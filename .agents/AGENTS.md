@@ -98,8 +98,8 @@ langfuse/
 - Build check: `pnpm run build:check`
 - Full build: `pnpm run build`
 - Full reset/bootstrap (destructive): `pnpm run dx`
-- Codex environment bootstrap: `bash scripts/codex/setup.sh`
-- Codex environment maintenance: `bash scripts/codex/maintenance.sh`
+- Environment/worktree bootstrap: `bash scripts/codex/setup.sh`
+- Environment/worktree maintenance: `bash scripts/codex/maintenance.sh`
 - Install Playwright Chromium for agent browser review: `pnpm run playwright:install`
 
 Minimum verification matrix:
@@ -125,6 +125,8 @@ Minimum verification matrix:
   - `packages/shared/prisma/generated/*`
 - Public API contract changes must update Fern sources in `fern/apis/**` and
   regenerated outputs. Never hand-edit `generated/**`.
+- Before adding constants, value lists, or display mappings, search for an
+  existing owner and reuse or extend that source of truth.
 - Keep tests independent and parallel-safe.
 - For bug fixes, write the failing test first, confirm it fails, then fix the
   bug.
