@@ -268,9 +268,17 @@ export const ROUTES: Route[] = [
   },
   // Agent Hub
   {
-    title: "Agent Dashboard",
+    title: "Agents",
     pathname: `/project/[projectId]/agents`,
     icon: Bot,
+    productModule: "agents",
+    group: RouteGroup.Agents,
+    section: RouteSection.Main,
+  },
+  {
+    title: "Metrics",
+    pathname: `/project/[projectId]/agents/metrics`,
+    icon: Activity,
     productModule: "agents",
     group: RouteGroup.Agents,
     section: RouteSection.Main,
