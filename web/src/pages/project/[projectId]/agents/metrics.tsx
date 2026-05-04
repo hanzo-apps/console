@@ -1,11 +1,11 @@
 import { AgentsProvider } from "@/src/features/agents/AgentsProvider";
-import { AgentsListPage } from "@/src/features/agents/pages/AgentsListPage";
+import { EnhancedDashboardPage } from "@/src/features/agents/pages/EnhancedDashboardPage";
 
-export default function AgentsRoute() {
+export default function AgentMetricsRoute() {
   return (
     <AgentsProvider>
       <div className="min-h-full p-4 md:p-6 lg:p-8">
-        <AgentsListPage />
+        <EnhancedDashboardPage />
       </div>
     </AgentsProvider>
   );
