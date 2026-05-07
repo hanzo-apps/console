@@ -82,7 +82,7 @@ services:
     build:
       context: ..
       dockerfile: web/Dockerfile
-    image: ghcr.io/hanzoai/console:latest
+    image: ghcr.io/hanzoai/console:3.156.7
     restart: always
     depends_on:
       <<: *depends-on
@@ -97,7 +97,7 @@ services:
     build:
       context: ..
       dockerfile: worker/Dockerfile
-    image: ghcr.io/hanzoai/console-worker:latest
+    image: ghcr.io/hanzoai/console-worker:3.156.7
     restart: always
     depends_on: *depends-on
     environment:
@@ -107,7 +107,7 @@ services:
     build:
       context: /Users/z/work/hanzo/agent
       dockerfile: deployments/docker/Dockerfile.control-plane
-    image: ghcr.io/hanzoai/agent:latest
+    image: ghcr.io/hanzoai/agent:0.1.0
     restart: always
     depends_on:
       postgres:
@@ -190,7 +190,7 @@ services:
     build:
       context: images
       dockerfile: Dockerfile.minio
-    image: ghcr.io/hanzoai/s3:latest
+    image: ghcr.io/hanzoai/s3:1.0.1
     restart: always
     entrypoint: sh
     command: -c 'mkdir -p /data/hanzo && minio server --address ":9000" --console-address ":9001" /data'
