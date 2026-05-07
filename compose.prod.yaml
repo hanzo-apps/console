@@ -145,7 +145,7 @@ services:
       - cloud-hanzo-network
 
   s3:
-    image: ghcr.io/hanzoai/s3:latest
+    image: ghcr.io/hanzoai/s3:1.0.1
     restart: always
     entrypoint: sh
     # create the 'cloud' bucket before starting the service
