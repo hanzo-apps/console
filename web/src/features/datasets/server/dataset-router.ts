@@ -1667,6 +1667,15 @@ export const datasetRouter = createTRPCRouter({
         });
       }
 
+      try {
+        await validateWebhookURL(input.url);
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Invalid remote run URL: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+      }
+
       const updatedDataset = await updateDataset({
         input: {
           id: input.datasetId,
