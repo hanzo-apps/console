@@ -19,7 +19,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     setValidating(true);
 
     try {
-      const response = await fetch("/api/agents/ui/v1/dashboard/summary", {
+      const response = await fetch("/v1/agents/ui/v1/dashboard/summary", {
         headers: { "X-API-Key": inputKey },
       });
 

@@ -62,7 +62,7 @@ const ApiKeyListSchema = z.object({
 describe("Admin Organizations API", () => {
   const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 
-  describe("POST /api/admin/organizations", () => {
+  describe("POST /v1/admin/organizations", () => {
     it("should create a new organization with valid admin authentication", async () => {
       const uniqueOrgName = `Test Org ${randomUUID().substring(0, 8)}`;
       const metadata = { tier: "testing", users: 5 };
@@ -70,7 +70,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "POST",
-        "/api/admin/organizations",
+        "/v1/admin/organizations",
         {
           name: uniqueOrgName,
           metadata: metadata,
@@ -105,7 +105,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "POST",
-        "/api/admin/organizations",
+        "/v1/admin/organizations",
         {
           name: uniqueOrgName,
         },
@@ -133,7 +133,7 @@ describe("Admin Organizations API", () => {
     it("should return 401 when no authorization header is provided", async () => {
       const uniqueOrgName = `Test Org ${randomUUID().substring(0, 8)}`;
 
-      const result = await makeAPICall("POST", "/api/admin/organizations", {
+      const result = await makeAPICall("POST", "/v1/admin/organizations", {
         name: uniqueOrgName,
       });
       expect(result.status).toBe(401);
@@ -145,7 +145,7 @@ describe("Admin Organizations API", () => {
 
       const result = await makeAPICall(
         "POST",
-        "/api/admin/organizations",
+        "/v1/admin/organizations",
         {
           name: uniqueOrgName,
         },
@@ -158,7 +158,7 @@ describe("Admin Organizations API", () => {
     it("should return 400 when organization name is too short", async () => {
       const result = await makeAPICall(
         "POST",
-        "/api/admin/organizations",
+        "/v1/admin/organizations",
         {
           name: "A", // Short name
         },
@@ -171,7 +171,7 @@ describe("Admin Organizations API", () => {
     it("should return 400 when organization name is too long", async () => {
       const result = await makeAPICall(
         "POST",
-        "/api/admin/organizations",
+        "/v1/admin/organizations",
         {
           name: "A".repeat(61), // More than 60 characters
         },
@@ -182,7 +182,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("GET /api/admin/organizations", () => {
+  describe("GET /v1/admin/organizations", () => {
     let testOrgId: string;
 
     beforeAll(async () => {
@@ -209,7 +209,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationsListSchema,
         "GET",
-        "/api/admin/organizations",
+        "/v1/admin/organizations",
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -232,13 +232,13 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("GET", "/api/admin/organizations");
+      const result = await makeAPICall("GET", "/v1/admin/organizations");
       expect(result.status).toBe(401);
       expect(result.body.error).toContain("Unauthorized");
     });
   });
 
-  describe("GET /api/admin/organizations/[organizationId]", () => {
+  describe("GET /v1/admin/organizations/[organizationId]", () => {
     let testOrgId: string;
 
     beforeAll(async () => {
@@ -265,7 +265,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "GET",
-        `/api/admin/organizations/${testOrgId}`,
+        `/v1/admin/organizations/${testOrgId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -299,7 +299,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "GET",
-        `/api/admin/organizations/${org.id}`,
+        `/v1/admin/organizations/${org.id}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -328,7 +328,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "GET",
-        `/api/admin/organizations/${nonExistentId}`,
+        `/v1/admin/organizations/${nonExistentId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -338,7 +338,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("PUT /api/admin/organizations/[organizationId]", () => {
+  describe("PUT /v1/admin/organizations/[organizationId]", () => {
     let testOrgId: string;
 
     beforeEach(async () => {
@@ -368,7 +368,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "PUT",
-        `/api/admin/organizations/${testOrgId}`,
+        `/v1/admin/organizations/${testOrgId}`,
         {
           name: newName,
           metadata: newMetadata,
@@ -397,7 +397,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "PUT",
-        `/api/admin/organizations/${nonExistentId}`,
+        `/v1/admin/organizations/${nonExistentId}`,
         {
           name: "New Name",
         },
@@ -411,7 +411,7 @@ describe("Admin Organizations API", () => {
     it("should return 400 when updating with invalid name", async () => {
       const result = await makeAPICall(
         "PUT",
-        `/api/admin/organizations/${testOrgId}`,
+        `/v1/admin/organizations/${testOrgId}`,
         {
           name: "A", // Short name
         },
@@ -423,7 +423,7 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("PUT", `/api/admin/organizations/${testOrgId}`, {
+      const result = await makeAPICall("PUT", `/v1/admin/organizations/${testOrgId}`, {
         name: "New Name",
       });
 
@@ -432,7 +432,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("DELETE /api/admin/organizations/[organizationId]", () => {
+  describe("DELETE /v1/admin/organizations/[organizationId]", () => {
     let testOrgId: string;
 
     beforeEach(async () => {
@@ -470,7 +470,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         DeleteResponseSchema,
         "DELETE",
-        `/api/admin/organizations/${orgId}`,
+        `/v1/admin/organizations/${orgId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -492,7 +492,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "DELETE",
-        `/api/admin/organizations/${nonExistentId}`,
+        `/v1/admin/organizations/${nonExistentId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -512,7 +512,7 @@ describe("Admin Organizations API", () => {
 
       const result = await makeAPICall(
         "DELETE",
-        `/api/admin/organizations/${testOrgId}`,
+        `/v1/admin/organizations/${testOrgId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -527,14 +527,14 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("DELETE", `/api/admin/organizations/${testOrgId}`);
+      const result = await makeAPICall("DELETE", `/v1/admin/organizations/${testOrgId}`);
 
       expect(result.status).toBe(401);
       expect(result.body.error).toContain("Unauthorized");
     });
   });
 
-  describe("GET /api/admin/organizations/[organizationId]/apiKeys", () => {
+  describe("GET /v1/admin/organizations/[organizationId]/apiKeys", () => {
     let testOrgId: string;
 
     beforeAll(async () => {
@@ -576,7 +576,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         ApiKeyListSchema,
         "GET",
-        `/api/admin/organizations/${testOrgId}/apiKeys`,
+        `/v1/admin/organizations/${testOrgId}/apiKeys`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -592,7 +592,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "GET",
-        `/api/admin/organizations/${nonExistentId}/apiKeys`,
+        `/v1/admin/organizations/${nonExistentId}/apiKeys`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -602,7 +602,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("POST /api/admin/organizations/[organizationId]/apiKeys", () => {
+  describe("POST /v1/admin/organizations/[organizationId]/apiKeys", () => {
     let testOrgId: string;
 
     beforeEach(async () => {
@@ -632,7 +632,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         ApiKeyResponseSchema,
         "POST",
-        `/api/admin/organizations/${testOrgId}/apiKeys`,
+        `/v1/admin/organizations/${testOrgId}/apiKeys`,
         {
           note: "Test API Key",
         },
@@ -658,7 +658,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "POST",
-        `/api/admin/organizations/${nonExistentId}/apiKeys`,
+        `/v1/admin/organizations/${nonExistentId}/apiKeys`,
         {
           note: "Test API Key",
         },
@@ -670,7 +670,7 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("POST", `/api/admin/organizations/${testOrgId}/apiKeys`, {
+      const result = await makeAPICall("POST", `/v1/admin/organizations/${testOrgId}/apiKeys`, {
         note: "Test API Key",
       });
 
@@ -679,7 +679,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("DELETE /api/admin/organizations/[organizationId]/apiKeys/[apiKeyId]", () => {
+  describe("DELETE /v1/admin/organizations/[organizationId]/apiKeys/[apiKeyId]", () => {
     let testOrgId: string;
     let testApiKeyId: string;
 
@@ -723,7 +723,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         DeleteResponseSchema,
         "DELETE",
-        `/api/admin/organizations/${testOrgId}/apiKeys/${testApiKeyId}`,
+        `/v1/admin/organizations/${testOrgId}/apiKeys/${testApiKeyId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -745,7 +745,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "DELETE",
-        `/api/admin/organizations/${testOrgId}/apiKeys/${nonExistentId}`,
+        `/v1/admin/organizations/${testOrgId}/apiKeys/${nonExistentId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -758,7 +758,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "DELETE",
-        `/api/admin/organizations/${nonExistentId}/apiKeys/${testApiKeyId}`,
+        `/v1/admin/organizations/${nonExistentId}/apiKeys/${testApiKeyId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -768,7 +768,7 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("DELETE", `/api/admin/organizations/${testOrgId}/apiKeys/${testApiKeyId}`);
+      const result = await makeAPICall("DELETE", `/v1/admin/organizations/${testOrgId}/apiKeys/${testApiKeyId}`);
 
       expect(result.status).toBe(401);
       expect(result.body.error).toContain("Unauthorized");
@@ -776,7 +776,7 @@ describe("Admin Organizations API", () => {
   });
 
   it("should return 405 for non-supported methods", async () => {
-    const result = await makeAPICall("PATCH", "/api/admin/organizations", undefined, `Bearer ${ADMIN_API_KEY}`);
+    const result = await makeAPICall("PATCH", "/v1/admin/organizations", undefined, `Bearer ${ADMIN_API_KEY}`);
     expect(result.status).toBe(405);
     expect(result.body.error).toContain("Method Not Allowed");
   });

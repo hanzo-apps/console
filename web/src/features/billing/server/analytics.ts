@@ -32,7 +32,7 @@ export async function trackServerEvent(eventName: string, eventData?: Record<str
     data: eventData,
     websiteId: siteId,
     hostname: "cloud.hanzo.ai",
-    url: "/api/billing/webhook",
+    url: "/v1/billing/webhook",
     title: "Billing Webhook",
   };
 

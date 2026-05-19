@@ -1,13 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import {
-  applyProxyTenantHeaders,
-  buildProxyTenantHeaders,
-} from "@/src/server/tenant-headers";
+import { applyProxyTenantHeaders, buildProxyTenantHeaders } from "@/src/server/tenant-headers";
 
 /**
  * Catch-all proxy for Hanzo Visor compute management API.
  *
- * Forwards /api/compute/* to ${CASVISOR_API_URL}/api/* stripping the /api/compute prefix.
+ * Forwards /v1/compute/* (canonical) and legacy /api/compute/* to
+ * ${CASVISOR_API_URL}/api/* stripping the /v1/compute or /api/compute prefix.
+ * File lives at pages/api/ per Next.js Pages Router framework constraint;
+ * next.config.js rewrites map /v1/compute/* to this handler. Upstream Casvisor
+ * still exposes /api/* — that path is preserved on the destination.
  * Server-side only -- CASVISOR_API_URL is never exposed to the client.
  */
 
@@ -41,10 +42,7 @@ function readBody(req: NextApiRequest): Promise<Buffer> {
   });
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const casvisorUrl = process.env.CASVISOR_API_URL;
   if (!casvisorUrl) {
     return res.status(503).json({
@@ -61,9 +59,7 @@ export default async function handler(
 
   const query = { ...req.query };
   delete query.path;
-  const qs = new URLSearchParams(
-    query as Record<string, string>,
-  ).toString();
+  const qs = new URLSearchParams(query as Record<string, string>).toString();
 
   const targetUrl = `${casvisorUrl.replace(/\/+$/, "")}/api/${upstreamPath}${qs ? `?${qs}` : ""}`;
 
@@ -129,8 +125,7 @@ export default async function handler(
       });
     }
 
-    const message =
-      err instanceof Error ? err.message : "Unknown proxy error";
+    const message = err instanceof Error ? err.message : "Unknown proxy error";
     console.error("[compute-proxy]", message);
     return res.status(502).json({
       error: "Bad Gateway",

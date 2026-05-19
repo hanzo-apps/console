@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // ZT ZAP Frontend Client
 //
-// Calls the ZAP tool endpoint at /api/zap/zt from the browser.
+// Calls the ZAP tool endpoint at /v1/zap/zt from the browser.
 // Used by React Query hooks in hooks.ts.
 // ---------------------------------------------------------------------------
 
@@ -17,13 +17,10 @@ export class ZapError extends Error {
 /**
  * Call a ZT ZAP tool.
  *
- * POST /api/zap/zt { name, args } → { content: T }
+ * POST /v1/zap/zt { name, args } → { content: T }
  */
-export async function zapCallZt<T = unknown>(
-  name: string,
-  args: Record<string, unknown>,
-): Promise<T> {
-  const res = await fetch("/api/zap/zt", {
+export async function zapCallZt<T = unknown>(name: string, args: Record<string, unknown>): Promise<T> {
+  const res = await fetch("/v1/zap/zt", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, args }),

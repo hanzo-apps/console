@@ -1,13 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import {
-  applyProxyTenantHeaders,
-  buildProxyTenantHeaders,
-} from "@/src/server/tenant-headers";
+import { applyProxyTenantHeaders, buildProxyTenantHeaders } from "@/src/server/tenant-headers";
 
 /**
  * Catch-all proxy for Hanzo Agents control plane API.
  *
- * Forwards /api/agents/* to ${AGENTS_API_URL}/* stripping the /api/agents prefix.
+ * Forwards /v1/agents/* (canonical) and legacy /api/agents/* to
+ * ${AGENTS_API_URL}/* stripping the /v1/agents or /api/agents prefix.
+ * File lives at pages/api/ per Next.js Pages Router framework constraint;
+ * next.config.js rewrites map /v1/agents/* to this handler.
  * Server-side only -- AGENTS_API_URL is never exposed to the client.
  *
  * Multi-tenant: extracts org/project/actor/env context from the console
@@ -46,10 +46,7 @@ function readBody(req: NextApiRequest): Promise<Buffer> {
   });
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const agentsUrl = process.env.AGENTS_API_URL;
   if (!agentsUrl) {
     return res.status(503).json({
@@ -68,9 +65,7 @@ export default async function handler(
   // Preserve query string (minus the catch-all `path` param injected by Next.js).
   const query = { ...req.query };
   delete query.path;
-  const qs = new URLSearchParams(
-    query as Record<string, string>,
-  ).toString();
+  const qs = new URLSearchParams(query as Record<string, string>).toString();
 
   const targetUrl = `${agentsUrl.replace(/\/+$/, "")}/${upstreamPath}${qs ? `?${qs}` : ""}`;
 
@@ -144,8 +139,7 @@ export default async function handler(
       });
     }
 
-    const message =
-      err instanceof Error ? err.message : "Unknown proxy error";
+    const message = err instanceof Error ? err.message : "Unknown proxy error";
     console.error("[agents-proxy]", message);
     return res.status(502).json({
       error: "Bad Gateway",
