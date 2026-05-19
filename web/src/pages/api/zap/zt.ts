@@ -1,26 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerAuthSession } from "@/src/server/auth";
 import { hasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import {
-  callTool,
-  getToolScope,
-  type ZapToolRequest,
-} from "@/src/features/zt/server/ztTools";
+import { callTool, getToolScope, type ZapToolRequest } from "@/src/features/zt/server/ztTools";
 import { ZtApiError } from "@/src/features/zt/server/ztClient";
 
 /**
  * ZAP tool endpoint for ZT (Zero Trust).
  *
- * Accepts: POST /api/zap/zt
+ * Accepts: POST /v1/zap/zt (canonical) — file lives at pages/api/zap/zt
+ *          per Next.js Pages Router framework constraint; next.config.js
+ *          rewrites map /v1/zap/* to this handler.
  * Body:    { name: "zt.<tool>", args: { ... } }
  * Returns: { content: T }
  *
  * Auth: Next-Auth session + RBAC project scope check.
  */
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
@@ -47,8 +42,7 @@ export default async function handler(
     return res.status(404).json({ error: `Unknown tool: ${toolName}` });
   }
 
-  const projectId =
-    typeof args.projectId === "string" ? args.projectId : undefined;
+  const projectId = typeof args.projectId === "string" ? args.projectId : undefined;
   if (!projectId) {
     return res.status(400).json({ error: "Missing projectId in args" });
   }

@@ -100,11 +100,39 @@ const nextConfig = {
   },
   output: "standalone",
 
-  // In frontend-only mode, proxy API calls to production console
+  // Two purposes:
+  //  1. /v1/* → /api/* — Pages Router forces API files under `pages/api/`, but
+  //     the canonical published URL surface is /v1/*. This rewrite exposes the
+  //     Hanzo-owned (non-upstream) internal routes at /v1/*. Internal callers
+  //     in code (components, hooks, services) must reference /v1/* paths.
+  //     The Langfuse upstream surfaces (/api/public/*, /api/auth/*, /api/trpc/*,
+  //     /api/observe/*) keep their /api/* shapes because external SDKs and
+  //     NextAuth/tRPC libraries hardcode those.
+  //  2. Frontend-only mode proxies API calls to a production console.
   async rewrites() {
-    if (process.env.SKIP_ENV_VALIDATION !== "1") return [];
+    const v1ToApi = [
+      "admin",
+      "agents",
+      "billing",
+      "compute",
+      "feedback",
+      "kms",
+      "start-cron",
+      "zap",
+    ].map((seg) => ({
+      source: `/v1/${seg}/:path*`,
+      destination: `/api/${seg}/:path*`,
+    }));
+    // Top-level feedback / start-cron without /:path*
+    v1ToApi.push({ source: "/v1/feedback", destination: "/api/feedback" });
+    v1ToApi.push({ source: "/v1/start-cron", destination: "/api/start-cron" });
+
+    if (process.env.SKIP_ENV_VALIDATION !== "1") return v1ToApi;
     const target = process.env.CONSOLE_API_URL || "https://console.hanzo.ai";
-    return [{ source: "/api/:path*", destination: `${target}/api/:path*` }];
+    return [
+      ...v1ToApi,
+      { source: "/api/:path*", destination: `${target}/api/:path*` },
+    ];
   },
 
   async headers() {
