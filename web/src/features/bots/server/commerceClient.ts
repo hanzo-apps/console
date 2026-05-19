@@ -5,18 +5,16 @@ import { env } from "@/src/env.mjs";
 // Commerce API Client — calls Hanzo Commerce directly (not via bot gateway)
 //
 // Endpoints:
-//   GET  /api/v1/users/:userId/payment-methods
-//   POST /api/v1/users/:userId/payment-methods
-//   GET  /api/v1/users/:userId/subscriptions
-//   GET  /api/v1/users/:userId/orders
-//   GET  /api/v1/users/:userId/credits
-//   POST /api/v1/billing/invoices
+//   GET  /v1/users/:userId/payment-methods
+//   POST /v1/users/:userId/payment-methods
+//   GET  /v1/users/:userId/subscriptions
+//   GET  /v1/users/:userId/orders
+//   GET  /v1/users/:userId/credits
+//   POST /v1/billing/invoices
 // ---------------------------------------------------------------------------
 
 function commerceUrl(): string {
-  return (
-    env.COMMERCE_API_URL ?? "http://commerce.hanzo.svc.cluster.local:8001"
-  );
+  return env.COMMERCE_API_URL ?? "http://commerce.hanzo.svc.cluster.local:8001";
 }
 
 function commerceToken(): string {
@@ -24,8 +22,7 @@ function commerceToken(): string {
   if (!token) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message:
-        "Commerce API auth not configured. Set COMMERCE_SERVICE_TOKEN.",
+      message: "Commerce API auth not configured. Set COMMERCE_SERVICE_TOKEN.",
     });
   }
   return token;
@@ -95,10 +92,7 @@ async function commerceRequest<T>(
 }
 
 /** GET helper */
-export function commerceGet<T>(
-  path: string,
-  params?: Record<string, string | undefined>,
-): Promise<T> {
+export function commerceGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
   return commerceRequest<T>("GET", path, { params });
 }
 
@@ -150,9 +144,7 @@ export interface CommerceSubscription {
  * List payment methods for a project (scoped by projectId as userId).
  */
 export function listPaymentMethods(projectId: string) {
-  return commerceGet<CommercePaymentMethod[]>(
-    `/api/v1/users/${projectId}/payment-methods`,
-  );
+  return commerceGet<CommercePaymentMethod[]>(`/v1/users/${projectId}/payment-methods`);
 }
 
 /**
@@ -167,19 +159,14 @@ export function addPaymentMethod(
     network?: string;
   },
 ) {
-  return commercePost<{ id: string }>(
-    `/api/v1/users/${projectId}/payment-methods`,
-    data,
-  );
+  return commercePost<{ id: string }>(`/v1/users/${projectId}/payment-methods`, data);
 }
 
 /**
  * Get credits balance for a project.
  */
 export function getCredits(projectId: string) {
-  return commerceGet<CommerceCredits>(
-    `/api/v1/users/${projectId}/credits`,
-  );
+  return commerceGet<CommerceCredits>(`/v1/users/${projectId}/credits`);
 }
 
 /**
@@ -187,14 +174,8 @@ export function getCredits(projectId: string) {
  */
 export async function getBotBilling(projectId: string, botId: string) {
   const [subscription, invoices] = await Promise.all([
-    commerceGet<CommerceSubscription | null>(
-      `/api/v1/users/${projectId}/subscriptions`,
-      { botId },
-    ).catch(() => null),
-    commerceGet<CommerceInvoice[]>(
-      `/api/v1/users/${projectId}/orders`,
-      { botId, type: "invoice" },
-    ).catch(() => []),
+    commerceGet<CommerceSubscription | null>(`/v1/users/${projectId}/subscriptions`, { botId }).catch(() => null),
+    commerceGet<CommerceInvoice[]>(`/v1/users/${projectId}/orders`, { botId, type: "invoice" }).catch(() => []),
   ]);
 
   return {
@@ -215,19 +196,12 @@ export function getBillingBalance(userId: string, currency = "usd") {
     balance: number;
     holds: number;
     available: number;
-  }>("/api/v1/billing/balance", { user: userId, currency });
+  }>("/v1/billing/balance", { user: userId, currency });
 }
 
 /**
  * Upgrade a bot's subscription tier.
  */
-export function upgradeBotPlan(
-  projectId: string,
-  botId: string,
-  tier: string,
-) {
-  return commercePost<{ ok: boolean }>(
-    `/api/v1/users/${projectId}/subscriptions`,
-    { botId, plan: tier },
-  );
+export function upgradeBotPlan(projectId: string, botId: string, tier: string) {
+  return commercePost<{ ok: boolean }>(`/v1/users/${projectId}/subscriptions`, { botId, plan: tier });
 }
