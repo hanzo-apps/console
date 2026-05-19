@@ -15,29 +15,14 @@ import { DIDIdentityBadge } from "../components/did/DIDDisplay";
 import { Badge } from "../components/ui/badge";
 import { ExecutionForm } from "../components/reasoners/ExecutionForm";
 import { ExecutionHistoryList } from "../components/reasoners/ExecutionHistoryList";
-import {
-  ExecutionQueue,
-  type ExecutionQueueRef,
-  type QueuedExecution,
-} from "../components/reasoners/ExecutionQueue";
+import { ExecutionQueue, type ExecutionQueueRef, type QueuedExecution } from "../components/reasoners/ExecutionQueue";
 import { FormattedOutput } from "../components/reasoners/FormattedOutput";
 import { PerformanceChart } from "../components/reasoners/PerformanceChart";
 import { StatusIndicator } from "../components/reasoners/StatusIndicator";
 import { Alert } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { SegmentedControl } from "../components/ui/segmented-control";
 import type { SegmentedControlOption } from "../components/ui/segmented-control";
 import { ResponsiveGrid } from "@/src/features/agents/components/layout/ResponsiveGrid";
@@ -60,11 +45,8 @@ export function ReasonerDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Multiple execution state
-  const [selectedExecution, setSelectedExecution] =
-    useState<QueuedExecution | null>(null);
-  const [resultViewMode, setResultViewMode] = useState<"formatted" | "json">(
-    "formatted"
-  );
+  const [selectedExecution, setSelectedExecution] = useState<QueuedExecution | null>(null);
+  const [resultViewMode, setResultViewMode] = useState<"formatted" | "json">("formatted");
   const executionQueueRef = useRef<ExecutionQueueRef | null>(null);
 
   // History and metrics
@@ -96,9 +78,7 @@ export function ReasonerDetailPage() {
         setFormData({ input: exampleData });
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load reasoner details"
-      );
+      setError(err instanceof Error ? err.message : "Failed to load reasoner details");
     } finally {
       setLoading(false);
     }
@@ -117,11 +97,7 @@ export function ReasonerDetailPage() {
   const loadHistory = async () => {
     if (!fullReasonerId) return;
     try {
-      const data = await reasonersApi.getExecutionHistory(
-        fullReasonerId,
-        1,
-        10
-      );
+      const data = await reasonersApi.getExecutionHistory(fullReasonerId, 1, 10);
       setHistory(data);
     } catch (err) {
       console.error("Failed to load history:", err);
@@ -133,10 +109,7 @@ export function ReasonerDetailPage() {
 
     // Validate form data
     if (reasoner.input_schema) {
-      const validation = validateFormData(
-        formData.input,
-        reasoner.input_schema
-      );
+      const validation = validateFormData(formData.input, reasoner.input_schema);
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
         return;
@@ -147,9 +120,7 @@ export function ReasonerDetailPage() {
     setIsExecuting(true);
 
     // Add execution to queue
-    const executionId = executionQueueRef.current.addExecution(
-      formData.input || {}
-    );
+    const executionId = executionQueueRef.current.addExecution(formData.input || {});
     console.log("Added execution to queue:", executionId);
 
     // Reset executing state after a brief delay
@@ -174,9 +145,7 @@ export function ReasonerDetailPage() {
     if (!reasoner || !fullReasonerId) return;
 
     const baseUrl = window.location.origin;
-    const curlCommand = `curl -X POST ${baseUrl}/api/v1/execute/${encodeURIComponent(
-      fullReasonerId
-    )} \\
+    const curlCommand = `curl -X POST ${baseUrl}/v1/execute/${encodeURIComponent(fullReasonerId)} \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify({ input: formData.input || {} }, null, 2)}'`;
 
@@ -192,9 +161,7 @@ export function ReasonerDetailPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
           <InProgress className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-body-small">
-            Loading reasoner details...
-          </p>
+          <p className="text-body-small">Loading reasoner details...</p>
         </div>
       </div>
     );
@@ -208,9 +175,7 @@ export function ReasonerDetailPage() {
             <div className="h-4 w-4 rounded-full bg-red-500" />
             <div>
               <h3 className="font-semibold text-red-900">Error</h3>
-              <p className="text-sm text-red-700">
-                {error || "Reasoner not found"}
-              </p>
+              <p className="text-sm text-red-700">{error || "Reasoner not found"}</p>
             </div>
           </div>
         </Alert>
@@ -224,12 +189,8 @@ export function ReasonerDetailPage() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-display">
-              {reasoner.name}
-            </h2>
-            <p className="text-body">
-              {reasoner.description || "No description available"}
-            </p>
+            <h2 className="text-display">{reasoner.name}</h2>
+            <p className="text-body">{reasoner.description || "No description available"}</p>
           </div>
           <div className="flex items-center gap-4">
             <StatusIndicator
@@ -237,16 +198,11 @@ export function ReasonerDetailPage() {
                 reasoner.node_status === "active"
                   ? "online"
                   : reasoner.node_status === "inactive"
-                  ? "offline"
-                  : "unknown"
+                    ? "offline"
+                    : "unknown"
               }
             />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCopyCommand}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" size="sm" onClick={handleCopyCommand} className="flex items-center gap-2">
               <Copy className="h-4 w-4" />
               Copy cURL
             </Button>
@@ -262,11 +218,7 @@ export function ReasonerDetailPage() {
         {reasoner.tags && reasoner.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {reasoner.tags.map((tag) => (
-              <Badge
-                key={`${reasoner.reasoner_id}-${tag}`}
-                variant="secondary"
-                className="text-xs"
-              >
+              <Badge key={`${reasoner.reasoner_id}-${tag}`} variant="secondary" className="text-xs">
                 #{tag}
               </Badge>
             ))}
@@ -293,9 +245,7 @@ export function ReasonerDetailPage() {
                 <CheckmarkFilled className="h-4 w-4 text-status-success" />
                 <span className="text-caption">Success Rate</span>
               </div>
-              <p className="text-heading-3">
-                {(metrics.success_rate * 100).toFixed(1)}%
-              </p>
+              <p className="text-heading-3">{(metrics.success_rate * 100).toFixed(1)}%</p>
             </CardContent>
           </Card>
 
@@ -332,9 +282,7 @@ export function ReasonerDetailPage() {
                 <Play className="h-5 w-5" />
                 Execute Reasoner
               </CardTitle>
-              <CardDescription>
-                Provide input data and execute the reasoner
-              </CardDescription>
+              <CardDescription>Provide input data and execute the reasoner</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ExecutionForm
@@ -344,12 +292,7 @@ export function ReasonerDetailPage() {
                 validationErrors={validationErrors}
               />
 
-              <Button
-                onClick={handleExecute}
-                className="w-full"
-                size="lg"
-                disabled={isExecuting}
-              >
+              <Button onClick={handleExecute} className="w-full" size="lg" disabled={isExecuting}>
                 {isExecuting ? (
                   <>
                     <InProgress className="h-4 w-4 mr-2 animate-spin" />
@@ -368,17 +311,19 @@ export function ReasonerDetailPage() {
           {/* Schema Information */}
           <Tabs defaultValue="input" className="space-y-4">
             <TabsList variant="underline" className="grid w-full grid-cols-2">
-              <TabsTrigger value="input" variant="underline">Input Schema</TabsTrigger>
-              <TabsTrigger value="output" variant="underline">Output Schema</TabsTrigger>
+              <TabsTrigger value="input" variant="underline">
+                Input Schema
+              </TabsTrigger>
+              <TabsTrigger value="output" variant="underline">
+                Output Schema
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="input">
               <Card className="card-elevated">
                 <CardHeader>
                   <CardTitle className="text-sm">Input Schema</CardTitle>
-                  <CardDescription>
-                    Expected input format for this reasoner
-                  </CardDescription>
+                  <CardDescription>Expected input format for this reasoner</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {reasoner.input_schema ? (
@@ -386,9 +331,7 @@ export function ReasonerDetailPage() {
                       {JSON.stringify(reasoner.input_schema, null, 2)}
                     </pre>
                   ) : (
-                    <p className="text-text-tertiary">
-                      No input schema available
-                    </p>
+                    <p className="text-text-tertiary">No input schema available</p>
                   )}
                 </CardContent>
               </Card>
@@ -398,9 +341,7 @@ export function ReasonerDetailPage() {
               <Card className="card-elevated">
                 <CardHeader>
                   <CardTitle className="text-sm">Output Schema</CardTitle>
-                  <CardDescription>
-                    Expected output format from this reasoner
-                  </CardDescription>
+                  <CardDescription>Expected output format from this reasoner</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {reasoner.output_schema ? (
@@ -408,9 +349,7 @@ export function ReasonerDetailPage() {
                       {JSON.stringify(reasoner.output_schema, null, 2)}
                     </pre>
                   ) : (
-                    <p className="text-text-tertiary">
-                      No output schema available
-                    </p>
+                    <p className="text-text-tertiary">No output schema available</p>
                   )}
                 </CardContent>
               </Card>
@@ -435,27 +374,21 @@ export function ReasonerDetailPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Execution Result</CardTitle>
-                    <CardDescription>
-                      Result from execution: {selectedExecution.inputSummary}
-                    </CardDescription>
+                    <CardDescription>Result from execution: {selectedExecution.inputSummary}</CardDescription>
                   </div>
-                  {normalizeExecutionStatus(selectedExecution.status) === "succeeded" &&
-                    selectedExecution.result && (
-                      <SegmentedControl
-                        value={resultViewMode}
-                        onValueChange={(mode) =>
-                          setResultViewMode(mode as typeof resultViewMode)
-                        }
-                        options={RESULT_VIEW_OPTIONS}
-                        size="sm"
-                        optionClassName="min-w-[120px]"
-                      />
-                    )}
+                  {normalizeExecutionStatus(selectedExecution.status) === "succeeded" && selectedExecution.result && (
+                    <SegmentedControl
+                      value={resultViewMode}
+                      onValueChange={(mode) => setResultViewMode(mode as typeof resultViewMode)}
+                      options={RESULT_VIEW_OPTIONS}
+                      size="sm"
+                      optionClassName="min-w-[120px]"
+                    />
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-                {normalizeExecutionStatus(selectedExecution.status) === "succeeded" &&
-                selectedExecution.result ? (
+                {normalizeExecutionStatus(selectedExecution.status) === "succeeded" && selectedExecution.result ? (
                   <FormattedOutput
                     data={selectedExecution.result}
                     showRaw={resultViewMode === "json"}
@@ -470,9 +403,7 @@ export function ReasonerDetailPage() {
                     <div className="h-8 w-8 mx-auto mb-3 rounded-full bg-status-error-bg flex items-center justify-center">
                       <div className="h-4 w-4 rounded-full bg-status-error" />
                     </div>
-                    <p className="text-status-error font-medium mb-1">
-                      Execution Failed
-                    </p>
+                    <p className="text-status-error font-medium mb-1">Execution Failed</p>
                     <p className="text-body-small">{selectedExecution.error}</p>
                   </div>
                 ) : (
@@ -492,11 +423,7 @@ export function ReasonerDetailPage() {
                 <Activity className="h-4 w-4" />
                 Activity
               </TabsTrigger>
-              <TabsTrigger
-                value="performance"
-                variant="underline"
-                className="gap-2"
-              >
+              <TabsTrigger value="performance" variant="underline" className="gap-2">
                 <Analytics className="h-4 w-4" />
                 Performance
               </TabsTrigger>
@@ -509,9 +436,7 @@ export function ReasonerDetailPage() {
                     <Activity className="h-5 w-5" />
                     Recent Executions
                   </CardTitle>
-                  <CardDescription>
-                    Latest execution attempts and their results
-                  </CardDescription>
+                  <CardDescription>Latest execution attempts and their results</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ExecutionHistoryList
@@ -531,9 +456,7 @@ export function ReasonerDetailPage() {
                     <Analytics className="h-5 w-5" />
                     Performance Metrics
                   </CardTitle>
-                  <CardDescription>
-                    Response times and success rates over time
-                  </CardDescription>
+                  <CardDescription>Response times and success rates over time</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <PerformanceChart metrics={metrics} />
