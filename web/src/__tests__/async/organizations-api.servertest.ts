@@ -1,10 +1,10 @@
 /** @jest-environment node */
 
 import { makeZodVerifiedAPICall, makeAPICall } from "@/src/__tests__/test-utils";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { z } from "zod/v4";
 import { randomUUID } from "crypto";
-import { createAndAddApiKeysToDb, createBasicAuthHeader } from "@hanzo/console-core/src/server";
+import { createAndAddApiKeysToDb, createBasicAuthHeader } from "@hanzo/shared/src/server";
 
 // Schema for organization project response
 const OrganizationProjectSchema = z.object({
@@ -62,7 +62,7 @@ const ApiKeyListSchema = z.object({
 describe("Admin Organizations API", () => {
   const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 
-  describe("POST /v1/admin/organizations", () => {
+  describe("POST /api/admin/organizations", () => {
     it("should create a new organization with valid admin authentication", async () => {
       const uniqueOrgName = `Test Org ${randomUUID().substring(0, 8)}`;
       const metadata = { tier: "testing", users: 5 };
@@ -70,7 +70,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "POST",
-        "/v1/admin/organizations",
+        "/api/admin/organizations",
         {
           name: uniqueOrgName,
           metadata: metadata,
@@ -105,7 +105,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "POST",
-        "/v1/admin/organizations",
+        "/api/admin/organizations",
         {
           name: uniqueOrgName,
         },
@@ -133,7 +133,7 @@ describe("Admin Organizations API", () => {
     it("should return 401 when no authorization header is provided", async () => {
       const uniqueOrgName = `Test Org ${randomUUID().substring(0, 8)}`;
 
-      const result = await makeAPICall("POST", "/v1/admin/organizations", {
+      const result = await makeAPICall("POST", "/api/admin/organizations", {
         name: uniqueOrgName,
       });
       expect(result.status).toBe(401);
@@ -145,7 +145,7 @@ describe("Admin Organizations API", () => {
 
       const result = await makeAPICall(
         "POST",
-        "/v1/admin/organizations",
+        "/api/admin/organizations",
         {
           name: uniqueOrgName,
         },
@@ -158,7 +158,7 @@ describe("Admin Organizations API", () => {
     it("should return 400 when organization name is too short", async () => {
       const result = await makeAPICall(
         "POST",
-        "/v1/admin/organizations",
+        "/api/admin/organizations",
         {
           name: "A", // Short name
         },
@@ -171,7 +171,7 @@ describe("Admin Organizations API", () => {
     it("should return 400 when organization name is too long", async () => {
       const result = await makeAPICall(
         "POST",
-        "/v1/admin/organizations",
+        "/api/admin/organizations",
         {
           name: "A".repeat(61), // More than 60 characters
         },
@@ -182,7 +182,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("GET /v1/admin/organizations", () => {
+  describe("GET /api/admin/organizations", () => {
     let testOrgId: string;
 
     beforeAll(async () => {
@@ -209,7 +209,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationsListSchema,
         "GET",
-        "/v1/admin/organizations",
+        "/api/admin/organizations",
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -232,13 +232,13 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("GET", "/v1/admin/organizations");
+      const result = await makeAPICall("GET", "/api/admin/organizations");
       expect(result.status).toBe(401);
       expect(result.body.error).toContain("Unauthorized");
     });
   });
 
-  describe("GET /v1/admin/organizations/[organizationId]", () => {
+  describe("GET /api/admin/organizations/[organizationId]", () => {
     let testOrgId: string;
 
     beforeAll(async () => {
@@ -265,7 +265,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "GET",
-        `/v1/admin/organizations/${testOrgId}`,
+        `/api/admin/organizations/${testOrgId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -299,7 +299,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "GET",
-        `/v1/admin/organizations/${org.id}`,
+        `/api/admin/organizations/${org.id}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -328,7 +328,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "GET",
-        `/v1/admin/organizations/${nonExistentId}`,
+        `/api/admin/organizations/${nonExistentId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -338,7 +338,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("PUT /v1/admin/organizations/[organizationId]", () => {
+  describe("PUT /api/admin/organizations/[organizationId]", () => {
     let testOrgId: string;
 
     beforeEach(async () => {
@@ -368,7 +368,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         OrganizationResponseSchema,
         "PUT",
-        `/v1/admin/organizations/${testOrgId}`,
+        `/api/admin/organizations/${testOrgId}`,
         {
           name: newName,
           metadata: newMetadata,
@@ -397,7 +397,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "PUT",
-        `/v1/admin/organizations/${nonExistentId}`,
+        `/api/admin/organizations/${nonExistentId}`,
         {
           name: "New Name",
         },
@@ -411,7 +411,7 @@ describe("Admin Organizations API", () => {
     it("should return 400 when updating with invalid name", async () => {
       const result = await makeAPICall(
         "PUT",
-        `/v1/admin/organizations/${testOrgId}`,
+        `/api/admin/organizations/${testOrgId}`,
         {
           name: "A", // Short name
         },
@@ -423,7 +423,7 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("PUT", `/v1/admin/organizations/${testOrgId}`, {
+      const result = await makeAPICall("PUT", `/api/admin/organizations/${testOrgId}`, {
         name: "New Name",
       });
 
@@ -432,7 +432,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("DELETE /v1/admin/organizations/[organizationId]", () => {
+  describe("DELETE /api/admin/organizations/[organizationId]", () => {
     let testOrgId: string;
 
     beforeEach(async () => {
@@ -470,7 +470,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         DeleteResponseSchema,
         "DELETE",
-        `/v1/admin/organizations/${orgId}`,
+        `/api/admin/organizations/${orgId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -492,7 +492,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "DELETE",
-        `/v1/admin/organizations/${nonExistentId}`,
+        `/api/admin/organizations/${nonExistentId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -512,7 +512,7 @@ describe("Admin Organizations API", () => {
 
       const result = await makeAPICall(
         "DELETE",
-        `/v1/admin/organizations/${testOrgId}`,
+        `/api/admin/organizations/${testOrgId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -527,14 +527,14 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("DELETE", `/v1/admin/organizations/${testOrgId}`);
+      const result = await makeAPICall("DELETE", `/api/admin/organizations/${testOrgId}`);
 
       expect(result.status).toBe(401);
       expect(result.body.error).toContain("Unauthorized");
     });
   });
 
-  describe("GET /v1/admin/organizations/[organizationId]/apiKeys", () => {
+  describe("GET /api/admin/organizations/[organizationId]/apiKeys", () => {
     let testOrgId: string;
 
     beforeAll(async () => {
@@ -549,9 +549,9 @@ describe("Admin Organizations API", () => {
       await prisma.apiKey.create({
         data: {
           orgId: testOrgId,
-          publicKey: `pk-hz-test-${randomUUID()}`,
+          publicKey: `pk-lf-test-${randomUUID()}`,
           hashedSecretKey: "hashed-secret",
-          displaySecretKey: "sk-hz-test...1234",
+          displaySecretKey: "sk-lf-test...1234",
           note: "Test API Key",
           scope: "ORGANIZATION",
         },
@@ -576,7 +576,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         ApiKeyListSchema,
         "GET",
-        `/v1/admin/organizations/${testOrgId}/apiKeys`,
+        `/api/admin/organizations/${testOrgId}/apiKeys`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -592,7 +592,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "GET",
-        `/v1/admin/organizations/${nonExistentId}/apiKeys`,
+        `/api/admin/organizations/${nonExistentId}/apiKeys`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -602,7 +602,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("POST /v1/admin/organizations/[organizationId]/apiKeys", () => {
+  describe("POST /api/admin/organizations/[organizationId]/apiKeys", () => {
     let testOrgId: string;
 
     beforeEach(async () => {
@@ -632,7 +632,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         ApiKeyResponseSchema,
         "POST",
-        `/v1/admin/organizations/${testOrgId}/apiKeys`,
+        `/api/admin/organizations/${testOrgId}/apiKeys`,
         {
           note: "Test API Key",
         },
@@ -641,8 +641,8 @@ describe("Admin Organizations API", () => {
       );
 
       expect(response.status).toBe(201);
-      expect(response.body.publicKey).toMatch(/^pk-hz-/);
-      expect(response.body.secretKey).toMatch(/^sk-hz-/);
+      expect(response.body.publicKey).toMatch(/^pk-lf-/);
+      expect(response.body.secretKey).toMatch(/^sk-lf-/);
       expect(response.body.note).toBe("Test API Key");
 
       // Verify the API key was actually created in the database
@@ -658,7 +658,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "POST",
-        `/v1/admin/organizations/${nonExistentId}/apiKeys`,
+        `/api/admin/organizations/${nonExistentId}/apiKeys`,
         {
           note: "Test API Key",
         },
@@ -670,7 +670,7 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("POST", `/v1/admin/organizations/${testOrgId}/apiKeys`, {
+      const result = await makeAPICall("POST", `/api/admin/organizations/${testOrgId}/apiKeys`, {
         note: "Test API Key",
       });
 
@@ -679,7 +679,7 @@ describe("Admin Organizations API", () => {
     });
   });
 
-  describe("DELETE /v1/admin/organizations/[organizationId]/apiKeys/[apiKeyId]", () => {
+  describe("DELETE /api/admin/organizations/[organizationId]/apiKeys/[apiKeyId]", () => {
     let testOrgId: string;
     let testApiKeyId: string;
 
@@ -695,9 +695,9 @@ describe("Admin Organizations API", () => {
       const apiKey = await prisma.apiKey.create({
         data: {
           orgId: testOrgId,
-          publicKey: `pk-hz-test-${randomUUID()}`,
+          publicKey: `pk-lf-test-${randomUUID()}`,
           hashedSecretKey: "hashed-secret",
-          displaySecretKey: "sk-hz-test...1234",
+          displaySecretKey: "sk-lf-test...1234",
           note: "Test API Key",
           scope: "ORGANIZATION",
         },
@@ -723,7 +723,7 @@ describe("Admin Organizations API", () => {
       const response = await makeZodVerifiedAPICall(
         DeleteResponseSchema,
         "DELETE",
-        `/v1/admin/organizations/${testOrgId}/apiKeys/${testApiKeyId}`,
+        `/api/admin/organizations/${testOrgId}/apiKeys/${testApiKeyId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
         200,
@@ -745,7 +745,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "DELETE",
-        `/v1/admin/organizations/${testOrgId}/apiKeys/${nonExistentId}`,
+        `/api/admin/organizations/${testOrgId}/apiKeys/${nonExistentId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -758,7 +758,7 @@ describe("Admin Organizations API", () => {
       const nonExistentId = randomUUID();
       const result = await makeAPICall(
         "DELETE",
-        `/v1/admin/organizations/${nonExistentId}/apiKeys/${testApiKeyId}`,
+        `/api/admin/organizations/${nonExistentId}/apiKeys/${testApiKeyId}`,
         undefined,
         `Bearer ${ADMIN_API_KEY}`,
       );
@@ -768,7 +768,7 @@ describe("Admin Organizations API", () => {
     });
 
     it("should return 401 when no authorization header is provided", async () => {
-      const result = await makeAPICall("DELETE", `/v1/admin/organizations/${testOrgId}/apiKeys/${testApiKeyId}`);
+      const result = await makeAPICall("DELETE", `/api/admin/organizations/${testOrgId}/apiKeys/${testApiKeyId}`);
 
       expect(result.status).toBe(401);
       expect(result.body.error).toContain("Unauthorized");
@@ -776,7 +776,7 @@ describe("Admin Organizations API", () => {
   });
 
   it("should return 405 for non-supported methods", async () => {
-    const result = await makeAPICall("PATCH", "/v1/admin/organizations", undefined, `Bearer ${ADMIN_API_KEY}`);
+    const result = await makeAPICall("PATCH", "/api/admin/organizations", undefined, `Bearer ${ADMIN_API_KEY}`);
     expect(result.status).toBe(405);
     expect(result.body.error).toContain("Method Not Allowed");
   });
@@ -831,8 +831,8 @@ describe("Public Organizations API", () => {
       scope: "ORGANIZATION",
       note: "Test API Key for Organizations API",
       predefinedKeys: {
-        publicKey: `pk-hz-org-${randomUUID().substring(0, 8)}`,
-        secretKey: `sk-hz-org-${randomUUID().substring(0, 8)}`,
+        publicKey: `pk-lf-org-${randomUUID().substring(0, 8)}`,
+        secretKey: `sk-lf-org-${randomUUID().substring(0, 8)}`,
       },
     });
     testApiKey = apiKey.publicKey;
@@ -896,8 +896,8 @@ describe("Public Organizations API", () => {
           scope: "PROJECT",
           note: "Test Project API Key",
           predefinedKeys: {
-            publicKey: `pk-hz-project-${randomUUID().substring(0, 8)}`,
-            secretKey: `sk-hz-project-${randomUUID().substring(0, 8)}`,
+            publicKey: `pk-lf-project-${randomUUID().substring(0, 8)}`,
+            secretKey: `sk-lf-project-${randomUUID().substring(0, 8)}`,
           },
         });
 
@@ -995,8 +995,8 @@ describe("Public Organizations API", () => {
           scope: "ORGANIZATION",
           note: "Test API Key for Empty Org",
           predefinedKeys: {
-            publicKey: `pk-hz-empty-${randomUUID().substring(0, 8)}`,
-            secretKey: `sk-hz-empty-${randomUUID().substring(0, 8)}`,
+            publicKey: `pk-lf-empty-${randomUUID().substring(0, 8)}`,
+            secretKey: `sk-lf-empty-${randomUUID().substring(0, 8)}`,
           },
         });
 
@@ -1026,7 +1026,7 @@ describe("Public Organizations API", () => {
           data: {
             name: `Null Metadata Project ${randomUUID().substring(0, 8)}`,
             orgId: testOrgId,
-            metadata: undefined,
+            metadata: null,
           },
         });
 

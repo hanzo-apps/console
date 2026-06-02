@@ -6,21 +6,21 @@ import { api } from "@/src/utils/api";
 import { ListTree, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { DatasetStatus } from "@hanzo/console-core";
+import { DatasetStatus } from "@hanzo/shared";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { useState } from "react";
 import { getDatasetItemTabs } from "@/src/features/navigation/utils/dataset-item-tabs";
 import { type DatasetItemTab } from "@/src/features/navigation/utils/dataset-item-tabs";
 import { type ReactNode } from "react";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { EditDatasetItemDialog } from "@/src/features/datasets/components/EditDatasetItemDialog";
 import { useDatasetVersion } from "@/src/features/datasets/hooks/useDatasetVersion";
 import { toDatasetSchema } from "@/src/features/datasets/utils/datasetItemUtils";
@@ -39,7 +39,7 @@ export const DatasetItemDetailPage = ({
   const datasetId = router.query.datasetId as string;
   const itemId = router.query.itemId as string;
   const hasAccess = useHasProjectAccess({ projectId, scope: "datasets:CUD" });
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const utils = api.useUtils();
   const [isArchivePopoverOpen, setIsArchivePopoverOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);

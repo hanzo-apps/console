@@ -3,7 +3,6 @@
 import * as React from "react";
 import { NavMain, type NavMainItem } from "@/src/components/nav/nav-main";
 import { NavUser, type UserNavigationProps } from "@/src/components/nav/nav-user";
-import { OrgProjectSwitcher } from "@/src/components/nav/org-project-switcher";
 import {
   Sidebar,
   SidebarContent,
@@ -24,13 +23,9 @@ import { HanzoLogo } from "@/src/components/HanzoLogo";
 import { SidebarNotifications } from "@/src/components/nav/sidebar-notifications";
 import { type RouteGroup } from "@/src/components/layouts/routes";
 import { ExternalLink, Grid2X2 } from "lucide-react";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
-import type { Session } from "next-auth";
-
-// Cross-app links now live in <HanzoHeader> (see AuthenticatedLayout)
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 
 type AppSidebarProps = {
-  session?: Session;
   navItems: {
     grouped: Partial<Record<RouteGroup, NavMainItem[]>> | null;
     ungrouped: NavMainItem[];
@@ -42,28 +37,14 @@ type AppSidebarProps = {
   userNavProps: UserNavigationProps;
 } & React.ComponentProps<typeof Sidebar>;
 
-export function AppSidebar({ session, navItems, secondaryNavItems, userNavProps, ...props }: AppSidebarProps) {
-  const router = useRouter();
-  const routerProjectId = router.query.projectId as string | undefined;
-
-  // Derive current org from the project ID in the URL
-  const organizations = session?.user?.organizations ?? [];
-  const currentOrg = organizations.find((org) => org.projects.some((p) => p.id === routerProjectId));
-
+export function AppSidebar({ navItems, secondaryNavItems, userNavProps, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
       <SidebarHeader>
-        <div className="flex min-h-9 items-center gap-2 py-2 pl-2 pr-1 group-data-[collapsible=icon]:p-3">
+        <div className="flex min-h-9 items-center gap-2 py-2 pl-2 pr-0 group-data-[collapsible=icon]:p-3">
           <HanzoLogo version />
         </div>
         <div className="h-1 flex-1 border-b" />
-        {organizations.length > 0 && (
-          <OrgProjectSwitcher
-            organizations={organizations}
-            currentOrgId={currentOrg?.id}
-            currentProjectId={routerProjectId}
-          />
-        )}
         <DemoBadge />
       </SidebarHeader>
       <SidebarContent>
@@ -84,7 +65,7 @@ export function AppSidebar({ session, navItems, secondaryNavItems, userNavProps,
 
 const DemoBadge = () => {
   const router = useRouter();
-  const { isConsoleCloud } = useConsoleCloudRegion();
+  const { isHanzoCloud } = useHanzoCloudRegion();
   const routerProjectId = router.query.projectId as string | undefined;
 
   if (
@@ -92,7 +73,7 @@ const DemoBadge = () => {
       env.NEXT_PUBLIC_DEMO_ORG_ID &&
       env.NEXT_PUBLIC_DEMO_PROJECT_ID &&
       routerProjectId === env.NEXT_PUBLIC_DEMO_PROJECT_ID &&
-      isConsoleCloud
+      isHanzoCloud
     )
   )
     return null;
@@ -104,7 +85,7 @@ const DemoBadge = () => {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Use Demo App to create traces" variant="cta">
-              <Link href="https://hanzo.ai/docs/demo" target="_blank" rel="noopener noreferrer">
+              <Link href="https://hanzo.com/docs/demo" target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
                 <span>Use Demo App</span>
               </Link>

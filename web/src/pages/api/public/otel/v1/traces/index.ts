@@ -1,20 +1,10 @@
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
-import { logger, OtelIngestionProcessor, markProjectAsOtelUser } from "@hanzo/console-core/src/server";
+import { logger, OtelIngestionProcessor, markProjectAsOtelUser } from "@hanzo/shared/src/server";
 import { z } from "zod/v4";
 import { $root } from "@/src/pages/api/public/otel/otlp-proto/generated/root";
 import { gunzip } from "node:zlib";
-import { ForbiddenError } from "@hanzo/console-core";
-import { env } from "@/src/env.mjs";
-
-/** Read a console SDK header that may arrive with hyphens or underscores. */
-function getConsoleHeader(headers: Record<string, string | string[] | undefined>, name: string): string | undefined {
-  const hyphenVal = headers[name];
-  if (typeof hyphenVal === "string") return hyphenVal;
-  const underscoreVal = headers[name.replaceAll("-", "_")];
-  if (typeof underscoreVal === "string") return underscoreVal;
-  return undefined;
-}
+import { ForbiddenError } from "@hanzo/shared";
 
 export const config = {
   api: {
@@ -99,39 +89,9 @@ export default withMiddlewares({
         return {};
       }
 
-      // Extract SDK headers for write path decision (supports both hyphen and underscore formats)
-      const sdkName = getConsoleHeader(req.headers, "x-console-sdk-name");
-      const sdkVersion = getConsoleHeader(req.headers, "x-console-sdk-version");
-      const ingestionVersion = getConsoleHeader(req.headers, "x-console-ingestion-version");
-
-      // Reject unsupported future ingestion versions (> 4)
-      // Lower versions are valid but use dual write (path A)
-      const parsedIngestionVersion = ingestionVersion ? parseInt(ingestionVersion, 10) : undefined;
-      if (parsedIngestionVersion !== undefined && (isNaN(parsedIngestionVersion) || parsedIngestionVersion > 4)) {
-        res.status(400);
-        return {
-          error: `Unsupported x-console-ingestion-version: "${ingestionVersion}". Maximum supported: "4".`,
-        };
-      }
-
-      // Extract headers to propagate for ingestion masking
-      const propagatedHeaderNames = env.HANZO_INGESTION_MASKING_PROPAGATED_HEADERS;
-      const propagatedHeaders: Record<string, string> = {};
-      for (const headerName of propagatedHeaderNames) {
-        const value = req.headers[headerName];
-        if (typeof value === "string") {
-          propagatedHeaders[headerName] = value;
-        }
-      }
-
       const processor = new OtelIngestionProcessor({
         projectId: auth.scope.projectId,
         publicKey: auth.scope.publicKey,
-        orgId: auth.scope.orgId,
-        propagatedHeaders: Object.keys(propagatedHeaders).length > 0 ? propagatedHeaders : undefined,
-        sdkName,
-        sdkVersion,
-        ingestionVersion,
       });
 
       // At this point, we have the raw OpenTelemetry Span body. We upload the full batch to S3

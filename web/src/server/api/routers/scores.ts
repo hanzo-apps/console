@@ -12,41 +12,34 @@ import {
   timeFilter,
   UpdateAnnotationScoreData,
   validateDbScore,
-  ConsoleNotFoundError,
+  HanzoNotFoundError,
   InternalServerError,
   BatchActionQuerySchema,
   BatchActionType,
   ActionId,
   BatchExportTableName,
   type ScoreDomain,
-  type FilterState,
   CreateAnnotationScoreData,
   type ScoreConfigDomain,
   ScoreSourceEnum,
   ScoreDataTypeEnum,
   CORRECTION_NAME,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import {
   getScoresGroupedByNameSourceType,
   getScoresUiCount,
   getScoresUiTable,
-  getScoresUiCountFromEvents,
-  getScoresUiTableFromEvents,
-  getScoresTraceMetricsFromEvents,
   getScoreNames,
   getScoreStringValues,
   getTracesGroupedByTags,
   getTracesGroupedByName,
   getTracesGroupedByUsers,
-  getEventsGroupedByTraceName,
-  getEventsGroupedByTraceTags,
-  getEventsGroupedByUserId,
   tracesTableUiColumnDefinitions,
   upsertScore,
   logger,
   getTraceById,
   getScoreById,
-  convertDateToDatastoreDateTime,
+  convertDateToClickhouseDateTime,
   searchExistingAnnotationScore,
   hasAnyScore,
   ScoreDeleteQueue,
@@ -55,7 +48,7 @@ import {
   deleteScores,
   getTracesIdentifierForSession,
   validateConfigAgainstBody,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { v4 } from "uuid";
 import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEntitlement";
 import { createBatchActionJob } from "@/src/features/table/server/createBatchActionJob";
@@ -83,19 +76,12 @@ type AllScoresReturnType = Omit<ScoreDomain, "metadata"> & {
   hasMetadata: boolean;
 };
 
-type AllScoresFromEventsReturnType = Omit<ScoreDomain, "metadata"> & {
-  jobConfigurationId: string | null;
-  authorUserImage: string | null;
-  authorUserName: string | null;
-  hasMetadata: boolean;
-};
-
 export const scoresRouter = createTRPCRouter({
   /**
    * Get all scores for a project, meant for internal use and *excludes metadata of scores*
    */
   all: protectedProjectProcedure.input(ScoreAllOptions).query(async ({ input, ctx }) => {
-    const datastoreScoreData = await getScoresUiTable({
+    const clickhouseScoreData = await getScoresUiTable({
       projectId: input.projectId,
       filter: input.filter ?? [],
       orderBy: input.orderBy,
@@ -110,7 +96,7 @@ export const scoresRouter = createTRPCRouter({
         where: {
           projectId: input.projectId,
           jobOutputScoreId: {
-            in: datastoreScoreData.map((score) => score.id),
+            in: clickhouseScoreData.map((score) => score.id),
           },
         },
         select: {
@@ -119,23 +105,10 @@ export const scoresRouter = createTRPCRouter({
           jobOutputScoreId: true,
         },
       }),
-      // Scope user lookup to the project's organization to prevent
-      // leaking user names/images across tenant boundaries.
       ctx.prisma.user.findMany({
         where: {
           id: {
-            in: datastoreScoreData.map((score) => score.authorUserId).filter((s): s is string => Boolean(s)),
-          },
-          organizationMemberships: {
-            some: {
-              organization: {
-                projects: {
-                  some: {
-                    id: input.projectId,
-                  },
-                },
-              },
-            },
+            in: clickhouseScoreData.map((score) => score.authorUserId).filter((s): s is string => Boolean(s)),
           },
         },
         select: {
@@ -147,7 +120,7 @@ export const scoresRouter = createTRPCRouter({
     ]);
 
     return {
-      scores: datastoreScoreData.map<AllScoresReturnType>((score) => {
+      scores: clickhouseScoreData.map<AllScoresReturnType>((score) => {
         const jobExecution = jobExecutions.find((je) => je.jobOutputScoreId === score.id);
         const user = users.find((u) => u.id === score.authorUserId);
         return {
@@ -174,13 +147,13 @@ export const scoresRouter = createTRPCRouter({
       if (!score) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: `No score with id ${input.scoreId} in project ${input.projectId} in Datastore`,
+          message: `No score with id ${input.scoreId} in project ${input.projectId} in Clickhouse`,
         });
       }
       return toDomainWithStringifiedMetadata(score);
     }),
   countAll: protectedProjectProcedure.input(ScoreAllOptions).query(async ({ input }) => {
-    const datastoreScoreData = await getScoresUiCount({
+    const clickhouseScoreData = await getScoresUiCount({
       projectId: input.projectId,
       filter: input.filter ?? [],
       orderBy: input.orderBy,
@@ -189,140 +162,9 @@ export const scoresRouter = createTRPCRouter({
     });
 
     return {
-      totalCount: datastoreScoreData,
+      totalCount: clickhouseScoreData,
     };
   }),
-  /**
-   * v4: Get all scores without traces JOIN. Trace metadata loaded via metricsFromEvents.
-   */
-  allFromEvents: protectedProjectProcedure.input(ScoreAllOptions).query(async ({ input, ctx }) => {
-    const datastoreScoreData = await getScoresUiTableFromEvents({
-      projectId: input.projectId,
-      filter: input.filter ?? [],
-      orderBy: input.orderBy,
-      limit: input.limit,
-      offset: input.page * input.limit,
-    });
-
-    const [jobExecutions, users] = await Promise.all([
-      ctx.prisma.jobExecution.findMany({
-        where: {
-          projectId: input.projectId,
-          jobOutputScoreId: {
-            in: datastoreScoreData.map((score) => score.id),
-          },
-        },
-        select: {
-          id: true,
-          jobConfigurationId: true,
-          jobOutputScoreId: true,
-        },
-      }),
-      ctx.prisma.user.findMany({
-        where: {
-          id: {
-            in: datastoreScoreData.map((score) => score.authorUserId).filter((s): s is string => Boolean(s)),
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-          image: true,
-        },
-      }),
-    ]);
-
-    return {
-      scores: datastoreScoreData.map<AllScoresFromEventsReturnType>((score) => {
-        const jobExecution = jobExecutions.find((je) => je.jobOutputScoreId === score.id);
-        const user = users.find((u) => u.id === score.authorUserId);
-        return {
-          ...score,
-          jobConfigurationId: jobExecution?.jobConfigurationId ?? null,
-          authorUserImage: user?.image ?? null,
-          authorUserName: user?.name ?? null,
-        };
-      }),
-    };
-  }),
-  /**
-   * v4: Count scores without traces JOIN.
-   */
-  countAllFromEvents: protectedProjectProcedure.input(ScoreAllOptions).query(async ({ input }) => {
-    const count = await getScoresUiCountFromEvents({
-      projectId: input.projectId,
-      filter: input.filter ?? [],
-      orderBy: input.orderBy,
-      limit: 1,
-      offset: 0,
-    });
-
-    return {
-      totalCount: count,
-    };
-  }),
-  /**
-   * v4: Load trace metadata (name, userId, tags) from events_core for a page of scores.
-   */
-  metricsFromEvents: protectedProjectProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-        traceIds: z.array(z.string()),
-      }),
-    )
-    .query(async ({ input }) => {
-      if (input.traceIds.length === 0) return [];
-      return getScoresTraceMetricsFromEvents({
-        projectId: input.projectId,
-        traceIds: input.traceIds,
-      });
-    }),
-  /**
-   * v4: Filter options using events_core instead of traces table.
-   */
-  filterOptionsFromEvents: protectedProjectProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-        timestampFilter: z.array(timeFilter).optional(),
-      }),
-    )
-    .query(async ({ input }) => {
-      const { timestampFilter } = input;
-
-      const eventsFilter: FilterState = [];
-      if (timestampFilter && timestampFilter.length > 0) {
-        eventsFilter.push(
-          ...timestampFilter.map((tf) => ({
-            ...tf,
-            column: "startTime" as const,
-          })),
-        );
-      }
-
-      const [names, tags, traceNames, userIds, stringValues] = await Promise.all([
-        getScoreNames(input.projectId, timestampFilter ?? []),
-        getEventsGroupedByTraceTags(input.projectId, eventsFilter),
-        getEventsGroupedByTraceName(input.projectId, eventsFilter),
-        getEventsGroupedByUserId(input.projectId, eventsFilter),
-        getScoreStringValues(input.projectId, timestampFilter ?? []),
-      ]);
-
-      return {
-        name: names.map((i) => ({ value: i.name, count: i.count })),
-        tags: tags.map((t) => ({ value: t.tag })),
-        traceName: traceNames.map((tn) => ({
-          value: tn.traceName,
-          count: Number(tn.count),
-        })),
-        userId: userIds.map((u) => ({
-          value: u.userId,
-          count: Number(u.count),
-        })),
-        stringValue: stringValues,
-      };
-    }),
   filterOptions: protectedProjectProcedure
     .input(
       z.object({
@@ -448,16 +290,16 @@ export const scoresRouter = createTRPCRouter({
         };
 
     if (inflatedParams.traceId) {
-      const datastoreTrace = await getTraceById({
+      const clickhouseTrace = await getTraceById({
         traceId: inflatedParams.traceId,
         projectId: input.projectId,
-        datastoreFeatureTag: "annotations-trpc",
+        clickhouseFeatureTag: "annotations-trpc",
       });
 
-      if (!datastoreTrace) {
-        logger.error(`No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`);
-        throw new ConsoleNotFoundError(
-          `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
+      if (!clickhouseTrace) {
+        logger.error(`No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Clickhouse`);
+        throw new HanzoNotFoundError(
+          `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Clickhouse`,
         );
       }
     } else if (inflatedParams.sessionId) {
@@ -465,15 +307,15 @@ export const scoresRouter = createTRPCRouter({
       const traceIdentifiers = await getTracesIdentifierForSession(input.projectId, inflatedParams.sessionId);
       if (traceIdentifiers.length === 0) {
         logger.error(
-          `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
+          `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Clickhouse`,
         );
-        throw new ConsoleNotFoundError(
-          `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
+        throw new HanzoNotFoundError(
+          `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Clickhouse`,
         );
       }
     }
 
-    const datastoreScore = await searchExistingAnnotationScore(
+    const clickhouseScore = await searchExistingAnnotationScore(
       input.projectId,
       inflatedParams.observationId,
       inflatedParams.traceId,
@@ -485,9 +327,9 @@ export const scoresRouter = createTRPCRouter({
 
     const timestamp = input.timestamp ?? new Date();
 
-    const score = !!datastoreScore
+    const score = !!clickhouseScore
       ? {
-          ...datastoreScore,
+          ...clickhouseScore,
           value: input.value,
           stringValue: input.stringValue ?? null,
           comment: input.comment ?? null,
@@ -521,7 +363,7 @@ export const scoresRouter = createTRPCRouter({
 
     await upsertScore({
       id: score.id, // Reuse ID that was generated by Prisma
-      timestamp: convertDateToDatastoreDateTime(timestamp),
+      timestamp: convertDateToClickhouseDateTime(timestamp),
       project_id: input.projectId,
       environment: input.environment ?? "default",
       trace_id: inflatedParams.traceId,
@@ -536,8 +378,8 @@ export const scoresRouter = createTRPCRouter({
       data_type: input.dataType,
       string_value: input.stringValue,
       queue_id: input.queueId,
-      created_at: convertDateToDatastoreDateTime(score.createdAt),
-      updated_at: convertDateToDatastoreDateTime(score.updatedAt),
+      created_at: convertDateToClickhouseDateTime(score.createdAt),
+      updated_at: convertDateToClickhouseDateTime(score.updatedAt),
       metadata: score.metadata as Record<string, string>,
     });
 
@@ -560,7 +402,7 @@ export const scoresRouter = createTRPCRouter({
 
     let updatedScore: ScoreDomain | null | undefined = null;
 
-    // Fetch the current score from Datastore
+    // Fetch the current score from Clickhouse
     const score = await getScoreById({
       projectId: input.projectId,
       scoreId: input.id,
@@ -568,18 +410,18 @@ export const scoresRouter = createTRPCRouter({
     });
 
     if (!score) {
-      // Datastore is eventually consistent; if client provided timestamp, we can upsert along the ordering key
+      // Clickhouse is eventually consistent; if client provided timestamp, we can upsert along the ordering key
       if (!input.timestamp) {
         logger.warn(
-          `No annotation score with id ${input.id} in project ${input.projectId} in Datastore, and no timestamp provided`,
+          `No annotation score with id ${input.id} in project ${input.projectId} in Clickhouse, and no timestamp provided`,
         );
-        throw new ConsoleNotFoundError(
-          `No annotation score with id ${input.id} in project ${input.projectId} in Datastore`,
+        throw new HanzoNotFoundError(
+          `No annotation score with id ${input.id} in project ${input.projectId} in Clickhouse`,
         );
       }
 
       logger.info(
-        `Score ${input.id} not found in Datastore for project ${input.projectId}, upserting with provided timestamp`,
+        `Score ${input.id} not found in ClickHouse for project ${input.projectId}, upserting with provided timestamp`,
       );
 
       // Validate config if provided
@@ -590,7 +432,7 @@ export const scoresRouter = createTRPCRouter({
         },
       });
       if (!config) {
-        throw new ConsoleNotFoundError(`No score config with id ${input.configId} in project ${input.projectId}`);
+        throw new HanzoNotFoundError(`No score config with id ${input.configId} in project ${input.projectId}`);
       }
 
       // Upsert with provided data
@@ -607,16 +449,16 @@ export const scoresRouter = createTRPCRouter({
           };
 
       if (inflatedParams.traceId) {
-        const datastoreTrace = await getTraceById({
+        const clickhouseTrace = await getTraceById({
           traceId: inflatedParams.traceId,
           projectId: input.projectId,
-          datastoreFeatureTag: "annotations-trpc",
+          clickhouseFeatureTag: "annotations-trpc",
         });
 
-        if (!datastoreTrace) {
-          logger.error(`No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`);
-          throw new ConsoleNotFoundError(
-            `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
+        if (!clickhouseTrace) {
+          logger.error(`No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Clickhouse`);
+          throw new HanzoNotFoundError(
+            `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Clickhouse`,
           );
         }
       } else if (inflatedParams.sessionId) {
@@ -624,10 +466,10 @@ export const scoresRouter = createTRPCRouter({
         const traceIdentifiers = await getTracesIdentifierForSession(input.projectId, inflatedParams.sessionId);
         if (traceIdentifiers.length === 0) {
           logger.error(
-            `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
+            `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Clickhouse`,
           );
-          throw new ConsoleNotFoundError(
-            `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
+          throw new HanzoNotFoundError(
+            `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Clickhouse`,
           );
         }
       }
@@ -636,7 +478,7 @@ export const scoresRouter = createTRPCRouter({
 
       await upsertScore({
         id: input.id,
-        timestamp: convertDateToDatastoreDateTime(timestamp),
+        timestamp: convertDateToClickhouseDateTime(timestamp),
         project_id: input.projectId,
         environment: input.environment ?? "default",
         trace_id: inflatedParams.traceId,
@@ -651,8 +493,8 @@ export const scoresRouter = createTRPCRouter({
         data_type: input.dataType,
         string_value: input.stringValue,
         queue_id: input.queueId,
-        created_at: convertDateToDatastoreDateTime(new Date()),
-        updated_at: convertDateToDatastoreDateTime(new Date()),
+        created_at: convertDateToClickhouseDateTime(new Date()),
+        updated_at: convertDateToClickhouseDateTime(new Date()),
         metadata: {},
       });
 
@@ -711,7 +553,7 @@ export const scoresRouter = createTRPCRouter({
           },
         });
         if (!config) {
-          throw new ConsoleNotFoundError(`No score config with id ${score.configId} in project ${input.projectId}`);
+          throw new HanzoNotFoundError(`No score config with id ${score.configId} in project ${input.projectId}`);
         }
         try {
           validateConfigAgainstBody({
@@ -735,7 +577,7 @@ export const scoresRouter = createTRPCRouter({
       await upsertScore({
         id: input.id,
         project_id: input.projectId,
-        timestamp: convertDateToDatastoreDateTime(score.timestamp),
+        timestamp: convertDateToClickhouseDateTime(score.timestamp),
         value: input.value !== null ? input.value : undefined,
         string_value: input.stringValue,
         comment: input.comment,
@@ -749,8 +591,8 @@ export const scoresRouter = createTRPCRouter({
         observation_id: score.observationId,
         session_id: score.sessionId,
         environment: score.environment,
-        created_at: convertDateToDatastoreDateTime(score.createdAt),
-        updated_at: convertDateToDatastoreDateTime(score.updatedAt),
+        created_at: convertDateToClickhouseDateTime(score.createdAt),
+        updated_at: convertDateToClickhouseDateTime(score.updatedAt),
         metadata: score.metadata as Record<string, string>,
       });
 
@@ -803,16 +645,16 @@ export const scoresRouter = createTRPCRouter({
         scope: "scores:CUD",
       });
 
-      // Fetch the current score from Datastore
-      const datastoreScore = await getScoreById({
+      // Fetch the current score from Clickhouse
+      const clickhouseScore = await getScoreById({
         projectId: input.projectId,
         scoreId: input.id,
         source: ScoreSourceEnum.ANNOTATION,
       });
-      if (!datastoreScore) {
-        logger.warn(`No annotation score with id ${input.id} in project ${input.projectId} in Datastore`);
-        throw new ConsoleNotFoundError(
-          `No annotation score with id ${input.id} in project ${input.projectId} in Datastore`,
+      if (!clickhouseScore) {
+        logger.warn(`No annotation score with id ${input.id} in project ${input.projectId} in Clickhouse`);
+        throw new HanzoNotFoundError(
+          `No annotation score with id ${input.id} in project ${input.projectId} in Clickhouse`,
         );
       }
 
@@ -821,12 +663,12 @@ export const scoresRouter = createTRPCRouter({
         resourceType: "score",
         resourceId: input.id,
         action: "delete",
-        before: datastoreScore,
+        before: clickhouseScore,
       });
 
-      await deleteScores(input.projectId, [datastoreScore.id]);
+      await deleteScores(input.projectId, [clickhouseScore.id]);
 
-      return validateDbScore(datastoreScore);
+      return validateDbScore(clickhouseScore);
     }),
   upsertCorrection: protectedProjectProcedure
     .input(
@@ -848,18 +690,18 @@ export const scoresRouter = createTRPCRouter({
         scope: "scores:CUD",
       });
 
-      const datastoreTrace = await getTraceById({
+      const clickhouseTrace = await getTraceById({
         traceId: input.traceId,
         projectId: input.projectId,
-        datastoreFeatureTag: "annotations-trpc",
+        clickhouseFeatureTag: "annotations-trpc",
       });
 
-      if (!datastoreTrace) {
-        logger.error(`No trace with id ${input.traceId} in project ${input.projectId} in Datastore`);
-        throw new ConsoleNotFoundError(`No trace with id ${input.traceId} in project ${input.projectId} in Datastore`);
+      if (!clickhouseTrace) {
+        logger.error(`No trace with id ${input.traceId} in project ${input.projectId} in Clickhouse`);
+        throw new HanzoNotFoundError(`No trace with id ${input.traceId} in project ${input.projectId} in Clickhouse`);
       }
 
-      const datastoreScore = await searchExistingAnnotationScore(
+      const clickhouseScore = await searchExistingAnnotationScore(
         input.projectId,
         input.observationId ?? null,
         input.traceId,
@@ -871,9 +713,9 @@ export const scoresRouter = createTRPCRouter({
 
       const timestamp = input.timestamp;
 
-      const score = !!datastoreScore
+      const score = !!clickhouseScore
         ? {
-            ...datastoreScore,
+            ...clickhouseScore,
             value: 0,
             stringValue: null,
             comment: null,
@@ -910,7 +752,7 @@ export const scoresRouter = createTRPCRouter({
 
       await upsertScore({
         id: score.id, // Reuse ID that was generated by Prisma
-        timestamp: convertDateToDatastoreDateTime(timestamp),
+        timestamp: convertDateToClickhouseDateTime(timestamp),
         project_id: input.projectId,
         environment: input.environment ?? "default",
         trace_id: input.traceId,
@@ -925,8 +767,8 @@ export const scoresRouter = createTRPCRouter({
         data_type: ScoreDataTypeEnum.CORRECTION,
         string_value: null,
         queue_id: input.queueId ?? null,
-        created_at: convertDateToDatastoreDateTime(score.createdAt),
-        updated_at: convertDateToDatastoreDateTime(score.updatedAt),
+        created_at: convertDateToClickhouseDateTime(score.createdAt),
+        updated_at: convertDateToClickhouseDateTime(score.updatedAt),
         metadata: score.metadata as Record<string, string>,
         long_string_value: input.value,
       });

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { createEmptyMessage } from "@/src/components/ChatMessages/utils/createEmptyMessage";
 import { useModelParams } from "@/src/features/playground/page/hooks/useModelParams";
 import usePlaygroundCache from "@/src/features/playground/page/hooks/usePlaygroundCache";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import {
@@ -22,7 +22,7 @@ import {
   type ChatMessage,
   compileChatMessagesWithIds,
   type MessagePlaceholderValues,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 
 import type { MessagesContext } from "@/src/components/ChatMessages/types";
 import type { ModelParamsContext } from "@/src/components/ModelParameters";
@@ -77,7 +77,7 @@ export const usePlaygroundContext = () => {
 };
 
 export const PlaygroundProvider: React.FC<PlaygroundProviderProps> = ({ children, windowId }) => {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const projectId = useProjectIdFromURL();
   const { playgroundCache, setPlaygroundCache } = usePlaygroundCache(windowId);
   const [promptVariables, setPromptVariables] = useState<PromptVariable[]>([]);

@@ -8,11 +8,10 @@ import {
   InputCommandList,
   InputCommandSeparator,
 } from "@/src/components/ui/input-command";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { getAllModels } from "@/src/features/dashboard/components/hooks";
 import { cn } from "@/src/utils/tailwind";
-import { type FilterState } from "@hanzo/console-core";
-import { type ViewVersion } from "@/src/features/query";
+import { type FilterState } from "@hanzo/shared";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -82,9 +81,8 @@ export const useModelSelection = (
   globalFilterState: FilterState,
   fromTimestamp: Date,
   toTimestamp: Date,
-  metricsVersion?: ViewVersion,
 ) => {
-  const allModels = getAllModels(projectId, globalFilterState, fromTimestamp, toTimestamp, metricsVersion);
+  const allModels = getAllModels(projectId, globalFilterState, fromTimestamp, toTimestamp);
 
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [firstAllModelUpdate, setFirstAllModelUpdate] = useState(true);

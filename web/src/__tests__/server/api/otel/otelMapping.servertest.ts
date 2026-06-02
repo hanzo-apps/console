@@ -1,12 +1,8 @@
-import { OtelIngestionProcessor, createIngestionEventSchema } from "@hanzo/console-core/src/server";
+import { OtelIngestionProcessor, createIngestionEventSchema } from "@hanzo/shared/src/server";
 
 // Test helper function to maintain backward compatibility with existing tests
 // This mimics the old convertOtelSpanToIngestionEvent function signature
-async function convertOtelSpanToIngestionEvent(
-  resourceSpan: any,
-  seenTraces: Set<string>,
-  publicKey?: string,
-): Promise<Array<{ type: string; body: Record<string, any> }>> {
+async function convertOtelSpanToIngestionEvent(resourceSpan: any, seenTraces: Set<string>, publicKey?: string) {
   const processor = new OtelIngestionProcessor({
     projectId: "test-project",
     publicKey,
@@ -22,7 +18,7 @@ async function convertOtelSpanToIngestionEvent(
 
 describe("OTel Resource Span Mapping", () => {
   describe("Hanzo OTEL SDK spans", () => {
-    const publicKey = "pk-hz-1234567890";
+    const publicKey = "pk-lf-1234567890";
 
     it("should convert LF-OTEL spans to LF-events", async () => {
       const hanzoOtelSpans = [
@@ -60,7 +56,7 @@ describe("OTel Resource Span Mapping", () => {
                 attributes: [
                   {
                     key: "public_key",
-                    value: { stringValue: "pk-hz-1234567890" },
+                    value: { stringValue: "pk-lf-1234567890" },
                   },
                 ],
               },
@@ -387,7 +383,7 @@ describe("OTel Resource Span Mapping", () => {
                 attributes: [
                   {
                     key: "public_key",
-                    value: { stringValue: "pk-hz-1234567890" },
+                    value: { stringValue: "pk-lf-1234567890" },
                   },
                 ],
               },
@@ -3174,120 +3170,10 @@ describe("OTel Resource Span Mapping", () => {
       };
       expect(OtelIngestionProcessor.convertNanoTimestampToISO(zeroTimestamp)).toBe("1970-01-01T00:00:00.000Z");
     });
-
-    it("should return undefined for missing or invalid timestamps", () => {
-      expect(OtelIngestionProcessor.convertNanoTimestampToISO(undefined as any)).toBeUndefined();
-      expect(OtelIngestionProcessor.convertNanoTimestampToISO(null as any)).toBeUndefined();
-      expect(OtelIngestionProcessor.convertNanoTimestampToISO("")).toBeUndefined();
-      expect(OtelIngestionProcessor.convertNanoTimestampToISO("not-a-timestamp")).toBeUndefined();
-      expect(OtelIngestionProcessor.convertNanoTimestampToISO(NaN)).toBeUndefined();
-      expect(OtelIngestionProcessor.convertNanoTimestampToISO(Number.POSITIVE_INFINITY)).toBeUndefined();
-      expect(
-        OtelIngestionProcessor.convertNanoTimestampToISO({
-          high: 1,
-        } as any),
-      ).toBeUndefined();
-    });
-  });
-
-  describe("Missing span timestamps", () => {
-    it("should process spans with no start/end times without throwing", async () => {
-      const resourceSpan = {
-        resource: {
-          attributes: [{ key: "service.name", value: { stringValue: "test" } }],
-        },
-        scopeSpans: [
-          {
-            scope: {
-              name: "test-scope",
-              version: "1.0.0",
-            },
-            spans: [
-              {
-                traceId: "2cce18f7e8cd065a0b4e634eef728391",
-                spanId: "57f0255417974100",
-                name: "span-without-time",
-                kind: 1,
-                attributes: [],
-                status: {},
-              },
-            ],
-          },
-        ],
-      };
-
-      const processor = new OtelIngestionProcessor({
-        projectId: "test-project",
-      });
-      const eventInputs = processor.processToEvent([resourceSpan]);
-      expect(eventInputs).toHaveLength(1);
-      expect(eventInputs[0].startTimeISO).toBeDefined();
-      expect(eventInputs[0].endTimeISO).toBeDefined();
-      expect(eventInputs[0].startTimeISO).toBe(eventInputs[0].endTimeISO);
-
-      const ingestionEvents = await convertOtelSpanToIngestionEvent(resourceSpan, new Set());
-
-      const trace = ingestionEvents.find((e) => e.type === "trace-create");
-      const observation = ingestionEvents.find((e) => e.type === "span-create");
-
-      expect(trace).toBeDefined();
-      expect(trace?.body.timestamp).toBeDefined();
-      expect(observation).toBeDefined();
-      expect(observation?.body.startTime).toBeDefined();
-      expect(observation?.body.endTime).toBeDefined();
-      expect(observation?.body.startTime).toBe(observation?.body.endTime);
-    });
-
-    it("should use the present timestamp as fallback when only one edge is missing", async () => {
-      const endOnlyTimestamp = {
-        low: 467248096,
-        high: 406528574,
-        unsigned: true,
-      };
-      const expectedISO = OtelIngestionProcessor.convertNanoTimestampToISO(endOnlyTimestamp);
-
-      const resourceSpan = {
-        resource: {
-          attributes: [{ key: "service.name", value: { stringValue: "test" } }],
-        },
-        scopeSpans: [
-          {
-            scope: {
-              name: "test-scope",
-              version: "1.0.0",
-            },
-            spans: [
-              {
-                traceId: "2cce18f7e8cd065a0b4e634eef728391",
-                spanId: "57f0255417974100",
-                name: "span-end-only-time",
-                kind: 1,
-                endTimeUnixNano: endOnlyTimestamp,
-                attributes: [],
-                status: {},
-              },
-            ],
-          },
-        ],
-      };
-
-      const processor = new OtelIngestionProcessor({
-        projectId: "test-project",
-      });
-      const eventInputs = processor.processToEvent([resourceSpan]);
-      expect(eventInputs).toHaveLength(1);
-      expect(eventInputs[0].startTimeISO).toBe(expectedISO);
-      expect(eventInputs[0].endTimeISO).toBe(expectedISO);
-
-      const ingestionEvents = await convertOtelSpanToIngestionEvent(resourceSpan, new Set());
-      const observation = ingestionEvents.find((e) => e.type === "span-create");
-      expect(observation?.body.startTime).toBe(expectedISO);
-      expect(observation?.body.endTime).toBe(expectedISO);
-    });
   });
 
   describe("Trace seen logic", () => {
-    const publicKey = "pk-hz-1234567890";
+    const publicKey = "pk-lf-1234567890";
 
     it("should create a shallow trace when seenTraces set is empty for non-root span without trace updates", async () => {
       const otelSpans = [
@@ -3591,15 +3477,15 @@ describe("OTel Resource Span Mapping", () => {
                   },
                   attributes: [
                     {
-                      key: "hanzo.trace.metadata.console_user_id",
+                      key: "hanzo.trace.metadata.hanzo_user_id",
                       value: { stringValue: "user-123" },
                     },
                     {
-                      key: "hanzo.trace.metadata.console_session_id",
+                      key: "hanzo.trace.metadata.hanzo_session_id",
                       value: { stringValue: "session-456" },
                     },
                     {
-                      key: "hanzo.trace.metadata.console_tags",
+                      key: "hanzo.trace.metadata.hanzo_tags",
                       value: { stringValue: "tag1,tag2" },
                     },
                   ],
@@ -3672,15 +3558,15 @@ describe("OTel Resource Span Mapping", () => {
                   },
                   attributes: [
                     {
-                      key: "hanzo.observation.metadata.console_user_id",
+                      key: "hanzo.observation.metadata.hanzo_user_id",
                       value: { stringValue: "user-789" },
                     },
                     {
-                      key: "hanzo.observation.metadata.console_session_id",
+                      key: "hanzo.observation.metadata.hanzo_session_id",
                       value: { stringValue: "session-abc" },
                     },
                     {
-                      key: "hanzo.observation.metadata.console_tags",
+                      key: "hanzo.observation.metadata.hanzo_tags",
                       value: { stringValue: "tag3,tag4" },
                     },
                   ],
@@ -4133,7 +4019,7 @@ describe("OTel Resource Span Mapping", () => {
 
       const traceEvent = events.find((e) => e.type === "trace-create");
       expect(traceEvent).toBeDefined();
-      expect(traceEvent!.body.sessionId).toBe("hanzo-session-123");
+      expect(traceEvent.body.sessionId).toBe("hanzo-session-123");
     });
 
     it("should prioritize session.id over gen_ai.conversation.id when both are present", async () => {
@@ -4201,7 +4087,7 @@ describe("OTel Resource Span Mapping", () => {
 
       const traceEvent = events.find((e) => e.type === "trace-create");
       expect(traceEvent).toBeDefined();
-      expect(traceEvent!.body.sessionId).toBe("session-id-123");
+      expect(traceEvent.body.sessionId).toBe("session-id-123");
     });
 
     it("should default to span-create for unknown observation type", async () => {
@@ -4595,7 +4481,7 @@ describe("OTel Resource Span Mapping", () => {
                 attributes: [
                   {
                     key: "public_key",
-                    value: { stringValue: "pk-hz-1234567890" },
+                    value: { stringValue: "pk-lf-1234567890" },
                   },
                 ],
               },
@@ -4736,13 +4622,13 @@ describe("OTel Resource Span Mapping", () => {
       expect(updatedTraceEvent).toBeDefined();
 
       // original_span_attribute should still exist
-      expect(updatedTraceEvent!.body.metadata?.attributes?.original_span_attribute).toBe("should_be_preserved");
+      expect(updatedTraceEvent.body.metadata?.attributes?.original_span_attribute).toBe("should_be_preserved");
 
       // new_span_attribute should now exist
-      expect(updatedTraceEvent!.body.metadata?.attributes?.new_span_attribute).toBe("new_value");
+      expect(updatedTraceEvent.body.metadata?.attributes?.new_span_attribute).toBe("new_value");
 
       // The sessionId should be updated
-      expect(updatedTraceEvent!.body.sessionId).toBe("new-session");
+      expect(updatedTraceEvent.body.sessionId).toBe("new-session");
     });
   });
 

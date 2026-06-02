@@ -15,7 +15,7 @@ import {
 import { Switch } from "@/src/components/ui/switch";
 import { usePersistedWindowIds } from "@/src/features/playground/page/hooks/usePersistedWindowIds";
 import { type PlaygroundCache, type PlaygroundSchema, type PlaygroundTool } from "@/src/features/playground/page/types";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import {
   ChatMessageRole,
@@ -31,7 +31,7 @@ import {
   type PlaceholderMessage,
   PromptType,
   isGenerationLike,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { normalizeInput, normalizeOutput } from "@/src/utils/chatml";
 import { extractTools } from "@/src/utils/chatml/extractTools";
 import { convertChatMlToPlayground } from "@/src/utils/chatml/playgroundConverter";
@@ -62,7 +62,7 @@ type JumpToPlaygroundButtonProps = (
 
 export const JumpToPlaygroundButton: React.FC<JumpToPlaygroundButtonProps> = (props) => {
   const router = useRouter();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const projectId = useProjectIdFromURL();
   const { addWindowWithId, clearAllCache } = usePersistedWindowIds();
   const [capturedState, setCapturedState] = useState<PlaygroundCache>(null);

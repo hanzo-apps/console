@@ -7,15 +7,15 @@ import {
   DeleteTraceV1Query,
   DeleteTraceV1Response,
 } from "@/src/features/public-api/types/traces";
-import { filterAndValidateDbTraceScoreList, ConsoleNotFoundError } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+import { filterAndValidateDbTraceScoreList, HanzoNotFoundError } from "@hanzo/shared";
+import { prisma } from "@hanzo/shared/src/db";
 import {
   getObservationsForTrace,
   getScoresForTraces,
   getTraceById,
   traceException,
   traceDeletionProcessor,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import Decimal from "decimal.js";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
@@ -29,12 +29,12 @@ export default withMiddlewares({
       const trace = await getTraceById({
         traceId,
         projectId: auth.scope.projectId,
-        datastoreFeatureTag: "tracing-public-api",
-        preferredService: "ReadOnly",
+        clickhouseFeatureTag: "tracing-public-api",
+        preferredClickhouseService: "ReadOnly",
       });
 
       if (!trace) {
-        throw new ConsoleNotFoundError(`Trace ${traceId} not found within authorized project`);
+        throw new HanzoNotFoundError(`Trace ${traceId} not found within authorized project`);
       }
 
       const [observations, scores] = await Promise.all([
@@ -43,13 +43,13 @@ export default withMiddlewares({
           projectId: auth.scope.projectId,
           timestamp: trace?.timestamp,
           includeIO: true,
-          preferredService: "ReadOnly",
+          preferredClickhouseService: "ReadOnly",
         }),
         getScoresForTraces({
           projectId: auth.scope.projectId,
           traceIds: [traceId],
           timestamp: trace?.timestamp,
-          preferredService: "ReadOnly",
+          preferredClickhouseService: "ReadOnly",
         }),
       ]);
 

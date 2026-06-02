@@ -5,7 +5,7 @@
  * - Query generation and execution through executeQuery function
  * - SQL generation by QueryBuilder for various pivot table configurations
  * - Data transformation from raw query results to pivot table structure
- * - Integration with Datastore database and error handling
+ * - Integration with ClickHouse database and error handling
  *
  * Test Coverage:
  * - Zero dimension pivot tables (grand total only)
@@ -17,7 +17,7 @@
  */
 
 import { randomUUID } from "crypto";
-import { createTrace, createTracesCh, createObservation, createObservationsCh } from "@hanzo/console-core/src/server";
+import { createTrace, createTracesCh, createObservation, createObservationsCh } from "@hanzo/shared/src/server";
 import { type QueryType } from "@/src/features/query/types";
 import { transformToPivotTable, type DatabaseRow } from "@/src/features/widgets/utils/pivot-table-utils";
 import { QueryBuilder } from "@/src/features/query/server/queryBuilder";
@@ -88,7 +88,7 @@ describe("Dashboard Router - Pivot Table Integration", () => {
         ),
     ];
 
-    // Insert traces into Datastore
+    // Insert traces into ClickHouse
     await createTracesCh(traces);
 
     // Create observations with different models for each trace
@@ -148,7 +148,7 @@ describe("Dashboard Router - Pivot Table Integration", () => {
       );
     }
 
-    // Insert observations into Datastore
+    // Insert observations into ClickHouse
     await createObservationsCh(observations);
 
     // Calculate test data statistics for verification

@@ -13,7 +13,7 @@
  * All preferences are managed via ViewPreferencesContext and persisted to localStorage.
  */
 
-import { ObservationLevel } from "@hanzo/console-core";
+import { ObservationLevel } from "@hanzo/shared";
 import { Settings2 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import {
@@ -29,7 +29,7 @@ import {
 } from "@/src/components/ui/dropdown-menu";
 import { Switch } from "@/src/components/ui/switch";
 import { cn } from "@/src/utils/tailwind";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { useViewPreferences } from "../contexts/ViewPreferencesContext";
 
 export interface TraceSettingsDropdownProps {
@@ -37,7 +37,7 @@ export interface TraceSettingsDropdownProps {
 }
 
 export function TraceSettingsDropdown({ isGraphViewAvailable }: TraceSettingsDropdownProps) {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   // Get all preferences directly from context
   const {

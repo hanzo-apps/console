@@ -2,7 +2,7 @@ import { useState } from "react";
 import { type RouterInputs, api } from "@/src/utils/api";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { MAX_FILE_SIZE_BYTES } from "@/src/features/datasets/components/UploadDatasetCsv";
-import { type BulkDatasetItemValidationError } from "@hanzo/console-core";
+import { type BulkDatasetItemValidationError } from "@hanzo/shared";
 import chunk from "lodash/chunk";
 import { parseCsvClient, parseColumns, buildSchemaObject } from "@/src/features/datasets/lib/csv/helpers";
 import type { CsvColumnPreview, FieldMapping } from "@/src/features/datasets/lib/csv/types";
@@ -69,13 +69,13 @@ export function useCsvImport(options: UseCsvImportOptions) {
   const utils = api.useUtils();
   const mutCreateManyDatasetItems = api.datasets.createManyDatasetItems.useMutation({});
 
-  const execute = async (wrapSingleColumn: boolean): Promise<boolean> => {
+  const execute = async (wrapSingleColumn: boolean) => {
     const { csvFile, projectId, datasetId, input, expectedOutput, metadata } = options;
 
-    if (!csvFile) return false;
+    if (!csvFile) return;
     if (csvFile.size > MAX_FILE_SIZE_BYTES) {
       showErrorToast("File too large", "Maximum file size is 10MB");
-      return false;
+      return;
     }
 
     setValidationErrors([]);
@@ -187,7 +187,7 @@ export function useCsvImport(options: UseCsvImportOptions) {
             processedItems: 0,
             status: "not-started",
           });
-          return false;
+          return;
         }
 
         processedCount += chunkItems.length;
@@ -216,7 +216,7 @@ export function useCsvImport(options: UseCsvImportOptions) {
           `Please try again starting from row ${processedCount + 1}.`,
         );
       }
-      return false;
+      return;
     }
 
     utils.datasets.invalidate();
@@ -226,8 +226,6 @@ export function useCsvImport(options: UseCsvImportOptions) {
       processedItems: items.length,
       status: "complete",
     });
-
-    return true;
   };
 
   const reset = () => {

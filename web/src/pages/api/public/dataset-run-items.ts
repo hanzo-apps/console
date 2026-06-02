@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -8,7 +8,7 @@ import {
   PostDatasetRunItemsV1Body,
   PostDatasetRunItemsV1Response,
 } from "@/src/features/public-api/types/datasets";
-import { type JSONValue, ConsoleNotFoundError } from "@hanzo/console-core";
+import { HanzoNotFoundError } from "@hanzo/shared";
 import { addDatasetRunItemsToEvalQueue } from "@/src/features/evals/server/addDatasetRunItemsToEvalQueue";
 import {
   eventTypes,
@@ -16,23 +16,13 @@ import {
   processEventBatch,
   getObservationById,
   getDatasetItemById,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { v4 } from "uuid";
 import { createOrFetchDatasetRun } from "@/src/features/public-api/server/dataset-runs";
 import {
   generateDatasetRunItemsForPublicApi,
   getDatasetRunItemsCountForPublicApi,
 } from "@/src/features/public-api/server/dataset-run-items";
-
-const resolveMetadata = (metadata: JSONValue): Record<string, unknown> => {
-  if (Array.isArray(metadata)) {
-    return { metadata: metadata };
-  }
-  if (typeof metadata === "object" && metadata !== null) {
-    return metadata as Record<string, unknown>;
-  }
-  return { metadata: metadata };
-};
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({
@@ -50,11 +40,10 @@ export default withMiddlewares({
         projectId: auth.scope.projectId,
         datasetItemId: datasetItemId,
         status: "ACTIVE",
-        version: body.datasetVersion ?? undefined,
       });
 
       if (!datasetItem) {
-        throw new ConsoleNotFoundError("Dataset item not found");
+        throw new HanzoNotFoundError("Dataset item not found");
       }
 
       let finalTraceId = traceId;
@@ -67,32 +56,23 @@ export default withMiddlewares({
           fetchWithInputOutput: false,
         });
         if (observationId && !observation) {
-          throw new ConsoleNotFoundError("Observation not found");
+          throw new HanzoNotFoundError("Observation not found");
         }
         finalTraceId = observation?.traceId;
       }
 
       if (!finalTraceId) {
-        throw new ConsoleNotFoundError("Trace not found");
+        throw new HanzoNotFoundError("Trace not found");
       }
 
       /********************
        *   RUN CREATION    *
        ********************/
 
-      const metadata = {
-        ...(body.metadata ? resolveMetadata(body.metadata) : {}),
-        ...(body.datasetVersion
-          ? {
-              dataset_version: body.datasetVersion.toISOString(),
-            }
-          : {}),
-      };
-
       const run = await createOrFetchDatasetRun({
         name: body.runName,
         description: body.runDescription ?? undefined,
-        metadata: metadata,
+        metadata: body.metadata ?? undefined,
         projectId: auth.scope.projectId,
         datasetId: datasetItem.datasetId,
       });
@@ -118,7 +98,6 @@ export default withMiddlewares({
           datasetId: datasetItem.datasetId,
           runId: run.id,
           datasetItemId: datasetItem.id,
-          datasetVersion: datasetItem.validFrom.toISOString(),
         },
       };
       // note: currently we do not accept user defined ids for dataset run items
@@ -144,7 +123,6 @@ export default withMiddlewares({
       await addDatasetRunItemsToEvalQueue({
         projectId: auth.scope.projectId,
         datasetItemId: datasetItem.id,
-        datasetItemValidFrom: datasetItem.validFrom,
         traceId: finalTraceId,
         observationId: observationId ?? undefined,
       });
@@ -188,7 +166,7 @@ export default withMiddlewares({
       });
 
       if (!datasetRun) {
-        throw new ConsoleNotFoundError("Dataset run not found for the given project and dataset id");
+        throw new HanzoNotFoundError("Dataset run not found for the given project and dataset id");
       }
 
       const { datasetId, limit, page } = query;

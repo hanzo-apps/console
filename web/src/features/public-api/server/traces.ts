@@ -1,22 +1,22 @@
 import {
-  convertDateToDatastoreDateTime,
-  queryDatastore,
+  convertDateToClickhouseDateTime,
+  queryClickhouse,
   TRACE_TO_OBSERVATIONS_INTERVAL,
-  orderByToDatastoreSql,
+  orderByToClickhouseSql,
   type DateTimeFilter,
-  convertDatastoreTracesListToDomain,
+  convertClickhouseTracesListToDomain,
   type TraceRecordReadType,
   measureAndReturn,
   deriveFilters,
   createPublicApiTracesColumnMapping,
   tracesTableUiColumnDefinitions,
   shouldSkipObservationsFinal,
-} from "@hanzo/console-core/src/server";
-import { AGGREGATABLE_SCORE_TYPES, type OrderByState } from "@hanzo/console-core";
+} from "@hanzo/shared/src/server";
+import { AGGREGATABLE_SCORE_TYPES, type OrderByState } from "@hanzo/shared";
 import { TRACE_FIELD_GROUPS, type TraceFieldGroup } from "@/src/features/public-api/types/traces";
 import { env } from "@/src/env.mjs";
 
-import type { FilterState } from "@hanzo/console-core";
+import type { FilterState } from "@hanzo/shared";
 import snakeCase from "lodash/snakeCase";
 
 export type TraceQueryType = {
@@ -62,23 +62,23 @@ async function buildTracesBaseQuery(
   params: Record<string, any>;
   fromTimeFilter?: DateTimeFilter | undefined;
 }> {
-  // Datastore query optimizations for List Traces API
+  // ClickHouse query optimizations for List Traces API
   const disableObservationsFinal = await shouldSkipObservationsFinal(props.projectId);
-  const propagateObservationsTimeBounds = env.HANZO_API_DATASTORE_PROPAGATE_OBSERVATIONS_TIME_BOUNDS === "true";
+  const propagateObservationsTimeBounds = env.HANZO_API_CLICKHOUSE_PROPAGATE_OBSERVATIONS_TIME_BOUNDS === "true";
 
   let filter = deriveFilters(props, filterParams, advancedFilters, tracesTableUiColumnDefinitions);
   const appliedFilter = filter.apply();
 
   const fromTimeFilter = filter.find(
     (f) =>
-      f.datastoreTable === "traces" && f.field.includes("timestamp") && (f.operator === ">=" || f.operator === ">"),
+      f.clickhouseTable === "traces" && f.field.includes("timestamp") && (f.operator === ">=" || f.operator === ">"),
   ) as DateTimeFilter | undefined;
   const toTimeFilter = filter.find(
     (f) =>
-      f.datastoreTable === "traces" && f.field.includes("timestamp") && (f.operator === "<=" || f.operator === "<"),
+      f.clickhouseTable === "traces" && f.field.includes("timestamp") && (f.operator === "<=" || f.operator === "<"),
   ) as DateTimeFilter | undefined;
 
-  // We need to drop the datastorePrefix here to make the filter work for the observations and scores tables.
+  // We need to drop the clickhousePrefix here to make the filter work for the observations and scores tables.
   const environmentFilter = filter
     .filter((f) => f.field === "environment")
     .map((f) => {
@@ -91,13 +91,13 @@ async function buildTracesBaseQuery(
   // Otherwise, we will ignore it in most cases due to `FINAL`.
   const shouldUseSkipIndexes = filter.some(
     (f) =>
-      f.datastoreTable === "traces" &&
+      f.clickhouseTable === "traces" &&
       ["user_id", "session_id", "metadata"].some((skipIndexCol) => f.field.includes(skipIndexCol)),
   );
 
   // Check if any filters reference the observations or scores tables
-  const filtersNeedObservations = filter.some((f) => f.datastoreTable === "observations");
-  const filtersNeedScores = filter.some((f) => f.datastoreTable === "scores");
+  const filtersNeedObservations = filter.some((f) => f.clickhouseTable === "observations");
+  const filtersNeedScores = filter.some((f) => f.clickhouseTable === "scores");
 
   // Check if filters specifically reference score aggregation columns
   const hasScoreAggregationFilters = filter.some((f) => f.field === "s.scores_avg" || f.field === "s.score_categories");
@@ -204,7 +204,7 @@ async function buildTracesBaseQuery(
   // This may still return stale information if the orderBy key was updated between traces or if a filter
   // applies only to a stale value.
   const chOrderBy =
-    (orderByToDatastoreSql(orderBy || [], orderByColumns) || "ORDER BY t.timestamp desc") +
+    (orderByToClickhouseSql(orderBy || [], orderByColumns) || "ORDER BY t.timestamp desc") +
     (shouldUseSkipIndexes ? ", t.event_ts desc" : "");
 
   const queryMiddle = `
@@ -263,12 +263,12 @@ async function buildTracesBaseQuery(
     ...(props.page !== undefined ? { offset: (props.page - 1) * props.limit } : {}),
     ...(fromTimeFilter
       ? {
-          cteFromTimeFilter: convertDateToDatastoreDateTime(fromTimeFilter.value),
+          cteFromTimeFilter: convertDateToClickhouseDateTime(fromTimeFilter.value),
         }
       : {}),
     ...(toTimeFilter && propagateObservationsTimeBounds
       ? {
-          cteToTimeFilter: convertDateToDatastoreDateTime(toTimeFilter.value),
+          cteToTimeFilter: convertDateToClickhouseDateTime(toTimeFilter.value),
         }
       : {}),
   };
@@ -316,10 +316,10 @@ export const generateTracesForPublicApi = async ({
         operation_name: "getTracesForPublicApi",
       },
       fromTimestamp: fromTimeFilter?.value ?? undefined,
-      preferredService: "ReadOnly",
+      preferredClickhouseService: "ReadOnly",
     },
     fn: (input) => {
-      return queryDatastore<
+      return queryClickhouse<
         TraceRecordReadType & {
           observations?: string[];
           scores?: string[];
@@ -331,12 +331,12 @@ export const generateTracesForPublicApi = async ({
         query,
         params: input.params,
         tags: input.tags,
-        preferredService: "ReadOnly",
+        preferredClickhouseService: "ReadOnly",
       });
     },
   });
 
-  return convertDatastoreTracesListToDomain(result, {
+  return convertClickhouseTracesListToDomain(result, {
     metrics: includeMetrics,
     scores: includeScores,
     observations: includeObservations,
@@ -396,11 +396,11 @@ export const getTracesCountForPublicApi = async ({
       timestamp,
     },
     fn: async (input) => {
-      const records = await queryDatastore<{ count: string }>({
+      const records = await queryClickhouse<{ count: string }>({
         query: query.replace("__TRACE_TABLE__", "traces"),
         params: input.params,
         tags: input.tags,
-        preferredService: "ReadOnly",
+        preferredClickhouseService: "ReadOnly",
       });
       return records.map((record) => Number(record.count)).shift();
     },
@@ -420,8 +420,8 @@ const orderByColumns = [
 ].map((name) => ({
   uiTableName: name,
   uiTableId: name,
-  datastoreTableName: "traces",
-  datastoreSelect: snakeCase(name),
+  clickhouseTableName: "traces",
+  clickhouseSelect: snakeCase(name),
   queryPrefix: "t",
 }));
 

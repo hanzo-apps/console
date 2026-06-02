@@ -1,11 +1,11 @@
-import { Tabs, TabsList, TabsTrigger } from "@hanzo/ui";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hanzo/ui";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
 import useSessionStorage from "@/src/components/useSessionStorage";
-import { SupportOrUpgradePage } from "@/src/features/billing/components/SupportOrUpgradePage";
+import { SupportOrUpgradePage } from "@/src/ee/features/billing/components/SupportOrUpgradePage";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { AnnotationQueueItemPage } from "@/src/features/annotation-queues/components/AnnotationQueueItemPage";
 import { api } from "@/src/utils/api";
-import { AnnotationQueueObjectType } from "@hanzo/console-core";
+import { AnnotationQueueObjectType } from "@hanzo/shared";
 import { Goal, Network } from "lucide-react";
 import Page from "@/src/components/layouts/page";
 

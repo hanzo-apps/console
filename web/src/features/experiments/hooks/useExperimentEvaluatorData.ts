@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { type EvalTemplate } from "@hanzo/console-core";
+import { type EvalTemplate } from "@hanzo/shared";
 import { type RouterOutputs } from "@/src/utils/api";
 import { type PartialConfig } from "@/src/features/evals/types";
 import partition from "lodash/partition";
@@ -7,11 +7,7 @@ import partition from "lodash/partition";
 const partitionEvaluators = (
   evaluators: RouterOutputs["evals"]["jobConfigsByTarget"] | undefined,
   datasetId: string,
-): {
-  activeEvaluators: string[];
-  pausedEvaluators: string[];
-  evaluatorTargetObjects: Record<string, string>;
-} => {
+): { activeEvaluators: string[]; pausedEvaluators: string[] } => {
   const filteredEvaluators =
     evaluators?.filter(({ filter }) => {
       if (filter?.length === 0) return true;
@@ -26,16 +22,9 @@ const partitionEvaluators = (
   const activeIds = activeEvaluators.map((evaluator) => evaluator.evalTemplateId);
   const inactiveIds = pausedEvaluators.map((evaluator) => evaluator.evalTemplateId);
 
-  // Build a map of template ID to target object for displaying legacy badges
-  const evaluatorTargetObjects: Record<string, string> = {};
-  for (const evaluator of filteredEvaluators) {
-    evaluatorTargetObjects[evaluator.evalTemplateId] = evaluator.targetObject;
-  }
-
   return {
     activeEvaluators: activeIds,
     pausedEvaluators: inactiveIds,
-    evaluatorTargetObjects,
   };
 };
 
@@ -144,7 +133,7 @@ export function useExperimentEvaluatorData({
     [prepareEvaluatorData],
   );
 
-  const { activeEvaluators, pausedEvaluators, evaluatorTargetObjects } = useMemo(() => {
+  const { activeEvaluators, pausedEvaluators } = useMemo(() => {
     return partitionEvaluators(evaluatorsData, datasetId);
   }, [evaluatorsData, datasetId]);
 
@@ -154,7 +143,6 @@ export function useExperimentEvaluatorData({
     showEvaluatorForm,
     activeEvaluators,
     pausedEvaluators,
-    evaluatorTargetObjects,
 
     // Handlers
     handleConfigureEvaluator,

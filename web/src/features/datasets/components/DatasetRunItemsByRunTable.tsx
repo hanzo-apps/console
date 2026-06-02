@@ -1,6 +1,6 @@
 import { DataTable } from "@/src/components/table/data-table";
 import TableLink from "@/src/components/table/table-link";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { api } from "@/src/utils/api";
 import { formatIntervalSeconds } from "@/src/utils/dates";
 import { useQueryParams, withDefault, NumberParam } from "use-query-params";
@@ -12,22 +12,17 @@ import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-
 import { ListTree } from "lucide-react";
 import { useScoreColumns } from "@/src/features/scores/hooks/useScoreColumns";
 import useColumnOrder from "@/src/features/column-visibility/hooks/useColumnOrder";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { scoreFilters } from "@/src/features/scores/lib/scoreColumns";
 import { DatasetItemIOCell, TraceObservationIOCell } from "@/src/features/datasets/components/DatasetIOCells";
-import { datasetRunItemsTableColsWithOptions } from "@hanzo/console-core";
+import { datasetRunItemsTableColsWithOptions } from "@hanzo/shared";
 import { convertRunItemToItemsByRunUiTableRow } from "@/src/features/datasets/lib/convertRunItemDataToUiTableRow";
 import { type DatasetRunItemByRunRowData } from "@/src/features/datasets/lib/types";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { useQueryFilterState } from "@/src/features/filters/hooks/useFilterState";
 import { useDebounce } from "@/src/hooks/useDebounce";
 
-export function DatasetRunItemsByRunTable(props: {
-  projectId: string;
-  datasetId: string;
-  datasetRunId: string;
-  datasetVersion?: Date | null;
-}) {
+export function DatasetRunItemsByRunTable(props: { projectId: string; datasetId: string; datasetRunId: string }) {
   const { setDetailPageList } = useDetailPageLists();
   const [paginationState, setPaginationState] = useQueryParams({
     pageIndex: withDefault(NumberParam, 0),
@@ -82,7 +77,7 @@ export function DatasetRunItemsByRunTable(props: {
     }),
   });
 
-  const columns: ConsoleColumnDef<DatasetRunItemByRunRowData>[] = [
+  const columns: HanzoColumnDef<DatasetRunItemByRunRowData>[] = [
     {
       accessorKey: "datasetItemId",
       header: "Dataset Item",
@@ -91,10 +86,9 @@ export function DatasetRunItemsByRunTable(props: {
       isPinnedLeft: true,
       cell: ({ row }) => {
         const datasetItemId: string = row.getValue("datasetItemId");
-        const versionParam = props.datasetVersion ? `?version=${props.datasetVersion.toISOString()}` : "";
         return (
           <TableLink
-            path={`/project/${props.projectId}/datasets/${props.datasetId}/items/${datasetItemId}${versionParam}`}
+            path={`/project/${props.projectId}/datasets/${props.datasetId}/items/${datasetItemId}`}
             value={datasetItemId}
           />
         );
@@ -221,7 +215,6 @@ export function DatasetRunItemsByRunTable(props: {
             projectId={props.projectId}
             datasetId={props.datasetId}
             datasetItemId={datasetItemId}
-            datasetItemVersion={row.original.datasetItemVersion}
             io="expectedOutput"
             singleLine={rowHeight === "s"}
           />

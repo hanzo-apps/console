@@ -3,7 +3,7 @@ import router from "next/router";
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/src/components/ui/button";
-import { Checkbox } from "@hanzo/ui";
+import { Checkbox } from "@/src/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -13,8 +13,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/src/components/ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hanzo/ui";
-import { Textarea } from "@hanzo/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
+import { Textarea } from "@/src/components/ui/textarea";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { api } from "@/src/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +25,7 @@ import {
   PromptType,
   extractVariables,
   getIsCharOrUnderscore,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { PromptChatMessages } from "./PromptChatMessages";
 import { ReviewPromptDialog } from "./ReviewPromptDialog";
 import {
@@ -40,7 +40,7 @@ import { SquareArrowOutUpRight } from "lucide-react";
 import { PromptVariableListPreview } from "@/src/features/prompts/components/PromptVariableListPreview";
 import { CodeMirrorEditor } from "@/src/components/editor/CodeMirrorEditor";
 import { PromptLinkingEditor } from "@/src/components/editor/PromptLinkingEditor";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import usePlaygroundCache from "@/src/features/playground/page/hooks/usePlaygroundCache";
 import { useQueryParam } from "use-query-params";
 import { usePromptNameValidation } from "@/src/features/prompts/hooks/usePromptNameValidation";
@@ -61,7 +61,7 @@ export const NewPromptForm: React.FC<NewPromptFormProps> = (props) => {
   const [initialMessages, setInitialMessages] = useState<unknown>([]);
 
   const utils = api.useUtils();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   let initialPromptVariant: PromptVariant | null;
   try {
@@ -193,9 +193,6 @@ export const NewPromptForm: React.FC<NewPromptFormProps> = (props) => {
       if (draft.chatPrompt && Array.isArray(draft.chatPrompt) && draft.chatPrompt.length > 0) {
         setInitialMessages(draft.chatPrompt);
       }
-      if (folderPath && !initialPrompt) {
-        form.setValue("name", `${folderPath}/`);
-      }
     },
   });
 
@@ -219,7 +216,7 @@ export const NewPromptForm: React.FC<NewPromptFormProps> = (props) => {
                       <a
                         target="_blank"
                         rel="noopener noreferrer"
-                        href="https://hanzo.ai/docs/prompt-management/get-started#prompt-folders-for-organization"
+                        href="https://hanzo.com/docs/prompt-management/get-started#prompt-folders-for-organization"
                       >
                         <i>folders</i>
                       </a>
@@ -262,7 +259,7 @@ export const NewPromptForm: React.FC<NewPromptFormProps> = (props) => {
             </FormDescription>
             <Tabs
               value={form.watch("type")}
-              onValueChange={(e: string) => {
+              onValueChange={(e) => {
                 form.setValue("type", e as PromptType);
               }}
             >
@@ -353,6 +350,7 @@ export const NewPromptForm: React.FC<NewPromptFormProps> = (props) => {
                 onBlur={field.onBlur}
                 editable
                 mode="json"
+                minHeight="none"
               />
               <FormMessage />
             </FormItem>

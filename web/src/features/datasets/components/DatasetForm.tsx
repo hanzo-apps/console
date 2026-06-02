@@ -15,9 +15,9 @@ import { api } from "@/src/utils/api";
 import { useMemo, useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { Input } from "@/src/components/ui/input";
 import { CodeMirrorEditor } from "@/src/components/editor";
-import { DatasetNameSchema, isValidJSONSchema, type Prisma } from "@hanzo/console-core";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
-import { Label } from "@hanzo/ui";
+import { DatasetNameSchema, isValidJSONSchema, type Prisma } from "@hanzo/shared";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { Label } from "@/src/components/ui/label";
 import { useRouter } from "next/router";
 import { useUniqueNameValidation } from "@/src/hooks/useUniqueNameValidation";
 import { DialogBody, DialogFooter } from "@/src/components/ui/dialog";
@@ -122,7 +122,7 @@ export const DatasetForm = forwardRef<DatasetFormRef, DatasetFormProps>((props, 
   const [formError, setFormError] = useState<string | null>(null);
   const [serverSideSchemaValidationErrors, setServerSideSchemaValidationErrors] =
     useState<ServerSideSchemaValidationErrors | null>(null);
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
 
   const inputSchemaString =

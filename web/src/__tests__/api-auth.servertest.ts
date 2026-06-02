@@ -1,5 +1,5 @@
-import { getDisplaySecretKey, hashSecretKey, OrgEnrichedApiKey } from "@hanzo/console-core/src/server";
-import { Prisma, type PrismaClient, prisma } from "@hanzo/console-core/src/db";
+import { getDisplaySecretKey, hashSecretKey, OrgEnrichedApiKey } from "@hanzo/shared/src/server";
+import { Prisma, type PrismaClient, prisma } from "@hanzo/shared/src/db";
 import { Redis } from "ioredis";
 import { env } from "@/src/env.mjs";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
@@ -16,7 +16,7 @@ describe("Authenticate API calls", () => {
     it("should create new api key", async () => {
       await createAPIKey();
       const auth = await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       expect(auth.validKey).toBe(true);
@@ -31,7 +31,7 @@ describe("Authenticate API calls", () => {
     it("should create new api key and succeed with new key", async () => {
       await createAPIKey();
       const auth = await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
       expect(auth.validKey).toBe(true);
 
@@ -42,12 +42,12 @@ describe("Authenticate API calls", () => {
       expect(apiKey?.fastHashedSecretKey).not.toBeNull();
 
       const auth2 = await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
       expect(auth2.validKey).toBe(true);
     });
 
-    it("should create new api key with billing data and succeed with new key", async () => {
+    it("should create new api key with stripe data and succeed with new key", async () => {
       await createAPIKey();
 
       await prisma.organization.update({
@@ -56,7 +56,7 @@ describe("Authenticate API calls", () => {
         },
         data: {
           cloudConfig: {
-            billing: {
+            stripe: {
               customerId: "cus_test123",
               activeSubscriptionId: "sub_test123",
               activeProductId: "prod_test123",
@@ -66,17 +66,17 @@ describe("Authenticate API calls", () => {
       });
 
       await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       const auth = await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
       expect(auth.validKey).toBe(true);
 
       if (auth.validKey) {
         expect(auth.scope.orgId).toBe("seed-org-id");
-        expect(auth.scope.plan).toBe("oss");
+        expect(auth.scope.plan).toBe("cloud:free");
         expect(auth.scope.rateLimitOverrides).toEqual([]);
       }
 
@@ -117,17 +117,17 @@ describe("Authenticate API calls", () => {
       });
 
       await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       const auth = await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
       expect(auth.validKey).toBe(true);
 
       if (auth.validKey) {
         expect(auth.scope.orgId).toBe("seed-org-id");
-        expect(auth.scope.plan).toBe("oss");
+        expect(auth.scope.plan).toBe("cloud:free");
         expect(auth.scope.rateLimitOverrides).toEqual([
           {
             resource: "ingestion",
@@ -156,7 +156,7 @@ describe("Authenticate API calls", () => {
     it("should fail on wrong api key with new key", async () => {
       await createAPIKey();
       const auth = await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
       expect(auth.validKey).toBe(true);
 
@@ -168,7 +168,7 @@ describe("Authenticate API calls", () => {
       expect(apiKey?.fastHashedSecretKey).not.toBeNull();
 
       const wrongAuth = await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkx",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkx",
       );
       expect(wrongAuth.validKey).toBe(false);
     });
@@ -182,7 +182,7 @@ describe("Authenticate API calls", () => {
       expect(initialApiKey?.fastHashedSecretKey).toBeNull();
 
       const auth = await new ApiAuthService(prisma, null).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkx",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkx",
       );
       expect(auth.validKey).toBe(false);
 
@@ -246,7 +246,7 @@ describe("Authenticate API calls", () => {
 
       // first auth will generate the fast hashed api key
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       const apiKey = await prisma.apiKey.findUnique({
@@ -261,7 +261,7 @@ describe("Authenticate API calls", () => {
 
       // second will add the key to redis
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       const cachedKey2 = await redis.get(`api-key:${apiKey?.fastHashedSecretKey}`);
@@ -273,7 +273,7 @@ describe("Authenticate API calls", () => {
       expect(parsed).toEqual({
         ...apiKey,
         orgId: "seed-org-id",
-        plan: "oss",
+        plan: "cloud:free",
         rateLimitOverrides: [
           {
             resource: "public-api",
@@ -320,11 +320,11 @@ describe("Authenticate API calls", () => {
 
       // first auth will generate the fast hashed api key
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       const apiKey = await prisma.apiKey.findUnique({
-        where: { publicKey: "pk-hz-1234567890" },
+        where: { publicKey: "pk-lf-1234567890" },
       });
 
       expect(apiKey).not.toBeNull();
@@ -334,8 +334,8 @@ describe("Authenticate API calls", () => {
       const nonScopedKey = {
         id: "seed-api-key",
         note: "seeded key",
-        publicKey: "pk-hz-1234567890",
-        displaySecretKey: "sk-hz-...7890",
+        publicKey: "pk-lf-1234567890",
+        displaySecretKey: "sk-lf-...7890",
         createdAt: new Date().toISOString(),
         lastUsedAt: null,
         expiresAt: null,
@@ -366,7 +366,7 @@ describe("Authenticate API calls", () => {
 
       // Auth should still succeed by falling back to Postgres
       const verification = await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       expect(verification.validKey).toBe(true);
@@ -383,7 +383,7 @@ describe("Authenticate API calls", () => {
       expect(parsed).toEqual({
         ...apiKey,
         orgId: "seed-org-id",
-        plan: "oss",
+        plan: "cloud:hobby",
         scope: "PROJECT", // Now the scope is present
         projectId: "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a",
         rateLimitOverrides: [
@@ -412,7 +412,7 @@ describe("Authenticate API calls", () => {
       // key does not exist in database
 
       const verification = await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       expect(verification.validKey).toBe(false);
@@ -427,7 +427,7 @@ describe("Authenticate API calls", () => {
       // key does not exist in database
 
       const verification = await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       expect(verification.validKey).toBe(false);
@@ -438,7 +438,7 @@ describe("Authenticate API calls", () => {
       expect(redisValue).toBe('"api-key-non-existent"');
 
       const verification2 = await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
       expect(verification2.validKey).toBe(false);
 
@@ -460,17 +460,17 @@ describe("Authenticate API calls", () => {
 
       // first auth will generate the fast hashed api key
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       // second will add the key to redis
       const auth2 = await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       // third will read from redis only
       await new ApiAuthService(mockPrisma as unknown as PrismaClient, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       expect(auth2.validKey).toBe(true);
@@ -478,7 +478,7 @@ describe("Authenticate API calls", () => {
       // Ensure prisma was not called
       expect(mockPrisma.apiKey.findUnique).not.toHaveBeenCalled();
 
-      const cachedKey = await redis.get("api-key:3a59a2355b705f1daac5f26f75de5dfa35c6162393ab33b0bc6d8ab53afac0c2");
+      const cachedKey = await redis.get("api-key:ed6818ada09bdad405a74ac72773dde1708dd3fc6fe8bb81b59927400419d227");
       expect(cachedKey).not.toBeNull();
 
       const parsed = OrgEnrichedApiKey.parse(JSON.parse(cachedKey!));
@@ -496,7 +496,7 @@ describe("Authenticate API calls", () => {
         isIngestionSuspended: expect.anything(),
         projectId: expect.any(String),
         orgId: "seed-org-id",
-        plan: "oss",
+        plan: "cloud:hobby",
         scope: "PROJECT",
       });
     });
@@ -513,20 +513,20 @@ describe("Authenticate API calls", () => {
 
       // first auth will generate the fast hashed api key
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       // second will add the key to redis
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       // third will read from redis only
       await new ApiAuthService(mockPrisma as unknown as PrismaClient, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
-      const ttl = await redis.ttl("api-key:3a59a2355b705f1daac5f26f75de5dfa35c6162393ab33b0bc6d8ab53afac0c2");
+      const ttl = await redis.ttl("api-key:ed6818ada09bdad405a74ac72773dde1708dd3fc6fe8bb81b59927400419d227");
 
       expect(ttl).toBeGreaterThan(env.HANZO_CACHE_API_KEY_TTL_SECONDS - 2);
 
@@ -534,10 +534,10 @@ describe("Authenticate API calls", () => {
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
       await new ApiAuthService(mockPrisma as unknown as PrismaClient, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
-      const ttl2 = await redis.ttl("api-key:3a59a2355b705f1daac5f26f75de5dfa35c6162393ab33b0bc6d8ab53afac0c2");
+      const ttl2 = await redis.ttl("api-key:ed6818ada09bdad405a74ac72773dde1708dd3fc6fe8bb81b59927400419d227");
 
       expect(ttl2).toBeGreaterThan(env.HANZO_CACHE_API_KEY_TTL_SECONDS - 2);
     }, 10000);
@@ -547,12 +547,12 @@ describe("Authenticate API calls", () => {
 
       // first auth will generate the fast hashed api key
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       // second will add the key to redis
       const auth2 = await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       expect(auth2.validKey).toBe(true);
@@ -572,7 +572,7 @@ describe("Authenticate API calls", () => {
       expect(parsed).toEqual({
         ...apiKey,
         orgId: "seed-org-id",
-        plan: "oss",
+        plan: "cloud:free",
         createdAt: apiKey?.createdAt.toISOString(),
         scope: "PROJECT",
         isIngestionSuspended: expect.anything(),
@@ -627,11 +627,11 @@ describe("Authenticate API calls", () => {
 
       // put keys into cache
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       const apiKey = await prisma.apiKey.findUnique({
@@ -678,10 +678,10 @@ describe("Authenticate API calls", () => {
 
       // put keys into cache
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
       await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(
-        "Basic cGstaHotMTIzNDU2Nzg5MDpzay1oei0xMjM0NTY3ODkw",
+        "Basic cGstbGYtMTIzNDU2Nzg5MDpzay1sZi0xMjM0NTY3ODkw",
       );
 
       const apiKey = await prisma.apiKey.findUnique({

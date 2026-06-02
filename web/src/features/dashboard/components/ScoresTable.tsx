@@ -1,7 +1,6 @@
 import { DashboardCard } from "@/src/features/dashboard/components/cards/DashboardCard";
 import { DashboardTable } from "@/src/features/dashboard/components/cards/DashboardTable";
-import { type ScoreDataTypeType, type ScoreSourceType, type FilterState } from "@hanzo/console-core";
-import { type ViewVersion } from "@/src/features/query";
+import { type ScoreDataTypeType, type ScoreSourceType, type FilterState } from "@hanzo/shared";
 import { api } from "@/src/utils/api";
 import { compactNumberFormatter } from "@/src/utils/numbers";
 import { RightAlignedCell } from "./RightAlignedCell";
@@ -30,13 +29,11 @@ export const ScoresTable = ({
   projectId,
   globalFilterState,
   isLoading = false,
-  metricsVersion,
 }: {
   className: string;
   projectId: string;
   globalFilterState: FilterState;
   isLoading?: boolean;
-  metricsVersion?: ViewVersion;
 }) => {
   const localFilters = createTracesTimeFilter(globalFilterState, "scoreTimestamp");
 
@@ -65,7 +62,6 @@ export const ScoresTable = ({
       ],
       orderBy: [{ column: "scoreId", direction: "DESC", agg: "COUNT" }],
       queryName: "score-aggregate",
-      version: metricsVersion ?? "v1",
     },
     {
       trpc: {
@@ -110,7 +106,6 @@ export const ScoresTable = ({
         ],
         orderBy: [{ column: "scoreId", direction: "DESC", agg: "COUNT" }],
         queryName: "score-aggregate",
-        version: metricsVersion ?? "v1",
       },
       {
         trpc: {
@@ -195,7 +190,7 @@ export const ScoresTable = ({
         isLoading={isLoading || metrics.isPending || zeroValueScores.isPending || oneValueScores.isPending}
         noDataProps={{
           description: "Scores evaluate LLM quality and can be created manually or using the SDK.",
-          href: "https://hanzo.ai/docs/evaluation/overview",
+          href: "https://hanzo.com/docs/evaluation/overview",
         }}
       >
         <TotalMetric

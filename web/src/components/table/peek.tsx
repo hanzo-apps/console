@@ -1,16 +1,15 @@
 import { Button } from "@/src/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
 import { Expand, ExternalLink } from "lucide-react";
-import { Separator } from "@hanzo/ui";
-import { ItemBadge, type ConsoleItemType } from "@/src/components/ItemBadge";
+import { Separator } from "@/src/components/ui/separator";
+import { ItemBadge, type HanzoItemType } from "@/src/components/ItemBadge";
 import { DetailPageNav } from "@/src/features/navigate-detail-pages/DetailPageNav";
 import { type ListEntry } from "@/src/features/navigate-detail-pages/context";
 import { cn } from "@/src/utils/tailwind";
 import { memo } from "react";
 import { useRouter } from "next/router";
-import { PeekTableStateProvider } from "@/src/components/table/peek/contexts/PeekTableStateContext";
 
-type PeekViewItemType = Extract<ConsoleItemType, "TRACE" | "DATASET_ITEM" | "RUNNING_EVALUATOR" | "EVALUATOR">;
+type PeekViewItemType = Extract<HanzoItemType, "TRACE" | "DATASET_ITEM" | "RUNNING_EVALUATOR" | "EVALUATOR">;
 
 /**
  * Options to control peek event behavior.
@@ -51,6 +50,9 @@ export type DataTablePeekViewProps = {
    * The content to display in the peek view.
    */
   children: React.ReactNode;
+
+  /** The timestamp of the last time the table data was updated */
+  tableDataUpdatedAt: number;
 };
 
 export const createPeekEventHandler = (options?: PeekEventControlOptions) => {
@@ -137,16 +139,17 @@ function TablePeekViewComponent(props: TablePeekViewProps) {
           </div>
         </SheetHeader>
         <Separator />
-        <PeekTableStateProvider>
-          <div className="flex max-h-full min-h-0 flex-1 flex-col">
-            <div className="flex-1 overflow-auto" key={itemId}>
-              {peekView.children}
-            </div>
+        <div className="flex max-h-full min-h-0 flex-1 flex-col">
+          <div className="flex-1 overflow-auto" key={itemId}>
+            {peekView.children}
           </div>
-        </PeekTableStateProvider>
+        </div>
       </SheetContent>
     </Sheet>
   );
 }
 
-export const TablePeekView = memo(TablePeekViewComponent);
+export const TablePeekView = memo(TablePeekViewComponent, (prev, next) => {
+  // TODO LFE-6627: drop tableDataUpdatedAt and allow memoization to work independently of table data updates
+  return prev.peekView.tableDataUpdatedAt === next.peekView.tableDataUpdatedAt;
+}) as typeof TablePeekViewComponent;

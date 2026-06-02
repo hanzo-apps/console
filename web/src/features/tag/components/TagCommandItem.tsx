@@ -1,7 +1,7 @@
 import { InputCommandItem } from "@/src/components/ui/input-command";
 import { Button } from "@/src/components/ui/button";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
-import { Checkbox } from "@hanzo/ui";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { Checkbox } from "@/src/components/ui/checkbox";
 
 type TagCommandItemProps = {
   value: string;
@@ -10,7 +10,7 @@ type TagCommandItemProps = {
 };
 
 const TagCommandItem = ({ value, selectedTags, setSelectedTags }: TagCommandItemProps) => {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   return (
     <InputCommandItem
       key={value}

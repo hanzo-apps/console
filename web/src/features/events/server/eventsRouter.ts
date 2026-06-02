@@ -1,19 +1,15 @@
 import { type z } from "zod/v4";
 import { z as zodSchema } from "zod/v4";
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { type Observation, type OrderByState, paginationZod, timeFilter } from "@hanzo/console-core";
+import { type Observation, type OrderByState, paginationZod, timeFilter } from "@hanzo/shared";
 import { EventsTableOptions } from "./types";
 import { getEventList, getEventCount, getEventFilterOptions, getEventBatchIO } from "./eventsService";
 import {
   instrumentAsync,
   getScoresAndCorrectionsForTraces,
-  convertDateToDatastoreDateTime,
+  convertDateToClickhouseDateTime,
   getAgentGraphDataFromEventsTable,
-  getObservationsForTraceFromEventsTable,
-  MAX_OBSERVATIONS_PER_TRACE,
-  applyCommentFilters,
-} from "@hanzo/console-core/src/server";
-
+} from "@hanzo/shared/src/server";
 import { AgentGraphDataSchema, type AgentGraphDataResponse } from "@/src/features/trace-graph-view/types";
 import type * as opentelemetry from "@opentelemetry/api";
 
@@ -49,17 +45,6 @@ export type BatchIOInput = z.infer<typeof BatchIOInput>;
 
 export const eventsRouter = createTRPCRouter({
   all: protectedProjectProcedure.input(GetAllEventsInput).query(async ({ input, ctx }) => {
-    const { filterState, hasNoMatches } = await applyCommentFilters({
-      filterState: input.filter ?? [],
-      prisma: ctx.prisma,
-      projectId: ctx.session.projectId,
-      objectType: "OBSERVATION",
-    });
-
-    if (hasNoMatches) {
-      return { observations: [] };
-    }
-
     return instrumentAsync(
       {
         name: "get-event-list-trpc",
@@ -69,7 +54,7 @@ export const eventsRouter = createTRPCRouter({
 
         return getEventList({
           projectId: ctx.session.projectId,
-          filter: filterState,
+          filter: input.filter ?? [],
           searchQuery: input.searchQuery ?? undefined,
           searchType: input.searchType,
           orderBy: input.orderBy,
@@ -80,17 +65,6 @@ export const eventsRouter = createTRPCRouter({
     );
   }),
   countAll: protectedProjectProcedure.input(GetAllEventsInput).query(async ({ input, ctx }) => {
-    const { filterState, hasNoMatches } = await applyCommentFilters({
-      filterState: input.filter ?? [],
-      prisma: ctx.prisma,
-      projectId: ctx.session.projectId,
-      objectType: "OBSERVATION",
-    });
-
-    if (hasNoMatches) {
-      return { totalCount: 0 };
-    }
-
     return instrumentAsync(
       {
         name: "get-event-count-trpc",
@@ -99,7 +73,7 @@ export const eventsRouter = createTRPCRouter({
         addAttributesToSpan({ span, input, orderBy: input.orderBy });
         return getEventCount({
           projectId: ctx.session.projectId,
-          filter: filterState,
+          filter: input.filter ?? [],
           searchQuery: input.searchQuery ?? undefined,
           searchType: input.searchType,
           orderBy: input.orderBy,
@@ -170,36 +144,6 @@ export const eventsRouter = createTRPCRouter({
       });
     }),
   /**
-   * Fetch all observations for a trace from the events table.
-   * Returns up to MAX_OBSERVATIONS_PER_TRACE observations.
-   * Sets cutoffObservationsAfterMaxCount=true if trace exceeds the cap.
-   */
-  byTraceId: protectedProjectProcedure
-    .input(
-      zodSchema.object({
-        projectId: zodSchema.string(),
-        traceId: zodSchema.string(),
-        timestamp: zodSchema.date().optional(),
-      }),
-    )
-    .query(async ({ input, ctx }) => {
-      return instrumentAsync({ name: "get-events-by-trace-id-trpc" }, async (span) => {
-        span.setAttribute("project_id", ctx.session.projectId);
-        span.setAttribute("trace_id", input.traceId);
-
-        const { observations, totalCount } = await getObservationsForTraceFromEventsTable({
-          projectId: ctx.session.projectId,
-          traceId: input.traceId,
-          timestamp: input.timestamp,
-        });
-
-        return {
-          observations,
-          cutoffObservationsAfterMaxCount: totalCount > MAX_OBSERVATIONS_PER_TRACE,
-        };
-      });
-    }),
-  /**
    * Fetch agent graph data from events table.
    * Used by v4 events-based trace detail view for graph visualization.
    * Returns same shape as traces.getAgentGraphData for frontend compatibility.
@@ -220,8 +164,8 @@ export const eventsRouter = createTRPCRouter({
 
         const { traceId, minStartTime, maxStartTime } = input;
 
-        const chMinStartTime = convertDateToDatastoreDateTime(new Date(minStartTime));
-        const chMaxStartTime = convertDateToDatastoreDateTime(new Date(maxStartTime));
+        const chMinStartTime = convertDateToClickhouseDateTime(new Date(minStartTime));
+        const chMaxStartTime = convertDateToClickhouseDateTime(new Date(maxStartTime));
 
         const records = await getAgentGraphDataFromEventsTable({
           projectId: ctx.session.projectId,
@@ -300,9 +244,7 @@ export const addAttributesToSpan = ({
     }
 
     input.filter.forEach((f) => {
-      if (f.value !== undefined) {
-        span.setAttribute(f.column, String(f.value));
-      }
+      span.setAttribute(f.column, f.value.toString());
     });
   }
 

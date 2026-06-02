@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "@/src/utils/tailwind";
 import DocPopup from "@/src/components/layouts/doc-popup";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 interface NoDataOrLoadingProps {
   isLoading: boolean;
@@ -19,11 +19,11 @@ const NoData = ({ noDataText = "No data", children, className }: NoDataProps) =>
   return (
     <div
       className={cn(
-        "flex h-3/4 min-h-[9rem] w-full items-center justify-center rounded-md border border-dashed",
+        "flex h-3/4 min-h-[9rem] w-full items-center justify-center rounded-tremor-default border border-dashed",
         className,
       )}
     >
-      <p className="text-muted-foreground">{noDataText}</p>
+      <p className="text-tremor-content">{noDataText}</p>
       {children}
     </div>
   );
@@ -32,7 +32,9 @@ const NoData = ({ noDataText = "No data", children, className }: NoDataProps) =>
 export function NoDataOrLoading({ isLoading, description, href, className }: NoDataOrLoadingProps) {
   if (isLoading) {
     return (
-      <div className={cn("flex h-3/4 min-h-[9rem] w-full items-center justify-center rounded-md", className)}>
+      <div
+        className={cn("flex h-3/4 min-h-[9rem] w-full items-center justify-center rounded-tremor-default", className)}
+      >
         <Skeleton className="h-full w-full" />
       </div>
     );

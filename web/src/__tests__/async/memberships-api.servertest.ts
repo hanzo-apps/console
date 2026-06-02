@@ -1,11 +1,11 @@
 /** @jest-environment node */
 
 import { makeZodVerifiedAPICall, makeAPICall } from "@/src/__tests__/test-utils";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { z } from "zod/v4";
 import { randomUUID } from "crypto";
-import { Role } from "@hanzo/console-core";
-import { createAndAddApiKeysToDb, createBasicAuthHeader } from "@hanzo/console-core/src/server";
+import { Role } from "@hanzo/shared";
+import { createAndAddApiKeysToDb, createBasicAuthHeader } from "@hanzo/shared/src/server";
 
 // Schema for membership response
 const MembershipResponseSchema = z.object({
@@ -63,8 +63,8 @@ describe("Memberships APIs", () => {
       scope: "ORGANIZATION",
       note: "Test API Key for Memberships API",
       predefinedKeys: {
-        publicKey: `pk-hz-org-${randomUUID().substring(0, 8)}`,
-        secretKey: `sk-hz-org-${randomUUID().substring(0, 8)}`,
+        publicKey: `pk-lf-org-${randomUUID().substring(0, 8)}`,
+        secretKey: `sk-lf-org-${randomUUID().substring(0, 8)}`,
       },
     });
     testApiKey = apiKey.publicKey;
@@ -133,8 +133,8 @@ describe("Memberships APIs", () => {
           scope: "PROJECT",
           note: "Test API Key for Memberships API",
           predefinedKeys: {
-            publicKey: `pk-hz-project-${randomUUID().substring(0, 8)}`,
-            secretKey: `sk-hz-project-${randomUUID().substring(0, 8)}`,
+            publicKey: `pk-lf-project-${randomUUID().substring(0, 8)}`,
+            secretKey: `sk-lf-project-${randomUUID().substring(0, 8)}`,
           },
         });
 

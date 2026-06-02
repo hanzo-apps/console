@@ -8,7 +8,7 @@ import { useMemo } from "react";
 import type { Session, User } from "next-auth";
 import { useEntitlements } from "@/src/features/entitlements/hooks";
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 import { ROUTES, RouteSection, RouteGroup, type Route } from "@/src/components/layouts/routes";
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 import { applyNavigationFilters } from "../utils/navigationFilters";
@@ -47,9 +47,6 @@ function groupNavigationItems(items: NavigationItem[]): GroupedNavigation {
         ...(grouped[RouteGroup.Observability] || []),
         ...(grouped[RouteGroup.PromptManagement] || []),
         ...(grouped[RouteGroup.Evaluation] || []),
-        ...(grouped[RouteGroup.Agents] || []),
-        ...(grouped[RouteGroup.KMS] || []),
-        ...(grouped[RouteGroup.Base] || []),
       ]
     : [];
 
@@ -78,7 +75,7 @@ export function useFilteredNavigation(session: Session | null, organization: Org
   const router = useRouter();
   const entitlements = useEntitlements();
   const uiCustomization = useUiCustomization();
-  const { isConsoleCloud, region } = useConsoleCloudRegion();
+  const { isHanzoCloud, region } = useHanzoCloudRegion();
 
   const routerProjectId = router.query.projectId as string | undefined;
   const routerOrganizationId = router.query.organizationId as string | undefined;
@@ -90,10 +87,9 @@ export function useFilteredNavigation(session: Session | null, organization: Org
       routerOrganizationId,
       session,
       enableExperimentalFeatures: session?.environment?.enableExperimentalFeatures ?? false,
-      cloudAdmin: Boolean(session?.user?.admin && isConsoleCloud && region !== "DEV"),
+      cloudAdmin: Boolean(session?.user?.admin && isHanzoCloud && region !== "DEV"),
       entitlements,
       uiCustomization,
-      isConsoleCloud,
       currentPath: router.asPath,
     }),
     [
@@ -103,7 +99,7 @@ export function useFilteredNavigation(session: Session | null, organization: Org
       entitlements,
       uiCustomization,
       router.asPath,
-      isConsoleCloud,
+      isHanzoCloud,
       region,
     ],
   );

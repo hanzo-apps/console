@@ -4,14 +4,14 @@ import { NumberParam, StringParam, useQueryParam, withDefault } from "use-query-
 import type { z } from "zod/v4";
 import { OpenAiMessageView } from "@/src/components/trace2/components/IOPreview/components/ChatMessageList";
 import { TabsBar, TabsBarList, TabsBarContent, TabsBarTrigger } from "@/src/components/ui/tabs-bar";
-import { Tabs, TabsList, TabsTrigger } from "@hanzo/ui";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Badge } from "@/src/components/ui/badge";
 import { CodeView, JSONView } from "@/src/components/ui/CodeJsonViewer";
 import { DetailPageNav } from "@/src/features/navigate-detail-pages/DetailPageNav";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { api } from "@/src/utils/api";
 import { getNumberFromMap } from "@/src/utils/map-utils";
-import { extractVariables, PRODUCTION_LABEL, PromptType } from "@hanzo/console-core";
+import { extractVariables, PRODUCTION_LABEL, PromptType } from "@hanzo/shared";
 import { getPromptTabs, PROMPT_TABS } from "@/src/features/navigation/utils/prompt-tabs";
 import { PromptHistoryNode } from "./prompt-history";
 import { JumpToPlaygroundButton } from "@/src/features/playground/page/components/JumpToPlaygroundButton";
@@ -20,7 +20,7 @@ import Generations from "@/src/components/table/use-cases/observations";
 import { FlaskConical, MoreVertical, Plus } from "lucide-react";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { Button } from "@/src/components/ui/button";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { Dialog, DialogContent, DialogTrigger } from "@/src/components/ui/dialog";
 import { CreateExperimentsForm } from "@/src/features/experiments/components/CreateExperimentsForm";
 import { useMemo, useState } from "react";
@@ -76,7 +76,7 @@ await hanzo.prompt.get("${name}", { version: ${version} })
 
 export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: string } = {}) => {
   const projectId = useProjectIdFromURL();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const router = useRouter();
 
   const promptName =
@@ -403,7 +403,7 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
               </div>
             </div>
           </div>
-          <TabsBar value={currentTab} className="min-h-0" onValueChange={(value: string) => setCurrentTab(value)}>
+          <TabsBar value={currentTab} className="min-h-0" onValueChange={(value) => setCurrentTab(value)}>
             <TabsBarList className="min-w-0 max-w-full justify-start overflow-x-auto">
               <TabsBarTrigger value="prompt">Prompt</TabsBarTrigger>
               <TabsBarTrigger value="config">Config</TabsBarTrigger>
@@ -429,7 +429,7 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
                   <div className="flex items-center justify-end py-2">
                     <Tabs
                       value={resolutionMode}
-                      onValueChange={(value: string) => {
+                      onValueChange={(value) => {
                         setResolutionMode(value as "tagged" | "resolved");
                       }}
                     >

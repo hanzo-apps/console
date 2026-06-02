@@ -1,41 +1,5 @@
-import { type FilterState, singleFilter, type SingleValueOption } from "@hanzo/console-core";
+import { type FilterState, singleFilter, type SingleValueOption } from "@hanzo/shared";
 import { encodeDelimitedArray, decodeDelimitedArray } from "use-query-params";
-
-// Escape pipe characters in values to avoid conflicts with the delimiter
-// Uses backslash escaping: | → \|, and \ → \\
-export function escapePipeInValue(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
-}
-
-export function unescapePipeInValue(value: string): string {
-  return value.replace(/\\\|/g, "|").replace(/\\\\/g, "\\");
-}
-
-// Split on unescaped pipe characters only (pipes not preceded by backslash)
-export function splitOnUnescapedPipe(str: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let i = 0;
-
-  while (i < str.length) {
-    if (str[i] === "\\" && i + 1 < str.length) {
-      // Escaped character - include both backslash and next char
-      current += str[i] + str[i + 1];
-      i += 2;
-    } else if (str[i] === "|") {
-      // Unescaped pipe - split here
-      result.push(current);
-      current = "";
-      i++;
-    } else {
-      current += str[i];
-      i++;
-    }
-  }
-  result.push(current);
-
-  return result;
-}
 
 // Generic helpers for reusable encoding/decoding across feature areas
 export type GenericFilterOptions = Record<string, string[] | (string | SingleValueOption)[] | Record<string, string[]>>;
@@ -67,10 +31,7 @@ export function encodeFiltersGeneric(filters: FilterState): string {
         .map((f) => {
           // Determine the key field (for categoryOptions, numberObject, stringObject)
           const key =
-            f.type === "numberObject" ||
-            f.type === "stringObject" ||
-            f.type === "categoryOptions" ||
-            f.type === "positionInTrace"
+            f.type === "numberObject" || f.type === "stringObject" || f.type === "categoryOptions"
               ? (f as any).key || ""
               : "";
 
@@ -79,11 +40,7 @@ export function encodeFiltersGeneric(filters: FilterState): string {
           if (f.type === "datetime") {
             encodedValue = encodeURIComponent(new Date(f.value).toISOString());
           } else if (f.type === "stringOptions" || f.type === "arrayOptions" || f.type === "categoryOptions") {
-            // Escape pipe characters in individual values before joining with pipe delimiter
-            const escapedValues = (f.value as string[]).map(escapePipeInValue);
-            encodedValue = encodeURIComponent(escapedValues.join("|"));
-          } else if (f.type === "positionInTrace") {
-            encodedValue = f.value === undefined || f.value === null ? "" : encodeURIComponent(String(f.value));
+            encodedValue = encodeURIComponent((f.value as string[]).join("|"));
           } else {
             encodedValue = encodeURIComponent(String(f.value));
           }
@@ -127,17 +84,12 @@ export function decodeFiltersGeneric(query: string): FilterState {
       parsedValue = new Date(decodedValue);
     } else if (type === "number" || type === "numberObject") {
       parsedValue = Number(decodedValue);
-    } else if (type === "positionInTrace") {
-      parsedValue = decodedValue === "" ? undefined : Number(decodedValue);
     } else if (type === "stringOptions" || type === "arrayOptions" || type === "categoryOptions") {
-      // Split on unescaped pipe characters only, then unescape each value
       parsedValue = decodedValue
-        ? splitOnUnescapedPipe(decodedValue).map(unescapePipeInValue)
-        : type === "arrayOptions"
-          ? [] // Empty array for arrayOptions — empty strings are not valid array values (e.g., tags)
-          : decodedValue === ""
-            ? [""] // allow empty strings for stringOptions (i.e, filter for empty trace name)
-            : [decodedValue];
+        ? decodedValue.split("|")
+        : decodedValue === ""
+          ? [""] // allow empty strings (i.e, filter for empty trace name)
+          : [decodedValue];
     } else if (type === "boolean") {
       parsedValue = decodedValue === "true";
     } else {
@@ -153,15 +105,8 @@ export function decodeFiltersGeneric(query: string): FilterState {
     };
 
     // Add key field for types that need it
-    if (decodedKey) {
-      if (
-        type === "categoryOptions" ||
-        type === "numberObject" ||
-        type === "stringObject" ||
-        type === "positionInTrace"
-      ) {
-        filter.key = decodedKey;
-      }
+    if (decodedKey && (type === "categoryOptions" || type === "numberObject" || type === "stringObject")) {
+      filter.key = decodedKey;
     }
 
     // Validate with zod

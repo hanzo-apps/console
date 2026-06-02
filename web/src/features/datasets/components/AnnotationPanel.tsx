@@ -1,6 +1,6 @@
 import { Button } from "@/src/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/src/components/ui/resizable";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { CommentsSection } from "@/src/features/annotation-queues/components/shared/CommentsSection";
 import { useActiveCell } from "@/src/features/datasets/contexts/ActiveCellContext";
@@ -26,11 +26,7 @@ export const AnnotationPanel = ({ projectId }: { projectId: string }) => {
   });
 
   return (
-    <ResizablePanelGroup
-      direction="vertical"
-      onLayout={(sizes: number[]) => setVerticalSize(sizes[0])}
-      className="h-full"
-    >
+    <ResizablePanelGroup direction="vertical" onLayout={(sizes) => setVerticalSize(sizes[0])} className="h-full">
       <ResizablePanel className="w-full overflow-y-auto p-2" minSize={30} defaultSize={verticalSize}>
         {activeCell ? (
           <>

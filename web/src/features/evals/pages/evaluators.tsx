@@ -3,19 +3,19 @@ import { useRouter } from "next/router";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { Plus } from "lucide-react";
 import EvaluatorTable from "@/src/features/evals/components/evaluator-table";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { getEvalsTabs, EVALS_TABS } from "@/src/features/navigation/utils/evals-tabs";
 import { ActionButton } from "@/src/components/ActionButton";
 import { api } from "@/src/utils/api";
 import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
-import { SupportOrUpgradePage } from "@/src/features/billing/components/SupportOrUpgradePage";
+import { SupportOrUpgradePage } from "@/src/ee/features/billing/components/SupportOrUpgradePage";
 import { EvaluatorsOnboarding } from "@/src/components/onboarding/EvaluatorsOnboarding";
 import { ManageDefaultEvalModel } from "@/src/features/evals/components/manage-default-eval-model";
 
 export default function EvaluatorsPage() {
   const router = useRouter();
   const projectId = router.query.projectId as string;
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   const evaluatorLimit = useEntitlementLimit("model-based-evaluations-count-evaluators");
   const hasWriteAccess = useHasProjectAccess({
@@ -56,7 +56,7 @@ export default function EvaluatorsPage() {
           title: "LLM-as-a-Judge Evaluators",
           help: {
             description: "Configure a hanzo managed or custom evaluator to evaluate incoming traces.",
-            href: "https://hanzo.ai/docs/evaluation/evaluation-methods/llm-as-a-judge",
+            href: "https://hanzo.com/docs/evaluation/evaluation-methods/llm-as-a-judge",
           },
         }}
         scrollable
@@ -73,7 +73,7 @@ export default function EvaluatorsPage() {
           title: "LLM-as-a-Judge Evaluators",
           help: {
             description: "Configure a hanzo managed or custom evaluator to evaluate incoming traces.",
-            href: "https://hanzo.ai/docs/evaluation/evaluation-methods/llm-as-a-judge",
+            href: "https://hanzo.com/docs/evaluation/evaluation-methods/llm-as-a-judge",
           },
           tabsProps: {
             tabs: getEvalsTabs(projectId),

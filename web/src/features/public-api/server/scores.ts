@@ -1,21 +1,13 @@
+import { convertApiProvidedFilterToClickhouseFilter } from "@hanzo/shared/src/server";
 import {
-  convertApiProvidedFilterToDatastoreFilter,
-  deriveFilters,
-  convertDatastoreScoreToDomain,
+  convertClickhouseScoreToDomain,
   StringFilter,
   StringOptionsFilter,
   type ScoreRecordReadType,
-  queryDatastore,
+  queryClickhouse,
   measureAndReturn,
-  scoresTableUiColumnDefinitions,
-} from "@hanzo/console-core/src/server";
-import {
-  removeObjectKeys,
-  ScoreDataTypeEnum,
-  type ScoreDataTypeType,
-  type ScoreDomain,
-  type FilterState,
-} from "@hanzo/console-core";
+} from "@hanzo/shared/src/server";
+import { removeObjectKeys, ScoreDataTypeEnum, type ScoreDataTypeType, type ScoreDomain } from "@hanzo/shared";
 
 /**
  * Converts a ScoreDomain object to API format.
@@ -55,11 +47,9 @@ export type ScoreQueryType = {
   traceTags?: string | string[];
   operator?: string;
   scoreIds?: string[];
-  observationId?: string[];
   dataType?: string;
   environment?: string | string[];
   fields?: string[] | null;
-  advancedFilters?: FilterState;
 };
 
 /**
@@ -160,7 +150,7 @@ export const _handleGenerateScoresForPublicApi = async ({
       },
     },
     fn: async (input) => {
-      const records = await queryDatastore<
+      const records = await queryClickhouse<
         ScoreRecordReadType & {
           tags?: string[];
           user_id?: string;
@@ -170,11 +160,11 @@ export const _handleGenerateScoresForPublicApi = async ({
         query: query.replace("__TRACE_TABLE__", "traces"),
         params: input.params,
         tags: input.tags,
-        preferredService: "ReadOnly",
+        preferredClickhouseService: "ReadOnly",
       });
 
       return records.map((record) => {
-        const domainScore = convertDatastoreScoreToDomain(record);
+        const domainScore = convertClickhouseScoreToDomain(record);
         const apiScore = convertScoreToPublicApi(domainScore);
         return {
           ...apiScore,
@@ -261,11 +251,11 @@ export const _handleGetScoresCountForPublicApi = async ({
       },
     },
     fn: async (input) => {
-      const records = await queryDatastore<{ count: string }>({
+      const records = await queryClickhouse<{ count: string }>({
         query: query.replace("__TRACE_TABLE__", "traces"),
         params: input.params,
         tags: input.tags,
-        preferredService: "ReadOnly",
+        preferredClickhouseService: "ReadOnly",
       });
       return records.map((record) => Number(record.count)).shift();
     },
@@ -275,120 +265,113 @@ export const _handleGetScoresCountForPublicApi = async ({
 const secureScoreFilterOptions = [
   {
     id: "traceId",
-    datastoreSelect: "trace_id",
-    datastoreTable: "scores",
+    clickhouseSelect: "trace_id",
+    clickhouseTable: "scores",
     filterType: "StringFilter",
-    datastorePrefix: "s",
-  },
-  {
-    id: "observationId",
-    datastoreSelect: "observation_id",
-    datastoreTable: "scores",
-    filterType: "StringOptionsFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "name",
-    datastoreSelect: "name",
-    datastoreTable: "scores",
+    clickhouseSelect: "name",
+    clickhouseTable: "scores",
     filterType: "StringFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "source",
-    datastoreSelect: "source",
-    datastoreTable: "scores",
+    clickhouseSelect: "source",
+    clickhouseTable: "scores",
     filterType: "StringFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "fromTimestamp",
-    datastoreSelect: "timestamp",
+    clickhouseSelect: "timestamp",
     operator: ">=" as const,
-    datastoreTable: "scores",
+    clickhouseTable: "scores",
     filterType: "DateTimeFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "toTimestamp",
-    datastoreSelect: "timestamp",
+    clickhouseSelect: "timestamp",
     operator: "<" as const,
-    datastoreTable: "scores",
+    clickhouseTable: "scores",
     filterType: "DateTimeFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "value",
-    datastoreSelect: "value",
-    datastoreTable: "scores",
+    clickhouseSelect: "value",
+    clickhouseTable: "scores",
     filterType: "NumberFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "scoreIds",
-    datastoreSelect: "id",
-    datastoreTable: "scores",
+    clickhouseSelect: "id",
+    clickhouseTable: "scores",
     filterType: "StringOptionsFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "configId",
-    datastoreSelect: "config_id",
-    datastoreTable: "scores",
+    clickhouseSelect: "config_id",
+    clickhouseTable: "scores",
     filterType: "StringFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "sessionId",
-    datastoreSelect: "session_id",
-    datastoreTable: "scores",
+    clickhouseSelect: "session_id",
+    clickhouseTable: "scores",
     filterType: "StringFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "datasetRunId",
-    datastoreSelect: "dataset_run_id",
-    datastoreTable: "scores",
+    clickhouseSelect: "dataset_run_id",
+    clickhouseTable: "scores",
     filterType: "StringFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "queueId",
-    datastoreSelect: "queue_id",
-    datastoreTable: "scores",
+    clickhouseSelect: "queue_id",
+    clickhouseTable: "scores",
     filterType: "StringFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "environment",
-    datastoreSelect: "environment",
-    datastoreTable: "scores",
+    clickhouseSelect: "environment",
+    clickhouseTable: "scores",
     filterType: "StringOptionsFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
   {
     id: "dataType",
-    datastoreSelect: "data_type",
-    datastoreTable: "scores",
+    clickhouseSelect: "data_type",
+    clickhouseTable: "scores",
     filterType: "StringFilter",
-    datastorePrefix: "s",
+    clickhousePrefix: "s",
   },
 ];
 
 const secureTraceFilterOptions = [
   {
     id: "traceTags",
-    datastoreSelect: "tags",
-    datastoreTable: "traces",
+    clickhouseSelect: "tags",
+    clickhouseTable: "traces",
     filterType: "ArrayOptionsFilter",
-    datastorePrefix: "t",
+    clickhousePrefix: "t",
   },
   {
     id: "userId",
-    datastoreSelect: "user_id",
-    datastoreTable: "traces",
+    clickhouseSelect: "user_id",
+    clickhouseTable: "traces",
     filterType: "StringFilter",
-    datastorePrefix: "t",
+    clickhousePrefix: "t",
   },
 ];
 
@@ -404,15 +387,10 @@ const determineTraceJoinRequirement = (fields: string[] | null | undefined, trac
 };
 
 const generateScoreFilter = (filter: ScoreQueryType, scoreDataTypes?: readonly ScoreDataTypeType[]) => {
-  const scoresFilter = deriveFilters(
-    filter,
-    secureScoreFilterOptions,
-    filter.advancedFilters,
-    scoresTableUiColumnDefinitions,
-  );
+  const scoresFilter = convertApiProvidedFilterToClickhouseFilter(filter, secureScoreFilterOptions);
   scoresFilter.push(
     new StringFilter({
-      datastoreTable: "scores",
+      clickhouseTable: "scores",
       field: "project_id",
       operator: "=",
       value: filter.projectId,
@@ -424,7 +402,7 @@ const generateScoreFilter = (filter: ScoreQueryType, scoreDataTypes?: readonly S
   if (scoreDataTypes) {
     scoresFilter.push(
       new StringOptionsFilter({
-        datastoreTable: "scores",
+        clickhouseTable: "scores",
         field: "data_type",
         operator: "any of",
         values: [...scoreDataTypes],
@@ -433,7 +411,7 @@ const generateScoreFilter = (filter: ScoreQueryType, scoreDataTypes?: readonly S
     );
   }
 
-  const tracesFilter = convertApiProvidedFilterToDatastoreFilter(filter, secureTraceFilterOptions);
+  const tracesFilter = convertApiProvidedFilterToClickhouseFilter(filter, secureTraceFilterOptions);
 
   // If environment is specified AND there are other trace filters (userId, traceTags),
   // also apply the environment filter to traces. This ensures that when filtering by
@@ -444,7 +422,7 @@ const generateScoreFilter = (filter: ScoreQueryType, scoreDataTypes?: readonly S
     const envValues = Array.isArray(filter.environment) ? filter.environment : [filter.environment];
     tracesFilter.push(
       new StringOptionsFilter({
-        datastoreTable: "traces",
+        clickhouseTable: "traces",
         field: "environment",
         operator: "any of",
         values: envValues,

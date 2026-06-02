@@ -1,5 +1,5 @@
-import { jsonSchemaNullable, type TriggerEventAction } from "@hanzo/console-core";
-import { logger, type PromptResult, EntityChangeQueue, QueueJobs, QueueName } from "@hanzo/console-core/src/server";
+import { jsonSchemaNullable, type TriggerEventAction } from "@hanzo/shared";
+import { logger, type PromptResult, EntityChangeQueue, QueueJobs, QueueName } from "@hanzo/shared/src/server";
 import { v4 } from "uuid";
 
 /**

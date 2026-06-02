@@ -4,27 +4,27 @@ import { Github, Bug, Lightbulb, Sparkles, LibraryBig, LifeBuoy, Radio, Calendar
 //eslint-disable-next-line no-restricted-imports
 import { SiDiscord } from "react-icons/si";
 import { RainbowButton } from "@/src/components/magicui/rainbow-button";
-import { Separator } from "@hanzo/ui";
+import { Separator } from "@/src/components/ui/separator";
 import { usePlan } from "@/src/features/entitlements/hooks";
-import { isCloudPlan } from "@hanzo/console-core";
+import { isCloudPlan } from "@hanzo/shared";
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 
 type SupportType = "in-app-support" | "custom" | "community";
 
 export function IntroSection({ onStartForm }: { onStartForm: () => void; displayDensity?: "default" | "compact" }) {
   const uiCustomization = useUiCustomization();
-  const { isConsoleCloud } = useConsoleCloudRegion();
-  const capture = useInsightsCapture();
+  const { isHanzoCloud } = useHanzoCloudRegion();
+  const capture = usePostHogClientCapture();
 
   // Note: We previously added an entitlement for in-app support, but removed it for now.
-  //       The issue was that on global routes e.g., https://hanzo.ai/setup, the entitlement
+  //       The issue was that on global routes e.g., https://hanzo.com/setup, the entitlement
   //       hook would not have access to an org or project an therefore no plan, always returning
   //       false if asked. However on these pages, the in-app-chat should be available.
   //       Therefore we now check for whether wer are in a cloud deployment instead.
   // const hasInAppSupportEntitlement = useHasEntitlement("in-app-support");
-  const hasInAppSupportEntitlement = !!isConsoleCloud;
+  const hasInAppSupportEntitlement = !!isHanzoCloud;
   const plan = usePlan();
 
   const supportType: SupportType = useMemo(() => {
@@ -52,7 +52,7 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void; display
         </p>
 
         <RainbowButton asChild>
-          <a href="https://hanzo.ai/docs/ask-ai" target="_blank" rel="noopener">
+          <a href="https://hanzo.com/docs/ask-ai" target="_blank" rel="noopener">
             Chat with AI
           </a>
         </RainbowButton>
@@ -69,7 +69,7 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void; display
         </p>
 
         <Button asChild variant="outline">
-          <a href={uiCustomization?.documentationHref ?? "https://hanzo.ai/docs"} target="_blank" rel="noopener">
+          <a href={uiCustomization?.documentationHref ?? "https://hanzo.com/docs"} target="_blank" rel="noopener">
             View documentation
           </a>
         </Button>
@@ -101,12 +101,12 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void; display
             {!uiCustomization?.supportHref && (
               <>
                 <Button variant="outline" asChild>
-                  <a href="https://hanzo.ai/ideas" target="_blank" rel="noopener">
+                  <a href="https://hanzo.com/ideas" target="_blank" rel="noopener">
                     Feature request
                   </a>
                 </Button>
                 <Button variant="outline" asChild>
-                  <a href="https://hanzo.ai/issues" target="_blank" rel="noopener">
+                  <a href="https://hanzo.com/issues" target="_blank" rel="noopener">
                     Report a bug
                   </a>
                 </Button>
@@ -146,17 +146,17 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void; display
               Ask AI & Docs did not unblock you? Get help from and share feedback with the community.
             </p>
             <Button variant="outline" asChild>
-              <a href="https://hanzo.ai/gh-support" target="_blank" rel="noopener">
+              <a href="https://hanzo.com/gh-support" target="_blank" rel="noopener">
                 <Github className="mr-2 h-4 w-4" /> Get Help ↗
               </a>
             </Button>
             <Button variant="outline" asChild>
-              <a href="https://hanzo.ai/ideas" target="_blank" rel="noopener">
+              <a href="https://hanzo.com/ideas" target="_blank" rel="noopener">
                 <Lightbulb className="mr-2 h-4 w-4" /> Feature request ↗
               </a>
             </Button>
             <Button variant="outline" asChild>
-              <a href="https://hanzo.ai/issues" target="_blank" rel="noopener">
+              <a href="https://hanzo.com/issues" target="_blank" rel="noopener">
                 <Bug className="mr-2 h-4 w-4" /> Report a bug ↗
               </a>
             </Button>
@@ -176,12 +176,12 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void; display
           </p>
           <div className="mt-3 grid grid-cols-1 gap-2">
             <Button asChild variant="ghost" className="justify-start px-1.5">
-              <a href="https://hanzo.ai/gh-support" target="_blank" rel="noopener">
+              <a href="https://hanzo.com/gh-support" target="_blank" rel="noopener">
                 <Github className="mr-2 h-4 w-4" /> GitHub ↗
               </a>
             </Button>
             <Button asChild variant="ghost" className="justify-start px-1.5">
-              <a href="https://hanzo.ai/discord" target="_blank" rel="noopener" className="flex items-center">
+              <a href="https://hanzo.com/discord" target="_blank" rel="noopener" className="flex items-center">
                 <SiDiscord className="mr-2 h-4 w-4" /> Discord ↗
               </a>
             </Button>
@@ -199,7 +199,7 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void; display
 
             {showStatusPageLink && (
               <Button asChild variant="ghost" className="justify-start px-1.5">
-                <a href="https://status.hanzo.ai" target="_blank" rel="noopener" className="flex items-center">
+                <a href="https://status.hanzo.com" target="_blank" rel="noopener" className="flex items-center">
                   <Radio className="mr-2 h-4 w-4" /> Status Page ↗
                 </a>
               </Button>

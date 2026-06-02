@@ -1,11 +1,12 @@
 // Hanzo Cloud only
 
 import { api } from "@/src/utils/api";
+import { MarkerBar } from "@tremor/react";
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
 import { Card } from "@/src/components/ui/card";
 import { numberFormatter, compactNumberFormatter } from "@/src/utils/numbers";
-import { type Plan } from "@hanzo/console-core";
-import { MAX_EVENTS_FREE_PLAN } from "@/src/features/billing/constants";
+import { type Plan } from "@hanzo/shared";
+import { MAX_EVENTS_FREE_PLAN } from "@/src/ee/features/billing/constants";
 
 export const BillingUsageChart = () => {
   const organization = useQueryOrganization();
@@ -31,7 +32,7 @@ export const BillingUsageChart = () => {
     : "Events";
 
   if (usage.data === null) {
-    // Might happen in dev mode if Commerce service is not configured
+    // Might happen in dev mode if STRIPE_SECRET_KEY is not set
     // This avoids errors for all developers not working on or testing the billing features
     return null;
   }
@@ -53,20 +54,7 @@ export const BillingUsageChart = () => {
                   <span className="text-sm">{`${numberFormatter((usage.data.usageCount / hobbyPlanLimit) * 100)}%`}</span>
                   <span className="text-sm">Plan limit: {compactNumberFormatter(hobbyPlanLimit)}</span>
                 </div>
-                <div
-                  className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted"
-                  role="progressbar"
-                  aria-valuenow={Math.min((usage.data.usageCount / hobbyPlanLimit) * 100, 100)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{
-                      width: `${Math.min((usage.data.usageCount / hobbyPlanLimit) * 100, 100)}%`,
-                    }}
-                  />
-                </div>
+                <MarkerBar value={Math.min((usage.data.usageCount / hobbyPlanLimit) * 100, 100)} className="mt-3" />
               </>
             )}
           </>

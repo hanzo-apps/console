@@ -33,32 +33,7 @@ export function UserIdBadge({ userId, projectId }: { userId: string | null; proj
   );
 }
 
-export function TargetTraceBadge({
-  targetTraceId,
-  projectId,
-}: {
-  targetTraceId: string | null;
-  projectId: string;
-}) {
-  if (!targetTraceId) return null;
-  return (
-    <Link
-      href={`/project/${projectId}/traces/${encodeURIComponent(targetTraceId)}`}
-      className="inline-flex"
-    >
-      <Badge>
-        <span className="truncate">Target Trace: {targetTraceId}</span>
-        <ExternalLinkIcon className="ml-1 h-3 w-3" />
-      </Badge>
-    </Link>
-  );
-}
-
-export function EnvironmentBadge({
-  environment,
-}: {
-  environment: string | null;
-}) {
+export function EnvironmentBadge({ environment }: { environment: string | null }) {
   if (!environment) return null;
   return <Badge variant="tertiary">Env: {environment}</Badge>;
 }

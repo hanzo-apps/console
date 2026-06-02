@@ -1,7 +1,7 @@
 import { JsonSkeleton, stringifyJsonNode, IO_TABLE_CHAR_LIMIT, JSONView } from "@/src/components/ui/CodeJsonViewer";
 import { cn } from "@/src/utils/tailwind";
 import { memo } from "react";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { decodeUnicodeEscapesOnly } from "@/src/utils/unicode";
 
 const IOTableCellContent = ({

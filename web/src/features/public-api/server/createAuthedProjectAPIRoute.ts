@@ -2,11 +2,11 @@ import crypto from "node:crypto";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { type ZodType, type z } from "zod/v4";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
-import { prisma } from "@hanzo/console-core/src/db";
-import { redis, type AuthHeaderValidVerificationResult, traceException, logger } from "@hanzo/console-core/src/server";
-import { type RateLimitResource } from "@hanzo/console-core";
+import { prisma } from "@hanzo/shared/src/db";
+import { redis, type AuthHeaderValidVerificationResult, traceException, logger } from "@hanzo/shared/src/server";
+import { type RateLimitResource } from "@hanzo/shared";
 import { RateLimitService } from "@/src/features/public-api/server/RateLimitService";
-import { contextWithHanzoProps } from "@hanzo/console-core/src/server";
+import { contextWithHanzoProps } from "@hanzo/shared/src/server";
 import * as opentelemetry from "@opentelemetry/api";
 import { env } from "@/src/env.mjs";
 
@@ -23,8 +23,8 @@ type RouteConfig<TQuery extends ZodType<any>, TBody extends ZodType<any>, TRespo
    *
    * Admin API key authentication requires:
    * - Authorization: Bearer <ADMIN_API_KEY>
-   * - x-iam-admin-api-key: <ADMIN_API_KEY> (must match exactly for redundancy)
-   * - x-iam-project-id: <project-id> (target project)
+   * - x-hanzo-admin-api-key: <ADMIN_API_KEY> (must match exactly for redundancy)
+   * - x-hanzo-project-id: <project-id> (target project)
    *
    * This authentication method is ONLY available when NEXT_PUBLIC_HANZO_CLOUD_REGION is not set (self-hosted).
    *
@@ -87,8 +87,8 @@ async function verifyBasicAuth(authHeader: string | undefined): Promise<
  *
  * This function checks if the request contains valid admin API key credentials:
  * 1. Authorization header must be Bearer token format with ADMIN_API_KEY value
- * 2. x-iam-admin-api-key header must match ADMIN_API_KEY env var exactly (for redundancy)
- * 3. x-iam-project-id header must be present and specify a valid project ID
+ * 2. x-hanzo-admin-api-key header must match ADMIN_API_KEY env var exactly (for redundancy)
+ * 3. x-hanzo-project-id header must be present and specify a valid project ID
  * 4. NEXT_PUBLIC_HANZO_CLOUD_REGION must NOT be set (self-hosted instances only)
  *
  * The ADMIN_API_KEY must be set as an environment variable on the server.
@@ -105,8 +105,8 @@ async function verifyAdminApiKeyAuth(req: NextApiRequest): Promise<
   | null
 > {
   const authHeader = req.headers.authorization;
-  const adminApiKeyHeader = req.headers["x-iam-admin-api-key"];
-  const projectIdHeader = req.headers["x-iam-project-id"];
+  const adminApiKeyHeader = req.headers["x-hanzo-admin-api-key"];
+  const projectIdHeader = req.headers["x-hanzo-project-id"];
 
   // If not attempting admin auth, return null to proceed with regular auth
   if (!authHeader?.startsWith("Bearer ") || !adminApiKeyHeader) return null;
@@ -147,7 +147,7 @@ async function verifyAdminApiKeyAuth(req: NextApiRequest): Promise<
   if (!projectIdHeader || typeof projectIdHeader !== "string") {
     throw {
       status: 400,
-      message: "x-iam-project-id header is required for admin API key authentication",
+      message: "x-hanzo-project-id header is required for admin API key authentication",
     };
   }
 

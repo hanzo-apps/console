@@ -1,5 +1,5 @@
 import { validateOrderBy, validateFilters } from "@/src/components/table/table-view-presets/validation";
-import { type ColumnDefinition, type FilterState, type OrderByState } from "@hanzo/console-core";
+import { type ColumnDefinition, type FilterState, type OrderByState } from "@hanzo/shared";
 
 // Mock data for testing
 const mockColumns = [

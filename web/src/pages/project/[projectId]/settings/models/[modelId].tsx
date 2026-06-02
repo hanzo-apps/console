@@ -18,7 +18,7 @@ import Generations from "@/src/components/table/use-cases/observations";
 import Page from "@/src/components/layouts/page";
 import { SquareArrowOutUpRight, Info as InfoIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { CodeMirrorEditor } from "@/src/components/editor";
 import { useEffect } from "react";
 
@@ -208,6 +208,7 @@ export default function ModelDetailPage() {
                             mode="json"
                             value={JSON.stringify(activeTier.conditions, null, 2)}
                             onChange={() => {}} // Read-only
+                            minHeight="none"
                             className="max-h-[250px] overflow-y-auto"
                             editable={false}
                           />

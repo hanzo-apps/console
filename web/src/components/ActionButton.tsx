@@ -1,10 +1,10 @@
 import React from "react";
 import { Lock, AlertCircle, Sparkle } from "lucide-react";
 import { Button, type ButtonProps } from "@/src/components/ui/button";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { HoverCardPortal } from "@radix-ui/react-hover-card";
 import Link from "next/link";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 
 const BUTTON_STATE_MESSAGES = {
   limitReached: (current: number, max: number) =>
@@ -23,7 +23,7 @@ interface ActionButtonProps extends ButtonProps {
   children: React.ReactNode;
   className?: string;
   href?: string;
-  trackingEventName?: Parameters<ReturnType<typeof useInsightsCapture>>[0];
+  trackingEventName?: Parameters<ReturnType<typeof usePostHogClientCapture>>[0];
   trackingProps?: Record<string, unknown>;
 }
 
@@ -45,7 +45,7 @@ export const ActionButton = React.forwardRef<HTMLButtonElement, ActionButtonProp
   },
   ref,
 ) {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const hasReachedLimit = typeof limit === "number" && limitValue !== undefined && limitValue >= limit;
   const isDisabled = disabled || !hasAccess || !hasEntitlement || hasReachedLimit;
 

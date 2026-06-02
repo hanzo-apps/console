@@ -8,7 +8,7 @@ import { useAnalyticsUrlState } from "@/src/features/score-analytics/lib/analyti
 import { type TimeRange } from "@/src/utils/date-range-utils";
 import { type ScoreOption } from "./charts/ScoreCombobox";
 import { Badge } from "@/src/components/ui/badge";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 
 export interface ScoreAnalyticsHeaderProps {
   scoreOptions: ScoreOption[];
@@ -89,7 +89,7 @@ export function ScoreAnalyticsHeader({
                 your feedback.
               </p>
               <a
-                href="https://hanzo.ai/discussions"
+                href="https://hanzo.com/discussions"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"

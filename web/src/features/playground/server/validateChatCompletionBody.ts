@@ -1,11 +1,5 @@
 import { z } from "zod/v4";
-import {
-  LLMAdapter,
-  LLMJSONSchema,
-  LLMToolDefinitionSchema,
-  ChatMessageSchema,
-  JSONObjectSchema,
-} from "@hanzo/console-core";
+import { LLMAdapter, LLMJSONSchema, LLMToolDefinitionSchema, ChatMessageSchema, JSONObjectSchema } from "@hanzo/shared";
 
 const ModelParamsSchema = z.object({
   provider: z.string(),
@@ -14,7 +8,6 @@ const ModelParamsSchema = z.object({
   temperature: z.number().optional(),
   max_tokens: z.number().optional(),
   top_p: z.number().optional(),
-  maxReasoningTokens: z.number().optional(),
   providerOptions: JSONObjectSchema.optional(),
 });
 

@@ -14,7 +14,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useEffect } from "react";
 import { api } from "@/src/utils/api";
-import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
+import { useObservationListBeta } from "@/src/features/events/hooks/useObservationListBeta";
 import { type ObservationReturnTypeWithMetadata, type ObservationReturnType } from "@/src/server/api/routers/traces";
 import { stringifyMetadata } from "@/src/utils/clientSideDomainTypes";
 import type { ParseRequest, ParseResponse } from "@/src/workers/json-parser.worker";
@@ -95,7 +95,7 @@ interface ParsedData {
  * Sync parse helper - used for small payloads or when Web Worker unavailable
  */
 async function syncParseObservationData(input: unknown, output: unknown, metadata: unknown): Promise<ParsedData> {
-  const { deepParseJsonIterative } = await import("@hanzo/console-core");
+  const { deepParseJsonIterative } = await import("@hanzo/shared");
   const startTime = performance.now();
 
   return {
@@ -174,7 +174,7 @@ export function useParsedObservation({
   startTime,
   baseObservation,
 }: UseParsedObservationParams) {
-  const { isBetaEnabled } = useV4Beta();
+  const { isBetaEnabled } = useObservationListBeta();
 
   // Step 1a: Fetch raw observation data from observations table (beta OFF)
   const observationQuery = api.observations.byId.useQuery(

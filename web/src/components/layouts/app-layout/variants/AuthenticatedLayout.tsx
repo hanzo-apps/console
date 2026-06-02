@@ -8,62 +8,14 @@ import type { PropsWithChildren } from "react";
 import Head from "next/head";
 import { SidebarProvider, SidebarInset } from "@/src/components/ui/sidebar";
 import { AppSidebar } from "@/src/components/nav/app-sidebar";
+import { CommandMenu } from "@/src/features/command-k-menu/CommandMenu";
 import { Toaster } from "@/src/components/ui/sonner";
-import { PaymentBannerProvider } from "@/src/features/payment-banner";
+import { PaymentBanner, PaymentBannerProvider } from "@/src/features/payment-banner";
 import { ResizableContent } from "../components/ResizableContent";
 import { ThemeToggle } from "@/src/features/theming/ThemeToggle";
 import type { Session } from "next-auth";
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 import type { RouteGroup } from "@/src/components/layouts/routes";
-import dynamic from "next/dynamic";
-// Re-export wrapper that bypasses webpack CJS static analysis issue
-import { HanzoHeader, useHanzoAuth } from "@/src/components/nav/hanzo-header";
-
-const CommandMenu = dynamic(
-  () =>
-    import("@/src/features/command-k-menu/CommandMenu").then((mod) => ({
-      default: mod.CommandMenu,
-    })),
-  {
-    ssr: false,
-  },
-);
-
-const PaymentBanner = dynamic(
-  () =>
-    import("@/src/features/payment-banner").then((mod) => ({
-      default: mod.PaymentBanner,
-    })),
-  {
-    ssr: false,
-  },
-);
-
-const FirstLoginBillingModal = dynamic(
-  () =>
-    import("@/src/features/billing/components/FirstLoginBillingModal").then((mod) => ({
-      default: mod.FirstLoginBillingModal,
-    })),
-  {
-    ssr: false,
-  },
-);
-
-function ConsoleHanzoHeader({ onSignOut }: { onSignOut: () => void }) {
-  const { user, organizations, currentOrgId, switchOrg } = useHanzoAuth();
-
-  return (
-    <HanzoHeader
-      currentApp="Console"
-      currentAppId="console"
-      user={user}
-      organizations={organizations}
-      currentOrgId={currentOrgId}
-      onOrgSwitch={switchOrg}
-      onSignOut={onSignOut}
-    />
-  );
-}
 
 /** Grouped navigation structure returned by processNavigation */
 type GroupedNavigation = {
@@ -135,7 +87,6 @@ export function AuthenticatedLayout({ children, session, navigation, metadata, o
             <PaymentBanner />
             <div className="flex min-h-0 flex-1 pt-banner-offset">
               <AppSidebar
-                session={session}
                 navItems={navigation.mainNavigation}
                 secondaryNavItems={navigation.secondaryNavigation}
                 userNavProps={userNavProps}
@@ -144,7 +95,6 @@ export function AuthenticatedLayout({ children, session, navigation, metadata, o
                 <ResizableContent>{children}</ResizableContent>
                 <Toaster visibleToasts={1} />
                 <CommandMenu mainNavigation={navigation.navigation} />
-                <FirstLoginBillingModal />
               </SidebarInset>
             </div>
           </div>

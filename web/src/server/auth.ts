@@ -1,13 +1,13 @@
-import { type GetServerSidePropsContext } from "next";
-import { getServerSession, type User, type NextAuthOptions, type Session } from "next-auth";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@hanzo/console-core/src/db";
-import { verifyPassword } from "@/src/features/auth-credentials/lib/credentialsServerUtils";
-import { parseFlags } from "@/src/features/feature-flags/utils";
 import { env } from "@/src/env.mjs";
+import { verifyPassword } from "@/src/features/auth-credentials/lib/credentialsServerUtils";
 import { createProjectMembershipsOnSignup } from "@/src/features/auth/lib/createProjectMembershipsOnSignup";
-import { type AdapterUser, type Adapter, type AdapterAccount } from "next-auth/adapters";
-
+import { parseFlags } from "@/src/features/feature-flags/utils";
+import { prisma } from "@hanzo/shared/src/db";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { type GetServerSidePropsContext } from "next";
+import { getServerSession, type NextAuthOptions, type Session, type User } from "next-auth";
+import { type Adapter, type AdapterAccount, type AdapterUser } from "next-auth/adapters";
+// Comment
 // Providers
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider, { type GoogleProfile } from "next-auth/providers/google";
@@ -26,19 +26,14 @@ import WorkOSProvider from "next-auth/providers/workos";
 import WordPressProvider from "next-auth/providers/wordpress";
 import { type Provider } from "next-auth/providers/index";
 import { getCookieName, getCookieOptions } from "./utils/cookies";
-// Multi-tenant SSO stubs — Hanzo uses IAM, not per-domain SSO
-function getSsoAuthProviderIdForDomain(_domain: string): string | null {
-  return null;
-}
-async function findMultiTenantSsoConfig(_params: { providerId?: string; domain?: string }) {
-  return { isMultiTenantSsoProvider: false, domain: "" };
-}
-async function loadSsoProviders(): Promise<[]> {
-  return [];
-}
+import {
+  findMultiTenantSsoConfig,
+  getSsoAuthProviderIdForDomain,
+  loadSsoProviders,
+} from "@/src/ee/features/multi-tenant-sso/utils";
 import { ENTERPRISE_SSO_REQUIRED_MESSAGE } from "@/src/features/auth/constants";
 import { z } from "zod/v4";
-import { CloudConfigSchema } from "@hanzo/console-core";
+import { CloudConfigSchema } from "@hanzo/shared";
 import {
   CustomSSOProvider,
   GitHubEnterpriseProvider,
@@ -48,8 +43,7 @@ import {
   instrumentAsync,
   logger,
   resolveProjectRole,
-} from "@hanzo/console-core/src/server";
-import { IamProvider } from "@hanzo/iam/nextauth";
+} from "@hanzo/shared/src/server";
 import {
   getOrganizationPlanServerSide,
   getSelfHostedInstancePlanServerSide,
@@ -359,17 +353,6 @@ if (env.AUTH_JUMPCLOUD_CLIENT_ID && env.AUTH_JUMPCLOUD_CLIENT_SECRET && env.AUTH
     }),
   );
 
-if (env.IAM_CLIENT_ID && env.IAM_CLIENT_SECRET && env.IAM_SERVER_URL)
-  staticProviders.push(
-    IamProvider({
-      clientId: env.IAM_CLIENT_ID,
-      clientSecret: env.IAM_CLIENT_SECRET,
-      serverUrl: env.IAM_SERVER_URL,
-      allowDangerousEmailAccountLinking: env.IAM_ALLOW_ACCOUNT_LINKING === "true",
-      checks: ["state", "pkce"],
-    }) as unknown as Provider,
-  );
-
 if (env.AUTH_WORKOS_CLIENT_ID && env.AUTH_WORKOS_CLIENT_SECRET)
   staticProviders.push(
     WorkOSProvider({
@@ -537,6 +520,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
     session: {
       strategy: "jwt",
       maxAge: env.AUTH_SESSION_MAX_AGE * 60, // convert minutes to seconds, default is set in env.mjs
+      // updateAge: 60 * 60 * 24,
     },
     callbacks: {
       async session({ session, token }): Promise<Session> {
@@ -553,7 +537,6 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
               emailVerified: true,
               featureFlags: true,
               admin: true,
-              v4BetaEnabled: true,
               organizationMemberships: {
                 include: {
                   organization: {
@@ -567,11 +550,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
                       },
                     },
                   },
-                  ProjectMemberships: {
-                    include: {
-                      project: true,
-                    },
-                  },
+                  ProjectMemberships: true,
                 },
               },
             },
@@ -598,30 +577,28 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
                     emailSupportHash: dbUser.email ? createSupportEmailHash(dbUser.email) : undefined,
                     image: dbUser.image,
                     admin: dbUser.admin,
-                    v4BetaEnabled: dbUser.v4BetaEnabled,
                     canCreateOrganizations: canCreateOrganizations(dbUser.email),
-                    organizations: dbUser.organizationMemberships.map((orgMembership) => {
-                      const parsedCloudConfig = CloudConfigSchema.safeParse(orgMembership.organization.cloudConfig);
+                    organizations: dbUser.organizationMemberships.map((membership) => {
+                      const parsedCloudConfig = CloudConfigSchema.safeParse(membership.organization.cloudConfig);
                       return {
-                        id: orgMembership.organization.id,
-                        name: orgMembership.organization.name,
-                        role: orgMembership.role,
-                        metadata: (orgMembership.organization.metadata as Record<string, unknown>) ?? {},
-                        aiFeaturesEnabled: orgMembership.organization.aiFeaturesEnabled,
+                        id: membership.organization.id,
+                        name: membership.organization.name,
+                        role: membership.role,
+                        metadata: (membership.organization.metadata as Record<string, unknown>) ?? {},
+                        aiFeaturesEnabled: membership.organization.aiFeaturesEnabled,
                         cloudConfig: parsedCloudConfig.data,
-                        projects: orgMembership.organization.projects
+                        projects: membership.organization.projects
                           .map((project) => {
                             const projectRole = resolveProjectRole({
                               projectId: project.id,
-                              projectMemberships: orgMembership.ProjectMemberships,
-                              orgMembershipRole: orgMembership.role,
+                              projectMemberships: membership.ProjectMemberships,
+                              orgMembershipRole: membership.role,
                             });
                             return {
                               id: project.id,
                               name: project.name,
                               role: projectRole,
                               retentionDays: project.retentionDays,
-                              hasTraces: project.hasTraces,
                               deletedAt: project.deletedAt,
                               metadata: (project.metadata as Record<string, unknown>) ?? {},
                             };
@@ -643,27 +620,10 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
       },
       async signIn({ user, account, profile }) {
         return instrumentAsync({ name: "next-auth-sign-in" }, async (span) => {
-          // Debug logging for Hanzo IAM provider
-          if (account?.provider === "iam") {
-            logger.info("Hanzo IAM signIn callback", {
-              userId: user.id,
-              userName: user.name,
-              userEmail: user.email,
-              accountType: account.type,
-              profileSub: (profile as Record<string, unknown>)?.sub,
-              profileEmail: (profile as Record<string, unknown>)?.email,
-              hasAccessToken: !!account.access_token,
-              hasIdToken: !!account.id_token,
-            });
-          }
-
           // Block sign in without valid user.email
           const email = user.email?.toLowerCase();
           if (!email) {
-            logger.error("No email found in user object", {
-              provider: account?.provider,
-              profileKeys: profile ? Object.keys(profile) : [],
-            });
+            logger.error("No email found in user object");
             throw new Error("No email found in user object");
           }
           if (z.string().email().safeParse(email).success === false) {
@@ -696,7 +656,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
             const { isMultiTenantSsoProvider, domain: ssoDomain } = await findMultiTenantSsoConfig({
               providerId: account.provider,
             });
-            if (isMultiTenantSsoProvider && ssoDomain.toLowerCase() !== userDomain.toLowerCase()) {
+            if (isMultiTenantSsoProvider && ssoDomain && ssoDomain.toLowerCase() !== userDomain.toLowerCase()) {
               throw new Error(`This domain is not associated with this SSO provider.`);
             }
           }
@@ -796,6 +756,116 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
       },
     },
   };
+
+  // Add Hanzo IAM provider
+  data.providers.push({
+    id: "hanzo-iam",
+    name: "Hanzo IAM",
+    type: "oauth" as const,
+    clientId: env.HANZO_IAM_CLIENT_ID,
+    clientSecret: env.HANZO_IAM_CLIENT_SECRET,
+    wellKnown: `${env.HANZO_IAM_SERVER_URL}/.well-known/openid-configuration`,
+    authorization: {
+      params: {
+        scope: "openid email profile",
+        prompt: "select_account",
+        response_type: "code",
+      },
+      url: `${env.HANZO_IAM_SERVER_URL}/oauth/authorize`,
+    },
+    token: {
+      url: `${env.HANZO_IAM_SERVER_URL}/oauth/token`,
+    },
+    userinfo: {
+      url: `${env.HANZO_IAM_SERVER_URL}/oauth/userinfo`,
+    },
+    checks: ["state", "pkce"],
+    client: {
+      token_endpoint_auth_method: "client_secret_basic",
+    },
+    allowDangerousEmailAccountLinking: env.HANZO_IAM_ALLOW_ACCOUNT_LINKING === "true",
+    async profile(profile, _tokens) {
+      const dbUser = await prisma.user.upsert({
+        where: { email: profile.email },
+        create: {
+          email: profile.email,
+          name: profile.name,
+          image: profile.picture,
+        },
+        update: {
+          name: profile.name,
+          image: profile.picture,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          image: true,
+          emailVerified: true,
+          featureFlags: true,
+          organizationMemberships: {
+            include: {
+              organization: {
+                select: {
+                  id: true,
+                  name: true,
+                  cloudConfig: true,
+                  metadata: true,
+                  aiFeaturesEnabled: true,
+                  projects: {
+                    select: {
+                      id: true,
+                      name: true,
+                      retentionDays: true,
+                      deletedAt: true,
+                      metadata: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const user = {
+        id: profile.sub,
+        name: profile.name,
+        email: profile.email,
+        image: profile.picture,
+        emailVerified: dbUser.emailVerified?.toISOString(),
+        canCreateOrganizations: canCreateOrganizations(profile.email),
+        organizations: dbUser.organizationMemberships.map((orgMembership) => {
+          const parsedCloudConfig = CloudConfigSchema.safeParse(orgMembership.organization.cloudConfig);
+          return {
+            id: orgMembership.organization.id,
+            name: orgMembership.organization.name,
+            role: orgMembership.role,
+            cloudConfig: parsedCloudConfig.data,
+            metadata: (orgMembership.organization.metadata ?? {}) as Record<string, unknown>,
+            aiFeaturesEnabled: orgMembership.organization.aiFeaturesEnabled ?? true,
+            projects: orgMembership.organization.projects
+              .map((project) => {
+                return {
+                  id: project.id,
+                  name: project.name,
+                  role: orgMembership.role,
+                  retentionDays: project.retentionDays,
+                  deletedAt: project.deletedAt,
+                  metadata: (project.metadata ?? {}) as Record<string, unknown>,
+                };
+              })
+              .filter((project) => projectRoleAccessRights[project.role].includes("project:read")),
+            plan: getOrganizationPlanServerSide(parsedCloudConfig.data),
+          };
+        }),
+        featureFlags: parseFlags(dbUser.featureFlags),
+      };
+
+      return user;
+    },
+  });
+
   return data;
 }
 

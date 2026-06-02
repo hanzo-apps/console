@@ -6,12 +6,12 @@ import { Card, CardDescription, CardHeader, CardTitle, CardContent, CardFooter }
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { DialogHeader, DialogTitle, DialogDescription, DialogBody } from "@/src/components/ui/dialog";
 import Link from "next/link";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { type CreateExperiment } from "@/src/features/experiments/types";
 import { MultiStepExperimentForm } from "@/src/features/experiments/components/MultiStepExperimentForm";
 import { RemoteExperimentUpsertForm } from "@/src/features/experiments/components/RemoteExperimentUpsertForm";
 import { RemoteExperimentTriggerModal } from "@/src/features/experiments/components/RemoteExperimentTriggerModal";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 export const CreateExperimentsForm = ({
   projectId,
@@ -43,7 +43,7 @@ export const CreateExperimentsForm = ({
   }) => Promise<void>;
   showSDKRunInfoPage?: boolean;
 }) => {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const [showPromptForm, setShowPromptForm] = useState(false);
   const [showRemoteExperimentUpsertForm, setShowRemoteExperimentUpsertForm] = useState(false);
   const [showRemoteExperimentTriggerModal, setShowRemoteExperimentTriggerModal] = useState(false);
@@ -81,7 +81,7 @@ export const CreateExperimentsForm = ({
           <DialogDescription>
             Experiments allow you to test iterations of your application or prompt on a dataset. Learn more about
             experiments{" "}
-            <Link href="https://hanzo.ai/docs/evaluation/dataset-runs/datasets" target="_blank" className="underline">
+            <Link href="https://hanzo.com/docs/evaluation/dataset-runs/datasets" target="_blank" className="underline">
               here
             </Link>
             .
@@ -95,7 +95,7 @@ export const CreateExperimentsForm = ({
                   <Wand2 className="size-4" />
                   via User Interface
                 </CardTitle>
-                <CardDescription>Test single prompts and model configurations via Console UI.</CardDescription>
+                <CardDescription>Test single prompts and model configurations via Hanzo UI</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="list-disc space-y-2 pl-4 text-sm text-muted-foreground">
@@ -114,7 +114,7 @@ export const CreateExperimentsForm = ({
                   asChild
                   onClick={() => capture("dataset_run:view_prompt_experiment_docs")}
                 >
-                  <Link href="https://hanzo.ai/docs/evaluation/dataset-runs/native-run">View Docs</Link>
+                  <Link href="https://hanzo.com/docs/evaluation/dataset-runs/native-run">View Docs</Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -125,9 +125,7 @@ export const CreateExperimentsForm = ({
                   <Code2 className="size-4" />
                   via SDK / API
                 </CardTitle>
-                <CardDescription>
-                  Start any dataset run via the Console SDKs. To configure runs via webhook, use the button below.
-                </CardDescription>
+                <CardDescription>Start any dataset run via the Hanzo SDKs</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="list-disc space-y-2 pl-4 text-sm text-muted-foreground">
@@ -158,7 +156,7 @@ export const CreateExperimentsForm = ({
                   asChild
                   onClick={() => capture("dataset_run:view_custom_experiment_docs")}
                 >
-                  <Link href="https://hanzo.ai/docs/evaluation/dataset-runs/remote-run" target="_blank">
+                  <Link href="https://hanzo.com/docs/evaluation/dataset-runs/remote-run" target="_blank">
                     View Docs
                   </Link>
                 </Button>

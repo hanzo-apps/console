@@ -10,17 +10,17 @@ import {
   type ScoreConfigCategoryDomain,
   type UpdateAnnotationScoreData,
   type CreateAnnotationScoreData,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { Input } from "@/src/components/ui/input";
-import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { Combobox } from "@/src/components/ui/combobox";
-import { Textarea } from "@hanzo/ui";
+import { Textarea } from "@/src/components/ui/textarea";
 import { HoverCardContent } from "@radix-ui/react-hover-card";
-import { HoverCard, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { formatAnnotateDescription, isNumericDataType, isScoreUnsaved } from "@/src/features/scores/lib/helpers";
 import { ToggleGroup, ToggleGroupItem } from "@/src/components/ui/toggle-group";
 import Header from "@/src/components/layouts/header";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { cn } from "@/src/utils/tailwind";
 import {
   type AnnotationScoreFormData,
@@ -44,7 +44,7 @@ import { DropdownMenuItem } from "@/src/components/ui/dropdown-menu";
 import { useScoreConfigSelection } from "@/src/features/scores/hooks/useScoreConfigSelection";
 import { useRouter } from "next/router";
 import { useAnnotationScoreConfigs } from "@/src/features/scores/hooks/useScoreConfigs";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 const CHAR_CUTOFF = 6;
 
@@ -147,7 +147,7 @@ function AnnotateHeader({
       title="Annotate"
       help={{
         description,
-        href: "https://hanzo.ai/docs/evaluation/evaluation-methods/annotation",
+        href: "https://hanzo.com/docs/evaluation/evaluation-methods/annotation",
         className: "leading-relaxed",
       }}
       actionButtons={[
@@ -175,7 +175,7 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
   actionButtons,
   configControl,
 }: InnerAnnotationFormProps<Target>) {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const router = useRouter();
   const { configs, allowManualSelection } = configControl;
 

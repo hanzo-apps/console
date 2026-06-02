@@ -149,11 +149,7 @@ const buildIdLink = (): TRPCLink<AppRouter> => () => {
 
 const shouldSilenceError = (meta: Record<string, unknown>, error: Error): boolean => {
   if (Array.isArray(meta?.silentHttpCodes)) {
-    return (
-      error instanceof TRPCClientError &&
-      typeof error.data?.httpStatus === "number" &&
-      meta.silentHttpCodes.includes(error.data?.httpStatus)
-    );
+    return error instanceof TRPCClientError && meta.silentHttpCodes.includes(error.data.httpStatus);
   }
 
   return false;
@@ -190,16 +186,12 @@ export const api = createTRPCNext<AppRouter>({
           true: httpLink({
             url: `${getBaseUrl()}/api/trpc`,
             transformer: superjson,
-            fetch: (url, options) =>
-              fetch(url, { ...options, credentials: "include" }),
           }),
           // when condition is false, use batching
           false: httpBatchLink({
             url: `${getBaseUrl()}/api/trpc`,
             transformer: superjson,
             maxURLLength: 2083, // avoid too large batches
-            fetch: (url, options) =>
-              fetch(url, { ...options, credentials: "include" }),
           }),
         }),
       ],
@@ -248,8 +240,6 @@ export const directApi = createTRPCProxyClient<AppRouter>({
       url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
       maxURLLength: 2083, // avoid too large batches
-      fetch: (url, options) =>
-        fetch(url, { ...options, credentials: "include" }),
     }),
   ],
 });

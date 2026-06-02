@@ -21,7 +21,7 @@ import {
   UNCLOSED_VARIABLE_REGEX,
   PromptDependencyRegex,
   parsePromptDependencyTags,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { lightTheme } from "@/src/components/editor/light-theme";
 import { darkTheme } from "@/src/components/editor/dark-theme";
 
@@ -168,7 +168,6 @@ export function CodeMirrorEditor({
   onBlur,
   mode,
   minHeight,
-  maxHeight,
   placeholder,
   editorRef,
 }: {
@@ -180,13 +179,13 @@ export function CodeMirrorEditor({
   lineWrapping?: boolean;
   className?: string;
   mode: "json" | "text" | "prompt";
-  minHeight?: number | string;
-  maxHeight?: number | string;
+  minHeight: "none" | 30 | 100 | 200;
   placeholder?: string;
   editorRef?: React.RefObject<ReactCodeMirrorRef | null>;
 }) {
   const { resolvedTheme } = useTheme();
   const codeMirrorTheme = resolvedTheme === "dark" ? darkTheme : lightTheme;
+
   // used to disable linter when field is empty
   const [linterEnabled, setLinterEnabled] = useState<boolean>(!!value && value !== "");
 
@@ -225,26 +224,14 @@ export function CodeMirrorEditor({
             ]),
         // Extend gutter to full height when minHeight > content height
         // This also enlarges the text area to minHeight
-        ...(!!minHeight
-          ? [
+        ...(minHeight === "none"
+          ? []
+          : [
               EditorView.theme({
-                ".cm-gutter,.cm-content": {
-                  minHeight: typeof minHeight === "number" ? `${minHeight}px` : minHeight,
-                },
+                ".cm-gutter,.cm-content": { minHeight: `${minHeight}px` },
                 ".cm-scroller": { overflow: "auto" },
               }),
-            ]
-          : []),
-        // Add max height support for very long bodies of text
-        ...(!!maxHeight
-          ? [
-              EditorView.theme({
-                ".cm-scroller": {
-                  maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight,
-                },
-              }),
-            ]
-          : []),
+            ]),
         ...(mode === "json" ? [json()] : []),
         ...(mode === "json" && linterEnabled ? [linter(jsonParseLinter())] : []),
         ...(mode === "prompt" ? [promptSupport, promptLinter] : []),

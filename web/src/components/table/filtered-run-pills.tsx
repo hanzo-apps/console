@@ -1,9 +1,9 @@
 import { Badge } from "@/src/components/ui/badge";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { api } from "@/src/utils/api";
 import { ListFilter } from "lucide-react";
 import React, { useMemo } from "react";
-import { type FilterCondition, type FilterState } from "@hanzo/console-core";
+import { type FilterCondition, type FilterState } from "@hanzo/shared";
 
 interface FilteredRunPillsProps {
   projectId: string;

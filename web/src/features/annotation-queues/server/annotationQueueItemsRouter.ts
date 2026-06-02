@@ -11,11 +11,11 @@ import {
   BatchActionType,
   BatchExportTableName,
   type BatchTableNames,
-  ConsoleNotFoundError,
+  HanzoNotFoundError,
   paginationZod,
   Prisma,
-} from "@hanzo/console-core";
-import { getObservationById, getTraceIdsForObservations, logger } from "@hanzo/console-core/src/server";
+} from "@hanzo/shared";
+import { getObservationById, getTraceIdsForObservations, logger } from "@hanzo/shared/src/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
@@ -26,7 +26,7 @@ const isItemLocked = (item: AnnotationQueueItem) => {
 const MAP_OBJECT_TYPE_TO_ACTION_PROPS: Record<
   AnnotationQueueObjectType,
   {
-    actionId: Exclude<ActionId, ActionId.ObservationAddToDataset | ActionId.ObservationBatchEvaluation>;
+    actionId: Exclude<ActionId, ActionId.ObservationAddToDataset>;
     tableName: BatchTableNames;
   }
 > = {
@@ -108,18 +108,18 @@ export const queueItemRouter = createTRPCRouter({
       };
 
       if (item.objectType === AnnotationQueueObjectType.OBSERVATION) {
-        const datastoreObservation = await getObservationById({
+        const clickhouseObservation = await getObservationById({
           id: item.objectId,
           projectId: input.projectId,
         });
 
-        if (!datastoreObservation) {
-          throw new ConsoleNotFoundError("Observation not found");
+        if (!clickhouseObservation) {
+          throw new HanzoNotFoundError("Observation not found");
         }
 
         return {
           ...inflatedItem,
-          parentTraceId: datastoreObservation?.traceId,
+          parentTraceId: clickhouseObservation?.traceId,
         };
       }
 

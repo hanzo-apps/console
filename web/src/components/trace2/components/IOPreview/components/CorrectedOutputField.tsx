@@ -1,7 +1,7 @@
 import { Pencil, Trash, FileDiff, Loader2, Check, Info } from "lucide-react";
 import { cn } from "@/src/utils/tailwind";
 import { Button } from "@/src/components/ui/button";
-import { type ScoreDomain } from "@hanzo/console-core";
+import { type ScoreDomain } from "@hanzo/shared";
 import { useCorrectionData } from "./hooks/useCorrectionData";
 import { useCorrectionMutations } from "./hooks/useCorrectionMutations";
 import { useCorrectionEditor } from "./hooks/useCorrectionEditor";
@@ -11,7 +11,7 @@ import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAcces
 import { Switch } from "@/src/components/ui/switch";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import { CorrectedOutputDiffDialog } from "./CorrectedOutputDiffDialog";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import Link from "next/link";
 
 interface CorrectedOutputFieldProps {
@@ -153,7 +153,7 @@ export function CorrectedOutputField({
                     Corrected outputs allow you to save the expected output for a trace or observation. Learn more in
                     the{" "}
                     <Link
-                      href="https://hanzo.ai/docs/observability/features/corrections"
+                      href="https://hanzo.com/docs/observability/features/corrections"
                       target="_blank"
                       rel="noreferrer"
                       className="underline hover:text-foreground"

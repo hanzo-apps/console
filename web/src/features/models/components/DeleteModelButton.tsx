@@ -1,9 +1,9 @@
 import { useState } from "react";
 
 import { Button } from "@/src/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { type GetModelResult } from "@/src/features/models/validation";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 
@@ -18,7 +18,7 @@ export const DeleteModelButton = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const utils = api.useUtils();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const mut = api.models.delete.useMutation({
     onSuccess: () => {
       void utils.models.invalidate();

@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from "react";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 import { env } from "@/src/env.mjs";
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 
@@ -19,7 +19,7 @@ import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
  * @returns Metadata object with title and icon paths
  */
 export function useLayoutMetadata(activePathName: string | undefined, _navigation: NavigationItem[]) {
-  const { region } = useConsoleCloudRegion();
+  const { region } = useHanzoCloudRegion();
 
   return useMemo(() => {
     const basePath = env.NEXT_PUBLIC_BASE_PATH ?? "";

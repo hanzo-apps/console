@@ -1,6 +1,6 @@
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
@@ -9,16 +9,16 @@ import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganiz
 import { api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
 import type { RouterOutput } from "@/src/utils/types";
-import { Role } from "@hanzo/console-core";
+import { Role } from "@hanzo/shared";
 import { type Row } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { Alert, AlertDescription, AlertTitle } from "@hanzo/ui";
+import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { useHasEntitlement } from "@/src/features/entitlements/hooks";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { RoleSelectItem } from "@/src/features/rbac/components/RoleSelectItem";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { HoverCardPortal } from "@radix-ui/react-hover-card";
 import Link from "next/link";
 import useColumnOrder from "@/src/features/column-visibility/hooks/useColumnOrder";
@@ -126,7 +126,7 @@ export function MembersTable({
 
   const projectRolesEntitlement = useHasEntitlement("rbac-project-roles");
 
-  const columns: ConsoleColumnDef<MembersTableRow>[] = [
+  const columns: HanzoColumnDef<MembersTableRow>[] = [
     {
       accessorKey: "user",
       id: "user",
@@ -176,7 +176,7 @@ export function MembersTable({
       headerTooltip: {
         description:
           "The org-role is the default role for this user in this organization and applies to the organization and all its projects.",
-        href: "https://hanzo.ai/docs/administration/rbac",
+        href: "https://hanzo.com/docs/administration/rbac",
       },
       cell: ({ row }) => {
         const orgRole = row.getValue("orgRole") as MembersTableRow["orgRole"];
@@ -229,7 +229,7 @@ export function MembersTable({
             headerTooltip: {
               description:
                 "The role for this user in this specific project. This role overrides the default project role.",
-              href: "https://hanzo.ai/docs/administration/rbac",
+              href: "https://hanzo.com/docs/administration/rbac",
             },
             cell: ({
               row,

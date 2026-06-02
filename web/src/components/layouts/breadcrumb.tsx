@@ -1,5 +1,11 @@
 import { Badge } from "@/src/components/ui/badge";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@hanzo/ui";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/src/components/ui/breadcrumb";
 import { Button } from "@/src/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +21,7 @@ import { ChevronDownIcon, LoaderCircle, PlusIcon, Settings, Slash } from "lucide
 import { useSession } from "next-auth/react";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { createOrganizationRoute, createProjectRoute } from "@/src/features/setup/setupRoutes";
-import { isCloudPlan, planLabels } from "@hanzo/console-core";
+import { isCloudPlan, planLabels } from "@hanzo/shared";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Fragment } from "react";
@@ -79,7 +85,7 @@ const BreadcrumbComponent = ({
               {organization?.name ?? "Organization"}
               {isCloudPlan(organization?.plan) && organization.id !== env.NEXT_PUBLIC_DEMO_ORG_ID && (
                 <Badge className="ml-1 px-1 py-0 text-xs font-normal" variant="secondary">
-                  {planLabels[organization.plan as keyof typeof planLabels]}
+                  {planLabels[organization.plan]}
                 </Badge>
               )}
               <ChevronDownIcon className="h-4 w-4" />

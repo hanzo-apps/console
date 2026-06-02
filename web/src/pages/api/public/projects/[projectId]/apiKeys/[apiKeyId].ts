@@ -1,8 +1,12 @@
 import { type NextApiRequest, type NextApiResponse } from "next";
-import { prisma } from "@hanzo/console-core/src/db";
-import { logger, redis } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/shared/src/db";
+import { logger, redis } from "@hanzo/shared/src/server";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { cors, runMiddleware } from "@/src/features/public-api/server/cors";
+import {
+  validateQueryParams,
+  handleDeleteApiKey,
+} from "@/src/ee/features/admin-api/server/projects/projectById/apiKeys/apiKeyById";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -41,40 +45,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const { projectId, apiKeyId } = req.query;
-    if (!projectId || typeof projectId !== "string" || !apiKeyId || typeof apiKeyId !== "string") {
+    const params = validateQueryParams(req.query);
+    if (!params) {
       return res.status(400).json({ message: "Invalid request parameters" });
     }
 
-    // Verify project exists and belongs to the organization
+    const { projectId, apiKeyId } = params;
+
+    // Check if project exists and belongs to the organization
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
         orgId: authCheck.scope.orgId,
-        deletedAt: null,
       },
     });
 
     if (!project) {
-      return res.status(404).json({
-        message: "Project not found or you don't have access to it",
-      });
+      return res.status(404).json({ message: "Project not found or you don't have access to it" });
     }
 
-    // Find the API key belonging to this project
-    const apiKey = await prisma.apiKey.findFirst({
-      where: { id: apiKeyId, projectId },
-    });
-
-    if (!apiKey) {
-      return res.status(404).json({ message: "API key not found" });
+    // Handle different HTTP methods
+    switch (req.method) {
+      case "DELETE":
+        return await handleDeleteApiKey(req, res, projectId, apiKeyId, authCheck.scope.orgId);
+      default:
+        res.status(405).json({ message: "Method Not Allowed" });
+        return;
     }
-
-    await prisma.apiKey.delete({
-      where: { id: apiKeyId },
-    });
-
-    return res.status(200).json({ success: true });
   } catch (e) {
     logger.error("Failed to process project API key request", e);
     res.status(500).json({ message: "Internal server error" });

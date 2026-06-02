@@ -1,8 +1,8 @@
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
-import { GetScoreQueryV2, GetScoreResponseV2, InternalServerError, ConsoleNotFoundError } from "@hanzo/console-core";
-import { logger, traceException } from "@hanzo/console-core/src/server";
+import { GetScoreQueryV2, GetScoreResponseV2, InternalServerError, HanzoNotFoundError } from "@hanzo/shared";
+import { logger, traceException } from "@hanzo/shared/src/server";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({
@@ -17,7 +17,7 @@ export default withMiddlewares({
       });
 
       if (!score) {
-        throw new ConsoleNotFoundError("Score not found");
+        throw new HanzoNotFoundError("Score not found");
       }
 
       const parsedScore = GetScoreResponseV2.safeParse(score);

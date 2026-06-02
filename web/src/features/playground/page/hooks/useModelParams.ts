@@ -3,7 +3,7 @@ import { useEffect, useMemo, useCallback, useState } from "react";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { api } from "@/src/utils/api";
 import useLocalStorage from "@/src/components/useLocalStorage";
-import { LLMAdapter, supportedModels, type UIModelParams } from "@hanzo/console-core";
+import { LLMAdapter, supportedModels, type UIModelParams } from "@hanzo/shared";
 import { type ModelParamsContext } from "@/src/components/ModelParameters";
 import { getModelNameKey, getModelProviderKey } from "../storage/keys";
 
@@ -86,24 +86,10 @@ export const useModelParams = (windowId?: string) => {
   );
 
   const setModelParamEnabled: ModelParamsContext["setModelParamEnabled"] = (key, enabled) => {
-    setModelParams((prev) => {
-      const updated = {
-        ...prev,
-        [key]: { ...prev[key], enabled },
-      };
-
-      // For Anthropic models, temperature and top_p are mutually exclusive
-      // When enabling one, disable the other
-      if (updated.adapter.value === LLMAdapter.Anthropic && enabled) {
-        if (key === "temperature" && prev.top_p.enabled) {
-          updated.top_p = { ...prev.top_p, enabled: false };
-        } else if (key === "top_p" && prev.temperature.enabled) {
-          updated.temperature = { ...prev.temperature, enabled: false };
-        }
-      }
-
-      return updated;
-    });
+    setModelParams((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], enabled },
+    }));
   };
 
   // Set default provider and model
@@ -190,7 +176,6 @@ function getDefaultAdapterParams(adapter: LLMAdapter): Omit<UIModelParams, "prov
         maxTemperature: { value: 2, enabled: false },
         max_tokens: { value: 4096, enabled: false },
         top_p: { value: 1, enabled: false },
-        maxReasoningTokens: { value: 0, enabled: false },
         providerOptions: { value: {}, enabled: false },
       };
 
@@ -204,7 +189,6 @@ function getDefaultAdapterParams(adapter: LLMAdapter): Omit<UIModelParams, "prov
         maxTemperature: { value: 2, enabled: false },
         max_tokens: { value: 4096, enabled: false },
         top_p: { value: 1, enabled: false },
-        maxReasoningTokens: { value: 0, enabled: false },
         providerOptions: { value: {}, enabled: false },
       };
 
@@ -219,7 +203,6 @@ function getDefaultAdapterParams(adapter: LLMAdapter): Omit<UIModelParams, "prov
         maxTemperature: { value: 1, enabled: false },
         max_tokens: { value: 4096, enabled: false },
         top_p: { value: 1, enabled: false },
-        maxReasoningTokens: { value: 0, enabled: false },
         providerOptions: { value: {}, enabled: false },
       };
 
@@ -233,7 +216,6 @@ function getDefaultAdapterParams(adapter: LLMAdapter): Omit<UIModelParams, "prov
         maxTemperature: { value: 1, enabled: false },
         max_tokens: { value: 4096, enabled: false },
         top_p: { value: 1, enabled: false },
-        maxReasoningTokens: { value: 0, enabled: false },
         providerOptions: { value: {}, enabled: false },
       };
 
@@ -247,7 +229,6 @@ function getDefaultAdapterParams(adapter: LLMAdapter): Omit<UIModelParams, "prov
         maxTemperature: { value: 2, enabled: false },
         max_tokens: { value: 4096, enabled: false },
         top_p: { value: 1, enabled: false },
-        maxReasoningTokens: { value: 0, enabled: false },
         providerOptions: { value: {}, enabled: false },
       };
 
@@ -261,7 +242,6 @@ function getDefaultAdapterParams(adapter: LLMAdapter): Omit<UIModelParams, "prov
         maxTemperature: { value: 2, enabled: false },
         max_tokens: { value: 4096, enabled: false },
         top_p: { value: 1, enabled: false },
-        maxReasoningTokens: { value: 0, enabled: false },
         providerOptions: { value: {}, enabled: false },
       };
   }

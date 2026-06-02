@@ -10,14 +10,12 @@ import {
   datasetItemFilterColumns,
   datasetRunItemsTableCols,
   usersTableCols,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { scoresTableCols } from "@/src/server/api/definitions/scoresTable";
 import { useQueryParam, encodeDelimitedArray, decodeDelimitedArray, withDefault } from "use-query-params";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { evalConfigFilterColumns } from "@/src/server/api/definitions/evalConfigsTable";
 import { evalExecutionsFilterCols } from "@/src/server/api/definitions/evalExecutionsTable";
-import { escapePipeInValue, splitOnUnescapedPipe, unescapePipeInValue } from "../lib/filter-query-encoding";
-import { usePeekTableState } from "@/src/components/table/peek/contexts/PeekTableStateContext";
 
 const DEBUG_QUERY_STATE = false;
 
@@ -36,22 +34,13 @@ const getCommaArrayParam = (table: TableName) => ({
           }
 
           const stringified = `${columnId};${f.type};${
-            f.type === "numberObject" ||
-            f.type === "stringObject" ||
-            f.type === "categoryOptions" ||
-            f.type === "positionInTrace"
-              ? f.key
-              : ""
+            f.type === "numberObject" || f.type === "stringObject" || f.type === "categoryOptions" ? f.key : ""
           };${f.operator};${encodeURIComponent(
             f.type === "datetime"
               ? new Date(f.value).toISOString()
               : f.type === "stringOptions" || f.type === "arrayOptions" || f.type === "categoryOptions"
-                ? (f.value as string[]).map(escapePipeInValue).join("|")
-                : f.type === "positionInTrace"
-                  ? f.value === undefined || f.value === null
-                    ? ""
-                    : f.value
-                  : f.value,
+                ? f.value.join("|")
+                : f.value,
           )}`;
 
           if (DEBUG_QUERY_STATE) console.log("stringified", stringified);
@@ -76,15 +65,11 @@ const getCommaArrayParam = (table: TableName) => ({
               ? new Date(decodedValue)
               : type === "number" || type === "numberObject"
                 ? Number(decodedValue)
-                : type === "positionInTrace"
-                  ? decodedValue === ""
-                    ? undefined
-                    : Number(decodedValue)
-                  : type === "stringOptions" || type === "arrayOptions" || type === "categoryOptions"
-                    ? splitOnUnescapedPipe(decodedValue).map(unescapePipeInValue)
-                    : type === "boolean"
-                      ? decodedValue === "true"
-                      : decodedValue;
+                : type === "stringOptions" || type === "arrayOptions" || type === "categoryOptions"
+                  ? decodedValue.split("|")
+                  : type === "boolean"
+                    ? decodedValue === "true"
+                    : decodedValue;
 
         if (DEBUG_QUERY_STATE) console.log("parsedValue", parsedValue);
         const parsed = singleFilter.safeParse({
@@ -106,8 +91,6 @@ export const useQueryFilterState = (
   table: TableName,
   projectId?: string, // Passing projectId is expected as filters might differ across projects. However, we can't call hooks conditionally. There is a case in the prompts table where this will only be used if projectId is defined, but it's not defined in all cases.
 ) => {
-  const peekContext = usePeekTableState();
-
   const [sessionFilterState, setSessionFilterState] = useSessionStorage<FilterState>(
     !!projectId ? `${table}FilterState-${projectId}` : `${table}FilterState`,
     initialState,
@@ -134,16 +117,6 @@ export const useQueryFilterState = (
     "filter",
     withDefault(getCommaArrayParam(table), sessionFilterState),
   );
-
-  if (peekContext) {
-    const setState = (newFilters: FilterState) => {
-      peekContext.setTableState({
-        ...peekContext.tableState,
-        filters: newFilters,
-      });
-    };
-    return [peekContext.tableState.filters, setState] as const;
-  }
 
   const setFilterStateWithSession = (newState: FilterState): void => {
     setFilterState(newState);

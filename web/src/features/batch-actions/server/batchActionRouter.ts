@@ -1,15 +1,13 @@
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { paginationZod } from "@hanzo/console-core";
+import { paginationZod } from "@hanzo/shared";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 import { GetBatchActionByIdSchema } from "../validation";
 import { addToDatasetRouter } from "./addToDatasetRouter";
-import { runEvaluationRouter } from "./runEvaluationRouter";
 
 export const batchActionRouter = createTRPCRouter({
   addToDataset: addToDatasetRouter,
-  runEvaluation: runEvaluationRouter,
   byId: protectedProjectProcedure.input(GetBatchActionByIdSchema).query(async ({ input, ctx }) => {
     throwIfNoProjectAccess({
       session: ctx.session,

@@ -17,10 +17,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { api } from "@/src/utils/api";
-import { Textarea } from "@hanzo/ui";
+import { Textarea } from "@/src/components/ui/textarea";
 import { isBooleanDataType, isCategoricalDataType, isNumericDataType } from "@/src/features/scores/lib/helpers";
 import DocPopup from "@/src/components/layouts/doc-popup";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import {
   createConfigSchema,
   updateConfigSchema,
@@ -28,7 +28,7 @@ import {
   type UpdateConfig,
 } from "@/src/features/score-configs/lib/upsertFormTypes";
 import { validateScoreConfigUpsertFormInput } from "@/src/features/score-configs/lib/validateScoreConfigUpsertFormInput";
-import { ScoreConfigDataType } from "@hanzo/console-core";
+import { ScoreConfigDataType } from "@hanzo/shared";
 
 export function UpsertScoreConfigDialog({
   projectId,
@@ -44,7 +44,7 @@ export function UpsertScoreConfigDialog({
   defaultValues?: CreateConfig | UpdateConfig;
 }) {
   const [formError, setFormError] = useState<string | null>(null);
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   const hasAccess = useHasProjectAccess({
     projectId: projectId,
@@ -269,7 +269,7 @@ export function UpsertScoreConfigDialog({
                           )}
                           {fields.map((category, index) => (
                             <div
-                              key={`${category.id}-consoleObject`}
+                              key={`${category.id}-hanzoObject`}
                               className="items-top mb-2 grid grid-cols-[1fr,3fr] gap-2 text-left sm:grid-cols-[1fr,7fr]"
                             >
                               <FormField

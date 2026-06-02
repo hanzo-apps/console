@@ -1,4 +1,5 @@
-import insights, { type CaptureResult, type CaptureOptions } from "@hanzo/insights";
+import { type CaptureResult, type CaptureOptions } from "posthog-js";
+import { usePostHog } from "posthog-js/react";
 
 // resource:action, only use snake_case
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
@@ -48,7 +49,6 @@ export const events = {
     "permalink_visit",
     "update_name",
     "search_views",
-    "system_preset_selected",
   ],
   score: ["create", "update", "delete", "update_form_open", "create_form_open", "update_comment", "delete_comment"],
   score_configs: [
@@ -88,7 +88,7 @@ export const events = {
     "delete_form_open",
     "delete_template_button_click",
   ],
-  integrations: ["insights_form_submitted", "blob_storage_form_submitted", "mixpanel_form_submitted"],
+  integrations: ["posthog_form_submitted", "blob_storage_form_submitted", "mixpanel_form_submitted"],
   sign_in: ["cloud_region_switch", "button_click"],
   sign_up: ["button_click"],
   auth: ["reset_password_email_requested", "update_password_form_submit"],
@@ -173,7 +173,6 @@ export const events = {
   support_chat: ["initiated", "opened", "message_sent", "community_hours_click"], // also used on landing page for consistency
   cmd_k_menu: ["opened", "search_entered", "navigated"],
   spend_alert: ["created", "updated", "deleted"],
-  sidebar: ["book_a_call_clicked"],
 } as const;
 
 // type that represents all possible event names, e.g. "traces:bookmark"
@@ -181,13 +180,16 @@ type EventName = {
   [Resource in keyof typeof events]: `${Resource}:${(typeof events)[Resource][number]}`;
 }[keyof typeof events];
 
-export const useInsightsCapture = () => {
+export const usePostHogClientCapture = () => {
+  const posthog = usePostHog();
+
+  // wrapped posthog.capture function that only allows events that are in the allowlist
   function capture(
     eventName: EventName,
     properties?: Record<string, any> | null,
     options?: CaptureOptions,
   ): CaptureResult | void {
-    return insights.capture(eventName, properties, options);
+    return posthog.capture(eventName, properties, options);
   }
 
   return capture;

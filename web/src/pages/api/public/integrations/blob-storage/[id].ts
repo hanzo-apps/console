@@ -1,10 +1,10 @@
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
-import { prisma } from "@hanzo/console-core/src/db";
-import { redis } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/shared/src/db";
+import { redis } from "@hanzo/shared/src/server";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
-import { ConsoleNotFoundError, UnauthorizedError, ForbiddenError } from "@hanzo/console-core";
+import { HanzoNotFoundError, UnauthorizedError, ForbiddenError } from "@hanzo/shared";
 
 export default withMiddlewares({
   DELETE: handleDeleteBlobStorageIntegration,
@@ -48,7 +48,7 @@ async function handleDeleteBlobStorageIntegration(req: NextApiRequest, res: Next
   });
 
   if (!integration || integration.project.orgId !== authCheck.scope.orgId) {
-    throw new ConsoleNotFoundError("Blob storage integration not found");
+    throw new HanzoNotFoundError("Blob storage integration not found");
   }
 
   // Delete the integration

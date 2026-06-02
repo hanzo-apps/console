@@ -4,7 +4,7 @@ import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
 import { DataTableControlsProvider, DataTableControls } from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { InlineFilterState } from "@/src/features/filters/components/filter-builder";
 import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
@@ -12,20 +12,17 @@ import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFi
 import { evaluatorFilterConfig } from "@/src/features/filters/config/evaluators-config";
 import { type RouterOutputs, api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
-import { type FilterState, singleFilter } from "@hanzo/console-core";
+import { type FilterState, singleFilter } from "@hanzo/shared";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useEffect, useState, useMemo } from "react";
-import { useQueryParam, StringParam, withDefault } from "use-query-params";
-import { usePaginationState } from "@/src/hooks/usePaginationState";
+import { useEffect, useState } from "react";
+import { useQueryParams, withDefault, NumberParam, useQueryParam, StringParam } from "use-query-params";
 import { z } from "zod/v4";
 import { generateJobExecutionCounts } from "@/src/features/evals/utils/job-execution-utils";
-import { isLegacyEvalTarget, isEventTarget } from "@/src/features/evals/utils/typeHelpers";
 import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
 import TableIdOrName from "@/src/components/table/table-id";
-import { MoreVertical, Loader2, ExternalLinkIcon, Edit, Info } from "lucide-react";
+import { MoreVertical, Loader2, ExternalLinkIcon, Edit } from "lucide-react";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
 import { PeekViewEvaluatorConfigDetail } from "@/src/components/table/peek/peek-evaluator-config-detail";
-import { TablePeekView } from "@/src/components/table/peek";
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -42,13 +39,8 @@ import { DeleteEvalConfigButton } from "@/src/components/deleteButton";
 import { RAGAS_TEMPLATE_PREFIX } from "@/src/features/evals/types";
 import { MaintainerTooltip } from "@/src/features/evals/components/maintainer-tooltip";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { usdFormatter } from "@/src/utils/numbers";
-import { Callout } from "@/src/components/ui/callout";
-import Link from "next/link";
-import { Badge } from "@/src/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@hanzo/ui";
-import { useIsObservationEvalsFullyReleased } from "@/src/features/events/hooks/useObservationEvals";
 
 export type EvaluatorDataRow = {
   id: string;
@@ -72,54 +64,14 @@ export type EvaluatorDataRow = {
   logs?: string;
   actions?: string;
   totalCost?: number | null;
-  isLegacy?: boolean;
 };
 
-function LegacyBadgeCell({ status }: { status: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <Badge variant="warning">
-        Legacy
-        {status === "ACTIVE" && (
-          <Tooltip>
-            <TooltipTrigger>
-              <Info className="ml-1 h-3.5 w-3.5 text-dark-yellow" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-[280px]">
-              <div className="space-y-1 text-sm">
-                <p className="font-medium">Action required</p>
-                <p className="text-muted-foreground">
-                  This evaluator requires changes to benefit from new features and performance improvements. Please
-                  follow{" "}
-                  <Link
-                    href="https://hanzo.ai/docs/faq/all/llm-as-a-judge-migration"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-dark-blue hover:opacity-80"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    this guide
-                  </Link>{" "}
-                  to upgrade to the new version.
-                </p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </Badge>
-    </div>
-  );
-}
-
 export default function EvaluatorTable({ projectId }: { projectId: string }) {
-  const isFullyReleased = useIsObservationEvalsFullyReleased();
   const router = useRouter();
   const { setDetailPageList } = useDetailPageLists();
-  const [paginationState, setPaginationState] = usePaginationState(0, 50, {
-    page: "pageIndex",
-    limit: "pageSize",
+  const [paginationState, setPaginationState] = useQueryParams({
+    pageIndex: withDefault(NumberParam, 0),
+    pageSize: withDefault(NumberParam, 50),
   });
   const [searchQuery, setSearchQuery] = useQueryParam("search", withDefault(StringParam, null));
   const [editConfigId, setEditConfigId] = useState<string | null>(null);
@@ -135,7 +87,7 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
     target: ["trace", "dataset"],
   };
 
-  const queryFilter = useSidebarFilterState(evaluatorFilterConfig, newFilterOptions, projectId, false, false, []);
+  const queryFilter = useSidebarFilterState(evaluatorFilterConfig, newFilterOptions, projectId, false);
 
   const evaluators = api.evals.allConfigs.useQuery({
     page: paginationState.pageIndex,
@@ -175,13 +127,6 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
       },
     },
   );
-
-  const hasLegacyEvals = useMemo(() => {
-    if (!evaluators.data?.configs) return false;
-    return evaluators.data.configs.some(
-      (config) => config.finalStatus === "ACTIVE" && isLegacyEvalTarget(config.targetObject),
-    );
-  }, [evaluators.data?.configs]);
 
   useEffect(() => {
     if (evaluators.isSuccess) {
@@ -288,35 +233,11 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
       enableSorting: true,
       size: 150,
     }),
-    ...(isFullyReleased
-      ? [
-          columnHelper.accessor("isLegacy", {
-            id: "isLegacy",
-            header: "Eval Version",
-            size: 180,
-            enableHiding: true,
-            cell: (row) => {
-              const targetObject = row.row.original.target;
-              const status = row.row.original.status;
-              const isDeprecated = isLegacyEvalTarget(targetObject);
-
-              if (!isDeprecated) return null;
-
-              return <LegacyBadgeCell status={status} />;
-            },
-          }),
-        ]
-      : []),
     columnHelper.accessor("target", {
       id: "target",
-      header: "Runs on",
+      header: "Target",
       size: 150,
       enableHiding: true,
-      cell: (row) => {
-        const targetObject = row.getValue();
-        const renderText = isEventTarget(targetObject) ? "observations" : targetObject;
-        return <span className="text-muted-foreground">{renderText}</span>;
-      },
     }),
     columnHelper.accessor("filter", {
       id: "filter",
@@ -396,7 +317,7 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
         );
       },
     }),
-  ] as ConsoleColumnDef<EvaluatorDataRow>[];
+  ] as HanzoColumnDef<EvaluatorDataRow>[];
 
   const [columnVisibility, setColumnVisibility] = useColumnVisibility<EvaluatorDataRow>(
     "evalConfigColumnVisibility",
@@ -404,21 +325,6 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
   );
 
   const peekNavigationProps = usePeekNavigation();
-
-  const peekConfig = useMemo(
-    () => ({
-      itemType: "RUNNING_EVALUATOR" as const,
-      detailNavigationKey: "evals",
-      peekEventOptions: {
-        ignoredSelectors: [
-          "[aria-label='edit'], [aria-label='actions'], [aria-label='view-logs'], [aria-label='delete']",
-        ],
-      },
-      children: <PeekViewEvaluatorConfigDetail projectId={projectId} />,
-      ...peekNavigationProps,
-    }),
-    [projectId, peekNavigationProps],
-  );
 
   const convertToTableRow = (jobConfig: RouterOutputs["evals"]["allConfigs"]["configs"][number]): EvaluatorDataRow => {
     const result = generateJobExecutionCounts(jobConfig.jobExecutionsByState);
@@ -448,7 +354,6 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
             : "Hanzo maintained"
         : "Not available",
       totalCost: costData,
-      isLegacy: isLegacyEvalTarget(jobConfig.targetObject),
     };
   };
 
@@ -458,27 +363,6 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
       defaultSidebarCollapsed={evaluatorFilterConfig.defaultSidebarCollapsed}
     >
       <div className="flex h-full w-full flex-col">
-        {isFullyReleased && hasLegacyEvals && (
-          <div className="p-2 pb-0">
-            <Callout id="eval-remapping-table" variant="info" key="dismissed-eval-remapping-callouts">
-              <span>New LLM-as-a-Judge functionality has landed. </span>
-              <span className="font-semibold">
-                Some of your evaluators (marked &quot;Legacy&quot;) require changes{" "}
-              </span>
-              <span>for new features and improvements. </span>
-              <Link
-                href="https://hanzo.ai/docs/faq/all/llm-as-a-judge-migration"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-dark-blue hover:opacity-80"
-              >
-                Learn what is changing and how to upgrade
-              </Link>
-              <span>.</span>
-            </Callout>
-          </div>
-        )}
-
         {/* Toolbar spanning full width */}
         <DataTableToolbar
           columns={columns}
@@ -503,7 +387,18 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
             <DataTable
               tableName={"evalConfigs"}
               columns={columns}
-              peekView={peekConfig}
+              peekView={{
+                itemType: "RUNNING_EVALUATOR",
+                detailNavigationKey: "evals",
+                peekEventOptions: {
+                  ignoredSelectors: [
+                    "[aria-label='edit'], [aria-label='actions'], [aria-label='view-logs'], [aria-label='delete']",
+                  ],
+                },
+                tableDataUpdatedAt: Math.max(evaluators.dataUpdatedAt, costs.dataUpdatedAt),
+                children: <PeekViewEvaluatorConfigDetail projectId={projectId} />,
+                ...peekNavigationProps,
+              }}
               data={
                 evaluators.isLoading
                   ? { isLoading: true, isError: false }
@@ -533,7 +428,6 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
             />
           </div>
         </ResizableFilterLayout>
-        <TablePeekView peekView={peekConfig} />
       </div>
       <Dialog
         open={!!editConfigId && existingEvaluator.isSuccess}

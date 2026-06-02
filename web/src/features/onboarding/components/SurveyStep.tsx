@@ -1,8 +1,8 @@
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/src/components/ui/form";
-import { RadioGroup, RadioGroupItem } from "@hanzo/ui";
-import { Textarea } from "@hanzo/ui";
+import { RadioGroup, RadioGroupItem } from "@/src/components/ui/radio-group";
+import { Textarea } from "@/src/components/ui/textarea";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@hanzo/ui";
+import { Label } from "@/src/components/ui/label";
 import type { Control, Path } from "react-hook-form";
 import type { SurveyQuestion, SurveyFormData } from "../lib/surveyTypes";
 
@@ -45,7 +45,7 @@ export function SurveyStep({ question, control, onAutoAdvance, isLast = false }:
               <RadioGroup
                 name={field.name}
                 ref={field.ref}
-                onValueChange={(value: string) => {
+                onValueChange={(value) => {
                   field.onChange(value);
                   setTimeout(() => {
                     handleAutoAdvanceWithTimeout(value);

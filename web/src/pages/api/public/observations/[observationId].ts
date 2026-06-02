@@ -1,5 +1,5 @@
-import { prisma } from "@hanzo/console-core/src/db";
-import { ConsoleNotFoundError } from "@hanzo/console-core";
+import { prisma } from "@hanzo/shared/src/db";
+import { HanzoNotFoundError } from "@hanzo/shared";
 import {
   GetObservationV1Query,
   GetObservationV1Response,
@@ -11,7 +11,7 @@ import {
   enrichObservationWithModelData,
   getObservationById,
   getObservationByIdFromEventsTable,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { env } from "@/src/env.mjs";
 
 export default withMiddlewares({
@@ -26,29 +26,30 @@ export default withMiddlewares({
           ? query.useEventsTable === true
           : env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS;
 
-      const datastoreObservation = useEventsTable
+      const clickhouseObservation = useEventsTable
         ? await getObservationByIdFromEventsTable({
             id: query.observationId,
             projectId: auth.scope.projectId,
             fetchWithInputOutput: true,
+            preferredClickhouseService: "ReadOnly",
           })
         : await getObservationById({
             id: query.observationId,
             projectId: auth.scope.projectId,
             fetchWithInputOutput: true,
-            preferredService: "ReadOnly",
+            preferredClickhouseService: "ReadOnly",
           });
 
-      if (!datastoreObservation) {
-        throw new ConsoleNotFoundError("Observation not found within authorized project");
+      if (!clickhouseObservation) {
+        throw new HanzoNotFoundError("Observation not found within authorized project");
       }
 
-      const model = datastoreObservation.internalModelId
+      const model = clickhouseObservation.internalModelId
         ? await prisma.model.findFirst({
             where: {
               AND: [
                 {
-                  id: datastoreObservation.internalModelId,
+                  id: clickhouseObservation.internalModelId,
                 },
                 {
                   OR: [
@@ -75,12 +76,12 @@ export default withMiddlewares({
         : undefined;
 
       const observation = {
-        ...datastoreObservation,
+        ...clickhouseObservation,
         ...enrichObservationWithModelData(model),
       };
 
       if (!observation) {
-        throw new ConsoleNotFoundError("Observation not found within authorized project");
+        throw new HanzoNotFoundError("Observation not found within authorized project");
       }
       return transformDbToApiObservation(observation);
     },

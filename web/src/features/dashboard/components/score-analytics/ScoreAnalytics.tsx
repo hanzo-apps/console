@@ -1,10 +1,10 @@
 import { api } from "@/src/utils/api";
 import { DashboardCard } from "@/src/features/dashboard/components/cards/DashboardCard";
-import { type ScoreDataTypeType, type FilterState } from "@hanzo/console-core";
+import { type ScoreDataTypeType, type FilterState } from "@hanzo/shared";
 import { type DashboardDateRangeAggregationOption } from "@/src/utils/date-range-utils";
 import { MultiSelectKeyValues } from "@/src/features/scores/components/multi-select-key-values";
 import React, { useMemo } from "react";
-import { Separator } from "@hanzo/ui";
+import { Separator } from "@/src/components/ui/separator";
 import { isBooleanDataType, isCategoricalDataType, isNumericDataType } from "@/src/features/scores/lib/helpers";
 import { NumericScoreTimeSeriesChart } from "@/src/features/dashboard/components/score-analytics/NumericScoreTimeSeriesChart";
 import { CategoricalScoreChart } from "@/src/features/dashboard/components/score-analytics/CategoricalScoreChart";
@@ -12,7 +12,6 @@ import { NumericScoreHistogram } from "@/src/features/dashboard/components/score
 import DocPopup from "@/src/components/layouts/doc-popup";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
 import useLocalStorage from "@/src/components/useLocalStorage";
-import { type ViewVersion } from "@/src/features/query";
 import { convertScoreColumnsToAnalyticsData, getScoreDataTypeIcon } from "@/src/features/scores/lib/scoreColumns";
 
 export function ScoreAnalytics(props: {
@@ -23,7 +22,6 @@ export function ScoreAnalytics(props: {
   toTimestamp: Date;
   projectId: string;
   isLoading?: boolean;
-  metricsVersion?: ViewVersion;
 }) {
   // Stale score selections in localStorage are ignored as we only show scores that exist in scoreAnalyticsOptions
   const [selectedDashboardScoreKeys, setSelectedDashboardScoreKeys] = useLocalStorage<string[]>(
@@ -96,11 +94,7 @@ export function ScoreAnalytics(props: {
                   <div>
                     <div className="mb-2 text-sm text-muted-foreground">
                       Total aggregate scores
-                      {isNumericDataType(dataType) && (
-                        // TODO: v2 histogram aggregates all rows server-side (no 10k cap).
-                        // Make this tooltip conditional on metricsVersion.
-                        <DocPopup description="Aggregate of up to 10,000 scores" />
-                      )}
+                      {isNumericDataType(dataType) && <DocPopup description="Aggregate of up to 10,000 scores" />}
                     </div>
                     {isCategoricalDataType(dataType) && (
                       <CategoricalScoreChart
@@ -109,7 +103,6 @@ export function ScoreAnalytics(props: {
                         globalFilterState={props.globalFilterState}
                         fromTimestamp={props.fromTimestamp}
                         toTimestamp={props.toTimestamp}
-                        metricsVersion={props.metricsVersion}
                       />
                     )}
                     {(isNumericDataType(dataType) || isBooleanDataType(dataType)) && (
@@ -119,7 +112,6 @@ export function ScoreAnalytics(props: {
                         name={name}
                         dataType={dataType as Extract<ScoreDataTypeType, "NUMERIC" | "BOOLEAN">}
                         globalFilterState={props.globalFilterState}
-                        metricsVersion={props.metricsVersion}
                       />
                     )}
                   </div>
@@ -136,7 +128,6 @@ export function ScoreAnalytics(props: {
                         globalFilterState={props.globalFilterState}
                         fromTimestamp={props.fromTimestamp}
                         toTimestamp={props.toTimestamp}
-                        metricsVersion={props.metricsVersion}
                       />
                     )}
                     {(isNumericDataType(dataType) || isBooleanDataType(dataType)) && (
@@ -149,7 +140,6 @@ export function ScoreAnalytics(props: {
                         globalFilterState={props.globalFilterState}
                         fromTimestamp={props.fromTimestamp}
                         toTimestamp={props.toTimestamp}
-                        metricsVersion={props.metricsVersion}
                       />
                     )}
                   </div>
@@ -160,8 +150,8 @@ export function ScoreAnalytics(props: {
           })}
         </div>
       ) : Boolean(scoreKeysAndProps.data?.scoreColumns.length) ? (
-        <div className="flex min-h-[9rem] w-full flex-1 items-center justify-center rounded-md border">
-          <p className="text-muted-foreground">Select a score to view analytics</p>
+        <div className="flex min-h-[9rem] w-full flex-1 items-center justify-center rounded-tremor-default border">
+          <p className="text-tremor-content">Select a score to view analytics</p>
         </div>
       ) : (
         <NoDataOrLoading isLoading={scoreKeysAndProps.isPending} />

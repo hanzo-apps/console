@@ -1,5 +1,5 @@
 import { api } from "@/src/utils/api";
-import { type FilterState } from "@hanzo/console-core";
+import { type FilterState } from "@hanzo/shared";
 import { createTracesTimeFilter } from "@/src/features/dashboard/lib/dashboard-utils";
 import {
   type DashboardDateRangeAggregationOption,
@@ -8,12 +8,9 @@ import {
 import React, { useMemo } from "react";
 import { DashboardCategoricalScoreAdapter } from "@/src/features/scores/adapters";
 import { type ScoreData } from "@/src/features/scores/types";
-import { type QueryType, type ViewVersion, mapLegacyUiTableFilterToView } from "@/src/features/query";
+import { CategoricalChart } from "@/src/features/scores/components/ScoreChart";
+import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
 import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
-import { Chart } from "@/src/features/widgets/chart-library/Chart";
-import { scoreChartDataToDataPoints } from "@/src/features/dashboard/lib/chart-data-adapters";
-import { isEmptyChart } from "@/src/features/dashboard/lib/score-analytics-utils";
-import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
 
 export function CategoricalScoreChart(props: {
   projectId: string;
@@ -22,7 +19,6 @@ export function CategoricalScoreChart(props: {
   fromTimestamp: Date;
   toTimestamp: Date;
   agg?: DashboardDateRangeAggregationOption;
-  metricsVersion?: ViewVersion;
 }) {
   const scoresQuery: QueryType = {
     view: "scores-categorical",
@@ -66,7 +62,6 @@ export function CategoricalScoreChart(props: {
     {
       projectId: props.projectId,
       query: scoresQuery,
-      version: props.metricsVersion,
     },
     {
       trpc: {
@@ -92,21 +87,13 @@ export function CategoricalScoreChart(props: {
     return adapter.toChartData();
   }, [scores.data, props.agg]);
 
-  if (isEmptyChart({ data: chartData })) {
-    return <NoDataOrLoading isLoading={scores.isLoading} className="min-h-[9rem] flex-1" />;
-  }
   return (
-    <div className="h-80 w-full shrink-0">
-      <Chart
-        chartType="VERTICAL_BAR"
-        data={scoreChartDataToDataPoints(chartData, chartLabels)}
-        rowLimit={100}
-        chartConfig={{
-          type: "VERTICAL_BAR",
-          row_limit: 100,
-          subtle_fill: true,
-        }}
-      />
-    </div>
+    <CategoricalChart
+      chartData={chartData}
+      chartLabels={chartLabels}
+      isLoading={scores.isLoading}
+      className="min-h-[9rem] flex-1"
+      stack={!!props.agg}
+    />
   );
 }

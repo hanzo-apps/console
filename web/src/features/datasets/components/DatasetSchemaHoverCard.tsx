@@ -1,9 +1,9 @@
 import { ArrowUpRight, LockIcon, Copy, Check } from "lucide-react";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { CodeMirrorEditor } from "@/src/components/editor";
-import type { Prisma } from "@hanzo/console-core";
+import type { Prisma } from "@hanzo/shared";
 import { Button } from "@/src/components/ui/button";
-import { Separator } from "@hanzo/ui";
+import { Separator } from "@/src/components/ui/separator";
 import { useMemo, useState } from "react";
 import { generateSchemaExample } from "../lib/generateSchemaExample";
 import { copyTextToClipboard } from "@/src/utils/clipboard";
@@ -70,6 +70,7 @@ export const DatasetSchemaHoverCard: React.FC<DatasetSchemaHoverCardProps> = ({
             mode="json"
             value={schemaString}
             onChange={() => {}} // Read-only
+            minHeight="none"
             className="max-h-[250px] overflow-y-auto"
             editable={false}
           />
@@ -88,6 +89,7 @@ export const DatasetSchemaHoverCard: React.FC<DatasetSchemaHoverCardProps> = ({
               <CodeMirrorEditor
                 mode="json"
                 value={exampleObject}
+                minHeight="none"
                 className="max-h-[250px] overflow-y-auto"
                 editable={false}
               />

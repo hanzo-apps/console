@@ -11,7 +11,7 @@ import {
   AvailableWebhookApiSchema,
   type SafeWebhookActionConfig,
   WebhookDefaultHeaders,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { api } from "@/src/utils/api";
 import { useState } from "react";
 import {
@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { WebhookSecretRender } from "../WebhookSecretRender";
 import { CodeView } from "@/src/components/ui/CodeJsonViewer";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
@@ -151,7 +151,7 @@ export const WebhookActionForm: React.FC<WebhookActionFormProps> = ({ form, disa
           <FormDescription className="mb-2">Default headers (automatically added by Hanzo):</FormDescription>
           {Object.entries({
             ...WebhookDefaultHeaders,
-            "x-webhook-signature": `t=<timestamp>,v1=<signature>`,
+            "x-hanzo-signature": `t=<timestamp>,v1=<signature>`,
           }).map(([key, value]) => (
             <div key={key} className="mb-2 grid grid-cols-[1fr,1fr,auto,auto] gap-2">
               <FormItem>
@@ -246,7 +246,7 @@ export const WebhookActionForm: React.FC<WebhookActionFormProps> = ({ form, disa
         <FormLabel>Webhook Secret</FormLabel>
         <FormDescription className="mb-2">
           Use this secret to verify webhook signatures for security. The secret is automatically included in the
-          x-webhook-signature header.
+          x-hanzo-signature header.
         </FormDescription>
 
         {action?.id ? (

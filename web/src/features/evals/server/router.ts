@@ -7,7 +7,6 @@ import {
   ZodModelConfig,
   singleFilter,
   variableMapping,
-  observationVariableMapping,
   paginationZod,
   type JobConfiguration,
   JobType,
@@ -16,11 +15,9 @@ import {
   JobConfigState,
   orderBy,
   jsonSchema,
-  EvalTargetObject,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import {
   getQueue,
-  getAvgCostByEvaluatorIds,
   getCostByEvaluatorIds,
   getScoresByIds,
   logger,
@@ -30,12 +27,12 @@ import {
   orderByToPrismaSql,
   DefaultEvalModelService,
   testModelCall,
-  clearNoEvalConfigsCache,
-} from "@hanzo/console-core/src/server";
+  clearNoJobConfigsCache,
+} from "@hanzo/shared/src/server";
 import { TRPCError } from "@trpc/server";
 import { EvalReferencedEvaluators } from "@/src/features/evals/types";
 import { EvaluatorStatus } from "../types";
-import { traceException } from "@hanzo/console-core/src/server";
+import { traceException } from "@hanzo/shared/src/server";
 import { isNotNullOrUndefined } from "@/src/utils/types";
 import { v4 as uuidv4 } from "uuid";
 import { env } from "@/src/env.mjs";
@@ -51,8 +48,7 @@ const ConfigWithTemplateSchema = z.object({
   scoreName: z.string(),
   targetObject: z.string(),
   filter: z.array(singleFilter).nullable(), // reusing the filter type from the tables
-  // Accept either full variableMapping (trace/dataset) or simplified observationVariableMapping (event/experiment)
-  variableMapping: z.union([z.array(variableMapping), z.array(observationVariableMapping)]),
+  variableMapping: z.array(variableMapping),
   sampling: z.instanceof(Prisma.Decimal),
   delay: z.number(),
   status: z.enum(JobConfigState),
@@ -124,19 +120,16 @@ const CreateEvalJobSchema = z.object({
   scoreName: z.string().min(1),
   target: z.string(), // should be z.enum(["trace", "dataset-run-item"])
   filter: z.array(singleFilter).nullable(), // reusing the filter type from the tables
-  // Accept either full variableMapping (trace/dataset) or simplified observationVariableMapping (event/experiment)
-  mapping: z.union([z.array(variableMapping), z.array(observationVariableMapping)]),
+  mapping: z.array(variableMapping),
   sampling: z.number().gt(0).lte(1),
   delay: z.number().gte(0).default(DEFAULT_TRACE_JOB_DELAY), // 10 seconds default
   timeScope: TimeScopeSchema,
-  status: z.enum(EvaluatorStatus).optional().default(JobConfigState.ACTIVE),
 });
 
 const UpdateEvalJobSchema = z.object({
   scoreName: z.string().min(1).optional(),
   filter: z.array(singleFilter).optional(),
-  // Accept either full variableMapping (trace/dataset) or simplified observationVariableMapping (event/experiment)
-  variableMapping: z.union([z.array(variableMapping), z.array(observationVariableMapping)]).optional(),
+  variableMapping: z.array(variableMapping).optional(),
   sampling: z.number().gt(0).lte(1).optional(),
   delay: z.number().gte(0).optional(),
   status: z.enum(EvaluatorStatus).optional(),
@@ -202,7 +195,7 @@ export const evalRouter = createTRPCRouter({
       scope: "evalJob:read",
     });
 
-    const [configCount, configActiveCount, templateCount, legacyConfigCount] = await Promise.all([
+    const [configCount, configActiveCount, templateCount] = await Promise.all([
       ctx.prisma.jobConfiguration.count({
         where: {
           projectId: input.projectId,
@@ -221,22 +214,12 @@ export const evalRouter = createTRPCRouter({
           projectId: input.projectId,
         },
       }),
-      ctx.prisma.jobConfiguration.count({
-        where: {
-          projectId: input.projectId,
-          jobType: "EVAL",
-          targetObject: {
-            in: [EvalTargetObject.TRACE, EvalTargetObject.DATASET],
-          },
-        },
-      }),
     ]);
 
     return {
       configCount,
       configActiveCount,
       templateCount,
-      legacyConfigCount,
     };
   }),
   allConfigs: protectedProjectProcedure
@@ -604,12 +587,7 @@ export const evalRouter = createTRPCRouter({
     }),
 
   jobConfigsByTarget: protectedProjectProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-        targetObject: z.union([z.array(z.string()), z.string()]),
-      }),
-    )
+    .input(z.object({ projectId: z.string(), targetObject: z.string() }))
     .query(async ({ input, ctx }) => {
       throwIfNoProjectAccess({
         session: ctx.session,
@@ -617,12 +595,10 @@ export const evalRouter = createTRPCRouter({
         scope: "evalJob:read",
       });
 
-      const targetObjects = Array.isArray(input.targetObject) ? input.targetObject : [input.targetObject];
-
       const evaluators = await ctx.prisma.jobConfiguration.findMany({
         where: {
           projectId: input.projectId,
-          targetObject: { in: targetObjects },
+          targetObject: input.targetObject,
         },
         include: {
           evalTemplate: true,
@@ -700,24 +676,15 @@ export const evalRouter = createTRPCRouter({
         variableMapping: input.mapping,
         sampling: input.sampling,
         delay: input.delay,
-        status: input.status,
+        status: "ACTIVE",
         timeScope: input.timeScope,
       },
     });
 
-    // Clear the "no job configs" caches only if the new config is ACTIVE
-    if (input.status === JobConfigState.ACTIVE) {
-      await clearNoEvalConfigsCache(input.projectId, "traceBased");
-      await clearNoEvalConfigsCache(input.projectId, "eventBased");
-    }
+    // Clear the "no job configs" cache since we just created a new job configuration
+    await clearNoJobConfigsCache(input.projectId);
 
-    // EVENT targets handle historical evaluation via the dedicated batch
-    // "Run Evaluation" action (runEvaluationRouter), so we only schedule
-    // historical backfills here for TRACE and DATASET targets.
-    if (
-      input.timeScope.includes("EXISTING") &&
-      (input.target === EvalTargetObject.TRACE || input.target === EvalTargetObject.DATASET)
-    ) {
+    if (input.timeScope.includes("EXISTING")) {
       logger.info(`Applying to historical traces for job ${job.id} and project ${input.projectId}`);
       const batchJobQueue = getQueue(QueueName.BatchActionQueue);
       if (!batchJobQueue) {
@@ -747,8 +714,6 @@ export const evalRouter = createTRPCRouter({
         { delay: input.delay },
       );
     }
-
-    return { id: job.id };
   }),
   createTemplate: protectedProjectProcedure.input(CreateEvalTemplate).mutation(async ({ input, ctx }) => {
     throwIfNoProjectAccess({
@@ -944,7 +909,7 @@ export const evalRouter = createTRPCRouter({
           projectId: projectId,
           evalTemplateId: evalTemplateId,
           status: oldStatus,
-          targetObject: EvalTargetObject.DATASET,
+          targetObject: "dataset",
         },
       });
 
@@ -1018,10 +983,7 @@ export const evalRouter = createTRPCRouter({
         });
       }
 
-      // Only enforce EXISTING-only deactivation rule for legacy targets (TRACE/DATASET)
       if (
-        (existingJob.targetObject === EvalTargetObject.TRACE ||
-          existingJob.targetObject === EvalTargetObject.DATASET) &&
         existingJob.timeScope.includes("EXISTING") &&
         !existingJob.timeScope.includes("NEW") &&
         config.status === "INACTIVE"
@@ -1050,19 +1012,12 @@ export const evalRouter = createTRPCRouter({
         data: config,
       });
 
-      // Clear the "no job configs" caches if we're activating a job configuration
+      // Clear the "no job configs" cache if we're activating a job configuration
       if (config.status === "ACTIVE") {
-        await clearNoEvalConfigsCache(projectId, "traceBased");
-        await clearNoEvalConfigsCache(projectId, "eventBased");
+        await clearNoJobConfigsCache(projectId);
       }
 
-      // EVENT targets handle historical evaluation via the dedicated batch
-      // "Run Evaluation" action (runEvaluationRouter), so we only schedule
-      // historical backfills here for TRACE and DATASET targets.
-      if (
-        config.timeScope?.includes("EXISTING") &&
-        (existingJob?.targetObject === EvalTargetObject.TRACE || existingJob?.targetObject === EvalTargetObject.DATASET)
-      ) {
+      if (config.timeScope?.includes("EXISTING")) {
         logger.info(`Applying to historical traces for job ${evalConfigId} and project ${projectId}`);
         const batchJobQueue = getQueue(QueueName.BatchActionQueue);
         if (!batchJobQueue) {
@@ -1133,11 +1088,6 @@ export const evalRouter = createTRPCRouter({
           projectId: projectId,
         },
       });
-
-      // Clear the "no job configs" caches to ensure they are re-evaluated
-      // This is conservative but ensures correctness after deletion
-      await clearNoEvalConfigsCache(projectId, "traceBased");
-      await clearNoEvalConfigsCache(projectId, "eventBased");
     }),
 
   // TODO: moved to LFE-4573
@@ -1341,31 +1291,6 @@ export const evalRouter = createTRPCRouter({
           return acc;
         },
         {} as Record<string, number>,
-      );
-    }),
-
-  avgCostByEvaluatorIds: protectedProjectProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-        evaluatorIds: z.array(z.string()),
-      }),
-    )
-    .query(async ({ input, ctx }) => {
-      throwIfNoProjectAccess({
-        session: ctx.session,
-        projectId: input.projectId,
-        scope: "evalJob:read",
-      });
-
-      const costs = await getAvgCostByEvaluatorIds(input.projectId, input.evaluatorIds);
-
-      return costs.reduce(
-        (acc, { evaluatorId, avgCost, executionCount }) => {
-          acc[evaluatorId] = { avgCost, executionCount };
-          return acc;
-        },
-        {} as Record<string, { avgCost: number; executionCount: number }>,
       );
     }),
 });

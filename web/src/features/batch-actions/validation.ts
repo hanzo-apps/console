@@ -1,20 +1,10 @@
 import z from "zod/v4";
-import {
-  AddToDatasetMappingSchema,
-  ObservationAddToDatasetConfigSchema,
-  BatchActionQuerySchema,
-} from "@hanzo/console-core";
+import { AddToDatasetMappingSchema, ObservationAddToDatasetConfigSchema, BatchActionQuerySchema } from "@hanzo/shared";
 
 export const CreateObservationAddToDatasetActionSchema = z.object({
   projectId: z.string(),
   query: BatchActionQuerySchema,
   config: ObservationAddToDatasetConfigSchema,
-});
-
-export const CreateObservationBatchEvaluationActionSchema = z.object({
-  projectId: z.string(),
-  query: BatchActionQuerySchema,
-  evaluatorIds: z.array(z.string()).min(1),
 });
 
 export const ValidateBatchAddToDatasetMappingSchema = z.object({

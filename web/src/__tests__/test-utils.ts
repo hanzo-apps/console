@@ -1,7 +1,7 @@
 import { env } from "@/src/env.mjs";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import {
-  datastoreClient,
+  clickhouseClient,
   createBasicAuthHeader,
   getQueue,
   IngestionQueue,
@@ -9,7 +9,7 @@ import {
   OtelIngestionQueue,
   QueueName,
   TraceUpsertQueue,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { type z } from "zod/v4";
 
 export const ensureTestDatabaseExists = async () => {
@@ -76,7 +76,7 @@ export const ensureTestDatabaseExists = async () => {
     }
   }
 
-  // Datastore uses default database (no setup needed)
+  // ClickHouse uses default database (no setup needed)
 };
 
 export const pruneDatabase = async () => {
@@ -96,7 +96,7 @@ export const pruneDatabase = async () => {
   await prisma.comment.deleteMany();
   await prisma.media.deleteMany();
 
-  await truncateDatastoreTables();
+  await truncateClickhouseTables();
 };
 export const getQueues = () => {
   const queues: string[] = Object.values(QueueName);
@@ -106,7 +106,7 @@ export const getQueues = () => {
     QueueName.DataRetentionQueue,
     QueueName.BlobStorageIntegrationQueue,
     QueueName.DeadLetterRetryQueue,
-    QueueName.InsightsIntegrationQueue,
+    QueueName.PostHogIntegrationQueue,
     QueueName.CloudFreeTierUsageThresholdQueue,
   ];
 
@@ -142,25 +142,25 @@ export const disconnectQueues = async () => {
   );
 };
 
-export const truncateDatastoreTables = async () => {
-  if (!env.DATASTORE_URL?.includes("localhost:8123") && !env.DATASTORE_URL?.includes("127.0.0.1:8123")) {
-    throw new Error("You cannot prune datastore unless running on localhost.");
+export const truncateClickhouseTables = async () => {
+  if (!env.CLICKHOUSE_URL?.includes("localhost:8123")) {
+    throw new Error("You cannot prune clickhouse unless running on localhost.");
   }
 
   // Additional safety check for test database
-  if (env.DATASTORE_DB === "test") {
-    console.log("Running tests against test Datastore database:", env.DATASTORE_DB);
-  } else if (env.DATASTORE_DB !== "default") {
-    console.log("Running tests against Datastore database:", env.DATASTORE_DB);
+  if (env.CLICKHOUSE_DB === "test") {
+    console.log("Running tests against test ClickHouse database:", env.CLICKHOUSE_DB);
+  } else if (env.CLICKHOUSE_DB !== "default") {
+    console.log("Running tests against ClickHouse database:", env.CLICKHOUSE_DB);
   }
 
-  await datastoreClient().command({
+  await clickhouseClient().command({
     query: "TRUNCATE TABLE IF EXISTS observations",
   });
-  await datastoreClient().command({
+  await clickhouseClient().command({
     query: "TRUNCATE TABLE IF EXISTS scores",
   });
-  await datastoreClient().command({
+  await clickhouseClient().command({
     query: "TRUNCATE TABLE IF EXISTS traces",
   });
 };
@@ -182,7 +182,7 @@ export type ErrorIngestion = {
   error: string;
 };
 
-export async function makeAPICall<T = Record<string, any>>(
+export async function makeAPICall<T = IngestionAPIResponse>(
   method: "POST" | "GET" | "PUT" | "DELETE" | "PATCH",
   url: string,
   body?: unknown,
@@ -244,7 +244,7 @@ export async function makeZodVerifiedAPICall<T extends z.ZodTypeAny>(
       `API call (${method} ${url}) did not return valid response, returned status ${status}, body ${JSON.stringify(resBody)}, error ${typeCheckResult.error}`,
     );
   }
-  return { body: resBody as z.infer<T>, status };
+  return { body: resBody, status };
 }
 
 export async function makeZodVerifiedAPICallSilent<T extends z.ZodTypeAny>(
@@ -266,5 +266,5 @@ export async function makeZodVerifiedAPICallSilent<T extends z.ZodTypeAny>(
     }
   }
 
-  return { body: resBody as z.infer<T>, status };
+  return { body: resBody, status };
 }

@@ -6,7 +6,7 @@ import {
   publicApiPaginationZod,
   singleFilter,
   InvalidRequestError,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 
 import {
   reduceUsageOrCostDetails,
@@ -14,7 +14,7 @@ import {
   type ObservationPriceFields,
   OBSERVATION_FIELD_GROUPS,
   type ObservationFieldGroup,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { z } from "zod/v4";
 import { useEventsTableSchema } from "../../query/types";
 
@@ -144,9 +144,6 @@ export const transformDbToApiObservation = (
     userId,
 
     sessionId,
-
-    // exclude trace name, this will only be available on events api
-    traceName,
     // Exclude tool data from public API (not yet released)
 
     toolDefinitions,
@@ -266,17 +263,10 @@ export const EncodedObservationsCursorV2 = z
  * Encodes a cursor object to base64 string for API response
  */
 export const encodeCursor = (cursor: ObservationsCursorV2Type): z.infer<typeof EncodedObservationsCursorV2String> => {
-  let startTimeStr: string;
-  if (cursor.lastStartTimeTo instanceof Date) {
-    startTimeStr = isNaN(cursor.lastStartTimeTo.getTime())
-      ? new Date(0).toISOString()
-      : cursor.lastStartTimeTo.toISOString();
-  } else {
-    startTimeStr = cursor.lastStartTimeTo;
-  }
   return Buffer.from(
     JSON.stringify({
-      lastStartTimeTo: startTimeStr,
+      lastStartTimeTo:
+        cursor.lastStartTimeTo instanceof Date ? cursor.lastStartTimeTo.toISOString() : cursor.lastStartTimeTo,
       lastTraceId: cursor.lastTraceId,
       lastId: cursor.lastId,
     }),
@@ -315,14 +305,11 @@ export const GetObservationsV2Query = z.object({
   // Pagination
   limit: z.coerce.number().nonnegative().lte(1000).default(50),
   cursor: EncodedObservationsCursorV2.optional(),
-  // Parsing behavior - parseIoAsJson=true is retired, IO is always returned as raw strings
+  // Parsing behavior
   parseIoAsJson: z
     .union([z.literal("true"), z.literal("false")])
-    .refine((val) => val !== "true", {
-      message:
-        "parseIoAsJson=true is no longer supported on the v2 observations endpoint. Input/output fields are always returned as raw strings. Remove the parseIoAsJson parameter or set it to false.",
-    })
-    .optional(),
+    .transform((val) => val === "true")
+    .default(false),
   // Filters
   type: ObservationType.nullish(),
   name: z.string().nullish(),

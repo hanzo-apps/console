@@ -1,13 +1,9 @@
 import { type AppType } from "next/app";
 import { type Session } from "next-auth";
-import { Geist, Geist_Mono } from "next/font/google";
-
-const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"] });
 import { SessionProvider } from "next-auth/react";
 import { setUser } from "@sentry/nextjs";
 import { useSession } from "next-auth/react";
-import { TooltipProvider } from "@hanzo/ui";
+import { TooltipProvider } from "@/src/components/ui/tooltip";
 import { CommandMenuProvider } from "@/src/features/command-k-menu/CommandMenuProvider";
 
 import { api } from "@/src/utils/api";
@@ -20,9 +16,8 @@ import { AppLayout } from "@/src/components/layouts/app-layout";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 
-import insights from "@hanzo/insights";
-// InsightsProvider from @hanzo/insights-react crashes with React 19 — use global insights client directly
-// import { InsightsProvider } from "@hanzo/insights-react";
+import posthog from "posthog-js";
+import { PostHogProvider } from "posthog-js/react";
 import prexit from "prexit";
 
 // Custom polyfills not yet available in `next-core`:
@@ -76,18 +71,18 @@ import { env } from "@/src/env.mjs";
 import { ThemeProvider } from "@/src/features/theming/ThemeProvider";
 import { MarkdownContextProvider } from "@/src/features/theming/useMarkdownContext";
 import { SupportDrawerProvider } from "@/src/features/support-chat/SupportDrawerProvider";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 import { ScoreCacheProvider } from "@/src/features/scores/contexts/ScoreCacheContext";
 import { CorrectionCacheProvider } from "@/src/features/corrections/contexts/CorrectionCacheContext";
 
-// Check that Insights is client-side (used to handle Next.js SSR) and that env vars are set
-if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_INSIGHTS_KEY && process.env.NEXT_PUBLIC_INSIGHTS_HOST) {
-  insights.init(process.env.NEXT_PUBLIC_INSIGHTS_KEY, {
-    api_host: process.env.NEXT_PUBLIC_INSIGHTS_HOST || "https://insights.hanzo.ai",
-    ui_host: process.env.NEXT_PUBLIC_INSIGHTS_HOST || "https://insights.hanzo.ai",
+// Check that PostHog is client-side (used to handle Next.js SSR) and that env vars are set
+if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
+  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
+    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.posthog.com",
+    ui_host: "https://eu.posthog.com",
     // Enable debug mode in development
-    loaded: (hi) => {
-      if (process.env.NODE_ENV === "development") hi.debug();
+    loaded: (posthog) => {
+      if (process.env.NODE_ENV === "development") posthog.debug();
     },
     session_recording: {
       maskCapturedNetworkRequestFn(request) {
@@ -106,10 +101,10 @@ const MyApp: AppType<{ session: Session | null }> = ({ Component, pageProps: { s
   const router = useRouter();
 
   useEffect(() => {
-    // Insights (product analytics)
-    if (env.NEXT_PUBLIC_INSIGHTS_KEY && env.NEXT_PUBLIC_INSIGHTS_HOST) {
+    // PostHog (cloud.hanzo.ai)
+    if (env.NEXT_PUBLIC_POSTHOG_KEY && env.NEXT_PUBLIC_POSTHOG_HOST) {
       const handleRouteChange = () => {
-        insights.capture("$pageview");
+        posthog.capture("$pageview");
       };
       router.events.on("routeChangeComplete", handleRouteChange);
 
@@ -121,10 +116,10 @@ const MyApp: AppType<{ session: Session | null }> = ({ Component, pageProps: { s
   }, []);
 
   return (
-    <div className={`${geistSans.variable} ${geistMono.variable}`}>
-      <QueryParamProvider adapter={NextAdapterPages} options={{ enableBatching: true }}>
-        <TooltipProvider>
-          <CommandMenuProvider>
+    <QueryParamProvider adapter={NextAdapterPages}>
+      <TooltipProvider>
+        <CommandMenuProvider>
+          <PostHogProvider client={posthog}>
             <SessionProvider
               session={session}
               refetchOnWindowFocus={true}
@@ -148,10 +143,10 @@ const MyApp: AppType<{ session: Session | null }> = ({ Component, pageProps: { s
                 </MarkdownContextProvider>
               </DetailPageListsProvider>
             </SessionProvider>
-          </CommandMenuProvider>
-        </TooltipProvider>
-      </QueryParamProvider>
-    </div>
+          </PostHogProvider>
+        </CommandMenuProvider>
+      </TooltipProvider>
+    </QueryParamProvider>
   );
 };
 
@@ -159,7 +154,7 @@ export default api.withTRPC(MyApp);
 
 function UserTracking() {
   const session = useSession();
-  const { region } = useConsoleCloudRegion();
+  const { region } = useHanzoCloudRegion();
   const sessionUser = session.data?.user;
 
   // Track user identity and properties
@@ -171,9 +166,9 @@ function UserTracking() {
       lastIdentifiedUser.current !== JSON.stringify(sessionUser)
     ) {
       lastIdentifiedUser.current = JSON.stringify(sessionUser);
-      // Insights
-      if (env.NEXT_PUBLIC_INSIGHTS_KEY && env.NEXT_PUBLIC_INSIGHTS_HOST)
-        insights.identify(sessionUser.id ?? undefined, {
+      // PostHog
+      if (env.NEXT_PUBLIC_POSTHOG_KEY && env.NEXT_PUBLIC_POSTHOG_HOST)
+        posthog.identify(sessionUser.id ?? undefined, {
           environment: process.env.NODE_ENV,
           email: sessionUser.email ?? undefined,
           name: sessionUser.name ?? undefined,
@@ -200,16 +195,27 @@ function UserTracking() {
     }
   }, [sessionUser, session.status, region]);
 
+  // add stripe link to chat
+  // const orgStripeLink = organization?.cloudConfig?.stripe?.customerId
+  //   ? `https://dashboard.stripe.com/customers/${organization.cloudConfig.stripe.customerId}`
+  //   : undefined;
+  // useEffect(() => {
+  //   if (orgStripeLink) {
+  //     chatSetUser({
+  //       data: {
+  //         stripe: orgStripeLink,
+  //       },
+  //     });
+  //   }
+  // }, [orgStripeLink]);
+
   return null;
 }
 
-if (typeof window === "undefined" && process.env.NEXT_RUNTIME === "nodejs" && process.env.NEXT_MANUAL_SIG_HANDLE) {
-  // Dynamic import without top-level await to avoid making _app an async module
-  // which breaks React hydration in Pages Router
-  import("@/src/utils/shutdown").then(({ shutdown }) => {
-    prexit(async (signal) => {
-      console.log("Signal: ", signal);
-      return await shutdown(signal);
-    });
+if (process.env.NEXT_RUNTIME === "nodejs" && process.env.NEXT_MANUAL_SIG_HANDLE) {
+  const { shutdown } = await import("@/src/utils/shutdown");
+  prexit(async (signal) => {
+    console.log("Signal: ", signal);
+    return await shutdown(signal);
   });
 }

@@ -1,5 +1,5 @@
-import { type ConsoleColumnDef } from "@/src/components/table/types";
-import { type FilterState, type ColumnDefinition, type OrderByState } from "@hanzo/console-core";
+import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type FilterState, type ColumnDefinition, type OrderByState } from "@hanzo/shared";
 import { normalizeFilterColumnNames } from "@/src/features/filters/lib/filter-transform";
 
 /**
@@ -7,7 +7,7 @@ import { normalizeFilterColumnNames } from "@/src/features/filters/lib/filter-tr
  */
 export function validateOrderBy(
   orderBy: OrderByState | null,
-  columns?: ConsoleColumnDef<any, any>[],
+  columns?: HanzoColumnDef<any, any>[],
 ): OrderByState | null {
   if (!orderBy || !columns || columns.length === 0) return null;
 

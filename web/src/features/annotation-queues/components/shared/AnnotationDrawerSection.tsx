@@ -1,6 +1,6 @@
 import { Card } from "@/src/components/ui/card";
 import { type ScoreTarget } from "@/src/features/scores/types";
-import { type AnnotationQueueItem, type ScoreDomain, isPresent, type ScoreConfigDomain } from "@hanzo/console-core";
+import { type AnnotationQueueItem, type ScoreDomain, isPresent, type ScoreConfigDomain } from "@hanzo/shared";
 import { TriangleAlertIcon } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { AnnotationForm } from "@/src/features/scores/components/AnnotationForm";
@@ -57,7 +57,7 @@ export const AnnotationDrawerSection: React.FC<AnnotationDrawerSectionProps> = (
       />
       {hasNonAnnotationScores && (
         <div className="mt-4 text-xs text-muted-foreground">
-          API and eval scores visible when toggling on the detailed view. Add manual annotations above.
+          API and eval scores visible on left. Add manual annotations above.
         </div>
       )}
     </Card>

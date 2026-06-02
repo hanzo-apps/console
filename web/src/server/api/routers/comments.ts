@@ -2,13 +2,13 @@ import { z } from "zod/v4";
 
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { CommentObjectType } from "@hanzo/console-core";
-import { Prisma, CreateCommentData, DeleteCommentData } from "@hanzo/console-core";
+import { CommentObjectType } from "@hanzo/shared";
+import { Prisma, CreateCommentData, DeleteCommentData } from "@hanzo/shared";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { TRPCError } from "@trpc/server";
 import { validateCommentReferenceObject } from "@/src/features/comments/validateCommentReferenceObject";
-import { getTracesIdentifierForSession, logger, NotificationQueue, QueueJobs } from "@hanzo/console-core/src/server";
-import { getUserProjectRoles } from "@hanzo/console-core/src/server";
+import { getTracesIdentifierForSession, logger, NotificationQueue, QueueJobs } from "@hanzo/shared/src/server";
+import { getUserProjectRoles } from "@hanzo/shared/src/server";
 import { extractUniqueMentionedUserIds, sanitizeMentions } from "@/src/features/comments/lib/mentionParser";
 
 export const commentsRouter = createTRPCRouter({
@@ -329,7 +329,7 @@ export const commentsRouter = createTRPCRouter({
         scope: "comments:read",
       });
 
-      const datastoreTraces = await getTracesIdentifierForSession(input.projectId, input.sessionId);
+      const clickhouseTraces = await getTracesIdentifierForSession(input.projectId, input.sessionId);
 
       const allTraceCommentCounts = await ctx.prisma.$queryRaw<Array<{ objectId: string; count: bigint }>>`
           SELECT object_id as "objectId", COUNT(*) as count
@@ -339,7 +339,7 @@ export const commentsRouter = createTRPCRouter({
           GROUP BY object_id
         `;
 
-      const traceIds = new Set(datastoreTraces.map((t) => t.id));
+      const traceIds = new Set(clickhouseTraces.map((t) => t.id));
       return new Map(
         allTraceCommentCounts
           .filter((c) => traceIds.has(c.objectId))
@@ -360,9 +360,9 @@ export const commentsRouter = createTRPCRouter({
         scope: "comments:read",
       });
 
-      const datastoreTraces = await getTracesIdentifierForSession(input.projectId, input.sessionId);
+      const clickhouseTraces = await getTracesIdentifierForSession(input.projectId, input.sessionId);
 
-      const traceIds = datastoreTraces.map((t) => t.id);
+      const traceIds = clickhouseTraces.map((t) => t.id);
 
       if (traceIds.length === 0) {
         return {};

@@ -8,8 +8,8 @@ import {
   filterAndValidateV1GetScoreList,
   PostScoresBodyV1,
   PostScoresResponseV1,
-} from "@hanzo/console-core";
-import { eventTypes, logger, processEventBatch } from "@hanzo/console-core/src/server";
+} from "@hanzo/shared";
+import { eventTypes, logger, processEventBatch } from "@hanzo/shared/src/server";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";
 
 export default withMiddlewares({
@@ -64,7 +64,6 @@ export default withMiddlewares({
         value: query.value ?? undefined,
         operator: query.operator ?? undefined,
         scoreIds: query.scoreIds ?? undefined,
-        advancedFilters: query.filter,
       };
       const [items, count] = await Promise.all([
         scoresApiService.generateScoresForPublicApi(scoreParams),

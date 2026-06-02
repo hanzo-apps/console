@@ -14,10 +14,10 @@ import {
 import { CodeView } from "@/src/components/ui/CodeJsonViewer";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { Input } from "@/src/components/ui/input";
-import { useConsoleEnvCode } from "@/src/features/public-api/hooks/useConsoleEnvCode";
-import { Label } from "@hanzo/ui";
+import { useHanzoEnvCode } from "@/src/features/public-api/hooks/useHanzoEnvCode";
+import { Label } from "@/src/components/ui/label";
 import { cn } from "@/src/utils/tailwind";
 import { SubHeader } from "@/src/components/layouts/header";
 
@@ -25,7 +25,7 @@ type ApiKeyScope = "project" | "organization";
 
 export function CreateApiKeyButton(props: { entityId: string; scope: ApiKeyScope }) {
   const utils = api.useUtils();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   const hasProjectAccess = useHasProjectAccess({
     projectId: props.entityId,
@@ -155,23 +155,19 @@ export const ApiKeyRender = ({
   generatedKeys?: { secretKey: string; publicKey: string };
   className?: string;
 }) => {
-  const envCode = useConsoleEnvCode(generatedKeys);
+  const envCode = useHanzoEnvCode(generatedKeys);
 
   return (
     <div className={cn("space-y-6", className)}>
       <div>
         <SubHeader title="Secret Key" />
         <div className="text-sm text-muted-foreground">
-          Server-side only. Required for completions, embeddings, and management. This key can only be viewed once. You
-          can always create new keys in the {scope} settings.
+          This key can only be viewed once. You can always create new keys in the {scope} settings.
         </div>
         <CodeView content={generatedKeys?.secretKey ?? "Loading ..."} className="mt-2" />
       </div>
       <div>
         <SubHeader title="Public Key" />
-        <div className="text-sm text-muted-foreground">
-          Safe to use in client-side code. Can list models and check health.
-        </div>
         <CodeView content={generatedKeys?.publicKey ?? "Loading ..."} className="mt-2" />
       </div>
       <div>

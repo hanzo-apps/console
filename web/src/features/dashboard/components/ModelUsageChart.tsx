@@ -1,4 +1,5 @@
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
+import { BaseTimeSeriesChart } from "@/src/features/dashboard/components/BaseTimeSeriesChart";
 import { DashboardCard } from "@/src/features/dashboard/components/cards/DashboardCard";
 import {
   extractTimeSeriesData,
@@ -14,12 +15,10 @@ import {
   dashboardDateRangeAggregationSettings,
 } from "@/src/utils/date-range-utils";
 import { compactNumberFormatter } from "@/src/utils/numbers";
-import { type FilterState, getGenerationLikeTypes } from "@hanzo/console-core";
+import { type FilterState, getGenerationLikeTypes } from "@hanzo/shared";
 import { ModelSelectorPopover, useModelSelection } from "@/src/features/dashboard/components/ModelSelector";
-import { type QueryType, type ViewVersion, mapLegacyUiTableFilterToView } from "@/src/features/query";
+import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
 import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
-import { Chart } from "@/src/features/widgets/chart-library/Chart";
-import { timeSeriesToDataPoints } from "@/src/features/dashboard/lib/chart-data-adapters";
 
 export const ModelUsageChart = ({
   className,
@@ -30,7 +29,6 @@ export const ModelUsageChart = ({
   toTimestamp,
   userAndEnvFilterState,
   isLoading = false,
-  metricsVersion,
 }: {
   className?: string;
   projectId: string;
@@ -40,10 +38,9 @@ export const ModelUsageChart = ({
   toTimestamp: Date;
   userAndEnvFilterState: FilterState;
   isLoading?: boolean;
-  metricsVersion?: ViewVersion;
 }) => {
   const { allModels, selectedModels, setSelectedModels, isAllSelected, buttonText, handleSelectAll } =
-    useModelSelection(projectId, userAndEnvFilterState, fromTimestamp, toTimestamp, metricsVersion);
+    useModelSelection(projectId, userAndEnvFilterState, fromTimestamp, toTimestamp);
 
   const modelUsageQuery: QueryType = {
     view: "observations",
@@ -79,7 +76,6 @@ export const ModelUsageChart = ({
     {
       projectId,
       query: modelUsageQuery,
-      version: metricsVersion,
     },
     {
       enabled: !isLoading && selectedModels.length > 0 && allModels.length > 0,
@@ -249,20 +245,26 @@ export const ModelUsageChart = ({
     0,
   );
 
+  // had to add this function as tremor under the hodd adds more variables
+  // to the function call which would break usdFormatter.
+  const oneValueUsdFormatter = (value: number) => {
+    return totalCostDashboardFormatted(value);
+  };
+
   const data = [
     {
       tabTitle: "Cost by model",
       data: costByModel,
       totalMetric: totalCostDashboardFormatted(totalCost),
       metricDescription: `Cost`,
-      formatter: totalCostDashboardFormatted,
+      formatter: oneValueUsdFormatter,
     },
     {
       tabTitle: "Cost by type",
       data: costByType,
       totalMetric: totalCostDashboardFormatted(totalCost),
       metricDescription: `Cost`,
-      formatter: totalCostDashboardFormatted,
+      formatter: oneValueUsdFormatter,
     },
     {
       tabTitle: "Usage by model",
@@ -306,19 +308,14 @@ export const ModelUsageChart = ({
                 {isEmptyTimeSeries({ data: item.data }) || isLoading || queryResult.isPending ? (
                   <NoDataOrLoading isLoading={isLoading || queryResult.isPending} />
                 ) : (
-                  <div className="h-80 w-full shrink-0">
-                    <Chart
-                      chartType="LINE_TIME_SERIES"
-                      data={timeSeriesToDataPoints(item.data, agg)}
-                      rowLimit={100}
-                      chartConfig={{
-                        type: "LINE_TIME_SERIES",
-                        show_data_point_dots: false,
-                      }}
-                      valueFormatter={item.formatter}
-                      legendPosition="above"
-                    />
-                  </div>
+                  <BaseTimeSeriesChart
+                    className="[&_text]:fill-muted-foreground [&_tspan]:fill-muted-foreground"
+                    agg={agg}
+                    data={item.data}
+                    showLegend={true}
+                    connectNulls={true}
+                    valueFormatter={item.formatter}
+                  />
                 )}
               </>
             ),

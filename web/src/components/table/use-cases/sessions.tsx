@@ -4,7 +4,7 @@ import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
 import { DataTableControlsProvider, DataTableControls } from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import TableLink from "@/src/components/table/table-link";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { TokenUsageBadge } from "@/src/components/token-usage-badge";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFilterState";
@@ -18,7 +18,7 @@ import {
   BatchActionType,
   ActionId,
   type TimeFilter,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
 import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
 import { api } from "@/src/utils/api";
@@ -27,11 +27,11 @@ import { numberFormatter, usdFormatter } from "@/src/utils/numbers";
 import { type RouterOutput } from "@/src/utils/types";
 import type Decimal from "decimal.js";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { usePaginationState } from "@/src/hooks/usePaginationState";
+import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import { useTableDateRange } from "@/src/hooks/useTableDateRange";
 import { toAbsoluteTimeRange } from "@/src/utils/date-range-utils";
 import { joinTableCoreAndMetrics } from "@/src/components/table/utils/joinTableCoreAndMetrics";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import TagList from "@/src/features/tag/components/TagList";
 import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-height-switch";
 import { cn } from "@/src/utils/tailwind";
@@ -39,7 +39,7 @@ import useColumnOrder from "@/src/features/column-visibility/hooks/useColumnOrde
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { useTableViewManager } from "@/src/components/table/table-view-presets/hooks/useTableViewManager";
 import { Badge } from "@/src/components/ui/badge";
-import { type ScoreAggregate } from "@hanzo/console-core";
+import { type ScoreAggregate } from "@hanzo/shared";
 import { useSelectAll } from "@/src/features/table/hooks/useSelectAll";
 import { type TableAction } from "@/src/features/table/types";
 import { TableActionMenu } from "@/src/features/table/components/TableActionMenu";
@@ -72,15 +72,9 @@ export type SessionTableProps = {
   projectId: string;
   userId?: string;
   omittedFilter?: string[];
-  isBetaEnabled?: boolean;
 };
 
-export default function SessionsTable({
-  projectId,
-  userId,
-  omittedFilter = [],
-  isBetaEnabled = false,
-}: SessionTableProps) {
+export default function SessionsTable({ projectId, userId, omittedFilter = [] }: SessionTableProps) {
   const { setDetailPageList } = useDetailPageLists();
   const { timeRange, setTimeRange } = useTableDateRange(projectId);
 
@@ -143,9 +137,9 @@ export default function SessionsTable({
 
   const { selectAll, setSelectAll } = useSelectAll(projectId, "sessions");
 
-  const [paginationState, setPaginationState] = usePaginationState(0, 50, {
-    page: "pageIndex",
-    limit: "pageSize",
+  const [paginationState, setPaginationState] = useQueryParams({
+    pageIndex: withDefault(NumberParam, 0),
+    pageSize: withDefault(NumberParam, 50),
   });
 
   const [rowHeight, setRowHeight] = useRowHeightLocalStorage("sessions", "s");
@@ -156,13 +150,12 @@ export default function SessionsTable({
   });
 
   // dateRangeFilter contains only createdAt datetime filters, pass directly to API
-  const filterOptionsV3 = api.sessions.filterOptions.useQuery(
+  const filterOptions = api.sessions.filterOptions.useQuery(
     {
       projectId,
       timestampFilter: dateRangeFilter.length > 0 ? (dateRangeFilter as TimeFilter[]) : undefined,
     },
     {
-      enabled: !isBetaEnabled,
       trpc: {
         context: {
           skipBatch: true,
@@ -170,23 +163,6 @@ export default function SessionsTable({
       },
     },
   );
-
-  const filterOptionsV4 = api.sessions.filterOptionsFromEvents.useQuery(
-    {
-      projectId,
-      timestampFilter: dateRangeFilter.length > 0 ? (dateRangeFilter as TimeFilter[]) : undefined,
-    },
-    {
-      enabled: isBetaEnabled,
-      trpc: {
-        context: {
-          skipBatch: true,
-        },
-      },
-    },
-  );
-
-  const filterOptions = isBetaEnabled ? filterOptionsV4 : filterOptionsV3;
 
   const newFilterOptions = useMemo(() => {
     const scoreCategories =
@@ -258,25 +234,12 @@ export default function SessionsTable({
     limit: paginationState.pageSize,
   };
 
-  const sessionsV3 = api.sessions.all.useQuery(payloadGetAll, {
-    enabled: !isBetaEnabled,
+  const sessions = api.sessions.all.useQuery(payloadGetAll, {
     refetchOnWindowFocus: true,
   });
-  const sessionsV4 = api.sessions.allFromEvents.useQuery(payloadGetAll, {
-    enabled: isBetaEnabled,
+  const sessionCountQuery = api.sessions.countAll.useQuery(payloadCount, {
     refetchOnWindowFocus: true,
   });
-  const sessions = isBetaEnabled ? sessionsV4 : sessionsV3;
-
-  const sessionCountQueryV3 = api.sessions.countAll.useQuery(payloadCount, {
-    enabled: !isBetaEnabled,
-    refetchOnWindowFocus: true,
-  });
-  const sessionCountQueryV4 = api.sessions.countAllFromEvents.useQuery(payloadCount, {
-    enabled: isBetaEnabled,
-    refetchOnWindowFocus: true,
-  });
-  const sessionCountQuery = isBetaEnabled ? sessionCountQueryV4 : sessionCountQueryV3;
 
   const addToQueueMutation = api.annotationQueueItems.createMany.useMutation({
     onSuccess: (data) => {
@@ -298,37 +261,23 @@ export default function SessionsTable({
     filter: scoreFilters.forSessions(),
   });
 
-  const sessionMetricsV3 = api.sessions.metrics.useQuery(
+  const sessionMetrics = api.sessions.metrics.useQuery(
     {
       projectId,
-      sessionIds: sessionsV3.data?.sessions.map((s) => s.id) ?? [],
+      sessionIds: sessions.data?.sessions.map((s) => s.id) ?? [],
     },
     {
-      enabled: sessionsV3.data !== undefined && !isBetaEnabled,
+      enabled: sessions.data !== undefined,
       refetchOnWindowFocus: true,
     },
   );
-
-  const sessionMetricsV4 = api.sessions.metricsFromEvents.useQuery(
-    {
-      projectId,
-      sessionIds: sessionsV4.data?.sessions.map((s) => s.id) ?? [],
-      queryFromTimestamp: dateRange?.from ?? null,
-    },
-    {
-      enabled: sessionsV4.data !== undefined && isBetaEnabled,
-      refetchOnWindowFocus: true,
-    },
-  );
-
-  const sessionMetrics = isBetaEnabled ? sessionMetricsV4 : sessionMetricsV3;
 
   type SessionCoreOutput = RouterOutput["sessions"]["all"]["sessions"][number];
   type SessionMetricOutput = RouterOutput["sessions"]["metrics"][number];
 
-  const sessionRowData = useMemo(
-    () => joinTableCoreAndMetrics<SessionCoreOutput, SessionMetricOutput>(sessions.data?.sessions, sessionMetrics.data),
-    [sessions.data?.sessions, sessionMetrics.data],
+  const sessionRowData = joinTableCoreAndMetrics<SessionCoreOutput, SessionMetricOutput>(
+    sessions.data?.sessions,
+    sessionMetrics.data,
   );
 
   const totalCount = sessionCountQuery.data?.totalCount ?? null;
@@ -381,7 +330,7 @@ export default function SessionsTable({
     },
   ];
 
-  const columns: ConsoleColumnDef<SessionTableRow>[] = [
+  const columns: HanzoColumnDef<SessionTableRow>[] = [
     selectActionColumn,
     {
       accessorKey: "bookmarked",
@@ -782,7 +731,7 @@ export default function SessionsTable({
               help={{
                 description:
                   "A session is a collection of related traces, such as a conversation or thread. To begin, add a sessionId to the trace.",
-                href: "https://hanzo.ai/docs/observability/features/sessions",
+                href: "https://hanzo.com/docs/observability/features/sessions",
               }}
               rowHeight={rowHeight}
             />

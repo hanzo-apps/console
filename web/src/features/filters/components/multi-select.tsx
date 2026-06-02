@@ -13,9 +13,9 @@ import {
   InputCommandList,
   InputCommandSeparator,
 } from "@/src/components/ui/input-command";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
-import { Separator } from "@hanzo/ui";
-import { type FilterOption } from "@hanzo/console-core";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
+import { Separator } from "@/src/components/ui/separator";
+import { type FilterOption } from "@hanzo/shared";
 import { Input } from "@/src/components/ui/input";
 import { useRef, useState, useMemo, useCallback } from "react";
 import { PropertyHoverCard } from "@/src/features/widgets/components/WidgetPropertySelectItem";
@@ -53,17 +53,7 @@ export function MultiSelect({
   const freeTextInput = getFreeTextInput(isCustomSelectEnabled, values, optionValues);
   const [freeText, setFreeText] = useState(freeTextInput || "");
 
-  // Merge options with selected values that might not be in options
-  // This ensures selected values are always visible and removable
-  const mergedOptions = useMemo(() => {
-    const optionSet = new Set(options.map((o) => o.value));
-    const missingSelectedOptions: FilterOption[] = values
-      .filter((v) => !optionSet.has(v) && v.length > 0)
-      .map((v) => ({ value: v }));
-    return [...options, ...missingSelectedOptions];
-  }, [options, values]);
-
-  const selectableOptions = useMemo(() => mergedOptions.filter((option) => option.value.length > 0), [mergedOptions]);
+  const selectableOptions = useMemo(() => options.filter((option) => option.value.length > 0), [options]);
 
   const allSelectedState = useMemo(() => {
     if (selectableOptions.length === 0) return false;
@@ -171,7 +161,7 @@ export function MultiSelect({
                   <InputCommandSeparator />
                 </>
               )}
-              {mergedOptions.map((option) => {
+              {options.map((option) => {
                 if (option.value.length === 0) return;
                 const isSelected = selectedValues.has(option.value);
                 const displayValue = option.displayValue ?? (option.value === "" ? "(empty)" : option.value);

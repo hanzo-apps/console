@@ -1,11 +1,11 @@
 import { env } from "@/src/env.mjs";
-import { prisma, Role } from "@hanzo/console-core/src/db";
-import { logger } from "@hanzo/console-core/src/server";
-import { ServerInsights } from "@/src/features/insights-analytics/ServerInsights";
+import { prisma, Role } from "@hanzo/shared/src/db";
+import { logger } from "@hanzo/shared/src/server";
+import { ServerPosthog } from "@/src/features/posthog-analytics/ServerPosthog";
 
 export async function createProjectMembershipsOnSignup(user: { id: string; email: string | null }) {
   try {
-    // in no case do we want to send duplicate sign up events to insights
+    // in no case do we want to send duplicate sign up events to posthog
     const isNewUser = !(await prisma.organizationMembership.findFirst({
       where: { userId: user.id },
       select: { id: true },
@@ -35,92 +35,67 @@ export async function createProjectMembershipsOnSignup(user: { id: string; email
       });
     }
 
-    // self-hosted: HANZO_DEFAULT_ORG_ID (supports comma-separated list of org IDs)
-    const defaultOrgIds = env.HANZO_DEFAULT_ORG_ID ?? [];
-    const defaultOrgs =
-      defaultOrgIds.length > 0
-        ? await prisma.organization.findMany({
-            where: {
-              id: { in: defaultOrgIds },
-            },
-          })
-        : [];
-
-    // Create org memberships for all default orgs, store mapping of orgId -> membership
-    const orgMembershipMap = new Map<string, { id: string; orgId: string; userId: string }>();
-    for (const org of defaultOrgs) {
-      const membership = await prisma.organizationMembership.upsert({
-        where: {
-          orgId_userId: { orgId: org.id, userId: user.id },
-        },
-        update: {}, // No-op: preserve existing role
-        create: {
-          orgId: org.id,
-          userId: user.id,
-          role: env.HANZO_DEFAULT_ORG_ROLE ?? "VIEWER",
-        },
-      });
-      orgMembershipMap.set(org.id, membership);
-    }
-
-    // self-hosted: HANZO_DEFAULT_PROJECT_ID (supports comma-separated list of project IDs)
-    const defaultProjectIds = env.HANZO_DEFAULT_PROJECT_ID ?? [];
-    const defaultProjects =
-      defaultProjectIds.length > 0
-        ? await prisma.project.findMany({
-            where: {
-              id: { in: defaultProjectIds },
-            },
-          })
-        : [];
-
-    for (const project of defaultProjects) {
-      const existingOrgMembership = orgMembershipMap.get(project.orgId);
-      if (existingOrgMembership) {
-        // (1) project's org is in the default org list -> create project membership
-        await prisma.projectMembership.upsert({
+    // self-hosted: HANZO_DEFAULT_ORG_ID
+    const defaultOrg = env.HANZO_DEFAULT_ORG_ID
+      ? ((await prisma.organization.findUnique({
           where: {
-            projectId_userId: {
-              projectId: project.id,
-              userId: user.id,
+            id: env.HANZO_DEFAULT_ORG_ID,
+          },
+        })) ?? undefined)
+      : undefined;
+    const defaultOrgMembership =
+      defaultOrg !== undefined
+        ? await prisma.organizationMembership.upsert({
+            where: {
+              orgId_userId: { orgId: defaultOrg.id, userId: user.id },
             },
+            update: {}, // No-op: preserve existing role
+            create: {
+              orgId: defaultOrg.id,
+              userId: user.id,
+              role: env.HANZO_DEFAULT_ORG_ROLE ?? "VIEWER",
+            },
+          })
+        : undefined;
+
+    // self-hosted: HANZO_DEFAULT_PROJECT_ID
+    const defaultProject = env.HANZO_DEFAULT_PROJECT_ID
+      ? ((await prisma.project.findUnique({
+          where: {
+            id: env.HANZO_DEFAULT_PROJECT_ID,
           },
-          update: {}, // No-op: preserve existing role
-          create: {
-            userId: user.id,
-            orgMembershipId: existingOrgMembership.id,
-            projectId: project.id,
-            role: env.HANZO_DEFAULT_PROJECT_ROLE ?? "VIEWER",
-          },
-        });
+        })) ?? undefined)
+      : undefined;
+    if (defaultProject !== undefined) {
+      if (defaultOrgMembership) {
+        // (1) used together with HANZO_DEFAULT_ORG_ID -> create project role for the project within the org, do nothing if the project is not in the org
+        if (defaultProject.orgId === defaultOrgMembership.orgId) {
+          await prisma.projectMembership.upsert({
+            where: {
+              projectId_userId: {
+                projectId: defaultProject.id,
+                userId: user.id,
+              },
+            },
+            update: {}, // No-op: preserve existing role
+            create: {
+              userId: user.id,
+              orgMembershipId: defaultOrgMembership.id,
+              projectId: defaultProject.id,
+              role: env.HANZO_DEFAULT_PROJECT_ROLE ?? "VIEWER",
+            },
+          });
+        }
       } else {
-        // (2) project's org is NOT in the default org list (legacy behavior) -> create org membership for the project's org first
-        const orgMembership = await prisma.organizationMembership.upsert({
+        // (2) used without HANZO_DEFAULT_ORG_ID (legacy) -> create org membership for the project's org
+        await prisma.organizationMembership.upsert({
           where: {
-            orgId_userId: { orgId: project.orgId, userId: user.id },
+            orgId_userId: { orgId: defaultProject.orgId, userId: user.id },
           },
           update: {}, // No-op: preserve existing role
           create: {
-            orgId: project.orgId,
+            orgId: defaultProject.orgId,
             userId: user.id,
-            role: env.HANZO_DEFAULT_PROJECT_ROLE ?? "VIEWER",
-          },
-        });
-        // Add to map in case multiple projects belong to the same org
-        orgMembershipMap.set(project.orgId, orgMembership);
-
-        await prisma.projectMembership.upsert({
-          where: {
-            projectId_userId: {
-              projectId: project.id,
-              userId: user.id,
-            },
-          },
-          update: {}, // No-op: preserve existing role
-          create: {
-            userId: user.id,
-            orgMembershipId: orgMembership.id,
-            projectId: project.id,
             role: env.HANZO_DEFAULT_PROJECT_ROLE ?? "VIEWER",
           },
         });
@@ -130,21 +105,21 @@ export async function createProjectMembershipsOnSignup(user: { id: string; email
     // Invites do not work for users without emails (some future SSO users)
     if (user.email) await processMembershipInvitations(user.email, user.id);
 
-    // for conversion metric tracking: did a new user sign up?
+    // for conversion metric tracking in posthog: did a new user sign up?
     if (isNewUser && env.NEXT_PUBLIC_HANZO_CLOUD_REGION && ["EU", "US"].includes(env.NEXT_PUBLIC_HANZO_CLOUD_REGION)) {
       try {
-        const insights = new ServerInsights();
-        insights.capture({
+        const posthog = new ServerPosthog();
+        posthog.capture({
           distinctId: user.id,
           event: "cloud_signup_complete",
           properties: {
             cloudRegion: env.NEXT_PUBLIC_HANZO_CLOUD_REGION,
             hasDemoAccess: demoProject !== undefined,
-            hasDefaultOrg: defaultOrgs.length > 0,
-            hasDefaultProject: defaultProjects.length > 0,
+            hasDefaultOrg: defaultOrg !== undefined,
+            hasDefaultProject: defaultProject !== undefined,
           },
         });
-        await insights.shutdown();
+        await posthog.shutdown();
       } catch {
         // analytics tracking failure is not critical, just fail
       }

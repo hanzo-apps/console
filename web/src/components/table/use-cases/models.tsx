@@ -1,11 +1,10 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
-import { type Prisma } from "@hanzo/console-core/src/db";
-import { useQueryParams, withDefault, StringParam } from "use-query-params";
-import { usePaginationState } from "@/src/hooks/usePaginationState";
+import { type Prisma } from "@hanzo/shared/src/db";
+import { useQueryParams, withDefault, NumberParam, StringParam } from "use-query-params";
 import { IOTableCell } from "../../ui/IOTableCell";
 import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-height-switch";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
@@ -16,8 +15,8 @@ import { EditModelButton } from "@/src/features/models/components/EditModelButto
 import { CloneModelButton } from "@/src/features/models/components/CloneModelButton";
 import { PriceBreakdownTooltip } from "@/src/features/models/components/PriceBreakdownTooltip";
 import { UserCircle2Icon, PlusIcon } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@hanzo/ui";
-import { Skeleton } from "@hanzo/ui";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/src/components/ui/tooltip";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { HanzoIcon as _HanzoIcon, HanzoCloudIcon } from "@/src/components/HanzoLogo";
 import { useRouter } from "next/router";
 import { PriceUnitSelector } from "@/src/features/models/components/PriceUnitSelector";
@@ -25,7 +24,7 @@ import { usePriceUnitMultiplier } from "@/src/features/models/hooks/usePriceUnit
 import { UpsertModelFormDialog } from "@/src/features/models/components/UpsertModelFormDialog";
 import { TestModelMatchButton } from "@/src/features/models/components/test-match/TestModelMatchButton";
 import { ActionButton } from "@/src/components/ActionButton";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { SettingsTableCard } from "@/src/components/layouts/settings-table-card";
 
@@ -56,10 +55,10 @@ const modelConfigDescriptions = {
 
 export default function ModelTable({ projectId }: { projectId: string }) {
   const router = useRouter();
-  const capture = useInsightsCapture();
-  const [paginationState, setPaginationState] = usePaginationState(0, 50, {
-    page: "pageIndex",
-    limit: "pageSize",
+  const capture = usePostHogClientCapture();
+  const [paginationState, setPaginationState] = useQueryParams({
+    pageIndex: withDefault(NumberParam, 0),
+    pageSize: withDefault(NumberParam, 50),
   });
   const [queryParams, setQueryParams] = useQueryParams({
     search: withDefault(StringParam, ""),
@@ -100,7 +99,7 @@ export default function ModelTable({ projectId }: { projectId: string }) {
     scope: "models:CUD",
   });
 
-  const columns: ConsoleColumnDef<ModelTableRow>[] = [
+  const columns: HanzoColumnDef<ModelTableRow>[] = [
     {
       accessorKey: "modelName",
       id: "modelName",

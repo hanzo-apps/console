@@ -1,151 +1,81 @@
-import Header from "@/src/components/layouts/header";
+// This is a placeholder to read the file contents.
+
+// Hanzo Cloud only
 import { Button } from "@/src/components/ui/button";
-import { Card } from "@/src/components/ui/card";
-import { useQueryOrganization } from "@/src/features/organizations/hooks";
-import { api } from "@/src/utils/api";
-import { numberFormatter, compactNumberFormatter } from "@/src/utils/numbers";
-import { MAX_EVENTS_FREE_PLAN } from "@/src/features/billing/constants";
-import { ExternalLink, CreditCard, BarChart3, Receipt, Zap } from "lucide-react";
-import type { Plan } from "@hanzo/console-core";
+// import { api } from "@/src/utils/api";
+// import { Flex, MarkerBar, Metric, Text } from "@tremor/react";
+import Header from "@/src/components/layouts/header";
+// import { useQueryOrganization } from "@/src/features/organizations/hooks";
+// import { Card } from "@/src/components/ui/card";
+// import { numberFormatter, compactNumberFormatter } from "@/src/utils/numbers";
+import { useHasEntitlement } from "@/src/features/entitlements/hooks";
+// import { type Plan, planLabels } from "@hanzo/shared";
+import { useRouter } from "next/router";
+import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
+import { BillingOverview } from "./overview/BillingOverview";
+import { InvoiceHistory } from "./overview/InvoiceHistory";
+import { PaymentManagement } from "./overview/PaymentManagement";
+import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
+import { useState } from "react";
+import { Receipt, CreditCard } from "lucide-react";
 
 export const BillingSettings = () => {
-  const organization = useQueryOrganization();
+  const router = useRouter();
+  const orgId = router.query.organizationId as string | undefined;
+  const [activeView, setActiveView] = useState<"history" | "payment">("history");
 
-  const usage = api.cloudBilling.getUsage.useQuery(
-    { orgId: organization?.id as string },
-    { enabled: !!organization?.id, trpc: { context: { skipBatch: true } } },
-  );
+  const hasAccess = useHasOrganizationAccess({
+    organizationId: orgId,
+    scope: "hanzoCloudBilling:CRUD",
+  });
 
-  const subscription = api.cloudBilling.getSubscription.useQuery(
-    { orgId: organization?.id as string },
-    { enabled: !!organization?.id, trpc: { context: { skipBatch: true } } },
-  );
+  const entitled = useHasEntitlement("cloud-billing");
+  if (!entitled) return null;
 
-  const plan: Plan = organization?.plan ?? "cloud:hobby";
-  const hobbyPlanLimit = organization?.cloudConfig?.monthlyObservationLimit ?? MAX_EVENTS_FREE_PLAN;
-  const usageCount = usage.data?.usageCount ?? 0;
-  const usageType = usage.data?.usageType
-    ? usage.data.usageType.charAt(0).toUpperCase() + usage.data.usageType.slice(1)
-    : "Events";
-  const usagePct = plan === "cloud:hobby" ? Math.min((usageCount / hobbyPlanLimit) * 100, 100) : 0;
-
-  const sub = subscription.data;
-  const planName = sub?.plan?.name ?? (plan === "cloud:hobby" ? "Hobby (Free)" : plan);
-  const planStatus = sub?.status ?? "active";
+  if (!hasAccess)
+    return (
+      <Alert>
+        <AlertTitle>Access Denied</AlertTitle>
+        <AlertDescription>
+          You do not have permission to view the billing settings of this organization.
+        </AlertDescription>
+      </Alert>
+    );
 
   return (
     <div>
-      <Header title="Billing" />
-
-      {/* Plan + Balance card */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-            <Zap className="h-4 w-4" />
-            <span>Current Plan</span>
-          </div>
-          <div className="text-2xl font-bold">{planName}</div>
-          <div className="mt-1 text-xs text-muted-foreground capitalize">{planStatus}</div>
-          {sub?.current_period_end && (
-            <div className="mt-2 text-xs text-muted-foreground">
-              Renews {new Date(sub.current_period_end).toLocaleDateString()}
-            </div>
-          )}
-          {sub?.price?.amount != null && (
-            <div className="mt-1 text-sm font-medium">
-              ${(sub.price.amount / 100).toFixed(2)}/{sub.price.currency?.toUpperCase() ?? "USD"} /mo
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-            <BarChart3 className="h-4 w-4" />
-            <span>{usageType} this period</span>
-          </div>
-          {usage.data !== undefined ? (
-            <>
-              <div className="text-2xl font-bold">{numberFormatter(usageCount, 0)}</div>
-              {plan === "cloud:hobby" && (
-                <>
-                  <div className="mt-3 flex justify-between text-xs text-muted-foreground">
-                    <span>{numberFormatter(usagePct)}%</span>
-                    <span>Limit: {compactNumberFormatter(hobbyPlanLimit)}</span>
-                  </div>
-                  <div
-                    className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted"
-                    role="progressbar"
-                    aria-valuenow={usagePct}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  >
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        usagePct >= 90 ? "bg-destructive" : usagePct >= 70 ? "bg-yellow-500" : "bg-primary"
-                      }`}
-                      style={{ width: `${usagePct}%` }}
-                    />
-                  </div>
-                </>
-              )}
-              {usage.data.upcomingInvoice && (
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Upcoming invoice: ${usage.data.upcomingInvoice.usdAmount.toFixed(2)} on{" "}
-                  {new Date(usage.data.upcomingInvoice.date).toLocaleDateString()}
-                </div>
-              )}
-            </>
-          ) : usage.data === null ? (
-            <span className="text-sm text-muted-foreground">Billing not configured</span>
-          ) : (
-            <span className="text-sm text-muted-foreground">Loading...</span>
-          )}
-        </Card>
-      </div>
-
-      {/* Quick actions */}
+      <Header title="Usage & Billing" />
       <div className="mb-6">
-        <h3 className="mb-3 text-sm font-medium text-muted-foreground">Quick Actions</h3>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" size="sm" asChild>
-            <a href="https://billing.hanzo.ai/#credits" target="_blank" rel="noopener noreferrer">
-              <CreditCard className="mr-2 h-4 w-4" />
-              Add Funds
-            </a>
+        <div className="inline-flex rounded-lg border p-1">
+          <Button
+            variant={activeView === "history" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveView("history")}
+            className="gap-2"
+          >
+            <Receipt className="h-4 w-4" />
+            View Billing History
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a href="https://billing.hanzo.ai/#invoices" target="_blank" rel="noopener noreferrer">
-              <Receipt className="mr-2 h-4 w-4" />
-              View Invoices
-            </a>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a href="https://billing.hanzo.ai/#pricing" target="_blank" rel="noopener noreferrer">
-              <Zap className="mr-2 h-4 w-4" />
-              Manage Plan
-            </a>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a href="https://billing.hanzo.ai/#usage" target="_blank" rel="noopener noreferrer">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Detailed Usage
-            </a>
+          <Button
+            variant={activeView === "payment" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveView("payment")}
+            className="gap-2"
+          >
+            <CreditCard className="h-4 w-4" />
+            Manage Payment Methods
           </Button>
         </div>
       </div>
 
-      {/* Full portal link */}
-      <Card className="border-dashed p-4">
-        <p className="mb-3 text-sm text-muted-foreground">
-          For detailed usage analytics, invoices, payment methods, credits, team billing, and subscription management:
-        </p>
-        <Button asChild>
-          <a href="https://billing.hanzo.ai" target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Open Full Billing Portal
-          </a>
-        </Button>
-      </Card>
+      {activeView === "history" ? (
+        <div className="space-y-6">
+          <BillingOverview />
+          <InvoiceHistory />
+        </div>
+      ) : (
+        <PaymentManagement />
+      )}
     </div>
   );
 };

@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
-import { applyCommentFilters } from "@hanzo/console-core/src/server";
+import { applyCommentFilters } from "@hanzo/shared/src/server";
 import { createTRPCRouter, protectedGetTraceProcedure, protectedProjectProcedure } from "@/src/server/api/trpc";
 import {
   BatchActionQuerySchema,
@@ -19,7 +19,7 @@ import {
   type ScoreDomain,
   AGGREGATABLE_SCORE_TYPES,
   ScoreDataTypeEnum,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import {
   traceException,
   getTracesTable,
@@ -32,19 +32,19 @@ import {
   getTraceById,
   logger,
   upsertTrace,
-  convertTraceDomainToDatastore,
+  convertTraceDomainToClickhouse,
   hasAnyTrace,
   traceDeletionProcessor,
   getTracesTableMetrics,
   getCategoricalScoresGroupedByName,
-  convertDateToDatastoreDateTime,
+  convertDateToClickhouseDateTime,
   getAgentGraphData,
   tracesTableUiColumnDefinitions,
   getTracesGroupedByUsers,
   getTracesGroupedBySessionId,
   updateEvents,
   getScoresAndCorrectionsForTraces,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { TRPCError } from "@trpc/server";
 import { createBatchActionJob } from "@/src/features/table/server/createBatchActionJob";
 import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEntitlement";
@@ -196,7 +196,7 @@ export const traceRouter = createTRPCRouter({
           {
             type: "stringOptions",
             operator: "any of",
-            column: "id",
+            column: "ID",
             value: filteredTraceIds,
           },
         ],
@@ -418,27 +418,27 @@ export const traceRouter = createTRPCRouter({
 
         let trace;
 
-        const datastoreTrace = await getTraceById({
+        const clickhouseTrace = await getTraceById({
           traceId: input.traceId,
           projectId: input.projectId,
-          datastoreFeatureTag: "tracing-trpc",
+          clickhouseFeatureTag: "tracing-trpc",
         });
-        if (datastoreTrace) {
-          trace = datastoreTrace;
-          datastoreTrace.bookmarked = input.bookmarked;
-          const promises = [upsertTrace(convertTraceDomainToDatastore(datastoreTrace))];
+        if (clickhouseTrace) {
+          trace = clickhouseTrace;
+          clickhouseTrace.bookmarked = input.bookmarked;
+          const promises = [upsertTrace(convertTraceDomainToClickhouse(clickhouseTrace))];
           if (env.HANZO_ENABLE_EVENTS_TABLE_FLAGS === "true") {
             promises.push(
               updateEvents(
                 input.projectId,
-                { traceIds: [datastoreTrace.id], rootOnly: true },
+                { traceIds: [clickhouseTrace.id], rootOnly: true },
                 { bookmarked: input.bookmarked },
               ),
             );
           }
           await Promise.all(promises);
         } else {
-          logger.error(`Trace not found in Datastore: ${input.traceId}. Skipping bookmark.`);
+          logger.error(`Trace not found in Clickhouse: ${input.traceId}. Skipping bookmark.`);
         }
 
         return trace;
@@ -472,25 +472,25 @@ export const traceRouter = createTRPCRouter({
           after: input.public,
         });
 
-        const datastoreTrace = await getTraceById({
+        const clickhouseTrace = await getTraceById({
           traceId: input.traceId,
           projectId: input.projectId,
-          datastoreFeatureTag: "tracing-trpc",
+          clickhouseFeatureTag: "tracing-trpc",
         });
-        if (!datastoreTrace) {
-          logger.error(`Trace not found in Datastore: ${input.traceId}. Skipping publishing.`);
+        if (!clickhouseTrace) {
+          logger.error(`Trace not found in Clickhouse: ${input.traceId}. Skipping publishing.`);
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Trace not found",
           });
         }
-        datastoreTrace.public = input.public;
-        const promises = [upsertTrace(convertTraceDomainToDatastore(datastoreTrace))];
+        clickhouseTrace.public = input.public;
+        const promises = [upsertTrace(convertTraceDomainToClickhouse(clickhouseTrace))];
         if (env.HANZO_ENABLE_EVENTS_TABLE_FLAGS === "true") {
-          promises.push(updateEvents(input.projectId, { traceIds: [datastoreTrace.id] }, { public: input.public }));
+          promises.push(updateEvents(input.projectId, { traceIds: [clickhouseTrace.id] }, { public: input.public }));
         }
         await Promise.all(promises);
-        return datastoreTrace;
+        return clickhouseTrace;
       } catch (error) {
         logger.error("Failed to call traces.publish", error);
         throw new TRPCError({
@@ -521,20 +521,20 @@ export const traceRouter = createTRPCRouter({
           after: input.tags,
         });
 
-        const datastoreTrace = await getTraceById({
+        const clickhouseTrace = await getTraceById({
           traceId: input.traceId,
           projectId: input.projectId,
-          datastoreFeatureTag: "tracing-trpc",
+          clickhouseFeatureTag: "tracing-trpc",
         });
-        if (!datastoreTrace) {
-          logger.error(`Trace not found in Datastore: ${input.traceId}. Skipping tag update.`);
+        if (!clickhouseTrace) {
+          logger.error(`Trace not found in Clickhouse: ${input.traceId}. Skipping tag update.`);
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Trace not found",
           });
         }
-        datastoreTrace.tags = input.tags;
-        await upsertTrace(convertTraceDomainToDatastore(datastoreTrace));
+        clickhouseTrace.tags = input.tags;
+        await upsertTrace(convertTraceDomainToClickhouse(clickhouseTrace));
       } catch (error) {
         logger.error("Failed to call traces.updateTags", error);
         throw new TRPCError({
@@ -558,8 +558,8 @@ export const traceRouter = createTRPCRouter({
     .query(async ({ input }): Promise<Required<AgentGraphDataResponse>[]> => {
       const { traceId, projectId, minStartTime, maxStartTime } = input;
 
-      const chMinStartTime = convertDateToDatastoreDateTime(new Date(minStartTime));
-      const chMaxStartTime = convertDateToDatastoreDateTime(new Date(maxStartTime));
+      const chMinStartTime = convertDateToClickhouseDateTime(new Date(minStartTime));
+      const chMaxStartTime = convertDateToClickhouseDateTime(new Date(maxStartTime));
 
       const records = await getAgentGraphData({
         projectId,

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { Separator } from "@hanzo/ui";
+import { Separator } from "@/src/components/ui/separator";
 import { Switch } from "@/src/components/ui/switch";
 import { useRouter } from "next/router";
 import { z } from "zod/v4";
@@ -24,7 +24,7 @@ import {
   type ActionTypes,
   type JobConfigState,
   webhookActionFilterOptions,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { InlineFilterBuilder } from "@/src/features/filters/components/filter-builder";
 import { DeleteAutomationButton } from "./DeleteAutomationButton";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";

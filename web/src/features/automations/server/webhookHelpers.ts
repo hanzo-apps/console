@@ -1,18 +1,18 @@
-import { decrypt, encrypt, generateWebhookSecret } from "@hanzo/console-core/encryption";
+import { decrypt, encrypt, generateWebhookSecret } from "@hanzo/shared/encryption";
 import {
   type ActionCreate,
   type ActionConfig,
   type WebhookActionConfigWithSecrets,
   type WebhookActionCreate,
   isWebhookActionConfig,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import {
   getActionByIdWithSecrets,
   mergeHeaders,
   createDisplayHeaders,
   encryptSecretHeaders,
   validateWebhookURL,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { TRPCError } from "@trpc/server";
 
 interface WebhookConfigOptions {

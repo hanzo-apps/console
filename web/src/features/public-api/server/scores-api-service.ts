@@ -4,8 +4,8 @@ import {
   convertScoreToPublicApi,
   type ScoreQueryType,
 } from "@/src/features/public-api/server/scores";
-import { AGGREGATABLE_SCORE_TYPES, type ScoreSourceType } from "@hanzo/console-core";
-import { _handleGetScoreById } from "@hanzo/console-core/src/server";
+import { AGGREGATABLE_SCORE_TYPES, type ScoreSourceType } from "@hanzo/shared";
+import { _handleGetScoreById } from "@hanzo/shared/src/server";
 
 export class ScoresApiService {
   constructor(private readonly apiVersion: "v1" | "v2") {}
@@ -22,7 +22,7 @@ export class ScoresApiService {
       source,
       scoreScope: this.apiVersion === "v1" ? "traces_only" : "all",
       scoreDataTypes: this.apiVersion === "v1" ? AGGREGATABLE_SCORE_TYPES : undefined,
-      preferredService: "ReadOnly",
+      preferredClickhouseService: "ReadOnly",
     });
 
     if (!score) {

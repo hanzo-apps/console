@@ -3,11 +3,11 @@ import TagCreateItem from "@/src/features/tag/components/TagCreateItem";
 import { TagInput } from "@/src/features/tag/components/TagInput";
 import TagList from "@/src/features/tag/components/TagList";
 import { useTagManager } from "@/src/features/tag/hooks/useTagManager";
-import { Popover, PopoverTrigger, PopoverContent } from "@hanzo/ui";
+import { Popover, PopoverTrigger, PopoverContent } from "@/src/components/ui/popover";
 import { Command, CommandList, CommandGroup } from "cmdk";
 import { cn } from "@/src/utils/tailwind";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
-import { Label } from "@hanzo/ui";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { Label } from "@/src/components/ui/label";
 
 type TagManagerProps = {
   itemName: "prompt" | "trace";
@@ -36,7 +36,7 @@ const TagManager = ({
     initialTags: tags,
     allTags,
   });
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const filteredTags = availableTags.filter(
     (value) => value.toLowerCase().includes(inputValue.trim().toLowerCase()) && !selectedTags.includes(value),
   );
@@ -60,11 +60,11 @@ const TagManager = ({
   }
 
   return (
-    <Popover onOpenChange={(open: boolean) => handlePopoverChange(open)}>
+    <Popover onOpenChange={(open) => handlePopoverChange(open)}>
       <PopoverTrigger
         className="select-none"
         asChild
-        onClick={(e: React.MouseEvent) => {
+        onClick={(e) => {
           if (isTableCell) {
             e.stopPropagation();
           }
@@ -76,12 +76,12 @@ const TagManager = ({
       </PopoverTrigger>
       <PopoverContent
         className="space-y-2"
-        onClick={(e: React.MouseEvent) => {
+        onClick={(e) => {
           if (isTableCell) {
             e.stopPropagation();
           }
         }}
-        onKeyDown={(e: React.KeyboardEvent) => {
+        onKeyDown={(e) => {
           if (isTableCell) {
             e.stopPropagation();
           }

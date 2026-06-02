@@ -1,8 +1,8 @@
 import React from "react";
 import { Button } from "@/src/components/ui/button";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
-import { PRODUCTION_LABEL, LATEST_PROMPT_LABEL } from "@hanzo/console-core";
+import { PRODUCTION_LABEL, LATEST_PROMPT_LABEL } from "@hanzo/shared";
 import { cn } from "@/src/utils/tailwind";
 
 interface TruncatedLabelsProps {

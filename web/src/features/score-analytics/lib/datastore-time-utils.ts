@@ -1,16 +1,16 @@
 /**
- * Datastore time bucketing utilities for score analytics
+ * ClickHouse time bucketing utilities for score analytics
  *
- * This module provides helper functions for constructing Datastore time-based queries
+ * This module provides helper functions for constructing ClickHouse time-based queries
  * with proper interval normalization and SQL function generation.
  */
 
 import { type IntervalConfig } from "@/src/utils/date-range-utils";
 
 /**
- * Normalize multi-unit intervals to single-unit intervals for Datastore
+ * Normalize multi-unit intervals to single-unit intervals for ClickHouse
  *
- * Datastore time bucketing functions work best with single-unit intervals.
+ * ClickHouse time bucketing functions work best with single-unit intervals.
  * This function normalizes multi-unit intervals to single-unit equivalents,
  * with special handling for 7-day intervals (ISO 8601 weeks).
  *
@@ -21,21 +21,21 @@ import { type IntervalConfig } from "@/src/utils/date-range-utils";
  * This approach ensures consistent, calendar-aligned behavior across all time ranges.
  *
  * @param interval - The requested interval (may be multi-unit like {count: 2, unit: "day"})
- * @returns Normalized single-unit interval for Datastore (e.g., {count: 1, unit: "day"})
+ * @returns Normalized single-unit interval for ClickHouse (e.g., {count: 1, unit: "day"})
  *
  * @example
  * ```typescript
- * normalizeIntervalForDatastore({ count: 7, unit: "day" })
+ * normalizeIntervalForClickHouse({ count: 7, unit: "day" })
  * // Returns: { count: 7, unit: "day" } (special case for weeks)
  *
- * normalizeIntervalForDatastore({ count: 2, unit: "day" })
+ * normalizeIntervalForClickHouse({ count: 2, unit: "day" })
  * // Returns: { count: 1, unit: "day" }
  *
- * normalizeIntervalForDatastore({ count: 1, unit: "hour" })
+ * normalizeIntervalForClickHouse({ count: 1, unit: "hour" })
  * // Returns: { count: 1, unit: "hour" }
  * ```
  */
-export const normalizeIntervalForDatastore = (interval: IntervalConfig): IntervalConfig => {
+export const normalizeIntervalForClickHouse = (interval: IntervalConfig): IntervalConfig => {
   // Special case: 7-day intervals become ISO 8601 weeks (Monday-aligned)
   if (interval.count === 7 && interval.unit === "day") {
     return { count: 7, unit: "day" }; // Will use toStartOfWeek
@@ -46,9 +46,9 @@ export const normalizeIntervalForDatastore = (interval: IntervalConfig): Interva
 };
 
 /**
- * Generate Datastore SQL function for time bucketing
+ * Generate ClickHouse SQL function for time bucketing
  *
- * Returns the appropriate Datastore time bucketing function for SINGLE-UNIT intervals.
+ * Returns the appropriate ClickHouse time bucketing function for SINGLE-UNIT intervals.
  * Uses calendar-aligned functions to ensure "today's" data appears in today's bucket.
  *
  * Special cases:
@@ -58,21 +58,21 @@ export const normalizeIntervalForDatastore = (interval: IntervalConfig): Interva
  *
  * @param timestampField - The timestamp field name to bucket (e.g., "timestamp", "timestamp1")
  * @param normalizedInterval - Single-unit interval (or 7-day for weeks)
- * @returns Datastore SQL function call as string
+ * @returns ClickHouse SQL function call as string
  *
  * @example
  * ```typescript
- * getDatastoreTimeBucketFunction("timestamp", { count: 1, unit: "day" })
+ * getClickHouseTimeBucketFunction("timestamp", { count: 1, unit: "day" })
  * // Returns: "toStartOfDay(timestamp, 'UTC')"
  *
- * getDatastoreTimeBucketFunction("timestamp", { count: 7, unit: "day" })
+ * getClickHouseTimeBucketFunction("timestamp", { count: 7, unit: "day" })
  * // Returns: "toStartOfWeek(timestamp, 1)"
  *
- * getDatastoreTimeBucketFunction("created_at", { count: 1, unit: "hour" })
+ * getClickHouseTimeBucketFunction("created_at", { count: 1, unit: "hour" })
  * // Returns: "toStartOfHour(created_at)"
  * ```
  */
-export const getDatastoreTimeBucketFunction = (timestampField: string, normalizedInterval: IntervalConfig): string => {
+export const getClickHouseTimeBucketFunction = (timestampField: string, normalizedInterval: IntervalConfig): string => {
   const { count, unit } = normalizedInterval;
 
   // Special case: 7-day intervals align to ISO 8601 week (Monday start)

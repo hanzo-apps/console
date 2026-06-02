@@ -3,12 +3,12 @@ import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
 import { DataTableControlsProvider, DataTableControls } from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import { useQueryFilterState } from "@/src/features/filters/hooks/useFilterState";
-import { usePaginationState } from "@/src/hooks/usePaginationState";
 import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFilterState";
 import { getEventsColumnName, observationEventsFilterConfig } from "../config/filter-config";
 import { formatIntervalSeconds } from "@/src/utils/dates";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import {
   type ObservationLevelType,
   type FilterState,
@@ -17,28 +17,27 @@ import {
   TableViewPresetTableName,
   BatchActionType,
   ActionId,
-  RESOURCE_LIMIT_ERROR_MESSAGE,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { cn } from "@/src/utils/tailwind";
 import { LevelColors } from "@/src/components/level-colors";
 import { numberFormatter, usdFormatter } from "@/src/utils/numbers";
 import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
 import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-height-switch";
 import { useTableDateRange } from "@/src/hooks/useTableDateRange";
-import { toAbsoluteTimeRange, type TableDateRange } from "@/src/utils/date-range-utils";
-import { type ScoreAggregate } from "@hanzo/console-core";
+import { toAbsoluteTimeRange } from "@/src/utils/date-range-utils";
+import { type ScoreAggregate } from "@hanzo/shared";
 import TagList from "@/src/features/tag/components/TagList";
 import useColumnOrder from "@/src/features/column-visibility/hooks/useColumnOrder";
 import { BatchExportTableButton } from "@/src/components/BatchExportTableButton";
 import { BreakdownTooltip } from "@/src/components/trace2/components/_shared/BreakdownToolTip";
-import { InfoIcon, LightbulbIcon, PlusCircle } from "lucide-react";
+import { InfoIcon, PlusCircle } from "lucide-react";
 import { UpsertModelFormDialog } from "@/src/features/models/components/UpsertModelFormDialog";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { Badge } from "@/src/components/ui/badge";
 import { type Row, type RowSelectionState } from "@tanstack/react-table";
 import TableIdOrName from "@/src/components/table/table-id";
 import { ItemBadge } from "@/src/components/ItemBadge";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { PeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
 import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
@@ -49,26 +48,19 @@ import { TableSelectionManager } from "@/src/features/table/components/TableSele
 import { useSelectAll } from "@/src/features/table/hooks/useSelectAll";
 import { TableActionMenu } from "@/src/features/table/components/TableActionMenu";
 import { type TableAction } from "@/src/features/table/types";
-import { type DataTablePeekViewProps, TablePeekView } from "@/src/components/table/peek";
+import { type DataTablePeekViewProps } from "@/src/components/table/peek";
 import { useScoreColumns } from "@/src/features/scores/hooks/useScoreColumns";
 import { scoreFilters } from "@/src/features/scores/lib/scoreColumns";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { MemoizedIOTableCell } from "@/src/components/ui/IOTableCell";
 import { useEventsTableData } from "@/src/features/events/hooks/useEventsTableData";
 import { useEventsFilterOptions } from "@/src/features/events/hooks/useEventsFilterOptions";
-// Disabled for now because perhaps confusing
-// import {
-//   useEventsViewMode,
-//   type EventsViewMode,
-// } from "@/src/features/events/hooks/useEventsViewMode";
-// import { EventsViewModeToggle } from "@/src/features/events/components/EventsViewModeToggle";
-// import { useObservationCountCheck } from "@/src/features/events/hooks/useObservationCountCheck";
+import { useEventsViewMode } from "@/src/features/events/hooks/useEventsViewMode";
+import { EventsViewModeToggle } from "@/src/features/events/components/EventsViewModeToggle";
 import { JsonSkeleton } from "@/src/components/ui/CodeJsonViewer";
 import { type RefreshInterval, REFRESH_INTERVALS } from "@/src/components/table/data-table-refresh-button";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { api } from "@/src/utils/api";
-import { RunEvaluationDialog } from "@/src/features/batch-actions/components/RunEvaluationDialog/index";
-import { AddObservationsToDatasetDialog } from "@/src/features/batch-actions/components/AddObservationsToDatasetDialog/index";
 
 export type EventsTableRow = {
   // Identity fields
@@ -124,17 +116,12 @@ export type EventsTableRow = {
   latency?: number;
   timeToFirstToken?: number;
 
-  // Tool fields
-  toolDefinitions?: number;
-  toolCalls?: number;
-
   input?: string;
   output?: string;
   metadata?: unknown;
 
   // Trace fields
   traceTags?: string[];
-  traceName?: string;
 
   // Scores
   scores: ScoreAggregate;
@@ -142,24 +129,9 @@ export type EventsTableRow = {
 
 export type EventsTableProps = {
   projectId: string;
-  userId?: string;
-  hideControls?: boolean;
-  // External control props for embedded preview tables
-  externalFilterState?: FilterState;
-  externalDateRange?: TableDateRange;
-  limitRows?: number;
-  sessionId?: string;
 };
 
-export default function ObservationsEventsTable({
-  projectId,
-  userId,
-  hideControls = false,
-  externalFilterState,
-  externalDateRange,
-  limitRows,
-  sessionId,
-}: EventsTableProps) {
+export default function ObservationsEventsTable({ projectId }: EventsTableProps) {
   const router = useRouter();
   const { viewId } = router.query;
 
@@ -168,10 +140,11 @@ export default function ObservationsEventsTable({
   const { searchQuery, searchType, setSearchQuery, setSearchType } = useFullTextSearch();
 
   const { selectAll, setSelectAll } = useSelectAll(projectId, "observations");
-  const [showRunEvaluationDialog, setShowRunEvaluationDialog] = useState(false);
-  const [showAddToDatasetDialog, setShowAddToDatasetDialog] = useState(false);
 
-  const [paginationState, setPaginationState] = usePaginationState(1, 50);
+  const [paginationState, setPaginationState] = useQueryParams({
+    page: withDefault(NumberParam, 1),
+    limit: withDefault(NumberParam, 50),
+  });
 
   const [rowHeight, setRowHeight] = useRowHeightLocalStorage("observations", "s");
 
@@ -198,50 +171,27 @@ export default function ObservationsEventsTable({
 
   const { timeRange, setTimeRange } = useTableDateRange(projectId);
 
-  // Disabled for now because perhaps confusing — replaced by "Is Root Observation"
-  // boolean facet in the sidebar (see filter-config.ts).
-  //
-  // RE-ENABLING THE VIEW MODE TOGGLE:
-  // To re-enable, uncomment the code below AND the viewModeFilter, viewModeToggle,
-  // auto-switch logic, and imports further down. However, note that the sidebar now
-  // has an "Is Root Observation" boolean facet that also controls `hasParentObservation`.
-  // Having BOTH active would create duplicate/conflicting filters. Pick one:
-  //   - Sidebar facet only (current): remove this commented code entirely
-  //   - Toolbar toggle only: uncomment this code, remove the boolean facet from
-  //     web/src/features/events/config/filter-config.ts, and re-add
-  //     `hasParentObservation` param to the useEventsFilterOptions call below
-  //   - Both: would need deduplication logic to prevent conflicting filters
-  //
   // View mode toggle (Trace vs Observation)
-  // const { viewMode, setViewMode: setViewModeRaw } =
-  //   useEventsViewMode(projectId);
-  //
-  // const [userExplicitChoice, setUserExplicitChoice] =
-  //   useSessionStorage<EventsViewMode | null>(
-  //     `eventsViewModeUserChoice-${projectId}`,
-  //     null,
-  //   );
-  //
-  // const [autoSwitchedForRange, setAutoSwitchedForRange] = useSessionStorage<
-  //   string | null
-  // >(`eventsAutoSwitchRange-${projectId}`, null);
-  //
-  // const hasParentObservation = viewMode === "observation" ? undefined : false;
-  //
-  // const setViewMode = useCallback(
-  //   (mode: EventsViewMode) => {
-  //     setUserExplicitChoice(mode);
-  //     setViewModeRaw(mode);
-  //     setPaginationState({ page: 1, limit: 50 });
-  //   },
-  //   [setUserExplicitChoice, setViewModeRaw, setPaginationState],
-  // );
+  const { viewMode, setViewMode: setViewModeRaw } = useEventsViewMode(projectId);
+
+  // Convert view mode to hasParentObservation filter value
+  // trace = false (no parent), observation = true (has parent)
+  const hasParentObservation = viewMode === "observation";
+
+  // Wrap setViewMode to reset pagination when view mode changes
+  const setViewMode = useCallback(
+    (mode: typeof viewMode) => {
+      setViewModeRaw(mode);
+      setPaginationState({ page: 1 });
+    },
+    [setViewModeRaw, setPaginationState],
+  );
 
   // for auto data refresh
   const utils = api.useUtils();
   const [rawRefreshInterval, setRawRefreshInterval] = useSessionStorage<RefreshInterval>(
     `tableRefreshInterval-events-${projectId}`,
-    60_000,
+    null,
   );
 
   // Validate session storage value against allowed intervals
@@ -278,13 +228,11 @@ export default function ObservationsEventsTable({
 
   // Convert timeRange to absolute date range for compatibility
   // Include refreshTick to force recalculation on refresh
-  const tableDateRange = useMemo(() => {
+  const dateRange = useMemo(() => {
     // refreshTick forces recalculation but isn't used in computation
     void refreshTick;
     return toAbsoluteTimeRange(timeRange) ?? undefined;
   }, [timeRange, refreshTick]);
-
-  const dateRange = externalDateRange ?? tableDateRange;
 
   const dateRangeFilter: FilterState = dateRange
     ? [
@@ -309,10 +257,11 @@ export default function ObservationsEventsTable({
 
   const oldFilterState = inputFilterState.concat(dateRangeFilter);
 
-  // Fetch filter options
+  // Fetch filter options (scoped to current view mode)
   const { filterOptions, isFilterOptionsPending } = useEventsFilterOptions({
     projectId,
     oldFilterState,
+    hasParentObservation,
   });
 
   const queryFilter = useSidebarFilterState(
@@ -320,7 +269,6 @@ export default function ObservationsEventsTable({
     filterOptions,
     projectId,
     isFilterOptionsPending,
-    hideControls, // Disable URL persistence for embedded preview tables
   );
 
   // Create ref-based wrapper to avoid stale closure when queryFilter updates
@@ -329,67 +277,30 @@ export default function ObservationsEventsTable({
 
   const setFiltersWrapper = useCallback((filters: FilterState) => queryFilterRef.current?.setFilterState(filters), []);
 
-  // Disabled for now because perhaps confusing
-  // const viewModeFilter: FilterState =
-  //   viewMode === "trace"
-  //     ? [
-  //         {
-  //           column: "hasParentObservation",
-  //           type: "boolean",
-  //           operator: "=",
-  //           value: false,
-  //         },
-  //       ]
-  //     : [];
+  // Create view mode filter (not shown in sidebar)
+  const viewModeFilter: FilterState = [
+    {
+      column: "hasParentObservation",
+      type: "boolean",
+      operator: "=",
+      value: hasParentObservation,
+    },
+  ];
 
-  // Create user ID filter if userId is provided
-  const userIdFilter: FilterState = userId
-    ? [
-        {
-          column: "User ID",
-          type: "string",
-          operator: "=",
-          value: userId,
-        },
-      ]
-    : [];
-
-  const sessionIdFilter: FilterState = sessionId
-    ? [
-        {
-          column: "Session ID",
-          type: "string",
-          operator: "=",
-          value: sessionId,
-        },
-      ]
-    : [];
-
-  const combinedFilterState = queryFilter.filterState
-    .concat(dateRangeFilter)
-    .concat(userIdFilter)
-    .concat(sessionIdFilter);
-
-  // Use external filter state if provided, otherwise use combined filter state
-  const filterState = externalFilterState || combinedFilterState;
+  const filterState = queryFilter.filterState.concat(dateRangeFilter).concat(viewModeFilter);
 
   // Use the custom hook for observations data fetching
-  const { observations, totalCount, handleAddToAnnotationQueue, dataUpdatedAt, ioLoading, isSilencedError } =
-    useEventsTableData({
-      projectId,
-      filterState,
-      paginationState: limitRows ? { page: 1, limit: limitRows } : paginationState,
-      orderByState,
-      searchQuery,
-      searchType,
-      selectedRows,
-      selectAll,
-      setSelectedRows,
-    });
-
-  // Disabled for now because perhaps confusing
-  // === Auto-switch to observation mode when trace view is empty ===
-  // (commented out along with view mode toggle)
+  const { observations, totalCount, handleAddToAnnotationQueue, dataUpdatedAt, ioLoading } = useEventsTableData({
+    projectId,
+    filterState,
+    paginationState,
+    orderByState,
+    searchQuery,
+    searchType,
+    selectedRows,
+    selectAll,
+    setSelectedRows,
+  });
 
   useEffect(() => {
     if (observations.status === "success") {
@@ -397,10 +308,12 @@ export default function ObservationsEventsTable({
         "observations",
         observations?.rows?.map((o) => ({
           id: o?.id,
-          params: {
-            traceId: o?.traceId || "",
-            ...(o?.startTime ? { timestamp: o?.startTime.toISOString() } : {}),
-          },
+          params: o?.startTime
+            ? {
+                timestamp: o?.startTime.toISOString(),
+                traceId: o?.traceId || "",
+              }
+            : undefined,
         })) ?? [],
       );
     }
@@ -432,40 +345,17 @@ export default function ObservationsEventsTable({
         scope: "annotationQueues:CUD",
       },
     },
-    {
-      id: ActionId.ObservationAddToDataset,
-      type: BatchActionType.Create,
-      label: "Add to Dataset",
-      description: "Add selected observations to a dataset",
-      customDialog: true,
-      accessCheck: {
-        scope: "datasets:CUD",
-      },
-    },
-    {
-      id: ActionId.ObservationBatchEvaluation,
-      type: BatchActionType.Create,
-      label: "Evaluate",
-      description: "Run evaluations on selected observations.",
-      customDialog: true,
-      icon: <LightbulbIcon className="mr-2 h-4 w-4" />,
-      accessCheck: {
-        scope: "evalJob:CUD",
-      },
-    },
   ];
 
-  const enableSorting = !hideControls;
-
-  const columns: ConsoleColumnDef<EventsTableRow>[] = [
-    ...(hideControls ? [] : [selectActionColumn]),
+  const columns: HanzoColumnDef<EventsTableRow>[] = [
+    selectActionColumn,
     {
       accessorKey: "startTime",
       id: "startTime",
       header: getEventsColumnName("startTime"),
       size: 150,
       enableHiding: true,
-      enableSorting,
+      enableSorting: true,
       cell: ({ row }) => {
         const value: Date = row.getValue("startTime");
         return <LocalIsoDate date={value} />;
@@ -476,7 +366,7 @@ export default function ObservationsEventsTable({
       id: "type",
       header: getEventsColumnName("type"),
       size: 50,
-      enableSorting,
+      enableSorting: true,
       cell: ({ row }) => {
         const value: ObservationType = row.getValue("type");
         return value ? (
@@ -491,20 +381,9 @@ export default function ObservationsEventsTable({
       id: "name",
       header: getEventsColumnName("name"),
       size: 150,
-      enableSorting,
-      cell: ({ row }) => {
-        const value: EventsTableRow["name"] = row.getValue("name");
-        return value ?? undefined;
-      },
-    },
-    {
-      accessorKey: "traceName",
-      id: "traceName",
-      header: getEventsColumnName("traceName"),
-      size: 150,
       enableSorting: true,
       cell: ({ row }) => {
-        const value: string | undefined = row.getValue("traceName");
+        const value: EventsTableRow["name"] = row.getValue("name");
         return value ?? undefined;
       },
     },
@@ -549,7 +428,7 @@ export default function ObservationsEventsTable({
       size: 300,
       headerTooltip: {
         description: "Add metadata to traces to track additional information.",
-        href: "https://hanzo.ai/docs/observability/features/metadata",
+        href: "https://hanzo.com/docs/observability/features/metadata",
       },
       cell: ({ row }) => {
         const value: string | undefined = row.getValue("metadata");
@@ -568,7 +447,7 @@ export default function ObservationsEventsTable({
       headerTooltip: {
         description:
           "You can differentiate the importance of observations with the level attribute to control the verbosity of your traces and highlight errors and warnings.",
-        href: "https://hanzo.ai/docs/observability/features/log-levels",
+        href: "https://hanzo.com/docs/observability/features/log-levels",
       },
       enableHiding: true,
       cell: ({ row }) => {
@@ -579,7 +458,7 @@ export default function ObservationsEventsTable({
           </span>
         ) : undefined;
       },
-      enableSorting,
+      enableSorting: true,
     },
     {
       accessorKey: "statusMessage",
@@ -588,7 +467,7 @@ export default function ObservationsEventsTable({
       size: 150,
       headerTooltip: {
         description: "Use a statusMessage to e.g. provide additional information on a status such as level=ERROR.",
-        href: "https://hanzo.ai/docs/observability/features/log-levels",
+        href: "https://hanzo.com/docs/observability/features/log-levels",
       },
       enableHiding: true,
       defaultHidden: true,
@@ -609,7 +488,7 @@ export default function ObservationsEventsTable({
         return latency !== undefined ? <span>{formatIntervalSeconds(latency)}</span> : undefined;
       },
       enableHiding: true,
-      enableSorting,
+      enableSorting: true,
     },
     {
       accessorKey: "totalCost",
@@ -633,7 +512,7 @@ export default function ObservationsEventsTable({
         ) : undefined;
       },
       enableHiding: true,
-      enableSorting,
+      enableSorting: true,
     },
     {
       accessorKey: "cost",
@@ -660,7 +539,7 @@ export default function ObservationsEventsTable({
           },
           enableHiding: true,
           defaultHidden: true,
-          enableSorting,
+          enableSorting: true,
         },
         {
           accessorKey: "outputCost",
@@ -677,35 +556,9 @@ export default function ObservationsEventsTable({
           },
           enableHiding: true,
           defaultHidden: true,
-          enableSorting,
+          enableSorting: true,
         },
       ],
-    },
-    {
-      accessorKey: "toolDefinitions",
-      id: "toolDefinitions",
-      header: getEventsColumnName("toolDefinitions"),
-      size: 120,
-      enableHiding: true,
-      enableSorting,
-      defaultHidden: true,
-      cell: ({ row }) => {
-        const value: number | undefined = row.getValue("toolDefinitions");
-        return value !== undefined ? <span>{numberFormatter(value, 0)}</span> : undefined;
-      },
-    },
-    {
-      accessorKey: "toolCalls",
-      id: "toolCalls",
-      header: getEventsColumnName("toolCalls"),
-      size: 100,
-      enableHiding: true,
-      enableSorting,
-      defaultHidden: true,
-      cell: ({ row }) => {
-        const value: number | undefined = row.getValue("toolCalls");
-        return value !== undefined ? <span>{numberFormatter(value, 0)}</span> : undefined;
-      },
     },
     {
       accessorKey: "timeToFirstToken",
@@ -713,7 +566,7 @@ export default function ObservationsEventsTable({
       header: getEventsColumnName("timeToFirstToken"),
       size: 150,
       enableHiding: true,
-      enableSorting,
+      enableSorting: true,
       cell: ({ row }) => {
         const timeToFirstToken: number | undefined = row.getValue("timeToFirstToken");
 
@@ -748,7 +601,7 @@ export default function ObservationsEventsTable({
           },
           defaultHidden: true,
           enableHiding: true,
-          enableSorting,
+          enableSorting: true,
         },
         {
           accessorKey: "inputTokens",
@@ -757,7 +610,7 @@ export default function ObservationsEventsTable({
           size: 100,
           enableHiding: true,
           defaultHidden: true,
-          enableSorting,
+          enableSorting: true,
           cell: ({ row }: { row: Row<EventsTableRow> }) => {
             const value = row.getValue("usage") as {
               inputUsage: number;
@@ -774,7 +627,7 @@ export default function ObservationsEventsTable({
           size: 100,
           enableHiding: true,
           defaultHidden: true,
-          enableSorting,
+          enableSorting: true,
           cell: ({ row }: { row: Row<EventsTableRow> }) => {
             const value = row.getValue("usage") as {
               inputUsage: number;
@@ -791,7 +644,7 @@ export default function ObservationsEventsTable({
           size: 100,
           enableHiding: true,
           defaultHidden: true,
-          enableSorting,
+          enableSorting: true,
           cell: ({ row }: { row: Row<EventsTableRow> }) => {
             const value = row.getValue("usage") as {
               inputUsage: number;
@@ -809,7 +662,7 @@ export default function ObservationsEventsTable({
       header: getEventsColumnName("providedModelName"),
       size: 150,
       enableHiding: true,
-      enableSorting,
+      enableSorting: true,
       cell: ({ row }) => {
         const model = row.getValue("providedModelName") as string;
         const modelId = row.getValue("modelId") as string | undefined;
@@ -853,11 +706,11 @@ export default function ObservationsEventsTable({
       header: getEventsColumnName("promptName"),
       headerTooltip: {
         description: "Link to prompt version in Hanzo prompt management.",
-        href: "https://hanzo.ai/docs/prompt-management/get-started",
+        href: "https://hanzo.com/docs/prompt-management/get-started",
       },
       size: 200,
       enableHiding: true,
-      enableSorting,
+      enableSorting: true,
       cell: ({ row }) => {
         const promptName = row.original.promptName;
         const promptVersion = row.original.promptVersion;
@@ -914,7 +767,7 @@ export default function ObservationsEventsTable({
       header: getEventsColumnName("endTime"),
       size: 150,
       enableHiding: true,
-      enableSorting,
+      enableSorting: true,
       defaultHidden: true,
       cell: ({ row }) => {
         const value: Date | undefined = row.getValue("endTime");
@@ -930,7 +783,7 @@ export default function ObservationsEventsTable({
         const value = row.getValue("traceId");
         return typeof value === "string" ? <TableIdOrName value={value} /> : undefined;
       },
-      enableSorting,
+      enableSorting: true,
       enableHiding: true,
       defaultHidden: true,
     },
@@ -949,10 +802,10 @@ export default function ObservationsEventsTable({
       size: 100,
       headerTooltip: {
         description: "Track changes via the version tag.",
-        href: "https://hanzo.ai/docs/experimentation",
+        href: "https://hanzo.com/docs/experimentation",
       },
       enableHiding: true,
-      enableSorting,
+      enableSorting: true,
       defaultHidden: true,
     },
     {
@@ -1010,16 +863,17 @@ export default function ObservationsEventsTable({
     currentFilterState: queryFilter.filterState,
   });
 
-  const peekConfig: DataTablePeekViewProps | undefined = useMemo(() => {
-    if (hideControls) return undefined;
-    return {
+  const peekConfig: DataTablePeekViewProps = useMemo(
+    () => ({
       itemType: "TRACE",
       customTitlePrefix: "Observation ID:",
       detailNavigationKey: "observations",
       children: <PeekViewObservationDetail projectId={projectId} />,
+      tableDataUpdatedAt: dataUpdatedAt,
       ...peekNavigationProps,
-    };
-  }, [projectId, peekNavigationProps, hideControls]);
+    }),
+    [projectId, dataUpdatedAt, peekNavigationProps],
+  );
 
   const rows: EventsTableRow[] = useMemo(() => {
     const result =
@@ -1056,7 +910,6 @@ export default function ObservationsEventsTable({
               promptName: observation.promptName ?? undefined,
               promptVersion: observation.promptVersion?.toString() ?? undefined,
               traceTags: undefined, // TODO: traceTags not available in EventsObservation
-              traceName: observation.traceName ?? undefined,
               timestamp: observation.startTime ?? undefined,
               usageDetails: observation.usageDetails ?? {},
               costDetails: observation.costDetails ?? {},
@@ -1077,10 +930,6 @@ export default function ObservationsEventsTable({
               userId: observation.userId ?? undefined,
               sessionId: observation.sessionId ?? undefined,
               completionStartTime: observation.completionStartTime ?? undefined,
-              toolDefinitions: observation.toolDefinitions
-                ? Object.keys(observation.toolDefinitions).length
-                : undefined,
-              toolCalls: observation.toolCalls ? observation.toolCalls.length : undefined,
             };
           })
         : [];
@@ -1088,111 +937,83 @@ export default function ObservationsEventsTable({
     return result;
   }, [observations]);
 
-  const selectedObservationIds = useMemo(() => {
-    const rowIds = new Set(observations.rows?.map((o) => o.id));
-    return Object.keys(selectedRows).filter((id) => rowIds.has(id));
-  }, [observations.rows, selectedRows]);
-
-  const exampleObservation = useMemo(() => {
-    const firstId = selectedObservationIds[0];
-    const firstObs = observations.rows?.find((o) => o.id === firstId);
-    return {
-      id: firstObs?.id ?? "",
-      traceId: firstObs?.traceId ?? "",
-      startTime: firstObs?.startTime ?? undefined,
-    };
-  }, [selectedObservationIds, observations.rows]);
-
   return (
     <DataTableControlsProvider>
       <div className="flex h-full w-full flex-col">
         {/* Toolbar spanning full width */}
-        {!hideControls && (
-          <DataTableToolbar
-            columns={columns}
-            filterState={queryFilter.filterState}
-            searchConfig={{
-              metadataSearchFields: ["ID", "Name", "Trace Name", "Model"],
-              updateQuery: setSearchQuery,
-              currentQuery: searchQuery ?? undefined,
-              searchType,
-              setSearchType,
-              tableAllowsFullTextSearch: true,
-            }}
-            viewConfig={{
-              tableName: TableViewPresetTableName.Observations,
-              projectId,
-              controllers: viewControllers,
-            }}
-            columnsWithCustomSelect={["providedModelName", "name", "promptName"]}
-            columnVisibility={columnVisibility}
-            setColumnVisibility={setColumnVisibilityState}
-            columnOrder={columnOrder}
-            setColumnOrder={setColumnOrder}
-            orderByState={orderByState}
-            rowHeight={rowHeight}
-            setRowHeight={setRowHeight}
-            timeRange={timeRange}
-            setTimeRange={setTimeRange}
-            // Disabled, for now moved to filter sidebar
-            // TODO: remove this toggle once v4 looks good as is
-            // viewModeToggle={
-            //   <EventsViewModeToggle
-            //     viewMode={viewMode}
-            //     onViewModeChange={setViewMode}
-            //   />
-            // }
-            refreshConfig={{
-              onRefresh: handleRefresh,
-              isRefreshing: observations.status === "loading",
-              interval: refreshInterval,
-              setInterval: setRefreshInterval,
-            }}
-            actionButtons={[
-              <BatchExportTableButton
-                {...{
-                  projectId,
-                  filterState,
-                  orderByState,
-                  searchQuery,
-                  searchType,
-                }}
-                tableName={BatchExportTableName.Events}
-                key="batchExport"
-              />,
-              selectedObservationIds.length > 0 ? (
-                <TableActionMenu
-                  key="observations-multi-select-actions"
-                  projectId={projectId}
-                  actions={tableActions}
-                  tableName={BatchExportTableName.Observations}
-                  onCustomAction={(actionType) => {
-                    if (actionType === ActionId.ObservationBatchEvaluation) {
-                      setShowRunEvaluationDialog(true);
-                    }
-                    if (actionType === ActionId.ObservationAddToDataset) {
-                      setShowAddToDatasetDialog(true);
-                    }
-                  }}
-                />
-              ) : null,
-            ]}
-            multiSelect={{
-              selectAll,
-              setSelectAll,
-              selectedRowIds: selectedObservationIds,
-              setRowSelection: setSelectedRows,
-              totalCount,
-              pageSize: paginationState.limit,
-              pageIndex: paginationState.page - 1,
-            }}
-            filterWithAI
-          />
-        )}
+        <DataTableToolbar
+          columns={columns}
+          filterState={queryFilter.filterState}
+          searchConfig={{
+            metadataSearchFields: ["ID", "Name", "Trace Name", "Model"],
+            updateQuery: setSearchQuery,
+            currentQuery: searchQuery ?? undefined,
+            searchType,
+            setSearchType,
+            tableAllowsFullTextSearch: true,
+          }}
+          viewConfig={{
+            tableName: TableViewPresetTableName.Observations,
+            projectId,
+            controllers: viewControllers,
+          }}
+          columnsWithCustomSelect={["providedModelName", "name", "promptName"]}
+          columnVisibility={columnVisibility}
+          setColumnVisibility={setColumnVisibilityState}
+          columnOrder={columnOrder}
+          setColumnOrder={setColumnOrder}
+          orderByState={orderByState}
+          rowHeight={rowHeight}
+          setRowHeight={setRowHeight}
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
+          viewModeToggle={<EventsViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />}
+          refreshConfig={{
+            onRefresh: handleRefresh,
+            isRefreshing: observations.status === "loading",
+            interval: refreshInterval,
+            setInterval: setRefreshInterval,
+          }}
+          actionButtons={[
+            <BatchExportTableButton
+              {...{
+                projectId,
+                filterState,
+                orderByState,
+                searchQuery,
+                searchType,
+              }}
+              tableName={BatchExportTableName.Observations}
+              key="batchExport"
+            />,
+            Object.keys(selectedRows).filter((observationId) =>
+              observations.rows?.map((o) => o.id).includes(observationId),
+            ).length > 0 ? (
+              <TableActionMenu
+                key="observations-multi-select-actions"
+                projectId={projectId}
+                actions={tableActions}
+                tableName={BatchExportTableName.Observations}
+              />
+            ) : null,
+          ]}
+          multiSelect={{
+            selectAll,
+            setSelectAll,
+            selectedRowIds:
+              Object.keys(selectedRows).filter((observationId) =>
+                observations.rows?.map((o) => o.id).includes(observationId),
+              ) ?? [],
+            setRowSelection: setSelectedRows,
+            totalCount,
+            pageSize: paginationState.limit,
+            pageIndex: paginationState.page - 1,
+          }}
+        />
 
         {/* Content area with sidebar and table */}
         <ResizableFilterLayout>
-          {!hideControls && <DataTableControls queryFilter={queryFilter} filterWithAI />}
+          <DataTableControls queryFilter={queryFilter} />
 
           <div className="flex flex-1 flex-col overflow-hidden">
             <DataTable
@@ -1204,52 +1025,37 @@ export default function ObservationsEventsTable({
                 observations.status === "loading" || isViewLoading
                   ? { isLoading: true, isError: false }
                   : observations.status === "error"
-                    ? isSilencedError
-                      ? {
-                          isLoading: false,
-                          isError: false,
-                          data: [],
-                        }
-                      : {
-                          isLoading: false,
-                          isError: true,
-                          error: "",
-                        }
+                    ? {
+                        isLoading: false,
+                        isError: true,
+                        error: "",
+                      }
                     : {
                         isLoading: false,
                         isError: false,
                         data: rows,
                       }
               }
-              noResultsMessage={
-                isSilencedError ? (
-                  <span className="text-muted-foreground">{RESOURCE_LIMIT_ERROR_MESSAGE}</span>
-                ) : undefined
-              }
-              pagination={
-                limitRows
-                  ? undefined
-                  : {
-                      totalCount,
-                      onChange: (updater) => {
-                        const newState =
-                          typeof updater === "function"
-                            ? updater({
-                                pageIndex: paginationState.page - 1,
-                                pageSize: paginationState.limit,
-                              })
-                            : updater;
-                        setPaginationState({
-                          page: newState.pageIndex + 1,
-                          limit: newState.pageSize,
-                        });
-                      },
-                      state: {
-                        pageIndex: paginationState.page - 1,
-                        pageSize: paginationState.limit,
-                      },
-                    }
-              }
+              pagination={{
+                totalCount,
+                onChange: (updater) => {
+                  const newState =
+                    typeof updater === "function"
+                      ? updater({
+                          pageIndex: paginationState.page - 1,
+                          pageSize: paginationState.limit,
+                        })
+                      : updater;
+                  setPaginationState({
+                    page: newState.pageIndex + 1,
+                    limit: newState.pageSize,
+                  });
+                },
+                state: {
+                  pageIndex: paginationState.page - 1,
+                  pageSize: paginationState.limit,
+                },
+              }}
               rowSelection={selectedRows}
               setRowSelection={setSelectedRows}
               setOrderBy={setOrderByState}
@@ -1290,50 +1096,7 @@ export default function ObservationsEventsTable({
             />
           </div>
         </ResizableFilterLayout>
-        {peekConfig && <TablePeekView peekView={peekConfig} />}
       </div>
-
-      {showRunEvaluationDialog && (
-        <RunEvaluationDialog
-          projectId={projectId}
-          selectedObservationIds={selectedObservationIds}
-          query={{
-            filter: filterState,
-            orderBy: orderByState,
-            searchQuery: searchQuery ?? undefined,
-            searchType,
-          }}
-          selectAll={selectAll}
-          totalCount={totalCount ?? 0}
-          onClose={() => {
-            setShowRunEvaluationDialog(false);
-            setSelectedRows({});
-            setSelectAll(false);
-          }}
-          exampleObservation={exampleObservation}
-        />
-      )}
-
-      {showAddToDatasetDialog && (
-        <AddObservationsToDatasetDialog
-          projectId={projectId}
-          selectedObservationIds={selectedObservationIds}
-          query={{
-            filter: filterState,
-            orderBy: orderByState,
-            searchQuery: searchQuery ?? undefined,
-            searchType,
-          }}
-          selectAll={selectAll}
-          totalCount={totalCount ?? 0}
-          onClose={() => {
-            setShowAddToDatasetDialog(false);
-            setSelectedRows({});
-            setSelectAll(false);
-          }}
-          exampleObservation={exampleObservation}
-        />
-      )}
     </DataTableControlsProvider>
   );
 }

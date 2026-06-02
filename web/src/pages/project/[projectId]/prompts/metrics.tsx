@@ -1,7 +1,7 @@
 import { DataTable } from "@/src/components/table/data-table";
 import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-height-switch";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
 import { useRouter } from "next/router";
 import { api } from "@/src/utils/api";
@@ -11,8 +11,8 @@ import TableLink from "@/src/components/table/table-link";
 import { numberFormatter, usdFormatter } from "@/src/utils/numbers";
 import { formatIntervalSeconds } from "@/src/utils/dates";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
-import { Skeleton } from "@hanzo/ui";
-import { type ScoreAggregate } from "@hanzo/console-core";
+import { Skeleton } from "@/src/components/ui/skeleton";
+import { type ScoreAggregate } from "@hanzo/shared";
 import useColumnOrder from "@/src/features/column-visibility/hooks/useColumnOrder";
 import Page from "@/src/components/layouts/page";
 import { DetailPageNav } from "@/src/features/navigate-detail-pages/DetailPageNav";
@@ -127,7 +127,7 @@ export default function PromptVersionTable({ promptName: promptNameProp }: { pro
       prefix: "Generation",
     });
 
-  const columns: ConsoleColumnDef<PromptVersionTableRow>[] = [
+  const columns: HanzoColumnDef<PromptVersionTableRow>[] = [
     {
       accessorKey: "version",
       id: "version",
@@ -270,7 +270,7 @@ export default function PromptVersionTable({ promptName: promptNameProp }: { pro
       headerTooltip: {
         description:
           "The last time this prompt version was used in a generation. See docs for details on how to link generations/traces to prompt versions.",
-        href: "https://hanzo.ai/docs/prompt-management/get-started",
+        href: "https://hanzo.com/docs/prompt-management/get-started",
       },
       cell: ({ row }) => {
         const value: number | undefined | null = row.getValue("lastUsed");
@@ -289,7 +289,7 @@ export default function PromptVersionTable({ promptName: promptNameProp }: { pro
       headerTooltip: {
         description:
           "The first time this prompt version was used in a generation. See docs for details on how to link generations/traces to prompt versions.",
-        href: "https://hanzo.ai/docs/prompt-management/get-started",
+        href: "https://hanzo.com/docs/prompt-management/get-started",
       },
       cell: ({ row }) => {
         const value: number | undefined | null = row.getValue("firstUsed");
@@ -339,7 +339,7 @@ export default function PromptVersionTable({ promptName: promptNameProp }: { pro
         help: {
           description:
             "You can use this prompt within your application through the Hanzo SDKs and integrations. Refer to the documentation for more information.",
-          href: "https://hanzo.ai/docs/prompt-management/get-started",
+          href: "https://hanzo.com/docs/prompt-management/get-started",
         },
         breadcrumb: [
           {

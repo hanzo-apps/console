@@ -2,8 +2,8 @@
 
 import { makeZodVerifiedAPICall, makeAPICall } from "@/src/__tests__/test-utils";
 import { z } from "zod/v4";
-import { createAndAddApiKeysToDb, createBasicAuthHeader } from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+import { createAndAddApiKeysToDb, createBasicAuthHeader } from "@hanzo/shared/src/server";
+import { prisma } from "@hanzo/shared/src/db";
 import { randomUUID } from "crypto";
 import { verifyPassword } from "@/src/features/auth-credentials/lib/credentialsServerUtils";
 
@@ -129,12 +129,12 @@ const ResourceTypesResponseSchema = z.object({
 describe("SCIM API", () => {
   // Test variables
   const orgId = "seed-org-id";
-  const orgApiKey = `pk-hz-org-${randomUUID().substring(0, 8)}`;
-  const orgSecretKey = `sk-hz-org-${randomUUID().substring(0, 8)}`;
-  const projectApiKey = "pk-hz-1234567890";
-  const projectSecretKey = "sk-hz-1234567890";
-  const invalidApiKey = "pk-hz-invalid";
-  const invalidSecretKey = "sk-hz-invalid";
+  const orgApiKey = `pk-lf-org-${randomUUID().substring(0, 8)}`;
+  const orgSecretKey = `sk-lf-org-${randomUUID().substring(0, 8)}`;
+  const projectApiKey = "pk-lf-1234567890";
+  const projectSecretKey = "sk-lf-1234567890";
+  const invalidApiKey = "pk-lf-invalid";
+  const invalidSecretKey = "sk-lf-invalid";
   let testUserId: string;
 
   beforeAll(async () => {
@@ -435,8 +435,8 @@ describe("SCIM API", () => {
 
         expect(response.status).toBe(201);
         expect(response.body.userName).toBe(uniqueEmail);
-        expect(response.body.name!.formatted).toBe("Test User");
-        expect(response.body.emails![0].value).toBe(uniqueEmail);
+        expect(response.body.name.formatted).toBe("Test User");
+        expect(response.body.emails[0].value).toBe(uniqueEmail);
 
         testUserId = response.body.id;
 
@@ -477,10 +477,10 @@ describe("SCIM API", () => {
 
         expect(response.status).toBe(201);
         expect(response.body.userName).toBe(uniqueEmail);
-        expect(response.body.name!.formatted).toBe("Test User With Password");
-        expect(response.body.emails![0].value).toBe(uniqueEmail);
+        expect(response.body.name.formatted).toBe("Test User With Password");
+        expect(response.body.emails[0].value).toBe(uniqueEmail);
         // Password should not be returned in the response
-        expect((response.body as any).password).toBeUndefined();
+        expect(response.body.password).toBeUndefined();
 
         testUserId = response.body.id;
 
@@ -538,7 +538,7 @@ describe("SCIM API", () => {
 
         expect(response.status).toBe(201);
         expect(response.body.userName).toBe(uniqueEmail);
-        expect(response.body.name!.formatted).toBe("Test User With Role");
+        expect(response.body.name.formatted).toBe("Test User With Role");
 
         testUserId = response.body.id;
 
@@ -618,7 +618,7 @@ describe("SCIM API", () => {
 
         expect(response.status).toBe(200);
         expect(response.body.id).toBe(testUserId);
-        expect(response.body.name!.formatted).toBe("Test User");
+        expect(response.body.name.formatted).toBe("Test User");
       });
 
       it("should return 404 when user does not exist", async () => {

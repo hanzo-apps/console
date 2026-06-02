@@ -1,9 +1,9 @@
 import { Button } from "@/src/components/ui/button";
 import { api } from "@/src/utils/api";
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@hanzo/ui";
+import { Label } from "@/src/components/ui/label";
 import { RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -82,7 +82,7 @@ export function RetryBackgroundMigration({
           <p className="mt-1 text-xs text-muted-foreground">
             Required for security. This key must match your ADMIN_API_KEY environment variable{" ("}
             <a
-              href="https://hanzo.ai/self-hosting/administration/organization-management-api#authentication"
+              href="https://hanzo.com/self-hosting/administration/organization-management-api#authentication"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground underline hover:text-primary"

@@ -11,8 +11,8 @@ import {
   type GetMediaUploadUrlResponse,
   GetMediaUploadUrlResponseSchema,
 } from "@/src/features/media/validation";
-import { type Media, type ObservationMedia, prisma, type TraceMedia } from "@hanzo/console-core/src/db";
-import { redis } from "@hanzo/console-core/src/server";
+import { type Media, type ObservationMedia, prisma, type TraceMedia } from "@hanzo/shared/src/db";
+import { redis } from "@hanzo/shared/src/server";
 
 describe("Media Upload API", () => {
   const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
@@ -117,7 +117,7 @@ describe("Media Upload API", () => {
       // Upload file
       const uploadFileResponse = await fetch(getUploadUrlResponse.body.uploadUrl, {
         method: "PUT",
-        body: fileBytes as unknown as BodyInit,
+        body: fileBytes,
         headers: {
           "Content-Type": contentType,
           "X-Amz-Checksum-Sha256": sha256Hash,
@@ -223,7 +223,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: validPNG.contentType,
         contentLength: BigInt(validPNG.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 200,
         uploadHttpError: null,
@@ -269,7 +269,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPDF.sha256Hash,
         contentType: validPDF.contentType,
         contentLength: BigInt(validPDF.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
       });
       expect(result.traceMediaRecord).toBeNull();
@@ -312,7 +312,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: validPNG.contentType,
         contentLength: BigInt(100),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 403,
         uploadHttpError: expect.any(String),
@@ -342,7 +342,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: validPNG.contentType,
         contentLength: BigInt(validPNG.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 200,
         uploadHttpError: null,
@@ -387,7 +387,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: validPNG.contentType,
         contentLength: BigInt(validPNG.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 403,
         uploadHttpError: expect.any(String),
@@ -417,7 +417,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: validPNG.contentType,
         contentLength: BigInt(validPNG.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 200,
         uploadHttpError: null,
@@ -462,7 +462,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: "image/jpeg",
         contentLength: BigInt(validPNG.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 403,
         uploadHttpError: expect.any(String),
@@ -492,7 +492,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: validPNG.contentType,
         contentLength: BigInt(validPNG.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 200,
         uploadHttpError: null,
@@ -537,7 +537,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: "image/jpeg",
         contentLength: BigInt(validPNG.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 200,
         uploadHttpError: null,
@@ -578,7 +578,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: validPNG.contentType,
         contentLength: BigInt(validPNG.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 200,
         uploadHttpError: null,
@@ -624,7 +624,7 @@ describe("Media Upload API", () => {
         sha256Hash: validPNG.sha256Hash,
         contentType: validPNG.contentType,
         contentLength: BigInt(validPNG.contentLength),
-        bucketName: env.S3_MEDIA_UPLOAD_BUCKET,
+        bucketName: env.HANZO_S3_MEDIA_UPLOAD_BUCKET,
         bucketPath: expect.any(String),
         uploadHttpStatus: 200,
         uploadHttpError: null,
@@ -689,7 +689,7 @@ describe("Media Upload API", () => {
         ...validPNG,
         traceId,
         field,
-        contentLength: env.S3_MEDIA_MAX_CONTENT_LENGTH + 1,
+        contentLength: env.HANZO_S3_MEDIA_MAX_CONTENT_LENGTH + 1,
       });
 
       expect(result.getUploadUrlResponse?.status).toBe(400);

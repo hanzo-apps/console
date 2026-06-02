@@ -1,9 +1,9 @@
 import { EvaluatorStatus } from "@/src/features/evals/types";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api, type RouterOutputs } from "@/src/utils/api";
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { Button } from "@/src/components/ui/button";
 import { Switch } from "@/src/components/ui/switch";
 
@@ -17,7 +17,7 @@ export function DeactivateEvalConfig({
   const utils = api.useUtils();
   const hasAccess = useHasProjectAccess({ projectId, scope: "evalJob:CUD" });
   const [isOpen, setIsOpen] = useState(false);
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const isActive = evalConfig?.status === EvaluatorStatus.ACTIVE;
 
   const mutEvaluator = api.evals.updateEvalJob.useMutation({

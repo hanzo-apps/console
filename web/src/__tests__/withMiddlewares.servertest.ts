@@ -1,18 +1,17 @@
 /** @jest-environment node */
 import type { NextApiRequest, NextApiResponse } from "next";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
-import { BaseError, ConsoleNotFoundError, UnauthorizedError, ServiceUnavailableError } from "@hanzo/console-core";
-import { DatastoreResourceError, logger, traceException } from "@hanzo/console-core/src/server";
+import { BaseError, HanzoNotFoundError, UnauthorizedError, ServiceUnavailableError } from "@hanzo/shared";
+import { ClickHouseResourceError, logger, traceException } from "@hanzo/shared/src/server";
 import { createMocks } from "node-mocks-http";
 import { z } from "zod/v4";
 import { Prisma } from "@prisma/client";
 
 // Mock the logger and traceException
-jest.mock("@hanzo/console-core/src/server", () => ({
-  ...jest.requireActual("@hanzo/console-core/src/server"),
+jest.mock("@hanzo/shared/src/server", () => ({
+  ...jest.requireActual("@hanzo/shared/src/server"),
   logger: {
     info: jest.fn(),
-    warn: jest.fn(),
     error: jest.fn(),
     debug: jest.fn(),
   },
@@ -37,7 +36,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "POST",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -63,7 +62,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "GET",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -80,9 +79,9 @@ describe("withMiddlewares error handling", () => {
     });
   });
 
-  describe("ConsoleNotFoundError handling", () => {
-    it("should handle ConsoleNotFoundError and log as info", async () => {
-      const error = new ConsoleNotFoundError("Resource not found");
+  describe("HanzoNotFoundError handling", () => {
+    it("should handle HanzoNotFoundError and log as info", async () => {
+      const error = new HanzoNotFoundError("Resource not found");
 
       const handler = withMiddlewares({
         GET: async () => {
@@ -93,7 +92,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "GET",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -103,7 +102,7 @@ describe("withMiddlewares error handling", () => {
       const jsonData = JSON.parse(res._getData());
       expect(jsonData).toMatchObject({
         message: "Resource not found",
-        error: "HanzoCloudNotFoundError",
+        error: "HanzoNotFoundError",
       });
       // Should log as info, not error
       expect(logger.info).toHaveBeenCalledWith(error);
@@ -124,7 +123,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "POST",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -152,7 +151,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "POST",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -167,10 +166,10 @@ describe("withMiddlewares error handling", () => {
     });
   });
 
-  describe("DatastoreResourceError handling", () => {
-    it("should handle DatastoreResourceError with 422 status", async () => {
+  describe("ClickHouseResourceError handling", () => {
+    it("should handle ClickHouseResourceError with 400 status", async () => {
       const originalError = new Error("Memory limit exceeded: maximum: 10GB");
-      const resourceError = new DatastoreResourceError("MEMORY_LIMIT", originalError);
+      const resourceError = new ClickHouseResourceError("MEMORY_LIMIT", originalError);
 
       const handler = withMiddlewares({
         POST: async () => {
@@ -181,17 +180,16 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "POST",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
       await handler(req, res);
 
-      expect(res._getStatusCode()).toBe(422);
+      expect(res._getStatusCode()).toBe(524);
       const jsonData = JSON.parse(res._getData());
       expect(jsonData["message"]).toBeDefined();
-      expect(jsonData["message"]).toContain(DatastoreResourceError.ERROR_ADVICE_MESSAGE);
-      expect(jsonData["error"]).toBe("Unprocessable Content");
+      expect(jsonData["message"]).toContain(ClickHouseResourceError.ERROR_ADVICE_MESSAGE);
     });
   });
 
@@ -212,7 +210,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "POST",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -246,7 +244,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "POST",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -279,7 +277,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "POST",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -309,7 +307,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "DELETE",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -335,7 +333,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "PATCH",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 
@@ -359,7 +357,7 @@ describe("withMiddlewares error handling", () => {
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: "PUT",
         headers: {
-          "x-iam-public-key": "test-key",
+          "x-hanzo-public-key": "test-key",
         },
       });
 

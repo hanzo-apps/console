@@ -1,4 +1,4 @@
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { cn } from "@/src/utils/tailwind";
 import { type ReactNode, useState } from "react";
 
@@ -11,7 +11,7 @@ export type TabComponentProps = {
 
 export const TabComponent = ({ tabs }: TabComponentProps) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   return (
     <div>
       <div className="sm:hidden">
@@ -56,7 +56,7 @@ export const TabComponent = ({ tabs }: TabComponentProps) => {
           </nav>
         </div>
       </div>
-      <div className="mt-4 flex flex-col">{tabs[selectedIndex]?.content}</div>
+      <div className="mt-4 flex h-3/4 flex-col">{tabs[selectedIndex]?.content}</div>
     </div>
   );
 };

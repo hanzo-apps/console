@@ -1,6 +1,6 @@
 import { env } from "@/src/env.mjs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import {
   Dialog,
   DialogBody,
@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 
 const regions =
   env.NEXT_PUBLIC_HANZO_CLOUD_REGION === "STAGING"
@@ -53,16 +53,16 @@ const regions =
           },
           {
             name: "HIPAA",
-            hostname: "hipaa.cloud.hanzo.ai",
+            hostname: "hipaa.cloud.hanzo.com",
             flag: "⚕️",
           },
         ];
 
 export function CloudRegionSwitch({ isSignUpPage }: { isSignUpPage?: boolean }) {
-  const capture = useInsightsCapture();
-  const { isConsoleCloud, region: cloudRegion } = useConsoleCloudRegion();
+  const capture = usePostHogClientCapture();
+  const { isHanzoCloud, region: cloudRegion } = useHanzoCloudRegion();
 
-  if (!isConsoleCloud) return null;
+  if (!isHanzoCloud) return null;
 
   const currentRegion = regions.find((region) => region.name === cloudRegion);
 
@@ -115,7 +115,7 @@ export function CloudRegionSwitch({ isSignUpPage }: { isSignUpPage?: boolean }) 
             <p>
               The Business Associate Agreement (BAA) is only effective on the Cloud Pro and Teams plans.{" "}
               <a
-                href="https://hanzo.ai/security/hipaa"
+                href="https://hanzo.com/security/hipaa"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-accent underline hover:text-hover-primary-accent"
@@ -162,7 +162,7 @@ const DataRegionInfo = () => (
           <p>
             Learn more about{" "}
             <a
-              href="https://hanzo.ai/security/data-regions"
+              href="https://hanzo.com/security/data-regions"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary-accent underline"
@@ -171,7 +171,7 @@ const DataRegionInfo = () => (
             </a>{" "}
             and{" "}
             <a
-              href="https://hanzo.ai/docs/data-security-privacy"
+              href="https://hanzo.com/docs/data-security-privacy"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary-accent underline"

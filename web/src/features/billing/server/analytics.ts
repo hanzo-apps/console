@@ -32,7 +32,7 @@ export async function trackServerEvent(eventName: string, eventData?: Record<str
     data: eventData,
     websiteId: siteId,
     hostname: "cloud.hanzo.ai",
-    url: "/v1/billing/webhook",
+    url: "/api/billing/webhook",
     title: "Billing Webhook",
   };
 
@@ -62,7 +62,7 @@ export const serverBillingAnalytics = {
   subscriptionCreated: async (data: {
     orgId: string;
     planName: string;
-    productId: string;
+    stripeProductId: string;
     amount?: number;
     interval?: string;
     status: string;
@@ -74,13 +74,13 @@ export const serverBillingAnalytics = {
     orgId: string;
     oldPlan?: string;
     newPlan: string;
-    productId: string;
+    stripeProductId: string;
     status: string;
   }) => {
     await trackServerEvent("subscription_updated", data);
   },
 
-  subscriptionDeleted: async (data: { orgId: string; planName?: string; productId?: string }) => {
+  subscriptionDeleted: async (data: { orgId: string; planName?: string; stripeProductId?: string }) => {
     await trackServerEvent("subscription_deleted", data);
   },
 

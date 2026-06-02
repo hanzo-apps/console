@@ -2,10 +2,10 @@ import { api } from "@/src/utils/api";
 import { cn } from "@/src/utils/tailwind";
 import Link from "next/link";
 import { SidebarMenuButton } from "@/src/components/ui/sidebar";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 
 export function CloudStatusMenu() {
-  const { isConsoleCloud } = useConsoleCloudRegion();
+  const { isHanzoCloud } = useHanzoCloudRegion();
   const { data, isLoading } = api.cloudStatus.getStatus.useQuery(undefined, {
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -13,11 +13,11 @@ export function CloudStatusMenu() {
     // Refresh status data every 5 minutes, keep response cached for 5 minutes
     refetchInterval: 5 * 60 * 1000,
     staleTime: 5 * 60 * 1000,
-    enabled: !!isConsoleCloud,
+    enabled: !!isHanzoCloud,
   });
 
   // Skip component rendering if not running on Hanzo Cloud
-  if (!isConsoleCloud) {
+  if (!isHanzoCloud) {
     return null;
   }
 
@@ -28,7 +28,7 @@ export function CloudStatusMenu() {
 
   return (
     <SidebarMenuButton asChild tooltip="Status">
-      <Link href="https://status.hanzo.ai" target="_blank" rel="noopener noreferrer">
+      <Link href="https://status.hanzo.com" target="_blank" rel="noopener noreferrer">
         <div className="relative mx-1 flex h-2 w-2 items-center justify-center">
           <span
             className={cn("absolute inline-flex h-2 w-2 animate-ping rounded-full bg-yellow-500 opacity-75")}

@@ -1,5 +1,5 @@
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
-import { type CategoricalAggregate, type AggregatedScoreData } from "@hanzo/console-core";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
+import { type CategoricalAggregate, type AggregatedScoreData } from "@hanzo/shared";
 
 import { numberFormatter } from "@/src/utils/numbers";
 import { cn } from "@/src/utils/tailwind";
@@ -7,7 +7,7 @@ import { BracesIcon, MessageCircleMore, Copy, Check } from "lucide-react";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
 import { api } from "@/src/utils/api";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import React from "react";
 import { copyTextToClipboard } from "@/src/utils/clipboard";
 import { Button } from "@/src/components/ui/button";
@@ -26,11 +26,11 @@ const ScoreValueCounts = ({
   wrap: boolean;
 }) => {
   return valueCounts.map(({ value, count }, index) => (
-    <span key={value} className="inline-block">
+    <div key={value} className="flex flex-row">
       <span className="truncate">{value}</span>
       <span>{`: ${numberFormatter(count, 0)}`}</span>
-      {index < valueCounts.length - 1 && <span className="mr-1">{wrap ? "" : "; "}</span>}
-    </span>
+      {!wrap && index < valueCounts.length - 1 && <span className="mr-1">{";"}</span>}
+    </div>
   ));
 };
 
@@ -99,12 +99,9 @@ export const ScoresTableCell = ({
     <div className="group">
       {aggregate.valueCounts.length > COLLAPSE_CATEGORICAL_SCORES_AFTER ? (
         <HoverCard>
-          <HoverCardTrigger asChild>
+          <HoverCardTrigger>
             <div
-              className={cn(
-                "cursor-pointer overflow-hidden group-hover:text-accent-dark-blue/55",
-                wrap ? "line-clamp-5" : "text-ellipsis whitespace-nowrap",
-              )}
+              className={cn("flex cursor-pointer group-hover:text-accent-dark-blue/55", wrap ? "flex-col" : "flex-row")}
             >
               <ScoreValueCounts
                 valueCounts={aggregate.valueCounts.slice(0, COLLAPSE_CATEGORICAL_SCORES_AFTER)}
@@ -113,7 +110,7 @@ export const ScoresTableCell = ({
             </div>
           </HoverCardTrigger>
           <HoverCardContent className="z-20 flex max-h-[40vh] max-w-64 flex-col overflow-y-auto whitespace-normal break-normal text-xs">
-            <ScoreValueCounts valueCounts={aggregate.valueCounts} wrap />
+            <ScoreValueCounts valueCounts={aggregate.valueCounts} wrap={wrap} />
           </HoverCardContent>
         </HoverCard>
       ) : (

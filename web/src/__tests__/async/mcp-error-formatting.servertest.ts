@@ -1,8 +1,8 @@
 /** @jest-environment node */
 
 // Mock queue operations to avoid Redis dependency in tests
-jest.mock("@hanzo/console-core/src/server", () => {
-  const actual = jest.requireActual("@hanzo/console-core/src/server");
+jest.mock("@hanzo/shared/src/server", () => {
+  const actual = jest.requireActual("@hanzo/shared/src/server");
   return {
     ...actual,
     // Mock queue getInstance to return a no-op queue
@@ -20,13 +20,7 @@ import { ZodError } from "zod/v4";
 import { z } from "zod/v4";
 import { formatErrorForUser, wrapErrorHandling } from "@/src/features/mcp/core/error-formatting";
 import { UserInputError, ApiServerError } from "@/src/features/mcp/core/errors";
-import {
-  UnauthorizedError,
-  ForbiddenError,
-  ConsoleNotFoundError,
-  InvalidRequestError,
-  BaseError,
-} from "@hanzo/console-core";
+import { UnauthorizedError, ForbiddenError, HanzoNotFoundError, InvalidRequestError, BaseError } from "@hanzo/shared";
 
 describe("MCP Error Formatting", () => {
   describe("formatErrorForUser", () => {
@@ -174,8 +168,8 @@ describe("MCP Error Formatting", () => {
         expect(mcpError.message).toContain("permission");
       });
 
-      it("should format ConsoleNotFoundError with original message", () => {
-        const error = new ConsoleNotFoundError("Prompt not found: chatbot");
+      it("should format HanzoNotFoundError with original message", () => {
+        const error = new HanzoNotFoundError("Prompt not found: chatbot");
         const mcpError = formatErrorForUser(error);
 
         expect(mcpError.code).toBe(ErrorCode.InvalidRequest);
@@ -388,7 +382,7 @@ describe("MCP Error Formatting", () => {
     it("should categorize user-fixable errors as InvalidRequest", () => {
       const userErrors = [
         new UserInputError("Invalid input"),
-        new ConsoleNotFoundError("Not found"),
+        new HanzoNotFoundError("Not found"),
         new InvalidRequestError("Bad request"),
       ];
 

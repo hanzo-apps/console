@@ -1,12 +1,12 @@
 import { z } from "zod/v4";
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { orderBy, singleFilter, optionalPaginationZod } from "@hanzo/console-core";
+import { orderBy, singleFilter, optionalPaginationZod } from "@hanzo/shared";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { DashboardWidgetChartType, DashboardWidgetViews } from "@hanzo/console-core/src/db";
-import { DashboardService, DimensionSchema, MetricSchema, ChartConfigSchema } from "@hanzo/console-core/src/server";
+import { DashboardWidgetChartType, DashboardWidgetViews } from "@hanzo/shared/src/db";
+import { DashboardService, DimensionSchema, MetricSchema, ChartConfigSchema } from "@hanzo/shared/src/server";
 import { views } from "@/src/features/query";
 import { TRPCError } from "@trpc/server";
-import { ConsoleConflictError } from "@hanzo/console-core";
+import { HanzoConflictError } from "@hanzo/shared";
 
 const CreateDashboardWidgetInput = z.object({
   projectId: z.string(),
@@ -204,7 +204,7 @@ export const dashboardWidgetRouter = createTRPCRouter({
         };
       } catch (error) {
         // If the widget is still referenced in dashboards, throw a CONFLICT error
-        if (error instanceof ConsoleConflictError) {
+        if (error instanceof HanzoConflictError) {
           throw new TRPCError({
             code: "CONFLICT",
             message: error.message,

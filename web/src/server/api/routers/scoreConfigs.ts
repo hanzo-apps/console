@@ -5,14 +5,14 @@ import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/tr
 import {
   filterAndValidateDbScoreConfigList,
   InvalidRequestError,
-  ConsoleNotFoundError,
+  HanzoNotFoundError,
   optionalPaginationZod,
   ScoreConfigCategory,
   ScoreConfigDataType,
   validateDbScoreConfig,
   validateDbScoreConfigSafe,
-} from "@hanzo/console-core";
-import { traceException } from "@hanzo/console-core/src/server";
+} from "@hanzo/shared";
+import { traceException } from "@hanzo/shared/src/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
 const ScoreConfigAllInput = z.object({
@@ -114,7 +114,7 @@ export const scoreConfigsRouter = createTRPCRouter({
       },
     });
     if (!existingConfig) {
-      throw new ConsoleNotFoundError("No score config with this id in this project.");
+      throw new HanzoNotFoundError("No score config with this id in this project.");
     }
 
     // Merge the input with the existing config and verify schema compliance

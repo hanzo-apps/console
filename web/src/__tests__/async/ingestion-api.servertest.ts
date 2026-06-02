@@ -6,7 +6,7 @@ import {
   getObservationById,
   getScoreById,
   getTraceById,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { v4 } from "uuid";
 
 const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
@@ -106,8 +106,8 @@ describe("/api/public/ingestion API Endpoint", () => {
     });
   });
 
-  // Disabled within test sequence as we're using a datastore version which doesn't support this
-  // it("should replace bad escape sequences on datastore", async () => {
+  // Disabled within test sequence as we're using a clickhouse version which doesn't support this
+  // it("should replace bad escape sequences on clickhouse", async () => {
   //   const entity = {
   //     id: randomUUID(),
   //     type: "trace-create",

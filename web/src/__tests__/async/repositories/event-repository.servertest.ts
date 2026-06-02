@@ -9,12 +9,11 @@ import {
   updateEvents,
   getTraceByIdFromEventsTable,
   getObservationsBatchIOFromEventsTable,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/shared/src/server";
+import { prisma } from "@hanzo/shared/src/db";
 import { randomUUID } from "crypto";
 import { env } from "@/src/env.mjs";
-import { type FilterCondition } from "@hanzo/console-core";
-import waitForExpect from "wait-for-expect";
+import { type FilterCondition } from "@hanzo/shared";
 
 const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
 
@@ -29,7 +28,7 @@ function idFilter(id: string): FilterCondition {
   };
 }
 
-describe("Datastore Events Repository Test", () => {
+describe("Clickhouse Events Repository Test", () => {
   it("should kill redis connection", () => {
     // we need at least one test case to avoid hanging
     // redis connection when everything else is skipped.
@@ -568,9 +567,7 @@ describe("Datastore Events Repository Test", () => {
           offset: 0,
         });
 
-        const filteredObservations = result.filter((o) =>
-          ([traceId1, traceId2, traceId3] as string[]).includes(o.traceId ?? ""),
-        );
+        const filteredObservations = result.filter((o) => [traceId1, traceId2, traceId3].includes(o.traceId ?? ""));
         expect(filteredObservations.length).toBe(2);
         const traceIds = filteredObservations.map((o) => o.traceId).sort();
         expect(traceIds).toEqual([traceId1, traceId2].sort());
@@ -680,9 +677,7 @@ describe("Datastore Events Repository Test", () => {
           offset: 0,
         });
 
-        const filteredObservations = result.filter((o) =>
-          ([traceId1, traceId2, traceId3] as string[]).includes(o.traceId ?? ""),
-        );
+        const filteredObservations = result.filter((o) => [traceId1, traceId2, traceId3].includes(o.traceId ?? ""));
         expect(filteredObservations.length).toBe(2);
         const names = filteredObservations.map((o) => o.name).sort();
         expect(names).toEqual(["user-alpha-event", "user-beta-event"]);
@@ -866,9 +861,7 @@ describe("Datastore Events Repository Test", () => {
           offset: 0,
         });
 
-        const filteredObservations = result.filter((o) =>
-          ([traceId1, traceId2, traceId3] as string[]).includes(o.traceId ?? ""),
-        );
+        const filteredObservations = result.filter((o) => [traceId1, traceId2, traceId3].includes(o.traceId ?? ""));
         expect(filteredObservations.length).toBe(1);
         expect(filteredObservations[0].name).toBe("new-user-1");
       });
@@ -1568,38 +1561,12 @@ describe("Datastore Events Repository Test", () => {
       expect(result).toBeDefined();
       expect(result?.bookmarked).toBe(false);
 
-      async function checkTraceIdsBookmarked(traceId: string, bookmarkedExp: boolean) {
-        await waitForExpect(async () => {
-          // Verify events_core
-          const eventTrace = await getTraceByIdFromEventsTable({
-            projectId,
-            traceId: traceId,
-            renderingProps: {
-              truncated: true,
-              shouldJsonParse: false,
-            },
-          });
-          expect(eventTrace).toBeDefined();
-          expect(eventTrace?.bookmarked).toBe(bookmarkedExp);
-
-          // Verify events_full
-          const eventTraceFull = await getTraceByIdFromEventsTable({
-            projectId,
-            traceId: traceId,
-            renderingProps: {
-              truncated: false,
-              shouldJsonParse: true,
-            },
-          });
-          expect(eventTraceFull).toBeDefined();
-          expect(eventTraceFull?.bookmarked).toBe(bookmarkedExp);
-        });
-      }
-
       // Model setting bookmark as true on the root span
       await updateEvents(projectId, { traceIds: [traceId], rootOnly: true }, { bookmarked: true });
 
-      await checkTraceIdsBookmarked(traceId, true);
+      result = await getTraceByIdFromEventsTable({ projectId, traceId });
+      expect(result).toBeDefined();
+      expect(result?.bookmarked).toBe(true);
 
       // Non-root event on bookmarked
       await createEventsCh([
@@ -1619,10 +1586,17 @@ describe("Datastore Events Repository Test", () => {
       // including the non-root, added above
       await updateEvents(projectId, { traceIds: [traceId] }, { bookmarked: false });
 
-      await checkTraceIdsBookmarked(traceId, false);
+      result = await getTraceByIdFromEventsTable({ projectId, traceId });
+      expect(result).toBeDefined();
+      expect(result?.bookmarked).toBe(false);
 
       // Trace id 2 should remain bookmarked
-      await checkTraceIdsBookmarked(traceId2, true);
+      result = await getTraceByIdFromEventsTable({
+        projectId,
+        traceId: traceId2,
+      });
+      expect(result).toBeDefined();
+      expect(result?.bookmarked).toBe(true);
     });
 
     it("should allow to set/unset public", async () => {
@@ -1650,45 +1624,23 @@ describe("Datastore Events Repository Test", () => {
         parent_span_id: "",
       });
 
-      async function checkTraceIdsPublic(traceId: string, publicExp: boolean) {
-        await waitForExpect(async () => {
-          // Verify events_core
-          const eventTrace = await getTraceByIdFromEventsTable({
-            projectId,
-            traceId: traceId,
-            renderingProps: {
-              truncated: true,
-              shouldJsonParse: false,
-            },
-          });
-          expect(eventTrace).toBeDefined();
-          expect(eventTrace?.public).toBe(publicExp);
-
-          // Verify events_full
-          const eventTraceFull = await getTraceByIdFromEventsTable({
-            projectId,
-            traceId: traceId,
-            renderingProps: {
-              truncated: false,
-              shouldJsonParse: true,
-            },
-          });
-          expect(eventTraceFull).toBeDefined();
-          expect(eventTraceFull?.public).toBe(publicExp);
-        });
-      }
-
       await createEventsCh([rootEvent, rootEvent2]);
 
-      await checkTraceIdsPublic(traceId, false);
+      var result = await getTraceByIdFromEventsTable({ projectId, traceId });
+      expect(result).toBeDefined();
+      expect(result?.public).toBe(false);
 
       await updateEvents(projectId, { traceIds: [traceId] }, { public: true });
 
-      await checkTraceIdsPublic(traceId, true);
+      result = await getTraceByIdFromEventsTable({ projectId, traceId });
+      expect(result).toBeDefined();
+      expect(result?.public).toBe(true);
 
       await updateEvents(projectId, { traceIds: [traceId] }, { public: false });
 
-      await checkTraceIdsPublic(traceId, false);
+      result = await getTraceByIdFromEventsTable({ projectId, traceId });
+      expect(result).toBeDefined();
+      expect(result?.public).toBe(false);
 
       // Non-root event with public
       await createEventsCh([
@@ -1703,16 +1655,24 @@ describe("Datastore Events Repository Test", () => {
           parent_span_id: rootSpanId,
         }),
       ]);
-
-      await checkTraceIdsPublic(traceId, true);
+      result = await getTraceByIdFromEventsTable({ projectId, traceId });
+      expect(result).toBeDefined();
+      expect(result?.public).toBe(true);
 
       // Clearing public on non-root
       await updateEvents(projectId, { traceIds: [traceId] }, { public: false });
 
-      await checkTraceIdsPublic(traceId, false);
+      result = await getTraceByIdFromEventsTable({ projectId, traceId });
+      expect(result).toBeDefined();
+      expect(result?.public).toBe(false);
 
       // Trace id 2 should remain public
-      await checkTraceIdsPublic(traceId2, true);
+      result = await getTraceByIdFromEventsTable({
+        projectId,
+        traceId: traceId2,
+      });
+      expect(result).toBeDefined();
+      expect(result?.public).toBe(true);
     });
   });
 
@@ -1814,8 +1774,6 @@ describe("Datastore Events Repository Test", () => {
       const result = await getObservationsBatchIOFromEventsTable({
         projectId,
         observations: [],
-        minStartTime: new Date(),
-        maxStartTime: new Date(),
       });
 
       expect(result).toBeDefined();
