@@ -55,6 +55,14 @@ const reportToHeader = {
 const nextConfig = {
   // Allow building to alternate directory for parallel build checks while dev server runs
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  typescript: {
+    // CI test jobs run `pnpm run typecheck` separately and skip duplicate
+    // Next.js type checks to keep test builds fast. Production/Docker builds
+    // do not set this flag and still fail on TypeScript errors.
+    ignoreBuildErrors: process.env.NEXT_IGNORE_BUILD_ERRORS === "true",
+  },
+  // Agent/browser tooling often targets 127.0.0.1 instead of localhost in dev.
+  allowedDevOrigins: ["127.0.0.1"],
   staticPageGenerationTimeout: 500, // default is 60. Required for build process for amd
   transpilePackages: ["@hanzo/shared", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
   reactStrictMode: true,
@@ -66,10 +74,14 @@ const nextConfig = {
     "@hanzo/insights-node",
     "@opentelemetry/sdk-node",
     "@opentelemetry/instrumentation-winston",
-    "kysely",
   ],
   poweredByHeader: false,
   basePath: env.NEXT_PUBLIC_BASE_PATH,
+  compiler: {
+    define: {
+      "import.meta.vitest": "undefined",
+    },
+  },
   turbopack: {
     resolveAlias: {
       "@hanzo/shared": "./packages/shared/src",
@@ -81,11 +93,11 @@ const nextConfig = {
         "../node_modules/.pnpm/react-resizable@3.0.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/react-resizable/css/styles.css",
     },
   },
+  logging: {
+    browserToTerminal: true,
+  },
   experimental: {
-    browserDebugInfoInTerminal: true, // Logs browser logs to terminal
-    // TODO: enable with new next version! 15.6
-    // see: https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopackPersistentCaching
-    // turbopackPersistentCaching: true,
+    turbopackFileSystemCacheForBuild: true,
   },
 
   /**
@@ -235,10 +247,18 @@ const nextConfig = {
     ];
   },
 
-  webpack(config, { isServer }) {
+  webpack(config, { isServer, webpack }) {
     // Exclude Datadog packages from webpack bundling to avoid issues
     // see: https://docs.datadoghq.com/tracing/trace_collection/automatic_instrumentation/dd_libraries/nodejs/#bundling-with-nextjs
     config.externals.push("@datadog/pprof", "dd-trace");
+
+    // Setup in-source testing: https://vitest.dev/guide/in-source.html#other-bundlers
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        "import.meta.vitest": "undefined",
+      }),
+    );
+
     return config;
   },
 };
@@ -282,10 +302,4 @@ const sentryConfig =
         automaticVercelMonitors: false,
       });
 
-// Enable bundle analyzer in analyze mode, otherwise use standard config
-const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env.ANALYZE === "true",
-  openAnalyzer: true, // Open analyzer in browser
-});
-
-export default withBundleAnalyzer(sentryConfig);
+export default sentryConfig;

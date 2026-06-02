@@ -17,24 +17,45 @@ function convertDate(
   date: number,
   agg: DashboardDateRangeAggregationOption,
 ): string {
-  const showMinutes = ["minute", "hour"].includes(
-    dashboardDateRangeAggregationSettings[agg].dateTrunc ?? "",
-  );
+  const parsedDate = new Date(date);
+  const { dateTrunc, minutes } = dashboardDateRangeAggregationSettings[agg];
 
-  if (showMinutes) {
-    return new Date(date).toLocaleTimeString("en-US", {
-      year: "2-digit",
-      month: "numeric",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  switch (dateTrunc) {
+    case "minute":
+      return parsedDate.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    case "hour":
+      if (minutes && minutes <= 24 * 60) {
+        return parsedDate.toLocaleString("en-US", {
+          month: "numeric",
+          day: "numeric",
+          hour: "numeric",
+        });
+      }
+      return parsedDate.toLocaleString("en-US", {
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+      });
+    case "day":
+    case "week":
+      return parsedDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    case "month":
+      return parsedDate.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+    default:
+      return parsedDate.toLocaleDateString("en-US", {
+        month: "numeric",
+        day: "numeric",
+      });
   }
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "2-digit",
-    month: "numeric",
-    day: "numeric",
-  });
 }
 
 /**
@@ -121,29 +142,51 @@ export function scoreChartDataToDataPoints(
   });
 }
 
+const compareViewMetricUnits = {
+  cost: "USD",
+  latency: "millisecond",
+} as const;
+
+export function getCompareViewChartUnit(metricKey: string): string | undefined {
+  return compareViewMetricUnits[
+    metricKey as keyof typeof compareViewMetricUnits
+  ];
+}
+
+const normalizeCompareViewMetric = (metricKey: string, metric: number) =>
+  // TODO: remove when revamping the datasets api for it to directly return ms.
+  metricKey === "latency" ? metric * 1000 : metric;
+
 /**
  * Converts dataset run compare-view chartData (ChartBin[] from CompareViewAdapter) to DataPoint[].
- * - Single series (chartLabels.length === 1): one row per run → HORIZONTAL_BAR / VERTICAL_BAR.
- * - Multi series (categorical): one row per (run, category) → BAR_TIME_SERIES.
+ * - Single series: one row per run as a time-series point.
+ * - Multi series: one row per (run, category) as a bar time-series point.
  */
 export function compareViewChartDataToDataPoints(
   chartData: ChartBin[],
   chartLabels: string[],
+  metricKey: string,
 ): DataPoint[] {
   if (chartLabels.length === 0) return [];
   if (chartLabels.length === 1) {
     const label = chartLabels[0]!;
     return chartData.map((bin) => ({
-      dimension: bin.binLabel,
-      metric: (bin as Record<string, number>)[label] ?? 0,
-      time_dimension: undefined,
+      time_dimension: bin.binLabel,
+      dimension: label,
+      metric: normalizeCompareViewMetric(
+        metricKey,
+        (bin as Record<string, number>)[label] ?? 0,
+      ),
     }));
   }
   return chartData.flatMap((bin) =>
     chartLabels.map((label) => ({
       time_dimension: bin.binLabel,
       dimension: label,
-      metric: (bin as Record<string, number>)[label] ?? 0,
+      metric: normalizeCompareViewMetric(
+        metricKey,
+        (bin as Record<string, number>)[label] ?? 0,
+      ),
     })),
   );
 }

@@ -31,7 +31,6 @@ import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import { useTableDateRange } from "@/src/hooks/useTableDateRange";
 import { toAbsoluteTimeRange } from "@/src/utils/date-range-utils";
 import { joinTableCoreAndMetrics } from "@/src/components/table/utils/joinTableCoreAndMetrics";
-import { Skeleton } from "@/src/components/ui/skeleton";
 import TagList from "@/src/features/tag/components/TagList";
 import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-height-switch";
 import { cn } from "@/src/utils/tailwind";
@@ -198,11 +197,24 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
     };
   }, [environmentOptions, filterOptions.data]);
 
+  const isSidebarFilterLoading =
+    filterOptions.isPending || environmentFilterOptions.isPending;
+
+  const queryFilterOptions: UseSidebarFilterStateOptions = useMemo(
+    () => ({
+      loading: isSidebarFilterLoading,
+      stateLocation: "urlAndSessionStorage",
+      sessionFilterContextId: projectId,
+      // Sidebar-only implicit environment defaults
+      implicitDefaultConfig: DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG,
+    }),
+    [isSidebarFilterLoading, projectId],
+  );
+
   const queryFilter = useSidebarFilterState(
-    sessionFilterConfig,
+    sessionsFilterConfig,
     newFilterOptions,
-    projectId,
-    filterOptions.isPending || environmentFilterOptions.isPending,
+    queryFilterOptions,
   );
 
   // Create ref-based wrapper to avoid stale closure when queryFilter updates
@@ -216,15 +228,13 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
   const backendFilterState = transformFiltersForBackend(
     combinedFilterState,
     SESSION_COLUMN_TO_BACKEND_KEY,
-    sessionFilterConfig.columnDefinitions,
+    sessionsFilterConfig.columnDefinitions,
   );
 
   const payloadCount = {
     projectId,
     filter: backendFilterState,
     orderBy: null,
-    page: 0,
-    limit: 1,
   };
 
   const payloadGetAll = {
@@ -295,6 +305,7 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
     projectId,
     tableName: "sessions",
     setSelectedRows,
+    setSelectAll,
   });
 
   const handleAddToAnnotationQueue = async ({ projectId, targetId }: { projectId: string; targetId: string }) => {
@@ -338,6 +349,7 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       isFixedPosition: true,
       header: undefined,
       size: 50,
+      loadingCell: <TableIconButtonLoadingCell />,
       cell: ({ row }) => {
         const bookmarked: SessionTableRow["bookmarked"] = row.getValue("bookmarked");
         const sessionId: SessionTableRow["id"] = row.getValue("id");
@@ -381,10 +393,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       header: "Duration",
       size: 130,
       enableHiding: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["sessionDuration"] = row.getValue("sessionDuration");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return value && typeof value === "number" ? formatIntervalSeconds(value) : undefined;
       },
@@ -396,6 +409,7 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       id: "environment",
       size: 150,
       enableHiding: true,
+      loadingCell: <TableBadgeLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["environment"] = row.getValue("environment");
         return value ? (
@@ -412,21 +426,22 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableHiding: true,
       defaultHidden: true,
       cell: () => {
-        return isColumnLoading ? <Skeleton className="h-3 w-1/2" /> : null;
+        return isColumnLoading ? <TableTextLoadingCell /> : null;
       },
       columns: scoreColumns,
     },
     {
       accessorKey: "userIds",
-      enableColumnFilter: !omittedFilter.find((f) => f === "userIds"),
+      enableColumnFilter: !omittedFilter.includes("userIds"),
       id: "userIds",
       header: "User IDs",
       size: 200,
       enableHiding: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["userIds"] = row.getValue("userIds");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return value && Array.isArray(value) ? (
           <div className="flex gap-1">
@@ -447,10 +462,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       },
       enableHiding: true,
       enableSorting: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["countTraces"] = row.getValue("countTraces");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return value ? <span>{numberFormatter(value, 0)}</span> : undefined;
       },
@@ -463,10 +479,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableHiding: true,
       defaultHidden: true,
       enableSorting: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["inputCost"] = row.getValue("inputCost");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return value ? <span>{usdFormatter(value.toNumber())}</span> : undefined;
       },
@@ -479,10 +496,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableHiding: true,
       enableSorting: true,
       defaultHidden: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["outputCost"] = row.getValue("outputCost");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return value ? <span>{usdFormatter(value.toNumber())}</span> : undefined;
       },
@@ -494,10 +512,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       size: 110,
       enableHiding: true,
       enableSorting: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["totalCost"] = row.getValue("totalCost");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return value ? <span>{usdFormatter(value.toNumber())}</span> : undefined;
       },
@@ -510,10 +529,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableHiding: true,
       defaultHidden: true,
       enableSorting: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["inputTokens"] = row.getValue("inputTokens");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return value ? <span>{numberFormatter(Number(value), 0)}</span> : undefined;
       },
@@ -526,10 +546,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableHiding: true,
       defaultHidden: true,
       enableSorting: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["outputTokens"] = row.getValue("outputTokens");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return value ? <span>{numberFormatter(Number(value), 0)}</span> : undefined;
       },
@@ -542,10 +563,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableHiding: true,
       defaultHidden: true,
       enableSorting: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["totalTokens"] = row.getValue("totalTokens");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return value ? <span>{numberFormatter(Number(value), 0)}</span> : undefined;
       },
@@ -557,12 +579,13 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       size: 220,
       enableHiding: true,
       enableSorting: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const promptTokens: SessionTableRow["inputTokens"] = row.getValue("inputTokens");
         const completionTokens: SessionTableRow["outputTokens"] = row.getValue("outputTokens");
         const totalTokens: SessionTableRow["totalTokens"] = row.getValue("totalTokens");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return (
           <TokenUsageBadge
@@ -581,10 +604,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       size: 250,
       enableHiding: true,
       defaultHidden: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value: SessionTableRow["traceTags"] = row.getValue("traceTags");
         if (!sessionMetrics.isSuccess) {
-          return <Skeleton className="h-3 w-1/2" />;
+          return <TableTextLoadingCell />;
         }
         return (
           value && (
@@ -610,31 +634,39 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
     stateUpdaters: {
       setOrderBy: setOrderByState,
       setFilters: setFiltersWrapper,
+      setExpandedFilters: queryFilter.onExpandedChange,
       setColumnOrder: setColumnOrder,
       setColumnVisibility: setColumnVisibility,
     },
     validationContext: {
       columns,
-      filterColumnDefinition: sessionFilterConfig.columnDefinitions,
+      filterColumnDefinition: sessionsFilterConfig.columnDefinitions,
+      expandableFilterColumns: sessionsFilterConfig.facets.map(
+        (facet) => facet.column,
+      ),
     },
-    currentFilterState: queryFilter.filterState,
+    currentFilterState: queryFilter.explicitFilterState,
+    currentExpandedFilters: queryFilter.expanded,
   });
 
   return (
-    <DataTableControlsProvider>
+    <DataTableControlsProvider tableName={sessionsFilterConfig.tableName}>
       <div className="flex h-full w-full flex-col">
         {/* Toolbar spanning full width */}
         <DataTableToolbar
-          filterState={queryFilter.filterState}
+          filterState={queryFilter.explicitFilterState}
           actionButtons={[
-            Object.keys(selectedRows).filter((sessionId) =>
-              sessions.data?.sessions.map((s) => s.id).includes(sessionId),
-            ).length > 0 ? (
+            selectedSessionIds.length > 0 || selectAll ? (
               <TableActionMenu
                 key="sessions-multi-select-actions"
                 projectId={projectId}
                 actions={tableActions}
                 tableName={BatchExportTableName.Sessions}
+                selectedCount={selectedSessionCount}
+                onClearSelection={() => {
+                  setSelectedRows({});
+                  setSelectAll(false);
+                }}
               />
             ) : null,
             <BatchExportTableButton
@@ -665,9 +697,7 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
           multiSelect={{
             selectAll,
             setSelectAll,
-            selectedRowIds: Object.keys(selectedRows).filter((sessionId) =>
-              sessions.data?.sessions.map((s) => s.id).includes(sessionId),
-            ),
+            selectedRowIds: selectedSessionIds,
             setRowSelection: setSelectedRows,
             totalCount,
             ...paginationState,
@@ -676,7 +706,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
 
         {/* Content area with sidebar and table */}
         <ResizableFilterLayout>
-          <DataTableControls queryFilter={queryFilter} />
+          <DataTableControls
+            // Remount the sidebar when the saved view changes so the new view's filters replace any stale draft UI state.
+            key={viewControllers.selectedViewId ?? "no-view"}
+            queryFilter={queryFilter}
+          />
 
           <div className="flex flex-1 flex-col overflow-hidden">
             <DataTable
@@ -727,6 +761,7 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
               columnOrder={columnOrder}
               onColumnOrderChange={setColumnOrder}
               rowSelection={selectedRows}
+              highlightAllRows={selectAll}
               setRowSelection={setSelectedRows}
               help={{
                 description:

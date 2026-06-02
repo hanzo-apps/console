@@ -287,6 +287,8 @@ CREATE TABLE IF NOT EXISTS events
 -- Create new events table for development setups.
 -- We expect this to be fully immutable and eventually replace observations.
 -- Remove IF NOT EXISTS when moving this to prod migrations.
+SET enable_full_text_index=1;
+
 CREATE TABLE IF NOT EXISTS events_full
   (
       project_id String,
@@ -310,6 +312,7 @@ CREATE TABLE IF NOT EXISTS events_full
       level LowCardinality(String),
       status_message String, -- Threat '' and null the same for search
       completion_start_time Nullable(DateTime64(6)),
+      is_app_root Bool DEFAULT false,
 
       -- Updateable properties
       bookmarked Bool DEFAULT false,
@@ -432,6 +435,7 @@ CREATE TABLE IF NOT EXISTS events_core
     level LowCardinality(String),
     status_message String,
     completion_start_time Nullable(DateTime64(6)),
+    is_app_root Bool DEFAULT false,
 
     -- Updateable properties
     bookmarked Bool DEFAULT false,
@@ -549,6 +553,7 @@ SELECT
     level,
     status_message,
     completion_start_time,
+    is_app_root,
     bookmarked,
     public,
     prompt_id,
@@ -598,74 +603,88 @@ SELECT
     is_deleted
 FROM events_full;
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS events_full_mv TO events_full AS
+-- Diagnostic table to track event size distributions across projects.
+-- Every insert (including updates) produces a row — no deduplication.
+-- See LFE-9402 for context.
+CREATE TABLE IF NOT EXISTS ingestion_size_stats (
+    project_id String,
+    trace_id String,
+    span_id String,
+    created_at DateTime64(3),
+    input_size UInt64,
+    output_size UInt64,
+    metadata_size UInt64,
+    total_size UInt64
+) ENGINE = MergeTree
+PRIMARY KEY (toStartOfHour(created_at), project_id)
+ORDER BY (toStartOfHour(created_at), project_id, trace_id, span_id, created_at);
+
+-- MV: observations -> ingestion_size_stats
+CREATE MATERIALIZED VIEW IF NOT EXISTS ingestion_size_stats_observations_mv
+TO ingestion_size_stats AS
 SELECT
     project_id,
     trace_id,
-    span_id,
-    parent_span_id,
-    start_time,
-    end_time,
-    name,
-    type,
-    environment,
-    version,
-    release,
-    trace_name,
-    user_id,
-    session_id,
-    tags,
-    level,
-    status_message,
-    completion_start_time,
-    bookmarked,
-    public,
-    prompt_id,
-    prompt_name,
-    prompt_version,
-    model_id,
-    provided_model_name,
-    model_parameters,
-    provided_usage_details,
-    usage_details,
-    provided_cost_details,
-    cost_details,
-    usage_pricing_tier_id,
-    usage_pricing_tier_name,
-    tool_definitions,
-    tool_calls,
-    tool_call_names,
-    input,
-    output,
-    metadata_names,
-    metadata_raw_values as metadata_values,
-    experiment_id,
-    experiment_name,
-    experiment_metadata_names,
-    experiment_metadata_values,
-    experiment_description,
-    experiment_dataset_id,
-    experiment_item_id,
-    experiment_item_version,
-    experiment_item_expected_output,
-    experiment_item_metadata_names,
-    experiment_item_metadata_values,
-    experiment_item_root_span_id,
-    source,
-    service_name,
-    service_version,
-    scope_name,
-    scope_version,
-    telemetry_sdk_language,
-    telemetry_sdk_name,
-    telemetry_sdk_version,
-    blob_storage_file_path,
-    event_bytes,
+    id AS span_id,
     created_at,
-    updated_at,
-    event_ts,
-    is_deleted
-FROM events;
+    length(coalesce(input, '')) AS input_size,
+    length(coalesce(output, '')) AS output_size,
+    arraySum(arrayMap(k -> length(k), mapKeys(metadata)))
+      + arraySum(arrayMap(v -> length(v), mapValues(metadata))) AS metadata_size,
+    byteSize(*) AS total_size
+FROM observations;
+
+-- MV: traces -> ingestion_size_stats
+CREATE MATERIALIZED VIEW IF NOT EXISTS ingestion_size_stats_traces_mv
+TO ingestion_size_stats AS
+SELECT
+    project_id,
+    id AS trace_id,
+    concat('t-', id) AS span_id,
+    created_at,
+    length(coalesce(input, '')) AS input_size,
+    length(coalesce(output, '')) AS output_size,
+    arraySum(arrayMap(k -> length(k), mapKeys(metadata)))
+      + arraySum(arrayMap(v -> length(v), mapValues(metadata))) AS metadata_size,
+    byteSize(*) AS total_size
+FROM traces;
+
+CREATE VIEW analytics_events_core AS
+SELECT
+  project_id,
+  toStartOfHour(start_time) AS hour,
+  sumMap(map(type, toUInt64(1))) AS count_types,
+  uniq(trace_id) AS count_traces,
+  uniq(span_id) AS count_spans,
+  uniqIf(trace_name, trace_name != '') AS count_trace_names,
+  max(user_id != '') AS has_users,
+  uniqIf(user_id, user_id != '') AS count_users,
+  max(session_id != '') AS has_sessions,
+  uniqIf(session_id, session_id != '') AS count_sessions,
+  max(if(environment != 'default', 1, 0)) AS has_environments,
+  uniq(environment) as count_environments,
+  max(length(tags) > 0) AS has_tags,
+  uniqArray(tags) AS count_unique_tags,
+  max(level != 'DEFAULT') AS has_level,
+  max(provided_model_name != '') AS has_provided_model_name,
+  uniqIf(provided_model_name, provided_model_name != '') AS count_models,
+  max(length(provided_usage_details) > 0) AS has_provided_usage_details,
+  max(length(provided_cost_details) > 0) AS has_provided_cost_details,
+  max(prompt_name != '') AS has_prompt_name,
+  max(length(tool_definitions) > 0) AS has_tool_definitions,
+  max(length(tool_calls) > 0) AS has_tool_calls,
+  uniqArray(metadata_names) AS count_unique_metadata_names,
+  max(experiment_name != '') AS has_experiment_names,
+  uniqIf(experiment_name, experiment_name != '') AS count_unique_experiment_names,
+  sum(event_bytes) AS sum_event_bytes,
+  sumMap(map(if(source = '', '-', source), toUInt64(1))) AS count_sources,
+  uniqIf(service_name, service_name != '') as count_service_names,
+  sumMap(map(if(scope_name = '', '-', concat(scope_name, '-', scope_version)), toUInt64(1))) AS count_scopes,
+  sumMap(map(if(telemetry_sdk_language = '', '-', telemetry_sdk_language), toUInt64(1))) AS count_telemetry_sdk_languages,
+  sumMap(map(if(telemetry_sdk_name = '', '-', concat(telemetry_sdk_language, '-', telemetry_sdk_name, '-', telemetry_sdk_version)), toUInt64(1))) AS count_sdk_telemetry_sdks
+FROM events_core
+WHERE toStartOfHour(start_time) <= toStartOfHour(subtractHours(now(), 1))
+GROUP BY project_id, hour;
 
 EOF
 
@@ -679,21 +698,22 @@ echo "Populating development tables with sample data..."
   --database="${DATASTORE_DB}" \
   --multiquery <<EOF
   SET type_json_skip_duplicated_paths = 1;
-  TRUNCATE events;
   TRUNCATE events_core;
   TRUNCATE events_full;
 
-  -- Note: production excludes experiment traces here (LEFT ANTI JOIN dataset_run_items_rmt)
-  -- and re-inserts them with experiment metadata via handleExperimentBackfill.
-  -- For dev seeding, we include all traces directly to ensure events_core and
-  -- traces/observations tables have matching row counts for dashboard testing.
-  INSERT INTO events (project_id, trace_id, span_id, parent_span_id, start_time, end_time, name, type,
+  -- Insert observations into events_full (experiment metadata included when dataset_run_items match)
+  INSERT INTO events_full (project_id, trace_id, span_id, parent_span_id, start_time, end_time, name, type,
                       environment, version, release, tags, trace_name, user_id, session_id, public, bookmarked, level, status_message, completion_start_time, prompt_id,
                       prompt_name, prompt_version, model_id, provided_model_name, model_parameters,
                       provided_usage_details, usage_details, provided_cost_details, cost_details,
                       usage_pricing_tier_id, usage_pricing_tier_name,
                       tool_definitions, tool_calls, tool_call_names, input,
-                      output, metadata, metadata_names, metadata_raw_values,
+                      output, metadata_names, metadata_values,
+                      experiment_id, experiment_name, experiment_description, experiment_dataset_id,
+                      experiment_item_id, experiment_item_expected_output,
+                      experiment_metadata_names, experiment_metadata_values,
+                      experiment_item_metadata_names, experiment_item_metadata_values,
+                      experiment_item_root_span_id,
                       source, blob_storage_file_path, event_bytes,
                       created_at, updated_at, event_ts, is_deleted)
   SELECT o.project_id,
@@ -736,10 +756,20 @@ echo "Populating development tables with sample data..."
          o.tool_call_names,
          coalesce(o.input, '')                                                           AS input,
          coalesce(o.output, '')                                                          AS output,
-         CAST(mapConcat(o.metadata, coalesce(t.metadata, map())), 'JSON(max_dynamic_paths=0)') AS metadata,
          mapKeys(mapConcat(o.metadata, coalesce(t.metadata, map())))                     AS metadata_names,
-         mapValues(mapConcat(o.metadata, coalesce(t.metadata, map())))                   AS metadata_raw_values,
-         multiIf(mapContains(o.metadata, 'resourceAttributes'), 'otel-dual-write', 'ingestion-api-dual-write') AS source,
+         mapValues(mapConcat(o.metadata, coalesce(t.metadata, map())))                   AS metadata_values,
+         coalesce(dri.dataset_run_id, '')                                                AS experiment_id,
+         coalesce(dri.dataset_run_name, '')                                              AS experiment_name,
+         coalesce(dri.dataset_run_description, '')                                       AS experiment_description,
+         coalesce(dri.dataset_id, '')                                                    AS experiment_dataset_id,
+         coalesce(dri.dataset_item_id, '')                                               AS experiment_item_id,
+         coalesce(dri.dataset_item_expected_output, '')                                  AS experiment_item_expected_output,
+         if(dri.dataset_run_id != '', mapKeys(dri.dataset_run_metadata), [])             AS experiment_metadata_names,
+         if(dri.dataset_run_id != '', mapValues(dri.dataset_run_metadata), [])           AS experiment_metadata_values,
+         if(dri.dataset_run_id != '', mapKeys(dri.dataset_item_metadata), [])            AS experiment_item_metadata_names,
+         if(dri.dataset_run_id != '', mapValues(dri.dataset_item_metadata), [])          AS experiment_item_metadata_values,
+         if(dri.dataset_run_id != '', o.id, '')                                          AS experiment_item_root_span_id,
+         multiIf(dri.dataset_run_id != '', 'ingestion-api-dual-write-experiments', mapContains(o.metadata, 'resourceAttributes'), 'otel-dual-write', 'ingestion-api-dual-write') AS source,
          ''                                                                              AS blob_storage_file_path,
          byteSize(*)                                                                     AS event_bytes,
          o.created_at,
@@ -748,17 +778,24 @@ echo "Populating development tables with sample data..."
          o.is_deleted
   FROM observations o FINAL
   LEFT JOIN traces t ON o.project_id = t.project_id AND o.trace_id = t.id
+  LEFT JOIN dataset_run_items_rmt dri ON o.project_id = dri.project_id AND o.trace_id = dri.trace_id
   WHERE (o.is_deleted = 0);
-  -- Backfill events from traces table as well
+
+  -- Backfill events from traces table as well (experiment metadata included when dataset_run_items match)
   -- Traces are converted to synthetic observations with id = 't-' + trace_id
   -- (matching convertTraceToStagingObservation in the ingestion pipeline)
-  INSERT INTO events (project_id, trace_id, span_id, parent_span_id, start_time, name, type,
+  INSERT INTO events_full (project_id, trace_id, span_id, parent_span_id, start_time, name, type,
                       environment, version, release, tags, trace_name, user_id, session_id, public, bookmarked, level,
                       model_parameters, provided_usage_details, usage_details, provided_cost_details, cost_details,
                       usage_pricing_tier_id, usage_pricing_tier_name,
                       tool_definitions, tool_calls, tool_call_names,
                       input, output,
-                      metadata, metadata_names, metadata_raw_values,
+                      metadata_names, metadata_values,
+                      experiment_id, experiment_name, experiment_description, experiment_dataset_id,
+                      experiment_item_id, experiment_item_expected_output,
+                      experiment_metadata_names, experiment_metadata_values,
+                      experiment_item_metadata_names, experiment_item_metadata_values,
+                      experiment_item_root_span_id,
                       source, blob_storage_file_path, event_bytes,
                       created_at, updated_at, event_ts, is_deleted)
   SELECT t.project_id,
@@ -790,10 +827,20 @@ echo "Populating development tables with sample data..."
          [],
          coalesce(t.input, '')                                                           AS input,
          coalesce(t.output, '')                                                          AS output,
-         CAST(t.metadata, 'JSON(max_dynamic_paths=0)'),
          mapKeys(t.metadata)                                                             AS metadata_names,
-         mapValues(t.metadata)                                                           AS metadata_raw_values,
-         multiIf(mapContains(t.metadata, 'resourceAttributes'), 'otel-dual-write', 'ingestion-api-dual-write') AS source,
+         mapValues(t.metadata)                                                           AS metadata_values,
+         coalesce(dri.dataset_run_id, '')                                                AS experiment_id,
+         coalesce(dri.dataset_run_name, '')                                              AS experiment_name,
+         coalesce(dri.dataset_run_description, '')                                       AS experiment_description,
+         coalesce(dri.dataset_id, '')                                                    AS experiment_dataset_id,
+         coalesce(dri.dataset_item_id, '')                                               AS experiment_item_id,
+         coalesce(dri.dataset_item_expected_output, '')                                  AS experiment_item_expected_output,
+         if(dri.dataset_run_id != '', mapKeys(dri.dataset_run_metadata), [])             AS experiment_metadata_names,
+         if(dri.dataset_run_id != '', mapValues(dri.dataset_run_metadata), [])           AS experiment_metadata_values,
+         if(dri.dataset_run_id != '', mapKeys(dri.dataset_item_metadata), [])            AS experiment_item_metadata_names,
+         if(dri.dataset_run_id != '', mapValues(dri.dataset_item_metadata), [])          AS experiment_item_metadata_values,
+         if(dri.dataset_run_id != '', concat('t-', t.id), '')                            AS experiment_item_root_span_id,
+         multiIf(dri.dataset_run_id != '', 'ingestion-api-dual-write-experiments', mapContains(t.metadata, 'resourceAttributes'), 'otel-dual-write', 'ingestion-api-dual-write') AS source,
          ''                                                                              AS blob_storage_file_path,
          byteSize(*)                                                                     AS event_bytes,
          t.created_at,
@@ -801,6 +848,7 @@ echo "Populating development tables with sample data..."
          t.event_ts,
          t.is_deleted
   FROM traces t FINAL
+  LEFT JOIN dataset_run_items_rmt dri ON t.project_id = dri.project_id AND t.id = dri.trace_id
   WHERE (t.is_deleted = 0);
 
 EOF

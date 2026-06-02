@@ -5,12 +5,18 @@ import {
   DefaultEvalModelService,
   fetchLLMCompletion,
   IngestionQueue,
+  LLMAdapter,
   QueueJobs,
   ScoreEventType,
 } from "@hanzo/console-core/src/server";
 import { env } from "../../env";
-import { buildEvalScoreSchema, buildEvalMessages } from "./evalExecutionUtils";
+import { buildEvalMessages } from "./evalRuntime";
 import { getEvalS3StorageClient } from "./s3StorageClient";
+import { createInternalEventsWriter } from "../internal-tracing/createInternalEventsWriter";
+
+type StructuredOutputSchema = NonNullable<
+  Parameters<typeof fetchLLMCompletion>[0]["structuredOutputSchema"]
+>;
 
 /**
  * Result of fetching model configuration.
@@ -25,6 +31,7 @@ export type ModelConfigResult =
           adapter: string;
           [key: string]: unknown;
         };
+        adapter: LLMAdapter;
         modelParams: Record<string, unknown>;
       };
     }
@@ -39,7 +46,7 @@ export type ModelConfigResult =
 export interface LLMCallParams {
   messages: ReturnType<typeof buildEvalMessages>;
   modelConfig: Extract<ModelConfigResult, { valid: true }>["config"];
-  structuredOutputSchema: ReturnType<typeof buildEvalScoreSchema>;
+  structuredOutputSchema: StructuredOutputSchema;
   traceSinkParams: {
     targetProjectId: string;
     traceId: string;
@@ -196,6 +203,7 @@ export function createProductionEvalExecutionDeps(): EvalExecutionDeps {
           traceName: params.traceSinkParams.traceName,
           environment: params.traceSinkParams.environment,
           metadata: params.traceSinkParams.metadata,
+          eventsWriter: createInternalEventsWriter(),
         },
       });
     },

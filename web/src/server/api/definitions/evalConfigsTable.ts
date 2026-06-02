@@ -5,20 +5,26 @@ export const evalConfigFilterColumns: ColumnDefinition[] = [
     name: "Status",
     id: "status",
     type: "stringOptions",
-    internal: 'jc."status"::text',
-    options: Object.values(JobConfigState).map((value) => ({ value })),
+    internal: evaluatorDisplayStatusSql,
+    options: [...Object.values(JobConfigState), "PAUSED"].map((value) => ({
+      value,
+    })),
   },
   {
     name: "Target",
     id: "target",
     type: "stringOptions",
     internal: 'jc."target_object"',
-    options: [{ value: "trace" }, { value: "dataset" }],
+    options: evalConfigTargetOptions,
   },
 ];
 
 export const evalConfigsTableCols: ColumnDefinition[] = [
-  ...evalConfigFilterColumns,
+  {
+    ...evalConfigFilterColumns[0],
+    internal: evaluatorStatusSortRankSql,
+  },
+  evalConfigFilterColumns[1],
   {
     name: "Updated At",
     id: "updatedAt",

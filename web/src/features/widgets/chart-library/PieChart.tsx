@@ -21,6 +21,9 @@ export const PieChart: React.FC<ChartProps> = ({
   },
   accessibilityLayer = true,
 }) => {
+  const formatValue = (value: number) =>
+    toFullMetricString(metricFormatter(value, { style: "compact" }));
+
   // Calculate total metric value for center label
   const totalValue = useMemo(() => {
     return data.reduce((acc, curr) => acc + (curr.metric as number), 0);
@@ -34,6 +37,24 @@ export const PieChart: React.FC<ChartProps> = ({
       fill: `hsl(var(--chart-${(index % 4) + 1}))`,
     }));
   }, [data]);
+
+  const renderSector = (props: PieSectorShapeProps) => {
+    const outerRadius =
+      typeof props.outerRadius === "number" ? props.outerRadius : 0;
+    const expandedOuterRadius = props.isActive ? outerRadius + 10 : outerRadius;
+
+    return (
+      <Sector
+        {...props}
+        outerRadius={expandedOuterRadius}
+        opacity={
+          subtleFill ? (props.isActive ? 0.9 : 0.45) : props.isActive ? 1 : 0.82
+        }
+        stroke="hsl(var(--background))"
+        strokeWidth={props.isActive ? 4 : 3}
+      />
+    );
+  };
 
   return (
     <ChartContainer config={config}>
@@ -52,6 +73,7 @@ export const PieChart: React.FC<ChartProps> = ({
           outerRadius={120}
           paddingAngle={2}
           strokeWidth={5}
+          shape={renderSector}
         >
           {/* Label in the center of the donut */}
           {data.length > 0 && (

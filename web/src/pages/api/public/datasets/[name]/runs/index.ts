@@ -2,7 +2,6 @@ import { prisma } from "@hanzo/console-core/src/db";
 import {
   GetDatasetRunsV1Query,
   GetDatasetRunsV1Response,
-  transformDbDatasetRunToAPIDatasetRun,
 } from "@/src/features/public-api/types/datasets";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";

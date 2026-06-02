@@ -111,11 +111,85 @@ We built a monorepo using [pnpm](https://pnpm.io/motivation) and [turbo](https:/
 Requirements
 
 - Node.js 24 as specified in the [.nvmrc](.nvmrc)
-- Pnpm v.9.5.0
+- Pnpm v.11.1.3
 - Docker to run the database locally
 - Datastore client
 
 **Note:** You can also simply run Hanzo in a **GitHub Codespace** via the provided devcontainer. To do this, click on the green "Code" button in the top right corner of the repository and select "Open with Codespaces".
+
+### Codex Cloud Setup
+
+You can also attach this repository to an OpenAI Codex cloud environment. The
+cloud environment itself is configured in the Codex UI, while the repo-owned
+bootstrap is versioned in:
+
+- `scripts/codex/setup.sh`
+- `scripts/codex/maintenance.sh`
+
+Recommended Codex UI configuration:
+
+1. Create a new cloud environment for this repository in the Codex UI.
+2. Choose a base environment with Node.js 24 support.
+3. Set the setup script to:
+
+   ```bash
+   bash scripts/codex/setup.sh
+   ```
+
+4. Set the maintenance script to:
+
+   ```bash
+   bash scripts/codex/maintenance.sh
+   ```
+
+5. Keep internet access disabled by default, or only allow the minimum domains
+   needed for your task.
+6. Add secrets and environment variables in the Codex UI instead of committing
+   them to the repository.
+
+Notes:
+
+- This Codex setup is intended for repository tasks such as code changes,
+  linting, typechecking, and targeted tests.
+- It does **not** start the full Langfuse stack. Local development still uses
+  Docker and `pnpm run dx` / `pnpm run dev`.
+- Running the full application inside Codex requires external services for
+  PostgreSQL, Redis, ClickHouse, and object storage, plus matching environment
+  variables in the Codex UI.
+
+### Shared Agent Setup
+
+This repository keeps the shared agent setup in source control so developers
+using different tools can work against the same instructions, bootstrap, and
+MCP server catalog.
+
+- Canonical shared docs:
+  - `.agents/AGENTS.md`
+- Root discovery symlinks:
+  - `AGENTS.md`
+  - `CLAUDE.md`
+- Shared agent setup overview: `.agents/README.md`
+- Shared skills: `.agents/skills/`
+- Shared tool/bootstrap/MCP config: `.agents/config.json`
+- Tool-specific MCP configs generated locally from that catalog and not committed:
+  - `.mcp.json`
+  - `.cursor/mcp.json`
+  - `.vscode/mcp.json`
+  - `.codex/config.toml`
+- Tool-specific runtime shims generated locally from the shared config and not committed:
+  - `.claude/settings.json`
+  - `.codex/environments/environment.toml`
+  - `.cursor/environment.json`
+- Tool-specific skill projections generated locally and not committed:
+  - `.claude/skills/*`
+- Shared bootstrap for agent environments: `bash scripts/codex/setup.sh`
+
+When you change the shared MCP setup:
+
+1. Edit `.agents/config.json`
+2. Run `pnpm run agents:sync`
+3. Run `pnpm run agents:check`
+4. Do not commit the generated MCP config files or runtime shims
 
 **Steps**
 
@@ -242,21 +316,16 @@ Tests automatically create the PostgreSQL test database if it doesn't exist and 
 
 ### Tests in the `web` package (public API)
 
-We're using Jest with in the `web` package. Therefore, if you want to provide an argument to the test runner, do it directly without an intermittent `--`.
+We're using Vitest in the `web` package. There are two types of unit tests:
 
-There are three types of unit tests:
-
-- `test-sync`
-- `test` (for async folder tests)
+- `test` (server tests)
 - `test-client`
 
-To run a specific test, for example the test: `"should handle special characters in prompt names"` in `prompts.v2.servertest.ts`, run:
+To run a specific test by name within a file, run:
 
 ```sh
-cd web  # or with --filter=web
-pnpm test-sync --testPathPatterns="prompts\.v2\.servertest" --testNamePattern="should handle special characters in prompt names"
-# for async folder tests:
-pnpm test -- --testPathPatterns="observations-api" --testNamePattern="should fetch all observations"
+cd web  # or use `pnpm --filter web test ...` from the repository root
+pnpm test prompts.v2.servertest -t "should handle special characters in prompt names"
 ```
 
 To run all tests:
@@ -273,10 +342,10 @@ pnpm run test:watch
 
 ### Tests in the `worker` package
 
-For the `worker` package, we're using `vitest` to run unit tests.
+For the `worker` package, we're also using Vitest to run unit tests.
 
 ```sh
-pnpm run test --filter=worker -- FILE_YOU_WANT_TO_TEST.ts -t "test name"
+pnpm --filter worker run test FILE_YOU_WANT_TO_TEST.ts -t "test name"
 ```
 
 ## CI/CD
@@ -286,7 +355,7 @@ We use GitHub Actions for CI/CD, the configuration is in [`.github/workflows/pip
 CI on `main` and `pull_request`
 
 - Check Linting
-- E2E test of API using Jest
+- E2E test of API using Vitest
 - E2E tests of UI using Playwright
 
 CD on `main`
@@ -306,7 +375,7 @@ You can use the staging environment end-to-end with the Hanzo integrations or SD
 
 ## Production environment
 
-When a new release is tagged on the `main` branch (excluding prereleases), it triggers a production deployment. The deployment process consists of two steps:
+We run two separate release/deployment processes:
 
 1. The Docker image is published to GitHub Packages with the version number and `latest` tag.
 2. The deployment is carried out on Hanzo Cloud. This is done by force pushing the `main` branch to the `production` branch during every release, using the [`release.yml`](.github/workflows/release.yml) GitHub Action.

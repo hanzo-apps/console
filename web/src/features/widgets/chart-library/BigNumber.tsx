@@ -79,7 +79,7 @@ const formatBigNumber = (value: number, maxCharacters?: number): { formatted: st
 export const BigNumber: React.FC<ChartProps> = ({ data, className }: ChartProps & { className?: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
-  const [fontSize, setFontSize] = useState("text-6xl");
+  const [fontSize, setFontSize] = useState<FontSizeClass>("text-6xl");
   const [maxCharacters, setMaxCharacters] = useState<number>();
 
   // Calculate metric value from data - show loading if no data
@@ -114,21 +114,7 @@ export const BigNumber: React.FC<ChartProps> = ({ data, className }: ChartProps 
       const availableHeight = containerHeight * 0.9; // Use more height (was 0.8)
 
       // Start with a large font size and scale down
-      const baseFontSizes = [
-        { class: "text-8xl", px: 128 },
-        { class: "text-7xl", px: 96 },
-        { class: "text-6xl", px: 72 },
-        { class: "text-5xl", px: 60 },
-        { class: "text-4xl", px: 48 },
-        { class: "text-3xl", px: 36 },
-        { class: "text-2xl", px: 24 },
-        { class: "text-xl", px: 20 },
-        { class: "text-lg", px: 18 },
-        { class: "text-base", px: 16 },
-        { class: "text-sm", px: 14 },
-      ];
-
-      let selectedFontSize = "text-sm";
+      let selectedFontSize: FontSizeClass = "text-sm";
       let calculatedMaxChars = 0;
 
       // Test each font size to find the largest that fits
@@ -139,8 +125,13 @@ export const BigNumber: React.FC<ChartProps> = ({ data, className }: ChartProps 
 
         // Quick test with current display value
         const testDisplayValue = !isLoading
-          ? formatBigNumber(calculatedMetric, maxChars)
-          : { formatted: "0", unit: "" };
+          ? metricFormatter
+            ? metricFormatter(calculatedMetric, {
+                style: "compact",
+                maxCharacters: maxChars,
+              })
+            : { main: "0" }
+          : { main: "0" };
 
         const textLength = (testDisplayValue.formatted + testDisplayValue.unit).length;
         const estimatedWidth = textLength * charWidth;
@@ -162,7 +153,7 @@ export const BigNumber: React.FC<ChartProps> = ({ data, className }: ChartProps 
     }
 
     return () => resizeObserver.disconnect();
-  }, [calculatedMetric, isLoading]);
+  }, [calculatedMetric, isLoading, metricFormatter]);
 
   if (isLoading) {
     return null;
@@ -171,37 +162,42 @@ export const BigNumber: React.FC<ChartProps> = ({ data, className }: ChartProps 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col items-center justify-center", className)}>
       <div className="flex items-baseline justify-center gap-1">
+        {displayValue.prefix && (
+          <span
+            className={cn(
+              "text-muted-foreground font-bold",
+              getAffixFontSize(fontSize),
+            )}
+          >
+            {displayValue.negative && (
+              <span
+                className={cn(
+                  "text-foreground font-extrabold tracking-tight",
+                  fontSize,
+                )}
+              >
+                -
+              </span>
+            )}
+            {displayValue.prefix}
+          </span>
+        )}
         <span
           ref={textRef}
           className={cn("text-center font-extrabold tracking-tight", fontSize)}
           title={calculatedMetric.toString()}
         >
-          {displayValue.formatted}
+          {displayValue.negative && !displayValue.prefix ? "-" : ""}
+          {displayValue.main}
         </span>
-        {displayValue.unit && (
+        {displayValue.suffix && (
           <span
             className={cn(
-              "font-bold text-muted-foreground",
-              fontSize === "text-8xl"
-                ? "text-4xl"
-                : fontSize === "text-7xl"
-                  ? "text-3xl"
-                  : fontSize === "text-6xl"
-                    ? "text-2xl"
-                    : fontSize === "text-5xl"
-                      ? "text-xl"
-                      : fontSize === "text-4xl"
-                        ? "text-lg"
-                        : fontSize === "text-3xl"
-                          ? "text-base"
-                          : fontSize === "text-2xl"
-                            ? "text-sm"
-                            : fontSize === "text-xl"
-                              ? "text-sm"
-                              : "text-xs",
+              "text-muted-foreground font-bold",
+              getAffixFontSize(fontSize),
             )}
           >
-            {displayValue.unit}
+            {displayValue.suffix}
           </span>
         )}
       </div>

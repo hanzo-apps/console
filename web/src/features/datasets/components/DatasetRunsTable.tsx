@@ -158,7 +158,7 @@ const DatasetRunTableMultiSelectAction = ({
                 setIsDeleteDialogOpen(false);
               }}
             >
-              Delete Dataset Runs
+              Delete Experiments
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -480,7 +480,7 @@ export function DatasetRunsTable(props: {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only [position:relative]">Open menu</span>
+                <span className="sr-only relative">Open menu</span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -527,10 +527,11 @@ export function DatasetRunsTable(props: {
     <>
       {hasCharts ? (
         <ResizablePanelGroup
-          direction="vertical"
+          orientation="vertical"
           className="h-full"
-          onLayout={(sizes) => {
-            setChartsPanelSize(sizes[0]);
+          onLayoutChanged={(layout) => {
+            const charts = layout["dataset-charts"];
+            if (charts != null) setChartsPanelSize(charts);
           }}
         >
           <ResizablePanel defaultSize={chartsPanelSize} minSize={20} className="overflow-hidden">

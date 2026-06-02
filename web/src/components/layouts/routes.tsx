@@ -53,6 +53,7 @@ import { type Entitlement } from "@/src/features/entitlements/constants/entitlem
 import { type User } from "next-auth";
 import { type OrganizationScope } from "@/src/features/rbac/constants/organizationAccessRights";
 import { SupportButton } from "@/src/components/nav/support-button";
+import { InAppAiAgentButton } from "@/src/components/nav/in-app-ai-agent-button";
 import { BookACallButton } from "@/src/components/nav/book-a-call-button";
 // v4 is always enabled now — toggle removed
 import { SidebarMenuButton } from "@/src/components/ui/sidebar";
@@ -184,7 +185,7 @@ export const ROUTES: Route[] = [
     icon: SquarePercent,
   },
   {
-    title: "LLM-as-a-Judge",
+    title: "Evaluators",
     icon: Lightbulb,
     productModule: "evaluation",
     projectRbacScopes: ["evalJob:read"],
@@ -633,6 +634,15 @@ export const ROUTES: Route[] = [
     section: RouteSection.Main,
   },
   {
+    title: "Experiments",
+    pathname: `/project/[projectId]/experiments`,
+    icon: Beaker,
+    featureFlag: "experimentsV4Enabled",
+    group: RouteGroup.Evaluation,
+    section: RouteSection.Main,
+    label: "Beta",
+  },
+  {
     title: "Upgrade",
     icon: Sparkle,
     pathname: "/project/[projectId]/settings/billing",
@@ -674,6 +684,14 @@ export const ROUTES: Route[] = [
     section: RouteSection.Secondary,
     pathname: "",
     menuNode: <BookACallButton />,
+  },
+  {
+    title: "AI Assistant",
+    section: RouteSection.Secondary,
+    pathname: "",
+    featureFlag: "inAppAgent",
+    show: ({ organization }) => organization?.aiFeaturesEnabled === true,
+    menuNode: <InAppAiAgentButton />,
   },
   {
     title: "Support",

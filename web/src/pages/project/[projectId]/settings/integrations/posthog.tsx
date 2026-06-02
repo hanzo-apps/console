@@ -58,7 +58,7 @@ export default function PosthogIntegrationSettings() {
         ),
       }}
     >
-      <p className="mb-4 text-sm text-primary">
+      <p className="text-primary mb-4 text-sm">
         We have teamed up with{" "}
         <Link href="https://posthog.com" className="underline">
           PostHog
@@ -84,7 +84,7 @@ export default function PosthogIntegrationSettings() {
       {state.data?.enabled && (
         <>
           <Header title="Status" className="mt-8" />
-          <p className="text-sm text-primary">
+          <p className="text-primary text-sm">
             Data synced until:{" "}
             {state.data?.lastSyncAt ? new Date(state.data.lastSyncAt).toLocaleString() : "Never (pending)"}
           </p>
@@ -186,7 +186,7 @@ const PostHogIntegrationSettings = ({
                   onCheckedChange={() => {
                     field.onChange(!field.value);
                   }}
-                  className="ml-4 mt-1"
+                  className="mt-1 ml-4"
                 />
               </FormControl>
               <FormMessage />

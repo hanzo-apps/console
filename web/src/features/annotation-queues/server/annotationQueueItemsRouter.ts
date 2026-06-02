@@ -17,7 +17,8 @@ import {
 } from "@hanzo/shared";
 import { getObservationById, getTraceIdsForObservations, logger } from "@hanzo/shared/src/server";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod/v4";
+import { z } from "zod";
+import { env } from "@/src/env.mjs";
 
 const isItemLocked = (item: AnnotationQueueItem) => {
   return item.lockedByUserId && item.lockedAt && new Date(item.lockedAt) > new Date(Date.now() - 5 * 60 * 1000);
@@ -40,7 +41,10 @@ const MAP_OBJECT_TYPE_TO_ACTION_PROPS: Record<
   },
   [AnnotationQueueObjectType.OBSERVATION]: {
     actionId: ActionId.ObservationAddToAnnotationQueue,
-    tableName: BatchExportTableName.Observations,
+    tableName:
+      env.LANGFUSE_ENABLE_EVENTS_TABLE_UI === "true"
+        ? BatchExportTableName.Events
+        : BatchExportTableName.Observations,
   },
 };
 
@@ -54,6 +58,12 @@ export const queueItemRouter = createTRPCRouter({
       }),
     )
     .query(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "annotationQueues:read",
+      });
+
       const item = await ctx.prisma.annotationQueueItem.findUnique({
         where: {
           id: input.itemId,
@@ -71,6 +81,7 @@ export const queueItemRouter = createTRPCRouter({
       z.object({
         projectId: z.string(),
         itemId: z.string(),
+        isBetaEnabled: z.boolean().optional().default(false),
       }),
     )
     .query(async ({ input, ctx }) => {
@@ -108,10 +119,16 @@ export const queueItemRouter = createTRPCRouter({
       };
 
       if (item.objectType === AnnotationQueueObjectType.OBSERVATION) {
-        const clickhouseObservation = await getObservationById({
-          id: item.objectId,
-          projectId: input.projectId,
-        });
+        const clickhouseObservation =
+          env.LANGFUSE_ENABLE_EVENTS_TABLE_UI === "true"
+            ? await getObservationByIdFromEventsTable({
+                id: item.objectId,
+                projectId: input.projectId,
+              })
+            : await getObservationById({
+                id: item.objectId,
+                projectId: input.projectId,
+              });
 
         if (!clickhouseObservation) {
           throw new HanzoNotFoundError("Observation not found");

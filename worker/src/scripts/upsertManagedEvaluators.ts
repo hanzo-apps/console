@@ -11,10 +11,7 @@ const ManagedEvaluatorSchema = z.object({
   name: z.string(),
   partner: z.string().nullish(),
   version: z.number(),
-  outputSchema: z.object({
-    score: z.string(),
-    reasoning: z.string(),
-  }),
+  outputDefinition: PersistedEvalOutputDefinitionSchema,
   prompt: z.string(),
 });
 
@@ -57,8 +54,9 @@ export const upsertManagedEvaluators = async (force = false) => {
         name: evaluator.name,
         partner: evaluator.partner,
         version: evaluator.version,
-        outputSchema: evaluator.outputSchema,
+        outputDefinition: evaluator.outputDefinition,
         prompt: evaluator.prompt,
+        vars: parsePromptVariables(evaluator.prompt),
         updatedAt: evaluator.updated_at,
       };
 
@@ -73,7 +71,6 @@ export const upsertManagedEvaluators = async (force = false) => {
             id: evaluator.id,
             projectId: null,
             updatedAt: evaluator.updated_at,
-            vars: parsePromptVariables(evaluator.prompt),
           },
         })
         .then(() => logger.info(`Upserted evaluator ${evaluator.name} (${evaluator.id})`))

@@ -131,7 +131,7 @@ export function SpendAlertDialog({ orgId, alert, open, onOpenChange, onSuccess }
                 </FormItem>
               )}
             />
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               <div className="flex flex-row items-center">
                 <Info className="mr-2 h-3 w-3" />
                 <span className="font-medium">How it works</span>

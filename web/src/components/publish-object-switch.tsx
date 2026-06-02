@@ -5,38 +5,106 @@ import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePos
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 import { copyTextToClipboard } from "@/src/utils/clipboard";
+import { trpcErrorToast } from "@/src/utils/trpcErrorToast";
+import { type RouterInput } from "@/src/utils/types";
 import { CheckIcon, Globe, Link, Share2 } from "lucide-react";
 import { useState } from "react";
 
 export const PublishTraceSwitch = (props: {
   traceId: string;
   projectId: string;
+  timestamp?: Date;
   isPublic: boolean;
   size?: "icon" | "icon-xs";
 }) => {
+  const { isBetaEnabled } = useV4Beta();
   const capture = usePostHogClientCapture();
   const hasAccess = useHasProjectAccess({
     projectId: props.projectId,
     scope: "objects:publish",
   });
   const utils = api.useUtils();
+  const traceQueryInput: RouterInput["traces"]["byIdWithObservationsAndScores"] =
+    {
+      projectId: props.projectId,
+      traceId: props.traceId,
+      timestamp: props.timestamp,
+    };
+  const eventsTraceQueryInput: RouterInput["events"]["byTraceId"] = {
+    projectId: props.projectId,
+    traceId: props.traceId,
+    timestamp: props.timestamp,
+  };
   const mut = api.traces.publish.useMutation({
-    onSuccess: () => utils.traces.invalidate(),
+    onMutate: async (input) => {
+      if (isBetaEnabled) {
+        await utils.events.byTraceId.cancel(eventsTraceQueryInput);
+
+        const previousEvents = utils.events.byTraceId.getData(
+          eventsTraceQueryInput,
+        );
+
+        utils.events.byTraceId.setData(eventsTraceQueryInput, (old) => {
+          if (!old) return old;
+
+          return {
+            ...old,
+            observations: old.observations.map((observation) =>
+              !observation.parentObservationId
+                ? { ...observation, public: input.public }
+                : observation,
+            ),
+          };
+        });
+
+        return { previousEvents };
+      }
+
+      await utils.traces.byIdWithObservationsAndScores.cancel(traceQueryInput);
+
+      const previousTrace =
+        utils.traces.byIdWithObservationsAndScores.getData(traceQueryInput);
+
+      utils.traces.byIdWithObservationsAndScores.setData(
+        traceQueryInput,
+        (old) => (old ? { ...old, public: input.public } : old),
+      );
+
+      return { previousTrace };
+    },
+    onError: (err, _input, context) => {
+      if (isBetaEnabled) {
+        utils.events.byTraceId.setData(
+          eventsTraceQueryInput,
+          context?.previousEvents,
+        );
+      } else {
+        utils.traces.byIdWithObservationsAndScores.setData(
+          traceQueryInput,
+          context?.previousTrace,
+        );
+      }
+      trpcErrorToast(err);
+    },
+    onSuccess: async () => {
+      if (!isBetaEnabled) {
+        await utils.traces.all.invalidate();
+      }
+    },
   });
 
   return (
     <Base
-      id={props.traceId}
       itemName="trace"
       isPublic={props.isPublic}
       size={props.size}
       onChange={(val) => {
-        mut.mutate({
+        capture("trace_detail:publish_button_click");
+        return mut.mutateAsync({
           projectId: props.projectId,
           traceId: props.traceId,
           public: val,
         });
-        capture("trace_detail:publish_button_click");
       }}
       isLoading={mut.isPending}
       disabled={!hasAccess}
@@ -57,22 +125,26 @@ export const PublishSessionSwitch = (props: {
   });
   const utils = api.useUtils();
   const mut = api.sessions.publish.useMutation({
-    onSuccess: () => utils.sessions.invalidate(),
+    onError: (err) => {
+      trpcErrorToast(err);
+    },
+    onSuccess: async () => {
+      await utils.sessions.invalidate();
+    },
   });
 
   return (
     <Base
-      id={props.sessionId}
       itemName="session"
       isPublic={props.isPublic}
       size={props.size}
       onChange={(val) => {
-        mut.mutate({
+        capture("session_detail:publish_button_click");
+        return mut.mutateAsync({
           projectId: props.projectId,
           sessionId: props.sessionId,
           public: val,
         });
-        capture("session_detail:publish_button_click");
       }}
       isLoading={mut.isPending}
       disabled={!hasAccess}
@@ -81,31 +153,37 @@ export const PublishSessionSwitch = (props: {
 };
 
 const Base = (props: {
-  id: string;
   itemName: string;
-  onChange: (value: boolean) => void;
+  onChange: (value: boolean) => Promise<unknown>;
   isLoading: boolean;
   isPublic: boolean;
   disabled?: boolean;
   size?: "icon" | "icon-xs";
 }) => {
   const [isCopied, setIsCopied] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const copyUrl = () => {
     setIsCopied(true);
-    void copyTextToClipboard(window.location.href);
+    copyTextToClipboard(window.location.href);
     setTimeout(() => setIsCopied(false), 2500);
   };
 
   const handleOnClick = () => {
     if (props.isLoading) return;
+    setIsOpen(false);
     props.onChange(!props.isPublic);
   };
 
   return (
     <div className="flex items-center gap-1">
       <div className="text-sm font-semibold">
-        <Popover>
+        <Popover
+          open={isOpen}
+          onOpenChange={(open) => {
+            if (!props.isLoading) setIsOpen(open);
+          }}
+        >
           <PopoverTrigger asChild>
             <Button
               id="publish-trace"

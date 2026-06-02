@@ -23,6 +23,7 @@ import * as z from "zod/v4";
 import * as opentelemetry from "@opentelemetry/api";
 import { type IncomingHttpHeaders } from "node:http";
 import { getTRPCErrorCodeFromHTTPStatusCode } from "@/src/server/utils/trpc-utils";
+import { sendAdminAccessWebhook } from "@/src/server/adminAccessWebhook";
 
 type CreateContextOptions = {
   session: Session | null;
@@ -44,7 +45,6 @@ export const createInnerTRPCContext = (opts: CreateContextOptions) => {
     session: opts.session,
     headers: opts.headers,
     prisma,
-    DB,
   };
 };
 
@@ -160,6 +160,8 @@ const withErrorHandling = t.middleware(async ({ ctx, next }) => {
       res.error = new TRPCError({
         code: "SERVICE_UNAVAILABLE",
         message: ClickHouseResourceError.ERROR_ADVICE_MESSAGE,
+        // Keep the original error, it will be removed by `errorFormatter`
+        cause: res.error.cause,
       });
       logErrorByCode(res.error.code, res.error);
     } else {
@@ -289,6 +291,11 @@ const enforceUserIsAuthedAndProjectMember = t.middleware(async (opts) => {
           message: "Project not found",
         });
       }
+      await sendAdminAccessWebhook({
+        email: ctx.session.user.email,
+        projectId,
+        orgId: dbProject.orgId,
+      });
       return next({
         ctx: {
           // infers the `session` as non-nullable
@@ -311,6 +318,14 @@ const enforceUserIsAuthedAndProjectMember = t.middleware(async (opts) => {
     });
   }
 
+  if (ctx.session.user.admin === true) {
+    await sendAdminAccessWebhook({
+      email: ctx.session.user.email,
+      projectId,
+      orgId: sessionProject.organization.id,
+    });
+  }
+
   return next({
     ctx: {
       // infers the `session` as non-nullable
@@ -329,6 +344,23 @@ const enforceUserIsAuthedAndProjectMember = t.middleware(async (opts) => {
 export const protectedProjectProcedure = withOtelTracingProcedure
   .use(withErrorHandling)
   .use(enforceUserIsAuthedAndProjectMember);
+
+/** requireFeatureFlag gates a procedure behind a server-side feature flag. */
+export const requireFeatureFlag = (flag: Flag) =>
+  t.middleware(({ ctx, next }) => {
+    const session = ctx.session;
+    const enabled =
+      (session?.user?.featureFlags?.[flag] ?? false) ||
+      (session?.user?.admin ?? false) ||
+      (session?.environment?.enableExperimentalFeatures ?? false);
+    if (!enabled) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: `Feature "${flag}" is not enabled for this user`,
+      });
+    }
+    return next();
+  });
 
 export const protectedProjectProcedureWithoutTracing = t.procedure
   .use(withErrorHandling)
@@ -364,6 +396,13 @@ const enforceIsAuthedAndOrgMember = t.middleware(async (opts) => {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "User is not a member of this organization",
+    });
+  }
+
+  if (ctx.session.user.admin === true) {
+    await sendAdminAccessWebhook({
+      email: ctx.session.user.email,
+      orgId,
     });
   }
 
@@ -468,6 +507,14 @@ const enforceTraceAccess = t.middleware(async (opts) => {
       message: "User is not a member of this project and this trace is not public",
     });
   }
+
+  if (ctx.session?.user?.admin === true) {
+    await sendAdminAccessWebhook({
+      email: ctx.session.user.email,
+      projectId,
+    });
+  }
+
   return next({
     ctx: {
       session: {
@@ -505,7 +552,7 @@ const enforceSessionAccess = t.middleware(async (opts) => {
   const { sessionId, projectId } = result.data;
 
   // trace sessions are stored in postgres. No need to check for clickhouse eligibility.
-  const session = await prisma.traceSession.findFirst({
+  const session = await ctx.prisma.traceSession.findFirst({
     where: {
       id: sessionId,
       projectId,
@@ -532,6 +579,13 @@ const enforceSessionAccess = t.middleware(async (opts) => {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "User is not a member of this project and this session is not public",
+    });
+  }
+
+  if (ctx.session?.user?.admin === true) {
+    await sendAdminAccessWebhook({
+      email: ctx.session.user.email,
+      projectId,
     });
   }
 

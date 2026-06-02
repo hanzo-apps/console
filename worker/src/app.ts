@@ -11,10 +11,11 @@ require("dotenv").config();
 import {
   evalJobCreatorQueueProcessor,
   evalJobDatasetCreatorQueueProcessor,
-  evalJobExecutorQueueProcessor,
+  evalJobExecutorQueueProcessorBuilder,
   evalJobTraceCreatorQueueProcessor,
-  llmAsJudgeExecutionQueueProcessor,
+  llmAsJudgeExecutionQueueProcessorBuilder,
 } from "./queues/evalQueue";
+import { codeEvalExecutionQueueProcessorBuilder } from "./queues/codeEvalQueue";
 import { batchExportQueueProcessor } from "./queues/batchExportQueue";
 import { onShutdown } from "./utils/shutdown";
 import helmet from "helmet";
@@ -28,7 +29,9 @@ import {
   BlobStorageIntegrationQueue,
   DeadLetterRetryQueue,
   IngestionQueue,
+  SecondaryIngestionQueue,
   OtelIngestionQueue,
+  SecondaryOtelIngestionQueue,
   TraceUpsertQueue,
   EventPropagationQueue,
 } from "@hanzo/console-core/src/server";
@@ -59,13 +62,16 @@ import { DlqRetryService } from "./services/dlq/dlqRetryService";
 import { entityChangeQueueProcessor } from "./queues/entityChangeQueue";
 import { webhookProcessor } from "./queues/webhooks";
 import { datasetDeleteProcessor } from "./queues/datasetDelete";
-import { otelIngestionQueueProcessor } from "./queues/otelIngestionQueue";
+import { otelIngestionQueueProcessorBuilder } from "./queues/otelIngestionQueue";
 import { eventPropagationProcessor } from "./queues/eventPropagationQueue";
 import { notificationQueueProcessor } from "./queues/notificationQueue";
 import { BatchProjectCleaner, BATCH_DELETION_TABLES } from "./features/batch-project-cleaner";
 import { BatchDataRetentionCleaner, BATCH_DATA_RETENTION_TABLES } from "./features/batch-data-retention-cleaner";
 import { MediaRetentionCleaner } from "./features/media-retention-cleaner";
 import { BatchTraceDeletionCleaner } from "./features/batch-trace-deletion-cleaner";
+import { BatchProjectMediaCleaner } from "./features/batch-project-media-cleaner";
+import { BatchProjectBlobCleaner } from "./features/batch-project-blob-cleaner";
+import { QueueMetricsRunner } from "./features/queue-metrics-runner";
 
 const app = express();
 
@@ -227,6 +233,20 @@ if (env.QUEUE_CONSUMER_OTEL_INGESTION_QUEUE_IS_ENABLED === "true") {
     WorkerManager.register(shardName as QueueName, otelIngestionQueueProcessor, {
       concurrency: env.HANZO_OTEL_INGESTION_QUEUE_PROCESSING_CONCURRENCY,
     });
+  });
+}
+
+if (env.QUEUE_CONSUMER_OTEL_INGESTION_SECONDARY_QUEUE_IS_ENABLED === "true") {
+  const shardNames = SecondaryOtelIngestionQueue.getShardNames();
+  shardNames.forEach((shardName) => {
+    WorkerManager.register(
+      shardName as QueueName,
+      otelIngestionQueueProcessorBuilder(false),
+      {
+        concurrency:
+          env.LANGFUSE_OTEL_INGESTION_SECONDARY_QUEUE_PROCESSING_CONCURRENCY,
+      },
+    );
   });
 }
 
@@ -407,12 +427,42 @@ if (env.HANZO_BATCH_DATA_RETENTION_CLEANER_ENABLED === "true") {
   mediaRetentionCleaner.start();
 }
 
+// Batch project media cleaner for S3 media cleanup of soft-deleted projects
+export let batchProjectMediaCleaner: BatchProjectMediaCleaner | null = null;
+
+if (
+  env.LANGFUSE_BATCH_PROJECT_CLEANER_ENABLED === "true" &&
+  env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET
+) {
+  batchProjectMediaCleaner = new BatchProjectMediaCleaner();
+  batchProjectMediaCleaner.start();
+}
+
+// Batch project blob cleaner for ingestion event S3/ClickHouse cleanup of soft-deleted projects
+export let batchProjectBlobCleaner: BatchProjectBlobCleaner | null = null;
+
+if (
+  env.LANGFUSE_BATCH_PROJECT_CLEANER_ENABLED === "true" &&
+  env.LANGFUSE_ENABLE_BLOB_STORAGE_FILE_LOG === "true"
+) {
+  batchProjectBlobCleaner = new BatchProjectBlobCleaner();
+  batchProjectBlobCleaner.start();
+}
+
 // Batch trace deletion cleaner for supplementary trace deletion
 export let batchTraceDeletionCleaner: BatchTraceDeletionCleaner | null = null;
 
 if (env.HANZO_BATCH_TRACE_DELETION_CLEANER_ENABLED === "true") {
   batchTraceDeletionCleaner = new BatchTraceDeletionCleaner();
   batchTraceDeletionCleaner.start();
+}
+
+// Queue metrics background reporter
+export let queueMetricsRunner: QueueMetricsRunner | null = null;
+
+if (env.LANGFUSE_QUEUE_METRICS_ENABLED === "true") {
+  queueMetricsRunner = new QueueMetricsRunner();
+  queueMetricsRunner.start();
 }
 
 process.on("SIGINT", () => onShutdown("SIGINT"));

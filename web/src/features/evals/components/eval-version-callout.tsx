@@ -39,7 +39,7 @@ const getCalloutContent = (targetObject: string, evalCapabilities: EvalCapabilit
             href="https://hanzo.ai/docs/tracing/overview#console-tracing-vs-opentelemetry"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-dark-blue hover:opacity-80"
+            className="text-dark-blue font-medium hover:opacity-80"
           >
             Learn more
           </a>
@@ -63,7 +63,7 @@ const getCalloutContent = (targetObject: string, evalCapabilities: EvalCapabilit
               href="https://hanzo.ai/docs/evaluation/experiments/experiments-via-sdk#experiment-runner-sdk"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-dark-blue hover:opacity-80"
+              className="text-dark-blue font-medium hover:opacity-80"
             >
               Learn more about the Experiment Runner SDK.
             </a>
@@ -89,7 +89,7 @@ const getCalloutContent = (targetObject: string, evalCapabilities: EvalCapabilit
             href="https://hanzo.ai/docs/evaluation/experiments/experiments-via-sdk#experiment-runner-sdk"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-dark-blue hover:opacity-80"
+            className="text-dark-blue font-medium hover:opacity-80"
           >
             Learn more
           </a>
@@ -112,7 +112,7 @@ const getCalloutContent = (targetObject: string, evalCapabilities: EvalCapabilit
             href="https://hanzo.ai/docs/faq/all/llm-as-a-judge-migration"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-dark-blue hover:opacity-80"
+            className="text-dark-blue font-medium hover:opacity-80"
           >
             Learn more
           </a>

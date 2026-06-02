@@ -65,16 +65,16 @@ export const ScoresTableCell = ({
         {value}
         {aggregate.comment && (
           <HoverCard>
-            <HoverCardTrigger className="inline-block cursor-pointer">
+            <HoverCardTrigger className="inline-block shrink-0 cursor-pointer">
               <MessageCircleMore size={12} />
             </HoverCardTrigger>
-            <HoverCardContent className="flex flex-col whitespace-normal break-normal p-0 text-xs">
-              <div className="sticky top-0 z-10 flex h-8 items-center justify-end bg-popover px-1">
+            <HoverCardContent className="flex flex-col p-0 text-xs break-normal whitespace-normal">
+              <div className="bg-popover sticky top-0 z-10 flex h-8 items-center justify-end px-1">
                 <Button
                   onClick={handleCopy}
                   variant="ghost"
                   size="icon-xs"
-                  className="rounded p-1 hover:bg-accent"
+                  className="hover:bg-accent rounded p-1"
                   aria-label={copied ? "Copied" : "Copy to clipboard"}
                 >
                   {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -151,9 +151,9 @@ function AggregateScoreMetadataPeek({ scoreId, projectId }: { scoreId: string; p
       <HoverCardTrigger className="inline-block cursor-pointer">
         <BracesIcon size={12} />
       </HoverCardTrigger>
-      <HoverCardContent className="overflow-hidden whitespace-normal break-normal rounded-md border-none p-0 text-xs">
+      <HoverCardContent className="overflow-hidden rounded-md border-none p-0 text-xs break-normal whitespace-normal">
         {metadataLoaded ? (
-          <JSONView codeClassName="!rounded-md" json={metadata} />
+          <JSONView codeClassName="rounded-md!" json={metadata} />
         ) : (
           <Skeleton className="h-12 w-full" />
         )}

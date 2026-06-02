@@ -108,7 +108,7 @@ export const UserAssignmentSection = ({
           }
         }}
         renderSelectedItem={(user, onRemove) => (
-          <div className="flex flex-shrink-0 items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
+          <div className="bg-muted flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs">
             <span className="max-w-32 truncate">{user.name || user.email}</span>
             <Button variant="ghost" size="sm" className="h-4 w-4 p-0 hover:bg-muted-foreground/20" onClick={onRemove}>
               <X className="h-3 w-3" />
@@ -117,7 +117,7 @@ export const UserAssignmentSection = ({
         )}
         renderItem={(user, isSelected, onToggle) => (
           <div
-            className="flex cursor-pointer items-center gap-3 px-3 py-2 transition-colors hover:bg-muted/50"
+            className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 px-3 py-2 transition-colors"
             onClick={onToggle}
           >
             <div className="min-w-0 flex-1">

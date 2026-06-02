@@ -70,7 +70,7 @@ export const AnnotationPanel = ({ projectId }: { projectId: string }) => {
         )}
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel className="overflow-y-auto" minSize={20}>
+      <ResizablePanel className="overflow-y-auto" minSize="20%">
         <CommentsSection
           projectId={projectId}
           objectId={activeCell.observationId ?? activeCell.traceId}

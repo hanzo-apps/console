@@ -31,8 +31,8 @@ export function SamplingDetailsHoverCard({
         <button
           className={
             showLabel
-              ? "inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-              : "inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-muted-foreground/10"
+              ? "text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
+              : "hover:bg-muted-foreground/10 inline-flex h-4 w-4 items-center justify-center rounded-full"
           }
           aria-label="View sampling details"
         >

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, type ReactNode } from "react";
-import { CircleFadingArrowUp, PlusIcon } from "lucide-react";
+import { CircleFadingArrowUp } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
 import {
   InputCommand,
   InputCommandGroup,
@@ -46,21 +47,27 @@ export function SetPromptVersionLabels({
   const [isAddingLabel, setIsAddingLabel] = useState(false);
   const labelsChanged = JSON.stringify([...selectedLabels].sort()) !== JSON.stringify([...prompt.labels].sort());
   const customLabelScrollRef = useRef<HTMLDivElement | null>(null);
+  const previousIsOpenRef = useRef(false);
+  const previousPromptIdRef = useRef(prompt.id);
 
   const usedLabelsInProject = api.prompts.allLabels.useQuery(
     {
-      projectId: projectId as string, // Typecast as query is enabled only when projectId is present
+      projectId: projectId as string,
     },
     { enabled: Boolean(projectId) },
   );
 
-  // Set initial labels and selected labels
   useEffect(() => {
     if (isOpen) {
       setLabels([...new Set([...prompt.labels, ...(usedLabelsInProject.data ?? [])])]);
       setSelectedLabels(prompt.labels);
+      setCreatedLabels([]);
+      setSearchValue("");
     }
-  }, [isOpen, prompt.labels, usedLabelsInProject.data]);
+
+    previousIsOpenRef.current = isOpen;
+    previousPromptIdRef.current = prompt.id;
+  }, [isOpen, prompt.id, prompt.labels]);
 
   const isPromotingToProduction =
     !prompt.labels.includes(PRODUCTION_LABEL) && selectedLabels.includes(PRODUCTION_LABEL);
@@ -70,7 +77,7 @@ export function SetPromptVersionLabels({
 
   const mutatePromptVersionLabels = api.prompts.setLabels.useMutation({
     onSuccess: () => {
-      void utils.prompts.invalidate();
+      utils.prompts.invalidate();
     },
   });
 
@@ -99,12 +106,59 @@ export function SetPromptVersionLabels({
     else setIsOpen(open);
   };
 
+  // Derived label lists
+  const labels = [
+    ...new Set([
+      ...prompt.labels,
+      ...(usedLabelsInProject.data ?? []),
+      ...createdLabels,
+    ]),
+  ];
+  const customLabels = labels.filter((l) => !isReservedPromptLabel(l));
+  const normalizedSearchValue = searchValue.toLowerCase().trim();
+  const filteredCustomLabels = customLabels.filter((l) =>
+    l.toLowerCase().includes(normalizedSearchValue),
+  );
+  const filteredCustomLabelSet = new Set(filteredCustomLabels);
+  const filteredUnselectedCount = filteredCustomLabels.filter(
+    (l) => !selectedLabels.includes(l),
+  ).length;
+  const hasFilteredSelection = filteredCustomLabels.some((l) =>
+    selectedLabels.includes(l),
+  );
+
+  // Validate new label creation from search input
+  const trimmedSearch = searchValue.trim();
+  const isValidNewLabel =
+    trimmedSearch.length > 0 &&
+    !isReservedPromptLabel(trimmedSearch) &&
+    PromptLabelSchema.safeParse(trimmedSearch).success &&
+    !labels.includes(trimmedSearch);
+  const noExactMatch =
+    trimmedSearch.length > 0 && !labels.includes(trimmedSearch);
+
+  const handleCreateLabel = () => {
+    if (!isValidNewLabel) return;
+    setCreatedLabels((prev) => [...prev, trimmedSearch]);
+    setSelectedLabels((prev) => [...new Set([...prev, trimmedSearch])]);
+    capture("prompt_detail:add_label_submit");
+    setSearchValue("");
+    setTimeout(
+      () =>
+        customLabelScrollRef.current?.scrollTo({
+          top: customLabelScrollRef.current?.scrollHeight,
+          behavior: "smooth",
+        }),
+      0,
+    );
+  };
+
   return (
     <Popover open={isOpen} onOpenChange={handleOnOpenChange} modal={false}>
       <PopoverTrigger asChild data-version-trigger="true">
         <div
           className={cn(
-            "flex w-fit min-w-0 max-w-full cursor-pointer flex-wrap gap-1",
+            "flex w-fit max-w-full min-w-0 cursor-pointer flex-wrap gap-1",
             !hasAccess && "cursor-not-allowed",
           )}
         >
@@ -114,7 +168,7 @@ export function SetPromptVersionLabels({
             variant="outline"
             title="Add prompt label"
             className={cn(
-              "h-6 w-6 bg-muted-gray text-primary",
+              "bg-muted-gray text-primary h-6 w-6",
               showOnlyOnHover && "opacity-0 group-hover:opacity-100",
               !hasAccess && "cursor-not-allowed group-hover:opacity-50",
             )}
@@ -153,35 +207,6 @@ export function SetPromptVersionLabels({
                 </div>
               </InputCommandGroup>
             </InputCommandList>
-            <div className="px-1">
-              {isAddingLabel ? (
-                <AddLabelForm
-                  {...{
-                    setLabels,
-                    setSelectedLabels,
-                    onAddLabel: () => {
-                      setTimeout(
-                        () =>
-                          customLabelScrollRef.current?.scrollTo({
-                            top: customLabelScrollRef.current?.scrollHeight,
-                            behavior: "smooth",
-                          }),
-                        0,
-                      );
-                    },
-                  }}
-                />
-              ) : (
-                <Button
-                  variant="ghost"
-                  className="mt-2 w-full justify-start px-2 py-1 text-sm font-normal"
-                  onClick={() => setIsAddingLabel(true)}
-                >
-                  <PlusIcon className="mr-2 h-4 w-4" />
-                  Add custom label
-                </Button>
-              )}
-            </div>
           </InputCommand>
           <Button
             type="button"

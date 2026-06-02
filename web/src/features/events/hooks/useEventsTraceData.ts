@@ -3,7 +3,7 @@ import { api } from "@/src/utils/api";
 import { adaptEventsToTraceFormat, type AdaptedTraceData } from "@/src/features/events/lib/eventsToTraceAdapter";
 import {
   filterAndValidateDbScoreList,
-  AGGREGATABLE_SCORE_TYPES,
+  ScoreDataTypeArray,
   ScoreDataTypeEnum,
   type ScoreDomain,
 } from "@hanzo/shared";
@@ -72,6 +72,18 @@ export function useEventsTraceData(props: UseEventsTraceDataProps): UseEventsTra
     return eventsQuery.data.observations.find((o) => !o.parentObservationId);
   }, [eventsQuery.data]);
 
+  // Prefer the root observation when present, otherwise fall back to the earliest one.
+  const primaryObservation = useMemo(() => {
+    if (!observations?.length) return null;
+    if (rootObservation) return rootObservation;
+    // Fallback to earliest observation
+    return (
+      [...observations].sort(
+        (a, b) => a.startTime.getTime() - b.startTime.getTime(),
+      )[0] ?? null
+    );
+  }, [observations, rootObservation]);
+
   const timeRange = useMemo(() => {
     if (!eventsQuery.data?.observations?.length) return null;
     const times = eventsQuery.data.observations.map((o) => o.startTime.getTime());
@@ -81,13 +93,14 @@ export function useEventsTraceData(props: UseEventsTraceDataProps): UseEventsTra
     };
   }, [eventsQuery.data]);
 
-  // Step 3: Fetch I/O for root observation (for trace-level I/O display)
+  // Step 3: Fetch I/O for the primary trace observation.
   const rootIOQuery = api.events.batchIO.useQuery(
     {
       projectId,
       observations: rootObservation ? [{ id: rootObservation.id, traceId }] : [],
       minStartTime: timeRange?.min ?? new Date(),
       maxStartTime: timeRange?.max ?? new Date(),
+      truncated: false,
     },
     {
       enabled: enabled && !!rootObservation && !!timeRange && !!eventsQuery.data,
@@ -111,7 +124,7 @@ export function useEventsTraceData(props: UseEventsTraceDataProps): UseEventsTra
     // Validate and partition scores
     const validatedScores = filterAndValidateDbScoreList({
       scores: scoresQuery.data ?? [],
-      dataTypes: [...AGGREGATABLE_SCORE_TYPES, ScoreDataTypeEnum.CORRECTION],
+      dataTypes: [...ScoreDataTypeArray],
       onParseError: (e) => {
         console.error("[useEventsTraceData] Score validation error:", e);
       },

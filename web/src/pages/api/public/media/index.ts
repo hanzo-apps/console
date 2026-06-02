@@ -1,12 +1,8 @@
-import { randomUUID } from "crypto";
-
 import { env } from "@/src/env.mjs";
-import { getFileExtensionFromContentType } from "@/src/features/media/server/getFileExtensionFromContentType";
-import { getMediaStorageServiceClient } from "@/src/features/media/server/getMediaStorageClient";
+import { createMediaUploadUrl } from "@/src/features/media/server/mediaService";
 import {
   GetMediaUploadUrlQuerySchema,
   GetMediaUploadUrlResponseSchema,
-  type MediaContentType,
 } from "@/src/features/media/validation";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";

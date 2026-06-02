@@ -147,7 +147,7 @@ export function BatchActionsTable(props: { projectId: string }) {
             <Tooltip>
               <TooltipTrigger>
                 <div className="flex items-center gap-1">
-                  <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                  <InfoIcon className="text-muted-foreground h-3 w-3" />
                   <span className="max-w-[250px] truncate text-xs">{log}</span>
                 </div>
               </TooltipTrigger>
@@ -185,6 +185,7 @@ export function BatchActionsTable(props: { projectId: string }) {
         onChange: setPaginationState,
         state: paginationState,
       }}
+      cellPadding="comfortable"
     />
   );
 }

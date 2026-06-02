@@ -30,11 +30,11 @@ function createScoreColumns<T extends Record<string, any>>(
       header,
       id: accessorKey,
       enableHiding: true,
+      defaultHidden,
       size: 150,
       cell: ({ row }) => {
-        // Handle both prefixed and non-prefixed score data access
         const scoresData: ScoreAggregate = row.getValue(scoreColumnKey) ?? {};
-        const value = scoresData[accessorKey];
+        const value = rawKey ? scoresData[key] : scoresData[accessorKey];
 
         if (!value) return null;
 
@@ -64,6 +64,8 @@ export function useScoreColumns<T extends Record<string, any>>({
   prefix,
   isFilterDataPending = false,
   displayFormat = "smart",
+  defaultHidden,
+  rawKey = false,
 }: {
   projectId: string;
   scoreColumnKey: keyof T & string;
@@ -73,6 +75,8 @@ export function useScoreColumns<T extends Record<string, any>>({
   prefix?: string;
   isFilterDataPending?: boolean;
   displayFormat?: "smart" | "aggregate";
+  defaultHidden?: boolean;
+  rawKey?: boolean;
 }) {
   const scoreColumnsQuery = api.scores.getScoreColumns.useQuery(
     {
@@ -94,6 +98,8 @@ export function useScoreColumns<T extends Record<string, any>>({
       scoreColumnKey,
       displayFormat,
       prefix,
+      defaultHidden,
+      rawKey,
     );
   }, [scoreColumnsQuery.data?.scoreColumns, scoreColumnKey, prefix, displayFormat]);
 

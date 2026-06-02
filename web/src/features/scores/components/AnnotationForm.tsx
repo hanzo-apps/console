@@ -45,6 +45,7 @@ import { useScoreConfigSelection } from "@/src/features/scores/hooks/useScoreCon
 import { useRouter } from "next/router";
 import { useAnnotationScoreConfigs } from "@/src/features/scores/hooks/useScoreConfigs";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import Spinner from "@/src/components/design-system/Spinner/Spinner";
 
 const CHAR_CUTOFF = 6;
 
@@ -247,10 +248,17 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
     form.setValue(`scoreData.${index}.stringValue`, previousScore.stringValue);
     form.setValue(`scoreData.${index}.comment`, previousScore.comment);
     form.setValue(`scoreData.${index}.timestamp`, previousScore.timestamp);
-    form.setError(`scoreData.${index}.value`, {
-      type: "server",
-      message: "Failed to delete score",
-    });
+    if (isTextDataType(field.dataType)) {
+      form.setError(`scoreData.${index}.stringValue`, {
+        type: "server",
+        message: "Failed to delete score",
+      });
+    } else {
+      form.setError(`scoreData.${index}.value`, {
+        type: "server",
+        message: "Failed to delete score",
+      });
+    }
   };
 
   const handleDeleteScore = (index: number) => {
@@ -266,7 +274,11 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
     };
 
     // Optimistically clear form
-    form.clearErrors(`scoreData.${index}.value`);
+    if (isTextDataType(field.dataType)) {
+      form.clearErrors(`scoreData.${index}.stringValue`);
+    } else {
+      form.clearErrors(`scoreData.${index}.value`);
+    }
     update(index, {
       name: field.name,
       dataType: field.dataType,
@@ -297,10 +309,17 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
   const rollbackUpdateError = (index: number, previousValue?: number | null, previousStringValue?: string | null) => {
     form.setValue(`scoreData.${index}.value`, previousValue);
     form.setValue(`scoreData.${index}.stringValue`, previousStringValue);
-    form.setError(`scoreData.${index}.value`, {
-      type: "server",
-      message: "Failed to update score",
-    });
+    if (isTextDataType(controlledFields[index]?.dataType)) {
+      form.setError(`scoreData.${index}.stringValue`, {
+        type: "server",
+        message: "Failed to update score",
+      });
+    } else {
+      form.setError(`scoreData.${index}.value`, {
+        type: "server",
+        message: "Failed to update score",
+      });
+    }
   };
 
   const rollbackCreateError = (
@@ -314,10 +333,17 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
     form.setValue(`scoreData.${index}.timestamp`, previousTimestamp);
     form.setValue(`scoreData.${index}.value`, previousValue);
     form.setValue(`scoreData.${index}.stringValue`, previousStringValue);
-    form.setError(`scoreData.${index}.value`, {
-      type: "server",
-      message: "Failed to create score",
-    });
+    if (isTextDataType(controlledFields[index]?.dataType)) {
+      form.setError(`scoreData.${index}.stringValue`, {
+        type: "server",
+        message: "Failed to create score",
+      });
+    } else {
+      form.setError(`scoreData.${index}.value`, {
+        type: "server",
+        message: "Failed to create score",
+      });
+    }
   };
 
   const handleUpsert = (index: number, value: number | null, stringValue: string | null) => {
@@ -417,6 +443,21 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
     handleUpsert(index, numericCategoryValue, stringValue);
   };
 
+  const handleTextUpsert = (index: number) => {
+    const field = controlledFields[index];
+    const config = configs.find((c) => c.id === field.configId);
+
+    if (!config || !field) return;
+    if (!field.stringValue) {
+      if (field.id) {
+        handleDeleteScore(index);
+      }
+      return;
+    }
+
+    handleUpsert(index, 0, field.stringValue);
+  };
+
   const rollbackCommentError = (
     index: number,
     field: (typeof controlledFields)[number],
@@ -468,7 +509,7 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
               placeholder="Value"
               align="end"
               items="empty scores"
-              className="grid grid-cols-[auto,1fr,auto,auto] gap-2"
+              className="grid grid-cols-[auto_1fr_auto_auto] gap-2"
               options={selectionOptions}
               onValueChange={handleSelectionChange}
               values={fields
@@ -513,7 +554,7 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
                     return (
                       <div
                         key={fields[index]?.id}
-                        className="grid w-full grid-cols-[1fr,2fr] items-center gap-8 text-left"
+                        className="grid w-full grid-cols-[1fr_2fr] items-center gap-8 text-left"
                       >
                         <div className="grid h-full grid-cols-[1fr,auto] items-center">
                           {config.description || isPresent(config.maxValue) || isPresent(config.minValue) ? (
@@ -535,7 +576,7 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
                           ) : (
                             <span
                               className={cn(
-                                "line-clamp-2 break-words text-xs font-medium",
+                                "line-clamp-2 text-xs font-medium wrap-break-word",
                                 config.isArchived ? "text-foreground/40" : "",
                               )}
                               title={score.name}
@@ -584,8 +625,29 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
                             </PopoverContent>
                           </Popover>
                         </div>
-                        <div className="grid grid-cols-[11fr,1fr] items-center py-1">
-                          {isNumericDataType(score.dataType) ? (
+                        <div className="grid grid-cols-[11fr_1fr] items-center py-1">
+                          {isTextDataType(score.dataType) ? (
+                            <FormField
+                              control={form.control}
+                              name={`scoreData.${index}.stringValue`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Textarea
+                                      {...field}
+                                      value={field.value ?? ""}
+                                      maxLength={TEXT_SCORE_MAX_LENGTH}
+                                      className="text-xs"
+                                      disabled={isInputDisabled(config)}
+                                      placeholder="Enter free form text..."
+                                      onBlur={() => handleTextUpsert(index)}
+                                    />
+                                  </FormControl>
+                                  <FormMessage className="text-xs" />
+                                </FormItem>
+                              )}
+                            />
+                          ) : isNumericDataType(score.dataType) ? (
                             <FormField
                               control={form.control}
                               name={`scoreData.${index}.value`}
@@ -664,7 +726,7 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
                                             value={category.label}
                                             disabled
                                             variant="outline"
-                                            className="grid grid-flow-col gap-1 text-nowrap px-1 text-xs font-normal opacity-50"
+                                            className="grid grid-flow-col gap-1 px-1 text-xs font-normal text-nowrap opacity-50"
                                           >
                                             <span className="truncate" title={category.label}>
                                               {category.label}
@@ -676,7 +738,7 @@ function InnerAnnotationForm<Target extends ScoreTarget>({
                                             key={category.value}
                                             value={category.label}
                                             variant="outline"
-                                            className="grid grid-flow-col gap-1 text-nowrap px-1 text-xs font-normal"
+                                            className="grid grid-flow-col gap-1 px-1 text-xs font-normal text-nowrap"
                                           >
                                             <span className="truncate" title={category.label}>
                                               {category.label}

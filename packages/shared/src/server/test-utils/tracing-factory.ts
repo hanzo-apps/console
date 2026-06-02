@@ -106,7 +106,7 @@ export const createTraceScore = (score: Partial<ScoreRecordInsertType>): ScoreRe
     id: v4(),
     project_id: v4(),
     trace_id: v4(),
-    observation_id: v4(),
+    observation_id: null, // Trace-level scores must have observation_id as null by default
     environment: "default",
     name: "test-score" + v4(),
     timestamp: Date.now(),
@@ -189,7 +189,6 @@ export const createEvent = (
   const {
     metadata_values: metadataValuesAlias,
     metadata_names: metadataNamesOverride,
-    metadata_raw_values: metadataRawValuesOverride,
     ...eventOverrides
   } = event;
 
@@ -199,16 +198,10 @@ export const createEvent = (
     server: "Node",
   };
 
-  // Merge default metadata with any provided metadata
-  const finalMetadata: Record<string, string> = {
-    ...defaultMetadata,
-    ...eventOverrides.metadata,
-  };
-
   // Extract metadata keys and values in sorted order for deterministic array population
-  const sortedKeys = Object.keys(finalMetadata).sort();
+  const sortedKeys = Object.keys(defaultMetadata).sort();
   const metadataNames = sortedKeys;
-  const metadataValues = sortedKeys.map((key) => finalMetadata[key]);
+  const metadataValues = sortedKeys.map((key) => defaultMetadata[key]);
 
   return {
     // Identifiers
@@ -229,6 +222,7 @@ export const createEvent = (
 
     user_id: null,
     session_id: null,
+    is_app_root: false,
 
     level: "DEFAULT",
     status_message: null,
@@ -258,9 +252,7 @@ export const createEvent = (
     input: "Hello World",
     output: "Hello John",
 
-    // Metadata - populate both JSON and array columns
-    // metadata_values alias maps to metadata_raw_values (events table column name)
-    metadata: finalMetadata,
+    // Metadata
     metadata_names: metadataNamesOverride ?? metadataNames,
     metadata_raw_values: metadataValuesAlias ?? metadataRawValuesOverride ?? metadataValues,
 

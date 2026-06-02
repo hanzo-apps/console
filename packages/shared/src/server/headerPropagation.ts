@@ -6,6 +6,7 @@ export type HanzoContextProps = {
   headers?: IncomingHttpHeaders;
   userId?: string;
   projectId?: string;
+  apiKeyId?: string;
 };
 
 /**
@@ -45,6 +46,11 @@ export const contextWithHanzoProps = (props: HanzoContextProps): opentelemetry.C
   if (props.projectId) {
     baggage = baggage.setEntry("hanzo.project.id", {
       value: props.projectId,
+    });
+  }
+  if (props.apiKeyId) {
+    baggage = baggage.setEntry("langfuse.api_key.id", {
+      value: props.apiKeyId,
     });
   }
 

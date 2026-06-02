@@ -30,6 +30,7 @@ export function DashboardWidget({
   filterState,
   onDeleteWidget,
   dashboardOwner,
+  schedulerId,
 }: {
   projectId: string;
   dashboardId: string;
@@ -62,6 +63,7 @@ export function DashboardWidget({
   const [sortState, setSortState] = useState<OrderByState | null>(() => {
     return defaultSort || null;
   });
+  const [retryCount, setRetryCount] = useState(0);
 
   // Apply defaultSort when it becomes available (after widget data loads)
   // but only if user hasn't interacted yet
@@ -75,7 +77,76 @@ export function DashboardWidget({
     setSortState(newSort);
   }, []);
 
-  const queryResult = api.dashboard.executeQuery.useQuery(
+  const widgetQuery: QueryType = useMemo(() => {
+    const fromTimestamp = dateRange
+      ? dateRange.from
+      : new Date(new Date().getTime() - 1000);
+    const toTimestamp = dateRange ? dateRange.to : new Date();
+
+    const isTimeSeries = isTimeSeriesChart(
+      widget.data?.chartType ?? "LINE_TIME_SERIES",
+    );
+    const hasDimension = (widget.data?.dimensions ?? []).length > 0;
+    const chartType = widget.data?.chartConfig.type ?? "LINE_TIME_SERIES";
+    const needsTopN = isV2BreakdownChart({
+      version: metricsVersion,
+      hasDimension,
+      isTimeSeries,
+      chartType,
+    });
+
+    const firstMetric = widget.data?.metrics[0];
+    const orderBy = buildWidgetOrderBy({
+      chartType,
+      sortState,
+      needsTopN,
+      firstMetric: firstMetric
+        ? { aggregation: firstMetric.agg, measure: firstMetric.measure }
+        : undefined,
+    });
+
+    // Only query-engine fields — rendering fields (defaultSort, show_value_labels)
+    // stay on widget.data.chartConfig for the Chart component
+    const chartConfig = widget.data?.chartConfig
+      ? toQueryChartConfig(widget.data.chartConfig, {
+          defaultRowLimit: needsTopN ? 100 : undefined,
+        })
+      : { type: chartType };
+
+    return {
+      view: (widget.data?.view as z.infer<typeof views>) ?? "traces",
+      dimensions: widget.data?.dimensions ?? [],
+      metrics:
+        widget.data?.metrics.map((metric) => ({
+          measure: metric.measure,
+          aggregation: metric.agg as z.infer<typeof metricAggregations>,
+        })) ?? [],
+      filters: [
+        ...mapLegacyUiTableFilterToView(
+          (widget.data?.view as z.infer<typeof views>) ?? "traces",
+          widget.data?.filters ?? [],
+        ),
+        ...mapLegacyUiTableFilterToView(
+          (widget.data?.view as z.infer<typeof views>) ?? "traces",
+          filterState,
+        ),
+      ],
+      timeDimension: isTimeSeries ? { granularity: "auto" as const } : null,
+      fromTimestamp: fromTimestamp.toISOString(),
+      toTimestamp: toTimestamp.toISOString(),
+      orderBy,
+      chartConfig,
+    };
+  }, [widget.data, filterState, dateRange, sortState, metricsVersion]);
+
+  const queryValidation = useMemo(
+    () =>
+      widget.data
+        ? validateQuery(widgetQuery, metricsVersion)
+        : ({ valid: true } as const),
+    [widgetQuery, metricsVersion, widget.data],
+  );
+  const queryResult = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: {
@@ -161,6 +232,27 @@ export function DashboardWidget({
     });
   }, [queryResult.data, widget.data]);
 
+  const chartPresentation = useMemo(() => {
+    if (!widget.data) {
+      return undefined;
+    }
+
+    if (widget.data.chartType === "PIVOT_TABLE") {
+      return undefined;
+    }
+
+    const metric = widget.data.metrics[0];
+    if (!metric) {
+      return undefined;
+    }
+
+    return getWidgetMetricPresentation({
+      metric,
+      view: widget.data.view,
+      version: metricsVersion,
+    });
+  }, [metricsVersion, widget.data]);
+
   const handleEdit = () => {
     router.push(`/project/${projectId}/widgets/${placement.widgetId}?dashboardId=${dashboardId}`);
   };
@@ -217,12 +309,12 @@ export function DashboardWidget({
             <>
               <GripVerticalIcon
                 size={16}
-                className="drag-handle hidden cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing lg:group-hover:block"
+                className="drag-handle text-muted-foreground hover:text-foreground hidden cursor-grab active:cursor-grabbing lg:group-hover:block"
               />
               {widget.data.owner === "PROJECT" ? (
                 <button
                   onClick={handleEdit}
-                  className="hidden text-muted-foreground hover:text-foreground group-hover:block"
+                  className="text-muted-foreground hover:text-foreground hidden group-hover:block"
                   aria-label="Edit widget"
                 >
                   <PencilIcon size={16} />
@@ -230,7 +322,7 @@ export function DashboardWidget({
               ) : widget.data.owner === "HANZO" ? (
                 <button
                   onClick={handleCopy}
-                  className="hidden text-muted-foreground hover:text-foreground group-hover:block"
+                  className="text-muted-foreground hover:text-foreground hidden group-hover:block"
                   aria-label="Copy widget"
                 >
                   <CopyIcon size={16} />
@@ -238,7 +330,7 @@ export function DashboardWidget({
               ) : null}
               <button
                 onClick={handleDelete}
-                className="hidden text-muted-foreground hover:text-destructive group-hover:block"
+                className="text-muted-foreground hover:text-destructive hidden group-hover:block"
                 aria-label="Delete widget"
               >
                 <TrashIcon size={16} />

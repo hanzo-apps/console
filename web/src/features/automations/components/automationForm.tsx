@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/src/components/ui/separator";
 import { Switch } from "@/src/components/ui/switch";
 import { useRouter } from "next/router";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -43,7 +43,7 @@ const slackSchema = z.object({
 
 // Define GitHub Dispatch action schema
 const githubDispatchSchema = z.object({
-  url: z.string().url("Invalid URL"),
+  url: z.url("Invalid URL"),
   eventType: z.string().min(1, "Event type is required").max(100),
   githubToken: z.string(),
   displayGitHubToken: z.string().optional(),
@@ -330,7 +330,7 @@ export const AutomationForm = ({
                         placeholder="Automation name"
                         {...field}
                         disabled={!hasAccess || !isEditing}
-                        className="rounded-none border-0 border-b border-border bg-transparent px-0 text-2xl font-semibold focus-visible:ring-0 focus-visible:ring-offset-0"
+                        className="border-border rounded-none border-0 border-b bg-transparent px-0 text-2xl font-semibold focus-visible:ring-0 focus-visible:ring-offset-0"
                       />
                     </FormControl>
                     <FormMessage />
@@ -518,7 +518,7 @@ export const AutomationForm = ({
                 />
               </div>
             )}
-            <div className="flex-grow"></div>
+            <div className="grow"></div>
             <div className="flex gap-3">
               <Button type="button" variant="outline" onClick={handleCancel}>
                 Cancel

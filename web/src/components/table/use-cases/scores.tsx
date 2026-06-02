@@ -22,6 +22,7 @@ import {
   isPresent,
   type FilterState,
   type ScoreDataTypeType,
+  LISTABLE_SCORE_TYPES,
   BatchExportTableName,
   BatchActionType,
   TableViewPresetTableName,
@@ -218,7 +219,7 @@ export default function ScoresTable({
           count: n.count !== undefined ? Number(n.count) : undefined,
         })) ?? undefined,
       source: ["ANNOTATION", "API", "EVAL"],
-      dataType: ["NUMERIC", "CATEGORICAL", "BOOLEAN"],
+      dataType: [...LISTABLE_SCORE_TYPES],
       value: [],
       stringValue:
         filterOptions.data?.stringValue?.map((sv) => ({
@@ -241,8 +242,39 @@ export default function ScoresTable({
     [filterOptions.data, environmentOptions],
   );
 
+  const isSidebarFilterLoading =
+    filterOptions.isPending || environmentFilterOptions.isPending;
+
+  const queryFilterOptions: UseSidebarFilterStateOptions = useMemo(() => {
+    const baseOptions = {
+      loading: isSidebarFilterLoading,
+      implicitDefaultConfig: DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG,
+    };
+
+    if (peekContext) {
+      return {
+        ...baseOptions,
+        stateLocation: "peekContext",
+        context: peekContext,
+      };
+    }
+
+    if (disableUrlPersistence) {
+      return {
+        ...baseOptions,
+        stateLocation: "memory",
+      };
+    }
+
+    return {
+      ...baseOptions,
+      stateLocation: "urlAndSessionStorage",
+      sessionFilterContextId: projectId,
+    };
+  }, [disableUrlPersistence, isSidebarFilterLoading, peekContext, projectId]);
+
   const queryFilter = useSidebarFilterState(
-    scoreFilterConfig,
+    scoresFilterConfig,
     newFilterOptions,
     projectId,
     filterOptions.isPending || environmentFilterOptions.isPending,
@@ -263,14 +295,12 @@ export default function ScoresTable({
   const backendFilterState = transformFiltersForBackend(
     filterState,
     SCORE_COLUMN_TO_BACKEND_KEY,
-    scoreFilterConfig.columnDefinitions,
+    scoresFilterConfig.columnDefinitions,
   );
 
   const getCountPayload = {
     projectId,
     filter: backendFilterState,
-    page: 0,
-    limit: 1,
     orderBy: null,
   };
 
@@ -294,6 +324,7 @@ export default function ScoresTable({
     projectId,
     tableName: "scores",
     setSelectedRows,
+    setSelectAll,
   });
 
   const rawColumns: HanzoColumnDef<ScoresTableRow>[] = [
@@ -319,6 +350,7 @@ export default function ScoresTable({
       enableHiding: true,
       enableSorting: true,
       size: 150,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value = row.getValue("traceName") as ScoresTableRow["traceName"];
         const filter = encodeURIComponent(`name;stringOptions;;any of;${value}`);
@@ -395,6 +427,7 @@ export default function ScoresTable({
       id: "environment",
       size: 150,
       enableHiding: true,
+      loadingCell: <TableBadgeLoadingCell />,
       cell: ({ row }) => {
         const value = row.getValue("environment") as string | undefined;
         return value ? (
@@ -415,6 +448,7 @@ export default function ScoresTable({
       enableHiding: true,
       enableSorting: true,
       size: 100,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const value = row.getValue("userId");
         return typeof value === "string" ? (
@@ -473,6 +507,13 @@ export default function ScoresTable({
       header: "Metadata",
       id: "metadata",
       size: 400,
+      loadingCell: () => (
+        <IOTableCell
+          isLoading
+          data={undefined}
+          singleLine={rowHeight === "s"}
+        />
+      ),
       headerTooltip: {
         description: "Add metadata to scores to track additional information.",
         // TODO: docs for metadata on scores
@@ -490,6 +531,13 @@ export default function ScoresTable({
       id: "comment",
       enableHiding: true,
       size: 400,
+      loadingCell: () => (
+        <IOTableCell
+          isLoading
+          data={undefined}
+          singleLine={rowHeight === "s"}
+        />
+      ),
       cell: ({ row }) => {
         const value = row.getValue("comment") as ScoresTableRow["comment"];
         return !!value && <IOTableCell data={value} singleLine={rowHeight === "s"} />;
@@ -540,6 +588,7 @@ export default function ScoresTable({
       size: 250,
       enableHiding: true,
       defaultHidden: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const traceTags: string[] | undefined = row.getValue("traceTags");
         return (
@@ -621,26 +670,43 @@ export default function ScoresTable({
     stateUpdaters: {
       setOrderBy: setOrderByState,
       setFilters: setFiltersWrapper,
+      setExpandedFilters: queryFilter.onExpandedChange,
       setColumnOrder: setColumnOrder,
       setColumnVisibility: setColumnVisibility,
     },
     validationContext: {
       columns,
-      filterColumnDefinition: scoreFilterConfig.columnDefinitions,
+      filterColumnDefinition: scoresFilterConfig.columnDefinitions,
+      expandableFilterColumns: scoresFilterConfig.facets.map(
+        (facet) => facet.column,
+      ),
     },
-    currentFilterState: queryFilter.filterState,
+    currentFilterState: queryFilter.explicitFilterState,
+    currentExpandedFilters: queryFilter.expanded,
   });
+
+  const visibleSelectedScoreIds = useMemo(
+    () =>
+      Object.keys(selectedRows).filter((scoreId) =>
+        scores.data?.scores.map((s) => s.id).includes(scoreId),
+      ),
+    [selectedRows, scores.data?.scores],
+  );
+
+  const selectedScoreCount = selectAll
+    ? totalCount
+    : visibleSelectedScoreIds.length;
 
   return (
     <DataTableControlsProvider
-      tableName={scoreFilterConfig.tableName}
-      defaultSidebarCollapsed={scoreFilterConfig.defaultSidebarCollapsed}
+      tableName={scoresFilterConfig.tableName}
+      defaultSidebarCollapsed={scoresFilterConfig.defaultSidebarCollapsed}
     >
       <div className="flex h-full w-full flex-col">
         {/* Toolbar spanning full width */}
         <DataTableToolbar
           columns={columns}
-          filterState={queryFilter.filterState}
+          filterState={queryFilter.explicitFilterState}
           columnVisibility={columnVisibility}
           setColumnVisibility={setColumnVisibility}
           columnOrder={columnOrder}
@@ -658,6 +724,11 @@ export default function ScoresTable({
                 projectId={projectId}
                 actions={tableActions}
                 tableName={BatchExportTableName.Scores}
+                selectedCount={selectedScoreCount}
+                onClearSelection={() => {
+                  setSelectedRows({});
+                  setSelectAll(false);
+                }}
               />
             ) : null,
             <BatchExportTableButton
@@ -673,9 +744,7 @@ export default function ScoresTable({
           multiSelect={{
             selectAll,
             setSelectAll,
-            selectedRowIds: Object.keys(selectedRows).filter((scoreId) =>
-              scores.data?.scores.map((s) => s.id).includes(scoreId),
-            ),
+            selectedRowIds: visibleSelectedScoreIds,
             setRowSelection: setSelectedRows,
             totalCount,
             ...paginationState,
@@ -684,7 +753,11 @@ export default function ScoresTable({
 
         {/* Content area with sidebar and table */}
         <ResizableFilterLayout>
-          <DataTableControls queryFilter={queryFilter} />
+          <DataTableControls
+            // Remount the sidebar when the saved view changes so the new view's filters replace any stale draft UI state.
+            key={viewControllers.selectedViewId ?? "no-view"}
+            queryFilter={queryFilter}
+          />
 
           <div className="flex flex-1 flex-col overflow-hidden">
             <DataTable
@@ -713,6 +786,7 @@ export default function ScoresTable({
               setOrderBy={setOrderByState}
               orderBy={orderByState}
               rowSelection={selectedRows}
+              highlightAllRows={selectAll}
               setRowSelection={setSelectedRows}
               columnVisibility={columnVisibility}
               onColumnVisibilityChange={setColumnVisibility}

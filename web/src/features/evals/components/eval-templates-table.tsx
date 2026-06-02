@@ -9,7 +9,7 @@ import { Copy, Pen } from "lucide-react";
 import { useQueryParams, withDefault, NumberParam, useQueryParam, StringParam } from "use-query-params";
 import { useEffect, useState } from "react";
 import TableIdOrName from "@/src/components/table/table-id";
-import { PeekViewEvaluatorTemplateDetail } from "@/src/components/table/peek/peek-evaluator-template-detail";
+import { TablePeekViewEvaluatorTemplateDetail } from "@/src/components/table/peek/peek-evaluator-template-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
 import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
 import { Button } from "@/src/components/ui/button";
@@ -27,27 +27,94 @@ import { showSuccessToast } from "@/src/features/notifications/showSuccessToast"
 import { EvalReferencedEvaluators } from "@/src/features/evals/types";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { type RouterInput } from "@/src/utils/types";
-import { useSingleTemplateValidation } from "@/src/features/evals/hooks/useSingleTemplateValidation";
+import {
+  type TemplateValidationInput,
+  useSingleTemplateValidation,
+} from "@/src/features/evals/hooks/useSingleTemplateValidation";
 import { getMaintainer } from "@/src/features/evals/utils/typeHelpers";
 import { MaintainerTooltip } from "@/src/features/evals/components/maintainer-tooltip";
 import { ActionButton } from "@/src/components/ActionButton";
 import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
+import { Badge } from "@/src/components/ui/badge";
+import { getTemplateResultType } from "@/src/features/evals/utils/template-output";
+import {
+  EvalTemplateSourceCodeLanguage,
+  EvalTemplateType,
+  type EvalTemplate,
+} from "@langfuse/shared";
+import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
+import {
+  CODE_EVAL_ESCAPE_CONFIRM_MESSAGE,
+  shouldShowEvalTemplate,
+} from "@/src/features/evals/utils/code-eval-template-utils";
+import { SiPython, SiTypescript } from "react-icons/si";
 
 export type EvalsTemplateRow = {
   name: string;
+  resultType: string;
   maintainer: string;
   latestCreatedAt?: Date;
   latestVersion?: number;
   id?: string;
   usageCount?: number;
   actions?: string;
-  provider?: string;
-  model?: string;
+} & TemplateValidationInput;
+
+const getMaintainerLabel = (maintainer: string) =>
+  maintainer.replace(/ maintained$/, "");
+
+const getCodeEvalLanguageLabel = (
+  sourceCodeLanguage?: EvalTemplate["sourceCodeLanguage"],
+) =>
+  sourceCodeLanguage === EvalTemplateSourceCodeLanguage.PYTHON
+    ? "Python"
+    : sourceCodeLanguage === EvalTemplateSourceCodeLanguage.TYPESCRIPT
+      ? "TypeScript"
+      : "Code";
+
+const TemplateTypeBadge = ({
+  type,
+  sourceCodeLanguage,
+}: {
+  type?: EvalTemplateType;
+  sourceCodeLanguage?: EvalTemplate["sourceCodeLanguage"];
+}) => {
+  if (type === EvalTemplateType.CODE) {
+    const label = getCodeEvalLanguageLabel(sourceCodeLanguage);
+    const Icon =
+      sourceCodeLanguage === EvalTemplateSourceCodeLanguage.PYTHON
+        ? SiPython
+        : sourceCodeLanguage === EvalTemplateSourceCodeLanguage.TYPESCRIPT
+          ? SiTypescript
+          : null;
+
+    return (
+      <Badge className="w-fit gap-1.5" variant="outline-solid">
+        {Icon ? <Icon className="h-3 w-3" aria-hidden="true" /> : null}
+        {label}
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge className="w-fit gap-1.5" variant="outline-solid">
+      LLM-as-judge
+    </Badge>
+  );
+};
+
+const templateTableRowHeights: CustomHeights = {
+  s: "h-8",
+  m: "h-8",
+  l: "h-8",
 };
 
 export default function EvalsTemplateTable({ projectId }: { projectId: string }) {
   const router = useRouter();
+  const codeEvalCapabilities = useIsCodeEvalEnabled();
+  const { enabled: isCodeEvalEnabled, supportedSourceCodeLanguages } =
+    codeEvalCapabilities;
   const { setDetailPageList } = useDetailPageLists();
   const [paginationState, setPaginationState] = useQueryParams({
     pageIndex: withDefault(NumberParam, 0),
@@ -115,7 +182,7 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
 
   const createEvalTemplateMutation = api.evals.createTemplate.useMutation({
     onSuccess: () => {
-      void utils.evals.templateNames.invalidate();
+      utils.evals.templateNames.invalidate();
       setCloneTemplateId(null);
       setPendingCloneSubmission(null);
       setShowReferenceUpdateDialog(false);
@@ -134,11 +201,23 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
       const { templates: templateList = [] } = templates.data ?? {};
       setDetailPageList(
         "eval-templates",
-        templateList.map((template) => ({ id: template.latestId })),
+        templateList
+          .filter((template) =>
+            shouldShowEvalTemplate(template, {
+              enabled: isCodeEvalEnabled,
+              supportedSourceCodeLanguages,
+            }),
+          )
+          .map((template) => ({ id: template.latestId })),
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templates.isSuccess, templates.data]);
+  }, [
+    templates.isSuccess,
+    templates.data,
+    isCodeEvalEnabled,
+    supportedSourceCodeLanguages,
+    setDetailPageList,
+  ]);
 
   const columnHelper = createColumnHelper<EvalsTemplateRow>();
 
@@ -151,29 +230,59 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
         return name ? <TableIdOrName value={name} /> : undefined;
       },
     }),
+    columnHelper.accessor("type", {
+      id: "type",
+      header: "Type",
+      size: 120,
+      cell: ({ row }) => (
+        <TemplateTypeBadge
+          type={row.original.type}
+          sourceCodeLanguage={row.original.sourceCodeLanguage}
+        />
+      ),
+    }),
+    columnHelper.accessor("resultType", {
+      id: "resultType",
+      header: "Score Result Type",
+      size: 120,
+      cell: (row) => {
+        const resultType = row.getValue();
+
+        return (
+          <Badge className="w-fit self-start" variant="outline-solid">
+            {resultType}
+          </Badge>
+        );
+      },
+    }),
     columnHelper.accessor("maintainer", {
       id: "maintainer",
       header: "Maintainer",
       size: 150,
       cell: (row) => {
         return (
-          <div className="flex justify-center">
+          <div className="flex items-center gap-2">
             <MaintainerTooltip maintainer={row.getValue()} />
+            <span className="text-muted-foreground">
+              {getMaintainerLabel(row.getValue())}
+            </span>
           </div>
         );
       },
     }),
     columnHelper.accessor("latestCreatedAt", {
-      header: "Last Edit",
+      header: "Last Edited",
       id: "latestCreatedAt",
+      size: 80,
       cell: (row) => {
         return row.getValue()?.toLocaleDateString();
       },
     }),
     columnHelper.accessor("usageCount", {
-      header: "Usage count",
+      header: "Usage Count",
       id: "usageCount",
       enableHiding: true,
+      size: 80,
       cell: (row) => {
         const count = row.getValue();
         return !!count ? count : null;
@@ -183,6 +292,7 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
       header: "Latest Version",
       id: "latestVersion",
       enableHiding: true,
+      size: 80,
       cell: (row) => {
         return row.getValue();
       },
@@ -203,9 +313,9 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
       size: 100,
       cell: ({ row }) => {
         const id = row.original.id;
-        const provider = row.original.provider ?? null;
-        const model = row.original.model ?? null;
-        const isInvalid = isTemplateInvalid({ provider, model });
+        const isInvalid = isTemplateInvalid(row.original);
+        const isCodeTemplate = row.original.type === EvalTemplateType.CODE;
+        const isUserMaintained = row.original.maintainer.includes("User");
 
         return (
           <div className="flex flex-row gap-2">
@@ -231,7 +341,7 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
             >
               Use Evaluator
             </ActionButton>
-            {!row.original.maintainer.includes("User") ? (
+            {!isUserMaintained && !isCodeTemplate ? (
               <Button
                 aria-label="clone"
                 variant="outline"
@@ -245,7 +355,8 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
               >
                 <Copy className="h-3 w-3" />
               </Button>
-            ) : (
+            ) : null}
+            {isUserMaintained ? (
               <Button
                 aria-label="edit"
                 variant="outline"
@@ -259,7 +370,7 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
               >
                 <Pen className="h-3 w-3" />
               </Button>
-            )}
+            ) : null}
           </div>
         );
       },
@@ -282,30 +393,80 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
   ): EvalsTemplateRow => {
     return {
       name: template.name,
+      resultType:
+        template.type === EvalTemplateType.CODE
+          ? "Code-defined"
+          : getTemplateResultType(template.outputDefinition),
       maintainer: getMaintainer(template),
       latestCreatedAt: template.latestCreatedAt,
       latestVersion: template.version,
       id: template.latestId,
       usageCount: template.usageCount,
-      provider: template.provider,
-      model: template.model,
+      provider: template.provider ?? null,
+      model: template.model ?? null,
+      type: template.type,
+      sourceCodeLanguage: template.sourceCodeLanguage,
     };
   };
 
   return (
     <>
-      <DataTableToolbar
-        columns={columns}
-        columnVisibility={columnVisibility}
-        setColumnVisibility={setColumnVisibility}
-        searchConfig={{
-          metadataSearchFields: ["Name"],
-          updateQuery: setSearchQuery,
-          currentQuery: searchQuery ?? undefined,
-          tableAllowsFullTextSearch: false,
-          setSearchType: undefined,
-          searchType: undefined,
-        }}
+      <div className="flex h-full w-full flex-col">
+        <DataTableToolbar
+          columns={columns}
+          columnVisibility={columnVisibility}
+          setColumnVisibility={setColumnVisibility}
+          searchConfig={{
+            metadataSearchFields: ["Name"],
+            updateQuery: setSearchQuery,
+            currentQuery: searchQuery ?? undefined,
+            tableAllowsFullTextSearch: false,
+            setSearchType: undefined,
+            searchType: undefined,
+          }}
+        />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <DataTable
+            tableName={"evalTemplates"}
+            columns={columns}
+            peekView={peekConfig}
+            rowHeight="m"
+            customRowHeights={templateTableRowHeights}
+            data={
+              templates.isLoading
+                ? { isLoading: true, isError: false }
+                : templates.isError
+                  ? {
+                      isLoading: false,
+                      isError: true,
+                      error: templates.error.message,
+                    }
+                  : {
+                      isLoading: false,
+                      isError: false,
+                      data: safeExtract(templates.data, "templates", [])
+                        .filter((template) =>
+                          shouldShowEvalTemplate(
+                            template,
+                            codeEvalCapabilities,
+                          ),
+                        )
+                        .map((t) => convertToTableRow(t)),
+                    }
+            }
+            pagination={{
+              totalCount,
+              onChange: setPaginationState,
+              state: paginationState,
+            }}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+          />
+        </div>
+      </div>
+      <TablePeekViewEvaluatorTemplateDetail
+        {...peekConfig}
+        projectId={projectId}
       />
       <DataTable
         tableName={"evalTemplates"}
@@ -351,7 +512,14 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
           if (!open) setEditTemplateId(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-screen-md overflow-y-auto">
+        <DialogContent
+          className="max-h-[90vh] max-w-(--breakpoint-md) overflow-y-auto"
+          confirmCloseOnEscape={
+            template.data?.type === EvalTemplateType.CODE
+              ? CODE_EVAL_ESCAPE_CONFIRM_MESSAGE
+              : undefined
+          }
+        >
           <DialogHeader>
             <DialogTitle>Edit evaluator</DialogTitle>
           </DialogHeader>
@@ -363,7 +531,7 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
             existingEvalTemplate={template.data ?? undefined}
             onFormSuccess={() => {
               setEditTemplateId(null);
-              void utils.evals.templateNames.invalidate();
+              utils.evals.templateNames.invalidate();
               showSuccessToast({
                 title: "Evaluator updated successfully",
                 description: "You can now use this evaluator.",
@@ -381,7 +549,14 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-screen-md overflow-y-auto">
+        <DialogContent
+          className="max-h-[90vh] max-w-(--breakpoint-md) overflow-y-auto"
+          confirmCloseOnEscape={
+            cloneTemplate.data?.type === EvalTemplateType.CODE
+              ? CODE_EVAL_ESCAPE_CONFIRM_MESSAGE
+              : undefined
+          }
+        >
           <DialogHeader>
             <DialogTitle>Clone evaluator</DialogTitle>
           </DialogHeader>
@@ -396,10 +571,9 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
                     name: `${cloneTemplate.data.name} (project-level)`,
                     prompt: cloneTemplate.data.prompt,
                     vars: cloneTemplate.data.vars,
-                    outputSchema: cloneTemplate.data.outputSchema as {
-                      score: string;
-                      reasoning: string;
-                    },
+                    outputDefinition: cloneTemplate.data
+                      .outputDefinition as EvalTemplate["outputDefinition"],
+                    type: cloneTemplate.data.type,
                     provider: cloneTemplate.data.provider,
                     model: cloneTemplate.data.model,
                     modelParams: cloneTemplate.data.modelParams as any,
@@ -424,7 +598,7 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
             onFormSuccess={() => {
               setCloneTemplateId(null);
               setPendingCloneSubmission(null);
-              void utils.evals.templateNames.invalidate();
+              utils.evals.templateNames.invalidate();
               showSuccessToast({
                 title: "Evaluator cloned successfully",
                 description: "This evaluator is now available and maintained on project level. ",

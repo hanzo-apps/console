@@ -788,7 +788,7 @@ class BillingService {
             { idempotencyKey: legacyUpdateKey },
           );
 
-          void auditLog({
+          auditLog({
             session: this.ctx.session,
             orgId: parsedOrg.id,
             resourceType: "organization",
@@ -891,7 +891,7 @@ class BillingService {
             { idempotencyKey: upgradeKey },
           );
 
-          void auditLog({
+          auditLog({
             session: this.ctx.session,
             orgId: parsedOrg.id,
             resourceType: "organization",
@@ -1013,7 +1013,7 @@ class BillingService {
           { idempotencyKey: updateScheduleKey },
         );
 
-        void auditLog({
+        auditLog({
           session: this.ctx.session,
           orgId: parsedOrg.id,
           resourceType: "organization",
@@ -1193,7 +1193,7 @@ class BillingService {
           });
         }
 
-        void auditLog({
+        auditLog({
           session: this.ctx.session,
           orgId: parsedOrg.id,
           resourceType: "organization",
@@ -1298,7 +1298,7 @@ class BillingService {
           });
         }
 
-        void auditLog({
+        auditLog({
           session: this.ctx.session,
           orgId: parsedOrg.id,
           resourceType: "organization",
@@ -1344,7 +1344,7 @@ class BillingService {
 
         await this.releaseExistingSubscriptionScheduleIfAny(subscription, opId);
 
-        void auditLog({
+        auditLog({
           session: this.ctx.session,
           orgId: parsedOrg.id,
           resourceType: "organization",
@@ -1820,7 +1820,7 @@ class BillingService {
           });
         }
 
-        void auditLog({
+        auditLog({
           session: this.ctx.session,
           orgId: parsedOrg.id,
           resourceType: "organization",

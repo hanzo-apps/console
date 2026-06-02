@@ -56,7 +56,7 @@ export function ScoreAnalyticsHeader({
   );
 
   return (
-    <div className="flex flex-col gap-1 border-b border-border p-2 lg:flex-row lg:items-center lg:gap-4">
+    <div className="border-border flex flex-col gap-1 border-b p-2 lg:flex-row lg:items-center lg:gap-4">
       {/* Left: Score Selectors */}
       <div className="flex items-center gap-2">
         <ScoreCombobox
@@ -92,7 +92,7 @@ export function ScoreAnalyticsHeader({
                 href="https://hanzo.com/discussions"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
               >
                 Share feedback on GitHub Discussions
                 <ExternalLink className="h-3 w-3" />

@@ -3,6 +3,14 @@ import { StringParam, useQueryParam, withDefault } from "use-query-params";
 import { type FilterState, singleFilter, type SingleValueOption, type ColumnDefinition } from "@hanzo/shared";
 import { computeSelectedValues, encodeFiltersGeneric, decodeFiltersGeneric } from "../lib/filter-query-encoding";
 import { normalizeFilterColumnNames } from "../lib/filter-transform";
+import {
+  buildEffectiveEnvironmentFilter,
+  buildManagedEnvironmentPolicyConfig,
+  stripImplicitEnvironmentFilterFromExplicitState,
+  type ManagedEnvironmentPolicyInput,
+} from "../lib/managedEnvironmentPolicy";
+import { areStringSetsEqual } from "../lib/stringSetUtils";
+import { useKeyedSessionStorageState } from "./useKeyedSessionStorageState";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import type { FilterConfig } from "../lib/filter-config";
@@ -18,18 +26,41 @@ import type { FilterConfig } from "../lib/filter-config";
 export function decodeAndNormalizeFilters(filtersQuery: string, columnDefinitions: ColumnDefinition[]): FilterState {
   try {
     const filters = decodeFiltersGeneric(filtersQuery);
+    const knownColumns = new Map<string, string>();
+    for (const columnDefinition of columnDefinitions) {
+      knownColumns.set(columnDefinition.id, columnDefinition.id);
+      knownColumns.set(columnDefinition.name, columnDefinition.id);
+      // Map old column IDs to current canonical ID for backward compat
+      for (const alias of columnDefinition.aliases ?? []) {
+        knownColumns.set(alias, columnDefinition.id);
+      }
+    }
 
     // Normalize display names to column IDs immediately after decoding
     // This prevents duplicates when old URLs use display names (e.g., "Environment")
     // and user adds new filters with column IDs (e.g., "environment")
     const normalized = normalizeFilterColumnNames(filters, columnDefinitions);
+    const migrated = migrateFilterState
+      ? migrateFilterState(normalized)
+      : normalized;
 
     // Validate normalized filters
     const result: FilterState = [];
-    for (const filter of normalized) {
+    for (const filter of migrated) {
       const validationResult = singleFilter.safeParse(filter);
       if (validationResult.success) {
-        result.push(validationResult.data);
+        const canonicalColumnId = knownColumns.get(
+          validationResult.data.column,
+        );
+        if (!canonicalColumnId) {
+          // Gracefully ignore stale filters from old URLs or saved state.
+          continue;
+        }
+
+        result.push({
+          ...validationResult.data,
+          column: canonicalColumnId,
+        });
       } else {
         console.warn(`Invalid filter skipped:`, filter, validationResult.error);
       }
@@ -79,20 +110,22 @@ export interface CategoricalUIFilter extends BaseUIFilter {
   value: string[];
   options: string[];
   counts: Map<string, number>;
+  displayByValue?: Map<string, string>;
   onChange: (values: string[]) => void;
   onOnlyChange?: (value: string) => void;
   /**
    * Current operator for arrayOptions columns (tags, labels, etc.)
    * - "any of": OR logic - match if item has ANY selected value
    * - "all of": AND logic - match if item has ALL selected values
+   * - "none of": exclude items with ANY selected value
    * undefined for non-arrayOptions columns
    */
-  operator?: "any of" | "all of";
+  operator?: "any of" | "all of" | "none of";
   /**
    * Callback to change the operator. Only provided for arrayOptions columns.
    * When called, updates the filter to use the specified operator.
    */
-  onOperatorChange?: (operator: "any of" | "all of") => void;
+  onOperatorChange?: (operator: "any of" | "all of" | "none of") => void;
   /**
    * Active text filters (contains/does not contain) for this column
    * Mutually exclusive with checkbox selections
@@ -184,9 +217,11 @@ const EMPTY_MAP: Map<string, number> = new Map();
 function processOptions(options: (string | SingleValueOption)[]): {
   values: string[];
   counts: Map<string, number>;
+  displayByValue?: Map<string, string>;
 } {
   const values: string[] = [];
   const counts = new Map<string, number>();
+  const displayByValue = new Map<string, string>();
 
   for (const opt of options) {
     if (typeof opt === "string") {
@@ -196,13 +231,105 @@ function processOptions(options: (string | SingleValueOption)[]): {
       if (opt.count !== undefined) {
         counts.set(opt.value, opt.count);
       }
+      if (
+        typeof opt.displayValue === "string" &&
+        opt.displayValue !== opt.value
+      ) {
+        displayByValue.set(opt.value, opt.displayValue);
+      }
     }
   }
 
-  return { values, counts: counts.size > 0 ? counts : EMPTY_MAP };
+  return {
+    values,
+    counts: counts.size > 0 ? counts : EMPTY_MAP,
+    displayByValue: displayByValue.size > 0 ? displayByValue : undefined,
+  };
 }
 
 type UpdateFilter = (column: string, values: string[], operator?: "any of" | "none of" | "all of") => void;
+
+type BaseUseSidebarFilterStateOptions = {
+  loading?: boolean;
+  implicitDefaultConfig?: ManagedEnvironmentPolicyInput;
+};
+
+export type UseSidebarFilterStateOptions =
+  | (BaseUseSidebarFilterStateOptions & {
+      stateLocation: "peekContext";
+      context: PeekTableStateContextValue;
+    })
+  | (BaseUseSidebarFilterStateOptions & {
+      stateLocation: "urlAndSessionStorage";
+      /**
+       * Optional context identifier (for example projectId) to guard against
+       * carrying persisted filters across contexts.
+       */
+      sessionFilterContextId?: string | null;
+    })
+  | (BaseUseSidebarFilterStateOptions & { stateLocation: "url" })
+  | (BaseUseSidebarFilterStateOptions & { stateLocation: "memory" });
+
+const DEFAULT_HOOK_OPTIONS: UseSidebarFilterStateOptions = {
+  stateLocation: "urlAndSessionStorage",
+};
+
+/**
+ * Pure function that determines the operator and values for checkbox-based
+ * filter interactions. Extracted for testability.
+ *
+ * For arrayOptions (e.g., tags), "none of" inversion is NOT semantically
+ * equivalent because a single trace can have multiple tags. For example,
+ * a trace with tags [tag-1, tag-3] matches "any of [tag-1, tag-2]" but does NOT match
+ * "none of [tag-3, tag-4, tag-5]" (because it contains tag-3). Because of that, we never
+ * derive array filters by inverting the deselected set. Instead, we keep the user's explicit
+ * array operator when one already exists ("all of" / "none of"), and otherwise default new
+ * checkbox selections to positive matching ("any of").
+ *
+ * For stringOptions (e.g., environment), each row has a single value,
+ * so "none of [deselected]" is semantically equivalent to "any of [selected]".
+ *
+ * @param params - Filter context including column type, existing filter, selected and available values
+ * @returns Object with finalOperator and finalValues to apply
+ */
+export function resolveCheckboxOperator(params: {
+  colType: string | undefined;
+  existingFilter: FilterState[number] | undefined;
+  values: string[];
+  availableValues: string[];
+}): { finalOperator: "any of" | "none of" | "all of"; finalValues: string[] } {
+  const { colType, existingFilter, values, availableValues } = params;
+
+  if (colType === "arrayOptions") {
+    if (
+      existingFilter?.operator === "all of" &&
+      existingFilter.type === "arrayOptions"
+    ) {
+      return { finalOperator: "all of", finalValues: values };
+    }
+    if (
+      existingFilter?.operator === "none of" &&
+      existingFilter.type === "arrayOptions"
+    ) {
+      return { finalOperator: "none of", finalValues: values };
+    }
+    return { finalOperator: "any of", finalValues: values };
+  }
+
+  // For single-valued columns (stringOptions), "none of" inversion is safe
+  if (!existingFilter) {
+    const deselected = availableValues.filter((v) => !values.includes(v));
+    return { finalOperator: "none of", finalValues: deselected };
+  }
+  if (
+    existingFilter.operator === "none of" &&
+    existingFilter.type === "stringOptions"
+  ) {
+    const deselected = availableValues.filter((v) => !values.includes(v));
+    return { finalOperator: "none of", finalValues: deselected };
+  }
+  return { finalOperator: "any of", finalValues: values };
+}
 
 export function useSidebarFilterState(
   config: FilterConfig,
@@ -369,6 +496,11 @@ export function useSidebarFilterState(
       // Determine operator and values based on context
       let finalOperator: "any of" | "none of" | "all of";
       let finalValues: string[];
+      const existingFilter = current.find((f) => f.column === column);
+      const preserveArrayNoneOfOperator =
+        colType === "arrayOptions" &&
+        existingFilter?.type === "arrayOptions" &&
+        existingFilter.operator === "none of";
 
       if (operator !== undefined) {
         // Explicit operator provided (e.g., from "Only" button or operator toggle) - use as-is
@@ -381,6 +513,22 @@ export function useSidebarFilterState(
           values.length === 0 ||
           (values.length === availableValues.length && availableValues.every((v) => values.includes(v)))
         ) {
+          const isManagedEnvironmentColumn =
+            column === managedEnvironmentColumn &&
+            managedEnvironmentPolicyConfig.hiddenEnvironments.length > 0;
+
+          // Keep explicit override when user intentionally enables all environments.
+          if (isManagedEnvironmentColumn && values.length > 0) {
+            return [
+              ...other,
+              {
+                column,
+                type: "stringOptions" as const,
+                operator: "any of" as const,
+                value: values,
+              },
+            ];
+          }
           return other;
         }
         // Checkbox interaction - smart operator selection
@@ -442,7 +590,7 @@ export function useSidebarFilterState(
         },
       ];
     },
-    [config, options],
+    [config, options, managedEnvironmentColumn, managedEnvironmentPolicyConfig],
   );
 
   const updateFilter: UpdateFilter = useCallback(
@@ -478,19 +626,35 @@ export function useSidebarFilterState(
       // Only apply for array-type options (not nested objects)
       const optionValue = options[column];
       if (!Array.isArray(optionValue)) return;
-      updateFilter(column, [value], "any of");
+      const columnType = config.columnDefinitions.find(
+        (columnDefinition) => columnDefinition.id === column,
+      )?.type;
+      const existingFilter = filterState.find((f) => f.column === column);
+      const operator =
+        columnType === "arrayOptions" &&
+        existingFilter?.type === "arrayOptions" &&
+        (existingFilter.operator === "any of" ||
+          existingFilter.operator === "all of" ||
+          existingFilter.operator === "none of")
+          ? existingFilter.operator
+          : "any of";
+      updateFilter(column, [value], operator);
     },
-    [config.facets, options, updateFilter],
+    [
+      config.columnDefinitions,
+      config.facets,
+      filterState,
+      options,
+      updateFilter,
+    ],
   );
 
   const updateOperator = useCallback(
-    (column: string, newOperator: "any of" | "all of") => {
+    (column: string, newOperator: "any of" | "all of" | "none of") => {
       // Find the existing filter for this column
       const existingFilter = filterState.find((f) => f.column === column);
       if (!existingFilter) {
-        // Create a filter with the operator and empty values
-        // important so users set the operator preference before selecting values,
-        // in case for ALL on TAGS filter
+        // Without selected values there is no valid persisted filter yet.
         updateFilter(column, [], newOperator);
         return;
       }
@@ -509,9 +673,12 @@ export function useSidebarFilterState(
 
       let currentValues: string[];
       if (existingFilter.operator === "none of") {
-        // Convert "none of [excluded]" to selected values
-        const excluded = new Set(existingFilter.value);
-        currentValues = availableValues.filter((v) => !excluded.has(v));
+        currentValues =
+          existingFilter.type === "arrayOptions"
+            ? existingFilter.value
+            : availableValues.filter(
+                (v) => !new Set(existingFilter.value).has(v),
+              );
       } else {
         currentValues = existingFilter.value;
       }
@@ -700,6 +867,14 @@ export function useSidebarFilterState(
 
           // Get available values from options
           const availableValues = options[facet.column] ?? {};
+          const mergedAvailableValues =
+            typeof availableValues === "object" &&
+            !Array.isArray(availableValues)
+              ? mergeAvailableValuesWithActiveFilters(
+                  availableValues as Record<string, string[]>,
+                  activeFilters,
+                )
+              : ({} as Record<string, string[]>);
 
           // Extract key options from availableValues if not defined in facet
           const keyOptions =
@@ -949,7 +1124,7 @@ export function useSidebarFilterState(
         // Extract counts and values to display along multi-select values
         const { values: availableValues, counts } = Array.isArray(availableValuesWithOptions)
           ? processOptions(availableValuesWithOptions)
-          : { values: [], counts: EMPTY_MAP };
+          : { values: [], counts: EMPTY_MAP, displayByValue: undefined };
 
         // Check if this column supports operator toggle
         // Only arrayOptions columns get the ANY/ALL toggle
@@ -971,7 +1146,7 @@ export function useSidebarFilterState(
         // - "any of" (OR logic): match if item has ANY selected value
         // - "all of" (AND logic): match if item has ALL selected values
         // This operator is persisted in the filter state and URL
-        let currentOperator: "any of" | "all of" | undefined;
+        let currentOperator: "any of" | "all of" | "none of" | undefined;
         if (
           checkboxFilter &&
           (checkboxFilter.type === "arrayOptions" || checkboxFilter.type === "stringOptions") &&
@@ -1001,8 +1176,11 @@ export function useSidebarFilterState(
         const hasTextFilters = textFilters.length > 0;
         const hasCheckboxSelections = selectedValues.length > 0 && selectedValues.length !== availableValues.length;
 
-        // isActive check: filter is active if we have text filters OR checkbox selections
-        // Special case: "all of" with all values selected is still an active filter
+        // isActive check:
+        // - Managed environment facet: active only when selection differs from default
+        //   (implicit hidden-env default should not surface a "Clear" badge).
+        // - Other facets: active when text filters exist or checkbox selections differ from unfiltered.
+        //   Special case: "all of" with all values selected is still active.
         const isActive =
           hasTextFilters ||
           (currentOperator === "all of" && selectedValues.length === availableValues.length) ||
@@ -1016,6 +1194,7 @@ export function useSidebarFilterState(
           value: selectedValues,
           options: availableValues,
           counts,
+          displayByValue,
           loading: shouldShowLoading(facet.column),
           expanded: expandedSet.has(facet.column),
           isActive,
@@ -1073,12 +1252,14 @@ export function useSidebarFilterState(
 
   return {
     filterState,
+    effectiveFilterState: filterState,
+    explicitFilterState,
     setFilterState,
     updateFilter,
     updateFilterOnly,
     updateOperator,
     clearAll,
-    isFiltered: filterState.length > 0,
+    isFiltered: explicitFilterState.length > 0,
     filters,
     expanded: expandedState,
     onExpandedChange,

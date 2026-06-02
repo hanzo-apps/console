@@ -4,8 +4,6 @@ import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/cr
 import {
   GetDatasetV1Query,
   GetDatasetV1Response,
-  transformDbDatasetItemDomainToAPIDatasetItem,
-  transformDbDatasetToAPIDataset,
 } from "@/src/features/public-api/types/datasets";
 import { createDatasetItemFilterState, getDatasetItems } from "@hanzo/shared/src/server";
 import { HanzoNotFoundError } from "@hanzo/shared";
@@ -39,20 +37,6 @@ export default withMiddlewares({
 
       const datasetItems = await getDatasetItems({
         projectId: auth.scope.projectId,
-        filterState: createDatasetItemFilterState({
-          datasetIds: [dataset.id],
-          status: "ACTIVE",
-        }),
-        includeDatasetName: true,
-      });
-
-      const { datasetRuns, ...params } = dataset;
-
-      return {
-        ...transformDbDatasetToAPIDataset(params),
-        items: datasetItems.map(transformDbDatasetItemDomainToAPIDatasetItem),
-        runs: datasetRuns.map((run) => run.name),
-      };
-    },
+      }),
   }),
 });

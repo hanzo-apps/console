@@ -12,16 +12,13 @@ import { createProjectRoute, inviteMembersRoute } from "@/src/features/setup/set
 import { cn } from "@/src/utils/tailwind";
 import { Check } from "lucide-react";
 import { useRouter } from "next/router";
-import { StringParam, useQueryParam } from "use-query-params";
 
-// Multi-step setup process
+// Manual setup process
 // 1. Create Organization: /setup
-// 2. Invite Members: /organization/:orgId/setup
-// 3. Create Project: /organization/:orgId/setup?step=create-project
+// 2. Create Project: /organization/:orgId/setup?orgstep=create-project
 export function SetupPage() {
-  const { project, organization } = useQueryProjectOrOrganization();
+  const { organization } = useQueryProjectOrOrganization();
   const router = useRouter();
-  const [orgStep] = useQueryParam("orgstep", StringParam); // "invite-members" | "create-project"
 
   // starts at 1 to align with breadcrumb
   const stepInt = !organization ? 1 : project ? 3 : orgStep === "create-project" ? 3 : 2;
@@ -72,19 +69,19 @@ export function SetupPage() {
           stepInt === 1 && (
             <div>
               <Header title="New Organization" />
-              <p className="mb-4 text-sm text-muted-foreground">
+              <p className="text-muted-foreground mb-4 text-sm">
                 Organizations are used to manage your projects and teams.
               </p>
               <NewOrganizationForm
                 onSuccess={(orgId) => {
-                  router.push(inviteMembersRoute(orgId));
+                  router.push(createProjectRoute(orgId));
                 }}
               />
             </div>
           )
         }
         {
-          // 2. Invite Members
+          // 2. Create Project
           stepInt === 2 && organization && (
             <div className="flex flex-col gap-10">
               <div>
@@ -117,16 +114,6 @@ export function SetupPage() {
           )
         }
       </Card>
-
-      {stepInt === 2 && organization && (
-        <Button
-          className="mt-4 self-start"
-          data-testid="btn-skip-add-members"
-          onClick={() => router.push(createProjectRoute(organization.id))}
-        >
-          Next
-        </Button>
-      )}
     </ContainerPage>
   );
 }

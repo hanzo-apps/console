@@ -12,6 +12,7 @@ export type AuditableResource =
   | "datasetItem"
   | "dataset"
   | "datasetRun"
+  | "datasetRunItem"
   | "trace"
   | "project"
   | "observation"
@@ -38,6 +39,8 @@ export type AuditableResource =
   | "action"
   | "slackIntegration"
   | "cloudSpendAlert"
+  | "verifiedDomain"
+  | "ssoConfig"
   // legacy resources
   | "membership";
 

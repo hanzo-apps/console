@@ -40,6 +40,7 @@ import {
   JumpCloudProvider,
   traceException,
   sendResetPasswordVerificationRequest,
+  buildMailServerConfig,
   instrumentAsync,
   logger,
   resolveProjectRole,
@@ -52,6 +53,7 @@ import { projectRoleAccessRights } from "@/src/features/rbac/constants/projectAc
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import { getSSOBlockedDomains } from "@/src/features/auth-credentials/server/signupApiHandler";
 import { createSupportEmailHash } from "@/src/features/support-chat/createSupportEmailHash";
+import { canToggleV4 } from "@/src/features/events/lib/v4Rollout";
 
 function canCreateOrganizations(userEmail: string | null): boolean {
   const instancePlan = getSelfHostedInstancePlanServerSide();
@@ -106,11 +108,17 @@ const staticProviders: Provider[] = [
         },
       });
 
-      if (!dbUser) throw new Error("Invalid credentials");
-      if (dbUser.password === null)
+      if (!dbUser) {
+        // Keep bcrypt work comparable across failed login paths to reduce timing-based user enumeration.
+        await hashPassword(credentials.password);
+        throw new Error("Invalid credentials");
+      }
+
+      if (dbUser.password === null) {
         throw new Error(
           "Please sign in with the identity provider (e.g. Google, GitHub, Azure AD, etc.) that is linked to your account.",
         );
+      }
 
       const isValidPassword = await verifyPassword(credentials.password, dbUser.password);
       if (!isValidPassword) throw new Error("Invalid credentials");
@@ -135,7 +143,7 @@ const staticProviders: Provider[] = [
 if (env.SMTP_CONNECTION_URL && env.EMAIL_FROM_ADDRESS) {
   staticProviders.push(
     EmailProvider({
-      server: env.SMTP_CONNECTION_URL,
+      server: buildMailServerConfig(env.SMTP_CONNECTION_URL),
       from: env.EMAIL_FROM_ADDRESS,
       maxAge: 3 * 60, // 3 minutes
       async generateVerificationToken() {
@@ -164,6 +172,12 @@ if (
       },
       client: {
         token_endpoint_auth_method: env.AUTH_CUSTOM_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_CUSTOM_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_CUSTOM_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_CUSTOM_CHECKS ? { checks: env.AUTH_CUSTOM_CHECKS } : {}),
     }),
@@ -177,6 +191,12 @@ if (env.AUTH_GOOGLE_CLIENT_ID && env.AUTH_GOOGLE_CLIENT_SECRET)
       allowDangerousEmailAccountLinking: env.AUTH_GOOGLE_ALLOW_ACCOUNT_LINKING === "true",
       client: {
         token_endpoint_auth_method: env.AUTH_GOOGLE_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_GOOGLE_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_GOOGLE_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_GOOGLE_CHECKS ? { checks: env.AUTH_GOOGLE_CHECKS } : {}),
     }),
@@ -191,6 +211,12 @@ if (env.AUTH_OKTA_CLIENT_ID && env.AUTH_OKTA_CLIENT_SECRET && env.AUTH_OKTA_ISSU
       allowDangerousEmailAccountLinking: env.AUTH_OKTA_ALLOW_ACCOUNT_LINKING === "true",
       client: {
         token_endpoint_auth_method: env.AUTH_OKTA_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_OKTA_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_OKTA_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_OKTA_CHECKS ? { checks: env.AUTH_OKTA_CHECKS } : {}),
     }),
@@ -219,6 +245,12 @@ if (env.AUTH_ONELOGIN_CLIENT_ID && env.AUTH_ONELOGIN_CLIENT_SECRET && env.AUTH_O
       allowDangerousEmailAccountLinking: env.AUTH_ONELOGIN_ALLOW_ACCOUNT_LINKING === "true",
       client: {
         token_endpoint_auth_method: env.AUTH_ONELOGIN_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_ONELOGIN_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_ONELOGIN_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_ONELOGIN_CHECKS ? { checks: env.AUTH_ONELOGIN_CHECKS } : {}),
     }),
@@ -233,8 +265,54 @@ if (env.AUTH_AUTH0_CLIENT_ID && env.AUTH_AUTH0_CLIENT_SECRET && env.AUTH_AUTH0_I
       allowDangerousEmailAccountLinking: env.AUTH_AUTH0_ALLOW_ACCOUNT_LINKING === "true",
       client: {
         token_endpoint_auth_method: env.AUTH_AUTH0_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_AUTH0_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_AUTH0_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_AUTH0_CHECKS ? { checks: env.AUTH_AUTH0_CHECKS } : {}),
+    }),
+  );
+
+// Langfuse Cloud only: "Sign in with ClickHouse Cloud"
+// Uses Auth0Provider with a custom provider ID so the callback URL becomes
+// /api/auth/callback/clickhouse-cloud. NOT intended for self-hosted Langfuse.
+if (
+  env.AUTH_CLICKHOUSE_CLOUD_CLIENT_ID &&
+  env.AUTH_CLICKHOUSE_CLOUD_CLIENT_SECRET &&
+  env.AUTH_CLICKHOUSE_CLOUD_ISSUER &&
+  env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION
+)
+  staticProviders.push(
+    Auth0Provider({
+      id: "clickhouse-cloud",
+      name: "ClickHouse Cloud",
+      clientId: env.AUTH_CLICKHOUSE_CLOUD_CLIENT_ID,
+      clientSecret: env.AUTH_CLICKHOUSE_CLOUD_CLIENT_SECRET,
+      issuer: env.AUTH_CLICKHOUSE_CLOUD_ISSUER,
+      authorization: {
+        params: {
+          scope: "openid email profile",
+          // audience: "langfuse",
+        },
+      },
+      allowDangerousEmailAccountLinking:
+        env.AUTH_CLICKHOUSE_CLOUD_ALLOW_ACCOUNT_LINKING === "true",
+      client: {
+        token_endpoint_auth_method:
+          env.AUTH_CLICKHOUSE_CLOUD_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_CLICKHOUSE_CLOUD_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_CLICKHOUSE_CLOUD_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
+      },
+      ...(env.AUTH_CLICKHOUSE_CLOUD_CHECKS
+        ? { checks: env.AUTH_CLICKHOUSE_CLOUD_CHECKS }
+        : {}),
     }),
   );
 
@@ -279,6 +357,12 @@ if (env.AUTH_GITLAB_CLIENT_ID && env.AUTH_GITLAB_CLIENT_SECRET)
       issuer: env.AUTH_GITLAB_ISSUER,
       client: {
         token_endpoint_auth_method: env.AUTH_GITLAB_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_GITLAB_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_GITLAB_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       authorization: {
         url: `${env.AUTH_GITLAB_URL}/oauth/authorize`,
@@ -299,6 +383,12 @@ if (env.AUTH_AZURE_AD_CLIENT_ID && env.AUTH_AZURE_AD_CLIENT_SECRET && env.AUTH_A
       allowDangerousEmailAccountLinking: env.AUTH_AZURE_AD_ALLOW_ACCOUNT_LINKING === "true",
       client: {
         token_endpoint_auth_method: env.AUTH_AZURE_AD_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_AZURE_AD_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_AZURE_AD_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_AZURE_AD_CHECKS ? { checks: env.AUTH_AZURE_AD_CHECKS } : {}),
     }),
@@ -313,6 +403,12 @@ if (env.AUTH_COGNITO_CLIENT_ID && env.AUTH_COGNITO_CLIENT_SECRET && env.AUTH_COG
       allowDangerousEmailAccountLinking: env.AUTH_COGNITO_ALLOW_ACCOUNT_LINKING === "true",
       client: {
         token_endpoint_auth_method: env.AUTH_COGNITO_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_COGNITO_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_COGNITO_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_COGNITO_CHECKS ? { checks: env.AUTH_COGNITO_CHECKS } : { checks: "nonce" }),
     }),
@@ -331,6 +427,12 @@ if (env.AUTH_KEYCLOAK_CLIENT_ID && env.AUTH_KEYCLOAK_CLIENT_SECRET && env.AUTH_K
       },
       client: {
         token_endpoint_auth_method: env.AUTH_KEYCLOAK_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_KEYCLOAK_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_KEYCLOAK_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_KEYCLOAK_CHECKS ? { checks: env.AUTH_KEYCLOAK_CHECKS } : {}),
     }),
@@ -348,6 +450,12 @@ if (env.AUTH_JUMPCLOUD_CLIENT_ID && env.AUTH_JUMPCLOUD_CLIENT_SECRET && env.AUTH
       },
       client: {
         token_endpoint_auth_method: env.AUTH_JUMPCLOUD_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_JUMPCLOUD_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_JUMPCLOUD_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_JUMPCLOUD_CHECKS ? { checks: env.AUTH_JUMPCLOUD_CHECKS } : {}),
     }),
@@ -373,6 +481,12 @@ if (env.AUTH_WORDPRESS_CLIENT_ID && env.AUTH_WORDPRESS_CLIENT_SECRET)
       allowDangerousEmailAccountLinking: env.AUTH_WORDPRESS_ALLOW_ACCOUNT_LINKING === "true",
       client: {
         token_endpoint_auth_method: env.AUTH_WORDPRESS_CLIENT_AUTH_METHOD,
+        ...(env.AUTH_WORDPRESS_ID_TOKEN_SIGNED_RESPONSE_ALG
+          ? {
+              id_token_signed_response_alg:
+                env.AUTH_WORDPRESS_ID_TOKEN_SIGNED_RESPONSE_ALG,
+            }
+          : {}),
       },
       ...(env.AUTH_WORDPRESS_CHECKS ? { checks: env.AUTH_WORDPRESS_CHECKS } : {}),
     }),
@@ -394,7 +508,7 @@ const extendedPrismaAdapter: Adapter = {
 
     const user = await prismaAdapter.createUser(profile);
 
-    await createProjectMembershipsOnSignup(user);
+    await createProjectMembershipsOnSignup(user, { userWasJustCreated: true });
 
     return user;
   },
@@ -535,6 +649,8 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
               email: true,
               image: true,
               emailVerified: true,
+              password: true,
+              createdAt: true,
               featureFlags: true,
               admin: true,
               organizationMemberships: {
@@ -613,6 +729,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
                     }),
                     emailVerified: dbUser.emailVerified?.toISOString(),
                     featureFlags: parseFlags(dbUser.featureFlags),
+                    hasPassword: Boolean(dbUser.password),
                   }
                 : null,
           };
@@ -626,7 +743,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
             logger.error("No email found in user object");
             throw new Error("No email found in user object");
           }
-          if (z.string().email().safeParse(email).success === false) {
+          if (z.email().safeParse(email).success === false) {
             logger.error("Invalid email found in user object");
             throw new Error("Invalid email found in user object");
           }
@@ -663,6 +780,20 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
 
           // Only allow sign in via email link if user is already in db as this is used for password reset
           if (account?.provider === "email") {
+            const blockedDomains = getSSOBlockedDomains();
+            if (userDomain && blockedDomains.includes(userDomain)) {
+              logger.info(
+                "Blocked email-OTP sign in for domain enforced via AUTH_DOMAINS_WITH_SSO_ENFORCEMENT",
+                { email },
+              );
+              const params = new URLSearchParams({
+                reason: "sso_enforced_domain",
+              });
+              if (email) params.set("email", email);
+              params.set("attemptedProvider", "email");
+              return `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/auth/enterprise-sso-required?${params.toString()}`;
+            }
+
             const user = await prisma.user.findUnique({
               where: {
                 email: email,

@@ -22,7 +22,7 @@ export const composeAggregateScoreKey = ({
 }: {
   name: string;
   source: ScoreSourceType;
-  dataType: AggregatableScoreDataType;
+  dataType: ScoreDataTypeType;
   keyPrefix?: string;
 }): string => {
   const formattedName = normalizeScoreName(name);
@@ -34,13 +34,13 @@ export const decomposeAggregateScoreKey = (
 ): {
   name: string;
   source: ScoreSourceType;
-  dataType: AggregatableScoreDataType;
+  dataType: ScoreDataTypeType;
 } => {
   const [name, source, dataType] = key.split("-");
   return {
     name,
     source: source as ScoreSourceType,
-    dataType: dataType as AggregatableScoreDataType,
+    dataType: dataType as ScoreDataTypeType,
   };
 };
 
@@ -51,7 +51,7 @@ export const getScoreLabelFromKey = (key: string): string => {
 
 export type ScoreToAggregate =
   | (Omit<ScoreDomain, "dataType"> & {
-      dataType: AggregatableScoreDataType;
+      dataType: ListableScore["dataType"];
       hasMetadata?: boolean;
     })
   | (ScoreSimplified & {

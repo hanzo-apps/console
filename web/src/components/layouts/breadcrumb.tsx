@@ -28,7 +28,10 @@ import { Fragment } from "react";
 
 const LoadingMenuItem = () => (
   <DropdownMenuItem>
-    <LoaderCircle className="mr-1.5 h-4 w-4 animate-spin" /> Loading...
+    <span className="mr-1.5 inline-flex">
+      <Spinner size="sm" />
+    </span>
+    Loading...
   </DropdownMenuItem>
 );
 
@@ -81,7 +84,7 @@ const BreadcrumbComponent = ({
       <BreadcrumbList>
         {organization && (
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1 text-sm text-primary">
+            <DropdownMenuTrigger className="text-primary flex items-center gap-1 text-sm">
               {organization?.name ?? "Organization"}
               {isCloudPlan(organization?.plan) && organization.id !== env.NEXT_PUBLIC_DEMO_ORG_ID && (
                 <Badge className="ml-1 px-1 py-0 text-xs font-normal" variant="secondary">
@@ -114,7 +117,7 @@ const BreadcrumbComponent = ({
                         <DropdownMenuItem asChild>
                           <Link href={getOrgPath(dropdownOrg.id)} className="flex cursor-pointer justify-between">
                             <span
-                              className="max-w-36 overflow-hidden overflow-ellipsis whitespace-nowrap"
+                              className="max-w-36 overflow-hidden text-ellipsis whitespace-nowrap"
                               title={dropdownOrg.name}
                             >
                               {dropdownOrg.name}
@@ -161,7 +164,7 @@ const BreadcrumbComponent = ({
               <Slash />
             </BreadcrumbSeparator>
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 text-primary">
+              <DropdownMenuTrigger className="text-primary flex items-center gap-1">
                 {project?.name ?? "Project"}
                 <ChevronDownIcon className="h-4 w-4" />
               </DropdownMenuTrigger>
@@ -183,7 +186,7 @@ const BreadcrumbComponent = ({
                             className="flex cursor-pointer justify-between"
                           >
                             <span
-                              className="max-w-36 overflow-hidden overflow-ellipsis whitespace-nowrap"
+                              className="max-w-36 overflow-hidden text-ellipsis whitespace-nowrap"
                               title={dropdownProject.name}
                             >
                               {dropdownProject.name}

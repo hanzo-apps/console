@@ -25,11 +25,133 @@ import { z } from "zod/v4";
  * - HANZO_LLM_CONNECTION_GOOGLEAISTUDIO_KEY
  */
 
-// Eval schema matching production usage
-const evalOutputSchema = z.object({
+type TestLLMConnection = {
+  secretKey: string;
+  extraHeaders?: string | null;
+  baseURL?: string | null;
+  config?: Record<string, string> | null;
+};
+
+const numericEvalResponseSchema = z.object({
   score: z.number(),
-  reasoning: z.string(),
+  reasoning: z.string().min(1),
 });
+
+const booleanEvalResponseSchema = z.object({
+  score: z.boolean(),
+  reasoning: z.string().min(1),
+});
+
+const categoricalScoreValues = ["correct", "incorrect"] as const;
+const categoricalEvalResponseSchema = z.object({
+  score: z.enum(categoricalScoreValues),
+  reasoning: z.string().min(1),
+});
+
+type EvalStructuredOutputTestCase = {
+  name: string;
+  prompt: string;
+  outputDefinition: PersistedEvalOutputDefinition;
+  responseSchema: z.ZodTypeAny;
+  assertParsed?: (data: {
+    score: number | boolean | string;
+    reasoning: string;
+  }) => void;
+};
+
+const evalStructuredOutputTestCases: EvalStructuredOutputTestCase[] = [
+  {
+    name: "structured output - legacy eval schema",
+    prompt:
+      "Evaluate whether the answer '2 + 2 = 4' is correct. Return a numeric score from 0 to 100 and explain the score.",
+    outputDefinition: {
+      score:
+        "Return a numeric score from 0 to 100, where 100 means the answer is completely correct.",
+      reasoning: "Explain briefly why you chose that score.",
+    },
+    responseSchema: numericEvalResponseSchema,
+  },
+  {
+    name: "structured output - v2 numeric eval schema",
+    prompt:
+      "Evaluate whether the answer '2 + 2 = 4' is correct. Return a numeric score from 0 to 100 and explain the score.",
+    outputDefinition: createNumericEvalOutputDefinition({
+      scoreDescription:
+        "Return a numeric score from 0 to 100, where 100 means the answer is completely correct.",
+      reasoningDescription: "Explain briefly why you chose that score.",
+    }),
+    responseSchema: numericEvalResponseSchema,
+  },
+  {
+    name: "structured output - v2 boolean eval schema",
+    prompt:
+      "Judge whether the answer '2 + 2 = 5' is correct. Return true only if it is mathematically correct, otherwise false, and explain briefly.",
+    outputDefinition: createBooleanEvalOutputDefinition({
+      scoreDescription:
+        "Return true when the answer is mathematically correct, otherwise return false.",
+      reasoningDescription: "Explain briefly why you chose that verdict.",
+    }),
+    responseSchema: booleanEvalResponseSchema,
+    assertParsed: (data) => {
+      expect(data.score).toBe(false);
+    },
+  },
+  {
+    name: "structured output - v2 categorical eval schema",
+    prompt:
+      "Judge whether the answer '2 + 2 = 5' is correct. Select the best matching category and explain the choice.",
+    outputDefinition: createCategoricalEvalOutputDefinition({
+      scoreDescription:
+        "Select 'correct' when the answer is mathematically accurate, otherwise select 'incorrect'.",
+      reasoningDescription: "Explain briefly why you selected that category.",
+      categories: ["correct", "incorrect"],
+    }),
+    responseSchema: categoricalEvalResponseSchema,
+    assertParsed: (data) => {
+      expect(data.score).toBe("incorrect");
+    },
+  },
+];
+
+function registerEvalStructuredOutputTests(params: {
+  checkEnv: () => void;
+  getModelParams: () => ModelParams;
+  getLLMConnection: () => TestLLMConnection;
+  timeoutMs: number;
+}) {
+  evalStructuredOutputTestCases.forEach((testCase) => {
+    test(
+      testCase.name,
+      async () => {
+        params.checkEnv();
+
+        const completion = await fetchLLMCompletion({
+          streaming: false,
+          messages: [
+            {
+              role: "user",
+              content: testCase.prompt,
+              type: ChatMessageType.PublicAPICreated,
+            },
+          ],
+          modelParams: params.getModelParams(),
+          structuredOutputSchema: buildEvalOutputResultSchema(
+            testCase.outputDefinition,
+          ),
+          llmConnection: params.getLLMConnection(),
+        });
+
+        const parsed = testCase.responseSchema.safeParse(completion);
+        expect(parsed.success).toBe(true);
+        if (parsed.success) {
+          expect(parsed.data.reasoning.trim().length).toBeGreaterThan(0);
+          testCase.assertParsed?.(parsed.data);
+        }
+      },
+      params.timeoutMs,
+    );
+  });
+}
 
 // Common tool definition for tool calling tests
 const weatherTool = {

@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
@@ -8,6 +8,7 @@ import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/tr
 import {
   orderBy,
   paginationZod,
+  normalizeOrderByForTable,
   singleFilter,
   timeFilter,
   UpdateAnnotationScoreData,

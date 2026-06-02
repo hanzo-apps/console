@@ -71,7 +71,8 @@ function joinPromptCoreAndMetricData(
 
 export default function PromptVersionTable({ promptName: promptNameProp }: { promptName?: string } = {}) {
   const router = useRouter();
-  const projectId = router.query.projectId as string;
+  const projectId = useProjectIdFromURL() ?? "";
+  const promptNameFromQuery = router.query.promptName;
   const promptName =
     promptNameProp || (router.query.promptName ? decodeURIComponent(router.query.promptName as string) : "");
 
@@ -87,7 +88,7 @@ export default function PromptVersionTable({ promptName: promptNameProp }: { pro
 
   const promptVersions = api.prompts.allVersions.useQuery(
     {
-      projectId: projectId as string, // Typecast as query is enabled only when projectId is present
+      projectId,
       name: promptName,
       page: paginationState.pageIndex,
       limit: paginationState.pageSize,
@@ -99,8 +100,10 @@ export default function PromptVersionTable({ promptName: promptNameProp }: { pro
 
   const promptMetrics = api.prompts.versionMetrics.useQuery(
     {
-      projectId: projectId as string, // Typecast as query is enabled only when projectId is present
+      projectId,
       promptIds,
+      fromTimestamp: dateRange?.from,
+      toTimestamp: dateRange?.to,
     },
     {
       enabled: Boolean(projectId) && promptVersions.isSuccess,
@@ -369,6 +372,8 @@ export default function PromptVersionTable({ promptName: promptNameProp }: { pro
       <div className="gap-3">
         <DataTableToolbar
           columns={columns}
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
           rowHeight={rowHeight}
           setRowHeight={setRowHeight}
           columnVisibility={columnVisibility}

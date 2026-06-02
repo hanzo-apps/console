@@ -1,10 +1,12 @@
 import { auditLog } from "@/src/features/audit-logs/auditLog";
+import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEntitlement";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
 import { BatchExportStatus, CreateBatchExportSchema, paginationZod } from "@hanzo/shared";
 import { BatchExportQueue, logger, QueueJobs } from "@hanzo/shared/src/server";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod/v4";
+import { z } from "zod";
+import { assertLegacyTracingIoSearchCanCreateBatchJob } from "@/src/features/traces/server/legacyIoSearch";
 
 export const batchExportRouter = createTRPCRouter({
   create: protectedProjectProcedure.input(CreateBatchExportSchema).mutation(async ({ input, ctx }) => {

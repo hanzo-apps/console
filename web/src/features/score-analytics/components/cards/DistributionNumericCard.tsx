@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
-import { Loader2 } from "lucide-react";
 import { useScoreAnalytics } from "../ScoreAnalyticsProvider";
 import { ScoreDistributionNumericChart } from "../charts/ScoreDistributionNumericChart";
 import { SamplingDetailsHoverCard } from "../SamplingDetailsHoverCard";
+import Spinner from "@/src/components/design-system/Spinner/Spinner";
 
 type DistributionTab = "score1" | "score2" | "all" | "matched";
 
@@ -146,7 +146,7 @@ export function DistributionNumericCard() {
           <CardDescription>Loading chart...</CardDescription>
         </CardHeader>
         <CardContent className="flex h-[340px] flex-col items-center justify-center pl-0">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Spinner size="xl" variant="muted" />
         </CardContent>
       </Card>
     );
@@ -160,7 +160,7 @@ export function DistributionNumericCard() {
           <CardTitle>Distribution</CardTitle>
           <CardDescription>No data available</CardDescription>
         </CardHeader>
-        <CardContent className="flex h-[340px] flex-col items-center justify-center pl-0 text-sm text-muted-foreground">
+        <CardContent className="text-muted-foreground flex h-[340px] flex-col items-center justify-center pl-0 text-sm">
           Select a score to view distribution
         </CardContent>
       </Card>
@@ -247,7 +247,7 @@ export function DistributionNumericCard() {
             colors={chartColors}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
             No distribution data available for the selected time range
           </div>
         )}

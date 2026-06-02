@@ -97,13 +97,13 @@ export function UsageDetailsEditor({ usageDetails, onChange }: UsageDetailsEdito
       {/* Usage Details Table */}
       {entries.length > 0 ? (
         <div className="space-y-2 rounded-lg border p-3">
-          <div className="grid grid-cols-[1fr,1fr,auto] gap-2 text-sm font-medium">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2 text-sm font-medium">
             <div>Usage Type</div>
             <div>Value</div>
             <div className="w-10" />
           </div>
           {entries.map((entry, index) => (
-            <div key={index} className="grid grid-cols-[1fr,1fr,auto] gap-2">
+            <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
               <Input
                 placeholder="e.g. input"
                 value={entry.key}

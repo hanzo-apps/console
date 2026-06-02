@@ -36,50 +36,10 @@ export default withMiddlewares({
       } = {
         projectId: auth.scope.projectId,
         queueId: query.queueId,
-      };
-
-      if (query.status) {
-        where.status = query.status;
-      }
-
-      const [items, totalItems] = await Promise.all([
-        prisma.annotationQueueItem.findMany({
-          where,
-          orderBy: [
-            {
-              createdAt: "desc",
-            },
-            {
-              id: "desc",
-            },
-          ],
-          take: query.limit,
-          skip: (query.page - 1) * query.limit,
-        }),
-        prisma.annotationQueueItem.count({
-          where,
-        }),
-      ]);
-
-      return {
-        data: items.map((item) => ({
-          id: item.id,
-          queueId: item.queueId,
-          objectId: item.objectId,
-          objectType: item.objectType,
-          status: item.status,
-          completedAt: item.completedAt,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-        })),
-        meta: {
-          page: query.page,
-          limit: query.limit,
-          totalItems,
-          totalPages: Math.ceil(totalItems / query.limit),
-        },
-      };
-    },
+        page: query.page,
+        limit: query.limit,
+        status: query.status,
+      }),
   }),
   POST: createAuthedProjectAPIRoute({
     name: "Create annotation queue item",

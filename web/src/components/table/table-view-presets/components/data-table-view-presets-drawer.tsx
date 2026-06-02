@@ -41,7 +41,7 @@ import { PopoverTrigger } from "@/src/components/ui/popover";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/src/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { useUniqueNameValidation } from "@/src/hooks/useUniqueNameValidation";
 import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
@@ -68,7 +68,7 @@ interface TableViewPresetsDrawerProps {
     controllers: {
       selectedViewId: string | null;
       handleSetViewId: (viewId: string | null) => void;
-      applyViewState: (viewData: TableViewPresetDomain) => void;
+      applyViewState: (viewData: TableViewPresetState) => void;
     };
   };
   currentState: {
@@ -124,16 +124,10 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
     errorMessage: "View name already exists.",
   });
 
-  const handleSelectView = async (viewId: string) => {
-    // Handle system preset - just select it like any view
-    if (viewId === SYSTEM_PRESETS.DEFAULT.id) {
-      handleSetViewId(null);
-      return;
-    }
-
+  const handleSelectView = (view: TableViewPresetState & { id: string }) => {
     capture("saved_views:view_selected", {
       tableName,
-      viewId,
+      viewId: view.id,
     });
 
     handleSetViewId(viewId);
@@ -255,6 +249,7 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
   return (
     <>
       <Drawer
+        forceDirection="responsive-left"
         onOpenChange={(open) => {
           if (open) {
             capture("saved_views:drawer_open", { tableName });
@@ -546,7 +541,7 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                   )}
                 />
 
-                <div className="mt-4 text-sm text-muted-foreground">
+                <div className="text-muted-foreground mt-4 text-sm">
                   <p>This will save the current:</p>
                   <ul className="mt-2 list-disc pl-5">
                     <li>Column arrangement ({currentState.columnOrder.length} columns)</li>

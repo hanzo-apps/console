@@ -39,7 +39,7 @@ export function SpendAlertsSection({ orgId }: SpendAlertsSectionProps) {
               Get notified when your organization&apos;s spending exceeds configured thresholds. Alerts may be delayed
               by up to 90 minutes.
             </p>
-            <p className="max-w-prose text-sm text-muted-foreground"></p>
+            <p className="text-muted-foreground max-w-prose text-sm"></p>
           </div>
 
           <Button onClick={() => setIsCreateDialogOpen(true)}>

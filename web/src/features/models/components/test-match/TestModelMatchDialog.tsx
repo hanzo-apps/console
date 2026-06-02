@@ -15,7 +15,8 @@ import { UsageDetailsEditor } from "./UsageDetailsEditor";
 import { MatchedModelCard } from "./MatchedModelCard";
 import { MatchedTierCard } from "./MatchedTierCard";
 import { NoMatchDisplay } from "./NoMatchDisplay";
-import { Loader2, CheckCircle, SquareArrowOutUpRight } from "lucide-react";
+import { CheckCircle, SquareArrowOutUpRight } from "lucide-react";
+import Spinner from "@/src/components/design-system/Spinner/Spinner";
 
 type TestModelMatchDialogProps = {
   projectId: string;
@@ -43,11 +44,11 @@ export function TestModelMatchDialog({ projectId, open, onOpenChange }: TestMode
   );
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (modelName.trim()) {
       setHasSubmitted(true);
-      void refetch();
+      refetch();
     }
   };
 
@@ -71,7 +72,7 @@ export function TestModelMatchDialog({ projectId, open, onOpenChange }: TestMode
             </DialogDescription>
           </DialogHeader>
 
-          <DialogBody className="grid grid-cols-[1fr,1px,1fr] gap-6">
+          <DialogBody className="grid grid-cols-[1fr_1px_1fr] gap-6">
             {/* Left Column: Input Form */}
             <div className="flex flex-col justify-between space-y-6">
               <div className="space-y-6">
@@ -112,14 +113,14 @@ export function TestModelMatchDialog({ projectId, open, onOpenChange }: TestMode
                 {hasSubmitted && (
                   <>
                     {isLoading && (
-                      <div className="flex min-h-[300px] items-center justify-center gap-2 rounded-lg border bg-muted/30 p-6 text-muted-foreground">
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                      <div className="bg-muted/30 text-muted-foreground flex min-h-[300px] items-center justify-center gap-2 rounded-lg border p-6">
+                        <Spinner size="md" />
                         <span>Testing match...</span>
                       </div>
                     )}
 
                     {error && (
-                      <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4 text-sm text-destructive">
+                      <div className="border-destructive/50 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
                         Error: {error.message}
                       </div>
                     )}
@@ -134,11 +135,7 @@ export function TestModelMatchDialog({ projectId, open, onOpenChange }: TestMode
                                 Match Found
                               </span>
                             </div>
-                            <MatchedModelCard
-                              projectId={projectId}
-                              model={data.model}
-                              pricingTierId={data.matchedTier.id}
-                            />
+                            <MatchedModelCard model={data.model} />
                             <MatchedTierCard tier={data.matchedTier} />
                           </>
                         ) : (

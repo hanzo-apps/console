@@ -124,7 +124,7 @@ export function TierConditionsEditor({ tierIndex, form }: TierConditionsEditorPr
                 <FormControl>
                   <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                 </FormControl>
-                <FormLabel className="!mt-0">Case sensitive</FormLabel>
+                <FormLabel className="mt-0!">Case sensitive</FormLabel>
               </FormItem>
             )}
           />

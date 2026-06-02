@@ -64,7 +64,7 @@ export function NumericScoreTimeSeriesChart(props: {
     orderBy: null,
   };
 
-  const scores = api.dashboard.executeQuery.useQuery(
+  const scores = useScheduledDashboardExecuteQuery(
     {
       projectId: props.projectId,
       query: scoresQuery,
@@ -75,6 +75,7 @@ export function NumericScoreTimeSeriesChart(props: {
           skipBatch: true,
         },
       },
+      queryId: `${props.schedulerId ?? "home:score-analytics"}:numeric:${props.source}:${props.name}`,
     },
   );
 

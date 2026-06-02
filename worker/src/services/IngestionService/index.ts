@@ -37,12 +37,11 @@ import {
   validateAndInflateScore,
   DatasetRunItemRecordInsertType,
   EventRecordInsertType,
+  InternalTraceEventInput,
   traceException,
   flattenJsonToPathArrays,
   getDatasetItemById,
-  extractToolsFromObservation,
-  convertDefinitionsToMap,
-  convertCallsToArrays,
+  normalizeToolsForObservation,
   hasNoEvalConfigsCache,
 } from "@hanzo/console-core/src/server";
 
@@ -59,109 +58,23 @@ import { randomUUID } from "crypto";
 import { SpanKind } from "@opentelemetry/api";
 import { DatastoreReadSkipCache } from "../../utils/datastoreReadSkipCache";
 
+/**
+ * Parse a value to a UInt16-compatible number (0–65535).
+ * Returns undefined if the value is nullish or not a valid UInt16 integer.
+ */
+function parseUInt16(value: string | null | undefined): number | undefined {
+  if (value == null) return undefined;
+  const num = parseInt(value, 10);
+  if (!Number.isInteger(num) || num < 0 || num > 65535) return undefined;
+  return num;
+}
+
 type InsertRecord =
   | TraceRecordInsertType
   | ScoreRecordInsertType
   | ObservationRecordInsertType
   | DatasetRunItemRecordInsertType;
-
-/**
- * Flexible input type for writing events to the events table.
- * This is intentionally loose to allow for iteration as the events
- * table schema evolves. Only required fields are enforced.
- */
-export type EventInput = {
-  // Required identifiers
-  projectId: string;
-  traceId: string;
-  spanId: string;
-  startTimeISO: string;
-
-  // Optional identifiers
-  orgId?: string;
-  parentSpanId?: string;
-
-  // Core properties
-  name?: string;
-  type?: string;
-  environment?: string;
-  version?: string;
-  release?: string;
-  endTimeISO: string;
-  completionStartTime?: string;
-
-  traceName?: string;
-  tags?: string[];
-  bookmarked?: boolean;
-  public?: boolean;
-
-  // User/session
-  userId?: string;
-  sessionId?: string;
-  level?: string;
-  statusMessage?: string;
-
-  // Prompt
-  promptId?: string;
-  promptName?: string;
-  promptVersion?: string;
-
-  // Model
-  modelId?: string;
-  modelName?: string;
-  modelParameters?: string | Record<string, unknown>;
-
-  // Usage & Cost
-  providedUsageDetails?: Record<string, number>;
-  usageDetails?: Record<string, number>;
-  providedCostDetails?: Record<string, number>;
-  costDetails?: Record<string, number>;
-
-  // Tool Calls
-  toolDefinitions?: Record<string, string>;
-  toolCalls?: string[];
-  toolCallNames?: string[];
-
-  // I/O
-  input?: string;
-  output?: string;
-
-  // Metadata
-  // metadata can be a complex nested object with attributes, resourceAttributes, scopeAttributes, etc.
-  metadata: Record<string, unknown>;
-
-  // Source/instrumentation metadata
-  source: string;
-  serviceName?: string;
-  serviceVersion?: string;
-  scopeName?: string;
-  scopeVersion?: string;
-  telemetrySdkLanguage?: string;
-  telemetrySdkName?: string;
-  telemetrySdkVersion?: string;
-
-  // Storage
-  blobStorageFilePath?: string;
-  eventRaw?: string;
-  eventBytes?: number;
-
-  // Experiment fields
-  experimentId?: string;
-  experimentName?: string;
-  experimentMetadataNames?: string[];
-  experimentMetadataValues?: Array<string | null | undefined>;
-  experimentDescription?: string;
-  experimentDatasetId?: string;
-  experimentItemId?: string;
-  experimentItemVersion?: string;
-  experimentItemRootSpanId?: string;
-  experimentItemExpectedOutput?: string;
-  experimentItemMetadataNames?: string[];
-  experimentItemMetadataValues?: Array<string | null | undefined>;
-
-  // Catch-all for future fields
-  [key: string]: any;
-};
+export type EventInput = InternalTraceEventInput;
 
 const immutableEntityKeys: {
   [TableName.Traces]: (keyof TraceRecordInsertType)[];
@@ -270,6 +183,12 @@ export class IngestionService {
   public async createEventRecord(eventData: EventInput, fileKey: string): Promise<EventRecordInsertType> {
     logger.debug(`Creating event record for project ${eventData.projectId} and span ${eventData.spanId}`);
 
+    // processToEvent can keep normalized input/output as objects so tool data
+    // can be extracted before write time. EventRecordInsertType stores both
+    // fields as strings, so stringify at this schema boundary.
+    const input = this.stringify(eventData.input);
+    const output = this.stringify(eventData.output);
+
     // Perform lookups for prompt and model/usage enrichment
     const [prompt, generationUsage] = await Promise.all([
       // Lookup prompt by name and version
@@ -295,8 +214,8 @@ export class IngestionService {
               provided_model_name: eventData.modelName,
               provided_usage_details: eventData.providedUsageDetails ?? {},
               provided_cost_details: eventData.providedCostDetails ?? {},
-              input: eventData.input,
-              output: eventData.output,
+              input,
+              output,
             },
           })
         : null,
@@ -304,13 +223,14 @@ export class IngestionService {
 
     const now = this.getMicrosecondTimestamp();
 
-    // Store the full metadata JSON
-    const metadata = convertRecordValuesToString(eventData.metadata);
-
-    // Flatten to path-based arrays
-    const flattened = flattenJsonToPathArrays(metadata);
+    // Flatten raw metadata first (before stringification destroys nested structure)
+    const flattened = eventData.metadata
+      ? flattenJsonToPathArrays(eventData.metadata)
+      : { names: [], values: [] };
     const metadataNames = flattened.names;
-    const metadataValues = flattened.values;
+    // Defensive: coerce null/undefined to empty string for Array(String) ClickHouse column.
+    // Should not be required as convertValueToPlainJavascript() never returns null.
+    const metadataValues = flattened.values.map((v) => v ?? "");
 
     const eventRecord: EventRecordInsertType = {
       // Required identifiers
@@ -332,6 +252,7 @@ export class IngestionService {
       tags: eventData.tags ?? [],
       bookmarked: eventData.bookmarked ?? false,
       public: eventData.public ?? false,
+      is_app_root: eventData.isAppRoot ?? false,
 
       // Trace-level attributes: Name/User/session
       trace_name: eventData.traceName,
@@ -352,7 +273,7 @@ export class IngestionService {
       // Prompt
       prompt_id: prompt?.id || "",
       prompt_name: eventData.promptName,
-      prompt_version: eventData.promptVersion,
+      prompt_version: parseUInt16(eventData.promptVersion),
 
       // Model
       model_id: generationUsage?.internal_model_id || "",
@@ -378,13 +299,12 @@ export class IngestionService {
       tool_call_names: eventData.toolCallNames ?? [],
 
       // I/O
-      input: eventData.input,
-      output: eventData.output,
+      input,
+      output,
 
       // Metadata
-      metadata,
       metadata_names: metadataNames,
-      metadata_raw_values: metadataValues,
+      metadata_values: metadataValues,
 
       // Source/instrumentation metadata
       source: eventData.source,
@@ -425,7 +345,8 @@ export class IngestionService {
   }
 
   /**
-   * Writes an event record directly to the events table.
+   * Writes an event record directly to the events_full table.
+   * A materialized view auto-populates events_core from events_full.
    * Use createEventRecord() first to get the record, then call this to write.
    *
    * @param eventRecord - The event record to write

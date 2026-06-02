@@ -1,5 +1,6 @@
 import { type FilterState, singleFilter, type SingleValueOption } from "@hanzo/shared";
 import { encodeDelimitedArray, decodeDelimitedArray } from "use-query-params";
+import { normalizeLegacySessionPositionInTraceKey } from "@/src/components/session/session-position-in-trace";
 
 // Generic helpers for reusable encoding/decoding across feature areas
 export type GenericFilterOptions = Record<string, string[] | (string | SingleValueOption)[] | Record<string, string[]>>;
@@ -7,10 +8,15 @@ export type GenericFilterOptions = Record<string, string[] | (string | SingleVal
 // Pure helper: compute UI-selected values from a filter entry and available values
 export function computeSelectedValues(
   availableValues: string[],
-  filterEntry: { operator?: string; value?: unknown } | undefined,
+  filterEntry:
+    | { operator?: string; value?: unknown; type?: string }
+    | undefined,
 ): string[] {
   if (!filterEntry) return availableValues;
   const values = (filterEntry.value as string[]) ?? [];
+  if (filterEntry.type === "arrayOptions") {
+    return values;
+  }
   if (filterEntry.operator === "none of") {
     const excluded = new Set(values);
     return availableValues.filter((v) => !excluded.has(v));
@@ -76,6 +82,10 @@ export function decodeFiltersGeneric(query: string): FilterState {
 
     const decodedOperator = decodeURIComponent(operator);
     const decodedKey = key ? decodeURIComponent(key) : "";
+    const normalizedKey =
+      type === "positionInTrace"
+        ? normalizeLegacySessionPositionInTraceKey(decodedKey)
+        : decodedKey;
     const decodedValue = decodeURIComponent(encodedValue);
 
     // Parse value based on type

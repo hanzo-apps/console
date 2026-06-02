@@ -1,6 +1,7 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import { decrypt } from "../../encryption";
+import { LLMAdapter } from "./types";
 
 const ExtraHeaderSchema = z.record(z.string(), z.string());
 

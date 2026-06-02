@@ -47,7 +47,7 @@ const CodeBlock: FC<Props> = memo(({ language, value, theme, className }) => {
   const [isCopied, setIsCopied] = useState(false);
   const handleCopy = () => {
     setIsCopied(true);
-    void copyTextToClipboard(value ?? "");
+    copyTextToClipboard(value ?? "");
     setTimeout(() => setIsCopied(false), 1000);
   };
 
@@ -59,7 +59,7 @@ const CodeBlock: FC<Props> = memo(({ language, value, theme, className }) => {
           <Button
             variant="ghost"
             size="xs"
-            className="text-xs hover:bg-border focus-visible:ring-1 focus-visible:ring-offset-0"
+            className="hover:bg-border text-xs focus-visible:ring-1 focus-visible:ring-offset-0"
             onClick={handleCopy}
           >
             {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}

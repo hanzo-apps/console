@@ -1,11 +1,14 @@
 import { Job, Processor } from "@hanzo/mq";
 import {
   deleteEventsByProjectId,
+  deleteMediaFiles,
   deleteObservationsByProjectId,
   deleteScoresByProjectId,
   deleteTracesByProjectId,
   deleteDatasetRunItemsByProjectId,
+  findAllMediaByProjectId,
   getCurrentSpan,
+  getS3MediaStorageClient,
   logger,
   QueueName,
   removeIngestionEventsFromS3AndDeleteDatastoreRefsForProject,
@@ -52,15 +55,13 @@ export const projectDeleteProcessor: Processor = async (
   // Delete media data from S3 for project
   if (env.S3_MEDIA_UPLOAD_BUCKET) {
     logger.info(`Deleting media for ${projectId} in org ${orgId}`);
-    const mediaFilesToDelete = await prisma.media.findMany({
-      select: {
-        id: true,
-        projectId: true,
-        bucketPath: true,
-      },
-      where: {
-        projectId,
-      },
+    const mediaFilesToDelete = await findAllMediaByProjectId({ projectId });
+    await deleteMediaFiles({
+      projectId,
+      mediaFiles: mediaFilesToDelete,
+      storageClient: getS3MediaStorageClient(
+        env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET,
+      ),
     });
     const mediaStorageClient = getS3MediaStorageClient(env.S3_MEDIA_UPLOAD_BUCKET);
     // Delete from Cloud Storage

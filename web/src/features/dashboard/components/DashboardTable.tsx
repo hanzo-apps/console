@@ -44,7 +44,7 @@ function CloneDashboardButton({ dashboardId, projectId }: { dashboardId: string;
 
   const mutCloneDashboard = api.dashboard.cloneDashboard.useMutation({
     onSuccess: () => {
-      void utils.dashboard.invalidate();
+      utils.dashboard.invalidate();
       capture("dashboard:clone_dashboard");
       showSuccessToast({
         title: "Dashboard cloned",
@@ -62,7 +62,7 @@ function CloneDashboardButton({ dashboardId, projectId }: { dashboardId: string;
       return;
     }
 
-    void mutCloneDashboard.mutateAsync({
+    mutCloneDashboard.mutateAsync({
       projectId,
       dashboardId,
     });
@@ -227,11 +227,11 @@ export function DashboardTable() {
           <div onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost">
+                <Button size="xs" variant="ghost">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="flex flex-col [&>*]:w-full [&>*]:justify-start">
+              <DropdownMenuContent className="flex flex-col *:w-full *:justify-start">
                 {owner === "PROJECT" && (
                   <DropdownMenuItem asChild>
                     <EditDashboardButton
@@ -287,6 +287,7 @@ export function DashboardTable() {
       onRowClick={(row) => {
         router.push(`/project/${projectId}/dashboards/${encodeURIComponent(row.id)}`);
       }}
+      cellPadding="comfortable"
     />
   );
 }

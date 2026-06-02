@@ -26,6 +26,11 @@ export const PeekViewEvaluatorConfigDetail = ({ projectId }: { projectId: string
     jobConfigurationId: peekId,
     projectId,
   });
+  const lazyExecutionCounts = useLazyEvaluatorExecutionCounts({
+    projectId,
+    evaluatorId: evalConfig?.id,
+    evaluator: evalConfig,
+  });
 
   const hasAccess = useHasProjectAccess({ projectId, scope: "evalJob:CUD" });
 
@@ -33,8 +38,11 @@ export const PeekViewEvaluatorConfigDetail = ({ projectId }: { projectId: string
     return <Skeleton className="h-full w-full rounded-none" />;
   }
 
+  const displayStatus =
+    lazyExecutionCounts.displayStatus ?? evalConfig.displayStatus;
+
   return (
-    <div className="grid h-full flex-1 grid-rows-[auto,auto,1fr] gap-2 overflow-hidden p-3 contain-layout">
+    <div className="grid h-full flex-1 grid-rows-[auto_auto_1fr] gap-2 overflow-hidden p-3 contain-layout">
       <div className="flex items-center justify-between">
         <div className="flex flex-row items-center gap-2">
           <span className="max-h-fit text-lg font-medium">Configuration</span>
@@ -102,5 +110,22 @@ export const PeekViewEvaluatorConfigDetail = ({ projectId }: { projectId: string
         />
       </div>
     </div>
+  );
+};
+
+export const TablePeekViewEvaluatorConfigDetail = (
+  props: Omit<
+    React.ComponentProps<typeof TablePeekView>,
+    "children" | "title"
+  > & {
+    projectId: string;
+  },
+) => {
+  const { projectId } = props;
+
+  return (
+    <TablePeekView {...props}>
+      <PeekViewEvaluatorConfigDetail projectId={projectId} />
+    </TablePeekView>
   );
 };

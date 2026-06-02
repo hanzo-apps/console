@@ -22,13 +22,18 @@ describe("SlackMessageBuilder", () => {
       prompt: { text: "Hello {{name}}" },
       config: { temperature: 0.7 },
     },
+    user: {
+      id: "user-123",
+      name: "Test User",
+      email: "test@example.com",
+    },
   };
 
   describe("buildPromptVersionMessage", () => {
     it("should build complete prompt-version message with all fields", () => {
       const blocks = SlackMessageBuilder.buildPromptVersionMessage(mockPromptPayload);
 
-      expect(blocks).toHaveLength(6); // header, main, details, commit, actions, footer
+      expect(blocks).toHaveLength(5); // header, main, details, commit, actions
 
       // Check header block
       expect(blocks[0]).toMatchObject({
@@ -53,6 +58,10 @@ describe("SlackMessageBuilder", () => {
       expect(blocks[2]).toMatchObject({
         type: "section",
         fields: [
+          {
+            type: "mrkdwn",
+            text: "*Change author:*\nTest User",
+          },
           {
             type: "mrkdwn",
             text: "*Type:*\ntext",
@@ -130,19 +139,86 @@ describe("SlackMessageBuilder", () => {
           prompt: null,
           config: null,
         },
+        user: {
+          id: "user-123",
+          name: null,
+          email: "test@example.com",
+        },
       };
 
       const blocks = SlackMessageBuilder.buildPromptVersionMessage(minimalPayload);
 
-      expect(blocks).toHaveLength(5); // No commit message section
+      expect(blocks).toHaveLength(4); // No commit message section
+
+      // Check "Change author" falls back to email when name is null
+      const detailsSection = blocks[2];
+      expect(detailsSection.fields[0].text).toBe(
+        "*Change author:*\ntest@example.com",
+      );
 
       // Check labels and tags show "None"
-      const detailsSection = blocks[2];
-      expect(detailsSection.fields[2].text).toBe("*Labels:*\nNone");
-      expect(detailsSection.fields[3].text).toBe("*Tags:*\nNone");
+      expect(detailsSection.fields[3].text).toBe("*Labels:*\nNone");
+      expect(detailsSection.fields[4].text).toBe("*Tags:*\nNone");
 
       // Ensure no commit message section
       expect(blocks.find((block) => block.text?.text?.includes("*Commit Message:*"))).toBeUndefined();
+    });
+
+    it("should show 'API User' when user is not provided", () => {
+      const apiPayload: WebhookInput["payload"] = {
+        action: "created",
+        type: "prompt-version",
+        prompt: {
+          ...mockPromptPayload.prompt,
+        },
+      };
+
+      const blocks = SlackMessageBuilder.buildPromptVersionMessage(apiPayload);
+
+      const detailsSection = blocks[2];
+      expect(detailsSection.fields[0].text).toBe("*Change author:*\nAPI User");
+    });
+
+    it("should escape Slack mrkdwn special characters in user name", () => {
+      const injectionPayload: WebhookInput["payload"] = {
+        action: "created",
+        type: "prompt-version",
+        prompt: { ...mockPromptPayload.prompt },
+        user: {
+          id: "user-123",
+          name: "<!channel>",
+          email: "attacker@example.com",
+        },
+      };
+
+      const blocks =
+        SlackMessageBuilder.buildPromptVersionMessage(injectionPayload);
+
+      const detailsSection = blocks[2];
+      expect(detailsSection.fields[0].text).toBe(
+        "*Change author:*\n&lt;!channel&gt;",
+      );
+    });
+
+    it("should fall back to email when name is empty string", () => {
+      const emptyNamePayload: WebhookInput["payload"] = {
+        action: "created",
+        type: "prompt-version",
+        prompt: { ...mockPromptPayload.prompt },
+        user: {
+          id: "user-123",
+          name: "",
+          email: "alice@example.com",
+        },
+      };
+
+      const blocks =
+        SlackMessageBuilder.buildPromptVersionMessage(emptyNamePayload);
+
+      const detailsSection = blocks[2];
+      expect(detailsSection.fields[0].text).toBe(
+        "*Change author:*\nalice@example.com",
+      );
     });
 
     it("should generate correct action emojis for different actions", () => {
@@ -178,7 +254,7 @@ describe("SlackMessageBuilder", () => {
 
       const blocks = SlackMessageBuilder.buildFallbackMessage(unknownPayload as any);
 
-      expect(blocks).toHaveLength(2);
+      expect(blocks).toHaveLength(1);
 
       expect(blocks[0]).toMatchObject({
         type: "section",
@@ -204,8 +280,8 @@ describe("SlackMessageBuilder", () => {
     it("should route prompt-version events to prompt message builder", () => {
       const blocks = SlackMessageBuilder.buildMessage(mockPromptPayload);
 
-      // Should be a full prompt message (6 blocks with commit message)
-      expect(blocks).toHaveLength(6);
+      // Should be a full prompt message (5 blocks with commit message)
+      expect(blocks).toHaveLength(5);
       expect(blocks[0].text.text).toContain("Prompt created");
     });
 

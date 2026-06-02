@@ -10,7 +10,7 @@ type RunEvaluatorFormProps = {
 
 export function RunEvaluatorForm({ projectId, evaluatorId, evalTemplates }: RunEvaluatorFormProps) {
   return (
-    <Card className="grid max-h-[90vh] overflow-y-auto p-3">
+    <Card className="grid p-3">
       <EvaluatorForm
         projectId={projectId}
         evalTemplates={evalTemplates}

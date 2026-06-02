@@ -24,6 +24,8 @@ export const VerticalBarChartTimeSeries: React.FC<ChartProps> = ({
 }) => {
   const groupedData = useMemo(() => groupDataByTimeDimension(data), [data]);
   const dimensions = useMemo(() => getUniqueDimensions(data), [data]);
+  const formatValue = (value: number) =>
+    toFullMetricString(metricFormatter(value, { style: "compact" }));
 
   return (
     <ChartContainer config={config}>
@@ -34,6 +36,8 @@ export const VerticalBarChartTimeSeries: React.FC<ChartProps> = ({
           fontSize={12}
           tickLine={false}
           axisLine={false}
+          interval="preserveStartEnd"
+          minTickGap={24}
         />
         <YAxis type="number" stroke="hsl(var(--chart-grid))" fontSize={12} tickLine={false} axisLine={false} />
         {dimensions.map((dimension, index) => (

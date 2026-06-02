@@ -8,12 +8,18 @@ const ReleaseApiRes = z.array(
   z.object({
     repo: z.string(),
     latestRelease: z.string(),
-    publishedAt: z.string().datetime(),
-    url: z.string().url(),
+    publishedAt: z.iso.datetime(),
+    url: z.url(),
   }),
 );
 
 export const publicRouter = createTRPCRouter({
+  tracingSearchConfig: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(() => ({
+      legacyTracingIoSearchEnabled:
+        env.LANGFUSE_DISABLE_LEGACY_TRACING_IO_SEARCH !== "true",
+    })),
   checkUpdate: publicProcedure.query(async () => {
     // Skip update check on Hanzo Cloud
     if (env.NEXT_PUBLIC_HANZO_CLOUD_REGION) return null;

@@ -35,7 +35,7 @@ export const GitHubDispatchActionForm: React.FC<GitHubDispatchActionFormProps> =
                 href="https://docs.github.com/en/rest/repos/repos#create-a-repository-dispatch-event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center text-primary hover:underline"
+                className="text-primary inline-flex items-center hover:underline"
               >
                 Learn more <ExternalLink className="ml-1 h-3 w-3" />
               </Link>
@@ -52,7 +52,7 @@ export const GitHubDispatchActionForm: React.FC<GitHubDispatchActionFormProps> =
         render={({ field }) => (
           <FormItem>
             <FormLabel className="flex items-center">
-              Event Type <span className="ml-1 text-destructive">*</span>
+              Event Type <span className="text-destructive ml-1">*</span>
             </FormLabel>
             <FormControl>
               <Input placeholder="prompt-update" disabled={disabled} {...field} />
@@ -85,7 +85,7 @@ export const GitHubDispatchActionForm: React.FC<GitHubDispatchActionFormProps> =
                 href="https://github.com/settings/tokens/new?scopes=repo&description=Hanzo%20Automation"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center text-primary hover:underline"
+                className="text-primary inline-flex items-center hover:underline"
               >
                 Create token <ExternalLink className="ml-1 h-3 w-3" />
               </Link>

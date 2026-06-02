@@ -5,6 +5,7 @@ import { validateAllDatasetItems } from "@hanzo/console-core/src/server";
 type DatasetJson = Prisma.InputJsonObject | Prisma.JsonValue | typeof Prisma.DbNull;
 
 type UpsertDatasetInput = {
+  id?: string;
   name: string;
   description?: string;
   metadata?: DatasetJson;
@@ -19,6 +20,7 @@ type UpdateDatasetInput = {
   metadata?: DatasetJson;
   remoteExperimentUrl?: string | null;
   remoteExperimentPayload?: DatasetJson;
+  remoteExperimentEnabled?: boolean;
   inputSchema?: DatasetJson;
   expectedOutputSchema?: DatasetJson;
 };
@@ -29,20 +31,44 @@ export const upsertDataset = async ({ input, projectId }: { input: UpsertDataset
     throw new InvalidRequestError("Dataset name not valid. " + validation.error.message);
   }
 
-  // Check if dataset exists (for UPDATE path)
   const existingDataset = await prisma.dataset.findUnique({
-    where: {
-      projectId_name: {
-        projectId,
-        name: input.name,
-      },
-    },
+    where: input.id
+      ? {
+          id_projectId: {
+            id: input.id,
+            projectId,
+          },
+        }
+      : {
+          projectId_name: {
+            projectId,
+            name: input.name,
+          },
+        },
     select: {
       id: true,
       inputSchema: true,
       expectedOutputSchema: true,
     },
   });
+
+  if (input.id && !existingDataset) {
+    const existingDatasetWithName = await prisma.dataset.findUnique({
+      where: {
+        projectId_name: {
+          projectId,
+          name: input.name,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingDatasetWithName) {
+      throw new LangfuseConflictError("Dataset name already in use");
+    }
+  }
 
   // If updating and schemas are being set, validate all existing items
   if (existingDataset) {
@@ -74,11 +100,50 @@ export const upsertDataset = async ({ input, projectId }: { input: UpsertDataset
     }
   }
 
-  return await prisma.dataset.upsert({
-    where: {
-      projectId_name: {
-        projectId,
-        name: input.name,
+  const data = {
+    name: input.name,
+    description: input.description ?? undefined,
+    metadata: input.metadata ?? undefined,
+    inputSchema:
+      input.inputSchema === undefined
+        ? undefined
+        : input.inputSchema === null
+          ? Prisma.DbNull
+          : input.inputSchema,
+    expectedOutputSchema:
+      input.expectedOutputSchema === undefined
+        ? undefined
+        : input.expectedOutputSchema === null
+          ? Prisma.DbNull
+          : input.expectedOutputSchema,
+  };
+
+  try {
+    if (input.id) {
+      return await prisma.dataset.upsert({
+        where: {
+          id_projectId: {
+            id: input.id,
+            projectId,
+          },
+        },
+        create: {
+          id: input.id,
+          ...data,
+          projectId,
+        },
+        update: data,
+      });
+    }
+
+    const { name: _name, ...updateData } = data;
+
+    return await prisma.dataset.upsert({
+      where: {
+        projectId_name: {
+          projectId,
+          name: input.name,
+        },
       },
     },
     create: {
@@ -131,6 +196,7 @@ export const updateDataset = async ({ input, projectId }: { input: UpdateDataset
       metadata: input.metadata ?? undefined,
       remoteExperimentUrl: input.remoteExperimentUrl,
       remoteExperimentPayload: input.remoteExperimentPayload ?? undefined,
+      remoteExperimentEnabled: input.remoteExperimentEnabled ?? undefined,
       inputSchema:
         input.inputSchema === undefined ? undefined : input.inputSchema === null ? Prisma.DbNull : input.inputSchema,
       expectedOutputSchema:

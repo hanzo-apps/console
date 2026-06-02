@@ -28,6 +28,9 @@ import { prisma } from "../../db";
 /**
  * Checks if trace exists in datastore.
  * Additionally, give back the timestamp of the trace as metadata.
+ * Right now, this is only used for the evalService to decide whether a trace needs evaluation.
+ * As LLMaaJ allows a reduced set of filters on observations, we exclude some expensive to compute
+ * properties from the check. If those become used, we expect their absence to be caught by unit tests.
  *
  * @param {string} projectId - Project ID for the trace
  * @param {string} traceId - ID of the trace to check
@@ -65,7 +68,11 @@ export const checkTraceExistsAndGetTimestamp = async ({
   ) as DateTimeFilter | undefined;
 
   tracesFilter.push(
-    ...createFilterFromFilterState(filter, tracesTableUiColumnDefinitions),
+    ...createFilterFromFilterState(
+      filter,
+      tracesTableUiColumnDefinitions,
+      tracesTableCols,
+    ),
     new StringFilter({
       datastoreTable: "t",
       field: "id",
@@ -91,9 +98,13 @@ export const checkTraceExistsAndGetTimestamp = async ({
         countIf(level = 'WARNING') as warning_count,
         countIf(level = 'DEFAULT') as default_count,
         countIf(level = 'DEBUG') as debug_count,
+        -- Remove those columns as this should only be used within the evalService and doesn't use them
+        -- date_diff('millisecond', least(min(start_time), min(end_time)), greatest(max(start_time), max(end_time))) as latency_milliseconds,
+        -- sumMap(usage_details) as usage_details,
+        -- sumMap(cost_details) as cost_details,
         trace_id,
         project_id
-      FROM observations o FINAL
+      FROM observations o
       WHERE o.project_id = {projectId: String}
         ${timeStampFilter ? `AND o.start_time >= {traceTimestamp: DateTime64(3)} - ${OBSERVATIONS_TO_TRACE_INTERVAL}` : ""}
         AND o.start_time >= {timestamp: DateTime64(3)} - ${OBSERVATIONS_TO_TRACE_INTERVAL}
@@ -129,7 +140,10 @@ export const checkTraceExistsAndGetTimestamp = async ({
           t.id as id,
           t.project_id as project_id,
           t.timestamp as timestamp
-        FROM traces t FINAL
+        -- We skip FINAL here. If one trace exists that matches the conditions, we consider this truthy
+        -- even if the trace got updated in the meantime to a non-matching state.
+        -- As updates are usually addittive, this is deemed acceptable given the performance benefits.
+        FROM traces t
         ${observationFilterRes ? `INNER JOIN observations_agg o ON t.id = o.trace_id AND t.project_id = o.project_id` : ""}
         WHERE ${tracesFilterRes.query}
         AND t.project_id = {projectId: String}
@@ -447,6 +461,7 @@ export const getTraceById = async ({
   datastoreFeatureTag = "tracing",
   preferredService,
   excludeInputOutput = false,
+  excludeMetadata = false,
 }: {
   traceId: string;
   projectId: string;
@@ -457,6 +472,8 @@ export const getTraceById = async ({
   preferredService?: PreferredDatastoreService;
   /** When true, sets input/output columns to empty in the query to reduce database load */
   excludeInputOutput?: boolean;
+  /** When true, sets metadata column to empty in the query to reduce database load */
+  excludeMetadata?: boolean;
 }) => {
   const records = await measureAndReturn({
     operationName: "getTraceById",
@@ -487,13 +504,14 @@ export const getTraceById = async ({
         : renderingProps.truncated
           ? `leftUTF8(output, ${env.HANZO_SERVER_SIDE_IO_CHAR_LIMIT})`
           : "output";
+      const metadataColumn = excludeMetadata ? "'{}'" : "metadata";
 
       const query = `
         SELECT
           id,
           name as name,
           user_id as user_id,
-          metadata as metadata,
+          ${metadataColumn} as metadata,
           release as release,
           version as version,
           project_id,
@@ -585,6 +603,7 @@ export const getTracesGroupedByName = async (
         query,
         params: input.params,
         tags: input.tags,
+        preferredClickhouseService: "ReadOnly",
       });
     },
   });
@@ -597,6 +616,7 @@ export const getTracesGroupedBySessionId = async (
   limit?: number,
   offset?: number,
   columns?: UiColumnMappings,
+  columnDefinitions?: ColumnDefinition[],
 ) => {
   const { tracesFilter } = getProjectIdDefaultFilter(projectId, {
     tracesPrefix: "t",
@@ -651,6 +671,7 @@ export const getTracesGroupedBySessionId = async (
         query,
         params: input.params,
         tags: input.tags,
+        preferredClickhouseService: "ReadOnly",
       });
     },
   });
@@ -663,6 +684,7 @@ export const getTracesGroupedByUsers = async (
   limit?: number,
   offset?: number,
   columns?: UiColumnMappings,
+  columnDefinitions?: ColumnDefinition[],
 ) => {
   const { tracesFilter } = getProjectIdDefaultFilter(projectId, {
     tracesPrefix: "t",
@@ -717,6 +739,7 @@ export const getTracesGroupedByUsers = async (
         query,
         params: input.params,
         tags: input.tags,
+        preferredClickhouseService: "ReadOnly",
       });
     },
   });
@@ -726,10 +749,11 @@ export type GroupedTracesQueryProp = {
   projectId: string;
   filter: FilterState;
   columns?: UiColumnMappings;
+  columnDefinitions?: ColumnDefinition[];
 };
 
 export const getTracesGroupedByTags = async (props: GroupedTracesQueryProp) => {
-  const { projectId, filter, columns } = props;
+  const { projectId, filter, columns, columnDefinitions } = props;
 
   const chFilter = createFilterFromFilterState(filter, columns ?? tracesTableUiColumnDefinitions);
 
@@ -766,6 +790,7 @@ export const getTracesGroupedByTags = async (props: GroupedTracesQueryProp) => {
         query,
         params: input.params,
         tags: input.tags,
+        preferredClickhouseService: "ReadOnly",
       });
     },
   });
@@ -1243,7 +1268,9 @@ export const getTracesForBlobStorageExport = function (projectId: string, minTim
       bookmarked as bookmarked,
       tags,
       input as input,
-      output as output
+      output as output,
+      created_at,
+      updated_at
     FROM ${traceTable} FINAL
     WHERE project_id = {projectId: String}
     AND timestamp >= {minTimestamp: DateTime64(3)}
@@ -1274,6 +1301,7 @@ export const getTracesForAnalyticsIntegrations = async function* (
   projectName: string,
   minTimestamp: Date,
   maxTimestamp: Date,
+  options: { useGraceHash?: boolean } = {},
 ) {
   // Determine which trace table to use based on experiment flag
   const traceTable = "traces";
@@ -1288,6 +1316,7 @@ export const getTracesForAnalyticsIntegrations = async function* (
       FROM observations o FINAL
       WHERE o.project_id = {projectId: String}
       AND o.start_time >= {minTimestamp: DateTime64(3)} - ${TRACE_TO_OBSERVATIONS_INTERVAL}
+      AND o.start_time < {maxTimestamp: DateTime64(3)} + ${OBSERVATIONS_TO_TRACE_INTERVAL}
       GROUP BY o.project_id, o.trace_id
     )
 
@@ -1310,7 +1339,7 @@ export const getTracesForAnalyticsIntegrations = async function* (
     LEFT JOIN observations_agg o ON t.id = o.trace_id AND t.project_id = o.project_id
     WHERE t.project_id = {projectId: String}
     AND t.timestamp >= {minTimestamp: DateTime64(3)}
-    AND t.timestamp <= {maxTimestamp: DateTime64(3)}
+    AND t.timestamp < {maxTimestamp: DateTime64(3)}
   `;
 
   const records = queryDatastoreStream<Record<string, unknown>>({
@@ -1496,6 +1525,7 @@ export const getTraceCountsByProjectAndDay = async ({ startDate, endDate }: { st
       startDate: convertDateToDatastoreDateTime(startDate),
       endDate: convertDateToDatastoreDateTime(endDate),
     },
+    clickhouseConfigs: { request_timeout: 120_000 },
     tags: {
       feature: "tracing",
       type: "trace",

@@ -37,7 +37,7 @@ Model Context Protocol (MCP) server for Hanzo, enabling AI assistants to interac
        --header "Authorization: Basic {your-base64-token}"
    ```
 
-4. **Verify**
+4. **Verify prompt access**
    In Claude Code: `List all prompts in the project`
 
 ---
@@ -138,8 +138,8 @@ This design:
 
 Tools include hints for clients about their behavior:
 
-- **`readOnly: true`**: Safe operations that don't modify data (getPrompt, listPrompts)
-- **`destructive: true`**: Operations that create/modify data (createTextPrompt, createChatPrompt, updatePromptLabels)
+- **`readOnlyHint: true`**: Safe operations that don't modify data
+- **`destructiveHint: true`**: Operations that modify data in ways that are non-revertable. If an operation only creates entities, without updating existing, it can omit this.
 
 Clients like Claude Code can use these annotations to:
 
@@ -148,7 +148,7 @@ Clients like Claude Code can use these annotations to:
 
 ### Audit Logging
 
-All write operations (createTextPrompt, createChatPrompt, updatePromptLabels) automatically create audit log entries with before/after snapshots.
+All write operations should audit-log entries with before/after snapshots.
 
 ---
 

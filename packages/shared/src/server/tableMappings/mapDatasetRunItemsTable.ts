@@ -1,4 +1,7 @@
-import { UiColumnMappings } from "../../tableDefinitions";
+import {
+  matchesUiColumnMapping,
+  UiColumnMappings,
+} from "../../tableDefinitions";
 import { DatasetRunItemDomain } from "../../domain/dataset-run-items";
 
 export const datasetRunItemsTableUiColumnDefinitions: UiColumnMappings = [

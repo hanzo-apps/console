@@ -58,7 +58,7 @@ export function CategoricalScoreChart(props: {
     orderBy: null,
   };
 
-  const scores = api.dashboard.executeQuery.useQuery(
+  const scores = useScheduledDashboardExecuteQuery(
     {
       projectId: props.projectId,
       query: scoresQuery,
@@ -69,6 +69,7 @@ export function CategoricalScoreChart(props: {
           skipBatch: true,
         },
       },
+      queryId: `${props.schedulerId ?? "home:score-analytics"}:categorical:${props.scoreData.source}:${props.scoreData.name}:${props.agg ?? "aggregate"}`,
     },
   );
 

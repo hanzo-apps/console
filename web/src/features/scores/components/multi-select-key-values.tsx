@@ -3,7 +3,7 @@ import { Archive, ChevronDown, Component, Search } from "lucide-react";
 
 import { cn } from "@/src/utils/tailwind";
 import { Badge } from "@/src/components/ui/badge";
-import { Button } from "@/src/components/ui/button";
+import { Button, type ButtonProps } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import {
   DropdownMenu,
@@ -46,7 +46,7 @@ type MultiSelectKeyValuesProps<T extends { key: string; value: string } | string
   hideClearButton?: boolean;
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
-  variant?: "outline" | "secondary" | "ghost";
+  variant?: ButtonProps["variant"];
   showSelectedValueStrings?: boolean;
 };
 
@@ -148,7 +148,7 @@ export function MultiSelectKeyValues<T extends { key: string; value: string } | 
         <Button
           variant={variant}
           className={cn(
-            "flex h-8 w-full items-center justify-between rounded-md px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            "ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-8 w-full items-center justify-between rounded-md px-3 py-1 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
             className,
           )}
           disabled={disabled}
@@ -207,7 +207,7 @@ export function MultiSelectKeyValues<T extends { key: string; value: string } | 
 
             return (
               <DropdownMenuSub key={group.label}>
-                <DropdownMenuSubTrigger className="flex w-full cursor-default select-none items-center">
+                <DropdownMenuSubTrigger className="flex w-full cursor-default items-center select-none">
                   <Component className="mr-2 h-4 w-4 opacity-50" />
                   <span>{group.label}</span>
                 </DropdownMenuSubTrigger>

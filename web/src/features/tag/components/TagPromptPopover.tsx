@@ -52,7 +52,7 @@ export function TagPromptPopover({
   });
 
   function mutateTags(newTags: string[]) {
-    void mutTags.mutateAsync({
+    mutTags.mutateAsync({
       projectId,
       name: promptName,
       tags: newTags,

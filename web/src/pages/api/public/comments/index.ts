@@ -1,6 +1,10 @@
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
+  createCommentForApi,
+  listCommentsForApi,
+} from "@/src/features/comments/server/publicCommentService";
+import {
   GetCommentsV1Query,
   GetCommentsV1Response,
   PostCommentsV1Body,
@@ -59,41 +63,7 @@ export default withMiddlewares({
     name: "Get Comments",
     querySchema: GetCommentsV1Query,
     responseSchema: GetCommentsV1Response,
-    fn: async ({ query, auth }) => {
-      const { objectType, objectId, authorUserId, limit, page } = query;
-
-      const comments = await prisma.comment.findMany({
-        where: {
-          projectId: auth.scope.projectId,
-          objectType: objectType ?? undefined,
-          objectId: objectId ?? undefined,
-          authorUserId: authorUserId ?? undefined,
-        },
-        take: limit,
-        skip: (page - 1) * limit,
-      });
-
-      const totalItems = await prisma.comment.count({
-        where: {
-          projectId: auth.scope.projectId,
-          objectType: objectType ?? undefined,
-          objectId: objectId ?? undefined,
-          authorUserId: authorUserId ?? undefined,
-        },
-      });
-
-      return {
-        data: comments.map(
-          // Exclude inline positioning fields from public API
-          ({ dataField, path, rangeStart, rangeEnd, ...rest }) => rest,
-        ),
-        meta: {
-          page: query.page,
-          limit: query.limit,
-          totalItems,
-          totalPages: Math.ceil(totalItems / query.limit),
-        },
-      };
-    },
+    fn: async ({ query, auth }) =>
+      await listCommentsForApi({ ...query, projectId: auth.scope.projectId }),
   }),
 });

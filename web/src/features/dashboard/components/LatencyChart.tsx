@@ -8,7 +8,6 @@ import {
 import { DashboardCard } from "@/src/features/dashboard/components/cards/DashboardCard";
 import { BaseTimeSeriesChart } from "@/src/features/dashboard/components/BaseTimeSeriesChart";
 import { TabComponent } from "@/src/features/dashboard/components/TabsComponent";
-import { latencyFormatter } from "@/src/utils/numbers";
 import {
   type DashboardDateRangeAggregationOption,
   dashboardDateRangeAggregationSettings,
@@ -71,18 +70,20 @@ export const GenerationLatencyChart = ({
     orderBy: null,
   };
 
-  const latencies = api.dashboard.executeQuery.useQuery(
+  const latencies = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: latenciesQuery,
     },
     {
-      enabled: !isLoading && selectedModels.length > 0 && allModels.length > 0,
+      enabled: isLatencyEnabled,
       trpc: {
         context: {
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:generation-latency"}:latencies`,
+      priority: 1001,
     },
   );
 

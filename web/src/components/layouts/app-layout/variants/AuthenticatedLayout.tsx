@@ -12,10 +12,36 @@ import { CommandMenu } from "@/src/features/command-k-menu/CommandMenu";
 import { Toaster } from "@/src/components/ui/sonner";
 import { PaymentBanner, PaymentBannerProvider } from "@/src/features/payment-banner";
 import { ResizableContent } from "../components/ResizableContent";
+import useIsFeatureEnabled from "@/src/features/feature-flags/hooks/useIsFeatureEnabled";
 import { ThemeToggle } from "@/src/features/theming/ThemeToggle";
+import {
+  getAvailableCloudRegionOptions,
+  getCloudRegionAuthUrl,
+} from "@/src/features/organizations/cloudRegions";
+import { useLangfuseCloudRegion } from "@/src/features/organizations/hooks";
 import type { Session } from "next-auth";
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 import type { RouteGroup } from "@/src/components/layouts/routes";
+
+const V4EnabledBanner = dynamic(
+  () =>
+    import("@/src/features/events/components/V4EnabledBanner").then((mod) => ({
+      default: mod.V4EnabledBanner,
+    })),
+  {
+    ssr: false,
+  },
+);
+
+const V4PromoBanner = dynamic(
+  () =>
+    import("@/src/features/events/components/V4PromoBanner").then((mod) => ({
+      default: mod.V4PromoBanner,
+    })),
+  {
+    ssr: false,
+  },
+);
 
 /** Grouped navigation structure returned by processNavigation */
 type GroupedNavigation = {
@@ -37,6 +63,7 @@ type AuthenticatedLayoutProps = PropsWithChildren<{
     favicon256Path: string;
     appleTouchIconPath: string;
   };
+  aiFeaturesEnabled: boolean;
   onSignOut: () => void;
 }>;
 
@@ -58,6 +85,21 @@ export function AuthenticatedLayout({ children, session, navigation, metadata, o
     return null;
   }
 
+  const regionMenuItems = getAvailableCloudRegionOptions(currentRegion).map(
+    (region) => ({
+      name: region.name,
+      content: `${region.flag} ${region.name}`,
+      onClick: () => {
+        if (!region.rootUrl) return;
+        window.open(
+          getCloudRegionAuthUrl(region.rootUrl, user.email),
+          "_blank",
+          "noopener,noreferrer",
+        );
+      },
+    }),
+  );
+
   // User navigation items for sidebar dropdown
   const userNavProps = {
     user: {
@@ -68,6 +110,22 @@ export function AuthenticatedLayout({ children, session, navigation, metadata, o
     items: [
       { name: "Account Settings", href: "/account/settings" },
       { name: "Theme", onClick: () => {}, content: <ThemeToggle /> },
+      ...(isLangfuseCloud
+        ? [
+            {
+              name: "Regions",
+              subItems: regionMenuItems,
+              content: (
+                <>
+                  Regions
+                  <div className="ml-2 inline-flex rounded bg-black/5 p-1 text-xs dark:bg-white/10">
+                    Current: {currentRegion}
+                  </div>
+                </>
+              ),
+            },
+          ]
+        : []),
       { name: "Sign out", onClick: onSignOut },
     ],
   };
@@ -81,25 +139,29 @@ export function AuthenticatedLayout({ children, session, navigation, metadata, o
         <link rel="apple-touch-icon" href={metadata.appleTouchIconPath} />
       </Head>
 
-      <PaymentBannerProvider>
+      <TopBannerProvider>
         <SidebarProvider>
           <div className="flex h-dvh w-full flex-col">
             <PaymentBanner />
-            <div className="flex min-h-0 flex-1 pt-banner-offset">
+            <V4EnabledBanner />
+            <V4PromoBanner />
+            <div className="pt-banner-offset flex min-h-0 flex-1">
               <AppSidebar
                 navItems={navigation.mainNavigation}
                 secondaryNavItems={navigation.secondaryNavigation}
                 userNavProps={userNavProps}
               />
               <SidebarInset className="h-screen-with-banner max-w-full md:peer-data-[state=collapsed]:w-[calc(100vw-var(--sidebar-width-icon))] md:peer-data-[state=expanded]:w-[calc(100vw-var(--sidebar-width))]">
-                <ResizableContent>{children}</ResizableContent>
+                <ResizableContent aiAgentEnabled={assistantEnabled}>
+                  {children}
+                </ResizableContent>
                 <Toaster visibleToasts={1} />
                 <CommandMenu mainNavigation={navigation.navigation} />
               </SidebarInset>
             </div>
           </div>
         </SidebarProvider>
-      </PaymentBannerProvider>
+      </TopBannerProvider>
     </>
   );
 }

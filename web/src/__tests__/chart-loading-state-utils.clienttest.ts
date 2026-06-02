@@ -43,4 +43,24 @@ describe("getChartLoadingStateProps", () => {
       hintText: undefined,
     });
   });
+
+  test("hides progress UI when backend streaming is not available", () => {
+    expect(
+      getChartLoadingProgress({
+        isPending: true,
+        progress: null,
+        useBackendProgress: false,
+      }),
+    ).toBeUndefined();
+  });
+
+  test("keeps the loading bar visible while waiting for streamed progress", () => {
+    expect(
+      getChartLoadingProgress({
+        isPending: true,
+        progress: null,
+        useBackendProgress: true,
+      }),
+    ).toBeNull();
+  });
 });

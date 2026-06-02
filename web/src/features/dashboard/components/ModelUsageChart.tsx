@@ -8,7 +8,7 @@ import {
 } from "@/src/features/dashboard/components/hooks";
 import { TabComponent } from "@/src/features/dashboard/components/TabsComponent";
 import { TotalMetric } from "@/src/features/dashboard/components/TotalMetric";
-import { totalCostDashboardFormatted } from "@/src/features/dashboard/lib/dashboard-utils";
+import { costFormatter } from "@/src/utils/numbers";
 import { api } from "@/src/utils/api";
 import {
   type DashboardDateRangeAggregationOption,
@@ -72,18 +72,20 @@ export const ModelUsageChart = ({
     orderBy: null,
   };
 
-  const queryResult = api.dashboard.executeQuery.useQuery(
+  const queryResult = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: modelUsageQuery,
     },
     {
-      enabled: !isLoading && selectedModels.length > 0 && allModels.length > 0,
+      enabled: isModelUsageEnabled,
       trpc: {
         context: {
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:model-usage"}:timeseries`,
+      priority: 1001,
     },
   );
 
@@ -124,9 +126,10 @@ export const ModelUsageChart = ({
       ],
       orderBy: [{ column: "calculatedTotalCost", direction: "DESC", agg: "SUM" }],
       queryName: "observations-cost-by-type-timeseries",
+      version: metricsVersion,
     },
     {
-      enabled: !isLoading && selectedModels.length > 0 && allModels.length > 0,
+      enabled: isModelUsageEnabled,
       trpc: {
         context: {
           skipBatch: true,
@@ -172,9 +175,10 @@ export const ModelUsageChart = ({
       ],
       orderBy: [{ column: "totalTokens", direction: "DESC", agg: "SUM" }],
       queryName: "observations-usage-by-type-timeseries",
+      version: metricsVersion,
     },
     {
-      enabled: !isLoading && selectedModels.length > 0 && allModels.length > 0,
+      enabled: isModelUsageEnabled,
       trpc: {
         context: {
           skipBatch: true,
@@ -255,14 +259,14 @@ export const ModelUsageChart = ({
     {
       tabTitle: "Cost by model",
       data: costByModel,
-      totalMetric: totalCostDashboardFormatted(totalCost),
+      totalMetric: costFormatter(totalCost),
       metricDescription: `Cost`,
       formatter: oneValueUsdFormatter,
     },
     {
       tabTitle: "Cost by type",
       data: costByType,
-      totalMetric: totalCostDashboardFormatted(totalCost),
+      totalMetric: costFormatter(totalCost),
       metricDescription: `Cost`,
       formatter: oneValueUsdFormatter,
     },
@@ -271,12 +275,16 @@ export const ModelUsageChart = ({
       data: unitsByModel,
       totalMetric: totalTokens ? compactNumberFormatter(totalTokens) : compactNumberFormatter(0),
       metricDescription: `Units`,
+      chartMetricLabel: "Tokens",
+      chartUnit: "tokens",
     },
     {
       tabTitle: "Usage by type",
       data: unitsByType,
       totalMetric: totalTokens ? compactNumberFormatter(totalTokens) : compactNumberFormatter(0),
       metricDescription: `Units`,
+      chartMetricLabel: "Tokens",
+      chartUnit: "tokens",
     },
   ];
 

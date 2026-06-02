@@ -175,13 +175,13 @@ export function PromptSelectionDialog({ isOpen, onClose, onSelect, projectId }: 
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-2 top-2 bg-opacity-70"
+                  className="bg-opacity-70 absolute top-2 right-2"
                   onClick={copySelectedTag}
                 >
                   <CopyIcon className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {onSelect
                   ? "This tag will be inserted into the prompt content."
                   : "This tag will be copied to clipboard to be then inserted into the prompt"}

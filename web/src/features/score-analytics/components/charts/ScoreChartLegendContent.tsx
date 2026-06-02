@@ -1,5 +1,5 @@
 import React, { useState, useRef, useLayoutEffect, useMemo } from "react";
-import { type LegendProps } from "recharts";
+import type { DefaultLegendContentProps, LegendPayload } from "recharts";
 import { MoreVertical } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
@@ -14,9 +14,7 @@ export interface ScoreChartLegendContentProps extends Pick<LegendProps, "payload
   /** Callback when visibility changes */
   onVisibilityChange?: (key: string, visible: boolean) => void;
   /** Optional function to format labels */
-  formatLabel?: (label: string, item: unknown) => string;
-  /** Hide the color indicator icon */
-  hideIcon?: boolean;
+  formatLabel?: (label: string, item: LegendPayload) => string;
   /** Custom className */
   className?: string;
   /** Name key to use for legend items */
@@ -274,7 +272,7 @@ export const ScoreChartLegendContent = React.forwardRef<HTMLDivElement, ScoreCha
         return {};
       }
 
-      const groups: Record<string, typeof payload> = {};
+      const groups: Record<string, LegendPayload[]> = {};
 
       payload.forEach((item) => {
         const key = `${nameKey || item.dataKey || "value"}`;
@@ -340,7 +338,7 @@ export const ScoreChartLegendContent = React.forwardRef<HTMLDivElement, ScoreCha
     };
 
     // Format label for display
-    const getFormattedLabel = (item: (typeof payload)[0]): string => {
+    const getFormattedLabel = (item: LegendPayload): string => {
       const key = `${nameKey || item.dataKey || "value"}`;
 
       // Try to get label from ChartConfig first
@@ -409,7 +407,7 @@ export const ScoreChartLegendContent = React.forwardRef<HTMLDivElement, ScoreCha
                   ref={buttonRef}
                   variant="ghost"
                   size="sm"
-                  className="h-6 shrink-0 gap-1 px-2 text-xs text-muted-foreground hover:bg-accent"
+                  className="text-muted-foreground hover:bg-accent h-6 shrink-0 gap-1 px-2 text-xs"
                   aria-label={`Show all ${payload.length} categories`}
                 >
                   <span>Show all {payload.length}</span>

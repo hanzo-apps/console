@@ -38,7 +38,10 @@ import { TagPromptDetailsPopover } from "@/src/features/tag/components/TagPrompt
 import { SetPromptVersionLabels } from "@/src/features/prompts/components/SetPromptVersionLabels";
 import { CommentDrawerButton } from "@/src/features/comments/CommentDrawerButton";
 import { Command, CommandInput } from "@/src/components/ui/command";
-import { renderRichPromptContent } from "@/src/features/prompts/components/prompt-content-utils";
+import {
+  PromptReferenceProvider,
+  renderRichPromptContent,
+} from "@/src/components/ui/PromptReferences";
 import { PromptVariableListPreview } from "@/src/features/prompts/components/PromptVariableListPreview";
 import { createBreadcrumbItems } from "@/src/features/folders/utils";
 
@@ -96,13 +99,21 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
     projectId,
     scope: "promptExperiments:CUD",
   });
-  const promptHistory = api.prompts.allVersions.useQuery(
-    {
+  const hasCommentReadAccess = useHasProjectAccess({
+    projectId,
+    scope: "comments:read",
+  });
+  const promptHistoryInput = useMemo(
+    () => ({
       name: promptName,
       projectId: projectId as string, // Typecast as query is enabled only when projectId is present
-    },
-    { enabled: Boolean(projectId) },
+      includeCommentCounts: hasCommentReadAccess,
+    }),
+    [hasCommentReadAccess, projectId, promptName],
   );
+  const promptHistory = api.prompts.allVersions.useQuery(promptHistoryInput, {
+    enabled: Boolean(projectId),
+  });
   const prompt = currentPromptVersion
     ? promptHistory.data?.promptVersions.find((prompt) => prompt.version === currentPromptVersion)
     : currentPromptLabel
@@ -140,8 +151,8 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
   }) => {
     setIsCreateExperimentDialogOpen(false);
     if (!data) return;
-    void utils.datasets.baseRunDataByDatasetId.invalidate();
-    void utils.datasets.runsByDatasetId.invalidate();
+    utils.datasets.baseRunDataByDatasetId.invalidate();
+    utils.datasets.runsByDatasetId.invalidate();
     showSuccessToast({
       title: "Experiment triggered successfully",
       description: "Waiting for experiment to complete...",
@@ -172,27 +183,7 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
     ).data?.tags ?? []
   ).map((t) => t.value);
 
-  const promptIds = useMemo(
-    () => promptHistory.data?.promptVersions.map((p) => p.id) ?? [],
-    [promptHistory.data?.promptVersions],
-  );
-
-  const commentCounts = api.comments.getCountByObjectIds.useQuery(
-    {
-      projectId: projectId as string,
-      objectType: "PROMPT",
-      objectIds: promptIds,
-    },
-    {
-      enabled: Boolean(projectId) && promptIds.length > 0,
-      trpc: {
-        context: {
-          skipBatch: true,
-        },
-      },
-      refetchOnMount: false, // prevents refetching loops
-    },
-  );
+  const commentCounts = promptHistory.data?.commentCounts;
 
   const { pythonCode, jsCode } = useMemo(() => {
     if (!prompt?.id) return { pythonCode: null, jsCode: null };
@@ -254,6 +245,7 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
             availableTags={allTags}
             projectId={projectId as string}
             promptName={prompt.name}
+            includeCommentCounts={promptHistoryInput.includeCommentCounts}
           />
         ),
         actionButtonsRight: (
@@ -277,12 +269,12 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
       }}
     >
       <div className="grid flex-1 grid-cols-3 gap-4 overflow-hidden px-3 md:grid-cols-4">
-        <Command className="flex flex-col gap-2 overflow-y-auto rounded-none border-r pr-3 font-medium focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 data-[focus]:ring-0">
+        <Command className="flex flex-col gap-2 overflow-y-auto rounded-none border-r pr-3 font-medium focus:ring-0 focus:outline-hidden focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-hidden data-focus:ring-0">
           <div className="mt-3 flex items-center justify-between">
             <CommandInput
               showBorder={false}
               placeholder="Search..."
-              className="h-fit border-none py-0 text-sm font-light text-muted-foreground focus:ring-0"
+              className="text-muted-foreground h-fit border-none py-0 text-sm font-light focus:ring-0"
             />
 
             <Button
@@ -308,23 +300,22 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
                 setCurrentPromptVersion(version);
                 setCurrentPromptLabel(null);
               }}
-              totalCount={promptHistory.data.totalCount}
-              commentCounts={commentCounts.data}
+              commentCounts={commentCounts}
             />
           </div>
         </Command>
         <div className="col-span-2 mt-3 flex max-h-full min-h-0 flex-col md:col-span-3">
           <div className="flex flex-col items-start gap-2">
-            <div className="grid w-full min-w-0 grid-cols-[auto,auto] items-center justify-between">
-              <div className="flex min-w-0 max-w-full flex-shrink flex-col">
-                <div className="flex min-w-0 max-w-full flex-wrap items-start gap-1">
+            <div className="grid w-full min-w-0 grid-cols-[auto_auto] items-center justify-between">
+              <div className="flex max-w-full min-w-0 shrink flex-col">
+                <div className="flex max-w-full min-w-0 flex-wrap items-start gap-1">
                   <SetPromptVersionLabels
                     title={
                       <div className="contents !cursor-default" onClick={(e) => e.stopPropagation()}>
                         <Badge variant="outline" className="mr-1 h-6 text-nowrap">
                           # {prompt.version}
                         </Badge>
-                        <span className="mb-0 line-clamp-2 min-w-0 break-all text-lg font-medium md:break-normal md:break-words">
+                        <span className="mb-0 line-clamp-2 min-w-0 text-lg font-medium break-all md:break-normal md:wrap-break-word">
                           {prompt.commitMessage ?? prompt.name}
                         </span>
                       </div>
@@ -381,8 +372,11 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
                   projectId={projectId as string}
                   objectId={prompt.id}
                   objectType="PROMPT"
-                  count={getNumberFromMap(commentCounts?.data, prompt.id)}
+                  count={getNumberFromMap(commentCounts, prompt.id)}
                   variant="outline"
+                  onCommentChange={() =>
+                    utils.prompts.allVersions.invalidate(promptHistoryInput)
+                  }
                 />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -412,14 +406,14 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
             </TabsBarList>
             <TabsBarContent
               value="linked-generations"
-              className="mb-2 mt-0 flex max-h-full min-h-0 flex-1 flex-col overflow-hidden"
+              className="mt-0 mb-2 flex max-h-full min-h-0 flex-1 flex-col overflow-hidden"
             >
               <div className="flex h-full flex-1 flex-col overflow-hidden">
                 <Generations
                   projectId={prompt.projectId}
                   promptName={prompt.name}
                   promptVersion={prompt.version}
-                  omittedFilter={["Prompt Name", "Prompt Version"]}
+                  omittedFilter={["promptName"]}
                 />
               </div>
             </TabsBarContent>
@@ -480,7 +474,7 @@ export const PromptDetail = ({ promptName: promptNameProp }: { promptName?: stri
               <div className="flex h-full min-h-0 w-full flex-col gap-2 overflow-y-auto pb-4">
                 {pythonCode && <CodeView content={pythonCode} title="Python" />}
                 {jsCode && <CodeView content={jsCode} title="JS/TS" />}
-                <p className="pl-1 text-xs text-muted-foreground">
+                <p className="text-muted-foreground pl-1 text-xs">
                   See{" "}
                   <a
                     href="https://hanzo.ai/docs/prompts"

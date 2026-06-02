@@ -22,6 +22,51 @@ import { decrypt } from "@hanzo/console-core/encryption";
 import { randomUUID } from "crypto";
 import { env } from "../../env";
 
+export const BLOB_STORAGE_LAG_BUFFER_MS = 20 * 60 * 1000; // 20-minute lag buffer
+
+export async function* enrichObservationStream(
+  stream: AsyncGenerator<Record<string, unknown>>,
+  projectId: string,
+  modelIdField: string,
+  convertLatencyToSeconds: boolean,
+  fieldGroups?: ObservationFieldGroupFull[],
+): AsyncGenerator<Record<string, unknown>> {
+  const { getModel } = createModelCache(projectId);
+
+  const includeModelId = !fieldGroups || fieldGroups.includes("model");
+
+  for await (const row of stream) {
+    const enriched: Record<string, unknown> = { ...row };
+
+    if (includeModelId) {
+      const modelId = row[modelIdField] as string | null | undefined;
+      const model = await getModel(modelId);
+      const pricing = enrichObservationWithModelData(model);
+      enriched.input_price = pricing.inputPrice;
+      enriched.output_price = pricing.outputPrice;
+      enriched.total_price = pricing.totalPrice;
+    }
+
+    // ClickHouse returns {} for Map columns even when not SELECTed — drop it
+    // when the metadata group was not requested.
+    if (fieldGroups && !fieldGroups.includes("metadata")) {
+      delete enriched.metadata;
+    }
+
+    if (convertLatencyToSeconds && row.latency !== undefined) {
+      const latency = row.latency as number | null;
+      enriched.latency = latency != null ? latency / 1000 : null;
+    }
+
+    if (convertLatencyToSeconds && row.time_to_first_token !== undefined) {
+      const ttft = row.time_to_first_token as number | null;
+      enriched.time_to_first_token = ttft != null ? ttft / 1000 : null;
+    }
+
+    yield enriched;
+  }
+}
+
 const getMinTimestampForExport = async (
   projectId: string,
   lastSyncAt: Date | null,
@@ -103,6 +148,8 @@ const getMinTimestampForExport = async (
  */
 const getFrequencyIntervalMs = (frequency: string): number => {
   switch (frequency) {
+    case "every_20_minutes":
+      return 20 * 60 * 1000; // 20 minutes
     case "hourly":
       return 60 * 60 * 1000; // 1 hour
     case "daily":
@@ -152,6 +199,9 @@ const processBlobStorageExport = async (config: {
   type: BlobStorageIntegrationType;
   table: "traces" | "observations" | "scores" | "observations_v2"; // observations_v2 is the events table
   fileType: BlobStorageIntegrationFileType;
+  compressed: boolean;
+  convertV4LatencyToSeconds: boolean;
+  exportFieldGroups?: ObservationFieldGroupFull[];
 }) => {
   logger.info(`[BLOB INTEGRATION] Processing ${config.table} export for project ${config.projectId}`);
 
@@ -167,6 +217,9 @@ const processBlobStorageExport = async (config: {
     awsSse: undefined,
     awsSseKmsKeyId: undefined,
     useAzureBlob: config.type === BlobStorageIntegrationType.AZURE_BLOB_STORAGE,
+    useGoogleCloudStorage: false, // Not supported in blob storage integration
+    useOCIObjectStorage: false, // Not supported in blob storage integration
+    connectionValidation: blobStorageEndpointConnectionValidationOptions(),
   });
 
   try {
@@ -177,6 +230,11 @@ const processBlobStorageExport = async (config: {
     const filePath = `${config.prefix ?? ""}${config.projectId}/${config.table}/${timestamp}.${blobStorageProps.extension}`;
 
     // Fetch data based on table type
+    const exportFieldGroups =
+      config.exportFieldGroups && config.exportFieldGroups.length > 0
+        ? config.exportFieldGroups
+        : [...OBSERVATION_FIELD_GROUPS_FULL];
+
     let dataStream: AsyncGenerator<Record<string, unknown>>;
 
     switch (config.table) {
@@ -207,11 +265,11 @@ const processBlobStorageExport = async (config: {
     // 100 MB parts support files up to ~1 TB (100 MB × 10,000 AWS limit)
     // This prevents hitting AWS's 10,000 part limit on large exports
 
-    await storageService.uploadFile({
+    await storageService.uploadFileBuffered({
       fileName: filePath,
-      fileType: blobStorageProps.contentType,
+      fileType: uploadContentType,
       data: fileStream,
-      partSize: 100 * 1024 * 1024, // 100 MB part size
+      partSizeBytes: 100 * 1024 * 1024, // 100 MB part size
     });
 
     logger.info(`[BLOB INTEGRATION] Successfully exported ${config.table} records for project ${config.projectId}`);
@@ -283,7 +341,21 @@ export const handleBlobStorageIntegrationProjectJob = async (
   }
 
   try {
+    // Preflight the persisted integration endpoint once per job inside the
+    // export error path. StorageService connection-time validation remains the
+    // DNS-rebinding defense for each SDK connection.
+    if (blobStorageIntegration.endpoint) {
+      await validateBlobStorageEndpoint(blobStorageIntegration.endpoint);
+    }
+
     // Process the export based on the integration configuration
+    // Convert v4 (events table) latency/time_to_first_token from ms to seconds
+    // for integrations created on or after 2026-04-01. Before this date, v4 blob
+    // export returned these fields in milliseconds. We preserve that behavior for
+    // existing integrations to avoid silently breaking their pipelines.
+    const convertV4LatencyToSeconds =
+      blobStorageIntegration.createdAt >= new Date("2026-04-01T00:00:00Z");
+
     const executionConfig = {
       projectId,
       minTimestamp,
@@ -299,6 +371,10 @@ export const handleBlobStorageIntegrationProjectJob = async (
       forcePathStyle: blobStorageIntegration.forcePathStyle || undefined,
       type: blobStorageIntegration.type,
       fileType: blobStorageIntegration.fileType,
+      compressed: blobStorageIntegration.compressed,
+      convertV4LatencyToSeconds,
+      exportFieldGroups:
+        blobStorageIntegration.exportFieldGroups as ObservationFieldGroupFull[],
     };
 
     // Check if this project should only export traces (legacy behavior via env var)
@@ -374,6 +450,8 @@ export const handleBlobStorageIntegrationProjectJob = async (
       data: {
         lastSyncAt: maxTimestamp,
         nextSyncAt,
+        lastError: null,
+        lastErrorAt: null,
       },
     });
 
@@ -390,7 +468,7 @@ export const handleBlobStorageIntegrationProjectJob = async (
             timestamp: new Date(),
             payload: { projectId },
           },
-          { jobId },
+          { jobId, removeOnFail: true },
         );
         logger.info(`[BLOB INTEGRATION] Queued next catch-up chunk for project ${projectId} with jobId ${jobId}`);
       }
@@ -402,3 +480,107 @@ export const handleBlobStorageIntegrationProjectJob = async (
     throw error; // Rethrow to trigger retries
   }
 };
+
+function notifyBlobStorageExportFailedInBackground(projectId: string): void {
+  (async () => {
+    try {
+      const cooldownMs =
+        env.LANGFUSE_BLOB_STORAGE_FAILURE_NOTIFICATION_COOLDOWN_HOURS *
+        60 *
+        60 *
+        1000;
+
+      // Atomic claim: set timestamp before sending to prevent duplicate emails on concurrent retries.
+      // If the email send subsequently fails, the cooldown still applies — the next failure
+      // after cooldown expiry will retry the notification.
+      const claimed = await prisma.blobStorageIntegration.updateMany({
+        where: {
+          projectId,
+          OR: [
+            { lastFailureNotificationSentAt: null },
+            {
+              lastFailureNotificationSentAt: {
+                lt: new Date(Date.now() - cooldownMs),
+              },
+            },
+          ],
+        },
+        data: { lastFailureNotificationSentAt: new Date() },
+      });
+
+      if (claimed.count === 0) {
+        logger.info(
+          `[BLOB INTEGRATION] Skipping failure notification for project ${projectId}, cooldown still active`,
+        );
+        return;
+      }
+
+      const emailEnv = {
+        EMAIL_FROM_ADDRESS: env.EMAIL_FROM_ADDRESS,
+        SMTP_CONNECTION_URL: env.SMTP_CONNECTION_URL,
+        NEXTAUTH_URL: env.NEXTAUTH_URL,
+        CLOUD_CRM_EMAIL: env.CLOUD_CRM_EMAIL,
+      };
+
+      if (
+        !emailEnv.EMAIL_FROM_ADDRESS ||
+        !emailEnv.SMTP_CONNECTION_URL ||
+        !emailEnv.NEXTAUTH_URL
+      ) {
+        return;
+      }
+
+      const [adminEmails, project] = await Promise.all([
+        getProjectAdminEmails(projectId),
+        prisma.project.findUnique({
+          where: { id: projectId },
+          select: { name: true },
+        }),
+      ]);
+
+      if (adminEmails.length === 0) {
+        return;
+      }
+
+      const projectName = project?.name ?? projectId;
+      const settingsUrl = `${emailEnv.NEXTAUTH_URL}/project/${projectId}/settings/integrations/blobstorage`;
+
+      await sendBlobStorageExportFailedEmail({
+        env: emailEnv,
+        projectName,
+        settingsUrl,
+        receiverEmails: adminEmails,
+      });
+    } catch (error) {
+      logger.error(
+        `[BLOB INTEGRATION] Failed to send failure notification for project ${projectId}`,
+        error,
+      );
+    }
+  })();
+}
+
+function extractStorageErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return String(error).slice(0, 1000);
+
+  // handleStorageError wraps SDK errors via { cause: sdkError }
+  // Unwrap to get the raw SDK message (S3/Azure/GCS)
+  const cause = error.cause;
+  if (cause instanceof Error) {
+    return cause.message.slice(0, 1000);
+  }
+
+  // Fallback: ClickHouse errors or other non-wrapped errors
+  return error.message.slice(0, 1000);
+}
+
+function formatErrorChain(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const parts: string[] = [];
+  let current: unknown = error;
+  while (current instanceof Error) {
+    parts.push(current.message);
+    current = current.cause;
+  }
+  return parts.join(" caused by ");
+}

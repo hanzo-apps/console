@@ -41,8 +41,8 @@ function HeatmapTooltipContent({
   return (
     <div className="space-y-2">
       {/* Header Section */}
-      <div className="border-b border-border pb-2">
-        <p className="text-sm font-medium text-muted-foreground">
+      <div className="border-border border-b pb-2">
+        <p className="text-muted-foreground text-sm font-medium">
           {dataType === "NUMERIC"
             ? `Bin ${cell.row}×${cell.col}`
             : `${cell.metadata?.rowCategory as string} → ${cell.metadata?.colCategory as string}`}
@@ -58,7 +58,7 @@ function HeatmapTooltipContent({
       </div>
 
       {/* Secondary Info Section */}
-      <div className="space-y-1 border-t border-border pt-2">
+      <div className="border-border space-y-1 border-t pt-2">
         {dataType === "NUMERIC" ? (
           <>
             <div className="flex items-center gap-2">
@@ -66,7 +66,7 @@ function HeatmapTooltipContent({
               <span className="flex-1 text-xs text-muted-foreground">
                 {score1.name} ({score1.source})
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {(cell.metadata?.yRange as [number, number])?.[0]?.toFixed(2)} -{" "}
                 {(cell.metadata?.yRange as [number, number])?.[1]?.toFixed(2)}
               </span>
@@ -76,7 +76,7 @@ function HeatmapTooltipContent({
               <span className="flex-1 text-xs text-muted-foreground">
                 {score2?.name} ({score2?.source})
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {(cell.metadata?.xRange as [number, number])?.[0]?.toFixed(2)} -{" "}
                 {(cell.metadata?.xRange as [number, number])?.[1]?.toFixed(2)}
               </span>
@@ -145,7 +145,7 @@ export function HeatmapCard() {
           <CardDescription>Loading heatmap...</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col items-center justify-center pl-1">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Spinner size="xl" variant="muted" />
         </CardContent>
       </Card>
     );
@@ -159,7 +159,7 @@ export function HeatmapCard() {
           <CardTitle>Score Comparison</CardTitle>
           <CardDescription>No data available</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-1 flex-col items-center justify-center pl-0 text-sm text-muted-foreground">
+        <CardContent className="text-muted-foreground flex flex-1 flex-col items-center justify-center pl-0 text-sm">
           Select a score to view comparison
         </CardContent>
       </Card>
@@ -200,7 +200,7 @@ export function HeatmapCard() {
             showLabels={true}
             showAxisLabels={true}
           />
-          <p className="text-center text-sm font-light text-muted-foreground">
+          <p className="text-muted-foreground text-center text-sm font-light">
             Select a second score to view comparison heatmap
           </p>
         </CardContent>

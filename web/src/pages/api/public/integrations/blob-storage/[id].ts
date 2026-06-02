@@ -7,6 +7,7 @@ import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/ha
 import { HanzoNotFoundError, UnauthorizedError, ForbiddenError } from "@hanzo/shared";
 
 export default withMiddlewares({
+  GET: handleGetBlobStorageIntegrationStatus,
   DELETE: handleDeleteBlobStorageIntegration,
 });
 
@@ -34,7 +35,7 @@ async function handleDeleteBlobStorageIntegration(req: NextApiRequest, res: Next
   const { id } = req.query;
 
   if (!id || typeof id !== "string") {
-    throw new Error("Invalid integration ID");
+    throw new InvalidRequestError("Invalid integration ID");
   }
 
   // Check if the integration exists and belongs to a project in the organization
@@ -56,7 +57,80 @@ async function handleDeleteBlobStorageIntegration(req: NextApiRequest, res: Next
     where: { projectId: id },
   });
 
+  await auditLog({
+    action: "delete",
+    resourceType: "blobStorageIntegration",
+    resourceId: integration.projectId,
+    projectId: integration.projectId,
+    orgId: authCheck.scope.orgId,
+    apiKeyId: authCheck.scope.apiKeyId,
+  });
+
   return res.status(200).json({
     message: "Blob storage integration successfully deleted",
   });
+}
+
+async function handleGetBlobStorageIntegrationStatus(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
+  const authCheck = await new ApiAuthService(
+    prisma,
+    redis,
+  ).verifyAuthHeaderAndReturnScope(req.headers.authorization);
+  if (!authCheck.validKey) {
+    throw new UnauthorizedError(authCheck.error ?? "Unauthorized");
+  }
+
+  if (
+    authCheck.scope.accessLevel !== "organization" ||
+    !authCheck.scope.orgId
+  ) {
+    throw new ForbiddenError(
+      "Organization-scoped API key required for this operation.",
+    );
+  }
+
+  if (
+    !hasEntitlementBasedOnPlan({
+      plan: authCheck.scope.plan,
+      entitlement: "scheduled-blob-exports",
+    })
+  ) {
+    throw new ForbiddenError(
+      "scheduled-blob-exports entitlement required for this feature.",
+    );
+  }
+
+  const { id } = req.query;
+  if (!id || typeof id !== "string") {
+    throw new InvalidRequestError("Invalid integration ID");
+  }
+
+  const integration = await prisma.blobStorageIntegration.findUnique({
+    where: { projectId: id },
+    include: {
+      project: {
+        select: { orgId: true },
+      },
+    },
+  });
+
+  if (!integration || integration.project.orgId !== authCheck.scope.orgId) {
+    throw new LangfuseNotFoundError("Blob storage integration not found");
+  }
+
+  const responseData: BlobStorageIntegrationStatusResponseType = {
+    id: integration.projectId,
+    projectId: integration.projectId,
+    syncStatus: deriveSyncStatus(integration),
+    enabled: integration.enabled,
+    lastSyncAt: integration.lastSyncAt,
+    nextSyncAt: integration.nextSyncAt,
+    lastError: integration.lastError,
+    lastErrorAt: integration.lastErrorAt,
+  };
+
+  return res.status(200).json(responseData);
 }

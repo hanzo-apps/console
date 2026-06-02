@@ -2,7 +2,7 @@ import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAc
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
 import { paginationZod } from "@hanzo/shared";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { GetBatchActionByIdSchema } from "../validation";
 import { addToDatasetRouter } from "./addToDatasetRouter";
 

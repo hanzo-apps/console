@@ -94,7 +94,7 @@ export function MappingStep({
   };
 
   return (
-    <div className="grid h-[62vh] grid-cols-[minmax(0,1fr),minmax(0,1fr)] gap-6 overflow-auto p-6">
+    <div className="grid h-[62vh] grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6 overflow-auto p-6">
       {/* Left: Configuration */}
       <div className="min-w-0 space-y-6">
         <div>

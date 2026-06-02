@@ -80,8 +80,17 @@ export function SelectDashboardDialog({
                         onClick={() => setSelectedDashboardId(d.id)}
                         className={`cursor-pointer hover:bg-muted ${selectedDashboardId === d.id ? "bg-muted" : ""}`}
                       >
-                        <TableCell className="font-medium">{d.name}</TableCell>
-                        <TableCell className="truncate" title={d.description}>
+                        <TableCell
+                          density="comfortable"
+                          className="font-medium"
+                        >
+                          {d.name}
+                        </TableCell>
+                        <TableCell
+                          density="comfortable"
+                          className="truncate"
+                          title={d.description}
+                        >
                           {d.description}
                         </TableCell>
                         <TableCell>{new Date(d.updatedAt).toLocaleString()}</TableCell>

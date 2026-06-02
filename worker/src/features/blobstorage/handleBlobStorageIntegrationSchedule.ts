@@ -2,6 +2,8 @@ import { prisma } from "@hanzo/console-core/src/db";
 import { BlobStorageIntegrationProcessingQueue, QueueJobs, logger } from "@hanzo/console-core/src/server";
 import { randomUUID } from "crypto";
 
+let legacyJobsDrained = false;
+
 export const handleBlobStorageIntegrationSchedule = async () => {
   const now = new Date();
 
@@ -33,6 +35,17 @@ export const handleBlobStorageIntegrationSchedule = async () => {
 
   logger.info(`Scheduling ${blobStorageIntegrationProjects.length} blob storage integrations for sync`);
 
+  if (!legacyJobsDrained) {
+    // One-time cleanup: remove failed jobs left over from before the
+    // removeOnFail: true fix. These jobs block re-queuing due to jobId
+    // deduplication.
+    await blobStorageIntegrationProcessingQueue.clean(0, 0, "failed");
+    legacyJobsDrained = true;
+    logger.info(
+      "[BLOB INTEGRATION] Drained legacy failed jobs from processing queue",
+    );
+  }
+
   await blobStorageIntegrationProcessingQueue.addBulk(
     blobStorageIntegrationProjects.map((integration) => ({
       name: QueueJobs.BlobStorageIntegrationProcessingJob,
@@ -45,8 +58,11 @@ export const handleBlobStorageIntegrationSchedule = async () => {
         },
       },
       opts: {
-        // Use projectId and last sync as jobId to prevent duplicate jobs.
+        // Deduplicate by projectId + lastSyncAt so the same project isn't queued
+        // twice for the same sync window. removeOnFail ensures failed jobs are
+        // immediately cleaned up so they don't block re-queuing on the next cycle.
         jobId: `${integration.projectId}-${integration.lastSyncAt?.toISOString() ?? ""}`,
+        removeOnFail: true,
       },
     })),
   );

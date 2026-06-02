@@ -4,6 +4,7 @@ import { usePeekEvalTemplateData } from "@/src/components/table/peek/hooks/usePe
 import { EvalTemplateForm } from "@/src/features/evals/components/template-form";
 import { MaintainerTooltip } from "@/src/features/evals/components/maintainer-tooltip";
 import { getMaintainer } from "@/src/features/evals/utils/typeHelpers";
+import { TablePeekView } from "@/src/components/table/peek";
 
 export const PeekViewEvaluatorTemplateDetail = ({ projectId }: { projectId: string }) => {
   const router = useRouter();
@@ -19,12 +20,12 @@ export const PeekViewEvaluatorTemplateDetail = ({ projectId }: { projectId: stri
   }
 
   return (
-    <div className="grid h-full flex-1 grid-rows-[auto,1fr] gap-2 overflow-hidden p-4 contain-layout">
+    <div className="grid h-full flex-1 grid-rows-[auto_1fr] gap-2 overflow-hidden p-4 contain-layout">
       <div className="flex w-full flex-col items-start justify-between space-y-2 overflow-y-auto pb-4">
-        <div className="mb-1 w-full rounded-md border border-border bg-muted/50 p-4">
+        <div className="border-border bg-muted/50 mb-1 w-full rounded-md border p-4">
           <h3 className="mb-1 text-sm font-medium">Selected Evaluator</h3>
           <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">{template.name}</p>
+            <p className="text-muted-foreground text-sm">{template.name}</p>
             <MaintainerTooltip maintainer={getMaintainer(template)} />
           </div>
         </div>
@@ -38,5 +39,22 @@ export const PeekViewEvaluatorTemplateDetail = ({ projectId }: { projectId: stri
         />
       </div>
     </div>
+  );
+};
+
+export const TablePeekViewEvaluatorTemplateDetail = (
+  props: Omit<
+    React.ComponentProps<typeof TablePeekView>,
+    "children" | "title"
+  > & {
+    projectId: string;
+  },
+) => {
+  const { projectId } = props;
+
+  return (
+    <TablePeekView {...props}>
+      <PeekViewEvaluatorTemplateDetail projectId={projectId} />
+    </TablePeekView>
   );
 };

@@ -3,7 +3,7 @@ import {
   getCurrentSpan,
   logger,
   QueueName,
-  shouldSkipTraceDeletionFor,
+  shouldSkipDeletionFor,
   TQueueJobTypes,
 } from "@hanzo/console-core/src/server";
 import { prisma } from "@hanzo/console-core/src/db";
@@ -71,7 +71,7 @@ export const traceDeleteProcessor: Processor = async (
   }
 
   try {
-    if (await shouldSkipTraceDeletionFor(projectId, traceIdsToDelete)) {
+    if (await shouldSkipDeletionFor(projectId, traceIdsToDelete, "trace")) {
       return;
     }
 

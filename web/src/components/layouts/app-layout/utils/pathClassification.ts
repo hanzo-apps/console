@@ -10,6 +10,7 @@ export const PATH_CONSTANTS = {
     "/project/[projectId]/sessions/[sessionId]",
     "/project/[projectId]/traces/[traceId]",
     "/auth/reset-password",
+    "/auth/setup-password",
   ] as const,
 };
 

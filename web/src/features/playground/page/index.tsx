@@ -1,6 +1,6 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "@/src/components/ui/button";
-import { Play, Loader2 } from "lucide-react";
+import { Play } from "lucide-react";
 import { ResetPlaygroundButton } from "@/src/features/playground/page/components/ResetPlaygroundButton";
 import { useWindowCoordination } from "@/src/features/playground/page/hooks/useWindowCoordination";
 import { usePersistedWindowIds } from "@/src/features/playground/page/hooks/usePersistedWindowIds";
@@ -9,7 +9,12 @@ import { type MultiWindowState } from "@/src/features/playground/page/types";
 import Page from "@/src/components/layouts/page";
 import MultiWindowPlayground from "@/src/features/playground/page/components/MultiWindowPlayground";
 import { NoModelConfiguredAlert } from "@/src/features/playground/page/components/NoModelConfiguredAlert";
+import {
+  MessageSearchProvider,
+  MessageSearchToolbar,
+} from "@/src/components/ChatMessages/MessageSearch";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
+import Spinner from "@/src/components/design-system/Spinner/Spinner";
 
 /**
  * PlaygroundPage Component
@@ -33,6 +38,12 @@ import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
  * - Clean single-header design
  */
 export default function PlaygroundPage() {
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => {
+    setIsMac(window.navigator.userAgent.includes("Mac"));
+  }, []);
+
   const projectId = useProjectIdFromURL();
   const { windowIds, isLoaded, addWindowWithCopy, removeWindowId } = usePersistedWindowIds();
 
@@ -82,6 +93,12 @@ export default function PlaygroundPage() {
     executeAllWindows();
   });
 
+  const getMessageSearchPageLabel = useCallback(
+    (_pageId: string, pageIndex: number) =>
+      windowIds.length > 1 ? `Window ${pageIndex + 1}` : null,
+    [windowIds.length],
+  );
+
   // Don't render until window IDs are loaded
   if (!isLoaded) {
     return (
@@ -96,7 +113,7 @@ export default function PlaygroundPage() {
         }}
       >
         <div className="flex h-full items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Spinner size="xl" />
         </div>
       </Page>
     );
@@ -169,7 +186,7 @@ export default function PlaygroundPage() {
         <div className="flex-1 overflow-hidden">
           <MultiWindowPlayground windowState={windowState} onRemoveWindow={removeWindow} onAddWindow={addWindow} />
         </div>
-      </div>
-    </Page>
+      </Page>
+    </MessageSearchProvider>
   );
 }

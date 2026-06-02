@@ -30,6 +30,16 @@ import { backOff } from "exponential-backoff";
 import { env } from "../env";
 import { SlackMessageBuilder } from "../features/slack/slackMessageBuilder";
 
+// GitHub repository_dispatch client_payload: max 10 top-level properties and <64KB.
+// https://docs.github.com/en/rest/repos/repos#create-a-repository-dispatch-event
+const GITHUB_REPOSITORY_DISPATCH_MAX_PAYLOAD_BYTES = 64 * 1024;
+const GITHUB_REPOSITORY_DISPATCH_TRUNCATION_MARKER =
+  "[TRUNCATED: GitHub repository_dispatch payload exceeded size limit]";
+const GITHUB_REPOSITORY_DISPATCH_TRUNCATED_FIELDS = [
+  "prompt.prompt",
+  "prompt.config",
+];
+
 // Handles both webhook and slack actions
 export const webhookProcessor: Processor = async (job: Job<TQueueJobTypes[QueueName.WebhookQueue]>) => {
   try {
@@ -100,6 +110,7 @@ async function executeHttpAction({
   executionId,
   executionStart,
   actionConfig,
+  additionalSensitiveHeaders,
 }: {
   url: string;
   payload: string;
@@ -110,6 +121,7 @@ async function executeHttpAction({
   executionId: string;
   executionStart: Date;
   actionConfig: ActionDomainWithSecrets;
+  additionalSensitiveHeaders?: string[];
 }): Promise<{ httpStatus: number; responseBody: string }> {
   let httpStatus: number | undefined;
   let responseBody: string | undefined;
@@ -127,10 +139,28 @@ async function executeHttpAction({
         }, env.HANZO_WEBHOOK_TIMEOUT_MS);
 
         try {
+          const whitelist = whitelistFromEnv();
+
           // Skip validation when flag is set (for tests with MSW mocking)
           if (!skipValidation) {
-            await validateWebhookURL(url);
+            await validateWebhookURL(url, whitelist);
           }
+
+          const redirectOptions = skipValidation
+            ? {
+                maxRedirects: env.LANGFUSE_WEBHOOK_MAX_REDIRECTS,
+                skipValidation: true as const,
+                additionalSensitiveHeaders,
+              }
+            : {
+                maxRedirects: env.LANGFUSE_WEBHOOK_MAX_REDIRECTS,
+                redirectValidation: {
+                  validateUrl: validateWebhookURL,
+                  whitelist,
+                  logContext: WEBHOOK_URL_VALIDATION_LOG_CONTEXT,
+                },
+                additionalSensitiveHeaders,
+              };
 
           const redirectResult = await fetchWithSecureRedirects(
             url,
@@ -323,6 +353,12 @@ async function executeWebhookAction({
   }
 
   const webhookConfig = actionConfig.config;
+  const webhookUser = input.payload.user
+    ? {
+        name: input.payload.user.name,
+        email: input.payload.user.email,
+      }
+    : undefined;
 
   // Validate and prepare webhook payload
   const validatedPayload = PromptWebhookOutboundSchema.safeParse({
@@ -332,6 +368,7 @@ async function executeWebhookAction({
     apiVersion: "v1",
     action: input.payload.action,
     prompt: input.payload.prompt,
+    user: webhookUser,
   });
 
   if (!validatedPayload.success) {
@@ -339,19 +376,24 @@ async function executeWebhookAction({
   }
 
   // Prepare webhook payload with prompt always last
-  const { prompt, ...otherFields } = validatedPayload.data;
+  const { prompt, user, ...otherFields } = validatedPayload.data;
   const webhookPayload = JSON.stringify({
     ...otherFields,
+    ...(user ? { user } : {}),
     prompt,
   });
 
   // Prepare headers with signature if secret exists
   const requestHeaders: Record<string, string> = {};
+  const additionalSensitiveHeaders: string[] = [];
 
   // Add webhook config headers first
   if (webhookConfig.requestHeaders) {
     for (const [key, value] of Object.entries(webhookConfig.requestHeaders)) {
       requestHeaders[key] = value.value;
+      if (value.secret) {
+        additionalSensitiveHeaders.push(key);
+      }
     }
   }
 
@@ -380,6 +422,7 @@ async function executeWebhookAction({
     executionId,
     executionStart,
     actionConfig,
+    additionalSensitiveHeaders,
   });
 }
 
@@ -414,6 +457,12 @@ async function executeGitHubDispatchAction({
   }
 
   const githubConfig = actionConfig.config;
+  const webhookUser = input.payload.user
+    ? {
+        name: input.payload.user.name,
+        email: input.payload.user.email,
+      }
+    : undefined;
 
   // Validate and prepare Hanzo payload
   const validatedPayload = PromptWebhookOutboundSchema.safeParse({
@@ -423,6 +472,7 @@ async function executeGitHubDispatchAction({
     apiVersion: "v1",
     action: input.payload.action,
     prompt: input.payload.prompt,
+    user: webhookUser,
   });
 
   if (!validatedPayload.success) {
@@ -433,14 +483,35 @@ async function executeGitHubDispatchAction({
   const eventType = githubConfig.eventType;
 
   // Transform to GitHub dispatch format
-  const { prompt, ...otherFields } = validatedPayload.data;
-  const githubPayload = JSON.stringify({
+  const { prompt, user, ...otherFields } = validatedPayload.data;
+  const fullGithubPayload = JSON.stringify({
     event_type: eventType,
     client_payload: {
       ...otherFields,
+      ...(user ? { user } : {}),
       prompt,
     },
   });
+  const githubPayload =
+    Buffer.byteLength(fullGithubPayload, "utf8") <
+    GITHUB_REPOSITORY_DISPATCH_MAX_PAYLOAD_BYTES
+      ? fullGithubPayload
+      : JSON.stringify({
+          event_type: eventType,
+          client_payload: {
+            ...otherFields,
+            ...(user ? { user } : {}),
+            truncation: {
+              payloadTruncated: true,
+              truncatedFields: GITHUB_REPOSITORY_DISPATCH_TRUNCATED_FIELDS,
+            },
+            prompt: {
+              ...prompt,
+              prompt: GITHUB_REPOSITORY_DISPATCH_TRUNCATION_MARKER,
+              config: {},
+            },
+          },
+        });
 
   // Prepare headers with GitHub token
   const requestHeaders: Record<string, string> = {};
@@ -598,14 +669,11 @@ async function executeSlackAction({
       });
 
       // Update action config to store the failing execution ID
-      await tx.action.update({
-        where: { id: automation.action.id, projectId },
-        data: {
-          config: {
-            ...failureActionConfig.config,
-            lastFailingExecutionId: executionId,
-          },
-        },
+      await setActionLastFailingExecutionId({
+        tx,
+        actionId: automation.action.id,
+        projectId,
+        executionId,
       });
 
       logger.warn(`Automation ${automation.trigger.id} disabled after 1 failure in project ${projectId}`);
@@ -614,3 +682,31 @@ async function executeSlackAction({
     logger.debug(`Slack action failed for action ${automation.action.id} in project ${projectId}`);
   }
 }
+
+const setActionLastFailingExecutionId = async ({
+  tx,
+  actionId,
+  projectId,
+  executionId,
+}: {
+  tx: Prisma.TransactionClient;
+  actionId: string;
+  projectId: string;
+  executionId: string;
+}) => {
+  // The execution config may contain decrypted headers, so patch only this JSON
+  // key and leave the stored encrypted config untouched.
+  await tx.$executeRaw`
+    UPDATE actions
+    SET
+      config = jsonb_set(
+        config,
+        '{lastFailingExecutionId}',
+        to_jsonb(${executionId}::text),
+        true
+      ),
+      updated_at = NOW()
+    WHERE id = ${actionId}
+      AND project_id = ${projectId}
+  `;
+};

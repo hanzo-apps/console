@@ -5,17 +5,34 @@ import { type ListEntry, useDetailPageLists } from "@/src/features/navigate-deta
 import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 
 export const DetailPageNav = (props: { currentId: string; path: (entry: ListEntry) => string; listKey: string }) => {
   const { detailPagelists } = useDetailPageLists();
-  const entries = detailPagelists[props.listKey] ?? [];
+  const entries = detailPagelists[listKey] ?? [];
 
   const capture = usePostHogClientCapture();
   const router = useRouter();
   const currentIndex = entries.findIndex((entry) => entry.id === props.currentId);
   const previousPageEntry = currentIndex > 0 ? entries[currentIndex - 1] : undefined;
   const nextPageEntry = currentIndex < entries.length - 1 ? entries[currentIndex + 1] : undefined;
+
+  const navigateToEntry = useCallback(
+    (entry: ListEntry) => {
+      if (onNavigate) {
+        onNavigate(entry);
+        return;
+      }
+
+      router.push(
+        path({
+          id: encodeURIComponent(entry.id),
+          params: entry.params,
+        }),
+      );
+    },
+    [onNavigate, path, router],
+  );
 
   // keyboard shortcuts for buttons k and j
   useEffect(() => {
@@ -51,7 +68,7 @@ export const DetailPageNav = (props: { currentId: string; path: (entry: ListEntr
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [previousPageEntry, nextPageEntry, router, props]);
+  }, [previousPageEntry, nextPageEntry, navigateToEntry]);
 
   if (entries.length > 1)
     return (
@@ -66,12 +83,7 @@ export const DetailPageNav = (props: { currentId: string; path: (entry: ListEntr
               onClick={() => {
                 if (previousPageEntry) {
                   capture("navigate_detail_pages:button_click_prev_or_next");
-                  void router.push(
-                    props.path({
-                      id: encodeURIComponent(previousPageEntry.id),
-                      params: previousPageEntry.params,
-                    }),
-                  );
+                  navigateToEntry(previousPageEntry);
                 }
               }}
             >
@@ -95,12 +107,7 @@ export const DetailPageNav = (props: { currentId: string; path: (entry: ListEntr
               onClick={() => {
                 if (nextPageEntry) {
                   capture("navigate_detail_pages:button_click_prev_or_next");
-                  void router.push(
-                    props.path({
-                      id: encodeURIComponent(nextPageEntry.id),
-                      params: nextPageEntry.params,
-                    }),
-                  );
+                  navigateToEntry(nextPageEntry);
                 }
               }}
             >

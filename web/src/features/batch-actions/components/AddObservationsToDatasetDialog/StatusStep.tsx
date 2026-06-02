@@ -5,7 +5,9 @@ import { StatusBadge } from "@/src/components/layouts/status-badge";
 import { BatchActionStatus } from "@hanzo/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import Link from "next/link";
-import { Check, AlertCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/router";
+import { Check, AlertCircle } from "lucide-react";
+import Spinner from "@/src/components/design-system/Spinner/Spinner";
 
 type StatusStepProps = {
   projectId: string;
@@ -46,8 +48,8 @@ export function StatusStep({ projectId, batchActionId, dataset, expectedCount, o
         {/* Status Icon and Title */}
         <div className="flex flex-col items-center text-center">
           {!isComplete && (
-            <div className="mb-4 rounded-full bg-primary/10 p-6">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <div className="bg-primary/10 mb-4 rounded-full p-6">
+              <Spinner size="xxl" variant="primary" />
             </div>
           )}
           {isSuccess && (
@@ -110,7 +112,7 @@ export function StatusStep({ projectId, batchActionId, dataset, expectedCount, o
                     <Progress value={progressPercent} className="h-2" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted/50 p-3 text-sm">
+                  <div className="bg-muted/50 grid grid-cols-2 gap-4 rounded-lg p-3 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Processed</span>
                       <span className="font-semibold">{processedCount}</span>
@@ -126,7 +128,7 @@ export function StatusStep({ projectId, batchActionId, dataset, expectedCount, o
               )}
 
               {isComplete && failedCount > 0 && (
-                <div className="rounded-lg bg-muted/50 p-4 text-sm">
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Successfully processed</span>
                     <span className="font-semibold">{processedCount}</span>

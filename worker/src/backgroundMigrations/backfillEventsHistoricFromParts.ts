@@ -140,7 +140,8 @@ export default class BackfillEventsHistoricFromParts implements IBackgroundMigra
         FROM system.parts
         WHERE database = 'default'
         AND table = 'observations_pid_tid_sorting'
-        and active = 1
+        AND active = 1
+        AND partition_id IN ('202602', '202601')
         ORDER BY partition_id DESC
       `,
       tags: {
@@ -253,15 +254,15 @@ export default class BackfillEventsHistoricFromParts implements IBackgroundMigra
 
   private buildQuery(todo: ChunkTodo): string {
     return `
-      INSERT INTO events (
+      INSERT INTO events_full (
         project_id, trace_id, span_id, parent_span_id, start_time, end_time,
         name, type, environment, version, release, tags, public, bookmarked,
         trace_name, user_id, session_id, level, status_message, completion_start_time,
         prompt_id, prompt_name, prompt_version, model_id, provided_model_name,
         model_parameters, provided_usage_details, usage_details,
-        provided_cost_details, cost_details, tool_definitions, tool_calls, tool_call_names,
-        input, output, metadata,
-        metadata_names, metadata_raw_values, source,
+        provided_cost_details, cost_details, usage_pricing_tier_id, usage_pricing_tier_name,
+        tool_definitions, tool_calls, tool_call_names,
+        input, output, metadata_names, metadata_values, source,
         blob_storage_file_path, event_bytes, created_at, updated_at, event_ts, is_deleted
       )
       SELECT
@@ -295,14 +296,15 @@ export default class BackfillEventsHistoricFromParts implements IBackgroundMigra
         o.usage_details,
         o.provided_cost_details,
         o.cost_details,
+        o.usage_pricing_tier_id,
+        o.usage_pricing_tier_name,
         o.tool_definitions,
         o.tool_calls,
         o.tool_call_names,
         coalesce(o.input, '') AS input,
         coalesce(o.output, '') AS output,
-        CAST(mapApply((k, v) -> (k, if(isValidUTF8(v), v, toValidUTF8(v))), o.metadata), 'JSON(max_dynamic_paths=0)') AS metadata,
         mapKeys(o.metadata) AS metadata_names,
-        mapValues(o.metadata) AS metadata_raw_values,
+        mapValues(o.metadata) AS metadata_values,
         multiIf(mapContains(o.metadata, 'resourceAttributes'), 'otel-backfill', 'ingestion-api-backfill') AS source,
         '' AS blob_storage_file_path,
         0 AS event_bytes,
@@ -315,6 +317,8 @@ export default class BackfillEventsHistoricFromParts implements IBackgroundMigra
       ON o.project_id = t.project_id AND o.trace_id = t.id
       WHERE o._partition_id = '${todo.partition}'
       AND o._part = '${todo.partId}'
+      AND o.start_time >= toDateTime64('2026-01-20 00:00:00', 3)
+      AND o.start_time < toDateTime64('2026-02-22 00:00:00', 3)
       SETTINGS
         join_algorithm = 'full_sorting_merge',
         type_json_skip_duplicated_paths = 1
@@ -350,8 +354,10 @@ export default class BackfillEventsHistoricFromParts implements IBackgroundMigra
             }
           : retryCount === 0
             ? {
-                min_insert_block_size_rows: "10485450",
-                min_insert_block_size_bytes: "4Gi",
+                min_insert_block_size_rows: "5485450",
+                min_insert_block_size_bytes: "2Gi",
+                max_threads: 32,
+                max_block_size: "8192",
               }
             : {};
 
@@ -450,7 +456,7 @@ export default class BackfillEventsHistoricFromParts implements IBackgroundMigra
     });
     const tableNames = (await tables.json()).data as { name: string }[];
 
-    if (!tableNames.some((r) => r.name === "events")) {
+    if (!tableNames.some((r) => r.name === "events_full")) {
       // Retry if the table does not exist as this may mean migrations are still pending
       if (attempts > 0) {
         logger.info(`Datastore events table does not exist. Retrying in 10s...`);

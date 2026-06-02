@@ -21,6 +21,7 @@ export async function handleGetApiKeys(req: NextApiRequest, res: NextApiResponse
     where: {
       orgId: organizationId,
       scope: "ORGANIZATION",
+      isInAppAgentKey: false,
     },
     select: {
       id: true,
@@ -50,7 +51,7 @@ export async function handleCreateApiKey(req: NextApiRequest, res: NextApiRespon
   if (!validationResult.success) {
     return res.status(400).json({
       error: "Invalid request body",
-      details: validationResult.error.format(),
+      details: z.formatError(validationResult.error),
     });
   }
 

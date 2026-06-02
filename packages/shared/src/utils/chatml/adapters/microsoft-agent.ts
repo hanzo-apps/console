@@ -202,10 +202,7 @@ function preprocessData(data: unknown, ctx: NormalizerContext): unknown {
     if (toolDefinitions) {
       const tools = extractToolDefinitions(toolDefinitions);
       if (tools.length > 0) {
-        return normalized.map((msg) => ({
-          ...(msg as Record<string, unknown>),
-          tools,
-        }));
+        return attachToolDefinitionsToMessages(normalized, tools);
       }
     }
 
@@ -215,6 +212,18 @@ function preprocessData(data: unknown, ctx: NormalizerContext): unknown {
   // messages wrapper
   if (typeof data === "object" && "messages" in data) {
     const obj = data as Record<string, unknown>;
+    const messages = Array.isArray(obj.messages)
+      ? normalizeMessages(obj.messages)
+      : obj.messages;
+    const tools = normalizeToolDefinitionsForChatMl(obj.tools);
+
+    if (Array.isArray(messages) && tools.length > 0) {
+      return {
+        ...obj,
+        messages: attachToolDefinitionsToMessages(messages, tools),
+      };
+    }
+
     return {
       ...obj,
       messages: Array.isArray(obj.messages) ? normalizeMessages(obj.messages) : obj.messages,
@@ -240,6 +249,12 @@ export const microsoftAgentAdapter: ProviderAdapter = {
 
     const scopeName = getNestedProperty(meta, "scope", "name");
     if (scopeName === "agent_framework") return true;
+    if (
+      typeof scopeName === "string" &&
+      scopeName.includes("Microsoft.Extensions.AI")
+    )
+      return true;
+    if (scopeName === "pydantic-ai") return false;
 
     const providerName = getNestedProperty(meta, "attributes", "gen_ai.provider.name");
     if (providerName === "microsoft.agent_framework") return true;

@@ -40,7 +40,9 @@ export function DatasetRunItemsByRunTable(props: { projectId: string; datasetId:
   });
 
   const runItems = api.datasets.runItemsByRunId.useQuery({
-    ...props,
+    projectId,
+    datasetId,
+    datasetRunId,
     page: paginationState.pageIndex,
     limit: paginationState.pageSize,
     filter: userFilterState,
@@ -114,13 +116,13 @@ export function DatasetRunItemsByRunTable(props: { projectId: string; datasetId:
         if (!trace) return null;
         return trace.observationId ? (
           <TableLink
-            path={`/project/${props.projectId}/traces/${encodeURIComponent(trace.traceId)}?observation=${encodeURIComponent(trace.observationId)}`}
+            path={`/project/${projectId}/traces/${encodeURIComponent(trace.traceId)}?observation=${encodeURIComponent(trace.observationId)}`}
             value={`Trace: ${trace.traceId}, Observation: ${trace.observationId}`}
             icon={<ListTree className="h-4 w-4" />}
           />
         ) : (
           <TableLink
-            path={`/project/${props.projectId}/traces/${encodeURIComponent(trace.traceId)}`}
+            path={`/project/${projectId}/traces/${encodeURIComponent(trace.traceId)}`}
             value={`Trace: ${trace.traceId}`}
             icon={<ListTree className="h-4 w-4" />}
           />
@@ -172,7 +174,7 @@ export function DatasetRunItemsByRunTable(props: { projectId: string; datasetId:
         return trace ? (
           <TraceObservationIOCell
             traceId={trace.traceId}
-            projectId={props.projectId}
+            projectId={projectId}
             observationId={trace.observationId}
             io="input"
             fromTimestamp={runAt}
@@ -193,7 +195,7 @@ export function DatasetRunItemsByRunTable(props: { projectId: string; datasetId:
         return trace ? (
           <TraceObservationIOCell
             traceId={trace.traceId}
-            projectId={props.projectId}
+            projectId={projectId}
             observationId={trace.observationId}
             io="output"
             fromTimestamp={runAt}
@@ -212,8 +214,8 @@ export function DatasetRunItemsByRunTable(props: { projectId: string; datasetId:
         const datasetItemId: string = row.getValue("datasetItemId");
         return datasetItemId ? (
           <DatasetItemIOCell
-            projectId={props.projectId}
-            datasetId={props.datasetId}
+            projectId={projectId}
+            datasetId={datasetId}
             datasetItemId={datasetItemId}
             io="expectedOutput"
             singleLine={rowHeight === "s"}

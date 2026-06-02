@@ -1,11 +1,16 @@
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
-import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
+import {
+  LEGACY_PUBLIC_API_OBSERVATIONS_CLICKHOUSE_RESOURCE_ERROR_MESSAGE,
+  withMiddlewares,
+} from "@/src/features/public-api/server/withMiddlewares";
 import { transformDbToApiObservation } from "@/src/features/public-api/types/observations";
 import {
   GetTraceV1Query,
   GetTraceV1Response,
   DeleteTraceV1Query,
   DeleteTraceV1Response,
+  TRACE_FIELD_GROUPS,
+  type TraceFieldGroup,
 } from "@/src/features/public-api/types/traces";
 import { filterAndValidateDbTraceScoreList, HanzoNotFoundError } from "@hanzo/shared";
 import { prisma } from "@hanzo/shared/src/db";
@@ -19,58 +24,77 @@ import {
 import Decimal from "decimal.js";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
-export default withMiddlewares({
-  GET: createAuthedProjectAPIRoute({
-    name: "Get Single Trace",
-    querySchema: GetTraceV1Query,
-    responseSchema: GetTraceV1Response,
-    fn: async ({ query, auth }) => {
-      const { traceId } = query;
-      const trace = await getTraceById({
-        traceId,
-        projectId: auth.scope.projectId,
-        clickhouseFeatureTag: "tracing-public-api",
-        preferredClickhouseService: "ReadOnly",
-      });
+export default withMiddlewares(
+  {
+    GET: createAuthedProjectAPIRoute({
+      name: "Get Single Trace",
+      querySchema: GetTraceV1Query,
+      responseSchema: GetTraceV1Response,
+      fn: async ({ query, auth }) => {
+        const { traceId } = query;
 
       if (!trace) {
         throw new HanzoNotFoundError(`Trace ${traceId} not found within authorized project`);
       }
 
-      const [observations, scores] = await Promise.all([
-        getObservationsForTrace({
+        const trace = await getTraceById({
           traceId,
           projectId: auth.scope.projectId,
-          timestamp: trace?.timestamp,
-          includeIO: true,
+          clickhouseFeatureTag: "tracing-public-api",
           preferredClickhouseService: "ReadOnly",
-        }),
-        getScoresForTraces({
-          projectId: auth.scope.projectId,
-          traceIds: [traceId],
-          timestamp: trace?.timestamp,
-          preferredClickhouseService: "ReadOnly",
-        }),
-      ]);
+          excludeInputOutput: !includeIO,
+          excludeMetadata: !includeIO,
+        });
 
       const uniqueModels: string[] = Array.from(
         new Set(observations.map((r) => r.internalModelId).filter((r): r is string => Boolean(r))),
       );
 
-      const models =
-        uniqueModels.length > 0
-          ? await prisma.model.findMany({
-              where: {
-                id: {
-                  in: uniqueModels,
+        const [observations, scores] = await Promise.all([
+          includeObservations || includeMetrics
+            ? getObservationsForTrace({
+                traceId,
+                projectId: auth.scope.projectId,
+                timestamp: trace?.timestamp,
+                includeIO: includeObservations,
+                preferredClickhouseService: "ReadOnly",
+              })
+            : Promise.resolve([]),
+          includeScores
+            ? getScoresForTraces({
+                projectId: auth.scope.projectId,
+                traceIds: [traceId],
+                timestamp: trace?.timestamp,
+                preferredClickhouseService: "ReadOnly",
+              })
+            : Promise.resolve([]),
+        ]);
+
+        const uniqueModels: string[] = Array.from(
+          new Set(
+            observations
+              .map((r) => r.internalModelId)
+              .filter((r): r is string => Boolean(r)),
+          ),
+        );
+
+        const models =
+          uniqueModels.length > 0
+            ? await prisma.model.findMany({
+                where: {
+                  id: {
+                    in: uniqueModels,
+                  },
+                  OR: [
+                    { projectId: auth.scope.projectId },
+                    { projectId: null },
+                  ],
                 },
-                OR: [{ projectId: auth.scope.projectId }, { projectId: null }],
-              },
-              include: {
-                Price: true,
-              },
-            })
-          : [];
+                include: {
+                  Price: true,
+                },
+              })
+            : [];
 
       const observationsView = observations.map((o) => {
         const model = models.find((m) => m.id === o.internalModelId);
@@ -85,13 +109,15 @@ export default withMiddlewares({
         };
       });
 
-      const outObservations = observationsView.map(transformDbToApiObservation);
-      // As these are traces scores, we expect all scores to have a traceId set
-      // For type consistency, we validate the scores against the v1 schema which requires a traceId
-      const validatedScores = filterAndValidateDbTraceScoreList({
-        scores,
-        onParseError: traceException,
-      });
+        const outObservations = observationsView.map(
+          transformDbToApiObservation,
+        );
+        // As these are traces scores, we expect all scores to have a traceId set
+        // For type consistency, we validate the scores against the v1 schema which requires a traceId
+        const validatedScores = filterAndValidateDbLegacyTraceScoreList({
+          scores,
+          onParseError: traceException,
+        });
 
       const obsStartTimes = observations.map((o) => o.startTime).sort((a, b) => a.getTime() - b.getTime());
       const obsEndTimes = observations
@@ -121,26 +147,31 @@ export default withMiddlewares({
     },
   }),
 
-  DELETE: createAuthedProjectAPIRoute({
-    name: "Delete Single Trace",
-    querySchema: DeleteTraceV1Query,
-    responseSchema: DeleteTraceV1Response,
-    rateLimitResource: "trace-delete",
-    fn: async ({ query, auth }) => {
-      const { traceId } = query;
+    DELETE: createAuthedProjectAPIRoute({
+      name: "Delete Single Trace",
+      querySchema: DeleteTraceV1Query,
+      responseSchema: DeleteTraceV1Response,
+      rateLimitResource: "trace-delete",
+      fn: async ({ query, auth }) => {
+        const { traceId } = query;
 
-      await auditLog({
-        resourceType: "trace",
-        resourceId: traceId,
-        action: "delete",
-        projectId: auth.scope.projectId,
-        apiKeyId: auth.scope.apiKeyId,
-        orgId: auth.scope.orgId,
-      });
+        await auditLog({
+          resourceType: "trace",
+          resourceId: traceId,
+          action: "delete",
+          projectId: auth.scope.projectId,
+          apiKeyId: auth.scope.apiKeyId,
+          orgId: auth.scope.orgId,
+        });
 
-      await traceDeletionProcessor(auth.scope.projectId, [traceId]);
+        await traceDeletionProcessor(auth.scope.projectId, [traceId]);
 
-      return { message: "Trace deleted successfully" };
-    },
-  }),
-});
+        return { message: "Trace deleted successfully" };
+      },
+    }),
+  },
+  {
+    clickHouseResourceErrorMessage:
+      LEGACY_PUBLIC_API_OBSERVATIONS_CLICKHOUSE_RESOURCE_ERROR_MESSAGE,
+  },
+);

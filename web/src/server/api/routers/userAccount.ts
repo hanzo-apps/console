@@ -127,10 +127,74 @@ export const userAccountRouter = createTRPCRouter({
   setV4BetaEnabled: authenticatedProcedure
     .input(z.object({ enabled: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
+      const isCloudDeployment = Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION);
+
+      if (
+        !isCloudDeployment &&
+        process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION !== "DEV"
+      ) {
+        return {
+          success: true,
+          v4BetaEnabled: false,
+          canToggleV4: false,
+        };
+      }
+
+      const userRolloutState = await ctx.prisma.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: {
+          createdAt: true,
+          v4BetaEnabled: true,
+          organizationMemberships: {
+            select: {
+              organization: {
+                select: {
+                  id: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!userRolloutState) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      const userCanToggleV4 = canToggleV4({
+        userCreatedAt: userRolloutState.createdAt,
+        organizations: userRolloutState.organizationMemberships.map(
+          (membership) => ({
+            id: membership.organization.id,
+            createdAt: membership.organization.createdAt,
+          }),
+        ),
+        excludedOrganizationIds: env.NEXT_PUBLIC_DEMO_ORG_ID
+          ? [env.NEXT_PUBLIC_DEMO_ORG_ID]
+          : [],
+      });
+
+      if (!userCanToggleV4) {
+        return {
+          success: true,
+          v4BetaEnabled: userRolloutState.v4BetaEnabled,
+          canToggleV4: false,
+        };
+      }
+
       await ctx.prisma.user.update({
         where: { id: ctx.session.user.id },
         data: { v4BetaEnabled: input.enabled },
       });
-      return { success: true, v4BetaEnabled: input.enabled };
+
+      return {
+        success: true,
+        v4BetaEnabled: input.enabled,
+        canToggleV4: true,
+      };
     }),
 });

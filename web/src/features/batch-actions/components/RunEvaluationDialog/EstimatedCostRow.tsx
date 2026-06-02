@@ -59,7 +59,7 @@ export function EstimatedCostRow(props: EstimatedCostRowProps) {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <InfoIcon className="h-3 w-3 text-muted-foreground" />
+              <InfoIcon className="text-muted-foreground h-3 w-3" />
             </TooltipTrigger>
             <TooltipContent className="max-w-xs space-y-2 p-3">
               <p className="text-xs">
@@ -80,7 +80,7 @@ export function EstimatedCostRow(props: EstimatedCostRowProps) {
                 })}
               </div>
               {isPartial ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   *Partial estimate. Some evaluators have no execution history.
                 </p>
               ) : null}

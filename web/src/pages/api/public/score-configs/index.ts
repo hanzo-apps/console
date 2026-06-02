@@ -1,5 +1,3 @@
-import { v4 } from "uuid";
-import { type z } from "zod/v4";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { isBooleanDataType } from "@/src/features/scores/lib/helpers";
@@ -14,47 +12,16 @@ import {
   PostScoreConfigResponse,
 } from "@/src/features/public-api/types/score-configs";
 
-const inflateConfigBody = (body: z.infer<typeof PostScoreConfigBody>) => {
-  if (isBooleanDataType(body.dataType)) {
-    return {
-      ...body,
-      categories: [
-        { label: "True", value: 1 },
-        { label: "False", value: 0 },
-      ],
-    };
-  }
-  return body;
-};
-
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({
     name: "Create Score Config",
     bodySchema: PostScoreConfigBody,
     responseSchema: PostScoreConfigResponse,
     fn: async ({ body, auth }) => {
-      const inflatedConfigInput = inflateConfigBody(body);
-
-      const config = await prisma.scoreConfig.create({
-        data: {
-          ...inflatedConfigInput,
-          categories: inflatedConfigInput.categories ?? undefined,
-          id: v4(),
-          projectId: auth.scope.projectId,
-        },
+      return await createScoreConfig({
+        context: auth.scope,
+        body,
       });
-
-      await auditLog({
-        action: "create",
-        resourceType: "scoreConfig",
-        resourceId: config.id,
-        projectId: auth.scope.projectId,
-        orgId: auth.scope.orgId,
-        apiKeyId: auth.scope.apiKeyId,
-        after: config,
-      });
-
-      return validateDbScoreConfig(config);
     },
   }),
   GET: createAuthedProjectAPIRoute({
@@ -63,15 +30,10 @@ export default withMiddlewares({
     responseSchema: GetScoreConfigsResponse,
     fn: async ({ query, auth }) => {
       const { page, limit } = query;
-      const rawConfigs = await prisma.scoreConfig.findMany({
-        where: {
-          projectId: auth.scope.projectId,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: limit,
-        skip: (page - 1) * limit,
+      return await listScoreConfigs({
+        projectId: auth.scope.projectId,
+        page,
+        limit,
       });
 
       const configs = filterAndValidateDbScoreConfigList(rawConfigs, traceException);

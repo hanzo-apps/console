@@ -6,7 +6,6 @@ import {
   GetDatasetItemV1Response,
   DeleteDatasetItemV1Query,
   DeleteDatasetItemV1Response,
-  transformDbDatasetItemDomainToAPIDatasetItem,
 } from "@/src/features/public-api/types/datasets";
 import { HanzoNotFoundError } from "@hanzo/shared";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
@@ -18,10 +17,9 @@ export default withMiddlewares({
     querySchema: GetDatasetItemV1Query,
     responseSchema: GetDatasetItemV1Response,
     rateLimitResource: "datasets",
-    fn: async ({ query, auth }) => {
-      const { datasetItemId } = query;
-
-      const datasetItem = await getDatasetItemById({
+    fn: async ({ query, auth }) =>
+      await getDatasetItemForApi({
+        datasetItemId: query.datasetItemId,
         projectId: auth.scope.projectId,
         datasetItemId: datasetItemId,
       });
@@ -68,27 +66,12 @@ export default withMiddlewares({
     querySchema: DeleteDatasetItemV1Query,
     responseSchema: DeleteDatasetItemV1Response,
     rateLimitResource: "datasets",
-    fn: async ({ query, auth }) => {
-      const { datasetItemId } = query;
-
-      const result = await deleteDatasetItem({
-        projectId: auth.scope.projectId,
-        datasetItemId: datasetItemId,
-      });
-
-      await auditLog({
-        action: "delete",
-        resourceType: "datasetItem",
-        resourceId: datasetItemId,
+    fn: async ({ query, auth }) =>
+      await deleteDatasetItemForApi({
+        datasetItemId: query.datasetItemId,
         projectId: auth.scope.projectId,
         orgId: auth.scope.orgId,
         apiKeyId: auth.scope.apiKeyId,
-        before: result.deletedItem,
-      });
-
-      return {
-        message: "Dataset item successfully deleted" as const,
-      };
-    },
+      }),
   }),
 });

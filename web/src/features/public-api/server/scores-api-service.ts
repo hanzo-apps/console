@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 import {
   _handleGenerateScoresForPublicApi,
   _handleGetScoresCountForPublicApi,
@@ -10,10 +12,104 @@ import { _handleGetScoreById } from "@hanzo/shared/src/server";
 export class ScoresApiService {
   constructor(private readonly apiVersion: "v1" | "v2") {}
 
+  async createScore({
+    body,
+    auth,
+    auditScope,
+    scoreId = body.id ?? randomUUID(),
+  }: {
+    body: z.infer<typeof PostScoresBodyV1>;
+    auth: AuthHeaderValidVerificationResultIngestion;
+    auditScope?: { projectId: string; orgId: string; apiKeyId: string };
+    scoreId?: string;
+  }) {
+    const existingScore = auditScope
+      ? await _handleGetScoreById({
+          projectId: auditScope.projectId,
+          scoreId,
+          scoreScope: this.apiVersion === "v1" ? "traces_only" : "all",
+          scoreDataTypes:
+            this.apiVersion === "v1" ? LISTABLE_SCORE_TYPES : undefined,
+          preferredClickhouseService: "ReadOnly",
+        })
+      : undefined;
+
+    const result = await processEventBatch(
+      [
+        {
+          id: randomUUID(),
+          type: eventTypes.SCORE_CREATE,
+          timestamp: new Date().toISOString(),
+          body: { ...body, id: scoreId },
+        },
+      ],
+      auth,
+    );
+
+    if (
+      auditScope &&
+      result.errors.length === 0 &&
+      result.successes.length === 1
+    ) {
+      await auditLog({
+        action: existingScore ? "update" : "create",
+        resourceType: "score",
+        resourceId: scoreId,
+        projectId: auditScope.projectId,
+        orgId: auditScope.orgId,
+        apiKeyId: auditScope.apiKeyId,
+        before: existingScore
+          ? convertScoreToPublicApi(existingScore)
+          : undefined,
+        after: { ...body, id: scoreId },
+      });
+    }
+
+    return { id: scoreId, result };
+  }
+
+  async deleteScore({
+    projectId,
+    orgId,
+    apiKeyId,
+    scoreId,
+  }: {
+    projectId: string;
+    orgId: string;
+    apiKeyId: string;
+    scoreId: string;
+  }) {
+    const scoreDeleteQueue = ScoreDeleteQueue.getInstance();
+    if (!scoreDeleteQueue) {
+      throw new InternalServerError("ScoreDeleteQueue not initialized");
+    }
+
+    await auditLog({
+      action: "delete",
+      resourceType: "score",
+      resourceId: scoreId,
+      projectId,
+      orgId,
+      apiKeyId,
+    });
+
+    await scoreDeleteQueue.add(QueueJobs.ScoreDelete, {
+      timestamp: new Date(),
+      id: randomUUID(),
+      payload: {
+        projectId,
+        scoreIds: [scoreId],
+      },
+      name: QueueJobs.ScoreDelete,
+    });
+
+    return { message: "Score deletion queued successfully" };
+  }
+
   /**
    * Get a specific score by ID
-   * v1: Only returns aggregatable scores (NUMERIC, BOOLEAN, CATEGORICAL) - excludes CORRECTION
-   * v2: Returns all score types including CORRECTION
+   * v1: Returns listable scores (NUMERIC, BOOLEAN, CATEGORICAL, TEXT) - excludes CORRECTION
+   * v2: Returns all score types including CORRECTION and TEXT
    */
   async getScoreById({ projectId, scoreId, source }: { projectId: string; scoreId: string; source?: ScoreSourceType }) {
     const score = await _handleGetScoreById({
@@ -34,8 +130,8 @@ export class ScoresApiService {
 
   /**
    * Get list of scores with version-aware filtering
-   * v1: Only returns aggregatable scores (NUMERIC, BOOLEAN, CATEGORICAL) - excludes CORRECTION
-   * v2: Returns all score types including CORRECTION
+   * v1: Returns listable scores (NUMERIC, BOOLEAN, CATEGORICAL, TEXT) - excludes CORRECTION
+   * v2: Returns all score types including CORRECTION and TEXT
    */
   async generateScoresForPublicApi(props: ScoreQueryType) {
     return _handleGenerateScoresForPublicApi({
@@ -47,8 +143,8 @@ export class ScoresApiService {
 
   /**
    * Get count of scores with version-aware filtering
-   * v1: Only counts aggregatable scores (NUMERIC, BOOLEAN, CATEGORICAL) - excludes CORRECTION
-   * v2: Counts all score types including CORRECTION
+   * v1: Only counts listable scores (NUMERIC, BOOLEAN, CATEGORICAL, TEXT) - excludes CORRECTION
+   * v2: Counts all score types including CORRECTION and TEXT
    */
   async getScoresCountForPublicApi(props: ScoreQueryType) {
     return _handleGetScoresCountForPublicApi({

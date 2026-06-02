@@ -40,7 +40,7 @@ export function BatchExportsTable(props: { projectId: string }) {
 
   const cancelBatchExport = api.batchExport.cancel.useMutation({
     onSuccess: () => {
-      void batchExports.refetch();
+      batchExports.refetch();
       setCancelDialogOpen(false);
       setSelectedExportId(null);
     },
@@ -66,7 +66,7 @@ export function BatchExportsTable(props: { projectId: string }) {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <InfoIcon className="size-3 text-muted-foreground" />
+                  <InfoIcon className="text-muted-foreground size-3" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="space-y-1">
@@ -234,6 +234,7 @@ export function BatchExportsTable(props: { projectId: string }) {
           onChange: setPaginationState,
           state: paginationState,
         }}
+        cellPadding="comfortable"
       />
     </>
   );

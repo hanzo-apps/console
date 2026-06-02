@@ -1,6 +1,5 @@
 import { Button } from "@/src/components/ui/button";
-import { useEffect } from "react";
-import type * as z from "zod/v4";
+import type * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
@@ -10,7 +9,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
@@ -28,8 +26,6 @@ export const NewOrganizationForm = ({ onSuccess }: { onSuccess: (orgId: string) 
     resolver: zodResolver(organizationFormSchema),
     defaultValues: {
       name: "",
-      type: "Personal",
-      size: undefined,
     },
   });
   const capture = useInsightsCapture();
@@ -77,13 +73,6 @@ export const NewOrganizationForm = ({ onSuccess }: { onSuccess: (orgId: string) 
       });
   }
 
-  // Clear size whenever type is not Company or Agency to avoid submitting hidden values
-  useEffect(() => {
-    if (watchedType !== "Company" && watchedType !== "Agency") {
-      form.setValue("size", undefined);
-    }
-  }, [watchedType, form]);
-
   return (
     <Form {...form}>
       <form
@@ -93,7 +82,7 @@ export const NewOrganizationForm = ({ onSuccess }: { onSuccess: (orgId: string) 
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
             e.preventDefault();
-            void form.handleSubmit(onSubmit)();
+            form.handleSubmit(onSubmit)();
           }
         }}
       >

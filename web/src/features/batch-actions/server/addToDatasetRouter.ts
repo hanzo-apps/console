@@ -12,6 +12,7 @@ import { TRPCError } from "@trpc/server";
 import { BatchTableNames, BatchActionType, BatchActionStatus, ActionId } from "@hanzo/shared";
 import { env } from "@/src/env.mjs";
 import { CreateObservationAddToDatasetActionSchema } from "../validation";
+import { assertLegacyTracingIoSearchCanCreateBatchJob } from "@/src/features/traces/server/legacyIoSearch";
 
 const MAX_BATCH_ADD_TO_DATASET_ITEMS = 1000;
 
@@ -33,6 +34,8 @@ export const addToDatasetRouter = createTRPCRouter({
         const queryOpts = {
           projectId,
           filter: query.filter ?? [],
+          searchQuery: query.searchQuery,
+          searchType: query.searchType,
           limit: 1,
           offset: 0,
         };

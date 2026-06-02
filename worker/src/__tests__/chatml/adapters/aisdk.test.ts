@@ -42,6 +42,17 @@ describe("AI SDK Adapter", () => {
       ).toBe(true);
     });
 
+    it("should detect AI SDK via flat v4 event metadata", () => {
+      expect(
+        aisdkAdapter.detect({
+          metadata: {
+            "scope.name": "ai",
+            "attributes.operation.name": "ai.generateText.doGenerate",
+          },
+        }),
+      ).toBe(true);
+    });
+
     it("should detect AI SDK via framework hint", () => {
       expect(aisdkAdapter.detect({ framework: "aisdk" })).toBe(true);
       expect(aisdkAdapter.detect({ framework: "aisdk-v5" })).toBe(true);
@@ -302,6 +313,31 @@ describe("AI SDK Adapter", () => {
       expect(result.data?.[0].tools?.[0].parameters).toBeDefined();
     });
 
+    it("should attach provider tools without explicit names using their type", () => {
+      const input = {
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "text", text: "Search the web" }],
+          },
+        ],
+        tools: [
+          {
+            type: "web_search_preview",
+          },
+        ],
+      };
+
+      const result = normalizeInput(input, { framework: "aisdk" });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.[0].tools).toHaveLength(1);
+      expect(result.data?.[0].tools?.[0]).toEqual({
+        name: "web_search_preview",
+        description: "",
+      });
+    });
+
     it("should stringify simple tool result objects (1-2 scalar keys)", () => {
       const input = {
         messages: [
@@ -543,6 +579,37 @@ describe("AI SDK Adapter", () => {
       // Tool call should still be present
       expect(msg?.tool_calls?.length).toBe(1);
       expect(msg?.tool_calls?.[0].name).toBe("calculator");
+    });
+
+    it("should normalize raw tool calls with flat v4 event metadata", () => {
+      const rawToolCallArray = [
+        {
+          toolCallId: "call_abc",
+          toolName: "get_weather",
+          input: { city: "NYC" },
+        },
+      ];
+
+      const result = normalizeOutput(rawToolCallArray, {
+        metadata: {
+          "scope.name": "ai",
+          "attributes.operation.name": "ai.generateText.doGenerate",
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.[0]).toMatchObject({
+        role: "assistant",
+        content: "",
+        tool_calls: [
+          {
+            id: "call_abc",
+            name: "get_weather",
+            arguments: '{"city":"NYC"}',
+            type: "function",
+          },
+        ],
+      });
     });
   });
 });

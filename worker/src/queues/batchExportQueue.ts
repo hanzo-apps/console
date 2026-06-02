@@ -9,10 +9,10 @@ import { handleBatchExportJob } from "../features/batchExport/handleBatchExportJ
 
 export const batchExportQueueProcessor = async (job: Job<TQueueJobTypes[QueueName.BatchExport]>) => {
   try {
-    logger.info("Executing Batch Export Job", job.data.payload);
+    logger.info("[BATCH EXPORT] Executing Batch Export Job", job.data.payload);
     await handleBatchExportJob(job.data.payload);
 
-    logger.info("Finished Batch Export Job", job.data.payload);
+    logger.info("[BATCH EXPORT] Finished Batch Export Job", job.data.payload);
 
     return true;
   } catch (e) {
@@ -22,17 +22,20 @@ export const batchExportQueueProcessor = async (job: Job<TQueueJobTypes[QueueNam
     }
     const displayError = e instanceof BaseError ? e.message : "An internal error occurred";
 
-    await kyselyPrisma.$kysely
-      .updateTable("batch_exports")
-      .set("status", BatchExportStatus.FAILED)
-      .set("finished_at", new Date())
-      .set("log", displayError)
-      .where("id", "=", job.data.payload.batchExportId)
-      .where("project_id", "=", job.data.payload.projectId)
-      .execute();
+    await prisma.batchExport.update({
+      where: {
+        id: job.data.payload.batchExportId,
+        projectId: job.data.payload.projectId,
+      },
+      data: {
+        status: BatchExportStatus.FAILED,
+        finishedAt: new Date(),
+        log: displayError,
+      },
+    });
 
     logger.error(
-      `Failed Batch Export job for id ${job.data.payload.batchExportId} and project id ${job.data.payload.projectId}`,
+      `[BATCH EXPORT] Failed Batch Export job for id ${job.data.payload.batchExportId} and project id ${job.data.payload.projectId}`,
       e,
     );
     traceException(e);

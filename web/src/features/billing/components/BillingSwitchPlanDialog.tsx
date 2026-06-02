@@ -79,7 +79,7 @@ export const BillingSwitchPlanDialog = ({ disabled = false }: { disabled?: boole
                 return (
                   <div
                     key={product.stripeProductId}
-                    className="relative flex flex-col rounded-xl border bg-card p-4 shadow-sm transition-all hover:shadow-md"
+                    className="bg-card relative flex flex-col rounded-xl border p-4 shadow-xs transition-all hover:shadow-md"
                   >
                     <div className="mb-4">
                       {/* Labels above plan title */}
@@ -126,7 +126,7 @@ export const BillingSwitchPlanDialog = ({ disabled = false }: { disabled?: boole
                     <Link
                       href="https://hanzo.com/pricing"
                       target="_blank"
-                      className="mt-auto block py-4 text-sm text-muted-foreground hover:text-foreground"
+                      className="text-muted-foreground hover:text-foreground mt-auto block py-4 text-sm"
                     >
                       Learn more about plan →
                     </Link>

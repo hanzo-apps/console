@@ -16,6 +16,73 @@ import { useSingleTemplateValidation } from "@/src/features/evals/hooks/useSingl
 import { getMaintainer } from "@/src/features/evals/utils/typeHelpers";
 import { MaintainerTooltip } from "@/src/features/evals/components/maintainer-tooltip";
 import Link from "next/link";
+import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
+import { shouldShowEvalTemplate } from "@/src/features/evals/utils/code-eval-template-utils";
+import { SiPython, SiTypescript } from "react-icons/si";
+
+const CodeTemplateLanguageIcon = ({
+  sourceCodeLanguage,
+}: {
+  sourceCodeLanguage: EvalTemplate["sourceCodeLanguage"];
+}) => {
+  const language =
+    sourceCodeLanguage === EvalTemplateSourceCodeLanguage.TYPESCRIPT
+      ? { Icon: SiTypescript, title: "TypeScript" }
+      : sourceCodeLanguage === EvalTemplateSourceCodeLanguage.PYTHON
+        ? { Icon: SiPython, title: "Python" }
+        : null;
+
+  if (!language) return null;
+
+  const { Icon } = language;
+
+  return (
+    <span
+      title={language.title}
+      aria-label={language.title}
+      className="text-muted-foreground ml-1 inline-flex shrink-0"
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+    </span>
+  );
+};
+
+const getCodeTemplateLanguageTitle = (
+  sourceCodeLanguage: EvalTemplate["sourceCodeLanguage"],
+) =>
+  sourceCodeLanguage === EvalTemplateSourceCodeLanguage.PYTHON
+    ? "Python"
+    : sourceCodeLanguage === EvalTemplateSourceCodeLanguage.TYPESCRIPT
+      ? "TypeScript"
+      : "Code";
+
+const TemplatePreviewTooltipContent = ({
+  template,
+}: {
+  template: EvalTemplate;
+}) => {
+  if (template.type === EvalTemplateType.CODE) {
+    return (
+      <>
+        <p className="mb-1 font-medium">
+          {getCodeTemplateLanguageTitle(template.sourceCodeLanguage)} source
+        </p>
+        <pre className="text-muted-foreground text-xs wrap-break-word whitespace-pre-wrap">
+          {template.sourceCode}
+        </pre>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <p className="mb-1 font-medium">Evaluation prompt</p>
+      <pre className="text-muted-foreground text-xs wrap-break-word whitespace-pre-wrap">
+        {template.prompt}
+      </pre>
+    </>
+  );
+};
 
 interface EvaluatorSelectorProps {
   projectId: string;
@@ -30,9 +97,12 @@ export function EvaluatorSelector({
   evalTemplates,
   selectedTemplateId,
   onTemplateSelect,
-  onCreateNew,
 }: EvaluatorSelectorProps) {
   const [search, setSearch] = useState("");
+  const codeEvalCapabilities = useIsCodeEvalEnabled();
+  const visibleEvalTemplates = evalTemplates.filter((template) =>
+    shouldShowEvalTemplate(template, codeEvalCapabilities),
+  );
 
   // Group templates by name and whether they are managed by Hanzo
   const groupedTemplates = evalTemplates.reduce(
@@ -111,13 +181,34 @@ export function EvaluatorSelector({
                     }}
                     className={cn("group", templateData.some((t) => t.id === selectedTemplateId) && "bg-secondary")}
                   >
-                    {name}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex min-w-0 items-center">
+                          <span className="truncate">{name}</span>
+                          {latestVersion.type === EvalTemplateType.CODE ? (
+                            <CodeTemplateLanguageIcon
+                              sourceCodeLanguage={
+                                latestVersion.sourceCodeLanguage
+                              }
+                            />
+                          ) : null}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="right"
+                        className="max-h-[300px] max-w-[400px] overflow-y-auto"
+                      >
+                        <TemplatePreviewTooltipContent
+                          template={latestVersion}
+                        />
+                      </TooltipContent>
+                    </Tooltip>
                     {isInvalid && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <AlertCircle className="ml-1 h-4 w-4 text-yellow-500" />
                         </TooltipTrigger>
-                        <TooltipContent className="max-h-[50dvh] overflow-y-auto whitespace-normal break-normal text-sm">
+                        <TooltipContent className="max-h-[50dvh] overflow-y-auto text-sm break-normal whitespace-normal">
                           <p>Requires project-level evaluation model</p>
                           <Link
                             href={`/project/${projectId}/evals/default-model`}
@@ -136,7 +227,7 @@ export function EvaluatorSelector({
                         <Link
                           href={`/project/${projectId}/evals/templates/${latestVersion.id}`}
                           target="_blank"
-                          className="ml-auto opacity-0 hover:opacity-100 group-hover:opacity-100"
+                          className="ml-auto opacity-0 group-hover:opacity-100 hover:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
@@ -149,7 +240,7 @@ export function EvaluatorSelector({
                       <Link
                         href={`/project/${projectId}/evals/templates/${latestVersion.id}`}
                         target="_blank"
-                        className="ml-auto opacity-0 hover:opacity-100 group-hover:opacity-100"
+                        className="ml-auto opacity-0 group-hover:opacity-100 hover:opacity-100"
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
@@ -188,7 +279,7 @@ export function EvaluatorSelector({
                         <TooltipTrigger asChild>
                           <AlertCircle className="ml-1 h-4 w-4 text-yellow-500" />
                         </TooltipTrigger>
-                        <TooltipContent className="max-h-[50dvh] overflow-y-auto whitespace-normal break-normal text-sm">
+                        <TooltipContent className="max-h-[50dvh] overflow-y-auto text-sm break-normal whitespace-normal">
                           <p>Requires project-level evaluation model</p>
                           <Link
                             href={`/project/${projectId}/evals/default-model`}
@@ -207,7 +298,7 @@ export function EvaluatorSelector({
                         <Link
                           href={`/project/${projectId}/evals/templates/${latestVersion.id}`}
                           target="_blank"
-                          className="ml-auto opacity-0 hover:opacity-100 group-hover:opacity-100"
+                          className="ml-auto opacity-0 group-hover:opacity-100 hover:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
@@ -220,7 +311,7 @@ export function EvaluatorSelector({
                       <Link
                         href={`/project/${projectId}/evals/templates/${latestVersion.id}`}
                         target="_blank"
-                        className="ml-auto opacity-0 hover:opacity-100 group-hover:opacity-100"
+                        className="ml-auto opacity-0 group-hover:opacity-100 hover:opacity-100"
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
@@ -231,18 +322,6 @@ export function EvaluatorSelector({
                   </InputCommandItem>
                 );
               })}
-            </InputCommandGroup>
-          </>
-        )}
-
-        {onCreateNew && (
-          <>
-            <InputCommandSeparator alwaysRender />
-            <InputCommandGroup forceMount>
-              <InputCommandItem onSelect={onCreateNew}>
-                Create custom evaluator
-                <ExternalLink className="ml-auto h-4 w-4" />
-              </InputCommandItem>
             </InputCommandGroup>
           </>
         )}

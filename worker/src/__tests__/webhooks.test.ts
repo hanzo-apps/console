@@ -89,6 +89,9 @@ class WebhookTestServer {
 }
 
 const webhookServer = new WebhookTestServer();
+const GITHUB_REPOSITORY_DISPATCH_TRUNCATION_MARKER =
+  "[TRUNCATED: GitHub repository_dispatch payload exceeded size limit]";
+const GITHUB_REPOSITORY_DISPATCH_MAX_PAYLOAD_BYTES = 64 * 1024;
 
 describe("Webhook Integration Tests", () => {
   let projectId: string;
@@ -194,6 +197,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 
@@ -323,6 +331,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 
@@ -390,6 +403,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 
@@ -463,6 +481,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 
@@ -495,6 +518,9 @@ describe("Webhook Integration Tests", () => {
         throw new Error("Action not found");
       }
 
+      const secretHeaderValue = "secret-api-key-value";
+      const encryptedSecretHeaderValue = encrypt(secretHeaderValue);
+
       await prisma.action.update({
         where: { id: actionId },
         data: {
@@ -503,6 +529,15 @@ describe("Webhook Integration Tests", () => {
           config: {
             ...(action.config as WebhookActionConfigWithSecrets),
             url: "https://webhook-error.example.com/test",
+            requestHeaders: {
+              "x-secret-api-key": {
+                secret: true,
+                value: encryptedSecretHeaderValue,
+              },
+            },
+            displayHeaders: {
+              "x-secret-api-key": { secret: true, value: "secr...alue" },
+            },
           },
         },
       });
@@ -537,6 +572,11 @@ describe("Webhook Integration Tests", () => {
             prompt: PromptDomainSchema.parse(fullPrompt),
             action: "created",
             type: "prompt-version",
+            user: {
+              id: "user-123",
+              name: "Test User",
+              email: "test@example.com",
+            },
           },
         };
 
@@ -566,6 +606,17 @@ describe("Webhook Integration Tests", () => {
       const config = updatedAction?.config as any;
       expect(config.lastFailingExecutionId).toBeDefined();
       expect(typeof config.lastFailingExecutionId).toBe("string");
+
+      // Encrypted request headers are preserved when lastFailingExecutionId is written.
+      expect(config.requestHeaders["x-secret-api-key"].value).toBe(
+        encryptedSecretHeaderValue,
+      );
+      expect(config.requestHeaders["x-secret-api-key"].value).not.toBe(
+        secretHeaderValue,
+      );
+      expect(decrypt(config.requestHeaders["x-secret-api-key"].value)).toBe(
+        secretHeaderValue,
+      );
     });
 
     it("should execute webhook with secret headers correctly", async () => {
@@ -617,6 +668,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 
@@ -706,6 +762,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 
@@ -783,6 +844,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 
@@ -867,6 +933,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 
@@ -950,6 +1021,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 
@@ -1004,6 +1080,11 @@ describe("Webhook Integration Tests", () => {
           prompt: PromptDomainSchema.parse(fullPrompt),
           action: "created",
           type: "prompt-version",
+          user: {
+            id: "user-123",
+            name: "Test User",
+            email: "test@example.com",
+          },
         },
       };
 

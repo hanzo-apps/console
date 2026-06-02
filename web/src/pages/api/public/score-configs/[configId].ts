@@ -1,4 +1,8 @@
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
+import {
+  getScoreConfig,
+  updateScoreConfig,
+} from "@/src/features/public-api/server/score-configs-api-service";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import {
   GetScoreConfigQuery,
@@ -17,11 +21,9 @@ export default withMiddlewares({
     querySchema: GetScoreConfigQuery,
     responseSchema: GetScoreConfigResponse,
     fn: async ({ query, auth }) => {
-      const config = await prisma.scoreConfig.findUnique({
-        where: {
-          id: query.configId,
-          projectId: auth.scope.projectId,
-        },
+      return await getScoreConfig({
+        projectId: auth.scope.projectId,
+        configId: query.configId,
       });
 
       if (!config) {
@@ -43,11 +45,10 @@ export default withMiddlewares({
     bodySchema: PatchScoreConfigBody,
     responseSchema: PatchScoreConfigResponse,
     fn: async ({ query, body, auth }) => {
-      const existingConfig = await prisma.scoreConfig.findUnique({
-        where: {
-          id: query.configId,
-          projectId: auth.scope.projectId,
-        },
+      return await updateScoreConfig({
+        context: auth.scope,
+        configId: query.configId,
+        body,
       });
 
       if (!existingConfig) {

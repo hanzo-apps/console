@@ -110,7 +110,7 @@ export function MembersTable({
 
   const mutDeleteMember = api.members.deleteMembership.useMutation({
     onSuccess: (data) => {
-      if (data.userId === session.data?.user?.id) void session.update();
+      if (data.userId === session.data?.user?.id) session.update();
       utils.members.invalidate();
     },
   });
@@ -221,7 +221,7 @@ export function MembersTable({
       },
     },
     ...(project
-      ? [
+      ? ([
           {
             accessorKey: "projectRole",
             id: "projectRole",
@@ -253,7 +253,7 @@ export function MembersTable({
               );
             },
           },
-        ]
+        ] satisfies LangfuseColumnDef<MembersTableRow>[])
       : []),
     {
       accessorKey: "createdAt",
@@ -383,6 +383,7 @@ export function MembersTable({
             onColumnVisibilityChange={setColumnVisibility}
             columnOrder={columnOrder}
             onColumnOrderChange={setColumnOrder}
+            cellPadding="comfortable"
           />
         </SettingsTableCard>
       ) : (
@@ -413,6 +414,7 @@ export function MembersTable({
           onColumnVisibilityChange={setColumnVisibility}
           columnOrder={columnOrder}
           onColumnOrderChange={setColumnOrder}
+          cellPadding="comfortable"
         />
       )}
     </>
@@ -437,7 +439,7 @@ const OrgRoleDropdown = ({
   const mut = api.members.updateOrgMembership.useMutation({
     onSuccess: (data) => {
       utils.members.invalidate();
-      if (data.userId === session.data?.user?.id) void session.update();
+      if (data.userId === session.data?.user?.id) session.update();
       showSuccessToast({
         title: "Saved",
         description: "Organization role updated successfully",
@@ -495,7 +497,7 @@ const ProjectRoleDropdown = ({
   const mut = api.members.updateProjectRole.useMutation({
     onSuccess: (data) => {
       utils.members.invalidate();
-      if (data.userId === session.data?.user?.id) void session.update();
+      if (data.userId === session.data?.user?.id) session.update();
       showSuccessToast({
         title: "Saved",
         description: "Project role updated successfully",

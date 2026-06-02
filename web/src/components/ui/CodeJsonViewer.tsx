@@ -12,8 +12,12 @@ import { useMarkdownContext } from "@/src/features/theming/useMarkdownContext";
 import { type MediaReturnType } from "@/src/features/media/validation";
 import { HanzoMediaView } from "@/src/components/ui/HanzoMediaView";
 import { MarkdownJsonViewHeader } from "@/src/components/ui/MarkdownJsonView";
-import { renderRichPromptContent } from "@/src/features/prompts/components/prompt-content-utils";
+import {
+  renderRichPromptContent,
+  usePromptReferenceProjectId,
+} from "@/src/components/ui/PromptReferences";
 import { copyTextToClipboard } from "@/src/utils/clipboard";
+import { useCopyToClipboard } from "@/src/hooks/useCopyToClipboard";
 
 export const IO_TABLE_CHAR_LIMIT = 10000;
 
@@ -29,7 +33,6 @@ export function JSONView(props: {
   media?: MediaReturnType[];
   scrollable?: boolean;
   borderless?: boolean;
-  projectIdForPromptButtons?: string;
   controlButtons?: React.ReactNode;
   externalJsonCollapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -53,7 +56,7 @@ export function JSONView(props: {
       event.preventDefault();
     }
     const textToCopy = stringifyJsonNode(parsedJson);
-    void copyTextToClipboard(textToCopy);
+    copyTextToClipboard(textToCopy);
 
     // Keep focus on the copy button to prevent focus shifting
     if (event) {
@@ -80,7 +83,7 @@ export function JSONView(props: {
     <>
       <div
         className={cn(
-          "io-message-content flex gap-2 whitespace-pre-wrap break-words text-xs",
+          "io-message-content flex gap-2 text-xs wrap-break-word whitespace-pre-wrap",
           props.borderless ? "" : "p-2",
           props.title === "assistant" || props.title === "Output"
             ? "bg-accent-light-green dark:border-accent-dark-green"
@@ -156,7 +159,7 @@ export function JSONView(props: {
                 variant="ghost"
                 size="icon-xs"
                 onClick={handleToggleCollapse}
-                className="-mr-2 hover:bg-border"
+                className="hover:bg-border -mr-2"
                 title={isCollapsed ? "Expand all" : "Collapse all"}
               >
                 {isCollapsed ? <UnfoldVertical className="h-3 w-3" /> : <FoldVertical className="h-3 w-3" />}
@@ -183,29 +186,57 @@ export function CodeView(props: {
   defaultCollapsed?: boolean;
   title?: string;
   scrollable?: boolean;
+  copiedToClipboardMessage?: string;
 }) {
-  const [isCopied, setIsCopied] = useState(false);
+  const { copiedToClipboardMessage } = props;
+
   const [isCollapsed, setCollapsed] = useState(props.defaultCollapsed);
 
-  const handleCopy = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const { copy, isCopied } = useCopyToClipboard({
+    successDuration: copiedToClipboardMessage ? 3_000 : 1_000,
+  });
+
+  const handleCopy = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    setIsCopied(true);
+    const button = event.currentTarget;
     const content =
       props.originalContent ?? (typeof props.content === "string" ? props.content : (props.content?.join("\n") ?? ""));
     void copyTextToClipboard(content);
     setTimeout(() => setIsCopied(false), 1000);
 
-    // Keep focus on the copy button to prevent focus shifting
-    event.currentTarget.focus();
+    try {
+      await copy(content);
+    } catch {
+      // Clipboard writes can be rejected when the browser denies permission.
+    }
+
+    if (button) {
+      // Keep focus on the copy button to prevent focus shifting
+      // Note: the original button might no longer be in the DOM if React re-rendered the component after the state update.
+      button.focus();
+    }
   };
 
   const handleShowAll = () => setCollapsed(!isCollapsed);
+
+  const CopySuccessIcon = useMemo(() => {
+    return (
+      <div className="animate-appear relative h-3">
+        <Check className="h-3 w-3" />
+        {copiedToClipboardMessage && (
+          <div className="text-secondary-foreground absolute top-0 right-0 mr-6 h-full max-w-[60vw] transform truncate overflow-hidden text-right text-sm leading-none whitespace-nowrap">
+            {copiedToClipboardMessage}
+          </div>
+        )}
+      </div>
+    );
+  }, [copiedToClipboardMessage]);
 
   return (
     <div className={cn("flex max-w-full flex-col", props.className, props.scrollable && "max-h-full min-h-0")}>
       <>
         {props.title ? (
-          <div className="my-1 flex flex-shrink-0 items-center justify-between pl-1">
+          <div className="my-1 flex shrink-0 items-center justify-between pl-1">
             <div className="text-sm font-medium">{props.title}</div>
             <Button variant="ghost" size="icon-xs" onClick={handleCopy} className="">
               {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -226,7 +257,7 @@ export function CodeView(props: {
         )}
         <code
           className={cn(
-            "relative flex-1 whitespace-pre-wrap break-words px-4 py-3 font-mono text-xs",
+            "relative flex-1 px-4 py-3 font-mono text-xs wrap-break-word whitespace-pre-wrap",
             isCollapsed ? `line-clamp-6` : "block",
             props.scrollable ? "overflow-y-auto" : "",
           )}
@@ -256,6 +287,8 @@ export const JsonSkeleton = ({
   borderless?: boolean;
   className?: string;
 }) => {
+  const isSingleLine = numRows === 1;
+
   return (
     <div className={cn("w-[400px] rounded-md", borderless ? "" : "border", className)}>
       <div className="flex flex-col gap-1">

@@ -1,4 +1,4 @@
-import z from "zod/v4";
+import z from "zod";
 import { DEFAULT_TRACE_ENVIRONMENT } from "../ingestion/types";
 
 export const datastoreStringDateSchema = z
@@ -6,7 +6,7 @@ export const datastoreStringDateSchema = z
   // datastore stores UTC like '2024-05-23 18:33:41.602000'
   // we need to convert it to '2024-05-23T18:33:41.602000Z'
   .transform((str) => str.replace(" ", "T") + "Z")
-  .pipe(z.string().datetime());
+  .pipe(z.iso.datetime());
 
 //https://datastore.com/docs/en/integrations/javascript#integral-types-int64-int128-int256-uint64-uint128-uint256
 // datastore returns int64 as string
@@ -594,6 +594,7 @@ export const eventRecordBaseSchema = z.object({
   trace_name: z.string().nullish(),
   user_id: z.string().nullish(),
   session_id: z.string().nullish(),
+  is_app_root: z.boolean().default(false),
 
   // User updatable flags
   tags: z.array(z.string()).default([]),
@@ -606,7 +607,7 @@ export const eventRecordBaseSchema = z.object({
   // Prompt
   prompt_id: z.string().nullish(),
   prompt_name: z.string().nullish(),
-  prompt_version: z.string().nullish(),
+  prompt_version: z.number().nullish(),
 
   // Model
   model_id: z.string().nullish(),
@@ -632,8 +633,8 @@ export const eventRecordBaseSchema = z.object({
   output: z.string().nullish(),
 
   // Metadata
-  metadata: z.record(z.string(), z.string()),
   metadata_names: z.array(z.string()).default([]),
+  metadata_values: z.array(z.string()).default([]),
 
   // Experiment properties
   experiment_id: z.string().nullish(),
@@ -669,9 +670,6 @@ export const eventRecordBaseSchema = z.object({
 export type EventRecordBaseType = z.infer<typeof eventRecordBaseSchema>;
 
 export const eventRecordReadSchema = eventRecordBaseSchema.extend({
-  metadata_values: z.array(z.string()).default([]),
-  metadata_hashes: z.array(z.number().int()).default([]),
-  metadata_long_values: z.record(z.number().int(), z.string()).default({}),
   total_cost: z.number().nullish(),
 
   start_time: datastoreStringDateSchema,
@@ -684,7 +682,6 @@ export const eventRecordReadSchema = eventRecordBaseSchema.extend({
 export type EventRecordReadType = z.infer<typeof eventRecordReadSchema>;
 
 export const eventRecordInsertSchema = eventRecordBaseSchema.extend({
-  metadata_raw_values: z.array(z.string().nullish()).default([]),
   start_time: z.number(),
   end_time: z.number().nullish(),
   completion_start_time: z.number().nullish(),

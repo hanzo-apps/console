@@ -12,7 +12,7 @@ import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context
 import startCase from "lodash/startCase";
 import { Button } from "@/src/components/ui/button";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { Trash } from "lucide-react";
+import { Download, Trash } from "lucide-react";
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
@@ -41,7 +41,7 @@ export function DeleteWidget({ widgetId, owner }: { widgetId: string; owner: "PR
 
   const mutDeleteWidget = api.dashboardWidgets.delete.useMutation({
     onSuccess: () => {
-      void utils.dashboardWidgets.invalidate();
+      utils.dashboardWidgets.invalidate();
       capture("dashboard:delete_widget_form_open");
     },
     onError: (error) => {
@@ -80,7 +80,7 @@ export function DeleteWidget({ widgetId, owner }: { widgetId: string; owner: "PR
                 return;
               }
 
-              void mutDeleteWidget.mutateAsync({
+              mutDeleteWidget.mutate({
                 projectId,
                 widgetId,
               });
@@ -95,8 +95,62 @@ export function DeleteWidget({ widgetId, owner }: { widgetId: string; owner: "PR
   );
 }
 
+function ShareWidgetButton({ widgetId }: { widgetId: string }) {
+  const projectId = useProjectIdFromURL();
+  const utils = api.useUtils();
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  return (
+    <Button
+      variant="ghost"
+      size="xs"
+      disabled={!projectId}
+      loading={isDownloading}
+      onClick={async () => {
+        if (!projectId) {
+          return;
+        }
+
+        setIsDownloading(true);
+
+        try {
+          const widget = await utils.dashboardWidgets.get.fetch({
+            projectId,
+            widgetId,
+          });
+
+          downloadWidgetJson({
+            name: widget.name,
+            description: widget.description,
+            view: widget.view,
+            dimensions: widget.dimensions,
+            metrics: widget.metrics.map((metric) => ({
+              measure: metric.measure,
+              agg: metric.agg as z.infer<typeof metricAggregations>,
+            })),
+            filters: widget.filters,
+            chartType: widget.chartType,
+            chartConfig: widget.chartConfig,
+            minVersion: widget.minVersion,
+          });
+        } catch (error) {
+          showErrorToast(
+            "Failed to download widget",
+            error instanceof Error ? error.message : "Unknown error",
+          );
+        } finally {
+          setIsDownloading(false);
+        }
+      }}
+    >
+      <Download className="h-4 w-4" />
+    </Button>
+  );
+}
+
 export function DashboardWidgetTable() {
   const projectId = useProjectIdFromURL();
+  const { isBetaEnabled } = useV4Beta();
   const { setDetailPageList } = useDetailPageLists();
   const router = useRouter();
 
@@ -201,7 +255,11 @@ export function DashboardWidgetTable() {
       cell: (row) => {
         const id = row.row.original.id;
         return (
-          <div onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isBetaEnabled && <ShareWidgetButton widgetId={id} />}
             <DeleteWidget widgetId={id} owner={row.row.original.owner} />
           </div>
         );
@@ -230,6 +288,7 @@ export function DashboardWidgetTable() {
       }
       orderBy={orderByState}
       setOrderBy={setOrderByState}
+      cellPadding="comfortable"
       pagination={{
         totalCount: widgets.data?.totalCount ?? null,
         onChange: setPaginationState,

@@ -40,7 +40,9 @@ export const handleBatchExportJob = async (batchExportJob: BatchExportJobType) =
 
   const { projectId, batchExportId } = batchExportJob;
 
-  logger.info(`Starting batch export for ${projectId} and ${batchExportId}`);
+  logger.info(
+    `[BATCH EXPORT] Starting batch export for ${projectId} and ${batchExportId}`,
+  );
 
   const span = getCurrentSpan();
   if (span) {
@@ -156,6 +158,7 @@ export const handleBatchExportJob = async (batchExportJob: BatchExportJobType) =
           cutoffCreatedAt: jobDetails.createdAt,
           ...parsedQuery.data,
           filter: processedFilter,
+          fileFormat: jobDetails.format as BatchExportFileFormat,
         })
       : parsedQuery.data.tableName === BatchExportTableName.Traces
         ? await getTraceStream({
@@ -198,7 +201,10 @@ export const handleBatchExportJob = async (batchExportJob: BatchExportJobType) =
     streamTransformations[jobDetails.format as BatchExportFileFormat](),
     (err) => {
       if (err) {
-        logger.error("Getting data from DB and transform failed: ", err);
+        logger.error(
+          "[BATCH EXPORT] Getting data from DB and transform failed: ",
+          err,
+        );
       } else {
         logger.info(`Batch export ${batchExportId}: completed processing ${rowCount} total rows`);
       }
@@ -216,7 +222,7 @@ export const handleBatchExportJob = async (batchExportJob: BatchExportJobType) =
     throw new Error("No S3 bucket configured for exports.");
   }
 
-  const { signedUrl } = await StorageServiceFactory.getInstance({
+  const storageParams = {
     bucketName,
     accessKeyId: env.S3_BATCH_EXPORT_ACCESS_KEY_ID,
     secretAccessKey: env.S3_BATCH_EXPORT_SECRET_ACCESS_KEY,
@@ -230,12 +236,15 @@ export const handleBatchExportJob = async (batchExportJob: BatchExportJobType) =
     fileName,
     fileType: exportOptions[jobDetails.format as BatchExportFileFormat].fileType,
     data: fileStream,
-    expiresInSeconds,
-    partSize: env.BATCH_EXPORT_S3_PART_SIZE_MIB * 1024 * 1024,
-    queueSize: 4,
+    partSizeBytes: env.BATCH_EXPORT_S3_PART_SIZE_MIB * 1024 * 1024,
   });
 
-  logger.info(`Batch export file ${fileName} uploaded to S3`);
+  const signedUrl = await storageService.getSignedUrl(
+    fileName,
+    expiresInSeconds,
+  );
+
+  logger.info(`[BATCH EXPORT] Batch export file ${fileName} uploaded`);
 
   // Update job status
   await prisma.batchExport.update({
@@ -268,7 +277,7 @@ export const handleBatchExportJob = async (batchExportJob: BatchExportJobType) =
     });
 
     logger.info(
-      `Batch export with id ${batchExportId} for project ${projectId} successful. Email sent to user ${user.id}`,
+      `[BATCH EXPORT] Batch export with id ${batchExportId} for project ${projectId} successful. Email sent to user ${user.id}`,
     );
   }
 };

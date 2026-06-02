@@ -1,4 +1,4 @@
-import z from "zod/v4";
+import z from "zod";
 import { APIScoreSchemaV1, APIScoreV1 } from "../api/v1/schemas";
 import { ScoreDomain, ScoreSchema, ScoreDataTypeType, ScoresByDataTypes } from "../../../../domain";
 
@@ -106,3 +106,14 @@ export const filterAndValidateDbTraceScoreList = <IncludeHasMetadata extends boo
     return acc;
   }, [] as ValidatedAPITraceScore<IncludeHasMetadata>[]);
 };
+
+/**
+ * @deprecated
+ * Use `filterAndValidateDbScoreList` instead. This function is only used for the legacy v1 API where scores were only associated with traces.
+ * Use this function when pulling a list of scores from the database before using in the application to ensure type safety.
+ * All scores are expected to pass the validation. If a score fails validation, it will be logged to Otel.
+ * @param scores
+ * @returns list of validated scores
+ */
+export const filterAndValidateDbTraceScoreList =
+  filterAndValidateDbLegacyTraceScoreList;

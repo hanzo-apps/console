@@ -84,6 +84,7 @@ export const getTraceStream = async (props: {
         },
       ],
       tracesTableUiColumnDefinitions,
+      tracesTableCols,
     ),
   );
 
@@ -154,7 +155,8 @@ export const getTraceStream = async (props: {
         t.output as output,
         t.metadata as metadata,
         s.scores_avg as scores_avg,
-        s.score_categories as score_categories
+        s.score_categories as score_categories,
+        s.score_categories_tuples as score_categories_tuples
       FROM traces t
         LEFT JOIN scores_agg s ON s.trace_id = t.id AND s.project_id = t.project_id
       WHERE t.project_id = {projectId: String}
@@ -189,6 +191,7 @@ export const getTraceStream = async (props: {
         }[]
       | undefined;
     score_categories: string[] | undefined;
+    score_categories_tuples: [string, string | null, string][] | undefined;
   }>({
     query,
     params: {

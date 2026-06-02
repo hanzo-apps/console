@@ -1,4 +1,4 @@
-import { type z } from "zod/v4";
+import { type z } from "zod";
 import { protectedProjectProcedure } from "@/src/server/api/trpc";
 import { paginationZod } from "@hanzo/shared";
 import { GenerationTableOptions } from "./utils/GenerationTableOptions";

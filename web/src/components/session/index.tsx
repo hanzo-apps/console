@@ -2,7 +2,7 @@ import { GroupedScoreBadges } from "@/src/components/grouped-score-badge";
 import { ErrorPage } from "@/src/components/error-page";
 import { PublishSessionSwitch } from "@/src/components/publish-object-switch";
 import { StarSessionToggle } from "@/src/components/star-toggle";
-import { IOPreview } from "@/src/components/trace2/components/IOPreview/IOPreview";
+import { IOPreview } from "@/src/components/trace/components/IOPreview/IOPreview";
 import { JsonSkeleton } from "@/src/components/ui/CodeJsonViewer";
 import { Badge } from "@/src/components/ui/badge";
 import { DetailPageNav } from "@/src/features/navigate-detail-pages/DetailPageNav";
@@ -26,8 +26,7 @@ import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { Label } from "@/src/components/ui/label";
 import { AnnotationQueueObjectType, type ScoreDomain } from "@hanzo/shared";
 import { CreateNewAnnotationQueueItem } from "@/src/features/annotation-queues/components/CreateNewAnnotationQueueItem";
-import { TablePeekView } from "@/src/components/table/peek";
-import { PeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
+import { TablePeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
 import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 import { LazyTraceRow } from "@/src/components/session/TraceRow";
@@ -257,7 +256,7 @@ export const SessionPage: React.FC<{
         message="The session is either still being processed or has been deleted."
         additionalButton={{
           label: "Retry",
-          onClick: () => void window.location.reload(),
+          onClick: () => window.location.reload(),
         }}
       />
     );

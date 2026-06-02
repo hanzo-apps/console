@@ -63,7 +63,7 @@ export function DatasetVersionHistoryPanel({ projectId, datasetId, itemVersions 
   if (!versions || versions.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <div className="text-center text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-center text-sm">
           <Clock className="mx-auto mb-2 h-8 w-8" />
           <p>No versions found</p>
         </div>
@@ -124,7 +124,7 @@ export function DatasetVersionHistoryPanel({ projectId, datasetId, itemVersions 
       {/* Header */}
       <div className="border-b p-4">
         <h3 className="text-lg font-semibold">Version History</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {versions.length} version{versions.length !== 1 ? "s" : ""}
         </p>
       </div>

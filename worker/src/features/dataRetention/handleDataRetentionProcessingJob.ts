@@ -1,9 +1,10 @@
 import {
   deleteEventsOlderThanDays,
+  deleteMediaFiles,
   deleteObservationsOlderThanDays,
   deleteScoresOlderThanDays,
   deleteTracesOlderThanDays,
-  logger,
+  findExpiredMediaByProjectId,
   getS3MediaStorageClient,
   removeIngestionEventsFromS3AndDeleteDatastoreRefsForProject,
   getCurrentSpan,

@@ -44,7 +44,6 @@ function DatasetCompareRunsTableInternal(props: {
   projectId: string;
   datasetId: string;
   runIds: string[];
-  localExperiments: { key: string; value: string }[];
 }) {
   const { toggleField, isFieldSelected } = useDatasetCompareFields();
   const [isFieldsDropdownOpen, setIsFieldsDropdownOpen] = useState(false);
@@ -281,7 +280,6 @@ export function DatasetCompareRunsTable(props: {
   projectId: string;
   datasetId: string;
   runIds: string[];
-  localExperiments: { key: string; value: string }[];
 }) {
   return (
     <DatasetCompareFieldsProvider>

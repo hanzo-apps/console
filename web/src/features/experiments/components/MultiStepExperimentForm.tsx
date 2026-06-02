@@ -150,13 +150,33 @@ export const MultiStepExperimentForm = ({
   });
 
   const {
+    promptId: promptIdFromHook,
+    promptsByName,
+    expectedColumns,
+    selectedPromptModelConfig,
+  } = useExperimentPromptData({
+    projectId,
+    form,
+  });
+
+  const {
     modelParams,
     updateModelParamValue,
     setModelParamEnabled,
     availableModels,
     providerModelCombinations,
     availableProviders,
-  } = useModelParams();
+  } = useModelParams(undefined, {
+    promptConfigModel: selectedPromptModelConfig
+      ? {
+          selectionKey: promptIdFromHook,
+          ...(selectedPromptModelConfig.provider
+            ? { provider: selectedPromptModelConfig.provider }
+            : {}),
+          model: selectedPromptModelConfig.model,
+        }
+      : null,
+  });
 
   useExperimentNameValidation({
     projectId,
@@ -177,15 +197,6 @@ export const MultiStepExperimentForm = ({
       form.clearErrors("modelConfig");
     }
   }, [modelParams, form]);
-
-  const {
-    promptId: promptIdFromHook,
-    promptsByName,
-    expectedColumns,
-  } = useExperimentPromptData({
-    projectId,
-    form,
-  });
 
   const experimentMutation = api.experiments.createExperiment.useMutation({
     onSuccess: handleExperimentSuccess ?? (() => {}),
@@ -358,7 +369,7 @@ export const MultiStepExperimentForm = ({
     handleCloseEvaluatorForm,
     handleEvaluatorSuccess,
     handleSelectEvaluator,
-    handleEvaluatorToggled: () => void evaluators.refetch(),
+    handleEvaluatorToggled: () => evaluators.refetch(),
     preprocessFormValues,
   };
   const permissions = { hasEvalReadAccess, hasEvalWriteAccess };

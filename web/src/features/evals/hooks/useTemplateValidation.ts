@@ -20,6 +20,18 @@ export function useTemplateValidation({
   // validate that either a default eval model is set or the selected eval has a custom model
   useEffect(() => {
     if (selectedTemplate) {
+      if (isCodeEvalTemplate(selectedTemplate)) {
+        const isCodeEvalTemplateAvailable = shouldShowEvalTemplate(
+          selectedTemplate,
+          codeEvalCapabilities,
+        );
+        setIsSelectionValid(isCodeEvalTemplateAvailable);
+        if (isCodeEvalTemplateAvailable) {
+          onValidSelection?.(selectedTemplate);
+        }
+        return;
+      }
+
       if (!(selectedTemplate.provider || defaultModel.data?.provider)) {
         setIsSelectionValid(false);
         return;
@@ -35,7 +47,7 @@ export function useTemplateValidation({
       onValidSelection?.(selectedTemplate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTemplate?.id, onValidSelection]);
+  }, [selectedTemplate?.id, onValidSelection, codeEvalCapabilities.enabled]);
 
   return { isSelectionValid, selectedTemplate, setSelectedTemplate };
 }

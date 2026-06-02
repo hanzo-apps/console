@@ -2,6 +2,8 @@ import { DatasetRunItemDomain } from "../../domain/dataset-run-items";
 import { type OrderByState } from "../../interfaces/orderBy";
 import { datasetRunItemsTableUiColumnDefinitions } from "../tableMappings";
 import { datasetRunsTableUiColumnDefinitions } from "../../tableDefinitions/mapDatasetRunsTable";
+import { datasetRunItemsTableCols } from "../../tableDefinitions/datasetRunItemsTable";
+import { datasetRunsTableCols } from "../../tableDefinitions/datasetRunsTable";
 import { FilterState } from "../../types";
 import {
   createFilterFromFilterState,

@@ -31,7 +31,7 @@ export const AnnotationDrawerSection: React.FC<AnnotationDrawerSectionProps> = (
   const hasNonAnnotationScores = scores.some((score) => score.source !== "ANNOTATION");
 
   return (
-    <Card className="col-span-2 flex h-full flex-col overflow-y-auto p-3">
+    <Card className="col-span-2 flex h-full flex-col overflow-y-auto border-none p-3">
       <AnnotationForm
         key={"annotation-drawer-content" + item.objectId}
         scoreTarget={scoreTarget}

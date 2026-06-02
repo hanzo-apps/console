@@ -62,6 +62,9 @@ interface DataTableProps<TData, TValue> {
   hidePagination?: boolean;
   tableName: string;
   getRowClassName?: (row: TData) => string;
+  highlightAllRows?: boolean;
+  topAlignCells?: boolean;
+  cellPadding?: DataTableCellPadding;
 }
 
 export interface AsyncTableData<T> {
@@ -88,6 +91,15 @@ function isValidCssVariableName({ name, includesHyphens = true }: { name: string
   return regex.test(name);
 }
 
+const INTERACTIVE_ROW_CLICK_SELECTOR =
+  "a, button, input, select, textarea, summary, [role='button'], [role='link']";
+
+export const shouldIgnoreRowClickTarget = (target: EventTarget | null) => {
+  if (!(target instanceof Element)) return false;
+
+  return Boolean(target.closest(INTERACTIVE_ROW_CLICK_SELECTOR));
+};
+
 // These are the important styles to make sticky column pinning work!
 const getCommonPinningStyles = <TData,>(column: Column<TData>): CSSProperties => {
   const isPinned = column.getIsPinned();
@@ -109,6 +121,17 @@ const getPinningClasses = <TData,>(column: Column<TData>): string => {
   const isFirstRightPinnedColumn = isPinned === "right" && column.getIsFirstColumn("right");
 
   return cn(isLastLeftPinnedColumn && "border-r border-border", isFirstRightPinnedColumn && "border-l border-border");
+};
+
+const getCellPaddingClassName = (padding: DataTableCellPadding) => {
+  switch (padding) {
+    case "comfortable":
+      return "p-1";
+    case "none":
+      return "p-0 first:pl-0";
+    case "compact":
+      return "px-1";
+  }
 };
 
 export function DataTable<TData extends object, TValue>({
@@ -133,6 +156,9 @@ export function DataTable<TData extends object, TValue>({
   hidePagination = false,
   tableName,
   getRowClassName,
+  highlightAllRows = false,
+  topAlignCells = false,
+  cellPadding = "compact",
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const rowheighttw = getRowHeightTailwindClass(rowHeight, customRowHeights);
@@ -311,7 +337,7 @@ export function DataTable<TData extends object, TValue>({
                         }}
                       >
                         {header.isPlaceholder ? null : (
-                          <div className="flex select-none items-center">
+                          <div className="flex items-center select-none">
                             <span className="truncate">
                               {flexRender(header.column.columnDef.header, header.getContext())}
                             </span>
@@ -354,6 +380,9 @@ export function DataTable<TData extends object, TValue>({
                 help={help}
                 onRowClick={hasRowClickAction ? handleOnRowClick : undefined}
                 getRowClassName={getRowClassName}
+                highlightAllRows={highlightAllRows}
+                topAlignCells={topAlignCells}
+                cellPadding={cellPadding}
                 tableSnapshot={{
                   tableDataUpdatedAt: peekView?.tableDataUpdatedAt,
                   columnVisibility,
@@ -371,6 +400,9 @@ export function DataTable<TData extends object, TValue>({
                 help={help}
                 onRowClick={hasRowClickAction ? handleOnRowClick : undefined}
                 getRowClassName={getRowClassName}
+                highlightAllRows={highlightAllRows}
+                topAlignCells={topAlignCells}
+                cellPadding={cellPadding}
               />
             )}
           </Table>
@@ -414,6 +446,10 @@ interface TableBodyComponentProps<TData> {
   help?: { description: string; href: string };
   onRowClick?: (row: TData, event?: React.MouseEvent) => void;
   getRowClassName?: (row: TData) => string;
+  highlightAllRows?: boolean;
+  topAlignCells?: boolean;
+  cellPadding?: DataTableCellPadding;
+  /** Used for React.memo comparison only */
   tableSnapshot?: {
     tableDataUpdatedAt?: number;
     columnVisibility?: VisibilityState;
@@ -426,11 +462,13 @@ function TableRowComponent<TData>({
   row,
   onRowClick,
   getRowClassName,
+  highlightAllRows = false,
   children,
 }: {
   row: Row<TData>;
   onRowClick?: (row: TData, event?: React.MouseEvent) => void;
   getRowClassName?: (row: TData) => string;
+  highlightAllRows?: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -439,16 +477,24 @@ function TableRowComponent<TData>({
   return (
     <TableRow
       data-row-index={row.index}
-      onClick={(e) => onRowClick?.(row.original, e)}
+      onClick={(e) => {
+        if (shouldIgnoreRowClickTarget(e.target)) return;
+        onRowClick?.(row.original, e);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
+          if (shouldIgnoreRowClickTarget(e.target)) return;
           onRowClick?.(row.original);
         }
       }}
       className={cn(
         "hover:bg-accent",
         !!onRowClick ? "cursor-pointer" : "cursor-default",
-        selectedRowId && selectedRowId === row.id ? "bg-accent" : undefined,
+        (row.getIsSelected() || highlightAllRows) &&
+          "bg-muted/40 dark:bg-muted",
+        selectedRowId && selectedRowId === row.id
+          ? "bg-muted/40 dark:bg-muted"
+          : undefined,
         getRowClassName?.(row.original),
       )}
     >
@@ -466,7 +512,17 @@ function TableBodyComponent<TData>({
   help,
   onRowClick,
   getRowClassName,
+  highlightAllRows,
+  topAlignCells = false,
+  cellPadding = "compact",
+  tableSnapshot: _tableSnapshot,
 }: TableBodyComponentProps<TData>) {
+  const visibleColumns = table.getVisibleLeafColumns();
+  const skeletonRowCount = Math.max(
+    1,
+    Math.min(table.getState().pagination?.pageSize ?? 8, 8),
+  );
+
   return (
     <TableBody>
       {data.isLoading || !data.data ? (
@@ -482,12 +538,17 @@ function TableBodyComponent<TData>({
               const cellValue = cell.getValue();
               const isStringCell = typeof cellValue === "string";
               const isSmallRowHeight = (rowHeight ?? "s") === "s";
+              const columnDef = cell.column
+                .columnDef as LangfuseColumnDef<TData>;
 
               return (
                 <TableCell
                   key={cell.id}
                   className={cn(
-                    "overflow-hidden border-b px-1 text-xs first:pl-2",
+                    "overflow-hidden border-b text-xs first:pl-2",
+                    getCellPaddingClassName(
+                      columnDef.cellPadding ?? cellPadding,
+                    ),
                     isSmallRowHeight && "whitespace-nowrap",
                     getPinningClasses(cell.column),
                   )}
@@ -499,7 +560,9 @@ function TableBodyComponent<TData>({
                   <div
                     className={cn(
                       "flex",
-                      isSmallRowHeight ? "items-center" : "items-start",
+                      isSmallRowHeight && !topAlignCells
+                        ? "items-center"
+                        : "items-start",
                       !isSmallRowHeight && "py-1",
                       rowheighttw,
                     )}
@@ -561,6 +624,8 @@ const MemoizedTableBody = React.memo(TableBodyComponent, (prev, next) => {
   if (prev.data.isLoading !== next.data.isLoading) return false;
   if (prev.rowheighttw !== next.rowheighttw) return false;
   if (prev.rowHeight !== next.rowHeight) return false;
+  if (prev.highlightAllRows !== next.highlightAllRows) return false;
+  if (prev.cellPadding !== next.cellPadding) return false;
 
   // Then do more expensive deep equality checks
   if (!isEqual(prev.tableSnapshot.rowSelection, next.tableSnapshot.rowSelection)) return false;

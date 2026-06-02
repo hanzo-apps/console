@@ -52,7 +52,7 @@ export default function RemapEvaluatorPage() {
   const updateJobMutation = api.evals.updateEvalJob.useMutation({
     onSuccess: () => {
       utils.evals.invalidate();
-      void router.push(`/project/${projectId}/evals`);
+      router.push(`/project/${projectId}/evals`);
     },
     onError: (err) => {
       setError(err.message ?? "Failed to update old eval configuration");
@@ -63,7 +63,7 @@ export default function RemapEvaluatorPage() {
   const deleteJobMutation = api.evals.deleteEvalJob.useMutation({
     onSuccess: () => {
       utils.evals.invalidate();
-      void router.push(`/project/${projectId}/evals`);
+      router.push(`/project/${projectId}/evals`);
     },
     onError: (err) => {
       setError(err.message ?? "Failed to delete old eval configuration");
@@ -99,7 +99,7 @@ export default function RemapEvaluatorPage() {
         case "keep-active":
           // Do nothing - both old and new evals will be active
           utils.evals.invalidate();
-          void router.push(`/project/${projectId}/evals`);
+          router.push(`/project/${projectId}/evals`);
           break;
         case "mark-inactive":
           // Set old eval to INACTIVE
@@ -149,7 +149,7 @@ export default function RemapEvaluatorPage() {
               href="https://hanzo.ai/docs/faq/all/llm-as-a-judge-migration"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-dark-blue hover:opacity-80"
+              className="text-dark-blue font-medium hover:opacity-80"
             >
               Follow our step-by-step guide
             </a>{" "}

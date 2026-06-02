@@ -34,7 +34,7 @@ import {
   DEFAULT_ROW_LIMIT,
 } from "@/src/features/widgets/utils/pivot-table-utils";
 import { type ChartProps } from "@/src/features/widgets/chart-library/chart-props";
-import { numberFormatter } from "@/src/utils/numbers";
+import { valueFormatter } from "@/src/features/widgets/chart-library/utils";
 import { formatMetricName } from "@/src/features/widgets/utils";
 import { type OrderByState } from "@hanzo/shared";
 import { Loader2 } from "lucide-react";
@@ -49,12 +49,6 @@ export interface PivotTableProps {
 
   /** Pivot table specific configuration */
   config?: PivotTableConfig;
-
-  /** Chart configuration from shadcn/ui (for consistency with other charts) */
-  chartConfig?: ChartProps["config"];
-
-  /** Accessibility layer flag */
-  accessibilityLayer?: boolean;
 
   /** Current sort state */
   sortState?: OrderByState;
@@ -76,7 +70,7 @@ const StaticHeader: React.FC<{
 }> = ({ label, className }) => {
   return (
     <TableHead className={cn("p-1", className)}>
-      <div className="flex select-none items-center">
+      <div className="flex items-center select-none">
         <span className="truncate">{label}</span>
       </div>
     </TableHead>
@@ -117,7 +111,7 @@ const SortableHeader: React.FC<{
         )}
 
         {/* Visual indicator that appears on hover - matches traces table behavior */}
-        <div className="pointer-events-none absolute right-0 top-0 h-full w-1.5 touch-none select-none bg-secondary opacity-0 group-hover/header:opacity-100" />
+        <div className="bg-secondary pointer-events-none absolute top-0 right-0 h-full w-1.5 touch-none opacity-0 select-none group-hover/header:opacity-100" />
       </div>
     </TableHead>
   );
@@ -130,11 +124,12 @@ const SortableHeader: React.FC<{
 const PivotTableRowComponent: React.FC<{
   row: PivotTableRow;
   metrics: string[];
-}> = ({ row, metrics }) => {
+  units?: (string | undefined)[];
+}> = ({ row, metrics, units }) => {
   return (
     <TableRow
       className={cn(
-        "border-b transition-colors hover:bg-muted/30",
+        "hover:bg-muted/30 border-b transition-colors",
         row.isSubtotal && "bg-muted/30",
         row.isTotal && "bg-muted/50",
       )}
@@ -158,32 +153,17 @@ const PivotTableRowComponent: React.FC<{
       </TableCell>
 
       {/* Metric columns */}
-      {metrics.map((metric) => (
+      {metrics.map((metric, i) => (
         <TableCell
           key={metric}
           className={cn("p-2 text-right align-middle tabular-nums", (row.isSubtotal || row.isTotal) && "font-semibold")}
         >
-          {formatMetricValue(row.values[metric])}
+          {valueFormatter(row.values[metric], units?.[i])}
         </TableCell>
       ))}
     </TableRow>
   );
 };
-
-/**
- * Formats metric values for display in the table
- * Handles numbers and strings with appropriate formatting
- *
- * @param value - The metric value to format
- * @returns Formatted string for display
- */
-function formatMetricValue(value: number | string): string {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  return numberFormatter(value, 2).replace(/\.00$/, "");
-}
 
 /**
  * Formats metric names for column headers
@@ -315,10 +295,14 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, config, sortState,
 
   // Handle empty data state
   if (!data || data.length === 0) {
+    if (isLoading) {
+      return <div className="h-full" aria-hidden="true" />;
+    }
+
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">No data available</p>
+          <p className="text-muted-foreground text-sm">No data available</p>
         </div>
       </div>
     );
@@ -326,6 +310,10 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, config, sortState,
 
   // Handle transformation errors
   if (pivotTableRows.length === 0) {
+    if (isLoading) {
+      return <div className="h-full" aria-hidden="true" />;
+    }
+
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
@@ -375,7 +363,12 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, config, sortState,
 
         <TableBody>
           {sortedRows.map((row) => (
-            <PivotTableRowComponent key={row.id} row={row} metrics={metrics} />
+            <PivotTableRowComponent
+              key={row.id}
+              row={row}
+              metrics={metrics}
+              units={units}
+            />
           ))}
         </TableBody>
       </Table>

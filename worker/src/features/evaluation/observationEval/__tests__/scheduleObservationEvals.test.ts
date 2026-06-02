@@ -41,6 +41,7 @@ describe("scheduleObservationEvals", () => {
     tool_definitions: {},
     tool_calls: [],
     tool_call_names: [],
+    tool_call_count: 0,
 
     // Usage & Cost
     usage_details: { input: 100, output: 50 },
@@ -69,9 +70,12 @@ describe("scheduleObservationEvals", () => {
     filter: [],
     sampling: { toNumber: () => 1 } as unknown as Prisma.Decimal,
     evalTemplateId: "template-1",
+    evalTemplate: { type: EvalTemplateType.LLM_AS_JUDGE },
     scoreName: "quality",
     variableMapping: [],
     targetObject: EvalTargetObject.EVENT,
+    status: JobConfigState.ACTIVE,
+    blockedAt: null,
     ...overrides,
   });
 
@@ -99,6 +103,67 @@ describe("scheduleObservationEvals", () => {
       expect(schedulerDeps.uploadObservationToS3).not.toHaveBeenCalled();
       expect(schedulerDeps.upsertJobExecution).not.toHaveBeenCalled();
       expect(schedulerDeps.enqueueEvalJob).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("executability", () => {
+    it("should skip paused and inactive configs before uploading to S3", async () => {
+      const schedulerDeps = createMockSchedulerDeps();
+      const observation = createMockObservation();
+
+      await scheduleObservationEvals({
+        observation,
+        configs: [
+          createMockConfig({
+            id: "paused-config",
+            blockedAt: new Date(),
+          }),
+          createMockConfig({
+            id: "inactive-config",
+            status: JobConfigState.INACTIVE,
+          }),
+        ],
+        schedulerDeps,
+      });
+
+      expect(schedulerDeps.uploadObservationToS3).not.toHaveBeenCalled();
+      expect(schedulerDeps.upsertJobExecution).not.toHaveBeenCalled();
+      expect(schedulerDeps.enqueueEvalJob).not.toHaveBeenCalled();
+    });
+
+    it("should schedule inactive configs for manual execution while skipping blocked configs", async () => {
+      const schedulerDeps = createMockSchedulerDeps();
+      const observation = createMockObservation();
+      const inactiveConfig = createMockConfig({
+        id: "inactive-config",
+        status: JobConfigState.INACTIVE,
+      });
+
+      await scheduleObservationEvals({
+        observation,
+        configs: [
+          createMockConfig({
+            id: "blocked-config",
+            blockedAt: new Date(),
+          }),
+          inactiveConfig,
+        ],
+        schedulerDeps,
+        executionMode: "MANUAL",
+      });
+
+      expect(schedulerDeps.uploadObservationToS3).toHaveBeenCalledTimes(1);
+      expect(schedulerDeps.upsertJobExecution).toHaveBeenCalledTimes(1);
+      expect(schedulerDeps.upsertJobExecution).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jobConfigurationId: inactiveConfig.id,
+        }),
+      );
+      expect(schedulerDeps.enqueueEvalJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          executionMode: "MANUAL",
+        }),
+      );
     });
   });
 
@@ -287,7 +352,28 @@ describe("scheduleObservationEvals", () => {
         projectId: "project-789",
         observationS3Path: "observations/project-789/obs-123.json",
         delay: 0,
+        evalTemplateType: EvalTemplateType.LLM_AS_JUDGE,
       });
+    });
+
+    it("should pass code template type to the scheduler deps", async () => {
+      const schedulerDeps = createMockSchedulerDeps();
+      const observation = createMockObservation();
+      const config = createMockConfig({
+        evalTemplate: { type: EvalTemplateType.CODE },
+      });
+
+      await scheduleObservationEvals({
+        observation,
+        configs: [config],
+        schedulerDeps,
+      });
+
+      expect(schedulerDeps.enqueueEvalJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          evalTemplateType: EvalTemplateType.CODE,
+        }),
+      );
     });
   });
 
@@ -295,7 +381,7 @@ describe("scheduleObservationEvals", () => {
     it("should process multiple matching configs independently", async () => {
       const schedulerDeps = createMockSchedulerDeps();
       schedulerDeps.upsertJobExecution = vi
-        .fn()
+        .fn<ObservationEvalSchedulerDeps["upsertJobExecution"]>()
         .mockResolvedValueOnce({ id: "job-exec-1" })
         .mockResolvedValueOnce({ id: "job-exec-2" })
         .mockResolvedValueOnce({ id: "job-exec-3" });

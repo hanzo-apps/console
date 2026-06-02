@@ -173,7 +173,7 @@ export const PostModelsV1Body = z
     if (hasFlatPrices) {
       if ((data.inputPrice || data.outputPrice) && data.totalPrice) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["totalPrice"],
           message: "If input and/or output price is set, total price must be null",
         });
@@ -185,7 +185,7 @@ export const PostModelsV1Body = z
       const result = validatePricingTiers(data.pricingTiers!);
       if (!result.valid) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["pricingTiers"],
           message: result.error,
         });

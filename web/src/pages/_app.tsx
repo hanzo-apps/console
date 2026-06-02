@@ -28,6 +28,7 @@ import "core-js/features/array/to-spliced";
 import "core-js/features/array/to-sorted";
 
 import "react18-json-view/src/style.css";
+import "streamdown/styles.css";
 
 // Polyfill to prevent React crashes when Google Translate modifies the DOM.
 // Google Translate wraps text nodes in <font> elements, which breaks React's
@@ -74,6 +75,7 @@ import { SupportDrawerProvider } from "@/src/features/support-chat/SupportDrawer
 import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 import { ScoreCacheProvider } from "@/src/features/scores/contexts/ScoreCacheContext";
 import { CorrectionCacheProvider } from "@/src/features/corrections/contexts/CorrectionCacheContext";
+import { V4_BETA_ENABLED_POSTHOG_PROPERTY } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 
 // Check that PostHog is client-side (used to handle Next.js SSR) and that env vars are set
 if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
@@ -132,10 +134,12 @@ const MyApp: AppType<{ session: Session | null }> = ({ Component, pageProps: { s
                     <ScoreCacheProvider>
                       <CorrectionCacheProvider>
                         <SupportDrawerProvider defaultOpen={false}>
-                          <AppLayout>
-                            <Component {...pageProps} />
-                            <UserTracking />
-                          </AppLayout>
+                          <InAppAiAgentProvider defaultOpen={false}>
+                            <AppLayout>
+                              <Component {...pageProps} />
+                              <UserTracking />
+                            </AppLayout>
+                          </InAppAiAgentProvider>
                         </SupportDrawerProvider>
                       </CorrectionCacheProvider>
                     </ScoreCacheProvider>
@@ -167,7 +171,7 @@ function UserTracking() {
     ) {
       lastIdentifiedUser.current = JSON.stringify(sessionUser);
       // PostHog
-      if (env.NEXT_PUBLIC_POSTHOG_KEY && env.NEXT_PUBLIC_POSTHOG_HOST)
+      if (env.NEXT_PUBLIC_POSTHOG_KEY && env.NEXT_PUBLIC_POSTHOG_HOST) {
         posthog.identify(sessionUser.id ?? undefined, {
           environment: process.env.NODE_ENV,
           email: sessionUser.email ?? undefined,
@@ -182,6 +186,11 @@ function UserTracking() {
             ) ?? undefined,
           HANZO_CLOUD_REGION: region,
         });
+        posthog.register({
+          [V4_BETA_ENABLED_POSTHOG_PROPERTY]:
+            sessionUser.v4BetaEnabled ?? false,
+        });
+      }
 
       // Sentry
       setUser({
@@ -190,6 +199,7 @@ function UserTracking() {
       });
     } else if (session.status === "unauthenticated") {
       lastIdentifiedUser.current = null;
+      posthog.unregister(V4_BETA_ENABLED_POSTHOG_PROPERTY);
       // Sentry
       setUser(null);
     }

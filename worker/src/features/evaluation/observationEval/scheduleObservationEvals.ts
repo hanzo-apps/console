@@ -5,6 +5,8 @@ import {
   EvalTargetObject,
   JobExecutionStatus,
   type FilterState,
+  type JobConfigExecutionMode,
+  isJobConfigExecutableForExecutionMode,
   mapEventEvalFilterColumnIdToField,
 } from "@hanzo/console-core";
 import { createW3CTraceId } from "../../utils";
@@ -13,6 +15,7 @@ interface ScheduleObservationEvalsParams {
   observation: ObservationForEval;
   configs: ObservationEvalConfig[];
   schedulerDeps: ObservationEvalSchedulerDeps;
+  executionMode?: JobConfigExecutionMode;
 }
 
 /**
@@ -39,6 +42,14 @@ export async function scheduleObservationEvals(params: ScheduleObservationEvalsP
   // Filter configs that match this observation (filter + sampling).
   // This is done before S3 upload to avoid unnecessary uploads.
   const matchingConfigs = configs.filter((config) => {
+    if (!isJobConfigExecutableForExecutionMode(config, executionMode)) {
+      logger.debug("Skipping non-executable observation eval config", {
+        configId: config.id,
+      });
+
+      return false;
+    }
+
     // Check filter
     const isTargeted = evaluateFilter(observation, config);
     if (!isTargeted) {
@@ -83,6 +94,7 @@ export async function scheduleObservationEvals(params: ScheduleObservationEvalsP
         matchingConfig,
         observationS3Path,
         schedulerDeps,
+        executionMode,
       }).catch((error) => {
         logger.error("Failed to process observation eval config", {
           configId: matchingConfig.id,
@@ -100,6 +112,7 @@ interface ProcessConfigParams {
   matchingConfig: ObservationEvalConfig;
   observationS3Path: string;
   schedulerDeps: ObservationEvalSchedulerDeps;
+  executionMode?: JobConfigExecutionMode;
 }
 
 async function processMatchingConfig(params: ProcessConfigParams): Promise<void> {
@@ -124,6 +137,8 @@ async function processMatchingConfig(params: ProcessConfigParams): Promise<void>
     projectId: observation.project_id,
     observationS3Path,
     delay: 0,
+    evalTemplateType: matchingConfig.evalTemplate.type,
+    ...(executionMode ? { executionMode } : {}),
   });
 
   logger.debug("Scheduled observation eval job", {

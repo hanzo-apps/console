@@ -129,6 +129,26 @@ export function createPublicApiObservationsColumnMapping(
   tablePrefix: "e" | "o",
   parentFieldName: "parent_span_id" | "parent_observation_id",
 ): ApiColumnMapping[] {
+  // user_id is denormalized onto events_core/events_full, so the events_proto
+  // path filters directly without joining the traces CTE. The legacy
+  // observations table does not carry user_id, so that path still joins
+  // traces.
+  const userIdMapping: ApiColumnMapping =
+    tableName === "events_proto"
+      ? {
+          id: "userId",
+          clickhouseSelect: "user_id",
+          filterType: "StringFilter",
+          clickhouseTable: tableName,
+          clickhousePrefix: tablePrefix,
+        }
+      : {
+          id: "userId",
+          clickhouseSelect: "user_id",
+          filterType: "StringFilter",
+          clickhouseTable: "traces",
+          clickhousePrefix: "t",
+        };
   return [
     {
       id: "userId",
@@ -329,8 +349,9 @@ export function convertApiProvidedFilterToDatastoreFilter(filter: BaseQueryType,
 export function deriveFilters<T extends BaseQueryType>(
   simpleFilterProps: T,
   filterParamsMapping: ApiColumnMapping[],
-  advancedFilters: FilterState | undefined,
+  advancedFilters: EventsTableFilterState | undefined,
   uiColumnDefinitions: UiColumnMappings,
+  columnDefinitions?: ColumnDefinition[],
 ): FilterList {
   // Start with advanced filters converted to FilterList
   const filterList = new FilterList(createFilterFromFilterState(advancedFilters ?? [], uiColumnDefinitions));

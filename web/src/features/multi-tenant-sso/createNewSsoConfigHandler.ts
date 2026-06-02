@@ -1,6 +1,8 @@
 import { prisma } from "@hanzo/console-core/src/db";
 import { encrypt } from "@hanzo/console-core/encryption";
 import { SsoProviderSchema } from "./types";
+import { validateSsoConfig } from "@/src/ee/features/multi-tenant-sso/validateSsoConfig";
+import { TRPCError } from "@trpc/server";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { env } from "@/src/env.mjs";
 import { logger } from "@hanzo/console-core/src/server";
@@ -15,11 +17,6 @@ export async function createNewSsoConfigHandler(req: NextApiRequest, res: NextAp
     // allow only POST requests
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method Not Allowed" });
-      return;
-    }
-    // check if ADMIN_API_KEY is set
-    if (!env.ADMIN_API_KEY) {
-      res.status(500).json({ error: "ADMIN_API_KEY is not set" });
       return;
     }
     if (!env.ENCRYPTION_KEY) {
@@ -56,6 +53,19 @@ export async function createNewSsoConfigHandler(req: NextApiRequest, res: NextAp
         error: `An SSO configuration already exists for domain '${domain}'`,
       });
       return;
+    }
+
+    // Pre-flight the IdP discovery doc so misconfigurations surface here
+    // instead of locking out users at first sign-in. Same check applied by
+    // the self-service tRPC `ssoConfig.save` mutation.
+    try {
+      await validateSsoConfig(body.data);
+    } catch (e) {
+      if (e instanceof TRPCError) {
+        res.status(412).json({ error: e.message });
+        return;
+      }
+      throw e;
     }
 
     const encryptedClientSecret = authConfig

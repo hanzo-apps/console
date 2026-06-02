@@ -1,10 +1,25 @@
-import { vi } from "vitest";
+import { vi, type Mock } from "vitest";
 import { randomUUID } from "crypto";
 import { type Prisma } from "@hanzo/console-core/src/db";
 import { type ObservationForEval, EvalTargetObject } from "@hanzo/console-core";
 import { type ObservationEvalConfig, type ObservationEvalSchedulerDeps } from "../types";
 import { type ObservationEvalProcessorDeps } from "../observationEvalProcessor";
 import { type EvalExecutionDeps, createMockEvalExecutionDeps } from "../../evalExecutionDeps";
+
+type MockSchedulerDeps = ObservationEvalSchedulerDeps & {
+  upsertJobExecution: Mock<ObservationEvalSchedulerDeps["upsertJobExecution"]>;
+  uploadObservationToS3: Mock<
+    ObservationEvalSchedulerDeps["uploadObservationToS3"]
+  >;
+  enqueueEvalJob: Mock<ObservationEvalSchedulerDeps["enqueueEvalJob"]>;
+};
+
+type MockProcessorDeps = ObservationEvalProcessorDeps & {
+  downloadObservationFromS3: Mock<
+    ObservationEvalProcessorDeps["downloadObservationFromS3"]
+  >;
+  evalExecutionDeps: EvalExecutionDeps;
+};
 
 /**
  * Creates a test ObservationForEval with sensible defaults.
@@ -47,6 +62,7 @@ export function createTestObservation(overrides: Partial<ObservationForEval> = {
     tool_definitions: {},
     tool_calls: [],
     tool_call_names: [],
+    tool_call_count: toolCallNames.length,
 
     // Usage & Cost
     usage_details: { input: 100, output: 50 },
@@ -82,7 +98,10 @@ export function createTestEvalConfig(overrides: Partial<ObservationEvalConfig> =
     filter: [],
     sampling: { toNumber: () => 1 } as unknown as Prisma.Decimal,
     evalTemplateId: `template-${randomUUID()}`,
+    evalTemplate: { type: EvalTemplateType.LLM_AS_JUDGE },
     scoreName: "test-score",
+    status: "ACTIVE",
+    blockedAt: null,
     targetObject: EvalTargetObject.EVENT,
     variableMapping: [{ templateVariable: "output", selectedColumnId: "output" }],
     ...overrides,
@@ -95,11 +114,15 @@ export function createTestEvalConfig(overrides: Partial<ObservationEvalConfig> =
  */
 export function createMockSchedulerDeps(
   overrides: Partial<{
-    createJobExecution: ReturnType<typeof vi.fn>;
-    uploadObservationToS3: ReturnType<typeof vi.fn>;
-    enqueueEvalJob: ReturnType<typeof vi.fn>;
+    upsertJobExecution: Mock<
+      ObservationEvalSchedulerDeps["upsertJobExecution"]
+    >;
+    uploadObservationToS3: Mock<
+      ObservationEvalSchedulerDeps["uploadObservationToS3"]
+    >;
+    enqueueEvalJob: Mock<ObservationEvalSchedulerDeps["enqueueEvalJob"]>;
   }> = {},
-): ObservationEvalSchedulerDeps {
+): MockSchedulerDeps {
   return {
     upsertJobExecution: overrides.createJobExecution ?? vi.fn().mockResolvedValue({ id: `job-exec-${randomUUID()}` }),
     uploadObservationToS3:
@@ -113,9 +136,12 @@ export function createMockSchedulerDeps(
  */
 export function createMockProcessorDeps(
   overrides: Partial<{
-    downloadObservationFromS3: ReturnType<typeof vi.fn>;
+    downloadObservationFromS3: Mock<
+      ObservationEvalProcessorDeps["downloadObservationFromS3"]
+    >;
+    evalExecutionDeps: EvalExecutionDeps;
   }> = {},
-): ObservationEvalProcessorDeps {
+): MockProcessorDeps {
   const defaultObservation = createTestObservation();
 
   return {
@@ -184,6 +210,7 @@ export function createMockJobConfiguration(
     sampling: string;
     delay: number;
     status: string;
+    blockedAt: Date | null;
     timeScope: string[];
     createdAt: Date;
     updatedAt: Date;
@@ -205,6 +232,7 @@ export function createMockJobConfiguration(
     sampling: overrides.sampling ?? "1.0",
     delay: overrides.delay ?? 0,
     status: overrides.status ?? "ACTIVE",
+    blockedAt: overrides.blockedAt ?? null,
     timeScope: overrides.timeScope ?? ["NEW"],
     createdAt: overrides.createdAt ?? new Date(),
     updatedAt: overrides.updatedAt ?? new Date(),
@@ -213,6 +241,7 @@ export function createMockJobConfiguration(
       overrides.evalTemplate !== undefined
         ? overrides.evalTemplate
         : createMockEvalTemplate({ id: templateId, projectId }),
+    project: { orgId: "test-org-123" },
   };
 }
 
@@ -225,11 +254,14 @@ export function createMockEvalTemplate(
     projectId: string | null;
     name: string;
     version: number;
-    prompt: string;
+    type: EvalTemplateType;
+    prompt: string | null;
     model: string;
     provider: string;
     modelParams: Record<string, unknown>;
-    outputSchema: Record<string, string>;
+    outputDefinition: Record<string, string> | null;
+    sourceCode: string | null;
+    sourceCodeLanguage: EvalTemplateSourceCodeLanguage | null;
     vars: string[];
     createdAt: Date;
     updatedAt: Date;
@@ -237,17 +269,23 @@ export function createMockEvalTemplate(
 ) {
   return {
     id: overrides.id ?? `template-${randomUUID()}`,
-    projectId: overrides.projectId ?? "test-project-123",
+    projectId:
+      "projectId" in overrides ? overrides.projectId : "test-project-123",
     name: overrides.name ?? "Test Evaluator",
     version: overrides.version ?? 1,
     prompt: overrides.prompt ?? "Evaluate the following output: {{output}}. Score 0-1.",
     model: overrides.model ?? "gpt-4",
     provider: overrides.provider ?? "openai",
     modelParams: overrides.modelParams ?? {},
-    outputSchema: overrides.outputSchema ?? {
-      score: "A number between 0 and 1",
-      reasoning: "Explain your reasoning",
-    },
+    outputDefinition:
+      "outputDefinition" in overrides
+        ? overrides.outputDefinition
+        : {
+            score: "A number between 0 and 1",
+            reasoning: "Explain your reasoning",
+          },
+    sourceCode: overrides.sourceCode ?? null,
+    sourceCodeLanguage: overrides.sourceCodeLanguage ?? null,
     vars: overrides.vars ?? ["output"],
     createdAt: overrides.createdAt ?? new Date(),
     updatedAt: overrides.updatedAt ?? new Date(),
@@ -303,6 +341,19 @@ export function createFullyMockedEvalPipeline(
     enqueueScoreIngestion: vi.fn().mockResolvedValue(undefined),
     updateJobExecution: vi.fn().mockResolvedValue(undefined),
   });
+
+  const processorDeps: MockProcessorDeps = {
+    downloadObservationFromS3: vi
+      .fn<ObservationEvalProcessorDeps["downloadObservationFromS3"]>()
+      .mockImplementation(async (path) => {
+        const data = uploadedData.get(path);
+        if (data) {
+          return JSON.stringify(data);
+        }
+        return JSON.stringify(observation);
+      }),
+    evalExecutionDeps: executionDeps,
+  };
 
   return {
     schedulerDeps,

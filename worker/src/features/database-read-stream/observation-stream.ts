@@ -1,6 +1,6 @@
 import {
+  BatchExportFileFormat,
   FilterCondition,
-  ScoreDataTypeEnum,
   type ScoreDataTypeType,
   TimeFilter,
   TracingSearchType,
@@ -24,7 +24,6 @@ import { Readable } from "stream";
 import { env } from "../../env";
 import { getChunkWithFlattenedScores, prepareScoresForOutput } from "./getDatabaseReadStream";
 import { fetchCommentsForExport } from "./fetchCommentsForExport";
-import type { Model, Price } from "@prisma/client";
 
 const BATCH_SIZE = 1000; // Fetch comments in batches for efficiency
 
@@ -76,6 +75,7 @@ export const getObservationStream = async (props: {
   searchQuery?: string;
   searchType?: TracingSearchType[];
   rowLimit?: number;
+  fileFormat?: BatchExportFileFormat;
 }): Promise<Readable> => {
   const {
     projectId,
@@ -85,6 +85,9 @@ export const getObservationStream = async (props: {
     searchType,
     rowLimit = env.BATCH_EXPORT_ROW_LIMIT,
   } = props;
+
+  const isCsv = props.fileFormat === BatchExportFileFormat.CSV;
+  const batchSize = isCsv ? DEFAULT_BATCH_SIZE : REDUCED_BATCH_SIZE;
 
   // Check if we should skip deduplication for OTEL projects
   const skipDedup = await shouldSkipObservationsFinal(projectId);
@@ -153,6 +156,7 @@ export const getObservationStream = async (props: {
         },
       ],
       observationsTableUiColumnDefinitions,
+      observationsTableCols,
     ),
   );
 
@@ -240,7 +244,8 @@ export const getObservationStream = async (props: {
         t.timestamp as traceTimestamp,
         t.user_id as userId,
         s.scores_avg as scores_avg,
-        s.score_categories as score_categories
+        s.score_categories as score_categories,
+        s.score_categories_tuples as score_categories_tuples
       FROM observations o
         LEFT JOIN traces t ON t.id = o.trace_id AND t.project_id = o.project_id
         LEFT JOIN scores_agg s ON s.trace_id = o.trace_id AND s.observation_id = o.id
@@ -261,6 +266,7 @@ export const getObservationStream = async (props: {
           }[]
         | undefined;
       score_categories: string[] | undefined;
+      score_categories_tuples: [string, string | null, string][] | undefined;
     } & {
       traceName: string;
       traceTags: string[];
@@ -302,6 +308,7 @@ export const getObservationStream = async (props: {
         }[]
       | undefined;
     score_categories: string[] | undefined;
+    score_categories_tuples: [string, string | null, string][] | undefined;
   } & {
     traceName: string;
     traceTags: string[];
@@ -343,7 +350,7 @@ export const getObservationStream = async (props: {
         {
           ...convertObservation(bufferedRow, {
             truncated: false,
-            shouldJsonParse: true,
+            shouldJsonParse: props.fileFormat !== BatchExportFileFormat.CSV,
           }),
           traceName: bufferedRow.traceName,
           traceTags: bufferedRow.traceTags,
@@ -375,7 +382,7 @@ export const getObservationStream = async (props: {
         observationIds.push(row.id);
 
         // Process in batches
-        if (rowBuffer.length >= BATCH_SIZE) {
+        if (rowBuffer.length >= batchSize) {
           // Fetch comments for this batch
           const commentsByObservation = await fetchCommentsForExport(projectId, "OBSERVATION", observationIds);
 

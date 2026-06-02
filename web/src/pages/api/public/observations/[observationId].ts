@@ -5,7 +5,10 @@ import {
   GetObservationV1Response,
   transformDbToApiObservation,
 } from "@/src/features/public-api/types/observations";
-import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
+import {
+  LEGACY_PUBLIC_API_OBSERVATIONS_CLICKHOUSE_RESOURCE_ERROR_MESSAGE,
+  withMiddlewares,
+} from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
   enrichObservationWithModelData,
@@ -44,41 +47,41 @@ export default withMiddlewares({
         throw new HanzoNotFoundError("Observation not found within authorized project");
       }
 
-      const model = clickhouseObservation.internalModelId
-        ? await prisma.model.findFirst({
-            where: {
-              AND: [
-                {
-                  id: clickhouseObservation.internalModelId,
-                },
-                {
-                  OR: [
-                    {
-                      projectId: auth.scope.projectId,
-                    },
-                    {
-                      projectId: null,
-                    },
-                  ],
-                },
-              ],
-            },
-            include: {
-              Price: true,
-            },
-            orderBy: {
-              projectId: {
-                sort: "desc",
-                nulls: "last",
+        const model = clickhouseObservation.internalModelId
+          ? await prisma.model.findFirst({
+              where: {
+                AND: [
+                  {
+                    id: clickhouseObservation.internalModelId,
+                  },
+                  {
+                    OR: [
+                      {
+                        projectId: auth.scope.projectId,
+                      },
+                      {
+                        projectId: null,
+                      },
+                    ],
+                  },
+                ],
               },
-            },
-          })
-        : undefined;
+              include: {
+                Price: true,
+              },
+              orderBy: {
+                projectId: {
+                  sort: "desc",
+                  nulls: "last",
+                },
+              },
+            })
+          : undefined;
 
-      const observation = {
-        ...clickhouseObservation,
-        ...enrichObservationWithModelData(model),
-      };
+        const observation = {
+          ...clickhouseObservation,
+          ...enrichObservationWithModelData(model),
+        };
 
       if (!observation) {
         throw new HanzoNotFoundError("Observation not found within authorized project");

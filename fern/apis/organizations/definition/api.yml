@@ -4,12 +4,12 @@ docs: |
   
   This admin API is only available on self-hosted instances, not on Hanzo Cloud.
   An administrator must set the `ADMIN_API_KEY` environment variable to use this API.
-  
+
   ## Authentication
 
   Authenticate with the API by setting the Authorization header to `Bearer $ADMIN_API_KEY` where
   `$ADMIN_API_KEY` is the API key set via the container environment.
-  
+
   ## Exports
 
   - OpenAPI spec: https://cloud.hanzo.com/generated/organizations-api/openapi.yml

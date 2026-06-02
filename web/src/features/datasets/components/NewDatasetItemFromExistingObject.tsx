@@ -19,6 +19,7 @@ import { useIsAuthenticatedAndProjectMember } from "@/src/features/auth/hooks";
 import { parseJsonPrioritised } from "@hanzo/console-core";
 import { ActionButton } from "@/src/components/ActionButton";
 import { type MetadataDomainClient } from "@/src/utils/clientSideDomainTypes";
+import { type Prisma } from "@langfuse/shared";
 
 /**
  * Component for creating a new dataset item from an existing object.
@@ -34,12 +35,12 @@ export const NewDatasetItemFromExistingObject = (props: {
   traceId?: string;
   observationId?: string;
   fromDatasetId?: string;
-  input: string | null;
-  output: string | null;
+  input: Prisma.JsonValue | null;
+  output: Prisma.JsonValue | null;
   metadata: MetadataDomainClient;
   isCopyItem?: boolean;
-  buttonVariant?: "outline" | "secondary";
-  size?: "default" | "sm" | "xs" | "lg" | "icon" | "icon-xs" | "icon-sm";
+  buttonVariant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
 }) => {
   const parsedInput =
     props.input && typeof props.input === "string" ? (parseJsonPrioritised(props.input) ?? null) : null;

@@ -40,11 +40,11 @@ export const CsvImportValidationError: React.FC<CsvImportValidationErrorProps> =
         </Button>
 
         {isExpanded && (
-          <div className="mt-3 max-h-[400px] space-y-3 overflow-y-auto rounded-md border border-destructive/20 bg-destructive/5 p-3">
+          <div className="border-destructive/20 bg-destructive/5 mt-3 max-h-[400px] space-y-3 overflow-y-auto rounded-md border p-3">
             {errors.map((error, idx) => (
               <div
                 key={`${error.itemIndex}-${error.field}`}
-                className="space-y-1 border-b border-destructive/10 pb-3 last:border-0 last:pb-0"
+                className="border-destructive/10 space-y-1 border-b pb-3 last:border-0 last:pb-0"
               >
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs text-muted-foreground">#{idx + 1}</span>

@@ -40,21 +40,16 @@ export function FinalPreviewStep({ dataset, mapping, observationData, totalCount
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Input Preview */}
           <PreviewCard
             label="Input"
             data={previewResult?.input}
             onEdit={() => onEditStep("input-mapping" as DialogStep)}
           />
-
-          {/* Expected Output Preview */}
           <PreviewCard
             label="Expected Output"
             data={previewResult?.expectedOutput}
             onEdit={() => onEditStep("output-mapping" as DialogStep)}
           />
-
-          {/* Metadata Preview */}
           <PreviewCard
             label="Metadata"
             data={previewResult?.metadata}
@@ -62,6 +57,38 @@ export function FinalPreviewStep({ dataset, mapping, observationData, totalCount
           />
         </div>
       )}
+    </div>
+  );
+}
+
+function EditMappingActions({
+  variant,
+  fields,
+  onEditStep,
+}: {
+  variant: IssueVariant;
+  fields: string[];
+  onEditStep: (step: DialogStep) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 pt-1">
+      {fields.map((field) => (
+        <Button
+          key={field}
+          variant="link"
+          size="sm"
+          className={cn(
+            "h-auto p-0 text-xs underline",
+            issueTextVariants({ variant }),
+          )}
+          onClick={() => {
+            const step = STEP_FOR_FIELD[field];
+            if (step) onEditStep(step);
+          }}
+        >
+          Edit {fieldLabel(field)} mapping
+        </Button>
+      ))}
     </div>
   );
 }
@@ -84,7 +111,7 @@ function PreviewCard({ label, data, onEdit }: PreviewCardProps) {
       </div>
       <div className="max-h-62 overflow-auto">
         {data === null ? (
-          <div className="p-4 text-sm italic text-muted-foreground">null</div>
+          <div className="text-muted-foreground p-4 text-sm italic">null</div>
         ) : (
           <JSONView json={data} className="text-xs" />
         )}

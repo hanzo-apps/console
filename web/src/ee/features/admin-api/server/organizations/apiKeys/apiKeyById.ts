@@ -2,7 +2,7 @@ import { type NextApiRequest, type NextApiResponse } from "next";
 import { prisma } from "@hanzo/shared/src/db";
 import { logger, redis } from "@hanzo/shared/src/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 
 export const validateQueryParams = (query: unknown): { organizationId: string; apiKeyId: string } | null => {
@@ -29,6 +29,7 @@ export async function handleDeleteApiKey(
       id: apiKeyId,
       orgId: organizationId,
       scope: "ORGANIZATION",
+      isInAppAgentKey: false,
     },
   });
 

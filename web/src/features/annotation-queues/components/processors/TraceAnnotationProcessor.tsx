@@ -7,10 +7,6 @@ import { useEffect, useMemo } from "react";
 import { StringParam, useQueryParam } from "use-query-params";
 import { AnnotationDrawerSection } from "../shared/AnnotationDrawerSection";
 import { AnnotationProcessingLayout } from "../shared/AnnotationProcessingLayout";
-import { api } from "@/src/utils/api";
-import { castToNumberMap } from "@/src/utils/map-utils";
-import { useIsAuthenticatedAndProjectMember } from "@/src/features/auth/hooks";
-import { buildTraceUiData } from "@/src/components/trace2/lib/helpers";
 
 interface TraceAnnotationProcessorProps {
   item: AnnotationQueueItem & {
@@ -18,7 +14,6 @@ interface TraceAnnotationProcessorProps {
     lockedByUser: { name: string | null | undefined } | null;
   };
   data: any; // Trace data with observations and scores
-  view: "showTree" | "hideTree";
   configs: ScoreConfigDomain[];
   projectId: string;
 }
@@ -69,18 +64,14 @@ export const TraceAnnotationProcessor: React.FC<TraceAnnotationProcessorProps> =
     },
   );
 
+  // If annotating an observation, set it as selected so the tree highlights it
   useEffect(() => {
     if (view === "showTree" && item.objectType === AnnotationQueueObjectType.OBSERVATION) {
       setCurrentObservationId(item.objectId);
-    } else setCurrentObservationId(undefined);
-  }, [view, item, setCurrentObservationId]);
-
-  const { tree: traceTree, nodeMap } = useMemo(() => {
-    if (!data || !data.observations) {
-      return { tree: null, nodeMap: new Map() };
+    } else {
+      setCurrentObservationId(undefined);
     }
-    return buildTraceUiData(data, data.observations);
-  }, [data]);
+  }, [item, setCurrentObservationId]);
 
   if (!data) return <div className="p-3">Loading...</div>;
 

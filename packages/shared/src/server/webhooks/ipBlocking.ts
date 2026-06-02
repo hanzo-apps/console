@@ -26,8 +26,12 @@ const BLOCKED_CIDRS = [
   "fe80::/10", // link-local
   "ff00::/8", // multicast
   "100::/64", // discard-only
+  "64:ff9b::/96", // NAT64 IPv4 embedded in IPv6
+  "64:ff9b:1::/48", // NAT64 IPv4 embedded in IPv6 (local-use)
+  "::/96", // IPv4-compatible IPv6
   "2001::/32", // Teredo tunneling
   "2001:db8::/32", // doc
+  "2002::/16", // IPv6 prefix for transmitting IPv6 to IPv4 via 6to4 tunneling
 ];
 
 // Pre-parse blocked networks once for performance
@@ -46,12 +50,14 @@ const blockedNetworks = BLOCKED_CIDRS.map((cidr) => {
  */
 export function isIPBlocked(ipString: string, whitelistedIPs: string[], whiteListedIpSegments: string[]): boolean {
   try {
+    const cleanedIp = normalizeIPAddress(ipString);
+
     // Check if IP is in whitelist first
-    if (whitelistedIPs.includes(ipString.toLowerCase().trim())) {
+    if (whitelistedIPs.includes(cleanedIp)) {
       return false;
     }
 
-    const ip = ipaddr.parse(ipString);
+    const ip = ipaddr.parse(cleanedIp);
 
     const whitelistedSegments = whiteListedIpSegments.map((cidr) => {
       const [addr, bits] = cidr.split("/");
@@ -83,8 +89,7 @@ export function isIPBlocked(ipString: string, whitelistedIPs: string[], whiteLis
  * Check if a string is an IP address
  */
 export function isIPAddress(hostname: string): boolean {
-  // Remove brackets from IPv6 addresses
-  const cleaned = hostname.replace(/^\[|\]$/g, "");
+  const cleaned = normalizeIPAddress(hostname);
 
   try {
     ipaddr.parse(cleaned);
@@ -112,6 +117,8 @@ export function isHostnameBlocked(hostname: string): boolean {
     // Cloud metadata endpoints
     "metadata.google.internal",
     "169.254.169.254",
+    "fd00:ec2::254",
+    "[fd00:ec2::254]",
 
     // Docker/container networking
     "host.docker.internal",
@@ -130,4 +137,11 @@ export function isHostnameBlocked(hostname: string): boolean {
   }
 
   return false;
+}
+
+function normalizeIPAddress(ipString: string): string {
+  return ipString
+    .toLowerCase()
+    .trim()
+    .replace(/^\[|\]$/g, "");
 }

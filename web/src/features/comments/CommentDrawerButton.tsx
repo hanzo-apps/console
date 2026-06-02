@@ -19,6 +19,7 @@ export function CommentDrawerButton({
   size = "default",
   pendingSelection,
   onSelectionUsed,
+  onCommentChange,
   isOpen: controlledIsOpen,
   onOpenChange: controlledOnOpenChange,
 }: {
@@ -26,11 +27,12 @@ export function CommentDrawerButton({
   objectId: string;
   objectType: CommentObjectType;
   count?: number;
-  variant?: "secondary" | "outline";
+  variant?: ButtonProps["variant"];
   className?: string;
-  size?: "default" | "sm" | "xs" | "lg" | "icon" | "icon-xs" | "icon-sm";
+  size?: ButtonProps["size"];
   pendingSelection?: SelectionData | null;
   onSelectionUsed?: () => void;
+  onCommentChange?: () => void | Promise<void>;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -141,7 +143,7 @@ export function CommentDrawerButton({
             <div className="flex items-center gap-1">
               <MessageCircleIcon className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
               <span>Add comment</span>
-              <span className="flex h-3.5 w-fit items-center justify-center rounded-sm bg-primary/50 px-1 text-xs text-primary-foreground shadow-sm">
+              <span className="bg-primary/50 text-primary-foreground flex h-3.5 w-fit items-center justify-center rounded-sm px-1 text-xs shadow-xs">
                 {count > 99 ? "99+" : count}
               </span>
             </div>
@@ -153,9 +155,12 @@ export function CommentDrawerButton({
           )}
         </Button>
       </DrawerTrigger>
-      <DrawerContent overlayClassName="bg-primary/10">
+      <DrawerContent
+        overlayClassName="bg-primary/10"
+        className="h-screen-with-banner max-h-screen-with-banner overflow-hidden"
+      >
         <div
-          className="mx-auto flex h-full w-full flex-col overflow-hidden focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 md:max-h-full"
+          className="mx-auto flex h-full w-full flex-col overflow-hidden focus:ring-0 focus:outline-hidden focus-visible:ring-0 focus-visible:outline-hidden md:max-h-full"
           tabIndex={-1}
           ref={(el) => {
             // Auto-focus drawer content when it opens (only once)
@@ -165,12 +170,15 @@ export function CommentDrawerButton({
             }
           }}
         >
-          <DrawerHeader className="sr-only flex-shrink-0 rounded-sm bg-background">
+          <DrawerHeader className="bg-background sr-only shrink-0 rounded-sm">
             <DrawerTitle>
               <Header title="Comments"></Header>
             </DrawerTitle>
           </DrawerHeader>
-          <div data-vaul-no-drag className="min-h-0 flex-1 px-2 pt-2">
+          <div
+            data-vaul-no-drag
+            className="min-h-0 flex-1 overflow-hidden px-2 py-2"
+          >
             <CommentList
               projectId={projectId}
               objectId={objectId}
@@ -179,6 +187,7 @@ export function CommentDrawerButton({
               isDrawerOpen={isDrawerOpen}
               pendingSelection={pendingSelection}
               onSelectionUsed={onSelectionUsed}
+              onCommentChange={onCommentChange}
             />
           </div>
         </div>

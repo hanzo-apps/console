@@ -3,7 +3,6 @@ import {
   datastoreClient,
   getDatastoreEntityType,
   getCurrentSpan,
-  getQueue,
   getS3EventStorageClient,
   hasS3SlowdownFlag,
   IngestionEventType,
@@ -15,6 +14,7 @@ import {
   recordHistogram,
   recordIncrement,
   redis,
+  SecondaryIngestionQueue,
   TQueueJobTypes,
   traceException,
 } from "@hanzo/console-core/src/server";

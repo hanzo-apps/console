@@ -2,7 +2,7 @@ import { Button } from "@/src/components/ui/button";
 import { MultiSelectKeyValues } from "@/src/features/scores/components/multi-select-key-values";
 import { FlaskConical, List } from "lucide-react";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MarkdownJsonView } from "@/src/components/ui/MarkdownJsonView";
 import { Dialog, DialogContent, DialogTrigger } from "@/src/components/ui/dialog";
 import { CreateExperimentsForm } from "@/src/features/experiments/components/CreateExperimentsForm";
@@ -69,6 +69,57 @@ export default function DatasetCompare() {
     await handleExperimentSettledBase(data);
   };
 
+  const handleBetaSwitchChange = (enabled: boolean) => {
+    setExperimentsBetaEnabled(enabled);
+
+    if (enabled && runIds && runIds.length > 0) {
+      router.push(toExperimentsResultsUrl(projectId, runIds));
+    }
+  };
+
+  // Auto-redirect when experiments beta is active (e.g., user arrives via bookmark/back button)
+  useEffect(() => {
+    if (isExperimentsBetaActive && projectId && runIds && runIds.length > 0) {
+      router.push(toExperimentsResultsUrl(projectId, runIds));
+    }
+  }, [isExperimentsBetaActive, projectId, runIds, router]);
+
+  const betaSwitch = canUseExperimentsBetaToggle ? (
+    <ExperimentsBetaSwitch
+      enabled={isExperimentsBetaEnabled}
+      onEnabledChange={handleBetaSwitchChange}
+    />
+  ) : null;
+
+  if (isExperimentsBetaActive) {
+    return (
+      <Page
+        headerProps={{
+          title: `Compare runs: ${dataset.data?.name ?? datasetId}`,
+          tabsProps: {
+            tabs: getDatasetRunCompareTabs(projectId, datasetId),
+            activeTab: DATASET_RUN_COMPARE_TABS.CHARTS,
+          },
+          breadcrumb: [
+            {
+              name: "Datasets",
+              href: `/project/${projectId}/datasets`,
+            },
+            {
+              name: dataset.data?.name ?? datasetId,
+              href: `/project/${projectId}/datasets/${datasetId}`,
+            },
+          ],
+          actionButtonsLeft: betaSwitch,
+        }}
+      >
+        <div className="flex h-full items-center justify-center">
+          <Spinner size="xl" variant="muted" />
+        </div>
+      </Page>
+    );
+  }
+
   return (
     <Page
       headerProps={{
@@ -92,6 +143,7 @@ export default function DatasetCompare() {
         },
         actionButtonsRight: (
           <>
+            {betaSwitch}
             <Dialog
               key="create-experiment-dialog"
               open={isCreateExperimentDialogOpen}
@@ -122,7 +174,7 @@ export default function DatasetCompare() {
             </Dialog>
             <MultiSelectKeyValues
               key="select-runs"
-              title="Runs"
+              title="Experiments"
               showSelectedValueStrings={false}
               placeholder="Select runs to compare"
               className="w-fit"
@@ -158,12 +210,11 @@ export default function DatasetCompare() {
         ),
       }}
     >
-      <div className="grid flex-1 grid-cols-[1fr,auto] overflow-hidden">
+      <div className="grid flex-1 grid-cols-[1fr_auto] overflow-hidden">
         <div className="flex h-full flex-col gap-2 overflow-hidden px-3 py-2">
           <div className="flex w-full justify-end">
             <DatasetAnalytics
               key="dataset-analytics"
-              projectId={projectId}
               scoreOptions={scoreAnalyticsOptions}
               selectedMetrics={selectedMetrics}
               setSelectedMetrics={setSelectedMetrics}
@@ -211,7 +262,7 @@ export default function DatasetCompare() {
             ) : isLoading ? (
               <Skeleton className="h-52 w-full" />
             ) : (
-              <span className="-mt-2 text-sm text-muted-foreground">
+              <span className="text-muted-foreground -mt-2 text-sm">
                 {Boolean(chartDataMap?.size)
                   ? "All charts hidden. Enable them in the Charts dropdown."
                   : "Select more than one run to generate charts."}

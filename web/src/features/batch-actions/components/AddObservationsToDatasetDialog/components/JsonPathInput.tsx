@@ -8,7 +8,7 @@ import { darkTheme } from "@/src/components/editor/dark-theme";
 import { cn } from "@/src/utils/tailwind";
 import { evaluateJsonPath } from "@hanzo/shared";
 
-// JSON path language mode for syntax highlighting
+// JSONPath language mode for syntax highlighting
 const jsonPathLanguage = StreamLanguage.define({
   name: "jsonpath",
   startState: () => ({ inBracket: false }),
@@ -100,7 +100,7 @@ export function JsonPathInput({
     (newValue: string) => {
       onChange(newValue);
 
-      // Try to resolve the JSON path
+      // Try to resolve the JSONPath
       if (newValue && newValue.startsWith("$") && parsedSourceData) {
         try {
           evaluateJsonPath(parsedSourceData, newValue);

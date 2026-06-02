@@ -191,7 +191,7 @@ export default function ModelDetailPage() {
                       <HoverCardTrigger asChild>
                         <Button
                           variant="ghost"
-                          className="inline-flex h-auto items-center gap-1.5 p-0 text-xs text-muted-foreground hover:bg-transparent hover:text-accent-foreground"
+                          className="text-muted-foreground hover:text-accent-foreground inline-flex h-auto items-center gap-1.5 p-0 text-xs hover:bg-transparent"
                           size="sm"
                         >
                           <InfoIcon className="h-3 w-3" />
@@ -222,7 +222,7 @@ export default function ModelDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-2">
-              <div className="grid grid-cols-2 gap-2 border-b border-border text-sm font-medium text-muted-foreground">
+              <div className="border-border text-muted-foreground grid grid-cols-2 gap-2 border-b text-sm font-medium">
                 <span>Usage Type</span>
                 <span className="flex items-center gap-2">
                   <span>Price {priceUnit}</span>

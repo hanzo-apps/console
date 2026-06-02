@@ -3,6 +3,7 @@ import { prisma } from "@hanzo/shared/src/db";
 import { logger, redis } from "@hanzo/shared/src/server";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { cors, runMiddleware } from "@/src/features/public-api/server/cors";
+import { RateLimitService } from "@/src/features/public-api/server/RateLimitService";
 import {
   validateQueryAndExtractId,
   handleGetApiKeys,
@@ -44,6 +45,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({
         error: "This feature is not available on your current plan.",
       });
+    }
+
+    const rateLimitCheck =
+      await RateLimitService.getInstance().rateLimitRequest(
+        authCheck.scope,
+        "public-api",
+      );
+    if (rateLimitCheck?.isRateLimited()) {
+      return rateLimitCheck.sendRestResponseIfLimited(res);
     }
 
     const projectId = validateQueryAndExtractId(req.query);

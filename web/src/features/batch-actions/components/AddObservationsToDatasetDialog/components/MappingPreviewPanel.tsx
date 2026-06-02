@@ -59,9 +59,23 @@ export function MappingPreviewPanel({
     });
   }, [observationData, config, defaultSourceField]);
 
-  // Validate result against schema
+  // Validate result against schema, and treat JSONPath syntax errors as validation failures
   const validationResult = useMemo(() => {
-    // Skip validation if no schema or "none" mode
+    const jsonPathErrorItems: SchemaValidationError[] = jsonPathErrors.map(
+      (err) => ({
+        path: err.mappingKey
+          ? `${err.sourceField} (key: "${err.mappingKey}")`
+          : err.sourceField,
+        message: `Invalid JSONPath "${err.jsonPath}": ${err.message}`,
+      }),
+    );
+
+    // Any JSONPath syntax error blocks the mapping regardless of schema
+    if (jsonPathErrorItems.length > 0) {
+      return { isValid: false, errors: jsonPathErrorItems };
+    }
+
+    // Skip schema validation if no schema or "none" mode
     if (!hasSchema || config.mode === "none") {
       return { isValid: true, errors: [] as SchemaValidationError[] };
     }
@@ -89,10 +103,10 @@ export function MappingPreviewPanel({
         })),
       };
     } catch {
-      // If validation fails to run, treat as valid (don't block on validation errors)
+      // If schema validation fails to run, treat as valid (don't block on validation errors)
       return { isValid: true, errors: [] as SchemaValidationError[] };
     }
-  }, [hasSchema, config.mode, resultData, schema]);
+  }, [hasSchema, config.mode, resultData, schema, jsonPathErrors]);
 
   // Track previous validation state to avoid redundant callbacks
   const prevValidationRef = useRef<{
@@ -177,7 +191,7 @@ export function MappingPreviewPanel({
 
       {/* Arrow */}
       <div className="flex justify-center">
-        <ArrowDown className="h-6 w-6 text-muted-foreground" />
+        <ArrowDown className="text-muted-foreground h-6 w-6" />
       </div>
 
       {/* Result data */}
@@ -201,7 +215,7 @@ export function MappingPreviewPanel({
           }`}
         >
           {config.mode === "none" ? (
-            <div className="p-3 text-xs italic text-muted-foreground">null</div>
+            <div className="text-muted-foreground p-3 text-xs italic">null</div>
           ) : (
             <JSONView json={resultData} className="text-xs" />
           )}

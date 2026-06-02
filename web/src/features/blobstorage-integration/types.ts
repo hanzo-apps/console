@@ -1,10 +1,10 @@
 import { z } from "zod/v4";
 import { BlobStorageIntegrationType, BlobStorageIntegrationFileType, BlobStorageExportMode } from "@hanzo/shared";
 
-export const blobStorageIntegrationFormSchema = z.object({
+export const blobStorageIntegrationFormSchemaBase = z.object({
   type: z.enum(BlobStorageIntegrationType),
   bucketName: z.string().min(1, { message: "Bucket name is required" }),
-  endpoint: z.string().url().optional().nullable(),
+  endpoint: z.url().optional().nullable(),
   region: z.string().default("auto"),
   accessKeyId: z.string().optional(),
   secretAccessKey: z.string().nullable().optional(),
@@ -15,7 +15,7 @@ export const blobStorageIntegrationFormSchema = z.object({
     })
     .optional()
     .or(z.literal("")),
-  exportFrequency: z.enum(["hourly", "daily", "weekly"]),
+  exportFrequency: z.enum(["every_20_minutes", "hourly", "daily", "weekly"]),
   enabled: z.boolean(),
   forcePathStyle: z.boolean(),
   fileType: z.enum(BlobStorageIntegrationFileType).default(BlobStorageIntegrationFileType.JSONL),

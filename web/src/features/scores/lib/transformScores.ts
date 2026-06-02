@@ -102,7 +102,11 @@ function transformAggregates(
   const scores: AnnotationScore[] = [];
 
   Object.entries(mergedAggregates).forEach(([key, aggregate]) => {
-    const { name, source, dataType } = decomposeAggregateScoreKey(key);
+    const {
+      name,
+      source,
+      dataType: rawDataType,
+    } = decomposeAggregateScoreKey(key);
 
     // Only ANNOTATION source can be edited, and must have single ID
     // Multi-value aggregates (no id) are child observation scores - skip them

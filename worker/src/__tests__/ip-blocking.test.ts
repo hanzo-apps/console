@@ -57,6 +57,7 @@ describe("IP Blocking Module", () => {
       it("should block IPv6 private addresses", () => {
         expect(isIPBlocked("fc00::1", [], [])).toBe(true);
         expect(isIPBlocked("fd00::1", [], [])).toBe(true);
+        expect(isIPBlocked("fd00:ec2::254", [], [])).toBe(true); // AWS metadata (IPv6)
         expect(isIPBlocked("fe80::1", [], [])).toBe(true);
       });
 
@@ -73,6 +74,13 @@ describe("IP Blocking Module", () => {
       it("should block Teredo addresses", () => {
         expect(isIPBlocked("2001::1", [], [])).toBe(true);
         expect(isIPBlocked("2001:0000:4136:e378:8000:63bf:3fff:fdd2", [], [])).toBe(true);
+      });
+
+      it("should block NAT64 and 6to4 transition addresses", () => {
+        expect(isIPBlocked("64:ff9b::7f00:1", [], [])).toBe(true); // NAT64 for 127.0.0.1
+        expect(isIPBlocked("64:ff9b:1::7f00:1", [], [])).toBe(true); // NAT64 local-use for 127.0.0.1
+        expect(isIPBlocked("::7f00:1", [], [])).toBe(true); // IPv4-compatible IPv6 for 127.0.0.1
+        expect(isIPBlocked("2002:7f00:1::", [], [])).toBe(true); // 6to4 for 127.0.0.1
       });
     });
 
@@ -209,6 +217,8 @@ describe("IP Blocking Module", () => {
     it("should block cloud metadata endpoints", () => {
       expect(isHostnameBlocked("metadata.google.internal")).toBe(true);
       expect(isHostnameBlocked("169.254.169.254")).toBe(true);
+      expect(isHostnameBlocked("fd00:ec2::254")).toBe(true);
+      expect(isHostnameBlocked("[fd00:ec2::254]")).toBe(true);
     });
 
     it("should block Docker internal hostnames", () => {

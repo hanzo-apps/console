@@ -1,5 +1,3 @@
-const JAPANESE_CHAR_RANGE = "\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF";
-
 export function getIsCharOrUnderscore(value: string): boolean {
   const charOrUnderscore = new RegExp(`^[a-zA-Z_${JAPANESE_CHAR_RANGE}]+$`, "u");
 
@@ -9,14 +7,15 @@ export function getIsCharOrUnderscore(value: string): boolean {
 // Regex for valid variable names (letters, underscores, starting with letter)
 export const VARIABLE_REGEX = new RegExp(`^[a-zA-Z${JAPANESE_CHAR_RANGE}][a-zA-Z${JAPANESE_CHAR_RANGE}_]*$`, "u");
 
-// Regex to find variables in mustache syntax
-export const MUSTACHE_REGEX = /{{([^{}]*)}}+/g;
+// Regex to find variables in mustache syntax. Extra surrounding braces are
+// treated as literals by SDK/compiler behavior, e.g. {{{name}}} -> {value}.
+export const MUSTACHE_REGEX = /{{([^{}]*)}}/g;
 
 // Regex to find multiline variables
-export const MULTILINE_VARIABLE_REGEX = /{{[^}]*\n[^}]*}}/g;
+export const MULTILINE_VARIABLE_REGEX = /{{[^{}]*\n[^{}]*}}/g;
 
 // Regex to find unclosed variables
-export const UNCLOSED_VARIABLE_REGEX = /{{(?![^{]*}})/g;
+export const UNCLOSED_VARIABLE_REGEX = /{{(?!{)(?![^{]*}})/g;
 
 export function isValidVariableName(variable: string): boolean {
   return VARIABLE_REGEX.test(variable);

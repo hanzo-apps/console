@@ -19,10 +19,16 @@ type CreateEvaluatorDialogProps = {
   projectId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  targetObject?: EvalTargetObjectType;
 };
 
 export function CreateEvaluatorDialog(props: CreateEvaluatorDialogProps) {
-  const { projectId, open, onOpenChange } = props;
+  const {
+    projectId,
+    open,
+    onOpenChange,
+    targetObject = EvalTargetObject.EVENT,
+  } = props;
   const [templateId, setTemplateId] = useState<string | null>(null);
   const utils = api.useUtils();
 
@@ -46,13 +52,13 @@ export function CreateEvaluatorDialog(props: CreateEvaluatorDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] max-w-screen-md pb-0">
+      <DialogContent className="max-h-[90vh] max-w-(--breakpoint-md) pb-0">
         <DialogHeader>
           <DialogTitle>Create Evaluator for batched observation runs</DialogTitle>
           <DialogDescription>This form creates an evaluator for batched observation runs.</DialogDescription>
         </DialogHeader>
 
-        <DialogBody className="max-h-[72vh] overflow-y-auto pb-0 pr-1">
+        <DialogBody className="max-h-[72vh] overflow-y-auto pr-1 pb-0">
           {!templateId ? (
             <div className="space-y-4 px-1 pb-1">
               <p className="text-sm text-muted-foreground">Select an evaluator template to configure.</p>
@@ -85,11 +91,12 @@ export function CreateEvaluatorDialog(props: CreateEvaluatorDialogProps) {
                 hideTargetSelection
                 hidePreviewTable
                 defaultRunOnLive={false}
+                defaultTarget={targetObject}
                 onFormSuccess={() => {
                   handleClose(false);
-                  void utils.evals.jobConfigsByTarget.invalidate({
+                  utils.evals.jobConfigsByTarget.invalidate({
                     projectId,
-                    targetObject: EvalTargetObject.EVENT,
+                    targetObject,
                   });
                   showSuccessToast({
                     title: "Evaluator created",
@@ -98,7 +105,7 @@ export function CreateEvaluatorDialog(props: CreateEvaluatorDialogProps) {
                 }}
                 preprocessFormValues={(values) => ({
                   ...values,
-                  target: EvalTargetObject.EVENT,
+                  target: targetObject,
                   timeScope: ["NEW"],
                   ...(values.runOnLive
                     ? {}

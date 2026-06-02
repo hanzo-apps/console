@@ -168,7 +168,7 @@ export function KeyValueFilterBuilder(props: KeyValueFilterBuilderProps) {
           <div key={index} className="flex flex-col gap-2 border-b pb-3 last:border-b-0 last:pb-0">
             {/* Key input and delete button row */}
             <div className="flex items-center gap-2">
-              {keyOptions ? (
+              {hasKeyOptions ? (
                 // Combobox for known keys
                 <Popover
                   open={openPopoverIndex === index}
@@ -186,7 +186,7 @@ export function KeyValueFilterBuilder(props: KeyValueFilterBuilderProps) {
                       <InputCommandList>
                         <InputCommandEmpty>No keys found.</InputCommandEmpty>
                         <InputCommandGroup>
-                          {keyOptions.map((option) => (
+                          {mergedKeyOptions.map((option) => (
                             <InputCommandItem
                               key={option}
                               value={option}

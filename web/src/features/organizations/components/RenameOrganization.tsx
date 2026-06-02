@@ -1,7 +1,7 @@
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { api } from "@/src/utils/api";
-import type * as z from "zod/v4";
+import type * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/src/components/ui/form";
@@ -33,7 +33,7 @@ export default function RenameOrganization() {
   });
   const renameOrganization = api.organizations.update.useMutation({
     onSuccess: () => {
-      void updateSession();
+      updateSession();
     },
     onError: (error) => form.setError("name", { message: error.message }),
   });
@@ -59,7 +59,7 @@ export default function RenameOrganization() {
       <Header title="Organization Name" />
       <Card className="mb-4 p-3">
         {form.getValues().name !== "" ? (
-          <p className="mb-4 text-sm text-primary">
+          <p className="text-primary mb-4 text-sm">
             Your Organization will be renamed from &quot;
             {orgName}
             &quot; to &quot;
@@ -83,7 +83,7 @@ export default function RenameOrganization() {
                       <Input placeholder={orgName} {...field} className="flex-1" disabled={!hasAccess} />
                       {!hasAccess && (
                         <span title="No access">
-                          <LockIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted" />
+                          <LockIcon className="text-muted absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform" />
                         </span>
                       )}
                     </div>

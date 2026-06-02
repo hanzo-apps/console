@@ -167,7 +167,9 @@ const getSessionsTableGeneric = async <T>(props: FetchSessionsTableProps) => {
     tracesPrefix: "s",
   });
 
-  tracesFilter.push(...createFilterFromFilterState(filter, sessionCols));
+  tracesFilter.push(
+    ...createFilterFromFilterState(filter, sessionCols, sessionsViewCols),
+  );
 
   const tracesFilterRes = tracesFilter.filter((f) => f.field !== "environment").apply();
   const scoresFilterRes = scoresFilter.apply();

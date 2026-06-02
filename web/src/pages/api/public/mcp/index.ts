@@ -17,7 +17,7 @@
  *
  * Note: This endpoint does NOT use withMiddlewares() like other public APIs because
  * the transport layer needs direct response control for both JSON and SSE responses.
- * Error handling and CORS are implemented directly in the transport layer.
+ * Error handling, header validation, and CORS are implemented in this route layer.
  *
  * Authentication: BasicAuth (Public Key:Secret Key) - LF-1927
  * Resources: Added in LF-1928
@@ -27,6 +27,10 @@
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { createMcpServer } from "@/src/features/mcp/server/mcpServer";
 import { handleMcpRequest } from "@/src/features/mcp/server/transport";
+import {
+  applyMcpCorsHeaders,
+  validateMcpRequestSecurity,
+} from "@/src/features/mcp/server/security";
 import { formatErrorForUser } from "@/src/features/mcp/core/error-formatting";
 import { type ServerContext } from "@/src/features/mcp/types";
 import { logger, redis } from "@hanzo/console-core/src/server";
@@ -46,13 +50,14 @@ import "@/src/features/mcp/server/bootstrap";
  * Handles MCP protocol requests using Streamable HTTP (SSE) transport.
  *
  * Request flow:
- * 1. Authenticate request using BasicAuth (Public Key:Secret Key)
- * 2. Check rate limits
- * 3. Extract ServerContext from authenticated API key
- * 4. Create fresh MCP server instance with context in closures
- * 5. Connect to SSE transport
- * 6. Handle MCP protocol communication
- * 7. Discard server instance after request
+ * 1. Validate Host/Origin headers and handle CORS
+ * 2. Authenticate request using BasicAuth (Public Key:Secret Key)
+ * 3. Check rate limits
+ * 4. Extract ServerContext from authenticated API key
+ * 5. Create fresh MCP server instance with context in closures
+ * 6. Connect to SSE transport
+ * 7. Handle MCP protocol communication
+ * 8. Discard server instance after request
  *
  * @param req - Next.js API request
  * @param res - Next.js API response
@@ -65,7 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, Mcp-Session-Id, Last-Event-ID");
     res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
-    // Handle preflight OPTIONS request (before authentication)
+    // Handle preflight OPTIONS request after request validation
     if (req.method === "OPTIONS") {
       res.status(200).end();
       return;
@@ -103,6 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       apiKeyId: authCheck.scope.apiKeyId,
       accessLevel: "project",
       publicKey: authCheck.scope.publicKey,
+      isInAppAgentKey: authCheck.scope.isInAppAgentKey === true,
     };
 
     logger.info("MCP request authenticated", {
@@ -155,7 +161,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "1mb",
+      sizeLimit: "4.5mb",
     },
   },
 };

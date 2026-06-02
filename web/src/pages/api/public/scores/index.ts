@@ -1,33 +1,42 @@
-import { v4 } from "uuid";
-
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import {
   GetScoresQueryV1,
   GetScoresResponseV1,
-  filterAndValidateV1GetScoreList,
+  filterAndValidateLegacyV1GetScoreList,
   PostScoresBodyV1,
   PostScoresResponseV1,
 } from "@hanzo/shared";
 import { eventTypes, logger, processEventBatch } from "@hanzo/shared/src/server";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";
+import { randomUUID } from "crypto";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({
     name: "Create Score",
     bodySchema: PostScoresBodyV1,
     responseSchema: PostScoresResponseV1,
+    allowedAccessLevels: ["project", "scores"],
     fn: async ({ body, auth, res }) => {
-      const event = {
-        id: v4(),
-        type: eventTypes.SCORE_CREATE,
-        timestamp: new Date().toISOString(),
-        body,
-      };
-      if (!event.body.id) {
-        event.body.id = v4();
+      if (auth.scope.isIngestionSuspended) {
+        throw new ForbiddenError(
+          "Ingestion suspended: Usage threshold exceeded. Please upgrade your plan.",
+        );
       }
-      const result = await processEventBatch([event], auth);
+
+      const conformedBody = {
+        ...body,
+        // We previously used `if(!body.id)` to decide if a new ID should be generated,
+        // this would accept falsy values such as empty string as valid IDs, and generate a new ID in that case.
+        // The `createScore` uses `??` instead, which would break this behavior, so we use `||` here to maintain the old behavior.
+        id: body.id || randomUUID(),
+      };
+
+      const scoresApiService = new ScoresApiService("v1");
+      const { id, result } = await scoresApiService.createScore({
+        body: conformedBody,
+        auth,
+      });
       if (result.errors.length > 0) {
         const error = result.errors[0];
         res.status(error.status).json({ message: error.error ?? error.message });
@@ -37,7 +46,7 @@ export default withMiddlewares({
         logger.error("Failed to create score", { result });
         throw new Error("Failed to create score");
       }
-      return { id: event.body.id };
+      return { id };
     },
   }),
   GET: createAuthedProjectAPIRoute({
@@ -75,7 +84,7 @@ export default withMiddlewares({
       return {
         // As these are traces scores, we expect all scores to have a traceId set
         // For type consistency, we validate the scores against the v1 schema which requires a traceId
-        data: filterAndValidateV1GetScoreList(items),
+        data: filterAndValidateLegacyV1GetScoreList(items),
         meta: {
           page: query.page,
           limit: query.limit,

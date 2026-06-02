@@ -74,7 +74,11 @@ export function LlmApiKeyList(props: { projectId: string }) {
           <TableBody className="text-muted-foreground">
             {apiKeys.data?.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell
+                  density="comfortable"
+                  colSpan={6}
+                  className="text-center"
+                >
                   None
                 </TableCell>
               </TableRow>
@@ -82,7 +86,7 @@ export function LlmApiKeyList(props: { projectId: string }) {
               apiKeys.data?.data.map((apiKey) => (
                 <TableRow
                   key={apiKey.id}
-                  className="cursor-default hover:bg-primary-foreground"
+                  className="hover:bg-primary-foreground cursor-default"
                   onClick={() => setEditingKeyId(apiKey.id)}
                 >
                   <TableCell className="font-mono">{apiKey.provider}</TableCell>
@@ -93,12 +97,7 @@ export function LlmApiKeyList(props: { projectId: string }) {
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
                       <UpdateLLMApiKeyDialog
-                        apiKey={{
-                          ...apiKey,
-                          secretKey: apiKey.displaySecretKey,
-                          extraHeaders: apiKey.extraHeaderKeys.join(","),
-                          config: apiKey.config ?? null,
-                        }}
+                        apiKey={apiKey}
                         projectId={props.projectId}
                         open={editingKeyId === apiKey.id}
                         onOpenChange={(open: boolean) => {

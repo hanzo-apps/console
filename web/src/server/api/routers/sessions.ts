@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { applyCommentFilters } from "@hanzo/shared/src/server";
@@ -40,10 +40,12 @@ import chunk from "lodash/chunk";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
 import { toDomainArrayWithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 
-const SessionFilterOptions = z.object({
+const SessionCountOptions = z.object({
   projectId: z.string(), // Required for protectedProjectProcedure
   filter: z.array(singleFilter).nullable(),
   orderBy: orderBy,
+});
+const SessionFilterOptions = SessionCountOptions.extend({
   ...paginationZod,
 });
 
@@ -99,7 +101,7 @@ const handleGetSessionById = async (input: {
 
   const validatedScores = filterAndValidateDbScoreList({
     scores,
-    dataTypes: AGGREGATABLE_SCORE_TYPES,
+    dataTypes: LISTABLE_SCORE_TYPES,
     onParseError: traceException,
   });
 
@@ -244,7 +246,7 @@ export const sessionRouter = createTRPCRouter({
 
       const validatedScores = filterAndValidateDbScoreList({
         scores,
-        dataTypes: AGGREGATABLE_SCORE_TYPES,
+        dataTypes: LISTABLE_SCORE_TYPES,
         onParseError: traceException,
       });
 
@@ -351,7 +353,7 @@ export const sessionRouter = createTRPCRouter({
 
       const validatedScores: ScoreDomain[] = filterAndValidateDbScoreList({
         scores,
-        dataTypes: AGGREGATABLE_SCORE_TYPES,
+        dataTypes: LISTABLE_SCORE_TYPES,
         onParseError: traceException,
       });
 

@@ -55,7 +55,7 @@ export function ScoreAnalytics(props: {
       title="Scores Analytics"
       description="Aggregate scores and averages over time"
       isLoading={props.isLoading || scoreKeysAndProps.isPending}
-      headerClassName={"grid grid-cols-[1fr,auto,auto] items-center"}
+      headerClassName={"grid grid-cols-[1fr_auto_auto] items-center"}
       headerChildren={
         !scoreKeysAndProps.isPending &&
         !props.isLoading &&
@@ -92,7 +92,7 @@ export function ScoreAnalytics(props: {
                 <div className="mt-2 grid gap-2 lg:grid-cols-2 lg:gap-4">
                   {/* aggregate */}
                   <div>
-                    <div className="mb-2 text-sm text-muted-foreground">
+                    <div className="text-muted-foreground mb-2 text-sm">
                       Total aggregate scores
                       {isNumericDataType(dataType) && <DocPopup description="Aggregate of up to 10,000 scores" />}
                     </div>

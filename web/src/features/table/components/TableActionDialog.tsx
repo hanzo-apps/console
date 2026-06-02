@@ -23,6 +23,7 @@ import { Loader2 } from "lucide-react";
 type TableActionDialogProps = {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: () => void;
   action: TableAction;
   projectId: string;
   tableName: BatchExportTableName;
@@ -33,7 +34,6 @@ export function TableActionDialog({ isOpen, onClose, action, projectId, tableNam
     projectId,
     scope: action.accessCheck.scope,
   });
-  const { setSelectAll } = useSelectAll(projectId, tableName);
   const hasEntitlement = useOptionalEntitlement(action.accessCheck.entitlement);
   const form = useForm({ defaultValues: { targetId: "" } });
 
@@ -55,12 +55,19 @@ export function TableActionDialog({ isOpen, onClose, action, projectId, tableNam
         targetId: form.getValues().targetId,
       });
     }
-    setSelectAll(false);
+    onSuccess();
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{action.label}</DialogTitle>

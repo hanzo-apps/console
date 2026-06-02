@@ -35,9 +35,12 @@ export {
   EventsAggregationQueryBuilder,
   EventsSessionAggregationQueryBuilder,
   EventsQueryBuilder,
+  ExperimentsAggregationQueryBuilder,
+  OBSERVATION_FIELD_GROUP_FIELD_NAMES,
   buildEventsFullTableSplitQuery,
   type CTESchema,
   type CTEWithSchema,
+  type ExperimentsAggregationFieldSetName,
   type SessionEventsMetricsRow,
   type SplitQueryBuilder,
 } from "./datastore-sql/event-query-builder";
@@ -45,6 +48,7 @@ export {
   eventsScoresAggregation,
   eventsSessionsAggregation,
   eventsSessionScoresAggregation,
+  eventsTraceMetadata,
   eventsTracesAggregation,
   eventsTracesScoresAggregation,
 } from "./datastore-sql/query-fragments";

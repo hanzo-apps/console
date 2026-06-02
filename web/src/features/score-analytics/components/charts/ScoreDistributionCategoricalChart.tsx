@@ -240,7 +240,7 @@ export function ScoreDistributionCategoricalChart({
           })}
         {!hasStackedData && <Bar key="pv" dataKey="pv" fill={config.pv.color} radius={[4, 4, 0, 0]} />}
 
-        <Legend
+        <ChartLegend
           content={
             <ScoreChartLegendContent
               interactive={hasStackedData}

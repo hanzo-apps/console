@@ -28,7 +28,7 @@ export const ArchiveScoreConfigButton = ({
 
   const utils = api.useUtils();
   const configMutation = api.scoreConfigs.update.useMutation({
-    onSuccess: () => void utils.scoreConfigs.invalidate(),
+    onSuccess: () => utils.scoreConfigs.invalidate(),
   });
 
   return (
@@ -61,7 +61,7 @@ export const ArchiveScoreConfigButton = ({
             variant={isArchived ? "default" : "destructive"}
             loading={configMutation.isPending}
             onClick={() => {
-              void configMutation.mutateAsync({
+              configMutation.mutateAsync({
                 projectId,
                 id: configId,
                 isArchived: !isArchived,

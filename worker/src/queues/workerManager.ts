@@ -1,14 +1,10 @@
 import { Job, Processor, Worker, WorkerOptions } from "@hanzo/mq";
 import {
-  getQueue,
   convertQueueNameToMetricName,
   createNewRedisInstance,
   getQueuePrefix,
   logger,
   QueueName,
-  IngestionQueue,
-  TraceUpsertQueue,
-  OtelIngestionQueue,
   recordGauge,
   recordHistogram,
   recordIncrement,
@@ -72,6 +68,10 @@ export class WorkerManager {
     return WorkerManager.workers[queueName];
   }
 
+  public static getRegisteredQueueNames(): string[] {
+    return Object.keys(WorkerManager.workers);
+  }
+
   public static register(
     queueName: QueueName,
     processor: Processor,
@@ -98,16 +98,27 @@ export class WorkerManager {
     WorkerManager.workers[queueName] = worker;
     logger.info(`${queueName} executor started: ${worker.isRunning()}`);
 
+    const oldMetric = convertQueueNameToMetricName(queueName);
+    const { baseMetric, shardTag } = WorkerManager.resolveMetricInfo(queueName);
+
     // Add error handling
     worker.on("failed", (job: Job | undefined, err: Error) => {
       logger.error(`Queue job ${job?.name} with id ${job?.id} in ${queueName} failed`, err);
       traceException(err);
-      recordIncrement(convertQueueNameToMetricName(queueName) + ".failed");
+      recordIncrement(oldMetric + ".failed");
+      recordIncrement(baseMetric + ".rate", 1, {
+        type: "failed",
+        ...shardTag,
+      });
     });
     worker.on("error", (failedReason: Error) => {
       logger.error(`Queue job ${queueName} errored: ${failedReason}`, failedReason);
       traceException(failedReason);
-      recordIncrement(convertQueueNameToMetricName(queueName) + ".error");
+      recordIncrement(oldMetric + ".error");
+      recordIncrement(baseMetric + ".rate", 1, {
+        type: "error",
+        ...shardTag,
+      });
     });
   }
 }

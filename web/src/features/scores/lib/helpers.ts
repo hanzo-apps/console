@@ -13,6 +13,9 @@ export const isCategoricalDataType = (dataType: ScoreDataTypeType) => dataType =
 
 export const isBooleanDataType = (dataType: ScoreDataTypeType) => dataType === ScoreDataTypeEnum.BOOLEAN;
 
+export const isTextDataType = (dataType: ScoreDataTypeType) =>
+  dataType === ScoreDataTypeEnum.TEXT;
+
 export const isScoreUnsaved = (scoreId?: string | null): boolean => !scoreId;
 
 export const toOrderedScoresList = (list: ScoreData[]): ScoreData[] => list.sort((a, b) => a.key.localeCompare(b.key));

@@ -25,6 +25,7 @@ export const projectApiKeysRouter = createTRPCRouter({
         where: {
           projectId: input.projectId,
           scope: "PROJECT",
+          isInAppAgentKey: false,
         },
         select: {
           id: true,
@@ -85,6 +86,14 @@ export const projectApiKeysRouter = createTRPCRouter({
         scope: "apiKeys:CUD",
       });
 
+      await ctx.prisma.apiKey.findFirstOrThrow({
+        where: {
+          id: input.keyId,
+          projectId: input.projectId,
+          isInAppAgentKey: false,
+        },
+      });
+
       await auditLog({
         session: ctx.session,
         resourceType: "apiKey",
@@ -96,6 +105,7 @@ export const projectApiKeysRouter = createTRPCRouter({
         where: {
           id: input.keyId,
           projectId: input.projectId,
+          isInAppAgentKey: false,
         },
         data: {
           note: input.note,
@@ -118,6 +128,16 @@ export const projectApiKeysRouter = createTRPCRouter({
         projectId: input.projectId,
         scope: "apiKeys:CUD",
       });
+      const apiKey = await ctx.prisma.apiKey.findFirstOrThrow({
+        where: {
+          id: input.id,
+          projectId: input.projectId,
+          scope: "PROJECT",
+        },
+      });
+
+      if (apiKey.isInAppAgentKey) return false;
+
       await auditLog({
         session: ctx.session,
         resourceType: "apiKey",

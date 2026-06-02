@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { redis, safeMultiDel } from "..";
 import { logger } from "../logger";
+import type { Cluster, Redis } from "ioredis";
 
 import { type ApiKey } from "../../db";
 
@@ -28,10 +29,10 @@ export async function invalidateCachedApiKeys(apiKeys: ApiKey[], identifier: str
     return;
   }
 
-  if (redis) {
+  if (redisClient) {
     logger.info(`Invalidating API keys in redis for ${identifier}`);
     const keysToDelete = filteredHashKeys.map((hash) => `api-key:${hash}`);
-    await safeMultiDel(redis, keysToDelete);
+    await safeMultiDel(redisClient, keysToDelete);
   }
 }
 
@@ -48,7 +49,10 @@ export async function invalidateCachedApiKeys(apiKeys: ApiKey[], identifier: str
  *
  * @param orgId - The organization ID whose API keys should be invalidated from cache
  */
-export async function invalidateCachedOrgApiKeys(orgId: string): Promise<void> {
+export async function invalidateCachedOrgApiKeys(
+  orgId: string,
+  redisClient: Redis | Cluster | null = redis,
+): Promise<void> {
   const apiKeys = await prisma.apiKey.findMany({
     where: {
       OR: [
@@ -69,10 +73,10 @@ export async function invalidateCachedOrgApiKeys(orgId: string): Promise<void> {
     return;
   }
 
-  if (redis) {
+  if (redisClient) {
     logger.info(`Invalidating API keys in redis for org ${orgId}`);
     const keysToDelete = hashKeys.map((hash) => `api-key:${hash}`);
-    await safeMultiDel(redis, keysToDelete);
+    await safeMultiDel(redisClient, keysToDelete);
   }
 }
 
@@ -100,9 +104,9 @@ export async function invalidateCachedProjectApiKeys(projectId: string): Promise
     return;
   }
 
-  if (redis) {
+  if (redisClient) {
     logger.info(`Invalidating API keys in redis for project ${projectId}`);
     const keysToDelete = hashKeys.map((hash) => `api-key:${hash}`);
-    await safeMultiDel(redis, keysToDelete);
+    await safeMultiDel(redisClient, keysToDelete);
   }
 }

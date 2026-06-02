@@ -27,6 +27,7 @@ import { useTableDateRange } from "@/src/hooks/useTableDateRange";
 import { toAbsoluteTimeRange } from "@/src/utils/date-range-utils";
 import { type ScoreAggregate } from "@hanzo/shared";
 import TagList from "@/src/features/tag/components/TagList";
+import { usePeekTableState } from "@/src/components/table/peek/contexts/PeekTableStateContext";
 import useColumnOrder from "@/src/features/column-visibility/hooks/useColumnOrder";
 import { BatchExportTableButton } from "@/src/components/BatchExportTableButton";
 import { BreakdownTooltip } from "@/src/components/trace2/components/_shared/BreakdownToolTip";
@@ -34,13 +35,15 @@ import { InfoIcon, PlusCircle } from "lucide-react";
 import { UpsertModelFormDialog } from "@/src/features/models/components/UpsertModelFormDialog";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { Badge } from "@/src/components/ui/badge";
-import { type Row, type RowSelectionState } from "@tanstack/react-table";
+import { type RowSelectionState } from "@tanstack/react-table";
 import TableIdOrName from "@/src/components/table/table-id";
 import { ItemBadge } from "@/src/components/ItemBadge";
-import { Skeleton } from "@/src/components/ui/skeleton";
-import { PeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
+import { TablePeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
-import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
+import {
+  detailPageListKeys,
+  useDetailPageLists,
+} from "@/src/features/navigate-detail-pages/context";
 import { useTableViewManager } from "@/src/components/table/table-view-presets/hooks/useTableViewManager";
 import { useRouter } from "next/router";
 import { useFullTextSearch } from "@/src/components/table/use-cases/useFullTextSearch";
@@ -50,7 +53,10 @@ import { TableActionMenu } from "@/src/features/table/components/TableActionMenu
 import { type TableAction } from "@/src/features/table/types";
 import { type DataTablePeekViewProps } from "@/src/components/table/peek";
 import { useScoreColumns } from "@/src/features/scores/hooks/useScoreColumns";
-import { scoreFilters } from "@/src/features/scores/lib/scoreColumns";
+import {
+  addPrefixToScoreKeys,
+  scoreFilters,
+} from "@/src/features/scores/lib/scoreColumns";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { MemoizedIOTableCell } from "@/src/components/ui/IOTableCell";
 import { useEventsTableData } from "@/src/features/events/hooks/useEventsTableData";
@@ -125,6 +131,7 @@ export type EventsTableRow = {
 
   // Scores
   scores: ScoreAggregate;
+  traceScores: ScoreAggregate;
 };
 
 export type EventsTableProps = {
@@ -134,6 +141,10 @@ export type EventsTableProps = {
 export default function ObservationsEventsTable({ projectId }: EventsTableProps) {
   const router = useRouter();
   const { viewId } = router.query;
+  const eventsFilterConfig = useMemo(
+    () => getObservationEventsFilterConfig(omittedFilter),
+    [omittedFilter],
+  );
 
   const { setDetailPageList } = useDetailPageLists();
   const [selectedRows, setSelectedRows] = useState<RowSelectionState>({});
@@ -219,7 +230,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
 
   const handleRefresh = useCallback(() => {
     setRefreshTick((t) => t + 1);
-    void Promise.all([
+    Promise.all([
       utils.events.all.invalidate(),
       utils.events.countAll.invalidate(),
       utils.events.filterOptions.invalidate(),
@@ -230,7 +241,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
   // Include refreshTick to force recalculation on refresh
   const dateRange = useMemo(() => {
     // refreshTick forces recalculation but isn't used in computation
-    void refreshTick;
+    refreshTick;
     return toAbsoluteTimeRange(timeRange) ?? undefined;
   }, [timeRange, refreshTick]);
 
@@ -264,8 +275,36 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
     hasParentObservation,
   });
 
+  const queryFilterOptions: UseSidebarFilterStateOptions = useMemo(() => {
+    const baseOptions = {
+      loading: isFilterOptionsPending,
+      implicitDefaultConfig: DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG,
+    };
+
+    if (peekContext) {
+      return {
+        ...baseOptions,
+        stateLocation: "peekContext",
+        context: peekContext,
+      };
+    }
+
+    if (hideControls) {
+      return {
+        ...baseOptions,
+        stateLocation: "memory",
+      };
+    }
+
+    return {
+      ...baseOptions,
+      stateLocation: "urlAndSessionStorage",
+      sessionFilterContextId: projectId,
+    };
+  }, [hideControls, isFilterOptionsPending, peekContext, projectId]);
+
   const queryFilter = useSidebarFilterState(
-    observationEventsFilterConfig,
+    eventsFilterConfig,
     filterOptions,
     projectId,
     isFilterOptionsPending,
@@ -305,7 +344,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
   useEffect(() => {
     if (observations.status === "success") {
       setDetailPageList(
-        "observations",
+        detailPageListKeys.events,
         observations?.rows?.map((o) => ({
           id: o?.id,
           params: o?.startTime
@@ -331,6 +370,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
     projectId,
     tableName: "observations",
     setSelectedRows,
+    setSelectAll,
   });
 
   const tableActions: TableAction[] = [
@@ -392,6 +432,13 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
       header: getEventsColumnName("input"),
       id: "input",
       size: 300,
+      loadingCell: () => (
+        <JsonSkeleton
+          numRows={rowHeight === "s" ? 1 : undefined}
+          borderless
+          className="h-full w-full overflow-hidden px-2 py-1"
+        />
+      ),
       cell: ({ row }) => {
         const value: string | undefined = row.getValue("input");
         if (ioLoading) {
@@ -406,6 +453,13 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
       id: "output",
       header: getEventsColumnName("output"),
       size: 300,
+      loadingCell: () => (
+        <JsonSkeleton
+          numRows={rowHeight === "s" ? 1 : undefined}
+          borderless
+          className="h-full w-full overflow-hidden px-2 py-1"
+        />
+      ),
       cell: ({ row }) => {
         const value: string | undefined = row.getValue("output");
         if (ioLoading) {
@@ -426,6 +480,13 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
       accessorKey: "metadata",
       header: "Metadata",
       size: 300,
+      loadingCell: () => (
+        <JsonSkeleton
+          numRows={rowHeight === "s" ? 1 : undefined}
+          borderless
+          className="h-full w-full overflow-hidden px-2 py-1"
+        />
+      ),
       headerTooltip: {
         description: "Add metadata to traces to track additional information.",
         href: "https://hanzo.com/docs/observability/features/metadata",
@@ -529,7 +590,8 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
           id: "inputCost",
           header: getEventsColumnName("inputCost"),
           size: 120,
-          cell: ({ row }: { row: Row<EventsTableRow> }) => {
+          loadingCell: <TableTextLoadingCell />,
+          cell: ({ row }) => {
             const value = row.getValue("cost") as {
               inputCost: number | undefined;
               outputCost: number | undefined;
@@ -546,7 +608,8 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
           id: "outputCost",
           header: getEventsColumnName("outputCost"),
           size: 120,
-          cell: ({ row }: { row: Row<EventsTableRow> }) => {
+          loadingCell: <TableTextLoadingCell />,
+          cell: ({ row }) => {
             const value = row.getValue("cost") as {
               inputCost: number | undefined;
               outputCost: number | undefined;
@@ -558,7 +621,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
           defaultHidden: true,
           enableSorting: true,
         },
-      ],
+      ] satisfies LangfuseColumnDef<EventsTableRow>[],
     },
     {
       accessorKey: "timeToFirstToken",
@@ -588,7 +651,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
           id: "tokensPerSecond",
           header: "Tokens per second",
           size: 200,
-          cell: ({ row }: { row: Row<EventsTableRow> }) => {
+          cell: ({ row }) => {
             const latency: number | undefined = row.getValue("latency");
             const usage = row.getValue("usage") as {
               inputUsage: number;
@@ -608,6 +671,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
           id: "inputTokens",
           header: getEventsColumnName("inputTokens"),
           size: 100,
+          loadingCell: <TableTextLoadingCell />,
           enableHiding: true,
           defaultHidden: true,
           enableSorting: true,
@@ -625,6 +689,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
           id: "outputTokens",
           header: getEventsColumnName("outputTokens"),
           size: 100,
+          loadingCell: <TableTextLoadingCell />,
           enableHiding: true,
           defaultHidden: true,
           enableSorting: true,
@@ -642,6 +707,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
           id: "totalTokens",
           header: getEventsColumnName("totalTokens"),
           size: 100,
+          loadingCell: <TableTextLoadingCell />,
           enableHiding: true,
           defaultHidden: true,
           enableSorting: true,
@@ -654,7 +720,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
             return <span>{numberFormatter(value.totalUsage, 0)}</span>;
           },
         },
-      ],
+      ] satisfies LangfuseColumnDef<EventsTableRow>[],
     },
     {
       accessorKey: "providedModelName",
@@ -724,6 +790,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
       id: "environment",
       size: 150,
       enableHiding: true,
+      loadingCell: <TableBadgeLoadingCell />,
       cell: ({ row }) => {
         const value: EventsTableRow["environment"] = row.getValue("environment");
         return value ? (
@@ -739,6 +806,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
       header: getEventsColumnName("traceTags"),
       size: 250,
       enableHiding: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const traceTags: string[] | undefined = row.getValue("traceTags");
         return (
@@ -757,9 +825,20 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
       enableHiding: true,
       defaultHidden: true,
       cell: () => {
-        return isColumnLoading ? <Skeleton className="h-3 w-1/2" /> : null;
+        return isColumnLoading ? <TableTextLoadingCell /> : null;
       },
       columns: scoreColumns,
+    },
+    {
+      accessorKey: "traceScores",
+      header: "Trace Scores",
+      id: "traceScores",
+      enableHiding: true,
+      defaultHidden: true,
+      cell: () => {
+        return isTraceColumnLoading ? <TableTextLoadingCell /> : null;
+      },
+      columns: traceScoreColumns,
     },
     {
       accessorKey: "endTime",
@@ -847,20 +926,28 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
   });
 
   const { isLoading: isViewLoading, ...viewControllers } = useTableViewManager({
-    tableName: TableViewPresetTableName.Observations,
+    tableName: TableViewPresetTableName.ObservationsEvents,
     projectId,
     stateUpdaters: {
       setOrderBy: setOrderByState,
       setFilters: setFiltersWrapper,
+      setExpandedFilters: queryFilter.onExpandedChange,
       setColumnOrder: setColumnOrder,
       setColumnVisibility: setColumnVisibilityState,
       setSearchQuery: setSearchQuery,
     },
     validationContext: {
       columns,
-      filterColumnDefinition: observationEventsFilterConfig.columnDefinitions,
+      filterColumnDefinition: eventsFilterConfig.columnDefinitions,
+      expandableFilterColumns: eventsFilterConfig.facets.map(
+        (facet) => facet.column,
+      ),
+      migrateFilterState: eventsFilterConfig.migrateFilterState,
     },
-    currentFilterState: queryFilter.filterState,
+    currentFilterState: queryFilter.explicitFilterState,
+    currentExpandedFilters: queryFilter.expanded,
+    disabled: hideControls,
+    allowBackendSystemPresets: true,
   });
 
   const peekConfig: DataTablePeekViewProps = useMemo(
@@ -888,7 +975,11 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
               startTime: observation.startTime,
               endTime: observation.endTime ?? undefined,
               timeToFirstToken: observation.timeToFirstToken ?? undefined,
-              scores: {}, // TODO: scores not included in FullObservation type
+              scores: observation.scores ?? {},
+              traceScores: addPrefixToScoreKeys(
+                observation.traceScores ?? {},
+                "Trace",
+              ),
               latency: observation.latency ?? undefined,
               totalCost: observation.totalCost ?? undefined,
               cost: {
@@ -938,7 +1029,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
   }, [observations]);
 
   return (
-    <DataTableControlsProvider>
+    <DataTableControlsProvider tableName={eventsFilterConfig.tableName}>
       <div className="flex h-full w-full flex-col">
         {/* Toolbar spanning full width */}
         <DataTableToolbar
@@ -1057,6 +1148,7 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
                 },
               }}
               rowSelection={selectedRows}
+              highlightAllRows={selectAll}
               setRowSelection={setSelectedRows}
               setOrderBy={setOrderByState}
               orderBy={orderByState}
@@ -1077,18 +1169,18 @@ export default function ObservationsEventsTable({ projectId }: EventsTableProps)
                   const timestamp = row.timestamp;
 
                   if (traceId) {
-                    let observationUrl = `/project/${projectId}/traces/${encodeURIComponent(traceId)}`;
+                    const observationUrl = buildTraceDetailPath({
+                      projectId,
+                      traceId,
+                      observationId,
+                      timestamp,
+                    });
 
-                    const params = new URLSearchParams();
-                    params.set("observation", observationId);
-                    if (timestamp) {
-                      params.set("timestamp", timestamp.toISOString());
-                    }
-
-                    observationUrl += `?${params.toString()}`;
-
-                    const fullUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${observationUrl}`;
-                    window.open(fullUrl, "_blank");
+                    window.open(
+                      getSafeRedirectPath(observationUrl),
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
                   }
                 }
                 // For normal clicks, let the data-table handle opening the peek view

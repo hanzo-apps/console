@@ -169,7 +169,7 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void; display
       {supportType !== "custom" && (
         <div>
           <div className="flex items-center gap-2 text-base font-semibold">
-            <Github className="h-4 w-4" /> Community & Resources
+            <SiGithub className="h-4 w-4" /> Community & Resources
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Join the conversation and connect with the Hanzo community.

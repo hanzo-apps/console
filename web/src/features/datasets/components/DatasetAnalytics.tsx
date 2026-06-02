@@ -4,7 +4,6 @@ import { useInsightsCapture } from "@/src/features/insights-analytics/useInsight
 import { MultiSelectKeyValues } from "@/src/features/scores/components/multi-select-key-values";
 
 export function DatasetAnalytics(props: {
-  projectId: string;
   scoreOptions: { key: string; value: string }[];
   selectedMetrics: string[];
   setSelectedMetrics: (metrics: string[]) => void;
@@ -12,7 +11,7 @@ export function DatasetAnalytics(props: {
   const capture = useInsightsCapture();
   return (
     <MultiSelectKeyValues
-      className="max-w-fit focus:!ring-0 focus:!ring-offset-0"
+      className="max-w-fit focus:ring-0! focus:ring-offset-0!"
       placeholder="Search..."
       title="Charts"
       variant="outline"

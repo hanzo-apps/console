@@ -12,9 +12,45 @@ import {
 import { parseMetadataDatastoreRecordToDomain } from "../utils/metadata_conversion";
 import { RenderingProps, DEFAULT_RENDERING_PROPS, applyInputOutputRendering } from "../utils/rendering";
 import { logger } from "../logger";
+import { prisma } from "../../db";
 import type { Model, Price } from "@prisma/client";
 
-type ModelWithPrice = Model & { Price: Price[] };
+export type ModelWithPrice = Model & { Price: Price[] };
+
+/**
+ * Creates a model cache that fetches models from the database on demand and stores them in memory.
+ * Only queries the database if a model ID is not already in the cache.
+ */
+export const createModelCache = (projectId: string) => {
+  const modelCache = new Map<string, ModelWithPrice | null>();
+
+  const getModel = async (
+    internalModelId: string | null | undefined,
+  ): Promise<ModelWithPrice | null> => {
+    if (!internalModelId) return null;
+
+    if (modelCache.has(internalModelId)) {
+      return modelCache.get(internalModelId) ?? null;
+    }
+
+    const model = await prisma.model.findFirst({
+      where: {
+        id: internalModelId,
+        OR: [{ projectId }, { projectId: null }],
+      },
+      include: {
+        Price: true,
+      },
+    });
+
+    modelCache.set(internalModelId, model);
+
+    logger.debug(`Model ${internalModelId} fetched from database`);
+    return model;
+  };
+
+  return { getModel };
+};
 
 /**
  * Converts a Record<string, number> to ensure all values are numbers.
@@ -48,6 +84,7 @@ function ensureObservationCoreFields(record: Partial<ObservationRecordReadType>)
   if (record.trace_id === undefined) missingFields.push("trace_id");
   if (record.start_time === undefined) missingFields.push("start_time");
   if (record.project_id === undefined) missingFields.push("project_id");
+  if (record.type === undefined) missingFields.push("type");
 
   if (missingFields.length > 0) {
     const errorMessage = `Missing required ObservationCoreFields: ${missingFields.join(", ")}${record.id ? ` (record: ${record.id})` : ""}`;
@@ -61,6 +98,7 @@ function ensureObservationCoreFields(record: Partial<ObservationRecordReadType>)
     startTime: parseDatastoreUTCDateTimeFormat(record.start_time!),
     projectId: record.project_id!,
     parentObservationId: record.parent_observation_id ?? null,
+    type: record.type! as ObservationType,
   };
 }
 
@@ -185,9 +223,12 @@ export function convertObservationPartial(
       internalModelId: record.internal_model_id ?? null,
     }),
     ...(record.model_parameters !== undefined && {
+      // ClickHouse stores model_parameters as a free-form string; SDKs can
+      // write non-JSON sentinels here, so fall back to the raw value instead
+      // of throwing for the whole row.
       modelParameters: record.model_parameters
         ? ((typeof record.model_parameters === "string"
-            ? JSON.parse(record.model_parameters)
+            ? parseJsonPrioritised(record.model_parameters)
             : record.model_parameters) ?? null)
         : null,
     }),
@@ -204,6 +245,9 @@ export function convertObservationPartial(
       inputCost: reducedCostDetails.input,
       outputCost: reducedCostDetails.output,
       totalCost: reducedCostDetails.total,
+    }),
+    ...(record.provided_usage_details !== undefined && {
+      providedUsageDetails: convertNumericRecord(record.provided_usage_details),
     }),
     ...(record.provided_cost_details !== undefined && {
       providedCostDetails: convertNumericRecord(record.provided_cost_details),
@@ -290,6 +334,7 @@ export function convertObservationPartial(
     promptVersion: partial.promptVersion ?? null,
     latency: partial.latency ?? null,
     timeToFirstToken: partial.timeToFirstToken ?? null,
+    providedUsageDetails: partial.providedUsageDetails ?? {},
     usageDetails: partial.usageDetails ?? {},
     costDetails: partial.costDetails ?? {},
     providedCostDetails: partial.providedCostDetails ?? {},
@@ -338,11 +383,20 @@ export function convertEventsObservation(
     ? convertObservationPartial(record as ObservationRecordReadType, renderingProps, true)
     : convertObservationPartial(record, renderingProps, false);
 
+  const baseObservation = convertObservationPartial(
+    record,
+    renderingProps,
+    false,
+  );
   return {
     ...baseObservation,
-    userId: record.user_id ?? null,
-    sessionId: record.session_id ?? null,
-    traceName: record.trace_name ?? null,
+    ...(record.user_id !== undefined && { userId: record.user_id }),
+    ...(record.session_id !== undefined && { sessionId: record.session_id }),
+    ...(record.trace_name !== undefined && { traceName: record.trace_name }),
+    ...(record.release !== undefined && { release: record.release }),
+    ...(record.tags !== undefined && { tags: record.tags }),
+    ...(record.bookmarked !== undefined && { bookmarked: record.bookmarked }),
+    ...(record.public !== undefined && { public: record.public }),
   };
 }
 

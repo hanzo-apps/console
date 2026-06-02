@@ -32,7 +32,7 @@ const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
           alt="Hanzo Cloud Logo"
           className={cn(
             "group-data-[collapsible=icon]:hidden dark:hidden",
-            size === "sm" ? "max-h-4 max-w-14" : "max-h-5 max-w-16",
+            "max-h-4 max-w-14",
           )}
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -41,7 +41,7 @@ const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
           alt="Hanzo Cloud Logo"
           className={cn(
             "hidden group-data-[collapsible=icon]:hidden dark:block",
-            size === "sm" ? "max-h-4 max-w-14" : "max-h-5 max-w-16",
+            "max-h-4 max-w-14",
           )}
         />
         <PlusIcon size={size === "sm" ? 8 : 12} className="group-data-[collapsible=icon]:hidden" />

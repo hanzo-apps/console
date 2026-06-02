@@ -129,7 +129,7 @@ export function CustomMappingEditor({
   };
 
   return (
-    <div className="space-y-2 rounded-md border bg-muted/30 p-4">
+    <div className="bg-muted/30 space-y-2 rounded-md border p-4">
       <div>
         <Label className="text-sm font-medium">Target</Label>
         <Tabs value={config.type} onValueChange={(v) => handleTypeChange(v as MappingTarget)} className="mt-2">
@@ -152,7 +152,7 @@ export function CustomMappingEditor({
             </div>
           </div>
           <div>
-            <Label className="text-sm font-medium">JSON Path</Label>
+            <Label className="text-sm font-medium">JSONPath</Label>
             <div className="mt-1">
               <JsonPathInput
                 value={config.rootConfig?.jsonPath ?? "$."}
@@ -232,7 +232,7 @@ function KeyValueEntryRow({
     <div className={`space-y-2 rounded-md border bg-background p-3 ${isSchemaField ? "border-primary/30" : ""}`}>
       <div className="grid grid-cols-[1fr,auto] gap-2">
         <div>
-          <Label className="text-xs text-muted-foreground">
+          <Label className="text-muted-foreground text-xs">
             Key
             {isRequired && <span className="ml-1 text-destructive">*</span>}
             {isSchemaField && <span className="ml-2 text-primary">(from schema)</span>}
@@ -261,9 +261,9 @@ function KeyValueEntryRow({
         </div>
       </div>
 
-      <div className="grid grid-cols-[38fr,62fr] gap-2">
+      <div className="grid grid-cols-[38fr_62fr] gap-2">
         <div>
-          <Label className="text-xs text-muted-foreground">Source</Label>
+          <Label className="text-muted-foreground text-xs">Source</Label>
           <div className="mt-1">
             <SourceFieldSelector value={entry.sourceField} onChange={onSourceFieldChange} disabled={!isPath} />
           </div>

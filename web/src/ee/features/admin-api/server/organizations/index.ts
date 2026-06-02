@@ -3,6 +3,7 @@ import { logger } from "@hanzo/shared/src/server";
 import { organizationNameSchema } from "@/src/features/organizations/utils/organizationNameSchema";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { type NextApiRequest, type NextApiResponse } from "next";
+import { z } from "zod";
 
 export async function handleGetOrganizations(req: NextApiRequest, res: NextApiResponse) {
   const organizations = await prisma.organization.findMany({
@@ -41,7 +42,7 @@ export async function handleCreateOrganization(req: NextApiRequest, res: NextApi
   if (!validationResult.success) {
     res.status(400).json({
       error: "Invalid request body",
-      details: validationResult.error.format(),
+      details: z.formatError(validationResult.error),
     });
     return;
   }

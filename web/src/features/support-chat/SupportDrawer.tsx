@@ -66,7 +66,7 @@ export const SupportDrawer = ({
       </div>
       <div className="flex-1 overflow-y-auto border-t">
         <div className="px-2 py-1">
-          <div className="h-full bg-background">
+          <div className="bg-background h-full">
             <div className="p-2">
               {currentMode === "intro" && <IntroSection onStartForm={() => setCurrentMode("form")} />}
               {currentMode === "form" && (

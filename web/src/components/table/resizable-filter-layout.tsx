@@ -34,8 +34,6 @@ export function ResizableFilterLayout({ children }: PropsWithChildren) {
     return <div className="flex flex-1 flex-col overflow-hidden">{tableContent}</div>;
   }
 
-  const autoSaveId = tableName ? `filter-layout-${tableName}` : "filter-layout";
-
   return (
     <ResizablePanelGroup
       direction="horizontal"

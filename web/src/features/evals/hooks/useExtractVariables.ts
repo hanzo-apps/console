@@ -17,10 +17,26 @@ function getObservation(
   return observations.find((o) => o.name === objectName) || null;
 }
 
+function normalizePreviewColumnId(selectedColumnId: string) {
+  switch (selectedColumnId) {
+    case "expected_output":
+    case "experiment_item_expected_output":
+      return "experimentItemExpectedOutput";
+    case "experiment_item_metadata":
+      return "experimentItemMetadata";
+    default:
+      return selectedColumnId;
+  }
+}
+
 type ExtractedVariable = {
   variable: string;
-  value: unknown;
+  value: string;
 };
+
+type ExtractionError =
+  | { kind: "jsonPath"; message: string }
+  | { kind: "unexpected"; message: string };
 
 export function useExtractVariables({
   variables,
@@ -38,7 +54,8 @@ export function useExtractVariables({
   const utils = api.useUtils();
   const [extractedVariables, setExtractedVariables] = useState<ExtractedVariable[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
-  const [extractionError, setExtractionError] = useState<Error | null>(null);
+  const [extractionError, setExtractionError] =
+    useState<ExtractionError | null>(null);
   const previousMappingRef = useRef<string>("");
 
   // Create a stable string representation of the current mapping for comparison
@@ -50,9 +67,12 @@ export function useExtractVariables({
 
   // Handle error toasts separately to avoid repeated toasts on re-renders
   useEffect(() => {
-    if (extractionError) {
-      trpcErrorToast(extractionError);
-    }
+    if (!extractionError) return;
+    const title =
+      extractionError.kind === "jsonPath"
+        ? "Invalid JSONPath in variable mapping"
+        : "Failed to extract variable";
+    showErrorToast(title, extractionError.message, "WARNING");
   }, [extractionError]);
 
   useEffect(() => {
@@ -139,7 +159,11 @@ export function useExtractVariables({
       .then((results) => {
         const firstError = results.find((result) => result.error instanceof Error);
         if (firstError) {
-          setExtractionError(firstError.error as Error);
+          const baseMessage = (firstError.error as Error).message;
+          const message = firstError.jsonSelector
+            ? `${firstError.jsonSelector}: ${baseMessage}`
+            : baseMessage;
+          setExtractionError({ kind: "jsonPath", message });
         }
         setExtractedVariables(results);
         // Update the ref to the current mapping string to track changes
@@ -147,7 +171,10 @@ export function useExtractVariables({
       })
       .catch((error) => {
         console.error("Error extracting variables:", error);
-        setExtractionError(error);
+        setExtractionError({
+          kind: "unexpected",
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
         setExtractedVariables(
           variables.map((variable) => ({
             variable,

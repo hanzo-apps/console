@@ -341,7 +341,7 @@ export const openAIAdapter: ProviderAdapter = {
   detect(ctx: NormalizerContext): boolean {
     const meta = parseMetadata(ctx.metadata);
 
-    // REJECTIONS: Explicit rejection of LangGraph/LangChain/Semantic Kernel formats
+    // REJECTIONS: Explicit rejection of LangGraph/LangChain/Semantic/Pydantic Kernel formats
     if (meta && typeof meta === "object") {
       // LangGraph
       if (
@@ -358,6 +358,29 @@ export const openAIAdapter: ProviderAdapter = {
       if ("scope" in meta && typeof meta.scope === "object") {
         const scope = meta.scope as Record<string, unknown>;
         if (typeof scope.name === "string" && scope.name.startsWith("Microsoft.SemanticKernel")) {
+          return false;
+        }
+
+        if (
+          scope.name === "agent_framework" ||
+          (typeof scope.name === "string" &&
+            scope.name.includes("Microsoft.Extensions.AI"))
+        ) {
+          return false;
+        }
+      }
+
+      const providerName = getNestedProperty(
+        meta,
+        "attributes",
+        "gen_ai.provider.name",
+      );
+      if (providerName === "microsoft.agent_framework") return false;
+
+      // Pydantic ai
+      if ("scope" in meta && typeof meta.scope === "object") {
+        const scope = meta.scope as Record<string, unknown>;
+        if (scope.name === "pydantic-ai") {
           return false;
         }
       }

@@ -2,14 +2,18 @@ import { type AnnotationQueueItem, type ScoreConfigDomain } from "@hanzo/shared"
 import { AnnotationDrawerSection } from "../shared/AnnotationDrawerSection";
 import { AnnotationProcessingLayout } from "../shared/AnnotationProcessingLayout";
 import { SessionIO } from "@/src/components/session";
-import { useState, useEffect } from "react";
+import { LazyTraceEventsRow } from "@/src/components/session/TraceEventsRow";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/src/components/ui/button";
 import { ItemBadge } from "@/src/components/ItemBadge";
-import { CopyIdsPopover } from "@/src/components/trace2/components/_shared/CopyIdsPopover";
+import { CopyIdsPopover } from "@/src/components/trace/components/_shared/CopyIdsPopover";
 import { Badge } from "@/src/components/ui/badge";
 import { Separator } from "@/src/components/ui/separator";
 import Link from "next/link";
 import { Card } from "@/src/components/ui/card";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
+import { api } from "@/src/utils/api";
+import { JsonSkeleton } from "@/src/components/ui/CodeJsonViewer";
 
 interface SessionAnnotationProcessorProps {
   item: AnnotationQueueItem & {
@@ -31,7 +35,7 @@ export const SessionAnnotationProcessor: React.FC<SessionAnnotationProcessorProp
   projectId,
 }) => {
   const [visibleTraces, setVisibleTraces] = useState(PAGE_SIZE);
-  const [currentTraceIndex, setCurrentTraceIndex] = useState(1);
+  const { isBetaEnabled } = useV4Beta();
 
   // Intersection observer to which trace is currently in view
   useEffect(() => {
@@ -46,40 +50,59 @@ export const SessionAnnotationProcessor: React.FC<SessionAnnotationProcessorProp
           }
         });
       },
+    },
+  );
+
+  const traceCommentCounts =
+    api.comments.getTraceCommentCountsBySessionId.useQuery(
       {
-        threshold: 0.5, // Trigger when 50% of trace is visible
-        rootMargin: "-25% 0px -25% 0px", // Focus on center area
+        projectId,
+        sessionId: item.objectId,
       },
+      { enabled: isBetaEnabled },
     );
 
-    // Observe all trace cards
-    const traceCards = document.querySelectorAll("[data-trace-index]");
-    traceCards.forEach((card) => observer.observe(card));
+  // Unify traces from both paths:
+  // - v4 beta OFF: traces come from data.traces (byIdWithScores endpoint)
+  // - v4 beta ON: traces come from separate tracesFromEvents query
+  const traces = useMemo(() => {
+    if (isBetaEnabled) {
+      return tracesFromEventsQuery.data ?? [];
+    }
+    return data?.traces ?? [];
+  }, [isBetaEnabled, tracesFromEventsQuery.data, data?.traces]);
 
-    return () => observer.disconnect();
-  }, [data?.traces, visibleTraces]);
+  // For the "Total traces" badge, show countTraces from session metadata when available (v4),
+  // or fall back to loaded traces length
+  const totalTracesForBadge = useMemo(() => {
+    if (isBetaEnabled) {
+      return data?.countTraces ?? traces.length;
+    }
+    return traces.length;
+  }, [isBetaEnabled, data?.countTraces, traces.length]);
+
+  // Stable callback to avoid creating new function reference on every render (defeats React.memo)
+  const openPeek = useCallback(
+    (traceId: string) => {
+      window.open(`/project/${projectId}/traces/${traceId}`, "_blank");
+    },
+    [projectId],
+  );
 
   const leftPanel = (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Sticky Header */}
-      <div className="flex-shrink-0 bg-background">
-        <div className="mt-3 grid w-full grid-cols-[auto,auto] items-start justify-between gap-2 px-4">
+      <div className="bg-background shrink-0">
+        <div className="mt-3 grid w-full grid-cols-[auto_auto] items-start justify-between gap-2 px-4">
           <div className="flex w-full flex-row items-start gap-1">
             <div className="mt-1.5">
               <ItemBadge type="SESSION" isSmall />
             </div>
-            <span className="mb-0 ml-1 line-clamp-2 min-w-0 break-all font-medium md:break-normal md:break-words">
+            <span className="mb-0 ml-1 line-clamp-2 min-w-0 font-medium break-all md:break-normal md:wrap-break-word">
               {item.objectId}
             </span>
             <CopyIdsPopover idItems={[{ id: item.objectId, name: "Session ID" }]} />
           </div>
-          {data?.traces && (
-            <div className="flex items-center">
-              <Badge variant="outline" className="text-xs">
-                Trace {currentTraceIndex} / {data.traces.length}
-              </Badge>
-            </div>
-          )}
         </div>
         <div className="mb-4 mt-2 grid w-full min-w-0 items-center justify-between px-4">
           <div className="flex min-w-0 max-w-full flex-shrink flex-col">

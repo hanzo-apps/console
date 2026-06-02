@@ -21,6 +21,9 @@ export const VerticalBarChart: React.FC<ChartProps> = ({
   },
   accessibilityLayer = true,
 }) => {
+  const formatValue = (value: number) =>
+    toFullMetricString(metricFormatter(value, { style: "compact" }));
+
   return (
     <ChartContainer config={config}>
       <BarChart accessibilityLayer={accessibilityLayer} data={data}>
@@ -31,6 +34,7 @@ export const VerticalBarChart: React.FC<ChartProps> = ({
           fontSize={12}
           tickLine={false}
           axisLine={false}
+          niceTicks="auto"
         />
         <YAxis type="number" stroke="hsl(var(--chart-grid))" fontSize={12} tickLine={false} axisLine={false} />
         <Bar dataKey="metric" radius={[4, 4, 0, 0]} className="fill-[--color-metric]" />

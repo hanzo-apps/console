@@ -85,7 +85,7 @@ export function RetryBackgroundMigration({
               href="https://hanzo.com/self-hosting/administration/organization-management-api#authentication"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground underline hover:text-primary"
+              className="text-muted-foreground hover:text-primary underline"
             >
               Docs
             </a>

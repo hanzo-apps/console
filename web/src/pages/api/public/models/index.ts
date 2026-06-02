@@ -7,7 +7,6 @@ import {
   GetModelsV1Response,
   PostModelsV1Body,
   PostModelsV1Response,
-  prismaToApiModelDefinition,
 } from "@/src/features/public-api/types/models";
 import { InvalidRequestError } from "@hanzo/console-core";
 import { isValidPostgresRegex } from "@/src/features/models/server/isValidPostgresRegex";
@@ -19,71 +18,11 @@ export default withMiddlewares({
     querySchema: GetModelsV1Query,
     responseSchema: GetModelsV1Response,
     fn: async ({ query, auth }) => {
-      const models = await prisma.model.findMany({
-        where: {
-          OR: [
-            {
-              projectId: auth.scope.projectId,
-            },
-            {
-              projectId: null,
-            },
-          ],
-        },
-        orderBy: [
-          { modelName: "asc" },
-          { unit: "asc" },
-          {
-            startDate: {
-              sort: "desc",
-              nulls: "last",
-            },
-          },
-        ],
-        include: {
-          pricingTiers: {
-            select: {
-              id: true,
-              name: true,
-              isDefault: true,
-              priority: true,
-              conditions: true,
-              prices: {
-                select: {
-                  usageType: true,
-                  price: true,
-                },
-              },
-            },
-            orderBy: { priority: "asc" },
-          },
-        },
-        take: query.limit,
-        skip: (query.page - 1) * query.limit,
+      return await listModelsForApi({
+        projectId: auth.scope.projectId,
+        page: query.page,
+        limit: query.limit,
       });
-
-      const totalItems = await prisma.model.count({
-        where: {
-          OR: [
-            {
-              projectId: auth.scope.projectId,
-            },
-            {
-              projectId: null,
-            },
-          ],
-        },
-      });
-
-      return {
-        data: models.map(prismaToApiModelDefinition),
-        meta: {
-          page: query.page,
-          limit: query.limit,
-          totalItems,
-          totalPages: Math.ceil(totalItems / query.limit),
-        },
-      };
     },
   }),
 
@@ -199,38 +138,6 @@ export default withMiddlewares({
 
         return createdModel;
       });
-
-      // Clear model cache for the project after successful creation
-      await clearModelCacheForProject(auth.scope.projectId);
-
-      // Fetch the created model with pricingTiers relation
-      const modelWithTiers = await prisma.model.findUnique({
-        where: { id: model.id },
-        include: {
-          pricingTiers: {
-            select: {
-              id: true,
-              name: true,
-              isDefault: true,
-              priority: true,
-              conditions: true,
-              prices: {
-                select: {
-                  usageType: true,
-                  price: true,
-                },
-              },
-            },
-            orderBy: { priority: "asc" },
-          },
-        },
-      });
-
-      if (!modelWithTiers) {
-        throw new InvalidRequestError("Failed to fetch created model");
-      }
-
-      return prismaToApiModelDefinition(modelWithTiers);
     },
   }),
 });

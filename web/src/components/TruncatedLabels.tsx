@@ -50,7 +50,7 @@ export function TruncatedLabels({
           <div
             key={label}
             className={cn(
-              "max-h-fit min-h-6 w-fit content-center rounded-sm bg-secondary px-1 text-left text-xs font-semibold text-secondary-foreground",
+              "bg-secondary text-secondary-foreground max-h-fit min-h-6 w-fit content-center rounded-sm px-1 text-left text-xs font-semibold",
               badgeClassName,
             )}
           >
@@ -71,7 +71,7 @@ export function TruncatedLabels({
             <Button
               variant="outline"
               size="sm"
-              className="h-6 cursor-pointer text-xs text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-6 cursor-pointer text-xs"
             >
               +{hiddenLabels.length} more
             </Button>
@@ -85,7 +85,7 @@ export function TruncatedLabels({
                     <div
                       key={label}
                       className={cn(
-                        "max-h-fit min-h-6 w-fit content-center rounded-sm bg-secondary px-1 text-left text-xs font-semibold text-secondary-foreground",
+                        "bg-secondary text-secondary-foreground max-h-fit min-h-6 w-fit content-center rounded-sm px-1 text-left text-xs font-semibold",
                         badgeClassName,
                       )}
                     >

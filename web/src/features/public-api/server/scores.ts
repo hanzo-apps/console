@@ -9,14 +9,26 @@ import {
 } from "@hanzo/shared/src/server";
 import { removeObjectKeys, ScoreDataTypeEnum, type ScoreDataTypeType, type ScoreDomain } from "@hanzo/shared";
 
+type ScoreApiResult = Omit<ScoreDomain, "longStringValue"> & {
+  stringValue?: string | null;
+};
+type TextScoreApiResult = Omit<ScoreDomain, "longStringValue" | "value"> & {
+  stringValue?: string | null;
+};
+
 /**
  * Converts a ScoreDomain object to API format.
  * For CORRECTION scores, moves longStringValue to stringValue for API compatibility.
+ * For TEXT scores, removes longStringValue and value (always 0, not meaningful).
  * For other score types, removes longStringValue.
  */
-export const convertScoreToPublicApi = <T extends ScoreDomain>(
-  score: T,
-): Omit<T, "longStringValue"> & { stringValue?: string | null } => {
+export function convertScoreToPublicApi(
+  score: ScoreDomain & { dataType: "TEXT" },
+): TextScoreApiResult;
+export function convertScoreToPublicApi(score: ScoreDomain): ScoreApiResult;
+export function convertScoreToPublicApi(
+  score: ScoreDomain,
+): ScoreApiResult | TextScoreApiResult {
   if (score.dataType === ScoreDataTypeEnum.CORRECTION) {
     const { longStringValue, ...rest } = score;
     return {
@@ -25,8 +37,12 @@ export const convertScoreToPublicApi = <T extends ScoreDomain>(
     };
   }
 
+  if (score.dataType === ScoreDataTypeEnum.TEXT) {
+    return removeObjectKeys(score, ["longStringValue", "value"]);
+  }
+
   return removeObjectKeys(score, ["longStringValue"]);
-};
+}
 
 export type ScoreQueryType = {
   page: number;
@@ -75,7 +91,7 @@ export const _handleGenerateScoresForPublicApi = async ({
 
   const query = `
       SELECT
-          ${needsTraceJoin ? "t.user_id as user_id, t.tags as tags, t.environment as trace_environment," : ""}
+          ${needsTraceJoin ? "t.user_id as user_id, t.tags as tags, t.environment as trace_environment, t.session_id as trace_session_id," : ""}
           s.id as id,
           s.project_id as project_id,
           s.timestamp as timestamp,
@@ -93,6 +109,7 @@ export const _handleGenerateScoresForPublicApi = async ({
           s.data_type as data_type,
           s.config_id as config_id,
           s.queue_id as queue_id,
+          s.execution_trace_id as execution_trace_id,
           s.trace_id as trace_id,
           s.observation_id as observation_id,
           s.session_id as session_id,
@@ -155,6 +172,7 @@ export const _handleGenerateScoresForPublicApi = async ({
           tags?: string[];
           user_id?: string;
           trace_environment?: string;
+          trace_session_id?: string | null;
         }
       >({
         query: query.replace("__TRACE_TABLE__", "traces"),
@@ -174,6 +192,7 @@ export const _handleGenerateScoresForPublicApi = async ({
                   userId: record.user_id,
                   tags: record.tags,
                   environment: record.trace_environment,
+                  sessionId: record.trace_session_id,
                 }
               : null,
         };

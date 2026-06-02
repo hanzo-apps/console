@@ -7,7 +7,6 @@ import {
   DeleteModelV1Response,
   GetModelV1Query,
   GetModelV1Response,
-  prismaToApiModelDefinition,
 } from "@/src/features/public-api/types/models";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { clearModelCacheForProject } from "@hanzo/console-core/src/server";
@@ -18,42 +17,9 @@ export default withMiddlewares({
     querySchema: GetModelV1Query,
     responseSchema: GetModelV1Response,
     fn: async ({ query, auth }) => {
-      const model = await prisma.model.findFirst({
-        where: {
-          AND: [
-            {
-              id: query.modelId,
-            },
-            {
-              OR: [
-                {
-                  projectId: auth.scope.projectId,
-                },
-                {
-                  projectId: null,
-                },
-              ],
-            },
-          ],
-        },
-        include: {
-          pricingTiers: {
-            select: {
-              id: true,
-              name: true,
-              isDefault: true,
-              priority: true,
-              conditions: true,
-              prices: {
-                select: {
-                  usageType: true,
-                  price: true,
-                },
-              },
-            },
-            orderBy: { priority: "asc" },
-          },
-        },
+      return await getModelForApi({
+        projectId: auth.scope.projectId,
+        modelId: query.modelId,
       });
 
       if (!model) {
@@ -93,15 +59,8 @@ export default withMiddlewares({
         projectId: auth.scope.projectId,
         orgId: auth.scope.orgId,
         apiKeyId: auth.scope.apiKeyId,
-        before: model,
+        modelId: query.modelId,
       });
-
-      // Clear model cache for the project after successful deletion
-      await clearModelCacheForProject(auth.scope.projectId);
-
-      return {
-        message: "Model successfully deleted" as const,
-      };
     },
   }),
 });

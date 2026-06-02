@@ -1,7 +1,7 @@
 import { Alert, AlertDescription } from "@hanzo/ui";
 import { Button } from "@/src/components/ui/button";
 import useLocalStorage from "@/src/components/useLocalStorage";
-import { Info, AlertTriangle, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const DEFAULT_STORAGE_KEY = "dismissed-callouts";
@@ -70,7 +70,6 @@ export function Callout({
 
   if (!isVisible) return null;
 
-  const Icon = variant === "warning" ? AlertTriangle : Info;
   const variantClass =
     variant === "warning"
       ? "border-light-yellow bg-light-yellow dark:border-light-yellow dark:bg-light-yellow"
@@ -95,7 +94,7 @@ export function Callout({
             variant="ghost"
             size="sm"
             onClick={handleDismiss}
-            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground h-6 w-6 p-0"
             aria-label="Dismiss"
           >
             <X className="h-4 w-4" />

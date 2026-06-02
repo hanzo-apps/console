@@ -8,14 +8,20 @@ import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
 import { api } from "@/src/utils/api";
 import { type ViewVersion, mapLegacyUiTableFilterToView } from "@/src/features/query";
 
-export const getAllModels = (
+type UseAllModelsOptions = {
+  enabled?: boolean;
+  queryId: string;
+};
+
+export const useAllModels = (
   projectId: string,
   globalFilterState: FilterState,
   fromTimestamp: Date,
   toTimestamp: Date,
   metricsVersion?: ViewVersion,
+  options?: UseAllModelsOptions,
 ) => {
-  const allModels = api.dashboard.executeQuery.useQuery(
+  const allModels = useScheduledDashboardExecuteQuery(
     {
       projectId,
       version: metricsVersion,
@@ -44,6 +50,8 @@ export const getAllModels = (
           skipBatch: true,
         },
       },
+      enabled: options?.enabled ?? true,
+      queryId: `${options?.queryId ?? "dashboard:all-models"}:models`,
     },
   );
 
