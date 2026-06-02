@@ -6,11 +6,11 @@ import {
   GetScoreQueryV1,
   GetScoreResponseV1,
   InternalServerError,
-  ConsoleNotFoundError,
-} from "@hanzo/console-core";
-import { logger, traceException, ScoreDeleteQueue } from "@hanzo/console-core/src/server";
+  HanzoNotFoundError,
+} from "@hanzo/shared";
+import { logger, traceException, ScoreDeleteQueue } from "@hanzo/shared/src/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
-import { QueueJobs } from "@hanzo/console-core/src/server";
+import { QueueJobs } from "@hanzo/shared/src/server";
 import { randomUUID } from "crypto";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";
 
@@ -27,7 +27,7 @@ export default withMiddlewares({
       });
 
       if (!score) {
-        throw new ConsoleNotFoundError("Score not found");
+        throw new HanzoNotFoundError("Score not found");
       }
 
       const parsedScore = GetScoreResponseV1.safeParse(score);

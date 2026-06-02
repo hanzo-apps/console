@@ -1,8 +1,13 @@
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { cors, runMiddleware } from "@/src/features/public-api/server/cors";
-import { prisma } from "@hanzo/console-core/src/db";
-import { logger, redis } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/shared/src/db";
+import { logger, redis } from "@hanzo/shared/src/server";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
+import {
+  handleGetMemberships,
+  handleUpdateMembership,
+  handleDeleteMembership,
+} from "@/src/ee/features/admin-api/server/projects/projectById/memberships";
 
 import { type NextApiRequest, type NextApiResponse } from "next";
 
@@ -63,13 +68,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  const orgId = authCheck.scope.orgId;
-
   // Verify the project belongs to the organization
   const project = await prisma.project.findFirst({
     where: {
       id: projectId,
-      orgId,
+      orgId: authCheck.scope.orgId,
       deletedAt: null,
     },
   });
@@ -80,90 +83,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
+  // Route to the appropriate handler based on HTTP method
   try {
-    if (req.method === "GET") {
-      const memberships = await prisma.projectMembership.findMany({
-        where: { projectId },
-        include: {
-          user: {
-            select: { id: true, email: true, name: true },
-          },
-        },
-      });
-
-      return res.status(200).json({
-        memberships: memberships.map((m) => ({
-          userId: m.userId,
-          role: m.role,
-          email: m.user.email!,
-          name: m.user.name,
-        })),
-      });
-    }
-
-    if (req.method === "PUT") {
-      const { userId, role } = req.body ?? {};
-
-      if (!userId || !role) {
-        return res.status(400).json({ error: "userId and role are required" });
-      }
-
-      // Verify user has an organization membership
-      const orgMembership = await prisma.organizationMembership.findUnique({
-        where: {
-          orgId_userId: { orgId, userId },
-        },
-      });
-
-      if (!orgMembership) {
-        return res.status(404).json({
-          error: "User is not a member of the organization",
+    switch (req.method) {
+      case "GET":
+        return handleGetMemberships(req, res, projectId, authCheck.scope.orgId);
+      case "PUT":
+        return handleUpdateMembership(req, res, projectId, authCheck.scope.orgId);
+      case "DELETE":
+        return handleDeleteMembership(req, res, projectId, authCheck.scope.orgId);
+      default:
+        // This should never happen due to the check at the beginning
+        return res.status(405).json({
+          error: "Method not allowed",
         });
-      }
-
-      const membership = await prisma.projectMembership.upsert({
-        where: {
-          projectId_userId: { projectId, userId },
-        },
-        update: { role },
-        create: {
-          projectId,
-          userId,
-          role,
-          orgMembershipId: orgMembership.id,
-        },
-        include: {
-          user: {
-            select: { id: true, email: true, name: true },
-          },
-        },
-      });
-
-      return res.status(200).json({
-        userId: membership.userId,
-        role: membership.role,
-        email: membership.user.email!,
-        name: membership.user.name,
-      });
-    }
-
-    if (req.method === "DELETE") {
-      const { userId } = req.body ?? {};
-
-      if (!userId) {
-        return res.status(400).json({ error: "userId is required" });
-      }
-
-      await prisma.projectMembership.delete({
-        where: {
-          projectId_userId: { projectId, userId },
-        },
-      });
-
-      return res.status(200).json({
-        message: "Project membership deleted successfully",
-        userId,
-      });
     }
   } catch (error) {
     logger.error(`Error handling project memberships for ${req.method} on project ${projectId}`, error);

@@ -4,15 +4,14 @@ import { NumberParam, StringParam, useQueryParam, useQueryParams, withDefault } 
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
 import { DataTable } from "@/src/components/table/data-table";
 import TableLink from "@/src/components/table/table-link";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
-import { Skeleton } from "@hanzo/ui";
+import { type HanzoColumnDef } from "@/src/components/table/types";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { useQueryFilterState } from "@/src/features/filters/hooks/useFilterState";
 import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
-import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
 import { api } from "@/src/utils/api";
 import { compactNumberFormatter, usdFormatter } from "@/src/utils/numbers";
 import { type RouterOutput } from "@/src/utils/types";
-import { type FilterState, usersTableCols } from "@hanzo/console-core";
+import { type FilterState, usersTableCols } from "@hanzo/shared";
 import { joinTableCoreAndMetrics } from "@/src/components/table/utils/joinTableCoreAndMetrics";
 import { useTableDateRange } from "@/src/hooks/useTableDateRange";
 import { toAbsoluteTimeRange } from "@/src/utils/date-range-utils";
@@ -35,13 +34,12 @@ type RowData = {
 export default function UsersPage() {
   const router = useRouter();
   const projectId = router.query.projectId as string;
-  const { isBetaEnabled } = useV4Beta();
 
   // Check if the user has any users
   const { data: hasAnyUser, isLoading } = api.users.hasAny.useQuery(
     { projectId },
     {
-      enabled: !!projectId && !isBetaEnabled,
+      enabled: !!projectId,
       trpc: {
         context: {
           skipBatch: true,
@@ -51,55 +49,27 @@ export default function UsersPage() {
     },
   );
 
-  const { data: hasAnyUserFromEvents, isLoading: isLoadingFromEvents } = api.users.hasAnyFromEvents.useQuery(
-    { projectId },
-    {
-      enabled: !!projectId && isBetaEnabled,
-      trpc: {
-        context: {
-          skipBatch: true,
-        },
-      },
-      refetchInterval: 10_000,
-    },
-  );
-
-  const hasUsers = isBetaEnabled ? hasAnyUserFromEvents : hasAnyUser;
-  const isLoadingUsers = isBetaEnabled ? isLoadingFromEvents : isLoading;
-  const showOnboarding = !isLoadingUsers && !hasUsers;
+  const showOnboarding = !isLoading && !hasAnyUser;
 
   return (
     <Page
       headerProps={{
         title: "Users",
         help: {
-          description: (
-            <>
-              Attribute data in Hanzo to a user by adding a userId to your traces. See{" "}
-              <a
-                href="https://hanzo.ai/docs/observability/features/users"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-primary/30 hover:decoration-primary"
-                onClick={(e) => e.stopPropagation()}
-              >
-                docs
-              </a>{" "}
-              to learn more.
-            </>
-          ),
-          href: "https://hanzo.ai/docs/observability/features/users",
+          description:
+            "Attribute data in Hanzo Cloud to a user by adding a userId to your traces. See docs to learn more.",
+          href: "https://hanzo.ai/docs/user-explorer",
         },
       }}
       scrollable={showOnboarding}
     >
       {/* Show onboarding screen if user has no users */}
-      {showOnboarding ? <UsersOnboarding /> : <UsersTable isBetaEnabled={isBetaEnabled} />}
+      {showOnboarding ? <UsersOnboarding /> : <UsersTable />}
     </Page>
   );
 }
 
-const UsersTable = ({ isBetaEnabled }: { isBetaEnabled: boolean }) => {
+const UsersTable = () => {
   const router = useRouter();
   const projectId = router.query.projectId as string;
 
@@ -160,25 +130,24 @@ const UsersTable = ({ isBetaEnabled }: { isBetaEnabled: boolean }) => {
 
   const [searchQuery, setSearchQuery] = useQueryParam("search", withDefault(StringParam, null));
 
-  const usersV3 = api.users.all.useQuery(
-    {
-      filter: filterState,
-      page: paginationState.pageIndex,
-      limit: paginationState.pageSize,
-      projectId,
-      searchQuery: searchQuery ?? undefined,
-    },
-    { enabled: !isBetaEnabled },
-  );
+  const users = api.users.all.useQuery({
+    filter: filterState,
+    page: paginationState.pageIndex,
+    limit: paginationState.pageSize,
+    projectId,
+    searchQuery: searchQuery ?? undefined,
+  });
 
-  const userMetricsV3 = api.users.metrics.useQuery(
+  // this API call will return an empty array if there are no users.
+  // Hence, this adds one fast unnecessary API call if there are no users.
+  const userMetrics = api.users.metrics.useQuery(
     {
       projectId,
-      userIds: usersV3.data?.users.map((u) => u.userId) ?? [],
+      userIds: users.data?.users.map((u) => u.userId) ?? [],
       filter: filterState,
     },
     {
-      enabled: usersV3.isSuccess && !isBetaEnabled,
+      enabled: users.isSuccess,
       trpc: {
         context: {
           skipBatch: true,
@@ -186,37 +155,6 @@ const UsersTable = ({ isBetaEnabled }: { isBetaEnabled: boolean }) => {
       },
     },
   );
-
-  const usersV4 = api.users.allFromEvents.useQuery(
-    {
-      filter: filterState,
-      page: paginationState.pageIndex,
-      limit: paginationState.pageSize,
-      projectId,
-      searchQuery: searchQuery ?? undefined,
-    },
-    { enabled: isBetaEnabled },
-  );
-
-  const userMetricsV4 = api.users.metricsFromEvents.useQuery(
-    {
-      projectId,
-      userIds: usersV4.data?.users.map((u) => u.userId) ?? [],
-      filter: filterState,
-    },
-    {
-      enabled: usersV4.isSuccess && isBetaEnabled,
-      trpc: {
-        context: {
-          skipBatch: true,
-        },
-      },
-    },
-  );
-
-  // Select the active query based on beta state
-  const users = isBetaEnabled ? usersV4 : usersV3;
-  const userMetrics = isBetaEnabled ? userMetricsV4 : userMetricsV3;
 
   type UserCoreOutput = RouterOutput["users"]["all"]["users"][number];
   type UserMetricsOutput = RouterOutput["users"]["metrics"][number];
@@ -247,15 +185,15 @@ const UsersTable = ({ isBetaEnabled }: { isBetaEnabled: boolean }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users.isSuccess, users.data]);
 
-  const columns: ConsoleColumnDef<RowData>[] = [
+  const columns: HanzoColumnDef<RowData>[] = [
     {
       accessorKey: "userId",
       enableColumnFilter: true,
       header: "User ID",
       headerTooltip: {
         description:
-          "The unique identifier for the user that was logged in Hanzo. See docs for more details on how to set this up.",
-        href: "https://hanzo.ai/docs/observability/features/users",
+          "The unique identifier for the user that was logged in Hanzo Console. See docs for more details on how to set this up.",
+        href: "https://hanzo.com/docs/observability/features/users",
       },
       size: 150,
       cell: ({ row }) => {
@@ -318,7 +256,7 @@ const UsersTable = ({ isBetaEnabled }: { isBetaEnabled: boolean }) => {
       headerTooltip: {
         description:
           "Total number of events for the user, includes traces and observations. See data model for more details.",
-        href: "https://hanzo.ai/docs/observability/data-model",
+        href: "https://hanzo.com/docs/observability/data-model",
       },
       size: 120,
       cell: ({ row }) => {
@@ -408,9 +346,7 @@ const UsersTable = ({ isBetaEnabled }: { isBetaEnabled: boolean }) => {
                       firstEvent: t.firstTrace?.toLocaleString() ?? "No event yet",
                       lastEvent: t.lastTrace?.toLocaleString() ?? "No event yet",
                       totalEvents: compactNumberFormatter(
-                        isBetaEnabled
-                          ? Number(t.totalObservations ?? 0)
-                          : Number(t.totalTraces ?? 0) + Number(t.totalObservations ?? 0),
+                        Number(t.totalTraces ?? 0) + Number(t.totalObservations ?? 0),
                       ),
                       totalTokens: compactNumberFormatter(t.totalTokens ?? 0),
                       totalCost: usdFormatter(t.sumCalculatedTotalCost ?? 0, 2, 2),

@@ -8,10 +8,10 @@ import { api } from "@/src/utils/api";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 import { projectNameSchema } from "@/src/features/auth/lib/projectNameSchema";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 
 export const NewProjectForm = ({ orgId, onSuccess }: { orgId: string; onSuccess: (projectId: string) => void }) => {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const { update: updateSession } = useSession();
 
   const form = useForm({

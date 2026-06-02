@@ -1,5 +1,5 @@
 import { PrettyJsonView } from "@/src/components/ui/PrettyJsonView";
-import { AnnotationQueueObjectType, type ScoreDomain, isGenerationLike } from "@hanzo/console-core";
+import { AnnotationQueueObjectType, type ScoreDomain, isGenerationLike } from "@hanzo/shared";
 import { Badge } from "@/src/components/ui/badge";
 import { type ObservationReturnType } from "@/src/server/api/routers/traces";
 import { api } from "@/src/utils/api";
@@ -29,8 +29,8 @@ import { ExternalLinkIcon, InfoIcon, PlusCircle } from "lucide-react";
 import { UpsertModelFormDialog } from "@/src/features/models/components/UpsertModelFormDialog";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { ItemBadge } from "@/src/components/ItemBadge";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
-import { Tabs, TabsList, TabsTrigger } from "@hanzo/ui";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Switch } from "@/src/components/ui/switch";
 import { useRouter } from "next/router";
 import { CopyIdsPopover } from "@/src/components/trace2/components/_shared/CopyIdsPopover";
@@ -76,7 +76,7 @@ export const ObservationPreview = ({
     setCurrentView,
   );
 
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const [isPrettyViewAvailable, setIsPrettyViewAvailable] = useState(false);
 
   const isAuthenticatedAndProjectMember = useIsAuthenticatedAndProjectMember(projectId);
@@ -374,7 +374,7 @@ export const ObservationPreview = ({
         <TabsBar
           value={selectedTab.includes("preview") ? "preview" : "scores"}
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
-          onValueChange={(value: string) => setSelectedTab(value)}
+          onValueChange={(value) => setSelectedTab(value)}
         >
           {viewType === "detailed" && (
             <TabsBarList>
@@ -385,7 +385,7 @@ export const ObservationPreview = ({
                   <Tabs
                     className="ml-auto h-fit px-2 py-0.5"
                     value={selectedViewTab}
-                    onValueChange={(value: string) => {
+                    onValueChange={(value) => {
                       capture("trace_detail:io_mode_switch", { view: value });
                       handleViewTabChange(value);
                     }}
@@ -488,7 +488,6 @@ export const ObservationPreview = ({
                   observationId={preloadedObservation.id}
                   hiddenColumns={["traceId", "observationId", "traceName", "jobConfigurationId", "userId"]}
                   localStorageSuffix="ObservationPreview"
-                  disableUrlPersistence
                 />
               </div>
             </TabsBarContent>

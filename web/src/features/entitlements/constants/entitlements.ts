@@ -1,4 +1,4 @@
-import { type Plan } from "@hanzo/console-core";
+import { type Plan } from "@hanzo/shared";
 
 // Entitlements: Binary feature access
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
@@ -21,37 +21,13 @@ export const entitlements = [
   "model-based-evaluations",
   "playground",
   "prompt-experiments",
-  "integration-insights",
+  "integration-posthog",
 ] as const;
 export type Entitlement = (typeof entitlements)[number];
 
 const cloudAllPlansEntitlements: Entitlement[] = ["cloud-billing", "trace-deletion"];
 
-// All features available for self-hosted and OSS deployments (permissive open source)
-const allEntitlements: Entitlement[] = [
-  "rbac-project-roles",
-  "trace-deletion",
-  "audit-logs",
-  "data-retention",
-  "scheduled-blob-exports",
-  "prompt-protected-labels",
-  "admin-api",
-  "annotation-queues",
-  "model-based-evaluations",
-  "playground",
-  "prompt-experiments",
-  "integration-insights",
-  "self-host-ui-customization",
-  "self-host-allowed-organization-creators",
-];
-
-const unlimitedLimits = {
-  "annotation-queue-count": false as const,
-  "organization-member-count": false as const,
-  "data-access-days": false as const,
-  "model-based-evaluations-count-evaluators": false as const,
-  "prompt-management-count-prompts": false as const,
-};
+const selfHostedAllPlansEntitlements: Entitlement[] = ["trace-deletion", "scheduled-blob-exports"];
 
 // Entitlement Limits: Limits on the number of resources that can be created/used
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
@@ -79,6 +55,7 @@ export const entitlementAccess: Record<
   }
 > = {
   "cloud:free": {
+    // Add new free plan
     entitlements: [...cloudAllPlansEntitlements],
     entitlementLimits: {
       "organization-member-count": 2,
@@ -130,7 +107,13 @@ export const entitlementAccess: Record<
       "scheduled-blob-exports",
       "cloud-spend-alerts",
     ],
-    entitlementLimits: unlimitedLimits,
+    entitlementLimits: {
+      "annotation-queue-count": false,
+      "organization-member-count": false,
+      "data-access-days": false,
+      "model-based-evaluations-count-evaluators": false,
+      "prompt-management-count-prompts": false,
+    },
   },
   "cloud:enterprise": {
     entitlements: [
@@ -144,23 +127,68 @@ export const entitlementAccess: Record<
       "scheduled-blob-exports",
       "cloud-spend-alerts",
     ],
-    entitlementLimits: unlimitedLimits,
+    entitlementLimits: {
+      "annotation-queue-count": false,
+      "organization-member-count": false,
+      "data-access-days": false,
+      "model-based-evaluations-count-evaluators": false,
+      "prompt-management-count-prompts": false,
+    },
   },
-  // Open source and self-hosted: full access to all features, no limits
   oss: {
-    entitlements: allEntitlements,
-    entitlementLimits: unlimitedLimits,
+    entitlements: selfHostedAllPlansEntitlements,
+    entitlementLimits: {
+      "annotation-queue-count": false,
+      "organization-member-count": false,
+      "data-access-days": false,
+      "model-based-evaluations-count-evaluators": false,
+      "prompt-management-count-prompts": false,
+    },
   },
   "self-hosted:pro": {
-    entitlements: allEntitlements,
-    entitlementLimits: unlimitedLimits,
+    entitlements: selfHostedAllPlansEntitlements,
+    entitlementLimits: {
+      "annotation-queue-count": false,
+      "organization-member-count": false,
+      "data-access-days": false,
+      "model-based-evaluations-count-evaluators": false,
+      "prompt-management-count-prompts": false,
+    },
   },
   "self-hosted:team": {
-    entitlements: allEntitlements,
-    entitlementLimits: unlimitedLimits,
+    entitlements: [
+      ...selfHostedAllPlansEntitlements,
+      "rbac-project-roles",
+      "self-host-allowed-organization-creators",
+      "self-host-ui-customization",
+      "audit-logs",
+      "data-retention",
+      "prompt-protected-labels",
+      "admin-api",
+    ],
+    entitlementLimits: {
+      "annotation-queue-count": false,
+      "organization-member-count": false,
+      "data-access-days": false,
+      "model-based-evaluations-count-evaluators": false,
+      "prompt-management-count-prompts": false,
+    },
   },
   "self-hosted:dev": {
-    entitlements: allEntitlements,
-    entitlementLimits: unlimitedLimits,
+    entitlements: [
+      ...selfHostedAllPlansEntitlements,
+      "annotation-queues",
+      "model-based-evaluations",
+      "playground",
+      "prompt-experiments",
+      "integration-posthog",
+    ],
+    entitlementLimits: {
+      "annotation-queue-count": 1,
+      "organization-member-count": 2,
+      "data-access-days": 30,
+      "model-based-evaluations-count-evaluators": 1,
+      "prompt-management-count-prompts": false,
+    },
   },
 };

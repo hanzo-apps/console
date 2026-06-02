@@ -1,31 +1,40 @@
-import React, { useEffect } from "react";
+import React, { useCallback } from "react";
 import { useRouter } from "next/router";
+import { useSession } from "next-auth/react";
 import { useQueryParams, StringParam } from "use-query-params";
 import TracesTable from "@/src/components/table/use-cases/traces";
 import Page from "@/src/components/layouts/page";
 import { api } from "@/src/utils/api";
 import { TracesOnboarding } from "@/src/components/onboarding/TracesOnboarding";
 import { getTracingTabs, TRACING_TABS } from "@/src/features/navigation/utils/tracing-tabs";
-import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
+import { useObservationListBeta } from "@/src/features/events/hooks/useObservationListBeta";
 import ObservationsEventsTable from "@/src/features/events/components/EventsTable";
-import { useQueryProject } from "@/src/features/projects/hooks";
+import { Switch } from "@/src/components/ui/switch";
+import { Label } from "@/src/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
 
 export default function Traces() {
   const router = useRouter();
   const projectId = router.query.projectId as string;
-  const { isBetaEnabled } = useV4Beta();
-  const [, setQueryParams] = useQueryParams({ viewMode: StringParam });
-  const { project } = useQueryProject();
+  const { data: session } = useSession();
+  const { isBetaEnabled, setBetaEnabled: setBetaEnabledRaw } = useObservationListBeta();
 
-  // Clear viewMode query when beta is turned off (e.g. from sidebar)
-  useEffect(() => {
-    if (!isBetaEnabled) {
-      setQueryParams({ viewMode: undefined });
-    }
-  }, [isBetaEnabled, setQueryParams]);
+  // clear viewMode param query when beta is turned off
+  const [, setQueryParams] = useQueryParams({ viewMode: StringParam });
+  const setBetaEnabled = useCallback(
+    (enabled: boolean) => {
+      setBetaEnabledRaw(enabled);
+      if (!enabled) {
+        setQueryParams({ viewMode: undefined });
+      }
+    },
+    [setBetaEnabledRaw, setQueryParams],
+  );
+
+  // TODO: remove for prod go-live
+  const showBetaToggle = session?.user?.email?.endsWith("@hanzo.com");
 
   // Check if the user has tracing configured
-  // Skip polling entirely if the project flag is already set in the session
   const { data: hasTracingConfigured, isLoading } = api.traces.hasTracingConfigured.useQuery(
     { projectId },
     {
@@ -35,13 +44,30 @@ export default function Traces() {
           skipBatch: true,
         },
       },
-      refetchInterval: project?.hasTraces ? false : 10_000,
-      initialData: project?.hasTraces ? true : undefined,
-      staleTime: project?.hasTraces ? Infinity : 0,
+      refetchInterval: 10_000,
     },
   );
 
   const showOnboarding = !isLoading && !hasTracingConfigured;
+
+  const betaToggle = showBetaToggle ? (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2">
+            <Switch id="beta-toggle" checked={isBetaEnabled} onCheckedChange={setBetaEnabled} />
+            <Label htmlFor="beta-toggle" className="cursor-pointer text-xs">
+              Beta
+            </Label>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          Try the new unified observations view powered by the events table
+          <p>Try the high performance events based observation view</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  ) : null;
 
   if (showOnboarding) {
     return (
@@ -50,9 +76,10 @@ export default function Traces() {
           title: "Tracing",
           help: {
             description:
-              "A trace represents a single function/api invocation. Traces contain observations. See [docs](https://hanzo.ai/docs/observability/data-model) to learn more.",
-            href: "https://hanzo.ai/docs/observability/data-model",
+              "A trace represents a single function/api invocation. Traces contain observations. See docs to learn more.",
+            href: "https://hanzo.com/docs/observability/data-model",
           },
+          actionButtonsLeft: betaToggle,
         }}
         scrollable
       >
@@ -66,23 +93,11 @@ export default function Traces() {
       headerProps={{
         title: "Tracing",
         help: {
-          description: (
-            <>
-              A trace represents a single function/api invocation. Traces contain observations. See{" "}
-              <a
-                href="https://hanzo.ai/docs/observability/data-model"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-primary/30 hover:decoration-primary"
-                onClick={(e) => e.stopPropagation()}
-              >
-                docs
-              </a>{" "}
-              to learn more.
-            </>
-          ),
-          href: "https://hanzo.ai/docs/observability/data-model",
+          description:
+            "A trace represents a single function/api invocation. Traces contain observations. See docs to learn more.",
+          href: "https://hanzo.com/docs/observability/data-model",
         },
+        actionButtonsLeft: betaToggle,
         tabsProps: isBetaEnabled
           ? undefined
           : {

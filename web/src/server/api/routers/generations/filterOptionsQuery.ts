@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import { ObservationType, timeFilter, type ObservationOptions } from "@hanzo/console-core";
+import { timeFilter, type ObservationOptions } from "@hanzo/shared";
 import { protectedProjectProcedure } from "@/src/server/api/trpc";
 import {
   getCategoricalScoresGroupedByName,
@@ -14,14 +14,13 @@ import {
   getTracesGroupedByName,
   getTracesGroupedByTags,
   tracesTableUiColumnDefinitions,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 
 export const filterOptionsQuery = protectedProjectProcedure
   .input(
     z.object({
       projectId: z.string(),
       startTimeFilter: z.array(timeFilter).optional(),
-      observationType: z.union([z.enum(ObservationType), z.literal("ALL")]).default("GENERATION"),
     }),
   )
   .query(async ({ input }) => {
@@ -38,7 +37,7 @@ export const filterOptionsQuery = protectedProjectProcedure
           }))
         : [];
 
-    const getDatastoreTraceName = async (): Promise<Array<{ traceName: string }>> => {
+    const getClickhouseTraceName = async (): Promise<Array<{ traceName: string }>> => {
       const traces = await getTracesGroupedByName(
         input.projectId,
         tracesTableUiColumnDefinitions,
@@ -47,7 +46,7 @@ export const filterOptionsQuery = protectedProjectProcedure
       return traces.map((i) => ({ traceName: i.name }));
     };
 
-    const getDatastoreTraceTags = async (): Promise<Array<{ tag: string }>> => {
+    const getClickhouseTraceTags = async (): Promise<Array<{ tag: string }>> => {
       const traces = await getTracesGroupedByTags({
         projectId: input.projectId,
         filter: traceTimestampFilters,
@@ -74,17 +73,13 @@ export const filterOptionsQuery = protectedProjectProcedure
       //model
       getObservationsGroupedByModel(input.projectId, startTimeFilter ?? []),
       //name
-      getObservationsGroupedByName(
-        input.projectId,
-        startTimeFilter ?? [],
-        input.observationType === "ALL" ? null : input.observationType,
-      ),
+      getObservationsGroupedByName(input.projectId, startTimeFilter ?? []),
       //prompt name
       getObservationsGroupedByPromptName(input.projectId, startTimeFilter ?? []),
       //trace name
-      getDatastoreTraceName(),
+      getClickhouseTraceName(),
       // trace tags
-      getDatastoreTraceTags(),
+      getClickhouseTraceTags(),
       // modelId
       getObservationsGroupedByModelId(input.projectId, startTimeFilter ?? []),
       // available tool names (from tool_definitions)

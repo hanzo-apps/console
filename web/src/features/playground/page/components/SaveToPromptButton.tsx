@@ -11,16 +11,16 @@ import {
   InputCommandItem,
   InputCommandList,
 } from "@/src/components/ui/input-command";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
 import { usePlaygroundContext } from "@/src/features/playground/page/context";
 import usePlaygroundCache from "@/src/features/playground/page/hooks/usePlaygroundCache";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { api } from "@/src/utils/api";
 import { cn } from "@/src/utils/tailwind";
 import DocPopup from "@/src/components/layouts/doc-popup";
-import { PromptType } from "@hanzo/console-core";
+import { PromptType } from "@hanzo/shared";
 
 interface SaveToPromptButtonProps {
   className?: string;
@@ -29,7 +29,7 @@ interface SaveToPromptButtonProps {
 export const SaveToPromptButton: React.FC<SaveToPromptButtonProps> = ({ className }) => {
   const [selectedPromptId, setSelectedPromptId] = useState("");
   const { modelParams, messages, output, promptVariables } = usePlaygroundContext();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const router = useRouter();
   const projectId = useProjectIdFromURL();
   const { setPlaygroundCache } = usePlaygroundCache();

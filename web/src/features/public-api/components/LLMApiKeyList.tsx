@@ -11,12 +11,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@hanzo/ui";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 import { DialogDescription } from "@radix-ui/react-dialog";
-import { Alert, AlertDescription, AlertTitle } from "@hanzo/ui";
+import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { CreateLLMApiKeyDialog } from "./CreateLLMApiKeyDialog";
 import { UpdateLLMApiKeyDialog } from "./UpdateLLMApiKeyDialog";
 
@@ -125,7 +125,7 @@ export function LlmApiKeyList(props: { projectId: string }) {
 
 // show dialog to let user confirm that this is a destructive action
 function DeleteApiKeyButton(props: { projectId: string; apiKeyId: string }) {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const hasAccess = useHasProjectAccess({
     projectId: props.projectId,
     scope: "llmApiKeys:delete",

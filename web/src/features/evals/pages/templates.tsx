@@ -5,14 +5,14 @@ import Link from "next/link";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { Lock, Plus } from "lucide-react";
 import EvalsTemplateTable from "@/src/features/evals/components/eval-templates-table";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { getEvalsTabs, EVALS_TABS } from "@/src/features/navigation/utils/evals-tabs";
 import { ManageDefaultEvalModel } from "@/src/features/evals/components/manage-default-eval-model";
 
 export default function TemplatesPage() {
   const router = useRouter();
   const projectId = router.query.projectId as string;
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const hasWriteAccess = useHasProjectAccess({
     projectId,
     scope: "evalTemplate:CUD",
@@ -33,7 +33,7 @@ export default function TemplatesPage() {
         title: "LLM-as-a-Judge Evaluators",
         help: {
           description: "View all hanzo managed and custom evaluators.",
-          href: "https://hanzo.ai/docs/evaluation/evaluation-methods/llm-as-a-judge",
+          href: "https://hanzo.com/docs/evaluation/evaluation-methods/llm-as-a-judge",
         },
         tabsProps: {
           tabs: getEvalsTabs(projectId),

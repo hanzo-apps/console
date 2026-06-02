@@ -1,6 +1,6 @@
 import { VERSION } from "@/src/constants";
-import { ServerInsights } from "@/src/features/insights-analytics/ServerInsights";
-import { Prisma, prisma } from "@hanzo/console-core/src/db";
+import { ServerPosthog } from "@/src/features/posthog-analytics/ServerPosthog";
+import { Prisma, prisma } from "@hanzo/shared/src/db";
 import { v4 as uuidv4 } from "uuid";
 import {
   getDatasetRunItemCountsByProjectInCreationInterval,
@@ -8,7 +8,7 @@ import {
   getScoreCountsByProjectInCreationInterval,
   getTraceCountsByProjectInCreationInterval,
   logger,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { env } from "@/src/env.mjs";
 
 // Interval between jobs in minutes
@@ -35,7 +35,7 @@ export async function telemetry() {
       const { jobStartedAt, lastRun, clientId } = job;
 
       // Run telemetry job
-      await insightsTelemetry({
+      await posthogTelemetry({
         startTimeframe: lastRun,
         endTimeframe: jobStartedAt,
         clientId,
@@ -142,7 +142,7 @@ async function jobScheduler(): Promise<
   return { shouldRunJob: true, jobStartedAt, lastRun, clientId };
 }
 
-async function insightsTelemetry({
+async function posthogTelemetry({
   startTimeframe,
   endTimeframe,
   clientId,
@@ -152,7 +152,7 @@ async function insightsTelemetry({
   clientId: string;
 }) {
   try {
-    const insights = new ServerInsights();
+    const posthog = new ServerPosthog();
     // Count projects
     const totalProjects = await prisma.project.count({
       where: {
@@ -161,25 +161,25 @@ async function insightsTelemetry({
     });
 
     // Count traces
-    const countTracesDatastore = await getTraceCountsByProjectInCreationInterval({
+    const countTracesClickhouse = await getTraceCountsByProjectInCreationInterval({
       start: startTimeframe ?? new Date(0),
       end: endTimeframe,
     });
-    const countTraces = countTracesDatastore.reduce((acc, curr) => acc + curr.count, 0);
+    const countTraces = countTracesClickhouse.reduce((acc, curr) => acc + curr.count, 0);
 
     // Count scores
-    const countScoresDatastore = await getScoreCountsByProjectInCreationInterval({
+    const countScoresClickhouse = await getScoreCountsByProjectInCreationInterval({
       start: startTimeframe ?? new Date(0),
       end: endTimeframe,
     });
-    const countScores = countScoresDatastore.reduce((acc, curr) => acc + curr.count, 0);
+    const countScores = countScoresClickhouse.reduce((acc, curr) => acc + curr.count, 0);
 
     // Count observations
-    const countObservationsDatastore = await getObservationCountsByProjectInCreationInterval({
+    const countObservationsClickhouse = await getObservationCountsByProjectInCreationInterval({
       start: startTimeframe ?? new Date(0),
       end: endTimeframe,
     });
-    const countObservations = countObservationsDatastore.reduce((acc, curr) => acc + curr.count, 0);
+    const countObservations = countObservationsClickhouse.reduce((acc, curr) => acc + curr.count, 0);
 
     // Count datasets
     const countDatasets = await prisma.dataset.count({
@@ -211,11 +211,11 @@ async function insightsTelemetry({
       },
     });
 
-    const countDatasetRunItemsDatastore = await getDatasetRunItemCountsByProjectInCreationInterval({
+    const countDatasetRunItemsClickhouse = await getDatasetRunItemCountsByProjectInCreationInterval({
       start: startTimeframe ?? new Date(0),
       end: endTimeframe,
     });
-    const countDatasetRunItems = countDatasetRunItemsDatastore.reduce((acc, curr) => acc + curr.count, 0);
+    const countDatasetRunItems = countDatasetRunItemsClickhouse.reduce((acc, curr) => acc + curr.count, 0);
 
     // Domains (no PII)
     const domains = await prisma.$queryRaw<Array<{ domain: string }>>`
@@ -229,7 +229,7 @@ async function insightsTelemetry({
       LIMIT 30
     `;
 
-    insights.capture({
+    posthog.capture({
       distinctId: "docker:" + clientId,
       event: "telemetry",
       properties: {
@@ -256,7 +256,7 @@ async function insightsTelemetry({
       },
     });
 
-    await insights.shutdown();
+    await posthog.shutdown();
   } catch (error) {
     logger.error(error);
   }

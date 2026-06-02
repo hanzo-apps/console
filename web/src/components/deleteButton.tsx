@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { Button } from "@/src/components/ui/button";
 import { LockIcon, TrashIcon } from "lucide-react";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { type ProjectScope } from "@/src/features/rbac/constants/projectAccessRights";
 import { api } from "@/src/utils/api";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@hanzo/ui";
+import { Label } from "@/src/components/ui/label";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { useHasEntitlement } from "@/src/features/entitlements/hooks";
 
@@ -28,8 +28,8 @@ type BaseDeleteButtonProps = Omit<DeleteButtonProps, "itemId"> & {
   variant?: "outline" | "ghost";
   scope: NonNullable<DeleteButtonProps["scope"]>;
   invalidateFunc: NonNullable<DeleteButtonProps["invalidateFunc"]>;
-  captureDeleteOpen: (capture: ReturnType<typeof useInsightsCapture>, isTableAction: boolean) => void;
-  captureDeleteSuccess: (capture: ReturnType<typeof useInsightsCapture>, isTableAction: boolean) => void;
+  captureDeleteOpen: (capture: ReturnType<typeof usePostHogClientCapture>, isTableAction: boolean) => void;
+  captureDeleteSuccess: (capture: ReturnType<typeof usePostHogClientCapture>, isTableAction: boolean) => void;
   entityToDeleteName: string;
   customDeletePrompt?: string;
   executeDeleteMutation: (onSuccess: () => void) => Promise<void>;
@@ -57,7 +57,7 @@ export function DeleteButton({
 }: BaseDeleteButtonProps) {
   const [isDeleted, setIsDeleted] = useState(false);
   const router = useRouter();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
 
   const hasAccess = useHasProjectAccess({ projectId, scope: scope });
@@ -92,12 +92,12 @@ export function DeleteButton({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+      <PopoverContent onClick={(e) => e.stopPropagation()}>
         <h2 className="text-md mb-3 font-semibold">Please confirm</h2>
         <p className="mb-3 max-w-72 text-sm">
           {customDeletePrompt ??
-            `This action cannot be undone. It removes all the data associated with
-            this ${entityToDeleteName}. If this is the project default, it will be deleted for all users.`}
+            `This action cannot be undone and removes all the data associated with
+            this ${entityToDeleteName}.`}
         </p>
         {deleteConfirmation && (
           <div className="mb-4 grid w-full gap-1.5">

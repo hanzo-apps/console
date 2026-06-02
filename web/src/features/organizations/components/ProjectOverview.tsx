@@ -1,59 +1,20 @@
-import { BookOpen, FolderOpen, LockIcon, MessageSquareText, PlusIcon, Settings, Users } from "lucide-react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { Separator } from "@hanzo/ui";
+import ContainerPage from "@/src/components/layouts/container-page";
 import Header from "@/src/components/layouts/header";
 import { Button } from "@/src/components/ui/button";
-import Link from "next/link";
-import { StringParam, useQueryParams } from "use-query-params";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
-import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { env } from "@/src/env.mjs";
-import { Fragment } from "react";
-import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
+import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { createOrganizationRoute, createProjectRoute } from "@/src/features/setup/setupRoutes";
-import { isCloudPlan, planLabels } from "@hanzo/console-core";
-import ContainerPage from "@/src/components/layouts/container-page";
+import { isCloudPlan } from "@hanzo/shared";
+import { Divider } from "@tremor/react";
+import { BookOpen, LockIcon, MessageSquareText, PlusIcon, Settings, Users } from "lucide-react";
 import { type User } from "next-auth";
-
-// Organization logos — keyed by org name (lowercase)
-const ORG_LOGOS: Record<string, string> = {
-  hanzo: "https://hanzo.ai/logo/icon.svg",
-  lux: "https://lux.network/logo/icon.svg",
-  zoo: "https://zoo.ngo/logo/icon.svg",
-  pars: "https://pars.network/logo/icon.svg",
-};
-
-// Get org initial as fallback when no logo available
-const getOrgInitial = (name: string) => name.charAt(0).toUpperCase();
-
-const OrgLogo = ({ name, size = 32 }: { name: string; size?: number }) => {
-  const logo = ORG_LOGOS[name.toLowerCase()];
-  if (logo) {
-    return (
-      <img
-        src={logo}
-        alt={name}
-        width={size}
-        height={size}
-        className="rounded-md"
-        onError={(e) => {
-          // Fallback to initial on load error
-          (e.target as HTMLImageElement).style.display = "none";
-          (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
-        }}
-      />
-    );
-  }
-  return (
-    <div
-      className="flex items-center justify-center rounded-md bg-primary/10 text-primary font-semibold"
-      style={{ width: size, height: size, fontSize: size * 0.5 }}
-    >
-      {getOrgInitial(name)}
-    </div>
-  );
-};
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { Fragment } from "react";
+import { StringParam, useQueryParams } from "use-query-params";
 
 const OrganizationProjectTiles = ({ org, search }: { org: User["organizations"][number]; search?: string }) => {
   return (
@@ -61,15 +22,9 @@ const OrganizationProjectTiles = ({ org, search }: { org: User["organizations"][
       {org.projects
         .filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase()))
         .map((project) => (
-          <Card key={project.id} className="group hover:border-primary/30 transition-colors">
-            <CardHeader className="flex flex-row items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <FolderOpen size={20} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <CardTitle className="truncate text-base">{project.name}</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">{org.name}</p>
-              </div>
+          <Card key={project.id}>
+            <CardHeader>
+              <CardTitle className="truncate text-base">{project.name}</CardTitle>
             </CardHeader>
             {!project.deletedAt ? (
               <CardFooter className="gap-2">
@@ -215,9 +170,6 @@ const SingleOrganizationProjectOverviewTile = ({ orgId, search }: { orgId: strin
 
   return (
     <div key={orgId} className="mb-10">
-      <div className="flex items-center gap-3 mb-2">
-        <OrgLogo name={org.name} size={36} />
-      </div>
       <Header
         title={org.name}
         className="truncate"
@@ -225,6 +177,7 @@ const SingleOrganizationProjectOverviewTile = ({ orgId, search }: { orgId: strin
         label={
           isCloudPlan(org.plan)
             ? {
+                // text: planLabels[org.plan],
                 text: org.cloudConfig?.plan ?? "Free",
                 href: `/organization/${org.id}/settings/billing`,
               }
@@ -308,7 +261,7 @@ export const OrganizationProjectOverview = () => {
         })
         .map((org) => (
           <Fragment key={org.id}>
-            {!queryOrgId && org.id === env.NEXT_PUBLIC_DEMO_ORG_ID && <Separator />}
+            {!queryOrgId && org.id === env.NEXT_PUBLIC_DEMO_ORG_ID && <Divider />}
             <SingleOrganizationProjectOverviewTile orgId={org.id} search={search ?? undefined} />
           </Fragment>
         ))}

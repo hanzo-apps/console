@@ -6,8 +6,7 @@ import {
   AGGREGATABLE_SCORE_TYPES,
   ScoreDataTypeEnum,
   type ScoreDomain,
-} from "@hanzo/console-core";
-import type { FullEventsObservations } from "@hanzo/console-core/src/server";
+} from "@hanzo/shared";
 import { type WithStringifiedMetadata, toDomainArrayWithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 import { partition } from "lodash";
 
@@ -28,7 +27,6 @@ interface UseEventsTraceDataResult {
     | undefined;
   isLoading: boolean;
   error: unknown;
-  cutoffObservationsAfterMaxCount: boolean;
 }
 
 /**
@@ -46,11 +44,17 @@ export function useEventsTraceData(props: UseEventsTraceDataProps): UseEventsTra
   const { projectId, traceId, enabled = true } = props;
 
   // Step 1: Fetch all observations for this trace (without I/O for performance)
-  const eventsQuery = api.events.byTraceId.useQuery(
+  // TODO: paginationZod caps limit at 100 - for traces with >100 observations,
+  // implement pagination or create a dedicated byTraceId endpoint with higher limit
+  const eventsQuery = api.events.all.useQuery(
     {
       projectId,
-      traceId,
-      timestamp: props.timestamp,
+      filter: [{ column: "traceId", operator: "=", value: traceId, type: "string" }],
+      searchQuery: null,
+      searchType: [],
+      orderBy: { column: "startTime", order: "ASC" },
+      page: 1,
+      limit: 100,
     },
     {
       enabled: enabled && !!traceId,
@@ -63,21 +67,19 @@ export function useEventsTraceData(props: UseEventsTraceDataProps): UseEventsTra
   );
 
   // Step 2: Find root observation and calculate time range for batchIO
-  const observations = eventsQuery.data?.observations as FullEventsObservations | undefined;
-
   const rootObservation = useMemo(() => {
-    if (!observations?.length) return null;
-    return observations.find((o) => !o.parentObservationId);
-  }, [observations]);
+    if (!eventsQuery.data?.observations?.length) return null;
+    return eventsQuery.data.observations.find((o) => !o.parentObservationId);
+  }, [eventsQuery.data]);
 
   const timeRange = useMemo(() => {
-    if (!observations?.length) return null;
-    const times = observations.map((o) => o.startTime.getTime());
+    if (!eventsQuery.data?.observations?.length) return null;
+    const times = eventsQuery.data.observations.map((o) => o.startTime.getTime());
     return {
       min: new Date(Math.min(...times)),
       max: new Date(Math.max(...times)),
     };
-  }, [observations]);
+  }, [eventsQuery.data]);
 
   // Step 3: Fetch I/O for root observation (for trace-level I/O display)
   const rootIOQuery = api.events.batchIO.useQuery(
@@ -95,7 +97,7 @@ export function useEventsTraceData(props: UseEventsTraceDataProps): UseEventsTra
 
   // Step 4: Fetch scores for the trace
   const scoresQuery = api.events.scoresForTrace.useQuery(
-    { traceId, projectId, timestamp: props.timestamp },
+    { traceId, projectId },
     {
       enabled: enabled && !!traceId,
       staleTime: 60 * 1000,
@@ -104,7 +106,7 @@ export function useEventsTraceData(props: UseEventsTraceDataProps): UseEventsTra
 
   // Step 5: Transform and merge data
   const transformed = useMemo(() => {
-    if (!observations?.length) return null;
+    if (!eventsQuery.data?.observations?.length) return null;
 
     // Validate and partition scores
     const validatedScores = filterAndValidateDbScoreList({
@@ -123,7 +125,7 @@ export function useEventsTraceData(props: UseEventsTraceDataProps): UseEventsTra
 
     // Adapt events to trace format
     const adapted = adaptEventsToTraceFormat({
-      events: observations,
+      events: eventsQuery.data.observations,
       traceId,
       rootIO: rootIO ? { input: rootIO.input, output: rootIO.output } : undefined,
     });
@@ -134,14 +136,11 @@ export function useEventsTraceData(props: UseEventsTraceDataProps): UseEventsTra
       scores: scoresDomain,
       corrections,
     };
-  }, [observations, traceId, rootIOQuery.data, scoresQuery.data]);
-
-  const cutoffObservationsAfterMaxCount = eventsQuery.data?.cutoffObservationsAfterMaxCount ?? false;
+  }, [eventsQuery.data, traceId, rootIOQuery.data, scoresQuery.data]);
 
   return {
     data: transformed ?? undefined,
     isLoading: eventsQuery.isLoading || scoresQuery.isLoading,
     error: eventsQuery.error || scoresQuery.error,
-    cutoffObservationsAfterMaxCount,
   };
 }

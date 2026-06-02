@@ -1,6 +1,5 @@
 import { transformToAnnotationScores } from "@/src/features/scores/lib/transformScores";
-import { type ScoreDomain, type ScoreAggregate, type ScoreConfigDomain } from "@hanzo/console-core";
-import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
+import { type ScoreDomain, type ScoreAggregate, type ScoreConfigDomain } from "@hanzo/shared";
 
 const mockConfigs: ScoreConfigDomain[] = [
   {
@@ -39,7 +38,6 @@ describe("transformToAnnotationScores - flat scores", () => {
         dataType: "NUMERIC",
         value: 8,
         stringValue: null,
-        longStringValue: "",
         configId: "config-1",
         comment: "Good quality",
         traceId: "trace-1",
@@ -63,7 +61,6 @@ describe("transformToAnnotationScores - flat scores", () => {
         dataType: "CATEGORICAL",
         value: 1,
         stringValue: "positive",
-        longStringValue: "positive",
         configId: "config-2",
         comment: null,
         traceId: "trace-1",
@@ -82,7 +79,7 @@ describe("transformToAnnotationScores - flat scores", () => {
       },
     ];
 
-    const result = transformToAnnotationScores(flatScores as any, mockConfigs);
+    const result = transformToAnnotationScores(flatScores, mockConfigs);
 
     expect(result).toHaveLength(2);
     expect(result[0]).toEqual({
@@ -124,7 +121,6 @@ describe("transformToAnnotationScores - flat scores", () => {
         dataType: "NUMERIC",
         value: 8,
         stringValue: null,
-        longStringValue: "",
         configId: "config-1",
         comment: null,
         traceId: "trace-1",
@@ -148,7 +144,6 @@ describe("transformToAnnotationScores - flat scores", () => {
         dataType: "CATEGORICAL",
         value: 1,
         stringValue: "positive",
-        longStringValue: "positive",
         configId: "config-2",
         comment: null,
         traceId: "trace-1",
@@ -167,7 +162,7 @@ describe("transformToAnnotationScores - flat scores", () => {
       },
     ];
 
-    const result = transformToAnnotationScores(flatScores as any, mockConfigs);
+    const result = transformToAnnotationScores(flatScores, mockConfigs);
 
     expect(result).toHaveLength(1);
     expect(result[0]?.name).toBe("sentiment");
@@ -183,7 +178,6 @@ describe("transformToAnnotationScores - flat scores", () => {
         dataType: "NUMERIC",
         value: 8,
         stringValue: null,
-        longStringValue: "",
         configId: "config-99",
         comment: null,
         traceId: "trace-1",
@@ -202,7 +196,7 @@ describe("transformToAnnotationScores - flat scores", () => {
       },
     ];
 
-    const result = transformToAnnotationScores(flatScores as any, mockConfigs);
+    const result = transformToAnnotationScores(flatScores, mockConfigs);
 
     expect(result).toHaveLength(0);
   });

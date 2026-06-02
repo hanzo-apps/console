@@ -1,10 +1,10 @@
 /** @jest-environment node */
 
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { disconnectQueues, makeAPICall } from "@/src/__tests__/test-utils";
 import { v4 as uuidv4, v4 } from "uuid";
-import { PromptSchema, type ValidatedPrompt, type ChatMessage, type Prompt, PromptType } from "@hanzo/console-core";
-import { parsePromptDependencyTags } from "@hanzo/console-core";
+import { PromptSchema, type ValidatedPrompt, type ChatMessage, type Prompt, PromptType } from "@hanzo/shared";
+import { parsePromptDependencyTags } from "@hanzo/shared";
 import { generateId, nanoid } from "ai";
 
 import { type PromptsMetaResponse } from "@/src/features/prompts/server/actions/getPromptsMeta";
@@ -13,7 +13,7 @@ import {
   getObservationById,
   MAX_PROMPT_NESTING_DEPTH,
   ChatMessageType,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { randomUUID } from "node:crypto";
 import waitForExpect from "wait-for-expect";
 import { createPrompt } from "@/src/features/prompts/server/actions/createPrompt";
@@ -113,7 +113,7 @@ const testPromptEquality = (promptParams: CreatePromptInDBParams, prompt: Prompt
   expect(prompt.createdBy).toBe(promptParams.createdBy);
   expect(prompt.config).toEqual(promptParams.config);
   expect(prompt.tags).toEqual([]);
-  expect((prompt as any).resolutionGraph).toBeNull();
+  expect(prompt.resolutionGraph).toBeNull();
 };
 
 describe("/api/public/v2/prompts API Endpoint", () => {
@@ -129,6 +129,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       const body = response.body;
 
       expect(body).toHaveProperty("error");
+      // @ts-expect-error
       expect(body.error).toContain("Unauthorized");
     });
 
@@ -568,7 +569,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
 
       // Verify the placeholder message structure is preserved
       const messages = validatedPrompt.prompt as ChatMessage[];
-      const placeholderMessage = messages[1] as unknown as {
+      const placeholderMessage = messages[1] as {
         type: ChatMessageType.Placeholder;
         name: string;
       };
@@ -596,7 +597,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       const { body, status } = await makeAPICall("GET", `/api/public/prompts?name=${promptName}`, undefined, auth);
       expect(status).toBe(404);
       expect(body).toEqual({
-        error: "HanzoCloudNotFoundError",
+        error: "HanzoNotFoundError",
         message: "Prompt not found",
       });
     });
@@ -624,7 +625,8 @@ describe("/api/public/v2/prompts API Endpoint", () => {
 
       const { body, status } = await makeAPICall("GET", `${baseURI}/${promptName}`, undefined, auth);
       expect(status).toBe(404);
-      expect(body.error).toBe("HanzoCloudNotFoundError");
+      // @ts-expect-error
+      expect(body.error).toBe("HanzoNotFoundError");
     });
 
     it("should fail if text prompt has message format", async () => {
@@ -646,7 +648,8 @@ describe("/api/public/v2/prompts API Endpoint", () => {
 
       const { body, status } = await makeAPICall("GET", `${baseURI}/${promptName}`, undefined, auth);
       expect(status).toBe(404);
-      expect(body.error).toBe("HanzoCloudNotFoundError");
+      // @ts-expect-error
+      expect(body.error).toBe("HanzoNotFoundError");
     });
 
     it("should fail if previous versions have different prompt type", async () => {
@@ -686,6 +689,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       );
 
       expect(postResponse2.status).toBe(400);
+      // @ts-expect-error
       expect(postResponse2.body.error).toBe("InvalidRequestError");
 
       // Check if the prompt is still the chat prompt
@@ -705,7 +709,8 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       // Check that the text prompt has not been created
       const getResponse2 = await makeAPICall("GET", `${baseURI}/${promptName}?version=2`, undefined, auth);
       expect(getResponse2.status).toBe(404);
-      expect(getResponse2.body.error).toBe("HanzoCloudNotFoundError");
+      // @ts-expect-error
+      expect(getResponse2.body.error).toBe("HanzoNotFoundError");
     });
 
     it("should correctly handle overwriting labels", async () => {
@@ -770,6 +775,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       if (!isPrompt(fetchedProductionPrompt.body)) {
         throw new Error("Expected body to be a prompt");
       }
+      // @ts-expect-error
       expect(fetchedProductionPrompt.body.id).toBe(prompt2.body.id);
       expect(fetchedProductionPrompt.body.labels).toEqual(["production"]); // Only production label should be present
 
@@ -781,6 +787,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
         throw new Error("Expected body to be a prompt");
       }
 
+      // @ts-expect-error
       expect(fetchedFirstPrompt.body.id).toBe(prompt1.body.id);
       expect(fetchedFirstPrompt.body.labels).toEqual(["development"]);
 
@@ -792,6 +799,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
         throw new Error("Expected body to be a prompt");
       }
 
+      // @ts-expect-error
       expect(fetchedThirdPrompt.body.id).toBe(prompt3.body.id);
       expect(fetchedThirdPrompt.body.labels).toEqual(["staging", "latest"]);
     });
@@ -1030,7 +1038,9 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("error");
       expect(response.body).toHaveProperty("message");
+      // @ts-expect-error
       expect(response.body.message).toContain("variables and placeholders must be unique");
+      // @ts-expect-error
       expect(response.body.message).toContain("userName");
     });
 
@@ -1082,6 +1092,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(v2Response.status).toBe(201);
       expect(v2Response.body).toHaveProperty("id");
       expect(v2Response.body).toHaveProperty("version");
+      // @ts-expect-error - Response body type is flexible for testing
       expect(v2Response.body.version).toBe(2);
     });
   });
@@ -1211,6 +1222,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       // Return 200 with empty list if name does not exist
       const response3 = await makeAPICall("GET", `${baseURI}?name=non-existent`, undefined, auth);
       expect(response3.status).toBe(200);
+      // @ts-expect-error
       expect(response3.body.data).toEqual([]);
     });
 
@@ -1235,6 +1247,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       // Return 200 with empty list if tag does not exist
       const response3 = await makeAPICall("GET", `${baseURI}?tag=non-existent`, undefined, auth);
       expect(response3.status).toBe(200);
+      // @ts-expect-error
       expect(response3.body.data).toEqual([]);
     });
 
@@ -1281,6 +1294,7 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       // Return 200 with empty list if label does not exist
       const response3 = await makeAPICall("GET", `${baseURI}?label=non-existent`, undefined, auth);
       expect(response3.status).toBe(200);
+      // @ts-expect-error
       expect(response3.body.data).toEqual([]);
     });
   });
@@ -1882,7 +1896,7 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       // Verify the resolution graph is returned with the correct structure
       const parentId = responseBody.id;
 
-      expect((responseBody as any).resolutionGraph).toEqual({
+      expect(responseBody.resolutionGraph).toEqual({
         root: {
           name: "parent-prompt",
           version: 1,
@@ -1925,7 +1939,7 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
 
       expect(parsedPromptAfterUpdate).toBe("Parent prompt with dependency: I am an updated child prompt");
 
-      expect((responseBodyAfterUpdate as any).resolutionGraph).toEqual({
+      expect(responseBodyAfterUpdate.resolutionGraph).toEqual({
         root: {
           name: "parent-prompt",
           version: 1,
@@ -2882,7 +2896,9 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty("error");
+      // @ts-expect-error
       expect(res.body.message).toContain("depending on");
+      // @ts-expect-error
       expect(res.body.message).toContain(parentName);
 
       // Verify child was NOT deleted
@@ -3006,9 +3022,13 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       const res = await makeAPICall("DELETE", `${baseURI}/${encodeURIComponent(childName)}?version=1`, undefined, auth);
 
       expect(res.status).toBe(400);
+      // @ts-expect-error
       expect(res.body.message).toContain("depending on");
+      // @ts-expect-error - Should mention blocking parent names
       expect(res.body.message).toContain(parent1Name);
+      // @ts-expect-error
       expect(res.body.message).toContain(parent3Name);
+      // @ts-expect-error - Should NOT mention parent2 (its dependency still satisfied)
       expect(res.body.message).not.toContain(parent2Name);
     });
 

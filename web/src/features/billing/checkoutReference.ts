@@ -1,11 +1,11 @@
 import { env } from "@/src/env.mjs";
 
 /**
- * Create a checkout client reference ID from an organization ID.
- * Used to link checkout sessions to organizations.
+ * Create a Stripe client reference ID from an organization ID
+ * This is used to link Stripe checkout sessions to organizations
  * Format: {cloudRegion}_{orgId}
  */
-export function createCheckoutReference(orgId: string): string | null {
+export function createStripeClientReference(orgId: string): string | null {
   if (!orgId) {
     return null;
   }
@@ -14,9 +14,9 @@ export function createCheckoutReference(orgId: string): string | null {
 }
 
 /**
- * Parse a checkout client reference ID to get the organization ID.
+ * Parse a Stripe client reference ID to get the organization ID
  */
-export function parseCheckoutReference(clientReferenceId: string): string | null {
+export function parseStripeClientReference(clientReferenceId: string): string | null {
   if (!clientReferenceId) {
     return null;
   }
@@ -30,23 +30,22 @@ export function parseCheckoutReference(clientReferenceId: string): string | null
 }
 
 /**
- * Extract org ID from a checkout client reference.
+ * Alias for parseStripeClientReference
  */
-export function getOrgIdFromCheckoutReference(clientReferenceId: string | null | undefined): string | undefined {
+export function getOrgIdFromStripeClientReference(clientReferenceId: string | null | undefined): string | undefined {
   if (!clientReferenceId) {
     return undefined;
   }
-  return parseCheckoutReference(clientReferenceId) ?? undefined;
+  return parseStripeClientReference(clientReferenceId) ?? undefined;
 }
 
 /**
- * Check if a client reference ID is from the current cloud region.
+ * Check if a client reference ID is from the current cloud region
  */
-export function isCheckoutReferenceFromCurrentCloudRegion(clientReferenceId: string | null | undefined): boolean {
+export function isStripeClientReferenceFromCurrentCloudRegion(clientReferenceId: string | null | undefined): boolean {
   if (!clientReferenceId) {
     return false;
   }
   const currentRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION || "DEFAULT";
   return clientReferenceId.startsWith(`${currentRegion}_`);
 }
-

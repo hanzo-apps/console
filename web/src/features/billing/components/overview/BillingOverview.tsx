@@ -1,78 +1,147 @@
-import { Card } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
+import { Card } from "@/src/components/ui/card";
+import { PlanSelectionModal } from "@/src/features/billing/components/PlanSectionModal";
+import { stripeProducts } from "@/src/features/billing/utils/stripeProducts";
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
 import { api } from "@/src/utils/api";
-import { numberFormatter } from "@/src/utils/numbers";
-import { MAX_EVENTS_FREE_PLAN } from "@/src/features/billing/constants";
-import { ExternalLink, TrendingUp } from "lucide-react";
-import type { Plan } from "@hanzo/console-core";
+import { useRouter } from "next/router";
+import { useState } from "react";
+import { planLabels, type Plan } from "@hanzo/shared";
 
-/**
- * Compact billing overview widget for the org settings main page.
- * Shows plan, usage, and a link to the full billing portal.
- */
 export const BillingOverview = () => {
+  const router = useRouter();
   const organization = useQueryOrganization();
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
 
-  const usage = api.cloudBilling.getUsage.useQuery(
-    { orgId: organization?.id as string },
-    { enabled: !!organization?.id, trpc: { context: { skipBatch: true } } },
+  const { data: usage } = api.cloudBilling.getUsage.useQuery(
+    {
+      orgId: organization?.id ?? "",
+    },
+    {
+      enabled: organization !== undefined,
+    },
+  );
+  const { data: subscription } = api.cloudBilling.getSubscriptionInfo.useQuery(
+    {
+      orgId: organization?.id ?? "",
+    },
+    {
+      enabled: organization !== undefined,
+    },
   );
 
-  const subscription = api.cloudBilling.getSubscription.useQuery(
-    { orgId: organization?.id as string },
-    { enabled: !!organization?.id, trpc: { context: { skipBatch: true } } },
+  // Fetch organization details to get credits
+  const { data: orgDetails } = api.organizations.getDetails.useQuery(
+    { orgId: organization?.id ?? "" },
+    { enabled: !!organization },
   );
 
-  if (usage.data === null && subscription.data === null) return null;
+  const createCheckoutSession = api.cloudBilling.createStripeCheckoutSession.useMutation();
 
-  const plan: Plan = organization?.plan ?? "cloud:hobby";
-  const hobbyLimit = organization?.cloudConfig?.monthlyObservationLimit ?? MAX_EVENTS_FREE_PLAN;
-  const count = usage.data?.usageCount ?? 0;
-  const pct = plan === "cloud:hobby" ? Math.min((count / hobbyLimit) * 100, 100) : 0;
+  const handlePurchaseCredits = async () => {
+    const creditsProduct = stripeProducts.find((p) => p.id === "credits-plan");
+    if (!creditsProduct) {
+      console.error("Credits product not found");
+      return;
+    }
 
-  const sub = subscription.data;
-  const planName = sub?.plan?.name ?? (plan === "cloud:hobby" ? "Hobby" : plan);
+    const url = await createCheckoutSession.mutateAsync({
+      orgId: organization?.id ?? "",
+      stripeProductId: creditsProduct.stripeProductId,
+    });
+    if (url) window.location.href = url;
+  };
+
+  const handleUpgradePlan = () => {
+    setIsPlanModalOpen(true);
+  };
+
+  // Get plan from organization
+  const currentPlanKey = organization?.plan as Plan | undefined;
+  const currentPlan = currentPlanKey ? planLabels[currentPlanKey] : "Free Plan";
+  const currentUsage = usage?.usageCount || 0;
+  const availableCredits = orgDetails?.credits || 0;
+
+  const hasActiveSubscription = Boolean(organization?.cloudConfig?.stripe?.activeSubscriptionId);
+
+  // Format billing period end date
+  const billingPeriodEnd = subscription?.billingPeriod?.end;
+  const nextBillingDate = billingPeriodEnd ? new Date(billingPeriodEnd).toLocaleDateString() : null;
+
+  // Check for cancellation
+  const isCanceled = Boolean(subscription?.cancellation);
+  const cancelAt = subscription?.cancellation?.cancelAt ? new Date(subscription.cancellation.cancelAt * 1000) : null;
 
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">Billing</h3>
-        </div>
-        <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
-          <a href="https://billing.hanzo.ai" target="_blank" rel="noopener noreferrer">
-            Details <ExternalLink className="ml-1 h-3 w-3" />
-          </a>
-        </Button>
-      </div>
-
-      <div className="flex items-baseline gap-3">
-        <span className="text-lg font-bold">{planName}</span>
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary capitalize">
-          {sub?.status ?? "active"}
-        </span>
-      </div>
-
-      {usage.data !== undefined && (
-        <div className="mt-3">
-          <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>{numberFormatter(count, 0)} events</span>
-            {plan === "cloud:hobby" && <span>{Math.round(pct)}%</span>}
-          </div>
-          {plan === "cloud:hobby" && (
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-yellow-500" : "bg-primary"
-                }`}
-                style={{ width: `${pct}%` }}
-              />
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      {/* Active Subscription Card */}
+      <Card className="p-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground">
+              {hasActiveSubscription ? "Active Subscription" : "No Subscription"}
+            </h3>
+            <p className="mt-2 text-2xl font-bold">{currentPlan}</p>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {hasActiveSubscription ? (
+                <>
+                  {isCanceled && cancelAt ? (
+                    <p>Active until: {cancelAt.toLocaleDateString()}</p>
+                  ) : nextBillingDate ? (
+                    <p>Next billing date: {nextBillingDate}</p>
+                  ) : null}
+                </>
+              ) : (
+                <div>Free credit grant of $5.00</div>
+              )}
             </div>
-          )}
+          </div>
         </div>
-      )}
-    </Card>
+
+        <Button variant="secondary" className="mt-4 w-full" onClick={handleUpgradePlan}>
+          {hasActiveSubscription ? "Change Plan" : "Upgrade Plan"}
+        </Button>
+      </Card>
+
+      {/* Payment Summary Card */}
+      <Card className="p-6">
+        <h3 className="text-sm font-medium text-muted-foreground">Payment Summary</h3>
+        <div className="mt-4 space-y-3">
+          <div className="flex justify-between">
+            <span className="text-sm">Current Usage</span>
+            <span className="font-medium">${currentUsage.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm">Credits Available</span>
+            <span className="font-medium">${availableCredits.toFixed(2)}</span>
+          </div>
+        </div>
+        <Button className="mt-4 w-full" onClick={handlePurchaseCredits}>
+          Purchase Credits
+        </Button>
+      </Card>
+
+      {/* Upcoming Charges Card */}
+      <Card className="p-6">
+        <h3 className="text-sm font-medium text-muted-foreground">Upcoming Charges</h3>
+        <div className="mt-4 flex items-center justify-center text-center">
+          <p className="text-sm text-muted-foreground">
+            {hasActiveSubscription && nextBillingDate
+              ? `Next billing date: ${nextBillingDate}`
+              : "No upcoming charges. You're on a free plan."}
+          </p>
+        </div>
+        <Button variant="outline" className="mt-4 w-full" onClick={() => router.push("/pricing")}>
+          View Pricing
+        </Button>
+      </Card>
+
+      <PlanSelectionModal
+        isOpen={isPlanModalOpen}
+        onClose={() => setIsPlanModalOpen(false)}
+        orgId={organization?.id ?? ""}
+        currentSubscription={subscription}
+      />
+    </div>
   );
 };

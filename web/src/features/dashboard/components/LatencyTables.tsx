@@ -1,13 +1,13 @@
 import { RightAlignedCell } from "@/src/features/dashboard/components/RightAlignedCell";
 import { DashboardCard } from "@/src/features/dashboard/components/cards/DashboardCard";
 import { DashboardTable } from "@/src/features/dashboard/components/cards/DashboardTable";
-import { type FilterState, getGenerationLikeTypes } from "@hanzo/console-core";
+import { type FilterState, getGenerationLikeTypes } from "@hanzo/shared";
 import { api } from "@/src/utils/api";
 
 import { formatIntervalSeconds } from "@/src/utils/dates";
 import { truncate } from "@/src/utils/string";
 import { Popup } from "@/src/components/layouts/doc-popup";
-import { type QueryType, type ViewVersion, mapLegacyUiTableFilterToView } from "@/src/features/query";
+import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
 
 export const LatencyTables = ({
   projectId,
@@ -15,14 +15,12 @@ export const LatencyTables = ({
   fromTimestamp,
   toTimestamp,
   isLoading = false,
-  metricsVersion,
 }: {
   projectId: string;
   globalFilterState: FilterState;
   fromTimestamp: Date;
   toTimestamp: Date;
   isLoading?: boolean;
-  metricsVersion?: ViewVersion;
 }) => {
   const generationsLatenciesQuery: QueryType = {
     view: "observations",
@@ -46,14 +44,12 @@ export const LatencyTables = ({
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
     orderBy: [{ field: "p95_latency", direction: "desc" }],
-    chartConfig: { type: "table", row_limit: 20 },
   };
 
   const generationsLatencies = api.dashboard.executeQuery.useQuery(
     {
       projectId,
       query: generationsLatenciesQuery,
-      version: metricsVersion,
     },
     {
       trpc: {
@@ -87,14 +83,12 @@ export const LatencyTables = ({
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
     orderBy: [{ field: "p95_latency", direction: "desc" }],
-    chartConfig: { type: "table", row_limit: 20 },
   };
 
   const spansLatencies = api.dashboard.executeQuery.useQuery(
     {
       projectId,
       query: spansLatenciesQuery,
-      version: metricsVersion,
     },
     {
       trpc: {
@@ -120,14 +114,12 @@ export const LatencyTables = ({
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
     orderBy: [{ field: "p95_latency", direction: "desc" }],
-    chartConfig: { type: "table", row_limit: 20 },
   };
 
   const tracesLatencies = api.dashboard.executeQuery.useQuery(
     {
       projectId,
       query: tracesLatenciesQuery,
-      version: metricsVersion,
     },
     {
       trpc: {

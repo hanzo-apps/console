@@ -3,13 +3,13 @@ import {
   deriveFilters,
   StringFilter,
   type ObservationRecordReadType,
-  queryDatastore,
+  queryClickhouse,
   measureAndReturn,
   observationsTableUiColumnDefinitions,
   convertObservation,
   shouldSkipObservationsFinal,
-} from "@hanzo/console-core/src/server";
-import type { FilterState } from "@hanzo/console-core";
+} from "@hanzo/shared/src/server";
+import type { FilterState } from "@hanzo/shared";
 
 type QueryType = {
   page: number;
@@ -29,16 +29,15 @@ type QueryType = {
 export const generateObservationsForPublicApi = async (props: QueryType) => {
   const chFilter = generateFilter(props);
   const appliedFilter = chFilter.apply();
-  const traceFilter = chFilter.find((f) => f.datastoreTable === "traces");
+  const traceFilter = chFilter.find((f) => f.clickhouseTable === "traces");
 
-  // Datastore query optimizations for List Observations API
+  // ClickHouse query optimizations for List Observations API
   const disableObservationsFinal = await shouldSkipObservationsFinal(props.projectId);
 
   const query = `
-    with datastore_keys as (
+    with clickhouse_keys as (
       SELECT DISTINCT
         id,
-        trace_id,
         project_id,
         type,
         toDate(start_time)
@@ -83,7 +82,7 @@ export const generateObservationsForPublicApi = async (props: QueryType) => {
       event_ts
     FROM observations o ${disableObservationsFinal ? "" : "FINAL"}
     WHERE o.project_id = {projectId: String}
-      AND (id, trace_id, project_id, type, toDate(start_time)) in (select * from datastore_keys)
+      AND (id, project_id, type, toDate(start_time)) in (select * from clickhouse_keys)
     ORDER BY start_time DESC
   `;
 
@@ -105,11 +104,11 @@ export const generateObservationsForPublicApi = async (props: QueryType) => {
       },
     },
     fn: async (input) => {
-      const result = await queryDatastore<ObservationRecordReadType>({
+      const result = await queryClickhouse<ObservationRecordReadType>({
         query: query.replace("__TRACE_TABLE__", "traces"),
         params: input.params,
         tags: input.tags,
-        preferredService: "ReadOnly",
+        preferredClickhouseService: "ReadOnly",
       });
       return result.map((r) => convertObservation(r));
     },
@@ -119,7 +118,7 @@ export const generateObservationsForPublicApi = async (props: QueryType) => {
 export const getObservationsCountForPublicApi = async (props: QueryType) => {
   const chFilter = generateFilter(props);
   const filter = chFilter.apply();
-  const traceFilter = chFilter.find((f) => f.datastoreTable === "traces");
+  const traceFilter = chFilter.find((f) => f.clickhouseTable === "traces");
 
   const query = `
     SELECT count() as count
@@ -143,11 +142,11 @@ export const getObservationsCountForPublicApi = async (props: QueryType) => {
       },
     },
     fn: async (input) => {
-      const records = await queryDatastore<{ count: string }>({
+      const records = await queryClickhouse<{ count: string }>({
         query: query.replace("__TRACE_TABLE__", "traces"),
         params: input.params,
         tags: input.tags,
-        preferredService: "ReadOnly",
+        preferredClickhouseService: "ReadOnly",
       });
       return records.map((record) => Number(record.count)).shift();
     },
@@ -162,16 +161,16 @@ const generateFilter = (query: QueryType) => {
     simpleFilterProps,
     filterParams,
     advancedFilters,
-    observationsTableUiColumnDefinitions.filter((c) => c.datastoreTableName !== "scores"),
+    observationsTableUiColumnDefinitions.filter((c) => c.clickhouseTableName !== "scores"),
   );
 
   // Remove score filters since observations don't support scores in response
-  const filteredChFilter = chFilter.filter((f) => f.datastoreTable !== "scores");
+  const filteredChFilter = chFilter.filter((f) => f.clickhouseTable !== "scores");
 
   // Add project filter
   filteredChFilter.push(
     new StringFilter({
-      datastoreTable: "observations",
+      clickhouseTable: "observations",
       field: "project_id",
       operator: "=",
       value: query.projectId,

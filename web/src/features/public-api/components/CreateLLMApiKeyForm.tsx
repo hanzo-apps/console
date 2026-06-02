@@ -9,7 +9,7 @@ import {
   type LlmApiKeys,
   BEDROCK_USE_DEFAULT_CREDENTIALS,
   VERTEXAI_USE_DEFAULT_CREDENTIALS,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { ChevronDown, PlusIcon, TrashIcon } from "lucide-react";
 import { z } from "zod/v4";
 import { Button } from "@/src/components/ui/button";
@@ -27,13 +27,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/src/components/ui/switch";
 import { api } from "@/src/utils/api";
 import { cn } from "@/src/utils/tailwind";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { type useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
 import { DialogFooter } from "@/src/components/ui/dialog";
 import { DialogBody } from "@/src/components/ui/dialog";
 import { env } from "@/src/env.mjs";
 
-const isConsoleCloud = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
+const isHanzoCloud = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
 
 const isCustomModelsRequired = (adapter: LLMAdapter) => adapter === LLMAdapter.Azure || adapter === LLMAdapter.Bedrock;
 
@@ -73,7 +73,7 @@ const createFormSchema = (mode: "create" | "update") =>
 
         // In create mode, validate credentials
         // For cloud deployments, AWS credentials are required
-        if (isConsoleCloud) {
+        if (isHanzoCloud) {
           return data.awsAccessKeyId && data.awsSecretAccessKey && data.awsRegion;
         }
 
@@ -84,7 +84,7 @@ const createFormSchema = (mode: "create" | "update") =>
         message:
           mode === "update"
             ? "AWS region is required."
-            : isConsoleCloud
+            : isHanzoCloud
               ? "AWS credentials are required for Bedrock"
               : "AWS region is required.",
         path: ["adapter"],
@@ -127,7 +127,7 @@ const createFormSchema = (mode: "create" | "update") =>
         return !!data.secretKey;
       },
       {
-        message: isConsoleCloud
+        message: isHanzoCloud
           ? "GCP service account JSON key is required for Vertex AI"
           : "GCP service account JSON key or Application Default Credentials is required.",
         path: ["secretKey"],
@@ -172,7 +172,7 @@ export function CreateLLMApiKeyForm({
 }: CreateLLMApiKeyFormProps) {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const utils = api.useUtils();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   const existingKeys = api.llmApiKey.all.useQuery(
     {
@@ -193,7 +193,7 @@ export function CreateLLMApiKeyForm({
   const mutTestUpdateLLMApiKey = api.llmApiKey.testUpdate.useMutation();
 
   const defaultAdapter: LLMAdapter = customization?.defaultModelAdapter
-    ? LLMAdapter[customization.defaultModelAdapter as keyof typeof LLMAdapter]
+    ? LLMAdapter[customization.defaultModelAdapter]
     : LLMAdapter.OpenAI;
 
   const getCustomizedBaseURL = (adapter: LLMAdapter) => {
@@ -246,7 +246,7 @@ export function CreateLLMApiKeyForm({
             withDefaultModels: true,
             customModels: [],
             extraHeaders: [],
-            vertexAILocation: "global",
+            vertexAILocation: "",
             awsRegion: "",
             awsAccessKeyId: "",
             awsSecretAccessKey: "",
@@ -325,7 +325,7 @@ export function CreateLLMApiKeyForm({
           <FormLabel>Extra Headers</FormLabel>
           <FormDescription>
             Optional additional HTTP headers to include with requests towards LLM provider. All header values stored
-            encrypted {isConsoleCloud ? "on our servers" : "in your database"}.
+            encrypted {isHanzoCloud ? "on our servers" : "in your database"}.
           </FormDescription>
 
           {headerFields.map((header, index) => (
@@ -399,7 +399,7 @@ export function CreateLLMApiKeyForm({
         }
       } else {
         // In create mode, handle as before
-        if (!isConsoleCloud && (!values.awsAccessKeyId || !values.awsSecretAccessKey)) {
+        if (!isHanzoCloud && (!values.awsAccessKeyId || !values.awsSecretAccessKey)) {
           secretKey = BEDROCK_USE_DEFAULT_CREDENTIALS;
         } else {
           const credentials: BedrockCredential = {
@@ -589,12 +589,12 @@ export function CreateLLMApiKeyForm({
                   <FormItem>
                     <FormLabel>
                       AWS Access Key ID
-                      {!isConsoleCloud && <span className="font-normal text-muted-foreground"> (optional)</span>}
+                      {!isHanzoCloud && <span className="font-normal text-muted-foreground"> (optional)</span>}
                     </FormLabel>
                     <FormDescription>
                       {mode === "update"
                         ? "Leave empty to keep existing credentials. To update, provide both Access Key ID and Secret Access Key."
-                        : isConsoleCloud
+                        : isHanzoCloud
                           ? "These should be long-lived credentials for an AWS user with `bedrock:InvokeModel` permission."
                           : "For self-hosted deployments, AWS credentials are optional. When omitted, authentication will use the AWS SDK default credential provider chain."}
                     </FormDescription>
@@ -623,7 +623,7 @@ export function CreateLLMApiKeyForm({
                   <FormItem>
                     <FormLabel>
                       AWS Secret Access Key
-                      {!isConsoleCloud && <span className="font-normal text-muted-foreground"> (optional)</span>}
+                      {!isHanzoCloud && <span className="font-normal text-muted-foreground"> (optional)</span>}
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -646,7 +646,7 @@ export function CreateLLMApiKeyForm({
                   </FormItem>
                 )}
               />
-              {!isConsoleCloud && (
+              {!isHanzoCloud && (
                 <div className="space-y-2 border-l-2 border-blue-200 pl-4 text-sm text-muted-foreground">
                   <p>
                     <strong>Default credential provider chain:</strong> When AWS credentials are omitted, the system
@@ -674,7 +674,7 @@ export function CreateLLMApiKeyForm({
           ) : currentAdapter === LLMAdapter.VertexAI ? (
             <>
               {/* Vertex AI ADC option for self-hosted only, create mode only */}
-              {!isConsoleCloud && mode === "create" && (
+              {!isHanzoCloud && mode === "create" && (
                 <FormItem>
                   <span className="row flex">
                     <span className="flex-1">
@@ -701,7 +701,7 @@ export function CreateLLMApiKeyForm({
               )}
 
               {/* Service Account Key - hidden when ADC is enabled */}
-              {(isConsoleCloud || form.watch("secretKey") !== VERTEXAI_USE_DEFAULT_CREDENTIALS) && (
+              {(isHanzoCloud || form.watch("secretKey") !== VERTEXAI_USE_DEFAULT_CREDENTIALS) && (
                 <FormField
                   control={form.control}
                   name="secretKey"
@@ -709,7 +709,7 @@ export function CreateLLMApiKeyForm({
                     <FormItem>
                       <FormLabel>GCP Service Account Key (JSON)</FormLabel>
                       <FormDescription>
-                        {isConsoleCloud
+                        {isHanzoCloud
                           ? "Your API keys are stored encrypted on our servers."
                           : "Your API keys are stored encrypted in your database."}
                       </FormDescription>
@@ -749,7 +749,7 @@ export function CreateLLMApiKeyForm({
               )}
 
               {/* ADC info box for self-hosted */}
-              {!isConsoleCloud && form.watch("secretKey") === VERTEXAI_USE_DEFAULT_CREDENTIALS && (
+              {!isHanzoCloud && form.watch("secretKey") === VERTEXAI_USE_DEFAULT_CREDENTIALS && (
                 <div className="space-y-2 border-l-2 border-blue-200 pl-4 text-sm text-muted-foreground">
                   <p>
                     <strong>Application Default Credentials (ADC):</strong> When enabled, the system will automatically
@@ -783,7 +783,7 @@ export function CreateLLMApiKeyForm({
                 <FormItem>
                   <FormLabel>API Key</FormLabel>
                   <FormDescription>
-                    {isConsoleCloud
+                    {isHanzoCloud
                       ? "Your API keys are stored encrypted on our servers."
                       : "Your API keys are stored encrypted in your database."}
                   </FormDescription>
@@ -881,11 +881,11 @@ export function CreateLLMApiKeyForm({
                     <FormItem>
                       <FormLabel>Location (Optional)</FormLabel>
                       <FormDescription>
-                        Google Cloud region (e.g., global, us-central1, europe-west4). Defaults to{" "}
-                        <span className="font-medium">global</span> as required for Gemini 3 models.
+                        Specify the Google Cloud location for Vertex AI. If not specified, the default location will be
+                        used (us-central1). Examples: us-central1, europe-west4, asia-northeast1
                       </FormDescription>
                       <FormControl>
-                        <Input {...field} placeholder="global" />
+                        <Input {...field} placeholder="e.g., us-central1" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback, memo } from "react";
 import { cn } from "@/src/utils/tailwind";
-import { deepParseJson } from "@hanzo/console-core";
-import { Skeleton } from "@hanzo/ui";
+import { deepParseJson } from "@hanzo/shared";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { type MediaReturnType } from "@/src/features/media/validation";
 import { HanzoMediaView } from "@/src/components/ui/HanzoMediaView";
 import { MarkdownJsonViewHeader } from "@/src/components/ui/MarkdownJsonView";
@@ -18,11 +18,11 @@ import {
   type ExpandedState,
   type Row,
 } from "@tanstack/react-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 
 // Custom expanded state type that allows false ("user intentionally collapsed all")
 type HanzoExpandedState = ExpandedState | false;
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@hanzo/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { ChatMlArraySchema } from "@/src/components/schemas/ChatMlSchema";
 import { MarkdownView } from "@/src/components/ui/MarkdownViewer";
 import { StringOrMarkdownSchema, containsAnyMarkdown } from "@/src/components/schemas/MarkdownSchema";
@@ -34,7 +34,7 @@ import {
   transformJsonToTableData,
 } from "@/src/components/table/utils/jsonExpansionUtils";
 import { ValueCell, getValueStringLength } from "@/src/components/table/ValueCell";
-import { ItemBadge, type ConsoleItemType } from "@/src/components/ItemBadge";
+import { ItemBadge, type HanzoItemType } from "@/src/components/ItemBadge";
 
 // Constants for table layout
 const INDENTATION_PER_LEVEL = 16;
@@ -397,7 +397,7 @@ function JsonPrettyTable({
     }
   }, [stickyTopLevelKey, data, expanded]);
 
-  const columns: ConsoleColumnDef<JsonTableRow, unknown>[] = [
+  const columns: HanzoColumnDef<JsonTableRow, unknown>[] = [
     {
       accessorKey: "key",
       header: "Path",
@@ -421,7 +421,7 @@ function JsonPrettyTable({
           "type" in row.original.value &&
           typeof (row.original.value as any).type === "string" &&
           (row.original.value as any).type
-            ? ((row.original.value as any).type as ConsoleItemType)
+            ? ((row.original.value as any).type as HanzoItemType)
             : null;
 
         const content = (

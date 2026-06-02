@@ -1,6 +1,6 @@
 {
   "name": "hanzo",
-  "version": "3.155.0",
+  "version": "3.148.0",
   "author": "engineering@hanzo.com",
   "license": "MIT",
   "private": true,
@@ -9,9 +9,9 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "infra:dev:up": "docker compose -f ./docker-compose.dev.yml up -d --wait",
-    "infra:dev:down": "docker compose -f ./docker-compose.dev.yml down",
-    "infra:dev:prune": "docker compose -f ./docker-compose.dev.yml down -v",
+    "infra:dev:up": "docker compose -f ./compose.dev.yaml up -d --wait",
+    "infra:dev:down": "docker compose -f ./compose.dev.yaml down",
+    "infra:dev:prune": "docker compose -f ./compose.dev.yaml down -v",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed",
@@ -38,14 +38,13 @@
   },
   "devDependencies": {
     "@release-it/bumper": "^7.0.5",
-    "@types/dagre": "^0.7.53",
     "braces": "3.0.3",
     "dotenv-cli": "^7.4.4",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.6.2",
     "release-it": "^19.0.4",
-    "turbo": "^2.8.10"
+    "turbo": "^2.7.5"
   },
   "release-it": {
     "git": {
@@ -91,7 +90,9 @@
     }
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,css}": "prettier --write --experimental-cli"
+    "**/*.{js,jsx,ts,tsx,css}": [
+      "prettier --write"
+    ]
   },
   "packageManager": "pnpm@9.5.0",
   "pnpm": {
@@ -102,27 +103,7 @@
       "rollup@^4.0.0": "^4.22.4",
       "@types/node-fetch": "^2.6.13",
       "glob": "^10.5.0",
-      "qs": "6.14.1",
-      "date-fns": "^3.3.1",
-      "vis-network": "^9.1.9",
-      "bullmq": "npm:bullmq@^5.34.10",
-      "@posthog/core": "npm:@hanzo/insights-core@1.23.2"
-    },
-    "patchedDependencies": {
-      "next-auth@4.24.13": "patches/next-auth@4.24.13.patch",
-      "@hanzo/ui@5.3.39": "patches/@hanzo__ui@5.3.39.patch"
+      "qs": "6.14.1"
     }
-  },
-  "dependencies": {
-    "@autoform/react": "^4.0.0",
-    "@autoform/shadcn": "^1.0.1",
-    "@autoform/zod": "^5.0.0",
-    "@deck.gl/core": "^9.2.6",
-    "@deck.gl/layers": "^9.2.6",
-    "@deck.gl/react": "^9.2.6",
-    "@phosphor-icons/react": "^2.1.10",
-    "@xyflow/react": "^12.10.0",
-    "dagre": "^0.8.5",
-    "elkjs": "^0.11.0"
   }
 }

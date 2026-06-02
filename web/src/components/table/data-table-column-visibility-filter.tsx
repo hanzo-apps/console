@@ -2,8 +2,8 @@ import React, { useCallback, useMemo, type Dispatch, type SetStateAction } from 
 import { Button } from "@/src/components/ui/button";
 import { type ColumnOrderState, type VisibilityState } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight, Component, Menu, X } from "lucide-react";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { type HanzoColumnDef } from "@/src/components/table/types";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import DocPopup from "@/src/components/layouts/doc-popup";
 import {
   closestCenter,
@@ -27,12 +27,12 @@ import {
   Drawer,
   DrawerClose,
 } from "@/src/components/ui/drawer";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@hanzo/ui";
-import { Checkbox } from "@hanzo/ui";
-import { Separator } from "@hanzo/ui";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/src/components/ui/collapsible";
+import { Checkbox } from "@/src/components/ui/checkbox";
+import { Separator } from "@/src/components/ui/separator";
 
 interface DataTableColumnVisibilityFilterProps<TData, TValue> {
-  columns: ConsoleColumnDef<TData, TValue>[];
+  columns: HanzoColumnDef<TData, TValue>[];
   columnVisibility: VisibilityState;
   setColumnVisibility: Dispatch<SetStateAction<VisibilityState>>;
   columnOrder?: ColumnOrderState;
@@ -40,7 +40,7 @@ interface DataTableColumnVisibilityFilterProps<TData, TValue> {
 }
 
 const calculateColumnCounts = <TData, TValue>(
-  columns: ConsoleColumnDef<TData, TValue>[],
+  columns: HanzoColumnDef<TData, TValue>[],
   columnVisibility: VisibilityState,
 ) => {
   return columns.reduce(
@@ -67,7 +67,7 @@ function ColumnVisibilityListItem<TData, TValue>({
   columnVisibility,
   isOrderable = false,
 }: {
-  column: ConsoleColumnDef<TData, TValue>;
+  column: HanzoColumnDef<TData, TValue>;
   toggleColumn: (columnId: string) => void;
   columnVisibility: VisibilityState;
   isOrderable?: boolean;
@@ -146,7 +146,7 @@ function GroupVisibilityHeader<TData, TValue>({
   children,
   toggleAll,
 }: {
-  column: ConsoleColumnDef<TData, TValue>;
+  column: HanzoColumnDef<TData, TValue>;
   groupTotalCount: number;
   groupVisibleCount: number;
   isOpen: boolean;
@@ -217,11 +217,7 @@ function GroupVisibilityHeader<TData, TValue>({
   );
 }
 
-function setAllColumns<TData, TValue>(
-  columns: ConsoleColumnDef<TData, TValue>[],
-  visible: boolean,
-  groupName?: string,
-) {
+function setAllColumns<TData, TValue>(columns: HanzoColumnDef<TData, TValue>[], visible: boolean, groupName?: string) {
   return (oldVisibility: VisibilityState) => {
     const newColumnVisibility: VisibilityState = { ...oldVisibility };
     columns.forEach((col) => {
@@ -249,7 +245,7 @@ export function DataTableColumnVisibilityFilter<TData, TValue>({
   columnOrder,
   setColumnOrder,
 }: DataTableColumnVisibilityFilterProps<TData, TValue>) {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({});
 
   const { defaultColumnOrder, defaultColumnVisibility } = useMemo(() => {
@@ -279,7 +275,7 @@ export function DataTableColumnVisibilityFilter<TData, TValue>({
         return newColumnVisibility;
       });
     },
-    // eslint disable is because we don't want the insights capture as deps
+    // eslint disable is because we don't want the posthog capture as deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [setColumnVisibility, columnVisibility],
   );

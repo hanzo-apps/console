@@ -1,9 +1,9 @@
 import { useMemo, useEffect, useRef } from "react";
-import { ArrowDown, AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowDown, AlertCircle, CheckCircle2 } from "lucide-react";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import type { FieldMappingConfig, SourceField, ObservationPreviewData, SchemaValidationError } from "../types";
-import { applyFieldMappingConfig, validateFieldAgainstSchema } from "@hanzo/console-core";
+import { applyFieldMappingConfig, validateFieldAgainstSchema } from "@hanzo/shared";
 
 type MappingPreviewPanelProps = {
   fieldLabel: string;
@@ -44,25 +44,11 @@ export function MappingPreviewPanel({
     return observationData[defaultSourceField];
   }, [observationData, config, defaultSourceField]);
 
-  // Compute result data and collect JSON path misses
-  const { resultData, jsonPathMisses } = useMemo(() => {
-    if (!observationData)
-      return {
-        resultData: null,
-        jsonPathMisses: [] as {
-          sourceField: string;
-          jsonPath: string;
-          mappingKey: string | null;
-        }[],
-      };
+  // Compute result data
+  const resultData = useMemo(() => {
+    if (!observationData) return null;
 
-    const misses: {
-      sourceField: string;
-      jsonPath: string;
-      mappingKey: string | null;
-    }[] = [];
-
-    const data = applyFieldMappingConfig({
+    return applyFieldMappingConfig({
       observation: {
         input: observationData.input,
         output: observationData.output,
@@ -70,12 +56,7 @@ export function MappingPreviewPanel({
       },
       config,
       defaultSourceField,
-      onJsonPathMiss: (info) => {
-        misses.push(info);
-      },
     });
-
-    return { resultData: data, jsonPathMisses: misses };
   }, [observationData, config, defaultSourceField]);
 
   // Validate result against schema
@@ -204,25 +185,19 @@ export function MappingPreviewPanel({
         <div className="flex items-center gap-2">
           <p className="text-xs font-medium text-muted-foreground">Result: Dataset Item {fieldLabel}</p>
           {/* Validation status indicator */}
-          {config.mode !== "none" && (
+          {hasSchema && config.mode !== "none" && (
             <div className="flex items-center gap-1">
-              {hasSchema && !validationResult.isValid ? (
-                <AlertCircle className="h-3.5 w-3.5 text-destructive" />
-              ) : jsonPathMisses.length > 0 ? (
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500" />
-              ) : hasSchema ? (
+              {validationResult.isValid ? (
                 <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-              ) : null}
+              ) : (
+                <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+              )}
             </div>
           )}
         </div>
         <div
           className={`max-h-[21vh] overflow-auto rounded-md border bg-background ${
-            hasSchema && !validationResult.isValid && config.mode !== "none"
-              ? "border-destructive"
-              : jsonPathMisses.length > 0 && config.mode !== "none"
-                ? "border-amber-500/50"
-                : ""
+            hasSchema && !validationResult.isValid && config.mode !== "none" ? "border-destructive" : ""
           }`}
         >
           {config.mode === "none" ? (
@@ -240,23 +215,6 @@ export function MappingPreviewPanel({
               {validationResult.errors.map((error, idx) => (
                 <li key={idx} className="text-xs text-destructive">
                   <span className="font-mono">{error.path || "root"}</span>: {error.message}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* JSON path warnings */}
-        {jsonPathMisses.length > 0 && config.mode !== "none" && (
-          <div className="max-h-[5vh] overflow-y-auto rounded-md border border-amber-500/50 bg-amber-50 p-2 dark:bg-amber-950/30">
-            <p className="mb-1 text-xs font-medium text-amber-600 dark:text-amber-500">
-              JSON path warnings (preview observation):
-            </p>
-            <ul className="space-y-0.5">
-              {jsonPathMisses.map((miss, idx) => (
-                <li key={idx} className="text-xs text-amber-600 dark:text-amber-500">
-                  <span className="font-mono">{miss.jsonPath}</span> did not match any data in {miss.sourceField}
-                  {miss.mappingKey ? ` (key: "${miss.mappingKey}")` : ""}
                 </li>
               ))}
             </ul>

@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-height-switch";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { api } from "@/src/utils/api";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
 import { DataTable } from "@/src/components/table/data-table";
-import { type ScoreConfigDataType, type Prisma, type ScoreConfigCategoryDomain } from "@hanzo/console-core";
+import { type ScoreConfigDataType, type Prisma, type ScoreConfigCategoryDomain } from "@hanzo/shared";
 import { IOTableCell } from "../../ui/IOTableCell";
-import { usePaginationState } from "@/src/hooks/usePaginationState";
+import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import { isBooleanDataType, isCategoricalDataType, isNumericDataType } from "@/src/features/scores/lib/helpers";
 import { Edit, MoreVertical } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
@@ -64,9 +64,9 @@ function getConfigRange(originalRow: ScoreConfigTableRow): undefined | Prisma.Js
 export function ScoreConfigsTable({ projectId }: { projectId: string }) {
   const [editConfigId, setEditConfigId] = useState<string | null>(null);
   const [createConfigOpen, setCreateConfigOpen] = useState(false);
-  const [paginationState, setPaginationState] = usePaginationState(0, 50, {
-    page: "pageIndex",
-    limit: "pageSize",
+  const [paginationState, setPaginationState] = useQueryParams({
+    pageIndex: withDefault(NumberParam, 0),
+    pageSize: withDefault(NumberParam, 50),
   });
 
   const hasAccess = useHasProjectAccess({
@@ -92,7 +92,7 @@ export function ScoreConfigsTable({ projectId }: { projectId: string }) {
 
   const totalCount = configs.data?.totalCount ?? null;
 
-  const columns: ConsoleColumnDef<ScoreConfigTableRow>[] = [
+  const columns: HanzoColumnDef<ScoreConfigTableRow>[] = [
     {
       accessorKey: "name",
       id: "name",

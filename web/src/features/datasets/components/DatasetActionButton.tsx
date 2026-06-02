@@ -5,8 +5,8 @@ import { useState, forwardRef } from "react";
 import { DialogTrigger } from "@radix-ui/react-dialog";
 import { DatasetForm } from "@/src/features/datasets/components/DatasetForm";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { type Prisma } from "@hanzo/console-core";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { type Prisma } from "@hanzo/shared";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 
 interface BaseDatasetButtonProps {
   mode: "create" | "update" | "delete";
@@ -41,7 +41,7 @@ interface UpdateDatasetButtonProps extends BaseDatasetButtonProps {
 type DatasetActionButtonProps = CreateDatasetButtonProps | UpdateDatasetButtonProps | DeleteDatasetButtonProps;
 
 export const DatasetActionButton = forwardRef<HTMLButtonElement, DatasetActionButtonProps>((props, ref) => {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const [open, setOpen] = useState(false);
   const hasAccess = useHasProjectAccess({
     projectId: props.projectId,

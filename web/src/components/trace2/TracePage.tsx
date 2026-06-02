@@ -14,16 +14,14 @@ import { Button } from "@/src/components/ui/button";
 import Link from "next/link";
 import { stripBasePath } from "@/src/utils/redirect";
 import { Badge } from "@/src/components/ui/badge";
-import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
+import { useObservationListBeta } from "@/src/features/events/hooks/useObservationListBeta";
 import { useEventsTraceData } from "@/src/features/events/hooks/useEventsTraceData";
-import { showErrorToast } from "@/src/features/notifications/showErrorToast";
-import { useEffect } from "react";
 
 export function TracePage({ traceId, timestamp }: { traceId: string; timestamp?: Date }) {
   const router = useRouter();
   const session = useSession();
   const routeProjectId = (router.query.projectId as string) ?? "";
-  const { isBetaEnabled } = useV4Beta();
+  const { isBetaEnabled } = useObservationListBeta();
 
   // Old path: fetch from traces table (beta OFF)
   const tracesQuery = api.traces.byIdWithObservationsAndScores.useQuery(
@@ -62,16 +60,6 @@ export function TracePage({ traceId, timestamp }: { traceId: string; timestamp?:
   const hasProjectAccess = useIsAuthenticatedAndProjectMember(projectIdForAccessCheck);
 
   const [selectedTab, setSelectedTab] = useQueryParam("display", withDefault(StringParam, "details"));
-
-  useEffect(() => {
-    if (isBetaEnabled && eventsData.cutoffObservationsAfterMaxCount) {
-      showErrorToast(
-        "Trace truncated",
-        "This trace has too many observations for the detail view. Only a subset is shown.",
-        "WARNING",
-      );
-    }
-  }, [isBetaEnabled, eventsData.cutoffObservationsAfterMaxCount]);
 
   // Handle errors - for events path, we check if there's no data after loading
   if (!isBetaEnabled && tracesQuery.error?.data?.code === "UNAUTHORIZED")

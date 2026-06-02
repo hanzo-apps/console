@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { decrypt, encrypt } from "@hanzo/console-core/encryption";
+import { decrypt, encrypt } from "@hanzo/shared/encryption";
 import { mixpanelIntegrationFormSchema } from "@/src/features/mixpanel-integration/types";
 import { TRPCError } from "@trpc/server";
 import { env } from "@/src/env.mjs";
@@ -26,11 +26,10 @@ export const mixpanelIntegrationRouter = createTRPCRouter({
         return null;
       }
 
-      const { encryptedMixpanelProjectToken, exportSource, ...config } = dbConfig;
+      const { encryptedMixpanelProjectToken, ...config } = dbConfig;
 
       return {
         ...config,
-        exportSource,
         mixpanelProjectToken: decrypt(encryptedMixpanelProjectToken),
       };
     } catch (e) {
@@ -59,7 +58,7 @@ export const mixpanelIntegrationRouter = createTRPCRouter({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
-              "Missing environment variable: `ENCRYPTION_KEY`. Please consult our docs: https://hanzo.ai/self-hosting",
+              "Missing environment variable: `ENCRYPTION_KEY`. Please consult our docs: https://hanzo.com/self-hosting",
           });
         }
       }
@@ -82,13 +81,11 @@ export const mixpanelIntegrationRouter = createTRPCRouter({
           mixpanelRegion: config.mixpanelRegion,
           encryptedMixpanelProjectToken,
           enabled: config.enabled,
-          exportSource: config.exportSource,
         },
         update: {
           encryptedMixpanelProjectToken,
           mixpanelRegion: config.mixpanelRegion,
           enabled: config.enabled,
-          exportSource: config.exportSource,
         },
       });
     }),

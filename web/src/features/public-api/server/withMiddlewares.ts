@@ -2,8 +2,8 @@ import { isPrismaException } from "@/src/utils/exceptions";
 import { cors, runMiddleware } from "@/src/features/public-api/server/cors";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { type ZodError } from "zod/v4";
-import { BaseError, ConsoleNotFoundError, MethodNotAllowedError, UnauthorizedError } from "@hanzo/console-core";
-import { logger, traceException, contextWithHanzoProps, DatastoreResourceError } from "@hanzo/console-core/src/server";
+import { BaseError, HanzoNotFoundError, MethodNotAllowedError, UnauthorizedError } from "@hanzo/shared";
+import { logger, traceException, contextWithHanzoProps, ClickHouseResourceError } from "@hanzo/shared/src/server";
 import * as opentelemetry from "@opentelemetry/api";
 
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
@@ -19,8 +19,8 @@ const defaultHandler = () => {
 };
 
 const CH_ERROR_ADVICE_FULL = [
-  DatastoreResourceError.ERROR_ADVICE_MESSAGE,
-  "See https://hanzo.ai/docs/api-and-data-platform/features/public-api for more details.",
+  ClickHouseResourceError.ERROR_ADVICE_MESSAGE,
+  "See https://hanzo.com/docs/api-and-data-platform/features/public-api for more details.",
 ].join("\n");
 
 export function withMiddlewares(handlers: Handlers) {
@@ -49,7 +49,7 @@ export function withMiddlewares(handlers: Handlers) {
 
         return await finalHandlers[method](req, res);
       } catch (error) {
-        if (error instanceof ConsoleNotFoundError || error instanceof UnauthorizedError) {
+        if (error instanceof HanzoNotFoundError || error instanceof UnauthorizedError) {
           logger.info(error);
         } else {
           logger.error(error);
@@ -65,19 +65,19 @@ export function withMiddlewares(handlers: Handlers) {
           });
         }
 
-        // Handle Datastore resource errors
-        if (error instanceof DatastoreResourceError) {
-          const resourceError = error as DatastoreResourceError;
+        // Handle ClickHouse resource errors
+        if (error instanceof ClickHouseResourceError) {
+          const resourceError = error as ClickHouseResourceError;
 
-          logger.warn("Datastore resource limit exceeded", {
+          logger.error("ClickHouse resource limit exceeded", {
             errorType: resourceError.errorType,
             message: resourceError.message,
             suggestion: CH_ERROR_ADVICE_FULL,
           });
 
-          return res.status(422).json({
+          return res.status(524).json({
             message: CH_ERROR_ADVICE_FULL,
-            error: "Unprocessable Content",
+            error: "Request is taking too long to process.",
           });
         }
 

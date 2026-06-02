@@ -1,11 +1,11 @@
 /** @jest-environment node */
 
 import { makeZodVerifiedAPICall, makeAPICall } from "@/src/__tests__/test-utils";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { z } from "zod/v4";
 import { randomUUID } from "crypto";
-import { createAndAddApiKeysToDb, createBasicAuthHeader } from "@hanzo/console-core/src/server";
-import { decrypt } from "@hanzo/console-core/encryption";
+import { createAndAddApiKeysToDb, createBasicAuthHeader } from "@hanzo/shared/src/server";
+import { decrypt } from "@hanzo/shared/encryption";
 
 // Schemas based on Fern schema definition
 const BlobStorageIntegrationResponseSchema = z.object({
@@ -99,8 +99,8 @@ describe("Blob Storage Integrations API", () => {
       scope: "ORGANIZATION",
       note: "Test API Key for Blob Storage API",
       predefinedKeys: {
-        publicKey: `pk-hz-blob-${randomUUID().substring(0, 8)}`,
-        secretKey: `sk-hz-blob-${randomUUID().substring(0, 8)}`,
+        publicKey: `pk-lf-blob-${randomUUID().substring(0, 8)}`,
+        secretKey: `sk-lf-blob-${randomUUID().substring(0, 8)}`,
       },
     });
     testApiKey = orgApiKey.publicKey;
@@ -207,8 +207,8 @@ describe("Blob Storage Integrations API", () => {
         scope: "PROJECT",
         note: "Project API Key",
         predefinedKeys: {
-          publicKey: `pk-hz-proj-${randomUUID().substring(0, 8)}`,
-          secretKey: `sk-hz-proj-${randomUUID().substring(0, 8)}`,
+          publicKey: `pk-lf-proj-${randomUUID().substring(0, 8)}`,
+          secretKey: `sk-lf-proj-${randomUUID().substring(0, 8)}`,
         },
       });
 
@@ -605,8 +605,8 @@ describe("Blob Storage Integrations API", () => {
         scope: "PROJECT",
         note: "Project API Key",
         predefinedKeys: {
-          publicKey: `pk-hz-proj-del-${randomUUID().substring(0, 8)}`,
-          secretKey: `sk-hz-proj-del-${randomUUID().substring(0, 8)}`,
+          publicKey: `pk-lf-proj-del-${randomUUID().substring(0, 8)}`,
+          secretKey: `sk-lf-proj-del-${randomUUID().substring(0, 8)}`,
         },
       });
 

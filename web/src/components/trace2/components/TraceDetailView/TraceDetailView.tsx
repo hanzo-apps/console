@@ -2,17 +2,17 @@
  * TraceDetailView - Shows trace-level details when no observation is selected
  */
 
-import { type TraceDomain, type ScoreDomain } from "@hanzo/console-core";
+import { type TraceDomain, type ScoreDomain } from "@hanzo/shared";
 import { type ObservationReturnTypeWithMetadata } from "@/src/server/api/routers/traces";
 import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 import { TabsBar, TabsBarContent, TabsBarList, TabsBarTrigger } from "@/src/components/ui/tabs-bar";
-import { Tabs, TabsList, TabsTrigger } from "@hanzo/ui";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Switch } from "@/src/components/ui/switch";
 import { useCallback, useMemo, useState } from "react";
 import { type SelectionData } from "@/src/features/comments/contexts/InlineCommentSelectionContext";
 import { api } from "@/src/utils/api";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hanzo/ui";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 
 // Preview tab components
 import { IOPreview } from "@/src/components/trace2/components/IOPreview/IOPreview";
@@ -142,8 +142,9 @@ export function TraceDetailView({ trace, observations, scores, corrections, proj
   const isLogViewVirtualized = observations.length >= TRACE_VIEW_CONFIG.logView.virtualizationThreshold;
 
   // Scores tab visibility: hide for public trace viewers and in peek mode (annotation queues)
+  const { isPeekMode } = useViewPreferences();
   const isAuthenticatedAndProjectMember = useIsAuthenticatedAndProjectMember(projectId);
-  const showScoresTab = isAuthenticatedAndProjectMember;
+  const showScoresTab = isAuthenticatedAndProjectMember && !isPeekMode;
 
   // Handle tab change
   const handleTabChange = (value: string) => {
@@ -155,8 +156,6 @@ export function TraceDetailView({ trace, observations, scores, corrections, proj
       {/* Header section (extracted component) */}
       <TraceDetailViewHeader
         trace={trace}
-        observations={observations}
-        parsedMetadata={parsedMetadata}
         projectId={projectId}
         traceScores={traceScores}
         commentCount={comments.get(trace.id)}
@@ -198,7 +197,7 @@ export function TraceDetailView({ trace, observations, scores, corrections, proj
                 <Tabs
                   className="ml-auto h-fit px-2 py-0.5"
                   value={selectedTab === "log" && isLogViewVirtualized ? "pretty" : selectedViewTab}
-                  onValueChange={(value: string) => {
+                  onValueChange={(value) => {
                     // Don't allow JSON views for virtualized log view
                     if (selectedTab === "log" && isLogViewVirtualized && value === "json") {
                       return;
@@ -326,7 +325,6 @@ export function TraceDetailView({ trace, observations, scores, corrections, proj
                 traceId={trace.id}
                 hiddenColumns={["traceName", "jobConfigurationId", "userId"]}
                 localStorageSuffix="TracePreview"
-                disableUrlPersistence
               />
             </div>
           </TabsBarContent>

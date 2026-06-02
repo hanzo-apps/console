@@ -2,14 +2,14 @@ import { type Redis, type Cluster } from "ioredis";
 import { type z } from "zod/v4";
 import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
 import { env } from "@/src/env.mjs";
-import { type RateLimitResult, type RateLimitResource, type RateLimitConfig, type Plan } from "@hanzo/console-core";
+import { type RateLimitResult, type RateLimitResource, type RateLimitConfig, type Plan } from "@hanzo/shared";
 import {
   recordIncrement,
   type ApiAccessScope,
   logger,
   createNewRedisInstance,
   redisQueueRetryOptions,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { type NextApiResponse } from "next";
 
 // Business Logic

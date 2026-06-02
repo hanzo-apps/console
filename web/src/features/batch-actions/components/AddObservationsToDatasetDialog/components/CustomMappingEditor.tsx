@@ -1,7 +1,7 @@
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@hanzo/ui";
-import { Tabs, TabsList, TabsTrigger } from "@hanzo/ui";
+import { Label } from "@/src/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Plus, Trash2 } from "lucide-react";
 import { JsonPathInput } from "./JsonPathInput";
 import { SourceFieldSelector } from "./SourceFieldSelector";
@@ -12,7 +12,7 @@ import type {
   ObservationPreviewData,
   MappingTarget,
 } from "../types";
-import { isJsonPath } from "@hanzo/console-core";
+import { isJsonPath } from "@hanzo/shared";
 
 type CustomMappingEditorProps = {
   config: CustomMappingConfig;
@@ -132,7 +132,7 @@ export function CustomMappingEditor({
     <div className="space-y-2 rounded-md border bg-muted/30 p-4">
       <div>
         <Label className="text-sm font-medium">Target</Label>
-        <Tabs value={config.type} onValueChange={(v: string) => handleTypeChange(v as MappingTarget)} className="mt-2">
+        <Tabs value={config.type} onValueChange={(v) => handleTypeChange(v as MappingTarget)} className="mt-2">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="root">Root</TabsTrigger>
             <TabsTrigger value="keyValueMap">Key-value map</TabsTrigger>
@@ -186,7 +186,7 @@ export function CustomMappingEditor({
                   entry={entry}
                   onKeyChange={(key) => handleEntryChange(entry.id, "key", key)}
                   onSourceFieldChange={(sf) => handleEntryChange(entry.id, "sourceField", sf)}
-                  onValueChange={(value: string) => handleEntryChange(entry.id, "value", value)}
+                  onValueChange={(value) => handleEntryChange(entry.id, "value", value)}
                   onRemove={() => handleRemoveEntry(entry.id)}
                   canRemove={canRemove}
                   sourceData={getSourceData(entry.sourceField)}

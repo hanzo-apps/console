@@ -10,7 +10,7 @@
  */
 
 import { memo } from "react";
-import { type ObservationType, AnnotationQueueObjectType, isGenerationLike } from "@hanzo/console-core";
+import { type ObservationType, AnnotationQueueObjectType, isGenerationLike } from "@hanzo/shared";
 import { type SelectionData } from "@/src/features/comments/contexts/InlineCommentSelectionContext";
 import { type ObservationReturnTypeWithMetadata } from "@/src/server/api/routers/traces";
 import { ItemBadge } from "@/src/components/ItemBadge";
@@ -35,9 +35,7 @@ import { CostBadge, UsageBadge } from "./ObservationMetadataBadgesTooltip";
 import { ModelBadge } from "./ObservationMetadataBadgeModel";
 import { ModelParametersBadges } from "./ObservationMetadataBadgeModelParameters";
 import { type WithStringifiedMetadata, type MetadataDomainClient } from "@/src/utils/clientSideDomainTypes";
-import { type ScoreDomain } from "@hanzo/console-core";
-import { type AggregatedTraceMetrics } from "@/src/components/trace2/lib/trace-aggregation";
-import type Decimal from "decimal.js";
+import { type ScoreDomain } from "@hanzo/shared";
 
 export interface ObservationDetailViewHeaderProps {
   observation: ObservationReturnTypeWithMetadata;
@@ -59,8 +57,6 @@ export interface ObservationDetailViewHeaderProps {
   onSelectionUsed?: () => void;
   isCommentDrawerOpen?: boolean;
   onCommentDrawerOpenChange?: (open: boolean) => void;
-  subtreeMetrics?: AggregatedTraceMetrics | null;
-  treeNodeTotalCost?: Decimal;
 }
 
 export const ObservationDetailViewHeader = memo(function ObservationDetailViewHeader({
@@ -75,8 +71,6 @@ export const ObservationDetailViewHeader = memo(function ObservationDetailViewHe
   onSelectionUsed,
   isCommentDrawerOpen,
   onCommentDrawerOpenChange,
-  subtreeMetrics,
-  treeNodeTotalCost,
 }: ObservationDetailViewHeaderProps) {
   // Format cost and usage values
   const totalCost = observation.totalCost;
@@ -175,30 +169,14 @@ export const ObservationDetailViewHeader = memo(function ObservationDetailViewHe
           <SessionBadge sessionId={observation.sessionId ?? null} projectId={projectId} />
           <UserIdBadge userId={observation.userId ?? null} projectId={projectId} />
           <EnvironmentBadge environment={observation.environment} />
-          <CostBadge
-            totalCost={subtreeMetrics ? (treeNodeTotalCost?.toNumber() ?? subtreeMetrics.totalCost) : totalCost}
-            costDetails={subtreeMetrics?.costDetails ?? observation.costDetails}
+          <CostBadge totalCost={totalCost} costDetails={observation.costDetails} />
+          <UsageBadge
+            type={observation.type}
+            inputUsage={inputUsage}
+            outputUsage={outputUsage}
+            totalUsage={totalUsage}
+            usageDetails={observation.usageDetails}
           />
-          {subtreeMetrics ? (
-            subtreeMetrics.hasGenerationLike &&
-            subtreeMetrics.usageDetails && (
-              <UsageBadge
-                type="GENERATION"
-                inputUsage={subtreeMetrics.inputUsage}
-                outputUsage={subtreeMetrics.outputUsage}
-                totalUsage={subtreeMetrics.totalUsage}
-                usageDetails={subtreeMetrics.usageDetails}
-              />
-            )
-          ) : (
-            <UsageBadge
-              type={observation.type}
-              inputUsage={inputUsage}
-              outputUsage={outputUsage}
-              totalUsage={totalUsage}
-              usageDetails={observation.usageDetails}
-            />
-          )}
           <VersionBadge version={observation.version} />
           <ModelBadge
             model={observation.model}

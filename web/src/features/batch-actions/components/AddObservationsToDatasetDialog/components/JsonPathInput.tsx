@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { lightTheme } from "@/src/components/editor/light-theme";
 import { darkTheme } from "@/src/components/editor/dark-theme";
 import { cn } from "@/src/utils/tailwind";
-import { evaluateJsonPath } from "@hanzo/console-core";
+import { evaluateJsonPath } from "@hanzo/shared";
 
 // JSON path language mode for syntax highlighting
 const jsonPathLanguage = StreamLanguage.define({
@@ -79,7 +79,6 @@ export function JsonPathInput({
   const codeMirrorTheme = resolvedTheme === "dark" ? darkTheme : lightTheme;
 
   const [resolveError, setResolveError] = useState<string | null>(null);
-  const [noMatchWarning, setNoMatchWarning] = useState(false);
 
   // Parse source data once
   const parsedSourceData = useMemo(() => {
@@ -104,23 +103,18 @@ export function JsonPathInput({
       // Try to resolve the JSON path
       if (newValue && newValue.startsWith("$") && parsedSourceData) {
         try {
-          const result = evaluateJsonPath(parsedSourceData, newValue);
-          setResolveError(null);
-          setNoMatchWarning(result === undefined);
+          evaluateJsonPath(parsedSourceData, newValue);
         } catch (e) {
           setResolveError(e instanceof Error ? e.message : "Invalid JSON path");
-          setNoMatchWarning(false);
         }
       } else {
         setResolveError(null);
-        setNoMatchWarning(false);
       }
     },
     [onChange, parsedSourceData],
   );
 
   const displayError = error || resolveError;
-  const showWarning = !displayError && noMatchWarning;
 
   return (
     <div className="space-y-1">
@@ -154,15 +148,9 @@ export function JsonPathInput({
         onChange={handleChange}
         onBlur={onBlur}
         placeholder={placeholder}
-        className={cn(
-          "overflow-hidden rounded-md border text-sm",
-          displayError && "border-destructive",
-          showWarning && "border-amber-500/50",
-          className,
-        )}
+        className={cn("overflow-hidden rounded-md border text-sm", displayError && "border-destructive", className)}
       />
       {displayError && <p className="text-xs text-destructive">{displayError}</p>}
-      {showWarning && <p className="text-xs text-amber-600 dark:text-amber-500">No match found in source data</p>}
     </div>
   );
 }

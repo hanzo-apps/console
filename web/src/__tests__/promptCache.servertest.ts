@@ -1,5 +1,5 @@
 import { type PrismaClient, type Prompt } from "@prisma/client";
-import { PromptService, type redis } from "@hanzo/console-core/src/server"; // Adjust the import path as needed
+import { PromptService, type redis } from "@hanzo/shared/src/server"; // Adjust the import path as needed
 
 type Redis = NonNullable<typeof redis>;
 
@@ -72,7 +72,7 @@ describe("PromptService", () => {
     it("should fetch from database if not in cache", async () => {
       mockRedis.exists.mockResolvedValue(0);
       mockRedis.getex.mockResolvedValue(null);
-      (mockPrisma.prompt.findFirst as jest.Mock).mockResolvedValue(mockPrompt);
+      mockPrisma.prompt.findFirst.mockResolvedValue(mockPrompt);
 
       const result = await promptService.getPrompt({
         projectId: "project1",
@@ -82,7 +82,7 @@ describe("PromptService", () => {
       });
 
       expect(result).toEqual(mockPrompt);
-      expect(mockPrisma.prompt.findFirst as jest.Mock).toHaveBeenCalled();
+      expect(mockPrisma.prompt.findFirst).toHaveBeenCalled();
       expect(mockMetricIncrementer).toHaveBeenCalledWith("prompt_cache_miss", 1);
 
       expect(mockRedis.set).toHaveBeenCalledWith("prompt:project1:testPrompt:1", JSON.stringify(mockPrompt), "EX", 300);
@@ -92,7 +92,7 @@ describe("PromptService", () => {
 
     it("should not use cache if locked", async () => {
       mockRedis.exists.mockResolvedValue(1);
-      (mockPrisma.prompt.findFirst as jest.Mock).mockResolvedValue(mockPrompt);
+      mockPrisma.prompt.findFirst.mockResolvedValue(mockPrompt);
 
       const result = await promptService.getPrompt({
         projectId: "project1",
@@ -103,7 +103,7 @@ describe("PromptService", () => {
 
       expect(result).toEqual(mockPrompt);
       expect(mockRedis.getex).not.toHaveBeenCalled();
-      expect(mockPrisma.prompt.findFirst as jest.Mock).toHaveBeenCalled();
+      expect(mockPrisma.prompt.findFirst).toHaveBeenCalled();
     });
   });
 
@@ -149,7 +149,7 @@ describe("PromptService", () => {
     });
 
     it("should not use cache when disabled", async () => {
-      (mockPrisma.prompt.findFirst as jest.Mock).mockResolvedValue(mockPrompt);
+      mockPrisma.prompt.findFirst.mockResolvedValue(mockPrompt);
 
       const result = await promptService.getPrompt({
         projectId: "project1",
@@ -160,7 +160,7 @@ describe("PromptService", () => {
 
       expect(result).toEqual(mockPrompt);
       expect(mockRedis.getex).not.toHaveBeenCalled();
-      expect(mockPrisma.prompt.findFirst as jest.Mock).toHaveBeenCalled();
+      expect(mockPrisma.prompt.findFirst).toHaveBeenCalled();
       expect(mockMetricIncrementer).not.toHaveBeenCalled();
     });
   });
@@ -171,7 +171,7 @@ describe("PromptService", () => {
     });
 
     it("should not use cache with null Redis instance", async () => {
-      (mockPrisma.prompt.findFirst as jest.Mock).mockResolvedValue(mockPrompt);
+      mockPrisma.prompt.findFirst.mockResolvedValue(mockPrompt);
 
       const result = await promptService.getPrompt({
         projectId: "project1",
@@ -181,7 +181,7 @@ describe("PromptService", () => {
       });
 
       expect(result).toEqual(mockPrompt);
-      expect(mockPrisma.prompt.findFirst as jest.Mock).toHaveBeenCalled();
+      expect(mockPrisma.prompt.findFirst).toHaveBeenCalled();
       expect(mockMetricIncrementer).not.toHaveBeenCalled();
     });
   });
@@ -189,7 +189,7 @@ describe("PromptService", () => {
   describe("getPrompt with Redis errors", () => {
     it("should fallback to database if Redis.exists throws an error", async () => {
       mockRedis.exists.mockRejectedValue(new Error("Redis error"));
-      (mockPrisma.prompt.findFirst as jest.Mock).mockResolvedValue(mockPrompt);
+      mockPrisma.prompt.findFirst.mockResolvedValue(mockPrompt);
 
       const result = await promptService.getPrompt({
         projectId: "project1",
@@ -199,14 +199,14 @@ describe("PromptService", () => {
       });
 
       expect(result).toEqual(mockPrompt);
-      expect(mockPrisma.prompt.findFirst as jest.Mock).toHaveBeenCalled();
+      expect(mockPrisma.prompt.findFirst).toHaveBeenCalled();
       expect(mockMetricIncrementer).toHaveBeenCalledWith("prompt_cache_miss", 1);
     });
 
     it("should fallback to database if Redis.getex throws an error", async () => {
       mockRedis.exists.mockResolvedValue(0);
       mockRedis.getex.mockRejectedValue(new Error("Redis error"));
-      (mockPrisma.prompt.findFirst as jest.Mock).mockResolvedValue(mockPrompt);
+      mockPrisma.prompt.findFirst.mockResolvedValue(mockPrompt);
 
       const result = await promptService.getPrompt({
         projectId: "project1",
@@ -216,14 +216,14 @@ describe("PromptService", () => {
       });
 
       expect(result).toEqual(mockPrompt);
-      expect(mockPrisma.prompt.findFirst as jest.Mock).toHaveBeenCalled();
+      expect(mockPrisma.prompt.findFirst).toHaveBeenCalled();
       expect(mockMetricIncrementer).toHaveBeenCalledWith("prompt_cache_miss", 1);
     });
 
     it("should not cache if Redis.set throws an error after database fetch", async () => {
       mockRedis.exists.mockResolvedValue(0);
       mockRedis.getex.mockResolvedValue(null);
-      (mockPrisma.prompt.findFirst as jest.Mock).mockResolvedValue(mockPrompt);
+      mockPrisma.prompt.findFirst.mockResolvedValue(mockPrompt);
       mockRedis.set.mockRejectedValue(new Error("Redis error"));
 
       const result = await promptService.getPrompt({
@@ -234,7 +234,7 @@ describe("PromptService", () => {
       });
 
       expect(result).toEqual(mockPrompt);
-      expect(mockPrisma.prompt.findFirst as jest.Mock).toHaveBeenCalled();
+      expect(mockPrisma.prompt.findFirst).toHaveBeenCalled();
       expect(mockMetricIncrementer).toHaveBeenCalledWith("prompt_cache_miss", 1);
     });
   });

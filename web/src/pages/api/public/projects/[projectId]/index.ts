@@ -1,7 +1,8 @@
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { cors, runMiddleware } from "@/src/features/public-api/server/cors";
-import { prisma } from "@hanzo/console-core/src/db";
-import { logger, redis } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/shared/src/db";
+import { logger, redis } from "@hanzo/shared/src/server";
+import { handleUpdateProject, handleDeleteProject } from "@/src/ee/features/admin-api/server/projects/projectById";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import { type NextApiRequest, type NextApiResponse } from "next";
 
@@ -61,57 +62,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  try {
-    if (req.method === "PUT") {
-      const { name, metadata, retention } = req.body ?? {};
+  // Route to the appropriate handler based on HTTP method
+  if (req.method === "PUT") {
+    return handleUpdateProject(req, res, projectId, authCheck.scope);
+  }
 
-      // Validate name if provided
-      if (name !== undefined && (typeof name !== "string" || name.length < 3 || name.length > 60)) {
-        return res.status(400).json({
-          message: "Invalid project name. Name must be between 3 and 60 characters.",
-        });
-      }
-
-      // Validate retention if provided
-      if (retention !== undefined && retention !== null) {
-        if (typeof retention !== "number" || (retention !== 0 && retention < 3)) {
-          return res.status(400).json({
-            message: "Invalid retention value. Must be 0 or >= 3.",
-          });
-        }
-      }
-
-      const updated = await prisma.project.update({
-        where: { id: projectId },
-        data: {
-          ...(name !== undefined ? { name } : {}),
-          ...(metadata !== undefined ? { metadata } : {}),
-          ...(retention !== undefined ? { retentionDays: retention } : {}),
-        },
-      });
-
-      return res.status(200).json({
-        id: updated.id,
-        name: updated.name,
-        metadata: updated.metadata ?? {},
-        ...(updated.retentionDays ? { retentionDays: updated.retentionDays } : {}),
-      });
-    }
-
-    if (req.method === "DELETE") {
-      // Soft delete
-      await prisma.project.update({
-        where: { id: projectId },
-        data: { deletedAt: new Date() },
-      });
-
-      return res.status(202).json({
-        success: true,
-        message: "Project deletion is being processed asynchronously.",
-      });
-    }
-  } catch (error) {
-    logger.error(error);
-    return res.status(500).json({ message: "Internal server error" });
+  if (req.method === "DELETE") {
+    return handleDeleteProject(req, res, projectId, authCheck.scope);
   }
 }

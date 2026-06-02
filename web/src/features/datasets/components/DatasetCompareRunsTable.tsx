@@ -2,13 +2,14 @@ import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
 import { FilteredRunPills } from "@/src/components/table/filtered-run-pills";
 import TableLink from "@/src/components/table/table-link";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { IOTableCell } from "@/src/components/ui/IOTableCell";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { getDatasetRunAggregateColumnProps } from "@/src/features/datasets/components/DatasetRunAggregateColumnHelpers";
 import { useDatasetRunAggregateColumns } from "@/src/features/datasets/hooks/useDatasetRunAggregateColumns";
-import { useState, useEffect, useMemo } from "react";
-import { usePaginationState } from "@/src/hooks/usePaginationState";
+import { NumberParam } from "use-query-params";
+import { useQueryParams, withDefault } from "use-query-params";
+import { useState, useEffect } from "react";
 import { api } from "@/src/utils/api";
 import { Button } from "@/src/components/ui/button";
 import { LayoutList } from "lucide-react";
@@ -25,11 +26,10 @@ import {
   useDatasetCompareFields,
 } from "@/src/features/datasets/contexts/DatasetCompareFieldsContext";
 import { useColumnFilterState } from "@/src/features/filters/hooks/useColumnFilterState";
-import { type Prisma } from "@hanzo/console-core";
-import { type EnrichedDatasetRunItem } from "@hanzo/console-core/src/server";
+import { type Prisma } from "@hanzo/shared";
+import { type EnrichedDatasetRunItem } from "@hanzo/shared/src/server";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
 import { PeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
-import { TablePeekView } from "@/src/components/table/peek";
 
 export type DatasetCompareRunRowData = {
   id: string;
@@ -65,9 +65,9 @@ function DatasetCompareRunsTableInternal(props: {
     });
   }, [props.runIds, convertToColumnFilterList, updateRunFilters]);
 
-  const [paginationState, setPaginationState] = usePaginationState(0, 50, {
-    page: "pageIndex",
-    limit: "pageSize",
+  const [paginationState, setPaginationState] = useQueryParams({
+    pageIndex: withDefault(NumberParam, 0),
+    pageSize: withDefault(NumberParam, 50),
   });
 
   const datasetItemsWithRunData = api.datasets.datasetItemsWithRunData.useQuery({
@@ -108,17 +108,6 @@ function DatasetCompareRunsTableInternal(props: {
     },
   });
 
-  const peekConfig = useMemo(
-    () => ({
-      itemType: "TRACE" as const,
-      children: <PeekViewTraceDetail projectId={props.projectId} />,
-      closePeek,
-      expandPeek,
-      // openPeek is handled by DatasetAggregateTableCell's custom handleOpenPeek
-    }),
-    [props.projectId, closePeek, expandPeek],
-  );
-
   const { runAggregateColumns, isLoading: cellsLoading } = useDatasetRunAggregateColumns({
     projectId: props.projectId,
     runIds: props.runIds,
@@ -127,7 +116,7 @@ function DatasetCompareRunsTableInternal(props: {
     getFiltersForRun,
   });
 
-  const columns: ConsoleColumnDef<DatasetCompareRunRowData>[] = [
+  const columns: HanzoColumnDef<DatasetCompareRunRowData>[] = [
     {
       accessorKey: "id",
       header: "Item id",
@@ -275,9 +264,15 @@ function DatasetCompareRunsTableInternal(props: {
           m: "h-64",
           l: "h-96",
         }}
-        peekView={peekConfig}
+        peekView={{
+          itemType: "TRACE",
+          children: <PeekViewTraceDetail projectId={props.projectId} />,
+          tableDataUpdatedAt: datasetItemsWithRunData.dataUpdatedAt,
+          closePeek,
+          expandPeek,
+          // openPeek is handled by DatasetAggregateTableCell's custom handleOpenPeek
+        }}
       />
-      <TablePeekView peekView={peekConfig} />
     </>
   );
 }

@@ -10,13 +10,13 @@ import {
   type TableViewPresetDomain,
   type TableViewPresetTableName,
   type TracingSearchType,
-} from "@hanzo/console-core";
+} from "@hanzo/shared";
 import { type RowSelectionState, type ColumnOrderState, type VisibilityState } from "@tanstack/react-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { DataTableRowHeightSwitch, type RowHeight } from "@/src/components/table/data-table-row-height-switch";
 import { Search, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { TimeRangePicker } from "@/src/components/date-picker";
 import { type TimeRange, TABLE_AGGREGATION_OPTIONS } from "@/src/utils/date-range-utils";
 import { DataTableSelectAllBanner } from "@/src/components/table/data-table-multi-select-actions/data-table-select-all-banner";
@@ -78,7 +78,7 @@ interface RefreshConfig {
 }
 
 interface DataTableToolbarProps<TData, TValue> {
-  columns: ConsoleColumnDef<TData, TValue>[];
+  columns: HanzoColumnDef<TData, TValue>[];
   filterColumnDefinition?: ColumnDefinition[];
   searchConfig?: SearchConfig;
   actionButtons?: React.ReactNode;
@@ -134,7 +134,7 @@ export function DataTableToolbar<TData, TValue>({
 }: DataTableToolbarProps<TData, TValue>) {
   const [searchString, setSearchString] = useState(searchConfig?.currentQuery ?? "");
 
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const { open: controlsPanelOpen, setOpen: setControlsPanelOpen } = useDataTableControls();
 
   // Only show the toggle button when we're using the new sidebar
@@ -158,6 +158,7 @@ export function DataTableToolbar<TData, TValue>({
             )}
           </Button>
         )}
+        {viewModeToggle}
         {searchConfig && (
           <div className="flex max-w-[30rem] flex-shrink-0 items-stretch md:min-w-[24rem]">
             <div
@@ -261,7 +262,6 @@ export function DataTableToolbar<TData, TValue>({
             )}
           </div>
         )}
-        {viewModeToggle}
         {timeRange && setTimeRange && (
           <TimeRangePicker
             timeRange={timeRange}

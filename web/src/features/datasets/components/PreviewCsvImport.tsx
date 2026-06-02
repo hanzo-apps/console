@@ -1,16 +1,16 @@
 import { CsvColumnsCard } from "./CsvColumnsCard";
 import { MappingCard } from "./MappingCard";
 import { DndContext, closestCenter, MeasuringStrategy, DragOverlay } from "@dnd-kit/core";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { api } from "@/src/utils/api";
-import { Progress } from "@hanzo/ui";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { Progress } from "@/src/components/ui/progress";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { DialogBody, DialogFooter } from "@/src/components/ui/dialog";
 import { CsvImportValidationError } from "./CsvImportValidationError";
-import { Checkbox } from "@hanzo/ui";
-import { Label } from "@hanzo/ui";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@hanzo/ui";
+import { Checkbox } from "@/src/components/ui/checkbox";
+import { Label } from "@/src/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/src/components/ui/tooltip";
 import { InfoIcon, GripVertical } from "lucide-react";
 import { useCsvMapping } from "@/src/features/datasets/hooks/useCsvMapping";
 import { useCsvDragAndDrop } from "@/src/features/datasets/hooks/useCsvDragAndDrop";
@@ -43,7 +43,7 @@ export function PreviewCsvImport({
   setPreview: (preview: CsvPreviewResult | null) => void;
   setOpen?: (open: boolean) => void;
 }) {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   // Fetch dataset schema
   const { data: dataset } = api.datasets.byId.useQuery({
@@ -55,28 +55,12 @@ export function PreviewCsvImport({
   const inputSchemaKeys = extractSchemaKeys(dataset?.inputSchema);
   const expectedOutputSchemaKeys = extractSchemaKeys(dataset?.expectedOutputSchema);
 
-  // Toggle states for direct mapping mode (per field)
-  const [useDirectMappingForInput, setUseDirectMappingForInput] = useState(false);
-  const [useDirectMappingForExpectedOutput, setUseDirectMappingForExpectedOutput] = useState(false);
-
-  // Compute effective schema keys - pass undefined when in direct mapping mode
-  const effectiveInputSchemaKeys = useDirectMappingForInput ? undefined : (inputSchemaKeys ?? undefined);
-  const effectiveExpectedOutputSchemaKeys = useDirectMappingForExpectedOutput
-    ? undefined
-    : (expectedOutputSchemaKeys ?? undefined);
-
   // Mapping state
   const mapping = useCsvMapping({
     preview,
-    inputSchemaKeys: effectiveInputSchemaKeys,
-    expectedOutputSchemaKeys: effectiveExpectedOutputSchemaKeys,
+    inputSchemaKeys: inputSchemaKeys ?? undefined,
+    expectedOutputSchemaKeys: expectedOutputSchemaKeys ?? undefined,
   });
-
-  // Reset mappings when switching modes (avoids stale closure in callback)
-  useEffect(() => {
-    mapping.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [useDirectMappingForInput, useDirectMappingForExpectedOutput]);
 
   // Drag and drop
   const dragAndDrop = useCsvDragAndDrop({
@@ -118,9 +102,10 @@ export function PreviewCsvImport({
 
   const handleImport = async () => {
     capture("dataset_item:upload_csv_form_submit");
-    const success = await csvImport.execute(wrapSingleColumn);
+    await csvImport.execute(wrapSingleColumn);
 
-    if (success) {
+    // Close dialog on success
+    if (csvImport.progress.status === "complete") {
       setOpen?.(false);
       setPreview(null);
     }
@@ -158,12 +143,6 @@ export function PreviewCsvImport({
                 onRemoveInputColumn={mapping.removeColumnFromInput}
                 onRemoveExpectedColumn={mapping.removeColumnFromExpectedOutput}
                 onRemoveMetadataColumn={mapping.removeColumnFromMetadata}
-                inputSchemaKeys={inputSchemaKeys}
-                expectedOutputSchemaKeys={expectedOutputSchemaKeys}
-                useDirectMappingForInput={useDirectMappingForInput}
-                useDirectMappingForExpectedOutput={useDirectMappingForExpectedOutput}
-                onToggleDirectMappingForInput={setUseDirectMappingForInput}
-                onToggleDirectMappingForExpectedOutput={setUseDirectMappingForExpectedOutput}
               />
             </div>
             {createPortal(
@@ -193,13 +172,12 @@ export function PreviewCsvImport({
         {csvImport.validationErrors.length > 0 && <CsvImportValidationError errors={csvImport.validationErrors} />}
       </DialogBody>
       <DialogFooter>
-        {/* Show checkbox in freeform mode OR when using direct mapping for any field */}
-        {(useDirectMappingForInput || useDirectMappingForExpectedOutput || !isSchemaMode) && (
+        {!isSchemaMode && (
           <div className="flex items-center gap-2">
             <Checkbox
               id="wrapSingleColumn"
               checked={wrapSingleColumn}
-              onCheckedChange={(checked: boolean | "indeterminate") => setWrapSingleColumn(checked === true)}
+              onCheckedChange={(checked) => setWrapSingleColumn(checked === true)}
             />
             <Label htmlFor="wrapSingleColumn" className="cursor-pointer text-sm font-normal">
               Force Objects

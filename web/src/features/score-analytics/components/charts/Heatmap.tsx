@@ -1,8 +1,8 @@
 import { useMemo, useLayoutEffect, useState, useRef } from "react";
 import { type HeatmapCell } from "@/src/features/score-analytics/lib/heatmap-utils";
 import { HeatmapCellComponent } from "./HeatmapCell";
-import { TooltipProvider } from "@hanzo/ui";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { TooltipProvider } from "@/src/components/ui/tooltip";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { cn } from "@/src/utils/tailwind";
 
 export interface HeatmapProps {

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { type ScoreDomain, type Prisma } from "@hanzo/console-core";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { type ScoreDomain, type Prisma } from "@hanzo/shared";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import usePreserveRelativeScroll from "@/src/hooks/usePreserveRelativeScroll";
 import { type MediaReturnType } from "@/src/features/media/validation";
@@ -132,7 +132,7 @@ export function IOPreview({
   environment = "default",
   showCorrections = true,
 }: IOPreviewProps) {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const [dismissedTraceViewNotifications, setDismissedTraceViewNotifications] = useLocalStorage<string[]>(
     STORAGE_KEY,
     [],
@@ -302,7 +302,7 @@ export function IOPreview({
             <ActionButton
               variant="outline"
               size="sm"
-              href="https://hanzo.ai/faq/all/empty-trace-input-and-output"
+              href="https://hanzo.com/faq/all/empty-trace-input-and-output"
               trackingEventName="notification:click_link"
               trackingProps={{ notification_id: EMPTY_IO_ALERT_ID }}
             >

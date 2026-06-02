@@ -1,17 +1,15 @@
 import { api } from "@/src/utils/api";
-import { type FilterState, getGenerationLikeTypes } from "@hanzo/console-core";
+import { type FilterState, getGenerationLikeTypes } from "@hanzo/shared";
 import { DashboardCard } from "@/src/features/dashboard/components/cards/DashboardCard";
 import { compactNumberFormatter } from "@/src/utils/numbers";
 import { TabComponent } from "@/src/features/dashboard/components/TabsComponent";
+import { BarList } from "@tremor/react";
 import { TotalMetric } from "@/src/features/dashboard/components/TotalMetric";
 import { ExpandListButton } from "@/src/features/dashboard/components/cards/ChevronButton";
 import { useState } from "react";
 import { totalCostDashboardFormatted } from "@/src/features/dashboard/lib/dashboard-utils";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
-import { type QueryType, type ViewVersion, mapLegacyUiTableFilterToView } from "@/src/features/query";
-import { Chart } from "@/src/features/widgets/chart-library/Chart";
-import { barListToDataPoints } from "@/src/features/dashboard/lib/chart-data-adapters";
-import { traceViewQuery } from "@/src/features/dashboard/lib/dashboard-utils";
+import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
 
 type BarChartDataPoint = {
   name: string;
@@ -25,7 +23,6 @@ export const UserChart = ({
   fromTimestamp,
   toTimestamp,
   isLoading = false,
-  metricsVersion,
 }: {
   className?: string;
   projectId: string;
@@ -33,7 +30,6 @@ export const UserChart = ({
   fromTimestamp: Date;
   toTimestamp: Date;
   isLoading?: boolean;
-  metricsVersion?: ViewVersion;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const userCostQuery: QueryType = {
@@ -62,7 +58,6 @@ export const UserChart = ({
     {
       projectId,
       query: userCostQuery,
-      version: metricsVersion,
     },
     {
       trpc: {
@@ -74,12 +69,11 @@ export const UserChart = ({
     },
   );
 
-  const isV2 = metricsVersion === "v2";
-  const countField = isV2 ? "uniq_traceId" : "count_count";
-
   const traceCountQuery: QueryType = {
-    ...traceViewQuery({ metricsVersion, globalFilterState }),
+    view: "traces",
     dimensions: [{ field: "userId" }],
+    metrics: [{ measure: "count", aggregation: "count" }],
+    filters: mapLegacyUiTableFilterToView("traces", globalFilterState),
     timeDimension: null,
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
@@ -90,7 +84,6 @@ export const UserChart = ({
     {
       projectId,
       query: traceCountQuery,
-      version: metricsVersion,
     },
     {
       trpc: {
@@ -108,7 +101,7 @@ export const UserChart = ({
         .map((item) => {
           return {
             name: item.userId as string,
-            value: item[countField] ? Number(item[countField]) : 0,
+            value: item.count_count ? Number(item.count_count) : 0,
           };
         })
     : [];
@@ -126,12 +119,9 @@ export const UserChart = ({
 
   const totalCost = user.data?.reduce((acc, curr) => acc + (Number(curr.sum_totalCost) || 0), 0);
 
-  const totalTraces = traces.data?.reduce((acc, curr) => acc + (Number(curr[countField]) || 0), 0);
+  const totalTraces = traces.data?.reduce((acc, curr) => acc + (Number(curr.count_count) || 0), 0);
 
   const maxNumberOfEntries = { collapsed: 5, expanded: 20 } as const;
-
-  const BAR_ROW_HEIGHT = 36;
-  const CHART_AXIS_PADDING = 32;
 
   const localUsdFormatter = (value: number) => totalCostDashboardFormatted(value);
 
@@ -164,34 +154,21 @@ export const UserChart = ({
             content: (
               <>
                 {item.data.length > 0 ? (
-                  <div className="flex flex-col">
+                  <>
                     <TotalMetric metric={item.totalMetric} description={item.metricDescription} />
-                    <div
-                      className="mt-4 w-full"
-                      style={{
-                        minHeight: 200,
-                        height: Math.max(200, item.data.length * BAR_ROW_HEIGHT + CHART_AXIS_PADDING),
-                      }}
-                    >
-                      <Chart
-                        chartType="HORIZONTAL_BAR"
-                        data={barListToDataPoints(item.data)}
-                        rowLimit={maxNumberOfEntries.expanded}
-                        chartConfig={{
-                          type: "HORIZONTAL_BAR",
-                          row_limit: maxNumberOfEntries.expanded,
-                          show_value_labels: true,
-                          subtle_fill: true,
-                        }}
-                        valueFormatter={item.formatter}
-                      />
-                    </div>
-                  </div>
+                    <BarList
+                      data={item.data}
+                      valueFormatter={item.formatter}
+                      className="mt-2 [&_*]:text-muted-foreground [&_p]:text-muted-foreground [&_span]:text-muted-foreground"
+                      showAnimation={true}
+                      color={"indigo"}
+                    />
+                  </>
                 ) : (
                   <NoDataOrLoading
                     isLoading={isLoading || user.isPending}
                     description="Consumption per user is tracked by passing their ids on traces."
-                    href="https://hanzo.ai/docs/observability/features/users"
+                    href="https://hanzo.com/docs/observability/features/users"
                   />
                 )}
               </>

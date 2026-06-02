@@ -1,1 +1,1 @@
-export type { NormalizerContext, ProviderAdapter, ToolEvent } from "@hanzo/console-core";
+export type { NormalizerContext, ProviderAdapter, ToolEvent } from "@hanzo/shared";

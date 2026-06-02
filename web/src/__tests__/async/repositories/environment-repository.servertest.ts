@@ -1,7 +1,7 @@
-import { createTracesCh, createTrace, getEnvironmentsForProject } from "@hanzo/console-core/src/server";
+import { createTracesCh, createTrace, getEnvironmentsForProject } from "@hanzo/shared/src/server";
 import { randomUUID } from "crypto";
 
-describe("Datastore Project Repository Test", () => {
+describe("Clickhouse Project Repository Test", () => {
   it("should return default if no environments are found", async () => {
     const projectId = randomUUID();
     const environments = await getEnvironmentsForProject({ projectId });

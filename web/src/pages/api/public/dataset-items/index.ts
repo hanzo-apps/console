@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -8,14 +8,14 @@ import {
   PostDatasetItemsV1Response,
   transformDbDatasetItemDomainToAPIDatasetItem,
 } from "@/src/features/public-api/types/datasets";
-import { ConsoleNotFoundError, Prisma } from "@hanzo/console-core";
+import { HanzoNotFoundError, Prisma } from "@hanzo/shared";
 import {
   createDatasetItemFilterState,
   getDatasetItems,
   getDatasetItemsCount,
   logger,
   upsertDatasetItem,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
 export const config = {
@@ -75,7 +75,7 @@ export default withMiddlewares({
             logger.warn(
               `Failed to upsert dataset item. Dataset item ${id} in project ${auth.scope.projectId} already exists for a different dataset than ${datasetName}`,
             );
-            throw new ConsoleNotFoundError(
+            throw new HanzoNotFoundError(
               `The dataset item with id ${id} already exists in a dataset other than ${datasetName}`,
             );
           }
@@ -90,7 +90,7 @@ export default withMiddlewares({
     responseSchema: GetDatasetItemsV1Response,
     rateLimitResource: "datasets",
     fn: async ({ query, auth }) => {
-      const { datasetName, sourceTraceId, sourceObservationId, version, page, limit } = query;
+      const { datasetName, sourceTraceId, sourceObservationId, page, limit } = query;
 
       let datasetId: string | undefined = undefined;
       if (datasetName) {
@@ -101,7 +101,7 @@ export default withMiddlewares({
           },
         });
         if (!dataset) {
-          throw new ConsoleNotFoundError("Dataset not found");
+          throw new HanzoNotFoundError("Dataset not found");
         }
         datasetId = dataset.id;
       }
@@ -114,7 +114,6 @@ export default withMiddlewares({
       const items = await getDatasetItems({
         projectId: auth.scope.projectId,
         filterState,
-        version: version ?? undefined,
         includeDatasetName: true,
         limit: limit,
         page: page - 1,
@@ -123,11 +122,10 @@ export default withMiddlewares({
       const totalItems = await getDatasetItemsCount({
         projectId: auth.scope.projectId,
         filterState,
-        version: version ?? undefined,
       });
 
       return {
-        data: items.map((item) => transformDbDatasetItemDomainToAPIDatasetItem(item)),
+        data: items.map(transformDbDatasetItemDomainToAPIDatasetItem),
         meta: {
           page,
           limit,

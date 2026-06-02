@@ -10,7 +10,7 @@ import { Button } from "@/src/components/ui/button";
 import { ChevronUp, ChevronDown, WrapText, Minus, Copy } from "lucide-react";
 import { useJsonViewPreferences } from "@/src/components/ui/AdvancedJsonViewer/hooks/useJsonViewPreferences";
 import { type MediaReturnType } from "@/src/features/media/validation";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import {
   InlineCommentSelectionProvider,
   useInlineCommentSelectionOptional,
@@ -20,7 +20,7 @@ import { CommentableJsonView } from "@/src/features/comments/components/Commenta
 import { InlineCommentBubble } from "@/src/features/comments/components/InlineCommentBubble";
 import { type CommentedPathsByField } from "@/src/components/ui/AdvancedJsonViewer/utils/commentRanges";
 import { type ExpansionState } from "@/src/components/ui/AdvancedJsonViewer/types";
-import { type ScoreDomain } from "@hanzo/console-core";
+import { type ScoreDomain } from "@hanzo/shared";
 import { CorrectedOutputField } from "./components/CorrectedOutputField";
 
 const VIRTUALIZATION_THRESHOLD = 3333;

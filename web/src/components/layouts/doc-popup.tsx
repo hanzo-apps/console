@@ -1,5 +1,5 @@
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@hanzo/ui";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { cn } from "@/src/utils/tailwind";
 import { Portal } from "@radix-ui/react-hover-card";
 import { Info } from "lucide-react";
@@ -11,12 +11,12 @@ export type DocPopupProps = {
 };
 
 export default function DocPopup({ description, href, className }: DocPopupProps) {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   return (
     <HoverCard
       openDelay={200}
-      onOpenChange={(open: boolean) => {
+      onOpenChange={(open) => {
         if (open) {
           capture("help_popup:opened", {
             hfref: href,
@@ -44,9 +44,13 @@ export default function DocPopup({ description, href, className }: DocPopupProps
       </HoverCardTrigger>
       <Portal>
         <HoverCardContent>
-          <div className={cn("whitespace-break-spaces text-xs font-normal text-primary sm:pl-0", className)}>
-            {description}
-          </div>
+          {typeof description === "string" ? (
+            <div className={cn("whitespace-break-spaces text-xs font-normal text-primary sm:pl-0", className)}>
+              {description}
+            </div>
+          ) : (
+            description
+          )}
         </HoverCardContent>
       </Portal>
     </HoverCard>
@@ -65,7 +69,11 @@ export function Popup({ triggerContent, description }: PopupProps) {
         <div>{triggerContent}</div>
       </HoverCardTrigger>
       <HoverCardContent>
-        <div className="whitespace-break-spaces text-xs font-normal text-primary sm:pl-0">{description}</div>
+        {typeof description === "string" ? (
+          <div className="whitespace-break-spaces text-xs font-normal text-primary sm:pl-0">{description}</div>
+        ) : (
+          description
+        )}
       </HoverCardContent>
     </HoverCard>
   );

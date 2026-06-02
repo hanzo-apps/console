@@ -7,7 +7,7 @@ declare global {
     hanzo?: {
       track: (eventName: string, eventData?: Record<string, any>) => void;
     };
-    insights?: {
+    posthog?: {
       capture: (eventName: string, eventData?: Record<string, any>) => void;
     };
   }
@@ -19,20 +19,20 @@ export const trackBillingEvent = (eventName: string, eventData?: Record<string, 
     window.hanzo.track(eventName, eventData);
   }
 
-  // Also track with Insights for backward compatibility
-  if (typeof window !== "undefined" && window.insights) {
-    window.insights.capture(eventName, eventData);
+  // Also track with PostHog for backward compatibility
+  if (typeof window !== "undefined" && window.posthog) {
+    window.posthog.capture(eventName, eventData);
   }
 };
 
 // Billing-specific event trackers
 export const billingAnalytics = {
   // Subscription events
-  subscriptionCreated: (data: { planName: string; productId: string; amount?: number; interval?: string }) => {
+  subscriptionCreated: (data: { planName: string; stripeProductId: string; amount?: number; interval?: string }) => {
     trackBillingEvent("subscription_created", data);
   },
 
-  subscriptionUpdated: (data: { oldPlan: string; newPlan: string; productId: string }) => {
+  subscriptionUpdated: (data: { oldPlan: string; newPlan: string; stripeProductId: string }) => {
     trackBillingEvent("subscription_updated", data);
   },
 
@@ -59,15 +59,15 @@ export const billingAnalytics = {
   },
 
   // Checkout events
-  checkoutStarted: (data: { planName: string; productId: string }) => {
+  checkoutStarted: (data: { planName: string; stripeProductId: string }) => {
     trackBillingEvent("checkout_started", data);
   },
 
-  checkoutCompleted: (data: { planName: string; productId: string; sessionId: string }) => {
+  checkoutCompleted: (data: { planName: string; stripeProductId: string; sessionId: string }) => {
     trackBillingEvent("checkout_completed", data);
   },
 
-  checkoutAbandoned: (data: { planName: string; productId: string }) => {
+  checkoutAbandoned: (data: { planName: string; stripeProductId: string }) => {
     trackBillingEvent("checkout_abandoned", data);
   },
 

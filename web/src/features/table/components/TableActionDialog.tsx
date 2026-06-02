@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import {
   Dialog,
   DialogBody,
@@ -17,10 +16,9 @@ import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAcces
 import { ActionButton } from "@/src/components/ActionButton";
 import { useOptionalEntitlement } from "@/src/features/entitlements/hooks";
 import { useSelectAll } from "@/src/features/table/hooks/useSelectAll";
-import { type BatchExportTableName } from "@hanzo/console-core";
+import { type BatchExportTableName } from "@hanzo/shared";
 import { api } from "@/src/utils/api";
 import { Loader2 } from "lucide-react";
-import { targetOptionsQueryMap } from "@/src/features/table/components/targetOptionsQueryMap";
 
 type TableActionDialogProps = {
   isOpen: boolean;
@@ -50,21 +48,6 @@ export function TableActionDialog({ isOpen, onClose, action, projectId, tableNam
     },
   );
 
-  const targetOptions = api.annotationQueues.allNamesAndIds.useQuery(
-    { projectId },
-    {
-      enabled: action.type === "create" && action.id in targetOptionsQueryMap && hasEntitlement,
-    },
-  );
-
-  // Auto-select when there's only one option
-  useEffect(() => {
-    const options = targetOptions?.data;
-    if (options?.length === 1 && !form.getValues().targetId) {
-      form.setValue("targetId", options[0].id);
-    }
-  }, [targetOptions?.data, form]);
-
   const handleConfirm = async () => {
     if ("execute" in action) {
       await action.execute({
@@ -93,7 +76,7 @@ export function TableActionDialog({ isOpen, onClose, action, projectId, tableNam
                   name="targetId"
                   render={({ field }) => (
                     <FormItem>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select..." />

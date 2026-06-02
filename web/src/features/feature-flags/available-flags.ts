@@ -1,6 +1,1 @@
-export const availableFlags = [
-  "templateFlag",
-  "excludeDatastoreRead",
-  "v4BetaToggleVisible",
-  "observationEvals",
-] as const;
+export const availableFlags = ["templateFlag", "excludeClickhouseRead"] as const;

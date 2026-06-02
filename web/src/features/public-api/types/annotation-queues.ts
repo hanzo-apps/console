@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import { paginationMetaResponseZod, publicApiPaginationZod } from "@hanzo/console-core";
-import { AnnotationQueueObjectType, AnnotationQueueStatus } from "@hanzo/console-core";
+import { paginationMetaResponseZod, publicApiPaginationZod } from "@hanzo/shared";
+import { AnnotationQueueObjectType, AnnotationQueueStatus } from "@hanzo/shared";
 
 /**
  * Common Types

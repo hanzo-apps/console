@@ -15,10 +15,10 @@ import { CloudPrivacyNotice } from "@/src/features/auth/components/AuthCloudPriv
 import { CloudRegionSwitch } from "@/src/features/auth/components/AuthCloudRegionSwitch";
 import { SSOButtons, useHuggingFaceRedirect, type PageProps } from "@/src/pages/auth/sign-in";
 import { PasswordInput } from "@/src/components/ui/password-input";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 import { useRouter } from "next/router";
 import { getSafeRedirectPath } from "@/src/utils/redirect";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import useLocalStorage from "@/src/components/useLocalStorage";
 
 // Use the same getServerSideProps function as src/pages/auth/sign-in.tsx
@@ -28,9 +28,9 @@ type NextAuthProvider = NonNullable<Parameters<typeof signIn>[0]>;
 
 export default function SignIn({ authProviders, runningOnHuggingFaceSpaces }: PageProps) {
   useHuggingFaceRedirect(runningOnHuggingFaceSpaces);
-  const { isConsoleCloud, region } = useConsoleCloudRegion();
+  const { isHanzoCloud, region } = useHanzoCloudRegion();
   const router = useRouter();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   // Read query params for targetPath and email pre-population
   const queryTargetPath = router.query.targetPath as string | undefined;
@@ -150,7 +150,7 @@ export default function SignIn({ authProviders, runningOnHuggingFaceSpaces }: Pa
         password: values.password,
         callbackUrl:
           targetPath ??
-          (isConsoleCloud && region !== "DEV"
+          (isHanzoCloud && region !== "DEV"
             ? `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/onboarding`
             : `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/`),
       });
@@ -172,7 +172,7 @@ export default function SignIn({ authProviders, runningOnHuggingFaceSpaces }: Pa
             Create new account
           </h2>
         </div>
-        {isConsoleCloud ? (
+        {isHanzoCloud ? (
           <div className="text-center sm:mx-auto sm:w-full sm:max-w-[480px]">No credit card required.</div>
         ) : null}
 

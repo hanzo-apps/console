@@ -6,9 +6,9 @@ import { projectNameSchema } from "@/src/features/auth/lib/projectNameSchema";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
-import { QueueJobs, redis, ProjectDeleteQueue, getEnvironmentsForProject } from "@hanzo/console-core/src/server";
+import { QueueJobs, redis, ProjectDeleteQueue, getEnvironmentsForProject } from "@hanzo/shared/src/server";
 import { randomUUID } from "crypto";
-import { StringNoHTMLNonEmpty } from "@hanzo/console-core";
+import { StringNoHTMLNonEmpty } from "@hanzo/shared";
 
 export const projectsRouter = createTRPCRouter({
   create: protectedOrganizationProcedure
@@ -232,7 +232,6 @@ export const projectsRouter = createTRPCRouter({
       const project = await ctx.prisma.project.findUnique({
         where: {
           id: input.projectId,
-          orgId: ctx.session.orgId,
           deletedAt: null,
         },
       });

@@ -10,9 +10,9 @@ import {
 } from "@/src/features/media/validation";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
-import { ForbiddenError, InternalServerError, InvalidRequestError } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
-import { logger, instrumentAsync } from "@hanzo/console-core/src/server";
+import { ForbiddenError, InternalServerError, InvalidRequestError } from "@hanzo/shared";
+import { prisma } from "@hanzo/shared/src/db";
+import { logger, instrumentAsync } from "@hanzo/shared/src/server";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({
@@ -32,8 +32,8 @@ export default withMiddlewares({
       const { projectId } = auth.scope;
       const { contentType, contentLength, sha256Hash, traceId, observationId, field } = body;
 
-      if (contentLength > env.S3_MEDIA_MAX_CONTENT_LENGTH)
-        throw new InvalidRequestError(`File size must be less than ${env.S3_MEDIA_MAX_CONTENT_LENGTH} bytes`);
+      if (contentLength > env.HANZO_S3_MEDIA_MAX_CONTENT_LENGTH)
+        throw new InvalidRequestError(`File size must be less than ${env.HANZO_S3_MEDIA_MAX_CONTENT_LENGTH} bytes`);
 
       return await instrumentAsync({ name: "media-create-upload-url" }, async (span) => {
         span.setAttribute("projectId", projectId);
@@ -81,10 +81,10 @@ export default withMiddlewares({
 
           span.setAttribute("mediaId", mediaId);
 
-          if (!env.S3_MEDIA_UPLOAD_BUCKET)
+          if (!env.HANZO_S3_MEDIA_UPLOAD_BUCKET)
             throw new InternalServerError("Media upload to blob storage not enabled or no bucket configured");
 
-          const s3Client = getMediaStorageServiceClient(env.S3_MEDIA_UPLOAD_BUCKET);
+          const s3Client = getMediaStorageServiceClient(env.HANZO_S3_MEDIA_UPLOAD_BUCKET);
 
           const bucketPath = getBucketPath({
             projectId,
@@ -125,13 +125,13 @@ export default withMiddlewares({
                       ${projectId},
                       ${sha256Hash},
                       ${bucketPath},
-                      ${env.S3_MEDIA_UPLOAD_BUCKET},
+                      ${env.HANZO_S3_MEDIA_UPLOAD_BUCKET},
                       ${contentType},
                       ${contentLength}
                     )
                     ON CONFLICT ("project_id", "sha_256_hash")
                     DO UPDATE SET
-                      "bucket_name" = ${env.S3_MEDIA_UPLOAD_BUCKET},
+                      "bucket_name" = ${env.HANZO_S3_MEDIA_UPLOAD_BUCKET},
                       "bucket_path" = ${bucketPath},
                       "content_type" = ${contentType},
                       "content_length" = ${contentLength}
@@ -179,7 +179,7 @@ function getBucketPath(params: { projectId: string; mediaId: string; contentType
   const { projectId, mediaId, contentType } = params;
   const fileExtension = getFileExtensionFromContentType(contentType);
 
-  const prefix = env.S3_MEDIA_UPLOAD_PREFIX ? `${env.S3_MEDIA_UPLOAD_PREFIX}` : "";
+  const prefix = env.HANZO_S3_MEDIA_UPLOAD_PREFIX ? `${env.HANZO_S3_MEDIA_UPLOAD_PREFIX}` : "";
 
   return `${prefix}${projectId}/${mediaId}.${fileExtension}`;
 }

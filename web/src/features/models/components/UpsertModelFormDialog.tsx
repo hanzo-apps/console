@@ -26,7 +26,7 @@ import {
 import { Input } from "@/src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { type FormUpsertModel, FormUpsertModelSchema, type GetModelResult } from "@/src/features/models/validation";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { api } from "@/src/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/router";
@@ -54,7 +54,7 @@ type UpsertModelDialogProps =
     };
 
 export const UpsertModelFormDialog = (({ children, ...props }: UpsertModelDialogProps) => {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const utils = api.useUtils();
@@ -344,7 +344,7 @@ export const UpsertModelFormDialog = (({ children, ...props }: UpsertModelDialog
                       Optionally, Hanzo can tokenize the input and output of a generation if no unit counts are
                       ingested. This is useful for e.g. streamed OpenAI completions. For details on the supported
                       tokenizers, see the{" "}
-                      <Link href="https://hanzo.ai/docs/model-usage-and-cost" className="underline" target="_blank">
+                      <Link href="https://hanzo.com/docs/model-usage-and-cost" className="underline" target="_blank">
                         docs
                       </Link>
                       .
@@ -360,10 +360,15 @@ export const UpsertModelFormDialog = (({ children, ...props }: UpsertModelDialog
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tokenizer Config</FormLabel>
-                      <CodeMirrorEditor mode="json" value={field.value ?? "{}"} onChange={field.onChange} />
+                      <CodeMirrorEditor
+                        mode="json"
+                        value={field.value ?? "{}"}
+                        onChange={field.onChange}
+                        minHeight="none"
+                      />
                       <FormDescription>
                         The config for the tokenizer. Required for openai. See the{" "}
-                        <Link href="https://hanzo.ai/docs/model-usage-and-cost" className="underline" target="_blank">
+                        <Link href="https://hanzo.com/docs/model-usage-and-cost" className="underline" target="_blank">
                           docs
                         </Link>{" "}
                         for details.

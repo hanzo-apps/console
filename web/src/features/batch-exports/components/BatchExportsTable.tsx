@@ -1,15 +1,15 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { type Row, type CellContext } from "@tanstack/react-table";
 import { api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
-import { type BatchExport } from "@hanzo/console-core";
+import { type BatchExport } from "@hanzo/shared";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
 import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import { ActionButton } from "@/src/components/ActionButton";
 import { DownloadIcon, InfoIcon } from "lucide-react";
 import { Avatar, AvatarImage } from "@/src/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hanzo/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -207,7 +207,7 @@ export function BatchExportsTable(props: { projectId: string }) {
         );
       },
     },
-  ] as ConsoleColumnDef<BatchExport>[];
+  ] as HanzoColumnDef<BatchExport>[];
 
   return (
     <>

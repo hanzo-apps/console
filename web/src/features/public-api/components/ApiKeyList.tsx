@@ -11,8 +11,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@hanzo/ui";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { CreateApiKeyButton } from "@/src/features/public-api/components/CreateApiKeyButton";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
@@ -20,16 +20,16 @@ import { api } from "@/src/utils/api";
 import { DialogDescription } from "@radix-ui/react-dialog";
 import { TrashIcon } from "lucide-react";
 import { useState } from "react";
-import { Alert, AlertDescription, AlertTitle } from "@hanzo/ui";
+import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import startCase from "lodash/startCase";
-import { useConsoleEnvCode } from "@/src/features/public-api/hooks/useConsoleEnvCode";
+import { useHanzoEnvCode } from "@/src/features/public-api/hooks/useHanzoEnvCode";
 
 type ApiKeyScope = "project" | "organization";
 type ApiKeyEntity = { id: string; note: string | null };
 
 export function ApiKeyList(props: { entityId: string; scope: ApiKeyScope }) {
   const { entityId, scope } = props;
-  const envCode = useConsoleEnvCode();
+  const envCode = useHanzoEnvCode();
 
   if (!entityId) {
     throw new Error(`${scope}Id is required for ApiKeyList with scope ${scope}`);
@@ -76,8 +76,8 @@ export function ApiKeyList(props: { entityId: string; scope: ApiKeyScope }) {
           description: `Learn more about ${scope} API keys`,
           href:
             scope === "project"
-              ? "https://hanzo.ai/docs/api#authentication"
-              : "https://hanzo.ai/docs/api#org-scoped-routes",
+              ? "https://hanzo.com/docs/api#authentication"
+              : "https://hanzo.com/docs/api#org-scoped-routes",
         }}
         actionButtons={<CreateApiKeyButton entityId={entityId} scope={scope} />}
       />
@@ -131,7 +131,7 @@ export function ApiKeyList(props: { entityId: string; scope: ApiKeyScope }) {
 // show dialog to let user confirm that this is a destructive action
 function DeleteApiKeyButton(props: { entityId: string; apiKeyId: string; scope: ApiKeyScope }) {
   const { entityId, apiKeyId, scope } = props;
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   const hasProjectAccess = useHasProjectAccess({
     projectId: props.entityId,

@@ -1,13 +1,13 @@
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
 import type { RouterOutput } from "@/src/utils/types";
 import { Trash } from "lucide-react";
-import { type Organization, type Role } from "@hanzo/console-core";
+import { type Organization, type Role } from "@hanzo/shared";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import Header from "@/src/components/layouts/header";
 import useSessionStorage from "@/src/components/useSessionStorage";
@@ -80,7 +80,7 @@ export function MembershipInvitesPage({ orgId, projectId }: { orgId: string; pro
     scope: "organizationMembers:CUD",
   });
 
-  const columns: ConsoleColumnDef<InvitesTableRow>[] = [
+  const columns: HanzoColumnDef<InvitesTableRow>[] = [
     {
       accessorKey: "email",
       id: "email",

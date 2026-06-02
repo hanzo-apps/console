@@ -1,8 +1,8 @@
 import { type NextApiRequest } from "next";
 import { verifyAuth } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { env } from "@/src/env.mjs";
-import { createOrgProjectAndApiKey, hashSecretKey, getDisplaySecretKey } from "@hanzo/console-core/src/server";
+import { createOrgProjectAndApiKey, hashSecretKey, getDisplaySecretKey } from "@hanzo/shared/src/server";
 
 describe("Admin API Key Authentication", () => {
   const ADMIN_API_KEY = "test-admin-key-123";
@@ -42,7 +42,7 @@ describe("Admin API Key Authentication", () => {
         headers: {
           authorization: auth,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       const result = await verifyAuth(mockReq, false);
 
@@ -56,7 +56,7 @@ describe("Admin API Key Authentication", () => {
         headers: {
           authorization: "Basic invalid",
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       await expect(verifyAuth(mockReq, false)).rejects.toEqual({
         status: 401,
@@ -88,7 +88,7 @@ describe("Admin API Key Authentication", () => {
         headers: {
           authorization: "Basic " + Buffer.from(`${publicKey}:${secretKey}`).toString("base64"),
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       await expect(verifyAuth(mockReq, false)).rejects.toMatchObject({
         status: 401,
@@ -102,10 +102,10 @@ describe("Admin API Key Authentication", () => {
       const mockReq = {
         headers: {
           authorization: `Bearer ${ADMIN_API_KEY}`,
-          "x-iam-admin-api-key": ADMIN_API_KEY,
-          "x-iam-project-id": projectId,
+          "x-hanzo-admin-api-key": ADMIN_API_KEY,
+          "x-hanzo-project-id": projectId,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       const result = await verifyAuth(mockReq, true);
 
@@ -122,7 +122,7 @@ describe("Admin API Key Authentication", () => {
         headers: {
           authorization: auth,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       const result = await verifyAuth(mockReq, true);
 
@@ -131,12 +131,12 @@ describe("Admin API Key Authentication", () => {
       expect(result.scope.apiKeyId).not.toBe("ADMIN_API_KEY");
     });
 
-    it("should fall back to basic auth when no x-iam-admin-api-key header", async () => {
+    it("should fall back to basic auth when no x-hanzo-admin-api-key header", async () => {
       const mockReq = {
         headers: {
           authorization: auth,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       const result = await verifyAuth(mockReq, true);
 
@@ -150,10 +150,10 @@ describe("Admin API Key Authentication", () => {
       const mockReq = {
         headers: {
           authorization: `Bearer ${ADMIN_API_KEY}`,
-          "x-iam-admin-api-key": ADMIN_API_KEY,
-          "x-iam-project-id": projectId,
+          "x-hanzo-admin-api-key": ADMIN_API_KEY,
+          "x-hanzo-project-id": projectId,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       await expect(verifyAuth(mockReq, true)).rejects.toEqual({
         status: 403,
@@ -169,10 +169,10 @@ describe("Admin API Key Authentication", () => {
       const mockReq = {
         headers: {
           authorization: "Bearer some-key",
-          "x-iam-admin-api-key": "some-key",
-          "x-iam-project-id": projectId,
+          "x-hanzo-admin-api-key": "some-key",
+          "x-hanzo-project-id": projectId,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       await expect(verifyAuth(mockReq, true)).rejects.toEqual({
         status: 500,
@@ -186,10 +186,10 @@ describe("Admin API Key Authentication", () => {
       const mockReq = {
         headers: {
           authorization: "Bearer wrong-key",
-          "x-iam-admin-api-key": ADMIN_API_KEY,
-          "x-iam-project-id": projectId,
+          "x-hanzo-admin-api-key": ADMIN_API_KEY,
+          "x-hanzo-project-id": projectId,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       await expect(verifyAuth(mockReq, true)).rejects.toEqual({
         status: 401,
@@ -197,14 +197,14 @@ describe("Admin API Key Authentication", () => {
       });
     });
 
-    it("should fail with invalid x-iam-admin-api-key header", async () => {
+    it("should fail with invalid x-hanzo-admin-api-key header", async () => {
       const mockReq = {
         headers: {
           authorization: `Bearer ${ADMIN_API_KEY}`,
-          "x-iam-admin-api-key": "wrong-key",
-          "x-iam-project-id": projectId,
+          "x-hanzo-admin-api-key": "wrong-key",
+          "x-hanzo-project-id": projectId,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       await expect(verifyAuth(mockReq, true)).rejects.toEqual({
         status: 401,
@@ -216,10 +216,10 @@ describe("Admin API Key Authentication", () => {
       const mockReq = {
         headers: {
           authorization: "Bearer different-key-1",
-          "x-iam-admin-api-key": "different-key-2",
-          "x-iam-project-id": projectId,
+          "x-hanzo-admin-api-key": "different-key-2",
+          "x-hanzo-project-id": projectId,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       await expect(verifyAuth(mockReq, true)).rejects.toEqual({
         status: 401,
@@ -227,17 +227,17 @@ describe("Admin API Key Authentication", () => {
       });
     });
 
-    it("should fail without x-iam-project-id header", async () => {
+    it("should fail without x-hanzo-project-id header", async () => {
       const mockReq = {
         headers: {
           authorization: `Bearer ${ADMIN_API_KEY}`,
-          "x-iam-admin-api-key": ADMIN_API_KEY,
+          "x-hanzo-admin-api-key": ADMIN_API_KEY,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       await expect(verifyAuth(mockReq, true)).rejects.toEqual({
         status: 400,
-        message: "x-iam-project-id header is required for admin API key authentication",
+        message: "x-hanzo-project-id header is required for admin API key authentication",
       });
     });
 
@@ -245,10 +245,10 @@ describe("Admin API Key Authentication", () => {
       const mockReq = {
         headers: {
           authorization: `Bearer ${ADMIN_API_KEY}`,
-          "x-iam-admin-api-key": ADMIN_API_KEY,
-          "x-iam-project-id": "non-existent-project",
+          "x-hanzo-admin-api-key": ADMIN_API_KEY,
+          "x-hanzo-project-id": "non-existent-project",
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       await expect(verifyAuth(mockReq, true)).rejects.toEqual({
         status: 404,
@@ -260,9 +260,9 @@ describe("Admin API Key Authentication", () => {
       const mockReq = {
         headers: {
           authorization: auth,
-          "x-iam-project-id": projectId,
+          "x-hanzo-project-id": projectId,
         },
-      } as unknown as NextApiRequest;
+      } as NextApiRequest;
 
       const result = await verifyAuth(mockReq, true);
 

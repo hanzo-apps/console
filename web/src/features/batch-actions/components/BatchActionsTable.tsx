@@ -1,12 +1,12 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
 import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import { InfoIcon } from "lucide-react";
 import { Avatar, AvatarImage } from "@/src/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hanzo/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 
 type BatchActionRow = {
@@ -38,7 +38,7 @@ export function BatchActionsTable(props: { projectId: string }) {
     page: paginationState.pageIndex,
   });
 
-  const columns: ConsoleColumnDef<BatchActionRow>[] = [
+  const columns: HanzoColumnDef<BatchActionRow>[] = [
     {
       accessorKey: "actionType",
       id: "actionType",

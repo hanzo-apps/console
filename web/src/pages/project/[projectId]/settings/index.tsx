@@ -11,7 +11,7 @@ import { useQueryProject } from "@/src/features/projects/hooks";
 import { MembershipInvitesPage } from "@/src/features/rbac/components/MembershipInvitesPage";
 import { MembersTable } from "@/src/features/rbac/components/MembersTable";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
-import { InsightsLogo } from "@/src/components/InsightsLogo";
+import { PostHogLogo } from "@/src/components/PosthogLogo";
 import { MixpanelLogo } from "@/src/components/MixpanelLogo";
 import { Card } from "@/src/components/ui/card";
 import { TransferProjectButton } from "@/src/features/projects/components/TransferProjectButton";
@@ -22,17 +22,15 @@ import { SettingsDangerZone } from "@/src/components/SettingsDangerZone";
 import { ActionButton } from "@/src/components/ActionButton";
 import { BatchExportsSettingsPage } from "@/src/features/batch-exports/components/BatchExportsSettingsPage";
 import { BatchActionsSettingsPage } from "@/src/features/batch-actions/components/BatchActionsSettingsPage";
-import { AuditLogsSettingsPage } from "@/src/features/audit-log-viewer/AuditLogsSettingsPage";
+import { AuditLogsSettingsPage } from "@/src/ee/features/audit-log-viewer/AuditLogsSettingsPage";
 import { ModelsSettings } from "@/src/features/models/components/ModelSettings";
 import ConfigureRetention from "@/src/features/projects/components/ConfigureRetention";
 import ContainerPage from "@/src/components/layouts/container-page";
 import ProtectedLabelsSettings from "@/src/features/prompts/components/ProtectedLabelsSettings";
-import { Slack, Copy, Check, RefreshCw, ExternalLink, CheckCircle, Loader2 } from "lucide-react";
+import { Slack } from "lucide-react";
 import { ScoreConfigSettings } from "@/src/features/score-configs/components/ScoreConfigSettings";
 import { env } from "@/src/env.mjs";
 import { NotificationSettings } from "@/src/features/notifications/components/NotificationSettings";
-import { copyTextToClipboard } from "@/src/utils/clipboard";
-import { useState, useCallback } from "react";
 
 type ProjectSettingsPage = {
   title: string;
@@ -44,6 +42,9 @@ type ProjectSettingsPage = {
 export function useProjectSettingsPages(): ProjectSettingsPage[] {
   const router = useRouter();
   const { project, organization } = useQueryProject();
+  const showBillingSettings = useHasEntitlement("cloud-billing");
+  const showRetentionSettings = useHasEntitlement("data-retention");
+  const showProtectedLabelsSettings = useHasEntitlement("prompt-protected-labels");
 
   if (!project || !organization || !router.query.projectId) {
     return [];
@@ -52,18 +53,27 @@ export function useProjectSettingsPages(): ProjectSettingsPage[] {
   return getProjectSettingsPages({
     project,
     organization,
+    showBillingSettings,
+    showRetentionSettings,
     showLLMConnectionsSettings: true,
+    showProtectedLabelsSettings,
   });
 }
 
 export const getProjectSettingsPages = ({
   project,
   organization,
+  showBillingSettings,
+  showRetentionSettings,
   showLLMConnectionsSettings,
+  showProtectedLabelsSettings,
 }: {
   project: { id: string; name: string; metadata: Record<string, unknown> };
   organization: { id: string; name: string; metadata: Record<string, unknown> };
+  showBillingSettings: boolean;
+  showRetentionSettings: boolean;
   showLLMConnectionsSettings: boolean;
+  showProtectedLabelsSettings: boolean;
 }): ProjectSettingsPage[] => [
   {
     title: "General",
@@ -73,7 +83,7 @@ export const getProjectSettingsPages = ({
       <div className="flex flex-col gap-6">
         <HostNameProject />
         <RenameProject />
-        <ConfigureRetention />
+        {showRetentionSettings && <ConfigureRetention />}
         <div>
           <Header title="Debug Information" />
           <JSONView
@@ -135,7 +145,7 @@ export const getProjectSettingsPages = ({
     show: showLLMConnectionsSettings,
   },
   {
-    title: "Model Definitions",
+    title: "Models",
     slug: "models",
     cmdKKeywords: ["cost", "token"],
     content: <ModelsSettings projectId={project.id} />,
@@ -145,6 +155,7 @@ export const getProjectSettingsPages = ({
     slug: "protected-prompt-labels",
     cmdKKeywords: ["prompt", "label", "protect", "lock"],
     content: <ProtectedLabelsSettings projectId={project.id} />,
+    show: showProtectedLabelsSettings,
   },
   {
     title: "Scores Configs",
@@ -169,14 +180,8 @@ export const getProjectSettingsPages = ({
   {
     title: "Integrations",
     slug: "integrations",
-    cmdKKeywords: ["insights", "mixpanel", "analytics"],
+    cmdKKeywords: ["posthog", "mixpanel", "analytics"],
     content: <Integrations projectId={project.id} />,
-  },
-  {
-    title: "Tracking & Products",
-    slug: "tracking",
-    cmdKKeywords: ["tracking", "snippet", "embed", "product keys", "analytics", "kms", "api key"],
-    content: <TrackingProducts projectId={project.id} orgId={organization.id} />,
   },
   {
     title: "Exports",
@@ -205,8 +210,8 @@ export const getProjectSettingsPages = ({
   {
     title: "Billing",
     slug: "billing",
-    href: "https://billing.hanzo.ai",
-    cmdKKeywords: ["payment", "subscription", "plan", "invoice", "usage"],
+    href: `/organization/${organization.id}/settings/billing`,
+    show: showBillingSettings,
   },
   {
     title: "Organization Settings",
@@ -233,193 +238,6 @@ export default function SettingsPage() {
   );
 }
 
-// --- Tracking & Products ---
-
-const useCopyButton = () => {
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-
-  const handleCopy = useCallback(async (text: string, key: string) => {
-    await copyTextToClipboard(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
-  }, []);
-
-  return { copiedKey, handleCopy };
-};
-
-const CopyBtn = ({
-  text,
-  copyKey,
-  copiedKey,
-  onCopy,
-}: {
-  text: string;
-  copyKey: string;
-  copiedKey: string | null;
-  onCopy: (text: string, key: string) => void;
-}) => {
-  const isCopied = copiedKey === copyKey;
-  return (
-    <Button variant="ghost" size="xs" className="h-7 px-2" onClick={() => onCopy(text, copyKey)}>
-      {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-      <span className="ml-1 text-xs">{isCopied ? "Copied" : "Copy"}</span>
-    </Button>
-  );
-};
-
-// Placeholder keys — replace with API calls when the backend exposes product keys per org/project.
-// Expected API: GET /api/projects/{projectId}/product-keys
-// Response shape: { analyticsSiteId: string, insightsProjectKey: string, aiApiKey: string, kmsToken: string }
-const useProductKeys = (_projectId: string, _orgId: string) => {
-  return {
-    analyticsSiteId: "ha-placeholder-site-id",
-    insightsProjectKey: "hi-placeholder-project-key",
-    aiApiKey: "hz-placeholder-api-key",
-    kmsToken: "hk-placeholder-kms-token",
-  };
-};
-
-const TrackingProducts = (props: { projectId: string; orgId: string }) => {
-  const { copiedKey, handleCopy } = useCopyButton();
-  const keys = useProductKeys(props.projectId, props.orgId);
-  const [verifying, setVerifying] = useState(false);
-  const [verified, setVerified] = useState<boolean | null>(null);
-
-  const snippet = `<!-- Hanzo Analytics + Insights -->
-<script defer src="https://analytics.hanzo.ai/script.js"
-  data-website-id="${keys.analyticsSiteId}"
-  data-insights-key="${keys.insightsProjectKey}">
-</script>`;
-
-  // Placeholder verification — replace with actual API call to check event flow.
-  // Expected API: POST /api/projects/{projectId}/tracking/verify
-  // Response: { receiving: boolean, lastEventAt?: string }
-  const handleVerify = async () => {
-    setVerifying(true);
-    setVerified(null);
-    // Simulate a verification check
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setVerified(false);
-    setVerifying(false);
-  };
-
-  const productKeys: Array<{
-    label: string;
-    value: string;
-    copyKey: string;
-    regenerate?: boolean;
-    kmsLink?: boolean;
-  }> = [
-    { label: "AI API Key", value: keys.aiApiKey, copyKey: "ai-api-key", regenerate: true },
-    { label: "Analytics Site ID", value: keys.analyticsSiteId, copyKey: "analytics-site-id" },
-    { label: "Insights Project", value: keys.insightsProjectKey, copyKey: "insights-project" },
-    { label: "KMS Token", value: keys.kmsToken, copyKey: "kms-token", kmsLink: true },
-  ];
-
-  const productLinks: Array<{ label: string; href: string }> = [
-    { label: "AI Models", href: "https://api.hanzo.ai" },
-    { label: "Analytics", href: "https://analytics.hanzo.ai" },
-    { label: "Insights", href: "https://insights.hanzo.ai" },
-    { label: "KMS", href: "https://kms.hanzo.ai" },
-    { label: "Flow", href: "https://flow.hanzo.ai" },
-    { label: "Chat", href: "https://chat.hanzo.ai" },
-  ];
-
-  return (
-    <div>
-      <Header title="Tracking & Products" />
-      <div className="space-y-6">
-        {/* Unified Tracking Snippet */}
-        <Card className="p-4">
-          <h4 className="mb-2 text-lg font-medium">Unified Tracking Snippet</h4>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Add this snippet to your site to enable both Hanzo Analytics and Insights in a single script tag.
-          </p>
-          <div className="relative rounded border bg-secondary">
-            <div className="flex items-center justify-between border-b px-3 py-1.5">
-              <span className="text-xs text-muted-foreground">html</span>
-              <CopyBtn text={snippet} copyKey="snippet" copiedKey={copiedKey} onCopy={handleCopy} />
-            </div>
-            <pre className="overflow-x-auto p-3 font-mono text-xs leading-relaxed">{snippet}</pre>
-          </div>
-          <div className="mt-4 flex items-center gap-3">
-            <Button variant="secondary" size="sm" onClick={handleVerify} disabled={verifying}>
-              {verifying ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              Verify Installation
-            </Button>
-            {verified === true && <span className="text-sm text-green-600">Events are flowing.</span>}
-            {verified === false && (
-              <span className="text-sm text-destructive">
-                No events received yet. Ensure the snippet is installed and a page has been loaded.
-              </span>
-            )}
-          </div>
-        </Card>
-
-        {/* Product Keys */}
-        <Card className="p-4">
-          <h4 className="mb-2 text-lg font-medium">Product Keys</h4>
-          <p className="mb-4 text-sm text-muted-foreground">
-            API keys and identifiers for Hanzo products associated with this organization.
-          </p>
-          <div className="divide-y rounded border">
-            {productKeys.map((key) => (
-              <div
-                key={key.copyKey}
-                className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <span className="text-sm font-medium">{key.label}</span>
-                  <span className="ml-3 font-mono text-sm text-muted-foreground">{key.value}</span>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <CopyBtn text={key.value} copyKey={key.copyKey} copiedKey={copiedKey} onCopy={handleCopy} />
-                  {key.regenerate && (
-                    <Button variant="ghost" size="xs" className="h-7 px-2" disabled>
-                      <RefreshCw className="mr-1 h-3 w-3" />
-                      <span className="text-xs">Regenerate</span>
-                    </Button>
-                  )}
-                  {key.kmsLink && (
-                    <Button asChild variant="ghost" size="xs" className="h-7 px-2">
-                      <Link href="https://kms.hanzo.ai" target="_blank">
-                        <span className="text-xs">View in KMS</span>
-                        <ExternalLink className="ml-1 h-3 w-3" />
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Product Links */}
-        <Card className="p-4">
-          <h4 className="mb-2 text-lg font-medium">Product Dashboards</h4>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Quick links to each Hanzo product dashboard for this organization.
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {productLinks.map((link) => (
-              <Button key={link.label} asChild variant="outline" size="sm" className="justify-start">
-                <Link href={link.href} target="_blank">
-                  <ExternalLink className="mr-2 h-3.5 w-3.5" />
-                  {link.label}
-                </Link>
-              </Button>
-            ))}
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
 const Integrations = (props: { projectId: string }) => {
   const hasAccess = useHasProjectAccess({
     projectId: props.projectId,
@@ -434,21 +252,21 @@ const Integrations = (props: { projectId: string }) => {
       <div className="space-y-6">
         <Card className="p-3">
           {}
-          <InsightsLogo className="mb-4 w-40 text-foreground" />
+          <PostHogLogo className="mb-4 w-40 text-foreground" />
           <p className="mb-4 text-sm text-primary">
-            We have teamed up with Hanzo Insights (OSS product analytics) to make Hanzo Events/Metrics available in your
-            Hanzo Insights Dashboards.
+            We have teamed up with PostHog (OSS product analytics) to make Hanzo Events/Metrics available in your
+            Posthog Dashboards.
           </p>
           <div className="flex items-center gap-2">
             <ActionButton
               variant="secondary"
               hasAccess={hasAccess}
-              href={`/project/${props.projectId}/settings/integrations/insights`}
+              href={`/project/${props.projectId}/settings/integrations/posthog`}
             >
               Configure
             </ActionButton>
             <Button asChild variant="ghost">
-              <Link href="https://hanzo.ai/integrations/analytics/insights" target="_blank">
+              <Link href="https://hanzo.com/integrations/analytics/posthog" target="_blank">
                 Integration Docs ↗
               </Link>
             </Button>
@@ -470,7 +288,7 @@ const Integrations = (props: { projectId: string }) => {
               Configure
             </ActionButton>
             <Button asChild variant="ghost">
-              <Link href="https://hanzo.ai/integrations/analytics/mixpanel" target="_blank">
+              <Link href="https://hanzo.com/integrations/analytics/mixpanel" target="_blank">
                 Integration Docs ↗
               </Link>
             </Button>
@@ -493,7 +311,7 @@ const Integrations = (props: { projectId: string }) => {
               Configure
             </ActionButton>
             <Button asChild variant="ghost">
-              <Link href="https://hanzo.ai/docs/query-traces#blob-storage" target="_blank">
+              <Link href="https://hanzo.com/docs/query-traces#blob-storage" target="_blank">
                 Integration Docs ↗
               </Link>
             </Button>

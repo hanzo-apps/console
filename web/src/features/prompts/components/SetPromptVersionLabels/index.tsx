@@ -7,14 +7,14 @@ import {
   InputCommandList,
   InputCommandSeparator,
 } from "@/src/components/ui/input-command";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { api } from "@/src/utils/api";
-import { PRODUCTION_LABEL, type Prompt } from "@hanzo/console-core";
+import { PRODUCTION_LABEL, type Prompt } from "@hanzo/shared";
 import { AddLabelForm } from "./AddLabelForm";
 import { LabelCommandItem } from "./LabelCommandItem";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { isReservedPromptLabel } from "@/src/features/prompts/utils";
 import { TruncatedLabels } from "@/src/components/TruncatedLabels";
 import { cn } from "@/src/utils/tailwind";
@@ -38,7 +38,7 @@ export function SetPromptVersionLabels({
 }) {
   const projectId = useProjectIdFromURL();
   const utils = api.useUtils();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const hasAccess = useHasProjectAccess({ projectId, scope: "prompts:CUD" });
 
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);

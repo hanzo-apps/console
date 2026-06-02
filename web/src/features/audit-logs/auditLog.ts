@@ -1,4 +1,4 @@
-import { prisma as _prisma, type Role, AuditLogRecordType } from "@hanzo/console-core/src/db";
+import { prisma as _prisma, type Role, AuditLogRecordType } from "@hanzo/shared/src/db";
 
 export type AuditableResource =
   | "annotationQueue"
@@ -26,13 +26,13 @@ export type AuditableResource =
   | "evalTemplate"
   | "job"
   | "blobStorageIntegration"
-  | "insightsIntegration"
+  | "posthogIntegration"
   | "mixpanelIntegration"
   | "llmApiKey"
   | "llmTool"
   | "llmSchema"
   | "batchExport"
-  | "checkoutSession"
+  | "stripeCheckoutSession"
   | "batchAction"
   | "automation"
   | "action"

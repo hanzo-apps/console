@@ -13,10 +13,10 @@ import { XIcon, Check, ChevronsUpDown } from "lucide-react";
 import { ActionButton } from "@/src/components/ActionButton";
 import { cn } from "@/src/utils/tailwind";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/src/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 
 import { StatusBadge } from "@/src/components/layouts/status-badge";
-import { LATEST_PROMPT_LABEL, PRODUCTION_LABEL, PromptLabelSchema } from "@hanzo/console-core";
+import { LATEST_PROMPT_LABEL, PRODUCTION_LABEL, PromptLabelSchema } from "@hanzo/shared";
 
 const AddLabelFormSchema = z.object({
   label: PromptLabelSchema,

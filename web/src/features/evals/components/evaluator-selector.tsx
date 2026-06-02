@@ -1,4 +1,4 @@
-import { type EvalTemplate } from "@hanzo/console-core";
+import { type EvalTemplate } from "@hanzo/shared";
 import { AlertCircle, CheckIcon, ExternalLink, ExternalLinkIcon } from "lucide-react";
 import {
   InputCommand,
@@ -11,7 +11,7 @@ import {
 } from "@/src/components/ui/input-command";
 import { useState } from "react";
 import { cn } from "@/src/utils/tailwind";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@hanzo/ui";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/src/components/ui/tooltip";
 import { useSingleTemplateValidation } from "@/src/features/evals/hooks/useSingleTemplateValidation";
 import { getMaintainer } from "@/src/features/evals/utils/typeHelpers";
 import { MaintainerTooltip } from "@/src/features/evals/components/maintainer-tooltip";

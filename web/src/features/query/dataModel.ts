@@ -1,6 +1,6 @@
 import type z from "zod/v4";
 import type { ViewVersion, ViewDeclarationType, DimensionsDeclarationType, views } from "@/src/features/query/types";
-import { InvalidRequestError } from "@hanzo/console-core";
+import { InvalidRequestError } from "@hanzo/shared";
 
 // The data model defines all available dimensions, measures, and the timeDimension for a given view.
 // Make sure to update ./dashboardUiTableToViewMapping.ts if you make changes
@@ -161,14 +161,7 @@ export const eventsTracesView: ViewDeclarationType = {
       alias: "name",
       type: "string",
       description: "Name assigned to the trace (often the endpoint or operation).",
-      // First try most-recent non-empty trace_name, then fall back to root event's name
-      aggregationFunction:
-        "COALESCE(nullIf(argMaxIf(events_traces.trace_name, events_traces.event_ts, events_traces.trace_name <> ''), ''), argMaxIf(events_traces.name, events_traces.event_ts, events_traces.parent_span_id = '' AND events_traces.name <> ''))",
-      // Pruning columns for WHERE: OR'd together to help datastore skip blocks,
-      // then dimension.sql is AND'd for exact row-level match.
-      filterSql: {
-        where: ["events_traces.trace_name", "events_traces.name"],
-      },
+      aggregationFunction: "argMaxIf(events_traces.trace_name, events_traces.event_ts, events_traces.trace_name <> '')",
     },
     tags: {
       sql: "events_traces.tags",
@@ -225,14 +218,14 @@ export const eventsTracesView: ViewDeclarationType = {
   },
   measures: {
     count: {
-      sql: "countIf(events_traces.parent_span_id = '')",
+      sql: "count(*)",
       alias: "count",
       type: "integer",
       description: "Total number of traces.",
       unit: "traces",
     },
     observationsCount: {
-      sql: "uniqIf(events_traces.span_id, events_traces.parent_span_id != '')",
+      sql: "uniq(events_traces.span_id)",
       alias: "observationsCount",
       type: "integer",
       description: "Unique observations linked to the trace.",
@@ -261,21 +254,21 @@ export const eventsTracesView: ViewDeclarationType = {
       unit: "sessions",
     },
     latency: {
-      sql: "date_diff('millisecond', minIf(events_traces.start_time, events_traces.parent_span_id != ''), maxIf(events_traces.end_time, events_traces.parent_span_id != ''))",
+      sql: "date_diff('millisecond', min(events_traces.start_time), max(events_traces.end_time))",
       alias: "latency",
       type: "integer",
       description: "Elapsed time between the first and last observation inside the trace.",
       unit: "millisecond",
     },
     totalTokens: {
-      sql: "sumMapIf(events_traces.usage_details, events_traces.parent_span_id != '')['total']",
+      sql: "sumMap(events_traces.usage_details)['total']",
       alias: "totalTokens",
       type: "integer",
       description: "Sum of tokens consumed by all observations in the trace.",
       unit: "tokens",
     },
     totalCost: {
-      sql: "sumIf(toNullable(events_traces.total_cost), events_traces.parent_span_id != '')",
+      sql: "sum(events_traces.total_cost)",
       alias: "totalCost",
       type: "decimal",
       description: "Total cost accumulated across observations in the trace.",
@@ -291,11 +284,7 @@ export const eventsTracesView: ViewDeclarationType = {
   },
   segments: [],
   timeDimension: "start_time",
-  rootEventCondition: {
-    column: "trace_id",
-    condition: "parent_span_id = ''",
-  },
-  baseCte: `events_core events_traces`,
+  baseCte: `events events_traces`,
 };
 
 export const observationsView: ViewDeclarationType = {
@@ -422,14 +411,12 @@ export const observationsView: ViewDeclarationType = {
       alias: "toolNames",
       type: "arrayString",
       description: "Names of available tools defined for the observation.",
-      explodeArray: true,
     },
     calledToolNames: {
       sql: "observations.tool_call_names",
       alias: "calledToolNames",
       type: "arrayString",
       description: "Names of tools that were called by the observation.",
-      explodeArray: true,
     },
   },
   measures: {
@@ -797,7 +784,7 @@ const createScoreSpecificDimensions = (tableAlias: string, isV2: boolean = false
 // Shared table relations factory
 const createScoreTableRelations = (
   version: "v1" | "v2",
-): Record<string, { name: string; joinConditionSql: string; timeDimension: string; useFinal?: boolean }> => {
+): Record<string, { name: string; joinConditionSql: string; timeDimension: string }> => {
   if (version === "v1") {
     return {
       traces: {
@@ -814,18 +801,16 @@ const createScoreTableRelations = (
   } else {
     return {
       events_traces: {
-        name: "events_core",
+        name: "events",
         joinConditionSql:
           "ON scores.trace_id = events_traces.trace_id AND scores.project_id = events_traces.project_id AND events_traces.parent_span_id = ''",
         timeDimension: "start_time",
-        useFinal: false,
       },
       events_observations: {
-        name: "events_core",
+        name: "events",
         joinConditionSql:
           "ON scores.project_id = events_observations.project_id AND scores.trace_id = events_observations.trace_id AND scores.observation_id = events_observations.span_id",
         timeDimension: "start_time",
-        useFinal: false,
       },
     };
   }
@@ -1057,34 +1042,12 @@ export const eventsObservationsView: ViewDeclarationType = {
       alias: "toolNames",
       type: "arrayString",
       description: "Names of available tools defined for the observation.",
-      explodeArray: true,
     },
     calledToolNames: {
       sql: "events_observations.tool_call_names",
       alias: "calledToolNames",
       type: "arrayString",
       description: "Names of tools that were called by the observation.",
-      explodeArray: true,
-    },
-    costType: {
-      sql: "mapKeys(events_observations.cost_details)",
-      alias: "costType",
-      type: "string",
-      description: "Cost category key from cost_details map (e.g. 'input', 'output', 'total').",
-      pairExpand: {
-        valuesSql: "mapValues(events_observations.cost_details)",
-        valueAlias: "cost_value",
-      },
-    },
-    usageType: {
-      sql: "mapKeys(events_observations.usage_details)",
-      alias: "usageType",
-      type: "string",
-      description: "Token usage category key from usage_details map (e.g. 'input', 'output', 'total').",
-      pairExpand: {
-        valuesSql: "mapValues(events_observations.usage_details)",
-        valueAlias: "usage_value",
-      },
     },
   },
   measures: {
@@ -1095,13 +1058,6 @@ export const eventsObservationsView: ViewDeclarationType = {
       type: "integer",
       description: "Total number of observations.",
       unit: "observations",
-    },
-    traceId: {
-      sql: "@@AGG@@(events_observations.trace_id)",
-      aggs: { agg: "any" },
-      alias: "traceId",
-      type: "string",
-      description: "Trace identifier; apply uniq aggregation to count distinct traces.",
     },
     latency: {
       sql: "date_diff('millisecond', @@AGG1@@(events_observations.start_time), @@AGG1@@(events_observations.end_time))",
@@ -1177,7 +1133,7 @@ export const eventsObservationsView: ViewDeclarationType = {
       unit: "USD",
     },
     totalCost: {
-      sql: "@@AGG1@@(toNullable(total_cost))",
+      sql: "@@AGG1@@(total_cost)",
       aggs: { agg1: "sum" },
       alias: "totalCost",
       type: "decimal",
@@ -1216,24 +1172,6 @@ export const eventsObservationsView: ViewDeclarationType = {
       description: "Number of tool calls per observation.",
       unit: "calls",
     },
-    costByType: {
-      sql: "cost_value",
-      alias: "costByType",
-      type: "decimal",
-      unit: "USD",
-      requiresDimension: "costType",
-      description:
-        "Sum of cost per category. The costType dimension is auto-included to emit the ARRAY JOIN that brings cost_value into scope.",
-    },
-    usageByType: {
-      sql: "usage_value",
-      alias: "usageByType",
-      type: "integer",
-      unit: "tokens",
-      requiresDimension: "usageType",
-      description:
-        "Sum of token usage per category. The usageType dimension is auto-included to emit the ARRAY JOIN that brings usage_value into scope.",
-    },
   },
   tableRelations: {
     // No traces relation - userId, sessionId, tags are denormalized on events table
@@ -1246,7 +1184,7 @@ export const eventsObservationsView: ViewDeclarationType = {
   },
   segments: [],
   timeDimension: "start_time",
-  baseCte: "events_core events_observations", // No FINAL modifier needed for events_core table
+  baseCte: "events events_observations", // No FINAL modifier needed for events table
 };
 
 // Define versioned structure type

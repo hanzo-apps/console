@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 import { WidgetPropertySelectItem } from "@/src/features/widgets/components/WidgetPropertySelectItem";
-import { Label } from "@hanzo/ui";
+import { Label } from "@/src/components/ui/label";
 import { viewDeclarations } from "@/src/features/query/dataModel";
 import { type z } from "zod/v4";
 import { views } from "@/src/features/query/types";
@@ -22,19 +22,17 @@ import { DatePickerWithRange } from "@/src/components/date-picker";
 import { InlineFilterBuilder } from "@/src/features/filters/components/filter-builder";
 import { useDashboardDateRange } from "@/src/hooks/useDashboardDateRange";
 import { toAbsoluteTimeRange, type DashboardDateRangeOptions } from "@/src/utils/date-range-utils";
-import { type ColumnDefinition } from "@hanzo/console-core";
+import { type ColumnDefinition } from "@hanzo/shared";
 import { Chart } from "@/src/features/widgets/chart-library/Chart";
 import { type DataPoint } from "@/src/features/widgets/chart-library/chart-props";
 import { Button } from "@/src/components/ui/button";
-import { type DashboardWidgetChartType } from "@hanzo/console-core/src/db";
+import { type DashboardWidgetChartType } from "@hanzo/shared/src/db";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
-import { type FilterState } from "@hanzo/console-core";
+import { type FilterState } from "@hanzo/shared";
 import { isTimeSeriesChart } from "@/src/features/widgets/chart-library/utils";
 import { BarChart, PieChart, LineChart, BarChartHorizontal, Hash, BarChart3, Table, Plus, X } from "lucide-react";
 import { buildWidgetName, buildWidgetDescription, formatMetricName } from "@/src/features/widgets/utils";
 import { MAX_PIVOT_TABLE_DIMENSIONS, MAX_PIVOT_TABLE_METRICS } from "@/src/features/widgets/utils/pivot-table-utils";
-import { ChartLoadingState } from "@/src/features/widgets/chart-library/ChartLoadingState";
-import { getChartLoadingStateProps } from "@/src/features/widgets/chart-library/chartLoadingStateUtils";
 
 type ChartType = {
   group: "time-series" | "total-value";
@@ -771,16 +769,8 @@ export function WidgetForm({
           skipBatch: true,
         },
       },
-      meta: {
-        silentHttpCodes: [422],
-      },
     },
   );
-
-  const chartLoadingState = getChartLoadingStateProps({
-    isPending: queryResult.isPending,
-    isError: queryResult.isError,
-  });
 
   // Transform the query results to a consistent format for charts
   const transformedData: DataPoint[] = useMemo(
@@ -1510,7 +1500,7 @@ export function WidgetForm({
       </div>
       {/* Right column - Chart */}
       <div className="w-2/3">
-        <Card className="flex aspect-video flex-col">
+        <Card className={"aspect-video"}>
           <CardHeader>
             <CardTitle className="truncate" title={widgetName}>
               {widgetName}
@@ -1520,63 +1510,42 @@ export function WidgetForm({
             </CardDescription>
           </CardHeader>
           {queryResult.data ? (
-            <div className="relative min-h-0 flex-1">
-              <Chart
-                chartType={selectedChartType as DashboardWidgetChartType}
-                data={transformedData}
-                rowLimit={rowLimit}
-                chartConfig={
-                  selectedChartType === "PIVOT_TABLE"
+            <Chart
+              chartType={selectedChartType as DashboardWidgetChartType}
+              data={transformedData}
+              rowLimit={rowLimit}
+              chartConfig={
+                selectedChartType === "PIVOT_TABLE"
+                  ? {
+                      type: selectedChartType as DashboardWidgetChartType,
+                      dimensions: pivotDimensions,
+                      row_limit: rowLimit,
+                      metrics: selectedMetrics.map((metric) => metric.id), // Pass metric field names
+                      defaultSort:
+                        defaultSortColumn && defaultSortColumn !== "none"
+                          ? {
+                              column: defaultSortColumn,
+                              order: defaultSortOrder,
+                            }
+                          : undefined,
+                    }
+                  : selectedChartType === "HISTOGRAM"
                     ? {
                         type: selectedChartType as DashboardWidgetChartType,
-                        dimensions: pivotDimensions,
-                        row_limit: rowLimit,
-                        metrics: selectedMetrics.map((metric) => metric.id), // Pass metric field names
-                        defaultSort:
-                          defaultSortColumn && defaultSortColumn !== "none"
-                            ? {
-                                column: defaultSortColumn,
-                                order: defaultSortOrder,
-                              }
-                            : undefined,
+                        bins: histogramBins,
                       }
-                    : selectedChartType === "HISTOGRAM"
-                      ? {
-                          type: selectedChartType as DashboardWidgetChartType,
-                          bins: histogramBins,
-                        }
-                      : {
-                          type: selectedChartType as DashboardWidgetChartType,
-                          row_limit: rowLimit,
-                        }
-                }
-                sortState={selectedChartType === "PIVOT_TABLE" ? previewSortState : undefined}
-                onSortChange={undefined}
-                isLoading={queryResult.isPending}
-              />
-              <ChartLoadingState
-                isLoading={chartLoadingState.isLoading}
-                showSpinner={chartLoadingState.showSpinner}
-                showHintImmediately={chartLoadingState.showHintImmediately}
-                hintText={chartLoadingState.hintText}
-                className="absolute inset-0 z-20 bg-background/80 backdrop-blur-sm"
-                hintClassName="max-w-sm px-4"
-              />
-            </div>
+                    : {
+                        type: selectedChartType as DashboardWidgetChartType,
+                        row_limit: rowLimit,
+                      }
+              }
+              sortState={selectedChartType === "PIVOT_TABLE" ? previewSortState : undefined}
+              onSortChange={undefined}
+            />
           ) : (
             <CardContent>
               <div className="flex h-[300px] items-center justify-center">
-                {chartLoadingState.isLoading ? (
-                  <ChartLoadingState
-                    isLoading={chartLoadingState.isLoading}
-                    showSpinner={chartLoadingState.showSpinner}
-                    showHintImmediately={chartLoadingState.showHintImmediately}
-                    hintText={chartLoadingState.hintText}
-                    hintClassName="max-w-sm px-4"
-                  />
-                ) : (
-                  <p className="text-muted-foreground">Waiting for Input / Loading...</p>
-                )}
+                <p className="text-muted-foreground">Waiting for Input / Loading...</p>
               </div>
             </CardContent>
           )}

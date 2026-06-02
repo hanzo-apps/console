@@ -18,7 +18,7 @@ import { tracing } from "@baselime/trpc-opentelemetry-middleware";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import { type Session } from "next-auth";
 import { getServerAuthSession } from "@/src/server/auth";
-import { prisma, Role } from "@hanzo/console-core/src/db";
+import { prisma, Role } from "@hanzo/shared/src/db";
 import * as z from "zod/v4";
 import * as opentelemetry from "@opentelemetry/api";
 import { type IncomingHttpHeaders } from "node:http";
@@ -85,20 +85,20 @@ import {
   getTraceById,
   logger,
   contextWithHanzoProps,
-  DatastoreResourceError,
-} from "@hanzo/console-core/src/server";
+  ClickHouseResourceError,
+} from "@hanzo/shared/src/server";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { getHTTPStatusCodeFromError } from "@trpc/server/http";
 import superjson from "superjson";
 import { ZodError as _ZodError } from "zod/v4";
 
-import { AdminApiAuthService } from "@/src/features/admin-api/server/adminApiAuth";
+import { AdminApiAuthService } from "@/src/ee/features/admin-api/server/adminApiAuth";
 import { env } from "@/src/env.mjs";
-import { BaseError, parseIO } from "@hanzo/console-core";
+import { BaseError, parseIO } from "@hanzo/shared";
 
 setUpSuperjson();
 
-const isConsoleCloud = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
+const isHanzoCloud = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
 
 const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
@@ -142,10 +142,6 @@ const logErrorByCode = (errorCode: TRPCError["code"], error: TRPCError) => {
     logger.info(`middleware intercepted error with code ${errorCode}`, {
       error,
     });
-  } else if (errorCode === "UNPROCESSABLE_CONTENT") {
-    logger.warn(`middleware intercepted error with code ${errorCode}`, {
-      error,
-    });
   } else {
     logger.error(`middleware intercepted error with code ${errorCode}`, {
       error,
@@ -158,30 +154,30 @@ const withErrorHandling = t.middleware(async ({ ctx, next }) => {
   const res = await next({ ctx }); // pass the context to the next middleware
 
   if (!res.ok) {
-    if (res.error.cause instanceof DatastoreResourceError) {
-      // Surface Datastore errors using an advice message
+    if (res.error.cause instanceof ClickHouseResourceError) {
+      // Surface ClickHouse errors using an advice message
       // which is supposed to provide a bit of guidance to the user.
-      logErrorByCode("UNPROCESSABLE_CONTENT", res.error);
       res.error = new TRPCError({
-        code: "UNPROCESSABLE_CONTENT",
-        message: DatastoreResourceError.ERROR_ADVICE_MESSAGE,
+        code: "SERVICE_UNAVAILABLE",
+        message: ClickHouseResourceError.ERROR_ADVICE_MESSAGE,
       });
+      logErrorByCode(res.error.code, res.error);
     } else {
       // Throw a new TRPC error with:
       // - The same error code as the original error
       // - Either the original error message OR "Internal error" if it's a 5xx error
       const { code, httpStatus } = resolveError(res.error);
       const isSafeToExpose = httpStatus >= 400 && httpStatus < 500;
-      const errorMessage = isConsoleCloud
+      const errorMessage = isHanzoCloud
         ? "We have been notified and are working on it."
         : "Please check error logs in your self-hosted deployment.";
 
-      logErrorByCode(code, res.error);
       res.error = new TRPCError({
         code,
         cause: null, // do not expose stack traces
         message: isSafeToExpose ? res.error.message : "Internal error. " + errorMessage,
       });
+      logErrorByCode(code, res.error);
     }
   }
 
@@ -360,30 +356,10 @@ const enforceIsAuthedAndOrgMember = t.middleware(async (opts) => {
   const orgId = result.data.orgId;
   const sessionOrg = ctx.session.user.organizations.find((org) => org.id === orgId);
 
-  if (!sessionOrg) {
-    if (ctx.session.user.admin === true) {
-      // Admins can access any org — verify it exists in DB
-      const dbOrg = await ctx.prisma.organization.findFirst({
-        select: { id: true },
-        where: { id: orgId },
-      });
-      if (!dbOrg) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Organization not found",
-        });
-      }
-      return next({
-        ctx: {
-          session: {
-            ...ctx.session,
-            user: ctx.session.user,
-            orgId: orgId,
-            orgRole: Role.OWNER,
-          },
-        },
-      });
-    }
+  if (
+    !sessionOrg
+    // && ctx.session.user.admin !== true
+  ) {
     logger.error(`User ${ctx.session.user.id} is not a member of org ${orgId}`);
     throw new TRPCError({
       code: "UNAUTHORIZED",
@@ -397,7 +373,7 @@ const enforceIsAuthedAndOrgMember = t.middleware(async (opts) => {
         ...ctx.session,
         user: ctx.session.user,
         orgId: orgId,
-        orgRole: sessionOrg.role,
+        orgRole: ctx.session.user.admin === true ? Role.OWNER : sessionOrg!.role,
       },
     },
   });
@@ -441,7 +417,7 @@ const enforceTraceAccess = t.middleware(async (opts) => {
   const fromTimestamp = result.data.fromTimestamp;
   const verbosity = result.data.verbosity;
 
-  const datastoreTrace = await getTraceById({
+  const clickhouseTrace = await getTraceById({
     traceId,
     projectId,
     timestamp: timestamp ?? undefined,
@@ -450,10 +426,10 @@ const enforceTraceAccess = t.middleware(async (opts) => {
       truncated: verbosity === "truncated",
       shouldJsonParse: false, // we do not want to parse the input/output for tRPC
     },
-    datastoreFeatureTag: "tracing-trpc",
+    clickhouseFeatureTag: "tracing-trpc",
   });
 
-  if (!datastoreTrace) {
+  if (!clickhouseTrace) {
     logger.error(`Trace with id ${traceId} not found for project ${projectId}`);
     throw new TRPCError({
       code: "NOT_FOUND",
@@ -462,9 +438,9 @@ const enforceTraceAccess = t.middleware(async (opts) => {
   }
 
   const trace = {
-    ...datastoreTrace,
-    input: parseIO(datastoreTrace.input, verbosity),
-    output: parseIO(datastoreTrace.output, verbosity),
+    ...clickhouseTrace,
+    input: parseIO(clickhouseTrace.input, verbosity),
+    output: parseIO(clickhouseTrace.output, verbosity),
   };
 
   const sessionProject = ctx.session?.user?.organizations
@@ -528,7 +504,7 @@ const enforceSessionAccess = t.middleware(async (opts) => {
 
   const { sessionId, projectId } = result.data;
 
-  // trace sessions are stored in postgres. No need to check for datastore eligibility.
+  // trace sessions are stored in postgres. No need to check for clickhouse eligibility.
   const session = await prisma.traceSession.findFirst({
     where: {
       id: sessionId,
@@ -588,7 +564,7 @@ const enforceAdminAuth = t.middleware(async (opts) => {
     });
   }
 
-  const adminAuthResult = AdminApiAuthService.verifyAuthString(result.data.adminApiKey);
+  const adminAuthResult = AdminApiAuthService.verifyAdminAuthFromAuthString(result.data.adminApiKey);
 
   if (!adminAuthResult.isAuthorized) {
     throw new TRPCError({

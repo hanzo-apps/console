@@ -7,9 +7,9 @@ import {
   QueueJobs,
   getObservationsCountFromEventsTable,
   getObservationsTableCount,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { TRPCError } from "@trpc/server";
-import { BatchTableNames, BatchActionType, BatchActionStatus, ActionId } from "@hanzo/console-core";
+import { BatchTableNames, BatchActionType, BatchActionStatus, ActionId } from "@hanzo/shared";
 import { env } from "@/src/env.mjs";
 import { CreateObservationAddToDatasetActionSchema } from "../validation";
 
@@ -29,9 +29,6 @@ export const addToDatasetRouter = createTRPCRouter({
 
         const { projectId, query, config } = input;
 
-        const useEventsTable = env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true";
-        const tableName = useEventsTable ? BatchTableNames.Events : BatchTableNames.Observations;
-
         // Check observation count doesn't exceed maximum
         const queryOpts = {
           projectId,
@@ -39,9 +36,10 @@ export const addToDatasetRouter = createTRPCRouter({
           limit: 1,
           offset: 0,
         };
-        const observationCount = useEventsTable
-          ? await getObservationsCountFromEventsTable(queryOpts)
-          : await getObservationsTableCount(queryOpts);
+        const observationCount =
+          env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true"
+            ? await getObservationsCountFromEventsTable(queryOpts)
+            : await getObservationsTableCount(queryOpts);
 
         if (observationCount > MAX_BATCH_ADD_TO_DATASET_ITEMS) {
           throw new TRPCError({
@@ -61,7 +59,7 @@ export const addToDatasetRouter = createTRPCRouter({
             projectId,
             userId,
             actionType: ActionId.ObservationAddToDataset,
-            tableName,
+            tableName: BatchTableNames.Observations,
             status: BatchActionStatus.Queued,
             query,
             config,
@@ -89,7 +87,7 @@ export const addToDatasetRouter = createTRPCRouter({
               batchActionId: batchAction.id,
               projectId,
               actionId: ActionId.ObservationAddToDataset,
-              tableName,
+              tableName: BatchTableNames.Observations,
               cutoffCreatedAt: new Date(),
               query,
               config,

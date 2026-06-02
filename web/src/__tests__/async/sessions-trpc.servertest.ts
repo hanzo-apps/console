@@ -1,10 +1,10 @@
 /** @jest-environment node */
 
 import type { Session } from "next-auth";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { createObservation, createObservationsCh, createTrace, createTracesCh } from "@hanzo/console-core/src/server";
+import { createObservation, createObservationsCh, createTrace, createTracesCh } from "@hanzo/shared/src/server";
 import { randomUUID } from "crypto";
 
 describe("traces trpc", () => {
@@ -23,8 +23,6 @@ describe("traces trpc", () => {
           role: "OWNER",
           plan: "cloud:free",
           cloudConfig: undefined,
-          metadata: {},
-          aiFeaturesEnabled: true,
           projects: [
             {
               id: projectId,
@@ -32,22 +30,20 @@ describe("traces trpc", () => {
               retentionDays: 30,
               deletedAt: null,
               name: "Test Project",
-              metadata: {},
             },
           ],
         },
       ],
       featureFlags: {
-        excludeDatastoreRead: false,
+        excludeClickhouseRead: false,
         templateFlag: true,
-        v4BetaToggleVisible: false,
       },
       admin: true,
     },
     environment: {} as any,
   };
 
-  const ctx = createInnerTRPCContext({ session, headers: {} });
+  const ctx = createInnerTRPCContext({ session });
   const caller = appRouter.createCaller({ ...ctx, prisma });
 
   describe("sessions.byIdWithScores", () => {

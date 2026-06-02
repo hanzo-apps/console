@@ -1,15 +1,15 @@
 import { StreamingTextResponse } from "ai";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { BaseError, ForbiddenError, InternalServerError, InvalidRequestError } from "@hanzo/console-core";
+import { BaseError, ForbiddenError, InternalServerError, InvalidRequestError } from "@hanzo/shared";
 
-import { InsightsCallbackHandler } from "./analytics/insightsCallback";
+import { PosthogCallbackHandler } from "./analytics/posthogCallback";
 import { authorizeRequestOrThrow } from "./authorizeRequest";
 import { validateChatCompletionBody } from "./validateChatCompletionBody";
 
 import { env } from "@/src/env.mjs";
-import { prisma } from "@hanzo/console-core/src/db";
-import { LLMApiKeySchema, logger, fetchLLMCompletion, contextWithHanzoProps } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/shared/src/db";
+import { LLMApiKeySchema, logger, fetchLLMCompletion, contextWithHanzoProps } from "@hanzo/shared/src/server";
 import * as opentelemetry from "@opentelemetry/api";
 
 export default async function chatCompletionHandler(req: NextRequest) {
@@ -29,7 +29,7 @@ export default async function chatCompletionHandler(req: NextRequest) {
       projectId: body.projectId,
     });
 
-    return await opentelemetry.context.with(baggageCtx, async () => {
+    return opentelemetry.context.with(baggageCtx, async () => {
       const { messages, modelParams, tools, structuredOutputSchema, streaming } = body;
 
       const LLMApiKey = await prisma.llmApiKeys.findFirst({
@@ -56,7 +56,7 @@ export default async function chatCompletionHandler(req: NextRequest) {
         messages,
         modelParams,
         structuredOutputSchema,
-        callbacks: [new InsightsCallbackHandler("playground", body, userId)],
+        callbacks: [new PosthogCallbackHandler("playground", body, userId)],
       };
 
       if (structuredOutputSchema) {
@@ -134,15 +134,14 @@ export default async function chatCompletionHandler(req: NextRequest) {
     }
 
     if (err instanceof Error) {
-      const statusCode = (err as any)?.response?.status ?? (err as any)?.status ?? 500;
-      const errorMessage = err.message || "An unknown error occurred";
-
       return NextResponse.json(
         {
-          message: errorMessage,
-          error: err.name || "Error",
+          message: err.message,
+          error: err,
         },
-        { status: statusCode },
+        {
+          status: (err as any)?.response?.status ?? (err as any)?.status ?? 500,
+        },
       );
     }
 

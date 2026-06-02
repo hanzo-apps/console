@@ -17,21 +17,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit, PlusIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Form } from "@/src/components/ui/form";
-import { Textarea } from "@hanzo/ui";
-import {
-  type CreateQueueWithAssignments,
-  CreateQueueWithAssignmentsData,
-  type ScoreConfigDomain,
-} from "@hanzo/console-core";
+import { Textarea } from "@/src/components/ui/textarea";
+import { type CreateQueueWithAssignments, CreateQueueWithAssignmentsData, type ScoreConfigDomain } from "@hanzo/shared";
 import { api } from "@/src/utils/api";
 import { MultiSelectKeyValues } from "@/src/features/scores/components/multi-select-key-values";
 import { useRouter } from "next/router";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
 import { ActionButton } from "@/src/components/ActionButton";
 import { DropdownMenuItem } from "@/src/components/ui/dropdown-menu";
 import { useUniqueNameValidation } from "@/src/hooks/useUniqueNameValidation";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@hanzo/ui";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/src/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { UserAssignmentSection } from "@/src/features/annotation-queues/components/UserAssignmentSection";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
@@ -60,7 +56,7 @@ export const CreateOrEditAnnotationQueueButton = ({
   });
   const queueLimit = useEntitlementLimit("annotation-queue-count");
   const router = useRouter();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
 
   const queueQuery = api.annotationQueues.byId.useQuery(
     { projectId, queueId: queueId as string },
@@ -163,7 +159,7 @@ export const CreateOrEditAnnotationQueueButton = ({
       form.reset();
       setIsOpen(false);
 
-      // capture insights event
+      // capture posthog event
     } catch {
       showErrorToast("Operation failed", "Failed to create or update queue or assign users. Please try again.");
     }
@@ -310,7 +306,7 @@ export const CreateOrEditAnnotationQueueButton = ({
                       <div className="mt-1 rounded-md border">
                         <Collapsible
                           open={isAdvancedOpen && hasQueueAssignmentsReadAccess}
-                          onOpenChange={(open: boolean) => {
+                          onOpenChange={(open) => {
                             if (!hasQueueAssignmentsReadAccess) {
                               setIsAdvancedOpen(false);
                             } else {

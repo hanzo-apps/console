@@ -15,8 +15,7 @@ import { Input } from "@/src/components/ui/input";
 import { PasswordInput } from "@/src/components/ui/password-input";
 import { Switch } from "@/src/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@hanzo/ui";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import {
   blobStorageIntegrationFormSchema,
   type BlobStorageIntegrationFormSchema,
@@ -24,7 +23,7 @@ import {
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card } from "@/src/components/ui/card";
+import { Card } from "@tremor/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
@@ -35,13 +34,9 @@ import {
   BlobStorageIntegrationType,
   BlobStorageIntegrationFileType,
   BlobStorageExportMode,
-  AnalyticsIntegrationExportSource,
   type BlobStorageIntegration,
-  EXPORT_SOURCE_OPTIONS,
-} from "@hanzo/console-core";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
-import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
-import { Info, ExternalLink } from "lucide-react";
+} from "@hanzo/shared";
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 
 export default function BlobStorageIntegrationSettings() {
   const router = useRouter();
@@ -71,7 +66,7 @@ export default function BlobStorageIntegrationSettings() {
         actionButtonsLeft: <>{status && <StatusBadge type={status} />}</>,
         actionButtonsRight: (
           <Button asChild variant="secondary">
-            <Link href="https://hanzo.ai/docs/api-and-data-platform/features/export-to-blob-storage" target="_blank">
+            <Link href="https://hanzo.com/docs/api-and-data-platform/features/export-to-blob-storage" target="_blank">
               Integration Docs ↗
             </Link>
           </Button>
@@ -143,13 +138,12 @@ const BlobStorageIntegrationSettingsForm = ({
   projectId: string;
   isLoading: boolean;
 }) => {
-  const capture = useInsightsCapture();
-  const { isConsoleCloud } = useConsoleCloudRegion();
-  const { isBetaEnabled } = useV4Beta();
+  const capture = usePostHogClientCapture();
+  const { isHanzoCloud } = useHanzoCloudRegion();
   const [integrationType, setIntegrationType] = useState<BlobStorageIntegrationType>(BlobStorageIntegrationType.S3);
 
   // Check if this is a self-hosted instance (no cloud region set)
-  const isSelfHosted = !isConsoleCloud;
+  const isSelfHosted = !isHanzoCloud;
 
   const blobStorageForm = useForm({
     resolver: zodResolver(blobStorageIntegrationFormSchema),
@@ -167,11 +161,6 @@ const BlobStorageIntegrationSettingsForm = ({
       fileType: state?.fileType || BlobStorageIntegrationFileType.JSONL,
       exportMode: state?.exportMode || BlobStorageExportMode.FULL_HISTORY,
       exportStartDate: state?.exportStartDate || null,
-      exportSource:
-        state?.exportSource ||
-        (isBetaEnabled
-          ? AnalyticsIntegrationExportSource.EVENTS
-          : AnalyticsIntegrationExportSource.TRACES_OBSERVATIONS),
     },
     disabled: isLoading,
   });
@@ -192,11 +181,6 @@ const BlobStorageIntegrationSettingsForm = ({
       fileType: state?.fileType || BlobStorageIntegrationFileType.JSONL,
       exportMode: state?.exportMode || BlobStorageExportMode.FULL_HISTORY,
       exportStartDate: state?.exportStartDate || null,
-      exportSource:
-        state?.exportSource ||
-        (isBetaEnabled
-          ? AnalyticsIntegrationExportSource.EVENTS
-          : AnalyticsIntegrationExportSource.TRACES_OBSERVATIONS),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
@@ -342,9 +326,7 @@ const BlobStorageIntegrationSettingsForm = ({
                 <FormControl>
                   <Switch checked={field.value} onCheckedChange={field.onChange} className="ml-4 mt-1" />
                 </FormControl>
-                <FormDescription>
-                  Enable for S3-compatible storage providers that require path-style access
-                </FormDescription>
+                <FormDescription>Enable for MinIO and some other S3 compatible providers</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -510,62 +492,6 @@ const BlobStorageIntegrationSettingsForm = ({
             </FormItem>
           )}
         />
-
-        {isBetaEnabled && (
-          <FormField
-            control={blobStorageForm.control}
-            name="exportSource"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1.5 pt-2">
-                  Export Source
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-[350px] space-y-2 p-3">
-                      {EXPORT_SOURCE_OPTIONS.map((option) => (
-                        <div key={option.value} className="space-y-0.5">
-                          <div className="font-medium">{option.label}</div>
-                          <div className="text-xs text-muted-foreground">{option.description}</div>
-                        </div>
-                      ))}
-                      <div className="border-t pt-2">
-                        <a
-                          href="https://hanzo.ai/docs/integrations/export-sources"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:underline"
-                        >
-                          For further information see
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select data to export" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {EXPORT_SOURCE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  Choose which data sources to export to blob storage. Scores are always included.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
 
         {blobStorageForm.watch("exportMode") === BlobStorageExportMode.FROM_CUSTOM_DATE && (
           <FormField

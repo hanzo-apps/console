@@ -1,13 +1,13 @@
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-import { ChatMessageType, fetchLLMCompletion, logger, type TraceSinkParams } from "@hanzo/console-core/src/server";
+import { ChatMessageType, fetchLLMCompletion, logger, type TraceSinkParams } from "@hanzo/shared/src/server";
 import { env } from "@/src/env.mjs";
 import { CreateNaturalLanguageFilterCompletion } from "./validation";
 import { getDefaultModelParams, parseFiltersFromCompletion, getHanzoClient } from "./utils";
 import { randomBytes } from "crypto";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { BEDROCK_USE_DEFAULT_CREDENTIALS } from "@hanzo/console-core";
-import { encrypt } from "@hanzo/console-core/encryption";
+import { BEDROCK_USE_DEFAULT_CREDENTIALS } from "@hanzo/shared";
+import { encrypt } from "@hanzo/shared/encryption";
 
 export const naturalLanguageFilterRouter = createTRPCRouter({
   createCompletion: protectedProjectProcedure
@@ -77,8 +77,8 @@ export const naturalLanguageFilterRouter = createTRPCRouter({
           targetProjectId: env.HANZO_AI_FEATURES_PROJECT_ID,
           userId: ctx.session.user.id,
           metadata: {
-            console_user_id: ctx.session.user.id,
-            console_project_id: ctx.session.projectId,
+            hanzo_user_id: ctx.session.user.id,
+            hanzo_project_id: ctx.session.projectId,
           },
           prompt: promptResponse,
         };
@@ -95,7 +95,7 @@ export const naturalLanguageFilterRouter = createTRPCRouter({
         const modelParams = getDefaultModelParams();
 
         const llmCompletion = await fetchLLMCompletion({
-          messages: messages.map((m: { role: string; content: string }) => ({
+          messages: messages.map((m) => ({
             role: m.role,
             content: m.content,
             type: ChatMessageType.PublicAPICreated,

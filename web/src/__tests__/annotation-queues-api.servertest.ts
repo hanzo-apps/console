@@ -1,6 +1,6 @@
 /** @jest-environment node */
 
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { makeZodVerifiedAPICall, makeAPICall, pruneDatabase } from "@/src/__tests__/test-utils";
 import {
   GetAnnotationQueuesResponse,
@@ -12,8 +12,8 @@ import {
   DeleteAnnotationQueueItemResponse,
   CreateAnnotationQueueResponse,
 } from "@/src/features/public-api/types/annotation-queues";
-import { AnnotationQueueObjectType, AnnotationQueueStatus } from "@hanzo/console-core";
-import { createOrgProjectAndApiKey } from "@hanzo/console-core/src/server";
+import { AnnotationQueueObjectType, AnnotationQueueStatus } from "@hanzo/shared";
+import { createOrgProjectAndApiKey } from "@hanzo/shared/src/server";
 import { v4 as uuidv4 } from "uuid";
 
 describe("Annotation Queues API Endpoints", () => {
@@ -231,7 +231,7 @@ describe("Annotation Queues API Endpoints", () => {
       expect(response.status).toBe(400);
     });
 
-    it.skip("should return 405 if the user is on the Hobby plan and has reached the maximum number of annotation queues", async () => {
+    it("should return 405 if the user is on the Hobby plan and has reached the maximum number of annotation queues", async () => {
       const { auth: hobbyPlanAuth, projectId: hobbyProjectId } = await createOrgProjectAndApiKey({
         plan: "Hobby",
       });

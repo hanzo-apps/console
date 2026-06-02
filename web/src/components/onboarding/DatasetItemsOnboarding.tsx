@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { CsvUploadDialog } from "@/src/features/datasets/components/CsvUploadDialog";
 import { NewDatasetItemForm } from "@/src/features/datasets/components/NewDatasetItemForm";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { cn } from "@/src/utils/tailwind";
 
 interface DatasetItemEntryPointRowProps {
@@ -57,7 +57,7 @@ const DatasetItemEntryPointRow = ({
 };
 
 export const DatasetItemsOnboarding = ({ projectId, datasetId }: { projectId: string; datasetId: string }) => {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false);
 
@@ -121,7 +121,7 @@ export const DatasetItemsOnboarding = ({ projectId, datasetId }: { projectId: st
         </Dialog>
 
         <Link
-          href="https://hanzo.ai/docs/evaluation/experiments/datasets#create-items-from-production-data"
+          href="https://hanzo.com/docs/evaluation/experiments/datasets#create-items-from-production-data"
           target="_blank"
         >
           <DatasetItemEntryPointRow
@@ -139,7 +139,7 @@ export const DatasetItemsOnboarding = ({ projectId, datasetId }: { projectId: st
           docPopup={{
             description:
               "Creating items from production data is supported on single trace level. Click to view docs for more details.",
-            href: "https://hanzo.ai/docs/evaluation/experiments/datasets#create-items-from-production-data",
+            href: "https://hanzo.com/docs/evaluation/experiments/datasets#create-items-from-production-data",
           }}
         />
       </div>

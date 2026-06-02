@@ -1,15 +1,15 @@
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
-import { prisma } from "@hanzo/console-core/src/db";
-import { redis } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/shared/src/db";
+import { redis } from "@hanzo/shared/src/server";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import {
   CreateBlobStorageIntegrationRequest,
   type BlobStorageIntegrationResponseType,
 } from "@/src/features/public-api/types/blob-storage-integrations";
-import { ConsoleNotFoundError, UnauthorizedError, ForbiddenError } from "@hanzo/console-core";
-import { encrypt } from "@hanzo/console-core/encryption";
+import { HanzoNotFoundError, UnauthorizedError, ForbiddenError } from "@hanzo/shared";
+import { encrypt } from "@hanzo/shared/encryption";
 
 export default withMiddlewares({
   GET: handleGetBlobStorageIntegrations,
@@ -109,7 +109,7 @@ async function handleUpsertBlobStorageIntegration(req: NextApiRequest, res: Next
     select: { id: true, orgId: true },
   });
   if (!project || project.orgId !== authCheck.scope.orgId) {
-    throw new ConsoleNotFoundError("Project not found");
+    throw new HanzoNotFoundError("Project not found");
   }
 
   // Prepare data for database

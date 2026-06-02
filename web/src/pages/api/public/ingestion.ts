@@ -1,13 +1,13 @@
 import { cors, runMiddleware } from "@/src/features/public-api/server/cors";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { z } from "zod/v4";
-import { traceException, redis, logger, getCurrentSpan, contextWithHanzoProps } from "@hanzo/console-core/src/server";
+import { traceException, redis, logger, getCurrentSpan, contextWithHanzoProps } from "@hanzo/shared/src/server";
 import { telemetry } from "@/src/features/telemetry";
-import { jsonSchema } from "@hanzo/console-core";
+import { jsonSchema } from "@hanzo/shared";
 import { isPrismaException } from "@/src/utils/exceptions";
-import { MethodNotAllowedError, BaseError, UnauthorizedError, ForbiddenError } from "@hanzo/console-core";
-import { processEventBatch } from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+import { MethodNotAllowedError, BaseError, UnauthorizedError, ForbiddenError } from "@hanzo/shared";
+import { processEventBatch } from "@hanzo/shared/src/server";
+import { prisma } from "@hanzo/shared/src/db";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { RateLimitService } from "@/src/features/public-api/server/RateLimitService";
 import * as opentelemetry from "@opentelemetry/api";
@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // add context of api call to the span
     const currentSpan = getCurrentSpan();
 
-    // get x-iam-xxx headers and add them to the span
+    // get x-hanzo-xxx headers and add them to the span
     Object.keys(req.headers).forEach((header) => {
       if (header.toLowerCase().startsWith("x-hanzo") || header.toLowerCase().startsWith("x_hanzo")) {
         currentSpan?.setAttributes({

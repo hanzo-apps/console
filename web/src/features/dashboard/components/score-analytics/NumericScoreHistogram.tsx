@@ -1,11 +1,13 @@
 import { api } from "@/src/utils/api";
-import { type ScoreSourceType, type FilterState, type ScoreDataTypeType } from "@hanzo/console-core";
-import { type ViewVersion } from "@/src/features/query";
+import { type ScoreSourceType, type FilterState, type ScoreDataTypeType } from "@hanzo/shared";
 import { createTracesTimeFilter } from "@/src/features/dashboard/lib/dashboard-utils";
 import React from "react";
+import { BarChart, type CustomTooltipProps } from "@tremor/react";
+import { Card } from "@/src/components/ui/card";
+import { getColorsForCategories } from "@/src/features/dashboard/utils/getColorsForCategories";
+import { padChartData } from "@/src/features/dashboard/lib/score-analytics-utils";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
-import { Chart } from "@/src/features/widgets/chart-library/Chart";
-import { scoreHistogramToDataPoints } from "@/src/features/dashboard/lib/chart-data-adapters";
+import { Tooltip } from "@/src/features/dashboard/components/Tooltip";
 
 export function NumericScoreHistogram(props: {
   projectId: string;
@@ -13,13 +15,10 @@ export function NumericScoreHistogram(props: {
   source: ScoreSourceType;
   dataType: Extract<ScoreDataTypeType, "NUMERIC" | "BOOLEAN">;
   globalFilterState: FilterState;
-  metricsVersion?: ViewVersion;
 }) {
-  const version = props.metricsVersion ?? "v1";
   const histogram = api.dashboard.scoreHistogram.useQuery(
     {
       projectId: props.projectId,
-      version,
       from: "traces_scores",
       select: [{ column: "value" }],
       filter: [
@@ -43,9 +42,7 @@ export function NumericScoreHistogram(props: {
           operator: "=",
         },
       ],
-      // v1 fetches raw values client-side (capped at 10k rows).
-      // v2 aggregates server-side via histogram() — limit is unused.
-      ...(version === "v1" ? { limit: 10000 } : {}),
+      limit: 10000,
     },
     {
       trpc: {
@@ -58,16 +55,28 @@ export function NumericScoreHistogram(props: {
 
   const { chartData, chartLabels } = histogram.data ? histogram.data : { chartData: [], chartLabels: [] };
 
+  const colors = getColorsForCategories(chartLabels);
+  const paddedChartData = padChartData(chartData);
+
+  const TooltipComponent = (tooltipProps: CustomTooltipProps) => (
+    <Tooltip {...tooltipProps} formatter={(value) => Intl.NumberFormat("en-US").format(value).toString()} />
+  );
+
   return histogram.isLoading || !Boolean(chartData.length) ? (
     <NoDataOrLoading isLoading={histogram.isLoading} />
   ) : (
-    <div className="h-80 w-full shrink-0">
-      <Chart
-        chartType="HISTOGRAM"
-        data={scoreHistogramToDataPoints(chartData, chartLabels)}
-        rowLimit={100}
-        chartConfig={{ type: "HISTOGRAM", subtle_fill: true }}
+    <Card className="min-h-[9rem] w-full flex-1 rounded-tremor-default border">
+      <BarChart
+        className="mt-4 [&_text]:fill-muted-foreground [&_tspan]:fill-muted-foreground"
+        data={paddedChartData}
+        index="binLabel"
+        categories={chartLabels}
+        colors={colors}
+        valueFormatter={(number: number) => Intl.NumberFormat("en-US").format(number).toString()}
+        yAxisWidth={48}
+        barCategoryGap={"0%"}
+        customTooltip={TooltipComponent}
       />
-    </div>
+    </Card>
   );
 }

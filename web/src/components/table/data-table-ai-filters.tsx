@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
-import { Textarea } from "@hanzo/ui";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hanzo/ui";
+import { Textarea } from "@/src/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
 import { Info, ExternalLink } from "lucide-react";
 import { useQueryProject } from "@/src/features/projects/hooks";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { api } from "@/src/utils/api";
-import { type FilterState } from "@hanzo/console-core";
+import { type FilterState } from "@hanzo/shared";
 
 interface DataTableAIFiltersProps {
   onFiltersGenerated: (filters: FilterState) => void;

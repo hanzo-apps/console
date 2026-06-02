@@ -4,9 +4,9 @@ import { api } from "@/src/utils/api";
 import { useState } from "react";
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
 import Header from "@/src/components/layouts/header";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
-import { useConsoleCloudRegion, useQueryOrganization } from "@/src/features/organizations/hooks";
+import { useHanzoCloudRegion, useQueryOrganization } from "@/src/features/organizations/hooks";
 import { Card } from "@/src/components/ui/card";
 import { LockIcon, ExternalLink } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -20,8 +20,8 @@ const aiFeaturesSchema = z.object({
 
 export default function AIFeatureSwitch() {
   const { update: updateSession } = useSession();
-  const { isConsoleCloud } = useConsoleCloudRegion();
-  const capture = useInsightsCapture();
+  const { isHanzoCloud } = useHanzoCloudRegion();
+  const capture = usePostHogClientCapture();
   const organization = useQueryOrganization();
   const [isAIFeatureSwitchEnabled, setIsAIFeatureSwitchEnabled] = useState(organization?.aiFeaturesEnabled ?? false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -68,7 +68,7 @@ export default function AIFeatureSwitch() {
     });
   }
 
-  if (!isConsoleCloud) return null;
+  if (!isHanzoCloud) return null;
 
   return (
     <div>
@@ -82,7 +82,7 @@ export default function AIFeatureSwitch() {
               Hanzo data region. Traces are sent to Hanzo Cloud in your data region. Your data will not be used for
               training models. Applicable HIPAA, SOC2, GDPR, and ISO 27001 compliance remains intact.{" "}
               <a
-                href="https://hanzo.ai/security/ai-features"
+                href="https://hanzo.com/security/ai-features"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-primary hover:underline"
@@ -123,7 +123,7 @@ export default function AIFeatureSwitch() {
               <br />
               <br />{" "}
               <a
-                href="https://hanzo.ai/security/ai-features"
+                href="https://hanzo.com/security/ai-features"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-primary hover:underline"

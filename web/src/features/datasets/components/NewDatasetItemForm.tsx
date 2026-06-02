@@ -6,9 +6,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { api } from "@/src/utils/api";
 import { useState, useMemo, useEffect } from "react";
 import { CodeMirrorEditor } from "@/src/components/editor";
-import { type Prisma } from "@hanzo/console-core";
+import { type Prisma } from "@hanzo/shared";
 import { cn } from "@/src/utils/tailwind";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { DatasetSchemaHoverCard } from "./DatasetSchemaHoverCard";
 import { useDatasetItemValidation } from "../hooks/useDatasetItemValidation";
 import { DatasetItemFieldSchemaErrors } from "./DatasetItemFieldSchemaErrors";
@@ -20,10 +20,10 @@ import {
   InputCommandInput,
   InputCommandItem,
 } from "@/src/components/ui/input-command";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
-import { ScrollArea } from "@hanzo/ui";
+import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { DialogBody, DialogFooter } from "@/src/components/ui/dialog";
 
 const formSchema = z.object({
@@ -101,7 +101,7 @@ export const NewDatasetItemForm = (props: {
   currentDatasetId?: string;
 }) => {
   const [formError, setFormError] = useState<string | null>(null);
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {

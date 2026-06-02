@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { encrypt } from "@hanzo/console-core/encryption";
+import { encrypt } from "@hanzo/shared/encryption";
 import { blobStorageIntegrationFormSchema } from "@/src/features/blobstorage-integration/types";
 import { TRPCError } from "@trpc/server";
 import {
@@ -11,10 +11,10 @@ import {
   BlobStorageIntegrationProcessingQueue,
   QueueJobs,
   StorageServiceFactory,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { randomUUID } from "crypto";
-import { decrypt } from "@hanzo/console-core/encryption";
-import { type BlobStorageIntegration, BlobStorageIntegrationType, BlobStorageExportMode } from "@hanzo/console-core";
+import { decrypt } from "@hanzo/shared/encryption";
+import { type BlobStorageIntegration, BlobStorageIntegrationType, BlobStorageExportMode } from "@hanzo/shared";
 import { env } from "@/src/env.mjs";
 
 export const blobStorageIntegrationRouter = createTRPCRouter({
@@ -79,7 +79,6 @@ export const blobStorageIntegrationRouter = createTRPCRouter({
           fileType,
           exportMode,
           exportStartDate,
-          exportSource,
         } = input;
 
         const isSelfHosted = !env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
@@ -115,7 +114,6 @@ export const blobStorageIntegrationRouter = createTRPCRouter({
           fileType,
           exportMode,
           exportStartDate: finalExportStartDate,
-          exportSource,
         };
 
         // Use a transaction to check if record exists, then create or update

@@ -1,7 +1,7 @@
 import { usdFormatter } from "@/src/utils/numbers";
 import { type DatasetRunItemByRunRowData, type DatasetRunItemByItemRowData } from "./types";
-import { type EnrichedDatasetRunItem } from "@hanzo/console-core/src/server";
-import { isPresent } from "@hanzo/console-core";
+import { type EnrichedDatasetRunItem } from "@hanzo/shared/src/server";
+import { isPresent } from "@hanzo/shared";
 
 export const convertRunItemToItemsByItemUiTableRow = (item: EnrichedDatasetRunItem): DatasetRunItemByItemRowData => {
   return {
@@ -29,7 +29,6 @@ export const convertRunItemToItemsByRunUiTableRow = (item: EnrichedDatasetRunIte
     id: item.id,
     runAt: item.createdAt,
     datasetItemId: item.datasetItemId,
-    datasetItemVersion: item.datasetItemVersion ?? undefined,
     trace: !!item.trace?.id
       ? {
           traceId: item.trace.id,

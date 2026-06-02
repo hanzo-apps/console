@@ -1,11 +1,5 @@
 import { PrettyJsonView } from "@/src/components/ui/PrettyJsonView";
-import {
-  type ScoreDomain,
-  type TraceDomain,
-  AnnotationQueueObjectType,
-  isGenerationLike,
-  ConsoleInternalTraceEnvironment,
-} from "@hanzo/console-core";
+import { type ScoreDomain, type TraceDomain, AnnotationQueueObjectType, isGenerationLike } from "@hanzo/shared";
 import { AggUsageBadge } from "@/src/components/token-usage-badge";
 import { Badge } from "@/src/components/ui/badge";
 import { type ObservationReturnTypeWithMetadata } from "@/src/server/api/routers/traces";
@@ -29,9 +23,9 @@ import { ExternalLinkIcon, InfoIcon } from "lucide-react";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { ItemBadge } from "@/src/components/ItemBadge";
 import Link from "next/link";
-import { Tabs, TabsList, TabsTrigger } from "@hanzo/ui";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Switch } from "@/src/components/ui/switch";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { useRouter } from "next/router";
 import { CopyIdsPopover } from "@/src/components/trace2/components/_shared/CopyIdsPopover";
 import { useJsonExpansion } from "@/src/components/trace2/contexts/JsonExpansionContext";
@@ -40,7 +34,7 @@ import { useParsedTrace } from "@/src/hooks/useParsedTrace";
 import { useJsonBetaToggle } from "@/src/components/trace2/hooks/useJsonBetaToggle";
 import { TraceDataProvider } from "@/src/components/trace2/contexts/TraceDataContext";
 import { ViewPreferencesProvider } from "@/src/components/trace2/contexts/ViewPreferencesContext";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hanzo/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
 import { getMostRecentCorrection } from "@/src/features/corrections/utils/getMostRecentCorrection";
 import TagList from "@/src/features/tag/components/TagList";
 import {
@@ -54,7 +48,6 @@ import {
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
 import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
-import { resolveEvalExecutionMetadata } from "@/src/components/trace2/lib/resolve-metadata";
 
 const LOG_VIEW_CONFIRMATION_THRESHOLD = 150;
 const LOG_VIEW_DISABLED_THRESHOLD = 350;
@@ -94,7 +87,7 @@ export const TracePreview = ({
 
   const [isPrettyViewAvailable, setIsPrettyViewAvailable] = useState(false);
   const isAuthenticatedAndProjectMember = useIsAuthenticatedAndProjectMember(trace.projectId);
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const router = useRouter();
   const { peek } = router.query;
   const showScoresTab = isAuthenticatedAndProjectMember && peek === undefined;
@@ -163,11 +156,6 @@ export const TracePreview = ({
     setShowLogViewDialog(false);
     setSelectedTab("log");
   };
-
-  const targetTraceId =
-    trace.environment === ConsoleInternalTraceEnvironment.LLMJudge
-      ? resolveEvalExecutionMetadata(parsedMetadata)
-      : null;
 
   return (
     <div className="col-span-2 flex h-full flex-1 flex-col overflow-hidden md:col-span-3">
@@ -264,17 +252,6 @@ export const TracePreview = ({
                   </Badge>
                 </Link>
               ) : null}
-              {targetTraceId ? (
-                <Link
-                  href={`/project/${trace.projectId as string}/traces/${encodeURIComponent(targetTraceId)}`}
-                  className="inline-flex"
-                >
-                  <Badge>
-                    <span className="truncate">Target Trace: {targetTraceId}</span>
-                    <ExternalLinkIcon className="ml-1 h-3 w-3" />
-                  </Badge>
-                </Link>
-              ) : null}
               {trace.environment ? <Badge variant="tertiary">Env: {trace.environment}</Badge> : null}
 
               {viewType === "detailed" && (
@@ -314,7 +291,7 @@ export const TracePreview = ({
         <TabsBar
           value={selectedTab === "log" ? "log" : selectedTab.includes("preview") ? "preview" : "scores"}
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
-          onValueChange={(value: string) => {
+          onValueChange={(value) => {
             // on tab click, is confirmation is needed?
             if (value === "log" && requiresConfirmation && !hasLogViewConfirmed) {
               setShowLogViewDialog(true);
@@ -350,7 +327,7 @@ export const TracePreview = ({
                     <Tabs
                       className="ml-auto h-fit px-2 py-0.5"
                       value={selectedViewTab}
-                      onValueChange={(value: string) => {
+                      onValueChange={(value) => {
                         capture("trace_detail:io_mode_switch", { view: value });
                         handleViewTabChange(value);
                       }}
@@ -486,7 +463,6 @@ export const TracePreview = ({
                   traceId={trace.id}
                   hiddenColumns={["traceName", "jobConfigurationId", "userId"]}
                   localStorageSuffix="TracePreview"
-                  disableUrlPersistence
                 />
               </div>
             </TabsBarContent>

@@ -1,18 +1,11 @@
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@hanzo/ui";
-import { Skeleton } from "@hanzo/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/src/components/ui/accordion";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { Button } from "@/src/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/src/components/ui/dropdown-menu";
 import { api } from "@/src/utils/api";
 import { useDatasetVersion } from "../hooks/useDatasetVersion";
-import { Clock, MoreVertical, Copy, ExternalLink } from "lucide-react";
+import { Clock } from "lucide-react";
 import { format, isToday, isYesterday, isWithinInterval, subDays, startOfDay, formatDistanceToNow } from "date-fns";
 import { cn } from "@/src/utils/tailwind";
-import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 
 type DatasetVersionHistoryPanelProps = {
   projectId: string;
@@ -57,19 +50,6 @@ export function DatasetVersionHistoryPanel({ projectId, datasetId, itemVersions 
     datasetId,
   });
 
-  const copyVersionTimestamp = (version: Date) => {
-    const isoTimestamp = version.toISOString();
-    navigator.clipboard.writeText(isoTimestamp);
-    showSuccessToast({
-      title: "Copied!",
-      description: `Version timestamp: ${isoTimestamp}`,
-    });
-  };
-
-  const openDocumentation = () => {
-    window.open("https://hanzo.ai/docs/datasets/dataset-versioning", "_blank");
-  };
-
   if (isLoading) {
     return (
       <div className="flex h-full flex-col gap-2 p-4">
@@ -102,74 +82,40 @@ export function DatasetVersionHistoryPanel({ projectId, datasetId, itemVersions 
     const isItemVersion = itemVersions?.some((iv) => iv.getTime() === version.getTime());
 
     return (
-      <div key={version.toISOString()} className="group relative flex items-center gap-1">
-        <Button
-          onClick={() => {
-            if (isLatest) {
-              resetToLatest();
-            } else {
-              setSelectedVersion(version);
-            }
-          }}
-          variant="ghost"
-          className={cn(
-            "flex h-auto flex-1 flex-col items-start gap-1 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/50",
-            isSelected && "bg-muted font-medium hover:bg-muted",
-          )}
-        >
-          <div className="flex w-full items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              {isItemVersion && (
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" title="Item modified in this version" />
-              )}
-              <span className={cn("truncate", isSelected && "text-foreground")}>
-                {format(version, "MMM d, yyyy 'at' h:mm a")}
-              </span>
-            </div>
-            {isLatest && (
-              <span className="shrink-0 rounded-md bg-accent-light-green px-2 py-0.5 text-xs font-medium text-accent-dark-green dark:bg-accent-dark-green dark:text-accent-light-green">
-                Latest
-              </span>
+      <Button
+        key={version.toISOString()}
+        onClick={() => {
+          if (isLatest) {
+            resetToLatest();
+          } else {
+            setSelectedVersion(version);
+          }
+        }}
+        variant="ghost"
+        className={cn(
+          "flex h-auto w-full flex-col items-start gap-1 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/50",
+          isSelected && "bg-muted font-medium hover:bg-muted",
+        )}
+      >
+        <div className="flex w-full items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            {isItemVersion && (
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" title="Item modified in this version" />
             )}
+            <span className={cn("truncate", isSelected && "text-foreground")}>
+              {format(version, "MMM d, yyyy 'at' h:mm a")}
+            </span>
           </div>
-          <span className={cn("text-xs", isSelected ? "text-muted-foreground" : "text-muted-foreground")}>
-            {formatDistanceToNow(version, { addSuffix: true })}
-          </span>
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="h-4 w-4" />
-              <span className="sr-only">Version actions</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                copyVersionTimestamp(version);
-              }}
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Copy version timestamp (UTC)
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                openDocumentation();
-              }}
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              How to use in experiments
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+          {isLatest && (
+            <span className="shrink-0 rounded-md bg-accent-light-green px-2 py-0.5 text-xs font-medium text-accent-dark-green dark:bg-accent-dark-green dark:text-accent-light-green">
+              Latest
+            </span>
+          )}
+        </div>
+        <span className={cn("text-xs", isSelected ? "text-muted-foreground" : "text-muted-foreground")}>
+          {formatDistanceToNow(version, { addSuffix: true })}
+        </span>
+      </Button>
     );
   };
 

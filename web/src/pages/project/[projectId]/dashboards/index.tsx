@@ -4,13 +4,13 @@ import { DashboardTable } from "@/src/features/dashboard/components/DashboardTab
 import { ActionButton } from "@/src/components/ActionButton";
 import { PlusIcon } from "lucide-react";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { getDashboardTabs, DASHBOARD_TABS } from "@/src/features/navigation/utils/dashboard-tabs";
 
 export default function Dashboards() {
   const router = useRouter();
   const { projectId } = router.query as { projectId: string };
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const hasCUDAccess = useHasProjectAccess({
     projectId,
     scope: "dashboards:CUD",
@@ -22,7 +22,7 @@ export default function Dashboards() {
         title: "Dashboards",
         help: {
           description: "Manage and create dashboards for your project.",
-          href: "https://hanzo.ai/docs/metrics/features/custom-dashboards",
+          href: "https://hanzo.com/docs/metrics/features/custom-dashboards",
         },
         tabsProps: {
           tabs: getDashboardTabs(projectId),

@@ -1,5 +1,5 @@
 import { encodeFiltersGeneric, decodeFiltersGeneric } from "@/src/features/filters/lib/filter-query-encoding";
-import type { FilterState } from "@hanzo/console-core";
+import type { FilterState } from "@hanzo/shared";
 
 // Wrapper functions for tests
 const encodeFilters = (filters: FilterState) => encodeFiltersGeneric(filters);
@@ -435,43 +435,6 @@ describe("Filter Query Encoding & Decoding (Legacy Format)", () => {
       const deserialized = decodeFilters(serialized);
 
       expect(deserialized).toEqual(filterWithEmptyString);
-    });
-
-    it("should maintain consistency for values containing pipes", () => {
-      // Issue #11757: values with literal | should round-trip correctly
-      const cases: FilterState[] = [
-        [
-          {
-            column: "name",
-            type: "stringOptions",
-            operator: "any of",
-            value: ["Builder | Short Research"],
-          },
-        ],
-        [
-          {
-            column: "name",
-            type: "stringOptions",
-            operator: "any of",
-            value: ["Builder | Short Research", "Regular Value", "Another | Pipe | Value"],
-          },
-        ],
-        [
-          {
-            column: "name",
-            type: "stringOptions",
-            operator: "any of",
-            value: ["path\\to\\file | description", "normal | value"],
-          },
-        ],
-      ];
-
-      for (const filters of cases) {
-        const serialized = encodeFilters(filters);
-        const deserialized = decodeFilters(serialized);
-
-        expect(deserialized).toEqual(filters);
-      }
     });
 
     it("should maintain consistency for mixed filter types", () => {

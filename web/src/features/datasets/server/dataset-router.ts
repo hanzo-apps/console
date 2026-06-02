@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { Prisma, type Dataset } from "@hanzo/console-core/src/db";
+import { Prisma, type Dataset } from "@hanzo/shared/src/db";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { DB } from "@/src/server/db";
@@ -13,11 +13,11 @@ import {
   isPresent,
   TracingSearchType,
   timeFilter,
-  isDatastoreFilterColumn,
+  isClickhouseFilterColumn,
   optionalPaginationZod,
-  ConsoleConflictError,
-  ConsoleNotFoundError,
-} from "@hanzo/console-core";
+  HanzoConflictError,
+  HanzoNotFoundError,
+} from "@hanzo/shared";
 import { TRPCError } from "@trpc/server";
 import {
   datasetRunsTableSchema,
@@ -61,12 +61,10 @@ import {
   getDatasetItemVersionHistory,
   getDatasetItemChangesSinceVersion,
   getDatasetItemsCountGrouped,
-  getDatasetVersionForRun,
-  escapeSqlLikePattern,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/shared/src/server";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
 import { updateDataset, upsertDataset } from "@/src/features/datasets/server/actions/createDataset";
-import { type BulkDatasetItemValidationError } from "@hanzo/console-core";
+import { type BulkDatasetItemValidationError } from "@hanzo/shared";
 import { v4 } from "uuid";
 
 // Batch size kept small (100) as items may have large input/output/metadata JSON
@@ -84,28 +82,19 @@ const resolveSearchCondition = (searchQuery?: string | null) => {
   return Prisma.sql`AND d.name ILIKE ${`%${searchQuery}%`}`;
 };
 
-const buildPathPrefixFilter = (pathPrefix?: string): Prisma.Sql => {
-  if (!pathPrefix) {
-    return Prisma.empty;
-  }
-
-  const escapedPathPrefix = escapeSqlLikePattern(pathPrefix);
-  return Prisma.sql` AND (d.name LIKE ${`${escapedPathPrefix}/%`} ESCAPE '\\' OR d.name = ${pathPrefix})`;
-};
-
 /**
- * Determines whether the given filters require Dataset Run Items (DRI) metrics from Datastore.
+ * Determines whether the given filters require Dataset Run Items (DRI) metrics from ClickHouse.
  *
  * @param filters - Array of filter conditions to evaluate
  * @returns true if any filter requires DRI metrics, false if using basic dataset run data is sufficient
  */
-export const requiresDatastoreLookups = (filters: FilterState): boolean => {
+export const requiresClickhouseLookups = (filters: FilterState): boolean => {
   if (filters.length === 0) {
     return false;
   }
 
   return filters.some((filter) => {
-    return isDatastoreFilterColumn(filter.column);
+    return isClickhouseFilterColumn(filter.column);
   });
 };
 
@@ -302,7 +291,14 @@ export const datasetRouter = createTRPCRouter({
     )
     .query(async ({ input, ctx }) => {
       // pathFilter: SQL WHERE clause to filter datasets by folder (e.g., "AND d.name LIKE 'folder/%'")
-      const pathFilter = buildPathPrefixFilter(input.pathPrefix);
+      const pathFilter = input.pathPrefix
+        ? (() => {
+            const prefix = input.pathPrefix;
+            // Escape backslashes and other LIKE special characters for pattern matching
+            const escapedPrefix = prefix.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+            return Prisma.sql` AND (d.name LIKE ${`${escapedPrefix}/%`} OR d.name = ${escapedPrefix})`;
+          })()
+        : Prisma.empty;
 
       const searchFilter = resolveSearchCondition(input.searchQuery);
 
@@ -445,7 +441,7 @@ export const datasetRouter = createTRPCRouter({
       }),
     )
     .query(async ({ input, ctx }) => {
-      const run = await ctx.prisma.datasetRuns.findUnique({
+      return ctx.prisma.datasetRuns.findUnique({
         where: {
           id_projectId: {
             id: input.runId,
@@ -454,20 +450,6 @@ export const datasetRouter = createTRPCRouter({
           datasetId: input.datasetId,
         },
       });
-
-      if (!run) return null;
-
-      // Resolve dataset version from run items
-      const datasetVersion = await getDatasetVersionForRun({
-        projectId: input.projectId,
-        datasetId: input.datasetId,
-        runId: input.runId,
-      });
-
-      return {
-        ...run,
-        datasetVersion,
-      };
     }),
   baseRunDataByDatasetId: protectedProjectProcedure
     .input(z.object({ projectId: z.string(), datasetId: z.string() }))
@@ -485,7 +467,7 @@ export const datasetRouter = createTRPCRouter({
     }),
   runsByDatasetId: protectedProjectProcedure.input(datasetRunsTableSchema).query(async ({ input, ctx }) => {
     // Use helper function to determine if we need DRI metrics
-    if (!requiresDatastoreLookups(input.filter ?? [])) {
+    if (!requiresClickhouseLookups(input.filter ?? [])) {
       const [runs, totalRuns] = await Promise.all([
         await ctx.prisma.datasetRuns.findMany({
           where: {
@@ -560,7 +542,7 @@ export const datasetRouter = createTRPCRouter({
       return {
         id: run.id,
         name: run.name,
-        // Use Datastore metrics if available, otherwise use defaults for runs without dataset_run_items_rmt
+        // Use ClickHouse metrics if available, otherwise use defaults for runs without dataset_run_items_rmt
         countRunItems: run.countRunItems ?? 0,
         avgTotalCost: run.avgTotalCost ?? null,
         totalCost: run.totalCost ?? null,
@@ -629,7 +611,6 @@ export const datasetRouter = createTRPCRouter({
         projectId: z.string(),
         datasetId: z.string(),
         datasetItemId: z.string(),
-        version: z.date().optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -637,10 +618,9 @@ export const datasetRouter = createTRPCRouter({
         projectId: input.projectId,
         datasetItemId: input.datasetItemId,
         datasetId: input.datasetId,
-        version: input.version,
       });
       if (!item) {
-        throw new ConsoleNotFoundError("Dataset item not found");
+        throw new HanzoNotFoundError("Dataset item not found");
       }
       return item;
     }),
@@ -957,7 +937,7 @@ export const datasetRouter = createTRPCRouter({
         return deletedDataset;
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-          throw new ConsoleConflictError("The dataset you are trying to delete has likely been deleted");
+          throw new HanzoConflictError("The dataset you are trying to delete has likely been deleted");
         }
         throw error;
       }
@@ -1275,10 +1255,13 @@ export const datasetRouter = createTRPCRouter({
           projectId: input.projectId,
           datasetId: datasetId,
           filter,
+          // ensure consistent ordering with datasets.baseDatasetItemByDatasetId
+          // CH run items are created in reverse order as postgres execution path
+          // can be refactored once we switch to CH only implementation
           orderBy: [
             {
               column: "createdAt",
-              order: "DESC",
+              order: "ASC",
             },
             { column: "datasetItemId", order: "DESC" },
           ],
@@ -1360,7 +1343,7 @@ export const datasetRouter = createTRPCRouter({
           orderBy: [
             {
               column: "createdAt",
-              order: "DESC",
+              order: "ASC",
             },
             { column: "datasetItemId", order: "DESC" },
           ],
@@ -1413,7 +1396,7 @@ export const datasetRouter = createTRPCRouter({
         offset: page * limit,
       });
 
-      // Step 2: Given dataset item ids, lookup dataset run items in datastore
+      // Step 2: Given dataset item ids, lookup dataset run items in clickhouse
       // Note: for each unique dataset item id and dataset run id combination, we will retrieve a dataset run item
       const datasetRunItems = await getDatasetRunItemsWithoutIOByItemIds({
         projectId: input.projectId,
@@ -1457,7 +1440,7 @@ export const datasetRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const { filterByRun, datasetId, projectId, runIds } = input;
 
-      // Rely on datastore to return only dataset item count that match the filters
+      // Rely on clickhouse to return only dataset item count that match the filters
       const datasetItemCount = await getDatasetItemsWithRunDataCount({
         projectId,
         datasetId,

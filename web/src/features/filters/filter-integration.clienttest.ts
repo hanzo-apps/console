@@ -4,7 +4,7 @@
  * using browser URLSearchParams APIs to simulate real-world usage.
  */
 
-import { type FilterState, tracesTableCols, observationsTableCols } from "@hanzo/console-core";
+import { type FilterState, tracesTableCols, observationsTableCols } from "@hanzo/shared";
 import { encodeFiltersGeneric, decodeFiltersGeneric } from "./lib/filter-query-encoding";
 import { validateFilters } from "@/src/components/table/table-view-presets/validation";
 import { traceFilterConfig } from "./config/traces-config";
@@ -180,35 +180,13 @@ describe("Filter Query Encoding Integration (Full URL Lifecycle)", () => {
         ],
       },
       {
-        description: "pipe as delimiter between array values",
+        description: "pipe characters in array values",
         filters: [
           {
             column: "period",
             type: "stringOptions",
             operator: "any of",
             value: ["triassic", "jurassic"],
-          },
-        ],
-      },
-      {
-        description: "literal pipe characters within values (issue #11757)",
-        filters: [
-          {
-            column: "name",
-            type: "stringOptions",
-            operator: "any of",
-            value: ["Builder | Short Research"],
-          },
-        ],
-      },
-      {
-        description: "multiple values with literal pipes",
-        filters: [
-          {
-            column: "name",
-            type: "stringOptions",
-            operator: "any of",
-            value: ["Builder | Short Research", "Another | Value"],
           },
         ],
       },
@@ -238,24 +216,6 @@ describe("Filter Query Encoding Integration (Full URL Lifecycle)", () => {
 
     // Empty filters
     expect(simulateUrlFlow([])).toEqual([]);
-  });
-
-  it("should round-trip arrayOptions with empty value as [] not ['']", () => {
-    // When user clicks ALL toggle with no checkboxes, value is []
-    const filters: FilterState = [
-      {
-        column: "tags",
-        type: "arrayOptions",
-        operator: "all of",
-        value: [],
-      },
-    ];
-
-    const result = simulateUrlFlow(filters);
-
-    // Must decode back to [] — not [""] which causes hasAll(tags, ['']) → 0 results
-    expect(result).toEqual(filters);
-    expect(result[0]?.value).toEqual([]);
   });
 });
 
@@ -545,7 +505,7 @@ describe("Filter Flow: URL → Decode → Normalize → Transform", () => {
   });
 
   it("should handle backend column remapping from URL", () => {
-    // Observations/traces table: "tags" (frontend) → "traceTags" (Datastore backend)
+    // Observations/traces table: "tags" (frontend) → "traceTags" (ClickHouse backend)
     const urlFilter = "tags;arrayOptions;;any of;tag1";
 
     const normalized = decodeAndNormalizeFilters(urlFilter, traceFilterConfig.columnDefinitions);

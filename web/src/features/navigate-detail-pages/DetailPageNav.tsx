@@ -1,8 +1,8 @@
 import { Button } from "@/src/components/ui/button";
 import { InputCommandShortcut } from "@/src/components/ui/input-command";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@hanzo/ui";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/src/components/ui/tooltip";
 import { type ListEntry, useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
@@ -11,7 +11,7 @@ export const DetailPageNav = (props: { currentId: string; path: (entry: ListEntr
   const { detailPagelists } = useDetailPageLists();
   const entries = detailPagelists[props.listKey] ?? [];
 
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const router = useRouter();
   const currentIndex = entries.findIndex((entry) => entry.id === props.currentId);
   const previousPageEntry = currentIndex > 0 ? entries[currentIndex - 1] : undefined;
@@ -34,17 +34,19 @@ export const DetailPageNav = (props: { currentId: string; path: (entry: ListEntr
       }
 
       if (event.key === "k" && previousPageEntry) {
-        const newPath = props.path({
-          id: encodeURIComponent(previousPageEntry.id),
-          params: previousPageEntry.params,
-        });
-        void router.push(newPath);
+        void router.push(
+          props.path({
+            id: encodeURIComponent(previousPageEntry.id),
+            params: previousPageEntry.params,
+          }),
+        );
       } else if (event.key === "j" && nextPageEntry) {
-        const newPath = props.path({
-          id: encodeURIComponent(nextPageEntry.id),
-          params: nextPageEntry.params,
-        });
-        void router.push(newPath);
+        void router.push(
+          props.path({
+            id: encodeURIComponent(nextPageEntry.id),
+            params: nextPageEntry.params,
+          }),
+        );
       }
     };
     window.addEventListener("keydown", handleKeyDown);

@@ -1,12 +1,7 @@
 import React from "react";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/src/components/ui/chart";
+import { ChartContainer, ChartTooltip } from "@/src/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import { type ChartProps } from "@/src/features/widgets/chart-library/chart-props";
-import { compactNumberFormatter } from "@/src/utils/numbers";
 
 /**
  * VerticalBarChart component
@@ -25,14 +20,9 @@ export const VerticalBarChart: React.FC<ChartProps> = ({
     },
   },
   accessibilityLayer = true,
-  valueFormatter = compactNumberFormatter,
-  subtleFill = false,
 }) => {
   return (
-    <ChartContainer
-      config={config}
-      className="[&_.recharts-bar-rectangle:hover]:opacity-30 dark:[&_.recharts-bar-rectangle:hover]:opacity-100 dark:[&_.recharts-bar-rectangle:hover]:brightness-[3]"
-    >
+    <ChartContainer config={config}>
       <BarChart accessibilityLayer={accessibilityLayer} data={data}>
         <XAxis
           type="category"
@@ -42,30 +32,11 @@ export const VerticalBarChart: React.FC<ChartProps> = ({
           tickLine={false}
           axisLine={false}
         />
-        <YAxis
-          type="number"
-          stroke="hsl(var(--chart-grid))"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-        />
-        <Bar
-          dataKey="metric"
-          radius={[4, 4, 0, 0]}
-          className="fill-[--color-metric]"
-          fillOpacity={subtleFill ? 0.3 : 1}
-        />
+        <YAxis type="number" stroke="hsl(var(--chart-grid))" fontSize={12} tickLine={false} axisLine={false} />
+        <Bar dataKey="metric" radius={[4, 4, 0, 0]} className="fill-[--color-metric]" />
         <ChartTooltip
-          cursor={false}
           contentStyle={{ backgroundColor: "hsl(var(--background))" }}
-          content={({ active, payload, label }) => (
-            <ChartTooltipContent
-              active={active}
-              payload={payload}
-              label={label}
-              valueFormatter={(v) => valueFormatter(Number(v))}
-            />
-          )}
+          itemStyle={{ color: "hsl(var(--foreground))" }}
         />
       </BarChart>
     </ChartContainer>

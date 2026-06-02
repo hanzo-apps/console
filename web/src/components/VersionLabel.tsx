@@ -14,18 +14,18 @@ import { api } from "@/src/utils/api";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/utils/tailwind";
 import { usePlan } from "@/src/features/entitlements/hooks";
-import { isSelfHostedPlan, planLabels } from "@hanzo/console-core";
+import { isSelfHostedPlan, planLabels } from "@hanzo/shared";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 
 export const VersionLabel = ({ className }: { className?: string }) => {
-  const { isConsoleCloud } = useConsoleCloudRegion();
+  const { isHanzoCloud } = useHanzoCloudRegion();
 
   const backgroundMigrationStatus = api.backgroundMigrations.status.useQuery(undefined, {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    enabled: !isConsoleCloud, // do not check for updates on Hanzo Cloud
+    enabled: !isHanzoCloud, // do not check for updates on Hanzo Cloud
     throwOnError: false, // do not render default error message
   });
 
@@ -33,13 +33,13 @@ export const VersionLabel = ({ className }: { className?: string }) => {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    enabled: !isConsoleCloud, // do not check for updates on Hanzo Cloud
+    enabled: !isHanzoCloud, // do not check for updates on Hanzo Cloud
     throwOnError: false, // do not render default error message
   });
 
   const plan = usePlan();
 
-  const selfHostedPlanLabel = !isConsoleCloud
+  const selfHostedPlanLabel = !isHanzoCloud
     ? plan && isSelfHostedPlan(plan)
       ? // self-host plan
         // TODO: clean up to use planLabels in packages/shared/src/features/entitlements/plans.ts
@@ -56,9 +56,9 @@ export const VersionLabel = ({ className }: { className?: string }) => {
       null;
 
   const showBackgroundMigrationStatus =
-    !isConsoleCloud && backgroundMigrationStatus.data && backgroundMigrationStatus.data.status !== "FINISHED";
+    !isHanzoCloud && backgroundMigrationStatus.data && backgroundMigrationStatus.data.status !== "FINISHED";
 
-  const hasUpdate = !isConsoleCloud && checkUpdate.data && checkUpdate.data.updateType;
+  const hasUpdate = !isHanzoCloud && checkUpdate.data && checkUpdate.data.updateType;
 
   const color =
     checkUpdate.data?.updateType === "major"
@@ -91,7 +91,7 @@ export const VersionLabel = ({ className }: { className?: string }) => {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>
-        ) : !isConsoleCloud ? (
+        ) : !isHanzoCloud ? (
           <>
             <DropdownMenuLabel>This is the latest release</DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -112,7 +112,7 @@ export const VersionLabel = ({ className }: { className?: string }) => {
             Releases
           </Link>
         </DropdownMenuItem>
-        {!isConsoleCloud && (
+        {!isHanzoCloud && (
           <DropdownMenuItem asChild>
             <Link href="/background-migrations">
               <ArrowUp10 size={16} className="mr-2" />
@@ -139,7 +139,7 @@ export const VersionLabel = ({ className }: { className?: string }) => {
             Roadmap
           </Link>
         </DropdownMenuItem>
-        {!isConsoleCloud && (
+        {!isHanzoCloud && (
           <DropdownMenuItem asChild>
             <Link href="https://hanzo.ai/pricing-self-host" target="_blank">
               <Info size={16} className="mr-2" />

@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/router";
 import { api } from "@/src/utils/api";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import ContainerPage from "@/src/components/layouts/container-page";
 import { ActionButton } from "@/src/components/ActionButton";
 import { SubHeader } from "@/src/components/layouts/header";
@@ -9,15 +9,8 @@ import { Button } from "@/src/components/ui/button";
 import { ApiKeyRender } from "@/src/features/public-api/components/CreateApiKeyButton";
 import { type RouterOutput } from "@/src/utils/types";
 import { useState } from "react";
-import { useQueryProject } from "@/src/features/projects/hooks";
 
-export const TracingSetup = ({
-  projectId,
-  hasTracingConfigured,
-}: {
-  projectId: string;
-  hasTracingConfigured?: boolean;
-}) => {
+const TracingSetup = ({ projectId, hasTracingConfigured }: { projectId: string; hasTracingConfigured?: boolean }) => {
   const [apiKeys, setApiKeys] = useState<RouterOutput["projectApiKeys"]["create"] | null>(null);
   const utils = api.useUtils();
   const mutCreateApiKey = api.projectApiKeys.create.useMutation({
@@ -38,7 +31,7 @@ export const TracingSetup = ({
   return (
     <div className="space-y-8">
       <div>
-        <SubHeader title="1. Get API keys" />
+        <SubHeader title="1. Get API Keys" />
         {apiKeys ? (
           <ApiKeyRender generatedKeys={apiKeys} scope={"project"} className="mt-4" />
         ) : (
@@ -60,13 +53,13 @@ export const TracingSetup = ({
       </div>
 
       <div>
-        <SubHeader title="2. Add tracing to your application" status={hasTracingConfigured ? "active" : "pending"} />
+        <SubHeader title="2. Instrument Your Application" status={hasTracingConfigured ? "active" : "pending"} />
         <p className="mb-4 text-sm text-muted-foreground">
-          Hanzo relies on OpenTelemetry to instrument your application and export LLM application/agent traces to Hanzo.
-          You can use one of our SDKs or 50+ framework integrations. Please follow the quickstart in the documentation
-          to add Hanzo to your application.
+          Hanzo Console relies on OpenTelemetry to instrument your application and export LLM application/agent traces
+          to Hanzo. You can use one of our SDKs or 50+ framework integrations. Please follow the quickstart in the
+          documentation to add Hanzo to your application.
         </p>
-        <ActionButton href="https://hanzo.ai/docs/observability/get-started">Quickstart guide</ActionButton>
+        <ActionButton href="https://hanzo.com/docs/observability/get-started">Instrumentation Quickstart</ActionButton>
       </div>
     </div>
   );
@@ -75,17 +68,13 @@ export const TracingSetup = ({
 export default function TracesSetupPage() {
   const router = useRouter();
   const projectId = router.query.projectId as string;
-  const { project } = useQueryProject();
 
   // Check if the user has tracing configured
-  // Skip polling entirely if the project flag is already set in the session
   const { data: hasTracingConfigured } = api.traces.hasTracingConfigured.useQuery(
     { projectId },
     {
       enabled: !!projectId,
-      refetchInterval: project?.hasTraces ? false : 5000,
-      initialData: project?.hasTraces ? true : undefined,
-      staleTime: project?.hasTraces ? Infinity : 0,
+      refetchInterval: 5000,
       trpc: {
         context: {
           skipBatch: true,
@@ -94,7 +83,7 @@ export default function TracesSetupPage() {
     },
   );
 
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   useEffect(() => {
     if (hasTracingConfigured !== undefined) {
       capture("onboarding:tracing_check_active", {
@@ -110,7 +99,7 @@ export default function TracesSetupPage() {
         help: {
           description:
             "Setup tracing to track and analyze your LLM calls. You can create API keys and integrate Hanzo with your application.",
-          href: "https://hanzo.ai/docs/observability/overview",
+          href: "https://hanzo.com/docs/observability/overview",
         },
       }}
     >

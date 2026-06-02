@@ -1,14 +1,14 @@
 /** @jest-environment node */
 
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/shared/src/db";
 import { makeAPICall, makeZodVerifiedAPICall } from "@/src/__tests__/test-utils";
 import {
   GetLlmConnectionsV1Response,
   PutLlmConnectionV1Response,
 } from "@/src/features/public-api/types/llm-connections";
-import { createOrgProjectAndApiKey } from "@hanzo/console-core/src/server";
-import { LLMAdapter } from "@hanzo/console-core";
-import { encrypt } from "@hanzo/console-core/encryption";
+import { createOrgProjectAndApiKey } from "@hanzo/shared/src/server";
+import { LLMAdapter } from "@hanzo/shared";
+import { encrypt } from "@hanzo/shared/encryption";
 
 // Generate truly unique provider names for tests to avoid conflicts
 const generateUniqueProvider = (baseName: string) =>
@@ -1174,7 +1174,7 @@ describe("/api/public/llm-connections API Endpoints", () => {
         "GET",
         "/api/public/llm-connections",
         undefined,
-        "Basic " + Buffer.from("pk-hz-fake-key:").toString("base64"),
+        "Basic " + Buffer.from("pk-lf-fake-key:").toString("base64"),
       );
       expect(fakeKeyResponse.status).toBe(401);
     });

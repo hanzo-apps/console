@@ -8,13 +8,11 @@ import { Dialog, DialogContent, DialogTrigger } from "@/src/components/ui/dialog
 import { CreateExperimentsForm } from "@/src/features/experiments/components/CreateExperimentsForm";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { DatasetAnalytics } from "@/src/features/datasets/components/DatasetAnalytics";
+import { TimeseriesChart } from "@/src/features/scores/components/TimeseriesChart";
+import { isNumericDataType } from "@/src/features/scores/lib/helpers";
 import { CompareViewAdapter } from "@/src/features/scores/adapters";
-import { RESOURCE_METRICS, isEmptyChart } from "@/src/features/dashboard/lib/score-analytics-utils";
-import { compareViewChartDataToDataPoints } from "@/src/features/dashboard/lib/chart-data-adapters";
-import { Chart } from "@/src/features/widgets/chart-library/Chart";
-import { compactNumberFormatter, usdFormatter } from "@/src/utils/numbers";
-import { formatIntervalSeconds } from "@/src/utils/dates";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { RESOURCE_METRICS } from "@/src/features/dashboard/lib/score-analytics-utils";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import Page from "@/src/components/layouts/page";
 import { SubHeaderLabel } from "@/src/components/layouts/header";
 import { SidePanel, SidePanelContent, SidePanelHeader, SidePanelTitle } from "@/src/components/ui/side-panel";
@@ -22,16 +20,15 @@ import useLocalStorage from "@/src/components/useLocalStorage";
 import { getScoreDataTypeIcon } from "@/src/features/scores/lib/scoreColumns";
 import { useDatasetRunsCompare } from "@/src/features/datasets/hooks/useDatasetRunsCompare";
 import { useDatasetRunCompareChartData } from "@/src/features/datasets/hooks/useDatasetRunCompareChartData";
-import { Skeleton } from "@hanzo/ui";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import {
   DATASET_RUN_COMPARE_TABS,
   getDatasetRunCompareTabs,
 } from "@/src/features/navigation/utils/dataset-run-compare-tabs";
-import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
 
 export default function DatasetCompare() {
   const router = useRouter();
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const projectId = router.query.projectId as string;
   const datasetId = router.query.datasetId as string;
 
@@ -184,50 +181,29 @@ export default function DatasetCompare() {
                   const { chartData, chartLabels } = adapter.toChartData();
 
                   const scoreData = scoreKeyToData.get(key);
-                  const title = scoreData
-                    ? `${getScoreDataTypeIcon(scoreData.dataType)} ${scoreData.name} (${scoreData.source.toLowerCase()})`
-                    : (RESOURCE_METRICS.find((metric) => metric.key === key)?.label ?? key);
-
-                  const valueFormatter =
-                    key === "latency"
-                      ? formatIntervalSeconds
-                      : key === "cost"
-                        ? usdFormatter
-                        : (v: number) =>
-                            compactNumberFormatter(v, RESOURCE_METRICS.find((m) => m.key === key)?.maxFractionDigits);
-
-                  if (isEmptyChart({ data: chartData })) {
+                  if (!scoreData)
                     return (
-                      <div key={key} className="flex min-h-[200px] min-w-0 max-w-full flex-col gap-2">
-                        <span className="shrink-0 text-sm font-medium">{title}</span>
-                        <NoDataOrLoading isLoading={false} className="min-h-32 flex-1" />
-                      </div>
-                    );
-                  }
-
-                  const dataPoints =
-                    chartLabels.length === 1
-                      ? chartData.map((d) => ({
-                          time_dimension: d.binLabel,
-                          dimension: chartLabels[0]!,
-                          metric: (d[chartLabels[0]!] as number) ?? 0,
-                        }))
-                      : compareViewChartDataToDataPoints(chartData, chartLabels);
-                  const chartType = chartLabels.length === 1 ? "LINE_TIME_SERIES" : "BAR_TIME_SERIES";
-
-                  return (
-                    <div key={key} className="flex min-h-[200px] min-w-0 max-w-full flex-col gap-2">
-                      <span className="shrink-0 text-sm font-medium">{title}</span>
-                      <div className="min-h-[200px] min-w-0 flex-1">
-                        <Chart
-                          chartType={chartType}
-                          data={dataPoints}
-                          rowLimit={Math.max(dataPoints.length, 1)}
-                          chartConfig={{ type: chartType }}
-                          valueFormatter={valueFormatter}
-                          legendPosition={chartLabels.length > 1 ? "above" : "none"}
+                      <div key={key} className="max-h-52 min-h-0 min-w-0 max-w-full">
+                        <TimeseriesChart
+                          key={key}
+                          chartData={chartData}
+                          chartLabels={chartLabels}
+                          title={RESOURCE_METRICS.find((metric) => metric.key === key)?.label ?? key}
+                          type="numeric"
+                          maxFractionDigits={RESOURCE_METRICS.find((metric) => metric.key === key)?.maxFractionDigits}
                         />
                       </div>
+                    );
+
+                  return (
+                    <div key={key} className="max-h-52 min-h-0 min-w-0 max-w-full">
+                      <TimeseriesChart
+                        key={key}
+                        chartData={chartData}
+                        chartLabels={chartLabels}
+                        title={`${getScoreDataTypeIcon(scoreData.dataType)} ${scoreData.name} (${scoreData.source.toLowerCase()})`}
+                        type={isNumericDataType(scoreData.dataType) ? "numeric" : "categorical"}
+                      />
                     </div>
                   );
                 })}

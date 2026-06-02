@@ -1,14 +1,14 @@
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Textarea } from "@hanzo/ui";
+import { Textarea } from "@/src/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { DatePicker } from "@/src/components/date-picker";
-import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { api } from "@/src/utils/api";
 import { Check, ChevronDown, ExternalLink, FilterIcon, Info, Plus, WandSparkles, X } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@hanzo/ui";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@hanzo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/src/components/ui/tooltip";
 import { MultiSelect } from "@/src/features/filters/components/multi-select";
 import {
   type WipFilterState,
@@ -18,10 +18,10 @@ import {
   type ColumnDefinition,
   filterOperators,
   singleFilter,
-} from "@hanzo/console-core";
-import { NonEmptyString } from "@hanzo/console-core";
+} from "@hanzo/shared";
+import { NonEmptyString } from "@hanzo/shared";
 import { cn } from "@/src/utils/tailwind";
-import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import {
   InputCommand,
   InputCommandEmpty,
@@ -31,58 +31,26 @@ import {
   InputCommandList,
 } from "@/src/components/ui/input-command";
 import { useQueryProject } from "@/src/features/projects/hooks";
-import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
-
-/**
- * Extended ColumnDefinition with optional alert for UI display.
- * Alerts are added dynamically in the web layer based on feature availability.
- */
-export type ColumnDefinitionWithAlert = ColumnDefinition & {
-  alert?: {
-    severity: "info" | "warning" | "error";
-    content: React.ReactNode;
-  };
-};
+import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 
 // Has WipFilterState, passes all valid filters to parent onChange
 export function PopoverFilterBuilder({
   columns,
   filterState,
   onChange,
-  columnIdentifier = "name",
   columnsWithCustomSelect = [],
   filterWithAI = false,
   buttonType = "default",
 }: {
-  /** Which column field to persist in filter.column: 'id' for stable refs, 'name' for legacy compatibility */
-  columns: ColumnDefinitionWithAlert[];
+  columns: ColumnDefinition[];
   filterState: FilterState;
   onChange: Dispatch<SetStateAction<FilterState>> | ((newState: FilterState) => void);
-  columnIdentifier?: ColumnIdentifier;
   columnsWithCustomSelect?: string[];
   filterWithAI?: boolean;
   buttonType?: "default" | "icon";
 }) {
-  const capture = useInsightsCapture();
+  const capture = usePostHogClientCapture();
   const [wipFilterState, _setWipFilterState] = useState<WipFilterState>(filterState);
-
-  // Sync wipFilterState when filterState prop changes externally
-  // (e.g., when a saved view preset is applied)
-  // We use a ref to track previous filterState to avoid re-running when wipFilterState changes
-  const prevFilterStateRef = useRef(filterState);
-  useEffect(() => {
-    // Only sync if filterState actually changed (reference comparison is fine here
-    // since filterState comes from URL parsing which creates new arrays)
-    if (prevFilterStateRef.current === filterState) return;
-    prevFilterStateRef.current = filterState;
-
-    _setWipFilterState((currentWip) => {
-      const hasWipFilters = currentWip.some((f) => !singleFilter.safeParse(f).success);
-      // Don't sync if user is actively editing (has invalid WIP filters)
-      return hasWipFilters ? currentWip : filterState;
-    });
-  }, [filterState]);
-
   const addNewFilter = () => {
     setWipFilterState((prev) => [
       ...prev,
@@ -113,7 +81,7 @@ export function PopoverFilterBuilder({
   return (
     <div className="flex items-center">
       <Popover
-        onOpenChange={(open: boolean) => {
+        onOpenChange={(open) => {
           if (open) {
             capture("table:filter_builder_open");
           }
@@ -165,7 +133,6 @@ export function PopoverFilterBuilder({
         </PopoverTrigger>
         <PopoverContent className="w-fit max-w-[90vw] overflow-x-auto" align="start">
           <FilterBuilderForm
-            columnIdentifier={columnIdentifier}
             columns={columns}
             filterState={wipFilterState}
             onChange={setWipFilterState}
@@ -217,69 +184,38 @@ export function InlineFilterState({ filterState, className }: { filterState: Fil
       <span key={i} className={cn("ml-2 whitespace-nowrap rounded-md bg-input px-2 py-1 text-xs", className)}>
         {filter.column}
         {filter.type === "stringObject" || filter.type === "numberObject" ? `.${filter.key}` : ""} {filter.operator}{" "}
-        {filter.type === "positionInTrace"
-          ? (() => {
-              const mode = filter.key ?? "last";
-              const label =
-                mode === "root"
-                  ? "root"
-                  : mode === "last"
-                    ? "last"
-                    : mode === "nthFromStart"
-                      ? `nth from start ${filter.value ?? ""}`.trim()
-                      : `nth from end ${filter.value ?? ""}`.trim();
-              return label;
-            })()
-          : filter.type === "datetime"
-            ? new Date(filter.value).toLocaleString()
-            : filter.type === "stringOptions" || filter.type === "arrayOptions"
-              ? filter.value.length > 2
-                ? `${filter.value.length} selected`
-                : filter.value.join(", ")
-              : filter.type === "number" || filter.type === "numberObject"
-                ? filter.value
-                : filter.type === "boolean"
-                  ? `${filter.value}`
-                  : filter.type === "null"
-                    ? ""
-                    : `"${filter.value}"`}
+        {filter.type === "datetime"
+          ? new Date(filter.value).toLocaleString()
+          : filter.type === "stringOptions" || filter.type === "arrayOptions"
+            ? filter.value.length > 2
+              ? `${filter.value.length} selected`
+              : filter.value.join(", ")
+            : filter.type === "number" || filter.type === "numberObject"
+              ? filter.value
+              : filter.type === "boolean"
+                ? `${filter.value}`
+                : `"${filter.value}"`}
       </span>
     );
   });
 }
 
-type ColumnIdentifier = "id" | "name";
-
 export function InlineFilterBuilder({
   columns,
   filterState,
   onChange,
-  columnIdentifier = "name",
   disabled,
   columnsWithCustomSelect,
   filterWithAI = false,
 }: {
-  columns: ColumnDefinitionWithAlert[];
+  columns: ColumnDefinition[];
   filterState: FilterState;
   onChange: Dispatch<SetStateAction<FilterState>> | ((newState: FilterState) => void);
-  /** Which column field to persist in filter.column: 'id' for stable refs, 'name' for legacy compatibility */
-  columnIdentifier?: ColumnIdentifier;
   disabled?: boolean;
   columnsWithCustomSelect?: string[];
   filterWithAI?: boolean;
 }) {
   const [wipFilterState, _setWipFilterState] = useState<WipFilterState>(filterState);
-
-  // sync filter state, e.g. when we exclude default LF filters on score creation to reflect in UI
-  // Only sync if we don't have any WIP (invalid) filters, to avoid overwriting user's work-in-progress
-  useEffect(() => {
-    const hasWipFilters = wipFilterState.some((f) => !singleFilter.safeParse(f).success);
-
-    // Don't sync if we have WIP filters - user is actively editing
-    if (!hasWipFilters) {
-      _setWipFilterState(filterState);
-    }
-  }, [filterState, wipFilterState]);
 
   const setWipFilterState = (state: ((prev: WipFilterState) => WipFilterState) | WipFilterState) => {
     _setWipFilterState((prev) => {
@@ -293,7 +229,6 @@ export function InlineFilterBuilder({
   return (
     <div className="flex flex-col">
       <FilterBuilderForm
-        columnIdentifier={columnIdentifier}
         columns={columns}
         filterState={wipFilterState}
         onChange={setWipFilterState}
@@ -309,30 +244,7 @@ const getOperator = (type: NonNullable<WipFilterCondition["type"]>): WipFilterCo
   return filterOperators[type]?.length > 0 ? filterOperators[type][0] : undefined;
 };
 
-/**
- * Returns severity-based styling classes for alert icons and tooltips
- */
-const getAlertStyles = (severity: "info" | "warning" | "error") => {
-  const styles = {
-    error: {
-      iconColor: "text-red-600",
-      tooltipBg: "bg-red-50 dark:bg-red-950",
-    },
-    info: {
-      iconColor: "text-blue-600",
-      tooltipBg: "bg-blue-50 dark:bg-blue-950",
-    },
-    warning: {
-      iconColor: "text-amber-600",
-      tooltipBg: "bg-amber-50 dark:bg-amber-950",
-    },
-  };
-
-  return styles[severity];
-};
-
 function FilterBuilderForm({
-  columnIdentifier,
   columns,
   filterState,
   onChange,
@@ -340,15 +252,14 @@ function FilterBuilderForm({
   columnsWithCustomSelect = [],
   filterWithAI = false,
 }: {
-  columnIdentifier: ColumnIdentifier;
-  columns: ColumnDefinitionWithAlert[];
+  columns: ColumnDefinition[];
   filterState: WipFilterState;
   onChange: Dispatch<SetStateAction<WipFilterState>>;
   disabled?: boolean;
   columnsWithCustomSelect?: string[];
   filterWithAI?: boolean;
 }) {
-  const { isConsoleCloud } = useConsoleCloudRegion();
+  const { isHanzoCloud } = useHanzoCloudRegion();
   const [showAiFilter, setShowAiFilter] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
@@ -418,7 +329,7 @@ function FilterBuilderForm({
   return (
     <>
       {/* AI Filter Section at the top */}
-      {!disabled && isConsoleCloud && filterWithAI && (
+      {!disabled && isHanzoCloud && filterWithAI && (
         <div className="flex flex-col gap-2">
           <Button
             onClick={() => {
@@ -526,10 +437,10 @@ function FilterBuilderForm({
                         </PopoverTrigger>
                         <PopoverContent
                           className="max-w-fit p-0"
-                          onWheel={(e: React.WheelEvent) => {
+                          onWheel={(e) => {
                             e.stopPropagation();
                           }}
-                          onTouchMove={(e: React.TouchEvent) => {
+                          onTouchMove={(e) => {
                             e.stopPropagation();
                           }}
                         >
@@ -538,51 +449,32 @@ function FilterBuilderForm({
                             <InputCommandList>
                               <InputCommandEmpty>No options found.</InputCommandEmpty>
                               <InputCommandGroup>
-                                {columns.map((option) => {
-                                  const hasAlert = !!option.alert;
-                                  const severity = option.alert?.severity ?? "warning";
-                                  const alertStyles = getAlertStyles(severity);
+                                {columns.map((option) => (
+                                  <InputCommandItem
+                                    key={option.id}
+                                    value={option.id}
+                                    onSelect={(value) => {
+                                      const col = columns.find((c) => c.id === value);
+                                      const defaultOperator = col?.type ? getOperator(col.type) : undefined;
 
-                                  return (
-                                    <InputCommandItem
-                                      key={option.id}
-                                      value={option.id}
-                                      onSelect={(value) => {
-                                        const col = columns.find((c) => c.id === value);
-                                        const defaultOperator = col?.type ? getOperator(col.type) : undefined;
-
-                                        handleFilterChange(
-                                          {
-                                            column: col?.[columnIdentifier],
-                                            type: col?.type,
-                                            operator: defaultOperator,
-                                            value: col?.type === "null" ? "" : undefined,
-                                            key: col?.type === "positionInTrace" ? "last" : undefined,
-                                          } as WipFilterCondition,
-                                          i,
-                                        );
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          option.id === column?.id ? "visible" : "invisible",
-                                        )}
-                                      />
-                                      <span className="flex-1">{option.name}</span>
-                                      {hasAlert && (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Info className={cn("ml-2 h-4 w-4", alertStyles.iconColor)} />
-                                          </TooltipTrigger>
-                                          <TooltipContent className={cn("max-w-xs", alertStyles.tooltipBg)}>
-                                            {option.alert?.content}
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      )}
-                                    </InputCommandItem>
-                                  );
-                                })}
+                                      handleFilterChange(
+                                        {
+                                          column: col?.name,
+                                          type: col?.type,
+                                          operator: defaultOperator,
+                                          value: undefined,
+                                          key: undefined,
+                                        } as WipFilterCondition,
+                                        i,
+                                      );
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn("mr-2 h-4 w-4", option.id === column?.id ? "visible" : "invisible")}
+                                    />
+                                    {option.name}
+                                  </InputCommandItem>
+                                ))}
                               </InputCommandGroup>
                             </InputCommandList>
                           </InputCommand>
@@ -641,35 +533,6 @@ function FilterBuilderForm({
                             ))}
                           </SelectContent>
                         </Select>
-                      ) : filter.type === "positionInTrace" ? (
-                        <Select
-                          onValueChange={(value) => {
-                            const needsValue = value === "nthFromEnd" || value === "nthFromStart";
-                            handleFilterChange(
-                              {
-                                ...filter,
-                                key: value,
-                                value: needsValue
-                                  ? typeof filter.value === "number" && filter.value >= 1
-                                    ? filter.value
-                                    : 1
-                                  : undefined,
-                              } as WipFilterCondition,
-                              i,
-                            );
-                          }}
-                          value={filter.key ?? "last"}
-                        >
-                          <SelectTrigger className="min-w-[140px]">
-                            <SelectValue placeholder="" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="root">1st</SelectItem>
-                            <SelectItem value="last">last</SelectItem>
-                            <SelectItem value="nthFromStart">nth from start</SelectItem>
-                            <SelectItem value="nthFromEnd">nth from end</SelectItem>
-                          </SelectContent>
-                        </Select>
                       ) : null}
                     </td>
                     <td className="p-1">
@@ -681,9 +544,8 @@ function FilterBuilderForm({
                           handleFilterChange(
                             {
                               ...filter,
+
                               operator: value as any,
-                              // Ensure null filters always have empty string value
-                              value: filter.type === "null" ? "" : (filter.value as any),
                             },
                             i,
                           );
@@ -797,30 +659,7 @@ function FilterBuilderForm({
                             ))}
                           </SelectContent>
                         </Select>
-                      ) : filter.type === "positionInTrace" ? (
-                        filter.key === "nthFromStart" || filter.key === "nthFromEnd" ? (
-                          <Input
-                            value={filter.value ?? ""}
-                            disabled={disabled}
-                            type="number"
-                            min={1}
-                            step={1}
-                            onChange={(e) =>
-                              handleFilterChange(
-                                {
-                                  ...filter,
-                                  value: isNaN(Number(e.target.value))
-                                    ? undefined
-                                    : Math.max(1, Number(e.target.value)),
-                                } as WipFilterCondition,
-                                i,
-                              )
-                            }
-                          />
-                        ) : (
-                          <Input disabled placeholder="-" />
-                        )
-                      ) : filter.type === "null" ? null : (
+                      ) : (
                         <Input disabled />
                       )}
                     </td>
