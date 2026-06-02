@@ -20,13 +20,23 @@ export const EvaluatorForm = (props: {
   preprocessFormValues?: (values: any) => any;
   defaultRunOnLive?: boolean;
   hidePreviewTable?: boolean;
+  defaultTarget?: EvalTargetObject;
 }) => {
-  const evalCapabilities = useEvalCapabilities(props.projectId);
+  const codeEvalCapabilities = useIsCodeEvalEnabled();
 
   const currentTemplate =
     props.existingEvaluator?.evalTemplate ?? props.evalTemplates.find((t) => t.id === props.templateId);
 
-  if (!currentTemplate) {
+  const evalCapabilities = useEvalCapabilities(props.projectId, {
+    isCodeEvalTemplate:
+      !!currentTemplate && isCodeEvalTemplate(currentTemplate),
+  });
+
+  if (
+    !currentTemplate ||
+    (isCodeEvalTemplate(currentTemplate) &&
+      !shouldShowEvalTemplate(currentTemplate, codeEvalCapabilities))
+  ) {
     return null;
   }
 
@@ -51,6 +61,7 @@ export const EvaluatorForm = (props: {
           evalCapabilities={evalCapabilities}
           defaultRunOnLive={props.defaultRunOnLive}
           hidePreviewTable={props.hidePreviewTable}
+          defaultTarget={props.defaultTarget}
         />
       )}
     </>

@@ -90,7 +90,7 @@ export const StructuredOutputSchemaPopover = () => {
     <Command className="flex flex-col">
       <CommandInput
         placeholder="Search schemas..."
-        className="h-8 border-none py-1 pl-6 pr-1 focus:ring-0 focus:ring-offset-0"
+        className="h-8 border-none py-1 pr-1 pl-6 focus:ring-0 focus:ring-offset-0"
       />
       <CommandList className="max-h-[300px] overflow-y-auto">
         <CommandEmpty>No schemas found.</CommandEmpty>
@@ -223,10 +223,10 @@ export const StructuredOutputSchemaSection = () => {
   };
 
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea className="max-h-[min(45vh,18rem)]">
       {!structuredOutputSchema ? (
         <div className="flex h-16 flex-col items-center justify-center p-4 text-center">
-          <p className="text-xs text-muted-foreground">No schema provided.</p>
+          <p className="text-muted-foreground text-xs">No schema provided.</p>
         </div>
       ) : (
         <div className="space-y-1">
@@ -273,12 +273,6 @@ export const StructuredOutputSchemaSection = () => {
                   </Button>
                 </div>
               </div>
-              <p
-                className="line-clamp-2 break-all text-xs text-muted-foreground"
-                title={structuredOutputSchema.description}
-              >
-                {structuredOutputSchema.description}
-              </p>
             </div>
           </CreateOrEditLLMSchemaDialog>
         </div>

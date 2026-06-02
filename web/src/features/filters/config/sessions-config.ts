@@ -2,6 +2,8 @@ import { sessionsViewCols } from "@hanzo/console-core";
 import type { FilterConfig } from "@/src/features/filters/lib/filter-config";
 import type { ColumnToBackendKeyMap } from "@/src/features/filters/lib/filter-transform";
 
+export type SessionOmittableFilterColumn = "userIds";
+
 /**
  * Maps frontend column IDs to backend-expected column IDs
  * Frontend uses "tags" but backend CH mapping expects "traceTags" for trace tags on sessions table
@@ -129,3 +131,9 @@ export const sessionFilterConfig: FilterConfig = {
     },
   ],
 };
+
+export function getSessionFilterConfig(
+  omittedFilter: SessionOmittableFilterColumn[] = [],
+): FilterConfig {
+  return omitFilterFacets(sessionFilterConfig, omittedFilter);
+}

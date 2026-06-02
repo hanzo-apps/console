@@ -1,16 +1,16 @@
 import { createContext, useContext, useState, useMemo, type ReactNode } from "react";
 import type { FilterState, OrderByState } from "@hanzo/console-core";
 
-interface PeekTableState {
+export interface PeekTableState {
   filters: FilterState;
   sorting: OrderByState;
   pagination: { pageIndex: number; pageSize: number };
   search: { query: string | null; type: string[] };
 }
 
-interface PeekTableStateContextValue {
+export interface PeekTableStateContextValue {
   tableState: PeekTableState;
-  setTableState: (state: PeekTableState) => void;
+  setTableState: Dispatch<SetStateAction<PeekTableState>>;
 }
 
 const PeekTableStateContext = createContext<PeekTableStateContextValue | undefined>(undefined);

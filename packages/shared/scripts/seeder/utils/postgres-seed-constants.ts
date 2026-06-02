@@ -686,7 +686,7 @@ export const SEED_EVALUATOR_TEMPLATES = [
     model: "gpt-3.5-turbo",
     vars: ["input", "output"],
     provider: "openai",
-    outputSchema: {
+    outputDefinition: {
       score: "provide a score between 0 and 1",
       reasoning: "one sentence reasoning for the score",
     },
@@ -695,6 +695,50 @@ export const SEED_EVALUATOR_TEMPLATES = [
       outputTokenLimit: 100,
       topP: 0.9,
     },
+    sourceCode: null,
+    sourceCodeLanguage: null,
+  },
+  {
+    id: "typescript-code-eval-template",
+    name: "typescript-code-eval-template",
+    version: 1,
+    type: "CODE",
+    prompt: null,
+    model: null,
+    vars: [
+      "input",
+      "output",
+      "metadata",
+      "experimentItemExpectedOutput",
+      "experimentItemMetadata",
+    ],
+    provider: null,
+    outputDefinition: null,
+    modelParams: null,
+    sourceCodeLanguage: "TYPESCRIPT",
+    sourceCode: `function evaluate(ctx: {
+  observation: {
+    input: unknown;
+    output: unknown;
+    metadata: unknown;
+  };
+}) {
+  const hasOutput = ctx.observation.output !== null && ctx.observation.output !== undefined;
+
+  return {
+    scores: [
+      {
+        name: "has-output",
+        value: hasOutput ? 1 : 0,
+        dataType: "BOOLEAN",
+        comment: hasOutput
+          ? "Observation has an output."
+          : "Observation is missing an output.",
+      },
+    ],
+  };
+}
+`,
   },
 ];
 

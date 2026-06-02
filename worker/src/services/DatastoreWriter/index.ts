@@ -15,6 +15,8 @@ import {
   EventRecordInsertType,
 } from "@hanzo/console-core/src/server";
 
+import { Decimal } from "decimal.js";
+
 import { env } from "../../env";
 import { logger } from "@hanzo/console-core/src/server";
 import { instrumentAsync } from "@hanzo/console-core/src/server";
@@ -46,7 +48,7 @@ export class DatastoreWriter {
       [TableName.ObservationsBatchStaging]: [],
       [TableName.BlobStorageFileLog]: [],
       [TableName.DatasetRunItems]: [],
-      [TableName.Events]: [],
+      [TableName.EventsFull]: [],
     };
 
     this.start();
@@ -112,7 +114,7 @@ export class DatastoreWriter {
           this.flush(TableName.ObservationsBatchStaging, fullQueue),
           this.flush(TableName.BlobStorageFileLog, fullQueue),
           this.flush(TableName.DatasetRunItems, fullQueue),
-          this.flush(TableName.Events, fullQueue),
+          this.flush(TableName.EventsFull, fullQueue),
         ]).catch((err) => {
           logger.error("DatastoreWriter.flushAll", err);
         });
@@ -240,6 +242,82 @@ export class DatastoreWriter {
     return record;
   }
 
+  private static clampDecimal64Value(value: number): [number, boolean] {
+    if (!Number.isFinite(value)) return [0, true];
+    if (new Decimal(value).abs().gte(DECIMAL_64_12_LIMIT)) {
+      return [value >= 0 ? DECIMAL_64_12_MAX_NUM : DECIMAL_64_12_MIN_NUM, true];
+    }
+    return [value, false];
+  }
+
+  private clampDecimal64Map(
+    map: Record<string, number> | undefined,
+    context: { recordId: string; projectId: string; fieldName: string },
+  ): Record<string, number> | undefined {
+    if (!map) return map;
+
+    let result: Record<string, number> | undefined;
+    for (const [key, value] of Object.entries(map)) {
+      const [cv, wasClamped] = ClickhouseWriter.clampDecimal64Value(value);
+      if (wasClamped) {
+        result ??= { ...map };
+        result[key] = cv;
+      }
+    }
+    if (!result) return map;
+
+    logger.warn("Clamped Decimal64(12) overflow in cost map", {
+      projectId: context.projectId,
+      recordId: context.recordId,
+      fieldName: context.fieldName,
+    });
+    recordIncrement("langfuse.clickhouse_writer.decimal64_clamped");
+    return result;
+  }
+
+  private clampDecimal64Fields<T extends TableName>(
+    tableName: T,
+    record: RecordInsertType<T>,
+  ): RecordInsertType<T> {
+    const r = record as Record<string, unknown>;
+    const ctx = {
+      recordId: r.id as string,
+      projectId: r.project_id as string,
+    };
+
+    switch (tableName) {
+      case TableName.Observations:
+      case TableName.ObservationsBatchStaging:
+      case TableName.EventsFull: {
+        r.provided_cost_details = this.clampDecimal64Map(
+          r.provided_cost_details as Record<string, number> | undefined,
+          { ...ctx, fieldName: "provided_cost_details" },
+        );
+        r.cost_details = this.clampDecimal64Map(
+          r.cost_details as Record<string, number> | undefined,
+          { ...ctx, fieldName: "cost_details" },
+        );
+        if (r.total_cost != null && typeof r.total_cost === "number") {
+          const [cv, wasClamped] = ClickhouseWriter.clampDecimal64Value(
+            r.total_cost,
+          );
+          if (wasClamped) {
+            r.total_cost = cv;
+            logger.warn("Clamped Decimal64(12) overflow in total_cost", {
+              projectId: ctx.projectId,
+              recordId: ctx.recordId,
+              fieldName: "total_cost",
+            });
+            recordIncrement("langfuse.clickhouse_writer.decimal64_clamped");
+          }
+        }
+        break;
+      }
+    }
+
+    return record;
+  }
+
   private async flush<T extends TableName>(tableName: T, fullQueue = false) {
     const entityQueue = this.queue[tableName];
     if (entityQueue.length === 0) return;
@@ -265,6 +343,9 @@ export class DatastoreWriter {
       const processingStartTime = Date.now();
 
       let recordsToWrite = queueItems.map((item) => item.data);
+      recordsToWrite = recordsToWrite.map((r) =>
+        this.clampDecimal64Fields(tableName, r),
+      );
       let hasBeenTruncated = false;
 
       await backOff(
@@ -447,7 +528,7 @@ export enum TableName {
   ObservationsBatchStaging = "observations_batch_staging",
   BlobStorageFileLog = "blob_storage_file_log",
   DatasetRunItems = "dataset_run_items_rmt",
-  Events = "events",
+  EventsFull = "events_full", // Primary write target - MV auto-populates events_core
 }
 
 type RecordInsertType<T extends TableName> = T extends TableName.Scores
@@ -464,7 +545,7 @@ type RecordInsertType<T extends TableName> = T extends TableName.Scores
             ? BlobStorageFileLogInsertType
             : T extends TableName.DatasetRunItems
               ? DatasetRunItemRecordInsertType
-              : T extends TableName.Events
+              : T extends TableName.EventsFull
                 ? EventRecordInsertType
                 : never;
 

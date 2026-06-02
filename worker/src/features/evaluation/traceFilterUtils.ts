@@ -1,8 +1,7 @@
 import { FilterState, TraceDomain } from "@hanzo/console-core";
 import { tracesTableUiColumnDefinitions } from "@hanzo/console-core/src/server";
 
-// Uses the uiTableId for mapping fields later.
-const evalTraceFilterColumns = [
+const _inMemoryTraceFilterColumns = [
   "id",
   "bookmarked",
   "name",
@@ -16,6 +15,9 @@ const evalTraceFilterColumns = [
   "tags",
 ] as const;
 
+type InMemoryTraceFilterColumn = (typeof _inMemoryTraceFilterColumns)[number];
+
+// Uses the uiTableId for mapping fields later.
 function getColumnDefinition(column: string) {
   const columnDef = tracesTableUiColumnDefinitions.find(
     (col) => col.uiTableId === column || col.uiTableName === column || col.datastoreSelect === column,
@@ -24,6 +26,33 @@ function getColumnDefinition(column: string) {
     throw new Error(`Unhandled column for trace filter: ${column}`);
   }
   return columnDef;
+}
+
+function getInMemoryTraceFilterColumn(
+  column: string,
+): InMemoryTraceFilterColumn | null {
+  const columnDef = getColumnDefinition(column);
+
+  switch (columnDef.uiTableId) {
+    case "traceName":
+      return "name";
+    case "traceTags":
+      return "tags";
+    case "id":
+    case "bookmarked":
+    case "name":
+    case "environment":
+    case "timestamp":
+    case "userId":
+    case "sessionId":
+    case "metadata":
+    case "release":
+    case "version":
+    case "tags":
+      return columnDef.uiTableId;
+    default:
+      return null;
+  }
 }
 
 /**

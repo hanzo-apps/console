@@ -74,7 +74,7 @@ export const PlaygroundToolsPopover = () => {
     <Command className="flex flex-col">
       <CommandInput
         placeholder="Search tools..."
-        className="h-8 border-none py-1 pl-6 pr-1 focus:ring-0 focus:ring-offset-0"
+        className="h-8 border-none py-1 pr-1 pl-6 focus:ring-0 focus:ring-offset-0"
       />
       <CommandList className="max-h-[300px] overflow-y-auto">
         <CommandEmpty>No tools found.</CommandEmpty>
@@ -206,10 +206,10 @@ export const PlaygroundTools = () => {
   };
 
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea className="[&>[data-radix-scroll-area-viewport]]:max-h-[min(45vh,18rem)]">
       {tools.length === 0 ? (
         <div className="flex h-16 flex-col items-center justify-center p-4 text-center">
-          <p className="text-xs text-muted-foreground">No tools attached.</p>
+          <p className="text-muted-foreground text-xs">No tools attached.</p>
         </div>
       ) : (
         <div className="space-y-1">

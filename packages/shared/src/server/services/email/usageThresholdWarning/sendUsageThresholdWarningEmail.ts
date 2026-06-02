@@ -1,9 +1,8 @@
-import { createTransport } from "nodemailer";
-import { parseConnectionUrl } from "nodemailer/lib/shared/index.js";
 import { render } from "@react-email/render";
+import { createMailTransport } from "../transport";
 import { UsageThresholdWarningEmailTemplate } from "./UsageThresholdWarningEmailTemplate";
 import { logger } from "../../../logger";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export interface UsageThresholdWarningEmailProps {
   env: Partial<
@@ -32,7 +31,7 @@ export const sendUsageThresholdWarningEmail = async ({
   }
 
   try {
-    const mailer = createTransport(parseConnectionUrl(env.SMTP_CONNECTION_URL));
+    const mailer = createMailTransport(env.SMTP_CONNECTION_URL);
 
     const emailSubject = `Hanzo Free Tier: ${organizationName} usage reached ${limit.toLocaleString()} events`;
     const emailHtml = await render(
@@ -60,7 +59,7 @@ export const sendUsageThresholdWarningEmail = async ({
     // Add BCC if configured (optional, for CRM integration)
     if (env.CLOUD_CRM_EMAIL) {
       // Validate email format to prevent email header injection
-      const emailSchema = z.string().email();
+      const emailSchema = z.email();
       const validationResult = emailSchema.safeParse(env.CLOUD_CRM_EMAIL);
 
       if (validationResult.success) {

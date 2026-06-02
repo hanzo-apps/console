@@ -4,7 +4,7 @@ import { logger, hasNoEvalConfigsCache, setNoEvalConfigsCache } from "@hanzo/con
 import { type ObservationEvalConfig } from "./types";
 
 /**
- * Fetches active observation eval configs for a project.
+ * Fetches executable observation eval configs for a project.
  *
  * Uses a cache to avoid unnecessary database queries:
  * - If cached as "no configs", returns empty array immediately
@@ -29,7 +29,9 @@ export async function fetchObservationEvalConfigs(projectId: string): Promise<Ob
       targetObject: {
         in: [EvalTargetObject.EVENT, EvalTargetObject.EXPERIMENT],
       },
-      status: "ACTIVE",
+      status: JobConfigState.ACTIVE,
+      blockedAt: null,
+      evalTemplateId: { not: null },
     },
     select: {
       id: true,
@@ -38,8 +40,15 @@ export async function fetchObservationEvalConfigs(projectId: string): Promise<Ob
       sampling: true,
       evalTemplateId: true,
       scoreName: true,
+      status: true,
+      blockedAt: true,
       targetObject: true,
       variableMapping: true,
+      evalTemplate: {
+        select: {
+          type: true,
+        },
+      },
     },
   });
 
@@ -53,5 +62,16 @@ export async function fetchObservationEvalConfigs(projectId: string): Promise<Ob
 
   logger.debug(`Found ${configs.length} observation eval configs for project ${projectId}`);
 
-  return configs as ObservationEvalConfig[];
+  return configs.map((config) => {
+    if (!config.evalTemplate) {
+      throw new Error(
+        `Observation eval config ${config.id} has no eval template`,
+      );
+    }
+
+    return {
+      ...config,
+      evalTemplate: config.evalTemplate,
+    };
+  });
 }

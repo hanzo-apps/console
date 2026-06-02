@@ -1,11 +1,13 @@
 import {
   BooleanConfigFields,
   CategoricalConfigFields,
+  TextConfigFields,
   jsonSchema,
   NumericConfigFields,
   paginationMetaResponseZod,
   publicApiPaginationZod,
   ScoreConfigCategory,
+  ScoreConfigNameSchema,
   validateCategories,
   validateNumericRangeFields,
 } from "@hanzo/console-core";
@@ -54,6 +56,10 @@ const APIScoreConfig = z
       ...ScoreConfigBase.shape,
       ...BooleanConfigFields.shape,
     }),
+    z.object({
+      ...ScoreConfigBase.shape,
+      ...TextConfigFields.shape,
+    }),
   ])
   .superRefine(validateNumericRangeFields);
 
@@ -66,7 +72,7 @@ export const GetScoreConfigResponse = APIScoreConfig;
 
 // POST /score-configs
 const PostScoreConfigBase = z.object({
-  name: z.string(),
+  name: ScoreConfigNameSchema,
   description: z.string().nullish(),
 });
 
@@ -93,6 +99,15 @@ export const PostScoreConfigBody = z
         categories: z.undefined(),
       }).shape,
     }),
+    z.object({
+      ...PostScoreConfigBase.shape,
+      ...z.object({
+        dataType: z.literal("TEXT"),
+        categories: z.undefined(),
+        maxValue: z.undefined().nullish(),
+        minValue: z.undefined().nullish(),
+      }).shape,
+    }),
   ])
   .superRefine(validateNumericRangeFields);
 
@@ -103,10 +118,13 @@ export const PutScoreConfigQuery = z.object({
   configId: z.string(),
 });
 
+const nonEmptyScoreConfigUpdateMessage =
+  "Request body cannot be empty. At least one field must be provided for update.";
+
 export const PutScoreConfigBody = z
   .object({
     isArchived: z.boolean().optional(),
-    name: z.string().min(1).max(35).optional(),
+    name: ScoreConfigNameSchema.optional(),
     minValue: z.number().optional(),
     maxValue: z.number().optional(),
     categories: CategoriesWithCustomError.optional(),

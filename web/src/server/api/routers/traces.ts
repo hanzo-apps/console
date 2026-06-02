@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
@@ -6,10 +6,12 @@ import { applyCommentFilters } from "@hanzo/shared/src/server";
 import { createTRPCRouter, protectedGetTraceProcedure, protectedProjectProcedure } from "@/src/server/api/trpc";
 import {
   BatchActionQuerySchema,
+  BatchTableNames,
   BatchExportTableName,
   BatchActionType,
   ActionId,
   filterAndValidateDbScoreList,
+  normalizeOrderByForTable,
   orderBy,
   paginationZod,
   singleFilter,
@@ -17,7 +19,7 @@ import {
   type Observation,
   TracingSearchType,
   type ScoreDomain,
-  AGGREGATABLE_SCORE_TYPES,
+  ScoreDataTypeArray,
   ScoreDataTypeEnum,
 } from "@hanzo/shared";
 import {
@@ -54,14 +56,17 @@ import {
   toDomainWithStringifiedMetadata,
   toDomainArrayWithStringifiedMetadata,
 } from "@/src/utils/clientSideDomainTypes";
+import { scoreFilters } from "@/src/features/scores/lib/scoreColumns";
 import partition from "lodash/partition";
 
-const TraceFilterOptions = z.object({
+const TraceCountOptions = z.object({
   projectId: z.string(), // Required for protectedProjectProcedure
   searchQuery: z.string().nullable(),
   searchType: z.array(TracingSearchType),
   filter: z.array(singleFilter).nullable(),
   orderBy: orderBy,
+});
+const TraceFilterOptions = TraceCountOptions.extend({
   ...paginationZod,
 });
 type TraceFilterOptions = z.infer<typeof TraceFilterOptions>;
@@ -69,6 +74,8 @@ type TraceFilterOptions = z.infer<typeof TraceFilterOptions>;
 export type ObservationReturnTypeWithMetadata = Omit<Observation, "input" | "output" | "metadata"> & {
   traceId: string;
   metadata: string | null;
+  traceName?: string | null;
+  traceTags?: string[];
   // optional, because in v4 an observation can have those properties
   userId?: string | null;
   sessionId?: string | null;
@@ -200,6 +207,7 @@ export const traceRouter = createTRPCRouter({
             value: filteredTraceIds,
           },
         ],
+        orderBy: { column: "timestamp", order: "DESC" },
       });
 
       const traceScores = await getScoresForTraces({
@@ -213,7 +221,7 @@ export const traceRouter = createTRPCRouter({
 
       const validatedScores = filterAndValidateDbScoreList({
         scores: traceScores,
-        dataTypes: AGGREGATABLE_SCORE_TYPES,
+        dataTypes: LISTABLE_SCORE_TYPES,
         includeHasMetadata: true,
         onParseError: traceException,
       });
@@ -232,6 +240,13 @@ export const traceRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       const { timestampFilter } = input;
+      // Trace table filters/columns operate on trace-scoped aggregates: any
+      // score row attached to the trace, whether it lives on the trace itself
+      // or on one of the trace's observations.
+      const traceScopedScoreFilters = [
+        ...(timestampFilter ?? []),
+        ...scoreFilters.forTraceScopedAggregates(),
+      ];
 
       const [numericScoreNames, categoricalScoreNames, traceNames, tags, userIds, sessionIds] = await Promise.all([
         getNumericScoresGroupedByName(input.projectId, timestampFilter ?? []),
@@ -311,7 +326,7 @@ export const traceRouter = createTRPCRouter({
 
       const validatedScores = filterAndValidateDbScoreList({
         scores: traceScores,
-        dataTypes: [...AGGREGATABLE_SCORE_TYPES, ScoreDataTypeEnum.CORRECTION],
+        dataTypes: [...ScoreDataTypeArray],
         onParseError: traceException,
       });
 

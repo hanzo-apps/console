@@ -1,3 +1,4 @@
+import { env } from "@/src/env.mjs";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
@@ -12,7 +13,7 @@ import {
 } from "@hanzo/console-core";
 import { getObservationById, logger } from "@hanzo/console-core/src/server";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const queueRouter = createTRPCRouter({
   hasAny: protectedProjectProcedure
@@ -453,12 +454,22 @@ export const queueRouter = createTRPCRouter({
         queueId: z.string(),
         projectId: z.string(),
         seenItemIds: z.array(z.string()),
+        isBetaEnabled: z.boolean().optional().default(false),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      try {
-        throwIfNoProjectAccess({
-          session: ctx.session,
+      throwIfNoProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "annotationQueues:CUD",
+      });
+
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+      const item = await ctx.prisma.annotationQueueItem.findFirst({
+        where: {
+          queueId: input.queueId,
           projectId: input.projectId,
           scope: "annotationQueues:CUD",
         });
@@ -476,28 +487,45 @@ export const queueRouter = createTRPCRouter({
               id: { in: input.seenItemIds },
             },
           },
-          orderBy: {
-            createdAt: "asc",
-          },
-        });
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
 
-        // Expected behavior, non-error case: all items have been seen AND/OR completed, no more unseen pending items
-        if (!item) return null;
+      // Expected behavior, non-error case: all items have been seen AND/OR completed, no more unseen pending items
+      if (!item) return null;
 
-        const updatedItem = await ctx.prisma.annotationQueueItem.update({
-          where: {
-            id: item.id,
-            projectId: input.projectId,
-          },
-          data: {
-            lockedAt: now,
-            lockedByUserId: ctx.session.user.id,
-          },
-        });
+      const updatedItem = await ctx.prisma.annotationQueueItem.update({
+        where: {
+          id: item.id,
+          projectId: input.projectId,
+        },
+        data: {
+          lockedAt: now,
+          lockedByUserId: ctx.session.user.id,
+        },
+      });
 
-        const inflatedUpdatedItem = {
-          ...updatedItem,
-          lockedByUser: { name: ctx.session.user.name },
+      const inflatedUpdatedItem = {
+        ...updatedItem,
+        lockedByUser: { name: ctx.session.user.name },
+      };
+
+      if (item.objectType === AnnotationQueueObjectType.OBSERVATION) {
+        const clickhouseObservation =
+          env.LANGFUSE_ENABLE_EVENTS_TABLE_UI === "true"
+            ? await getObservationByIdFromEventsTable({
+                id: item.objectId,
+                projectId: input.projectId,
+              })
+            : await getObservationById({
+                id: item.objectId,
+                projectId: input.projectId,
+              });
+        return {
+          ...inflatedUpdatedItem,
+          parentTraceId: clickhouseObservation?.traceId,
         };
 
         if (item.objectType === AnnotationQueueObjectType.OBSERVATION) {
@@ -522,5 +550,7 @@ export const queueRouter = createTRPCRouter({
           message: "Fetching and locking next annotation queue item failed.",
         });
       }
+
+      return inflatedUpdatedItem;
     }),
 });

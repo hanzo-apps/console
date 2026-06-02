@@ -1,5 +1,6 @@
 import { type AnnotationScoreDataSchema } from "@/src/features/scores/schema";
 import { type AnnotateFormSchema } from "@/src/features/scores/schema";
+import { type ButtonProps } from "@/src/components/ui/button";
 import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 import {
   type ScoreSourceType,
@@ -7,7 +8,6 @@ import {
   type ScoreAggregate,
   type ScoreConfigDomain,
   type ScoreDomain,
-  type AggregatableScoreDataType,
   ScoreConfigDataType,
 } from "@hanzo/console-core";
 import { type z } from "zod/v4";
@@ -85,7 +85,7 @@ export type AnnotateDrawerProps<Target extends ScoreTarget> = {
     queueId?: string;
     environment?: string;
   };
-  buttonVariant?: "secondary" | "outline";
+  buttonVariant?: ButtonProps["variant"];
 };
 
 export type AnnotateFormSchemaType = z.infer<typeof AnnotateFormSchema>;
@@ -98,7 +98,7 @@ export type ScoreColumn = {
   key: string;
   name: string;
   source: ScoreSourceType;
-  dataType: AggregatableScoreDataType;
+  dataType: AnnotationScoreDataType;
 };
 
 export type ScoreConfigSelection = { mode: "fixed"; configs: ScoreConfigDomain[] } | { mode: "selectable" };

@@ -1,5 +1,7 @@
 import { OrderByState } from "../../interfaces/orderBy";
 import { tracesTableUiColumnDefinitions } from "../tableMappings";
+import { tracesTableCols } from "../../tableDefinitions/tracesTable";
+import { findUiColumnMapping } from "../../tableDefinitions";
 import { FilterState } from "../../types";
 import { StringFilter, StringOptionsFilter, DateTimeFilter } from "../queries/datastore-sql/datastore-filter";
 import { getProjectIdDefaultFilter, createFilterFromFilterState } from "../queries/datastore-sql/factory";

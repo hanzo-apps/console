@@ -58,6 +58,10 @@ const getCommaArrayParam = (table: TableName) => ({
 
         if (DEBUG_QUERY_STATE) console.log("values", [column, type, key, operator, value]);
         const decodedValue = value ? decodeURIComponent(value) : undefined;
+        const normalizedKey =
+          type === "positionInTrace"
+            ? normalizeLegacySessionPositionInTraceKey(key)
+            : key;
         const parsedValue =
           decodedValue === undefined || type === undefined
             ? undefined
@@ -74,7 +78,7 @@ const getCommaArrayParam = (table: TableName) => ({
         if (DEBUG_QUERY_STATE) console.log("parsedValue", parsedValue);
         const parsed = singleFilter.safeParse({
           column: getColumnName(table, column),
-          key: key !== "" ? key : undefined,
+          key: normalizedKey !== "" ? normalizedKey : undefined,
           operator,
           value: parsedValue,
           type,
@@ -138,6 +142,8 @@ const tableCols = {
   dataset_items: datasetItemFilterColumns,
   dataset_runs: datasetRunsTableCols,
   dataset_run_items_by_run: datasetRunItemsTableCols,
+  experiments: experimentsTableCols,
+  "experiment-items": experimentItemsTableCols,
   widgets: [
     { id: "environment", name: "Environment" },
     { id: "traceName", name: "Trace Name" },

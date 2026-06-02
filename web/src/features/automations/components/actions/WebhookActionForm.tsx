@@ -4,7 +4,7 @@ import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessa
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { X, Plus, RefreshCw, Lock, LockOpen } from "lucide-react";
 import { useFieldArray, type UseFormReturn } from "react-hook-form";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   type ActionDomain,
   type ActionDomainWithSecrets,
@@ -105,7 +105,7 @@ export const WebhookActionForm: React.FC<WebhookActionFormProps> = ({ form, disa
         render={({ field }) => (
           <FormItem>
             <FormLabel className="flex items-center">
-              Webhook URL <span className="ml-1 text-destructive">*</span>
+              Webhook URL <span className="text-destructive ml-1">*</span>
             </FormLabel>
             <FormControl>
               <Input placeholder="https://example.com/webhook" {...field} disabled={disabled} />
@@ -219,7 +219,7 @@ export const WebhookActionForm: React.FC<WebhookActionFormProps> = ({ form, disa
                 {isSecret ? (
                   <Lock className="h-4 w-4 text-orange-500" />
                 ) : (
-                  <LockOpen className="h-4 w-4 text-muted-foreground" />
+                  <LockOpen className="text-muted-foreground h-4 w-4" />
                 )}
               </Button>
               <Button
@@ -268,7 +268,7 @@ export const WebhookActionForm: React.FC<WebhookActionFormProps> = ({ form, disa
             </div>
           </div>
         ) : (
-          <div className="rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
+          <div className="bg-muted/50 text-muted-foreground rounded-md border p-3 text-sm">
             Webhook secret will be generated when the automation is created.
           </div>
         )}

@@ -1,4 +1,29 @@
-import z from "zod/v4";
+import {
+  EvalTemplateSourceCodeLanguage,
+  EvalTemplateType,
+  type EvalTemplate,
+} from "@prisma/client";
+import z from "zod";
+
+export type EvalTemplateLlmAsAJudge = EvalTemplate & {
+  type: typeof EvalTemplateType.LLM_AS_JUDGE;
+  prompt: string;
+  outputDefinition: NonNullable<EvalTemplate["outputDefinition"]>;
+  sourceCode: null;
+  sourceCodeLanguage: null;
+};
+
+export type EvalTemplateCodeBased = EvalTemplate & {
+  type: typeof EvalTemplateType.CODE;
+  prompt: null;
+  outputDefinition: null;
+  sourceCode: string;
+  sourceCodeLanguage: EvalTemplateSourceCodeLanguage;
+};
+
+export type EvalTemplateWithType =
+  | EvalTemplateLlmAsAJudge
+  | EvalTemplateCodeBased;
 
 export const EvalTargetObject = {
   TRACE: "trace",
@@ -159,11 +184,6 @@ export const availableDatasetEvalVariables = [
   },
   ...availableTraceEvalVariables,
 ];
-
-export const OutputSchema = z.object({
-  reasoning: z.string(),
-  score: z.string(),
-});
 
 export const DEFAULT_TRACE_JOB_DELAY = 10_000;
 

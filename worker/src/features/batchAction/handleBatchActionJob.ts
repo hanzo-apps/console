@@ -1,6 +1,7 @@
 import {
   BatchActionProcessingEventType,
   CreateEvalQueue,
+  getEventsStreamForEval,
   getCurrentSpan,
   logger,
   QueueJobs,
@@ -35,6 +36,10 @@ import { processBatchedObservationEval } from "./processBatchedObservationEval";
 const CHUNK_SIZE = 1000;
 const convertDatesInFiltersFromStrings = (filters: FilterCondition[]) => {
   return filters.map((f: FilterCondition) => (f.type === "datetime" ? { ...f, value: new Date(f.value) } : f));
+};
+
+type HandleBatchActionJobDeps = {
+  evalCreatorQueue?: Queue<TQueueJobTypes[QueueName.CreateEvalQueue]>;
 };
 
 /**
@@ -137,33 +142,29 @@ export const handleBatchActionJob = async (batchActionJob: Job<TQueueJobTypes[Qu
       throw new Error(`Target ID is required for create action`);
     }
 
+    const streamParams = {
+      projectId: projectId,
+      cutoffCreatedAt: new Date(cutoffCreatedAt),
+      filter: convertDatesInFiltersFromStrings(query.filter ?? []),
+      searchQuery: query.searchQuery ?? undefined,
+      searchType: query.searchType ?? ["id" as const],
+    };
+
     const dbReadStream =
       actionId === "trace-delete"
         ? await getTraceIdentifierStream({
-            projectId: projectId,
-            cutoffCreatedAt: new Date(cutoffCreatedAt),
-            filter: convertDatesInFiltersFromStrings(query.filter ?? []),
+            ...streamParams,
             orderBy: query.orderBy,
-            searchQuery: query.searchQuery ?? undefined,
-            searchType: query.searchType ?? ["id" as const],
           })
-        : tableName === BatchTableNames.Observations
-          ? await getObservationStream({
-              projectId: projectId,
-              cutoffCreatedAt: new Date(cutoffCreatedAt),
-              filter: convertDatesInFiltersFromStrings(query.filter ?? []),
-              searchQuery: query.searchQuery ?? undefined,
-              searchType: query.searchType ?? ["id" as const],
-            })
-          : await getDatabaseReadStreamPaginated({
-              projectId: projectId,
-              cutoffCreatedAt: new Date(cutoffCreatedAt),
-              filter: convertDatesInFiltersFromStrings(query.filter ?? []),
-              orderBy: query.orderBy,
-              tableName: tableName as BatchTableNames,
-              searchQuery: query.searchQuery ?? undefined,
-              searchType: query.searchType ?? ["id" as const],
-            });
+        : tableName === BatchTableNames.Events
+          ? await getEventsStreamForAnnotationQueue(streamParams)
+          : tableName === BatchTableNames.Observations
+            ? await getObservationStream(streamParams)
+            : await getDatabaseReadStreamPaginated({
+                ...streamParams,
+                orderBy: query.orderBy,
+                tableName: tableName as BatchTableNames,
+              });
 
     // Process stream in database-sized batches
     // 1. Read all records
@@ -195,10 +196,27 @@ export const handleBatchActionJob = async (batchActionJob: Job<TQueueJobTypes[Qu
         id: configId,
         projectId: projectId,
       },
+      select: {
+        delay: true,
+        evalTemplate: {
+          select: {
+            type: true,
+          },
+        },
+      },
     });
 
     if (!config) {
       logger.error(`Eval config ${configId} not found for project ${projectId}`);
+      return;
+    }
+
+    if (config.evalTemplate?.type !== EvalTemplateType.LLM_AS_JUDGE) {
+      logger.info(`Skipping legacy eval-create for non-LLM eval template`, {
+        projectId,
+        configId,
+        evalTemplateType: config.evalTemplate?.type ?? null,
+      });
       return;
     }
 
@@ -222,7 +240,8 @@ export const handleBatchActionJob = async (batchActionJob: Job<TQueueJobTypes[Qu
             rowLimit: env.HANZO_MAX_HISTORIC_EVAL_CREATION_LIMIT,
           });
 
-    const evalCreatorQueue = CreateEvalQueue.getInstance();
+    const evalCreatorQueue =
+      deps.evalCreatorQueue ?? CreateEvalQueue.getInstance();
     if (!evalCreatorQueue) {
       logger.error("CreateEvalQueue is not initialized");
       return;
@@ -335,16 +354,24 @@ export const handleBatchActionJob = async (batchActionJob: Job<TQueueJobTypes[Qu
         where: {
           id: { in: selectedEvaluatorIds },
           projectId,
-          targetObject: EvalTargetObject.EVENT,
-          // status may be both active or inactive, no need to filter
+          evalTemplateId: { not: null },
+          // Preserve the selected evaluators as-is. Executability is checked
+          // later when each scheduling attempt runs.
         },
         select: {
           id: true,
           projectId: true,
           evalTemplateId: true,
+          evalTemplate: {
+            select: {
+              type: true,
+            },
+          },
           scoreName: true,
           targetObject: true,
           variableMapping: true,
+          status: true,
+          blockedAt: true,
         },
       });
 
@@ -353,6 +380,7 @@ export const handleBatchActionJob = async (batchActionJob: Job<TQueueJobTypes[Qu
       // sampling=1 to ensure every streamed observation is evaluated.
       evaluators = rawEvaluators.map((e) => ({
         ...e,
+        evalTemplate: e.evalTemplate!,
         filter: [] as [],
         sampling: new Decimal(1),
       }));
@@ -368,7 +396,7 @@ export const handleBatchActionJob = async (batchActionJob: Job<TQueueJobTypes[Qu
           log:
             error instanceof Error
               ? error.message
-              : "Selected evaluators are missing or not observation-scoped for historical event evaluation.",
+              : "Selected evaluators are missing or invalid for historical evaluation.",
         },
       });
 

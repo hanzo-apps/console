@@ -30,10 +30,15 @@ export class EvalExecutionQueue {
         })
       : null;
 
-    EvalExecutionQueue.instance?.on("error", (err) => {
-      logger.error("EvalExecutionQueue error", err);
+    queueInstance?.on("error", (err) => {
+      logger.error(
+        `SecondaryEvalExecutionQueue shard ${shardIndex} error`,
+        err,
+      );
     });
 
-    return EvalExecutionQueue.instance;
+    SecondaryEvalExecutionQueue.instances.set(shardIndex, queueInstance);
+
+    return queueInstance;
   }
 }

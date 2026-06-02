@@ -43,7 +43,7 @@ export const TracesAndObservationsTimeSeriesChart = ({
     orderBy: null,
   };
 
-  const traces = api.dashboard.executeQuery.useQuery(
+  const traces = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: tracesQuery,
@@ -89,7 +89,7 @@ export const TracesAndObservationsTimeSeriesChart = ({
     orderBy: null,
   };
 
-  const observations = api.dashboard.executeQuery.useQuery(
+  const observations = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: observationsQuery,
@@ -100,6 +100,7 @@ export const TracesAndObservationsTimeSeriesChart = ({
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:traces-time-series"}:observations`,
       enabled: !isLoading,
     },
   );

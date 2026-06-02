@@ -8,6 +8,8 @@ import { api } from "@/src/utils/api";
 import { Skeleton } from "@hanzo/ui";
 import { captureException } from "@sentry/nextjs";
 import { useSession } from "next-auth/react";
+import { buildResizableImageSrc } from "./resizable-image.utils";
+import { getSafeImageUrl } from "@/src/components/ui/safe-url";
 
 /**
  * Implemented customLoader as we cannot whitelist user provided image domains
@@ -40,6 +42,7 @@ export const ResizableImage = ({
   isDefaultVisible?: boolean;
   shouldValidateImageSource?: boolean;
 }) => {
+  const safeSrc = getSafeImageUrl(src);
   const [isZoomedIn, setIsZoomedIn] = useState(true);
   const [hasFetchError, setHasFetchError] = useState(false);
   const [isImageVisible, setIsImageVisible] = useState(isDefaultVisible);
@@ -73,12 +76,12 @@ export const ResizableImage = ({
             <>
               <Image
                 loader={customLoader}
-                src={src}
+                src={safeSrc}
                 alt={alt ?? `Markdown Image-${Math.random()}`}
                 loading="lazy"
                 width={0}
                 height={0}
-                title={src}
+                title={safeSrc ?? src}
                 className="h-full w-full rounded border object-contain"
                 onError={(error) => {
                   setHasFetchError(true);
@@ -87,7 +90,7 @@ export const ResizableImage = ({
               />
               <Button
                 type="button"
-                className="absolute right-0 top-0 mr-1 mt-1 h-8 w-8 opacity-0 group-hover:!bg-accent/30 group-hover:opacity-100"
+                className="group-hover:bg-accent/30! absolute top-0 right-0 mt-1 mr-1 h-8 w-8 opacity-0 group-hover:opacity-100"
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsZoomedIn(!isZoomedIn)}
@@ -96,13 +99,14 @@ export const ResizableImage = ({
               </Button>
             </>
           ) : (
-            <div className="flex w-full items-center gap-2 rounded border border-dashed bg-muted/30 p-2 text-xs text-muted-foreground/60">
+            <div className="bg-muted/30 text-muted-foreground/60 flex w-full items-center gap-2 rounded border border-dashed p-2 text-xs">
               <Button
                 title="Render image"
                 type="button"
                 size="sm"
                 variant="secondary"
                 onClick={() => setIsImageVisible(!isImageVisible)}
+                disabled={!safeSrc}
               >
                 Load Image
               </Button>

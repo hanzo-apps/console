@@ -52,5 +52,7 @@ export interface ObservationEvalSchedulerDeps {
     projectId: string;
     observationS3Path: string;
     delay: number;
+    evalTemplateType: EvalTemplateType;
+    executionMode?: JobConfigExecutionMode;
   }) => Promise<void>;
 }

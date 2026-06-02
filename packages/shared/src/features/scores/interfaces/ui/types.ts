@@ -26,7 +26,7 @@ export type ScoreAggregate = Record<string, AggregatedScoreData>;
 export type ScoreSimplified = {
   id: string;
   name: string;
-  dataType: AggregatableScoreDataType;
+  dataType: ListableScoreDataType;
   source: ScoreSourceType;
   value?: number | null;
   comment?: string | null;

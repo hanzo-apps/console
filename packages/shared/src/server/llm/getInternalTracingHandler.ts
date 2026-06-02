@@ -22,8 +22,25 @@ export function extractGenerationDetails(
     (event) => event.type === "generation-create" || event.type === "generation-update",
   );
 
-  if (generationEvents.length === 0) {
-    return null;
+  const blockedSpanIds = new Set();
+  const blockedSpanNameSubstrings = ["RunnableLambda", "OutputParser"];
+
+  for (const event of events) {
+    const eventName = "name" in event.body ? event.body.name : "";
+
+    if (typeof eventName !== "string" || eventName.length === 0) {
+      continue;
+    }
+
+    if (
+      blockedSpanNameSubstrings.some((blockedSubstring) =>
+        eventName.includes(blockedSubstring),
+      ) &&
+      "id" in event.body &&
+      event.type !== "trace-create"
+    ) {
+      blockedSpanIds.add(event.body.id);
+    }
   }
 
   // 2. Get the generation id from first event
@@ -52,25 +69,41 @@ export function extractGenerationDetails(
           }
         }
       }
-      return acc;
-    },
-    { id: generationId },
-  );
 
-  return {
-    observationId: generationId,
-    name: (mergedBody.name as string) || "generation",
-    input: mergedBody.input,
-    output: mergedBody.output,
-    metadata: (mergedBody.metadata as Record<string, unknown>) || {},
-  };
+      return true;
+    })
+    .map((event) => {
+      // Inject environment into all events
+      return {
+        ...event,
+        body: {
+          ...event.body,
+          environment,
+        },
+      };
+    })
+    .map((event) => {
+      if (event.type === "generation-create" && prompt) {
+        return {
+          ...event,
+          body: {
+            ...event.body,
+            promptName: prompt.name,
+            promptVersion: prompt.version,
+          },
+        };
+      }
+
+      return event;
+    });
 }
 
 export function getInternalTracingHandler(traceSinkParams: TraceSinkParams): {
   handler: CallbackHandler;
   processTracedEvents: () => Promise<void>;
 } {
-  const { prompt, targetProjectId, environment, userId } = traceSinkParams;
+  const { prompt, targetProjectId, environment, userId, eventsWriter } =
+    traceSinkParams;
   const handler = new CallbackHandler({
     _projectId: targetProjectId,
     _isLocalEventExportEnabled: true,
@@ -135,15 +168,20 @@ export function getInternalTracingHandler(traceSinkParams: TraceSinkParams): {
       // Extract generation details and invoke callback (if provided)
       if (traceSinkParams.onGenerationComplete) {
         try {
-          const generationDetails = extractGenerationDetails(processedEvents);
-          if (generationDetails) {
-            traceSinkParams.onGenerationComplete(generationDetails);
+          const { rootSpanId, eventInputs } = buildInternalTraceEventInputs({
+            processedEvents,
+            traceId: traceSinkParams.traceId,
+            projectId: targetProjectId,
+            experimentContext: eventsWriter.experimentContext,
+          });
+
+          if (eventInputs.length > 0) {
+            await eventsWriter.write({ rootSpanId, eventInputs });
           }
-        } catch (extractionError) {
-          // Don't fail the LLM call due to generation detail extraction errors
-          traceException(extractionError);
-          logger.error("Failed to extract generation details from events", {
-            error: extractionError,
+        } catch (writeError) {
+          traceException(writeError);
+          logger.error("Failed to direct-write internal traced events", {
+            error: writeError,
           });
         }
       }

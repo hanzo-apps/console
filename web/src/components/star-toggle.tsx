@@ -28,7 +28,7 @@ export function StarToggle({
       size={size}
       onClick={(e) => {
         e.stopPropagation();
-        void onClick(!value);
+        onClick(!value);
       }}
       disabled={disabled}
       loading={isLoading}
@@ -123,13 +123,11 @@ export function StarTraceToggle({
 export function StarTraceDetailsToggle({
   projectId,
   traceId,
-  timestamp,
   value,
   size = "icon",
 }: {
   projectId: string;
   traceId: string;
-  timestamp?: Date;
   value: boolean;
   size?: "icon" | "icon-xs";
 }) {
@@ -140,6 +138,11 @@ export function StarTraceDetailsToggle({
   });
   const capture = useInsightsCapture();
   const [isLoading, setIsLoading] = useState(false);
+  const [optimisticValue, setOptimisticValue] = useState(value);
+
+  useEffect(() => {
+    setOptimisticValue(value);
+  }, [value]);
 
   const mutBookmarkTrace = api.traces.bookmark.useMutation({
     onMutate: async (newBookmarkState) => {
@@ -177,27 +180,36 @@ export function StarTraceDetailsToggle({
     onSettled: () => {
       setIsLoading(false);
       // Refetch to ensure we have the latest data from the server
-      void utils.traces.byIdWithObservationsAndScores.invalidate();
-      void utils.traces.all.invalidate();
+      utils.traces.byIdWithObservationsAndScores.invalidate();
+      utils.traces.all.invalidate();
+      utils.events.byTraceId.invalidate();
     },
   });
 
   return (
     <StarToggle
-      value={value}
+      value={optimisticValue}
       size={size}
       disabled={!hasAccess}
       isLoading={isLoading}
-      onClick={(value) => {
+      onClick={(nextValue) => {
+        const previousValue = optimisticValue;
+        setIsLoading(true);
+        setOptimisticValue(nextValue);
         capture("trace_detail:bookmark_button_click", {
           id: traceId,
-          value: value,
+          value: nextValue,
         });
-        return mutBookmarkTrace.mutateAsync({
-          projectId,
-          traceId,
-          bookmarked: value,
-        });
+        return mutBookmarkTrace
+          .mutateAsync({
+            projectId,
+            traceId,
+            bookmarked: nextValue,
+          })
+          .catch((error) => {
+            setOptimisticValue(previousValue);
+            throw error;
+          });
       }}
     />
   );
@@ -222,7 +234,7 @@ export function StarSessionToggle({
   const capture = useInsightsCapture();
   const mutBookmarkSession = api.sessions.bookmark.useMutation({
     onSuccess: () => {
-      void utils.sessions.invalidate();
+      utils.sessions.invalidate();
     },
   });
 

@@ -3,6 +3,8 @@ import type { FilterConfig } from "@/src/features/filters/lib/filter-config";
 import type { ColumnToBackendKeyMap } from "@/src/features/filters/lib/filter-transform";
 import { renderFilterIcon } from "@/src/components/ItemBadge";
 
+export type ObservationsOmittableFilterColumn = "model" | "promptName";
+
 /**
  * Maps frontend column IDs to backend-expected column IDs
  * Frontend uses "tags" but backend CH mapping expects "traceTags" for trace tags on observations table
@@ -184,3 +186,9 @@ export const observationFilterConfig: FilterConfig = {
     },
   ],
 };
+
+export function getObservationsFilterConfig(
+  omittedFilter: ObservationsOmittableFilterColumn[] = [],
+): FilterConfig {
+  return omitFilterFacets(observationFilterConfig, omittedFilter);
+}

@@ -26,6 +26,10 @@ type MixpanelExecutionConfig = {
   maxTimestamp: Date;
   decryptedMixpanelProjectToken: string;
   mixpanelRegion: string;
+  // First attempt uses ClickHouse `auto` join algorithm. We only fall back to
+  // `grace_hash` (slower, but spills to disk) on retries so an OOM on the first
+  // attempt recovers without manual intervention while healthy syncs stay fast.
+  useGraceHash: boolean;
 };
 
 const processMixpanelTraces = async (config: MixpanelExecutionConfig) => {
@@ -34,6 +38,7 @@ const processMixpanelTraces = async (config: MixpanelExecutionConfig) => {
     config.projectName,
     config.minTimestamp,
     config.maxTimestamp,
+    { useGraceHash: config.useGraceHash },
   );
 
   logger.info(`[MIXPANEL] Sending traces for project ${config.projectId} to Mixpanel`);
@@ -64,6 +69,7 @@ const processMixpanelGenerations = async (config: MixpanelExecutionConfig) => {
     config.projectName,
     config.minTimestamp,
     config.maxTimestamp,
+    { useGraceHash: config.useGraceHash },
   );
 
   logger.info(`[MIXPANEL] Sending generations for project ${config.projectId} to Mixpanel`);
@@ -94,6 +100,7 @@ const processMixpanelScores = async (config: MixpanelExecutionConfig) => {
     config.projectName,
     config.minTimestamp,
     config.maxTimestamp,
+    { useGraceHash: config.useGraceHash },
   );
 
   logger.info(`[MIXPANEL] Sending scores for project ${config.projectId} to Mixpanel`);
@@ -193,6 +200,7 @@ export const handleMixpanelIntegrationProjectJob = async (
     maxTimestamp: new Date(new Date().getTime() - 30 * 60 * 1000), // 30 minutes ago
     decryptedMixpanelProjectToken: decrypt(mixpanelIntegration.encryptedMixpanelProjectToken),
     mixpanelRegion: mixpanelIntegration.mixpanelRegion,
+    useGraceHash: job.attemptsMade > 0,
   };
 
   try {

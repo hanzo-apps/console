@@ -75,7 +75,7 @@ export const Dropzone = ({
       <Button
         className={cn(
           "relative h-auto w-full flex-col overflow-hidden p-8",
-          isDragActive && "outline-none ring-1 ring-ring",
+          isDragActive && "ring-ring ring-1 outline-hidden",
           className,
         )}
         disabled={disabled}
@@ -120,7 +120,7 @@ export const DropzoneContent = ({ children, className }: DropzoneContentProps) =
 
   return (
     <div className={cn("flex flex-col items-center justify-center", className)}>
-      <div className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <div className="bg-muted text-muted-foreground flex size-8 items-center justify-center rounded-md">
         <UploadIcon size={16} />
       </div>
       <p className="my-2 w-full truncate text-sm font-medium">
@@ -168,7 +168,7 @@ export const DropzoneEmptyState = ({ children, className }: DropzoneEmptyStatePr
 
   return (
     <div className={cn("flex flex-col items-center justify-center", className)}>
-      <div className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <div className="bg-muted text-muted-foreground flex size-8 items-center justify-center rounded-md">
         <UploadIcon size={16} />
       </div>
       <p className="my-2 w-full truncate text-wrap text-sm font-medium">Upload {maxFiles === 1 ? "a file" : "files"}</p>

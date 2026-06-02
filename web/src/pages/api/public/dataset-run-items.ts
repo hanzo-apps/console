@@ -2,7 +2,6 @@ import { prisma } from "@hanzo/shared/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
-  type APIDatasetRunItem,
   GetDatasetRunItemsV1Query,
   GetDatasetRunItemsV1Response,
   PostDatasetRunItemsV1Body,
@@ -147,22 +146,12 @@ export default withMiddlewares({
     responseSchema: GetDatasetRunItemsV1Response,
     rateLimitResource: "datasets",
     fn: async ({ query, auth }) => {
-      /**************
-       * VALIDATION *
-       **************/
-
-      const datasetRun = await prisma.datasetRuns.findUnique({
-        where: {
-          datasetId_projectId_name: {
-            datasetId: query.datasetId,
-            name: query.runName,
-            projectId: auth.scope.projectId,
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-        },
+      return await listDatasetRunItemsForApi({
+        datasetId: query.datasetId,
+        runName: query.runName,
+        projectId: auth.scope.projectId,
+        limit: query.limit,
+        page: query.page,
       });
 
       if (!datasetRun) {

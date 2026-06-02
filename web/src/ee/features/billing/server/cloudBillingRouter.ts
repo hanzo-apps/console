@@ -1,4 +1,4 @@
-import * as z from "zod/v4";
+import * as z from "zod";
 
 import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEntitlement";
 
@@ -77,7 +77,7 @@ export const cloudBillingRouter = createTRPCRouter({
       const stripeBillingService = createBillingServiceFromContext(ctx);
       const url = await stripeBillingService.createCheckoutSession(input.orgId, input.stripeProductId);
 
-      void auditLog({
+      auditLog({
         session: ctx.session,
         orgId: input.orgId,
         resourceType: "organization",

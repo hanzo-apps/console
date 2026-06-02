@@ -16,6 +16,22 @@ export type ModelWithPrices = {
 };
 
 const MODEL_MATCH_CACHE_LOCKED_KEY = "LOCK:model-match-clear";
+const DEFAULT_LOCAL_CACHE_MODEL_MATCH_TTL_MS = 10_000;
+const DEFAULT_LOCAL_CACHE_MODEL_MATCH_MAX = 20_000;
+// This L1 cache is intentionally TTL-only. Cross-container consistency continues
+// to come from Redis invalidation plus the short local TTL.
+const modelMatchLocalCache = new LocalCache<ModelWithPrices>({
+  namespace: "model_match",
+  enabled: env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_ENABLED === "true",
+  ttlMs: getPositiveNumberOrDefault(
+    env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_TTL_MS,
+    DEFAULT_LOCAL_CACHE_MODEL_MATCH_TTL_MS,
+  ),
+  max: getPositiveNumberOrDefault(
+    env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_MAX,
+    DEFAULT_LOCAL_CACHE_MODEL_MATCH_MAX,
+  ),
+});
 
 export async function findModel(p: ModelMatchProps): Promise<ModelWithPrices> {
   return instrumentAsync(
@@ -55,21 +71,33 @@ export async function findModel(p: ModelMatchProps): Promise<ModelWithPrices> {
         span.setAttribute("model_cache_set", "true");
 
         logger.debug(
-          `Found model name ${postgresModel?.modelName} (id: ${postgresModel?.id}) for project ${p.projectId} and model ${p.model}`,
+          formatModelMatchDebugMessage("Resolving model match", {
+            projectId: p.projectId,
+            model: p.model,
+            localCacheEnabled:
+              env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_ENABLED === "true",
+            redisCacheEnabled:
+              env.LANGFUSE_CACHE_MODEL_MATCH_ENABLED === "true",
+          }),
         );
-        return { model: postgresModel, pricingTiers };
-      } else if (postgresModel) {
-        const pricingTiers = await findPricingTiersForModel(postgresModel.id);
-        span.setAttribute("matched_model_id", postgresModel.id);
-        span.setAttribute("model_match_source", "postgres");
-        span.setAttribute("model_cache_set", "false");
+      }
+      const localCacheKey = getRedisModelKey(p);
+      const { source, value } = await modelMatchLocalCache.getOrLoad(
+        localCacheKey,
+        async () => {
+          const cachedResult = await getModelWithPricesFromRedis(p);
+          if (cachedResult) {
+            return {
+              value: cachedResult,
+              source: "redis",
+            };
+          }
 
-        logger.debug(
-          `Found model name ${postgresModel?.modelName} (id: ${postgresModel?.id}) for project ${p.projectId} and model ${p.model}`,
-        );
-        return { model: postgresModel, pricingTiers };
-      } else {
-        span.setAttribute("model_match_source", "none");
+          const postgresModel = await findModelInPostgres(p);
+          if (postgresModel) {
+            const pricingTiers = await findPricingTiersForModel(
+              postgresModel.id,
+            );
 
         if (env.HANZO_CACHE_MODEL_MATCH_ENABLED === "true") {
           await addModelNotFoundTokenToRedis(p);
@@ -79,6 +107,29 @@ export async function findModel(p: ModelMatchProps): Promise<ModelWithPrices> {
         logger.debug(`Model not found for project ${p.projectId} and model ${p.model}`);
         return { model: null, pricingTiers: [] };
       }
+
+      span.setAttribute("model_match_source", source ?? "unknown");
+      span.setAttribute("matched_model_id", value.model.id);
+      if (source === "postgres") {
+        span.setAttribute(
+          "model_cache_set",
+          String(env.LANGFUSE_CACHE_MODEL_MATCH_ENABLED === "true"),
+        );
+      }
+
+      if (logger.isLevelEnabled("debug")) {
+        logger.debug(
+          formatModelMatchDebugMessage("Model match resolved", {
+            projectId: p.projectId,
+            model: p.model,
+            source: source ?? "unknown",
+            matchedModelId: value.model.id,
+            matchedModelName: value.model.modelName,
+            pricingTierCount: value.pricingTiers.length,
+          }),
+        );
+      }
+      return value;
     },
   );
 }
@@ -108,17 +159,7 @@ const getModelWithPricesFromRedis = async (p: ModelMatchProps): Promise<ModelWit
       return { model: null, pricingTiers: [] };
     }
 
-    const parsed = instrumentSync(
-      {
-        name: "parse-redis-model",
-        traceScope: "model-match",
-      },
-      (span) => {
-        span.setAttribute("model-cache-value-length", redisValue.length);
-
-        return JSON.parse(redisValue);
-      },
-    );
+    const parsed = JSON.parse(redisValue);
 
     if (parsed.model !== undefined && parsed.pricingTiers !== undefined) {
       const model = redisModelToPrismaModel(parsed.model);

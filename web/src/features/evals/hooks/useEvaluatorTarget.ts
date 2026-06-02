@@ -57,12 +57,25 @@ export const useEvaluatorTargetState = () => {
   const transformMapping = (currentMapping: VariableMapping[], targetObject: string): VariableMapping[] => {
     const isObservationBased = isEventTarget(targetObject) || isExperimentTarget(targetObject);
 
+    // Get valid column IDs for the target
+    const validColumnIds = isEventTarget(targetObject)
+      ? new Set(eventTargetEvalVariableColumns.map((c) => c.id))
+      : isExperimentTarget(targetObject)
+        ? new Set(experimentTargetEvalVariableColumns.map((c) => c.id))
+        : null;
+
     return currentMapping.map((field) => {
+      // Reset selectedColumnId if invalid for the new target
+      const selectedColumnId =
+        validColumnIds && !validColumnIds.has(field.selectedColumnId ?? "")
+          ? null
+          : field.selectedColumnId;
+
       if (isObservationBased) {
         // Placeholder consoleObject (stripped in onSubmit)
         return {
           templateVariable: field.templateVariable,
-          selectedColumnId: field.selectedColumnId,
+          selectedColumnId,
           jsonSelector: field.jsonSelector,
           consoleObject: "event" as ConsoleObject,
           objectName: null,

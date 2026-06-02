@@ -18,9 +18,17 @@ export interface ActionConfig {
   component?: React.ReactNode;
 }
 
+export interface Step {
+  title: string;
+  description?: string;
+  badge?: React.ReactNode;
+  content?: React.ReactNode;
+}
+
 export interface SplashScreenProps {
   title: string;
   description: string;
+  waitingFor?: string;
   image?: {
     src: string;
     alt: string;
@@ -28,19 +36,17 @@ export interface SplashScreenProps {
     height: number;
   };
   videoSrc?: string;
+  steps?: Step[];
   valuePropositions?: ValueProposition[];
   primaryAction?: ActionConfig;
   secondaryAction?: ActionConfig;
   gettingStarted?: string | React.ReactNode;
   children?: React.ReactNode;
-  className?: string;
+  /** Where to render the video. Defaults to "top" (after header, before content) */
+  videoPosition?: "top" | "bottom";
 }
 
-interface VideoPlayerProps {
-  videoSrc: string;
-}
-
-function VideoPlayer({ videoSrc }: VideoPlayerProps) {
+function VideoPlayer({ videoSrc }: { videoSrc: string }) {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -69,17 +75,46 @@ function VideoPlayer({ videoSrc }: VideoPlayerProps) {
 export function SplashScreen({
   title,
   description,
+  waitingFor,
   image,
   videoSrc,
+  steps,
   valuePropositions = [],
   primaryAction,
   secondaryAction,
   gettingStarted,
   children,
+  videoPosition = "top",
 }: SplashScreenProps) {
+  const mediaBlock = (
+    <>
+      {videoSrc && <VideoPlayer videoSrc={videoSrc} />}
+      {!videoSrc && image && (
+        <div className="my-6 w-full max-w-3xl">
+          <Image
+            src={image.src}
+            alt={image.alt}
+            width={image.width}
+            height={image.height}
+            className="rounded-md"
+          />
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <div className={cn("mx-auto flex max-w-4xl flex-col items-center p-8")}>
+    <div className="mx-auto flex max-w-4xl flex-col items-center p-8">
       <div className="mb-6 text-center">
+        {waitingFor && (
+          <StatusBadge
+            type="waiting"
+            showText={false}
+            className="mb-3 px-3 py-1 text-sm"
+          >
+            {waitingFor}
+          </StatusBadge>
+        )}
         <h2 className="mb-2 text-2xl font-bold">{title}</h2>
         <p className="text-muted-foreground">{description}</p>
       </div>
@@ -91,7 +126,6 @@ export function SplashScreen({
               {primaryAction.label}
             </ActionButton>
           ))}
-
         {secondaryAction &&
           (secondaryAction.component || (
             <ActionButton variant="outline" size="lg" onClick={secondaryAction.onClick} href={secondaryAction.href}>
@@ -108,7 +142,7 @@ export function SplashScreen({
         </Alert>
       )}
 
-      {videoSrc && <VideoPlayer videoSrc={videoSrc} />}
+      {videoPosition === "top" && mediaBlock}
 
       {!videoSrc && image && (
         <div className="my-6 w-full max-w-3xl">
@@ -129,6 +163,8 @@ export function SplashScreen({
           ))}
         </div>
       )}
+
+      {videoPosition === "bottom" && mediaBlock}
     </div>
   );
 }

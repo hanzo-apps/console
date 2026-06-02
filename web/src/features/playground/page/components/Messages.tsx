@@ -10,6 +10,7 @@ import { Switch } from "@/src/components/ui/switch";
 import { Settings } from "lucide-react";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import { env } from "@/src/env.mjs";
+import { STREAMING_PREF_KEY } from "@/src/features/playground/page/storage/keys";
 
 import { GenerationOutput } from "./GenerationOutput";
 import { ChatMessages } from "@/src/components/ChatMessages";
@@ -18,9 +19,9 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/src/comp
 
 export const Messages: React.FC<MessagesContext> = (props) => {
   return (
-    <div className="flex h-full flex-col space-y-4 pr-4 pt-2">
-      <ResizablePanelGroup direction="vertical">
-        <ResizablePanel minSize={10}>
+    <div className="flex h-full flex-col space-y-4 pt-2 pr-4">
+      <ResizablePanelGroup orientation="vertical">
+        <ResizablePanel minSize="10%">
           <ChatMessages {...props} />
         </ResizablePanel>
         <ResizableHandle withHandle className="bg-transparent" />
@@ -57,7 +58,7 @@ const SubmitButton = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 focus:outline-none focus:ring-0 focus-visible:ring-0"
+            className="h-8 w-8 focus:ring-0 focus:outline-hidden focus-visible:ring-0"
             disabled={isStreaming}
           >
             <Settings className="h-4 w-4" />

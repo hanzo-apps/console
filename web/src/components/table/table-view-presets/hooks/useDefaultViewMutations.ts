@@ -17,6 +17,10 @@ export function useDefaultViewMutations({ tableName, projectId }: UseDefaultView
         projectId,
         viewName: tableName,
       });
+      utils.TableViewPresets.getDefaultAssignments.invalidate({
+        projectId,
+        viewName: tableName,
+      });
       const scopeLabel = variables.scope === "user" ? "your" : "project";
       showSuccessToast({
         title: "Default view set",
@@ -31,6 +35,10 @@ export function useDefaultViewMutations({ tableName, projectId }: UseDefaultView
   const clearDefault = api.TableViewPresets.clearDefault.useMutation({
     onSuccess: (_, variables) => {
       utils.TableViewPresets.getDefault.invalidate({
+        projectId,
+        viewName: tableName,
+      });
+      utils.TableViewPresets.getDefaultAssignments.invalidate({
         projectId,
         viewName: tableName,
       });
@@ -66,6 +74,5 @@ export function useDefaultViewMutations({ tableName, projectId }: UseDefaultView
     setViewAsDefault,
     clearViewDefault,
     isSettingDefault: setAsDefault.isPending,
-    isClearingDefault: clearDefault.isPending,
   };
 }

@@ -4,7 +4,7 @@ import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/tr
 import { HanzoNotFoundError, optionalPaginationZod, Prisma } from "@hanzo/shared";
 import { getUserProjectRoles } from "@hanzo/shared/src/server";
 import partition from "lodash/partition";
-import z from "zod/v4";
+import z from "zod";
 
 export const queueAssignmentRouter = createTRPCRouter({
   createMany: protectedProjectProcedure

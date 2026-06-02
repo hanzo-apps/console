@@ -1,5 +1,7 @@
 import { useRouter } from "next/router";
 import { api } from "@/src/utils/api";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
+import { useDashboardFilterOptions } from "@/src/hooks/useDashboardFilterOptions";
 import Page from "@/src/components/layouts/page";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
 import { TimeRangePicker } from "@/src/components/date-picker";
@@ -19,6 +21,12 @@ import { DashboardGrid } from "@/src/features/widgets/components/DashboardGrid";
 import { useDashboardDateRange } from "@/src/hooks/useDashboardDateRange";
 import { DASHBOARD_AGGREGATION_OPTIONS, toAbsoluteTimeRange } from "@/src/utils/date-range-utils";
 import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
+import { useEnvironmentFilterOptionsCache } from "@/src/hooks/use-environment-filter-options-cache";
+import {
+  DashboardQuerySchedulerProvider,
+  getDashboardQuerySchedulerMaxConcurrent,
+  useDashboardQueryScheduler,
+} from "@/src/hooks/useDashboardQueryScheduler";
 
 interface WidgetPlacement {
   id: string;
@@ -42,6 +50,7 @@ export default function DashboardDetail() {
   };
 
   const lookbackLimit = useEntitlementLimit("data-access-days");
+  const { isBetaEnabled } = useV4Beta();
 
   // Fetch dashboard data
   const dashboard = api.dashboard.getDashboard.useQuery({
@@ -172,21 +181,20 @@ export default function DashboardDetail() {
     [localDashboardDefinition, setLocalDashboardDefinition, saveDashboardChanges],
   );
 
-  const traceFilterOptions = api.traces.filterOptions.useQuery(
-    {
-      projectId,
-    },
-    {
-      trpc: {
-        context: {
-          skipBatch: true,
-        },
-      },
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      staleTime: Infinity,
-    },
+  const { nameOptions, tagsOptions } = useDashboardFilterOptions({
+    projectId,
+    isBetaEnabled,
+    timeRange,
+  });
+
+  const environmentOptionsState = useEnvironmentFilterOptionsCache({
+    projectId,
+    timeRange,
+  });
+  const environmentOptions = environmentOptionsState.environmentOptions.map(
+    (value) => ({
+      value,
+    }),
   );
 
   const environmentFilterOptions = api.projects.environmentFilterOptions.useQuery(
@@ -341,7 +349,7 @@ export default function DashboardDetail() {
 
   const mutateCloneDashboard = api.dashboard.cloneDashboard.useMutation({
     onSuccess: (data) => {
-      void utils.dashboard.invalidate();
+      utils.dashboard.invalidate();
       capture("dashboard:clone_dashboard");
       // Redirect to new dashboard
       if (data?.id) {
@@ -359,6 +367,40 @@ export default function DashboardDetail() {
   };
 
   const dashboardTimeRangePresets = DASHBOARD_AGGREGATION_OPTIONS;
+  const widgetSchedulerPrefix = `dashboard:${projectId}:${dashboardId}:widget:`;
+  const widgetPlacements = useMemo(
+    () => localDashboardDefinition?.widgets ?? [],
+    [localDashboardDefinition?.widgets],
+  );
+
+  const getWidgetSchedulerId = useCallback(
+    (widgetPlacementId: string) =>
+      `${widgetSchedulerPrefix}${widgetPlacementId}`,
+    [widgetSchedulerPrefix],
+  );
+
+  const schedulerResetKey = useMemo(() => {
+    return [
+      projectId,
+      dashboardId,
+      absoluteTimeRange?.from?.toISOString() ?? "",
+      absoluteTimeRange?.to?.toISOString() ?? "",
+      JSON.stringify(currentFilters),
+      widgetPlacements.map((widget) => widget.id).join(","),
+    ].join("|");
+  }, [
+    absoluteTimeRange?.from,
+    absoluteTimeRange?.to,
+    currentFilters,
+    dashboardId,
+    projectId,
+    widgetPlacements,
+  ]);
+
+  const scheduler = useDashboardQueryScheduler({
+    maxConcurrent: getDashboardQuerySchedulerMaxConcurrent(timeRange),
+    resetKey: schedulerResetKey,
+  });
 
   return (
     <Page
@@ -425,28 +467,57 @@ export default function DashboardDetail() {
               <PopoverFilterBuilder columns={filterColumns} filterState={currentFilters} onChange={setCurrentFilters} />
             </div>
           </div>
-          <DashboardGrid
-            widgets={localDashboardDefinition.widgets}
-            onChange={(updatedWidgets) => {
-              setLocalDashboardDefinition({
-                ...localDashboardDefinition,
-                widgets: updatedWidgets,
-              });
-              saveDashboardChanges({
-                ...localDashboardDefinition,
-                widgets: updatedWidgets,
-              });
-            }}
-            canEdit={hasCUDAccess}
-            dashboardId={dashboardId}
-            projectId={projectId}
-            dateRange={absoluteTimeRange}
-            filterState={currentFilters}
-            onDeleteWidget={handleDeleteWidget}
-            dashboardOwner={dashboard.data?.owner}
-          />
-        </div>
-      )}
-    </Page>
+        ) : (
+          <div>
+            <div className="my-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-col gap-2 lg:flex-row lg:gap-3">
+                <TimeRangePicker
+                  timeRange={timeRange}
+                  onTimeRangeChange={setTimeRange}
+                  timeRangePresets={dashboardTimeRangePresets}
+                  className="my-0 max-w-full overflow-x-auto"
+                  disabled={
+                    lookbackLimit
+                      ? {
+                          before: new Date(
+                            new Date().getTime() -
+                              lookbackLimit * 24 * 60 * 60 * 1000,
+                          ),
+                        }
+                      : undefined
+                  }
+                />
+                <PopoverFilterBuilder
+                  columns={filterColumns}
+                  filterState={currentFilters}
+                  onChange={setCurrentFilters}
+                />
+              </div>
+            </div>
+            <DashboardGrid
+              widgets={localDashboardDefinition.widgets}
+              onChange={(updatedWidgets) => {
+                setLocalDashboardDefinition({
+                  ...localDashboardDefinition,
+                  widgets: updatedWidgets,
+                });
+                saveDashboardChanges({
+                  ...localDashboardDefinition,
+                  widgets: updatedWidgets,
+                });
+              }}
+              canEdit={hasCUDAccess}
+              dashboardId={dashboardId}
+              projectId={projectId}
+              dateRange={absoluteTimeRange}
+              filterState={currentFilters}
+              onDeleteWidget={handleDeleteWidget}
+              dashboardOwner={dashboard.data?.owner}
+              getWidgetSchedulerId={getWidgetSchedulerId}
+            />
+          </div>
+        )}
+      </Page>
+    </DashboardQuerySchedulerProvider>
   );
 }

@@ -62,7 +62,7 @@ export function NotificationSettings() {
         <CardContent className="space-y-6 p-6">
           <div>
             <h3 className="text-lg font-medium">Email Notifications</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Manage your email notification preferences for this project.
             </p>
           </div>

@@ -4,7 +4,7 @@ import {
   organizationOptionalNameSchema,
   organizationNameSchema,
 } from "@/src/features/organizations/utils/organizationNameSchema";
-import * as z from "zod/v4";
+import * as z from "zod";
 import { throwIfNoOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { TRPCError } from "@trpc/server";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
@@ -12,6 +12,7 @@ import { parseDbOrg } from "@hanzo/shared";
 import { redis } from "@hanzo/shared/src/server";
 import { createBillingServiceFromContext } from "@/src/ee/features/billing/server/stripeBillingService";
 import { isCloudBillingEnabled } from "@/src/ee/features/billing/utils/isCloudBilling";
+import { shouldAutoEnableV4 } from "@/src/features/events/lib/v4Rollout";
 
 import { env } from "@/src/env.mjs";
 import { addDaysAndRoundToNextDay } from "@/src/features/organizations/utils/converTime";
@@ -64,10 +65,18 @@ export const organizationsRouter = createTRPCRouter({
         .extend({
           orgId: z.string(),
           aiFeaturesEnabled: z.boolean().optional(),
+          aiTelemetryEnabled: z.boolean().optional(),
         })
-        .refine((data) => data.name || data.aiFeaturesEnabled !== undefined, {
-          message: "At least one of name or aiFeaturesEnabled is required",
-        }),
+        .refine(
+          (data) =>
+            data.name ||
+            data.aiFeaturesEnabled !== undefined ||
+            data.aiTelemetryEnabled !== undefined,
+          {
+            message:
+              "At least one of name, aiFeaturesEnabled or aiTelemetryEnabled is required",
+          },
+        ),
     )
     .mutation(async ({ input, ctx }) => {
       throwIfNoOrganizationAccess({
@@ -95,6 +104,7 @@ export const organizationsRouter = createTRPCRouter({
         data: {
           name: input.name,
           aiFeaturesEnabled: input.aiFeaturesEnabled,
+          aiTelemetryEnabled: input.aiTelemetryEnabled,
         },
       });
 

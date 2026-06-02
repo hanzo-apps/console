@@ -23,7 +23,7 @@ export const ExecutionCountTooltip = ({ projectId, item, filter }: ExecutionCoun
 
   return (
     <>
-      <span className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+      <span className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
         (
         {isLoading ? (
           <span className="inline-block font-mono">...</span>

@@ -173,6 +173,21 @@ describe("Filter Query Encoding & Decoding (Legacy Format)", () => {
       ];
       expect(encodeFilters(filters)).toBe("extinct;boolean;;=;true");
     });
+
+    it("should encode first-in-trace filter without a numeric value", () => {
+      const filters: FilterState = [
+        {
+          column: "positionInTrace",
+          type: "positionInTrace",
+          operator: "=",
+          key: "first",
+        },
+      ];
+
+      expect(encodeFilters(filters)).toBe(
+        "positionInTrace;positionInTrace;first;=;",
+      );
+    });
   });
 
   describe("Decoding", () => {
@@ -349,6 +364,32 @@ describe("Filter Query Encoding & Decoding (Legacy Format)", () => {
       ]);
     });
 
+    it("should decode first-in-trace filter without a numeric value", () => {
+      const decoded = decodeFilters("positionInTrace;positionInTrace;first;=;");
+
+      expect(decoded).toEqual([
+        {
+          column: "positionInTrace",
+          type: "positionInTrace",
+          operator: "=",
+          key: "first",
+        },
+      ]);
+    });
+
+    it("should interpret legacy root position-in-trace filter as first", () => {
+      const decoded = decodeFilters("positionInTrace;positionInTrace;root;=;");
+
+      expect(decoded).toEqual([
+        {
+          column: "positionInTrace",
+          type: "positionInTrace",
+          operator: "=",
+          key: "first",
+        },
+      ]);
+    });
+
     it("should decode stringOptions with empty string value", () => {
       // This URL is generated when filtering for empty trace names (clicking "Only" on empty name)
       const result = decodeFilters("name;stringOptions;;any of;");
@@ -358,6 +399,19 @@ describe("Filter Query Encoding & Decoding (Legacy Format)", () => {
           type: "stringOptions",
           operator: "any of",
           value: [""],
+        },
+      ]);
+    });
+
+    it("should decode arrayOptions none-of filter with empty values", () => {
+      const result = decodeFilters("tags;arrayOptions;;none of;");
+
+      expect(result).toEqual([
+        {
+          column: "tags",
+          type: "arrayOptions",
+          operator: "none of",
+          value: [],
         },
       ]);
     });

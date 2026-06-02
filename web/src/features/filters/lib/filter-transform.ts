@@ -26,6 +26,23 @@ export function normalizeFilterColumnNames(filters: FilterState, columnDefinitio
   });
 }
 
+type SingleValueOptionLike = Readonly<{
+  value: string;
+  count?: string | number;
+  displayValue?: string;
+}>;
+
+export const normalizeSingleValueOptions = (
+  options: readonly SingleValueOptionLike[] | undefined,
+): SingleValueOption[] =>
+  options?.map((option) => ({
+    value: option.value,
+    ...(option.count !== undefined ? { count: Number(option.count) } : {}),
+    ...(option.displayValue !== undefined
+      ? { displayValue: option.displayValue }
+      : {}),
+  })) ?? [];
+
 /**
  * Transforms frontend filter column IDs to backend-expected column IDs
  *

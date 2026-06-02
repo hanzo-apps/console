@@ -1,7 +1,7 @@
 import { Card } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
 import { api } from "@/src/utils/api";
-import type * as z from "zod/v4";
+import type * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/src/components/ui/form";
@@ -33,7 +33,7 @@ export default function ConfigureRetention() {
   });
   const setRetention = api.projects.setRetention.useMutation({
     onSuccess: (_) => {
-      void updateSession();
+      updateSession();
     },
     onError: (error) => form.setError("retention", { message: error.message }),
   });
@@ -74,7 +74,7 @@ export default function ConfigureRetention() {
         ) : !Boolean(project?.retentionDays) ? (
           <p className="mb-4 text-sm text-primary">Your Project retains data indefinitely.</p>
         ) : (
-          <p className="mb-4 text-sm text-primary">
+          <p className="text-primary mb-4 text-sm">
             Your Project&#39;s current retention is &quot;
             {project?.retentionDays ?? ""}
             &quot; days.
@@ -100,7 +100,7 @@ export default function ConfigureRetention() {
                       />
                       {!hasAccess && (
                         <span title="No access">
-                          <LockIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted" />
+                          <LockIcon className="text-muted absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform" />
                         </span>
                       )}
                     </div>

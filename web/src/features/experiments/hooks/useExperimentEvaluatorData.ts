@@ -2,7 +2,6 @@ import { useState, useCallback, useMemo } from "react";
 import { type EvalTemplate } from "@hanzo/shared";
 import { type RouterOutputs } from "@/src/utils/api";
 import { type PartialConfig } from "@/src/features/evals/types";
-import partition from "lodash/partition";
 
 const partitionEvaluators = (
   evaluators: RouterOutputs["evals"]["jobConfigsByTarget"] | undefined,
@@ -14,9 +13,16 @@ const partitionEvaluators = (
       return filter?.some(({ type, value }) => type === "stringOptions" && value.includes(datasetId));
     }) || [];
 
-  const [activeEvaluators, pausedEvaluators] = partition(
-    filteredEvaluators,
-    (evaluator) => evaluator.status === "ACTIVE",
+  const activeEvaluators = filteredEvaluators.filter((evaluator) =>
+    isJobConfigExecutable({
+      status: evaluator.status,
+      blockedAt: evaluator.blockedAt,
+    }),
+  );
+  const pausedEvaluators = filteredEvaluators.filter(
+    (evaluator) =>
+      evaluator.status === JobConfigState.ACTIVE &&
+      evaluator.blockedAt !== null,
   );
 
   const activeIds = activeEvaluators.map((evaluator) => evaluator.evalTemplateId);
@@ -117,7 +123,7 @@ export function useExperimentEvaluatorData({
   const handleEvaluatorSuccess = useCallback(() => {
     setShowEvaluatorForm(false);
     setSelectedEvaluatorData(null);
-    void refetchEvaluators();
+    refetchEvaluators();
   }, [refetchEvaluators]);
 
   // Handle when a user selects an evaluator from the template selector

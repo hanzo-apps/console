@@ -10,10 +10,12 @@ export function RequestResetPasswordEmailButton({
   email,
   className,
   variant = "default",
+  callbackUrl,
 }: {
   email: string;
   className?: string;
   variant?: "default" | "secondary";
+  callbackUrl?: string;
 }) {
   const [isEmailSent, setIsEmailSent] = useState(false);
   const [code, setCode] = useState("");
@@ -24,7 +26,7 @@ export function RequestResetPasswordEmailButton({
   const capture = useInsightsCapture();
 
   useEffect(() => {
-    const isValidEmail = z.string().email().safeParse(email).success;
+    const isValidEmail = z.email().safeParse(email).success;
     setIsValidEmail(isValidEmail);
   }, [email]);
 
@@ -34,9 +36,12 @@ export function RequestResetPasswordEmailButton({
     setIsLoading(true);
     setErrorMessage(null);
     try {
+      const targetCallbackUrl = callbackUrl
+        ? `${env.NEXT_PUBLIC_BASE_PATH ?? ""}${callbackUrl}`
+        : `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/auth/reset-password`;
       const res = await signIn("email", {
         email: email,
-        callbackUrl: `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/auth/reset-password`,
+        callbackUrl: targetCallbackUrl,
         redirect: false,
       });
       if (res?.error) {

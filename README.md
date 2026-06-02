@@ -1,4 +1,4 @@
-<img width="4856" height="1000" alt="github-banner" src="https://github.com/user-attachments/assets/6f435ef3-1194-4e26-87af-aa13826bbb5f" />
+<img width="2400" height="600" alt="hero-b (1)" src="https://github.com/user-attachments/assets/5810ae13-15d6-4b60-afd2-927adc501861" />
 
 <div align="center">
    <div>
@@ -135,7 +135,7 @@ See [self-hosting documentation](https://hanzo.com/self-hosting) to learn more a
 
 ## 🔌 Integrations
 
-<img width="4856" height="1322" alt="github-integrations" src="https://github.com/user-attachments/assets/e41ea0fb-742d-41ce-bf94-1d4fb95750cd" />
+<img width="2400" height="980" alt="integrations" src="https://github.com/user-attachments/assets/b85c9a45-68f0-4f76-b545-0e8632abef9f" />
 
 ### Main Integrations:
 
@@ -394,6 +394,6 @@ This helps us to:
 1. Understand how Hanzo is used and improve the most relevant features.
 2. Track overall usage for internal and external (e.g. fundraising) reporting.
 
-None of the data is shared with third parties and does not include any sensitive information. We want to be super transparent about this and you can find the exact data we collect [here](/web/src/features/telemetry/index.ts).
+The telemetry does not include raw traces, prompts, observations, scores, or dataset contents. We document the exact fields that are collected, where they are sent, and the implementation reference in our [telemetry docs](https://langfuse.com/self-hosting/security/telemetry).
 
-You can opt-out by setting `TELEMETRY_ENABLED=false`.
+For Langfuse OSS, you can opt out by setting `TELEMETRY_ENABLED=false`.

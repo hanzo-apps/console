@@ -5,9 +5,10 @@
  * Write operation with destructive hint.
  */
 
-import { z } from "zod/v4";
+import { z } from "zod";
 import { defineTool } from "../../../core/define-tool";
 import {
+  CreatePromptSchema,
   PromptType,
   PromptLabelSchema,
   PromptNameSchema,
@@ -128,4 +129,5 @@ export const [createChatPromptTool, handleCreateChatPrompt] = defineTool({
       };
     });
   },
+  destructiveHint: true,
 });

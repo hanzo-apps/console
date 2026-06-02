@@ -5,7 +5,7 @@ import { SurveyName } from "@prisma/client";
 import { logger } from "@hanzo/shared/src/server";
 
 const surveyResponseSchema = z.object({
-  surveyName: z.nativeEnum(SurveyName),
+  surveyName: z.enum(SurveyName),
   response: z.record(z.string(), z.string()),
   orgId: z.string().optional(),
 });

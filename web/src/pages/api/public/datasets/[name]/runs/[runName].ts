@@ -4,7 +4,6 @@ import {
   GetDatasetRunV1Response,
   DeleteDatasetRunV1Query,
   DeleteDatasetRunV1Response,
-  transformDbDatasetRunToAPIDatasetRun,
 } from "@/src/features/public-api/types/datasets";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
@@ -103,20 +102,8 @@ export default withMiddlewares({
         projectId: auth.scope.projectId,
         orgId: auth.scope.orgId,
         apiKeyId: auth.scope.apiKeyId,
-        before: datasetRun,
-      });
-
-      // Trigger async delete of dataset run items
-      await addToDeleteDatasetQueue({
-        deletionType: "dataset-runs",
-        projectId: auth.scope.projectId,
-        datasetRunIds: [datasetRun.id],
-        datasetId: datasetRun.datasetId,
-      });
-
-      return {
-        message: "Dataset run successfully deleted" as const,
-      };
-    },
+        name: query.name,
+        runName: query.runName,
+      }),
   }),
 });

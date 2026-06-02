@@ -1,5 +1,4 @@
-import { z } from "zod/v4";
-
+import { z } from "zod";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEntitlement";
@@ -8,6 +7,7 @@ import { type Prompt, Prisma } from "@hanzo/shared/src/db";
 import { createPrompt, duplicatePrompt } from "../actions/createPrompt";
 import { checkHasProtectedLabels } from "../utils/checkHasProtectedLabels";
 import {
+  CommentObjectType,
   CreatePromptTRPCSchema,
   LATEST_PROMPT_LABEL,
   optionalPaginationZod,
@@ -56,7 +56,6 @@ const buildPromptSearchFilter = (
 
   return searchConditions.length > 0 ? Prisma.sql` AND (${Prisma.join(searchConditions, " OR ")})` : Prisma.empty;
 };
-
 const PromptFilterOptions = z.object({
   projectId: z.string(), // Required for protectedProjectProcedure
   filter: z.array(singleFilter),
@@ -66,6 +65,19 @@ const PromptFilterOptions = z.object({
   searchQuery: z.string().optional(),
   searchType: z.array(TracingSearchType).optional(),
 });
+
+const promptMetricsTimeWindow = {
+  fromTimestamp: z.date().optional(),
+  toTimestamp: z.date().optional(),
+};
+
+const isValidPromptMetricsTimeWindow = ({
+  fromTimestamp,
+  toTimestamp,
+}: {
+  fromTimestamp?: Date;
+  toTimestamp?: Date;
+}) => !fromTimestamp || !toTimestamp || fromTimestamp < toTimestamp;
 
 export const promptRouter = createTRPCRouter({
   hasAny: protectedProjectProcedure
@@ -201,7 +213,7 @@ export const promptRouter = createTRPCRouter({
           1, // limit
           0, // page
           pathFilter,
-          searchFilter,
+          searchCondition,
           input.pathPrefix,
         ),
       );
@@ -212,10 +224,15 @@ export const promptRouter = createTRPCRouter({
     }),
   metrics: protectedProjectProcedure
     .input(
-      z.object({
-        projectId: z.string(),
-        promptNames: z.array(z.string()),
-      }),
+      z
+        .object({
+          projectId: z.string(),
+          promptNames: z.array(z.string()),
+          ...promptMetricsTimeWindow,
+        })
+        .refine(isValidPromptMetricsTimeWindow, {
+          message: "fromTimestamp must be before toTimestamp",
+        }),
     )
     .query(async ({ input }) => {
       if (input.promptNames.length === 0) return [];
@@ -313,6 +330,11 @@ export const promptRouter = createTRPCRouter({
         isSingleVersion: input.isSingleVersion,
         createdBy: ctx.session.user.id,
         prisma: ctx.prisma,
+        user: {
+          id: ctx.session.user.id,
+          name: ctx.session.user.name ?? null,
+          email: ctx.session.user.email ?? null,
+        },
       });
 
       if (!prompt) {
@@ -625,16 +647,12 @@ export const promptRouter = createTRPCRouter({
           }
         }
 
-        // Lock and invalidate cache for _all_ versions and labels of the prompt
         const promptService = new PromptService(ctx.prisma, redis);
-        await promptService.lockCache({ projectId, promptName });
-        await promptService.invalidateCache({ projectId, promptName });
 
         // Execute transaction
         await ctx.prisma.$transaction(transaction);
-
-        // Unlock cache
-        await promptService.unlockCache({ projectId, promptName });
+        // Rotate cache epoch only after successful commit.
+        await promptService.invalidateCache({ projectId });
 
         // Trigger webhooks for prompt version deletion
         await promptChangeEventSourcing(await promptService.resolvePrompt(promptVersion), "deleted");
@@ -803,16 +821,12 @@ export const promptRouter = createTRPCRouter({
           );
         });
 
-        // Lock and invalidate cache for _all_ versions and labels of the prompt
         const promptService = new PromptService(ctx.prisma, redis);
-        await promptService.lockCache({ projectId, promptName });
-        await promptService.invalidateCache({ projectId, promptName });
 
         // Execute transaction
         await ctx.prisma.$transaction(toBeExecuted);
-
-        // Unlock cache
-        await promptService.unlockCache({ projectId, promptName });
+        // Rotate cache epoch only after successful commit.
+        await promptService.invalidateCache({ projectId });
 
         // Trigger webhooks for prompt label update
         const updatedPrompts = await ctx.prisma.prompt.findMany({
@@ -940,10 +954,7 @@ export const promptRouter = createTRPCRouter({
           after: input.tags,
         });
 
-        // Lock and invalidate cache for _all_ versions and labels of the prompt
         const promptService = new PromptService(ctx.prisma, redis);
-        await promptService.lockCache({ projectId, promptName });
-        await promptService.invalidateCache({ projectId, promptName });
 
         await ctx.prisma.prompt.updateMany({
           where: {
@@ -957,8 +968,8 @@ export const promptRouter = createTRPCRouter({
           },
         });
 
-        // Unlock cache
-        await promptService.unlockCache({ projectId, promptName });
+        // Rotate cache epoch only after successful commit.
+        await promptService.invalidateCache({ projectId });
 
         // Trigger webhooks for prompt tag update
 
@@ -1003,6 +1014,7 @@ export const promptRouter = createTRPCRouter({
       z.object({
         projectId: z.string(),
         name: z.string(),
+        includeCommentCounts: z.boolean().optional(),
         ...optionalPaginationZod,
       }),
     )
@@ -1012,6 +1024,14 @@ export const promptRouter = createTRPCRouter({
         projectId: input.projectId,
         scope: "prompts:read",
       });
+      if (input.includeCommentCounts) {
+        throwIfNoProjectAccess({
+          session: ctx.session,
+          projectId: input.projectId,
+          scope: "comments:read",
+        });
+      }
+
       const [prompts, totalCount] = await Promise.all([
         ctx.prisma.prompt.findMany({
           where: {
@@ -1060,26 +1080,37 @@ export const promptRouter = createTRPCRouter({
           creator: user?.name,
         };
       });
-      return { promptVersions: joinedPromptAndUsers, totalCount };
+      return {
+        promptVersions: joinedPromptAndUsers,
+        totalCount,
+        ...(input.includeCommentCounts ? { commentCounts } : {}),
+      };
     }),
   versionMetrics: protectedProjectProcedure
     .input(
-      z.object({
-        projectId: z.string(),
-        promptIds: z.array(z.string()),
-      }),
+      z
+        .object({
+          projectId: z.string(),
+          promptIds: z.array(z.string()),
+          ...promptMetricsTimeWindow,
+        })
+        .refine(isValidPromptMetricsTimeWindow, {
+          message: "fromTimestamp must be before toTimestamp",
+        }),
     )
     .query(async ({ input, ctx }) => {
+      const { projectId, promptIds, ...timeWindow } = input;
+
       throwIfNoProjectAccess({
         session: ctx.session,
-        projectId: input.projectId,
+        projectId,
         scope: "prompts:read",
       });
 
       const [observations, observationScores, traceScores] = await Promise.all([
-        getObservationMetricsForPrompts(input.projectId, input.promptIds),
-        getScoresForPromptIds(input.projectId, input.promptIds, "observation"),
-        getScoresForPromptIds(input.projectId, input.promptIds, "trace"),
+        getObservationMetricsForPrompts(projectId, promptIds, timeWindow),
+        getScoresForPromptIds(projectId, promptIds, "observation", timeWindow),
+        getScoresForPromptIds(projectId, promptIds, "trace", timeWindow),
       ]);
 
       return observations.map((r) => {
@@ -1271,6 +1302,10 @@ const getScoresForPromptIds = async (
   projectId: string,
   promptIds: string[],
   fetchScoreRelation: "observation" | "trace",
+  timeWindow: {
+    fromTimestamp?: Date;
+    toTimestamp?: Date;
+  } = {},
 ) => {
   const scores = await getAggregatedScoresForPrompts(projectId, promptIds, fetchScoreRelation);
 

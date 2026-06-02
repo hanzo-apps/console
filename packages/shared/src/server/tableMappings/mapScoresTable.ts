@@ -106,8 +106,8 @@ export const scoresTableUiColumnDefinitions: UiColumnMappings = [
 ];
 
 /**
- * v4 column definitions for scores table — trace columns reference events_core
- * instead of traces table. Used with the events_core subquery JOIN (alias e).
+ * v4 column definitions for scores table — trace columns reference the traces
+ * CTE built from a flat EventsQueryBuilder. The CTE is joined as alias "e".
  */
 export const scoresTableUiColumnDefinitionsFromEvents: UiColumnMappings = [
   // All scores-native columns are identical to v3

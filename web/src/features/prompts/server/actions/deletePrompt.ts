@@ -87,9 +87,12 @@ export const deletePrompt = async (params: DeletePromptParams) => {
 
   const promptService = new PromptService(prisma, redis);
 
-  try {
-    await promptService.lockCache({ projectId, promptName });
-    await promptService.invalidateCache({ projectId, promptName });
+  const deletingLatest = promptVersions.some((p) =>
+    p.labels.includes("latest"),
+  );
+  const latestRemainsAfterDeletion = remainingVersions.some((v) =>
+    v.labels.includes("latest"),
+  );
 
     const deletingLatest = promptVersions.some((p) => p.labels.includes("latest"));
     const latestRemainsAfterDeletion = remainingVersions.some((v) => v.labels.includes("latest"));
@@ -109,10 +112,12 @@ export const deletePrompt = async (params: DeletePromptParams) => {
     await prisma.prompt.deleteMany({
       where: { projectId, id: { in: promptVersions.map((p) => p.id) } },
     });
-  } catch (err) {
-    logger.error("Failed to delete prompt", err);
-    throw err;
-  } finally {
-    await promptService.unlockCache({ projectId, promptName });
   }
+
+  await prisma.prompt.deleteMany({
+    where: { projectId, id: { in: promptVersions.map((p) => p.id) } },
+  });
+
+  // Rotate cache epoch only after successful commit.
+  await promptService.invalidateCache({ projectId });
 };

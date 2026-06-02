@@ -23,7 +23,7 @@ export async function handleInstallPath(req: NextApiRequest, res: NextApiRespons
     // 2. Set session cookies for state validation
     // 3. Render the installation page with "Add to Slack" button
     const installOptions = {
-      scopes: ["channels:read", "chat:write", "chat:write.public"],
+      scopes: [...SLACK_BOT_SCOPES],
       metadata: JSON.stringify({ projectId: projectId }),
       redirectUri: `${env.NEXTAUTH_URL}/api/public/slack/oauth`,
     };

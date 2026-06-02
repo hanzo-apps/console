@@ -45,35 +45,18 @@ export default withMiddlewares({
     name: "Delete Score",
     querySchema: DeleteScoreQueryV1,
     responseSchema: DeleteScoreResponseV1,
+    rateLimitResource: "score-delete",
     successStatusCode: 202,
     fn: async ({ query, auth }) => {
       const { scoreId } = query;
 
-      const scoreDeleteQueue = ScoreDeleteQueue.getInstance();
-      if (!scoreDeleteQueue) {
-        throw new InternalServerError("ScoreDeleteQueue not initialized");
-      }
-
-      await auditLog({
-        action: "delete",
-        resourceType: "score",
-        resourceId: scoreId,
+      const scoresApiService = new ScoresApiService("v1");
+      return await scoresApiService.deleteScore({
+        scoreId,
         projectId: auth.scope.projectId,
         orgId: auth.scope.orgId,
         apiKeyId: auth.scope.apiKeyId,
       });
-
-      await scoreDeleteQueue.add(QueueJobs.ScoreDelete, {
-        timestamp: new Date(),
-        id: randomUUID(),
-        payload: {
-          projectId: auth.scope.projectId,
-          scoreIds: [scoreId],
-        },
-        name: QueueJobs.ScoreDelete,
-      });
-
-      return { message: "Score deletion queued successfully" };
     },
   }),
 });

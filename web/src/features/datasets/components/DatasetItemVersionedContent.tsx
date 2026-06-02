@@ -29,7 +29,7 @@ export const DatasetItemVersionedContent = ({
 }: DatasetItemVersionedContentProps) => {
   // Loading states
   if (isLoadingVersioned) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>;
+    return <div className="text-muted-foreground text-sm">Loading...</div>;
   }
 
   // Item doesn't exist at this version
@@ -49,7 +49,7 @@ export const DatasetItemVersionedContent = ({
   // Show diff mode if enabled and item changed at this version
   if (showDiffMode && itemChangedAtVersion) {
     if (isLoadingLatest) {
-      return <div className="text-sm text-muted-foreground">Loading...</div>;
+      return <div className="text-muted-foreground text-sm">Loading...</div>;
     }
 
     // Can't show diff if latest doesn't exist

@@ -1,9 +1,9 @@
 import { Prompt, PrismaClient } from "@prisma/client";
 import { Redis, Cluster } from "ioredis";
+import { randomBytes } from "crypto";
 import { env } from "../../../env";
 import { logger } from "../../logger";
 import { escapeRegex } from "./utils";
-import { safeMultiDel } from "../../redis/redis";
 import {
   PromptGraph,
   PromptParams,
@@ -14,13 +14,16 @@ import {
 } from "./types";
 
 import { ParsedPromptDependencyTag } from "../../../features/prompts/parsePromptDependencyTags";
-import { PRODUCTION_LABEL } from "../../../features/prompts/constants";
 
 export const MAX_PROMPT_NESTING_DEPTH = 5;
 
 export class PromptService {
   private cacheEnabled: boolean;
   private ttlSeconds: number;
+
+  // Epoch keys live much longer than cache entries. 7 days gives inactive
+  // projects plenty of time while still cleaning up eventually.
+  private epochTtlSeconds = 7 * 24 * 60 * 60;
 
   constructor(
     private prisma: PrismaClient,
@@ -41,7 +44,11 @@ export class PromptService {
   }
 
   public async getPrompt(params: PromptParams): Promise<PromptResult | null> {
-    if (await this.shouldUseCache(params)) {
+    if (params.resolve === false) {
+      return this.getRawPrompt(params);
+    }
+
+    if (this.cacheEnabled) {
       const cachedPrompt = await this.getCachedPrompt(params);
 
       this.incrementMetric(cachedPrompt ? PromptServiceMetrics.PromptCacheHit : PromptServiceMetrics.PromptCacheMiss);
@@ -55,7 +62,7 @@ export class PromptService {
 
     const dbPrompt = await this.getDbPrompt(params);
 
-    if ((await this.shouldUseCache(params)) && dbPrompt) {
+    if (this.cacheEnabled && dbPrompt) {
       await this.cachePrompt({ ...params, prompt: dbPrompt });
 
       this.logDebug("Successfully cached prompt for params", params);
@@ -70,19 +77,17 @@ export class PromptService {
     const { projectId, promptName, version, label } = params;
 
     if (version) {
-      const prompt = await this.prisma.prompt.findFirst({
+      return this.prisma.prompt.findFirst({
         where: {
           projectId,
           name: promptName,
           version,
         },
       });
-
-      return this.resolvePrompt(prompt);
     }
 
     if (label) {
-      const prompt = await this.prisma.prompt.findFirst({
+      return this.prisma.prompt.findFirst({
         where: {
           projectId,
           name: promptName,
@@ -91,8 +96,6 @@ export class PromptService {
           },
         },
       });
-
-      return this.resolvePrompt(prompt);
     }
 
     this.logError("Invalid prompt params", params);
@@ -112,8 +115,6 @@ export class PromptService {
       ...prompt,
       prompt: promptGraph.resolvedPrompt,
       resolutionGraph: promptGraph.graph,
-      // Compute isActive based on labels (deprecated field in DB)
-      isActive: prompt.labels.includes(PRODUCTION_LABEL),
     };
   }
 
@@ -131,8 +132,10 @@ export class PromptService {
 
   private async getCachedPrompt(params: PromptParams): Promise<PromptResult | null> {
     try {
-      const key = this.getCacheKey(params);
-      const value = await this.redis?.getex(key, "EX", this.ttlSeconds);
+      const key = await this.getCacheKey(params);
+      if (!key) return null;
+
+      const value = await this.redis?.get(key);
 
       if (value) return JSON.parse(value) as PromptResult;
     } catch (e) {
@@ -144,11 +147,11 @@ export class PromptService {
 
   private async cachePrompt(params: PromptParams & { prompt: PromptResult }) {
     try {
-      const keyIndexKey = this.getKeyIndexKey(params);
-      const key = this.getCacheKey(params);
+      const key = await this.getCacheKey(params);
+      if (!key) return;
+
       const value = JSON.stringify(params.prompt);
 
-      await this.redis?.sadd(keyIndexKey, key);
       await this.redis?.set(key, value, "EX", this.ttlSeconds);
     } catch (e) {
       this.logError("Error caching prompt", e);
@@ -227,8 +230,11 @@ export class PromptService {
     await safeMultiDel(this.redis, keysToDelete);
   }
 
-  private getCacheKey(params: PromptParams): string {
-    const prefix = this.getCacheKeyPrefix(params);
+  private async getCacheKey(params: PromptParams): Promise<string | null> {
+    const epoch = await this.getOrCreateEpoch(params);
+    if (!epoch) return null;
+
+    const prefix = this.getCacheKeyPrefix(params, epoch);
 
     return `${prefix}:${params.version ?? params.label}`;
   }
@@ -376,10 +382,6 @@ export class PromptService {
 
   private logError(message: string, ...args: any[]) {
     logger.error(`[PromptService] ${message}`, ...args);
-  }
-
-  private logInfo(message: string, ...args: any[]) {
-    logger.info(`[PromptService] ${message}`, ...args);
   }
 
   private logDebug(message: string, ...args: any[]) {

@@ -38,14 +38,6 @@ const HistogramChart = ({ data }: { data: DataPoint[] }) => {
 
   const histogramData = transformHistogramData(data);
 
-  // Chart configuration
-  const config = {
-    count: {
-      label: "Count",
-      color: "hsl(var(--chart-1))",
-    },
-  };
-
   if (!histogramData.length) {
     return <div className="flex h-full items-center justify-center text-muted-foreground">No data available</div>;
   }

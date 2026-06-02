@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod/v4";
+import * as z from "zod";
 import Head from "next/head";
 import { Button } from "@/src/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/src/components/ui/form";
@@ -19,10 +19,11 @@ import Link from "next/link";
 import { ErrorPage } from "@/src/components/error-page";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { passwordSchema } from "@/src/features/auth/lib/signupSchema";
+import { useLangfuseCloudRegion } from "@/src/features/organizations/hooks";
 
 const resetPasswordSchema = z
   .object({
-    email: z.string().email(),
+    email: z.email(),
     password: passwordSchema,
     confirmPassword: passwordSchema,
   })
@@ -34,11 +35,15 @@ const resetPasswordSchema = z
 export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAvailable: boolean }) {
   const session = useSession();
   const router = useRouter();
+  const { isLangfuseCloud, region } = useLangfuseCloudRegion();
   const [formError, setFormError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showResetPasswordEmailButton, setShowResetPasswordEmailButton] = useState(false);
 
   const capture = useInsightsCapture();
+
+  // Detect set mode: user exists but has no password (signup email verification flow)
+  const isSetMode = session.data?.user?.hasPassword === false;
 
   const mutResetPassword = api.credentials.resetPassword.useMutation();
   const emailVerified = isEmailVerifiedWithinCutoff(session.data?.user?.emailVerified);
@@ -56,13 +61,21 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
     setFormError(null);
     setShowResetPasswordEmailButton(false);
     setIsSuccess(false);
-    capture("auth:update_password_form_submit");
+    capture(
+      isSetMode
+        ? "auth:set_password_form_submit"
+        : "auth:update_password_form_submit",
+    );
     await mutResetPassword
       .mutateAsync({ password: values.password })
       .then(() => {
         setIsSuccess(true);
         setTimeout(() => {
-          router.push("/");
+          const target =
+            isSetMode && isLangfuseCloud && region !== "DEV"
+              ? "/onboarding"
+              : "/";
+          router.push(target);
           setIsSuccess(false);
         }, 2000);
       })
@@ -92,6 +105,13 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
       />
     );
 
+  const title = isSetMode ? "Set your password" : "Reset your password";
+  const pageTitle = isSetMode ? "Set Password" : "Reset Password";
+  const submitLabel = isSetMode ? "Set password" : "Update Password";
+  const successMessage = isSetMode
+    ? "Password set successfully. Redirecting ..."
+    : "Password successfully updated. Redirecting ...";
+
   return (
     <>
       <Head>
@@ -102,10 +122,10 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
           <Link href="/">
             <HanzoCloudIcon className="mx-auto" />
           </Link>
-          <h2 className="mt-4 text-center text-2xl font-bold leading-9 tracking-tight text-primary">
-            Reset your password
+          <h2 className="text-primary mt-4 text-center text-2xl leading-9 font-bold tracking-tight">
+            {title}
           </h2>
-          {session.status !== "authenticated" && (
+          {!isSetMode && session.status !== "authenticated" && (
             <div className="mt-2 flex justify-center">
               <Button asChild variant="ghost">
                 <Link href="/auth/sign-in">
@@ -117,7 +137,7 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
           )}
         </div>
 
-        <div className="mt-10 bg-background px-6 py-10 shadow sm:mx-auto sm:w-full sm:max-w-[480px] sm:rounded-lg sm:px-12">
+        <div className="bg-background mt-10 px-6 py-10 shadow-sm sm:mx-auto sm:w-full sm:max-w-[480px] sm:rounded-lg sm:px-12">
           <div className="space-y-6">
             <Form {...form}>
               <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
@@ -138,7 +158,7 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
                           />
                           {emailVerified.verified && (
                             <span title="Email verified">
-                              <ShieldCheck className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-muted-green" />
+                              <ShieldCheck className="text-muted-green absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 transform" />
                             </span>
                           )}
                         </div>
@@ -154,7 +174,9 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>New Password</FormLabel>
+                          <FormLabel>
+                            {isSetMode ? "Password" : "New Password"}
+                          </FormLabel>
                           <FormControl>
                             <PasswordInput autoComplete="new-password" {...field} />
                           </FormControl>
@@ -167,7 +189,11 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Confirm New Password</FormLabel>
+                          <FormLabel>
+                            {isSetMode
+                              ? "Confirm Password"
+                              : "Confirm New Password"}
+                          </FormLabel>
                           <FormControl>
                             <PasswordInput autoComplete="new-password" {...field} />
                           </FormControl>
@@ -186,7 +212,7 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
                       loading={mutResetPassword.isPending}
                       variant={showResetPasswordEmailButton ? "secondary" : "default"}
                     >
-                      Update Password
+                      {submitLabel}
                     </Button>
                   ) : (
                     <RequestResetPasswordEmailButton email={form.watch("email")} className="w-full" />

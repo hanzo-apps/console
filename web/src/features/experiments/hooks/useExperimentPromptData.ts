@@ -48,9 +48,34 @@ export function useExperimentPromptData({ projectId, form }: ExperimentPromptDat
     [promptMeta.data],
   );
 
+  const selectedPromptModelConfig = useMemo(() => {
+    const prompt = promptMeta.data?.find((p) => p.id === promptId);
+    return getPromptModelConfig(prompt?.config);
+  }, [promptId, promptMeta.data]);
+
   return {
     expectedColumns,
     promptsByName,
     promptId,
+    selectedPromptModelConfig,
   };
 }
+
+const PromptConfigSchema = ZodModelConfig.extend({
+  provider: z.string().min(1).optional(),
+  model: z.string().min(1),
+});
+
+const getPromptModelConfig = (
+  config: unknown,
+): ExperimentPromptModelConfig | null => {
+  const parsedConfig = PromptConfigSchema.safeParse(config);
+
+  if (!parsedConfig.success) return null;
+
+  const { provider, model } = parsedConfig.data;
+  return {
+    ...(provider ? { provider } : {}),
+    model,
+  };
+};

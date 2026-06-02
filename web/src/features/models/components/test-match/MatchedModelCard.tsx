@@ -1,18 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 
-type MatchedModelCardProps = {
-  projectId: string;
+export type MatchedModelCardProps = {
   model: {
-    id: string;
     modelName: string;
     matchPattern: string;
     projectId: string | null;
   };
-  pricingTierId: string;
 };
-
-export type { MatchedModelCardProps };
 
 export function MatchedModelCard({ model }: MatchedModelCardProps) {
   const isHanzoModel = !model.projectId;
@@ -20,7 +15,7 @@ export function MatchedModelCard({ model }: MatchedModelCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <CardTitle className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           Matched Model
         </CardTitle>
       </CardHeader>

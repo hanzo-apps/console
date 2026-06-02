@@ -4,7 +4,7 @@ import { type Table } from "@tanstack/react-table";
 import { Button } from "@/src/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
-import { LoaderCircle } from "lucide-react";
+import Spinner from "@/src/components/design-system/Spinner/Spinner";
 import { Input } from "@/src/components/ui/input";
 import { useEffect, useState } from "react";
 
@@ -65,7 +65,7 @@ export function DataTablePagination<TData>({
 
   return (
     <div className="flex items-center justify-between">
-      <div className="flex-1 text-sm text-muted-foreground">
+      <div className="text-muted-foreground flex-1 text-sm">
         {/* {table.getFilteredSelectedRowModel().rows.length} of{" "}
         {table.getFilteredRowModel().rows.length} row(s) selected. */}
       </div>
@@ -94,7 +94,7 @@ export function DataTablePagination<TData>({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center justify-center gap-1 whitespace-nowrap text-sm font-medium">
+        <div className="flex items-center justify-center gap-1 text-sm font-medium whitespace-nowrap">
           {table.getPageCount() !== -1 ? (
             <>
               Page
@@ -135,7 +135,9 @@ export function DataTablePagination<TData>({
                 <span>
                   of{" "}
                   {isLoading ? (
-                    <LoaderCircle className="ml-1 inline-block h-3 w-3 animate-spin text-muted-foreground" />
+                    <span className="ml-1 inline-flex align-middle">
+                      <Spinner size="xxs" variant="muted" display="inline" />
+                    </span>
                   ) : (
                     1
                   )}

@@ -113,11 +113,11 @@ export function DataTableControls({ queryFilter, filterWithAI }: DataTableContro
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col overflow-auto border-t bg-background",
+        "bg-background flex h-full w-full flex-col overflow-auto border-t",
         "group-data-[expanded=false]/controls:hidden",
       )}
     >
-      <div className="sticky top-0 z-20 mb-1 flex h-10 shrink-0 items-center justify-between border-b bg-background px-3">
+      <div className="bg-background sticky top-0 z-20 mb-1 flex h-10 shrink-0 items-center justify-between border-b px-3">
         <span className="text-sm font-medium">Filters</span>
         <div className="flex items-center gap-1">
           {queryFilter.isFiltered && (
@@ -166,6 +166,7 @@ export function DataTableControls({ queryFilter, filterWithAI }: DataTableContro
                   expanded={filter.expanded}
                   options={filter.options}
                   counts={filter.counts}
+                  displayByValue={filter.displayByValue}
                   loading={filter.loading}
                   value={filter.value}
                   onChange={filter.onChange}
@@ -292,6 +293,7 @@ interface BaseFacetProps {
 interface CategoricalFacetProps extends BaseFacetProps {
   options: string[];
   counts: Map<string, number>;
+  displayByValue?: Map<string, string>;
   value: string[];
   onChange: (values: string[]) => void;
   onOnlyChange?: (value: string) => void;
@@ -345,10 +347,10 @@ const FilterAccordionTrigger = ({
   children,
   ...props
 }: React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>) => (
-  <AccordionPrimitive.Header className="sticky top-10 z-10 flex bg-background">
+  <AccordionPrimitive.Header className="bg-background sticky top-10 z-10 flex">
     <AccordionPrimitive.Trigger
       className={cn(
-        "flex flex-1 items-center justify-between font-medium hover:underline [&[data-state=open]>svg]:rotate-180",
+        "flex flex-1 items-center justify-between text-left font-medium hover:underline [&[data-state=open]>svg]:rotate-180",
         className,
       )}
       {...props}
@@ -365,7 +367,7 @@ const FilterAccordionContent = ({
   ...props
 }: React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>) => (
   <AccordionPrimitive.Content className="overflow-hidden text-sm" {...props}>
-    <div className={cn("pb-2 pt-1", className)}>{children}</div>
+    <div className={cn("pt-1 pb-2", className)}>{children}</div>
   </AccordionPrimitive.Content>
 );
 
@@ -411,7 +413,7 @@ export function FilterAccordionItem({
                   onReset();
                 }
               }}
-              className="inline-flex h-5 cursor-pointer items-center gap-1 rounded-full border bg-background px-2 text-xs hover:bg-accent hover:text-accent-foreground"
+              className="bg-background hover:bg-accent hover:text-accent-foreground inline-flex h-5 cursor-pointer items-center gap-1 rounded-full border px-2 text-xs"
               aria-label={`Clear ${label} filter`}
             >
               <span>Clear</span>
@@ -433,6 +435,7 @@ export function CategoricalFacet({
   loading,
   options,
   counts,
+  displayByValue,
   value,
   onChange,
   onOnlyChange,
@@ -473,9 +476,12 @@ export function CategoricalFacet({
   );
 
   const MAX_VISIBLE_OPTIONS = 12;
-  const hasMoreOptions = options.length > MAX_VISIBLE_OPTIONS;
+  const visibleOptionValues = Array.from(
+    new Set([...options, ...value.filter((option) => option.length > 0)]),
+  );
+  const hasMoreOptions = visibleOptionValues.length > MAX_VISIBLE_OPTIONS;
 
-  // Filter options by search query
+  // Filter options by search query (check both raw value and display label)
   const filteredOptions = searchQuery
     ? options.filter((option) => option.toLowerCase().includes(searchQuery.toLowerCase()))
     : options;
@@ -498,23 +504,26 @@ export function CategoricalFacet({
         {/* SELECT MODE: Checkboxes with optional counts */}
         {filterMode === "select" && (
           <div className="px-2">
-            {/* SOME/ALL Operator Toggle for arrayOptions filters
+            {/* SOME/ALL/NONE operator toggle for arrayOptions filters
 
                 This toggle appears for multi-valued array columns (arrayOptions) like tags.
-                It allows switching between OR and AND logic:
+                It allows switching between the supported array matching modes:
                 - SOME: Match items with ANY selected value (OR logic)
                 - ALL: Match items with ALL selected values (AND logic)
+                - NONE: Exclude items with ANY selected value
 
-                The toggle is automatically enabled by useSidebarFilterState for any
-                arrayOptions column when selections exist. Other filter types (stringOptions,
-                boolean, numeric) don't get this toggle as "ALL" wouldn't be semantically meaningful.
+                The toggle is shown whenever useSidebarFilterState exposes operator controls
+                for an arrayOptions column, including before any values are selected so users
+                can persist an operator preference first. Other filter types (stringOptions,
+                boolean, numeric) don't get this toggle because these array-specific modes
+                are not semantically meaningful there.
 
                 Currently enabled for:
                 - Traces: tags
                 - Sessions: userIds, tags
                 - Prompts: labels, tags
             */}
-            {onOperatorChange && value.length > 0 && (
+            {onOperatorChange && (
               <div className="mb-1.5 flex items-center gap-1.5 px-2">
                 <span className="text-[10px] text-muted-foreground/80">Match:</span>
                 <div className="inline-flex rounded border border-input/50 bg-background text-[10px]">
@@ -523,23 +532,35 @@ export function CategoricalFacet({
                     className={cn(
                       "rounded-l px-1.5 py-0.5 transition-colors",
                       operator === "any of" || !operator
-                        ? "bg-accent font-medium text-accent-foreground"
+                        ? "bg-accent text-accent-foreground font-medium"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     SOME
                   </button>
-                  <div className="w-px bg-border/50" />
+                  <div className="bg-border/50 w-px" />
                   <button
                     onClick={() => onOperatorChange("all of")}
                     className={cn(
-                      "rounded-r px-1.5 py-0.5 transition-colors",
+                      "px-1.5 py-0.5 transition-colors",
                       operator === "all of"
-                        ? "bg-accent font-medium text-accent-foreground"
+                        ? "bg-accent text-accent-foreground font-medium"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     ALL
+                  </button>
+                  <div className="bg-border/50 w-px" />
+                  <button
+                    onClick={() => onOperatorChange("none of")}
+                    className={cn(
+                      "rounded-r px-1.5 py-0.5 transition-colors",
+                      operator === "none of"
+                        ? "bg-accent text-accent-foreground font-medium"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    NONE
                   </button>
                 </div>
               </div>
@@ -568,7 +589,7 @@ export function CategoricalFacet({
                 {hasMoreOptions && (
                   <div className="mb-2 px-2">
                     <div className="relative">
-                      <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                      <Search className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />
                       <Input
                         placeholder="Filter values"
                         value={searchQuery}
@@ -718,7 +739,7 @@ export function NumericFacet({
     >
       <div className="px-4 py-2">
         {loading ? (
-          <div className="text-sm text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground text-sm">Loading...</div>
         ) : (
           <div className="grid gap-4">
             <div className="flex items-center gap-4">
@@ -828,7 +849,7 @@ export function StringFacet({
     >
       <div className="px-4">
         {loading ? (
-          <div className="text-sm text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground text-sm">Loading...</div>
         ) : (
           <Input
             type="text"
@@ -962,27 +983,27 @@ interface FilterModeTabsProps {
 
 function FilterModeTabs({ mode, onModeChange }: FilterModeTabsProps) {
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-1.5 px-4 @container">
-      <span className="text-[10px] text-muted-foreground/80">Mode:</span>
-      <div className="flex flex-1 flex-col rounded border border-input/50 bg-background text-[10px] @[7.5rem]:min-w-[140px] @[7.5rem]:flex-row">
+    <div className="@container mb-2 flex flex-wrap items-center gap-1.5 px-4">
+      <span className="text-muted-foreground/80 text-[10px]">Mode:</span>
+      <div className="border-input/50 bg-background flex flex-1 flex-col rounded border text-[10px] @[7.5rem]:min-w-[140px] @[7.5rem]:flex-row">
         <button
           onClick={() => onModeChange("select")}
           className={cn(
             "flex-1 rounded-t px-3 py-0.5 transition-colors @[7.5rem]:rounded-l @[7.5rem]:rounded-tr-none",
             mode === "select"
-              ? "bg-accent font-medium text-accent-foreground"
+              ? "bg-accent text-accent-foreground font-medium"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
           SELECT
         </button>
-        <div className="h-px bg-border/50 @[7.5rem]:h-auto @[7.5rem]:w-px" />
+        <div className="bg-border/50 h-px @[7.5rem]:h-auto @[7.5rem]:w-px" />
         <button
           onClick={() => onModeChange("text")}
           className={cn(
             "flex-1 rounded-b px-3 py-0.5 transition-colors @[7.5rem]:rounded-r @[7.5rem]:rounded-bl-none",
             mode === "text"
-              ? "bg-accent font-medium text-accent-foreground"
+              ? "bg-accent text-accent-foreground font-medium"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
@@ -1019,25 +1040,25 @@ function TextFilterSection({
     <div className="space-y-2">
       {/* Operator toggle */}
       <div className="flex items-center gap-1 px-2">
-        <div className="inline-flex rounded border border-input/50 bg-background text-[10px]">
+        <div className="border-input/50 bg-background inline-flex rounded border text-[10px]">
           <button
             onClick={() => setSelectedOperator("contains")}
             className={cn(
               "rounded-l px-2 py-0.5 transition-colors",
               selectedOperator === "contains"
-                ? "bg-accent font-medium text-accent-foreground"
+                ? "bg-accent text-accent-foreground font-medium"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
             contains
           </button>
-          <div className="w-px bg-border/50" />
+          <div className="bg-border/50 w-px" />
           <button
             onClick={() => setSelectedOperator("does not contain")}
             className={cn(
               "rounded-r px-2 py-0.5 transition-colors",
               selectedOperator === "does not contain"
-                ? "bg-accent font-medium text-accent-foreground"
+                ? "bg-accent text-accent-foreground font-medium"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -1077,9 +1098,9 @@ function TextFilterSection({
           {allFilters.map((f, idx) => (
             <div
               key={idx}
-              className="group/textfilter flex items-center gap-2 rounded border border-border/40 bg-muted/30 px-2 py-1 text-xs"
+              className="group/textfilter border-border/40 bg-muted/30 flex items-center gap-2 rounded border px-2 py-1 text-xs"
             >
-              <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+              <span className="text-muted-foreground shrink-0 text-[10px] font-medium">
                 {f.operator === "contains" ? "contains" : "does not contain"}
               </span>
               <span className="min-w-0 flex-1 truncate font-medium" title={f.value}>
@@ -1089,7 +1110,7 @@ function TextFilterSection({
                 size="sm"
                 variant="ghost"
                 onClick={() => onRemove?.(f.operator, f.value)}
-                className="h-4 w-4 shrink-0 p-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/textfilter:opacity-100"
+                className="text-muted-foreground hover:text-foreground h-4 w-4 shrink-0 p-0 opacity-0 transition-opacity group-hover/textfilter:opacity-100"
               >
                 ×
               </Button>
@@ -1132,7 +1153,7 @@ export function FilterValueCheckbox({
   return (
     <div className={cn("relative flex items-center px-2", disabled && "cursor-not-allowed opacity-50")}>
       {/* Checkbox hover area */}
-      <div className="group/checkbox flex items-center rounded-sm p-1 transition-colors hover:bg-accent">
+      <div className="group/checkbox hover:bg-accent flex items-center rounded-sm p-1 transition-colors">
         <Checkbox
           id={id}
           checked={checked}
@@ -1145,7 +1166,7 @@ export function FilterValueCheckbox({
       {/* Label hover area */}
       <div
         className={cn(
-          "group/label flex min-w-0 flex-1 cursor-pointer items-center rounded-sm px-1 py-1 transition-colors hover:bg-accent",
+          "group/label hover:bg-accent flex min-w-0 flex-1 cursor-pointer items-center rounded-sm px-1 py-1 transition-colors",
           disabled && "pointer-events-none",
         )}
         onClick={onLabelClick}
@@ -1163,7 +1184,7 @@ export function FilterValueCheckbox({
         )}
 
         {count > 0 ? (
-          <span className="ml-auto w-7 pl-1 text-right text-xs text-muted-foreground">
+          <span className="text-muted-foreground ml-auto w-7 pl-1 text-right text-xs">
             {compactNumberFormatter(count, 0)}
           </span>
         ) : null}
@@ -1175,7 +1196,7 @@ export function FilterValueCheckbox({
 export function DataTableControlsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium text-foreground">{title}</h3>
+      <h3 className="text-foreground text-sm font-medium">{title}</h3>
       <div>{children}</div>
     </div>
   );

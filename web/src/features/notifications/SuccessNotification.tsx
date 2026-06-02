@@ -27,7 +27,7 @@ export const SuccessNotification: React.FC<SuccessNotificationProps> = ({ title,
         )}
       </div>
       <button
-        className="flex h-6 w-6 cursor-pointer items-start justify-end border-none bg-transparent p-0 text-primary-foreground transition-colors duration-200"
+        className="text-primary-foreground flex h-6 w-6 cursor-pointer items-start justify-end border-none bg-transparent p-0 transition-colors duration-200"
         onClick={onDismiss}
         aria-label="Close"
       >

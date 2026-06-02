@@ -17,6 +17,42 @@ export function getSSOBlockedDomains() {
   );
 }
 
+/**
+ * Validates that a user is eligible to sign up with email/password.
+ * Returns an error message string if ineligible, or null if eligible.
+ */
+export async function validateSignupEligibility({
+  email,
+}: {
+  email: string;
+}): Promise<string | null> {
+  // Block if disabled by env
+  if (
+    env.NEXT_PUBLIC_SIGN_UP_DISABLED === "true" ||
+    env.AUTH_DISABLE_SIGNUP === "true"
+  ) {
+    return "Sign up is disabled.";
+  }
+  if (env.AUTH_DISABLE_USERNAME_PASSWORD === "true") {
+    return "Sign up with email and password is disabled for this instance. Please use SSO.";
+  }
+
+  // check if email domain is blocked from email/password sign up via env
+  const blockedDomains = getSSOBlockedDomains();
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (domain && blockedDomains.includes(domain)) {
+    return "Sign up with email and password is disabled for this domain. Please use SSO.";
+  }
+
+  // EE: check if custom SSO configuration is enabled for this domain
+  const multiTenantSsoProvider = await getSsoAuthProviderIdForDomain(domain);
+  if (multiTenantSsoProvider) {
+    return ENTERPRISE_SSO_REQUIRED_MESSAGE;
+  }
+
+  return null;
+}
+
 /*
  * Sign-up endpoint (email/password users), creates user in database.
  * SSO users are created by the NextAuth adapters.

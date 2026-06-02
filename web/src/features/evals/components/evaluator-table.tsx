@@ -36,7 +36,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/componen
 import { EvaluatorForm } from "@/src/features/evals/components/evaluator-form";
 import { useRouter } from "next/router";
 import { DeleteEvalConfigButton } from "@/src/components/deleteButton";
-import { RAGAS_TEMPLATE_PREFIX } from "@/src/features/evals/types";
 import { MaintainerTooltip } from "@/src/features/evals/components/maintainer-tooltip";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -78,26 +77,26 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
   const utils = api.useUtils();
 
   const [orderByState, setOrderByState] = useOrderByState({
-    column: "createdAt",
-    order: "DESC",
+    column: "status",
+    order: "ASC",
   });
 
   const newFilterOptions = {
-    status: ["ACTIVE", "INACTIVE"],
-    target: ["trace", "dataset"],
+    status: ["ACTIVE", "PAUSED", "INACTIVE"],
+    target: evalConfigTargetValues,
   };
 
   const queryFilter = useSidebarFilterState(evaluatorFilterConfig, newFilterOptions, projectId, false);
 
-  const evaluators = api.evals.allConfigs.useQuery({
-    page: paginationState.pageIndex,
-    limit: paginationState.pageSize,
-    projectId,
-    filter: queryFilter.filterState,
-    orderBy: orderByState,
-    searchQuery: searchQuery,
-  });
-  const totalCount = evaluators.data?.totalCount ?? null;
+  const { evaluators, rows, totalCount, hasLegacyEvals } =
+    useEvaluatorTableData({
+      projectId,
+      page: paginationState.pageIndex,
+      limit: paginationState.pageSize,
+      filter: queryFilter.filterState,
+      orderBy: orderByState,
+      searchQuery,
+    });
 
   const existingEvaluator = api.evals.configById.useQuery(
     {
@@ -154,6 +153,7 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
       header: "Status",
       id: "status",
       size: 80,
+      loadingCell: <TableBadgeLoadingCell />,
       cell: (row) => {
         const status = row.getValue();
         return <StatusBadge type={status.toLowerCase()} className={row.getValue() === "FINISHED" ? "pl-3" : ""} />;
@@ -166,7 +166,9 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
       cell: (row) => {
         const totalCost = row.getValue();
 
-        if (!costs.data) return <Skeleton className="h-4 w-16" />;
+        if (row.row.original.isCostLoading) {
+          return <Skeleton className="h-4 w-16" />;
+        }
 
         if (totalCost != null) return usdFormatter(totalCost, 2, 4);
 
@@ -179,13 +181,19 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
       size: 150,
       cell: (row) => {
         const result = row.getValue();
-        return <LevelCountsDisplay counts={result} />;
+        return (
+          <LevelCountsDisplay
+            counts={result}
+            isLoading={row.row.original.isResultLoading}
+          />
+        );
       },
     }),
     columnHelper.accessor("logs", {
       header: "Logs",
       id: "logs",
       size: 150,
+      loadingCell: <Skeleton className="h-6 w-16 rounded-md" />,
       cell: ({ row }) => {
         const id = row.original.id;
         return (
@@ -208,6 +216,12 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
       id: "template",
       header: "Referenced Evaluator",
       size: 200,
+      loadingCell: (
+        <div className="flex items-center gap-2">
+          <TableTextLoadingCell className="w-32" />
+          <TableBadgeLoadingCell className="w-6" />
+        </div>
+      ),
       cell: ({ row }) => {
         const template = row.original.template;
         if (!template) return "template not found";
@@ -279,6 +293,7 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
       header: "Actions",
       id: "actions",
       size: 100,
+      loadingCell: <TableIconButtonLoadingCell />,
       cell: ({ row }) => {
         const id = row.original.id;
         return (
@@ -435,13 +450,13 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
           if (!open) setEditConfigId(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-screen-xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-(--breakpoint-xl) overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit configuration</DialogTitle>
           </DialogHeader>
           {existingEvaluator.isLoading ? (
             <div className="flex items-center justify-center p-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
+              <Spinner size="lg" />
             </div>
           ) : (
             <EvaluatorForm
@@ -462,7 +477,7 @@ export default function EvaluatorTable({ projectId }: { projectId: string }) {
               mode="edit"
               onFormSuccess={() => {
                 setEditConfigId(null);
-                void utils.evals.allConfigs.invalidate();
+                utils.evals.allConfigs.invalidate();
                 showSuccessToast({
                   title: "Evaluator updated successfully",
                   description: "Changes will automatically be reflected future evaluator runs",

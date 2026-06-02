@@ -28,7 +28,7 @@ export function MatchedTierCard({ tier }: MatchedTierCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <CardTitle className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           Matched Pricing Tier
         </CardTitle>
       </CardHeader>

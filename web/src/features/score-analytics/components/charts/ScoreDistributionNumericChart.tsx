@@ -116,6 +116,7 @@ export function ScoreDistributionNumericChart({
           fontSize={12}
           tickLine={false}
           axisLine={false}
+          niceTicks="auto"
           tickFormatter={(value) => compactNumberFormatter(value)}
         />
         <ChartTooltip
@@ -130,7 +131,7 @@ export function ScoreDistributionNumericChart({
           <Bar dataKey="uv" fill={colors.score2} fillOpacity={hiddenKeys.has("uv") ? 0 : 1} radius={[4, 4, 0, 0]} />
         )}
 
-        <Legend
+        <ChartLegend
           content={
             <ScoreChartLegendContent
               interactive={isComparisonMode}

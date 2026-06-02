@@ -179,7 +179,7 @@ export const ModelParameters: React.FC<ModelParamsContext> = ({
     };
 
     return (
-      <div className="flex flex-col space-y-2 pb-1 pr-1 pt-2">
+      <div className="flex flex-col space-y-2 pt-2 pr-1 pb-1">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1 space-y-1">
             <Select disabled={formDisabled} onValueChange={handleCombinedSelection} value={currentCombinedValue}>
@@ -200,7 +200,7 @@ export const ModelParameters: React.FC<ModelParamsContext> = ({
               <FormDescription className="mt-1 text-xs">{modelParamsDescription}</FormDescription>
             ) : undefined}
           </div>
-          <div className="flex-shrink-0">{SettingsButton}</div>
+          <div className="shrink-0">{SettingsButton}</div>
         </div>
 
         {modelParams.model.value?.startsWith("o1-") ? (
@@ -447,7 +447,7 @@ const ProviderOptionsInput = ({
           </span>
           <Tooltip>
             <TooltipTrigger>
-              <InfoIcon className="size-3 text-muted-foreground" />
+              <InfoIcon className="text-muted-foreground size-3" />
             </TooltipTrigger>
             <TooltipContent className="max-w-[200px] p-2">
               Additional options to pass to the invocation. Please check your provider&apos;s API reference for

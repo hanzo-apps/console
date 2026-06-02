@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
@@ -6,6 +6,7 @@ import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/tr
 import { encrypt } from "@hanzo/shared/encryption";
 import { blobStorageIntegrationFormSchema } from "@/src/features/blobstorage-integration/types";
 import { TRPCError } from "@trpc/server";
+import { env } from "@/src/env.mjs";
 import {
   logger,
   BlobStorageIntegrationProcessingQueue,
@@ -49,7 +50,12 @@ export const blobStorageIntegrationRouter = createTRPCRouter({
   }),
 
   update: protectedProjectProcedure
-    .input(blobStorageIntegrationFormSchema.extend({ projectId: z.string() }))
+    .input(
+      blobStorageIntegrationFormSchemaBase
+        .extend({ projectId: z.string() })
+        .superRefine(validateAzureContainerName)
+        .superRefine(validateExportFieldGroups),
+    )
     .mutation(async ({ input, ctx }) => {
       try {
         throwIfNoProjectAccess({
@@ -57,6 +63,19 @@ export const blobStorageIntegrationRouter = createTRPCRouter({
           projectId: input.projectId,
           scope: "integrations:CRUD",
         });
+
+        if (input.exportSource) {
+          const project = await ctx.prisma.project.findUniqueOrThrow({
+            where: { id: input.projectId },
+            select: { createdAt: true },
+          });
+          assertLegacyBlobExportSourceAllowed({
+            project,
+            nextInternalExportSource: input.exportSource,
+            isCloud: Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION),
+          });
+        }
+
         await auditLog({
           session: ctx.session,
           action: "update",
@@ -158,6 +177,12 @@ export const blobStorageIntegrationRouter = createTRPCRouter({
       } catch (e) {
         if (e instanceof TRPCError) {
           throw e;
+        }
+        if (e instanceof InvalidRequestError) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: e.message,
+          });
         }
         logger.error(`Failed to update blob storage integration`, e);
         throw new TRPCError({

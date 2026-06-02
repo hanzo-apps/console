@@ -1,5 +1,7 @@
 import { prisma } from "@hanzo/console-core/src/db";
 import {
+  deleteMediaFiles,
+  findExpiredMediaByProjectId,
   getS3MediaStorageClient,
   logger,
   recordGauge,
@@ -182,16 +184,12 @@ export class MediaRetentionCleaner extends PeriodicExclusiveRunner {
       return;
     }
 
-    // Delete from S3 first
-    const mediaStorageClient = getS3MediaStorageClient(bucket);
-    await mediaStorageClient.deleteFiles(mediaFiles.map((f) => f.bucketPath));
-
-    // Delete from PostgreSQL (cascades to traceMedia/observationMedia)
-    await prisma.media.deleteMany({
-      where: {
-        id: { in: mediaFiles.map((f) => f.id) },
-        projectId: workload.projectId,
-      },
+    await deleteMediaFiles({
+      projectId: workload.projectId,
+      mediaFiles,
+      storageClient: getS3MediaStorageClient(
+        env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET!,
+      ),
     });
 
     // Record successful deletion metrics

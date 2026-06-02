@@ -18,7 +18,7 @@ const TagItemCreate = ({ inputValue, options, onSelect }: TagItemCreateProps) =>
     <CommandItem
       key={inputValue}
       value={inputValue.trim()}
-      className="flex min-h-8 cursor-pointer items-center rounded-sm px-3 py-1 text-sm text-muted-foreground hover:bg-secondary/80"
+      className="text-muted-foreground hover:bg-secondary/80 flex min-h-8 cursor-pointer items-center rounded-sm px-3 py-1 text-sm"
       onSelect={onSelect}
     >
       Create new tag: &quot;{inputValue.trim()}&quot;

@@ -1,9 +1,11 @@
 import { type HanzoColumnDef } from "@/src/components/table/types";
 import { type FilterState, type ColumnDefinition, type OrderByState } from "@hanzo/shared";
 import { normalizeFilterColumnNames } from "@/src/features/filters/lib/filter-transform";
+import type { FilterStateMigration } from "@/src/features/filters/lib/filter-config";
 
 /**
- * Validates if an orderBy state references valid columns
+ * Validates if an orderBy state references valid columns.
+ * Normalizes legacy column IDs (e.g. "name" → "traceName") via aliases.
  */
 export function validateOrderBy(
   orderBy: OrderByState | null,

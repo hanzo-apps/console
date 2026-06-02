@@ -37,7 +37,7 @@ export async function createUserEmailPassword(email: string, password: string, n
     },
   });
 
-  await createProjectMembershipsOnSignup(newUser);
+  await createProjectMembershipsOnSignup(newUser, { userWasJustCreated: true });
 
   return newUser.id;
 }

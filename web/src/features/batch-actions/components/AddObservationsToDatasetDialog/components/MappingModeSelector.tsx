@@ -18,7 +18,7 @@ export function MappingModeSelector({ value, onChange, fullLabel, fieldName }: M
           {fullLabel}
         </Label>
       </div>
-      <div className="flex items-center space-x-3 rounded-md border px-3 hover:bg-muted/50">
+      <div className="hover:bg-muted/50 flex items-center space-x-3 rounded-md border px-3">
         <RadioGroupItem value="custom" id={`${fieldName}-custom`} />
         <Label htmlFor={`${fieldName}-custom`} className="flex-1 cursor-pointer py-3 text-sm font-medium">
           Custom mapping

@@ -65,12 +65,12 @@ function BaselineToggle({ runId }: { runId: string }) {
   const handleClick = () => {
     if (isBaseline) {
       const { baseline, ...restQuery } = router.query;
-      void router.push({
+      router.push({
         pathname: router.pathname,
         query: restQuery,
       });
     } else {
-      void router.push({
+      router.push({
         pathname: router.pathname,
         query: { ...router.query, baseline: runId },
       });
@@ -98,7 +98,7 @@ function BaselineToggle({ runId }: { runId: string }) {
   return (
     <Toggle
       className={cn(
-        "p-1 text-muted-foreground/50 hover:bg-background hover:text-primary-accent data-[state=on]:bg-transparent data-[state=on]:text-current",
+        "text-muted-foreground/50 hover:bg-background hover:text-primary-accent p-1 data-[state=on]:bg-transparent data-[state=on]:text-current",
         isBaseline && "text-primary-accent",
       )}
       onClick={handleClick}
@@ -135,7 +135,7 @@ function RunAggregateHeader({
       <span className="flex-1 truncate" title={runName}>
         {runName}
       </span>
-      <div className="flex w-fit flex-shrink-0 gap-1">
+      <div className="flex w-fit shrink-0 gap-1">
         <PopoverFilterBuilder
           buttonType="icon"
           columns={columns}
@@ -222,7 +222,7 @@ export const constructDatasetRunAggregateColumns = ({
 
 export const getDatasetRunAggregateColumnProps = (isLoading: boolean) => ({
   accessorKey: "runs",
-  header: "Runs",
+  header: "Experiments",
   id: "runs",
   isFixedPosition: true,
   cell: () => {

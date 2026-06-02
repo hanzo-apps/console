@@ -1,18 +1,16 @@
 import { randomUUID } from "crypto";
-import { sql } from "kysely";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
+  EvalTemplateType,
   JobConfigState,
   JobExecutionStatus,
   type JobExecution,
   type JobConfiguration,
-  type EvalTemplate,
 } from "@prisma/client";
 import {
   QueueJobs,
   QueueName,
   EvalExecutionEvent,
-  traceException,
   logger,
   EvalExecutionQueue,
   checkTraceExistsAndGetTimestamp,
@@ -36,6 +34,7 @@ import {
 import { mapTraceFilterColumn, requiresDatabaseLookup } from "./traceFilterUtils";
 import {
   Prisma,
+  compilePersistedEvalOutputDefinition,
   singleFilter,
   variableMappingList,
   evalDatasetFormFilterCols,
@@ -45,20 +44,16 @@ import {
   variableMapping,
   TraceDomain,
   Observation,
-  DatasetItem,
   EvalTargetObject,
 } from "@hanzo/console-core";
 import { kyselyPrisma, prisma } from "@hanzo/console-core/src/db";
 import { createW3CTraceId } from "../utils";
-import { JSONPath } from "jsonpath-plus";
 import { UnrecoverableError } from "../../errors/UnrecoverableError";
 import { ObservationNotFoundError } from "../../errors/ObservationNotFoundError";
 import {
   compileEvalPrompt,
-  buildEvalScoreSchema,
-  buildExecutionMetadata,
   buildEvalMessages,
-  buildScoreEvent,
+  buildEvalExecutionMetadata,
   getEnvironmentFromVariables,
   evalTemplateOutputSchema,
   validateLLMResponse,
@@ -245,6 +240,7 @@ export const createEvalJobs = async ({
               : new Date(jobTimestamp),
         datastoreFeatureTag: "eval-create",
         excludeInputOutput: true,
+        excludeMetadata: false, // Metadata needed for in-memory filter evaluation
       });
 
       recordIncrement("hanzo.evaluation-execution.trace_cache_fetch", 1, {
@@ -318,9 +314,9 @@ export const createEvalJobs = async ({
   const findMatchingJob = (configId: string, datasetItemId: string | null, observationId: string | null) => {
     return allExistingJobs.find(
       (job) =>
-        job.job_configuration_id === configId &&
-        job.job_input_dataset_item_id === datasetItemId &&
-        job.job_input_observation_id === observationId,
+        job.jobConfigurationId === configId &&
+        job.jobInputDatasetItemId === datasetItemId &&
+        job.jobInputObservationId === observationId,
     );
   };
 
@@ -328,6 +324,25 @@ export const createEvalJobs = async ({
     if (config.status === JobConfigState.INACTIVE) {
       logger.debug(`Skipping inactive config ${config.id}`);
       continue;
+    }
+
+    // Self-hosted only: Skip trace-level evaluators with invalid filters.
+    // A bug (ff4b03c0b, Feb 2026) allowed score filters on trace evaluators, which the worker doesn't support.
+    // Cloud deployments are fixed; self-hosters need this runtime check.
+    if (
+      !env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION &&
+      config.targetObject === EvalTargetObject.TRACE
+    ) {
+      const filterValidation = validateEvaluatorFiltersForTarget({
+        targetObject: EvalTargetObject.TRACE,
+        filter: config.filter,
+      });
+      if (!filterValidation.isValid) {
+        logger.debug(
+          `Skipping trace evaluator ${config.id} with invalid filters: ${filterValidation.issues[0]?.message}`,
+        );
+        continue;
+      }
     }
 
     logger.debug("Creating eval job for config", config.id);
@@ -511,7 +526,7 @@ export const createEvalJobs = async ({
 
       // apply sampling. Only if the job is sampled, we create a job
       // user supplies a number between 0 and 1, which is the probability of sampling
-      if (parseFloat(config.sampling) !== 1) {
+      if (Number(config.sampling) !== 1) {
         const random = Math.random();
         if (random > parseFloat(config.sampling)) {
           logger.debug(`Eval job for config ${config.id} and trace ${event.traceId} was sampled out`);
@@ -528,7 +543,7 @@ export const createEvalJobs = async ({
           jobConfigurationId: config.id,
           jobInputTraceId: event.traceId,
           jobInputTraceTimestamp: traceTimestamp,
-          jobTemplateId: config.eval_template_id,
+          jobTemplateId: config.evalTemplateId,
           status: "PENDING",
           startTime: new Date(),
           ...(datasetItem
@@ -544,7 +559,8 @@ export const createEvalJobs = async ({
       });
 
       // add the job to the next queue so that eval can be executed
-      await EvalExecutionQueue.getInstance()?.add(
+      const shardingKey = `${event.projectId}-${jobExecutionId}`;
+      await EvalExecutionQueue.getInstance({ shardingKey })?.add(
         QueueName.EvaluationExecution,
         {
           name: QueueJobs.EvaluationExecution,
@@ -602,8 +618,7 @@ export const createEvalJobs = async ({
  * It handles:
  * - Compiling the prompt with extracted variables
  * - Calling the LLM with structured output
- * - Persisting the score to S3 and queueing for ingestion
- * - Updating job execution status
+ * - Returning the validated eval output and completion metadata
  *
  * Note: Callers are responsible for:
  * - Fetching and validating job, config, and template
@@ -616,23 +631,24 @@ export const createEvalJobs = async ({
  * @param params.config - Pre-fetched job configuration
  * @param params.template - Pre-fetched eval template
  * @param params.extractedVariables - Pre-extracted variables from trace/observation data
+ * @param params.executionMetadata - Metadata identifying this eval execution
  * @param params.deps - Optional dependency injection for testing (defaults to production deps)
  */
-export async function executeLLMAsJudgeEvaluation({
+export async function runLLMAsJudgeEvaluation({
   projectId,
   jobExecutionId,
   job,
   config,
   template,
   extractedVariables,
-  environment,
-  deps = createProductionEvalExecutionDeps(),
+  executionMetadata,
+  deps,
 }: {
   projectId: string;
   jobExecutionId: string;
   job: JobExecution;
   config: JobConfiguration;
-  template: EvalTemplate;
+  template: EvalTemplateLlmAsAJudge;
   extractedVariables: ExtractedVariable[];
   environment: string;
   deps?: EvalExecutionDeps;
@@ -796,6 +812,77 @@ export async function executeLLMAsJudgeEvaluation({
   });
 }
 
+function toNormalizedScores(params: {
+  outputResult: EvalOutputResult;
+  scoreName: string;
+}): CodeEvalScoreWithName[] {
+  const { outputResult, scoreName } = params;
+  const baseFields = {
+    name: scoreName,
+    comment: outputResult.reasoning,
+  };
+
+  if (outputResult.dataType === ScoreDataTypeEnum.NUMERIC) {
+    return [
+      {
+        ...baseFields,
+        dataType: ScoreDataTypeEnum.NUMERIC,
+        value: outputResult.score,
+      },
+    ];
+  }
+
+  if (outputResult.dataType === ScoreDataTypeEnum.BOOLEAN) {
+    return [
+      {
+        ...baseFields,
+        dataType: ScoreDataTypeEnum.BOOLEAN,
+        value: outputResult.score ? 1 : 0,
+      },
+    ];
+  }
+
+  return outputResult.matches.map((value) => ({
+    ...baseFields,
+    dataType: ScoreDataTypeEnum.CATEGORICAL,
+    value,
+  }));
+}
+
+export async function executeLLMAsJudgeEvaluation(
+  params: Omit<
+    Parameters<typeof runLLMAsJudgeEvaluation>[0],
+    "deps" | "executionMetadata"
+  > & {
+    environment: string;
+    deps?: EvalExecutionDeps;
+  },
+): Promise<void> {
+  const deps = params.deps ?? createProductionEvalExecutionDeps();
+  const executionMetadata = buildEvalExecutionMetadata({
+    jobExecutionId: params.jobExecutionId,
+    jobConfigurationId: params.job.jobConfigurationId,
+    targetTraceId: params.job.jobInputTraceId,
+    targetObservationId: params.job.jobInputObservationId,
+    targetDatasetItemId: params.job.jobInputDatasetItemId,
+  });
+  const result = await runLLMAsJudgeEvaluation({
+    ...params,
+    deps,
+    executionMetadata,
+  });
+
+  await completeEvalExecution({
+    projectId: params.projectId,
+    jobExecutionId: params.jobExecutionId,
+    traceId: params.job.jobInputTraceId,
+    observationId: params.job.jobInputObservationId,
+    environment: params.environment,
+    deps,
+    result,
+  });
+}
+
 /**
  * Evaluates a trace-level job by extracting variables from tracing data
  * and calling the shared LLM-as-a-judge execution.
@@ -839,10 +926,28 @@ export const evaluate = async ({ event }: { event: z.infer<typeof EvalExecutionE
     throw new UnrecoverableError(`Job configuration or template not found for job ${job.id}`);
   }
 
+  if (!isJobConfigExecutable(config)) {
+    logger.debug(
+      `Skipping non-executable config ${config.id} for job ${job.id}`,
+    );
+    await prisma.jobExecution.update({
+      where: {
+        id: job.id,
+        projectId: event.projectId,
+      },
+      data: {
+        status: JobExecutionStatus.CANCELLED,
+        endTime: new Date(),
+      },
+    });
+    return;
+  }
+
   // Fetch template to get variable names
   const template = await prisma.evalTemplate.findFirst({
     where: {
       id: config.evalTemplateId,
+      type: EvalTemplateType.LLM_AS_JUDGE,
       OR: [{ projectId: event.projectId }, { projectId: null }],
     },
   });
@@ -872,7 +977,7 @@ export const evaluate = async ({ event }: { event: z.infer<typeof EvalExecutionE
     jobExecutionId: event.jobExecutionId,
     job,
     config,
-    template,
+    template: template as EvalTemplateLlmAsAJudge,
     extractedVariables,
     environment: getEnvironmentFromVariables(extractedVariables) ?? DEFAULT_TRACE_ENVIRONMENT,
   });
@@ -895,13 +1000,13 @@ export async function extractVariablesFromTracingData({
   traceTimestamp?: Date;
   datasetItemId?: string;
   datasetItemValidFrom?: Date;
-}): Promise<{ var: string; value: string; environment?: string }[]> {
+}): Promise<ExtractedVariable[]> {
   // Internal cache for this function call to avoid duplicate database lookups.
   // We do not cache dataset items as Postgres is cheaper than Datastore.
   const traceCache = new Map<string, TraceDomain | null>();
   const observationCache = new Map<string, Observation | null>();
 
-  const results: { var: string; value: string; environment?: string }[] = [];
+  const results: ExtractedVariable[] = [];
 
   // We run through this list sequentially to make use of caching.
   // The performance improvement by parallel execution should be less than the improvement we gain by caching.
@@ -960,7 +1065,7 @@ export async function extractVariablesFromTracingData({
 
       results.push({
         var: variable,
-        value: parseDatabaseRowToString(datasetItem, mapping),
+        value: parseDatabaseRowValue(datasetItem, mapping),
       });
       continue;
     }
@@ -1003,7 +1108,7 @@ export async function extractVariablesFromTracingData({
 
       results.push({
         var: variable,
-        value: parseDatabaseRowToString(trace, mapping),
+        value: parseDatabaseRowValue(trace, mapping),
         environment: trace.environment,
       });
       continue;
@@ -1057,7 +1162,7 @@ export async function extractVariablesFromTracingData({
 
       results.push({
         var: variable,
-        value: parseDatabaseRowToString(observation, mapping),
+        value: parseDatabaseRowValue(observation, mapping),
         environment: observation.environment,
       });
       continue;
@@ -1069,12 +1174,20 @@ export async function extractVariablesFromTracingData({
   return results;
 }
 
-export const parseDatabaseRowToString = (
-  dbRow: Record<string, unknown>,
+const snakeToCamel = (s: string) =>
+  s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 
+// Returns the typed value extracted from a database row. LLM-as-judge
+// stringifies at template-substitution time via `compileEvalPrompt`; code-
+// based evaluators consume the typed value directly.
+export const parseDatabaseRowValue = (
+  dbRow: Record<string, unknown>,
   mapping: z.infer<typeof variableMapping>,
-): string => {
-  const selectedColumn = dbRow[mapping.selectedColumnId];
+): unknown => {
+  // Prisma returns camelCase keys, but selectedColumnId may be snake_case
+  const selectedColumn =
+    dbRow[mapping.selectedColumnId] ??
+    dbRow[snakeToCamel(mapping.selectedColumnId)];
 
   let jsonSelectedColumn;
 
@@ -1102,7 +1215,20 @@ export const parseDatabaseRowToString = (
     jsonSelectedColumn = selectedColumn;
   }
 
-  return parseUnknownToString(jsonSelectedColumn);
+  const { value, error } = extractValueFromObject(
+    { [mapping.selectedColumnId]: selectedColumn },
+    mapping.selectedColumnId,
+    mapping.jsonSelector ?? undefined,
+  );
+
+  if (error) {
+    logger.error(
+      `Error parsing JSON for json selector ${mapping.jsonSelector}. Falling back to original value.`,
+      error,
+    );
+  }
+
+  return value;
 };
 
 export const parseUnknownToString = (value: unknown): string => {

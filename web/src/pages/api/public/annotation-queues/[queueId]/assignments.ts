@@ -75,7 +75,11 @@ export default withMiddlewares({
         userId: userId,
         projectId: auth.scope.projectId,
         queueId: query.queueId,
-      };
+        input: body,
+        auditScope: auth.scope,
+      });
+
+      return assignment;
     },
   }),
 
@@ -85,14 +89,11 @@ export default withMiddlewares({
     bodySchema: DeleteAnnotationQueueAssignmentBody,
     responseSchema: DeleteAnnotationQueueAssignmentResponse,
     fn: async ({ query, body, auth }) => {
-      const { userId } = body;
-
-      // Verify the annotation queue exists and belongs to the project
-      const queue = await prisma.annotationQueue.findUnique({
-        where: {
-          id: query.queueId,
-          projectId: auth.scope.projectId,
-        },
+      const result = await deleteAnnotationQueueAssignmentForApi({
+        projectId: auth.scope.projectId,
+        queueId: query.queueId,
+        input: body,
+        auditScope: auth.scope,
       });
 
       if (!queue) {

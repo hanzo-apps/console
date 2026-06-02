@@ -7,7 +7,7 @@ import {
   type FilterState,
   type ColumnDefinition,
   type OrderByState,
-  type TableViewPresetDomain,
+  type TableViewPresetState,
   type TableViewPresetTableName,
   type TracingSearchType,
 } from "@hanzo/shared";
@@ -22,13 +22,19 @@ import { type TimeRange, TABLE_AGGREGATION_OPTIONS } from "@/src/utils/date-rang
 import { DataTableSelectAllBanner } from "@/src/components/table/data-table-multi-select-actions/data-table-select-all-banner";
 import { cn } from "@/src/utils/tailwind";
 import DocPopup from "@/src/components/layouts/doc-popup";
-import { TableViewPresetsDrawer } from "@/src/components/table/table-view-presets/components/data-table-view-presets-drawer";
+import {
+  TableViewPresetsDrawer,
+  type SystemFilterPreset,
+} from "@/src/components/table/table-view-presets/components/data-table-view-presets-drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/src/components/ui/dropdown-menu";
 import { useDataTableControls } from "@/src/components/table/data-table-controls";
 import { MultiSelect as MultiSelectFilter } from "@/src/features/filters/components/multi-select";
@@ -56,10 +62,15 @@ interface SearchConfig {
     fullText: string;
   };
   hidePerformanceWarning?: boolean;
+  availableSearchTypes?: {
+    content: boolean;
+    input: boolean;
+    output: boolean;
+  };
 }
 
 interface TableViewControllers {
-  applyViewState: (viewData: TableViewPresetDomain) => void;
+  applyViewState: (viewData: TableViewPresetState) => void;
   selectedViewId: string | null;
   handleSetViewId: (viewId: string | null) => void;
 }
@@ -68,6 +79,7 @@ interface TableViewConfig {
   tableName: TableViewPresetTableName;
   projectId: string;
   controllers: TableViewControllers;
+  systemFilterPresets?: SystemFilterPreset[];
 }
 
 interface RefreshConfig {
@@ -107,6 +119,44 @@ interface DataTableToolbarProps<TData, TValue> {
   viewModeToggle?: React.ReactNode;
 }
 
+// Helper function to get the description for DocPopup
+function getSearchDescription(
+  searchType: TracingSearchType[] | undefined,
+  metadataFields: string[] | undefined,
+  hidePerformanceWarning: boolean | undefined,
+  tableAllowsFullTextSearch: boolean | undefined,
+): React.ReactNode {
+  const fields = metadataFields?.join(", ") ?? "";
+  const performanceWarning = !hidePerformanceWarning
+    ? " For improved performance, please filter the table down."
+    : "";
+
+  if (tableAllowsFullTextSearch && searchType?.includes("content")) {
+    return (
+      <p className="text-primary text-xs font-normal">
+        Searches in Input/Output and {fields}.{performanceWarning}
+      </p>
+    );
+  }
+  if (tableAllowsFullTextSearch && searchType?.includes("input")) {
+    return (
+      <p className="text-primary text-xs font-normal">
+        Searches in Input and {fields}.{performanceWarning}
+      </p>
+    );
+  }
+  if (tableAllowsFullTextSearch && searchType?.includes("output")) {
+    return (
+      <p className="text-primary text-xs font-normal">
+        Searches in Output and {fields}.{performanceWarning}
+      </p>
+    );
+  }
+  return (
+    <p className="text-primary text-xs font-normal">Searches in {fields}.</p>
+  );
+}
+
 export function DataTableToolbar<TData, TValue>({
   columns,
   filterColumnDefinition,
@@ -141,7 +191,7 @@ export function DataTableToolbar<TData, TValue>({
   const hasNewSidebar = !filterColumnDefinition && filterState !== undefined;
   return (
     <div className={cn("grid h-fit w-full gap-0 px-2", className)}>
-      <div className="my-2 flex flex-wrap items-center gap-2 @container">
+      <div className="@container my-2 flex flex-wrap items-center gap-2">
         {hasNewSidebar && (
           <Button
             variant="outline"
@@ -160,7 +210,7 @@ export function DataTableToolbar<TData, TValue>({
         )}
         {viewModeToggle}
         {searchConfig && (
-          <div className="flex max-w-[30rem] flex-shrink-0 items-stretch md:min-w-[24rem]">
+          <div className="flex max-w-120 shrink-0 items-stretch md:min-w-96">
             <div
               className={cn(
                 "flex h-8 flex-1 items-center border border-input bg-background pl-2",
@@ -173,7 +223,7 @@ export function DataTableToolbar<TData, TValue>({
                 className="mr-1"
                 onClick={() => {
                   capture("table:search_submit");
-                  searchConfig.updateQuery(searchString);
+                  submitSearch(searchString);
                 }}
               >
                 <Search className="h-4 w-4" />
@@ -191,25 +241,25 @@ export function DataTableToolbar<TData, TValue>({
                   setSearchString(newValue);
                   // If user cleared the search, update URL immediately
                   if (newValue === "") {
-                    searchConfig.updateQuery("");
+                    submitSearch("");
                   }
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     capture("table:search_submit");
-                    searchConfig.updateQuery(searchString);
+                    submitSearch(searchString);
                   }
                 }}
-                className="w-full border-none bg-transparent px-0 py-2 text-sm focus-visible:outline-none focus-visible:ring-0"
+                className="w-full border-none bg-transparent px-0 py-2 text-sm focus-visible:ring-0 focus-visible:outline-hidden"
               />
             </div>
-            {searchConfig.setSearchType && (
+            {showSearchTypeSelector && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="default"
-                    className="w-30 flex items-center justify-between gap-1 rounded-l-none border-l-0"
+                    className="flex w-30 items-center justify-between gap-1 rounded-l-none border-l-0"
                   >
                     <span className="flex items-center gap-1 truncate">
                       {searchConfig.tableAllowsFullTextSearch && (searchConfig.searchType ?? []).includes("content")
@@ -299,18 +349,6 @@ export function DataTableToolbar<TData, TValue>({
         )}
 
         <div className="flex flex-row flex-wrap gap-2 pr-0.5 @6xl:ml-auto">
-          {!!columnVisibility && !!columnOrder && !!viewConfig && (
-            <TableViewPresetsDrawer
-              viewConfig={viewConfig}
-              currentState={{
-                orderBy: orderByState ?? null,
-                filters: filterState ?? [],
-                columnOrder,
-                columnVisibility,
-                searchQuery: searchString,
-              }}
-            />
-          )}
           {!!columnVisibility && !!setColumnVisibility && (
             <DataTableColumnVisibilityFilter
               columns={columns}

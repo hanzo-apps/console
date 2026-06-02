@@ -42,10 +42,10 @@ export const BillingUsageChart = () => {
       <Card className="p-3">
         {usage.data !== undefined ? (
           <>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {usage.data.billingPeriod
-                ? `${usageType} in current billing period (updated about once every 60 minutes)`
-                : `${usageType} / last 30d`}
+                ? `Consumed ${usageType} in current billing period (updated about once every 60 minutes)`
+                : `Consumed ${usageType} / last 30d`}
             </p>
             <div className="text-3xl font-bold">{numberFormatter(usage.data.usageCount, 0)}</div>
             {plan === "cloud:hobby" && (

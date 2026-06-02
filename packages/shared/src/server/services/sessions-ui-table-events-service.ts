@@ -83,6 +83,7 @@ export const getSessionTracesFromEvents = async (props: { projectId: string; ses
         query,
         params: input.params,
         tags: input.tags,
+        preferredClickhouseService: "EventsReadOnly",
       });
     },
   });

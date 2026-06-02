@@ -30,10 +30,12 @@ export class LLMAsJudgeExecutionQueue {
         })
       : null;
 
-    LLMAsJudgeExecutionQueue.instance?.on("error", (err) => {
-      logger.error("LLMAsJudgeExecutionQueue error", err);
+    queueInstance?.on("error", (err) => {
+      logger.error(`LLMAsJudgeExecutionQueue shard ${shardIndex} error`, err);
     });
 
-    return LLMAsJudgeExecutionQueue.instance;
+    LLMAsJudgeExecutionQueue.instances.set(shardIndex, queueInstance);
+
+    return queueInstance;
   }
 }

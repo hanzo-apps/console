@@ -46,7 +46,7 @@ export const LatencyTables = ({
     orderBy: [{ field: "p95_latency", direction: "desc" }],
   };
 
-  const generationsLatencies = api.dashboard.executeQuery.useQuery(
+  const generationsLatencies = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: generationsLatenciesQuery,
@@ -57,13 +57,14 @@ export const LatencyTables = ({
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:latency-tables"}:generations`,
       enabled: !isLoading,
     },
   );
 
-  const spansLatenciesQuery: QueryType = {
+  const observationsLatenciesQuery: QueryType = {
     view: "observations",
-    dimensions: [{ field: "name" }],
+    dimensions: [{ field: "type" }, { field: "name" }],
     metrics: [
       { measure: "latency", aggregation: "p50" },
       { measure: "latency", aggregation: "p90" },
@@ -74,9 +75,9 @@ export const LatencyTables = ({
       ...mapLegacyUiTableFilterToView("observations", globalFilterState),
       {
         column: "type",
-        operator: "=",
-        value: "SPAN",
-        type: "string",
+        operator: "none of",
+        value: [ObservationType.GENERATION],
+        type: "stringOptions",
       },
     ],
     timeDimension: null,
@@ -85,7 +86,7 @@ export const LatencyTables = ({
     orderBy: [{ field: "p95_latency", direction: "desc" }],
   };
 
-  const spansLatencies = api.dashboard.executeQuery.useQuery(
+  const observationsLatencies = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: spansLatenciesQuery,
@@ -96,6 +97,7 @@ export const LatencyTables = ({
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:latency-tables"}:observations`,
       enabled: !isLoading,
     },
   );
@@ -116,7 +118,7 @@ export const LatencyTables = ({
     orderBy: [{ field: "p95_latency", direction: "desc" }],
   };
 
-  const tracesLatencies = api.dashboard.executeQuery.useQuery(
+  const tracesLatencies = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: tracesLatenciesQuery,
@@ -127,6 +129,7 @@ export const LatencyTables = ({
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:latency-tables"}:traces`,
       enabled: !isLoading,
     },
   );
@@ -199,12 +202,12 @@ export const LatencyTables = ({
       </DashboardCard>
       <DashboardCard
         className="col-span-1 xl:col-span-2"
-        title="Span latency percentiles"
-        isLoading={isLoading || spansLatencies.isPending}
+        title="Observation latency percentiles"
+        isLoading={isLoading || observationsLatencies.isPending}
       >
         <DashboardTable
           headers={[
-            "Span Name",
+            "Observation",
             <RightAlignedCell key="p50">p50</RightAlignedCell>,
             <RightAlignedCell key="p90">p90</RightAlignedCell>,
             <RightAlignedCell key="p95">
@@ -212,8 +215,8 @@ export const LatencyTables = ({
             </RightAlignedCell>,
             <RightAlignedCell key="p99">p99</RightAlignedCell>,
           ]}
-          rows={generateLatencyData(spansLatencies.data)}
-          isLoading={isLoading || spansLatencies.isPending}
+          rows={generateLatencyData(observationsLatencies.data)}
+          isLoading={isLoading || observationsLatencies.isPending}
           collapse={{ collapsed: 5, expanded: 20 }}
         />
       </DashboardCard>

@@ -79,7 +79,7 @@ export function SelectWidgetDialog({
             ) : widgets.isError ? (
               <div className="py-8 text-center text-destructive">Error: {widgets.error.message}</div>
             ) : widgets.data?.widgets.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
+              <div className="text-muted-foreground py-8 text-center">
                 No widgets found. Create a new widget to get started.
               </div>
             ) : (

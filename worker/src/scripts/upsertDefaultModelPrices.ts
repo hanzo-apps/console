@@ -28,9 +28,7 @@ export const DefaultModelPriceSchema = z
     const tierValidation = validatePricingTiers(data.pricingTiers);
 
     if (!tierValidation.valid) {
-      ctx.addIssue({
-        message: tierValidation.error,
-      });
+      ctx.addIssue(tierValidation.error);
     }
 
     const defaultTiers = data.pricingTiers.filter((t) => t.isDefault);

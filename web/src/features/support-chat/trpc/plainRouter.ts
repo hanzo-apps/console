@@ -5,10 +5,21 @@ import { z } from "zod";
 import { env } from "@/src/env.mjs";
 import { VERSION } from "@/src/constants";
 import { nanoid } from "nanoid";
+import { logger } from "@langfuse/shared/src/server";
 
 import { MessageTypeSchema, SeveritySchema, TopicSchema, TopicGroups } from "../formConstants";
 
 import { buildPlainEventSupportRequestMetadataComponents } from "../plain/events/supportRequestMetadataEvent";
+import {
+  createPylonIssue,
+  buildPylonIssueBodyHtml,
+  buildPylonMetadataString,
+  mapSeverityToPylonPriority,
+  updatePylonAccountCustomFields,
+  mapPlanToPylonCustomerTier,
+  mapToPylonCaseSeverity,
+  mapMessageTypeToPylonQuestionType,
+} from "../pylon/pylonClient";
 
 import {
   initPlain,
@@ -16,7 +27,6 @@ import {
   createAttachmentUploadUrls,
   createThread as plainCreateSupportThread,
   createThreadEvent,
-  replyToThread,
   generateTenantExternalId,
   syncTenantsAndTiers,
   syncCustomerTenantMemberships,
@@ -33,13 +43,15 @@ const CreateSupportThreadInput = z.object({
   severity: SeveritySchema,
   topic: TopicSchema,
   message: z.string().trim().min(1),
-  url: z.string().url().optional(),
+  url: z.url().optional(),
   organizationId: z.string().optional(),
   projectId: z.string().optional(),
-  browserMetadata: z.record(z.any()).optional(),
+  browserMetadata: z.record(z.string(), z.any()).optional(),
   integrationType: z.string().optional(),
-  /** IDs of attachments already uploaded via prepareAttachmentUploads */
+  /** IDs of attachments already uploaded via prepareAttachmentUploads (Plain) */
   attachmentIds: z.array(z.string()).optional(),
+  /** URLs of attachments already uploaded to Pylon */
+  pylonAttachmentUrls: z.array(z.url()).optional(),
 });
 
 const PrepareAttachmentUploadsInput = z.object({

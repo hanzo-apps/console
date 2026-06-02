@@ -95,7 +95,7 @@ function CellWithData({ cell, color, onHover, onClick, renderTooltip, cellClassN
       type="button"
       className={cn(
         sharedClassName,
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "focus-visible:ring-ring focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2",
       )}
       style={sharedStyle}
       onMouseEnter={handleMouseEnter}

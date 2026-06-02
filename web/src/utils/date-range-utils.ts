@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { addMinutes, format } from "date-fns";
 import { type DateTrunc } from "@hanzo/console-core/src/server";
 

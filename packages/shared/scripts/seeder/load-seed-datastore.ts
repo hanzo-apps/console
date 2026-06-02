@@ -50,7 +50,7 @@ const prepareProjectsAndApiKeys = async (numOfProjects: number, opts: { required
         data: {
           id: apiKeyId,
           note: `API Key for ${projectId}`,
-          publicKey: `pk-${Math.random().toString(36).substr(2, 9)}`,
+          publicKey: `pk-${Math.random().toString(36).slice(2, 11)}`,
           hashedSecretKey: sk,
           displaySecretKey: getDisplaySecretKey(sk),
           scope: "PROJECT",

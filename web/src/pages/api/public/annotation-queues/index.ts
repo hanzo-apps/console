@@ -14,47 +14,12 @@ export default withMiddlewares({
     name: "Get annotation queues",
     querySchema: GetAnnotationQueuesQuery,
     responseSchema: GetAnnotationQueuesResponse,
-    fn: async ({ query, auth }) => {
-      const [queues, totalItems] = await Promise.all([
-        prisma.annotationQueue.findMany({
-          where: {
-            projectId: auth.scope.projectId,
-          },
-          orderBy: [
-            {
-              createdAt: "desc",
-            },
-            {
-              id: "desc",
-            },
-          ],
-          take: query.limit,
-          skip: (query.page - 1) * query.limit,
-        }),
-        prisma.annotationQueue.count({
-          where: {
-            projectId: auth.scope.projectId,
-          },
-        }),
-      ]);
-
-      return {
-        data: queues.map((queue) => ({
-          id: queue.id,
-          name: queue.name,
-          description: queue.description,
-          scoreConfigIds: queue.scoreConfigIds,
-          createdAt: queue.createdAt,
-          updatedAt: queue.updatedAt,
-        })),
-        meta: {
-          page: query.page,
-          limit: query.limit,
-          totalItems,
-          totalPages: Math.ceil(totalItems / query.limit),
-        },
-      };
-    },
+    fn: async ({ query, auth }) =>
+      await listAnnotationQueuesForApi({
+        projectId: auth.scope.projectId,
+        page: query.page,
+        limit: query.limit,
+      }),
   }),
 
   POST: createAuthedProjectAPIRoute({

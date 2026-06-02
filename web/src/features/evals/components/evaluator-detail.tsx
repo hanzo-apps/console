@@ -13,8 +13,8 @@ const JobExecutionCounts = ({ jobExecutionsByState }: { jobExecutionsByState?: J
     return null;
   }
 
-  const counts = generateJobExecutionCounts(jobExecutionsByState);
-  return <LevelCountsDisplay counts={counts} />;
+  const counts = generateJobExecutionCounts(jobExecutionCounts);
+  return <LevelCountsDisplay counts={counts} isLoading={isLoading} />;
 };
 
 export const EvaluatorDetail = () => {
@@ -27,6 +27,22 @@ export const EvaluatorDetail = () => {
     projectId: projectId,
     id: evaluatorId,
   });
+
+  const lazyExecutionCounts = useLazyEvaluatorExecutionCounts({
+    projectId,
+    evaluatorId,
+    evaluator: evaluator.data,
+  });
+  const filterValidation = React.useMemo(() => {
+    if (!evaluator.data) {
+      return null;
+    }
+
+    return validateEvaluatorFiltersForTarget({
+      targetObject: evaluator.data.targetObject as EvalTargetObject,
+      filter: evaluator.data.filter,
+    });
+  }, [evaluator.data]);
 
   // get all templates for the current template name
   const allTemplates = api.evals.allTemplatesForName.useQuery(
@@ -54,6 +70,11 @@ export const EvaluatorDetail = () => {
           evalTemplate: evaluator.data.evalTemplate,
         }
       : undefined;
+  const displayStatus =
+    lazyExecutionCounts.displayStatus ?? evaluator.data.displayStatus;
+  const shouldRenderExecutionCounts =
+    lazyExecutionCounts.isLoading ||
+    Boolean(lazyExecutionCounts.jobExecutionCounts?.length);
 
   return (
     <Page

@@ -19,14 +19,25 @@ export async function handleCreateProject(req: NextApiRequest, res: NextApiRespo
       });
     }
 
+    let parsedMetadata = metadata;
     if (metadata !== undefined && typeof metadata !== "object") {
       try {
-        JSON.parse(metadata);
+        parsedMetadata = JSON.parse(metadata);
       } catch (error) {
         return res.status(400).json({
           message: `Invalid metadata. Should be a valid JSON object: ${error}`,
         });
       }
+    }
+    if (
+      parsedMetadata !== undefined &&
+      (typeof parsedMetadata !== "object" ||
+        parsedMetadata === null ||
+        Array.isArray(parsedMetadata))
+    ) {
+      return res.status(400).json({
+        message: "Invalid metadata. Should be a valid JSON object.",
+      });
     }
 
     // Validate retention days if provided
@@ -75,7 +86,7 @@ export async function handleCreateProject(req: NextApiRequest, res: NextApiRespo
         name,
         orgId: scope.orgId,
         retentionDays: retention,
-        metadata,
+        metadata: parsedMetadata,
       },
     });
 

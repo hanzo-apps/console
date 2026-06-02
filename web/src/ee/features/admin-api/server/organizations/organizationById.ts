@@ -3,7 +3,7 @@ import { prisma } from "@hanzo/shared/src/db";
 import { logger } from "@hanzo/shared/src/server";
 import { organizationNameSchema } from "@/src/features/organizations/utils/organizationNameSchema";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const validateQueryAndExtractId = (query: unknown): string | null => {
   const inputQuerySchema = z.object({
@@ -66,7 +66,7 @@ export async function handleUpdateOrganization(req: NextApiRequest, res: NextApi
   if (!validationResult.success) {
     return res.status(400).json({
       error: "Invalid request body",
-      details: validationResult.error.format(),
+      details: z.formatError(validationResult.error),
     });
   }
 

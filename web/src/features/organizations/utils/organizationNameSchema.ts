@@ -10,30 +10,13 @@ const organizationName = StringNoHTML.min(3, "Must have at least 3 characters").
   "Must have at most 60 characters",
 );
 
-// Base schema for org creation, used for server-side validation too
-export const organizationNameSchema = z.object({
+export const organizationFormSchema = z.object({
   name: organizationName,
 });
+
+// Base schema for org creation, used for server-side validation too
+export const organizationNameSchema = organizationFormSchema;
 
 export const organizationOptionalNameSchema = z.object({
   name: organizationName.optional(),
 });
-
-// Extended schema for client-side form validation including type and size,
-// which are posted separately as a survey response.
-export const organizationFormSchema = organizationNameSchema
-  .extend({
-    type: z.enum(organizationTypeOptions),
-    size: z.enum(organizationSizeOptions).optional(),
-  })
-  .check((ctx) => {
-    const { type, size } = ctx.value;
-    if ((type === "Company" || type === "Agency") && !size) {
-      ctx.issues.push({
-        code: z.ZodIssueCode.custom,
-        path: ["size"],
-        input: ctx.value.size,
-        message: "Please specify the size of your organization",
-      });
-    }
-  });

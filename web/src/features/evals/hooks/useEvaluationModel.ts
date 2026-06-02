@@ -36,7 +36,7 @@ export function useEvaluationModel(
 
       setModelParams((prev: UIModelParams) => ({
         ...prev,
-        ...modelConfig,
+        ...getEnabledModelParamState(parsedModelParams.data),
         provider: { value: provider, enabled: true },
         model: { value: model, enabled: true },
       }));

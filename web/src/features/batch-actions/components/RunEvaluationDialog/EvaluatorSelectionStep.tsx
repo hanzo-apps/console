@@ -12,6 +12,7 @@ import { Eye, Plus, X } from "lucide-react";
 
 type Evaluator = RouterOutputs["evals"]["jobConfigsByTarget"][number];
 type ObservationPreview = RouterOutputs["observations"]["byId"];
+type EventPreview = RouterOutputs["events"]["batchIO"][number];
 
 type EvaluatorSelectionStepProps = {
   eligibleEvaluators: Evaluator[];
@@ -19,8 +20,9 @@ type EvaluatorSelectionStepProps = {
   isQueryLoading: boolean;
   isQueryError: boolean;
   queryErrorMessage: string | undefined;
-  previewObservation: ObservationPreview | undefined;
+  previewObservation: ObservationPreview | EventPreview | undefined;
   isPreviewLoading: boolean;
+  evaluatorScopeLabel: "observation" | "experiment";
   selectedEvaluatorIds: string[];
   evaluatorSearchQuery: string;
   onSearchQueryChange: (query: string) => void;
@@ -37,6 +39,7 @@ export function EvaluatorSelectionStep(props: EvaluatorSelectionStepProps) {
     queryErrorMessage,
     previewObservation,
     isPreviewLoading,
+    evaluatorScopeLabel,
     selectedEvaluatorIds,
     evaluatorSearchQuery,
     onSearchQueryChange,
@@ -90,10 +93,10 @@ export function EvaluatorSelectionStep(props: EvaluatorSelectionStepProps) {
     <div className="flex h-full flex-col gap-2">
       <div className="min-h-0 flex-1">
         {isQueryLoading ? (
-          <p className="text-sm text-muted-foreground">Loading evaluators...</p>
+          <p className="text-muted-foreground text-sm">Loading evaluators...</p>
         ) : isQueryError ? (
           <Card>
-            <CardContent className="p-4 text-sm text-destructive">
+            <CardContent className="text-destructive p-4 text-sm">
               Failed to load evaluators: {queryErrorMessage}
             </CardContent>
           </Card>
@@ -118,7 +121,7 @@ export function EvaluatorSelectionStep(props: EvaluatorSelectionStepProps) {
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  className="absolute right-1.5 top-1/2 h-7 w-7 -translate-y-1/2"
+                  className="absolute top-1/2 right-1.5 h-7 w-7 -translate-y-1/2"
                   onClick={() => onSearchQueryChange("")}
                   aria-label="Clear evaluator search"
                 >
@@ -141,7 +144,7 @@ export function EvaluatorSelectionStep(props: EvaluatorSelectionStepProps) {
                             <button
                               type="button"
                               aria-label={`Remove ${evaluator.scoreName}`}
-                              className="rounded p-0.5 hover:bg-muted"
+                              className="hover:bg-muted rounded p-0.5"
                               onClick={() => onToggleEvaluator(evaluator.id)}
                             >
                               <X className="h-3 w-3" />
@@ -166,7 +169,7 @@ export function EvaluatorSelectionStep(props: EvaluatorSelectionStepProps) {
                 {filteredEvaluators.map((item, index, array) => (
                   <div key={item.id}>
                     <div
-                      className="flex cursor-pointer items-center gap-2 px-2 py-1.5 transition-colors hover:bg-muted/50"
+                      className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 px-2 py-1.5 transition-colors"
                       onClick={() => onToggleEvaluator(item.id)}
                     >
                       <div className="min-w-0 flex-1">

@@ -8,7 +8,12 @@ import { useMediaQuery } from "react-responsive";
 import { cva } from "class-variance-authority";
 
 type DrawerProps = React.ComponentProps<typeof DrawerPrimitive.Root> & {
-  forceDirection?: "right" | "bottom" | "responsive";
+  forceDirection?:
+    | "right"
+    | "left"
+    | "bottom"
+    | "responsive"
+    | "responsive-left";
   /**
    * Whether to block text selection in the drawer.
    * Set to false to allow text selection (e.g., in comment sections).
@@ -28,36 +33,42 @@ type DrawerContentProps = React.ComponentPropsWithoutRef<typeof DrawerPrimitive.
 // https://tailwindcss.com/docs/responsive-design
 const TAILWIND_MD_MEDIA_QUERY = 768;
 
-const drawerVariants = cva(
-  "fixed inset-x-0 z-50 flex h-auto flex-col rounded-t-lg border bg-background md:inset-x-auto md:right-0 md:mt-0 md:rounded-l-lg md:rounded-r-none ",
-  {
-    variants: {
-      size: {
-        default: "md:w-1/2 lg:w-2/5 xl:w-1/3 2xl:w-1/4",
-        md: "w-3/5",
-        lg: "w-2/3",
-        full: "w-full",
-      },
-      position: {
-        top: "md:bottom-0 md:top-banner-offset md:max-h-screen-with-banner",
-      },
-      height: {
-        default: "h-1/3 md:h-full",
-        md: "md:h-1/2",
-      },
+const drawerVariants = cva("fixed z-50 flex flex-col border bg-background", {
+  variants: {
+    direction: {
+      bottom: "inset-x-0 bottom-0 rounded-t-lg",
+      left: "bottom-0 left-0 top-banner-offset h-screen-with-banner rounded-r-lg",
+      right:
+        "bottom-0 right-0 top-banner-offset h-screen-with-banner rounded-l-lg",
     },
-    defaultVariants: {
-      size: "default",
-      position: "top",
-      height: "default",
+    size: {
+      default: "w-full md:w-1/2 lg:w-2/5 xl:w-1/3 2xl:w-1/4",
+      md: "w-full md:w-3/5",
+      lg: "w-full md:w-2/3",
+      full: "w-full",
+    },
+    position: {
+      top: "",
+    },
+    height: {
+      default: "h-1/3 md:h-full",
+      md: "md:h-1/2",
     },
   },
-);
+  defaultVariants: {
+    direction: "bottom",
+    size: "default",
+    position: "top",
+    height: "default",
+  },
+});
 
 const DrawerContext = React.createContext<{
   blockTextSelection: boolean;
+  direction: "right" | "left" | "bottom";
 }>({
   blockTextSelection: false,
+  direction: "bottom",
 });
 
 const useDrawerContext = () => React.useContext(DrawerContext);
@@ -88,7 +99,7 @@ const DrawerPortal = DrawerPrimitive.Portal;
 const DrawerClose = DrawerPrimitive.Close;
 
 const DrawerOverlay = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Overlay>,
+  React.ComponentRef<typeof DrawerPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-50 bg-primary/20", className)} {...props} />
@@ -104,8 +115,11 @@ const DrawerContent = React.forwardRef<React.ElementRef<typeof DrawerPrimitive.C
         <DrawerOverlay className={overlayClassName} />
         <DrawerPrimitive.Content
           ref={ref}
-          className={cn(drawerVariants({ size, className, height, position }))}
+          className={cn(
+            drawerVariants({ direction, size, className, height, position }),
+          )}
           data-allow-text-selection={!blockTextSelection}
+          data-direction={direction}
           {...props}
         >
           <DrawerDescription className="sr-only">{props.title ?? ""}</DrawerDescription>
@@ -128,7 +142,7 @@ const DrawerFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 DrawerFooter.displayName = "DrawerFooter";
 
 const DrawerTitle = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Title>,
+  React.ComponentRef<typeof DrawerPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Title>
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Title
@@ -140,7 +154,7 @@ const DrawerTitle = React.forwardRef<
 DrawerTitle.displayName = DrawerPrimitive.Title.displayName;
 
 const DrawerDescription = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Description>,
+  React.ComponentRef<typeof DrawerPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Description>
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Description ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />

@@ -27,11 +27,11 @@ export function DeletePromptVersion({
 
   const mutDeletePromptVersion = api.prompts.deleteVersion.useMutation({
     onSuccess: () => {
-      void utils.prompts.invalidate();
+      utils.prompts.invalidate();
       setError(null);
       setIsOpen(false);
       if (countVersions > 1) {
-        void router.replace(
+        router.replace(
           {
             pathname: router.pathname,
             query: { ...router.query, version: undefined },
@@ -40,7 +40,7 @@ export function DeletePromptVersion({
           { shallow: true },
         );
       } else {
-        void router.push(`/project/${projectId}/prompts`);
+        router.push(`/project/${projectId}/prompts`);
       }
     },
     onError: (error) => {
@@ -76,7 +76,7 @@ export function DeletePromptVersion({
         <h2 className="text-md mb-3 font-semibold">Please confirm</h2>
         <p className="mb-3 text-sm">
           This action deletes the prompt version. Requests of version{" "}
-          <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+          <code className="bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
             {version}
           </code>
           of this prompt will return an error.
@@ -100,7 +100,7 @@ export function DeletePromptVersion({
               capture("prompt_detail:version_delete_submit");
               setError(null);
 
-              void mutDeletePromptVersion.mutate({
+              mutDeletePromptVersion.mutate({
                 promptVersionId,
                 projectId,
               });

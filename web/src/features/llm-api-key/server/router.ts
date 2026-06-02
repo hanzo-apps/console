@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { CreateLlmApiKey, UpdateLlmApiKey } from "@/src/features/llm-api-key/types";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
@@ -9,11 +9,12 @@ import {
 } from "@/src/server/api/trpc";
 import {
   type ChatMessage,
-  LLMApiKeySchema,
   ChatMessageRole,
   supportedModels,
   GCPServiceAccountKeySchema,
   BedrockConfigSchema,
+  BedrockCredentialSchema,
+  OpenAIConfigSchema,
   VertexAIConfigSchema,
   BEDROCK_USE_DEFAULT_CREDENTIALS,
   VERTEXAI_USE_DEFAULT_CREDENTIALS,
@@ -37,6 +38,40 @@ export function getDisplaySecretKey(secretKey: string) {
     return "Default GCP credentials (ADC)";
   }
   return secretKey.endsWith('"}') ? "..." + secretKey.slice(-6, -2) : "..." + secretKey.slice(-4);
+}
+
+export function validateBedrockSecretKey(secretKey: string) {
+  if (secretKey === BEDROCK_USE_DEFAULT_CREDENTIALS) {
+    return;
+  }
+
+  try {
+    BedrockCredentialSchema.parse(JSON.parse(secretKey));
+  } catch {
+    throw new Error(
+      "Invalid Bedrock credentials. Expected a JSON object with either {accessKeyId, secretAccessKey} or {apiKey}.",
+    );
+  }
+}
+
+function getBedrockAuthMethod(
+  secretKey: string,
+): BedrockAuthMethod | undefined {
+  if (secretKey === BEDROCK_USE_DEFAULT_CREDENTIALS) {
+    return AuthMethod.DefaultCredentials;
+  }
+
+  try {
+    const parsed = BedrockCredentialSchema.parse(JSON.parse(secretKey));
+    return parsed && "apiKey" in parsed
+      ? AuthMethod.ApiKey
+      : AuthMethod.AccessKeys;
+  } catch (error) {
+    logger.warn("Failed to derive Bedrock auth method from stored secret", {
+      error,
+    });
+    return undefined;
+  }
 }
 
 type TestLLMConnectionParams = {
@@ -72,11 +107,13 @@ async function testLLMConnection(params: TestLLMConnectionParams): Promise<{ suc
     ];
 
     // Parse config properly for type safety
-    let parsedConfig: Record<string, string> | null = null;
+    let parsedConfig: LLMConnectionConfig | null = null;
     if (params.config && params.adapter === LLMAdapter.Bedrock) {
       const bedrockConfig = BedrockConfigSchema.parse(params.config);
 
       parsedConfig = { region: bedrockConfig.region };
+    } else if (params.config && params.adapter === LLMAdapter.OpenAI) {
+      parsedConfig = OpenAIConfigSchema.parse(params.config);
     } else if (params.config && params.adapter === LLMAdapter.VertexAI) {
       const vertexAIConfig = VertexAIConfigSchema.parse(params.config);
       parsedConfig = vertexAIConfig.location ? { location: vertexAIConfig.location } : null;
@@ -107,6 +144,27 @@ async function testLLMConnection(params: TestLLMConnectionParams): Promise<{ suc
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
     };
+  }
+}
+
+async function validateBaseURLForWrite(params: {
+  baseURL?: string | null;
+  errorPrefix?: string;
+}): Promise<void> {
+  if (!params.baseURL) {
+    return;
+  }
+
+  try {
+    await validateLlmConnectionBaseURL(params.baseURL);
+  } catch (error) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        error instanceof Error
+          ? `${params.errorPrefix ?? "Invalid base URL"}: ${error.message}`
+          : (params.errorPrefix ?? "Invalid base URL"),
+    });
   }
 }
 
@@ -203,34 +261,73 @@ export const llmApiKeyRouter = createTRPCRouter({
         },
       });
 
-      return ctx.prisma.$transaction(async (tx) => {
+      const result = await ctx.prisma.$transaction(async (tx) => {
         // Check if the llm api key is used for the default evaluation model
-        // If so, it will be deleted and we must invalidate all eval jobs that rely on it
         const defaultModel = await tx.defaultLlmModel.findFirst({
           where: {
             projectId: input.projectId,
           },
+          select: {
+            llmApiKeyId: true,
+          },
         });
 
-        if (!!defaultModel && defaultModel.llmApiKeyId === llmApiKey?.id) {
-          // Invalidate all eval jobs that rely on the default model
+        const providerBlockedJobConfigIds = new Set<string>();
+        const defaultModelBlockedJobConfigIds = new Set<string>();
+
+        if (llmApiKey?.provider) {
           const evalTemplates = await tx.evalTemplate.findMany({
             where: {
               OR: [{ projectId: input.projectId }, { projectId: null }],
-              provider: null,
-              model: null,
+              provider: llmApiKey.provider,
+            },
+            select: {
+              id: true,
             },
           });
 
-          await tx.jobConfiguration.updateMany({
+          const providerBlockResult = await blockEvaluatorConfigsInTx({
+            tx,
+            projectId: input.projectId,
             where: {
-              evalTemplateId: { in: evalTemplates.map((et) => et.id) },
-              projectId: input.projectId,
+              evalTemplateId: {
+                in: evalTemplates.map((template) => template.id),
+              },
             },
-            data: {
-              status: "INACTIVE",
-            },
+            blockReason: EvaluatorBlockReason.LLM_CONNECTION_MISSING,
+            blockMessage: getEvaluatorBlockMetadata(
+              EvaluatorBlockReason.LLM_CONNECTION_MISSING,
+            ).message,
           });
+
+          for (const configId of providerBlockResult.blockedJobConfigIds) {
+            providerBlockedJobConfigIds.add(configId);
+          }
+        }
+
+        if (!!defaultModel && defaultModel.llmApiKeyId === llmApiKey?.id) {
+          const evalTemplateIds = await findDefaultModelEvalTemplateIds({
+            tx,
+            projectId: input.projectId,
+          });
+
+          const defaultModelBlockResult = await blockEvaluatorConfigsInTx({
+            tx,
+            projectId: input.projectId,
+            where: {
+              evalTemplateId: {
+                in: evalTemplateIds,
+              },
+            },
+            blockReason: EvaluatorBlockReason.DEFAULT_EVAL_MODEL_MISSING,
+            blockMessage: getEvaluatorBlockMetadata(
+              EvaluatorBlockReason.DEFAULT_EVAL_MODEL_MISSING,
+            ).message,
+          });
+
+          for (const configId of defaultModelBlockResult.blockedJobConfigIds) {
+            defaultModelBlockedJobConfigIds.add(configId);
+          }
         }
 
         await tx.llmApiKeys.delete({
@@ -248,8 +345,26 @@ export const llmApiKeyRouter = createTRPCRouter({
           action: "delete",
         });
 
-        return { success: true };
+        return {
+          providerBlockedJobConfigIds: Array.from(providerBlockedJobConfigIds),
+          defaultModelBlockedJobConfigIds: Array.from(
+            defaultModelBlockedJobConfigIds,
+          ),
+        };
       });
+
+      await finalizeBlockedEvaluatorConfigBlocks({
+        projectId: input.projectId,
+        source: EvaluatorBlockSource.LLM_API_KEY_DELETION,
+        blockedByReason: {
+          [EvaluatorBlockReason.LLM_CONNECTION_MISSING]:
+            result.providerBlockedJobConfigIds,
+          [EvaluatorBlockReason.DEFAULT_EVAL_MODEL_MISSING]:
+            result.defaultModelBlockedJobConfigIds,
+        },
+      });
+
+      return { success: true };
     }),
   all: protectedProjectProcedure
     .input(
@@ -264,35 +379,39 @@ export const llmApiKeyRouter = createTRPCRouter({
         scope: "llmApiKeys:read",
       });
 
-      const apiKeys = z
-        .array(
-          LLMApiKeySchema.extend({
-            secretKey: z.undefined(),
-            extraHeaders: z.undefined(),
-          }),
-        )
-        .parse(
-          await ctx.prisma.llmApiKeys.findMany({
-            // we must not return the secret key AND extra headers via the API, hence not selected
-            select: {
-              id: true,
-              createdAt: true,
-              updatedAt: true,
-              provider: true,
-              displaySecretKey: true,
-              projectId: true,
-              adapter: true,
-              baseURL: true,
-              customModels: true,
-              withDefaultModels: true,
-              extraHeaderKeys: true,
-              config: true,
-            },
-            where: {
-              projectId: input.projectId,
-            },
-          }),
-        );
+      const storedApiKeys = await ctx.prisma.llmApiKeys.findMany({
+        // secretKey is selected server-side only to derive a safe auth-method enum for Bedrock
+        select: {
+          id: true,
+          createdAt: true,
+          updatedAt: true,
+          provider: true,
+          displaySecretKey: true,
+          projectId: true,
+          adapter: true,
+          baseURL: true,
+          customModels: true,
+          withDefaultModels: true,
+          extraHeaderKeys: true,
+          config: true,
+          secretKey: true,
+        },
+        where: {
+          projectId: input.projectId,
+        },
+      });
+
+      const apiKeys = z.array(SafeLlmApiKeySchema).parse(
+        storedApiKeys.map(({ secretKey, ...apiKey }) => ({
+          ...apiKey,
+          secretKey: undefined,
+          extraHeaders: undefined,
+          authMethod:
+            apiKey.adapter === LLMAdapter.Bedrock
+              ? getBedrockAuthMethod(decrypt(secretKey))
+              : undefined,
+        })),
+      );
 
       const count = await ctx.prisma.llmApiKeys.count({
         where: {

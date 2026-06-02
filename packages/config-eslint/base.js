@@ -3,6 +3,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import turboConfig from "eslint-config-turbo/flat";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
+import langfusePlugin from "@repo/eslint-plugin";
 import "eslint-plugin-only-warn";
 
 export default tseslint.config(
@@ -35,6 +36,7 @@ export default tseslint.config(
       },
     },
     rules: {
+      "no-void": "warn",
       "no-redeclare": "off",
       "import/order": "off",
     },
@@ -51,6 +53,9 @@ export default tseslint.config(
     },
     languageOptions: {
       parser: tseslint.parser,
+      parserOptions: {
+        projectService: true,
+      },
     },
     rules: {
       "no-undef": "off", // TypeScript handles this
@@ -74,6 +79,18 @@ export default tseslint.config(
           ignoreRestSiblings: true,
         },
       ],
+      "@typescript-eslint/no-deprecated": "warn",
+    },
+  },
+
+  // Vitest in-source testing should only be used while developing, not in committed code.
+  {
+    name: "langfuse/no-in-source-vitest",
+    plugins: {
+      "@repo": langfusePlugin,
+    },
+    rules: {
+      "@repo/no-in-source-vitest": "warn",
     },
   },
 );

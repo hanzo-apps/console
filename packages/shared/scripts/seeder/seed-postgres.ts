@@ -4,6 +4,8 @@ import { hash } from "bcryptjs";
 import { v4 } from "uuid";
 import { encrypt } from "../../src/encryption";
 import {
+  EvalTemplateSourceCodeLanguage,
+  EvalTemplateType,
   type JobConfiguration,
   JobExecutionStatus,
   PrismaClient,
@@ -292,6 +294,8 @@ async function main() {
 
     // add eval objects
     for (const evalTemplate of SEED_EVALUATOR_TEMPLATES) {
+      const evalTemplateType = evalTemplate.type as EvalTemplateType;
+
       await prisma.evalTemplate.upsert({
         where: {
           projectId_name_version: {
@@ -305,12 +309,18 @@ async function main() {
           projectId: project1.id,
           name: evalTemplate.name,
           version: evalTemplate.version,
-          prompt: evalTemplate.prompt,
-          model: evalTemplate.model,
+          type: evalTemplateType,
+          prompt: evalTemplate.prompt ?? null,
+          model: evalTemplate.model ?? null,
           vars: evalTemplate.vars,
-          provider: evalTemplate.provider,
-          outputSchema: evalTemplate.outputSchema,
-          modelParams: evalTemplate.modelParams,
+          provider: evalTemplate.provider ?? null,
+          outputDefinition: evalTemplate.outputDefinition ?? undefined,
+          modelParams: evalTemplate.modelParams ?? undefined,
+          sourceCode: evalTemplate.sourceCode ?? null,
+          sourceCodeLanguage:
+            (evalTemplate.sourceCodeLanguage as
+              | EvalTemplateSourceCodeLanguage
+              | undefined) ?? null,
         },
         update: {},
       });
@@ -924,6 +934,14 @@ async function generateConfigs(project: Project) {
         { label: "False", value: 0 },
       ],
       description: "Used to indicate if text was harmful or offensive in nature.",
+      isArchived: false,
+    },
+    {
+      id: `config-${v4()}`,
+      projectId: project.id,
+      name: "Feedback",
+      dataType: ScoreDataTypeEnum.TEXT,
+      description: "Free-form text feedback on the output quality.",
       isArchived: false,
     },
   ];

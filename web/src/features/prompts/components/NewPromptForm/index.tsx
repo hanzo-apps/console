@@ -286,7 +286,7 @@ export const NewPromptForm: React.FC<NewPromptFormProps> = (props) => {
                   Draft restored.{" "}
                   <button
                     type="button"
-                    className="underline hover:text-foreground"
+                    className="hover:text-foreground underline"
                     onClick={() => {
                       clearDraft();
                       form.reset(defaultValues);
@@ -363,7 +363,7 @@ export const NewPromptForm: React.FC<NewPromptFormProps> = (props) => {
           name="isActive"
           render={({ field }) => (
             <FormItem>
-              <div className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
+              <div className="flex flex-row items-center space-y-0 space-x-3 rounded-md border p-3">
                 <FormControl>
                   <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                 </FormControl>
@@ -389,7 +389,7 @@ export const NewPromptForm: React.FC<NewPromptFormProps> = (props) => {
                 <Textarea
                   placeholder="Add commit message..."
                   {...field}
-                  className="rounded-md border text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 active:ring-0"
+                  className="rounded-md border text-sm focus:ring-0 focus:outline-hidden focus-visible:ring-0 focus-visible:ring-offset-0 active:ring-0"
                 />
               </FormControl>
               <FormMessage />

@@ -1,5 +1,6 @@
 import { VERSION } from "@/src/constants";
 import { cors, runMiddleware } from "@/src/features/public-api/server/cors";
+import { runHealthCheck } from "@/src/features/public-api/server/health-service";
 import { telemetry } from "@/src/features/telemetry";
 import { prisma } from "@hanzo/console-core/src/db";
 import {
@@ -98,8 +99,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       version: VERSION.replace("v", ""),
     });
   }
-  return res.status(200).json({
-    status: "OK",
-    version: VERSION.replace("v", ""),
-  });
 }

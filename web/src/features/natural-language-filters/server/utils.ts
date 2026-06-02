@@ -50,6 +50,7 @@ export function getHanzoClient(publicKey: string, secretKey: string, baseUrl?: s
       publicKey,
       secretKey,
       baseUrl,
+      enabled: enabled ?? true,
     });
   }
   return hanzoClient;

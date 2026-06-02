@@ -6,12 +6,8 @@ import {
   dashboardDateRangeAggregationSettings,
   DASHBOARD_AGGREGATION_PLACEHOLDER,
   type DashboardDateRangeOptions,
-  type TableDateRangeOptions,
   DASHBOARD_AGGREGATION_OPTIONS,
   type DashboardDateRange,
-  TABLE_AGGREGATION_OPTIONS,
-  getDateFromOption,
-  isTableDataRangeOptionAvailable,
   isDashboardDateRangeOptionAvailable,
   getAbbreviatedTimeRange,
   getTimeRangeLabel,
@@ -36,10 +32,10 @@ const BaseDateRangeDropdown = <T extends string>({
 }: BaseDateRangeDropdownProps<T>) => {
   return (
     <Select value={selectedOption} onValueChange={onSelectionChange}>
-      <SelectTrigger className="w-fit font-medium hover:bg-accent hover:text-accent-foreground focus:ring-0 focus:ring-offset-0">
+      <SelectTrigger className="hover:bg-accent hover:text-accent-foreground w-fit font-medium focus:ring-0 focus:ring-offset-0">
         <SelectValue placeholder="Select">
           <div className="flex items-center gap-2">
-            <span className="w-10 rounded bg-muted px-1.5 py-0.5 text-center text-xs">
+            <span className="bg-muted w-10 rounded px-1.5 py-0.5 text-center text-xs">
               {getAbbreviatedTimeRange(selectedOption)}
             </span>
             <span>{getTimeRangeLabel(selectedOption)}</span>
@@ -51,7 +47,7 @@ const BaseDateRangeDropdown = <T extends string>({
           const itemObj = (
             <SelectItem key={item} value={item} disabled={limitedOptions?.includes(item)} className="pl-2">
               <div className="flex items-center gap-2">
-                <span className="w-10 rounded bg-muted px-1.5 py-0.5 text-center text-xs">
+                <span className="bg-muted w-10 rounded px-1.5 py-0.5 text-center text-xs">
                   {getAbbreviatedTimeRange(item)}
                 </span>
                 <span>{getTimeRangeLabel(item)}</span>

@@ -23,6 +23,18 @@ export function useEvalConfigMappingData(
       enabled: !traceId && shouldFetch,
     },
   );
+  // Peek navigation wins over URL state; URL state wins over the table's first row.
+  const previewPointer =
+    selectedPreviewPointer ?? urlPreviewPointer ?? firstPreviewPointer;
+
+  const { previewData, isLoading } = usePreviewData({
+    projectId,
+    enabled: !disabled && Boolean(previewPointer),
+    target: targetValue,
+    traceId: previewPointer?.traceId,
+    observationId: previewPointer?.observationId,
+    timestamp: previewPointer?.timestamp,
+  });
 
   const relevantTraceId = traceId ?? latestTrace.data?.traces[0]?.id;
 

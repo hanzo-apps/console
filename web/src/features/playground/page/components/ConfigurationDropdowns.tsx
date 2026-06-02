@@ -17,6 +17,8 @@ export const ConfigurationDropdowns: React.FC = () => {
   const toolsCount = tools.length;
   const hasSchema = structuredOutputSchema ? 1 : 0;
   const variablesCount = promptVariables.length + messagePlaceholders.length;
+  const toolsPopoverWidth =
+    width > 0 ? Math.min(Math.max(width - 24, 0), 320) : undefined;
 
   // Helper function to get responsive content (text or icon)
   const getResponsiveContent = (
@@ -59,7 +61,11 @@ export const ConfigurationDropdowns: React.FC = () => {
               <ChevronDown className="h-3 w-3" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-4" align="start">
+          <PopoverContent
+            className="w-80 max-w-[calc(100vw-1rem)] min-w-0 overflow-hidden p-4"
+            align="start"
+            style={toolsPopoverWidth ? { width: toolsPopoverWidth } : undefined}
+          >
             <div className="mb-3">
               <h4 className="mb-1 text-sm font-medium">Tools</h4>
               <p className="text-xs text-muted-foreground">Configure tools for your model to use.</p>

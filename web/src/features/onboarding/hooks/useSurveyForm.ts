@@ -1,8 +1,6 @@
 import { useForm } from "react-hook-form";
-import { useReducer, useCallback } from "react";
+import { useCallback } from "react";
 import type { SurveyFormData } from "../lib/surveyTypes";
-import { surveyReducer, initialSurveyState } from "../lib/surveyReducer";
-import { SURVEY_QUESTIONS, TOTAL_STEPS } from "../lib/questions";
 import { api } from "@/src/utils/api";
 import { SurveyName } from "@prisma/client";
 import { useSession } from "next-auth/react";
@@ -10,7 +8,6 @@ import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 
 export function useSurveyForm() {
-  const [state, dispatch] = useReducer(surveyReducer, initialSurveyState);
   const { data: session } = useSession();
   const createSurveyMutation = api.surveys.create.useMutation({
     onSuccess: () => {
@@ -26,8 +23,6 @@ export function useSurveyForm() {
 
   const form = useForm<SurveyFormData>({
     defaultValues: {
-      role: undefined,
-      signupReason: undefined,
       referralSource: undefined,
     },
   });
@@ -100,15 +95,6 @@ export function useSurveyForm() {
 
   return {
     form,
-    state,
-    currentQuestion,
-    isLastStep,
-    isFirstStep,
-    goNext,
-    goBack,
-    goToStep,
-    handleAutoAdvance,
     handleSubmit,
-    totalSteps: effectiveTotalSteps,
   };
 }

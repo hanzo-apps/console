@@ -67,10 +67,10 @@ export function CloudRegionSwitch({ isSignUpPage }: { isSignUpPage?: boolean }) 
   const currentRegion = regions.find((region) => region.name === cloudRegion);
 
   return (
-    <div className="-mb-10 mt-8 rounded-lg bg-card px-6 py-6 text-sm sm:mx-auto sm:w-full sm:max-w-[480px] sm:rounded-lg sm:px-10">
+    <div className="bg-card mt-8 -mb-10 rounded-lg px-6 py-6 text-sm sm:mx-auto sm:w-full sm:max-w-[480px] sm:rounded-lg sm:px-10">
       <div className="flex w-full flex-col gap-2">
         <div>
-          <span className="text-sm font-medium leading-none">
+          <span className="text-sm leading-none font-medium">
             Data Region
             <DataRegionInfo />
           </span>
@@ -111,14 +111,14 @@ export function CloudRegionSwitch({ isSignUpPage }: { isSignUpPage?: boolean }) 
         </Select>
 
         {cloudRegion === "HIPAA" && (
-          <div className="mt-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+          <div className="bg-muted/50 text-muted-foreground mt-2 rounded-md p-3 text-xs">
             <p>
               The Business Associate Agreement (BAA) is only effective on the Cloud Pro and Teams plans.{" "}
               <a
                 href="https://hanzo.com/security/hipaa"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary-accent underline hover:text-hover-primary-accent"
+                className="text-primary-accent hover:text-hover-primary-accent underline"
               >
                 Learn more about HIPAA compliance →
               </a>
@@ -135,7 +135,7 @@ const DataRegionInfo = () => (
     <DialogTrigger asChild>
       <a
         href="#"
-        className="ml-1 text-xs text-primary-accent hover:text-hover-primary-accent"
+        className="text-primary-accent hover:text-hover-primary-accent ml-1 text-xs"
         title="What is this?"
         tabIndex={-1}
       >

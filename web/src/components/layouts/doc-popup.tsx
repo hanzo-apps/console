@@ -27,7 +27,7 @@ export default function DocPopup({ description, href, className }: DocPopupProps
     >
       <HoverCardTrigger className={cn("mx-1", href ? "cursor-pointer" : "cursor-default")} asChild>
         <div
-          className="inline-block whitespace-nowrap text-muted-foreground sm:pl-0"
+          className="text-muted-foreground inline-block whitespace-nowrap sm:pl-0"
           onClick={(e) => {
             if (!href) return;
             e.preventDefault();

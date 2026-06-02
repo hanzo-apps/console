@@ -1,4 +1,4 @@
-import z from "zod/v4";
+import z from "zod";
 import { prisma } from "../../../db";
 import { ForbiddenError, ConsoleNotFoundError } from "../../../errors";
 import { LLMApiKeySchema, ZodModelConfig } from "../../llm/types";
@@ -8,6 +8,7 @@ type ValidConfig = {
   provider: string;
   model: string;
   modelParams: z.infer<typeof ZodModelConfig>;
+  adapter: LLMAdapter;
 };
 
 export class DefaultEvalModelService {
@@ -128,6 +129,7 @@ export class DefaultEvalModelService {
           model: string;
           modelParams?: z.infer<typeof ZodModelConfig>;
           apiKey: z.infer<typeof LLMApiKeySchema>;
+          adapter: LLMAdapter;
         };
       }
     | {

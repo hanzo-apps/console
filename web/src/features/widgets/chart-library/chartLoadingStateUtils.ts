@@ -3,6 +3,7 @@ import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@hanzo/console-core";
 type ChartQueryState = {
   isPending: boolean;
   isError: boolean;
+  errorMessage?: string | null;
 };
 
 type ChartLoadingProps = {
@@ -17,6 +18,24 @@ export function getChartLoadingStateProps({ isPending, isError }: ChartQueryStat
     isLoading: isPending || isError,
     showSpinner: isPending,
     showHintImmediately: isError,
-    hintText: isError ? RESOURCE_LIMIT_ERROR_MESSAGE : undefined,
+    hintText: isError
+      ? (errorMessage ?? RESOURCE_LIMIT_ERROR_MESSAGE)
+      : undefined,
   };
+}
+
+export function getChartLoadingProgress({
+  isPending,
+  progress,
+  useBackendProgress,
+}: {
+  isPending: boolean;
+  progress: QueryProgress | null;
+  useBackendProgress: boolean;
+}): QueryProgress | null | undefined {
+  if (!isPending || !useBackendProgress) {
+    return undefined;
+  }
+
+  return progress ?? null;
 }

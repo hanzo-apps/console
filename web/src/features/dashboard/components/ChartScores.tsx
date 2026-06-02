@@ -39,7 +39,7 @@ export function ChartScores(props: {
     orderBy: null,
   };
 
-  const scores = api.dashboard.executeQuery.useQuery(
+  const scores = useScheduledDashboardExecuteQuery(
     {
       projectId: props.projectId,
       query: scoresQuery,
@@ -50,6 +50,7 @@ export function ChartScores(props: {
           skipBatch: true,
         },
       },
+      queryId: `${props.schedulerId ?? "home:chart-scores"}:scores`,
       enabled: !props.isLoading,
     },
   );

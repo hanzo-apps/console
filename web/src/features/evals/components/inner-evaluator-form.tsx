@@ -29,6 +29,7 @@ import { api } from "@/src/utils/api";
 import { InlineFilterBuilder } from "@/src/features/filters/components/filter-builder";
 import { type EvalTemplate, variableMapping } from "@hanzo/shared";
 import { useRouter } from "next/router";
+import { toast } from "sonner";
 import { Slider } from "@/src/components/ui/slider";
 import { Card } from "@/src/components/ui/card";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
@@ -96,7 +97,7 @@ const TracesPreview = memo(
           <span className="text-sm font-medium leading-none">Preview sample matched traces</span>
           <FormDescription>Sample over the last 24 hours that match these filters</FormDescription>
         </div>
-        <div className="mb-4 flex max-h-[30dvh] w-full flex-col overflow-hidden border-b border-l border-r">
+        <div className="mb-4 flex max-h-[30dvh] w-full flex-col overflow-hidden border-r border-b border-l">
           <Suspense fallback={<Skeleton className="h-[30dvh] w-full" />}>
             <TracesTable
               projectId={projectId}
@@ -132,6 +133,62 @@ export const InnerEvaluatorForm = (props: {
   const [showPreview, setShowPreview] = useState(false);
   const router = useRouter();
   const traceId = router.query.traceId as string;
+
+  // Check if existing trace evaluator has invalid filters (e.g., score filters added by bug ff4b03c0b)
+  const hasInvalidTraceFilters = useMemo(() => {
+    if (
+      !props.existingEvaluator?.filter ||
+      props.existingEvaluator.targetObject !== EvalTargetObject.TRACE
+    ) {
+      return false;
+    }
+    const validation = validateEvaluatorFiltersForTarget({
+      targetObject: EvalTargetObject.TRACE,
+      filter: props.existingEvaluator.filter,
+    });
+    return !validation.isValid;
+  }, [props.existingEvaluator?.filter, props.existingEvaluator?.targetObject]);
+
+  const defaultTargetResult = EvalTargetObjectSchema.safeParse(
+    props.existingEvaluator?.targetObject ??
+      props.defaultTarget ??
+      EvalTargetObject.EVENT,
+  );
+  const parsedDefaultTarget = defaultTargetResult.success
+    ? defaultTargetResult.data
+    : EvalTargetObject.EVENT;
+  const defaultTarget = isCodeEvalConfig
+    ? resolveCodeEvalTarget(parsedDefaultTarget)
+    : parsedDefaultTarget;
+
+  const getDefaultMapping = () => {
+    if (isCodeEvalConfig) {
+      return getCodeEvalVariableMapping();
+    }
+
+    if (props.existingEvaluator?.variableMapping) {
+      return isEventTarget(props.existingEvaluator.targetObject) ||
+        isExperimentTarget(props.existingEvaluator.targetObject)
+        ? z
+            .array(observationVariableMapping)
+            .parse(props.existingEvaluator.variableMapping)
+        : z
+            .array(variableMapping)
+            .parse(props.existingEvaluator.variableMapping);
+    }
+
+    return z.array(variableMapping).parse(
+      props.evalTemplate
+        ? props.evalTemplate.vars.map((v) => ({
+            templateVariable: v,
+            langfuseObject: "trace" as const,
+            objectName: null,
+            selectedColumnId: "input",
+            jsonSelector: null,
+          }))
+        : [],
+    );
+  };
 
   const form = useForm({
     resolver: zodResolver(evalConfigFormSchema),
@@ -261,8 +318,39 @@ export const InnerEvaluatorForm = (props: {
         })),
       );
       form.setValue("scoreName", `${props.evalTemplate.name}`);
+    } else if (
+      props.existingEvaluator &&
+      !props.disabled &&
+      !syncStatus.inSync
+    ) {
+      // Reconcile mapping when edit mode is enabled
+      const target = form.getValues("target");
+
+      // Keep mappings for unchanged variables
+      const preservedMappings = mapping.filter((m) =>
+        syncStatus.unchanged.includes(m.templateVariable),
+      );
+
+      // Add mappings for new variables
+      const newMappings = syncStatus.added.map((varName) => ({
+        templateVariable: varName,
+        langfuseObject: isLegacyEvalTarget(target)
+          ? ("trace" as const)
+          : undefined,
+        ...inferDefaultMapping(varName),
+      }));
+
+      // Combine and update form
+      form.setValue("mapping", [...preservedMappings, ...newMappings]);
     }
-  }, [form, props.evalTemplate]);
+  }, [
+    form,
+    props.evalTemplate,
+    props.disabled,
+    props.existingEvaluator,
+    syncStatus,
+    isCodeEvalConfig,
+  ]);
 
   const { fields } = useFieldArray({
     control: form.control,
@@ -272,11 +360,17 @@ export const InnerEvaluatorForm = (props: {
   const utils = api.useUtils();
   const createJobMutation = api.evals.createJob.useMutation({
     onSuccess: () => utils.models.invalidate(),
-    onError: (error) => setFormError(error.message),
+    onError: (error) => {
+      setFormError(error.message);
+      toast.error(error.message);
+    },
   });
   const updateJobMutation = api.evals.updateEvalJob.useMutation({
     onSuccess: () => utils.evals.invalidate(),
-    onError: (error) => setFormError(error.message),
+    onError: (error) => {
+      setFormError(error.message);
+      toast.error(error.message);
+    },
   });
   const [availableVariables, setAvailableVariables] = useState<
     typeof availableTraceEvalVariables | typeof availableDatasetEvalVariables
@@ -285,6 +379,34 @@ export const InnerEvaluatorForm = (props: {
       ? availableTraceEvalVariables
       : availableDatasetEvalVariables,
   );
+
+  const watchedTarget = form.watch("target");
+  const watchedScoreName = form.watch("scoreName");
+  const watchedFilter = form.watch("filter") ?? EMPTY_FILTER_STATE;
+  const shouldShowExperimentEventsPreview =
+    isExperimentTarget(watchedTarget) && isBetaEnabled;
+  const shouldShowEventsPreview =
+    isEventTarget(watchedTarget) || shouldShowExperimentEventsPreview;
+  const previewTableVisible = !props.disabled && !props.hidePreviewTable;
+  const previewAlreadyShowsSdkWarning =
+    previewTableVisible && shouldShowEventsPreview;
+  const eventsPreviewFilterState = useMemo(
+    () =>
+      shouldShowExperimentEventsPreview
+        ? getExperimentEvalPreviewFilters(watchedFilter)
+        : watchedFilter,
+    [shouldShowExperimentEventsPreview, watchedFilter],
+  );
+
+  // Clear mapping error if user switches away from trace target
+  useEffect(() => {
+    if (
+      !isTraceTarget(watchedTarget) &&
+      form.formState.errors.mapping?.type === "manual"
+    ) {
+      form.clearErrors("mapping");
+    }
+  }, [watchedTarget, form]);
 
   function onSubmit(values: z.infer<typeof evalConfigFormSchema>) {
     capture(props.mode === "edit" ? "eval_config:update" : "eval_config:new_form_submit");
@@ -409,21 +531,40 @@ export const InnerEvaluatorForm = (props: {
     </div>
   );
 
+  const shouldShowCodeEvalTestPanel =
+    isCodeEvalConfig &&
+    !props.disabled &&
+    (isEventTarget(watchedTarget) ||
+      (isExperimentTarget(watchedTarget) && isBetaEnabled));
+  const shouldShowCodeEvalSourceLinkInSettingsCard =
+    isCodeEvalConfig &&
+    !props.disabled &&
+    isExperimentTarget(watchedTarget) &&
+    !isBetaEnabled;
+
   const formBody = (
-    <div className="grid gap-4">
-      <FormField
-        control={form.control}
-        name="scoreName"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Generated Score Name</FormLabel>
-            <FormControl>
-              <Input {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+    <div
+      className={cn(
+        "grid gap-4",
+        shouldShowCodeEvalTestPanel &&
+          "xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] xl:items-start",
+      )}
+    >
+      <div className={cn(shouldShowCodeEvalTestPanel && "xl:col-span-2")}>
+        <FormField
+          control={form.control}
+          name="scoreName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Generated Score Name</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
       {!props.hideTargetSection && (
         <Card className="flex max-w-full flex-col gap-2 overflow-y-auto p-4">
           <span className="text-lg font-medium">Target</span>

@@ -90,7 +90,7 @@ function MappedColumnBadge({ column, onRemove }: { column: CsvColumnPreview; onR
     <div
       ref={setNodeRef}
       className={cn(
-        "group flex cursor-grab items-center gap-1 rounded-md bg-accent-dark-blue px-2 py-1 text-sm font-medium text-muted active:cursor-grabbing",
+        "bg-accent-dark-blue text-muted group flex cursor-grab items-center gap-1 rounded-md px-2 py-1 text-sm font-medium active:cursor-grabbing",
         isDragging && "opacity-30",
       )}
       {...attributes}
@@ -103,7 +103,7 @@ function MappedColumnBadge({ column, onRemove }: { column: CsvColumnPreview; onR
           e.stopPropagation();
           onRemove(column.name);
         }}
-        className="flex items-center rounded-sm hover:bg-accent-dark-blue/80"
+        className="hover:bg-accent-dark-blue/80 flex items-center rounded-sm"
       >
         <X className="h-3.5 w-3.5" />
       </button>

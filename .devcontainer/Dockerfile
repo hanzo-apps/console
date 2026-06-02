@@ -1,13 +1,28 @@
 # Dev container Dockerfile
-FROM mcr.microsoft.com/vscode/devcontainers/typescript-node:20-bookworm
+FROM --platform=${BUILDPLATFORM} golang:1.24 AS migrate-builder
+ARG TARGETOS
+ARG TARGETARCH
+ENV CGO_ENABLED=0 \
+    GOBIN=/out \
+    GOOS=${TARGETOS} \
+    GOARCH=${TARGETARCH}
+# Build only the ClickHouse migrate CLI used in this repo.
+RUN /usr/local/go/bin/go install -trimpath -tags 'clickhouse' -ldflags='-s -w' \
+    github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+
+FROM mcr.microsoft.com/devcontainers/universal:2
 
 # Install golang-migrate with Hanzo Datastore driver support
 RUN curl -L https://github.com/hanzoai/migrate/releases/download/v4.19.2/migrate.linux-amd64.tar.gz | tar xvz && \
     chmod +x migrate && \
     mv migrate /usr/local/bin/migrate
 
-# Install pnpm globally
-RUN npm install -g pnpm@9.5.0
+# Activate the repo's pinned pnpm via Corepack
+RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
 
-# Install Claude Code CLI
-RUN npm install -g @anthropic-ai/claude-code
+# Install Clickhouse
+RUN curl https://clickhouse.com/ | sh && \
+    sudo ./clickhouse install
+
+# Install agent CLIs used in this repo
+RUN npm install -g @anthropic-ai/claude-code @openai/codex

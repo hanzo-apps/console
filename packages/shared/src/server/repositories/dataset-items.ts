@@ -40,7 +40,9 @@ const emptyValidateOpts: { normalizeUndefinedToNull?: boolean } = {};
 async function getDatasets(props: {
   projectId: string;
   datasetIds: string[];
-}): Promise<Pick<Dataset, "id" | "inputSchema" | "expectedOutputSchema">[]> {
+}): Promise<
+  Pick<Dataset, "id" | "name" | "inputSchema" | "expectedOutputSchema">[]
+> {
   const datasets = await prisma.dataset.findMany({
     where: {
       id: { in: props.datasetIds },
@@ -48,6 +50,7 @@ async function getDatasets(props: {
     },
     select: {
       id: true,
+      name: true,
       inputSchema: true,
       expectedOutputSchema: true,
     },
@@ -62,7 +65,9 @@ async function getDatasets(props: {
 async function getDatasetById(props: {
   projectId: string;
   datasetId: string;
-}): Promise<Pick<Dataset, "id" | "inputSchema" | "expectedOutputSchema">> {
+}): Promise<
+  Pick<Dataset, "id" | "name" | "inputSchema" | "expectedOutputSchema">
+> {
   const result = await getDatasets({
     projectId: props.projectId,
     datasetIds: [props.datasetId],
@@ -73,7 +78,9 @@ async function getDatasetById(props: {
 async function getDatasetByName(props: {
   projectId: string;
   datasetName: string;
-}): Promise<Pick<Dataset, "id" | "inputSchema" | "expectedOutputSchema">> {
+}): Promise<
+  Pick<Dataset, "id" | "name" | "inputSchema" | "expectedOutputSchema">
+> {
   const dataset = await prisma.dataset.findFirst({
     where: {
       name: props.datasetName,
@@ -81,6 +88,7 @@ async function getDatasetByName(props: {
     },
     select: {
       id: true,
+      name: true,
       inputSchema: true,
       expectedOutputSchema: true,
     },
@@ -240,7 +248,7 @@ export async function upsertDatasetItem(
     normalizeOpts?: { sanitizeControlChars?: boolean };
     validateOpts: { normalizeUndefinedToNull?: boolean };
   } & IdOrName,
-): Promise<DatasetItemDomain> {
+): Promise<DatasetItemDomain & { datasetName: string }> {
   // 1. Get dataset
   const dataset =
     "datasetId" in props
@@ -336,16 +344,35 @@ export async function upsertDatasetItem(
     [Implementation.VERSIONED]: async () => {
       // VERSIONED: Invalidate old row by setting valid_to, then create new row
       await prisma.$transaction(async (tx) => {
-        const newValidFrom = new Date();
+        // 0. Re-read if there is an existing item to get the validFrom timestamp
+        const current = await tx.datasetItem.findFirst({
+          where: {
+            id: itemId,
+            projectId: props.projectId,
+            validTo: null,
+          },
+          orderBy: {
+            validFrom: "desc",
+          },
+        });
+
+        if (current && current.datasetId !== dataset.id) {
+          throw new LangfuseNotFoundError(
+            `Dataset item with id ${itemId} not found for project ${props.projectId}`,
+          );
+        }
+
+        const baseTs = current?.validFrom.getTime() ?? 0;
+        const newValidFrom = new Date(Math.max(Date.now(), baseTs + 1));
 
         // 1. If updating existing item, invalidate the current version
-        if (existingItem) {
+        if (current) {
           await tx.datasetItem.update({
             where: {
               id_projectId_validFrom: {
-                id: existingItem.id,
+                id: current.id,
                 projectId: props.projectId,
-                validFrom: existingItem.validFrom,
+                validFrom: current.validFrom,
               },
             },
             data: {
@@ -372,7 +399,7 @@ export async function upsertDatasetItem(
     throw new InternalServerError("Failed to upsert dataset item");
   }
 
-  return toDomainType(item);
+  return { ...toDomainType(item), datasetName: dataset.name };
 }
 
 /**
@@ -926,7 +953,7 @@ function buildStatefulDatasetItemsQuery(
   includeDatasetName: boolean,
   filter: FilterState,
   searchQuery?: string,
-  searchType?: ("id" | "content")[],
+  searchType?: TracingSearchType[],
   limit?: number,
   offset?: number,
 ): Prisma.Sql {
@@ -977,7 +1004,7 @@ function buildStatefulDatasetItemsCountQuery(
   projectId: string,
   filter: FilterState,
   searchQuery?: string,
-  searchType?: ("id" | "content")[],
+  searchType?: TracingSearchType[],
 ): Prisma.Sql {
   const filterCondition = tableColumnsToSqlFilterAndPrefix(filter, datasetItemsFilterCols, "dataset_item_events");
 
@@ -1014,7 +1041,7 @@ function buildDatasetItemsAtVersionQuery(
   filter: FilterState,
   version: Date | undefined,
   searchQuery?: string,
-  searchType?: ("id" | "content")[],
+  searchType?: TracingSearchType[],
   limit?: number,
   offset?: number,
 ): Prisma.Sql {
@@ -1077,7 +1104,7 @@ function buildDatasetItemsCountQuery(
   filter: FilterState,
   version?: Date,
   searchQuery?: string,
-  searchType?: ("id" | "content")[],
+  searchType?: TracingSearchType[],
 ): Prisma.Sql {
   const filterCondition = tableColumnsToSqlFilterAndPrefix(filter, datasetItemsFilterCols, "dataset_item_events");
 
@@ -1171,7 +1198,7 @@ async function getDatasetItemsInternal<IncludeIO extends boolean, IncludeDataset
   filter: FilterState;
   version?: Date;
   searchQuery?: string;
-  searchType?: ("id" | "content")[];
+  searchType?: TracingSearchType[];
   limit?: number;
   offset?: number;
 }): Promise<
@@ -1221,7 +1248,7 @@ async function getDatasetItemsCountAtVersionInternal(params: {
   filterState: FilterState;
   version?: Date;
   searchQuery?: string;
-  searchType?: ("id" | "content")[];
+  searchType?: TracingSearchType[];
 }): Promise<number> {
   const query = buildDatasetItemsCountQuery(
     params.projectId,
@@ -1341,7 +1368,7 @@ export async function getDatasetItems<
   filterState: FilterState;
   version?: Date;
   searchQuery?: string;
-  searchType?: ("id" | "content")[];
+  searchType?: TracingSearchType[];
   includeIO?: IncludeIO;
   includeDatasetName?: IncludeDatasetName;
   limit?: number;
@@ -1448,7 +1475,7 @@ export async function getDatasetItemsCount(props: {
   filterState: FilterState;
   version?: Date;
   searchQuery?: string;
-  searchType?: ("id" | "content")[];
+  searchType?: TracingSearchType[];
 }): Promise<number> {
   return executeWithDatasetServiceStrategy(OperationType.READ, {
     [Implementation.STATEFUL]: async () => {

@@ -1,7 +1,13 @@
 import { Callout } from "@/src/components/ui/callout";
 import { Button } from "@/src/components/ui/button";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/src/components/ui/tooltip";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { Info } from "lucide-react";
 import { isLegacyEvalTarget } from "@/src/features/evals/utils/typeHelpers";
 
 interface LegacyEvalCalloutProps {
@@ -19,7 +25,7 @@ export function LegacyEvalCallout({ projectId, evalConfigId, targetObject }: Leg
   return (
     <Callout
       id={`eval-remapping-peek-${evalConfigId}`}
-      variant="info"
+      variant="warning"
       key="dismissed-eval-remapping-callouts"
       actions={() => (
         <>

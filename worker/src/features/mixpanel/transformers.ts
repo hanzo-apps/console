@@ -9,6 +9,33 @@ import type {
 // UUID v5 namespace for Mixpanel (different from Insights)
 const MIXPANEL_UUID_NAMESPACE = "8f7c3e42-9a1b-4d5f-8e2a-1c6b9d3f4e7a";
 
+// Values that Mixpanel's /import?strict=1 API rejects as distinct_id.
+const MIXPANEL_BAD_DISTINCT_IDS = new Set([
+  "undefined",
+  "null",
+  "nil",
+  "none",
+  "unknown",
+  "n/a",
+  "na",
+  "anon",
+  "anonymous",
+  "false",
+  "true",
+  "0",
+  "-1",
+  "00000000-0000-0000-0000-000000000000",
+  "<nil>",
+  "[]",
+  "{}",
+  "lmy47d",
+]);
+
+function isBadDistinctId(value: unknown): boolean {
+  if (typeof value !== "string" || !value) return true;
+  return MIXPANEL_BAD_DISTINCT_IDS.has(value.trim().toLowerCase());
+}
+
 export type MixpanelEvent = {
   event: string;
   properties: {
@@ -27,6 +54,8 @@ export const transformTraceForMixpanel = (trace: AnalyticsTraceEvent, projectId:
   // Extract session IDs and exclude from properties
 
   const { insights_session_id, mixpanel_session_id, ...otherProps } = trace;
+
+  const hasValidUserId = !isBadDistinctId(trace.langfuse_user_id);
 
   return {
     event: "[Hanzo] Trace",
@@ -54,6 +83,8 @@ export const transformGenerationForMixpanel = (
 
   const { insights_session_id, mixpanel_session_id, ...otherProps } = generation;
 
+  const hasValidUserId = !isBadDistinctId(generation.langfuse_user_id);
+
   return {
     event: "[Hanzo] Generation",
     properties: {
@@ -77,6 +108,8 @@ export const transformScoreForMixpanel = (score: AnalyticsScoreEvent, projectId:
 
   const { insights_session_id, mixpanel_session_id, ...otherProps } = score;
 
+  const hasValidUserId = !isBadDistinctId(score.langfuse_user_id);
+
   return {
     event: "[Hanzo] Score",
     properties: {
@@ -99,6 +132,8 @@ export const transformEventForMixpanel = (event: AnalyticsObservationEvent, proj
   // Extract session IDs and exclude from properties
 
   const { insights_session_id, mixpanel_session_id, ...otherProps } = event;
+
+  const hasValidUserId = !isBadDistinctId(event.langfuse_user_id);
 
   return {
     event: "[Hanzo] Observation",

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { PlusIcon } from "lucide-react";
 
@@ -15,6 +15,12 @@ import {
 
 import { type NewPromptFormSchemaType } from "./validation";
 import { PromptSelectionDialog } from "../PromptSelectionDialog";
+import {
+  MessageSearchPageProvider,
+  MessageSearchProvider,
+  MessageSearchToolbar,
+  useSyncMessageSearchMessages,
+} from "@/src/components/ChatMessages/MessageSearch";
 
 import type { ControllerRenderProps } from "react-hook-form";
 import type { MessagesContext } from "@/src/components/ChatMessages/types";
@@ -102,17 +108,12 @@ export const PromptChatMessages: React.FC<PromptChatMessagesProps> = ({ onChange
   }, [messages, onChange]);
 
   return (
-    <div>
-      <div className="my-2 flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          className="flex items-center gap-1 px-2 py-1"
-          onClick={() => setIsDialogOpen(true)}
-        >
-          <PlusIcon className="h-4 w-4" />
-          <span className="text-xs">Add prompt reference</span>
-        </Button>
+    <MessageSearchProvider
+      pageIds={[PROMPT_CHAT_MESSAGES_SEARCH_PAGE_ID]}
+      captureRootRef={searchRootRef}
+    >
+      <MessageSearchPageProvider pageId={PROMPT_CHAT_MESSAGES_SEARCH_PAGE_ID}>
+        <PromptChatMessagesSearchSync messages={messages} />
 
         {projectId && (
           <PromptSelectionDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} projectId={projectId} />

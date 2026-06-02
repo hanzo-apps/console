@@ -3,7 +3,7 @@ FROM node:24-alpine@sha256:cd6fb7efa6490f039f3471a189214d5f548c11df1ff9e5b181aa4
 
 # It's important to update the index before installing packages to ensure you're getting the latest versions.
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk update && apk upgrade --no-cache libcrypto3 libssl3 libc6-compat busybox ssl_client
+RUN apk update && apk upgrade --no-cache libcrypto3 libssl3 libc6-compat busybox ssl_client zlib
 
 
 
@@ -19,7 +19,7 @@ RUN npm install turbo@^2.8.10 --global
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
-RUN corepack prepare pnpm@9.5.0 --activate
+RUN corepack prepare pnpm@11.1.3 --activate
 
 FROM base AS pruner
 
@@ -135,7 +135,7 @@ ARG GID=1001
 RUN addgroup --system --gid ${GID} nodejs
 RUN adduser --system --uid ${UID} nextjs
 
-RUN npm install -g --no-package-lock --no-save prisma@6.17.1
+RUN npm install -g --no-package-lock --no-save prisma@6.19.3
 
 # Install dd-trace only if NEXT_PUBLIC_HANZO_CLOUD_REGION is configured
 ARG NEXT_PUBLIC_HANZO_CLOUD_REGION

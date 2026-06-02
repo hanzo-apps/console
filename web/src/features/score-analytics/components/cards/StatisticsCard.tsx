@@ -15,6 +15,7 @@ import {
   interpretMAE,
   interpretRMSE,
 } from "@/src/features/score-analytics/lib/statistics-utils";
+import Spinner from "@/src/components/design-system/Spinner/Spinner";
 
 /**
  * StatisticsCard - Smart card component for displaying score statistics
@@ -42,7 +43,7 @@ export function StatisticsCard() {
           <CardDescription>Loading statistics...</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Spinner size="xl" variant="muted" />
         </CardContent>
       </Card>
     );
@@ -56,7 +57,7 @@ export function StatisticsCard() {
           <CardTitle>Statistics</CardTitle>
           <CardDescription>No data available</CardDescription>
         </CardHeader>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
+        <CardContent className="text-muted-foreground py-12 text-center text-sm">
           Select a score to view statistics
         </CardContent>
       </Card>

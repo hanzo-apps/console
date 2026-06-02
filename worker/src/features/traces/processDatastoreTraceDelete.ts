@@ -3,6 +3,7 @@ import {
   deleteObservationsByTraceIds,
   deleteScoresByTraceIds,
   deleteTraces,
+  getS3MediaStorageClient,
   logger,
   removeIngestionEventsFromS3AndDeleteDatastoreRefsForTraces,
   StorageService,

@@ -34,6 +34,7 @@ declare module "next-auth" {
     image?: PrismaUser["image"];
     admin?: PrismaUser["admin"];
     v4BetaEnabled?: boolean;
+    canToggleV4?: boolean;
     emailVerified?: string | null; // iso datetime string, need to stringify as JWT & useSession do not support Date objects
     canCreateOrganizations: boolean; // default true, allowlist can be set via HANZO_ALLOWED_ORGANIZATION_CREATORS
     organizations: {
@@ -44,6 +45,7 @@ declare module "next-auth" {
       plan: Plan;
       metadata: Record<string, unknown>;
       aiFeaturesEnabled: boolean;
+      aiTelemetryEnabled: boolean;
       projects: {
         id: PrismaProject["id"];
         name: PrismaProject["name"];
@@ -52,9 +54,11 @@ declare module "next-auth" {
         hasTraces: PrismaProject["hasTraces"];
         metadata: Record<string, unknown>;
         role: Role; // include only projects where user has a role
+        createdAt: string; // iso datetime string — JWT does not support Date objects
       }[];
     }[];
     featureFlags: Flags;
+    hasPassword?: boolean;
   }
 }
 

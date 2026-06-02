@@ -6,6 +6,8 @@ import { type NextApiRequest, type NextApiResponse } from "next";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import {
   CreateBlobStorageIntegrationRequest,
+  toInternalExportSource,
+  toPublicExportSource,
   type BlobStorageIntegrationResponseType,
 } from "@/src/features/public-api/types/blob-storage-integrations";
 import { HanzoNotFoundError, UnauthorizedError, ForbiddenError } from "@hanzo/shared";
@@ -106,7 +108,7 @@ async function handleUpsertBlobStorageIntegration(req: NextApiRequest, res: Next
   // Check if the project exists and belongs to the organization
   const project = await prisma.project.findUnique({
     where: { id: validatedData.projectId },
-    select: { id: true, orgId: true },
+    select: { id: true, orgId: true, createdAt: true },
   });
   if (!project || project.orgId !== authCheck.scope.orgId) {
     throw new HanzoNotFoundError("Project not found");
@@ -130,11 +132,54 @@ async function handleUpsertBlobStorageIntegration(req: NextApiRequest, res: Next
     exportStartDate: validatedData.exportStartDate || null,
   };
 
-  // Upsert the integration (create or update)
-  const integration = await prisma.blobStorageIntegration.upsert({
-    where: { projectId: validatedData.projectId },
-    update: dbData,
-    create: dbData,
+  if (validatedData.exportSource) {
+    assertLegacyBlobExportSourceAllowed({
+      project,
+      nextInternalExportSource: toInternalExportSource(
+        validatedData.exportSource,
+      ),
+      isCloud,
+    });
+  }
+
+  await auditLog({
+    action: "update",
+    resourceType: "blobStorageIntegration",
+    resourceId: validatedData.projectId,
+    apiKeyId: authCheck.scope.apiKeyId,
+    orgId: authCheck.scope.orgId,
+  });
+
+  const integration = await upsertBlobStorageIntegration({
+    prisma,
+    projectId: validatedData.projectId,
+    // When exportSource is absent and the project is post-cutoff Cloud, have
+    // the service substitute EVENTS on CREATE inside its own transaction —
+    // eliminating the TOCTOU window that a pre-flight findUnique would create.
+    forceEventsOnCreate:
+      validatedData.exportSource == null &&
+      !isLegacyBlobExportAllowed(project.createdAt, isCloud),
+    data: {
+      type: validatedData.type,
+      bucketName: validatedData.bucketName,
+      endpoint: validatedData.endpoint || null,
+      region: validatedData.region,
+      accessKeyId: validatedData.accessKeyId || null,
+      secretAccessKey: validatedData.secretAccessKey ?? null,
+      prefix: validatedData.prefix,
+      exportFrequency: validatedData.exportFrequency,
+      enabled: validatedData.enabled,
+      forcePathStyle: validatedData.forcePathStyle,
+      fileType: validatedData.fileType,
+      exportMode: validatedData.exportMode,
+      exportStartDate: validatedData.exportStartDate ?? null,
+      compressed: validatedData.compressed,
+      exportSource:
+        validatedData.exportSource != null
+          ? toInternalExportSource(validatedData.exportSource)
+          : undefined,
+      exportFieldGroups: validatedData.exportFieldGroups ?? undefined,
+    },
   });
 
   // Transform to API response format, exclude secretAccessKey
@@ -153,8 +198,17 @@ async function handleUpsertBlobStorageIntegration(req: NextApiRequest, res: Next
     fileType: integration.fileType,
     exportMode: integration.exportMode,
     exportStartDate: integration.exportStartDate,
+    compressed: integration.compressed,
+    exportSource: toPublicExportSource(integration.exportSource),
+    exportFieldGroups:
+      integration.exportSource ===
+      AnalyticsIntegrationExportSource.TRACES_OBSERVATIONS
+        ? null
+        : (integration.exportFieldGroups as ObservationFieldGroupFull[]),
     nextSyncAt: integration.nextSyncAt,
     lastSyncAt: integration.lastSyncAt,
+    lastError: integration.lastError,
+    lastErrorAt: integration.lastErrorAt,
     createdAt: integration.createdAt,
     updatedAt: integration.updatedAt,
   };

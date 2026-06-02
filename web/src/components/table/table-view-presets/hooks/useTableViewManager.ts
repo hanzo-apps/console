@@ -1,15 +1,15 @@
 import { api } from "@/src/utils/api";
 import {
-  type TableViewPresetTableName,
+  TableViewPresetTableName,
   type FilterState,
   type OrderByState,
-  type TableViewPresetDomain,
+  type TableViewPresetState,
   type ColumnDefinition,
 } from "@hanzo/shared";
 import { useRouter } from "next/router";
 import { useEffect, useCallback, useState, useRef } from "react";
 import { type VisibilityState } from "@tanstack/react-table";
-import { StringParam, withDefault } from "use-query-params";
+import { StringParam } from "use-query-params";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { useQueryParam } from "use-query-params";
 import { type HanzoColumnDef } from "@/src/components/table/types";
@@ -24,6 +24,7 @@ interface TableStateUpdaters {
   setOrderBy?: (orderBy: OrderByState) => void;
   setFilters?: (filters: FilterState) => void;
   setSearchQuery?: (searchQuery: string) => void;
+  setExpandedFilters?: (expandedFilters: string[]) => void;
 }
 
 interface UseTableStateProps {
@@ -33,9 +34,41 @@ interface UseTableStateProps {
   validationContext?: {
     columns?: HanzoColumnDef<any, any>[];
     filterColumnDefinition?: ColumnDefinition[];
+    expandableFilterColumns?: string[];
+    migrateFilterState?: FilterStateMigration;
   };
   currentFilterState?: FilterState;
+  currentExpandedFilters?: string[];
+  disabled?: boolean;
+  allowBackendSystemPresets?: boolean;
 }
+
+const isViewApplicableToTable = (
+  currentTableName: TableViewPresetTableName,
+  viewTableName: TableViewPresetTableName,
+) =>
+  currentTableName === viewTableName ||
+  (currentTableName === TableViewPresetTableName.ObservationsEvents &&
+    viewTableName === TableViewPresetTableName.Observations);
+
+const IMPLICIT_VIEW_BLOCKING_QUERY_PARAMS = [
+  "filter",
+  "search",
+  "searchType",
+  "orderBy",
+] as const;
+
+const hasQueryParam = (
+  query: NextRouter["query"],
+  key: (typeof IMPLICIT_VIEW_BLOCKING_QUERY_PARAMS)[number],
+) => {
+  const value = query[key];
+  if (Array.isArray(value)) return value.length > 0;
+  return value !== undefined && value !== "";
+};
+
+const hasExplicitTableStateInUrl = (query: NextRouter["query"]) =>
+  IMPLICIT_VIEW_BLOCKING_QUERY_PARAMS.some((key) => hasQueryParam(query, key));
 
 /**
  * Hook to manage table view state with permalink support
@@ -46,13 +79,17 @@ export function useTableViewManager({
   stateUpdaters,
   validationContext = {},
   currentFilterState,
+  currentExpandedFilters,
+  disabled = false,
+  allowBackendSystemPresets = false,
 }: UseTableStateProps) {
   const router = useRouter();
-  const { viewId } = router.query;
+  const isRouterReady = router.isReady;
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const capture = usePostHogClientCapture();
   const pendingFiltersRef = useRef<FilterState | null>(null);
+  const pendingFiltersPreviousStateRef = useRef<FilterState | null>(null);
 
   const [storedViewId, setStoredViewId] = useSessionStorage<string | null>(`${tableName}-${projectId}-viewId`, null);
   const [selectedViewId, setSelectedViewId] = useQueryParam("viewId", withDefault(StringParam, storedViewId));
@@ -68,6 +105,14 @@ export function useTableViewManager({
       }
       setStoredViewId(viewId);
       setSelectedViewId(viewId);
+
+      // Explicitly selecting "My view (default)" should stop bootstrap restore.
+      // Otherwise an in-flight bootstrap can restore a previously selected view.
+      if (viewId === null && !isInitializedRef.current) {
+        isInitializedRef.current = true;
+        setIsInitialized(true);
+        setIsLoading(false);
+      }
     },
     [setStoredViewId, setSelectedViewId],
   );
@@ -80,11 +125,13 @@ export function useTableViewManager({
   const setFiltersRef = useRef(setFilters);
   const setOrderByRef = useRef(setOrderBy);
   const setSearchQueryRef = useRef(setSearchQuery);
+  const setExpandedFiltersRef = useRef(setExpandedFilters);
 
   // Update refs immediately on every render
   setFiltersRef.current = setFilters;
   setOrderByRef.current = setOrderBy;
   setSearchQueryRef.current = setSearchQuery;
+  setExpandedFiltersRef.current = setExpandedFilters;
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -117,7 +164,7 @@ export function useTableViewManager({
 
   // Method to apply state from a view
   const applyViewState = useCallback(
-    (viewData: TableViewPresetDomain) => {
+    (viewData: TableViewPresetState) => {
       // lock table
       setIsLoading(true);
 
@@ -147,12 +194,33 @@ export function useTableViewManager({
 
       const filtersAlreadyApplied = isEqual(currentFilterState, validFilters);
 
+      if (
+        setExpandedFiltersRef.current &&
+        validationContext.expandableFilterColumns?.length
+      ) {
+        const nextExpandedFilters = Array.from(
+          new Set([
+            ...(currentExpandedFilters ?? []),
+            ...validFilters
+              .map((filter) => filter.column)
+              .filter((column) =>
+                validationContext.expandableFilterColumns?.includes(column),
+              ),
+          ]),
+        );
+
+        setExpandedFiltersRef.current(nextExpandedFilters);
+      }
+
       if (setFiltersRef.current) {
         setFiltersRef.current(validFilters);
         // Track expected filters to observe when state actually updates (for useEffect below)
-        // If filters are already applied, don't set pending ref (will unlock immediately)
+        // If filters are already applied, don't set pending ref (will unlock immediately).
+        // Also track pre-apply state so we can unlock when filters propagate but get
+        // migrated into an equivalent shape by downstream hooks.
         if (!filtersAlreadyApplied) {
           pendingFiltersRef.current = validFilters;
+          pendingFiltersPreviousStateRef.current = currentFilterState ?? [];
         }
       }
 
@@ -177,30 +245,58 @@ export function useTableViewManager({
     [setColumnOrder, setColumnVisibility, validationContext, currentFilterState],
   );
 
-  // Handle successful view data fetch
-  useEffect(() => {
-    if (viewData && !isInitialized) {
-      // Track permalink visit
-      capture("saved_views:permalink_visit", {
-        tableName,
-        viewId: viewId as string,
-        name: viewData.name,
-      });
+  // Fetch view data if a viewId is provided (skip for frontend-only system presets)
+  const {
+    data: selectedViewData,
+    error: selectedViewError,
+    isSuccess: isSelectedViewSuccess,
+    isError: isSelectedViewError,
+  } = api.TableViewPresets.getById.useQuery(
+    { viewId: selectedViewId as string, projectId },
+    {
+      enabled:
+        !disabled &&
+        isRouterReady &&
+        !!selectedViewId &&
+        !isInitialized &&
+        (!isSystemPresetId(selectedViewId) || allowBackendSystemPresets),
+    },
+  );
 
-      applyViewState(viewData);
-      setIsInitialized(true);
+  useEffect(() => {
+    if (disabled) return;
+    if (!isSelectedViewSuccess || !selectedViewData) return;
+    const requestedViewId = selectedViewId;
+    if (!requestedViewId) return;
+    if (isInitializedRef.current) return;
+    if (selectedViewIdRef.current !== requestedViewId) return;
+    if (selectedViewData.id !== requestedViewId) return;
+    if (!isViewApplicableToTable(tableName, selectedViewData.tableName)) {
+      handleSetViewId(null);
+      return;
     }
   }, [viewData, isInitialized, capture, tableName, viewId, applyViewState, setIsLoading]);
 
-  // Handle view data fetch error
   useEffect(() => {
-    if (viewError && !isInitialized) {
-      setIsInitialized(true);
-      setIsLoading(false);
-      handleSetViewId(null);
-      showErrorToast("Error applying view", viewError.message, "WARNING");
-    }
-  }, [viewError, isInitialized, setIsLoading, handleSetViewId]);
+    if (disabled) return;
+    if (!isSelectedViewError || !selectedViewError) return;
+    const requestedViewId = selectedViewId;
+    if (!requestedViewId) return;
+    if (isInitializedRef.current) return;
+    if (selectedViewIdRef.current !== requestedViewId) return;
+
+    isInitializedRef.current = true;
+    setIsInitialized(true);
+    setIsLoading(false);
+    handleSetViewId(null);
+    showErrorToast("Error applying view", selectedViewError.message, "WARNING");
+  }, [
+    disabled,
+    isSelectedViewError,
+    selectedViewError,
+    selectedViewId,
+    handleSetViewId,
+  ]);
 
   // Initialize on mount if no viewId
   useEffect(() => {
@@ -215,14 +311,35 @@ export function useTableViewManager({
   // Observe when filter state propagates from saved view
   // After calling setFilters, URL updates async → filterState recalculates → this effect detects completion
   useEffect(() => {
-    if (pendingFiltersRef.current && currentFilterState) {
-      if (isEqual(currentFilterState, pendingFiltersRef.current)) {
-        // Filter state has synchronized - safe to unlock table
-        pendingFiltersRef.current = null;
-        setIsLoading(false);
-      }
+    const pendingFilters = pendingFiltersRef.current;
+    if (!pendingFilters || currentFilterState === undefined) return;
+
+    const preApplyFilters = pendingFiltersPreviousStateRef.current ?? [];
+    const hasExpectedShape = isEqual(currentFilterState, pendingFilters);
+    const hasPropagatedWithCanonicalization = !isEqual(
+      currentFilterState,
+      preApplyFilters,
+    );
+
+    if (hasExpectedShape || hasPropagatedWithCanonicalization) {
+      // Filter state has synchronized - safe to unlock table.
+      // `hasPropagatedWithCanonicalization` handles equivalent rewrites
+      // (for example legacy env-delta -> canonical none-of shape).
+      pendingFiltersRef.current = null;
+      pendingFiltersPreviousStateRef.current = null;
+      setIsLoading(false);
     }
   }, [currentFilterState]);
+
+  if (disabled) {
+    return {
+      isLoading: false,
+      applyViewState: () => {},
+      handleSetViewId: () => {},
+      selectedViewId: null,
+      defaultViewScope: null,
+    };
+  }
 
   return {
     isLoading,

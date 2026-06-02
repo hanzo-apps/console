@@ -57,7 +57,7 @@ const TraceRedirectPage = ({ notFound, duplicatesFound }: { notFound?: boolean; 
         message="The trace is either still being processed or has been deleted."
         additionalButton={{
           label: "Retry",
-          onClick: () => void window.location.reload(),
+          onClick: () => window.location.reload(),
         }}
       />
     );

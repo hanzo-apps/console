@@ -19,8 +19,8 @@ export const EvalTemplateDetail = () => {
   const router = useRouter();
   const projectId = router.query.projectId as string;
   const templateId = router.query.id as string;
-
-  const [isEditing, setIsEditing] = useState(false);
+  const mode = router.query.mode;
+  const isEditing = mode === "edit";
 
   // get the current template by id
   const template = api.evals.templateById.useQuery({
@@ -43,6 +43,29 @@ export const EvalTemplateDetail = () => {
   const handleTemplateSelect = (newTemplate: EvalTemplate) => {
     // Update URL without full page reload
     router.push(`/project/${projectId}/evals/templates/${newTemplate.id}`, undefined, { shallow: true });
+  };
+
+  const setIsEditing = (nextIsEditing: boolean) => {
+    if (!router.isReady) {
+      return;
+    }
+
+    const nextQuery = { ...router.query };
+
+    if (nextIsEditing) {
+      nextQuery.mode = "edit";
+    } else {
+      delete nextQuery.mode;
+    }
+
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: nextQuery,
+      },
+      undefined,
+      { shallow: true },
+    );
   };
 
   return (
@@ -94,7 +117,7 @@ export const EvalTemplateDetail = () => {
           />
         </div>
       ) : (
-        <div className="grid flex-1 grid-cols-[1fr,auto] overflow-hidden contain-layout">
+        <div className="grid flex-1 grid-cols-[1fr_auto] overflow-hidden contain-layout">
           <div className="flex max-h-full min-h-0 flex-col overflow-y-auto px-3 pt-1">
             <EvalTemplateForm
               useDialog={false}
@@ -109,12 +132,12 @@ export const EvalTemplateDetail = () => {
               <SidePanelTitle className="text-base font-semibold">Change history</SidePanelTitle>
             </SidePanelHeader>
             <SidePanelContent>
-              <Command className="flex flex-col gap-2 overflow-y-auto rounded-none font-medium focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 data-[focus]:ring-0">
+              <Command className="flex flex-col gap-2 overflow-y-auto rounded-none font-medium focus:ring-0 focus:outline-hidden focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-hidden data-focus:ring-0">
                 <div className="flex flex-col overflow-y-auto">
                   {allTemplates.data.templates.map((template, index) => (
                     <div
                       key={template.id}
-                      className={`flex cursor-pointer flex-col rounded-md px-2 py-1.5 hover:bg-accent ${
+                      className={`hover:bg-accent flex cursor-pointer flex-col rounded-md px-2 py-1.5 ${
                         template.id === templateId ? "bg-accent" : ""
                       }`}
                       onClick={() => handleTemplateSelect(template)}
@@ -126,7 +149,7 @@ export const EvalTemplateDetail = () => {
                               e.stopPropagation();
                             }}
                             variant="outline"
-                            className="h-6 shrink-0 bg-background/50"
+                            className="bg-background/50 h-6 shrink-0"
                             data-version-trigger="false"
                           >
                             # {template.version}

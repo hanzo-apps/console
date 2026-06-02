@@ -43,7 +43,7 @@ export default function EditWidget() {
       if (dashboardId) {
         void router.push(`/project/${projectId}/dashboards/${dashboardId}?addWidgetId=${widgetId}`);
       } else {
-        void router.push(`/project/${projectId}/widgets`);
+        router.push(`/project/${projectId}/widgets`);
       }
     },
     onError: (error) => {
@@ -61,6 +61,7 @@ export default function EditWidget() {
     filters: any[];
     chartType: DashboardWidgetChartType;
     chartConfig: WidgetChartConfig;
+    minVersion: number;
   }) => {
     if (!widgetId) return;
 
@@ -78,6 +79,7 @@ export default function EditWidget() {
       filters: widgetFormData.filters,
       chartType: widgetFormData.chartType,
       chartConfig: widgetFormData.chartConfig,
+      minVersion: widgetFormData.minVersion,
     });
   };
 
@@ -110,6 +112,7 @@ export default function EditWidget() {
             filters: widgetData.filters,
             chartType: widgetData.chartType,
             chartConfig: widgetData.chartConfig,
+            minVersion: widgetData.minVersion,
           }}
         />
       ) : (

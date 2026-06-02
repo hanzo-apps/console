@@ -4,14 +4,23 @@ import { memo } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
 import { decodeUnicodeEscapesOnly } from "@/src/utils/unicode";
 
+type IOTableCellPadding = "default" | "compact";
+
+const ioTableCellPaddingClassNames: Record<IOTableCellPadding, string> = {
+  default: "px-2 py-1",
+  compact: "px-1 py-1",
+};
+
 const IOTableCellContent = ({
   data,
   singleLine,
   className,
+  padding,
 }: {
   data: unknown;
   singleLine: boolean;
   className?: string;
+  padding: IOTableCellPadding;
 }) => {
   const stringifiedJson = data !== null && data !== undefined ? stringifyJsonNode(data) : undefined;
 
@@ -31,7 +40,7 @@ const IOTableCellContent = ({
           true, // greedy mode for double-escaped Unicode (e.g., \\uXXXX)
         )}
         className={cn("h-full w-full self-stretch", className)}
-        codeClassName="py-1 px-2 min-h-0 h-full overflow-y-auto"
+        codeClassName={cn("min-h-0 h-full overflow-y-auto", paddingClassName)}
         collapseStringsAfterLength={null} // in table, show full strings as row height is fixed
         borderless
       />
@@ -41,7 +50,7 @@ const IOTableCellContent = ({
     <JSONView
       json={stringifiedJson ? decodeUnicodeEscapesOnly(stringifiedJson, true) : data}
       className={cn("h-full w-full self-stretch", className)}
-      codeClassName="py-1 px-2 min-h-0 h-full overflow-y-auto"
+      codeClassName={cn("min-h-0 h-full overflow-y-auto", paddingClassName)}
       collapseStringsAfterLength={null} // in table, show full strings as row height is fixed
       borderless
     />
@@ -52,15 +61,19 @@ export const IOTableCell = ({
   data,
   isLoading = false,
   className,
+  padding = "default",
   singleLine = false,
   enableExpandOnHover = false,
 }: {
   data: unknown;
   isLoading?: boolean;
   className?: string;
+  padding?: IOTableCellPadding;
   singleLine?: boolean;
   enableExpandOnHover?: boolean;
 }) => {
+  const paddingClassName = ioTableCellPaddingClassNames[padding];
+
   if (isLoading) {
     return <JsonSkeleton borderless className="h-full w-full overflow-hidden px-2 py-1" />;
   }

@@ -55,7 +55,7 @@ export const DatasetActionButton = forwardRef<HTMLButtonElement, DatasetActionBu
           props.icon ? (
             <Button
               ref={ref}
-              variant={props.variant || "outline"}
+              variant={props.variant || "outline-solid"}
               size={props.size || "icon"}
               className={props.className}
               disabled={!hasAccess}
@@ -112,9 +112,9 @@ export const DatasetActionButton = forwardRef<HTMLButtonElement, DatasetActionBu
             variant={props.variant || "default"}
           >
             {hasAccess ? (
-              <PlusIcon className="-ml-0.5 mr-1.5 h-4 w-4" aria-hidden="true" />
+              <PlusIcon className="mr-1.5 -ml-0.5 h-4 w-4" aria-hidden="true" />
             ) : (
-              <LockIcon className="-ml-0.5 mr-1.5 h-3 w-3" aria-hidden="true" />
+              <LockIcon className="mr-1.5 -ml-0.5 h-3 w-3" aria-hidden="true" />
             )}
             New dataset
           </Button>

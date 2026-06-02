@@ -1,3 +1,7 @@
+import {
+  JobExecutionStatus,
+  type EvaluatorExecutionStatusCount,
+} from "@langfuse/shared";
 import { compactNumberFormatter } from "@/src/utils/numbers";
 
 /**

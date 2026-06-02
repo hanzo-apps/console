@@ -6,7 +6,7 @@ import { MarkdownView } from "@/src/components/ui/MarkdownViewer";
 import { type MediaReturnType } from "@/src/features/media/validation";
 import { Check, Copy } from "lucide-react";
 import { useMemo, useState } from "react";
-import { type z } from "zod/v4";
+import { type z } from "zod";
 import { MARKDOWN_RENDER_CHARACTER_LIMIT } from "@/src/utils/constants";
 
 type MarkdownJsonViewHeaderProps = {
@@ -29,12 +29,12 @@ export function MarkdownJsonViewHeader({
   const [isCopied, setIsCopied] = useState(false);
 
   return (
-    <div className="io-message-header flex flex-row items-center justify-between px-1 py-1 text-sm font-medium capitalize transition-colors group-hover:bg-muted/80">
+    <div className="io-message-header group-hover:bg-muted/80 flex flex-row items-center justify-between px-1 py-1 text-sm font-medium capitalize transition-colors">
       <div className="flex items-center gap-2">
         {titleIcon}
         {title}
       </div>
-      <div className="mr-1 flex min-w-0 flex-shrink flex-row items-center gap-1">
+      <div className="mr-1 flex min-w-0 shrink flex-row items-center gap-1">
         {controlButtons}
         <Button
           title="Copy to clipboard"
@@ -46,7 +46,7 @@ export function MarkdownJsonViewHeader({
             handleOnCopy(event);
             setTimeout(() => setIsCopied(false), 1000);
           }}
-          className="-mr-2 hover:bg-border"
+          className="hover:bg-border -mr-2"
         >
           {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
         </Button>
@@ -103,7 +103,9 @@ export function MarkdownJsonView({
     <>
       {canEnableMarkdown ? (
         <MarkdownView
-          markdown={stringOrValidatedMarkdown.data ?? content}
+          markdown={
+            validatedOpenAIContent.success ? validatedOpenAIContent.data : null
+          }
           title={title}
           titleIcon={titleIcon}
           customCodeHeaderClassName={customCodeHeaderClassName}

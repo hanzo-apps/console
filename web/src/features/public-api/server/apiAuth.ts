@@ -1,6 +1,7 @@
 import { env } from "@/src/env.mjs";
 import {
   createShaHash,
+  deleteApiKeyFromDb,
   recordIncrement,
   verifySecretKey,
   type AuthHeaderVerificationResult,
@@ -22,6 +23,10 @@ import { API_KEY_NON_EXISTENT } from "@hanzo/shared/src/server";
 import { type z } from "zod/v4";
 import { CloudConfigSchema, isPlan } from "@hanzo/shared";
 
+type VerifyAuthHeaderOptions = {
+  allowInAppAgentKey?: boolean;
+};
+
 export class ApiAuthService {
   prisma: PrismaClient;
   redis: Redis | Cluster | null;
@@ -35,15 +40,15 @@ export class ApiAuthService {
   // - when projects move across organisations, the orgId in the API key cache needs to be updated
   // - when the plan of the org changes, the plan in the API key cache needs to be updated as well
   async invalidateCachedApiKeys(apiKeys: ApiKey[], identifier: string) {
-    await invalidateCachedApiKeysShared(apiKeys, identifier);
+    await invalidateCachedApiKeysShared(apiKeys, identifier, this.redis);
   }
 
   async invalidateCachedOrgApiKeys(orgId: string) {
-    await invalidateCachedOrgApiKeysShared(orgId);
+    await invalidateCachedOrgApiKeysShared(orgId, this.redis);
   }
 
   async invalidateCachedProjectApiKeys(projectId: string) {
-    await invalidateCachedProjectApiKeysShared(projectId);
+    await invalidateCachedProjectApiKeysShared(projectId, this.redis);
   }
 
   /**
@@ -236,6 +241,18 @@ export class ApiAuthService {
         error: "Invalid authorization header",
       };
     });
+
+    if (
+      result.validKey &&
+      result.scope.isInAppAgentKey === true &&
+      options.allowInAppAgentKey !== true
+    ) {
+      return {
+        validKey: false,
+        error:
+          "Access denied - in-app agent keys are not allowed for this endpoint",
+      };
+    }
 
     return result;
   }

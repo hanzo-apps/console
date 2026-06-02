@@ -10,9 +10,15 @@ import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import { useQueryFilterState } from "@/src/features/filters/hooks/useFilterState";
 import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFilterState";
 import {
-  observationFilterConfig,
+  type UseSidebarFilterStateOptions,
+  useSidebarFilterState,
+} from "@/src/features/filters/hooks/useSidebarFilterState";
+import {
+  getObservationsFilterConfig,
   OBSERVATION_COLUMN_TO_BACKEND_KEY,
+  type ObservationsOmittableFilterColumn,
 } from "@/src/features/filters/config/observations-config";
+import { DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG } from "@/src/features/filters/constants/internal-environments";
 import { transformFiltersForBackend } from "@/src/features/filters/lib/filter-transform";
 import { formatIntervalSeconds } from "@/src/utils/dates";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
@@ -42,18 +48,20 @@ import { BatchExportTableButton } from "@/src/components/BatchExportTableButton"
 import {
   BreakdownTooltip,
   calculateAggregatedUsage,
-} from "@/src/components/trace2/components/_shared/BreakdownToolTip";
+} from "@/src/components/trace/components/_shared/BreakdownToolTip";
 import { InfoIcon, PlusCircle } from "lucide-react";
 import { UpsertModelFormDialog } from "@/src/features/models/components/UpsertModelFormDialog";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { Badge } from "@/src/components/ui/badge";
-import { type RowSelectionState, type Row } from "@tanstack/react-table";
+import { type RowSelectionState } from "@tanstack/react-table";
 import TableIdOrName from "@/src/components/table/table-id";
 import { ItemBadge } from "@/src/components/ItemBadge";
-import { Skeleton } from "@/src/components/ui/skeleton";
-import { PeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
+import { TablePeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
-import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
+import {
+  detailPageListKeys,
+  useDetailPageLists,
+} from "@/src/features/navigate-detail-pages/context";
 import { useTableViewManager } from "@/src/components/table/table-view-presets/hooks/useTableViewManager";
 import { useRouter } from "next/router";
 import { useFullTextSearch } from "@/src/components/table/use-cases/useFullTextSearch";
@@ -373,8 +381,39 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
     };
   }, [environmentFilterOptions.data, filterOptions.data]);
 
+  const isSidebarFilterLoading =
+    filterOptions.isPending || environmentFilterOptions.isPending;
+
+  const queryFilterOptions: UseSidebarFilterStateOptions = useMemo(() => {
+    const baseOptions = {
+      loading: isSidebarFilterLoading,
+      implicitDefaultConfig: DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG,
+    };
+
+    if (peekContext) {
+      return {
+        ...baseOptions,
+        stateLocation: "peekContext",
+        context: peekContext,
+      };
+    }
+
+    if (hideControls) {
+      return {
+        ...baseOptions,
+        stateLocation: "memory",
+      };
+    }
+
+    return {
+      ...baseOptions,
+      stateLocation: "urlAndSessionStorage",
+      sessionFilterContextId: projectId,
+    };
+  }, [hideControls, isSidebarFilterLoading, peekContext, projectId]);
+
   const queryFilter = useSidebarFilterState(
-    observationFilterConfig,
+    observationsFilterConfig,
     newFilterOptions,
     projectId,
     filterOptions.isPending || environmentFilterOptions.isPending,
@@ -396,7 +435,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
   const backendFilterState = transformFiltersForBackend(
     filterState,
     OBSERVATION_COLUMN_TO_BACKEND_KEY,
-    observationFilterConfig.columnDefinitions,
+    observationsFilterConfig.columnDefinitions,
   );
 
   const getCountPayload = {
@@ -404,8 +443,6 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
     filter: backendFilterState,
     searchQuery,
     searchType,
-    page: 0,
-    limit: 0,
     orderBy: null,
   };
 
@@ -422,7 +459,6 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
   const totalCountQuery = api.generations.countAll.useQuery(getCountPayload, {
     refetchOnWindowFocus: true,
   });
-
   const totalCount = totalCountQuery.data?.totalCount ?? null;
 
   const addToQueueMutation = api.annotationQueueItems.createMany.useMutation({
@@ -441,7 +477,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
   useEffect(() => {
     if (generations.isSuccess) {
       setDetailPageList(
-        "observations",
+        detailPageListKeys.observations,
         generations.data.generations.map((g) => ({
           id: g.id,
           params: g.traceTimestamp
@@ -467,6 +503,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
     projectId,
     tableName: "observations",
     setSelectedRows,
+    setSelectAll,
   });
 
   const handleAddToAnnotationQueue = async ({ projectId, targetId }: { projectId: string; targetId: string }) => {
@@ -557,6 +594,14 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
       header: "Input",
       id: "input",
       size: 300,
+      loadingCell: () => (
+        <MemoizedIOTableCell
+          isLoading
+          data={undefined}
+          className="bg-muted/50"
+          singleLine={rowHeight === "s"}
+        />
+      ),
       cell: ({ row }) => {
         const observationId: string = row.getValue("id");
         const traceId: string = row.getValue("traceId");
@@ -578,6 +623,14 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
       id: "output",
       header: "Output",
       size: 300,
+      loadingCell: () => (
+        <MemoizedIOTableCell
+          isLoading
+          data={undefined}
+          className="bg-accent-light-green"
+          singleLine={rowHeight === "s"}
+        />
+      ),
       cell: ({ row }) => {
         const observationId: string = row.getValue("id");
         const traceId: string = row.getValue("traceId");
@@ -797,6 +850,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
       id: "environment",
       size: 150,
       enableHiding: true,
+      loadingCell: <TableBadgeLoadingCell />,
       cell: ({ row }) => {
         const value: ObservationsTableRow["environment"] = row.getValue("environment");
         return value ? (
@@ -812,6 +866,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
       header: "Trace Tags",
       size: 250,
       enableHiding: true,
+      loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
         const traceTags: string[] | undefined = row.getValue("traceTags");
         return (
@@ -827,6 +882,13 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
       accessorKey: "metadata",
       header: "Metadata",
       size: 300,
+      loadingCell: () => (
+        <MemoizedIOTableCell
+          isLoading
+          data={undefined}
+          singleLine={rowHeight === "s"}
+        />
+      ),
       headerTooltip: {
         description: "Add metadata to traces to track additional information.",
         href: "https://hanzo.com/docs/observability/features/metadata",
@@ -854,7 +916,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
       enableHiding: true,
       defaultHidden: true,
       cell: () => {
-        return isColumnLoading ? <Skeleton className="h-3 w-1/2" /> : null;
+        return isColumnLoading ? <TableTextLoadingCell /> : null;
       },
       columns: scoreColumns,
     },
@@ -945,7 +1007,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
           id: "tokensPerSecond",
           header: "Tokens per second",
           size: 200,
-          cell: ({ row }: { row: Row<ObservationsTableRow> }) => {
+          cell: ({ row }) => {
             const latency: number | undefined = row.getValue("latency");
             const usage: {
               promptTokens: number;
@@ -967,6 +1029,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
           id: "inputTokens",
           header: "Input Tokens",
           size: 100,
+          loadingCell: <TableTextLoadingCell />,
           enableHiding: true,
           defaultHidden: true,
           enableSorting: true,
@@ -984,6 +1047,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
           id: "outputTokens",
           header: "Output Tokens",
           size: 100,
+          loadingCell: <TableTextLoadingCell />,
           enableHiding: true,
           defaultHidden: true,
           enableSorting: true,
@@ -1001,6 +1065,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
           id: "totalTokens",
           header: "Total Tokens",
           size: 100,
+          loadingCell: <TableTextLoadingCell />,
           enableHiding: true,
           defaultHidden: true,
           enableSorting: true,
@@ -1013,7 +1078,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
             return <span>{numberFormatter(value.totalUsage, 0)}</span>;
           },
         },
-      ],
+      ] satisfies LangfuseColumnDef<ObservationsTableRow>[],
     },
     {
       accessorKey: "cost",
@@ -1030,7 +1095,8 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
           id: "inputCost",
           header: "Input Cost",
           size: 120,
-          cell: ({ row }: { row: Row<ObservationsTableRow> }) => {
+          loadingCell: <TableTextLoadingCell />,
+          cell: ({ row }) => {
             const value: {
               inputCost: number | undefined;
               outputCost: number | undefined;
@@ -1047,7 +1113,8 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
           id: "outputCost",
           header: "Output Cost",
           size: 120,
-          cell: ({ row }: { row: Row<ObservationsTableRow> }) => {
+          loadingCell: <TableTextLoadingCell />,
+          cell: ({ row }) => {
             const value: {
               inputCost: number | undefined;
               outputCost: number | undefined;
@@ -1059,7 +1126,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
           defaultHidden: true,
           enableSorting: true,
         },
-      ],
+      ] satisfies LangfuseColumnDef<ObservationsTableRow>[],
     },
   ];
 
@@ -1074,11 +1141,18 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
   );
 
   const peekNavigationProps = usePeekNavigation({
-    queryParams: ["observation", "display", "timestamp", "traceId"],
+    queryParams: [
+      "observation",
+      "display",
+      "timestamp",
+      "traceId",
+      "startTime",
+    ],
     paramsToMirrorPeekValue: ["observation"],
     extractParamsValuesFromRow: (row: ObservationsTableRow) => ({
       traceId: row.traceId || "",
       timestamp: row.timestamp?.toISOString() || "",
+      startTime: row.startTime.toISOString(),
     }),
     expandConfig: {
       basePath: `/project/${projectId}/traces`,
@@ -1092,15 +1166,21 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
     stateUpdaters: {
       setOrderBy: setOrderByState,
       setFilters: setFiltersWrapper,
+      setExpandedFilters: queryFilter.onExpandedChange,
       setColumnOrder: setColumnOrder,
       setColumnVisibility: setColumnVisibilityState,
       setSearchQuery: setSearchQuery,
     },
     validationContext: {
       columns,
-      filterColumnDefinition: observationFilterConfig.columnDefinitions,
+      filterColumnDefinition: observationsFilterConfig.columnDefinitions,
+      expandableFilterColumns: observationsFilterConfig.facets.map(
+        (facet) => facet.column,
+      ),
     },
-    currentFilterState: queryFilter.filterState,
+    currentFilterState: queryFilter.explicitFilterState,
+    currentExpandedFilters: queryFilter.expanded,
+    disabled: hideControls,
   });
 
   const peekConfig: DataTablePeekViewProps = useMemo(
@@ -1160,8 +1240,20 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
       : [];
   }, [generations]);
 
+  const selectedObservationIds = useMemo(
+    () =>
+      Object.keys(selectedRows).filter((generationId) =>
+        generations.data?.generations.map((g) => g.id).includes(generationId),
+      ),
+    [selectedRows, generations.data?.generations],
+  );
+
+  const selectedObservationCount = selectAll
+    ? totalCount
+    : selectedObservationIds.length;
+
   return (
-    <DataTableControlsProvider>
+    <DataTableControlsProvider tableName={observationsFilterConfig.tableName}>
       <div className="flex h-full w-full flex-col">
         {/* Toolbar spanning full width */}
         <DataTableToolbar
@@ -1266,6 +1358,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
                 state: paginationState,
               }}
               rowSelection={selectedRows}
+              highlightAllRows={selectAll}
               setRowSelection={setSelectedRows}
               setOrderBy={setOrderByState}
               orderBy={orderByState}
@@ -1286,18 +1379,18 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
                   const timestamp = row.timestamp;
 
                   if (traceId) {
-                    let observationUrl = `/project/${projectId}/traces/${encodeURIComponent(traceId)}`;
+                    const observationUrl = buildTraceDetailPath({
+                      projectId,
+                      traceId,
+                      observationId,
+                      timestamp,
+                    });
 
-                    const params = new URLSearchParams();
-                    params.set("observation", observationId);
-                    if (timestamp) {
-                      params.set("timestamp", timestamp.toISOString());
-                    }
-
-                    observationUrl += `?${params.toString()}`;
-
-                    const fullUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${observationUrl}`;
-                    window.open(fullUrl, "_blank");
+                    window.open(
+                      getSafeRedirectPath(observationUrl),
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
                   }
                 }
                 // For normal clicks, let the data-table handle opening the peek view
@@ -1311,9 +1404,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
       {showAddToDatasetDialog && (
         <AddObservationsToDatasetDialog
           projectId={projectId}
-          selectedObservationIds={Object.keys(selectedRows).filter((id) =>
-            generations.data?.generations.map((g) => g.id).includes(id),
-          )}
+          selectedObservationIds={selectedObservationIds}
           query={{
             filter: backendFilterState,
             orderBy: orderByState,
@@ -1329,9 +1420,7 @@ export default function ObservationsTable({ projectId, promptName, promptVersion
           }}
           exampleObservation={(() => {
             // Get the first selected observation to use for preview
-            const selectedIds = Object.keys(selectedRows).filter((id) =>
-              generations.data?.generations.map((g) => g.id).includes(id),
-            );
+            const selectedIds = selectedObservationIds;
             const firstId = selectedIds[0];
             const firstGen = generations.data?.generations.find((g) => g.id === firstId);
             return {

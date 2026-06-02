@@ -14,13 +14,14 @@ export const AnnotationProcessingLayout: React.FC<AnnotationProcessingLayoutProp
 }) => {
   const [panelSize, setPanelSize] = useSessionStorage(`annotationQueuePanelSize-${projectId}`, 65);
 
-  return (
-    <>
-      {/* Mobile: Vertical stack without resizing */}
+  if (isMobile) {
+    return (
       <div className="flex h-full flex-col gap-2 overflow-hidden md:hidden">
         <div className="h-1/2 overflow-y-auto rounded-md border">{leftPanel}</div>
         <div className="flex h-1/2 flex-col overflow-hidden">{rightPanel}</div>
       </div>
+    );
+  }
 
       {/* Desktop: Horizontal resizable panels */}
       <div className="hidden max-h-full min-h-0 overflow-hidden md:block">

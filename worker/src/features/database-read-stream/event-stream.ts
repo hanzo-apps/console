@@ -9,7 +9,6 @@
 
 import {
   FilterCondition,
-  ScoreDataTypeEnum,
   type ScoreDataTypeType,
   TimeFilter,
   TracingSearchType,
@@ -32,6 +31,26 @@ import { fetchCommentsForExport } from "./fetchCommentsForExport";
 import { BatchExportEventsRow } from "./types";
 
 const BATCH_SIZE = 1000; // Fetch comments in batches for efficiency
+const EVENT_SEARCH_COLUMNS = [
+  "span_id",
+  "name",
+  "trace_name",
+  "user_id",
+  "session_id",
+  "trace_id",
+] as const;
+
+const eventSearchCondition = (opts: {
+  query?: string;
+  searchType?: TracingSearchType[];
+}) =>
+  clickhouseSearchCondition({
+    query: opts.query,
+    searchType: opts.searchType,
+    tablePrefix: "e",
+    searchColumns: EVENT_SEARCH_COLUMNS,
+    useEventsTablePath: true,
+  });
 
 /**
  * Creates a stream of events from Datastore for batch export.
@@ -105,6 +124,7 @@ export const getEventsStream = async (props: {
         },
       ],
       eventsTableUiColumnDefinitions,
+      eventsTableCols,
     ),
   );
 
@@ -177,6 +197,7 @@ export const getEventsStream = async (props: {
         }[]
       | undefined;
     score_categories: string[] | undefined;
+    score_categories_tuples: [string, string | null, string][] | undefined;
   };
 
   const asyncGenerator = queryDatastoreStream<EventRow>({
@@ -189,6 +210,7 @@ export const getEventsStream = async (props: {
       kind: "export",
       projectId,
     },
+    preferredClickhouseService: "EventsReadOnly",
   });
 
   // Helper function to process a single event row
@@ -487,6 +509,7 @@ export const getEventsStreamForDataset = async (props: {
         },
       ],
       eventsTableUiColumnDefinitions,
+      eventsTableCols,
     ),
   );
 
@@ -504,6 +527,7 @@ export const getEventsStreamForDataset = async (props: {
     .selectFieldSet("core")
     .selectIO(false)
     .selectFieldSet("metadata")
+    .when(search.requiresEventsFull, (b) => b.forceFullTable())
     .where(appliedEventsFilter)
     .where(search)
     .whereRaw("e.is_deleted = 0")
@@ -537,6 +561,7 @@ export const getEventsStreamForDataset = async (props: {
       kind: "dataset",
       projectId,
     },
+    preferredClickhouseService: "EventsReadOnly",
   });
 
   return Readable.from(
@@ -548,6 +573,110 @@ export const getEventsStreamForDataset = async (props: {
           input: row.input,
           output: row.output,
           metadata: row.metadata,
+        };
+      }
+    })(),
+  );
+};
+
+/**
+ * Lightweight event stream for batch add-to-annotation-queue.
+ * Only fetches the fields needed for annotation queue item creation:
+ * id, traceId.
+ */
+export const getEventsStreamForAnnotationQueue = async (props: {
+  projectId: string;
+  cutoffCreatedAt: Date;
+  filter: FilterCondition[] | null;
+  searchQuery?: string;
+  searchType?: TracingSearchType[];
+  rowLimit?: number;
+}): Promise<Readable> => {
+  const {
+    projectId,
+    cutoffCreatedAt,
+    filter = [],
+    searchQuery,
+    searchType,
+    rowLimit = env.BATCH_EXPORT_ROW_LIMIT,
+  } = props;
+
+  const eventOnlyFilters = (filter ?? []).filter((f) => {
+    const columnDef = eventsTableUiColumnDefinitions.find(
+      (col) => col.uiTableName === f.column || col.uiTableId === f.column,
+    );
+
+    return (
+      columnDef?.clickhouseTableName !== "scores" &&
+      columnDef?.clickhouseTableName !== "comments"
+    );
+  });
+
+  const eventsFilter = new FilterList(
+    createFilterFromFilterState(
+      [
+        ...eventOnlyFilters,
+        {
+          column: "startTime",
+          operator: "<" as const,
+          value: cutoffCreatedAt,
+          type: "datetime" as const,
+        },
+      ],
+      eventsTableUiColumnDefinitions,
+      eventsTableCols,
+    ),
+  );
+
+  const appliedEventsFilter = eventsFilter.apply();
+
+  const search = eventSearchCondition({
+    query: searchQuery,
+    searchType,
+  });
+
+  const eventsQuery = new EventsQueryBuilder({ projectId })
+    .selectFieldSet("core")
+    .when(search.requiresEventsFull, (b) => b.forceFullTable())
+    .where(appliedEventsFilter)
+    .where(search)
+    .whereRaw("e.is_deleted = 0")
+    .orderByDefault()
+    .limitBy("e.span_id", "e.project_id")
+    .limit(rowLimit);
+
+  const { query, params: queryParams } = eventsQuery.buildWithParams();
+
+  type AnnotationQueueEventRow = {
+    id: string;
+    trace_id: string;
+  };
+
+  const asyncGenerator = queryClickhouseStream<AnnotationQueueEventRow>({
+    query,
+    params: queryParams,
+    clickhouseConfigs: {
+      request_timeout: 180_000,
+      clickhouse_settings: {
+        http_send_timeout: 300,
+        http_receive_timeout: 300,
+      },
+    },
+    tags: {
+      feature: "batch-add-to-annotation-queue",
+      type: "event",
+      kind: "annotation",
+      projectId,
+    },
+    preferredClickhouseService: "EventsReadOnly",
+  });
+
+  return Readable.from(
+    (async function* () {
+      for await (const row of asyncGenerator) {
+        yield {
+          id: row.id,
+          traceId: row.trace_id,
         };
       }
     })(),

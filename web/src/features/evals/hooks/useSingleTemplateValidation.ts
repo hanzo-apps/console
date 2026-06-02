@@ -5,8 +5,10 @@ export function useSingleTemplateValidation({ projectId }: { projectId: string }
   const { data: defaultModel } = api.defaultLlmModel.fetchDefaultModel.useQuery({ projectId });
 
   const templateRequiresDefaultModel = (
-    template: Partial<EvalTemplate> & Pick<EvalTemplate, "provider" | "model">,
+    template: Pick<TemplateValidationInput, "provider" | "model" | "type">,
   ): boolean => {
+    if (isCodeEvalTemplate(template)) return false;
+
     return !template.provider || !template.model;
   };
 

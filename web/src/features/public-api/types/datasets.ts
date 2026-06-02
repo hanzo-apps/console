@@ -229,6 +229,7 @@ export const PostDatasetRunItemsV1Body = z
     observationId: z.string().nullish(),
     traceId: z.string().nullish(),
     datasetVersion: versionZod.nullish(),
+    createdAt: stringDateTime,
   })
   .strict()
   .refine((data) => data.observationId || data.traceId, {

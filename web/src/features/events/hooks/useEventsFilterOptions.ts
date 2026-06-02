@@ -5,13 +5,13 @@ import { type FilterState, type TimeFilter } from "@hanzo/console-core";
 type UseEventsFilterOptionsParams = {
   projectId: string;
   oldFilterState: FilterState;
-  hasParentObservation?: boolean;
+  isRootObservation?: boolean;
 };
 
 export function useEventsFilterOptions({
   projectId,
   oldFilterState,
-  hasParentObservation,
+  isRootObservation,
 }: UseEventsFilterOptionsParams) {
   // Extract start time filters for filter options query
   const startTimeFilters = useMemo(() => {
@@ -55,6 +55,16 @@ export function useEventsFilterOptions({
       ) ?? undefined;
 
     const scoresNumeric = filterOptions.data?.scores_avg ?? undefined;
+    const traceScoreCategories =
+      filterOptions.data?.trace_score_categories?.reduce(
+        (acc, score) => {
+          acc[score.label] = score.values;
+          return acc;
+        },
+        {} as Record<string, string[]>,
+      ) ?? undefined;
+    const traceScoresNumeric =
+      filterOptions.data?.trace_scores_avg ?? undefined;
 
     return {
       environment: filterOptions.data?.environment ?? undefined,
@@ -88,6 +98,8 @@ export function useEventsFilterOptions({
       totalCost: [],
       score_categories: scoreCategories,
       scores_avg: scoresNumeric,
+      trace_score_categories: traceScoreCategories,
+      trace_scores_avg: traceScoresNumeric,
     };
   }, [filterOptions.data]);
 

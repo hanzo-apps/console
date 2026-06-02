@@ -14,6 +14,7 @@ import { DateTimeFilter, FilterList, StringFilter, FullObservations, orderByToDa
 import { createFilterFromFilterState } from "../queries/datastore-sql/factory";
 import { observationsTableTraceUiColumnDefinitions, observationsTableUiColumnDefinitions } from "../tableMappings";
 import { OrderByState } from "../../interfaces/orderBy";
+import { matchesUiColumnMapping } from "../../tableDefinitions";
 import { getTracesByIds } from "./traces";
 import { measureAndReturn } from "../datastore/measureAndReturn";
 import { convertDateToDatastoreDateTime, PreferredDatastoreService } from "../datastore/client";
@@ -140,9 +141,7 @@ export const getObservationsForTrace = async <IncludeIO extends boolean>(
     prompt_id,
     prompt_name,
     prompt_version,
-    tool_definitions,
-    tool_calls,
-    tool_call_names,
+    ${includeIO === true ? "tool_definitions, tool_calls, tool_call_names," : ""}
     created_at,
     updated_at,
     event_ts
@@ -798,6 +797,7 @@ export const getObservationsGroupedByModel = async (projectId: string, filter: F
       kind: "analytic",
       projectId,
     },
+    preferredClickhouseService: "ReadOnly",
   });
   return res.map((r) => ({ model: r.name }));
 };
@@ -840,6 +840,7 @@ export const getObservationsGroupedByModelId = async (projectId: string, filter:
       kind: "analytic",
       projectId,
     },
+    preferredClickhouseService: "ReadOnly",
   });
   return res.map((r) => ({ modelId: r.modelId }));
 };
@@ -887,6 +888,7 @@ export const getObservationsGroupedByName = async (
       kind: "analytic",
       projectId,
     },
+    preferredClickhouseService: "ReadOnly",
   });
   return res;
 };
@@ -927,6 +929,7 @@ export const getObservationsGroupedByToolName = async (projectId: string, filter
       kind: "analytic",
       projectId,
     },
+    preferredClickhouseService: "ReadOnly",
   });
   return res;
 };
@@ -967,6 +970,7 @@ export const getObservationsGroupedByCalledToolName = async (projectId: string, 
       kind: "analytic",
       projectId,
     },
+    preferredClickhouseService: "ReadOnly",
   });
   return res;
 };
@@ -1010,6 +1014,7 @@ export const getObservationsGroupedByPromptName = async (projectId: string, filt
       kind: "analytic",
       projectId,
     },
+    preferredClickhouseService: "ReadOnly",
   });
 
   const prompts = res.map((r) => r.id).filter((r): r is string => Boolean(r));
@@ -1242,6 +1247,8 @@ export const getObservationsWithPromptName = async (projectId: string, promptNam
   WHERE project_id = {projectId: String}
   AND prompt_name IN ({promptNames: Array(String)})
   AND prompt_name IS NOT NULL
+  ${fromTimestamp ? "AND start_time >= {fromTimestamp: DateTime64(3)}" : ""}
+  ${toTimestamp ? "AND start_time <= {toTimestamp: DateTime64(3)}" : ""}
   GROUP BY prompt_name
 `;
   const rows = await queryDatastore<{ count: string; prompt_name: string }>({
@@ -1249,6 +1256,12 @@ export const getObservationsWithPromptName = async (projectId: string, promptNam
     params: {
       projectId,
       promptNames,
+      fromTimestamp: fromTimestamp
+        ? convertDateToClickhouseDateTime(fromTimestamp)
+        : undefined,
+      toTimestamp: toTimestamp
+        ? convertDateToClickhouseDateTime(toTimestamp)
+        : undefined,
     },
     tags: {
       feature: "tracing",
@@ -1282,6 +1295,8 @@ export const getObservationMetricsForPrompts = async (projectId: string, promptI
               AND (prompt_name IS NOT NULL)
               AND project_id={projectId: String}
               AND prompt_id IN ({promptIds: Array(String)})
+              ${fromTimestamp ? "AND start_time >= {fromTimestamp: DateTime64(3)}" : ""}
+              ${toTimestamp ? "AND start_time <= {toTimestamp: DateTime64(3)}" : ""}
           )
       SELECT
           count(*) AS count,
@@ -1314,6 +1329,12 @@ export const getObservationMetricsForPrompts = async (projectId: string, promptI
     params: {
       projectId,
       promptIds,
+      ...(fromTimestamp
+        ? { fromTimestamp: convertDateToClickhouseDateTime(fromTimestamp) }
+        : {}),
+      ...(toTimestamp
+        ? { toTimestamp: convertDateToClickhouseDateTime(toTimestamp) }
+        : {}),
     },
     tags: {
       feature: "tracing",
@@ -1501,6 +1522,9 @@ export const getObservationCountsByProjectInCreationInterval = async ({ start, e
       start: convertDateToDatastoreDateTime(start),
       end: convertDateToDatastoreDateTime(end),
     },
+    clickhouseConfigs: {
+      request_timeout: 120000, // 2 minutes timeout
+    },
     tags: {
       feature: "tracing",
       type: "observation",
@@ -1603,11 +1627,24 @@ export const getObservationsForBlobStorageExport = function (
       cost_details,
       completion_start_time,
       prompt_name,
-      prompt_version
-    FROM observations FINAL
+      prompt_version,
+      total_cost,
+      if(isNull(end_time), NULL, date_diff('millisecond', start_time, end_time) / 1000) as latency,
+      if(isNull(completion_start_time), NULL, date_diff('millisecond', start_time, completion_start_time) / 1000) as time_to_first_token,
+      internal_model_id as model_id,
+      created_at,
+      updated_at,
+      prompt_id,
+      tool_calls,
+      tool_call_names,
+      tool_definitions,
+      usage_pricing_tier_name
+    FROM observations
     WHERE project_id = {projectId: String}
     AND start_time >= {minTimestamp: DateTime64(3)}
     AND start_time <= {maxTimestamp: DateTime64(3)}
+    ORDER BY event_ts DESC
+    LIMIT 1 BY id, project_id, type
   `;
 
   const records = queryDatastoreStream<Record<string, unknown>>({
@@ -1626,6 +1663,7 @@ export const getObservationsForBlobStorageExport = function (
     datastoreConfig: {
       request_timeout: env.DATASTORE_DATA_EXPORT_REQUEST_TIMEOUT_MS,
     },
+    preferredClickhouseService: "ReadOnly",
   });
 
   return records;
@@ -1636,10 +1674,31 @@ export const getGenerationsForAnalyticsIntegrations = async function* (
   projectName: string,
   minTimestamp: Date,
   maxTimestamp: Date,
+  options: { useGraceHash?: boolean } = {},
 ) {
-  const traceTable = "traces";
-
+  // Pre-filter traces in a CTE so the trace timestamp window prunes partitions
+  // directly, instead of living alongside the LEFT JOIN where the planner
+  // cannot push it down. LEFT JOIN keeps generations whose trace is missing or
+  // outside the 7-day window — they still ship to PostHog with NULL trace
+  // fields rather than being silently dropped.
   const query = `
+    WITH selected_traces AS (
+      SELECT
+        t.project_id as project_id,
+        t.id as id,
+        t.name as name,
+        t.session_id as session_id,
+        t.user_id as user_id,
+        t.release as release,
+        t.tags as tags,
+        t.metadata['$posthog_session_id'] as posthog_session_id,
+        t.metadata['$mixpanel_session_id'] as mixpanel_session_id
+      FROM traces t FINAL
+      WHERE t.project_id = {projectId: String}
+      AND t.timestamp >= {minTimestamp: DateTime64(3)} - ${OBSERVATIONS_TO_TRACE_INTERVAL}
+      AND t.timestamp <= {maxTimestamp: DateTime64(3)} + ${TRACE_TO_OBSERVATIONS_INTERVAL}
+    )
+
     SELECT
       o.name as name,
       o.start_time as start_time,
@@ -1664,13 +1723,10 @@ export const getGenerationsForAnalyticsIntegrations = async function* (
       t.metadata['$insights_session_id'] as insights_session_id,
       t.metadata['$mixpanel_session_id'] as mixpanel_session_id
     FROM observations o FINAL
-    LEFT JOIN ${traceTable} t FINAL ON o.trace_id = t.id AND o.project_id = t.project_id
+    LEFT JOIN selected_traces t ON o.trace_id = t.id AND o.project_id = t.project_id
     WHERE o.project_id = {projectId: String}
-    AND t.project_id = {projectId: String}
     AND o.start_time >= {minTimestamp: DateTime64(3)}
-    AND o.start_time <= {maxTimestamp: DateTime64(3)}
-    AND t.timestamp >= {minTimestamp: DateTime64(3)} - INTERVAL 7 DAY
-    AND t.timestamp <= {maxTimestamp: DateTime64(3)}
+    AND o.start_time < {maxTimestamp: DateTime64(3)}
     AND o.type = 'GENERATION'
   `;
 
@@ -1780,6 +1836,7 @@ export const getObservationCountsByProjectAndDay = async ({
       startDate: convertDateToDatastoreDateTime(startDate),
       endDate: convertDateToDatastoreDateTime(endDate),
     },
+    clickhouseConfigs: { request_timeout: 120_000 },
     tags: {
       feature: "tracing",
       type: "observation",

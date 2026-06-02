@@ -2,6 +2,7 @@ import {
   NumericConfigFields,
   CategoricalConfigFields,
   BooleanConfigFields,
+  TextConfigFields,
   validateNumericRangeFields,
 } from "@hanzo/console-core";
 import { z } from "zod/v4";

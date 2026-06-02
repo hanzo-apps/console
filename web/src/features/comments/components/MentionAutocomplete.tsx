@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { LoaderCircle } from "lucide-react";
+import Spinner from "@/src/components/design-system/Spinner/Spinner";
 import { Avatar, AvatarFallback } from "@/src/components/ui/avatar";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/src/components/ui/command";
 

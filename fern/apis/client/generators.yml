@@ -19,3 +19,4 @@ groups:
         config:
           namespaceExport: Hanzo
           allowCustomFetcher: true
+        smart-casing: false

@@ -191,6 +191,7 @@ export function ScoreDistributionBooleanChart({
           fontSize={12}
           tickLine={false}
           axisLine={false}
+          niceTicks="auto"
           tickFormatter={(value) => value.toLocaleString()}
         />
         <ChartTooltip
@@ -216,7 +217,7 @@ export function ScoreDistributionBooleanChart({
           />
         )}
 
-        <Legend
+        <ChartLegend
           content={
             <ScoreChartLegendContent
               interactive={isComparisonMode}

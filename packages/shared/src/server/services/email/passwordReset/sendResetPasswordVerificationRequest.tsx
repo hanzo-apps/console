@@ -10,6 +10,7 @@ import { type SendVerificationRequestParams } from "next-auth/providers/email";
 
 interface ResetPasswordTemplateProps {
   token: string;
+  isSetupMode: boolean;
 }
 
 const ResetPasswordTemplate = ({ token }: ResetPasswordTemplateProps) => {
@@ -52,7 +53,21 @@ const ResetPasswordTemplate = ({ token }: ResetPasswordTemplateProps) => {
 export async function sendResetPasswordVerificationRequest(params: SendVerificationRequestParams) {
   const { identifier, token, provider } = params as SendVerificationRequestParams & { token: string };
   const transport = createTransport(provider.server);
-  const htmlTemplate = await render(<ResetPasswordTemplate token={token} />);
+
+  // Detect if this is a setup-password flow (signup email verification)
+  const isSetupMode = url?.includes("/auth/setup-password") ?? false;
+
+  const htmlTemplate = await render(
+    <ResetPasswordTemplate token={token} isSetupMode={isSetupMode} />,
+  );
+
+  const subject = isSetupMode
+    ? "Verify your Langfuse email"
+    : "Your Langfuse password reset code";
+
+  const textBody = isSetupMode
+    ? `Welcome to Langfuse! Use the following code to verify your email: ${token}\n\nThis code will expire in 3 minutes. If you did not request this, you can ignore this email.`
+    : `Use the following code to reset your Langfuse password: ${token}\n\nThis code will expire in 3 minutes. If you did not request a reset, you can ignore this email.`;
 
   const result = await transport.sendMail({
     to: identifier,
@@ -61,7 +76,11 @@ export async function sendResetPasswordVerificationRequest(params: SendVerificat
     text: `Use the following code to reset your Hanzo password: ${token}\n\nThis code will expire in 3 minutes. If you did not request a reset, you can ignore this email.`,
     html: htmlTemplate,
   });
-  const failed = result.rejected.concat(result.pending).filter(Boolean);
+  // nodemailer's SES transport omits `rejected`/`pending` from SentMessageInfo,
+  // so guard against undefined before reading them.
+  const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(
+    Boolean,
+  );
   if (failed.length) {
     throw new Error(`Email(s) (${failed.join(", ")}) could not be sent`);
   }

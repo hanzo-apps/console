@@ -6,7 +6,6 @@ import {
   GetDatasetItemsV1Response,
   PostDatasetItemsV1Body,
   PostDatasetItemsV1Response,
-  transformDbDatasetItemDomainToAPIDatasetItem,
 } from "@/src/features/public-api/types/datasets";
 import { HanzoNotFoundError, Prisma } from "@hanzo/shared";
 import {

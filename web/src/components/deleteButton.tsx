@@ -25,7 +25,7 @@ export type DeleteButtonProps = {
 };
 
 type BaseDeleteButtonProps = Omit<DeleteButtonProps, "itemId"> & {
-  variant?: "outline" | "ghost";
+  variant?: ButtonProps["variant"];
   scope: NonNullable<DeleteButtonProps["scope"]>;
   invalidateFunc: NonNullable<DeleteButtonProps["invalidateFunc"]>;
   captureDeleteOpen: (capture: ReturnType<typeof usePostHogClientCapture>, isTableAction: boolean) => void;
@@ -74,7 +74,7 @@ export function DeleteButton({
     <Popover key={itemId ?? "delete-action"}>
       <PopoverTrigger asChild>
         <Button
-          variant={variant ?? (icon ? "outline" : "ghost")}
+          variant={variant ?? (icon ? "outline-solid" : "ghost")}
           size={icon ? "icon" : "default"}
           disabled={!hasAccess || !enabled}
           onClick={(e) => {
@@ -119,7 +119,7 @@ export function DeleteButton({
                 alert("Please type the correct confirmation");
                 return;
               }
-              void executeDeleteMutation(onDeleteSuccess);
+              executeDeleteMutation(onDeleteSuccess);
             }}
           >
             Delete {entityToDeleteName}
@@ -136,7 +136,7 @@ export function DeleteTraceButton(props: DeleteButtonProps) {
     itemId,
     projectId,
     scope = "traces:delete",
-    invalidateFunc = () => void utils.traces.all.invalidate(),
+    invalidateFunc = () => utils.traces.all.invalidate(),
   } = props;
   const traceMutation = api.traces.deleteMany.useMutation();
   const executeDeleteMutation = async (onSuccess: () => void) => {
@@ -222,7 +222,7 @@ export function DeleteDashboardButton(props: DeleteButtonProps) {
     itemId,
     projectId,
     scope = "dashboards:CUD",
-    invalidateFunc = () => void utils.dashboard.invalidate(),
+    invalidateFunc = () => utils.dashboard.invalidate(),
   } = props;
   const dashboardMutation = api.dashboard.delete.useMutation();
   const executeDeleteMutation = async (onSuccess: () => void) => {
@@ -265,7 +265,7 @@ export function DeleteEvalConfigButton(props: DeleteButtonProps) {
         title: "Running evaluator deleted",
         description: "The running evaluator has been deleted successfully",
       });
-      void utils.evals.invalidate();
+      utils.evals.invalidate();
     },
   });
 
@@ -309,7 +309,7 @@ export function DeleteEvaluationModelButton(props: Omit<DeleteButtonProps, "item
   const {
     projectId,
     scope = "evalDefaultModel:CUD",
-    invalidateFunc = () => void utils.defaultLlmModel.invalidate(),
+    invalidateFunc = () => utils.defaultLlmModel.invalidate(),
   } = props;
 
   const { mutateAsync: deleteDefaultModel, isPending } = api.defaultLlmModel.deleteDefaultModel.useMutation({

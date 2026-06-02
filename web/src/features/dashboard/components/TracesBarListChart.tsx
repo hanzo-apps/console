@@ -38,7 +38,7 @@ export const TracesBarListChart = ({
     orderBy: null,
   };
 
-  const totalTraces = api.dashboard.executeQuery.useQuery(
+  const totalTraces = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: totalTracesQuery,
@@ -49,6 +49,7 @@ export const TracesBarListChart = ({
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:traces"}:total`,
       enabled: !isLoading,
     },
   );
@@ -65,7 +66,7 @@ export const TracesBarListChart = ({
     orderBy: null,
   };
 
-  const traces = api.dashboard.executeQuery.useQuery(
+  const traces = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: tracesQuery,
@@ -76,6 +77,7 @@ export const TracesBarListChart = ({
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:traces"}:grouped`,
       enabled: !isLoading,
     },
   );

@@ -7,7 +7,7 @@ import { BarList } from "@tremor/react";
 import { TotalMetric } from "@/src/features/dashboard/components/TotalMetric";
 import { ExpandListButton } from "@/src/features/dashboard/components/cards/ChevronButton";
 import { useState } from "react";
-import { totalCostDashboardFormatted } from "@/src/features/dashboard/lib/dashboard-utils";
+import { costFormatter } from "@/src/utils/numbers";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
 import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
 
@@ -32,6 +32,8 @@ export const UserChart = ({
   isLoading?: boolean;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const maxNumberOfEntries = { collapsed: 5, expanded: 20 } as const;
+
   const userCostQuery: QueryType = {
     view: "observations",
     dimensions: [{ field: "userId" }],
@@ -51,10 +53,14 @@ export const UserChart = ({
     timeDimension: null,
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
-    orderBy: null,
+    orderBy: [{ field: "sum_totalCost", direction: "desc" }],
+    chartConfig: {
+      type: "HORIZONTAL_BAR",
+      row_limit: maxNumberOfEntries.expanded,
+    },
   };
 
-  const user = api.dashboard.executeQuery.useQuery(
+  const user = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: userCostQuery,
@@ -65,6 +71,7 @@ export const UserChart = ({
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:users"}:cost`,
       enabled: !isLoading,
     },
   );
@@ -77,10 +84,19 @@ export const UserChart = ({
     timeDimension: null,
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
-    orderBy: null,
+    orderBy: [
+      {
+        field: `${traceMetric.aggregation}_${traceMetric.measure}`,
+        direction: "desc",
+      },
+    ],
+    chartConfig: {
+      type: "HORIZONTAL_BAR",
+      row_limit: maxNumberOfEntries.expanded,
+    },
   };
 
-  const traces = api.dashboard.executeQuery.useQuery(
+  const traces = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: traceCountQuery,
@@ -91,6 +107,7 @@ export const UserChart = ({
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:users"}:traces`,
       enabled: !isLoading,
     },
   );
@@ -131,9 +148,10 @@ export const UserChart = ({
       data: isExpanded
         ? transformedCost.slice(0, maxNumberOfEntries.expanded)
         : transformedCost.slice(0, maxNumberOfEntries.collapsed),
-      totalMetric: totalCostDashboardFormatted(totalCost),
+      totalMetric: costFormatter(totalCost),
       metricDescription: "Total cost",
-      formatter: localUsdFormatter,
+      chartMetricLabel: "USD",
+      chartUnit: "USD",
     },
     {
       tabTitle: "Count of Traces",
@@ -142,8 +160,10 @@ export const UserChart = ({
         : transformedNumberOfTraces.slice(0, maxNumberOfEntries.collapsed),
       totalMetric: totalTraces ? compactNumberFormatter(totalTraces) : compactNumberFormatter(0),
       metricDescription: "Total traces",
+      chartMetricLabel: "Traces",
+      chartUnit: "traces",
     },
-  ];
+  ] as const;
 
   return (
     <DashboardCard className={className} title="User consumption" isLoading={isLoading || user.isPending}>

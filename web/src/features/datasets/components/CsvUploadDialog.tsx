@@ -37,7 +37,7 @@ export function CsvUploadDialog({ open, onOpenChange, projectId, datasetId, chil
             {csvFile && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <File className="h-4 w-4 text-muted-foreground" />
+                  <File className="text-muted-foreground h-4 w-4" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-[300px]">{csvFile.name}</TooltipContent>
               </Tooltip>

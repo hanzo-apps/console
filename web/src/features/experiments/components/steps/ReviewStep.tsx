@@ -104,7 +104,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ formState, navigationSta
         {/* Evaluators Card - Middle Right (only if there are evaluators) */}
         {activeEvaluatorNames.length > 0 && (
           <Card
-            className="cursor-pointer transition-colors hover:bg-accent"
+            className="hover:bg-accent cursor-pointer transition-colors"
             onClick={() => setActiveStep("evaluators")}
           >
             <CardHeader className="pb-3">
@@ -124,7 +124,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ formState, navigationSta
 
         {/* Run Details Card - Bottom (Full Width) */}
         <Card
-          className="cursor-pointer transition-colors hover:bg-accent md:col-span-2"
+          className="hover:bg-accent cursor-pointer transition-colors md:col-span-2"
           onClick={() => setActiveStep("details")}
         >
           <CardHeader className="pb-3">
@@ -140,7 +140,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ formState, navigationSta
               <span className="font-medium">{formValues.runName}</span>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <InfoIcon className="text-muted-foreground h-3.5 w-3.5" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-[300px]">
                   This run name is auto-generated from the experiment name and can be used to fetch the resulting

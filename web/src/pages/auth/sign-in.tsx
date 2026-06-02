@@ -9,6 +9,7 @@ import {
   SiOkta,
   SiAuthentik,
   SiAuth0,
+  SiClickhouse,
   SiAmazoncognito,
   SiKeycloak,
   SiGoogle,
@@ -22,7 +23,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod/v4";
+import * as z from "zod";
 import { CloudPrivacyNotice } from "@/src/features/auth/components/AuthCloudPrivacyNotice";
 import { PasswordInput } from "@/src/components/ui/password-input";
 import { isAnySsoConfigured } from "@/src/ee/features/multi-tenant-sso/utils";
@@ -37,7 +38,7 @@ import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 import { getSafeRedirectPath } from "@/src/utils/redirect";
 
 const credentialAuthForm = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8, {
     message: "Password must be at least 8 characters long",
   }),
@@ -56,6 +57,7 @@ export type PageProps = {
     onelogin: boolean;
     azureAd: boolean;
     auth0: boolean;
+    clickhouseCloud: boolean;
     cognito: boolean;
     keycloak:
       | {
@@ -81,6 +83,7 @@ export type PageProps = {
   };
   runningOnHuggingFaceSpaces: boolean;
   signUpDisabled: boolean;
+  emailVerificationRequired: boolean;
 };
 
 // Also used in src/pages/auth/sign-up.tsx
@@ -118,6 +121,12 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async () => {
           env.AUTH_AUTH0_CLIENT_ID !== undefined &&
           env.AUTH_AUTH0_CLIENT_SECRET !== undefined &&
           env.AUTH_AUTH0_ISSUER !== undefined,
+        // Langfuse Cloud only — NOT for self-hosted Langfuse
+        clickhouseCloud:
+          env.AUTH_CLICKHOUSE_CLOUD_CLIENT_ID !== undefined &&
+          env.AUTH_CLICKHOUSE_CLOUD_CLIENT_SECRET !== undefined &&
+          env.AUTH_CLICKHOUSE_CLOUD_ISSUER !== undefined &&
+          env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION !== undefined,
         cognito:
           env.AUTH_COGNITO_CLIENT_ID !== undefined &&
           env.AUTH_COGNITO_CLIENT_SECRET !== undefined &&
@@ -207,7 +216,7 @@ export function SSOButtons({
       <div>
         {showSeparator ? (
           action === "sign in" ? (
-            <div className="my-6 border-t border-border"></div>
+            <div className="border-border my-6 border-t"></div>
           ) : (
             <div className="my-6 text-center text-xs text-muted-foreground">or {action} with</div>
           )
@@ -294,6 +303,17 @@ export function SSOButtons({
               showLastUsedBadge={hasMultipleAuthMethods && lastUsedMethod === "auth0"}
             />
           )}
+          {authProviders.clickhouseCloud && (
+            <AuthProviderButton
+              icon={<SiClickhouse className="mr-3" size={18} />}
+              label="ClickHouse Cloud"
+              onClick={() => handleSignIn("clickhouse-cloud")}
+              loading={providerSigningIn === "clickhouse-cloud"}
+              showLastUsedBadge={
+                hasMultipleAuthMethods && lastUsedMethod === "clickhouse-cloud"
+              }
+            />
+          )}
           {authProviders.cognito && (
             <AuthProviderButton
               icon={<SiAmazoncognito className="mr-3" size={18} />}
@@ -310,7 +330,7 @@ export function SSOButtons({
               onClick={() => {
                 capture("sign_in:button_click", { provider: "keycloak" });
                 onProviderSelect?.("keycloak");
-                void signIn("keycloak");
+                signIn("keycloak");
               }}
               loading={providerSigningIn === "keycloak"}
               showLastUsedBadge={hasMultipleAuthMethods && lastUsedMethod === "keycloak"}
@@ -356,7 +376,7 @@ export function SSOButtons({
                   if (organization) {
                     capture("sign_in:button_click", { provider: "workos" });
                     onProviderSelect?.("workos");
-                    void signIn("workos", undefined, {
+                    signIn("workos", undefined, {
                       organization,
                     });
                   }
@@ -372,7 +392,7 @@ export function SSOButtons({
                   if (connection) {
                     capture("sign_in:button_click", { provider: "workos" });
                     onProviderSelect?.("workos");
-                    void signIn("workos", undefined, {
+                    signIn("workos", undefined, {
                       connection,
                     });
                   }
@@ -547,7 +567,7 @@ export default function SignIn({ authProviders, signUpDisabled, runningOnHugging
     credentialsForm.clearErrors();
 
     // Ensure email is valid before hitting the API
-    const emailSchema = z.string().email();
+    const emailSchema = z.email();
     const email = emailSchema.safeParse(credentialsForm.getValues("email"));
     if (!email.success) {
       credentialsForm.setError("email", {
@@ -575,7 +595,7 @@ export default function SignIn({ authProviders, signUpDisabled, runningOnHugging
         // Store the SSO provider as the last used auth method
         setLastUsedAuthMethod(providerId as NextAuthProvider);
 
-        void signIn(providerId);
+        signIn(providerId);
         return; // stop further execution – page redirect expected
       }
 
@@ -632,7 +652,7 @@ export default function SignIn({ authProviders, signUpDisabled, runningOnHugging
 
         {/* CloudRegionSwitch - disabled for Hanzo */}
 
-        <div className="mt-14 bg-background px-6 py-10 shadow sm:mx-auto sm:w-full sm:max-w-[480px] sm:rounded-lg sm:px-10">
+        <div className="bg-background mt-14 px-6 py-10 shadow-sm sm:mx-auto sm:w-full sm:max-w-[480px] sm:rounded-lg sm:px-10">
           <div className="space-y-6">
             {/* Email / (optional) password form – only when credentials auth is enabled */}
             {authProviders.credentials && (
@@ -645,7 +665,7 @@ export default function SignIn({ authProviders, signUpDisabled, runningOnHugging
                         ? credentialsForm.handleSubmit(onCredentialsSubmit)
                         : (e) => {
                             e.preventDefault();
-                            void handleContinue();
+                            handleContinue();
                           }
                     }
                   >
@@ -680,7 +700,7 @@ export default function SignIn({ authProviders, signUpDisabled, runningOnHugging
                               Password{" "}
                               <Link
                                 href="/auth/reset-password"
-                                className="ml-1 text-xs text-primary-accent hover:text-hover-primary-accent"
+                                className="text-primary-accent hover:text-hover-primary-accent ml-1 text-xs"
                                 tabIndex={-1}
                                 title="What is this?"
                               >
@@ -722,7 +742,7 @@ export default function SignIn({ authProviders, signUpDisabled, runningOnHugging
               </div>
             )}
             {credentialsFormError ? (
-              <div className="text-center text-sm font-medium text-destructive">
+              <div className="text-destructive text-center text-sm font-medium">
                 {credentialsFormError}
                 <br />
                 Contact support if this error is unexpected.{" "}
@@ -741,7 +761,7 @@ export default function SignIn({ authProviders, signUpDisabled, runningOnHugging
               No account yet?{" "}
               <Link
                 href={`/auth/sign-up${router.asPath.includes("?") ? router.asPath.substring(router.asPath.indexOf("?")) : ""}`}
-                className="font-semibold leading-6 text-primary-accent hover:text-hover-primary-accent"
+                className="text-primary-accent hover:text-hover-primary-accent leading-6 font-semibold"
               >
                 Sign up
               </Link>

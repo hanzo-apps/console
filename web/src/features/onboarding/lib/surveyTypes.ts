@@ -26,16 +26,5 @@ export interface SurveyState {
 export type SurveyAction = { type: "next" } | { type: "back" } | { type: "goToStep"; step: number };
 
 export interface SurveyFormData {
-  role?: string;
-  signupReason?: string;
   referralSource?: string;
-}
-
-export interface SurveyStepProps {
-  question: SurveyQuestion;
-  value: unknown;
-  onChange: (value: unknown) => void;
-  onNext?: () => void;
-  showNext?: boolean;
-  isLast?: boolean;
 }

@@ -46,7 +46,10 @@ status=$?
 
 # If migration fails (returns non-zero exit status), exit script with that status
 if [ $status -ne 0 ]; then
-    echo "Applying database migrations failed. This is mostly caused by the database being unavailable."
+    echo "Applying database migrations failed. Common causes:"
+    echo "  1. The database is unavailable or unreachable."
+    echo "  2. DATABASE_URL / DIRECT_URL credentials contain special characters that are not URL-encoded."
+    check_unencoded_credentials "$DIRECT_URL"
     echo "Exiting..."
     exit $status
 fi

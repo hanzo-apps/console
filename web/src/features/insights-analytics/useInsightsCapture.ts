@@ -1,6 +1,8 @@
 import { type CaptureResult, type CaptureOptions } from "posthog-js";
 import { usePostHog } from "posthog-js/react";
 
+export const V4_BETA_ENABLED_POSTHOG_PROPERTY = "v4BetaEnabled";
+
 // resource:action, only use snake_case
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
 // (used for type extraction via typeof, which is a legitimate pattern)
@@ -107,13 +109,16 @@ export const events = {
     "delete_form_open",
     "delete_dataset_button_click",
     "update_form_open",
-    "delete_form_open",
     "new_form_open",
     "new_form_submit",
     "update_form_submit",
     "delete_form_submit",
   ],
-  organizations: ["new_form_submit", "new_form_open"],
+  organizations: [
+    "new_form_submit",
+    "new_form_open",
+    "demo_project_button_click",
+  ],
   projects: ["new_form_submit", "new_form_open"],
   dataset_item: [
     "archive_toggle",
@@ -167,6 +172,7 @@ export const events = {
     "pricing_dialog_opened",
     "delete_organization",
     "ai_features_toggle",
+    "ai_telemetry_toggle",
   ],
   help_popup: ["opened", "href_clicked"],
   navigate_detail_pages: ["button_click_prev_or_next"],

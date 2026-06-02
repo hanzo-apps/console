@@ -10,6 +10,7 @@ interface ObservationTypeMapper {
     attributes: Record<string, unknown>,
     resourceAttributes?: Record<string, unknown>,
     scopeData?: Record<string, unknown>,
+    spanName?: string,
   ): boolean;
   mapToObservationType(
     attributes: Record<string, unknown>,
@@ -30,6 +31,7 @@ class SimpleAttributeMapper implements ObservationTypeMapper {
     attributes: Record<string, unknown>,
     _resourceAttributes?: Record<string, unknown>,
     _scopeData?: Record<string, unknown>,
+    _spanName?: string,
   ): boolean {
     return this.attributeKey in attributes && hasMeaningfulValue(attributes[this.attributeKey]);
   }
@@ -61,6 +63,7 @@ class CustomAttributeMapper implements ObservationTypeMapper {
       attributes: Record<string, unknown>,
       resourceAttributes?: Record<string, unknown>,
       scopeData?: Record<string, unknown>,
+      spanName?: string,
     ) => boolean,
     private readonly mapFn: (
       attributes: Record<string, unknown>,
@@ -73,8 +76,9 @@ class CustomAttributeMapper implements ObservationTypeMapper {
     attributes: Record<string, unknown>,
     resourceAttributes?: Record<string, unknown>,
     scopeData?: Record<string, unknown>,
+    spanName?: string,
   ): boolean {
-    return this.canMapFn(attributes, resourceAttributes, scopeData);
+    return this.canMapFn(attributes, resourceAttributes, scopeData, spanName);
   }
 
   mapToObservationType(
@@ -199,6 +203,7 @@ export class ObservationTypeMapperRegistry {
       evaluator: "EVALUATOR",
     }),
 
+    // Priority 2: OpenInference span kind
     new SimpleAttributeMapper("OpenInference", 2, "openinference.span.kind", {
       // Format:
       // OpenInference Value: Hanzo ObservationType
@@ -227,12 +232,25 @@ export class ObservationTypeMapperRegistry {
       execute_tool: "TOOL",
     }),
 
-    // Priority 4: Vercel AI SDK generation/embedding operations (require model information)
+    // Priority 4: Genkit subtype
+    new SimpleAttributeMapper("Genkit", 4, "genkit:metadata:subtype", {
+      // Format:
+      // Genkit Value: Langfuse ObservationType
+      "background-model": "GENERATION",
+      model: "GENERATION",
+      embedder: "EMBEDDING",
+      tool: "TOOL",
+      "tool.v2": "TOOL",
+      retriever: "RETRIEVER",
+      evaluator: "EVALUATOR",
+    }),
+
+    // Priority 5: Vercel AI SDK generation/embedding operations (require model information)
     new CustomAttributeMapper(
       // NAME
       "Vercel_AI_SDK_Operation_Generation_Like",
       // PRIORITY
-      4,
+      5,
       // CANMAP?
       (attributes) => {
         const modelKeys = [
@@ -284,12 +302,12 @@ export class ObservationTypeMapperRegistry {
       },
     ),
 
-    // Priority 5: Vercel AI SDK span-like operations (no model info)
+    // Priority 6: Vercel AI SDK span-like operations (no model info)
     new CustomAttributeMapper(
       // NAME
       "Vercel_AI_SDK_Operation_Span_Like",
       // PRIORITY
-      5,
+      6,
       // CANMAP?
       (attributes) => {
         // Check if it's a Vercel AI SDK operation (starts with "ai.")
@@ -330,12 +348,12 @@ export class ObservationTypeMapperRegistry {
       },
     ),
 
-    // GenAI tool call detection (e.g., Pydantic AI, any framework using gen_ai.tool.* attributes)
+    // Priority 7: GenAI tool call detection (e.g., Pydantic AI, any framework using gen_ai.tool.* attributes)
     // unfortunately, Pydantic does not set the gen_ai.operation.name attribute on tool calls
     // therefore, we need another mapper here.
     new CustomAttributeMapper(
       "GenAI_Tool_Call",
-      6,
+      7,
       (attributes) => {
         // Check for standard GenAI tool call attributes
         return (
@@ -345,9 +363,31 @@ export class ObservationTypeMapperRegistry {
       () => "TOOL",
     ),
 
+    // Priority 8: LiveKit spans: use span name to determine observation type
+    new CustomAttributeMapper(
+      "LiveKit_SpanName",
+      8,
+      (_attributes, _resourceAttributes, scopeData, spanName) => {
+        if (scopeData?.name !== "livekit-agents") return false;
+
+        return (
+          spanName === "agent_turn" ||
+          spanName === "start_agent_activity" ||
+          spanName === "function_tool"
+        );
+      },
+      (_attributes, _resourceAttributes, _scopeData, spanName) => {
+        if (spanName === "agent_turn" || spanName === "start_agent_activity")
+          return "AGENT";
+        if (spanName === "function_tool") return "TOOL";
+        return null;
+      },
+    ),
+
+    // Priority 9: Model-based fallback
     new CustomAttributeMapper(
       "ModelBased",
-      7,
+      9,
       (attributes, _resourceAttributes, _scopeData) => {
         const modelKeys = [
           HanzoOtelSpanAttributes.OBSERVATION_MODEL,

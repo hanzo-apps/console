@@ -12,7 +12,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
 import { api } from "@/src/utils/api";
-import * as z from "zod/v4";
+import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";

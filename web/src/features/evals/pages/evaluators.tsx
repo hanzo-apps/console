@@ -53,7 +53,7 @@ export default function EvaluatorsPage() {
     return (
       <Page
         headerProps={{
-          title: "LLM-as-a-Judge Evaluators",
+          title: "Evaluators",
           help: {
             description: "Configure a hanzo managed or custom evaluator to evaluate incoming traces.",
             href: "https://hanzo.com/docs/evaluation/evaluation-methods/llm-as-a-judge",
@@ -70,7 +70,7 @@ export default function EvaluatorsPage() {
     <>
       <Page
         headerProps={{
-          title: "LLM-as-a-Judge Evaluators",
+          title: "Evaluators",
           help: {
             description: "Configure a hanzo managed or custom evaluator to evaluate incoming traces.",
             href: "https://hanzo.com/docs/evaluation/evaluation-methods/llm-as-a-judge",

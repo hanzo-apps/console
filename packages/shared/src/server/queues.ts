@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { eventTypes } from "./ingestion/types";
 import { ActionId, BatchActionQuerySchema, BatchActionType } from "../features/batchAction/types";
 import { BatchTableNames } from "../interfaces/tableNames";
@@ -6,6 +6,7 @@ import { EventActionSchema } from "../domain";
 import { PromptDomainSchema } from "../domain/prompts";
 import { ObservationAddToDatasetConfigSchema } from "../features/batchAction/addToDatasetTypes";
 import { EvalTargetObjectSchema } from "../features/evals/types";
+import { JobConfigExecutionMode } from "../features/evals/evalConfigBlocking";
 
 export const IngestionEvent = z.object({
   data: z.object({
@@ -95,11 +96,12 @@ export const EvalExecutionEvent = z.object({
   delay: z.number().nullish(),
 });
 
-// LLM-as-a-Judge execution for observation-based evals
-export const LLMAsJudgeExecutionEventSchema = z.object({
+// Observation-based eval execution payload shared by LLM-as-judge and code eval queues.
+export const ObservationEvalExecutionEventSchema = z.object({
   projectId: z.string(),
   jobExecutionId: z.string(),
   observationS3Path: z.string(),
+  executionMode: JobConfigExecutionMode.optional(),
 });
 export const InsightsIntegrationProcessingEventSchema = z.object({
   projectId: z.string(),
@@ -227,6 +229,13 @@ export const WebhookOutboundEnvelopeSchema = z.object({
   prompt: PromptDomainSchema,
   action: EventActionSchema,
   type: z.literal("prompt-version"),
+  user: z
+    .object({
+      id: z.string(),
+      name: z.string().nullable(),
+      email: z.string().nullable(),
+    })
+    .optional(),
 });
 
 export const WebhookInputSchema = z.object({
@@ -244,6 +253,13 @@ export const EntityChangeEventSchema = z.discriminatedUnion("entityType", [
     promptId: z.string(),
     action: EventActionSchema,
     prompt: PromptDomainSchema,
+    user: z
+      .object({
+        id: z.string(),
+        name: z.string().nullable(),
+        email: z.string().nullable(),
+      })
+      .optional(),
   }),
   // Add other entity types here in the future
 ]);
@@ -283,10 +299,13 @@ export enum QueueName {
   TraceDelete = "trace-delete",
   ProjectDelete = "project-delete",
   EvaluationExecution = "evaluation-execution-queue", // Worker executes Evals
-  LLMAsJudgeExecution = "llm-as-a-judge-execution-queue", // Observation-based eval execution
+  EvaluationExecutionSecondaryQueue = "secondary-evaluation-execution-queue", // Separates high-throughput eval projects from other projects.
+  LLMAsJudgeExecution = "llm-as-a-judge-execution-queue", // Observation-based LLM-as-judge eval execution
+  CodeEvalExecution = "code-eval-execution-queue", // Observation-based code eval execution
   DatasetRunItemUpsert = "dataset-run-item-upsert-queue",
   BatchExport = "batch-export-queue",
   OtelIngestionQueue = "otel-ingestion-queue",
+  OtelIngestionSecondaryQueue = "secondary-otel-ingestion-queue", // Separates high priority + high throughput projects from other projects.
   IngestionQueue = "ingestion-queue", // Process single events with S3-merge
   IngestionSecondaryQueue = "secondary-ingestion-queue", // Separates high priority + high throughput projects from other projects.
   CloudUsageMeteringQueue = "cloud-usage-metering-queue",
@@ -321,13 +340,13 @@ export enum QueueJobs {
   DatasetRunItemUpsert = "dataset-run-item-upsert",
   EvaluationExecution = "evaluation-execution-job",
   LLMAsJudgeExecution = "llm-as-a-judge-execution-job",
+  CodeEvalExecution = "code-eval-execution-job",
   BatchExportJob = "batch-export-job",
   CloudUsageMeteringJob = "cloud-usage-metering-job",
   CloudSpendAlertJob = "cloud-spend-alert-job",
   CloudFreeTierUsageThresholdJob = "cloud-free-tier-usage-threshold-job",
   OtelIngestionJob = "otel-ingestion-job",
   IngestionJob = "ingestion-job",
-  IngestionSecondaryJob = "secondary-ingestion-job",
   ExperimentCreateJob = "experiment-create-job",
   InsightsIntegrationJob = "insights-integration-job",
   InsightsIntegrationProcessingJob = "insights-integration-processing-job",
@@ -395,11 +414,25 @@ export type TQueueJobTypes = {
     name: QueueJobs.EvaluationExecution;
     retryBaggage?: RetryBaggage;
   };
+  [QueueName.EvaluationExecutionSecondaryQueue]: {
+    timestamp: Date;
+    id: string;
+    payload: EvalExecutionEventType;
+    name: QueueJobs.EvaluationExecution;
+    retryBaggage?: RetryBaggage;
+  };
   [QueueName.LLMAsJudgeExecution]: {
     timestamp: Date;
     id: string;
-    payload: LLMAsJudgeExecutionEventType;
+    payload: ObservationEvalExecutionEventType;
     name: QueueJobs.LLMAsJudgeExecution;
+    retryBaggage?: RetryBaggage;
+  };
+  [QueueName.CodeEvalExecution]: {
+    timestamp: Date;
+    id: string;
+    payload: ObservationEvalExecutionEventType;
+    name: QueueJobs.CodeEvalExecution;
     retryBaggage?: RetryBaggage;
   };
   [QueueName.BatchExport]: {
@@ -409,6 +442,12 @@ export type TQueueJobTypes = {
     name: QueueJobs.BatchExportJob;
   };
   [QueueName.OtelIngestionQueue]: {
+    timestamp: Date;
+    id: string;
+    payload: OtelIngestionEventQueueType;
+    name: QueueJobs.OtelIngestionJob;
+  };
+  [QueueName.OtelIngestionSecondaryQueue]: {
     timestamp: Date;
     id: string;
     payload: OtelIngestionEventQueueType;

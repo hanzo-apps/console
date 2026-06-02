@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod/v4";
+import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { HanzoIcon } from "@/src/components/HanzoLogo";
 import { Button } from "@/src/components/ui/button";
@@ -14,7 +14,7 @@ import { env } from "@/src/env.mjs";
 import { captureException } from "@sentry/nextjs";
 
 const enterpriseSsoFormSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
 });
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -118,7 +118,7 @@ export default function EnterpriseSsoRequiredPage() {
       <Head>
         <title>Enterprise SSO Required | Hanzo Console</title>
       </Head>
-      <div className="flex min-h-screen-with-banner flex-col justify-center bg-background px-6 py-12 lg:px-8">
+      <div className="min-h-screen-with-banner bg-background flex flex-col justify-center px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <HanzoIcon className="mx-auto" />
           <h1 className="mt-6 text-center text-2xl font-bold text-primary">Use your Enterprise SSO</h1>
@@ -127,7 +127,7 @@ export default function EnterpriseSsoRequiredPage() {
           </p>
         </div>
 
-        <div className="mt-10 rounded-lg border border-border bg-card px-6 py-8 shadow sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="border-border bg-card mt-10 rounded-lg border px-6 py-8 shadow-sm sm:mx-auto sm:w-full sm:max-w-md">
           <Form {...form}>
             <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
               <FormField
@@ -150,7 +150,7 @@ export default function EnterpriseSsoRequiredPage() {
             </form>
           </Form>
           {error ? (
-            <div className="mt-4 text-center text-sm font-medium text-destructive">
+            <div className="text-destructive mt-4 text-center text-sm font-medium">
               {error}
               <br />
               Contact{" "}
@@ -167,7 +167,7 @@ export default function EnterpriseSsoRequiredPage() {
           </div>
         </div>
 
-        <div className="mt-4 text-center text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-4 text-center text-xs">
           Need help? Contact{" "}
           <a href="mailto:support@hanzo.com" className="text-primary-accent hover:text-hover-primary-accent">
             support@hanzo.com

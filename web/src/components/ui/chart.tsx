@@ -2,6 +2,11 @@
 
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
+import type {
+  TooltipContentProps,
+  TooltipPayloadEntry,
+  TooltipValueType,
+} from "recharts";
 
 import { cn } from "@/src/utils/tailwind";
 
@@ -47,7 +52,7 @@ const ChartContainer = React.forwardRef<
         data-chart={chartId}
         ref={ref}
         className={cn(
-          "h-full w-full flex-1 justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-none [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-surface]:outline-none",
+          "[&_.recharts-cartesian-axis-tick-value]:fill-muted-foreground/90 [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground/90 [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border relative h-full w-full flex-1 justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           className,
         )}
         {...props}
@@ -89,12 +94,36 @@ ${colorConfig
   );
 };
 
-const ChartTooltip = RechartsPrimitive.Tooltip;
+type ChartTooltipProps = React.ComponentProps<typeof RechartsPrimitive.Tooltip>;
+
+function ChartTooltip({
+  allowEscapeViewBox = { x: false, y: false },
+  isAnimationActive = false,
+  offset = 12,
+  useTranslate3d = true,
+  wrapperStyle,
+  ...props
+}: ChartTooltipProps) {
+  return (
+    <RechartsPrimitive.Tooltip
+      allowEscapeViewBox={allowEscapeViewBox}
+      isAnimationActive={isAnimationActive}
+      offset={offset}
+      useTranslate3d={useTranslate3d}
+      wrapperStyle={{
+        pointerEvents: "none",
+        zIndex: 50,
+        ...wrapperStyle,
+      }}
+      {...props}
+    />
+  );
+}
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-    React.ComponentProps<"div"> & {
+  React.ComponentProps<"div"> &
+    Partial<TooltipContentProps<TooltipValueType, string | number>> & {
       hideLabel?: boolean;
       hideIndicator?: boolean;
       indicator?: "line" | "dot" | "dashed";
@@ -156,7 +185,7 @@ const ChartTooltipContent = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl",
+          "border-border/50 bg-background grid min-w-32 items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl",
           className,
         )}
       >
@@ -165,18 +194,22 @@ const ChartTooltipContent = React.forwardRef<
           {payload.map((item, index) => {
             const key = `${nameKey || item.name || item.dataKey || "value"}`;
             const itemConfig = getPayloadConfigFromPayload(config, item, key);
-            const indicatorColor = color || item.payload.fill || item.color;
+            const indicatorColor =
+              color ||
+              getFillColor(item.payload) ||
+              item.color ||
+              "currentColor";
 
             return (
               <div
-                key={item.dataKey}
+                key={String(item.dataKey ?? item.name ?? index)}
                 className={cn(
-                  "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
+                  "[&>svg]:text-muted-foreground flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5",
                   indicator === "dot" && "items-center",
                 )}
               >
-                {formatter && item?.value !== undefined && item.name ? (
-                  formatter(item.value, item.name, item, index, item.payload)
+                {formatter && item?.value !== undefined && item.name != null ? (
+                  formatter(item.value, item.name, item, index, displayPayload)
                 ) : (
                   <>
                     {itemConfig?.icon ? (
@@ -201,7 +234,7 @@ const ChartTooltipContent = React.forwardRef<
                     )}
                     <div
                       className={cn(
-                        "flex flex-1 justify-between leading-none",
+                        "flex flex-1 justify-between gap-x-2 leading-none",
                         nestLabel ? "items-end" : "items-center",
                       )}
                     >
@@ -227,7 +260,7 @@ const ChartTooltipContent = React.forwardRef<
 );
 ChartTooltipContent.displayName = "ChartTooltip";
 
-const ChartLegend = RechartsPrimitive.Legend;
+type ChartLegendProps = React.ComponentProps<typeof RechartsPrimitive.Legend>;
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
@@ -302,13 +335,27 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
   return configLabelKey in config ? config[configLabelKey] : config[key as keyof typeof config];
 }
 
+function getFillColor(
+  payload: TooltipPayloadEntry<TooltipValueType, string | number>["payload"],
+): string | undefined {
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "fill" in payload &&
+    typeof payload.fill === "string"
+  ) {
+    return payload.fill;
+  }
+
+  return undefined;
+}
+
 export {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
-  ChartLegendContent,
-  ChartStyle,
+  ChartActiveReferenceLine,
   useChart,
   getPayloadConfigFromPayload,
 };

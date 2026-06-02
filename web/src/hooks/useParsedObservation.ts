@@ -19,6 +19,16 @@ import { type ObservationReturnTypeWithMetadata, type ObservationReturnType } fr
 import { stringifyMetadata } from "@/src/utils/clientSideDomainTypes";
 import type { ParseRequest, ParseResponse } from "@/src/workers/json-parser.worker";
 
+type ObservationWithStringifiedIO = ObservationReturnTypeWithMetadata & {
+  input: string | null;
+  output: string | null;
+};
+
+type ParsedObservationResult =
+  | ObservationWithStringifiedIO
+  | EventBatchIOOutput
+  | undefined;
+
 /**
  * Threshold for using Web Worker vs sync parsing (in characters).
  * Below this: sync parse (faster, no message-passing overhead)
@@ -206,18 +216,18 @@ export function useParsedObservation({
     },
   );
 
-  const mergedObservation = useMemo(() => {
+  const mergedObservation = useMemo<ParsedObservationResult>(() => {
     if (isBetaEnabled) {
       if (baseObservation && eventsQuery.data) {
         return {
           ...baseObservation,
-          input: eventsQuery.data.input as string,
-          output: eventsQuery.data.output as string,
+          input: eventsQuery.data.input,
+          output: eventsQuery.data.output,
           // Stringify metadata to match ObservationReturnTypeWithMetadata format
           metadata: stringifyMetadata(eventsQuery.data.metadata),
-        };
+        } satisfies ObservationWithStringifiedIO;
       }
-      // No base observation provided: return events data as-is (incomplete type)
+      // No base observation provided: return partial events data with safe stringified I/O.
       return eventsQuery.data;
     }
     // Beta OFF: return full observation from observations table

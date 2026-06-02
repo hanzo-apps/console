@@ -3,7 +3,12 @@ import { singleFilter } from "../../../interfaces/filters";
 import { FilterCondition } from "../../../types";
 import { isValidTableName } from "../../datastore/schemaUtils";
 import { logger } from "../../logger";
-import { UiColumnMappings } from "../../../tableDefinitions";
+import {
+  findUiColumnMapping,
+  type ColumnDefinition,
+  type UiColumnMappings,
+} from "../../../tableDefinitions";
+import { COMPATIBLE_FILTER_TYPES } from "./filterTypeCompatibility";
 import {
   StringFilter,
   DateTimeFilter,
@@ -40,6 +45,20 @@ export const createFilterFromFilterState = (filter: FilterCondition[], columnMap
     // checks if the column exists in the datastore schema
     const column = matchAndVerifyTracesUiColumn(frontEndFilter, columnMapping);
 
+    if (columnDefinitions && frontEndFilter.type !== "null") {
+      const colDef = columnDefinitions.find((c) => c.id === column.uiTableId);
+      if (colDef) {
+        const compatible = COMPATIBLE_FILTER_TYPES[colDef.type];
+        if (compatible && !compatible.includes(frontEndFilter.type)) {
+          throw new InvalidRequestError(
+            `Invalid filter type '${frontEndFilter.type}' for column '${frontEndFilter.column}'. Expected filter type '${colDef.type}'.`,
+          );
+        }
+      }
+    }
+
+    validateEventsTableMatchesFilter(frontEndFilter, column);
+
     switch (frontEndFilter.type) {
       case "string":
         return new StringFilter({
@@ -48,6 +67,7 @@ export const createFilterFromFilterState = (filter: FilterCondition[], columnMap
           operator: frontEndFilter.operator,
           value: frontEndFilter.value,
           tablePrefix: column.queryPrefix,
+          emptyEqualsNull: column.emptyEqualsNull,
         });
       case "datetime":
         return new DateTimeFilter({
@@ -64,6 +84,7 @@ export const createFilterFromFilterState = (filter: FilterCondition[], columnMap
           operator: frontEndFilter.operator,
           values: frontEndFilter.value,
           tablePrefix: column.queryPrefix,
+          emptyEqualsNull: column.emptyEqualsNull,
         });
       case "categoryOptions":
         return new CategoryOptionsFilter({
@@ -146,6 +167,7 @@ export const createFilterFromFilterState = (filter: FilterCondition[], columnMap
           field: column.datastoreSelect,
           operator: frontEndFilter.operator,
           tablePrefix: column.queryPrefix,
+          emptyEqualsNull: column.emptyEqualsNull,
         });
       default:
         // eslint-disable-next-line no-case-declarations
@@ -169,7 +191,7 @@ const matchAndVerifyTracesUiColumn = (filter: z.infer<typeof singleFilter>, uiTa
       filterType: filter.type,
       availableColumns: uiTableDefinitions.map((col) => col.uiTableId ?? col.uiTableName),
     });
-    throw new QueryBuilderError(errorMessage);
+    throw new InvalidRequestError(errorMessage);
   }
 
   if (!isValidTableName(uiTable.datastoreTableName)) {

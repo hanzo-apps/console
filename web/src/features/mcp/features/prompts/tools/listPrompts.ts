@@ -5,7 +5,7 @@
  * Read-only operation.
  */
 
-import { z } from "zod/v4";
+import { z } from "zod";
 import { defineTool } from "../../../core/define-tool";
 import { ParamPromptName, ParamPromptLabel, ParamPromptTag } from "../validation";
 import { ParamLimit, ParamPage } from "../../../core/validation";

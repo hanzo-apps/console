@@ -49,7 +49,7 @@ export function ReactionBar({ projectId, commentId, onReactionToggle }: Reaction
             <HoverCardContent className="w-fit p-2" side="top">
               <div className="flex flex-col gap-1">
                 {reaction.users.map((user) => (
-                  <div key={user.id} className="text-xs text-muted-foreground">
+                  <div key={user.id} className="text-muted-foreground text-xs">
                     {user.name || "Unknown user"}
                   </div>
                 ))}

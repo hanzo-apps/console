@@ -23,6 +23,10 @@ import { NonEmptyString } from "@hanzo/shared";
 import { cn } from "@/src/utils/tailwind";
 import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import {
+  formatSessionPositionInTraceFilterValue,
+  getSessionPositionInTraceFilterMode,
+} from "@/src/components/session/session-position-in-trace";
+import {
   InputCommand,
   InputCommandEmpty,
   InputCommandGroup,
@@ -106,7 +110,7 @@ export function PopoverFilterBuilder({
               {filterState.length > 0 ? (
                 <span
                   className={cn(
-                    "ml-1.5 rounded-sm bg-input px-1 text-xs shadow-sm @6xl:hidden",
+                    "bg-input ml-1.5 rounded-sm px-1 text-xs shadow-xs @6xl:hidden",
                     filterState.length > 2 && "@6xl:inline",
                   )}
                 >
@@ -122,7 +126,7 @@ export function PopoverFilterBuilder({
               {filterState.length > 0 && (
                 <span
                   className={cn(
-                    "absolute -right-1 top-0 flex h-4 min-w-4 items-center justify-center rounded-sm bg-input px-1 text-xs shadow-sm",
+                    "bg-input absolute top-0 -right-1 flex h-4 min-w-4 items-center justify-center rounded-sm px-1 text-xs shadow-xs",
                   )}
                 >
                   {filterState.length}
@@ -165,7 +169,7 @@ export function PopoverFilterBuilder({
                 variant="ghost"
                 type="button"
                 size="icon-xs"
-                className="ml-0.5 hover:bg-background"
+                className="hover:bg-background ml-0.5"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -348,7 +352,7 @@ function FilterBuilderForm({
                 ? "AI features are disabled for your organization. Click to enable them in organization settings."
                 : undefined
             }
-            className="w-full justify-start text-muted-foreground"
+            className="text-muted-foreground w-full justify-start"
           >
             <WandSparkles className="mr-2 h-4 w-4" />
             {!organization?.aiFeaturesEnabled ? (
@@ -371,7 +375,7 @@ function FilterBuilderForm({
                   if (aiError) setAiError(null); // Clear error when user starts typing
                 }}
                 placeholder="Describe the filters you want to apply..."
-                className="min-h-[80px] min-w-[28rem] resize-none"
+                className="min-h-[80px] min-w-112 resize-none"
                 disabled={createFilterMutation.isPending}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && e.ctrlKey && !createFilterMutation.isPending) {
@@ -391,7 +395,7 @@ function FilterBuilderForm({
                 </Button>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground" />
+                    <Info className="text-muted-foreground h-4 w-4" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="text-xs">
@@ -579,7 +583,13 @@ function FilterBuilderForm({
                           value={filter.value ?? undefined}
                           disabled={disabled}
                           type="number"
-                          step="0.01"
+                          step={
+                            (column?.type === "number" && column.step) || 0.01
+                          }
+                          min={
+                            column?.type === "number" ? column.min : undefined
+                          }
+                          placeholder="number"
                           lang="en-US"
                           onChange={(e) =>
                             handleFilterChange(

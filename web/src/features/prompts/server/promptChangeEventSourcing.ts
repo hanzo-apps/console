@@ -24,6 +24,7 @@ export const promptChangeEventSourcing = async (promptData: PromptResult | null,
         prompt: jsonSchemaNullable.parse(promptData.prompt),
         config: jsonSchemaNullable.parse(promptData.config),
       },
+      ...(user ? { user } : {}),
     },
   };
   try {

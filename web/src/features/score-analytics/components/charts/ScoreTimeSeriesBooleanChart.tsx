@@ -115,7 +115,7 @@ export function ScoreTimeSeriesBooleanChart({
 
   if (chartData.length === 0 || categories.length === 0) {
     return (
-      <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+      <div className="text-muted-foreground flex h-[200px] items-center justify-center text-sm">
         No time series data available
       </div>
     );
@@ -126,7 +126,7 @@ export function ScoreTimeSeriesBooleanChart({
 
   if (!hasAnyData) {
     return (
-      <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+      <div className="text-muted-foreground flex h-[200px] items-center justify-center text-sm">
         No data points available for the selected time range
       </div>
     );
@@ -149,6 +149,7 @@ export function ScoreTimeSeriesBooleanChart({
           tickLine={false}
           axisLine={false}
           label={{ value: "Count", angle: -90, position: "insideLeft" }}
+          niceTicks="auto"
           tickFormatter={(value) => value.toLocaleString()}
         />
         {categories.map((category) => {
@@ -167,6 +168,7 @@ export function ScoreTimeSeriesBooleanChart({
             />
           );
         })}
+        <ChartActiveReferenceLine />
         <ChartTooltip
           content={
             <ScoreChartTooltip
@@ -176,7 +178,7 @@ export function ScoreTimeSeriesBooleanChart({
             />
           }
         />
-        <Legend
+        <ChartLegend
           content={
             <ScoreChartLegendContent
               interactive={true}

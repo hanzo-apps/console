@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   logger.info(
-    `Received request for /api/public/scim/Users/[id] with method ${req.method} for orgId ${authCheck.scope.orgId} and userId ${req.query.id}`,
+    `[SCIM] Received request for /api/public/scim/Users/[id] with method ${req.method} for orgId ${authCheck.scope.orgId} and userId ${req.query.id}`,
   );
 
   // First, check if the user exists in the system at all
@@ -137,7 +137,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, user: User
     try {
       body = JSON.parse(body);
     } catch (error) {
-      logger.warn("Failed to parse JSON body", error);
+      logger.warn("[SCIM] Failed to parse JSON body", error);
       return res.status(400).json({
         schemas: ["urn:ietf:params:scim:api:messages:2.0:Error"],
         detail: "Invalid JSON body",
@@ -153,7 +153,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, user: User
     !body.schemas.includes("urn:ietf:params:scim:api:messages:2.0:PatchOp")
   ) {
     logger.warn(
-      "Invalid request body. Must include 'schemas' with 'urn:ietf:params:scim:api:messages:2.0:PatchOp'.",
+      "[SCIM] Invalid request body. Must include 'schemas' with 'urn:ietf:params:scim:api:messages:2.0:PatchOp'.",
       body,
     );
     return res.status(400).json({
@@ -192,18 +192,21 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, user: User
           },
           update: {},
         });
+        logger.info(
+          `[SCIM] Provisioned user ${user.id} in org ${orgId} via PATCH`,
+        );
       } else {
-        // Deprovision the user by removing them from the organization
-        await prisma.organizationMembership.deleteMany({
-          where: {
-            userId: user.id,
-            orgId: orgId,
-          },
-        });
+        // Deprovision atomically: check + delete in one Serializable txn.
+        if (!(await deprovisionOrReject(res, user.id, orgId))) {
+          return;
+        }
+        logger.info(
+          `[SCIM] Deprovisioned user ${user.id} from org ${orgId} via PATCH`,
+        );
       }
     } else {
       logger.error(
-        "Unsupported operation or invalid value in request body. Only 'replace' with 'active' field is supported.",
+        "[SCIM] Unsupported operation or invalid value in request body. Only 'replace' with 'active' field is supported.",
         op,
       );
       return res.status(400).json({
@@ -227,7 +230,7 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse, user: User, 
     try {
       body = JSON.parse(body);
     } catch (error) {
-      logger.warn("Failed to parse JSON body", error);
+      logger.warn("[SCIM] Failed to parse JSON body", error);
       return res.status(400).json({
         schemas: ["urn:ietf:params:scim:api:messages:2.0:Error"],
         detail: "Invalid JSON body",
@@ -243,7 +246,7 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse, user: User, 
     !body.schemas.includes("urn:ietf:params:scim:schemas:core:2.0:User")
   ) {
     logger.warn(
-      "Invalid request body. Must include 'schemas' with 'urn:ietf:params:scim:schemas:core:2.0:User'.",
+      "[SCIM] Invalid request body. Must include 'schemas' with 'urn:ietf:params:scim:schemas:core:2.0:User'.",
       body,
     );
     return res.status(400).json({
@@ -284,14 +287,17 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse, user: User, 
           role: role,
         },
       });
+      logger.info(
+        `[SCIM] Provisioned user ${user.id} in org ${orgId} with role ${role} via PUT`,
+      );
     } else {
-      // Deprovision the user by removing them from the organization
-      await prisma.organizationMembership.deleteMany({
-        where: {
-          userId: user.id,
-          orgId: orgId,
-        },
-      });
+      // Deprovision atomically: check + delete in one Serializable txn.
+      if (!(await deprovisionOrReject(res, user.id, orgId))) {
+        return;
+      }
+      logger.info(
+        `[SCIM] Deprovisioned user ${user.id} from org ${orgId} via PUT`,
+      );
     }
   }
 

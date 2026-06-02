@@ -49,6 +49,8 @@ const OrganizationProjectTiles = ({ org, search }: { org: User["organizations"][
 };
 
 const DemoOrganizationTile = () => {
+  const capture = usePostHogClientCapture();
+
   return (
     <Card>
       <CardHeader>
@@ -249,6 +251,9 @@ export const OrganizationProjectOverview = () => {
         ),
       }}
     >
+      <div className="mb-4">
+        <AgentToolsBanner />
+      </div>
       {showOnboarding && <Onboarding />}
       {organizations
         .sort((a, b) => {

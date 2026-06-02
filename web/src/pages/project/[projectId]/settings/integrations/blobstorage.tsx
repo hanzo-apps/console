@@ -19,7 +19,10 @@ import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePos
 import {
   blobStorageIntegrationFormSchema,
   type BlobStorageIntegrationFormSchema,
+  type BlobStorageSyncStatus,
 } from "@/src/features/blobstorage-integration/types";
+import { deriveSyncStatus } from "@/src/features/blobstorage-integration/deriveSyncStatus";
+import { Alert, AlertTitle, AlertDescription } from "@/src/components/ui/alert";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -85,9 +88,76 @@ export default function BlobStorageIntegrationSettings() {
           owner.
         </p>
       )}
+      {state.data && (
+        <>
+          <Header title="Status" />
+          {state.data.lastError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTitle>Last export failed</AlertTitle>
+              <AlertDescription>
+                {state.data.lastError}
+                {state.data.lastErrorAt && (
+                  <>
+                    <br />
+                    <span className="text-xs opacity-70">
+                      {new Date(state.data.lastErrorAt).toLocaleString()}
+                    </span>
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          <Card className="p-3">
+            <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
+              <span className="text-muted-foreground">Data exported up to</span>
+              <span>
+                {state.data.lastSyncAt
+                  ? new Date(state.data.lastSyncAt).toLocaleString()
+                  : "Never (pending)"}
+              </span>
+              {state.data.nextSyncAt && (
+                <>
+                  <span className="text-muted-foreground">
+                    Next export scheduled
+                  </span>
+                  <span>
+                    {new Date(state.data.nextSyncAt).toLocaleString()}
+                  </span>
+                </>
+              )}
+              <span className="text-muted-foreground">Export mode</span>
+              <span>
+                {state.data.exportMode === BlobStorageExportMode.FULL_HISTORY
+                  ? "Full history"
+                  : state.data.exportMode === BlobStorageExportMode.FROM_TODAY
+                    ? "From setup date"
+                    : state.data.exportMode ===
+                        BlobStorageExportMode.FROM_CUSTOM_DATE
+                      ? "From custom date"
+                      : "Unknown"}
+              </span>
+              {(state.data.exportMode ===
+                BlobStorageExportMode.FROM_CUSTOM_DATE ||
+                state.data.exportMode === BlobStorageExportMode.FROM_TODAY) &&
+                state.data.exportStartDate && (
+                  <>
+                    <span className="text-muted-foreground">
+                      Export start date
+                    </span>
+                    <span>
+                      {new Date(
+                        state.data.exportStartDate,
+                      ).toLocaleDateString()}
+                    </span>
+                  </>
+                )}
+            </div>
+          </Card>
+        </>
+      )}
       {hasAccess && (
         <>
-          <Header title="Configuration" />
+          <Header title="Configuration" className="mt-8" />
           <Card className="p-3">
             <BlobStorageIntegrationSettingsForm
               state={state.data || undefined}
@@ -145,6 +215,14 @@ const BlobStorageIntegrationSettingsForm = ({
   // Check if this is a self-hosted instance (no cloud region set)
   const isSelfHosted = !isHanzoCloud;
 
+  // Post-cutoff Cloud projects may only use OBSERVATIONS_V2 (EVENTS). The
+  // Export Source field is hidden in that case; the form value is pinned to
+  // EVENTS via the default below.
+  const isPostCutoffCloud =
+    project?.createdAt != null &&
+    !isLegacyBlobExportAllowed(new Date(project.createdAt), isLangfuseCloud);
+  const showExportSourceField = isBetaEnabled && !isPostCutoffCloud;
+
   const blobStorageForm = useForm({
     resolver: zodResolver(blobStorageIntegrationFormSchema),
     defaultValues: {
@@ -185,10 +263,16 @@ const BlobStorageIntegrationSettingsForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
+  const watchedExportSource = blobStorageForm.watch("exportSource");
+  const watchedExportMode = blobStorageForm.watch("exportMode");
+
   const utils = api.useUtils();
   const mut = api.blobStorageIntegration.update.useMutation({
     onSuccess: () => {
       utils.blobStorageIntegration.invalidate();
+    },
+    onError: (error) => {
+      showErrorToast("Failed to save integration", error.message);
     },
   });
   const mutDelete = api.blobStorageIntegration.delete.useMutation({
@@ -428,6 +512,9 @@ const BlobStorageIntegrationSettingsForm = ({
                     <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="every_20_minutes">
+                      Every 20 Minutes
+                    </SelectItem>
                     <SelectItem value="hourly">Hourly</SelectItem>
                     <SelectItem value="daily">Daily</SelectItem>
                     <SelectItem value="weekly">Weekly</SelectItem>
@@ -517,6 +604,27 @@ const BlobStorageIntegrationSettingsForm = ({
             )}
           />
         )}
+
+        <FormField
+          control={blobStorageForm.control}
+          name="compressed"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Gzip Compression</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  className="mt-1 ml-4"
+                />
+              </FormControl>
+              <FormDescription>
+                Compress exported files with gzip (.csv.gz, .json.gz, .jsonl.gz)
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={blobStorageForm.control}

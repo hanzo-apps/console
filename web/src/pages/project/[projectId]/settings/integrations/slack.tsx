@@ -70,6 +70,9 @@ export default function SlackIntegrationSettings() {
     scope: "automations:CUD",
   });
 
+  // Channel was typed by name rather than selected from the list
+  const isManualEntry = selectedChannel?.id.startsWith("#") ?? false;
+
   return (
     <ContainerPage
       headerProps={{
@@ -97,6 +100,7 @@ export default function SlackIntegrationSettings() {
                   <ChannelSelector
                     projectId={projectId}
                     selectedChannelId={selectedChannel?.id}
+                    selectedChannel={selectedChannel}
                     onChannelSelect={setSelectedChannel}
                     placeholder="Choose a channel to test"
                     showRefreshButton={true}
@@ -115,9 +119,15 @@ export default function SlackIntegrationSettings() {
                       </div>
                       <div>
                         <p className="text-sm font-medium">Channel Type</p>
-                        <Badge variant="outline" className="text-xs">
-                          {selectedChannel.isPrivate ? "Private" : "Public"}
-                        </Badge>
+                        {isManualEntry ? (
+                          <span className="text-muted-foreground text-xs">
+                            Available after sending a test message
+                          </span>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            {selectedChannel.isPrivate ? "Private" : "Public"}
+                          </Badge>
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-medium">Channel ID</p>
@@ -132,6 +142,19 @@ export default function SlackIntegrationSettings() {
                       selectedChannel={selectedChannel}
                       hasAccess={hasAccess}
                       disabled={false}
+                      onSuccess={(channelInfo) => {
+                        setSelectedChannel((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                id: channelInfo.id,
+                                name: channelInfo.name ?? prev.name,
+                                isPrivate:
+                                  channelInfo.isPrivate ?? prev.isPrivate,
+                              }
+                            : prev,
+                        );
+                      }}
                     />
                   </div>
                 </div>

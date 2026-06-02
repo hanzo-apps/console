@@ -159,7 +159,7 @@ export function DatasetsTable(props: { projectId: string }) {
     },
     {
       accessorKey: "countRuns",
-      header: "Runs",
+      header: "Experiments",
       id: "countRuns",
       enableHiding: true,
       size: 60,

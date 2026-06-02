@@ -4,7 +4,7 @@ import { protectedOrganizationProcedure, protectedProjectProcedure } from "@/src
 import { paginationZod, type PrismaClient, Role } from "@hanzo/shared";
 import { formatAuthProviderName } from "@hanzo/shared/src/server";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 const orgLevelMemberQuery = z.object({
   orgId: z.string(),

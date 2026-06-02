@@ -28,7 +28,7 @@ export const LLMApiKeyComponent = (p: { projectId: string; modelParams: UIModelP
     return (
       <div>
         <Label className="text-xs font-semibold">API key</Label>
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground text-sm">Loading...</p>
       </div>
     );
   }

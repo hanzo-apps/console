@@ -6,6 +6,9 @@ import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomi
 import { type LlmApiKeys } from "@hanzo/console-core";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { PencilIcon } from "lucide-react";
+import { type RouterOutputs } from "@/src/utils/api";
+
+type LlmApiKeyListItem = RouterOutputs["llmApiKey"]["all"]["data"][number];
 
 export function UpdateLLMApiKeyDialog({
   apiKey,
@@ -13,7 +16,7 @@ export function UpdateLLMApiKeyDialog({
   open,
   onOpenChange,
 }: {
-  apiKey: LlmApiKeys;
+  apiKey: LlmApiKeyListItem;
   projectId: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;

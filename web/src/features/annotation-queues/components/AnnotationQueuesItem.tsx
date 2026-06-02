@@ -56,7 +56,6 @@ export const AnnotationQueuesItem = ({
 
   return (
     <Page
-      withPadding
       headerProps={{
         title: itemId ? `${queue.data?.name}: ${itemId}` : (queue.data?.name ?? annotationQueueId),
         itemType: "QUEUE_ITEM",
@@ -113,7 +112,6 @@ export const AnnotationQueuesItem = ({
       <AnnotationQueueItemPage
         projectId={projectId}
         annotationQueueId={annotationQueueId}
-        view={view}
         queryItemId={itemId}
       />
     </Page>

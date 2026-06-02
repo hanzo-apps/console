@@ -10,11 +10,7 @@ import {
 import { logger, traceException } from "@hanzo/console-core/src/server";
 
 interface ScheduleExperimentEvalsParams {
-  projectId: string;
-  traceId: string;
-  datasetItem: DatasetItemDomain;
-  config: PromptExperimentConfig;
-  generationDetails: GenerationDetails;
+  observation: ObservationForEval;
 }
 
 /**
@@ -34,9 +30,10 @@ export async function scheduleExperimentObservationEvals(params: ScheduleExperim
   const { projectId, traceId, datasetItem, config, generationDetails } = params;
 
   try {
-    // 1. Fetch experiment-targeted eval configs
-    const configs = await fetchObservationEvalConfigs(projectId);
-    if (configs.length === 0) return;
+    const configs = await fetchObservationEvalConfigs(observation.project_id);
+    if (configs.length === 0) {
+      return;
+    }
 
     // 2. Build ObservationForEval with experiment context
     // Note: metadata from generation events contains additional context
@@ -90,18 +87,18 @@ export async function scheduleExperimentObservationEvals(params: ScheduleExperim
     });
 
     logger.info("Scheduled experiment observation evals", {
-      projectId,
-      traceId,
-      observationId: generationDetails.observationId,
+      projectId: observation.project_id,
+      traceId: observation.trace_id,
+      observationId: observation.span_id,
       configCount: configs.length,
     });
   } catch (error) {
     traceException(error);
     logger.error("Failed to schedule experiment observation evals", {
       error,
-      projectId,
-      traceId,
+      projectId: observation.project_id,
+      traceId: observation.trace_id,
+      observationId: observation.span_id,
     });
-    // Don't rethrow - eval scheduling should not fail the experiment
   }
 }

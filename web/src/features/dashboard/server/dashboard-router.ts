@@ -17,7 +17,6 @@ import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
 import { type QueryType, query as customQuery } from "@/src/features/query/types";
 import { paginationZod, orderBy, StringNoHTML, InvalidRequestError, singleFilter } from "@hanzo/shared";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { executeQuery } from "@/src/features/query/server/queryExecutor";
 
 // Define the dashboard list input schema
 const ListDashboardsInput = z.object({

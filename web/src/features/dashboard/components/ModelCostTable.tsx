@@ -7,7 +7,7 @@ import { type FilterState, getGenerationLikeTypes } from "@hanzo/shared";
 import { api } from "@/src/utils/api";
 import { compactNumberFormatter } from "@/src/utils/numbers";
 import { TotalMetric } from "./TotalMetric";
-import { totalCostDashboardFormatted } from "@/src/features/dashboard/lib/dashboard-utils";
+import { costFormatter } from "@/src/utils/numbers";
 import { truncate } from "@/src/utils/string";
 import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
 
@@ -48,7 +48,7 @@ export const ModelCostTable = ({
     orderBy: null,
   };
 
-  const metrics = api.dashboard.executeQuery.useQuery(
+  const metrics = useScheduledDashboardExecuteQuery(
     {
       projectId,
       query: modelCostQuery,
@@ -59,6 +59,7 @@ export const ModelCostTable = ({
           skipBatch: true,
         },
       },
+      queryId: `${schedulerId ?? "home:model-costs"}:metrics`,
       enabled: !isLoading,
     },
   );
