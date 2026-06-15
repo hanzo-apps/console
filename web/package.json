@@ -56,6 +56,7 @@
     "@hanzo/console": "workspace:*",
     "@hanzo/console-sdk": "npm:langfuse@3.38.4",
     "@hanzo/iam": "^0.4.1",
+    "@hanzo/zap": "file:../../../zap-proto/zap-ts",
     "@hanzo/insights": "^1.357.1",
     "@hanzo/insights-react": "^1.8.1",
     "@hanzo/mq": "npm:bullmq@^5.34.10",
@@ -180,8 +181,6 @@
     "uuid": "^14.0.0",
     "vaul": "^1.1.2",
     "vis-network": "^9.1.13",
-    "zap-es": "file:../../../zap-proto/zap-es",
-    "capnp-es": "file:../../../zap-proto/zap-es",
     "zod": "^4.3.6"
   },
   "devDependencies": {

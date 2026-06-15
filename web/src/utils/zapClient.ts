@@ -1,14 +1,17 @@
 /**
- * zapClient — thin browser client for the ZAP capability-RPC bridge.
+ * zapClient — thin browser client for the native ZAP capability-RPC bridge.
  *
  * Replaces `api.<router>.<proc>.useQuery()` for migrated routers. Posts to the
  * Next.js bridge at /v1/zap/<interface> with the wielder's Capability in the
  * `x-zap-capability` header (a Capability REPLACES the bearer JWT — see
- * zap-proto/zap-spec/SPEC.md §1).
+ * zap-proto/zap-spec/SPEC.md §1). The bridge proxies onto the native ZAP Go
+ * service binary over the @hanzo/zap TCP transport — no capnp anywhere in the
+ * path. The browser stays HTTP (the TCP client is Node-only); the bridge holds
+ * the connection.
  *
  * The browser obtains its session capability from the same place it used to get
  * the session cookie; until that exchange ships (its own milestone), dev mints a
- * minimal CapKindIAMSession read cap. The server still verifies it.
+ * minimal CapKindIAMSession read cap. The Go service still gates on it.
  */
 
 /** Dev session capability: CapKindIAMSession with PermSessionRead (bit 0). */

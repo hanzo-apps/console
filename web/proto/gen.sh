@@ -1,46 +1,39 @@
 #!/usr/bin/env bash
-# Regenerate ZAP TS bindings from the .capnp schemas in this dir.
+# Regenerate native ZAP TS bindings from the zap-spec .zap schemas in this dir.
 #
 # One command, idempotent: `pnpm --filter web zap:gen` (or run directly).
-# Output lands in web/src/server/zap/gen/. Generated files import `capnp-es`,
-# which resolves to the zap-es package (aliased in web/package.json).
+# Output lands in web/src/server/zap/gen/ as <schema>_zap.ts, importing the
+# native @hanzo/zap runtime (NO capnp, NO capnp-es).
 #
-# Requires: capnp (brew install capnp) + the zap-es source checkout. ZAP_ES may
-# override the zap-es location (default: ../../../../zap-proto/zap-es from web/).
+# The schema is the SAME zap-spec dialect the Go service binary compiles
+# (github.com/hanzoai/ui-customization/proto/ui-customization.zap). One schema,
+# two code targets (Go views server-side, TS views here) — zapgen --target.
+#
+# Requires: the zapgen compiler from github.com/zap-proto/go. Build it once with
+#   ( cd ../../../zap-proto/go/cmd/zapgen && go build -o zapgen . )
+# ZAPGEN may override the binary path; ZAP_GO overrides the go source checkout.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"        # web/proto
 WEB="$(cd "$HERE/.." && pwd)"                                 # web
-ZAP="${ZAP_ES:-$(cd "$WEB/../../../zap-proto/zap-es" && pwd)}"
+ZAP_GO="${ZAP_GO:-$(cd "$WEB/../../../zap-proto/go" && pwd)}"
 OUT="$WEB/src/server/zap/gen"
 
-if ! command -v capnp >/dev/null 2>&1; then
-  echo "error: capnp not found on PATH (brew install capnp)" >&2
-  exit 1
-fi
-
-# zap-es self-hosts its compiler via the 'capnp-es' specifier; ensure it resolves.
-if [ ! -e "$ZAP/node_modules/capnp-es" ]; then
-  ln -sfn "$ZAP" "$ZAP/node_modules/capnp-es"
+# Resolve (or build) the zapgen binary.
+ZAPGEN="${ZAPGEN:-$ZAP_GO/cmd/zapgen/zapgen}"
+if [ ! -x "$ZAPGEN" ]; then
+  echo "building zapgen -> $ZAPGEN" >&2
+  ( cd "$ZAP_GO/cmd/zapgen" && go build -o zapgen . )
 fi
 
 mkdir -p "$OUT"
 
-# Compile all schemas together so cross-imports (root -> ui-customization) resolve.
-# ts-only: the console's own tsgo type-checks the .ts in context (where capnp-es
-# resolves); we do not emit .d.ts from here (that pass type-checks under zap-es's
-# own tsconfig, where the alias is absent).
-( cd "$HERE" && npx --prefix "$ZAP" jiti "$ZAP/src/compiler/capnpc-js.ts" \
-    "-I$HERE" \
-    "$HERE"/*.capnp \
-    -ots:"$OUT" \
-    --src-prefix="$HERE" )
-
-# Normalize generated cross-imports to the repo's extensionless sibling convention
-# and drop unused names capnp-es over-imports (".//x.js" -> "./x", prune unused).
-node "$HERE/normalize-gen.mjs" "$OUT"
+# Emit TS views/builders for every schema in this dir.
+for schema in "$HERE"/*.zap; do
+  "$ZAPGEN" --target=ts -out "$OUT" "$schema"
+done
 
 # Format to the repo's prettier style so regeneration is byte-idempotent.
 ( cd "$WEB" && node_modules/.bin/prettier --write --log-level warn "$OUT"/*.ts )
 
-echo "ZAP bindings regenerated -> $OUT"
+echo "ZAP TS bindings regenerated -> $OUT"

@@ -1,67 +1,91 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { prisma } from "@hanzo/shared/src/db";
+import { ZapClient, Method, Status, type Response } from "@hanzo/zap";
 import {
-  CapKind,
-  Perm,
-  verifyCapability,
-  CapabilityDeniedError,
+  decodeCapabilityHeader,
+  verifyCapabilityFields,
+  buildCapabilityBuffer,
   CapabilityVerificationError,
-  type Capability,
-} from "@/src/server/zap/context";
+} from "@/src/server/zap/capability";
 import {
-  uiCustomizationGet,
-  uiCustomizationGetModules,
-} from "@/src/server/zap/dispatch";
+  UiCustomizationConfig,
+  VisibleModules,
+} from "@/src/server/zap/gen/ui-customization_zap";
 
 /**
- * ZAP capability-RPC HTTP bridge (Pages Router — matches the repo's existing
- * pages/api/zap/* convention; next.config.js maps /v1/zap/* here).
+ * ZAP capability-RPC bridge (Pages Router; next.config maps /v1/zap/* here).
  *
- * Wire: a ZAP Capability REPLACES the bearer JWT. The wielder presents it in the
- * `x-zap-capability` header. For dev we accept a JSON-encoded capability (the
- * binary CapProof + holderSig path is the same milestone as the real verifier —
- * see verifyCapability TODO). The body selects the method:
+ * Thin HTTP -> TCP proxy onto the native ZAP service binary. The wielder's
+ * Capability REPLACES the bearer JWT (zap-proto/zap-spec/SPEC.md §1) and travels
+ * in `x-zap-capability`; the bridge decodes it, builds the opaque binary cap
+ * buffer, and ships it over the @hanzo/zap TCP client to the Go ui-customization
+ * service. NO capnp, NO in-process server — the backend lives in Go.
  *
  *   POST /v1/zap/ui-customization   { "method": "get" | "getModules" }
  *
- * Returns JSON. Dispatch runs through a real zap-es Conn (see dispatch.ts), so
- * capability gating, Server.impl, and promise pipelining all execute.
+ * Target service address: UI_CUSTOMIZATION_ZAP_URL (default tcp://127.0.0.1:9999).
  */
 
-/** Decode the dev JSON capability header into a {@link Capability}. */
-function decodeCapabilityHeader(req: NextApiRequest): Capability | null {
-  const raw = req.headers["x-zap-capability"];
-  if (typeof raw !== "string" || raw.length === 0) return null;
-  let parsed: {
-    kind?: number;
-    holder?: string; // hex
-    issuer?: string; // hex
-    permissions?: string; // bigint as decimal/hex string
-    expiresAt?: string;
-    caveatKinds?: number[];
-  };
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  const hex = (s: string | undefined, len: number): Uint8Array => {
-    const out = new Uint8Array(len);
-    if (!s) return out;
-    const clean = s.startsWith("0x") ? s.slice(2) : s;
-    for (let i = 0; i < len && i * 2 + 1 < clean.length; i++) {
-      out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
-    }
-    return out;
-  };
+/** Parse tcp://host:port (or host:port) into {host, port}. */
+function parseZapUrl(raw: string): { host: string; port: number } {
+  const s = raw.startsWith("tcp://") ? raw.slice("tcp://".length) : raw;
+  const i = s.lastIndexOf(":");
+  if (i < 0) return { host: s, port: 9999 };
+  const port = parseInt(s.slice(i + 1), 10);
   return {
-    kind: (parsed.kind ?? CapKind.IAMSession) as Capability["kind"],
-    holder: hex(parsed.holder, 32),
-    issuer: hex(parsed.issuer, 32),
-    permissions: BigInt(parsed.permissions ?? Perm.SessionRead.toString()),
-    expiresAt: BigInt(parsed.expiresAt ?? "0"),
-    caveatKinds: parsed.caveatKinds ?? [],
+    host: s.slice(0, i) || "127.0.0.1",
+    port: Number.isFinite(port) ? port : 9999,
   };
+}
+
+function serviceAddr(): { host: string; port: number } {
+  return parseZapUrl(
+    process.env.UI_CUSTOMIZATION_ZAP_URL ?? "tcp://127.0.0.1:9999",
+  );
+}
+
+/** A plain-object UiCustomizationConfig — the JSON the frontend reads. */
+export interface UiCustomizationConfigJSON {
+  present: boolean;
+  hostname: string;
+  documentationHref: string;
+  supportHref: string;
+  feedbackHref: string;
+  logoLightModeHref: string;
+  logoDarkModeHref: string;
+  defaultModelAdapter: string;
+  defaultBaseUrlOpenAI: string;
+  defaultBaseUrlAnthropic: string;
+  defaultBaseUrlAzure: string;
+  visibleModules: string[];
+}
+
+function configToJSON(c: UiCustomizationConfig): UiCustomizationConfigJSON {
+  return {
+    present: c.present,
+    hostname: c.hostname,
+    documentationHref: c.documentationHref,
+    supportHref: c.supportHref,
+    feedbackHref: c.feedbackHref,
+    logoLightModeHref: c.logoLightModeHref,
+    logoDarkModeHref: c.logoDarkModeHref,
+    defaultModelAdapter: c.defaultModelAdapter,
+    defaultBaseUrlOpenAI: c.defaultBaseUrlOpenAI,
+    defaultBaseUrlAnthropic: c.defaultBaseUrlAnthropic,
+    defaultBaseUrlAzure: c.defaultBaseUrlAzure,
+    visibleModules: c.visibleModules.toStringArray(),
+  };
+}
+
+/** Decode an error body ({"error":"…"}) into a message. */
+function errorMessage(resp: Response): string {
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(resp.body)) as {
+      error?: string;
+    };
+    return parsed.error ?? `status ${resp.status}`;
+  } catch {
+    return `status ${resp.status}`;
+  }
 }
 
 export default async function handler(
@@ -73,7 +97,6 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Resolve the target interface from the path: /v1/zap/<interface>.
   const pathParts = (req.query.path ?? []) as string[];
   const iface = pathParts[0];
   if (iface !== "ui-customization") {
@@ -83,18 +106,18 @@ export default async function handler(
   }
 
   // Decode + verify the inbound capability (REPLACES next-auth session).
-  const presented = decodeCapabilityHeader(req);
-  if (!presented) {
+  const fields = decodeCapabilityHeader(req.headers["x-zap-capability"]);
+  if (!fields) {
     return res
       .status(401)
       .json({ error: "Missing or malformed x-zap-capability" });
   }
-  let cap: Capability;
+  let capBuf: Uint8Array;
   try {
-    cap = verifyCapability(presented);
+    capBuf = buildCapabilityBuffer(verifyCapabilityFields(fields));
   } catch (err) {
     if (err instanceof CapabilityVerificationError) {
-      return res.status(401).json({ error: err.message, code: err.code });
+      return res.status(401).json({ error: err.message });
     }
     throw err;
   }
@@ -102,24 +125,55 @@ export default async function handler(
   const body = req.body as { method?: string };
   const method = body?.method ?? "get";
 
+  const addr = serviceAddr();
+  let client: ZapClient;
+  try {
+    client = await ZapClient.connect(
+      { host: addr.host, port: addr.port, nodeID: "console-bridge" },
+      capBuf,
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "connect failed";
+    console.error("[zap/ui-customization] connect", message);
+    return res
+      .status(502)
+      .json({ error: `ZAP service unreachable: ${message}` });
+  }
+
   try {
     if (method === "get") {
+      const resp = await client.call(Method.Get);
+      if (resp.status === Status.Forbidden) {
+        return res.status(403).json({ error: errorMessage(resp) });
+      }
+      if (resp.status !== Status.OK) {
+        return res.status(resp.status >= 400 ? resp.status : 500).json({
+          error: errorMessage(resp),
+        });
+      }
       return res
         .status(200)
-        .json({ result: await uiCustomizationGet(cap, prisma) });
+        .json({ result: configToJSON(UiCustomizationConfig.wrap(resp.body)) });
     }
     if (method === "getModules") {
-      return res
-        .status(200)
-        .json({ result: await uiCustomizationGetModules(cap, prisma) });
+      const resp = await client.call(Method.GetModules);
+      if (resp.status === Status.Forbidden) {
+        return res.status(403).json({ error: errorMessage(resp) });
+      }
+      if (resp.status !== Status.OK) {
+        return res.status(resp.status >= 400 ? resp.status : 500).json({
+          error: errorMessage(resp),
+        });
+      }
+      const mods = VisibleModules.wrap(resp.body).modules.toStringArray();
+      return res.status(200).json({ result: mods });
     }
     return res.status(404).json({ error: `Unknown method: ${method}` });
   } catch (err) {
-    if (err instanceof CapabilityDeniedError) {
-      return res.status(403).json({ error: err.message, code: err.code });
-    }
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[zap/ui-customization]", message);
     return res.status(500).json({ error: message });
+  } finally {
+    client.close();
   }
 }
