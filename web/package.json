@@ -16,6 +16,7 @@
     "lint": "dotenv -e ../.env -- eslint . --cache --cache-location .next/cache/eslint/",
     "lint:fix": "dotenv -e ../.env -- eslint . --cache --cache-location .next/cache/eslint/ --fix",
     "analyze": "dotenv -e ../.env -- next experimental-analyze",
+    "zap:gen": "bash proto/gen.sh",
     "clean": "rm -rf node_modules",
     "start": "dotenv -e ../.env -- sh -c 'NEXT_MANUAL_SIG_HANDLE=true next start'",
     "test": "vitest run --project server --project server-unit --project in-source",
@@ -179,6 +180,8 @@
     "uuid": "^14.0.0",
     "vaul": "^1.1.2",
     "vis-network": "^9.1.13",
+    "zap-es": "file:../../../zap-proto/zap-es",
+    "capnp-es": "file:../../../zap-proto/zap-es",
     "zod": "^4.3.6"
   },
   "devDependencies": {

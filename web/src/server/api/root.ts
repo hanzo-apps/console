@@ -32,7 +32,8 @@ import { publicRouter } from "@/src/server/api/routers/public";
 import { credentialsRouter } from "@/src/features/auth-credentials/server/credentialsRouter";
 import { batchExportRouter } from "@/src/features/batch-exports/server/batchExport";
 import { utilsRouter } from "@/src/server/api/routers/utilities";
-import { uiCustomizationRouter } from "@/src/features/ui-customization/uiCustomizationRouter";
+// uiCustomization migrated to native ZAP capability-RPC — see
+// web/src/server/zap/root.ts + web/src/features/ui-customization/uiCustomizationServer.ts
 import { commentsRouter } from "@/src/server/api/routers/comments";
 import { commentReactionsRouter } from "@/src/server/api/routers/commentReactions";
 import { queueRouter } from "@/src/features/annotation-queues/server/annotationQueuesRouter";
@@ -109,7 +110,6 @@ export const appRouter = createTRPCRouter({
   public: publicRouter,
   credentials: credentialsRouter,
   utilities: utilsRouter,
-  uiCustomization: uiCustomizationRouter,
   comments: commentsRouter,
   commentReactions: commentReactionsRouter,
   media: mediaRouter,
