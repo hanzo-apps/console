@@ -11,7 +11,7 @@
 # Per-router migration = add ONE method here that returns the router's interface,
 # plus register the backing Server in web/src/server/zap/root.ts. Nothing else.
 
-using UiC = import "/ui-customization.capnp";
+using UiC = import "/ui-customization.zap";
 
 interface ZapRoot {
   # uiCustomization vends the UiCustomization capability (replaces the
