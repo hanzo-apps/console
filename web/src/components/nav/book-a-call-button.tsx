@@ -13,19 +13,46 @@ export const BookACallButton = () => {
   const capture = useInsightsCapture();
 
   useEffect(() => {
-    // Load Cal.com embed script once
-    if (document.getElementById("cal-embed-script")) return;
-
-    const script = document.createElement("script");
-    script.id = "cal-embed-script";
-    script.src = "https://app.cal.com/embed/embed.js";
-    script.async = true;
-    script.onload = () => {
-      if (window.Cal) {
-        window.Cal("init", { origin: "https://cal.com" });
-      }
-    };
-    document.head.appendChild(script);
+    if (window.Cal) return;
+    // Cal.com official embed bootstrap: defines the window.Cal queue stub and
+    // lazily injects embed.js (calls made before it loads are queued). Loading
+    // embed.js directly without this stub throws "Cal is not defined" from
+    // inside embed.js.
+    /* eslint-disable */
+    (function (C: any, A: any, L: any) {
+      const p = function (a: any, ar: any) {
+        a.q.push(ar);
+      };
+      const d = C.document;
+      C.Cal =
+        C.Cal ||
+        function () {
+          const cal = C.Cal;
+          const ar = arguments;
+          if (!cal.loaded) {
+            cal.ns = {};
+            cal.q = cal.q || [];
+            d.head.appendChild(d.createElement("script")).src = A;
+            cal.loaded = true;
+          }
+          if (ar[0] === L) {
+            const api: any = function () {
+              p(api, arguments);
+            };
+            const namespace = ar[1];
+            api.q = api.q || [];
+            if (typeof namespace === "string") {
+              cal.ns[namespace] = cal.ns[namespace] || api;
+              p(cal.ns[namespace], ar);
+              p(cal, ["initNamespace", namespace]);
+            } else p(cal, ar);
+            return;
+          }
+          p(cal, ar);
+        };
+    })(window, "https://app.cal.com/embed/embed.js", "init");
+    /* eslint-enable */
+    window.Cal?.("init", { origin: "https://cal.com" });
   }, []);
 
   return (
@@ -38,7 +65,11 @@ export const BookACallButton = () => {
             config: { layout: "month_view", theme: "dark" },
           });
         } else {
-          window.open("https://cal.com/hanzo/welcome-to-hanzo", "_blank", "noopener,noreferrer");
+          window.open(
+            "https://cal.com/hanzo/welcome-to-hanzo",
+            "_blank",
+            "noopener,noreferrer",
+          );
         }
       }}
     >
