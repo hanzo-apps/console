@@ -50,9 +50,9 @@ export const BookACallButton = () => {
           }
           p(cal, ar);
         };
+      (window as any).Cal("init", { origin: "https://cal.com" });
     })(window, "https://app.cal.com/embed/embed.js", "init");
     /* eslint-enable */
-    window.Cal?.("init", { origin: "https://cal.com" });
   }, []);
 
   return (
