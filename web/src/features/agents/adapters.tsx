@@ -107,11 +107,14 @@ export function useSearchParams(): [
         next instanceof URLSearchParams
           ? next.toString()
           : new URLSearchParams(next).toString();
-      void router.replace(
-        { pathname: router.pathname, query: qs ? `?${qs}` : undefined },
-        undefined,
-        { shallow: true },
-      );
+      // Use the RESOLVED path (asPath, with [projectId] already filled), not
+      // router.pathname (the route pattern) — and a plain query string (no
+      // leading "?"). Passing the pattern + "?"-prefixed query produced
+      // "/project/[projectId]/agents??..." with [projectId] uninterpolated.
+      const base = router.asPath.split("?")[0];
+      void router.replace(qs ? `${base}?${qs}` : base, undefined, {
+        shallow: true,
+      });
     },
     [router, searchParams],
   );
