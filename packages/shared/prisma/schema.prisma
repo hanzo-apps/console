@@ -1729,6 +1729,24 @@ model CloudSpendAlert {
   @@map("cloud_spend_alerts")
 }
 
+model VerifiedDomain {
+  id                String       @id @default(cuid())
+  organizationId    String       @map("organization_id")
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  domain            String
+  verificationToken String       @unique @default(cuid()) @map("verification_token")
+  verifiedAt        DateTime?    @map("verified_at")
+  createdByUserId   String?      @map("created_by_user_id")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  // NOTE: a DB-only partial unique index (domain WHERE verified_at IS NOT NULL)
+  // exists via migration 20260507120000 and cannot be expressed in Prisma schema.
+  @@unique([organizationId, domain], map: "verified_domains_organization_id_domain_key")
+  @@index([organizationId], map: "verified_domains_organization_id_idx")
+  @@map("verified_domains")
+}
+
 // ── DNS Management ──────────────────────────────────────────────
 
 model DnsZone {
