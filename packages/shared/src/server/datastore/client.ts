@@ -41,11 +41,16 @@ function buildQueryParams(
     }
   }
   if (params) {
+    // Datastore (ClickHouse) parses DateTime64 query parameters strictly and does
+    // NOT honor date_time_input_format, so a raw JS Date (Date.toString(), e.g.
+    // "Mon Jun 16 2026 15:59:56 GMT+0000 (Coordinated Universal Time)") is rejected
+    // with BAD_QUERY_PARAMETER. Format Date values to the datastore datetime format.
+    const serializeParam = (v: unknown): string => (v instanceof Date ? convertDateToDatastoreDateTime(v) : String(v));
     for (const [key, value] of Object.entries(params)) {
       if (Array.isArray(value)) {
-        qs.set(`param_${key}`, `[${value.map((v) => `'${String(v)}'`).join(",")}]`);
+        qs.set(`param_${key}`, `[${value.map((v) => `'${serializeParam(v)}'`).join(",")}]`);
       } else {
-        qs.set(`param_${key}`, String(value ?? ""));
+        qs.set(`param_${key}`, value === undefined || value === null ? "" : serializeParam(value));
       }
     }
   }
