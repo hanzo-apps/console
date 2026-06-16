@@ -18,7 +18,10 @@ import {
   AgentControlButton,
   type AgentState,
 } from "@/src/features/agents/components/ui/AgentControlButton";
-import { Alert, AlertDescription } from "@/src/features/agents/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+} from "@/src/features/agents/components/ui/alert";
 import { Badge } from "@/src/features/agents/components/ui/badge";
 import { Button } from "@/src/features/agents/components/ui/button";
 import {
@@ -40,7 +43,10 @@ import {
 import { ResponsiveGrid } from "@/src/features/agents/components/layout/ResponsiveGrid";
 import { useMode } from "@/src/features/agents/contexts/ModeContext";
 import { useDIDInfo } from "@/src/features/agents/hooks/useDIDInfo";
-import { useMCPHealthSSE, useNodeUnifiedStatusSSE } from "@/src/features/agents/hooks/useSSE";
+import {
+  useMCPHealthSSE,
+  useNodeUnifiedStatusSSE,
+} from "@/src/features/agents/hooks/useSSE";
 import {
   getMCPHealthModeAware,
   getMCPServerMetrics,
@@ -48,11 +54,14 @@ import {
   getNodeStatus,
 } from "@/src/features/agents/services/api";
 import {
-  reconcileAgent,
-  startAgent,
-  stopAgent,
+  reconcileNode,
+  startNode,
+  stopNode,
 } from "@/src/features/agents/services/configurationApi";
-import { AlertCircle, Flash } from "@/src/features/agents/components/ui/icon-bridge";
+import {
+  AlertCircle,
+  Flash,
+} from "@/src/features/agents/components/ui/icon-bridge";
 
 import {
   useErrorNotification,
@@ -90,10 +99,10 @@ function NodeDetailPageContent() {
 
   // State management
   const [node, setNode] = useState<AgentNodeDetailsForUIWithPackage | null>(
-    null
+    null,
   );
   const [mcpHealth, setMcpHealth] = useState<MCPHealthResponseModeAware | null>(
-    null
+    null,
   );
   const [liveStatus, setLiveStatus] = useState<AgentStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -111,7 +120,7 @@ function NodeDetailPageContent() {
   // Real-time updates using optimized SSE hook
   const { latestEvent } = useMCPHealthSSE(nodeId || null);
   const { latestEvent: unifiedStatusEvent } = useNodeUnifiedStatusSSE(
-    nodeId || null
+    nodeId || null,
   );
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
@@ -121,7 +130,7 @@ function NodeDetailPageContent() {
       console.log(
         "🔄 SSE: Received event:",
         latestEvent.type,
-        latestEvent.data
+        latestEvent.data,
       );
 
       // Update MCP health data based on event
@@ -138,7 +147,7 @@ function NodeDetailPageContent() {
                   ...server,
                   status: latestEvent.data.status || server.status,
                 }
-              : server
+              : server,
           );
 
           return {
@@ -160,7 +169,7 @@ function NodeDetailPageContent() {
     console.log(
       "🔄 NodeDetailPage: Received unified status event:",
       unifiedStatusEvent.type,
-      unifiedStatusEvent
+      unifiedStatusEvent,
     );
 
     const eventData = unifiedStatusEvent.data;
@@ -223,7 +232,7 @@ function NodeDetailPageContent() {
       default:
         console.log(
           "Unhandled unified status event type:",
-          unifiedStatusEvent.type
+          unifiedStatusEvent.type,
         );
     }
   }, [unifiedStatusEvent, nodeId]);
@@ -251,7 +260,7 @@ function NodeDetailPageContent() {
       setActiveTab(value);
       navigate(`${location.pathname}#${value}`, { replace: true });
     },
-    [navigate, location.pathname]
+    [navigate, location.pathname],
   );
 
   // Fetch node details and MCP data with progressive loading
@@ -297,7 +306,7 @@ function NodeDetailPageContent() {
             if (metricsData.status === "fulfilled") {
               // MCP metrics dashboard components have been removed
               console.log(
-                "MCP metrics data available but dashboard components removed"
+                "MCP metrics data available but dashboard components removed",
               );
             } else {
               console.warn("Failed to fetch MCP metrics:", metricsData.reason);
@@ -309,7 +318,7 @@ function NodeDetailPageContent() {
             } else {
               console.warn(
                 "Failed to fetch unified status:",
-                statusData.reason
+                statusData.reason,
               );
             }
 
@@ -330,7 +339,7 @@ function NodeDetailPageContent() {
         }
       }
     },
-    [nodeId, mode]
+    [nodeId, mode],
   );
 
   // Initial data fetch
@@ -349,7 +358,7 @@ function NodeDetailPageContent() {
     showInfo(`Initiating start sequence for ${nodeId}...`);
 
     try {
-      await startAgent(nodeId);
+      await startNode(nodeId);
       showSuccess(`🚀 Agent ${nodeId} launch sequence completed!`);
       // Refresh data to get updated status
       fetchData(false);
@@ -379,7 +388,7 @@ function NodeDetailPageContent() {
     showInfo(`Initiating shutdown sequence for ${nodeId}...`);
 
     try {
-      await stopAgent(nodeId);
+      await stopNode(nodeId);
       showSuccess(`🛑 Agent ${nodeId} shutdown completed successfully!`);
       // Refresh data to get updated status
       fetchData(false);
@@ -407,7 +416,7 @@ function NodeDetailPageContent() {
     showInfo(`🔄 Reconciling agent ${nodeId} state...`);
 
     try {
-      const result = await reconcileAgent(nodeId);
+      const result = await reconcileNode(nodeId);
       showSuccess(`✅ Agent ${nodeId} state reconciled successfully!`);
       console.log("Reconciliation result:", result);
       // Refresh data to get updated status
@@ -451,7 +460,6 @@ function NodeDetailPageContent() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isFullscreen]);
-
 
   // Determine current agent state for the control button
   const getAgentState = (): AgentState => {
@@ -531,7 +539,7 @@ function NodeDetailPageContent() {
   if (loading) {
     return (
       <MCPAccessibilityProvider>
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="mx-auto max-w-7xl space-y-6 p-6">
           <StatusAnnouncer status="Loading node details" />
 
           {/* Header skeleton */}
@@ -559,7 +567,7 @@ function NodeDetailPageContent() {
               {["Overview", "MCP Servers", "Tools", "Performance"].map(
                 (_, i) => (
                   <Skeleton key={i} className="h-10 w-24" />
-                )
+                ),
               )}
             </div>
             <div className="space-y-4">
@@ -639,19 +647,21 @@ function NodeDetailPageContent() {
 
   const agentStatusForTable = liveStatus
     ? {
-        health_status: liveStatus.health_status ?? 'unknown',
-        lifecycle_status: liveStatus.lifecycle_status ?? 'unknown'
+        health_status: liveStatus.health_status ?? "unknown",
+        lifecycle_status: liveStatus.lifecycle_status ?? "unknown",
       }
     : {
-        health_status: node.health_status ?? 'unknown',
-        lifecycle_status: node.lifecycle_status ?? 'unknown'
+        health_status: node.health_status ?? "unknown",
+        lifecycle_status: node.lifecycle_status ?? "unknown",
       };
 
-  const effectiveLifecycleStatus = liveStatus?.lifecycle_status ?? node.lifecycle_status ?? null;
-  const effectiveHealthStatus = liveStatus?.health_status ?? node.health_status ?? null;
+  const effectiveLifecycleStatus =
+    liveStatus?.lifecycle_status ?? node.lifecycle_status ?? null;
+  const effectiveHealthStatus =
+    liveStatus?.health_status ?? node.health_status ?? null;
   const liveStatusPresentation = getNodeStatusPresentation(
     effectiveLifecycleStatus,
-    effectiveHealthStatus
+    effectiveHealthStatus,
   );
 
   const headerMetadata: Array<{ label: string; value: string }> = [
@@ -670,14 +680,14 @@ function NodeDetailPageContent() {
         "flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium",
         liveStatusPresentation.theme.bgClass,
         liveStatusPresentation.theme.textClass,
-        liveStatusPresentation.theme.borderClass
+        liveStatusPresentation.theme.borderClass,
       )}
     >
       <span
         className={cn(
           "h-2 w-2 rounded-full",
           liveStatusPresentation.theme.indicatorClass,
-          liveStatusPresentation.shouldPulse && "animate-pulse"
+          liveStatusPresentation.shouldPulse && "animate-pulse",
         )}
       />
       {liveStatusPresentation.label}
@@ -758,12 +768,12 @@ function NodeDetailPageContent() {
   );
 
   const contentWrapperClass = cn(
-    "flex min-h-0 flex-1 flex-col overflow-hidden"
+    "flex min-h-0 flex-1 flex-col overflow-hidden",
   );
 
   const pageWrapperClass = cn(
     "flex min-h-0 flex-1 flex-col overflow-hidden",
-    isFullscreen && "fixed inset-0 z-50 bg-background"
+    isFullscreen && "fixed inset-0 z-50 bg-background",
   );
 
   const formatRelative = (date: Date) => {
@@ -811,24 +821,24 @@ function NodeDetailPageContent() {
           onValueChange={handleTabChange}
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-          <div className="flex items-center justify-between px-6 pt-4 pb-2">
-            <AnimatedTabsList className="h-11 gap-1 rounded-lg bg-muted/40 p-1 flex-1">
+          <div className="flex items-center justify-between px-6 pb-2 pt-4">
+            <AnimatedTabsList className="bg-muted/40 h-11 flex-1 gap-1 rounded-lg p-1">
               <AnimatedTabsTrigger value="overview" className="gap-2 px-4">
-              Overview
-            </AnimatedTabsTrigger>
-            <AnimatedTabsTrigger value="mcp-servers" className="gap-2 px-4">
-              MCP Servers
-            </AnimatedTabsTrigger>
-            <AnimatedTabsTrigger value="tools" className="gap-2 px-4">
-              Tools
-            </AnimatedTabsTrigger>
-            <AnimatedTabsTrigger value="performance" className="gap-2 px-4">
-              Performance
-            </AnimatedTabsTrigger>
-            <AnimatedTabsTrigger value="configuration" className="gap-2 px-4">
-              Configuration
-            </AnimatedTabsTrigger>
-          </AnimatedTabsList>
+                Overview
+              </AnimatedTabsTrigger>
+              <AnimatedTabsTrigger value="mcp-servers" className="gap-2 px-4">
+                MCP Servers
+              </AnimatedTabsTrigger>
+              <AnimatedTabsTrigger value="tools" className="gap-2 px-4">
+                Tools
+              </AnimatedTabsTrigger>
+              <AnimatedTabsTrigger value="performance" className="gap-2 px-4">
+                Performance
+              </AnimatedTabsTrigger>
+              <AnimatedTabsTrigger value="configuration" className="gap-2 px-4">
+                Configuration
+              </AnimatedTabsTrigger>
+            </AnimatedTabsList>
             {mobileStatusRefreshButton}
           </div>
 
@@ -845,42 +855,47 @@ function NodeDetailPageContent() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
+                  <dl className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 lg:grid-cols-3">
                     <div className="space-y-1">
-                      <dt className="text-sm font-medium text-muted-foreground">
+                      <dt className="text-muted-foreground text-sm font-medium">
                         Node ID
                       </dt>
-                      <dd className="text-sm font-mono break-all">{node.id}</dd>
+                      <dd className="break-all font-mono text-sm">{node.id}</dd>
                     </div>
 
                     <div className="space-y-1">
-                      <dt className="text-sm font-medium text-muted-foreground">
+                      <dt className="text-muted-foreground text-sm font-medium">
                         Team ID
                       </dt>
                       <dd className="text-sm">{node.team_id}</dd>
                     </div>
 
                     <div className="space-y-1">
-                      <dt className="text-sm font-medium text-muted-foreground">
+                      <dt className="text-muted-foreground text-sm font-medium">
                         Version
                       </dt>
-                      <dd className="text-sm font-mono">{node.version}</dd>
+                      <dd className="font-mono text-sm">{node.version}</dd>
                     </div>
 
                     <div className="space-y-1 md:col-span-2">
-                      <dt className="text-sm font-medium text-muted-foreground">
+                      <dt className="text-muted-foreground text-sm font-medium">
                         Base URL
                       </dt>
-                      <dd className="text-sm font-mono break-all">{node.base_url}</dd>
+                      <dd className="break-all font-mono text-sm">
+                        {node.base_url}
+                      </dd>
                     </div>
 
                     <div className="space-y-1">
-                      <dt className="text-sm font-medium text-muted-foreground">
+                      <dt className="text-muted-foreground text-sm font-medium">
                         Deployment Type
                       </dt>
                       <dd className="text-sm">
                         {node.deployment_type === "serverless" ? (
-                          <Badge variant="outline" className="inline-flex items-center gap-1">
+                          <Badge
+                            variant="outline"
+                            className="inline-flex items-center gap-1"
+                          >
                             <Flash className="h-3.5 w-3.5" />
                             Serverless
                           </Badge>
@@ -890,19 +905,20 @@ function NodeDetailPageContent() {
                       </dd>
                     </div>
 
-                    {node.deployment_type === "serverless" && node.invocation_url && (
-                      <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                        <dt className="text-sm font-medium text-muted-foreground">
-                          Invocation URL
-                        </dt>
-                        <dd className="text-sm font-mono break-all bg-muted/50 rounded-md px-3 py-2">
-                          {node.invocation_url}
-                        </dd>
-                      </div>
-                    )}
+                    {node.deployment_type === "serverless" &&
+                      node.invocation_url && (
+                        <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                          <dt className="text-muted-foreground text-sm font-medium">
+                            Invocation URL
+                          </dt>
+                          <dd className="bg-muted/50 break-all rounded-md px-3 py-2 font-mono text-sm">
+                            {node.invocation_url}
+                          </dd>
+                        </div>
+                      )}
 
                     <div className="space-y-1">
-                      <dt className="text-sm font-medium text-muted-foreground">
+                      <dt className="text-muted-foreground text-sm font-medium">
                         Last Heartbeat
                       </dt>
                       <dd className="text-sm">
@@ -913,7 +929,7 @@ function NodeDetailPageContent() {
                     </div>
 
                     <div className="space-y-1">
-                      <dt className="text-sm font-medium text-muted-foreground">
+                      <dt className="text-muted-foreground text-sm font-medium">
                         Registered At
                       </dt>
                       <dd className="text-sm">
@@ -944,7 +960,11 @@ function NodeDetailPageContent() {
             className="flex-1 overflow-y-auto"
           >
             <div className="flex flex-col gap-6 px-6 pb-6">
-              <ResponsiveGrid columns={{ base: 1, xl: 12 }} gap="md" align="start">
+              <ResponsiveGrid
+                columns={{ base: 1, xl: 12 }}
+                gap="md"
+                align="start"
+              >
                 <div className="xl:col-span-8">
                   <MCPServerList
                     servers={mcpServers}
@@ -967,10 +987,7 @@ function NodeDetailPageContent() {
             </div>
           </AnimatedTabsContent>
 
-          <AnimatedTabsContent
-            value="tools"
-            className="flex-1 overflow-y-auto"
-          >
+          <AnimatedTabsContent value="tools" className="flex-1 overflow-y-auto">
             <div className="flex flex-col gap-6 px-6 pb-6">
               {mcpServers.length > 0 ? (
                 mcpServers.map((server) => (
@@ -1015,8 +1032,9 @@ function NodeDetailPageContent() {
                 <p className="text-muted-foreground">
                   Performance metrics dashboard has been removed.
                 </p>
-                <p className="mt-2 text-body-small">
-                  Detailed MCP server metrics are available in the MCP Servers tab.
+                <p className="text-body-small mt-2">
+                  Detailed MCP server metrics are available in the MCP Servers
+                  tab.
                 </p>
                 <Button
                   variant="outline"
@@ -1066,8 +1084,8 @@ function NodeDetailPageContent() {
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    No package information available for this agent. Configuration
-                    cannot be managed.
+                    No package information available for this agent.
+                    Configuration cannot be managed.
                   </AlertDescription>
                 </Alert>
               )}
