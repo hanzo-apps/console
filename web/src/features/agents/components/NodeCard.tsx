@@ -10,8 +10,15 @@ import {
 } from "@/src/features/agents/components/ui/icon-bridge";
 import { memo, useEffect, useState } from "react";
 import { useNavigate } from "../adapters";
-import { startAgent, stopAgent, reconcileAgent } from "../services/configurationApi";
-import { AgentControlButton, type AgentState } from "@/src/features/agents/components/ui/AgentControlButton";
+import {
+  startNode,
+  stopNode,
+  reconcileNode,
+} from "../services/configurationApi";
+import {
+  AgentControlButton,
+  type AgentState,
+} from "@/src/features/agents/components/ui/AgentControlButton";
 import { useDIDStatus } from "../hooks/useDIDInfo";
 import { cn } from "../lib/utils";
 import type { AgentNodeSummary } from "../types/agents";
@@ -46,7 +53,12 @@ const NodeCard = memo(
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     // Console log to verify we're using the updated build and check node data
-    console.log('🎯 NodeCard: Rendering node with defensive checks - Node ID:', nodeSummary?.id, 'MCP Summary:', nodeSummary?.mcp_summary);
+    console.log(
+      "🎯 NodeCard: Rendering node with defensive checks - Node ID:",
+      nodeSummary?.id,
+      "MCP Summary:",
+      nodeSummary?.mcp_summary,
+    );
 
     // Get DID status for this node
     const { status: didStatus } = useDIDStatus(nodeSummary.id);
@@ -70,16 +82,18 @@ const NodeCard = memo(
 
     // Primary categorization: Running vs Offline (matches NodesStatusSummary)
     // Use optional chaining and fallbacks for safety
-    const lifecycleStatus = nodeSummary.lifecycle_status ?? 'unknown';
-    const healthStatus = nodeSummary.health_status ?? 'unknown';
+    const lifecycleStatus = nodeSummary.lifecycle_status ?? "unknown";
+    const healthStatus = nodeSummary.health_status ?? "unknown";
     const statusPresentation = getNodeStatusPresentation(
       lifecycleStatus,
-      healthStatus
+      healthStatus,
     );
     const isRunning =
-      lifecycleStatus === "ready" ||
-      lifecycleStatus === "degraded";
-    const isOffline = statusPresentation.kind === "offline" || statusPresentation.kind === "error" || !isRunning;
+      lifecycleStatus === "ready" || lifecycleStatus === "degraded";
+    const isOffline =
+      statusPresentation.kind === "offline" ||
+      statusPresentation.kind === "error" ||
+      !isRunning;
 
     // Secondary health indicators for running nodes
     const isDegraded = lifecycleStatus === "degraded";
@@ -98,15 +112,17 @@ const NodeCard = memo(
     // Convert MCP service status to MCPHealthStatus with defensive checks
     const getMCPHealthStatus = (): MCPHealthStatus => {
       // Comprehensive null/undefined checks to prevent Object.entries() errors
-      if (!nodeSummary?.mcp_summary ||
-          typeof nodeSummary.mcp_summary !== 'object' ||
-          nodeSummary.mcp_summary === null) {
+      if (
+        !nodeSummary?.mcp_summary ||
+        typeof nodeSummary.mcp_summary !== "object" ||
+        nodeSummary.mcp_summary === null
+      ) {
         return "unknown";
       }
 
       // Additional safety check for service_status property
       const serviceStatus = nodeSummary.mcp_summary.service_status;
-      if (!serviceStatus || typeof serviceStatus !== 'string') {
+      if (!serviceStatus || typeof serviceStatus !== "string") {
         return "unknown";
       }
 
@@ -144,13 +160,13 @@ const NodeCard = memo(
         regex.test(part) ? (
           <mark
             key={index}
-            className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded"
+            className="rounded bg-yellow-200 px-1 dark:bg-yellow-800"
           >
             {part}
           </mark>
         ) : (
           part
-        )
+        ),
       );
     };
 
@@ -172,9 +188,9 @@ const NodeCard = memo(
 
     // Handle start/stop actions
     const handleStartAgent = async () => {
-      setActionLoading('start');
+      setActionLoading("start");
       try {
-        await startAgent(nodeSummary.id);
+        await startNode(nodeSummary.id);
         console.log(`Agent ${nodeSummary.id} started successfully`);
       } catch (error) {
         console.error(`Failed to start agent ${nodeSummary.id}:`, error);
@@ -184,9 +200,9 @@ const NodeCard = memo(
     };
 
     const handleStopAgent = async () => {
-      setActionLoading('stop');
+      setActionLoading("stop");
       try {
-        await stopAgent(nodeSummary.id);
+        await stopNode(nodeSummary.id);
         console.log(`Agent ${nodeSummary.id} stopped successfully`);
       } catch (error) {
         console.error(`Failed to stop agent ${nodeSummary.id}:`, error);
@@ -196,9 +212,9 @@ const NodeCard = memo(
     };
 
     const handleReconcileAgent = async () => {
-      setActionLoading('reconcile');
+      setActionLoading("reconcile");
       try {
-        await reconcileAgent(nodeSummary.id);
+        await reconcileNode(nodeSummary.id);
         console.log(`Agent ${nodeSummary.id} reconciled successfully`);
       } catch (error) {
         console.error(`Failed to reconcile agent ${nodeSummary.id}:`, error);
@@ -209,39 +225,44 @@ const NodeCard = memo(
 
     // Determine current agent state for the control button
     const getAgentState = (): AgentState => {
-      if (actionLoading === 'start') return 'starting';
-      if (actionLoading === 'stop') return 'stopping';
-      if (actionLoading === 'reconcile') return 'reconciling';
+      if (actionLoading === "start") return "starting";
+      if (actionLoading === "stop") return "stopping";
+      if (actionLoading === "reconcile") return "reconciling";
 
       // Check multiple sources for running state (more robust detection)
       const isRunning =
-        lifecycleStatus === 'ready' ||
-        lifecycleStatus === 'degraded' ||
-        mcpSummary?.service_status === 'ready' ||
+        lifecycleStatus === "ready" ||
+        lifecycleStatus === "degraded" ||
+        mcpSummary?.service_status === "ready" ||
         (mcpSummary?.total_servers ?? 0) > 0;
 
       if (isRunning) {
         // Check for error/degraded states
-        if (lifecycleStatus === 'degraded' || mcpSummary?.service_status === 'degraded') {
-          return 'error';
+        if (
+          lifecycleStatus === "degraded" ||
+          mcpSummary?.service_status === "degraded"
+        ) {
+          return "error";
         }
-        return 'running';
+        return "running";
       }
 
-      return 'stopped';
+      return "stopped";
     };
 
     // Unified handler for agent control actions
-    const handleAgentAction = async (action: 'start' | 'stop' | 'reconcile') => {
+    const handleAgentAction = async (
+      action: "start" | "stop" | "reconcile",
+    ) => {
       try {
         switch (action) {
-          case 'start':
+          case "start":
             await handleStartAgent();
             break;
-          case 'stop':
+          case "stop":
             await handleStopAgent();
             break;
-          case 'reconcile':
+          case "reconcile":
             await handleReconcileAgent();
             break;
         }
@@ -250,7 +271,6 @@ const NodeCard = memo(
         setTimeout(() => {
           setCurrentTime(new Date());
         }, 1000);
-
       } catch (error) {
         // Error handling is already done in individual handlers
         console.error(`Failed to ${action} agent:`, error);
@@ -278,13 +298,13 @@ const NodeCard = memo(
       !isOffline && "hover:border-primary/50 hover:shadow-lg",
       isOffline && "opacity-70 hover:opacity-90",
       isHighImportance && "border-primary/40",
-      isHovered && !isOffline && "shadow-lg"
+      isHovered && !isOffline && "shadow-lg",
     );
 
     const statusDotClass = cn(
       "h-2.5 w-2.5 rounded-full",
       statusPresentation.theme.indicatorClass,
-      statusPresentation.shouldPulse && "animate-pulse"
+      statusPresentation.shouldPulse && "animate-pulse",
     );
 
     const highlightHeartbeat =
@@ -293,7 +313,7 @@ const NodeCard = memo(
       "text-xs flex items-center gap-1",
       highlightHeartbeat
         ? statusPresentation.theme.textClass
-        : "text-muted-foreground"
+        : "text-muted-foreground",
     );
 
     return (
@@ -318,39 +338,48 @@ const NodeCard = memo(
               <span
                 className={cn(
                   "text-xs font-medium uppercase tracking-wide",
-                  statusPresentation.theme.textClass
+                  statusPresentation.theme.textClass,
                 )}
               >
                 {statusPresentation.label}
               </span>
               <h3
                 className={cn(
-                  "truncate text-sm font-semibold text-foreground",
+                  "text-foreground truncate text-sm font-semibold",
                   "max-w-xs md:max-w-md",
-                  isOffline && "text-muted-foreground"
+                  isOffline && "text-muted-foreground",
                 )}
               >
                 {highlightText(nodeSummary.id)}
               </h3>
-              <Badge variant="outline" className="h-6 rounded-full px-2 text-body-small">
+              <Badge
+                variant="outline"
+                className="text-body-small h-6 rounded-full px-2"
+              >
                 v{nodeSummary.version}
               </Badge>
               {deploymentType === "serverless" && (
                 <Badge
                   variant="outline"
-                  className="h-6 rounded-full px-2 text-body-small flex items-center gap-1"
+                  className="text-body-small flex h-6 items-center gap-1 rounded-full px-2"
                 >
                   <Flash className="h-3.5 w-3.5" />
                   Serverless
                 </Badge>
               )}
               {isHighImportance && (
-                <Badge variant="outline" className="h-6 rounded-full px-2 text-body-small">
+                <Badge
+                  variant="outline"
+                  className="text-body-small h-6 rounded-full px-2"
+                >
                   High capability
                 </Badge>
               )}
               {hasMcpIssues && (
-                <Badge variant="destructive" className="h-6 rounded-full px-2 text-body-small">
+                <Badge
+                  variant="destructive"
+                  className="text-body-small h-6 rounded-full px-2"
+                >
                   Issues detected
                 </Badge>
               )}
@@ -361,7 +390,7 @@ const NodeCard = memo(
                 {lastHeartbeat ? formatTimeAgo(lastHeartbeat) : "No heartbeat"}
               </span>
               {didStatus && didStatus.has_did && (
-                <div className="flex items-center gap-1 text-body-small">
+                <div className="text-body-small flex items-center gap-1">
                   <Identification className="h-3.5 w-3.5" />
                   <CompositeDIDStatus
                     status={didStatus.did_status}
@@ -373,7 +402,7 @@ const NodeCard = memo(
                 </div>
               )}
               {mcpSummary && (
-                <div className="flex items-center gap-2 text-body-small">
+                <div className="text-body-small flex items-center gap-2">
                   <MCPHealthDot
                     status={getMCPHealthStatus()}
                     size="sm"
@@ -388,7 +417,7 @@ const NodeCard = memo(
                     </span>
                   )}
                   {capabilitiesAvailable && (
-                    <span className="rounded-full bg-status-success-bg px-2 py-0.5 text-[10px] font-medium text-status-success">
+                    <span className="bg-status-success-bg text-status-success rounded-full px-2 py-0.5 text-[10px] font-medium">
                       Capabilities ready
                     </span>
                   )}
@@ -409,14 +438,14 @@ const NodeCard = memo(
             </div>
             <ChevronRight
               className={cn(
-                "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                isHovered && "translate-x-1 text-foreground"
+                "text-muted-foreground h-4 w-4 transition-transform duration-200",
+                isHovered && "text-foreground translate-x-1",
               )}
             />
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-body-small">
+        <div className="text-body-small mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
           <div className="flex items-center gap-1.5">
             <Code className="h-4 w-4" />
             <span>
@@ -447,14 +476,14 @@ const NodeCard = memo(
               showDID={true}
               className={cn(
                 "text-xs opacity-70 transition-opacity",
-                isHovered ? "opacity-100" : "opacity-70"
+                isHovered ? "opacity-100" : "opacity-70",
               )}
             />
           )}
         </div>
       </div>
     );
-  }
+  },
 );
 
 NodeCard.displayName = "NodeCard";
