@@ -6,8 +6,15 @@
  * 2. Provide auth context (API key from Console session)
  * 3. Provide mode context (developer/user)
  */
-import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from "react";
 
+import { ModeProvider } from "./contexts/ModeContext";
 import { setApiKey, setBaseUrl } from "./services/api";
 
 interface AgentsConfig {
@@ -36,7 +43,9 @@ export function AgentsProvider({
 
   const resolvedBaseUrl =
     baseUrl ??
-    (typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_AGENTS_URL ?? "/v1/agents/ui/v1") : "/v1/agents/ui/v1");
+    (typeof window !== "undefined"
+      ? (process.env.NEXT_PUBLIC_AGENTS_URL ?? "/v1/agents/ui/v1")
+      : "/v1/agents/ui/v1");
 
   useEffect(() => {
     if (configuredRef.current) return;
@@ -50,5 +59,9 @@ export function AgentsProvider({
     }
   }, [resolvedBaseUrl, apiKey]);
 
-  return <AgentsContext.Provider value={{ baseUrl: resolvedBaseUrl, apiKey }}>{children}</AgentsContext.Provider>;
+  return (
+    <AgentsContext.Provider value={{ baseUrl: resolvedBaseUrl, apiKey }}>
+      <ModeProvider>{children}</ModeProvider>
+    </AgentsContext.Provider>
+  );
 }
