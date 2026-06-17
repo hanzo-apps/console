@@ -10,7 +10,7 @@ permissions: {}
 
 jobs:
   rebase-dependabot:
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     environment: "protected branches"
     steps:
       - name: "Rebase open Dependabot PR"
