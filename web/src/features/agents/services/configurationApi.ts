@@ -194,7 +194,9 @@ export const getAgentPackages = async (
   }
 
   const response = await fetch(url.toString(), addAuthHeaders());
-  return handleResponse(response);
+  // Backend wraps the list as { packages, total }; the UI expects a bare array.
+  const data = await handleResponse(response);
+  return Array.isArray(data) ? data : (data?.packages ?? []);
 };
 
 export const getAgentPackageDetails = async (
@@ -255,7 +257,11 @@ export const getAgentStatus = async (
 
 export const getRunningAgents = async (): Promise<AgentLifecycleInfo[]> => {
   const response = await fetch(`${API_BASE}/agents/running`, addAuthHeaders());
-  return handleResponse(response);
+  // Backend wraps as { running_agents, total_count }; UI expects a bare array.
+  const data = await handleResponse(response);
+  return Array.isArray(data)
+    ? data
+    : (data?.running_agents ?? data?.agents ?? []);
 };
 
 // Node Lifecycle Management API
