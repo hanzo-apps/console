@@ -254,13 +254,19 @@ function NodeDetailPageContent() {
     }
   }, [location.hash]);
 
-  // Update URL hash when tab changes
+  // Update URL hash when tab changes.
+  // NOTE: pass a path RELATIVE to the agents base ("/nodes/:id"), not
+  // location.pathname (the full resolved path). The useNavigate shim prepends
+  // "/project/:projectId/agents" to any path starting with "/", so passing the
+  // already-absolute pathname double-prefixes it and 404s.
   const handleTabChange = useCallback(
     (value: string) => {
       setActiveTab(value);
-      navigate(`${location.pathname}#${value}`, { replace: true });
+      if (nodeId) {
+        navigate(`/nodes/${nodeId}#${value}`, { replace: true });
+      }
     },
-    [navigate, location.pathname],
+    [navigate, nodeId],
   );
 
   // Fetch node details and MCP data with progressive loading
@@ -365,6 +371,26 @@ function NodeDetailPageContent() {
     } catch (error: any) {
       let errorMessage = `Failed to start agent ${nodeId}`;
 
+      // The backend rejects starting an already-active node ("invalid state
+      // transition ... to starting" → 500). Long-running nodes don't heartbeat
+      // continuously, so the UI may show "Start" while the node is in fact
+      // active. Re-check the real status; if it's active/ready, that's success.
+      try {
+        const refreshed: any = await reconcileNode(nodeId);
+        const st = refreshed?.status ?? refreshed;
+        if (
+          st?.lifecycle_status === "ready" ||
+          st?.health_status === "active" ||
+          st?.state === "active"
+        ) {
+          showInfo(`⚡ Agent ${nodeId} is already active and ready!`);
+          fetchData(false);
+          return;
+        }
+      } catch {
+        // ignore — fall through to the normal error reporting below
+      }
+
       // Handle specific error cases with clever messaging
       if (error.message?.includes("already running")) {
         showInfo(`⚡ Agent ${nodeId} is already active and ready!`);
@@ -394,6 +420,24 @@ function NodeDetailPageContent() {
       fetchData(false);
     } catch (error: any) {
       let errorMessage = `Failed to stop agent ${nodeId}`;
+
+      // Mirror of start: the backend rejects stopping an already-stopped node.
+      // Re-check the real status; if it's offline/stopped, that's success.
+      try {
+        const refreshed: any = await reconcileNode(nodeId);
+        const st = refreshed?.status ?? refreshed;
+        if (
+          st?.lifecycle_status === "offline" ||
+          st?.state === "offline" ||
+          st?.health_status === "inactive"
+        ) {
+          showInfo(`💤 Agent ${nodeId} is already in standby mode`);
+          fetchData(false);
+          return;
+        }
+      } catch {
+        // ignore — fall through to the normal error reporting below
+      }
 
       // Handle specific error cases with clever messaging
       if (error.message?.includes("not running")) {
