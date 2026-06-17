@@ -1,14 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { applyProxyTenantHeaders, buildProxyTenantHeaders } from "@/src/server/tenant-headers";
+import {
+  applyProxyTenantHeaders,
+  buildProxyTenantHeaders,
+} from "@/src/server/tenant-headers";
 
 /**
  * Catch-all proxy for Hanzo Visor compute management API.
  *
- * Forwards /v1/compute/* (canonical) and legacy /api/compute/* to
- * ${CASVISOR_API_URL}/api/* stripping the /v1/compute or /api/compute prefix.
- * File lives at pages/api/ per Next.js Pages Router framework constraint;
- * next.config.js rewrites map /v1/compute/* to this handler. Upstream Casvisor
- * still exposes /api/* — that path is preserved on the destination.
+ * Forwards /api/compute/* to ${CASVISOR_API_URL}/api/* stripping the /api/compute prefix.
  * Server-side only -- CASVISOR_API_URL is never exposed to the client.
  */
 
@@ -42,7 +41,10 @@ function readBody(req: NextApiRequest): Promise<Buffer> {
   });
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   const casvisorUrl = process.env.CASVISOR_API_URL;
   if (!casvisorUrl) {
     return res.status(503).json({
@@ -59,13 +61,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const query = { ...req.query };
   delete query.path;
+  // Casvisor/Visor authenticates programmatic API access via the app's
+  // clientId/clientSecret (query params). The browser only sends next-auth
+  // cookies, which Casvisor ignores, so without these it returns 403
+  // "Unauthorized operation". Inject the Visor app credentials server-side.
+  const cvClientId = process.env.CASVISOR_CLIENT_ID;
+  const cvClientSecret = process.env.CASVISOR_CLIENT_SECRET;
+  if (cvClientId && cvClientSecret) {
+    (query as Record<string, string>).clientId = cvClientId;
+    (query as Record<string, string>).clientSecret = cvClientSecret;
+  }
   const qs = new URLSearchParams(query as Record<string, string>).toString();
 
   const targetUrl = `${casvisorUrl.replace(/\/+$/, "")}/api/${upstreamPath}${qs ? `?${qs}` : ""}`;
 
   // Strip client-supplied tenant headers to prevent cross-tenant header
   // injection. Session-derived values are applied below.
-  const TENANT_HEADERS = new Set(["x-org-id", "x-project-id", "x-tenant-id", "x-actor-id"]);
+  const TENANT_HEADERS = new Set([
+    "x-org-id",
+    "x-project-id",
+    "x-tenant-id",
+    "x-actor-id",
+  ]);
   const headers: Record<string, string> = {};
   for (const [key, value] of Object.entries(req.headers)) {
     const lowerKey = key.toLowerCase();

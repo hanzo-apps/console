@@ -1,13 +1,16 @@
-import { getGlobalApiKey } from './api';
+import { getGlobalApiKey } from "./api";
 
-const API_BASE = '/api/v1';
+// Must go through the console agents proxy (/api/agents/ui/v1 → backend
+// /api/v1). A raw '/api/v1' base hits the console Next.js app, which has no
+// such route, and 404s.
+const API_BASE = "/api/agents/ui/v1";
 
 export class ObservabilityWebhookApiError extends Error {
   public status?: number;
 
   constructor(message: string, status?: number) {
     super(message);
-    this.name = 'ObservabilityWebhookApiError';
+    this.name = "ObservabilityWebhookApiError";
     this.status = status;
   }
 }
@@ -85,13 +88,16 @@ const addAuthHeaders = (options: RequestInit = {}): RequestInit => {
   const headers = new Headers(options.headers || {});
   const apiKey = getGlobalApiKey();
   if (apiKey) {
-    headers.set('X-API-Key', apiKey);
+    headers.set("X-API-Key", apiKey);
   }
-  headers.set('Content-Type', 'application/json');
+  headers.set("Content-Type", "application/json");
   return { ...options, headers };
 };
 
-const fetchWithTimeout = async (url: string, options: RequestInit & { timeout?: number } = {}) => {
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit & { timeout?: number } = {},
+) => {
   const { timeout = 10000, ...fetchOptions } = options;
 
   const controller = new AbortController();
@@ -106,8 +112,11 @@ const fetchWithTimeout = async (url: string, options: RequestInit & { timeout?: 
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new ObservabilityWebhookApiError(`Request timeout after ${timeout}ms`, 408);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ObservabilityWebhookApiError(
+        `Request timeout after ${timeout}ms`,
+        408,
+      );
     }
     throw error;
   }
@@ -138,51 +147,64 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 /**
  * Get the current observability webhook configuration
  */
-export const getObservabilityWebhook = async (): Promise<ObservabilityWebhookConfigResponse> => {
-  const response = await fetchWithTimeout(`${API_BASE}/settings/observability-webhook`);
-  return handleResponse<ObservabilityWebhookConfigResponse>(response);
-};
+export const getObservabilityWebhook =
+  async (): Promise<ObservabilityWebhookConfigResponse> => {
+    const response = await fetchWithTimeout(
+      `${API_BASE}/settings/observability-webhook`,
+    );
+    return handleResponse<ObservabilityWebhookConfigResponse>(response);
+  };
 
 /**
  * Set or update the observability webhook configuration
  */
 export const setObservabilityWebhook = async (
-  config: ObservabilityWebhookRequest
+  config: ObservabilityWebhookRequest,
 ): Promise<SetWebhookResponse> => {
-  const response = await fetchWithTimeout(`${API_BASE}/settings/observability-webhook`, {
-    method: 'POST',
-    body: JSON.stringify(config),
-  });
+  const response = await fetchWithTimeout(
+    `${API_BASE}/settings/observability-webhook`,
+    {
+      method: "POST",
+      body: JSON.stringify(config),
+    },
+  );
   return handleResponse<SetWebhookResponse>(response);
 };
 
 /**
  * Delete the observability webhook configuration
  */
-export const deleteObservabilityWebhook = async (): Promise<DeleteWebhookResponse> => {
-  const response = await fetchWithTimeout(`${API_BASE}/settings/observability-webhook`, {
-    method: 'DELETE',
-  });
-  return handleResponse<DeleteWebhookResponse>(response);
-};
+export const deleteObservabilityWebhook =
+  async (): Promise<DeleteWebhookResponse> => {
+    const response = await fetchWithTimeout(
+      `${API_BASE}/settings/observability-webhook`,
+      {
+        method: "DELETE",
+      },
+    );
+    return handleResponse<DeleteWebhookResponse>(response);
+  };
 
 /**
  * Get the observability forwarder status
  */
-export const getObservabilityWebhookStatus = async (): Promise<ObservabilityForwarderStatus> => {
-  const response = await fetchWithTimeout(`${API_BASE}/settings/observability-webhook/status`);
-  return handleResponse<ObservabilityForwarderStatus>(response);
-};
+export const getObservabilityWebhookStatus =
+  async (): Promise<ObservabilityForwarderStatus> => {
+    const response = await fetchWithTimeout(
+      `${API_BASE}/settings/observability-webhook/status`,
+    );
+    return handleResponse<ObservabilityForwarderStatus>(response);
+  };
 
 /**
  * Get dead letter queue entries
  */
 export const getDeadLetterQueue = async (
   limit = 100,
-  offset = 0
+  offset = 0,
 ): Promise<ObservabilityDeadLetterListResponse> => {
   const response = await fetchWithTimeout(
-    `${API_BASE}/settings/observability-webhook/dlq?limit=${limit}&offset=${offset}`
+    `${API_BASE}/settings/observability-webhook/dlq?limit=${limit}&offset=${offset}`,
   );
   return handleResponse<ObservabilityDeadLetterListResponse>(response);
 };
@@ -190,20 +212,30 @@ export const getDeadLetterQueue = async (
 /**
  * Trigger redrive of dead letter queue
  */
-export const redriveDeadLetterQueue = async (): Promise<ObservabilityRedriveResponse> => {
-  const response = await fetchWithTimeout(`${API_BASE}/settings/observability-webhook/redrive`, {
-    method: 'POST',
-    timeout: 60000, // Longer timeout for redrive operation
-  });
-  return handleResponse<ObservabilityRedriveResponse>(response);
-};
+export const redriveDeadLetterQueue =
+  async (): Promise<ObservabilityRedriveResponse> => {
+    const response = await fetchWithTimeout(
+      `${API_BASE}/settings/observability-webhook/redrive`,
+      {
+        method: "POST",
+        timeout: 60000, // Longer timeout for redrive operation
+      },
+    );
+    return handleResponse<ObservabilityRedriveResponse>(response);
+  };
 
 /**
  * Clear all entries from the dead letter queue
  */
-export const clearDeadLetterQueue = async (): Promise<{ success: boolean; message: string }> => {
-  const response = await fetchWithTimeout(`${API_BASE}/settings/observability-webhook/dlq`, {
-    method: 'DELETE',
-  });
+export const clearDeadLetterQueue = async (): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await fetchWithTimeout(
+    `${API_BASE}/settings/observability-webhook/dlq`,
+    {
+      method: "DELETE",
+    },
+  );
   return handleResponse<{ success: boolean; message: string }>(response);
 };
