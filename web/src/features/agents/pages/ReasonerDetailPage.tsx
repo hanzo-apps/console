@@ -15,14 +15,29 @@ import { DIDIdentityBadge } from "../components/did/DIDDisplay";
 import { Badge } from "../components/ui/badge";
 import { ExecutionForm } from "../components/reasoners/ExecutionForm";
 import { ExecutionHistoryList } from "../components/reasoners/ExecutionHistoryList";
-import { ExecutionQueue, type ExecutionQueueRef, type QueuedExecution } from "../components/reasoners/ExecutionQueue";
+import {
+  ExecutionQueue,
+  type ExecutionQueueRef,
+  type QueuedExecution,
+} from "../components/reasoners/ExecutionQueue";
 import { FormattedOutput } from "../components/reasoners/FormattedOutput";
 import { PerformanceChart } from "../components/reasoners/PerformanceChart";
 import { StatusIndicator } from "../components/reasoners/StatusIndicator";
 import { Alert } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
 import { SegmentedControl } from "../components/ui/segmented-control";
 import type { SegmentedControlOption } from "../components/ui/segmented-control";
 import { ResponsiveGrid } from "@/src/features/agents/components/layout/ResponsiveGrid";
@@ -38,15 +53,19 @@ const RESULT_VIEW_OPTIONS: ReadonlyArray<SegmentedControlOption> = [
 ] as const;
 
 export function ReasonerDetailPage() {
-  const { fullReasonerId } = useParams<{ fullReasonerId: string }>();
+  // Route is /agents/reasoners/[reasonerId]; alias to the name used below.
+  const { reasonerId: fullReasonerId } = useParams<{ reasonerId: string }>();
 
   const [reasoner, setReasoner] = useState<ReasonerWithNode | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Multiple execution state
-  const [selectedExecution, setSelectedExecution] = useState<QueuedExecution | null>(null);
-  const [resultViewMode, setResultViewMode] = useState<"formatted" | "json">("formatted");
+  const [selectedExecution, setSelectedExecution] =
+    useState<QueuedExecution | null>(null);
+  const [resultViewMode, setResultViewMode] = useState<"formatted" | "json">(
+    "formatted",
+  );
   const executionQueueRef = useRef<ExecutionQueueRef | null>(null);
 
   // History and metrics
@@ -78,7 +97,9 @@ export function ReasonerDetailPage() {
         setFormData({ input: exampleData });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load reasoner details");
+      setError(
+        err instanceof Error ? err.message : "Failed to load reasoner details",
+      );
     } finally {
       setLoading(false);
     }
@@ -97,7 +118,11 @@ export function ReasonerDetailPage() {
   const loadHistory = async () => {
     if (!fullReasonerId) return;
     try {
-      const data = await reasonersApi.getExecutionHistory(fullReasonerId, 1, 10);
+      const data = await reasonersApi.getExecutionHistory(
+        fullReasonerId,
+        1,
+        10,
+      );
       setHistory(data);
     } catch (err) {
       console.error("Failed to load history:", err);
@@ -109,7 +134,10 @@ export function ReasonerDetailPage() {
 
     // Validate form data
     if (reasoner.input_schema) {
-      const validation = validateFormData(formData.input, reasoner.input_schema);
+      const validation = validateFormData(
+        formData.input,
+        reasoner.input_schema,
+      );
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
         return;
@@ -120,7 +148,9 @@ export function ReasonerDetailPage() {
     setIsExecuting(true);
 
     // Add execution to queue
-    const executionId = executionQueueRef.current.addExecution(formData.input || {});
+    const executionId = executionQueueRef.current.addExecution(
+      formData.input || {},
+    );
     console.log("Added execution to queue:", executionId);
 
     // Reset executing state after a brief delay
@@ -145,7 +175,7 @@ export function ReasonerDetailPage() {
     if (!reasoner || !fullReasonerId) return;
 
     const baseUrl = window.location.origin;
-    const curlCommand = `curl -X POST ${baseUrl}/v1/execute/${encodeURIComponent(fullReasonerId)} \\
+    const curlCommand = `curl -X POST ${baseUrl}/api/v1/execute/${encodeURIComponent(fullReasonerId)} \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify({ input: formData.input || {} }, null, 2)}'`;
 
@@ -158,9 +188,9 @@ export function ReasonerDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <InProgress className="h-8 w-8 animate-spin text-muted-foreground" />
+          <InProgress className="text-muted-foreground h-8 w-8 animate-spin" />
           <p className="text-body-small">Loading reasoner details...</p>
         </div>
       </div>
@@ -170,12 +200,14 @@ export function ReasonerDetailPage() {
   if (error || !reasoner) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Alert className="max-w-md mx-auto border-red-200 bg-red-50">
+        <Alert className="mx-auto max-w-md border-red-200 bg-red-50">
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 rounded-full bg-red-500" />
             <div>
               <h3 className="font-semibold text-red-900">Error</h3>
-              <p className="text-sm text-red-700">{error || "Reasoner not found"}</p>
+              <p className="text-sm text-red-700">
+                {error || "Reasoner not found"}
+              </p>
             </div>
           </div>
         </Alert>
@@ -190,7 +222,9 @@ export function ReasonerDetailPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-display">{reasoner.name}</h2>
-            <p className="text-body">{reasoner.description || "No description available"}</p>
+            <p className="text-body">
+              {reasoner.description || "No description available"}
+            </p>
           </div>
           <div className="flex items-center gap-4">
             <StatusIndicator
@@ -202,13 +236,18 @@ export function ReasonerDetailPage() {
                     : "unknown"
               }
             />
-            <Button variant="outline" size="sm" onClick={handleCopyCommand} className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyCommand}
+              className="flex items-center gap-2"
+            >
               <Copy className="h-4 w-4" />
               Copy cURL
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-body">
+        <div className="text-body flex items-center gap-4">
           <span>Node: {reasoner.node_id}</span>
           <span>•</span>
           <span>ID: {fullReasonerId}</span>
@@ -218,7 +257,11 @@ export function ReasonerDetailPage() {
         {reasoner.tags && reasoner.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {reasoner.tags.map((tag) => (
-              <Badge key={`${reasoner.reasoner_id}-${tag}`} variant="secondary" className="text-xs">
+              <Badge
+                key={`${reasoner.reasoner_id}-${tag}`}
+                variant="secondary"
+                className="text-xs"
+              >
                 #{tag}
               </Badge>
             ))}
@@ -231,8 +274,8 @@ export function ReasonerDetailPage() {
         <ResponsiveGrid preset="quarters" gap="md" align="start">
           <Card className="card-elevated">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Time className="h-4 w-4 text-text-tertiary" />
+              <div className="mb-2 flex items-center gap-2">
+                <Time className="text-text-tertiary h-4 w-4" />
                 <span className="text-caption">Avg Response</span>
               </div>
               <p className="text-heading-3">{metrics.avg_response_time_ms}ms</p>
@@ -241,18 +284,20 @@ export function ReasonerDetailPage() {
 
           <Card className="card-elevated">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckmarkFilled className="h-4 w-4 text-status-success" />
+              <div className="mb-2 flex items-center gap-2">
+                <CheckmarkFilled className="text-status-success h-4 w-4" />
                 <span className="text-caption">Success Rate</span>
               </div>
-              <p className="text-heading-3">{(metrics.success_rate * 100).toFixed(1)}%</p>
+              <p className="text-heading-3">
+                {(metrics.success_rate * 100).toFixed(1)}%
+              </p>
             </CardContent>
           </Card>
 
           <Card className="card-elevated">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Analytics className="h-4 w-4 text-text-tertiary" />
+              <div className="mb-2 flex items-center gap-2">
+                <Analytics className="text-text-tertiary h-4 w-4" />
                 <span className="text-caption">Total Executions</span>
               </div>
               <p className="text-heading-3">{metrics.total_executions}</p>
@@ -261,8 +306,8 @@ export function ReasonerDetailPage() {
 
           <Card className="card-elevated">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Activity className="h-4 w-4 text-text-tertiary" />
+              <div className="mb-2 flex items-center gap-2">
+                <Activity className="text-text-tertiary h-4 w-4" />
                 <span className="text-caption">Last 24h</span>
               </div>
               <p className="text-heading-3">{metrics.executions_last_24h}</p>
@@ -274,7 +319,7 @@ export function ReasonerDetailPage() {
       {/* Responsive Layout */}
       <ResponsiveGrid columns={{ base: 1, lg: 12 }} gap="md" align="start">
         {/* Left Panel - Input & Configuration */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="space-y-6 lg:col-span-5">
           {/* Input Form */}
           <Card className="card-elevated">
             <CardHeader>
@@ -282,7 +327,9 @@ export function ReasonerDetailPage() {
                 <Play className="h-5 w-5" />
                 Execute Reasoner
               </CardTitle>
-              <CardDescription>Provide input data and execute the reasoner</CardDescription>
+              <CardDescription>
+                Provide input data and execute the reasoner
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ExecutionForm
@@ -292,15 +339,20 @@ export function ReasonerDetailPage() {
                 validationErrors={validationErrors}
               />
 
-              <Button onClick={handleExecute} className="w-full" size="lg" disabled={isExecuting}>
+              <Button
+                onClick={handleExecute}
+                className="w-full"
+                size="lg"
+                disabled={isExecuting}
+              >
                 {isExecuting ? (
                   <>
-                    <InProgress className="h-4 w-4 mr-2 animate-spin" />
+                    <InProgress className="mr-2 h-4 w-4 animate-spin" />
                     Executing...
                   </>
                 ) : (
                   <>
-                    <Play className="h-4 w-4 mr-2" />
+                    <Play className="mr-2 h-4 w-4" />
                     Execute Reasoner
                   </>
                 )}
@@ -323,15 +375,19 @@ export function ReasonerDetailPage() {
               <Card className="card-elevated">
                 <CardHeader>
                   <CardTitle className="text-sm">Input Schema</CardTitle>
-                  <CardDescription>Expected input format for this reasoner</CardDescription>
+                  <CardDescription>
+                    Expected input format for this reasoner
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {reasoner.input_schema ? (
-                    <pre className="bg-bg-secondary p-4 rounded-lg text-sm overflow-auto scrollbar-thin border border-border-secondary">
+                    <pre className="bg-bg-secondary scrollbar-thin border-border-secondary overflow-auto rounded-lg border p-4 text-sm">
                       {JSON.stringify(reasoner.input_schema, null, 2)}
                     </pre>
                   ) : (
-                    <p className="text-text-tertiary">No input schema available</p>
+                    <p className="text-text-tertiary">
+                      No input schema available
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -341,15 +397,19 @@ export function ReasonerDetailPage() {
               <Card className="card-elevated">
                 <CardHeader>
                   <CardTitle className="text-sm">Output Schema</CardTitle>
-                  <CardDescription>Expected output format from this reasoner</CardDescription>
+                  <CardDescription>
+                    Expected output format from this reasoner
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {reasoner.output_schema ? (
-                    <pre className="bg-bg-secondary p-4 rounded-lg text-sm overflow-auto scrollbar-thin border border-border-secondary">
+                    <pre className="bg-bg-secondary scrollbar-thin border-border-secondary overflow-auto rounded-lg border p-4 text-sm">
                       {JSON.stringify(reasoner.output_schema, null, 2)}
                     </pre>
                   ) : (
-                    <p className="text-text-tertiary">No output schema available</p>
+                    <p className="text-text-tertiary">
+                      No output schema available
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -358,7 +418,7 @@ export function ReasonerDetailPage() {
         </div>
 
         {/* Right Panel - Execution & Results */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="space-y-6 lg:col-span-7">
           {/* Execution Queue */}
           <ExecutionQueue
             reasonerId={fullReasonerId!}
@@ -374,21 +434,28 @@ export function ReasonerDetailPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Execution Result</CardTitle>
-                    <CardDescription>Result from execution: {selectedExecution.inputSummary}</CardDescription>
+                    <CardDescription>
+                      Result from execution: {selectedExecution.inputSummary}
+                    </CardDescription>
                   </div>
-                  {normalizeExecutionStatus(selectedExecution.status) === "succeeded" && selectedExecution.result && (
-                    <SegmentedControl
-                      value={resultViewMode}
-                      onValueChange={(mode) => setResultViewMode(mode as typeof resultViewMode)}
-                      options={RESULT_VIEW_OPTIONS}
-                      size="sm"
-                      optionClassName="min-w-[120px]"
-                    />
-                  )}
+                  {normalizeExecutionStatus(selectedExecution.status) ===
+                    "succeeded" &&
+                    selectedExecution.result && (
+                      <SegmentedControl
+                        value={resultViewMode}
+                        onValueChange={(mode) =>
+                          setResultViewMode(mode as typeof resultViewMode)
+                        }
+                        options={RESULT_VIEW_OPTIONS}
+                        size="sm"
+                        optionClassName="min-w-[120px]"
+                      />
+                    )}
                 </div>
               </CardHeader>
               <CardContent>
-                {normalizeExecutionStatus(selectedExecution.status) === "succeeded" && selectedExecution.result ? (
+                {normalizeExecutionStatus(selectedExecution.status) ===
+                  "succeeded" && selectedExecution.result ? (
                   <FormattedOutput
                     data={selectedExecution.result}
                     showRaw={resultViewMode === "json"}
@@ -399,16 +466,18 @@ export function ReasonerDetailPage() {
                     hideHeader={true}
                   />
                 ) : selectedExecution.status === "failed" ? (
-                  <div className="text-center py-8">
-                    <div className="h-8 w-8 mx-auto mb-3 rounded-full bg-status-error-bg flex items-center justify-center">
-                      <div className="h-4 w-4 rounded-full bg-status-error" />
+                  <div className="py-8 text-center">
+                    <div className="bg-status-error-bg mx-auto mb-3 flex h-8 w-8 items-center justify-center rounded-full">
+                      <div className="bg-status-error h-4 w-4 rounded-full" />
                     </div>
-                    <p className="text-status-error font-medium mb-1">Execution Failed</p>
+                    <p className="text-status-error mb-1 font-medium">
+                      Execution Failed
+                    </p>
                     <p className="text-body-small">{selectedExecution.error}</p>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center py-8">
-                    <InProgress className="h-6 w-6 animate-spin text-text-tertiary mr-3" />
+                    <InProgress className="text-text-tertiary mr-3 h-6 w-6 animate-spin" />
                     <span className="text-text-secondary">Executing...</span>
                   </div>
                 )}
@@ -419,11 +488,19 @@ export function ReasonerDetailPage() {
           {/* Activity & Performance */}
           <Tabs defaultValue="activity" className="space-y-4">
             <TabsList variant="underline" className="grid w-full grid-cols-2">
-              <TabsTrigger value="activity" variant="underline" className="gap-2">
+              <TabsTrigger
+                value="activity"
+                variant="underline"
+                className="gap-2"
+              >
                 <Activity className="h-4 w-4" />
                 Activity
               </TabsTrigger>
-              <TabsTrigger value="performance" variant="underline" className="gap-2">
+              <TabsTrigger
+                value="performance"
+                variant="underline"
+                className="gap-2"
+              >
                 <Analytics className="h-4 w-4" />
                 Performance
               </TabsTrigger>
@@ -436,7 +513,9 @@ export function ReasonerDetailPage() {
                     <Activity className="h-5 w-5" />
                     Recent Executions
                   </CardTitle>
-                  <CardDescription>Latest execution attempts and their results</CardDescription>
+                  <CardDescription>
+                    Latest execution attempts and their results
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ExecutionHistoryList
@@ -456,7 +535,9 @@ export function ReasonerDetailPage() {
                     <Analytics className="h-5 w-5" />
                     Performance Metrics
                   </CardTitle>
-                  <CardDescription>Response times and success rates over time</CardDescription>
+                  <CardDescription>
+                    Response times and success rates over time
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <PerformanceChart metrics={metrics} />
