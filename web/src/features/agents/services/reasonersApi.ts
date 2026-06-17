@@ -210,7 +210,9 @@ export const reasonersApi = {
     reasonerId: string,
     request: ExecutionRequest,
   ): Promise<ExecutionResponse> => {
-    const url = `/api/v1/execute/${encodeURIComponent(reasonerId)}`;
+    // Must go through the console agents proxy; a raw /api/v1 base hits the
+    // console app (no such route) and 404s. /api/agents/v1 → backend /api/v1.
+    const url = `/api/agents/v1/execute/${encodeURIComponent(reasonerId)}`;
 
     try {
       const response = await fetch(url, {
@@ -272,7 +274,7 @@ export const reasonersApi = {
     reasonerId: string,
     request: ExecutionRequest,
   ): Promise<AsyncExecuteResponse> => {
-    const url = `/api/v1/execute/async/${encodeURIComponent(reasonerId)}`;
+    const url = `/api/agents/v1/execute/async/${encodeURIComponent(reasonerId)}`;
 
     try {
       const response = await fetch(url, {
@@ -327,7 +329,7 @@ export const reasonersApi = {
   getExecutionStatus: async (
     executionId: string,
   ): Promise<ExecutionStatusResponse> => {
-    const url = `/api/v1/executions/${encodeURIComponent(executionId)}`;
+    const url = `/api/agents/v1/executions/${encodeURIComponent(executionId)}`;
 
     try {
       const response = await fetch(url, { headers: withAuthHeaders() });
@@ -421,7 +423,12 @@ export const reasonersApi = {
     reasonerId: string,
     template: Omit<ExecutionTemplate, "id" | "created_at">,
   ): Promise<ExecutionTemplate> => {
-    const url = `${API_BASE_URL}/reasoners/${encodeURIComponent(reasonerId)}/templates`;
+    // Backend renamed /reasoners → /bots and keys templates on the bot id.
+    // reasonerId is "<node_id>.<bot_id>"; send the bot segment.
+    const botId = reasonerId.includes(".")
+      ? reasonerId.slice(reasonerId.lastIndexOf(".") + 1)
+      : reasonerId;
+    const url = `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/templates`;
 
     try {
       const response = await fetch(url, {

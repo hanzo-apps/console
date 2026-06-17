@@ -3,22 +3,27 @@ import type {
   DIDRegistrationRequest,
   DIDRegistrationResponse,
   DIDFilters,
-  DIDStatusSummary
-} from '../types/did';
-import { getBaseUrl, getGlobalApiKey } from './api';
+  DIDStatusSummary,
+} from "../types/did";
+import { getBaseUrl, getGlobalApiKey } from "./api";
 
 async function fetchWrapper<T>(url: string, options?: RequestInit): Promise<T> {
   const headers = new Headers(options?.headers || {});
   const apiKey = getGlobalApiKey();
   if (apiKey) {
-    headers.set('X-API-Key', apiKey);
+    headers.set("X-API-Key", apiKey);
   }
-  const response = await fetch(`${getBaseUrl()}${url}`, { ...options, headers });
+  const response = await fetch(`${getBaseUrl()}${url}`, {
+    ...options,
+    headers,
+  });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({
-      message: 'Request failed with status ' + response.status
+      message: "Request failed with status " + response.status,
     }));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    throw new Error(
+      errorData.message || `HTTP error! status: ${response.status}`,
+    );
   }
   return response.json() as Promise<T>;
 }
@@ -29,12 +34,12 @@ async function fetchWrapper<T>(url: string, options?: RequestInit): Promise<T> {
  * Register an agent with DIDs for reasoners and skills
  */
 export async function registerAgentDID(
-  request: DIDRegistrationRequest
+  request: DIDRegistrationRequest,
 ): Promise<DIDRegistrationResponse> {
-  return fetchWrapper<DIDRegistrationResponse>('/did/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request)
+  return fetchWrapper<DIDRegistrationResponse>("/did/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
   });
 }
 
@@ -61,16 +66,18 @@ export async function getAgentDIDInfo(nodeId: string): Promise<AgentDIDInfo> {
 /**
  * Get DID status summary for a node (for UI indicators)
  */
-export async function getDIDStatusSummary(nodeId: string): Promise<DIDStatusSummary> {
+export async function getDIDStatusSummary(
+  nodeId: string,
+): Promise<DIDStatusSummary> {
   const didInfo = await getAgentDIDInfo(nodeId).catch(() => null);
 
   if (!didInfo) {
     return {
       has_did: false,
-      did_status: 'inactive',
+      did_status: "inactive",
       reasoner_count: 0,
       skill_count: 0,
-      last_updated: ''
+      last_updated: "",
     };
   }
 
@@ -79,7 +86,7 @@ export async function getDIDStatusSummary(nodeId: string): Promise<DIDStatusSumm
     did_status: didInfo.status,
     reasoner_count: Object.keys(didInfo.reasoners).length,
     skill_count: Object.keys(didInfo.skills).length,
-    last_updated: didInfo.registered_at
+    last_updated: didInfo.registered_at,
   };
 }
 
@@ -87,7 +94,7 @@ export async function getDIDStatusSummary(nodeId: string): Promise<DIDStatusSumm
  * Get W3C DID Document for a DID
  */
 export async function getDIDDocument(did: string): Promise<{
-  '@context': string[];
+  "@context": string[];
   id: string;
   verificationMethod: any[];
   authentication: string[];
@@ -105,7 +112,7 @@ export async function getDIDSystemStatus(): Promise<{
   message: string;
   timestamp: string;
 }> {
-  return fetchWrapper('/did/status');
+  return fetchWrapper("/did/status");
 }
 
 /**
@@ -116,17 +123,23 @@ export async function listAgentDIDs(filters?: DIDFilters): Promise<string[]> {
 
   if (filters) {
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== "") {
         queryParams.append(key, value.toString());
       }
     });
   }
 
   const queryString = queryParams.toString();
-  const url = `/did/agents${queryString ? `?${queryString}` : ''}`;
+  const url = `/did/agents${queryString ? `?${queryString}` : ""}`;
 
-  const response = await fetchWrapper<{ agent_dids: string[] }>(url);
-  return response.agent_dids;
+  // Backend has no /did/agents route; degrade to empty so the DID Explorer
+  // renders (agent/DID data is available via /identity/agents).
+  try {
+    const response = await fetchWrapper<{ agent_dids: string[] }>(url);
+    return response.agent_dids ?? [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -137,7 +150,7 @@ export async function copyDIDToClipboard(did: string): Promise<boolean> {
     await navigator.clipboard.writeText(did);
     return true;
   } catch (error) {
-    console.error('Failed to copy DID to clipboard:', error);
+    console.error("Failed to copy DID to clipboard:", error);
     return false;
   }
 }
@@ -145,7 +158,10 @@ export async function copyDIDToClipboard(did: string): Promise<boolean> {
 /**
  * Format DID for display (truncate middle for UI)
  */
-export function formatDIDForDisplay(did: string, maxLength: number = 20): string {
+export function formatDIDForDisplay(
+  did: string,
+  maxLength: number = 20,
+): string {
   if (did.length <= maxLength) {
     return did;
   }
@@ -168,7 +184,7 @@ export function isValidDID(did: string): boolean {
  * Get DID method from DID string
  */
 export function getDIDMethod(did: string): string | null {
-  const parts = did.split(':');
+  const parts = did.split(":");
   return parts.length >= 2 ? parts[1] : null;
 }
 
@@ -176,6 +192,6 @@ export function getDIDMethod(did: string): string | null {
  * Get DID identifier from DID string
  */
 export function getDIDIdentifier(did: string): string | null {
-  const parts = did.split(':');
-  return parts.length >= 3 ? parts.slice(2).join(':') : null;
+  const parts = did.split(":");
+  return parts.length >= 3 ? parts.slice(2).join(":") : null;
 }

@@ -25,13 +25,14 @@ async function fetchWrapper<T>(url: string, options?: RequestInit): Promise<T> {
     headers.set("X-API-Key", apiKey);
   }
 
-  const response = await fetch(`${getBaseUrl()}${url}`, { ...options, headers });
+  const response = await fetch(`${getBaseUrl()}${url}`, {
+    ...options,
+    headers,
+  });
   if (!response.ok) {
-    const errorData = await response
-      .json()
-      .catch(() => ({
-        message: "Request failed with status " + response.status,
-      }));
+    const errorData = await response.json().catch(() => ({
+      message: "Request failed with status " + response.status,
+    }));
     throw new Error(
       errorData.message || `HTTP error! status: ${response.status}`,
     );
@@ -118,7 +119,7 @@ function transformExecutionDetailsResponse(raw: any): WorkflowExecution {
   });
 
   // Debug logging to understand what the API is returning
-  console.log('Raw API response for execution:', raw.execution_id, {
+  console.log("Raw API response for execution:", raw.execution_id, {
     input_data: raw.input_data,
     output_data: raw.output_data,
     input_uri: raw.input_uri,
@@ -126,7 +127,7 @@ function transformExecutionDetailsResponse(raw: any): WorkflowExecution {
     input_size: raw.input_size,
     output_size: raw.output_size,
     // Log all keys to see what's available
-    keys: Object.keys(raw)
+    keys: Object.keys(raw),
   });
 
   // Handle input_data more carefully - check for different possible field names
@@ -269,13 +270,17 @@ export async function getExecutionStats(
   return transformExecutionStats(backendResponse);
 }
 
-// Stream real-time execution events
+// Stream real-time execution events.
+// NOTE: the backend's /executions/events SSE hangs (never flushes headers when
+// idle), which causes an EventSource reconnect storm. Use /nodes/events, which
+// returns 200 promptly; callers already guard on `parsed.execution` so the
+// (node) events are harmlessly ignored, and pages still load data via REST.
 export function streamExecutionEvents(): EventSource {
   const apiKey = getGlobalApiKey();
   const base = getBaseUrl();
   const url = apiKey
-    ? `${base}/executions/events?api_key=${encodeURIComponent(apiKey)}`
-    : `${base}/executions/events`;
+    ? `${base}/nodes/events?api_key=${encodeURIComponent(apiKey)}`
+    : `${base}/nodes/events`;
   return new EventSource(url);
 }
 
@@ -515,6 +520,8 @@ export async function getExecutionNoteTags(
 export function streamExecutionNotes(executionId: string): EventSource {
   const apiKey = getGlobalApiKey();
   const baseUrl = `${getBaseUrl()}/executions/${executionId}/notes/stream`;
-  const url = apiKey ? `${baseUrl}?api_key=${encodeURIComponent(apiKey)}` : baseUrl;
+  const url = apiKey
+    ? `${baseUrl}?api_key=${encodeURIComponent(apiKey)}`
+    : baseUrl;
   return new EventSource(url);
 }
