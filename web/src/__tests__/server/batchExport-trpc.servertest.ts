@@ -53,7 +53,7 @@ function makeSession(
         },
       ],
       featureFlags: {
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
         templateFlag: false,
         inAppAgent: false,
         v4BetaToggleVisible: false,

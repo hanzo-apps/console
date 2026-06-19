@@ -36,7 +36,7 @@ import {
   createOrgProjectAndApiKey,
   createTrace,
   createTracesCh,
-  queryClickhouse,
+  queryDatastore,
 } from "@langfuse/shared/src/server";
 import { EvalTargetObject } from "@langfuse/shared";
 
@@ -79,7 +79,7 @@ async function prepare() {
         },
       ],
       featureFlags: {
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
         templateFlag: true,
         v4BetaToggleVisible: false,
         observationEvals: false,
@@ -211,7 +211,7 @@ maybe("evals.testRunCodeEval", () => {
       prisma.jobExecution.count({ where: { projectId: project.id } }),
     ).resolves.toBe(jobExecutionCountBefore);
 
-    const scoreCount = await queryClickhouse<{ count: string }>({
+    const scoreCount = await queryDatastore<{ count: string }>({
       query: `SELECT count() as count FROM scores WHERE project_id = {projectId: String}`,
       params: { projectId: project.id },
       tags: {
@@ -526,7 +526,7 @@ maybe("evals.testRunCodeEval", () => {
     const executionTraceId = response.executionTraceId;
 
     const findTrace = async () => {
-      const rows = await queryClickhouse<{
+      const rows = await queryDatastore<{
         environment: string;
         sourceCode: string;
       }>({

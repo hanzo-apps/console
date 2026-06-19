@@ -1,4 +1,8 @@
-import { createEvent, createEventsCh, queryClickhouse } from "@hanzo/shared/src/server";
+import {
+  createEvent,
+  createEventsCh,
+  queryDatastore,
+} from "@hanzo/shared/src/server";
 import { makeZodVerifiedAPICall } from "@/src/__tests__/test-utils";
 import { GetObservationsV2Response } from "@/src/features/public-api/types/observations";
 import { randomUUID } from "crypto";
@@ -19,7 +23,8 @@ const getObservations = (url: string) =>
 
 const getRaw = (url: string) => makeAPICall("GET", url, undefined, auth);
 
-const maybe = env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? describe : describe.skip;
+const maybe =
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? describe : describe.skip;
 
 describe("/api/public/v2/observations API Endpoint", () => {
   beforeEach(async () => {
@@ -106,7 +111,9 @@ describe("/api/public/v2/observations API Endpoint", () => {
       expect(response.body.data.length).toBeGreaterThanOrEqual(1);
 
       // Find our created observation
-      const createdObs = response.body.data.find((obs: any) => obs.id === observationId);
+      const createdObs = response.body.data.find(
+        (obs: any) => obs.id === observationId,
+      );
       expect(createdObs).toBeDefined();
 
       // Verify core fields are always present
@@ -233,7 +240,11 @@ describe("/api/public/v2/observations API Endpoint", () => {
       await createEventsCh(observations);
 
       // Test default limit
-      const response1 = await makeZodVerifiedAPICall(GetObservationsV2Response, "GET", "/api/public/v2/observations");
+      const response1 = await makeZodVerifiedAPICall(
+        GetObservationsV2Response,
+        "GET",
+        "/api/public/v2/observations",
+      );
 
       expect(response1.status).toBe(200);
       expect(response1.body.data.length).toBe(6);
@@ -317,7 +328,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       await waitForExpect(
         async () => {
-          const result = await queryClickhouse<{ count: string }>({
+          const result = await queryDatastore<{ count: string }>({
             query: `SELECT count() as count FROM events_core WHERE project_id = {projectId: String} AND span_id IN ({ids: Array(String)})`,
             params: {
               projectId,
@@ -416,7 +427,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
       // Wait for ClickHouse to process
       await waitForExpect(
         async () => {
-          const result = await queryClickhouse<{ count: string }>({
+          const result = await queryDatastore<{ count: string }>({
             query: `SELECT count() as count FROM events WHERE project_id = {projectId: String} AND span_id IN ({ids: Array(String)})`,
             params: { projectId, ids: [observationId1, observationId2] },
           });
@@ -531,7 +542,9 @@ describe("/api/public/v2/observations API Endpoint", () => {
       expect(userIdFilterResponse.status).toBe(200);
       // Only observation1 has user_id: "test-user-123"
       expect(userIdFilterResponse.body.data.length).toEqual(1);
-      const userFilteredObs = userIdFilterResponse.body.data.find((obs: any) => obs.id === observationId1);
+      const userFilteredObs = userIdFilterResponse.body.data.find(
+        (obs: any) => obs.id === observationId1,
+      );
       expect(userFilteredObs).toBeDefined();
 
       // Verify trace name filter (requires join)
@@ -594,7 +607,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
       // Wait for ClickHouse to process
       await waitForExpect(
         async () => {
-          const result = await queryClickhouse<{ count: string }>({
+          const result = await queryDatastore<{ count: string }>({
             query: `SELECT count() as count FROM events WHERE project_id = {projectId: String} AND span_id IN ({ids: Array(String)})`,
             params: { projectId, ids: [observationId1, observationId2] },
           });
@@ -622,7 +635,9 @@ describe("/api/public/v2/observations API Endpoint", () => {
       expect(response.status).toBe(200);
       // Only observation1 should match (scope.name contains "api")
       expect(response.body.data.length).toBe(1);
-      const matchedObs = response.body.data.find((obs: any) => obs.id === observationId1);
+      const matchedObs = response.body.data.find(
+        (obs: any) => obs.id === observationId1,
+      );
       expect(matchedObs).toBeDefined();
       expect(matchedObs?.name).toBe("nested-metadata-obs-1");
     });
@@ -821,7 +836,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       await waitForExpect(
         async () => {
-          const result = await queryClickhouse<{ count: string }>({
+          const result = await queryDatastore<{ count: string }>({
             query: `SELECT count() as count FROM events_core WHERE project_id = {projectId: String} AND trace_id = {traceId: String}`,
             params: { projectId, traceId },
           });
@@ -1287,7 +1302,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
       // Wait for ClickHouse to process
       await waitForExpect(
         async () => {
-          const result = await queryClickhouse<{ count: string }>({
+          const result = await queryDatastore<{ count: string }>({
             query: `SELECT count() as count FROM events WHERE project_id = {projectId: String} AND span_id = {id: String}`,
             params: { projectId, id: observationId },
           });
@@ -1314,7 +1329,9 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       // 'keepTruncated' should still be truncated (200 chars)
       expect(obs?.metadata?.keepTruncated?.length).toBe(METADATA_CUTOFF);
-      expect(obs?.metadata?.keepTruncated).toBe(longValue2.substring(0, METADATA_CUTOFF));
+      expect(obs?.metadata?.keepTruncated).toBe(
+        longValue2.substring(0, METADATA_CUTOFF),
+      );
 
       // 'shortValue' should be present as is
       expect(obs?.metadata?.shortKey).toBe("shortValue");
@@ -1345,7 +1362,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
       // Wait for ClickHouse to process
       await waitForExpect(
         async () => {
-          const result = await queryClickhouse<{ count: string }>({
+          const result = await queryDatastore<{ count: string }>({
             query: `SELECT count() as count FROM events WHERE project_id = {projectId: String} AND span_id = {id: String}`,
             params: { projectId, id: observationId },
           });
@@ -1399,7 +1416,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
       // Wait for ClickHouse to process
       await waitForExpect(
         async () => {
-          const result = await queryClickhouse<{ count: string }>({
+          const result = await queryDatastore<{ count: string }>({
             query: `SELECT count() as count FROM events WHERE project_id = {projectId: String} AND span_id = {id: String}`,
             params: { projectId, id: observationId },
           });
@@ -1423,7 +1440,9 @@ describe("/api/public/v2/observations API Endpoint", () => {
       // Metadata should still be present but truncated (empty expandMetadata means no expansion)
       expect(obs?.metadata?.longKey).toBeDefined();
       expect(obs?.metadata?.longKey?.length).toBe(METADATA_CUTOFF);
-      expect(obs?.metadata?.longKey).toBe(longValue.substring(0, METADATA_CUTOFF));
+      expect(obs?.metadata?.longKey).toBe(
+        longValue.substring(0, METADATA_CUTOFF),
+      );
     });
   });
 
@@ -1634,7 +1653,9 @@ describe("/api/public/v2/observations API Endpoint", () => {
       expect(overlap.length).toBe(0);
 
       // Verify that all events were fetched
-      expect([...page1Ids, ...page2Ids].sort()).toEqual([obs1, obs2, obs3].map((o) => o.span_id).sort());
+      expect([...page1Ids, ...page2Ids].sort()).toEqual(
+        [obs1, obs2, obs3].map((o) => o.span_id).sort(),
+      );
     });
 
     it("should work with cursor and other filters", async () => {
@@ -1669,7 +1690,9 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       expect(page1.status).toBe(200);
       expect(page1.body.data.length).toBe(2);
-      expect(page1.body.data.every((obs: any) => obs.type === "SPAN")).toBe(true);
+      expect(page1.body.data.every((obs: any) => obs.type === "SPAN")).toBe(
+        true,
+      );
       expect(page1.body.meta.cursor).toBeDefined();
 
       // Fetch second page with same filter and cursor
@@ -1679,7 +1702,9 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       expect(page2.status).toBe(200);
       expect(page2.body.data.length).toBe(2);
-      expect(page2.body.data.every((obs: any) => obs.type === "SPAN")).toBe(true);
+      expect(page2.body.data.every((obs: any) => obs.type === "SPAN")).toBe(
+        true,
+      );
 
       // Verify no overlap
       const page1Ids = page1.body.data.map((obs: any) => obs.id);
@@ -1690,12 +1715,17 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
     it("should reject invalid cursor format", async () => {
       const { makeAPICall } = await import("@/src/__tests__/test-utils");
-      const response = await makeAPICall("GET", `/api/public/v2/observations?fields=id&cursor=invalid-base64-string`);
+      const response = await makeAPICall(
+        "GET",
+        `/api/public/v2/observations?fields=id&cursor=invalid-base64-string`,
+      );
 
       // Should fail validation
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("message");
-      expect((response.body as { message: string }).message).toContain("Invalid cursor format");
+      expect((response.body as { message: string }).message).toContain(
+        "Invalid cursor format",
+      );
     });
   });
 });

@@ -1,6 +1,6 @@
 import {
   dashboardColumnDefinitions,
-  orderByToClickhouseSql,
+  orderByToDatastoreSql,
   orderByToPrismaSql,
   tracesTableUiColumnDefinitions,
 } from "@langfuse/shared/src/server";
@@ -52,18 +52,18 @@ describe("orderByToPrisma (Convert orderBy to Prisma.sql)", () => {
     ).toEqual({ column: "createdAt", order: "ASC" });
   });
 
-  test("orderByToClickhouseSql throws InvalidRequestError for invalid columns", () => {
+  test("orderByToDatastoreSql throws InvalidRequestError for invalid columns", () => {
     expect(() =>
-      orderByToClickhouseSql(
+      orderByToDatastoreSql(
         { column: "not_a_column", order: "ASC" },
         tracesTableUiColumnDefinitions,
       ),
     ).toThrow(InvalidRequestError);
   });
 
-  test("orderByToClickhouseSql matches UiColumnMapping aliases", () => {
+  test("orderByToDatastoreSql matches UiColumnMapping aliases", () => {
     expect(
-      orderByToClickhouseSql(
+      orderByToDatastoreSql(
         { column: "Tool Names", order: "ASC" },
         dashboardColumnDefinitions,
       ),

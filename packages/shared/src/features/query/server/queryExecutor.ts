@@ -1,9 +1,6 @@
-import {
-  queryClickhouse,
-  type ClickhouseQueryOpts,
-} from "../../../server/repositories/clickhouse";
-import { measureAndReturn } from "../../../server/clickhouse/measureAndReturn";
-import { type PreferredClickhouseService } from "../../../server/clickhouse/client";
+import { queryDatastore, type DatastoreQueryOpts } from "../../../server/repositories/datastore";
+import { measureAndReturn } from "../../../server/datastore/measureAndReturn";
+import { type PreferredDatastoreService } from "../../../server/datastore/client";
 import { QueryBuilder } from "./queryBuilder";
 import { type QueryType, type ViewVersion } from "../types";
 import { env } from "../../../env";
@@ -11,9 +8,9 @@ import { env } from "../../../env";
 export type PreparedQuery = {
   compiledQuery: string;
   parameters: Record<string, unknown>;
-  preferredClickhouseService: PreferredClickhouseService | undefined;
+  preferredDatastoreService: PreferredDatastoreService | undefined;
   tags: Record<string, string>;
-  clickhouseSettings: Record<string, string>;
+  datastoreSettings: Record<string, string>;
   usesTraceTable: boolean;
   fromTimestamp: string;
 };
@@ -24,34 +21,22 @@ export async function prepareExecuteQuery(opts: {
   version?: ViewVersion;
   enableSingleLevelOptimization?: boolean;
 }): Promise<PreparedQuery> {
-  const {
-    projectId,
-    query,
-    version = "v1",
-    enableSingleLevelOptimization = false,
-  } = opts;
+  const { projectId, query, version = "v1", enableSingleLevelOptimization = false } = opts;
 
-  const chartConfig =
-    (query as unknown as { config?: QueryType["chartConfig"] }).config ??
-    query.chartConfig;
+  const chartConfig = (query as unknown as { config?: QueryType["chartConfig"] }).config ?? query.chartConfig;
   const queryBuilder = new QueryBuilder(chartConfig, version);
 
   const { query: compiledQuery, parameters } = await queryBuilder.build(
     query,
     projectId,
-    enableSingleLevelOptimization ||
-      env.LANGFUSE_ENABLE_SINGLE_LEVEL_QUERY_OPTIMIZATION === "true",
+    enableSingleLevelOptimization || env.LANGFUSE_ENABLE_SINGLE_LEVEL_QUERY_OPTIMIZATION === "true",
   );
 
   // v2 score views are score-based, but can add events_core joins for
   // trace/observation dimensions. Route based on the compiled query so only
   // generated queries that actually touch events use the events readonly pool.
-  const usesEventsTable =
-    compiledQuery.includes("events_core") ||
-    compiledQuery.includes("events_full");
-  const preferredClickhouseService = usesEventsTable
-    ? ("EventsReadOnly" as const)
-    : undefined;
+  const usesEventsTable = compiledQuery.includes("events_core") || compiledQuery.includes("events_full");
+  const preferredDatastoreService = usesEventsTable ? ("EventsReadOnly" as const) : undefined;
 
   const tags = {
     feature: "custom-queries",
@@ -60,36 +45,30 @@ export async function prepareExecuteQuery(opts: {
     projectId,
   };
 
-  const clickhouseSettings: Record<string, string> = {
+  const datastoreSettings: Record<string, string> = {
     date_time_output_format: "iso",
-    ...(env.CLICKHOUSE_USE_QUERY_CONDITION_CACHE === "true"
-      ? { use_query_condition_cache: "true" }
-      : {}),
-    max_bytes_before_external_group_by: String(
-      env.CLICKHOUSE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY,
-    ),
+    ...(env.DATASTORE_USE_QUERY_CONDITION_CACHE === "true" ? { use_query_condition_cache: "true" } : {}),
+    max_bytes_before_external_group_by: String(env.DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY),
   };
 
   return {
     compiledQuery,
     parameters,
-    preferredClickhouseService,
+    preferredDatastoreService,
     tags,
-    clickhouseSettings,
+    datastoreSettings,
     usesTraceTable: compiledQuery.includes("traces"),
     fromTimestamp: query.fromTimestamp,
   };
 }
 
-export function toClickhouseQueryOpts(
-  prepared: PreparedQuery,
-): Omit<ClickhouseQueryOpts, "allowLegacyEventsRead"> {
+export function toDatastoreQueryOpts(prepared: PreparedQuery): Omit<DatastoreQueryOpts, "allowLegacyEventsRead"> {
   return {
     query: prepared.compiledQuery,
     params: prepared.parameters,
-    clickhouseSettings: prepared.clickhouseSettings,
+    datastoreSettings: prepared.datastoreSettings,
     tags: prepared.tags,
-    preferredClickhouseService: prepared.preferredClickhouseService,
+    preferredService: prepared.preferredDatastoreService,
   };
 }
 
@@ -106,10 +85,10 @@ export async function executeQuery(
     enableSingleLevelOptimization,
   });
 
-  const chOpts = toClickhouseQueryOpts(prepared);
+  const chOpts = toDatastoreQueryOpts(prepared);
 
   if (!prepared.usesTraceTable) {
-    return queryClickhouse<Record<string, unknown>>(chOpts);
+    return queryDatastore<Record<string, unknown>>(chOpts);
   }
 
   return measureAndReturn({
@@ -125,7 +104,7 @@ export async function executeQuery(
       },
     },
     fn: async (input) => {
-      return queryClickhouse<Record<string, unknown>>({
+      return queryDatastore<Record<string, unknown>>({
         ...chOpts,
         query: input.query,
         params: input.params,

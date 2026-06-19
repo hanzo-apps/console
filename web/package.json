@@ -7,8 +7,8 @@
     "node": "24"
   },
   "scripts": {
-    "build": "INLINE_RUNTIME_CHUNK=false dotenv -e ../.env -- next build",
-    "build:check": "NEXT_DIST_DIR=.next-check INLINE_RUNTIME_CHUNK=false dotenv -e ../.env -- next build",
+    "build": "INLINE_RUNTIME_CHUNK=false dotenv -e ../.env -- next build --webpack",
+    "build:check": "NEXT_DIST_DIR=.next-check INLINE_RUNTIME_CHUNK=false dotenv -e ../.env -- next build --webpack",
     "typecheck": "dotenv -e ../.env -- tsgo -p tsconfig.build.json --noEmit --skipLibCheck --incremental --tsBuildInfoFile .tsbuildinfo",
     "dev": "dotenv -e ../.env -- next dev --turbopack",
     "dev:frontend": "dotenv -e ../.env.frontend -- next dev --turbopack -p 3001",
@@ -183,6 +183,7 @@
   },
   "devDependencies": {
     "@jedmao/location": "^3.0.0",
+    "@next/bundle-analyzer": "16.2.6",
     "@playwright/test": "^1.57.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",

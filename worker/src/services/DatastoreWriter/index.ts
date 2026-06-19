@@ -258,7 +258,7 @@ export class DatastoreWriter {
 
     let result: Record<string, number> | undefined;
     for (const [key, value] of Object.entries(map)) {
-      const [cv, wasClamped] = ClickhouseWriter.clampDecimal64Value(value);
+      const [cv, wasClamped] = DatastoreWriter.clampDecimal64Value(value);
       if (wasClamped) {
         result ??= { ...map };
         result[key] = cv;
@@ -275,10 +275,7 @@ export class DatastoreWriter {
     return result;
   }
 
-  private clampDecimal64Fields<T extends TableName>(
-    tableName: T,
-    record: RecordInsertType<T>,
-  ): RecordInsertType<T> {
+  private clampDecimal64Fields<T extends TableName>(tableName: T, record: RecordInsertType<T>): RecordInsertType<T> {
     const r = record as Record<string, unknown>;
     const ctx = {
       recordId: r.id as string,
@@ -293,14 +290,12 @@ export class DatastoreWriter {
           r.provided_cost_details as Record<string, number> | undefined,
           { ...ctx, fieldName: "provided_cost_details" },
         );
-        r.cost_details = this.clampDecimal64Map(
-          r.cost_details as Record<string, number> | undefined,
-          { ...ctx, fieldName: "cost_details" },
-        );
+        r.cost_details = this.clampDecimal64Map(r.cost_details as Record<string, number> | undefined, {
+          ...ctx,
+          fieldName: "cost_details",
+        });
         if (r.total_cost != null && typeof r.total_cost === "number") {
-          const [cv, wasClamped] = ClickhouseWriter.clampDecimal64Value(
-            r.total_cost,
-          );
+          const [cv, wasClamped] = DatastoreWriter.clampDecimal64Value(r.total_cost);
           if (wasClamped) {
             r.total_cost = cv;
             logger.warn("Clamped Decimal64(12) overflow in total_cost", {
@@ -343,9 +338,7 @@ export class DatastoreWriter {
       const processingStartTime = Date.now();
 
       let recordsToWrite = queueItems.map((item) => item.data);
-      recordsToWrite = recordsToWrite.map((r) =>
-        this.clampDecimal64Fields(tableName, r),
-      );
+      recordsToWrite = recordsToWrite.map((r) => this.clampDecimal64Fields(tableName, r));
       let hasBeenTruncated = false;
 
       await backOff(

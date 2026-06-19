@@ -12,38 +12,38 @@ export const experimentPreAggCols: UiColumnMappings = [
   {
     uiTableName: "ID",
     uiTableId: "id",
-    clickhouseTableName: "events_proto",
-    clickhouseSelect: "e.experiment_id",
+    datastoreTableName: "events_proto",
+    datastoreSelect: "e.experiment_id",
   },
   {
     uiTableName: "Name",
     uiTableId: "name",
-    clickhouseTableName: "events_proto",
-    clickhouseSelect: "e.experiment_name",
+    datastoreTableName: "events_proto",
+    datastoreSelect: "e.experiment_name",
   },
   {
     uiTableName: "Description",
     uiTableId: "description",
-    clickhouseTableName: "events_proto",
-    clickhouseSelect: "e.experiment_description",
+    datastoreTableName: "events_proto",
+    datastoreSelect: "e.experiment_description",
   },
   {
     uiTableName: "Dataset ID",
     uiTableId: "experimentDatasetId",
-    clickhouseTableName: "events_proto",
-    clickhouseSelect: "e.experiment_dataset_id",
+    datastoreTableName: "events_proto",
+    datastoreSelect: "e.experiment_dataset_id",
   },
   {
     uiTableName: "Start Time",
     uiTableId: "startTime",
-    clickhouseTableName: "events_proto",
-    clickhouseSelect: "e.start_time",
+    datastoreTableName: "events_proto",
+    datastoreSelect: "e.start_time",
   },
   {
     uiTableName: "Metadata",
     uiTableId: "metadata",
-    clickhouseTableName: "events_proto",
-    clickhouseSelect: "experiment_metadata",
+    datastoreTableName: "events_proto",
+    datastoreSelect: "experiment_metadata",
     queryPrefix: "e", // StringObjectFilter uses {prefix}.{field}_names/{field}_values for array access
   },
 ];
@@ -56,27 +56,27 @@ export const experimentScoreAggCols: UiColumnMappings = [
   {
     uiTableName: "Scores (numeric)",
     uiTableId: "obs_scores_avg",
-    clickhouseTableName: "scores",
-    clickhouseSelect: "obs_scores_avg",
+    datastoreTableName: "scores",
+    datastoreSelect: "obs_scores_avg",
   },
   {
     uiTableName: "Scores (categorical)",
     uiTableId: "obs_score_categories",
-    clickhouseTableName: "scores",
-    clickhouseSelect: "obs_score_categories",
+    datastoreTableName: "scores",
+    datastoreSelect: "obs_score_categories",
   },
   // Trace-level scores
   {
     uiTableName: "Trace Scores (numeric)",
     uiTableId: "trace_scores_avg",
-    clickhouseTableName: "scores",
-    clickhouseSelect: "trace_scores_avg",
+    datastoreTableName: "scores",
+    datastoreSelect: "trace_scores_avg",
   },
   {
     uiTableName: "Trace Scores (categorical)",
     uiTableId: "trace_score_categories",
-    clickhouseTableName: "scores",
-    clickhouseSelect: "trace_score_categories",
+    datastoreTableName: "scores",
+    datastoreSelect: "trace_score_categories",
   },
 ];
 
@@ -84,8 +84,8 @@ export const experimentOrderByCols: UiColumnMappings = [
   {
     uiTableName: "Start Time",
     uiTableId: "startTime",
-    clickhouseTableName: "events_proto",
-    clickhouseSelect: "start_time",
+    datastoreTableName: "events_proto",
+    datastoreSelect: "start_time",
   },
 ];
 
@@ -93,7 +93,4 @@ export const experimentOrderByCols: UiColumnMappings = [
  * Combined column mappings for experiments (all columns).
  * Used for general column lookups.
  */
-export const experimentCols: UiColumnMappings = [
-  ...experimentPreAggCols,
-  ...experimentScoreAggCols,
-];
+export const experimentCols: UiColumnMappings = [...experimentPreAggCols, ...experimentScoreAggCols];

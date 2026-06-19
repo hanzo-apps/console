@@ -37,7 +37,7 @@ describe("project API keys trpc", () => {
           },
         ],
         featureFlags: {
-          excludeClickhouseRead: false,
+          excludeDatastoreRead: false,
           templateFlag: true,
         },
         admin: false,

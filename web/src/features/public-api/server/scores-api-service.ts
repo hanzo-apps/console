@@ -30,7 +30,7 @@ export class ScoresApiService {
           scoreScope: this.apiVersion === "v1" ? "traces_only" : "all",
           scoreDataTypes:
             this.apiVersion === "v1" ? LISTABLE_SCORE_TYPES : undefined,
-          preferredClickhouseService: "ReadOnly",
+          preferredDatastoreService: "ReadOnly",
         })
       : undefined;
 
@@ -111,14 +111,23 @@ export class ScoresApiService {
    * v1: Returns listable scores (NUMERIC, BOOLEAN, CATEGORICAL, TEXT) - excludes CORRECTION
    * v2: Returns all score types including CORRECTION and TEXT
    */
-  async getScoreById({ projectId, scoreId, source }: { projectId: string; scoreId: string; source?: ScoreSourceType }) {
+  async getScoreById({
+    projectId,
+    scoreId,
+    source,
+  }: {
+    projectId: string;
+    scoreId: string;
+    source?: ScoreSourceType;
+  }) {
     const score = await _handleGetScoreById({
       projectId,
       scoreId,
       source,
       scoreScope: this.apiVersion === "v1" ? "traces_only" : "all",
-      scoreDataTypes: this.apiVersion === "v1" ? AGGREGATABLE_SCORE_TYPES : undefined,
-      preferredClickhouseService: "ReadOnly",
+      scoreDataTypes:
+        this.apiVersion === "v1" ? AGGREGATABLE_SCORE_TYPES : undefined,
+      preferredDatastoreService: "ReadOnly",
     });
 
     if (!score) {
@@ -137,7 +146,8 @@ export class ScoresApiService {
     return _handleGenerateScoresForPublicApi({
       props,
       scoreScope: this.apiVersion === "v1" ? "traces_only" : "all",
-      scoreDataTypes: this.apiVersion === "v1" ? AGGREGATABLE_SCORE_TYPES : undefined,
+      scoreDataTypes:
+        this.apiVersion === "v1" ? AGGREGATABLE_SCORE_TYPES : undefined,
     });
   }
 
@@ -150,7 +160,8 @@ export class ScoresApiService {
     return _handleGetScoresCountForPublicApi({
       props,
       scoreScope: this.apiVersion === "v1" ? "traces_only" : "all",
-      scoreDataTypes: this.apiVersion === "v1" ? AGGREGATABLE_SCORE_TYPES : undefined,
+      scoreDataTypes:
+        this.apiVersion === "v1" ? AGGREGATABLE_SCORE_TYPES : undefined,
     });
   }
 }

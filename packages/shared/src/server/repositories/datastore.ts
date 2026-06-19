@@ -323,7 +323,7 @@ function isRetryableError(error: unknown): boolean {
   return retryablePatterns.some((pattern) => errorMessage.includes(pattern));
 }
 
-export async function queryDatastore<T>(opts: {
+export type DatastoreQueryOpts = {
   query: string;
   params?: Record<string, unknown> | undefined;
   datastoreConfig?: DatastoreClientConfig;
@@ -331,7 +331,9 @@ export async function queryDatastore<T>(opts: {
   preferredService?: PreferredDatastoreService;
   datastoreSettings?: DatastoreSettings;
   allowLegacyEventsRead?: boolean;
-}): Promise<T[]> {
+};
+
+export async function queryDatastore<T>(opts: DatastoreQueryOpts): Promise<T[]> {
   if (!opts.allowLegacyEventsRead) assertNoLegacyEventsRead(opts.query);
 
   return await instrumentAsync({ name: "datastore-query", spanKind: SpanKind.CLIENT }, async (span) => {

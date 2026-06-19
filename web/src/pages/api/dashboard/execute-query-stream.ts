@@ -5,7 +5,7 @@ import {
   isRow,
   isException,
   ClickHouseResourceError,
-  queryClickhouseWithProgress,
+  queryDatastoreWithProgress,
 } from "@langfuse/shared/src/server";
 import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@langfuse/shared";
 import { logger } from "@langfuse/shared/src/server";
@@ -15,7 +15,7 @@ import { sendAdminAccessWebhook } from "@/src/server/adminAccessWebhook";
 import { prisma } from "@langfuse/shared/src/db";
 import {
   prepareExecuteQuery,
-  toClickhouseQueryOpts,
+  toDatastoreQueryOpts,
 } from "@langfuse/shared/query/server";
 import {
   query as customQuery,
@@ -139,9 +139,9 @@ export default async function handler(
       version,
       enableSingleLevelOptimization: version === "v2",
     });
-    const chOpts = toClickhouseQueryOpts(prepared);
+    const chOpts = toDatastoreQueryOpts(prepared);
 
-    for await (const event of queryClickhouseWithProgress<
+    for await (const event of queryDatastoreWithProgress<
       Record<string, unknown>
     >(chOpts)) {
       if (aborted) break;

@@ -1,10 +1,6 @@
-import {
-  FTS_MATCH_OPERATOR,
-  type FtsMatchOperator,
-  filterOperators,
-} from "../../../interfaces/filters";
+import { FTS_MATCH_OPERATOR, type FtsMatchOperator, filterOperators } from "../../../interfaces/filters";
 import { InvalidRequestError } from "../../../errors";
-import { EVENTS_TABLE_NAMES } from "../../clickhouse/schema";
+import { EVENTS_TABLE_NAMES } from "../../datastore/schema";
 
 export { FTS_MATCH_OPERATOR } from "../../../interfaces/filters";
 
@@ -12,21 +8,14 @@ type StringOperator = (typeof filterOperators)["string"][number];
 export type FtsStringOperator = StringOperator | FtsMatchOperator;
 export type FtsAcceleratedStringOperator = "=" | FtsMatchOperator;
 
-export const FTS_MATCH_TOKEN_ERROR =
-  "`matches` requires at least one search token.";
-export const FTS_MATCH_TARGET_ERROR =
-  "`matches` is only supported for input, output, and metadata filters.";
+export const FTS_MATCH_TOKEN_ERROR = "`matches` requires at least one search token.";
+export const FTS_MATCH_TARGET_ERROR = "`matches` is only supported for input, output, and metadata filters.";
 
 export const FTS_TEXT_NORMALIZER = "lower";
 
-export const FTS_EVENTS_TABLES: ReadonlySet<string> = new Set(
-  EVENTS_TABLE_NAMES,
-);
+export const FTS_EVENTS_TABLES: ReadonlySet<string> = new Set(EVENTS_TABLE_NAMES);
 
-export const FTS_TEXT_FIELDS: ReadonlySet<string> = new Set([
-  "input",
-  "output",
-]);
+export const FTS_TEXT_FIELDS: ReadonlySet<string> = new Set(["input", "output"]);
 export const FTS_METADATA_FIELD = "metadata";
 
 // Column mappings may carry a table prefix (e.g. "e.input"); strip to the bare
@@ -38,71 +27,43 @@ export const bareFtsField = (field: string): string => {
   return tail.replace(/^"(.*)"$/, "$1");
 };
 
-export const isFtsEventsTable = (
-  clickhouseTable: string | undefined,
-): boolean =>
-  clickhouseTable !== undefined && FTS_EVENTS_TABLES.has(clickhouseTable);
+export const isFtsEventsTable = (datastoreTable: string | undefined): boolean =>
+  datastoreTable !== undefined && FTS_EVENTS_TABLES.has(datastoreTable);
 
-export const isFtsMatchOperator = (
-  operator: string | undefined,
-): operator is FtsMatchOperator => operator === FTS_MATCH_OPERATOR;
+export const isFtsMatchOperator = (operator: string | undefined): operator is FtsMatchOperator =>
+  operator === FTS_MATCH_OPERATOR;
 
-export const isFtsTextField = (field: string): boolean =>
-  FTS_TEXT_FIELDS.has(bareFtsField(field));
+export const isFtsTextField = (field: string): boolean => FTS_TEXT_FIELDS.has(bareFtsField(field));
 
-export const isFtsMetadataField = (field: string): boolean =>
-  bareFtsField(field) === FTS_METADATA_FIELD;
+export const isFtsMetadataField = (field: string): boolean => bareFtsField(field) === FTS_METADATA_FIELD;
 
-export const isFtsTextTarget = (
-  clickhouseTable: string,
-  field: string,
-  operator: FtsStringOperator,
-): boolean =>
-  isFtsEventsTable(clickhouseTable) &&
-  isFtsTextField(field) &&
-  FTS_TEXT_OPERATORS.has(operator);
+export const isFtsTextTarget = (datastoreTable: string, field: string, operator: FtsStringOperator): boolean =>
+  isFtsEventsTable(datastoreTable) && isFtsTextField(field) && FTS_TEXT_OPERATORS.has(operator);
 
-export const isFtsMetadataTarget = (
-  clickhouseTable: string,
-  field: string,
-): boolean => isFtsEventsTable(clickhouseTable) && isFtsMetadataField(field);
+export const isFtsMetadataTarget = (datastoreTable: string, field: string): boolean =>
+  isFtsEventsTable(datastoreTable) && isFtsMetadataField(field);
 
 export const isFtsAcceleratedIoOperator = (operator: string): boolean =>
   FTS_TEXT_OPERATORS.has(operator as FtsStringOperator);
 
-export const hasFtsSearchToken = (value: string): boolean =>
-  /[\p{L}\p{N}]/u.test(value);
+export const hasFtsSearchToken = (value: string): boolean => /[\p{L}\p{N}]/u.test(value);
 
-const normalizeFtsTextExpr = (expr: string): string =>
-  `${FTS_TEXT_NORMALIZER}(${expr})`;
+const normalizeFtsTextExpr = (expr: string): string => `${FTS_TEXT_NORMALIZER}(${expr})`;
 
-export const ftsTextTokenPredicate = (
-  fieldExpr: string,
-  valueParam: string,
-): string =>
+export const ftsTextTokenPredicate = (fieldExpr: string, valueParam: string): string =>
   `hasAllTokens(${normalizeFtsTextExpr(fieldExpr)}, ${normalizeFtsTextExpr(valueParam)})`;
 
-export const ftsTextTokenConjunct = (
-  fieldExpr: string,
-  valueParam: string,
-): string =>
+export const ftsTextTokenConjunct = (fieldExpr: string, valueParam: string): string =>
   `(empty(tokens(${normalizeFtsTextExpr(valueParam)})) OR ${ftsTextTokenPredicate(fieldExpr, valueParam)})`;
 
-export const ftsTextIndexedSubstringCondition = (
-  fieldExpr: string,
-  valueParam: string,
-): string =>
+export const ftsTextIndexedSubstringCondition = (fieldExpr: string, valueParam: string): string =>
   `(position(${normalizeFtsTextExpr(fieldExpr)}, ${normalizeFtsTextExpr(valueParam)}) > 0 AND ${ftsTextTokenPredicate(fieldExpr, valueParam)})`;
 
-export const ftsMetadataArrayHas = (
-  arrayExpr: string,
-  valueParam: string,
-): string => `has(${arrayExpr}, ${valueParam})`;
+export const ftsMetadataArrayHas = (arrayExpr: string, valueParam: string): string =>
+  `has(${arrayExpr}, ${valueParam})`;
 
-export const ftsMetadataArrayTokenConjunct = (
-  arrayExpr: string,
-  valueParam: string,
-): string => `hasAllTokens(${arrayExpr}, ${valueParam})`;
+export const ftsMetadataArrayTokenConjunct = (arrayExpr: string, valueParam: string): string =>
+  `hasAllTokens(${arrayExpr}, ${valueParam})`;
 
 type FtsMetadataArrayConditionContext = {
   hasKey: string;
@@ -112,11 +73,7 @@ type FtsMetadataArrayConditionContext = {
 };
 
 type FtsOperatorDescriptor = {
-  textCondition: (
-    fieldExpr: string,
-    valueParam: string,
-    exactCondition: string,
-  ) => string;
+  textCondition: (fieldExpr: string, valueParam: string, exactCondition: string) => string;
   metadataArrayCondition: (ctx: FtsMetadataArrayConditionContext) => string;
 };
 
@@ -136,17 +93,11 @@ export const FTS_OPERATOR_DESCRIPTORS = {
   "=": {
     textCondition: (fieldExpr, valueParam, exactCondition) =>
       `(${exactCondition} AND ${ftsTextTokenConjunct(fieldExpr, valueParam)})`,
-    metadataArrayCondition: ({
-      hasKey,
-      valuesColumn,
-      valueAccessor,
-      valueParam,
-    }) =>
+    metadataArrayCondition: ({ hasKey, valuesColumn, valueAccessor, valueParam }) =>
       `${hasKey} AND ${ftsMetadataArrayHas(valuesColumn, valueParam)} AND (${valueAccessor} = ${valueParam})`,
   },
   [FTS_MATCH_OPERATOR]: {
-    textCondition: (fieldExpr, valueParam, _exactCondition) =>
-      ftsTextIndexedSubstringCondition(fieldExpr, valueParam),
+    textCondition: (fieldExpr, valueParam, _exactCondition) => ftsTextIndexedSubstringCondition(fieldExpr, valueParam),
     metadataArrayCondition: ftsMetadataArrayIndexedSubstringCondition,
   },
 } satisfies FtsOperatorDescriptors;
@@ -161,7 +112,7 @@ export const FTS_TEXT_OPERATORS: ReadonlySet<FtsStringOperator> = new Set(
 
 export const assertValidFtsMatchFilter = (opts: {
   filterType: "string" | "stringObject";
-  clickhouseTable: string;
+  datastoreTable: string;
   field: string;
   value: string;
 }) => {
@@ -170,10 +121,8 @@ export const assertValidFtsMatchFilter = (opts: {
   }
 
   if (
-    (opts.filterType === "string" &&
-      isFtsTextTarget(opts.clickhouseTable, opts.field, FTS_MATCH_OPERATOR)) ||
-    (opts.filterType === "stringObject" &&
-      isFtsMetadataTarget(opts.clickhouseTable, opts.field))
+    (opts.filterType === "string" && isFtsTextTarget(opts.datastoreTable, opts.field, FTS_MATCH_OPERATOR)) ||
+    (opts.filterType === "stringObject" && isFtsMetadataTarget(opts.datastoreTable, opts.field))
   ) {
     return;
   }

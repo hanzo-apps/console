@@ -82,7 +82,7 @@ describe("ClickHouse insert string edge cases", () => {
 
   describe("Invalid string length on oversized JSON payload", () => {
     maybeIt(
-      "should throw 'Size of JSON object' when input exceeds clickhouse byte limit",
+      "should throw 'Size of JSON object' when input exceeds datastore byte limit",
       async () => {
         const hugeString = "x".repeat(300 * 1024 * 1024);
 

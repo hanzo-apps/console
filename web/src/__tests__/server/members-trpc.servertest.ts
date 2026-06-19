@@ -85,7 +85,7 @@ function createSession(
         },
       ],
       featureFlags: {
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
         templateFlag: true,
       },
       admin: false, // Not admin to test actual limits

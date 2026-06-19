@@ -104,13 +104,6 @@ export const eventsTableCols: ColumnDefinition[] = [
     nullable: true,
   },
   {
-    name: "Prompt Version",
-    id: "promptVersion",
-    type: "number",
-    internal: "e.prompt_version",
-    nullable: true,
-  },
-  {
     name: "Model ID",
     id: "modelId",
     type: "stringOptions",
@@ -127,7 +120,7 @@ export const eventsTableCols: ColumnDefinition[] = [
     nullable: true,
   },
   {
-    name: "Cost ($)",
+    name: "Total Cost ($)",
     id: "totalCost",
     type: "number",
     internal: "if(mapExists((k, v) -> (k = 'total'), cost_details), cost_details['total'], NULL)",
@@ -214,7 +207,7 @@ export const eventsTableCols: ColumnDefinition[] = [
     name: "Trace Tags",
     id: "traceTags",
     type: "arrayOptions",
-    internal: "e.tags",
+    internal: "t.tags",
     options: [], // to be added at runtime
   },
   {
@@ -232,20 +225,6 @@ export const eventsTableCols: ColumnDefinition[] = [
     nullable: true,
   },
   {
-    name: "Trace Scores (numeric)",
-    id: "trace_scores_avg",
-    type: "numberObject",
-    internal: "trace_scores_avg",
-  },
-  {
-    name: "Trace Scores (categorical)",
-    id: "trace_score_categories",
-    type: "categoryOptions",
-    internal: "trace_score_categories",
-    options: [], // to be added at runtime
-    nullable: true,
-  },
-  {
     name: "Comment Count",
     id: "commentCount",
     type: "number",
@@ -258,16 +237,22 @@ export const eventsTableCols: ColumnDefinition[] = [
     internal: "", // handled by comment filter helpers
   },
   {
+    name: "Position in Trace",
+    id: "positionInTrace",
+    type: "positionInTrace",
+    internal: "positionInTrace",
+  },
+  {
+    name: "Level in Trace",
+    id: "levelInTrace",
+    type: "number",
+    internal: "levelInTrace",
+  },
+  {
     name: "Has Parent Observation",
     id: "hasParentObservation",
     type: "boolean",
-    internal: eventsTableHasParentObservationSql,
-  },
-  {
-    name: "Is Root Observation",
-    id: "isRootObservation",
-    type: "boolean",
-    internal: eventsTableIsRootObservationSql,
+    internal: "e.parent_span_id != ''",
   },
   {
     name: "Experiment Dataset ID",
@@ -323,59 +308,4 @@ export const eventsTableCols: ColumnDefinition[] = [
     internal: "length(e.tool_calls)",
     nullable: true,
   },
-  {
-    name: "Is Experiment Item Root Span",
-    id: "isExperimentItemRootSpan",
-    type: "boolean",
-    internal: "e.experiment_item_root_span_id = e.span_id",
-  },
-] as const satisfies readonly ColumnDefinition[];
-
-// TODO: Remove MutableDeep once consumers accept readonly column definitions.
-export const eventsTableCols =
-  eventsTableColsDefinition as unknown as MutableDeep<
-    typeof eventsTableColsDefinition
-  > &
-    ColumnDefinition[];
-
-type EventsTableColumnId = (typeof eventsTableColsDefinition)[number]["id"];
-
-// Subset of columns that are allowed to be used as filters in the MCP observations API
-const OBSERVATION_MCP_ALLOWED_EVENTS_TABLE_FILTER_COLUMN_IDS = [
-  "id",
-  "traceId",
-  "startTime",
-  "endTime",
-  "name",
-  "type",
-  "environment",
-  "version",
-  "userId",
-  "sessionId",
-  "traceName",
-  "level",
-  "statusMessage",
-  "promptName",
-  "promptVersion",
-  "modelId",
-  "providedModelName",
-  "totalCost",
-  "inputTokens",
-  "outputTokens",
-  "totalTokens",
-  "inputCost",
-  "outputCost",
-  "latency",
-  "timeToFirstToken",
-  "input",
-  "output",
-  "metadata",
-  "traceTags",
-  "hasParentObservation",
-] as const satisfies readonly EventsTableColumnId[];
-
-export type ObservationMcpAllowedEventsTableFilterColumn =
-  (typeof OBSERVATION_MCP_ALLOWED_EVENTS_TABLE_FILTER_COLUMN_IDS)[number];
-
-export const OBSERVATION_MCP_ALLOWED_EVENTS_TABLE_FILTER_COLUMNS: ReadonlySet<EventsTableColumnId> =
-  new Set(OBSERVATION_MCP_ALLOWED_EVENTS_TABLE_FILTER_COLUMN_IDS);
+];

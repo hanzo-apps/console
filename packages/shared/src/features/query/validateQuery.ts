@@ -1,8 +1,8 @@
-import { queryClickhouse, measureAndReturn, logger } from "@hanzo/shared/src/server";
-import { QueryBuilder } from "@/src/features/query/server/queryBuilder";
-import { type QueryType, type ViewVersion } from "@/src/features/query/types";
-import { getViewDeclaration } from "@/src/features/query/dataModel";
-import { env } from "@/src/env.mjs";
+import { queryDatastore, measureAndReturn, logger } from "../../server";
+import { QueryBuilder } from "./server/queryBuilder";
+import { type QueryType, type ViewVersion } from "./types";
+import { getViewDeclaration } from "./dataModel";
+import { env } from "../../env";
 
 /**
  * Result of query validation.
@@ -236,13 +236,13 @@ export async function executeQuery(
       try {
         if (!usesTraceTable) {
           // No trace table placeholders, execute normally
-          return await queryClickhouse<Record<string, unknown>>({
+          return await queryDatastore<Record<string, unknown>>({
             query: queryToExecute.query,
             params: queryToExecute.params,
-            clickhouseConfigs: {
+            datastoreConfigs: {
               clickhouse_settings: {
                 date_time_output_format: "iso",
-                max_bytes_before_external_group_by: String(env.CLICKHOUSE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY),
+                max_bytes_before_external_group_by: String(env.DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY),
               },
             },
             tags: {
@@ -270,13 +270,13 @@ export async function executeQuery(
               },
             },
             fn: async (input) => {
-              return queryClickhouse<Record<string, unknown>>({
+              return queryDatastore<Record<string, unknown>>({
                 query: input.query,
                 params: input.params,
-                clickhouseConfigs: {
+                datastoreConfigs: {
                   clickhouse_settings: {
                     date_time_output_format: "iso",
-                    max_bytes_before_external_group_by: String(env.CLICKHOUSE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY),
+                    max_bytes_before_external_group_by: String(env.DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY),
                   },
                 },
                 tags: input.tags,

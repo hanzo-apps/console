@@ -837,16 +837,25 @@ export const env = createEnv({
     PLAIN_API_KEY: process.env.PLAIN_API_KEY,
     PLAIN_CARDS_API_TOKEN: process.env.PLAIN_CARDS_API_TOKEN,
     // Datastore (analytics database)
-    DATASTORE_URL: process.env.DATASTORE_URL,
-    DATASTORE_CLUSTER_NAME: process.env.DATASTORE_CLUSTER_NAME,
-    DATASTORE_DB: process.env.DATASTORE_DB,
-    DATASTORE_USER: process.env.DATASTORE_USER,
-    DATASTORE_PASSWORD: process.env.DATASTORE_PASSWORD,
-    DATASTORE_CLUSTER_ENABLED: process.env.DATASTORE_CLUSTER_ENABLED,
+    // DATASTORE_* is our naming; fall back to legacy upstream DATASTORE_* so
+    // existing production deployments keep working (datastore IS our ClickHouse
+    // fork — same wire protocol, only our naming changed).
+    DATASTORE_URL: process.env.DATASTORE_URL ?? process.env.CLICKHOUSE_URL,
+    DATASTORE_CLUSTER_NAME:
+      process.env.DATASTORE_CLUSTER_NAME ?? process.env.CLICKHOUSE_CLUSTER_NAME,
+    DATASTORE_DB: process.env.DATASTORE_DB ?? process.env.CLICKHOUSE_DB,
+    DATASTORE_USER: process.env.DATASTORE_USER ?? process.env.CLICKHOUSE_USER,
+    DATASTORE_PASSWORD:
+      process.env.DATASTORE_PASSWORD ?? process.env.CLICKHOUSE_PASSWORD,
+    DATASTORE_CLUSTER_ENABLED:
+      process.env.DATASTORE_CLUSTER_ENABLED ??
+      process.env.CLICKHOUSE_CLUSTER_ENABLED,
     DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY:
-      process.env.DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY,
+      process.env.DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY ??
+      process.env.CLICKHOUSE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY,
     DATASTORE_USE_QUERY_CONDITION_CACHE:
-      process.env.DATASTORE_USE_QUERY_CONDITION_CACHE,
+      process.env.DATASTORE_USE_QUERY_CONDITION_CACHE ??
+      process.env.CLICKHOUSE_USE_QUERY_CONDITION_CACHE,
     CONSOLE_ROOT_EVENT_CONDITION_MAX_WINDOW_HOURS:
       process.env.CONSOLE_ROOT_EVENT_CONDITION_MAX_WINDOW_HOURS,
     // EE ui customization

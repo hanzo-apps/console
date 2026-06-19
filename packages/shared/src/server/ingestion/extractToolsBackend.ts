@@ -126,10 +126,7 @@ function addToolArgument(args: DatastoreToolArgument[], call: unknown): void {
   });
 }
 
-function addToolArguments(
-  args: ClickhouseToolArgument[],
-  calls: unknown[] | undefined,
-): void {
+function addToolArguments(args: DatastoreToolArgument[], calls: unknown[] | undefined): void {
   if (!calls) return;
 
   for (const call of calls) {
@@ -160,34 +157,19 @@ function isToolCallLike(value: unknown): boolean {
   if (call.type === "tool-result") return false;
 
   const functionCall = call.function as Record<string, unknown> | undefined;
-  const hasOpenAiShape = Boolean(
-    functionCall?.name && "arguments" in functionCall,
-  );
+  const hasOpenAiShape = Boolean(functionCall?.name && "arguments" in functionCall);
   const hasAiSdkToolCallShape =
-    Boolean(call.toolName) &&
-    (call.type === "tool-call" || ["input", "args"].some((key) => key in call));
-  const hasResponsesShape = Boolean(
-    call.call_id && call.name && "arguments" in call,
-  );
-  const hasAnthropicToolUseShape = Boolean(
-    call.type === "tool_use" && call.name && "input" in call,
-  );
+    Boolean(call.toolName) && (call.type === "tool-call" || ["input", "args"].some((key) => key in call));
+  const hasResponsesShape = Boolean(call.call_id && call.name && "arguments" in call);
+  const hasAnthropicToolUseShape = Boolean(call.type === "tool_use" && call.name && "input" in call);
   const hasToolCallMarker =
     "id" in call ||
     "index" in call ||
-    ["function", "function_call", "tool-call", "tool_use"].includes(
-      String(call.type),
-    );
-  const hasFlatToolCallShape = Boolean(
-    call.name && "arguments" in call && hasToolCallMarker,
-  );
+    ["function", "function_call", "tool-call", "tool_use"].includes(String(call.type));
+  const hasFlatToolCallShape = Boolean(call.name && "arguments" in call && hasToolCallMarker);
 
   return (
-    hasOpenAiShape ||
-    hasAiSdkToolCallShape ||
-    hasResponsesShape ||
-    hasAnthropicToolUseShape ||
-    hasFlatToolCallShape
+    hasOpenAiShape || hasAiSdkToolCallShape || hasResponsesShape || hasAnthropicToolUseShape || hasFlatToolCallShape
   );
 }
 
@@ -195,19 +177,14 @@ function isMessageLike(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
 
   const message = value as Record<string, unknown>;
-  return ["role", "content", "tool_calls", "additional_kwargs"].some(
-    (key) => key in message,
-  );
+  return ["role", "content", "tool_calls", "additional_kwargs"].some((key) => key in message);
 }
 
 /**
  * Helper to add a tool call from content-array parts.
  * Handles Anthropic `tool_use` and AI SDK `tool-call` parts.
  */
-function addToolArgumentFromContentPart(
-  args: ClickhouseToolArgument[],
-  part: Record<string, unknown>,
-): void {
+function addToolArgumentFromContentPart(args: DatastoreToolArgument[], part: Record<string, unknown>): void {
   if (part.type === "tool_use") {
     addToolArgument(args, {
       id: part.id,
@@ -287,8 +264,7 @@ function extractToolCallsFromRawOutput(output: unknown, args: DatastoreToolArgum
   const obj = output as Record<string, unknown>;
 
   // Direct tool_calls at top level
-  const directToolCalls =
-    parseArrayIfString(obj.tool_calls) ?? parseArrayIfString(obj.toolCalls);
+  const directToolCalls = parseArrayIfString(obj.tool_calls) ?? parseArrayIfString(obj.toolCalls);
   addToolArguments(args, directToolCalls);
 
   // OpenAI choices format: {choices: [{message: {tool_calls: [...]}}]}
@@ -297,9 +273,7 @@ function extractToolCallsFromRawOutput(output: unknown, args: DatastoreToolArgum
       if (choice && typeof choice === "object") {
         const c = choice as Record<string, unknown>;
         const message = c.message as Record<string, unknown> | undefined;
-        const messageToolCalls =
-          parseArrayIfString(message?.tool_calls) ??
-          parseArrayIfString(message?.toolCalls);
+        const messageToolCalls = parseArrayIfString(message?.tool_calls) ?? parseArrayIfString(message?.toolCalls);
         addToolArguments(args, messageToolCalls);
       }
     }
@@ -381,9 +355,7 @@ function parsePlainRecord(value: unknown): Record<string, unknown> | undefined {
 const TOOL_METADATA_ATTRIBUTE_KEY_PATTERN =
   /"(?:ai\.prompt\.tools|gen_ai\.tool\.definitions|model_request_parameters|llm\.tools\.\d+\.tool\.json_schema)"\s*:/;
 
-function parseMetadataAttributes(
-  value: unknown,
-): Record<string, unknown> | undefined {
+function parseMetadataAttributes(value: unknown): Record<string, unknown> | undefined {
   if (typeof value === "string") {
     if (!TOOL_METADATA_ATTRIBUTE_KEY_PATTERN.test(value)) {
       return undefined;
@@ -397,10 +369,7 @@ function toIngestionJsonValue(value: unknown): IngestionJsonValue {
   if (value == null) return value;
 
   const valueType = typeof value;
-  return valueType === "string" ||
-    valueType === "number" ||
-    valueType === "boolean" ||
-    valueType === "object"
+  return valueType === "string" || valueType === "number" || valueType === "boolean" || valueType === "object"
     ? (value as IngestionJsonValue)
     : undefined;
 }
@@ -409,18 +378,12 @@ function isToolDefinitionLike(tool: unknown): boolean {
   return Boolean(flattenToolDefinition(tool).name);
 }
 
-function isToolMetadataEntryLike(
-  tool: unknown,
-  options: { allowProviderToolWithoutName?: boolean } = {},
-): boolean {
+function isToolMetadataEntryLike(tool: unknown, options: { allowProviderToolWithoutName?: boolean } = {}): boolean {
   const parsedTool = parseIfString(tool);
   if (!isPlainRecord(parsedTool)) return false;
   if (isToolDefinitionLike(parsedTool)) return true;
 
-  return (
-    options.allowProviderToolWithoutName === true &&
-    typeof parsedTool.type === "string"
-  );
+  return options.allowProviderToolWithoutName === true && typeof parsedTool.type === "string";
 }
 
 function parseToolDefinitionArray(
@@ -438,23 +401,17 @@ function parseToolDefinitionArray(
 
   const toolLikeEntries = normalizedTools.filter((tool) =>
     isToolMetadataEntryLike(tool, {
-      allowProviderToolWithoutName:
-        options.allowProviderToolWithoutName ?? true,
+      allowProviderToolWithoutName: options.allowProviderToolWithoutName ?? true,
     }),
   );
-  if (
-    options.requireEveryItem &&
-    toolLikeEntries.length !== normalizedTools.length
-  ) {
+  if (options.requireEveryItem && toolLikeEntries.length !== normalizedTools.length) {
     return undefined;
   }
 
   return toolLikeEntries.length > 0 ? toolLikeEntries : undefined;
 }
 
-type ToolDefinitionArrayOptions = Parameters<
-  typeof parseToolDefinitionArray
->[1];
+type ToolDefinitionArrayOptions = Parameters<typeof parseToolDefinitionArray>[1];
 
 function dedupeToolDefinitions(tools: unknown[]): unknown[] {
   const seenToolNames = new Set<string>();
@@ -467,15 +424,13 @@ function dedupeToolDefinitions(tools: unknown[]): unknown[] {
   });
 }
 
-function collectAndRemoveToolDefinitionsFromMetadata(
-  metadata: Record<string, unknown>,
-): { tools: unknown[]; metadata: Record<string, unknown> } {
+function collectAndRemoveToolDefinitionsFromMetadata(metadata: Record<string, unknown>): {
+  tools: unknown[];
+  metadata: Record<string, unknown>;
+} {
   let tools: unknown[] = [];
   const cleanedMetadata = { ...metadata };
-  const addTools = (
-    value: unknown,
-    options: ToolDefinitionArrayOptions = {},
-  ) => {
+  const addTools = (value: unknown, options: ToolDefinitionArrayOptions = {}) => {
     const parsedTools = parseToolDefinitionArray(value, options);
     if (!parsedTools) return false;
 
@@ -518,9 +473,7 @@ function collectAndRemoveToolDefinitionsFromMetadata(
     delete cleanedAttributes["gen_ai.tool.definitions"];
   }
 
-  const modelRequestParameters = parseIfString(
-    attributes.model_request_parameters,
-  );
+  const modelRequestParameters = parseIfString(attributes.model_request_parameters);
   if (isPlainRecord(modelRequestParameters)) {
     const movedFunctionTools = addTools(modelRequestParameters.function_tools, {
       requireEveryItem: true,
@@ -547,10 +500,7 @@ function collectAndRemoveToolDefinitionsFromMetadata(
       key,
       match: /^llm\.tools\.(\d+)\.tool\.json_schema$/.exec(key),
     }))
-    .filter(
-      (entry): entry is { key: string; match: RegExpExecArray } =>
-        entry.match !== null,
-    )
+    .filter((entry): entry is { key: string; match: RegExpExecArray } => entry.match !== null)
     .sort((left, right) => Number(left.match[1]) - Number(right.match[1]));
 
   for (const { key } of indexedToolKeys) {
@@ -683,8 +633,7 @@ export function normalizeToolMetadataForObservation(
     };
   }
 
-  const normalizedMetadata =
-    collectAndRemoveToolDefinitionsFromMetadata(parsedMetadata);
+  const normalizedMetadata = collectAndRemoveToolDefinitionsFromMetadata(parsedMetadata);
   const { tools } = normalizedMetadata;
   if (tools.length === 0) {
     return {
@@ -753,11 +702,11 @@ function extractToolsFromParsedObservation(
   parsedInput: unknown,
   parsedOutput: unknown,
 ): {
-  toolDefinitions: ClickhouseToolDefinition[];
-  toolArguments: ClickhouseToolArgument[];
+  toolDefinitions: DatastoreToolDefinition[];
+  toolArguments: DatastoreToolArgument[];
 } {
-  const toolDefinitions: ClickhouseToolDefinition[] = [];
-  const toolArguments: ClickhouseToolArgument[] = [];
+  const toolDefinitions: DatastoreToolDefinition[] = [];
+  const toolArguments: DatastoreToolArgument[] = [];
 
   extractToolsFromRawInput(parsedInput, toolDefinitions);
   extractToolCallsFromRawOutput(parsedOutput, toolArguments);
@@ -786,18 +735,13 @@ export function normalizeToolsForObservation(
   toolCalls: string[];
   toolCallNames: string[];
 } {
-  const normalizedToolInput = normalizeToolMetadataForObservation(
-    input,
-    metadata,
-  );
+  const normalizedToolInput = normalizeToolMetadataForObservation(input, metadata);
 
   try {
-    const { toolDefinitions, toolArguments } =
-      extractToolsFromParsedObservation(
-        normalizedToolInput.inputForExtraction ??
-          parseIfString(normalizedToolInput.input),
-        parseIfString(output),
-      );
+    const { toolDefinitions, toolArguments } = extractToolsFromParsedObservation(
+      normalizedToolInput.inputForExtraction ?? parseIfString(normalizedToolInput.input),
+      parseIfString(output),
+    );
     const { tool_calls, tool_call_names } = convertCallsToArrays(toolArguments);
 
     return {

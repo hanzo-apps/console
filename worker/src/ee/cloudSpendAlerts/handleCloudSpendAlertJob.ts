@@ -4,21 +4,15 @@ import Stripe from "stripe";
 import { env } from "../../env";
 import { logger } from "@langfuse/shared/src/server";
 import { recordIncrement, traceException } from "@langfuse/shared/src/server";
-import { Job } from "bullmq";
+import { Job } from "@hanzo/mq";
 import { backOff } from "exponential-backoff";
 import { sendCloudSpendAlertEmail } from "@langfuse/shared/src/server";
 
-const recordMissingBillingConfigSkip = (
-  reason: "missing_stripe_customer_id" | "missing_stripe_subscription_id",
-) => {
-  recordIncrement(
-    "langfuse.queue.cloud_spend_alert_queue.skipped_orgs_missing_billing_config",
-    1,
-    {
-      unit: "organizations",
-      reason,
-    },
-  );
+const recordMissingBillingConfigSkip = (reason: "missing_stripe_customer_id" | "missing_stripe_subscription_id") => {
+  recordIncrement("langfuse.queue.cloud_spend_alert_queue.skipped_orgs_missing_billing_config", 1, {
+    unit: "organizations",
+    reason,
+  });
 };
 
 export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
@@ -59,27 +53,21 @@ export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
 
   if (org.cloudConfig?.plan === "Hobby") {
     // handle case where user has downgraded to hobby
-    logger.info(
-      `[CLOUD SPEND ALERTS] Org ${orgId} not entitled to spend alerts (plan: Hobby"})`,
-    );
+    logger.info(`[CLOUD SPEND ALERTS] Org ${orgId} not entitled to spend alerts (plan: Hobby"})`);
     return;
   }
 
   // Get Stripe customer ID
   const stripeCustomerId = org.cloudConfig?.stripe?.customerId;
   if (!stripeCustomerId) {
-    logger.warn(
-      `[CLOUD SPEND ALERTS] Stripe customer id not found for org ${orgId}`,
-    );
+    logger.warn(`[CLOUD SPEND ALERTS] Stripe customer id not found for org ${orgId}`);
     recordMissingBillingConfigSkip("missing_stripe_customer_id");
     return;
   }
   // Get Stripe subscription ID
   const stripeSubscriptionId = org.cloudConfig?.stripe?.activeSubscriptionId;
   if (!stripeSubscriptionId) {
-    logger.warn(
-      `[CLOUD SPEND ALERTS] Stripe subscription id not found for org ${orgId}`,
-    );
+    logger.warn(`[CLOUD SPEND ALERTS] Stripe subscription id not found for org ${orgId}`);
     recordMissingBillingConfigSkip("missing_stripe_subscription_id");
     return;
   }
@@ -89,20 +77,12 @@ export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
 
   try {
     // Get subscription to check billing cycle
-    const subscription =
-      await stripe.subscriptions.retrieve(stripeSubscriptionId);
+    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
 
-    const currentPeriodStart = new Date(
-      subscription.current_period_start * 1000,
-    );
+    const currentPeriodStart = new Date(subscription.current_period_start * 1000);
 
     // Create preview invoice to calculate current spend
-    const canCreateInvoicePreview = [
-      "active",
-      "past_due",
-      "trialing",
-      "unpaid",
-    ].includes(subscription.status);
+    const canCreateInvoicePreview = ["active", "past_due", "trialing", "unpaid"].includes(subscription.status);
 
     if (!canCreateInvoicePreview) {
       logger.warn(
@@ -114,10 +94,7 @@ export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
     const previewInvoice = await backOff(
       async () =>
         await stripe.invoices.createPreview({
-          customer:
-            typeof subscription.customer === "string"
-              ? subscription.customer
-              : subscription.customer?.id,
+          customer: typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id,
           subscription: stripeSubscriptionId,
         }),
       {
@@ -129,9 +106,7 @@ export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
     const currentSpendCents = previewInvoice.total ?? 0;
     const currentSpendUSD = currentSpendCents / 100;
 
-    logger.info(
-      `[CLOUD SPEND ALERTS] Org ${orgId} current spend: $${currentSpendUSD.toFixed(2)}`,
-    );
+    logger.info(`[CLOUD SPEND ALERTS] Org ${orgId} current spend: $${currentSpendUSD.toFixed(2)}`);
 
     // Get org admins and owners for email notifications (fetch once for all alerts)
     const adminMemberships = await prisma.organizationMembership.findMany({
@@ -146,9 +121,7 @@ export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
       },
     });
 
-    const adminEmails = adminMemberships
-      .map((m) => m.user?.email)
-      .filter((email): email is string => Boolean(email));
+    const adminEmails = adminMemberships.map((m) => m.user?.email).filter((email): email is string => Boolean(email));
 
     // Check each spend alert for this org
     for (const alert of org.spendAlerts) {
@@ -157,8 +130,7 @@ export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
       // Check if threshold is breached
       if (currentSpendUSD >= thresholdUSD) {
         // Check if already triggered this billing cycle
-        const alreadyTriggered =
-          alert.triggeredAt && alert.triggeredAt >= currentPeriodStart;
+        const alreadyTriggered = alert.triggeredAt && alert.triggeredAt >= currentPeriodStart;
 
         if (!alreadyTriggered) {
           logger.info(
@@ -182,21 +154,13 @@ export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
                 recipients: adminEmails,
               } as any);
 
-              recordIncrement(
-                "langfuse.queue.cloud_spend_alert_queue.emails_sent",
-                1,
-                { unit: "emails" },
-              );
+              recordIncrement("langfuse.queue.cloud_spend_alert_queue.emails_sent", 1, { unit: "emails" });
 
               logger.info(
                 `[CLOUD SPEND ALERTS] Sent alert emails to ${adminEmails.length} recipients for org ${orgId}`,
               );
             } catch (e) {
-              recordIncrement(
-                "langfuse.queue.cloud_spend_alert_queue.email_failures",
-                1,
-                { unit: "emails" },
-              );
+              recordIncrement("langfuse.queue.cloud_spend_alert_queue.email_failures", 1, { unit: "emails" });
               throw e;
             }
           }
@@ -207,43 +171,27 @@ export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
             data: { triggeredAt: detectedAt },
           });
 
-          recordIncrement(
-            "langfuse.queue.cloud_spend_alert_queue.triggered_alerts",
-            1,
-            {
-              unit: "alerts",
-            },
-          );
+          recordIncrement("langfuse.queue.cloud_spend_alert_queue.triggered_alerts", 1, {
+            unit: "alerts",
+          });
         } else {
-          logger.debug(
-            `[CLOUD SPEND ALERTS] Alert ${alert.id} for org ${orgId} already triggered this billing cycle`,
-          );
+          logger.debug(`[CLOUD SPEND ALERTS] Alert ${alert.id} for org ${orgId} already triggered this billing cycle`);
         }
       }
 
       // Reset triggeredAt if we're in a new billing cycle and threshold is not breached
-      if (
-        currentSpendUSD < thresholdUSD &&
-        alert.triggeredAt &&
-        alert.triggeredAt < currentPeriodStart
-      ) {
+      if (currentSpendUSD < thresholdUSD && alert.triggeredAt && alert.triggeredAt < currentPeriodStart) {
         await prisma.cloudSpendAlert.update({
           where: { id: alert.id },
           data: { triggeredAt: null },
         });
-        logger.debug(
-          `[CLOUD SPEND ALERTS] Reset alert ${alert.id} for org ${orgId} - new billing cycle`,
-        );
+        logger.debug(`[CLOUD SPEND ALERTS] Reset alert ${alert.id} for org ${orgId} - new billing cycle`);
       }
     }
 
-    recordIncrement(
-      "langfuse.queue.cloud_spend_alert_queue.processed_orgs",
-      1,
-      {
-        unit: "organizations",
-      },
-    );
+    recordIncrement("langfuse.queue.cloud_spend_alert_queue.processed_orgs", 1, {
+      unit: "organizations",
+    });
 
     logger.info(`[CLOUD SPEND ALERTS] Completed job for org ${orgId}`);
   } catch (error) {
@@ -251,16 +199,10 @@ export const handleCloudSpendAlertJob = async (job: Job<{ orgId: string }>) => {
       error,
       orgId,
     });
-    traceException(
-      `[CLOUD SPEND ALERTS] Error processing org ${orgId}: ${error}`,
-    );
-    recordIncrement(
-      "langfuse.queue.cloud_spend_alert_queue.skipped_orgs_with_errors",
-      1,
-      {
-        unit: "organizations",
-      },
-    );
+    traceException(`[CLOUD SPEND ALERTS] Error processing org ${orgId}: ${error}`);
+    recordIncrement("langfuse.queue.cloud_spend_alert_queue.skipped_orgs_with_errors", 1, {
+      unit: "organizations",
+    });
     throw error; // Let BullMQ handle retry
   }
 };

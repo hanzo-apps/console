@@ -1,4 +1,4 @@
-import { Queue } from "bullmq";
+import { Queue } from "@hanzo/mq";
 
 import {
   QueueName,
@@ -29,20 +29,17 @@ export const SHARDED_QUEUES: ShardedQueueDef[] = [
   {
     baseQueueName: QueueName.IngestionSecondaryQueue,
     getShardNames: () => SecondaryIngestionQueue.getShardNames(),
-    getInstance: (shard) =>
-      SecondaryIngestionQueue.getInstance({ shardName: shard }),
+    getInstance: (shard) => SecondaryIngestionQueue.getInstance({ shardName: shard }),
   },
   {
     baseQueueName: QueueName.OtelIngestionQueue,
     getShardNames: () => OtelIngestionQueue.getShardNames(),
-    getInstance: (shard) =>
-      OtelIngestionQueue.getInstance({ shardName: shard }),
+    getInstance: (shard) => OtelIngestionQueue.getInstance({ shardName: shard }),
   },
   {
     baseQueueName: QueueName.OtelIngestionSecondaryQueue,
     getShardNames: () => SecondaryOtelIngestionQueue.getShardNames(),
-    getInstance: (shard) =>
-      SecondaryOtelIngestionQueue.getInstance({ shardName: shard }),
+    getInstance: (shard) => SecondaryOtelIngestionQueue.getInstance({ shardName: shard }),
   },
   {
     baseQueueName: QueueName.TraceUpsert,
@@ -52,32 +49,26 @@ export const SHARDED_QUEUES: ShardedQueueDef[] = [
   {
     baseQueueName: QueueName.EvaluationExecution,
     getShardNames: () => EvalExecutionQueue.getShardNames(),
-    getInstance: (shard) =>
-      EvalExecutionQueue.getInstance({ shardName: shard }),
+    getInstance: (shard) => EvalExecutionQueue.getInstance({ shardName: shard }),
   },
   {
     baseQueueName: QueueName.EvaluationExecutionSecondaryQueue,
     getShardNames: () => SecondaryEvalExecutionQueue.getShardNames(),
-    getInstance: (shard) =>
-      SecondaryEvalExecutionQueue.getInstance({ shardName: shard }),
+    getInstance: (shard) => SecondaryEvalExecutionQueue.getInstance({ shardName: shard }),
   },
   {
     baseQueueName: QueueName.LLMAsJudgeExecution,
     getShardNames: () => LLMAsJudgeExecutionQueue.getShardNames(),
-    getInstance: (shard) =>
-      LLMAsJudgeExecutionQueue.getInstance({ shardName: shard }),
+    getInstance: (shard) => LLMAsJudgeExecutionQueue.getInstance({ shardName: shard }),
   },
   {
     baseQueueName: QueueName.CodeEvalExecution,
     getShardNames: () => CodeEvalExecutionQueue.getShardNames(),
-    getInstance: (shard) =>
-      CodeEvalExecutionQueue.getInstance({ shardName: shard }),
+    getInstance: (shard) => CodeEvalExecutionQueue.getInstance({ shardName: shard }),
   },
 ];
 
-export const SHARDED_QUEUE_BASE_NAMES = new Set<QueueName>(
-  SHARDED_QUEUES.map((q) => q.baseQueueName),
-);
+export const SHARDED_QUEUE_BASE_NAMES = new Set<QueueName>(SHARDED_QUEUES.map((q) => q.baseQueueName));
 
 /**
  * Resolve a queue name (possibly a shard name like "ingestion-queue-1") to its

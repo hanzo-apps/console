@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { removeEmptyEnvVariables } from "./utils/environment";
+import { applyDatastoreEnvBackCompat, removeEmptyEnvVariables } from "./utils/environment";
 
 const EnvSchema = z.object({
   NEXT_PUBLIC_HANZO_CLOUD_REGION: z.string().optional(),
@@ -247,4 +247,4 @@ export type SharedEnv = z.infer<typeof EnvSchema>;
 export const env: SharedEnv =
   process.env.DOCKER_BUILD === "1" // eslint-disable-line turbo/no-undeclared-env-vars
     ? (process.env as any)
-    : EnvSchema.parse(removeEmptyEnvVariables(process.env));
+    : EnvSchema.parse(applyDatastoreEnvBackCompat(removeEmptyEnvVariables(process.env)));

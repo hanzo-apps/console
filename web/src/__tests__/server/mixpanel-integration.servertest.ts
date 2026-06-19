@@ -38,7 +38,7 @@ const buildSession = (orgId: string, projectId: string): Session => ({
     ],
     featureFlags: {
       templateFlag: true,
-      excludeClickhouseRead: false,
+      excludeDatastoreRead: false,
     },
     admin: true,
   },

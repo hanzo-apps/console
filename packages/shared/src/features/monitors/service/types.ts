@@ -1,18 +1,13 @@
 /** service/types.ts contains the DTOs, schemas, and errors for the MonitorService. */
 import { z } from "zod";
 
-import { LangfuseNotFoundError } from "../../../errors";
+import { ConsoleNotFoundError } from "../../../errors";
 import { paginationZod } from "../../../utils/zod";
 
-import {
-  MonitorSchema,
-  MonitorWriteStatusSchema,
-  validateQuery,
-  validateThresholdOrder,
-} from "../types";
+import { MonitorSchema, MonitorWriteStatusSchema, validateQuery, validateThresholdOrder } from "../types";
 
 /** MonitorNotFoundError is thrown when a monitor row doesn't exist in the project. */
-export class MonitorNotFoundError extends LangfuseNotFoundError {
+export class MonitorNotFoundError extends ConsoleNotFoundError {
   constructor(monitorId: string, projectId: string) {
     super(`Monitor ${monitorId} not found in project ${projectId}`);
   }

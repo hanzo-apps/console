@@ -101,8 +101,8 @@ export const dashboardColumnDefinitions: UiColumnMappings = [
     aliases: ["Tool Names"],
   },
   {
-    clickhouseTableName: "observations",
-    clickhouseSelect: "tool_call_names",
+    datastoreTableName: "observations",
+    datastoreSelect: "tool_call_names",
     uiTableId: "calledToolNames",
     uiTableName: "Tool Names (Called)",
   },

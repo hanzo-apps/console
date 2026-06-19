@@ -6,6 +6,40 @@ import { withSentryConfig } from "@sentry/nextjs";
 import { env } from "./src/env.mjs";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import { scheduleCronJob } from "./src/server/serverCron.mjs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// The shared workspace package is published as `@hanzo/console-core`, but a large
+// amount of code still imports it under its historical `@hanzo/shared` name and the
+// even older upstream `@langfuse/shared` name (the @langfuse/* -> @hanzo/* brand
+// rename is still in flight). Turbopack resolves `@hanzo/shared` via
+// `turbopack.resolveAlias` above; the webpack production build (`next build
+// --webpack`) needs equivalent aliases. Point every shared subpath (both legacy
+// names) at the shared package's TS SOURCE — identical to the turbopack alias — so
+// `transpilePackages` recompiles it ESM-aware (the prebuilt CJS dist re-require()s
+// ESM-only deps like uuid, which webpack rejects).
+const sharedSrc = path.resolve(__dirname, "../packages/shared/src");
+const aliasForPrefix = (prefix) => ({
+  [`${prefix}/src/server/auth/apiKeys`]: path.join(sharedSrc, "server/auth/apiKeys.ts"),
+  [`${prefix}/src/server`]: path.join(sharedSrc, "server/index.ts"),
+  [`${prefix}/src/db`]: path.join(sharedSrc, "db.ts"),
+  [`${prefix}/src/env`]: path.join(sharedSrc, "env.ts"),
+  [`${prefix}/src/utils/chatml`]: path.join(sharedSrc, "utils/chatml/index.ts"),
+  [`${prefix}/src/index`]: path.join(sharedSrc, "index.ts"),
+  [`${prefix}/encryption`]: path.join(sharedSrc, "encryption/index.ts"),
+  [`${prefix}$`]: path.join(sharedSrc, "index.ts"),
+});
+const sharedAlias = {
+  ...aliasForPrefix("@hanzo/console-core"),
+  ...aliasForPrefix("@hanzo/shared"),
+  ...aliasForPrefix("@langfuse/shared"),
+  // The query subsystem (dataModel, queryBuilder, queryExecutor, types, validateQuery)
+  // moved out of web into the shared package, but a number of web modules still import
+  // it under its old web-local `@/src/features/query` path. Redirect to the shared
+  // source so both names resolve to one implementation.
+  "@/src/features/query": path.join(sharedSrc, "features/query"),
+};
 
 /**
  * CSP headers
@@ -64,7 +98,7 @@ const nextConfig = {
   // Agent/browser tooling often targets 127.0.0.1 instead of localhost in dev.
   allowedDevOrigins: ["127.0.0.1"],
   staticPageGenerationTimeout: 500, // default is 60. Required for build process for amd
-  transpilePackages: ["@hanzo/shared", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
+  transpilePackages: ["@hanzo/shared", "@langfuse/shared", "@hanzo/console-core", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
   reactStrictMode: true,
   serverExternalPackages: [
     "dd-trace",
@@ -248,6 +282,11 @@ const nextConfig = {
   },
 
   webpack(config, { isServer, webpack }) {
+    // Resolve the historical `@hanzo/shared` package name to the built shared
+    // package (real name `@hanzo/console-core`) for the webpack production build.
+    config.resolve = config.resolve || {};
+    config.resolve.alias = { ...(config.resolve.alias || {}), ...sharedAlias };
+
     // Exclude Datadog packages from webpack bundling to avoid issues
     // see: https://docs.datadoghq.com/tracing/trace_collection/automatic_instrumentation/dd_libraries/nodejs/#bundling-with-nextjs
     config.externals.push("@datadog/pprof", "dd-trace");
@@ -302,4 +341,8 @@ const sentryConfig =
         automaticVercelMonitors: false,
       });
 
-export default sentryConfig;
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
+export default withBundleAnalyzer(sentryConfig);

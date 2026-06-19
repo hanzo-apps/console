@@ -17,7 +17,7 @@ describe("tRPC error formatting", () => {
     } as Session;
 
     const formatterTestRouter = createTRPCRouter({
-      clickhouse: protectedProcedureWithoutTracing
+      datastore: protectedProcedureWithoutTracing
         .input(z.object({}))
         .query(() => {
           throw new ClickHouseResourceError(
@@ -40,7 +40,7 @@ describe("tRPC error formatting", () => {
 
     let error: TRPCError | undefined;
     try {
-      await caller.clickhouse({});
+      await caller.datastore({});
     } catch (caught) {
       error = caught as TRPCError;
     }

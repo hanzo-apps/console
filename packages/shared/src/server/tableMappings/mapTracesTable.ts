@@ -103,8 +103,8 @@ export const tracesTableUiColumnDefinitions: UiColumnMappings = [
     // Alias for tags so canonical traceTags filters work on the traces table too.
     uiTableName: "Trace Tags",
     uiTableId: "traceTags",
-    clickhouseTableName: "traces",
-    clickhouseSelect: "tags",
+    datastoreTableName: "traces",
+    datastoreSelect: "tags",
     queryPrefix: "t",
   },
   {

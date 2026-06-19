@@ -137,17 +137,17 @@ export function createPublicApiObservationsColumnMapping(
     tableName === "events_proto"
       ? {
           id: "userId",
-          clickhouseSelect: "user_id",
+          datastoreSelect: "user_id",
           filterType: "StringFilter",
-          clickhouseTable: tableName,
-          clickhousePrefix: tablePrefix,
+          datastoreTable: tableName,
+          datastorePrefix: tablePrefix,
         }
       : {
           id: "userId",
-          clickhouseSelect: "user_id",
+          datastoreSelect: "user_id",
           filterType: "StringFilter",
-          clickhouseTable: "traces",
-          clickhousePrefix: "t",
+          datastoreTable: "traces",
+          datastorePrefix: "t",
         };
   return [
     {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { Job } from "bullmq";
+import { Job } from "@hanzo/mq";
 
 vi.mock("@langfuse/shared/src/server", () => ({
   ExperimentCreateQueue: {
@@ -24,8 +24,8 @@ vi.mock("../../features/utils", () => ({
   retryLLMRateLimitError: vi.fn(),
 }));
 
-vi.mock("../../features/experiments/experimentServiceClickhouse", () => ({
-  createExperimentJobClickhouse: vi.fn(),
+vi.mock("../../features/experiments/experimentServiceDatastore", () => ({
+  createExperimentJobDatastore: vi.fn(),
 }));
 
 vi.mock("../../errors/UnrecoverableError", async () => {
@@ -37,7 +37,7 @@ vi.mock("../../errors/UnrecoverableError", async () => {
 });
 
 import { isLLMCompletionError } from "@langfuse/shared/src/server";
-import { createExperimentJobClickhouse } from "../../features/experiments/experimentServiceClickhouse";
+import { createExperimentJobDatastore } from "../../features/experiments/experimentServiceDatastore";
 import { retryLLMRateLimitError } from "../../features/utils";
 import { experimentCreateQueueProcessor } from "../experimentQueue";
 import { isUnrecoverableError } from "../../errors/UnrecoverableError";
@@ -62,15 +62,13 @@ describe("experimentCreateQueueProcessor", () => {
   it("rethrows retryable LLM errors when the retry queue is unavailable", async () => {
     const llmError = new Error("Rate limit exceeded");
     (llmError as Error & { isRetryable: boolean }).isRetryable = true;
-    (createExperimentJobClickhouse as Mock).mockRejectedValue(llmError);
+    (createExperimentJobDatastore as Mock).mockRejectedValue(llmError);
     (isLLMCompletionError as Mock).mockReturnValue(true);
     (retryLLMRateLimitError as Mock).mockResolvedValue({
       outcome: "queue_unavailable",
     });
 
-    await expect(
-      experimentCreateQueueProcessor(createMockJob()),
-    ).rejects.toThrow("Rate limit exceeded");
+    await expect(experimentCreateQueueProcessor(createMockJob())).rejects.toThrow("Rate limit exceeded");
 
     expect(retryLLMRateLimitError).toHaveBeenCalledWith(
       expect.objectContaining({

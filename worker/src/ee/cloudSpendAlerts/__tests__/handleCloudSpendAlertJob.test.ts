@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Job } from "bullmq";
+import type { Job } from "@hanzo/mq";
 
 const {
   mockOrganizationFindFirst,
@@ -95,13 +95,9 @@ describe("handleCloudSpendAlertJob", () => {
       }),
     );
 
-    await expect(
-      handleCloudSpendAlertJob(createJob()),
-    ).resolves.toBeUndefined();
+    await expect(handleCloudSpendAlertJob(createJob())).resolves.toBeUndefined();
 
-    expect(mockLoggerWarn).toHaveBeenCalledWith(
-      "[CLOUD SPEND ALERTS] Stripe customer id not found for org org-1",
-    );
+    expect(mockLoggerWarn).toHaveBeenCalledWith("[CLOUD SPEND ALERTS] Stripe customer id not found for org org-1");
     expect(mockTraceException).not.toHaveBeenCalled();
     expect(mockLoggerError).not.toHaveBeenCalled();
     expect(mockRecordIncrement).toHaveBeenCalledWith(
@@ -124,13 +120,9 @@ describe("handleCloudSpendAlertJob", () => {
       }),
     );
 
-    await expect(
-      handleCloudSpendAlertJob(createJob()),
-    ).resolves.toBeUndefined();
+    await expect(handleCloudSpendAlertJob(createJob())).resolves.toBeUndefined();
 
-    expect(mockLoggerWarn).toHaveBeenCalledWith(
-      "[CLOUD SPEND ALERTS] Stripe subscription id not found for org org-1",
-    );
+    expect(mockLoggerWarn).toHaveBeenCalledWith("[CLOUD SPEND ALERTS] Stripe subscription id not found for org org-1");
     expect(mockTraceException).not.toHaveBeenCalled();
     expect(mockLoggerError).not.toHaveBeenCalled();
     expect(mockRecordIncrement).toHaveBeenCalledWith(

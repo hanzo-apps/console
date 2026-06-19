@@ -1,13 +1,15 @@
 import { useEffect, useMemo } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { DataTableControlsProvider, DataTableControls } from "@/src/components/table/data-table-controls";
+import {
+  DataTableControlsProvider,
+  DataTableControls,
+} from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import TableLink from "@/src/components/table/table-link";
 import { type ConsoleColumnDef } from "@/src/components/table/types";
 import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
 import { DeletePrompt } from "@/src/features/prompts/components/delete-prompt";
 import { DeleteFolder } from "@/src/features/prompts/components/delete-folder";
-import { DuplicateFolder } from "@/src/features/prompts/components/duplicate-folder";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { api } from "@/src/utils/api";
 import { type RouterOutput } from "@/src/utils/types";
@@ -17,6 +19,7 @@ import { useQueryFilterState } from "@/src/features/filters/hooks/useFilterState
 import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFilterState";
 import { promptFilterConfig } from "@/src/features/filters/config/prompts-config";
 import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
+import { createColumnHelper } from "@tanstack/react-table";
 import { joinTableCoreAndMetrics } from "@/src/components/table/utils/joinTableCoreAndMetrics";
 import { Skeleton } from "@hanzo/ui";
 import { useDebounce } from "@/src/hooks/useDebounce";
@@ -58,19 +61,8 @@ function createRow(
 }
 
 export function PromptTable() {
-  const projectId = useProjectIdFromURL() ?? "";
+  const projectId = useProjectIdFromURL();
   const { setDetailPageList } = useDetailPageLists();
-  const promptMetricsTimeWindow = useMemo(() => {
-    const today = new Date();
-
-    const fromTimestamp = new Date(today);
-    fromTimestamp.setDate(fromTimestamp.getDate() - 7);
-    fromTimestamp.setHours(0, 0, 0, 0);
-
-    const toTimestamp = today;
-
-    return { fromTimestamp, toTimestamp };
-  }, []);
 
   const [filterState] = useQueryFilterState([], "prompts", projectId);
 
@@ -87,7 +79,8 @@ export function PromptTable() {
     setPaginationAndFolderState,
   } = useFolderPagination();
 
-  const { searchQuery, searchType, setSearchQuery, setSearchType } = useFullTextSearch();
+  const { searchQuery, searchType, setSearchQuery, setSearchType } =
+    useFullTextSearch();
 
   // Reset pagination when search query changes
   useEffect(() => {
@@ -99,7 +92,7 @@ export function PromptTable() {
     {
       page: paginationState.pageIndex,
       limit: paginationState.pageSize,
-      projectId,
+      projectId: projectId as string, // Typecast as query is enabled only when projectId is present
       filter: filterState,
       orderBy: orderByState,
       pathPrefix: currentFolderPath,
@@ -118,10 +111,14 @@ export function PromptTable() {
   const promptMetrics = api.prompts.metrics.useQuery(
     {
       projectId: projectId as string,
-      promptNames: prompts.data?.prompts.map((p) => buildFullPath(currentFolderPath, p.name)) ?? [],
+      promptNames:
+        prompts.data?.prompts.map((p) =>
+          buildFullPath(currentFolderPath, p.name),
+        ) ?? [],
     },
     {
-      enabled: Boolean(projectId) && prompts.data && prompts.data.totalCount > 0,
+      enabled:
+        Boolean(projectId) && prompts.data && prompts.data.totalCount > 0,
       trpc: {
         context: {
           skipBatch: true,
@@ -153,16 +150,11 @@ export function PromptTable() {
     const combinedRows: PromptTableRow[] = [];
 
     for (const prompt of promptsRowData.rows) {
-      const isFolder = prompt.row_type === "folder";
+      const isFolder = (prompt as { row_type?: string }).row_type === "folder";
       const fullPath = prompt.id; // id now contains the full path (used for metrics join)
       // Extract just the name portion (last segment) for display
       const itemName = fullPath.split("/").pop() ?? fullPath;
-      const type =
-        isFolder || prompt.type === "folder"
-          ? "folder"
-          : prompt.type === "chat"
-            ? "chat"
-            : "text";
+      const type = isFolder ? "folder" : (prompt.type as "text" | "chat");
 
       combinedRows.push(
         createRow({
@@ -191,7 +183,7 @@ export function PromptTable() {
 
   const promptFilterOptions = api.prompts.filterOptions.useQuery(
     {
-      projectId,
+      projectId: projectId as string,
     },
     {
       trpc: {
@@ -214,22 +206,20 @@ export function PromptTable() {
       type: ["text", "chat"],
       labels:
         promptFilterOptions.data?.labels?.map((l) => {
+          // API type says { value: string }[], but for some items, there is an optional count
+          const item = l as { value: string; count?: number };
           return {
-            value: l.value,
-            count:
-              "count" in l && l.count !== undefined
-                ? Number(l.count)
-                : undefined,
+            value: item.value,
+            count: item.count !== undefined ? Number(item.count) : undefined,
           };
         }) ?? undefined,
       tags:
         promptFilterOptions.data?.tags?.map((t) => {
+          // API type says { value: string }[], but for some items, there is an optional count
+          const item = t as { value: string; count?: number };
           return {
-            value: t.value,
-            count:
-              "count" in t && t.count !== undefined
-                ? Number(t.count)
-                : undefined,
+            value: item.value,
+            count: item.count !== undefined ? Number(item.count) : undefined,
           };
         }) ?? undefined,
       version: [],
@@ -240,11 +230,8 @@ export function PromptTable() {
   const queryFilter = useSidebarFilterState(
     promptFilterConfig,
     newFilterOptions,
-    {
-      loading: promptFilterOptions.isPending,
-      stateLocation: "urlAndSessionStorage",
-      sessionFilterContextId: projectId ?? null,
-    },
+    projectId,
+    promptFilterOptions.isPending,
   );
 
   useEffect(() => {
@@ -257,19 +244,24 @@ export function PromptTable() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompts.isSuccess, prompts.data]);
 
-  const promptColumns: LangfuseColumnDef<PromptTableRow>[] = [
-    {
-      accessorKey: "name",
+  const columnHelper = createColumnHelper<PromptTableRow>();
+  const promptColumns = [
+    columnHelper.accessor("name", {
       header: "Name",
       id: "name",
       enableSorting: true,
       size: 250,
-      cell: ({ getValue, row }) => {
-        const name = getValue<string>();
-        const rowData = row.original;
+      cell: (row) => {
+        const name = row.getValue();
+        const rowData = row.row.original;
 
         if (rowData.type === "folder") {
-          return <FolderBreadcrumbLink name={name} onClick={() => navigateToFolder(rowData.fullPath)} />;
+          return (
+            <FolderBreadcrumbLink
+              name={name}
+              onClick={() => navigateToFolder(rowData.fullPath)}
+            />
+          );
         }
 
         return name ? (
@@ -280,48 +272,48 @@ export function PromptTable() {
           />
         ) : undefined;
       },
-    },
-    {
-      accessorKey: "version",
+    }),
+    columnHelper.accessor("version", {
       header: "Versions",
       id: "version",
       enableSorting: true,
       size: 70,
-      cell: ({ getValue, row }) => {
-        if (row.original.type === "folder") return null;
-        return getValue<number | undefined>();
+      cell: (row) => {
+        if (row.row.original.type === "folder") return null;
+        return row.getValue();
       },
-    },
-    {
-      accessorKey: "type",
+    }),
+    columnHelper.accessor("type", {
       header: "Type",
       id: "type",
       enableSorting: true,
       size: 60,
-    },
-    {
-      accessorKey: "createdAt",
+      cell: (row) => {
+        return row.getValue();
+      },
+    }),
+    columnHelper.accessor("createdAt", {
       header: "Latest Version Created At",
       id: "createdAt",
       enableSorting: true,
       size: 200,
-      cell: ({ getValue, row }) => {
-        if (row.original.type === "folder") return null;
-        const createdAt = getValue<Date | undefined>();
+      cell: (row) => {
+        if (row.row.original.type === "folder") return null;
+        const createdAt = row.getValue();
         return createdAt ? <LocalIsoDate date={createdAt} /> : null;
       },
-    },
-    {
-      accessorKey: "numberOfObservations",
-      header: "Number of Observations (7d)",
-      id: "numberOfObservations",
+    }),
+    columnHelper.accessor("numberOfObservations", {
+      header: "Number of Observations",
       size: 170,
-      cell: ({ getValue, row }) => {
-        if (row.original.type === "folder") return null;
+      cell: (row) => {
+        if (row.row.original.type === "folder") return null;
 
         const numberOfObservations = row.getValue();
         const promptPath = row.row.original.fullPath;
-        const filter = encodeURIComponent(`promptName;stringOptions;;any of;${promptPath}`);
+        const filter = encodeURIComponent(
+          `promptName;stringOptions;;any of;${promptPath}`,
+        );
         if (!promptMetrics.isSuccess) {
           return <Skeleton className="h-3 w-1/2" />;
         }
@@ -332,29 +324,28 @@ export function PromptTable() {
           />
         );
       },
-    },
-    {
-      accessorKey: "tags",
+    }),
+    columnHelper.accessor("tags", {
       header: "Tags",
       id: "tags",
       enableSorting: true,
       size: 120,
-      cell: ({ getValue, row }) => {
+      cell: (row) => {
         // height h-6 to ensure consistent row height for normal & folder rows
-        if (row.original.type === "folder") return <div className="h-6" />;
+        if (row.row.original.type === "folder") return <div className="h-6" />;
 
-        const tags = getValue<string[] | undefined>();
-        const promptPath = row.original.fullPath;
+        const tags = row.getValue();
+        const promptPath = row.row.original.fullPath;
         return (
           <TagPromptPopover
             tags={tags ?? []}
             availableTags={allTags}
-            projectId={projectId}
+            projectId={projectId as string}
             promptName={promptPath}
             promptsFilter={{
               page: 0,
               limit: 50,
-              projectId,
+              projectId: projectId as string,
               filter: filterState,
               orderBy: orderByState,
             }}
@@ -362,22 +353,15 @@ export function PromptTable() {
         );
       },
       enableHiding: true,
-    },
-    {
-      accessorKey: "id",
+    }),
+    columnHelper.display({
       id: "actions",
       header: "Actions",
       size: 70,
-      enableSorting: false,
-      cell: ({ row }) => {
-        const rowData = row.original;
+      cell: (row) => {
+        const rowData = row.row.original;
         if (rowData.type === "folder") {
-          return (
-            <div className="flex gap-1">
-              <DuplicateFolder folderPath={rowData.fullPath} />
-              <DeleteFolder folderPath={rowData.fullPath} />
-            </div>
-          );
+          return <DeleteFolder folderPath={rowData.fullPath} />;
         }
 
         const promptPath = rowData.fullPath;
@@ -394,7 +378,10 @@ export function PromptTable() {
       <div className="flex h-full w-full flex-col">
         {/* Toolbar spanning full width */}
         {currentFolderPath && (
-          <FolderBreadcrumb currentFolderPath={currentFolderPath} navigateToFolder={navigateToFolder} />
+          <FolderBreadcrumb
+            currentFolderPath={currentFolderPath}
+            navigateToFolder={navigateToFolder}
+          />
         )}
         <DataTableToolbar
           columns={promptColumns}
@@ -412,11 +399,6 @@ export function PromptTable() {
               fullText: "Full Text",
             },
             hidePerformanceWarning: true,
-            availableSearchTypes: {
-              content: true,
-              input: false,
-              output: false,
-            },
           }}
         />
 
@@ -460,7 +442,6 @@ export function PromptTable() {
                 onChange: setPaginationAndFolderState,
                 state: paginationState,
               }}
-              cellPadding="comfortable"
             />
           </div>
         </ResizableFilterLayout>

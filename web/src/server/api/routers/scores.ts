@@ -3,8 +3,14 @@ import { z } from "zod";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { composeAggregateScoreKey } from "@/src/features/scores/lib/aggregateScores";
-import { getDateFromOption, SelectedTimeOptionSchema } from "@/src/utils/date-range-utils";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
+import {
+  getDateFromOption,
+  SelectedTimeOptionSchema,
+} from "@/src/utils/date-range-utils";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
 import {
   orderBy,
   paginationZod,
@@ -40,7 +46,7 @@ import {
   logger,
   getTraceById,
   getScoreById,
-  convertDateToClickhouseDateTime,
+  convertDateToDatastoreDateTime,
   searchExistingAnnotationScore,
   hasAnyScore,
   ScoreDeleteQueue,
@@ -55,7 +61,10 @@ import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEnti
 import { createBatchActionJob } from "@/src/features/table/server/createBatchActionJob";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { isNumericDataType, isTraceScore } from "@/src/features/scores/lib/helpers";
+import {
+  isNumericDataType,
+  isTraceScore,
+} from "@/src/features/scores/lib/helpers";
 import { toDomainWithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 
 const ScoreFilterOptions = z.object({
@@ -81,58 +90,64 @@ export const scoresRouter = createTRPCRouter({
   /**
    * Get all scores for a project, meant for internal use and *excludes metadata of scores*
    */
-  all: protectedProjectProcedure.input(ScoreAllOptions).query(async ({ input, ctx }) => {
-    const clickhouseScoreData = await getScoresUiTable({
-      projectId: input.projectId,
-      filter: input.filter ?? [],
-      orderBy: input.orderBy,
-      limit: input.limit,
-      offset: input.page * input.limit,
-      excludeMetadata: true,
-      includeHasMetadataFlag: true,
-    });
+  all: protectedProjectProcedure
+    .input(ScoreAllOptions)
+    .query(async ({ input, ctx }) => {
+      const datastoreScoreData = await getScoresUiTable({
+        projectId: input.projectId,
+        filter: input.filter ?? [],
+        orderBy: input.orderBy,
+        limit: input.limit,
+        offset: input.page * input.limit,
+        excludeMetadata: true,
+        includeHasMetadataFlag: true,
+      });
 
-    const [jobExecutions, users] = await Promise.all([
-      ctx.prisma.jobExecution.findMany({
-        where: {
-          projectId: input.projectId,
-          jobOutputScoreId: {
-            in: clickhouseScoreData.map((score) => score.id),
+      const [jobExecutions, users] = await Promise.all([
+        ctx.prisma.jobExecution.findMany({
+          where: {
+            projectId: input.projectId,
+            jobOutputScoreId: {
+              in: datastoreScoreData.map((score) => score.id),
+            },
           },
-        },
-        select: {
-          id: true,
-          jobConfigurationId: true,
-          jobOutputScoreId: true,
-        },
-      }),
-      ctx.prisma.user.findMany({
-        where: {
-          id: {
-            in: clickhouseScoreData.map((score) => score.authorUserId).filter((s): s is string => Boolean(s)),
+          select: {
+            id: true,
+            jobConfigurationId: true,
+            jobOutputScoreId: true,
           },
-        },
-        select: {
-          id: true,
-          name: true,
-          image: true,
-        },
-      }),
-    ]);
+        }),
+        ctx.prisma.user.findMany({
+          where: {
+            id: {
+              in: datastoreScoreData
+                .map((score) => score.authorUserId)
+                .filter((s): s is string => Boolean(s)),
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        }),
+      ]);
 
-    return {
-      scores: clickhouseScoreData.map<AllScoresReturnType>((score) => {
-        const jobExecution = jobExecutions.find((je) => je.jobOutputScoreId === score.id);
-        const user = users.find((u) => u.id === score.authorUserId);
-        return {
-          ...score,
-          jobConfigurationId: jobExecution?.jobConfigurationId ?? null,
-          authorUserImage: user?.image ?? null,
-          authorUserName: user?.name ?? null,
-        };
-      }),
-    };
-  }),
+      return {
+        scores: datastoreScoreData.map<AllScoresReturnType>((score) => {
+          const jobExecution = jobExecutions.find(
+            (je) => je.jobOutputScoreId === score.id,
+          );
+          const user = users.find((u) => u.id === score.authorUserId);
+          return {
+            ...score,
+            jobConfigurationId: jobExecution?.jobConfigurationId ?? null,
+            authorUserImage: user?.image ?? null,
+            authorUserName: user?.name ?? null,
+          };
+        }),
+      };
+    }),
   byId: protectedProjectProcedure
     .input(
       z.object({
@@ -148,24 +163,26 @@ export const scoresRouter = createTRPCRouter({
       if (!score) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: `No score with id ${input.scoreId} in project ${input.projectId} in Clickhouse`,
+          message: `No score with id ${input.scoreId} in project ${input.projectId} in Datastore`,
         });
       }
       return toDomainWithStringifiedMetadata(score);
     }),
-  countAll: protectedProjectProcedure.input(ScoreAllOptions).query(async ({ input }) => {
-    const clickhouseScoreData = await getScoresUiCount({
-      projectId: input.projectId,
-      filter: input.filter ?? [],
-      orderBy: input.orderBy,
-      limit: 1,
-      offset: 0,
-    });
+  countAll: protectedProjectProcedure
+    .input(ScoreAllOptions)
+    .query(async ({ input }) => {
+      const datastoreScoreData = await getScoresUiCount({
+        projectId: input.projectId,
+        filter: input.filter ?? [],
+        orderBy: input.orderBy,
+        limit: 1,
+        offset: 0,
+      });
 
-    return {
-      totalCount: clickhouseScoreData,
-    };
-  }),
+      return {
+        totalCount: datastoreScoreData,
+      };
+    }),
   filterOptions: protectedProjectProcedure
     .input(
       z.object({
@@ -175,22 +192,27 @@ export const scoresRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       const { timestampFilter } = input;
-      const [names, tags, traceNames, userIds, stringValues] = await Promise.all([
-        getScoreNames(input.projectId, timestampFilter ?? []),
-        getTracesGroupedByTags({
-          projectId: input.projectId,
-          filter: timestampFilter ?? [],
-        }),
-        getTracesGroupedByName(input.projectId, tracesTableUiColumnDefinitions, timestampFilter ?? []),
-        getTracesGroupedByUsers(
-          input.projectId,
-          timestampFilter ?? [],
-          undefined,
-          100, // limit to top 100 users
-          0,
-        ),
-        getScoreStringValues(input.projectId, timestampFilter ?? []),
-      ]);
+      const [names, tags, traceNames, userIds, stringValues] =
+        await Promise.all([
+          getScoreNames(input.projectId, timestampFilter ?? []),
+          getTracesGroupedByTags({
+            projectId: input.projectId,
+            filter: timestampFilter ?? [],
+          }),
+          getTracesGroupedByName(
+            input.projectId,
+            tracesTableUiColumnDefinitions,
+            timestampFilter ?? [],
+          ),
+          getTracesGroupedByUsers(
+            input.projectId,
+            timestampFilter ?? [],
+            undefined,
+            100, // limit to top 100 users
+            0,
+          ),
+          getScoreStringValues(input.projectId, timestampFilter ?? []),
+        ]);
 
       return {
         name: names.map((i) => ({ value: i.name, count: i.count })),
@@ -206,7 +228,10 @@ export const scoresRouter = createTRPCRouter({
   deleteMany: protectedProjectProcedure
     .input(
       z.object({
-        scoreIds: z.array(z.string()).min(1, "Minimum 1 scoreId is required.").nullable(),
+        scoreIds: z
+          .array(z.string())
+          .min(1, "Minimum 1 scoreId is required.")
+          .nullable(),
         projectId: z.string(),
         query: BatchActionQuerySchema.optional(),
         isBatchAction: z.boolean().default(false),
@@ -267,176 +292,20 @@ export const scoresRouter = createTRPCRouter({
         });
       }
       throw new TRPCError({
-        message: "Either batchAction or scoreIds must be provided to delete scores.",
+        message:
+          "Either batchAction or scoreIds must be provided to delete scores.",
         code: "BAD_REQUEST",
       });
     }),
-  createAnnotationScore: protectedProjectProcedure.input(CreateAnnotationScoreData).mutation(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "scores:CUD",
-    });
-
-    const inflatedParams = isTraceScore(input.scoreTarget)
-      ? {
-          observationId: input.scoreTarget.observationId ?? null,
-          traceId: input.scoreTarget.traceId,
-          sessionId: null,
-        }
-      : {
-          observationId: null,
-          traceId: null,
-          sessionId: input.scoreTarget.sessionId,
-        };
-
-    if (inflatedParams.traceId) {
-      const clickhouseTrace = await getTraceById({
-        traceId: inflatedParams.traceId,
+  createAnnotationScore: protectedProjectProcedure
+    .input(CreateAnnotationScoreData)
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
         projectId: input.projectId,
-        clickhouseFeatureTag: "annotations-trpc",
+        scope: "scores:CUD",
       });
 
-      if (!clickhouseTrace) {
-        logger.error(`No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Clickhouse`);
-        throw new HanzoNotFoundError(
-          `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Clickhouse`,
-        );
-      }
-    } else if (inflatedParams.sessionId) {
-      // We consider no longer writing all sessions into postgres, hence we should search for traces with the session id
-      const traceIdentifiers = await getTracesIdentifierForSession(input.projectId, inflatedParams.sessionId);
-      if (traceIdentifiers.length === 0) {
-        logger.error(
-          `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Clickhouse`,
-        );
-        throw new HanzoNotFoundError(
-          `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Clickhouse`,
-        );
-      }
-    }
-
-    const clickhouseScore = await searchExistingAnnotationScore(
-      input.projectId,
-      inflatedParams.observationId,
-      inflatedParams.traceId,
-      inflatedParams.sessionId,
-      input.name,
-      input.configId,
-      input.dataType,
-    );
-
-    const timestamp = input.timestamp ?? new Date();
-
-    const score = !!clickhouseScore
-      ? {
-          ...clickhouseScore,
-          value: input.value,
-          stringValue: input.stringValue ?? null,
-          comment: input.comment ?? null,
-          metadata: {},
-          authorUserId: ctx.session.user.id,
-          queueId: input.queueId ?? null,
-          timestamp,
-        }
-      : {
-          id: input.id ?? v4(),
-          projectId: input.projectId,
-          environment: input.environment ?? "default",
-          ...inflatedParams,
-          // only trace and session scores are supported for annotation
-          datasetRunId: null,
-          value: input.value,
-          stringValue: input.stringValue ?? null,
-          dataType: input.dataType ?? null,
-          configId: input.configId ?? null,
-          name: input.name,
-          comment: input.comment ?? null,
-          metadata: {},
-          authorUserId: ctx.session.user.id,
-          source: ScoreSourceEnum.ANNOTATION,
-          queueId: input.queueId ?? null,
-          executionTraceId: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          timestamp,
-        };
-
-    await upsertScore({
-      id: score.id, // Reuse ID that was generated by Prisma
-      timestamp: convertDateToClickhouseDateTime(timestamp),
-      project_id: input.projectId,
-      environment: input.environment ?? "default",
-      trace_id: inflatedParams.traceId,
-      observation_id: inflatedParams.observationId,
-      session_id: inflatedParams.sessionId,
-      name: input.name,
-      value: input.value,
-      source: ScoreSourceEnum.ANNOTATION,
-      comment: input.comment,
-      author_user_id: ctx.session.user.id,
-      config_id: input.configId,
-      data_type: input.dataType,
-      string_value: input.stringValue,
-      queue_id: input.queueId,
-      created_at: convertDateToClickhouseDateTime(score.createdAt),
-      updated_at: convertDateToClickhouseDateTime(score.updatedAt),
-      metadata: score.metadata as Record<string, string>,
-    });
-
-    await auditLog({
-      session: ctx.session,
-      resourceType: "score",
-      resourceId: score.id,
-      action: "create",
-      after: score,
-    });
-
-    return validateDbScore(score);
-  }),
-  updateAnnotationScore: protectedProjectProcedure.input(UpdateAnnotationScoreData).mutation(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "scores:CUD",
-    });
-
-    let updatedScore: ScoreDomain | null | undefined = null;
-
-    // Fetch the current score from Clickhouse
-    const score = await getScoreById({
-      projectId: input.projectId,
-      scoreId: input.id,
-      source: ScoreSourceEnum.ANNOTATION,
-    });
-
-    if (!score) {
-      // Clickhouse is eventually consistent; if client provided timestamp, we can upsert along the ordering key
-      if (!input.timestamp) {
-        logger.warn(
-          `No annotation score with id ${input.id} in project ${input.projectId} in Clickhouse, and no timestamp provided`,
-        );
-        throw new HanzoNotFoundError(
-          `No annotation score with id ${input.id} in project ${input.projectId} in Clickhouse`,
-        );
-      }
-
-      logger.info(
-        `Score ${input.id} not found in ClickHouse for project ${input.projectId}, upserting with provided timestamp`,
-      );
-
-      // Validate config if provided
-      const config = await ctx.prisma.scoreConfig.findFirst({
-        where: {
-          id: input.configId,
-          projectId: input.projectId,
-        },
-      });
-      if (!config) {
-        throw new HanzoNotFoundError(`No score config with id ${input.configId} in project ${input.projectId}`);
-      }
-
-      // Upsert with provided data
       const inflatedParams = isTraceScore(input.scoreTarget)
         ? {
             observationId: input.scoreTarget.observationId ?? null,
@@ -450,36 +319,85 @@ export const scoresRouter = createTRPCRouter({
           };
 
       if (inflatedParams.traceId) {
-        const clickhouseTrace = await getTraceById({
+        const datastoreTrace = await getTraceById({
           traceId: inflatedParams.traceId,
           projectId: input.projectId,
-          clickhouseFeatureTag: "annotations-trpc",
+          datastoreFeatureTag: "annotations-trpc",
         });
 
-        if (!clickhouseTrace) {
-          logger.error(`No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Clickhouse`);
+        if (!datastoreTrace) {
+          logger.error(
+            `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
+          );
           throw new HanzoNotFoundError(
-            `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Clickhouse`,
+            `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
           );
         }
       } else if (inflatedParams.sessionId) {
         // We consider no longer writing all sessions into postgres, hence we should search for traces with the session id
-        const traceIdentifiers = await getTracesIdentifierForSession(input.projectId, inflatedParams.sessionId);
+        const traceIdentifiers = await getTracesIdentifierForSession(
+          input.projectId,
+          inflatedParams.sessionId,
+        );
         if (traceIdentifiers.length === 0) {
           logger.error(
-            `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Clickhouse`,
+            `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
           );
           throw new HanzoNotFoundError(
-            `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Clickhouse`,
+            `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
           );
         }
       }
 
-      const timestamp = input.timestamp;
+      const datastoreScore = await searchExistingAnnotationScore(
+        input.projectId,
+        inflatedParams.observationId,
+        inflatedParams.traceId,
+        inflatedParams.sessionId,
+        input.name,
+        input.configId,
+        input.dataType,
+      );
+
+      const timestamp = input.timestamp ?? new Date();
+
+      const score = !!datastoreScore
+        ? {
+            ...datastoreScore,
+            value: input.value,
+            stringValue: input.stringValue ?? null,
+            comment: input.comment ?? null,
+            metadata: {},
+            authorUserId: ctx.session.user.id,
+            queueId: input.queueId ?? null,
+            timestamp,
+          }
+        : {
+            id: input.id ?? v4(),
+            projectId: input.projectId,
+            environment: input.environment ?? "default",
+            ...inflatedParams,
+            // only trace and session scores are supported for annotation
+            datasetRunId: null,
+            value: input.value,
+            stringValue: input.stringValue ?? null,
+            dataType: input.dataType ?? null,
+            configId: input.configId ?? null,
+            name: input.name,
+            comment: input.comment ?? null,
+            metadata: {},
+            authorUserId: ctx.session.user.id,
+            source: ScoreSourceEnum.ANNOTATION,
+            queueId: input.queueId ?? null,
+            executionTraceId: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            timestamp,
+          };
 
       await upsertScore({
-        id: input.id,
-        timestamp: convertDateToClickhouseDateTime(timestamp),
+        id: score.id, // Reuse ID that was generated by Prisma
+        timestamp: convertDateToDatastoreDateTime(timestamp),
         project_id: input.projectId,
         environment: input.environment ?? "default",
         trace_id: inflatedParams.traceId,
@@ -494,149 +412,282 @@ export const scoresRouter = createTRPCRouter({
         data_type: input.dataType,
         string_value: input.stringValue,
         queue_id: input.queueId,
-        created_at: convertDateToClickhouseDateTime(new Date()),
-        updated_at: convertDateToClickhouseDateTime(new Date()),
-        metadata: {},
+        created_at: convertDateToDatastoreDateTime(score.createdAt),
+        updated_at: convertDateToDatastoreDateTime(score.updatedAt),
+        metadata: score.metadata as Record<string, string>,
       });
-
-      const baseScore = {
-        id: input.id,
-        projectId: input.projectId,
-        environment: input.environment ?? "default",
-        traceId: inflatedParams.traceId,
-        observationId: inflatedParams.observationId,
-        sessionId: inflatedParams.sessionId,
-        datasetRunId: null,
-        name: input.name,
-        value: input.value,
-        dataType: input.dataType,
-        configId: input.configId ?? null,
-        metadata: {},
-        executionTraceId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        source: ScoreSourceEnum.ANNOTATION,
-        comment: input.comment ?? null,
-        authorUserId: ctx.session.user.id,
-        queueId: input.queueId ?? null,
-        timestamp,
-        longStringValue: "",
-      };
-
-      if (isNumericDataType(baseScore.dataType)) {
-        updatedScore = {
-          ...baseScore,
-          dataType: ScoreDataTypeEnum.NUMERIC,
-          stringValue: null,
-        };
-      } else {
-        updatedScore = {
-          ...baseScore,
-          dataType: input.dataType as "CATEGORICAL" | "BOOLEAN",
-          stringValue: input.stringValue!,
-        };
-      }
 
       await auditLog({
         session: ctx.session,
         resourceType: "score",
-        resourceId: input.id,
-        action: "update",
-        after: updatedScore,
+        resourceId: score.id,
+        action: "create",
+        after: score,
       });
-    } else {
-      // validate score against config
-      if (score.configId) {
+
+      return validateDbScore(score);
+    }),
+  updateAnnotationScore: protectedProjectProcedure
+    .input(UpdateAnnotationScoreData)
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "scores:CUD",
+      });
+
+      let updatedScore: ScoreDomain | null | undefined = null;
+
+      // Fetch the current score from Datastore
+      const score = await getScoreById({
+        projectId: input.projectId,
+        scoreId: input.id,
+        source: ScoreSourceEnum.ANNOTATION,
+      });
+
+      if (!score) {
+        // Datastore is eventually consistent; if client provided timestamp, we can upsert along the ordering key
+        if (!input.timestamp) {
+          logger.warn(
+            `No annotation score with id ${input.id} in project ${input.projectId} in Datastore, and no timestamp provided`,
+          );
+          throw new HanzoNotFoundError(
+            `No annotation score with id ${input.id} in project ${input.projectId} in Datastore`,
+          );
+        }
+
+        logger.info(
+          `Score ${input.id} not found in ClickHouse for project ${input.projectId}, upserting with provided timestamp`,
+        );
+
+        // Validate config if provided
         const config = await ctx.prisma.scoreConfig.findFirst({
           where: {
-            id: score.configId,
+            id: input.configId,
             projectId: input.projectId,
           },
         });
         if (!config) {
-          throw new HanzoNotFoundError(`No score config with id ${score.configId} in project ${input.projectId}`);
+          throw new HanzoNotFoundError(
+            `No score config with id ${input.configId} in project ${input.projectId}`,
+          );
         }
-        try {
-          validateConfigAgainstBody({
-            body: {
-              ...score,
-              value: input.value,
-              stringValue: isNumericDataType(score.dataType) ? null : input.stringValue!,
-              comment: input.comment ?? null,
-            } as ScoreDomain,
-            config: config as ScoreConfigDomain,
-            context: "ANNOTATION",
+
+        // Upsert with provided data
+        const inflatedParams = isTraceScore(input.scoreTarget)
+          ? {
+              observationId: input.scoreTarget.observationId ?? null,
+              traceId: input.scoreTarget.traceId,
+              sessionId: null,
+            }
+          : {
+              observationId: null,
+              traceId: null,
+              sessionId: input.scoreTarget.sessionId,
+            };
+
+        if (inflatedParams.traceId) {
+          const datastoreTrace = await getTraceById({
+            traceId: inflatedParams.traceId,
+            projectId: input.projectId,
+            datastoreFeatureTag: "annotations-trpc",
           });
-        } catch {
-          throw new TRPCError({
-            code: "PRECONDITION_FAILED",
-            message: "Score does not comply with config schema. Please adjust or delete score.",
-          });
+
+          if (!datastoreTrace) {
+            logger.error(
+              `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
+            );
+            throw new HanzoNotFoundError(
+              `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
+            );
+          }
+        } else if (inflatedParams.sessionId) {
+          // We consider no longer writing all sessions into postgres, hence we should search for traces with the session id
+          const traceIdentifiers = await getTracesIdentifierForSession(
+            input.projectId,
+            inflatedParams.sessionId,
+          );
+          if (traceIdentifiers.length === 0) {
+            logger.error(
+              `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
+            );
+            throw new HanzoNotFoundError(
+              `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
+            );
+          }
         }
-      }
 
-      await upsertScore({
-        id: input.id,
-        project_id: input.projectId,
-        timestamp: convertDateToClickhouseDateTime(score.timestamp),
-        value: input.value !== null ? input.value : undefined,
-        string_value: input.stringValue,
-        comment: input.comment,
-        author_user_id: ctx.session.user.id,
-        queue_id: input.queueId,
-        source: ScoreSourceEnum.ANNOTATION,
-        name: score.name,
-        data_type: score.dataType,
-        config_id: score.configId,
-        trace_id: score.traceId,
-        observation_id: score.observationId,
-        session_id: score.sessionId,
-        environment: score.environment,
-        created_at: convertDateToClickhouseDateTime(score.createdAt),
-        updated_at: convertDateToClickhouseDateTime(score.updatedAt),
-        metadata: score.metadata as Record<string, string>,
-      });
+        const timestamp = input.timestamp;
 
-      const baseScore = {
-        ...score,
-        value: input.value,
-        comment: input.comment ?? null,
-        authorUserId: ctx.session.user.id,
-        queueId: input.queueId ?? null,
-        timestamp: score.timestamp,
-      };
+        await upsertScore({
+          id: input.id,
+          timestamp: convertDateToDatastoreDateTime(timestamp),
+          project_id: input.projectId,
+          environment: input.environment ?? "default",
+          trace_id: inflatedParams.traceId,
+          observation_id: inflatedParams.observationId,
+          session_id: inflatedParams.sessionId,
+          name: input.name,
+          value: input.value,
+          source: ScoreSourceEnum.ANNOTATION,
+          comment: input.comment,
+          author_user_id: ctx.session.user.id,
+          config_id: input.configId,
+          data_type: input.dataType,
+          string_value: input.stringValue,
+          queue_id: input.queueId,
+          created_at: convertDateToDatastoreDateTime(new Date()),
+          updated_at: convertDateToDatastoreDateTime(new Date()),
+          metadata: {},
+        });
 
-      if (isNumericDataType(score.dataType)) {
-        updatedScore = {
-          ...baseScore,
-          dataType: ScoreDataTypeEnum.NUMERIC,
-          stringValue: null,
+        const baseScore = {
+          id: input.id,
+          projectId: input.projectId,
+          environment: input.environment ?? "default",
+          traceId: inflatedParams.traceId,
+          observationId: inflatedParams.observationId,
+          sessionId: inflatedParams.sessionId,
+          datasetRunId: null,
+          name: input.name,
+          value: input.value,
+          dataType: input.dataType,
+          configId: input.configId ?? null,
+          metadata: {},
+          executionTraceId: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          source: ScoreSourceEnum.ANNOTATION,
+          comment: input.comment ?? null,
+          authorUserId: ctx.session.user.id,
+          queueId: input.queueId ?? null,
+          timestamp,
+          longStringValue: "",
         };
+
+        if (isNumericDataType(baseScore.dataType)) {
+          updatedScore = {
+            ...baseScore,
+            dataType: ScoreDataTypeEnum.NUMERIC,
+            stringValue: null,
+          };
+        } else {
+          updatedScore = {
+            ...baseScore,
+            dataType: input.dataType as "CATEGORICAL" | "BOOLEAN",
+            stringValue: input.stringValue!,
+          };
+        }
+
+        await auditLog({
+          session: ctx.session,
+          resourceType: "score",
+          resourceId: input.id,
+          action: "update",
+          after: updatedScore,
+        });
       } else {
-        updatedScore = {
-          ...baseScore,
-          dataType: input.dataType as "CATEGORICAL" | "BOOLEAN",
-          stringValue: input.stringValue!,
+        // validate score against config
+        if (score.configId) {
+          const config = await ctx.prisma.scoreConfig.findFirst({
+            where: {
+              id: score.configId,
+              projectId: input.projectId,
+            },
+          });
+          if (!config) {
+            throw new HanzoNotFoundError(
+              `No score config with id ${score.configId} in project ${input.projectId}`,
+            );
+          }
+          try {
+            validateConfigAgainstBody({
+              body: {
+                ...score,
+                value: input.value,
+                stringValue: isNumericDataType(score.dataType)
+                  ? null
+                  : input.stringValue!,
+                comment: input.comment ?? null,
+              } as ScoreDomain,
+              config: config as ScoreConfigDomain,
+              context: "ANNOTATION",
+            });
+          } catch {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message:
+                "Score does not comply with config schema. Please adjust or delete score.",
+            });
+          }
+        }
+
+        await upsertScore({
+          id: input.id,
+          project_id: input.projectId,
+          timestamp: convertDateToDatastoreDateTime(score.timestamp),
+          value: input.value !== null ? input.value : undefined,
+          string_value: input.stringValue,
+          comment: input.comment,
+          author_user_id: ctx.session.user.id,
+          queue_id: input.queueId,
+          source: ScoreSourceEnum.ANNOTATION,
+          name: score.name,
+          data_type: score.dataType,
+          config_id: score.configId,
+          trace_id: score.traceId,
+          observation_id: score.observationId,
+          session_id: score.sessionId,
+          environment: score.environment,
+          created_at: convertDateToDatastoreDateTime(score.createdAt),
+          updated_at: convertDateToDatastoreDateTime(score.updatedAt),
+          metadata: score.metadata as Record<string, string>,
+        });
+
+        const baseScore = {
+          ...score,
+          value: input.value,
+          comment: input.comment ?? null,
+          authorUserId: ctx.session.user.id,
+          queueId: input.queueId ?? null,
+          timestamp: score.timestamp,
         };
+
+        if (isNumericDataType(score.dataType)) {
+          updatedScore = {
+            ...baseScore,
+            dataType: ScoreDataTypeEnum.NUMERIC,
+            stringValue: null,
+          };
+        } else {
+          updatedScore = {
+            ...baseScore,
+            dataType: input.dataType as "CATEGORICAL" | "BOOLEAN",
+            stringValue: input.stringValue!,
+          };
+        }
+
+        await auditLog({
+          session: ctx.session,
+          resourceType: "score",
+          resourceId: input.id,
+          action: "update",
+          before: score,
+          after: updatedScore,
+        });
       }
 
-      await auditLog({
-        session: ctx.session,
-        resourceType: "score",
-        resourceId: input.id,
-        action: "update",
-        before: score,
-        after: updatedScore,
-      });
-    }
+      if (!updatedScore) {
+        logger.error(
+          `Annotation score ${input.id} could not be updated in project ${input.projectId}`,
+        );
+        throw new InternalServerError(
+          `Annotation score could not be updated in project ${input.projectId}`,
+        );
+      }
 
-    if (!updatedScore) {
-      logger.error(`Annotation score ${input.id} could not be updated in project ${input.projectId}`);
-      throw new InternalServerError(`Annotation score could not be updated in project ${input.projectId}`);
-    }
-
-    return validateDbScore(updatedScore);
-  }),
+      return validateDbScore(updatedScore);
+    }),
   deleteAnnotationScore: protectedProjectProcedure
     .input(z.object({ projectId: z.string(), id: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -646,16 +697,18 @@ export const scoresRouter = createTRPCRouter({
         scope: "scores:CUD",
       });
 
-      // Fetch the current score from Clickhouse
-      const clickhouseScore = await getScoreById({
+      // Fetch the current score from Datastore
+      const datastoreScore = await getScoreById({
         projectId: input.projectId,
         scoreId: input.id,
         source: ScoreSourceEnum.ANNOTATION,
       });
-      if (!clickhouseScore) {
-        logger.warn(`No annotation score with id ${input.id} in project ${input.projectId} in Clickhouse`);
+      if (!datastoreScore) {
+        logger.warn(
+          `No annotation score with id ${input.id} in project ${input.projectId} in Datastore`,
+        );
         throw new HanzoNotFoundError(
-          `No annotation score with id ${input.id} in project ${input.projectId} in Clickhouse`,
+          `No annotation score with id ${input.id} in project ${input.projectId} in Datastore`,
         );
       }
 
@@ -664,12 +717,12 @@ export const scoresRouter = createTRPCRouter({
         resourceType: "score",
         resourceId: input.id,
         action: "delete",
-        before: clickhouseScore,
+        before: datastoreScore,
       });
 
-      await deleteScores(input.projectId, [clickhouseScore.id]);
+      await deleteScores(input.projectId, [datastoreScore.id]);
 
-      return validateDbScore(clickhouseScore);
+      return validateDbScore(datastoreScore);
     }),
   upsertCorrection: protectedProjectProcedure
     .input(
@@ -691,18 +744,22 @@ export const scoresRouter = createTRPCRouter({
         scope: "scores:CUD",
       });
 
-      const clickhouseTrace = await getTraceById({
+      const datastoreTrace = await getTraceById({
         traceId: input.traceId,
         projectId: input.projectId,
-        clickhouseFeatureTag: "annotations-trpc",
+        datastoreFeatureTag: "annotations-trpc",
       });
 
-      if (!clickhouseTrace) {
-        logger.error(`No trace with id ${input.traceId} in project ${input.projectId} in Clickhouse`);
-        throw new HanzoNotFoundError(`No trace with id ${input.traceId} in project ${input.projectId} in Clickhouse`);
+      if (!datastoreTrace) {
+        logger.error(
+          `No trace with id ${input.traceId} in project ${input.projectId} in Datastore`,
+        );
+        throw new HanzoNotFoundError(
+          `No trace with id ${input.traceId} in project ${input.projectId} in Datastore`,
+        );
       }
 
-      const clickhouseScore = await searchExistingAnnotationScore(
+      const datastoreScore = await searchExistingAnnotationScore(
         input.projectId,
         input.observationId ?? null,
         input.traceId,
@@ -714,9 +771,9 @@ export const scoresRouter = createTRPCRouter({
 
       const timestamp = input.timestamp;
 
-      const score = !!clickhouseScore
+      const score = !!datastoreScore
         ? {
-            ...clickhouseScore,
+            ...datastoreScore,
             value: 0,
             stringValue: null,
             comment: null,
@@ -753,7 +810,7 @@ export const scoresRouter = createTRPCRouter({
 
       await upsertScore({
         id: score.id, // Reuse ID that was generated by Prisma
-        timestamp: convertDateToClickhouseDateTime(timestamp),
+        timestamp: convertDateToDatastoreDateTime(timestamp),
         project_id: input.projectId,
         environment: input.environment ?? "default",
         trace_id: input.traceId,
@@ -768,8 +825,8 @@ export const scoresRouter = createTRPCRouter({
         data_type: ScoreDataTypeEnum.CORRECTION,
         string_value: null,
         queue_id: input.queueId ?? null,
-        created_at: convertDateToClickhouseDateTime(score.createdAt),
-        updated_at: convertDateToClickhouseDateTime(score.updatedAt),
+        created_at: convertDateToDatastoreDateTime(score.createdAt),
+        updated_at: convertDateToDatastoreDateTime(score.updatedAt),
         metadata: score.metadata as Record<string, string>,
         long_string_value: input.value,
       });
