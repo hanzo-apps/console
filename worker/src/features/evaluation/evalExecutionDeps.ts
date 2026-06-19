@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { JobExecutionStatus } from "@prisma/client";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   DefaultEvalModelService,
   fetchLLMCompletion,
@@ -8,15 +8,13 @@ import {
   LLMAdapter,
   QueueJobs,
   ScoreEventType,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { env } from "../../env";
 import { buildEvalMessages } from "./evalRuntime";
 import { getEvalS3StorageClient } from "./s3StorageClient";
 import { createInternalEventsWriter } from "../internal-tracing/createInternalEventsWriter";
 
-type StructuredOutputSchema = NonNullable<
-  Parameters<typeof fetchLLMCompletion>[0]["structuredOutputSchema"]
->;
+type StructuredOutputSchema = NonNullable<Parameters<typeof fetchLLMCompletion>[0]["structuredOutputSchema"]>;
 
 /**
  * Result of fetching model configuration.

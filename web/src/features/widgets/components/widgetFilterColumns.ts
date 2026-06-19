@@ -1,8 +1,5 @@
-import {
-  type ColumnDefinition,
-  type SingleValueOption,
-} from "@langfuse/shared";
-import { type ViewVersion, type views } from "@langfuse/shared/query";
+import { type ColumnDefinition, type SingleValueOption } from "@hanzo/console";
+import { type ViewVersion, type views } from "@hanzo/console/query";
 
 import { type z } from "zod";
 

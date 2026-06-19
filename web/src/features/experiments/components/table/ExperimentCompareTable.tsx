@@ -1,6 +1,6 @@
 import { DataTable } from "@/src/components/table/data-table";
 import { type DataTablePeekViewProps } from "@/src/components/table/peek";
-import { type OrderByState } from "@langfuse/shared";
+import { type OrderByState } from "@hanzo/console";
 import { type RowSelectionState } from "@tanstack/react-table";
 import { type OnChangeFn, type VisibilityState } from "@tanstack/react-table";
 import { type ColumnOrderState } from "@tanstack/react-table";

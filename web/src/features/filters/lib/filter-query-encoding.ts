@@ -1,9 +1,16 @@
-import { type FilterState, singleFilter, type SingleValueOption } from "@hanzo/shared";
+import {
+  type FilterState,
+  singleFilter,
+  type SingleValueOption,
+} from "@hanzo/console";
 import { encodeDelimitedArray, decodeDelimitedArray } from "use-query-params";
 import { normalizeLegacySessionPositionInTraceKey } from "@/src/components/session/session-position-in-trace";
 
 // Generic helpers for reusable encoding/decoding across feature areas
-export type GenericFilterOptions = Record<string, string[] | (string | SingleValueOption)[] | Record<string, string[]>>;
+export type GenericFilterOptions = Record<
+  string,
+  string[] | (string | SingleValueOption)[] | Record<string, string[]>
+>;
 
 // Pure helper: compute UI-selected values from a filter entry and available values
 export function computeSelectedValues(
@@ -37,7 +44,9 @@ export function encodeFiltersGeneric(filters: FilterState): string {
         .map((f) => {
           // Determine the key field (for categoryOptions, numberObject, stringObject)
           const key =
-            f.type === "numberObject" || f.type === "stringObject" || f.type === "categoryOptions"
+            f.type === "numberObject" ||
+            f.type === "stringObject" ||
+            f.type === "categoryOptions"
               ? (f as any).key || ""
               : "";
 
@@ -45,7 +54,11 @@ export function encodeFiltersGeneric(filters: FilterState): string {
           let encodedValue: string;
           if (f.type === "datetime") {
             encodedValue = encodeURIComponent(new Date(f.value).toISOString());
-          } else if (f.type === "stringOptions" || f.type === "arrayOptions" || f.type === "categoryOptions") {
+          } else if (
+            f.type === "stringOptions" ||
+            f.type === "arrayOptions" ||
+            f.type === "categoryOptions"
+          ) {
             encodedValue = encodeURIComponent((f.value as string[]).join("|"));
           } else {
             encodedValue = encodeURIComponent(String(f.value));
@@ -94,7 +107,11 @@ export function decodeFiltersGeneric(query: string): FilterState {
       parsedValue = new Date(decodedValue);
     } else if (type === "number" || type === "numberObject") {
       parsedValue = Number(decodedValue);
-    } else if (type === "stringOptions" || type === "arrayOptions" || type === "categoryOptions") {
+    } else if (
+      type === "stringOptions" ||
+      type === "arrayOptions" ||
+      type === "categoryOptions"
+    ) {
       parsedValue = decodedValue
         ? decodedValue.split("|")
         : decodedValue === ""
@@ -115,7 +132,12 @@ export function decodeFiltersGeneric(query: string): FilterState {
     };
 
     // Add key field for types that need it
-    if (decodedKey && (type === "categoryOptions" || type === "numberObject" || type === "stringObject")) {
+    if (
+      decodedKey &&
+      (type === "categoryOptions" ||
+        type === "numberObject" ||
+        type === "stringObject")
+    ) {
       filter.key = decodedKey;
     }
 

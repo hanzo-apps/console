@@ -1,8 +1,8 @@
 import { z } from "zod/v4";
-import { prisma, PrismaClient } from "@hanzo/console-core/src/db";
+import { prisma, PrismaClient } from "@hanzo/console/src/db";
 import defaultModelPrices from "../constants/default-model-prices.json";
-import { clearFullModelCache, logger } from "@hanzo/console-core/src/server";
-import { PricingTierConditionSchema, validatePricingTiers } from "@hanzo/console-core";
+import { clearFullModelCache, logger } from "@hanzo/console/src/server";
+import { PricingTierConditionSchema, validatePricingTiers } from "@hanzo/console";
 
 export const PricingTierSchema = z.object({
   id: z.string(),

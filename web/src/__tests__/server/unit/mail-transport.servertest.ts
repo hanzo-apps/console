@@ -4,7 +4,7 @@ import {
   __testing,
   buildMailServerConfig,
   createMailTransport,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 const { parseSesRegion } = __testing;
 

@@ -7,8 +7,8 @@ import {
   pollQueryStatus,
   getQueryError,
   sleep,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { env } from "../env";
 import { parseArgs } from "node:util";
 import { randomUUID } from "crypto";

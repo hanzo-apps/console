@@ -3,7 +3,7 @@ import {
   extractGenerationDetails,
   ConsoleInternalTraceEnvironment,
   type GenerationDetails,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import type { ObservationForEval } from "../../evaluation/observationEval";
 
 // Real events captured from an experiment run

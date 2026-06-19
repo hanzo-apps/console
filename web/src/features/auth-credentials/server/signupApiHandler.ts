@@ -7,7 +7,7 @@ function getSsoAuthProviderIdForDomain(_domain: string): string | null {
 }
 import { ENTERPRISE_SSO_REQUIRED_MESSAGE } from "@/src/features/auth/constants";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { logger } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
 
 export function getSSOBlockedDomains() {
   return (
@@ -57,16 +57,23 @@ export async function validateSignupEligibility({
  * Sign-up endpoint (email/password users), creates user in database.
  * SSO users are created by the NextAuth adapters.
  */
-export async function signupApiHandler(req: NextApiRequest, res: NextApiResponse) {
+export async function signupApiHandler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   if (req.method !== "POST") return;
   // Block if disabled by env
-  if (env.NEXT_PUBLIC_SIGN_UP_DISABLED === "true" || env.AUTH_DISABLE_SIGNUP === "true") {
+  if (
+    env.NEXT_PUBLIC_SIGN_UP_DISABLED === "true" ||
+    env.AUTH_DISABLE_SIGNUP === "true"
+  ) {
     res.status(422).json({ message: "Sign up is disabled." });
     return;
   }
   if (env.AUTH_DISABLE_USERNAME_PASSWORD === "true") {
     res.status(422).json({
-      message: "Sign up with email and password is disabled for this instance. Please use SSO.",
+      message:
+        "Sign up with email and password is disabled for this instance. Please use SSO.",
     });
     return;
   }
@@ -86,7 +93,8 @@ export async function signupApiHandler(req: NextApiRequest, res: NextApiResponse
   const domain = body.email.split("@")[1]?.toLowerCase();
   if (domain && blockedDomains.includes(domain)) {
     res.status(422).json({
-      message: "Sign up with email and password is disabled for this domain. Please use SSO.",
+      message:
+        "Sign up with email and password is disabled for this domain. Please use SSO.",
     });
     return;
   }
@@ -103,9 +111,15 @@ export async function signupApiHandler(req: NextApiRequest, res: NextApiResponse
   // create the user
   let userId: string;
   try {
-    userId = await createUserEmailPassword(body.email, body.password, body.name);
+    userId = await createUserEmailPassword(
+      body.email,
+      body.password,
+      body.name,
+    );
   } catch (error) {
-    const message = "Signup: Error creating user: " + (error instanceof Error ? error.message : JSON.stringify(error));
+    const message =
+      "Signup: Error creating user: " +
+      (error instanceof Error ? error.message : JSON.stringify(error));
     logger.warn(message, body.email.toLowerCase(), body.name);
     res.status(422).json({ message: message });
 

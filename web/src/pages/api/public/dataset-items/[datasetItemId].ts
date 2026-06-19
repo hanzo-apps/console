@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -8,12 +8,12 @@ import {
   DeleteDatasetItemV1Response,
   transformDbDatasetItemDomainToAPIDatasetItem,
 } from "@/src/features/public-api/types/datasets";
-import { HanzoNotFoundError } from "@hanzo/shared";
+import { HanzoNotFoundError } from "@hanzo/console";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import {
   deleteDatasetItem,
   getDatasetItemById,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({

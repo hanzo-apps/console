@@ -4,16 +4,23 @@ import {
   createTrace,
   createSessionScore,
   getScoresByIds,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   createObservationsCh,
   createScoresCh,
   createTracesCh,
   createOrgProjectAndApiKey,
-} from "@hanzo/shared/src/server";
-import { makeAPICall, makeZodVerifiedAPICall } from "@/src/__tests__/test-utils";
-import { DeleteScoreResponseV1, GetScoreResponseV1, GetScoresResponseV1 } from "@hanzo/shared";
-import { prisma } from "@hanzo/shared/src/db";
+} from "@hanzo/console/src/server";
+import {
+  makeAPICall,
+  makeZodVerifiedAPICall,
+} from "@/src/__tests__/test-utils";
+import {
+  DeleteScoreResponseV1,
+  GetScoreResponseV1,
+  GetScoresResponseV1,
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { v4 } from "uuid";
 import { z } from "zod";
 import waitForExpect from "wait-for-expect";
@@ -610,7 +617,15 @@ describe("/api/public/scores API Endpoint", () => {
           data_type: "NUMERIC",
         });
 
-        await createScoresCh([score1, score2, score3, score4, score5, sessionScore1, sessionScore2]);
+        await createScoresCh([
+          score1,
+          score2,
+          score3,
+          score4,
+          score5,
+          sessionScore1,
+          sessionScore2,
+        ]);
       });
 
       it("get all trace scores", async () => {
@@ -1141,33 +1156,61 @@ describe("/api/public/scores API Endpoint", () => {
 
       it("should reject session ID filtering", async () => {
         try {
-          await makeAPICall("GET", `/api/public/scores?sessionId=${sessionId}`, undefined, authentication);
+          await makeAPICall(
+            "GET",
+            `/api/public/scores?sessionId=${sessionId}`,
+            undefined,
+            authentication,
+          );
         } catch (error) {
-          expect((error as Error).message).toContain("API call did not return 200, returned status 400");
+          expect((error as Error).message).toContain(
+            "API call did not return 200, returned status 400",
+          );
         }
       });
 
       it("should reject dataset run ID filtering", async () => {
         try {
-          await makeAPICall("GET", `/api/public/scores?datasetRunId=${datasetRunId}`, undefined, authentication);
+          await makeAPICall(
+            "GET",
+            `/api/public/scores?datasetRunId=${datasetRunId}`,
+            undefined,
+            authentication,
+          );
         } catch (error) {
-          expect((error as Error).message).toContain("API call did not return 200, returned status 400");
+          expect((error as Error).message).toContain(
+            "API call did not return 200, returned status 400",
+          );
         }
       });
 
       it("should reject trace ID filtering", async () => {
         try {
-          await makeAPICall("GET", `/api/public/scores?traceId=${traceId}`, undefined, authentication);
+          await makeAPICall(
+            "GET",
+            `/api/public/scores?traceId=${traceId}`,
+            undefined,
+            authentication,
+          );
         } catch (error) {
-          expect((error as Error).message).toContain("API call did not return 200, returned status 400");
+          expect((error as Error).message).toContain(
+            "API call did not return 200, returned status 400",
+          );
         }
       });
 
       it("should reject CORRECTION data type filtering", async () => {
         try {
-          await makeAPICall("GET", `/api/public/scores?dataType=CORRECTION`, undefined, authentication);
+          await makeAPICall(
+            "GET",
+            `/api/public/scores?dataType=CORRECTION`,
+            undefined,
+            authentication,
+          );
         } catch (error) {
-          expect((error as Error).message).toContain("API call did not return 200, returned status 400");
+          expect((error as Error).message).toContain(
+            "API call did not return 200, returned status 400",
+          );
         }
       });
 
@@ -1232,7 +1275,9 @@ describe("/api/public/scores API Endpoint", () => {
         expect(response.body.meta.totalItems).toBe(1);
 
         // Verify CORRECTION score is NOT in the results
-        const correctionInResults = response.body.data.find((s) => s.id === correctionScoreId);
+        const correctionInResults = response.body.data.find(
+          (s) => s.id === correctionScoreId,
+        );
         expect(correctionInResults).toBeUndefined();
       });
 
@@ -1263,12 +1308,19 @@ describe("/api/public/scores API Endpoint", () => {
 
         // Wait for score to be available
         await waitForExpect(async () => {
-          const checkScore = await getScoresByIds(projectId, [correctionScoreId]);
+          const checkScore = await getScoresByIds(projectId, [
+            correctionScoreId,
+          ]);
           expect(checkScore).toHaveLength(0);
         });
 
         // Try to fetch by ID - should return 404 since v1 doesn't support CORRECTION
-        const response = await makeAPICall("GET", `/api/public/scores/${correctionScoreId}`, undefined, auth);
+        const response = await makeAPICall(
+          "GET",
+          `/api/public/scores/${correctionScoreId}`,
+          undefined,
+          auth,
+        );
         expect(response.status).toBe(404);
       });
     });

@@ -13,12 +13,12 @@ import HorizontalBarChart from "@/src/features/widgets/chart-library/HorizontalB
 import VerticalBarChart from "@/src/features/widgets/chart-library/VerticalBarChart";
 import PieChart from "@/src/features/widgets/chart-library/PieChart";
 import HistogramChart from "@/src/features/widgets/chart-library/HistogramChart";
-import { type DashboardWidgetChartType } from "@hanzo/console-core/src/db";
+import { type DashboardWidgetChartType } from "@hanzo/console/src/db";
 import { Button } from "@/src/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { BigNumber } from "@/src/features/widgets/chart-library/BigNumber";
 import { PivotTable } from "@/src/features/widgets/chart-library/PivotTable";
-import { type OrderByState } from "@hanzo/console-core";
+import { type OrderByState } from "@hanzo/console";
 
 export const Chart = ({
   chartType,
@@ -72,7 +72,8 @@ export const Chart = ({
     return data.map((item) => {
       if (!item.time_dimension) return { ...item, time_dimension: undefined };
       const value = item.time_dimension;
-      const looksLikeIso = value.includes("T") || /^\d{4}-\d{2}-\d{2}$/.test(value);
+      const looksLikeIso =
+        value.includes("T") || /^\d{4}-\d{2}-\d{2}$/.test(value);
       if (!looksLikeIso) {
         return { ...item, time_dimension: value };
       }
@@ -180,7 +181,12 @@ export const Chart = ({
           />
         );
       case "HISTOGRAM":
-        return <HistogramChart data={renderedData} subtleFill={chartConfig?.subtle_fill} />;
+        return (
+          <HistogramChart
+            data={renderedData}
+            subtleFill={chartConfig?.subtle_fill}
+          />
+        );
       case "NUMBER": {
         return (
           <BigNumber
@@ -224,15 +230,25 @@ export const Chart = ({
     <div className="flex flex-col items-center justify-center p-6 text-center">
       <AlertCircle className="mb-4 h-12 w-12" />
       <h3 className="mb-2 text-lg font-semibold">Large Dataset Warning</h3>
-      <p className="mb-6 text-sm text-muted-foreground">
-        This chart has more than 2,000 unique data points. Rendering it may be slow or may crash your browser. Try to
-        reduce the number of dimensions by adding more selective filters or choosing a coarser breakdown dimension.
+      <p className="text-muted-foreground mb-6 text-sm">
+        This chart has more than 2,000 unique data points. Rendering it may be
+        slow or may crash your browser. Try to reduce the number of dimensions
+        by adding more selective filters or choosing a coarser breakdown
+        dimension.
       </p>
-      <Button variant="outline" onClick={() => setForceRender(true)} className="font-medium">
+      <Button
+        variant="outline"
+        onClick={() => setForceRender(true)}
+        className="font-medium"
+      >
         I understand, proceed to render the chart
       </Button>
     </div>
   );
 
-  return <CardContent className="h-full p-0">{shouldWarn ? renderWarning() : renderChart()}</CardContent>;
+  return (
+    <CardContent className="h-full p-0">
+      {shouldWarn ? renderWarning() : renderChart()}
+    </CardContent>
+  );
 };

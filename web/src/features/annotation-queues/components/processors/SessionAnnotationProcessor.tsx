@@ -1,7 +1,7 @@
 import {
   type AnnotationQueueItem,
   type ScoreConfigDomain,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import { AnnotationDrawerSection } from "../shared/AnnotationDrawerSection";
 import { AnnotationProcessingLayout } from "../shared/AnnotationProcessingLayout";
 import { SessionIO } from "@/src/components/session";

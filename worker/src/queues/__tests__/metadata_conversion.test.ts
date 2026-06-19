@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { metadataArraysToRecord } from "@langfuse/shared/src/server";
+import { metadataArraysToRecord } from "@hanzo/console/src/server";
 
 describe("metadataArraysToRecord", () => {
   it("should return undefined for empty arrays", () => {
@@ -12,10 +12,7 @@ describe("metadataArraysToRecord", () => {
   });
 
   it("should keep the first occurrence when keys are duplicated", () => {
-    const result = metadataArraysToRecord(
-      ["env", "env", "env"],
-      ["first", "second", "third"],
-    );
+    const result = metadataArraysToRecord(["env", "env", "env"], ["first", "second", "third"]);
     expect(result).toEqual({ env: "first" });
   });
 

@@ -1,9 +1,9 @@
-import type { EvalTemplateLlmAsAJudge } from "@langfuse/shared";
+import type { EvalTemplateLlmAsAJudge } from "@hanzo/console";
 import type {
   JobConfiguration,
   Prisma as PrismaNamespace,
   prisma,
-} from "@langfuse/shared/src/db";
+} from "@hanzo/console/src/db";
 import type {
   PublicEvaluationRuleEvaluatorReferenceType,
   PublicEvaluationRuleEvaluatorType,

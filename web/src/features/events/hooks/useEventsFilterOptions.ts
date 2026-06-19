@@ -1,6 +1,6 @@
 import { api } from "@/src/utils/api";
 import { useMemo } from "react";
-import { type FilterState, type TimeFilter } from "@hanzo/console-core";
+import { type FilterState, type TimeFilter } from "@hanzo/console";
 
 type UseEventsFilterOptionsParams = {
   projectId: string;
@@ -16,7 +16,9 @@ export function useEventsFilterOptions({
   // Extract start time filters for filter options query
   const startTimeFilters = useMemo(() => {
     return oldFilterState.filter(
-      (f) => (f.column === "Start Time" || f.column === "startTime") && f.type === "datetime",
+      (f) =>
+        (f.column === "Start Time" || f.column === "startTime") &&
+        f.type === "datetime",
     ) as TimeFilter[];
   }, [oldFilterState]);
 
@@ -24,7 +26,8 @@ export function useEventsFilterOptions({
   const filterOptions = api.events.filterOptions.useQuery(
     {
       projectId,
-      startTimeFilter: startTimeFilters.length > 0 ? startTimeFilters : undefined,
+      startTimeFilter:
+        startTimeFilters.length > 0 ? startTimeFilters : undefined,
       hasParentObservation,
     },
     {
@@ -82,7 +85,8 @@ export function useEventsFilterOptions({
       experimentDatasetId: filterOptions.data?.experimentDatasetId ?? undefined,
       experimentId: filterOptions.data?.experimentId ?? undefined,
       experimentName: filterOptions.data?.experimentName ?? undefined,
-      hasParentObservation: filterOptions.data?.hasParentObservation ?? undefined,
+      hasParentObservation:
+        filterOptions.data?.hasParentObservation ?? undefined,
       toolNames: filterOptions.data?.toolNames ?? undefined,
       calledToolNames: filterOptions.data?.calledToolNames ?? undefined,
       toolDefinitions: [],

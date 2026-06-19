@@ -7,13 +7,13 @@ import {
   HanzoNotFoundError,
   MethodNotAllowedError,
   UnauthorizedError,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import {
   logger,
   traceException,
   contextWithHanzoProps,
   ClickHouseResourceError,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import * as opentelemetry from "@opentelemetry/api";
 import {
   sendUnstablePublicApiErrorResponse,

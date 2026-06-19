@@ -10,15 +10,15 @@ import {
 import {
   filterAndValidateDbTraceScoreList,
   HanzoNotFoundError,
-} from "@hanzo/shared";
-import { prisma } from "@hanzo/shared/src/db";
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import {
   getObservationsForTrace,
   getScoresForTraces,
   getTraceById,
   traceException,
   traceDeletionProcessor,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import Decimal from "decimal.js";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 

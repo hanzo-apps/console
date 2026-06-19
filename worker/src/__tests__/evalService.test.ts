@@ -1,6 +1,6 @@
-import { ApiError, LLMAdapter, ObservationType, variableMappingList, EvalTargetObject } from "@hanzo/console-core";
-import { encrypt } from "@hanzo/console-core/encryption";
-import { kyselyPrisma, prisma } from "@hanzo/console-core/src/db";
+import { ApiError, LLMAdapter, ObservationType, variableMappingList, EvalTargetObject } from "@hanzo/console";
+import { encrypt } from "@hanzo/console/encryption";
+import { kyselyPrisma, prisma } from "@hanzo/console/src/db";
 import {
   convertDateToDatastoreDateTime,
   createObservation,
@@ -14,7 +14,7 @@ import {
   createOrgProjectAndApiKey,
   LLMCompletionError,
   ConsoleInternalTraceEnvironment,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 import Decimal from "decimal.js";
 import { sql } from "kysely";
@@ -25,8 +25,8 @@ import { createEvalJobs, evaluate, extractVariablesFromTracingData } from "../fe
 import { requiresDatabaseLookup } from "../features/evaluation/traceFilterUtils";
 
 // Mock fetchLLMCompletion module with default passthrough behavior
-vi.mock("@hanzo/console-core/src/server", async () => {
-  const actual = await vi.importActual("@hanzo/console-core/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     fetchLLMCompletion: vi.fn().mockImplementation(actual.fetchLLMCompletion as any),
@@ -34,7 +34,7 @@ vi.mock("@hanzo/console-core/src/server", async () => {
 });
 
 // Import the mocked function
-import { fetchLLMCompletion } from "@hanzo/console-core/src/server";
+import { fetchLLMCompletion } from "@hanzo/console/src/server";
 import { UnrecoverableError } from "../errors/UnrecoverableError";
 
 let OPENAI_API_KEY = process.env.OPENAI_API_KEY;

@@ -2,22 +2,26 @@ import { VERSION } from "@/src/constants";
 import { cors, runMiddleware } from "@/src/features/public-api/server/cors";
 import { runHealthCheck } from "@/src/features/public-api/server/health-service";
 import { telemetry } from "@/src/features/telemetry";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   convertDateToDatastoreDateTime,
   logger,
   measureAndReturn,
   queryDatastore,
   traceException,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { type NextApiRequest, type NextApiResponse } from "next";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   try {
     await runMiddleware(req, res, cors);
     await telemetry();
     const failIfNoRecentEvents = req.query.failIfNoRecentEvents === "true";
-    const failIfDatabaseUnavailable = req.query.failIfDatabaseUnavailable === "true";
+    const failIfDatabaseUnavailable =
+      req.query.failIfDatabaseUnavailable === "true";
 
     try {
       if (failIfDatabaseUnavailable) {
@@ -77,7 +81,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (traces.length === 0 || observations.length === 0) {
           return res.status(503).json({
             status: `No ${
-              traces.length === 0 ? "traces" : observations.length === 0 ? "observations" : "<should not happen>"
+              traces.length === 0
+                ? "traces"
+                : observations.length === 0
+                  ? "observations"
+                  : "<should not happen>"
             } within the last 3 minutes`,
             version: VERSION.replace("v", ""),
           });

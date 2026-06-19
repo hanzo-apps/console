@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BEDROCK_USE_DEFAULT_CREDENTIALS } from "@langfuse/shared";
-import { resolveBedrockAuth } from "@langfuse/shared/src/server";
+import { BEDROCK_USE_DEFAULT_CREDENTIALS } from "@hanzo/console";
+import { resolveBedrockAuth } from "@hanzo/console/src/server";
 
 describe("resolveBedrockAuth", () => {
   it("uses bearer token auth when Bedrock secret contains a Bedrock API key", () => {

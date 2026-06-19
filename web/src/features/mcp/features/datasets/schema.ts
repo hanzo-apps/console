@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type JSONValue } from "@langfuse/shared";
+import { type JSONValue } from "@hanzo/console";
 
 const paginationSchema = {
   page: z.number().int().positive().default(1),

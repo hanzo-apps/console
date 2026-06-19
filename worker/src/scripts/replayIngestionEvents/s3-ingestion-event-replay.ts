@@ -15,7 +15,7 @@ import * as path from "path";
 import * as readline from "readline";
 import { parse } from "csv-parse";
 import { randomUUID } from "crypto";
-import { getQueue, OtelIngestionQueue, QueueJobs, QueueName, TQueueJobTypes } from "@hanzo/console-core/src/server";
+import { getQueue, OtelIngestionQueue, QueueJobs, QueueName, TQueueJobTypes } from "@hanzo/console/src/server";
 
 const INPUT_FILE = "events.csv";
 const OUTPUT_FILE = "events_filtered.csv";
@@ -397,13 +397,9 @@ async function ingestEventsToQueue(jsonlPath: string): Promise<void> {
 
   const startTime = Date.now();
   let processedEvents = 0;
-  const queues = new Set<
-    NonNullable<ReturnType<typeof SecondaryIngestionQueue.getInstance>>
-  >();
+  const queues = new Set<NonNullable<ReturnType<typeof SecondaryIngestionQueue.getInstance>>>();
 
-  console.log(
-    `🔗 Connected to Redis and created shard-aware queues: ${QUEUE_NAME}`,
-  );
+  console.log(`🔗 Connected to Redis and created shard-aware queues: ${QUEUE_NAME}`);
 
   // Second pass: ingest events into queue in batches
   console.log(`📥 Starting queue ingestion...`);
@@ -460,9 +456,7 @@ async function ingestEventsToQueue(jsonlPath: string): Promise<void> {
 }
 
 async function processQueueBatch(
-  queues: Set<
-    NonNullable<ReturnType<typeof SecondaryIngestionQueue.getInstance>>
-  >,
+  queues: Set<NonNullable<ReturnType<typeof SecondaryIngestionQueue.getInstance>>>,
   batch: JsonOutputItem[],
   batchNumber: number,
   processedEvents: number,
@@ -470,9 +464,7 @@ async function processQueueBatch(
   const jobsByQueue = new Map<
     string,
     {
-      queue: NonNullable<
-        ReturnType<typeof SecondaryIngestionQueue.getInstance>
-      >;
+      queue: NonNullable<ReturnType<typeof SecondaryIngestionQueue.getInstance>>;
       jobs: Array<{
         name: QueueJobs.IngestionJob;
         data: TQueueJobTypes[QueueName.IngestionSecondaryQueue];
@@ -498,8 +490,7 @@ async function processQueueBatch(
     } = {
       name: QueueJobs.IngestionJob,
       data: {
-        payload:
-          event as TQueueJobTypes[QueueName.IngestionSecondaryQueue]["payload"],
+        payload: event as TQueueJobTypes[QueueName.IngestionSecondaryQueue]["payload"],
         id: randomUUID(),
         timestamp: new Date(),
         name: QueueJobs.IngestionJob,
@@ -516,11 +507,7 @@ async function processQueueBatch(
     }
   }
 
-  await Promise.all(
-    Array.from(jobsByQueue.values()).map(({ queue, jobs }) =>
-      queue.addBulk(jobs),
-    ),
-  );
+  await Promise.all(Array.from(jobsByQueue.values()).map(({ queue, jobs }) => queue.addBulk(jobs)));
 
   // Log progress
   console.log(`✅ Added batch ${batchNumber} (${processedEvents + batch.length} events) to queue`);
@@ -541,13 +528,9 @@ async function ingestEventsToOtelQueue(otelJsonlPath: string): Promise<void> {
 
   const startTime = Date.now();
   let processedEvents = 0;
-  const queues = new Set<
-    NonNullable<ReturnType<typeof OtelIngestionQueue.getInstance>>
-  >();
+  const queues = new Set<NonNullable<ReturnType<typeof OtelIngestionQueue.getInstance>>>();
 
-  console.log(
-    `🔗 Connected to Redis and created shard-aware queues: ${OTEL_NAME}`,
-  );
+  console.log(`🔗 Connected to Redis and created shard-aware queues: ${OTEL_NAME}`);
 
   // Second pass: ingest events into queue in batches
   console.log(`📥 Starting OTEL queue ingestion...`);
@@ -572,12 +555,7 @@ async function ingestEventsToOtelQueue(otelJsonlPath: string): Promise<void> {
       // Process queue ingestion in batches
       if (batch.length >= BATCH_SIZE) {
         batchNumber++;
-        await processOtelQueueBatch(
-          queues,
-          batch,
-          batchNumber,
-          processedEvents,
-        );
+        await processOtelQueueBatch(queues, batch, batchNumber, processedEvents);
         processedEvents += batch.length;
         batch = [];
       }
@@ -643,8 +621,7 @@ async function processOtelQueueBatch(
     } = {
       name: QueueJobs.OtelIngestionJob,
       data: {
-        payload:
-          event as TQueueJobTypes[QueueName.OtelIngestionQueue]["payload"],
+        payload: event as TQueueJobTypes[QueueName.OtelIngestionQueue]["payload"],
         id: randomUUID(),
         timestamp: new Date(),
         name: QueueJobs.OtelIngestionJob,
@@ -661,11 +638,7 @@ async function processOtelQueueBatch(
     }
   }
 
-  await Promise.all(
-    Array.from(jobsByQueue.values()).map(({ queue, jobs }) =>
-      queue.addBulk(jobs),
-    ),
-  );
+  await Promise.all(Array.from(jobsByQueue.values()).map(({ queue, jobs }) => queue.addBulk(jobs)));
 
   // Log progress
   console.log(`✅ Added OTEL batch ${batchNumber} (${processedEvents + batch.length} events) to queue`);

@@ -2,7 +2,7 @@ import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
 import { type ConsoleColumnDef } from "@/src/components/table/types";
 import { api } from "@/src/utils/api";
-import { type BackgroundMigration } from "@hanzo/console-core";
+import { type BackgroundMigration } from "@hanzo/console";
 import { RetryBackgroundMigration } from "@/src/features/background-migrations/components/retry-background-migration";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
 import Page from "@/src/components/layouts/page";
@@ -72,7 +72,12 @@ export default function BackgroundMigrationsTable() {
       cell: (row) => {
         const name = row.row.original.name;
         const isRetryable = row.row.original.failedAt !== null;
-        return <RetryBackgroundMigration backgroundMigrationName={name} isRetryable={isRetryable} />;
+        return (
+          <RetryBackgroundMigration
+            backgroundMigrationName={name}
+            isRetryable={isRetryable}
+          />
+        );
       },
     },
   ] as ConsoleColumnDef<BackgroundMigration>[];

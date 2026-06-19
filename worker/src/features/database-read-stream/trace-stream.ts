@@ -1,4 +1,4 @@
-import { FilterCondition, ScoreDataTypeEnum, type ScoreDataTypeType, TracingSearchType } from "@hanzo/console-core";
+import { FilterCondition, ScoreDataTypeEnum, type ScoreDataTypeType, TracingSearchType } from "@hanzo/console";
 import {
   getDistinctScoreNames,
   queryDatastoreStream,
@@ -9,7 +9,7 @@ import {
   datastoreSearchCondition,
   parseDatastoreUTCDateTimeFormat,
   StringFilter,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { Readable } from "stream";
 import { env } from "../../env";
 import { getChunkWithFlattenedScores, isTraceTimestampFilter, prepareScoresForOutput } from "./getDatabaseReadStream";

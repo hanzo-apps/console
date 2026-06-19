@@ -13,13 +13,13 @@ import {
   createTRPCRouter,
   protectedProjectProcedure,
 } from "@/src/server/api/trpc";
-import { ModelUsageUnit, paginationZod, Prisma } from "@hanzo/shared";
+import { ModelUsageUnit, paginationZod, Prisma } from "@hanzo/console";
 import {
   clearModelCacheForProject,
   queryDatastore,
   findModel,
   matchPricingTier,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 
 const ModelAllOptions = z.object({

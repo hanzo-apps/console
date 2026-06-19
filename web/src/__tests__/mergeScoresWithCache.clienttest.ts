@@ -3,7 +3,7 @@ import {
   mergeAggregatesWithCache,
   mergeAnnotationScoresWithCache,
 } from "@/src/features/scores/lib/mergeScoresWithCache";
-import { type ScoreDomain, type ScoreAggregate } from "@hanzo/console-core";
+import { type ScoreDomain, type ScoreAggregate } from "@hanzo/console";
 import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 import { type CachedScore } from "@/src/features/scores/contexts/ScoreCacheContext";
 import { type AnnotationScore } from "@/src/features/scores/types";
@@ -363,7 +363,11 @@ describe("mergeAggregatesWithCache", () => {
       },
     ];
 
-    const result = mergeAggregatesWithCache(serverAggregates, cachedScores, new Set());
+    const result = mergeAggregatesWithCache(
+      serverAggregates,
+      cachedScores,
+      new Set(),
+    );
 
     const aggregate = result["quality-ANNOTATION-NUMERIC"];
     expect(aggregate).toBeDefined();
@@ -405,7 +409,11 @@ describe("mergeAggregatesWithCache", () => {
       },
     ];
 
-    const result = mergeAggregatesWithCache(serverAggregates, cachedScores, new Set());
+    const result = mergeAggregatesWithCache(
+      serverAggregates,
+      cachedScores,
+      new Set(),
+    );
 
     const aggregate = result["sentiment-ANNOTATION-CATEGORICAL"];
     expect(aggregate).toBeDefined();
@@ -463,7 +471,11 @@ describe("mergeAggregatesWithCache", () => {
       },
     ];
 
-    const result = mergeAggregatesWithCache(serverAggregates, cachedScores, new Set());
+    const result = mergeAggregatesWithCache(
+      serverAggregates,
+      cachedScores,
+      new Set(),
+    );
 
     expect(Object.keys(result)).toHaveLength(2);
     expect(result["accuracy-ANNOTATION-NUMERIC"]).toBeDefined();
@@ -488,7 +500,11 @@ describe("mergeAnnotationScoresWithCache", () => {
       },
     ];
 
-    const result = mergeAnnotationScoresWithCache(serverAnnotationScores, [], new Set());
+    const result = mergeAnnotationScoresWithCache(
+      serverAnnotationScores,
+      [],
+      new Set(),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]?.id).toBe("score-1");
@@ -526,7 +542,11 @@ describe("mergeAnnotationScoresWithCache", () => {
 
     const deletedIds = new Set(["score-1"]);
 
-    const result = mergeAnnotationScoresWithCache(serverAnnotationScores, [], deletedIds);
+    const result = mergeAnnotationScoresWithCache(
+      serverAnnotationScores,
+      [],
+      deletedIds,
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]?.id).toBe("score-2");
@@ -568,7 +588,11 @@ describe("mergeAnnotationScoresWithCache", () => {
       },
     ];
 
-    const result = mergeAnnotationScoresWithCache(serverAnnotationScores, cachedScores, new Set());
+    const result = mergeAnnotationScoresWithCache(
+      serverAnnotationScores,
+      cachedScores,
+      new Set(),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]?.value).toBe(9);
@@ -611,7 +635,11 @@ describe("mergeAnnotationScoresWithCache", () => {
       },
     ];
 
-    const result = mergeAnnotationScoresWithCache(serverAnnotationScores, cachedScores, new Set());
+    const result = mergeAnnotationScoresWithCache(
+      serverAnnotationScores,
+      cachedScores,
+      new Set(),
+    );
 
     expect(result).toHaveLength(2);
     const ids = result.map((s) => s.id);
@@ -641,7 +669,11 @@ describe("mergeAnnotationScoresWithCache", () => {
       },
     ];
 
-    const result = mergeAnnotationScoresWithCache(serverAnnotationScores, cachedScores, new Set());
+    const result = mergeAnnotationScoresWithCache(
+      serverAnnotationScores,
+      cachedScores,
+      new Set(),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({

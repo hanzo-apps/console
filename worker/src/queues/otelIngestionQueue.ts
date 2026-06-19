@@ -18,12 +18,12 @@ import {
   traceException,
   compareVersions,
   ResourceSpan,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { env } from "../env";
 import { IngestionService } from "../services/IngestionService";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { DatastoreWriter } from "../services/DatastoreWriter";
-import { ForbiddenError, convertEventRecordToObservationForEval } from "@hanzo/console-core";
+import { ForbiddenError, convertEventRecordToObservationForEval } from "@hanzo/console";
 import {
   fetchObservationEvalConfigs,
   scheduleObservationEvals,

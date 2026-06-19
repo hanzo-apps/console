@@ -2,7 +2,7 @@ import {
   organizationRoleAccessRights,
   type OrganizationScope,
 } from "@/src/features/rbac/constants/organizationAccessRights";
-import { type Role } from "@hanzo/console-core/src/db";
+import { type Role } from "@hanzo/console/src/db";
 import { TRPCError } from "@trpc/server";
 import { type Session } from "next-auth";
 import { useSession } from "next-auth/react";
@@ -28,7 +28,8 @@ export const throwIfNoOrganizationAccess = (p: HasOrganizationAccessParams) => {
   if (!hasOrganizationAccess(p))
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "Forbidden, user does not have access to this resource or action",
+      message:
+        "Forbidden, user does not have access to this resource or action",
     });
 };
 
@@ -36,7 +37,10 @@ export const throwIfNoOrganizationAccess = (p: HasOrganizationAccessParams) => {
  * React hook to check if user has access to the given scope
  * @returns true if user has access, false otherwise or while loading
  */
-export const useHasOrganizationAccess = (p: { organizationId: string | undefined; scope: OrganizationScope }) => {
+export const useHasOrganizationAccess = (p: {
+  organizationId: string | undefined;
+  scope: OrganizationScope;
+}) => {
   const { scope, organizationId } = p;
   const session = useSession();
 
@@ -56,7 +60,11 @@ export function hasOrganizationAccess(p: HasOrganizationAccessParams): boolean {
   if (isAdmin) return true;
 
   const organizationRole: Role | undefined =
-    "role" in p ? p.role : p.session?.user?.organizations.find((org) => org.id === p.organizationId)?.role;
+    "role" in p
+      ? p.role
+      : p.session?.user?.organizations.find(
+          (org) => org.id === p.organizationId,
+        )?.role;
   if (organizationRole === undefined) return false;
 
   return organizationRoleAccessRights[organizationRole].includes(p.scope);

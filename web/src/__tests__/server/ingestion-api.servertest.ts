@@ -6,7 +6,7 @@ import {
   getObservationById,
   getScoreById,
   getTraceById,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { v4 } from "uuid";
 
 let projectId: string;

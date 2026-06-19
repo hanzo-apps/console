@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -10,8 +10,8 @@ import {
 import {
   createDatasetItemFilterState,
   getDatasetItems,
-} from "@hanzo/shared/src/server";
-import { HanzoNotFoundError } from "@hanzo/shared";
+} from "@hanzo/console/src/server";
+import { HanzoNotFoundError } from "@hanzo/console";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({

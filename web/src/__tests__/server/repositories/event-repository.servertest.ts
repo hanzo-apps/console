@@ -10,11 +10,11 @@ import {
   updateEvents,
   getTraceByIdFromEventsTable,
   getObservationsBatchIOFromEventsTable,
-} from "@hanzo/shared/src/server";
-import { prisma } from "@hanzo/shared/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { randomUUID } from "crypto";
 import { env } from "@/src/env.mjs";
-import { type FilterCondition } from "@hanzo/shared";
+import { type FilterCondition } from "@hanzo/console";
 
 const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
 

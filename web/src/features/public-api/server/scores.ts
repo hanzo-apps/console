@@ -1,4 +1,4 @@
-import { convertApiProvidedFilterToDatastoreFilter } from "@hanzo/shared/src/server";
+import { convertApiProvidedFilterToDatastoreFilter } from "@hanzo/console/src/server";
 import {
   convertDatastoreScoreToDomain,
   StringFilter,
@@ -6,13 +6,13 @@ import {
   type ScoreRecordReadType,
   queryDatastore,
   measureAndReturn,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   removeObjectKeys,
   ScoreDataTypeEnum,
   type ScoreDataTypeType,
   type ScoreDomain,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 
 type ScoreApiResult = Omit<ScoreDomain, "longStringValue"> & {
   stringValue?: string | null;

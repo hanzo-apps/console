@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { Job } from "@hanzo/mq";
 
-vi.mock("@langfuse/shared/src/server", () => ({
+vi.mock("@hanzo/console/src/server", () => ({
   ExperimentCreateQueue: {
     getInstance: vi.fn().mockReturnValue({
       add: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock("../../errors/UnrecoverableError", async () => {
   };
 });
 
-import { isLLMCompletionError } from "@langfuse/shared/src/server";
+import { isLLMCompletionError } from "@hanzo/console/src/server";
 import { createExperimentJobDatastore } from "../../features/experiments/experimentServiceDatastore";
 import { retryLLMRateLimitError } from "../../features/utils";
 import { experimentCreateQueueProcessor } from "../experimentQueue";

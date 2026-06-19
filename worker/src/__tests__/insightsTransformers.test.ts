@@ -10,7 +10,7 @@ import type {
   AnalyticsGenerationEvent,
   AnalyticsScoreEvent,
   AnalyticsObservationEvent,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 
 describe("Insights transformers", () => {
   const projectId = "test-project-id";

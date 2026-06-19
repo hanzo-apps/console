@@ -1,5 +1,5 @@
 import { calculateNumericDiff } from "@/src/features/datasets/lib/calculateBaselineDiff";
-import { type EnrichedDatasetRunItem } from "@hanzo/console-core/src/server";
+import { type EnrichedDatasetRunItem } from "@hanzo/console/src/server";
 
 const getLatency = (runItem: EnrichedDatasetRunItem) => {
   return runItem.observation?.latency ?? runItem.trace.duration;
@@ -9,7 +9,10 @@ const getTotalCost = (runItem: EnrichedDatasetRunItem) => {
   return runItem.observation?.calculatedTotalCost ?? runItem.trace.totalCost;
 };
 
-export function useResourceMetricsDiff(current: EnrichedDatasetRunItem, baseline?: EnrichedDatasetRunItem | null) {
+export function useResourceMetricsDiff(
+  current: EnrichedDatasetRunItem,
+  baseline?: EnrichedDatasetRunItem | null,
+) {
   const baseProps = {
     latency: getLatency(current),
     totalCost: getTotalCost(current),
@@ -22,6 +25,9 @@ export function useResourceMetricsDiff(current: EnrichedDatasetRunItem, baseline
   return {
     ...baseProps,
     latencyDiff: calculateNumericDiff(baseProps.latency, getLatency(baseline)),
-    totalCostDiff: calculateNumericDiff(baseProps.totalCost, getTotalCost(baseline)),
+    totalCostDiff: calculateNumericDiff(
+      baseProps.totalCost,
+      getTotalCost(baseline),
+    ),
   };
 }

@@ -1,8 +1,8 @@
 const mockAddScoreDelete = vi.fn();
 const mockAddBatchAction = vi.fn();
 
-vi.mock("@langfuse/shared/src/server", async () => {
-  const originalModule = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const originalModule = await vi.importActual("@hanzo/console/src/server");
   return {
     ...originalModule,
     ScoreDeleteQueue: {
@@ -19,10 +19,10 @@ vi.mock("@langfuse/shared/src/server", async () => {
 });
 
 import type { Session } from "next-auth";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { ScoreConfigDataType } from "@langfuse/shared";
+import { ScoreConfigDataType } from "@hanzo/console";
 import {
   createObservation,
   createObservationsCh,
@@ -34,7 +34,7 @@ import {
   BatchActionQueue,
   QueueJobs,
   createOrgProjectAndApiKey,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 
 describe("scores trpc", () => {

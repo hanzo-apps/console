@@ -1,6 +1,6 @@
 import { type Entitlement } from "@/src/features/entitlements/constants/entitlements";
 import { type ProjectScope } from "@/src/features/rbac/constants/projectAccessRights";
-import { type BatchActionType, type ActionId } from "@hanzo/console-core";
+import { type BatchActionType, type ActionId } from "@hanzo/console";
 import { type ReactElement } from "react";
 
 type BaseTableAction = {
@@ -19,7 +19,13 @@ type BaseTableAction = {
 export type CreateTableAction = BaseTableAction & {
   type: BatchActionType.Create;
   targetLabel: string;
-  execute: ({ projectId, targetId }: { projectId: string; targetId: string }) => Promise<void>;
+  execute: ({
+    projectId,
+    targetId,
+  }: {
+    projectId: string;
+    targetId: string;
+  }) => Promise<void>;
 };
 
 type DeleteTableAction = BaseTableAction & {
@@ -33,4 +39,7 @@ export type CustomDialogTableAction = BaseTableAction & {
   // No execute or targetLabel - dialog handles everything
 };
 
-export type TableAction = CreateTableAction | DeleteTableAction | CustomDialogTableAction;
+export type TableAction =
+  | CreateTableAction
+  | DeleteTableAction
+  | CustomDialogTableAction;

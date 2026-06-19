@@ -1,4 +1,4 @@
-import { type PrismaClient } from "@hanzo/console-core/src/db";
+import { type PrismaClient } from "@hanzo/console/src/db";
 
 export const updatePromptTagsOnAllVersions = async ({
   prisma,
@@ -15,9 +15,12 @@ export const updatePromptTagsOnAllVersions = async ({
     where: { projectId, name: promptName },
   });
 
-  if (previousVersions.length === 0) return { touchedPromptIds: [], updates: [] };
+  if (previousVersions.length === 0)
+    return { touchedPromptIds: [], updates: [] };
 
-  const touchedPromptIds = previousVersions.map((prevVersion) => prevVersion.id);
+  const touchedPromptIds = previousVersions.map(
+    (prevVersion) => prevVersion.id,
+  );
 
   return {
     touchedPromptIds,

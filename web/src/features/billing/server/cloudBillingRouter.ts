@@ -3,7 +3,7 @@ import { stripeClient } from "@/src/features/billing/utils/stripe";
 import { stripeProducts } from "@/src/features/billing/utils/stripeProducts";
 import { env } from "@/src/env.mjs";
 import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEntitlement";
-import { parseDbOrg } from "@hanzo/shared";
+import { parseDbOrg } from "@hanzo/console";
 import {
   createTRPCRouter,
   protectedOrganizationProcedure,
@@ -12,7 +12,7 @@ import { TRPCError } from "@trpc/server";
 import * as z from "zod";
 import { throwIfNoOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
-import { getObservationCountOfProjectsSinceCreationDate } from "@hanzo/shared/src/server";
+import { getObservationCountOfProjectsSinceCreationDate } from "@hanzo/console/src/server";
 import { commerceGet } from "@/src/features/billing/server/commerceClient";
 import type Stripe from "stripe";
 

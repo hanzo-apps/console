@@ -1,9 +1,14 @@
 import { z } from "zod/v4";
-import { singleFilter, type hanzoObjects, TimeScopeSchema } from "@hanzo/shared";
-import { wipVariableMapping } from "@hanzo/shared";
+import {
+  singleFilter,
+  type hanzoObjects,
+  TimeScopeSchema,
+} from "@hanzo/console";
+import { wipVariableMapping } from "@hanzo/console";
 
 export const isTraceTarget = (target: string): boolean => target === "trace";
-export const isTraceOrDatasetObject = (object: string): boolean => object === "trace" || object === "dataset_item";
+export const isTraceOrDatasetObject = (object: string): boolean =>
+  object === "trace" || object === "dataset_item";
 
 export const evalConfigFormSchema = z.object({
   scoreName: z.string(),

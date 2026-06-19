@@ -3,8 +3,8 @@
 import * as fs from "fs";
 import { randomUUID } from "crypto";
 import { z } from "zod/v4";
-import { getQueue, QueueName, QueueJobs } from "@hanzo/console-core/src/server";
-import { ProjectQueueEventSchema } from "@hanzo/console-core/src/server";
+import { getQueue, QueueName, QueueJobs } from "@hanzo/console/src/server";
+import { ProjectQueueEventSchema } from "@hanzo/console/src/server";
 
 // Configuration
 const QUEUE_NAME = QueueName.ProjectDelete;

@@ -3,15 +3,15 @@ import {
   LangfuseNotFoundError,
   ScoreDataTypeEnum,
   UnauthorizedError,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import {
   getScoresAndCorrectionsForTraces,
   getObservationsCountFromEventsTable,
   getObservationsForTraceFromEventsTable,
   getTraceByIdFromEventsTable,
-} from "@langfuse/shared/src/server";
-import { env } from "@langfuse/shared/src/env";
-import { prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console/src/server";
+import { env } from "@hanzo/console/src/env";
+import { prisma } from "@hanzo/console/src/db";
 import { sendAdminAccessWebhook } from "@/src/server/adminAccessWebhook";
 import { TRACE_DOWNLOAD_OMIT_LARGE_FIELDS_THRESHOLD } from "../shared/traceDownloadConfig";
 

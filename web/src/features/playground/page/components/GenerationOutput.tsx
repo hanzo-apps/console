@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { usePlaygroundContext } from "../context";
-import { ChatMessageRole, ChatMessageType } from "@hanzo/console-core";
+import { ChatMessageRole, ChatMessageType } from "@hanzo/console";
 import { BracesIcon, Check, Copy, Plus } from "lucide-react";
 import { ToolCallCard } from "@/src/components/ChatMessages/ToolCallCard";
 import { copyTextToClipboard } from "@/src/utils/clipboard";
@@ -12,7 +12,8 @@ export const GenerationOutput = () => {
   const [isAdded, setIsAdded] = useState(false);
   const [isJson, setIsJson] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
-  const { output, outputJson, addMessage, outputToolCalls } = usePlaygroundContext();
+  const { output, outputJson, addMessage, outputToolCalls } =
+    usePlaygroundContext();
 
   const handleCopy = () => {
     setIsCopied(true);
@@ -65,7 +66,12 @@ export const GenerationOutput = () => {
           <BracesIcon size={15} />
         </Button>
 
-        <Button size="icon" variant="secondary" onClick={!isCopied ? handleCopy : undefined} title="Copy output">
+        <Button
+          size="icon"
+          variant="secondary"
+          onClick={!isCopied ? handleCopy : undefined}
+          title="Copy output"
+        >
           {isCopied ? checkIcon : copyIcon}
         </Button>
 
@@ -84,15 +90,20 @@ export const GenerationOutput = () => {
 
   return (
     <div className="relative h-full">
-      <div className="h-full overflow-auto rounded-lg bg-muted" ref={scrollAreaRef}>
-        <div className="sticky top-0 z-10 bg-muted p-3">
+      <div
+        className="bg-muted h-full overflow-auto rounded-lg"
+        ref={scrollAreaRef}
+      >
+        <div className="bg-muted sticky top-0 z-10 p-3">
           <div className="flex w-full items-center">
             <p className="flex-1 text-xs font-semibold">Output</p>
             {copyButton}
           </div>
         </div>
         <div className="px-4">
-          <pre className="whitespace-break-spaces break-words text-xs">{isJson ? outputJson : output}</pre>
+          <pre className="text-xs break-words whitespace-break-spaces">
+            {isJson ? outputJson : output}
+          </pre>
           {outputToolCalls.length > 0
             ? outputToolCalls.map((toolCall) => (
                 <div className="mt-4" key={toolCall.id}>

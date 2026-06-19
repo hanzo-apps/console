@@ -2,18 +2,18 @@ import {
   makeZodVerifiedAPICall,
   makeAPICall,
 } from "@/src/__tests__/test-utils";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import {
   createAndAddApiKeysToDb,
   createBasicAuthHeader,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   OBSERVATION_FIELD_GROUPS_FULL,
   LEGACY_BLOB_EXPORT_CUTOFF,
-} from "@langfuse/shared";
-import { decrypt } from "@langfuse/shared/encryption";
+} from "@hanzo/console";
+import { decrypt } from "@hanzo/console/encryption";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PRE_CUTOFF = new Date(LEGACY_BLOB_EXPORT_CUTOFF.getTime() - MS_PER_DAY);

@@ -1,7 +1,7 @@
-import { LLMAdapter } from "@hanzo/console-core/src/server";
-import { Hanzo } from "@hanzo/console";
+import { LLMAdapter } from "@hanzo/console/src/server";
+import { Hanzo } from "@hanzo/console-js";
 import { env } from "@/src/env.mjs";
-import { type FilterCondition, singleFilter } from "@hanzo/console-core";
+import { type FilterCondition, singleFilter } from "@hanzo/console";
 import { z } from "zod/v4";
 
 let hanzoClient: Hanzo | null = null;
@@ -19,7 +19,9 @@ export function getDefaultModelParams() {
 
 const FilterArraySchema = z.array(singleFilter);
 
-export function parseFiltersFromCompletion(completion: string): FilterCondition[] {
+export function parseFiltersFromCompletion(
+  completion: string,
+): FilterCondition[] {
   const arrayMatch = completion.match(/\[[\s\S]*?\]/)?.[0];
   const objectMatch = completion.match(/\{[\s\S]*?\}/)?.[0];
 
@@ -44,7 +46,11 @@ export function parseFiltersFromCompletion(completion: string): FilterCondition[
   return [];
 }
 
-export function getHanzoClient(publicKey: string, secretKey: string, baseUrl?: string): Hanzo {
+export function getHanzoClient(
+  publicKey: string,
+  secretKey: string,
+  baseUrl?: string,
+): Hanzo {
   if (!hanzoClient) {
     hanzoClient = new Hanzo({
       publicKey,

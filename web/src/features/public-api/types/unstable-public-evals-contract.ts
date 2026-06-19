@@ -12,7 +12,7 @@ import {
   timeFilter,
   experimentEvalFilterColumns,
   booleanFilter,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { z } from "zod";
 export {
   UnstablePublicApiErrorCode,

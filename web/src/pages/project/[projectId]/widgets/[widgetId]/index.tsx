@@ -4,7 +4,7 @@ import { api } from "@/src/utils/api";
 import { WidgetForm } from "@/src/features/widgets/components/WidgetForm";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
-import { type DashboardWidgetChartType } from "@hanzo/console-core/src/db";
+import { type DashboardWidgetChartType } from "@hanzo/console/src/db";
 import { type views, type metricAggregations } from "@/src/features/query";
 import { type z } from "zod/v4";
 import { type WidgetChartConfig } from "@/src/features/widgets/utils";
@@ -19,15 +19,16 @@ export default function EditWidget() {
 
   // Fetch the widget details
   const utils = api.useUtils();
-  const { data: widgetData, isLoading: isWidgetLoading } = api.dashboardWidgets.get.useQuery(
-    {
-      projectId,
-      widgetId,
-    },
-    {
-      enabled: Boolean(projectId) && Boolean(widgetId),
-    },
-  );
+  const { data: widgetData, isLoading: isWidgetLoading } =
+    api.dashboardWidgets.get.useQuery(
+      {
+        projectId,
+        widgetId,
+      },
+      {
+        enabled: Boolean(projectId) && Boolean(widgetId),
+      },
+    );
 
   // Update widget mutation
   const updateWidgetMutation = api.dashboardWidgets.update.useMutation({
@@ -41,7 +42,9 @@ export default function EditWidget() {
       });
       // Navigate back to dashboard if provided else widgets list
       if (dashboardId) {
-        void router.push(`/project/${projectId}/dashboards/${dashboardId}?addWidgetId=${widgetId}`);
+        void router.push(
+          `/project/${projectId}/dashboards/${dashboardId}?addWidgetId=${widgetId}`,
+        );
       } else {
         router.push(`/project/${projectId}/widgets`);
       }
@@ -108,7 +111,10 @@ export default function EditWidget() {
             // Keep single values for backward compatibility and fallbacks
             dimension: widgetData.dimensions.slice().shift()?.field ?? "none",
             measure: widgetData.metrics.slice().shift()?.measure ?? "count",
-            aggregation: (widgetData.metrics.slice().shift()?.agg as z.infer<typeof metricAggregations>) ?? "count",
+            aggregation:
+              (widgetData.metrics.slice().shift()?.agg as z.infer<
+                typeof metricAggregations
+              >) ?? "count",
             filters: widgetData.filters,
             chartType: widgetData.chartType,
             chartConfig: widgetData.chartConfig,

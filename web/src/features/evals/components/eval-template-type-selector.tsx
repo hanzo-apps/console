@@ -4,7 +4,7 @@ import { type z } from "zod";
 import {
   EvalTemplateSourceCodeLanguage,
   EvalTemplateType,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 import {
   FormControl,

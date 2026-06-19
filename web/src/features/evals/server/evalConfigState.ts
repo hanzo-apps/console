@@ -3,7 +3,7 @@ import {
   type JobConfiguration,
   JobConfigState,
   singleFilter,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 export const resetEvalConfigBlockFields = {
   blockedAt: null,

@@ -12,36 +12,29 @@ const chatGoogleConstructorMock = vi.fn().mockImplementation(function () {
     }),
   };
 });
-const chatBedrockConverseConstructorMock = vi
-  .fn()
-  .mockImplementation(function () {
-    return {
+const chatBedrockConverseConstructorMock = vi.fn().mockImplementation(function () {
+  return {
+    invoke: bedrockInvokeMock,
+    pipe: vi.fn().mockReturnValue({
       invoke: bedrockInvokeMock,
-      pipe: vi.fn().mockReturnValue({
-        invoke: bedrockInvokeMock,
-        stream: streamMock,
-      }),
-    };
-  });
+      stream: streamMock,
+    }),
+  };
+});
 const VERTEXAI_USE_DEFAULT_CREDENTIALS = "__VERTEXAI_DEFAULT_CREDENTIALS__";
 
 process.env.CLICKHOUSE_URL ??= "http://localhost:8123";
 process.env.CLICKHOUSE_USER ??= "default";
 process.env.CLICKHOUSE_PASSWORD ??= "password";
 process.env.LANGFUSE_S3_EVENT_UPLOAD_BUCKET ??= "test-bucket";
-process.env.ENCRYPTION_KEY ??=
-  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.ENCRYPTION_KEY ??= "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 class MockLLMCompletionError extends Error {
   responseStatusCode: number;
   isRetryable: boolean;
   blockReason: null;
 
-  constructor(params: {
-    message: string;
-    responseStatusCode?: number;
-    isRetryable?: boolean;
-  }) {
+  constructor(params: { message: string; responseStatusCode?: number; isRetryable?: boolean }) {
     super(params.message);
     this.name = "LLMCompletionError";
     this.responseStatusCode = params.responseStatusCode ?? 500;
@@ -73,20 +66,16 @@ describe("fetchLLMCompletion runtime timeouts", () => {
     vi.resetModules();
     originalCloudRegion = process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
     delete process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-    vi.doMock(
-      "../../../packages/shared/node_modules/@langchain/google",
-      () => ({
-        ChatGoogle: chatGoogleConstructorMock,
-      }),
-    );
+    vi.doMock("../../../packages/shared/node_modules/@langchain/google", () => ({
+      ChatGoogle: chatGoogleConstructorMock,
+    }));
     vi.doMock("../../../packages/shared/src/server/llm/errors", () => ({
       LLMCompletionError: MockLLMCompletionError,
     }));
 
     ({ env } = await import("../../../packages/shared/src/env"));
     ({ encrypt } = await import("../../../packages/shared/src/encryption"));
-    ({ fetchLLMCompletion } =
-      await import("../../../packages/shared/src/server/llm/fetchLLMCompletion"));
+    ({ fetchLLMCompletion } = await import("../../../packages/shared/src/server/llm/fetchLLMCompletion"));
 
     originalTimeout = env.LANGFUSE_FETCH_LLM_COMPLETION_TIMEOUT_MS;
   });
@@ -128,13 +117,11 @@ describe("fetchLLMCompletion runtime timeouts", () => {
       },
     });
 
-    const completionRejection = expect(completionPromise).rejects.toMatchObject(
-      {
-        name: "LLMCompletionError",
-        message: "Request timed out after 25ms",
-        isRetryable: false,
-      },
-    );
+    const completionRejection = expect(completionPromise).rejects.toMatchObject({
+      name: "LLMCompletionError",
+      message: "Request timed out after 25ms",
+      isRetryable: false,
+    });
 
     await vi.runOnlyPendingTimersAsync();
     await completionRejection;
@@ -167,13 +154,11 @@ describe("fetchLLMCompletion runtime timeouts", () => {
       },
     });
 
-    const completionRejection = expect(completionPromise).rejects.toMatchObject(
-      {
-        name: "LLMCompletionError",
-        message: "Request timed out after 25ms",
-        isRetryable: false,
-      },
-    );
+    const completionRejection = expect(completionPromise).rejects.toMatchObject({
+      name: "LLMCompletionError",
+      message: "Request timed out after 25ms",
+      isRetryable: false,
+    });
 
     await vi.runOnlyPendingTimersAsync();
     await completionRejection;
@@ -235,7 +220,7 @@ describe("fetchLLMCompletion end of model lifetime", () => {
     vi.resetModules();
     originalCloudRegion = process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
     delete process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-    // @langchain/aws is a dependency of @langfuse/shared, not worker — a bare
+    // @langchain/aws is a dependency of @hanzo/console, not worker — a bare
     // specifier can't resolve from this test file under pnpm strict isolation.
     vi.doMock("../../../packages/shared/node_modules/@langchain/aws", () => ({
       ChatBedrockConverse: chatBedrockConverseConstructorMock,
@@ -245,8 +230,7 @@ describe("fetchLLMCompletion end of model lifetime", () => {
     }));
 
     ({ encrypt } = await import("../../../packages/shared/src/encryption"));
-    ({ fetchLLMCompletion } =
-      await import("../../../packages/shared/src/server/llm/fetchLLMCompletion"));
+    ({ fetchLLMCompletion } = await import("../../../packages/shared/src/server/llm/fetchLLMCompletion"));
 
     // Resolve the real AWS SDK exception via @langchain/aws's dependency tree.
     const awsModulePath = require.resolve("@langchain/aws", {

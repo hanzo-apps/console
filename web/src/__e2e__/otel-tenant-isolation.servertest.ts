@@ -1,8 +1,8 @@
 import {
   createOrgProjectAndApiKey,
   queryDatastore,
-} from "@langfuse/shared/src/server";
-import { prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import waitForExpect from "wait-for-expect";
 import { randomBytes } from "crypto";
 import { afterAll } from "vitest";

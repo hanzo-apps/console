@@ -20,9 +20,9 @@ import {
   LangfuseNotFoundError,
   MethodNotAllowedError,
   Prisma,
-} from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
-import { getUserProjectRoles } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
+import { getUserProjectRoles } from "@hanzo/console/src/server";
 import type { z } from "zod";
 
 type GetAnnotationQueuesInput = z.infer<typeof GetAnnotationQueuesQuery>;

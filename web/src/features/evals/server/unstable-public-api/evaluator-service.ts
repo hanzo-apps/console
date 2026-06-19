@@ -4,9 +4,9 @@ import {
   InternalServerError,
   observationVariableMappingList,
   variableMappingList,
-} from "@langfuse/shared";
-import { invalidateProjectEvalConfigCaches } from "@langfuse/shared/src/server";
-import { EvalTemplateType, Prisma, prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { invalidateProjectEvalConfigCaches } from "@hanzo/console/src/server";
+import { EvalTemplateType, Prisma, prisma } from "@hanzo/console/src/db";
 import type { PostUnstableEvaluatorBodyType } from "@/src/features/public-api/types/unstable-evaluators";
 import {
   toApiEvaluator,

@@ -1,7 +1,7 @@
 import React from "react";
 import { act, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { SLOW_QUERY_HINT_TEXT } from "@hanzo/console-core";
+import { SLOW_QUERY_HINT_TEXT } from "@hanzo/console";
 import { ChartLoadingState } from "@/src/features/widgets/chart-library/ChartLoadingState";
 
 describe("ChartLoadingState", () => {
@@ -19,7 +19,9 @@ describe("ChartLoadingState", () => {
       <ChartLoadingState isLoading={true} hintDelayMs={hintDelayMs} />,
     );
 
-    expect(screen.getByRole("status", { name: "Loading chart data" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Loading chart data" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(SLOW_QUERY_HINT_TEXT)).not.toBeInTheDocument();
 
     act(() => {
@@ -34,7 +36,9 @@ describe("ChartLoadingState", () => {
   test("keeps legacy pending state spinner-only when loading toggles off and on again", () => {
     const hintDelayMs = 825;
 
-    const { rerender } = render(<ChartLoadingState isLoading={true} hintDelayMs={hintDelayMs} />);
+    const { rerender } = render(
+      <ChartLoadingState isLoading={true} hintDelayMs={hintDelayMs} />,
+    );
 
     act(() => {
       vi.advanceTimersByTime(hintDelayMs);
@@ -57,7 +61,13 @@ describe("ChartLoadingState", () => {
   });
 
   test("shows hint immediately without spinner for overload state", () => {
-    const { container } = render(<ChartLoadingState isLoading={true} showSpinner={false} showHintImmediately={true} />);
+    const { container } = render(
+      <ChartLoadingState
+        isLoading={true}
+        showSpinner={false}
+        showHintImmediately={true}
+      />,
+    );
 
     expect(screen.getByText(SLOW_QUERY_HINT_TEXT)).toBeInTheDocument();
     expect(screen.getByText("Query needs attention")).toBeInTheDocument();
@@ -71,7 +81,14 @@ describe("ChartLoadingState", () => {
   test("renders a provided hint text for error states", () => {
     const customHint = "Custom resource limit hint";
 
-    render(<ChartLoadingState isLoading={true} showHintImmediately={true} showSpinner={false} hintText={customHint} />);
+    render(
+      <ChartLoadingState
+        isLoading={true}
+        showHintImmediately={true}
+        showSpinner={false}
+        hintText={customHint}
+      />,
+    );
 
     expect(screen.getByText(customHint)).toBeInTheDocument();
     expect(screen.queryByText(SLOW_QUERY_HINT_TEXT)).not.toBeInTheDocument();

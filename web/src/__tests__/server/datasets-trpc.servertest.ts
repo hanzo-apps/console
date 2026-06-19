@@ -1,7 +1,7 @@
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@langfuse/shared/src/db";
-import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import type { Session } from "next-auth";
 import { v4 } from "uuid";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";

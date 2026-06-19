@@ -7,8 +7,8 @@ import {
   generateKeySet,
   getDisplaySecretKey,
   hashSecretKey,
-} from "@langfuse/shared/src/server";
-import { Prisma, type PrismaClient, prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console/src/server";
+import { Prisma, type PrismaClient, prisma } from "@hanzo/console/src/db";
 import { env } from "@/src/env.mjs";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { v4 } from "uuid";

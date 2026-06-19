@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -7,7 +7,7 @@ import {
   GetAnnotationQueuesQuery,
   GetAnnotationQueuesResponse,
 } from "@/src/features/public-api/types/annotation-queues";
-import { InvalidRequestError, MethodNotAllowedError } from "@hanzo/console-core";
+import { InvalidRequestError, MethodNotAllowedError } from "@hanzo/console";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({
@@ -36,7 +36,9 @@ export default withMiddlewares({
             },
           })) >= 1
         ) {
-          throw new MethodNotAllowedError("Maximum number of annotation queues reached on Hobby plan.");
+          throw new MethodNotAllowedError(
+            "Maximum number of annotation queues reached on Hobby plan.",
+          );
         }
       }
 
@@ -63,7 +65,9 @@ export default withMiddlewares({
       });
       const scoreConfigIdSet = new Set(scoreConfigs.map((config) => config.id));
       if (body.scoreConfigIds.some((id) => !scoreConfigIdSet.has(id))) {
-        throw new InvalidRequestError("At least one of the score config IDs cannot be found for the given project.");
+        throw new InvalidRequestError(
+          "At least one of the score config IDs cannot be found for the given project.",
+        );
       }
 
       const queue = await prisma.annotationQueue.create({

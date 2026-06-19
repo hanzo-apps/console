@@ -10,10 +10,10 @@ import {
   isGitHubDispatchAction,
   type AutomationDomain,
   type ActionDomainWithSecrets,
-} from "@hanzo/console-core";
-import { decrypt, createSignatureHeader } from "@hanzo/console-core/encryption";
-import { prisma } from "@hanzo/console-core/src/db";
-import { validateWebhookURL, whitelistFromEnv, fetchWithSecureRedirects } from "@hanzo/console-core/src/server";
+} from "@hanzo/console";
+import { decrypt, createSignatureHeader } from "@hanzo/console/encryption";
+import { prisma } from "@hanzo/console/src/db";
+import { validateWebhookURL, whitelistFromEnv, fetchWithSecureRedirects } from "@hanzo/console/src/server";
 import {
   TQueueJobTypes,
   QueueName,
@@ -24,7 +24,7 @@ import {
   getConsecutiveAutomationFailures,
   SlackService,
   logger,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { Processor, Job } from "@hanzo/mq";
 import { backOff } from "exponential-backoff";
 import { env } from "../env";
@@ -35,10 +35,7 @@ import { SlackMessageBuilder } from "../features/slack/slackMessageBuilder";
 const GITHUB_REPOSITORY_DISPATCH_MAX_PAYLOAD_BYTES = 64 * 1024;
 const GITHUB_REPOSITORY_DISPATCH_TRUNCATION_MARKER =
   "[TRUNCATED: GitHub repository_dispatch payload exceeded size limit]";
-const GITHUB_REPOSITORY_DISPATCH_TRUNCATED_FIELDS = [
-  "prompt.prompt",
-  "prompt.config",
-];
+const GITHUB_REPOSITORY_DISPATCH_TRUNCATED_FIELDS = ["prompt.prompt", "prompt.config"];
 
 // Handles both webhook and slack actions
 export const webhookProcessor: Processor = async (job: Job<TQueueJobTypes[QueueName.WebhookQueue]>) => {
@@ -493,8 +490,7 @@ async function executeGitHubDispatchAction({
     },
   });
   const githubPayload =
-    Buffer.byteLength(fullGithubPayload, "utf8") <
-    GITHUB_REPOSITORY_DISPATCH_MAX_PAYLOAD_BYTES
+    Buffer.byteLength(fullGithubPayload, "utf8") < GITHUB_REPOSITORY_DISPATCH_MAX_PAYLOAD_BYTES
       ? fullGithubPayload
       : JSON.stringify({
           event_type: eventType,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LATEST_PROMPT_LABEL, type Prompt } from "@langfuse/shared";
+import { LATEST_PROMPT_LABEL, type Prompt } from "@hanzo/console";
 
 import { getPromptForApi } from "@/src/features/prompts/server/prompt-api-service";
 

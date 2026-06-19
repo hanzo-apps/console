@@ -8,12 +8,12 @@ import {
   createEvent,
   createOrgProjectAndApiKey,
   type EventRecordInsertType,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   createObservationsCh,
   createTracesCh,
   createEventsCh,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   makeZodVerifiedAPICall,
   makeZodVerifiedAPICallSilent,

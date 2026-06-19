@@ -1,7 +1,7 @@
 import { expect, describe, it, beforeEach, afterEach } from "vitest";
 import { randomUUID } from "crypto";
-import { prisma } from "@hanzo/console-core/src/db";
-import { createOrgProjectAndApiKey } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import { BatchTraceDeletionCleaner } from "../features/batch-trace-deletion-cleaner";
 
 describe("BatchTraceDeletionCleaner", () => {

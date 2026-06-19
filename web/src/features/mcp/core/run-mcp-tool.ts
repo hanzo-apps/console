@@ -1,4 +1,4 @@
-import { instrumentAsync } from "@langfuse/shared/src/server";
+import { instrumentAsync } from "@hanzo/console/src/server";
 import { SpanKind, type Span } from "@opentelemetry/api";
 
 import type { ServerContext } from "../types";

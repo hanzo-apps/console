@@ -1,9 +1,9 @@
 import type { Session } from "next-auth";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
-import { LEGACY_BLOB_EXPORT_CUTOFF } from "@langfuse/shared";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
+import { LEGACY_BLOB_EXPORT_CUTOFF } from "@hanzo/console";
 import { env } from "@/src/env.mjs";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;

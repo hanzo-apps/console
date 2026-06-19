@@ -1,4 +1,4 @@
-import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@hanzo/console-core";
+import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@hanzo/console";
 
 type ChartQueryState = {
   isPending: boolean;
@@ -13,7 +13,10 @@ type ChartLoadingProps = {
   hintText?: string;
 };
 
-export function getChartLoadingStateProps({ isPending, isError }: ChartQueryState): ChartLoadingProps {
+export function getChartLoadingStateProps({
+  isPending,
+  isError,
+}: ChartQueryState): ChartLoadingProps {
   return {
     isLoading: isPending || isError,
     showSpinner: isPending,

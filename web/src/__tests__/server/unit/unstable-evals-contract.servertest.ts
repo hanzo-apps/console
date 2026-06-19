@@ -2,7 +2,7 @@ import {
   createNumericEvalOutputDefinition,
   EvalTargetObject,
   JobConfigState,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import {
   toApiEvaluationRule,
   toApiEvaluator,

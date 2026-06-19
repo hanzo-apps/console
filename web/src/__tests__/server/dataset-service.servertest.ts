@@ -12,14 +12,14 @@ import {
   getDatasetItemIdsWithRunData,
   createDatasetItem,
   createManyDatasetItems,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { v4 } from "uuid";
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   createObservation,
   createTraceScore,
   createTrace,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   enrichAndMapToDatasetItemId,
   getRunItemsByRunIdOrItemId,

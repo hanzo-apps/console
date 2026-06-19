@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { scheduleObservationEvals } from "../scheduleObservationEvals";
 import { type ObservationForEval, type ObservationEvalConfig, type ObservationEvalSchedulerDeps } from "../types";
-import { type Prisma } from "@hanzo/console-core/src/db";
-import { EvalTargetObject, JobExecutionStatus } from "@hanzo/console-core";
+import { type Prisma } from "@hanzo/console/src/db";
+import { EvalTargetObject, JobExecutionStatus } from "@hanzo/console";
 import { createW3CTraceId } from "../../../utils";
 
 describe("scheduleObservationEvals", () => {

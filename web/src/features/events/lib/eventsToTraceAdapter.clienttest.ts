@@ -1,4 +1,4 @@
-import { deepParseJson } from "@langfuse/shared";
+import { deepParseJson } from "@hanzo/console";
 
 import { adaptEventsToTraceFormat } from "./eventsToTraceAdapter";
 

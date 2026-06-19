@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -7,14 +7,14 @@ import {
   PostDatasetItemsV1Body,
   PostDatasetItemsV1Response,
 } from "@/src/features/public-api/types/datasets";
-import { HanzoNotFoundError, Prisma } from "@hanzo/shared";
+import { HanzoNotFoundError, Prisma } from "@hanzo/console";
 import {
   createDatasetItemFilterState,
   getDatasetItems,
   getDatasetItemsCount,
   logger,
   upsertDatasetItem,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
 export const config = {
@@ -32,7 +32,16 @@ export default withMiddlewares({
     responseSchema: PostDatasetItemsV1Response,
     rateLimitResource: "datasets",
     fn: async ({ body, auth }) => {
-      const { datasetName, id, input, expectedOutput, metadata, sourceTraceId, sourceObservationId, status } = body;
+      const {
+        datasetName,
+        id,
+        input,
+        expectedOutput,
+        metadata,
+        sourceTraceId,
+        sourceObservationId,
+        status,
+      } = body;
 
       try {
         const datasetItem = await upsertDatasetItem({
@@ -89,7 +98,8 @@ export default withMiddlewares({
     responseSchema: GetDatasetItemsV1Response,
     rateLimitResource: "datasets",
     fn: async ({ query, auth }) => {
-      const { datasetName, sourceTraceId, sourceObservationId, page, limit } = query;
+      const { datasetName, sourceTraceId, sourceObservationId, page, limit } =
+        query;
 
       let datasetId: string | undefined = undefined;
       if (datasetName) {

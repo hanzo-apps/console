@@ -11,7 +11,7 @@ import {
   type ChatMessageWithId,
   PromptChatMessageListSchema,
   ChatMessageType,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 
 import { type NewPromptFormSchemaType } from "./validation";
 import { PromptSelectionDialog } from "../PromptSelectionDialog";

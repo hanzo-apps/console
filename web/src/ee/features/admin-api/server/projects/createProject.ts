@@ -1,12 +1,16 @@
 import { type NextApiRequest, type NextApiResponse } from "next";
-import { prisma } from "@hanzo/shared/src/db";
-import { logger } from "@hanzo/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { logger } from "@hanzo/console/src/server";
 import { projectNameSchema } from "@/src/features/auth/lib/projectNameSchema";
 import { projectRetentionSchema } from "@/src/features/auth/lib/projectRetentionSchema";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
-import { type ApiAccessScope } from "@hanzo/shared/src/server";
+import { type ApiAccessScope } from "@hanzo/console/src/server";
 
-export async function handleCreateProject(req: NextApiRequest, res: NextApiResponse, scope: ApiAccessScope) {
+export async function handleCreateProject(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  scope: ApiAccessScope,
+) {
   try {
     const { name, retention, metadata } = req.body;
 
@@ -59,7 +63,8 @@ export async function handleCreateProject(req: NextApiRequest, res: NextApiRespo
 
         if (!hasDataRetentionEntitlement) {
           return res.status(403).json({
-            message: "The data-retention entitlement is required to set a non-zero retention period.",
+            message:
+              "The data-retention entitlement is required to set a non-zero retention period.",
           });
         }
       }

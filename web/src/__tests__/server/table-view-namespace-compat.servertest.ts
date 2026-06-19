@@ -1,17 +1,17 @@
 /** @jest-environment node */
 
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   createOrgProjectAndApiKey,
   DefaultViewService,
   getSystemTableViewPresets,
   TableViewService,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 import {
   LangfuseConflictError,
   TableViewPresetTableName,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 const createTableViewPreset = async ({
   projectId,

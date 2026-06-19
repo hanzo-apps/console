@@ -1,5 +1,5 @@
-import { logger, QueueName, recordHistogram } from "@hanzo/console-core/src/server";
-import { getQueue } from "@hanzo/console-core/src/server";
+import { logger, QueueName, recordHistogram } from "@hanzo/console/src/server";
+import { getQueue } from "@hanzo/console/src/server";
 
 export class DlqRetryService {
   private static retryQueues = [

@@ -1,5 +1,8 @@
-import { projectRoleAccessRights, type ProjectScope } from "@/src/features/rbac/constants/projectAccessRights";
-import { type Role } from "@hanzo/shared/src/db";
+import {
+  projectRoleAccessRights,
+  type ProjectScope,
+} from "@/src/features/rbac/constants/projectAccessRights";
+import { type Role } from "@hanzo/console/src/db";
 import { TRPCError } from "@trpc/server";
 import { type Session } from "next-auth";
 import { useSession } from "next-auth/react";
@@ -26,7 +29,9 @@ export const throwIfNoProjectAccess = (p: HasProjectAccessParams) => {
   if (!hasProjectAccess(p))
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: p.forbiddenErrorMessage ?? "User does not have access to this resource or action",
+      message:
+        p.forbiddenErrorMessage ??
+        "User does not have access to this resource or action",
     });
 };
 
@@ -34,7 +39,10 @@ export const throwIfNoProjectAccess = (p: HasProjectAccessParams) => {
  * React hook to check if user has access to the given scope
  * @returns true if user has access, false otherwise or while loading
  */
-export const useHasProjectAccess = (p: { projectId: string | undefined; scope: ProjectScope }) => {
+export const useHasProjectAccess = (p: {
+  projectId: string | undefined;
+  scope: ProjectScope;
+}) => {
   const { scope, projectId } = p;
   const session = useSession();
 
@@ -52,8 +60,9 @@ export function hasProjectAccess(p: HasProjectAccessParams): boolean {
   const projectRole: Role | undefined =
     "role" in p
       ? p.role
-      : p.session?.user?.organizations.flatMap((org) => org.projects).find((project) => project.id === p.projectId)
-          ?.role;
+      : p.session?.user?.organizations
+          .flatMap((org) => org.projects)
+          .find((project) => project.id === p.projectId)?.role;
   if (projectRole === undefined) return false;
 
   return projectRoleAccessRights[projectRole].includes(p.scope);

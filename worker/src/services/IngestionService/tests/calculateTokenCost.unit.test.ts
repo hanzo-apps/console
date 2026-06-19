@@ -2,8 +2,8 @@ import Decimal from "decimal.js";
 import { v4 as uuidv4 } from "uuid";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Price } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+import { Price } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 
 import { IngestionService } from "../../IngestionService";
 import * as datastoreWriteExports from "../../DatastoreWriter";

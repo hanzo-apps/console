@@ -5,7 +5,7 @@ import {
   recordIncrement,
   removeIngestionEventsFromS3AndDeleteDatastoreRefsForProject,
   traceException,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { env } from "../../env";
 import { PeriodicExclusiveRunner } from "../../utils/PeriodicExclusiveRunner";
 

@@ -3,7 +3,7 @@ import {
   eventsTableCols,
   filterOperators,
   OBSERVATION_MCP_ALLOWED_EVENTS_TABLE_FILTER_COLUMNS,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { defineTool } from "../../../core/define-tool";
 import { observationEventsFilterConfig } from "@/src/features/events/config/filter-config";
 

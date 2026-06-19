@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { randomUUID } from "crypto";
 import Decimal from "decimal.js";
-import { createOrgProjectAndApiKey, StorageService, StorageServiceFactory } from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
-import { EvalTargetObject } from "@hanzo/console-core";
+import { createOrgProjectAndApiKey, StorageService, StorageServiceFactory } from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { EvalTargetObject } from "@hanzo/console";
 import { env } from "../../../env";
 import { createObservationEvalSchedulerDeps } from "../observationEval/createSchedulerDeps";
 import { createProductionEvalExecutionDeps } from "../evalExecutionDeps";

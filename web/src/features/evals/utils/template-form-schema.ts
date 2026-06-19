@@ -8,7 +8,7 @@ import {
   getMinimumCategoricalCategoriesMessage,
   ScoreDataTypeEnum,
   ZodModelConfig,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { EvalReferencedEvaluators } from "@/src/features/evals/types";
 
 const selectedModelSchema = z.object({

@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@langfuse/shared/src/server", async (importOriginal) => {
-  const mod =
-    await importOriginal<typeof import("@langfuse/shared/src/server")>();
+vi.mock("@hanzo/console/src/server", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@hanzo/console/src/server")>();
   return {
     ...mod,
     createModelCache: vi.fn().mockReturnValue({
@@ -18,17 +17,13 @@ vi.mock("@langfuse/shared/src/server", async (importOriginal) => {
 });
 
 import { enrichObservationStream } from "../features/blobstorage/handleBlobStorageIntegrationProjectJob";
-import type { ObservationFieldGroupFull } from "@langfuse/shared";
+import type { ObservationFieldGroupFull } from "@hanzo/console";
 
-async function* rowStream(
-  rows: Record<string, unknown>[],
-): AsyncGenerator<Record<string, unknown>> {
+async function* rowStream(rows: Record<string, unknown>[]): AsyncGenerator<Record<string, unknown>> {
   for (const row of rows) yield row;
 }
 
-async function collect(
-  gen: AsyncGenerator<Record<string, unknown>>,
-): Promise<Record<string, unknown>[]> {
+async function collect(gen: AsyncGenerator<Record<string, unknown>>): Promise<Record<string, unknown>[]> {
   const out: Record<string, unknown>[] = [];
   for await (const row of gen) out.push(row);
   return out;
@@ -39,9 +34,7 @@ describe("enrichObservationStream field group filtering", () => {
     // Simulates a row from ClickHouse where metrics group was not SELECTed —
     // latency and time_to_first_token are absent from the row entirely.
     const rows = [{ id: "obs-1" }];
-    const results = await collect(
-      enrichObservationStream(rowStream(rows), "project-1", "model_id", true),
-    );
+    const results = await collect(enrichObservationStream(rowStream(rows), "project-1", "model_id", true));
 
     expect(results[0]).not.toHaveProperty("latency");
     expect(results[0]).not.toHaveProperty("time_to_first_token");
@@ -51,9 +44,7 @@ describe("enrichObservationStream field group filtering", () => {
     // Guards are independent: a row with latency but no time_to_first_token
     // should convert latency and leave time_to_first_token out entirely.
     const rows = [{ id: "obs-1", latency: 2000 }];
-    const results = await collect(
-      enrichObservationStream(rowStream(rows), "project-1", "model_id", true),
-    );
+    const results = await collect(enrichObservationStream(rowStream(rows), "project-1", "model_id", true));
 
     expect(results[0].latency).toBe(2);
     expect(results[0]).not.toHaveProperty("time_to_first_token");
@@ -63,9 +54,7 @@ describe("enrichObservationStream field group filtering", () => {
     // Simulates ClickHouse returning {} for an unselected Map column.
     const rows = [{ id: "obs-1", metadata: {} }];
     const results = await collect(
-      enrichObservationStream(rowStream(rows), "project-1", "model_id", false, [
-        "core" as ObservationFieldGroupFull,
-      ]),
+      enrichObservationStream(rowStream(rows), "project-1", "model_id", false, ["core" as ObservationFieldGroupFull]),
     );
 
     expect(results[0]).not.toHaveProperty("metadata");
@@ -74,9 +63,7 @@ describe("enrichObservationStream field group filtering", () => {
   it("does not add pricing fields when model group is not selected", async () => {
     const rows = [{ id: "obs-1" }];
     const results = await collect(
-      enrichObservationStream(rowStream(rows), "project-1", "model_id", false, [
-        "core" as ObservationFieldGroupFull,
-      ]),
+      enrichObservationStream(rowStream(rows), "project-1", "model_id", false, ["core" as ObservationFieldGroupFull]),
     );
 
     expect(results[0]).not.toHaveProperty("model_id");
@@ -148,9 +135,7 @@ describe("enrichObservationStream field group filtering", () => {
     // Legacy path: fieldGroups undefined means all fields included; model_id
     // passes through from the source row unchanged.
     const rows = [{ id: "obs-1", model_id: "gpt-4" }];
-    const results = await collect(
-      enrichObservationStream(rowStream(rows), "project-1", "model_id", false),
-    );
+    const results = await collect(enrichObservationStream(rowStream(rows), "project-1", "model_id", false));
 
     expect(results[0]).toHaveProperty("model_id");
     expect(results[0]).toHaveProperty("input_price");

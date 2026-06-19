@@ -1,5 +1,5 @@
-import { prisma } from "@hanzo/console-core/src/db";
-import { LLMAsJudgeExecutionQueue, QueueJobs, QueueName } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { LLMAsJudgeExecutionQueue, QueueJobs, QueueName } from "@hanzo/console/src/server";
 import { env } from "../../../env";
 import { getEvalS3StorageClient } from "../s3StorageClient";
 import { type ObservationEvalSchedulerDeps } from "./types";
@@ -52,9 +52,7 @@ export function createObservationEvalSchedulerDeps(): ObservationEvalSchedulerDe
         projectId: params.projectId,
         jobExecutionId: params.jobExecutionId,
         observationS3Path: params.observationS3Path,
-        ...(params.executionMode
-          ? { executionMode: params.executionMode }
-          : {}),
+        ...(params.executionMode ? { executionMode: params.executionMode } : {}),
       };
 
       if (params.evalTemplateType === EvalTemplateType.CODE) {

@@ -5,8 +5,8 @@ import {
   createTRPCRouter,
   protectedProjectProcedure,
 } from "@/src/server/api/trpc";
-import { CommentObjectType } from "@hanzo/shared";
-import { Prisma, CreateCommentData, DeleteCommentData } from "@hanzo/shared";
+import { CommentObjectType } from "@hanzo/console";
+import { Prisma, CreateCommentData, DeleteCommentData } from "@hanzo/console";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { TRPCError } from "@trpc/server";
 import { validateCommentReferenceObject } from "@/src/features/comments/validateCommentReferenceObject";
@@ -15,8 +15,8 @@ import {
   logger,
   NotificationQueue,
   QueueJobs,
-} from "@hanzo/shared/src/server";
-import { getUserProjectRoles } from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
+import { getUserProjectRoles } from "@hanzo/console/src/server";
 import {
   extractUniqueMentionedUserIds,
   sanitizeMentions,

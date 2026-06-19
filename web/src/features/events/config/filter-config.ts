@@ -1,4 +1,4 @@
-import { eventsTableCols } from "@hanzo/console-core";
+import { eventsTableCols } from "@hanzo/console";
 import type { FilterConfig } from "@/src/features/filters/lib/filter-config";
 import type { ColumnToBackendKeyMap } from "@/src/features/filters/lib/filter-transform";
 import { renderFilterIcon } from "@/src/components/ItemBadge";
@@ -129,7 +129,8 @@ export const observationEventsFilterConfig: FilterConfig = {
       type: "numeric" as const,
       column: "levelInTrace",
       label: getEventsColumnName("levelInTrace"),
-      tooltip: "Filter for observations at a specific depth level in a trace. The topmost observation has level 0.",
+      tooltip:
+        "Filter for observations at a specific depth level in a trace. The topmost observation has level 0.",
       min: 0,
       max: 50,
       step: 1,

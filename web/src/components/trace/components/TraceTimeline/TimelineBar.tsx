@@ -11,7 +11,7 @@ import { GroupedScoreBadges } from "@/src/components/grouped-score-badge";
 import { formatIntervalSeconds } from "@/src/utils/dates";
 import { usdFormatter } from "@/src/utils/numbers";
 import { heatMapTextColor } from "@/src/components/trace2/lib/helpers";
-import { isPresent } from "@hanzo/console-core";
+import { isPresent } from "@hanzo/console";
 
 export function TimelineBar({
   node,
@@ -46,8 +46,10 @@ export function TimelineBar({
       >
         <div
           className={cn(
-            "flex rounded-sm border border-border",
-            isSelected ? "ring ring-primary-accent" : "group-hover:ring group-hover:ring-tertiary",
+            "border-border flex rounded-sm border",
+            isSelected
+              ? "ring-primary-accent ring"
+              : "group-hover:ring-tertiary group-hover:ring",
           )}
           style={{ marginLeft: `${startOffset}px` }}
         >
@@ -71,8 +73,12 @@ export function TimelineBar({
             <div className="text-muted-foreground -ml-8 flex flex-row items-center justify-start gap-2 text-xs">
               <span className="text-xxs text-primary">First token</span>
               <ItemBadge type={node.type} isSmall />
-              <span className="whitespace-nowrap text-sm font-medium text-primary">{node.name}</span>
-              {showComments && commentCount ? <CommentCountIcon count={commentCount} /> : null}
+              <span className="text-primary text-sm font-medium whitespace-nowrap">
+                {node.name}
+              </span>
+              {showComments && commentCount ? (
+                <CommentCountIcon count={commentCount} />
+              ) : null}
               {showDuration && isPresent(latency) && (
                 <span
                   className={cn(
@@ -128,7 +134,9 @@ export function TimelineBar({
           className={cn(
             "border-border bg-muted flex h-8 items-center justify-start rounded-sm border",
             itemWidth ? "" : "border-dashed",
-            isSelected ? "ring ring-primary-accent" : "group-hover:ring group-hover:ring-tertiary",
+            isSelected
+              ? "ring-primary-accent ring"
+              : "group-hover:ring-tertiary group-hover:ring",
           )}
           style={{ width: `${itemWidth || 10}px` }}
         >
@@ -139,8 +147,12 @@ export function TimelineBar({
             )}
           >
             <ItemBadge type={node.type} isSmall />
-            <span className="whitespace-nowrap text-sm font-medium text-primary">{node.name}</span>
-            {showComments && commentCount ? <CommentCountIcon count={commentCount} /> : null}
+            <span className="text-primary text-sm font-medium whitespace-nowrap">
+              {node.name}
+            </span>
+            {showComments && commentCount ? (
+              <CommentCountIcon count={commentCount} />
+            ) : null}
             {showDuration && isPresent(latency) && (
               <span
                 className={cn(

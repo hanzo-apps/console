@@ -11,7 +11,7 @@ import {
   createObservationsCh,
   createTraceScore,
   createScoresCh,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 
 describe("queryBuilder", () => {

@@ -1,6 +1,6 @@
-import { EvalTargetObject } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
-import { logger, hasNoEvalConfigsCache, setNoEvalConfigsCache } from "@hanzo/console-core/src/server";
+import { EvalTargetObject } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
+import { logger, hasNoEvalConfigsCache, setNoEvalConfigsCache } from "@hanzo/console/src/server";
 import { type ObservationEvalConfig } from "./types";
 
 /**
@@ -64,9 +64,7 @@ export async function fetchObservationEvalConfigs(projectId: string): Promise<Ob
 
   return configs.map((config) => {
     if (!config.evalTemplate) {
-      throw new Error(
-        `Observation eval config ${config.id} has no eval template`,
-      );
+      throw new Error(`Observation eval config ${config.id} has no eval template`);
     }
 
     return {

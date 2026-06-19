@@ -2,13 +2,15 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@hanzo/ui";
 import { Button } from "@/src/components/ui/button";
-import { type BulkDatasetItemValidationError } from "@hanzo/console-core";
+import { type BulkDatasetItemValidationError } from "@hanzo/console";
 
 type CsvImportValidationErrorProps = {
   errors: BulkDatasetItemValidationError[];
 };
 
-export const CsvImportValidationError: React.FC<CsvImportValidationErrorProps> = ({ errors }) => {
+export const CsvImportValidationError: React.FC<
+  CsvImportValidationErrorProps
+> = ({ errors }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const errorCount = errors.length;
@@ -16,16 +18,18 @@ export const CsvImportValidationError: React.FC<CsvImportValidationErrorProps> =
 
   return (
     <Alert variant="destructive" className="mt-4">
-      <AlertTitle className="text-base font-semibold">Schema Validation Failed</AlertTitle>
+      <AlertTitle className="text-base font-semibold">
+        Schema Validation Failed
+      </AlertTitle>
       <AlertDescription className="mt-2 space-y-3">
         <p className="text-sm">
           {hasMoreThan10
             ? `${errorCount}+ items failed validation. Showing first ${errorCount} errors.`
             : `${errorCount} item${errorCount === 1 ? "" : "s"} failed validation.`}
         </p>
-        <p className="text-sm text-muted-foreground">
-          The CSV data does not match the required schema for this dataset. Fix the errors in your CSV file and try
-          importing again.
+        <p className="text-muted-foreground text-sm">
+          The CSV data does not match the required schema for this dataset. Fix
+          the errors in your CSV file and try importing again.
         </p>
 
         <Button
@@ -35,7 +39,11 @@ export const CsvImportValidationError: React.FC<CsvImportValidationErrorProps> =
           onClick={() => setIsExpanded(!isExpanded)}
           className="h-auto p-0 text-sm font-medium hover:bg-transparent"
         >
-          {isExpanded ? <ChevronDown className="mr-1 h-4 w-4" /> : <ChevronRight className="mr-1 h-4 w-4" />}
+          {isExpanded ? (
+            <ChevronDown className="mr-1 h-4 w-4" />
+          ) : (
+            <ChevronRight className="mr-1 h-4 w-4" />
+          )}
           {isExpanded ? "Hide" : "Show"} error details
         </Button>
 
@@ -47,9 +55,12 @@ export const CsvImportValidationError: React.FC<CsvImportValidationErrorProps> =
                 className="border-destructive/10 space-y-1 border-b pb-3 last:border-0 last:pb-0"
               >
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-muted-foreground">#{idx + 1}</span>
+                  <span className="text-muted-foreground font-mono text-xs">
+                    #{idx + 1}
+                  </span>
                   <span className="text-sm font-medium">
-                    CSV Row {error.itemIndex + 2}: {error.field === "input" ? "Input" : "Expected Output"}
+                    CSV Row {error.itemIndex + 2}:{" "}
+                    {error.field === "input" ? "Input" : "Expected Output"}
                   </span>
                 </div>
 
@@ -57,7 +68,9 @@ export const CsvImportValidationError: React.FC<CsvImportValidationErrorProps> =
                   {error.errors.map((err, errIdx) => (
                     <li key={errIdx} className="text-destructive">
                       {err.path !== "/" && (
-                        <span className="font-mono text-xs text-muted-foreground">{err.path}: </span>
+                        <span className="text-muted-foreground font-mono text-xs">
+                          {err.path}:{" "}
+                        </span>
                       )}
                       {err.message}
                     </li>
@@ -67,8 +80,9 @@ export const CsvImportValidationError: React.FC<CsvImportValidationErrorProps> =
             ))}
 
             {hasMoreThan10 && (
-              <p className="pt-2 text-xs text-muted-foreground">
-                Fix these errors to see if there are additional validation issues.
+              <p className="text-muted-foreground pt-2 text-xs">
+                Fix these errors to see if there are additional validation
+                issues.
               </p>
             )}
           </div>

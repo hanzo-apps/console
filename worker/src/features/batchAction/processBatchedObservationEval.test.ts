@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { EvalTargetObject } from "@hanzo/console-core";
+import { EvalTargetObject } from "@hanzo/console";
 import { type ObservationEvalConfig } from "../evaluation/observationEval";
 
-vi.mock("@hanzo/console-core/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     batchAction: {
       update: vi.fn().mockResolvedValue(undefined),
@@ -15,7 +15,7 @@ vi.mock("../evaluation/observationEval", () => ({
   scheduleObservationEvals: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { scheduleObservationEvals } from "../evaluation/observationEval";
 import { processBatchedObservationEval } from "./processBatchedObservationEval";
 
@@ -156,11 +156,7 @@ describe("processBatchedObservationEval", () => {
 
     const firstCall = (scheduleObservationEvals as Mock).mock.calls[0][0];
     expect(firstCall.observation.tool_call_count).toBe(3);
-    expect(firstCall.observation.tool_call_names).toEqual([
-      "search",
-      "calculator",
-      "fetch",
-    ]);
+    expect(firstCall.observation.tool_call_names).toEqual(["search", "calculator", "fetch"]);
 
     const secondCall = (scheduleObservationEvals as Mock).mock.calls[1][0];
     expect(secondCall.observation.tool_call_count).toBe(0);

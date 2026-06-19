@@ -11,9 +11,9 @@ import {
   singleFilter,
   type ObservationVariableMapping,
   type PersistedEvalOutputDefinition,
-} from "@langfuse/shared";
-import { InternalServerError } from "@langfuse/shared";
-import { logger } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { InternalServerError } from "@hanzo/console";
+import { logger } from "@hanzo/console/src/server";
 import { z } from "zod";
 import {
   ExperimentEvaluationRuleFilter,

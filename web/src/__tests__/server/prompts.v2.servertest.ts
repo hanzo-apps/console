@@ -1,10 +1,16 @@
 /** @jest-environment node */
 
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { disconnectQueues, makeAPICall } from "@/src/__tests__/test-utils";
 import { v4 as uuidv4, v4 } from "uuid";
-import { PromptSchema, type ValidatedPrompt, type ChatMessage, type Prompt, PromptType } from "@hanzo/shared";
-import { parsePromptDependencyTags } from "@hanzo/shared";
+import {
+  PromptSchema,
+  type ValidatedPrompt,
+  type ChatMessage,
+  type Prompt,
+  PromptType,
+} from "@hanzo/console";
+import { parsePromptDependencyTags } from "@hanzo/console";
 import { generateId, nanoid } from "ai";
 
 import { type PromptsMetaResponse } from "@/src/features/prompts/server/actions/getPromptsMeta";
@@ -13,7 +19,7 @@ import {
   getObservationById,
   MAX_PROMPT_NESTING_DEPTH,
   ChatMessageType,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "node:crypto";
 import waitForExpect from "wait-for-expect";
 import { createPrompt } from "@/src/features/prompts/server/actions/createPrompt";
@@ -105,7 +111,10 @@ const setupTriggerAndAction = async (projectId: string) => {
   };
 };
 
-const testPromptEquality = (promptParams: CreatePromptInDBParams, prompt: Prompt) => {
+const testPromptEquality = (
+  promptParams: CreatePromptInDBParams,
+  prompt: Prompt,
+) => {
   if (promptParams.promptId) {
     expect(prompt.id).toBe(promptParams.promptId);
   }
@@ -124,7 +133,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
   describe("when fetching a prompt", () => {
     it("should return a 401 if key is invalid", async () => {
       const projectId = uuidv4();
-      const response = await makeAPICall("GET", baseURI, undefined, `Bearer ${projectId}`);
+      const response = await makeAPICall(
+        "GET",
+        baseURI,
+        undefined,
+        `Bearer ${projectId}`,
+      );
       expect(response.status).toBe(401);
 
       const body = response.body;
@@ -496,7 +510,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
 
       expect(response.status).toBe(201);
 
-      const { body: fetchedPrompt } = await makeAPICall("GET", `${baseURI}/${promptName}`, undefined, auth);
+      const { body: fetchedPrompt } = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}`,
+        undefined,
+        auth,
+      );
 
       const validatedPrompt = validatePrompt(fetchedPrompt);
 
@@ -555,7 +574,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
 
       expect(response.status).toBe(201);
 
-      const { body: fetchedPrompt } = await makeAPICall("GET", `${baseURI}/${promptName}`, undefined, auth);
+      const { body: fetchedPrompt } = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}`,
+        undefined,
+        auth,
+      );
 
       const validatedPrompt = validatePrompt(fetchedPrompt);
 
@@ -595,7 +619,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
 
       expect(response.status).toBe(400);
 
-      const { body, status } = await makeAPICall("GET", `/api/public/prompts?name=${promptName}`, undefined, auth);
+      const { body, status } = await makeAPICall(
+        "GET",
+        `/api/public/prompts?name=${promptName}`,
+        undefined,
+        auth,
+      );
       expect(status).toBe(404);
       expect(body).toEqual({
         error: "HanzoNotFoundError",
@@ -624,7 +653,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
 
       expect(response.status).toBe(400);
 
-      const { body, status } = await makeAPICall("GET", `${baseURI}/${promptName}`, undefined, auth);
+      const { body, status } = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}`,
+        undefined,
+        auth,
+      );
       expect(status).toBe(404);
       // @ts-expect-error
       expect(body.error).toBe("HanzoNotFoundError");
@@ -647,7 +681,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
 
       expect(response.status).toBe(400);
 
-      const { body, status } = await makeAPICall("GET", `${baseURI}/${promptName}`, undefined, auth);
+      const { body, status } = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}`,
+        undefined,
+        auth,
+      );
       expect(status).toBe(404);
       // @ts-expect-error
       expect(body.error).toBe("HanzoNotFoundError");
@@ -694,7 +733,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(postResponse2.body.error).toBe("InvalidRequestError");
 
       // Check if the prompt is still the chat prompt
-      const getResponse1 = await makeAPICall("GET", `${baseURI}/${promptName}`, undefined, auth);
+      const getResponse1 = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}`,
+        undefined,
+        auth,
+      );
       expect(getResponse1.status).toBe(200);
 
       const validatedPrompt = validatePrompt(getResponse1.body);
@@ -708,7 +752,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(validatedPrompt.config).toEqual({});
 
       // Check that the text prompt has not been created
-      const getResponse2 = await makeAPICall("GET", `${baseURI}/${promptName}?version=2`, undefined, auth);
+      const getResponse2 = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}?version=2`,
+        undefined,
+        auth,
+      );
       expect(getResponse2.status).toBe(404);
       // @ts-expect-error
       expect(getResponse2.body.error).toBe("HanzoNotFoundError");
@@ -770,7 +819,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       );
 
       // Expect the second prompt to be fetched as default production prompt
-      const fetchedProductionPrompt = await makeAPICall("GET", `${baseURI}/${promptName}`, undefined, auth);
+      const fetchedProductionPrompt = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}`,
+        undefined,
+        auth,
+      );
       expect(fetchedProductionPrompt.status).toBe(200);
 
       if (!isPrompt(fetchedProductionPrompt.body)) {
@@ -781,7 +835,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(fetchedProductionPrompt.body.labels).toEqual(["production"]); // Only production label should be present
 
       // Expect the first prompt to have only development label
-      const fetchedFirstPrompt = await makeAPICall("GET", `${baseURI}/${promptName}?version=1`, undefined, auth);
+      const fetchedFirstPrompt = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}?version=1`,
+        undefined,
+        auth,
+      );
 
       expect(fetchedFirstPrompt.status).toBe(200);
       if (!isPrompt(fetchedFirstPrompt.body)) {
@@ -793,7 +852,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(fetchedFirstPrompt.body.labels).toEqual(["development"]);
 
       // Expect the third prompt to have only staging label
-      const fetchedThirdPrompt = await makeAPICall("GET", `${baseURI}/${promptName}?version=3`, undefined, auth);
+      const fetchedThirdPrompt = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}?version=3`,
+        undefined,
+        auth,
+      );
 
       expect(fetchedThirdPrompt.status).toBe(200);
       if (!isPrompt(fetchedThirdPrompt.body)) {
@@ -820,7 +884,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
         auth,
       );
 
-      const fetchedPrompt = await makeAPICall("GET", `${baseURI}/${promptName}`, undefined, auth);
+      const fetchedPrompt = await makeAPICall(
+        "GET",
+        `${baseURI}/${promptName}`,
+        undefined,
+        auth,
+      );
 
       expect(fetchedPrompt.status).toBe(200);
 
@@ -838,7 +907,11 @@ describe("/api/public/v2/prompts API Endpoint", () => {
     });
 
     describe("prompt name validation", () => {
-      const testInvalidName = async (name: string, expectedError: string, auth?: string) => {
+      const testInvalidName = async (
+        name: string,
+        expectedError: string,
+        auth?: string,
+      ) => {
         const response = await makeAPICall(
           "POST",
           baseURI,
@@ -851,8 +924,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
         );
         expect(response.status).toBe(400);
         expect(response.body.message).toBe("Invalid request data");
-        expect(JSON.stringify(response.body.error)).toContain(`"message":"${expectedError}"`);
-        const hasExpectedMessage = JSON.stringify(response.body.error).includes(`"message":"${expectedError}"`);
+        expect(JSON.stringify(response.body.error)).toContain(
+          `"message":"${expectedError}"`,
+        );
+        const hasExpectedMessage = JSON.stringify(response.body.error).includes(
+          `"message":"${expectedError}"`,
+        );
         expect(hasExpectedMessage).toBe(true);
       };
 
@@ -876,13 +953,33 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       it("should reject invalid prompt names", async () => {
         const { auth } = await createOrgProjectAndApiKey();
         // Test invalid patterns
-        await testInvalidName("/invalid-name", "Name cannot start with a slash", auth);
-        await testInvalidName("invalid-name/", "Name cannot end with a slash", auth);
-        await testInvalidName("invalid//name", "Name cannot contain consecutive slashes", auth);
-        await testInvalidName("invalid|name", "Prompt name cannot contain '|' character", auth);
+        await testInvalidName(
+          "/invalid-name",
+          "Name cannot start with a slash",
+          auth,
+        );
+        await testInvalidName(
+          "invalid-name/",
+          "Name cannot end with a slash",
+          auth,
+        );
+        await testInvalidName(
+          "invalid//name",
+          "Name cannot contain consecutive slashes",
+          auth,
+        );
+        await testInvalidName(
+          "invalid|name",
+          "Prompt name cannot contain '|' character",
+          auth,
+        );
         await testInvalidName("new", "Prompt name cannot be 'new'", auth);
         await testInvalidName("", "Text cannot be empty", auth);
-        await testInvalidName("Test <div>", "Text cannot contain HTML tags", auth);
+        await testInvalidName(
+          "Test <div>",
+          "Text cannot contain HTML tags",
+          auth,
+        );
       });
 
       it("should accept valid prompt names", async () => {
@@ -927,7 +1024,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       };
 
       const fetchPromptVersion = async (version: number) => {
-        const fetchedPrompt = await makeAPICall("GET", `${baseURI}/${promptName}?version=${version}`, undefined, auth);
+        const fetchedPrompt = await makeAPICall(
+          "GET",
+          `${baseURI}/${promptName}?version=${version}`,
+          undefined,
+          auth,
+        );
         expect(fetchedPrompt.status).toBe(200);
         if (!isPrompt(fetchedPrompt.body)) {
           throw new Error("Expected body to be a prompt");
@@ -1010,7 +1112,9 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       // Verify the name with slashes is preserved
       expect(validatedPrompt.name).toBe(promptName);
       expect(validatedPrompt.name).toContain("/");
-      expect(validatedPrompt.prompt).toBe("This is a prompt in a folder structure");
+      expect(validatedPrompt.prompt).toBe(
+        "This is a prompt in a folder structure",
+      );
     });
 
     it("should prevent creating a prompt with both a variable and placeholder with the same name", async () => {
@@ -1038,7 +1142,9 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(response.body).toHaveProperty("error");
       expect(response.body).toHaveProperty("message");
       // @ts-expect-error
-      expect(response.body.message).toContain("variables and placeholders must be unique");
+      expect(response.body.message).toContain(
+        "variables and placeholders must be unique",
+      );
       // @ts-expect-error
       expect(response.body.message).toContain("userName");
     });
@@ -1077,7 +1183,8 @@ describe("/api/public/v2/prompts API Endpoint", () => {
           prompt: [
             {
               role: "system",
-              content: "You are a helpful assistant with context: {{newHistory}}",
+              content:
+                "You are a helpful assistant with context: {{newHistory}}",
             },
             { type: "placeholder", name: "conversationHistory" },
             { role: "user", content: "Continue our conversation" },
@@ -1104,7 +1211,8 @@ describe("/api/public/v2/prompts API Endpoint", () => {
 
     beforeAll(async () => {
       // Create a prompt in a different project
-      ({ projectId: projectId, auth: auth } = await createOrgProjectAndApiKey());
+      ({ projectId: projectId, auth: auth } =
+        await createOrgProjectAndApiKey());
 
       ({ projectId: otherProjectId } = await createOrgProjectAndApiKey());
 
@@ -1119,7 +1227,9 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       });
 
       // Create prompts in the current project
-      await Promise.all(getMockPrompts(projectId, otherProjectId).map(createPromptInDB));
+      await Promise.all(
+        getMockPrompts(projectId, otherProjectId).map(createPromptInDB),
+      );
     });
 
     it("should only return prompts from the current project", async () => {
@@ -1130,8 +1240,14 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       const body = response.body as unknown as PromptsMetaResponse;
 
       expect(body.data).toHaveLength(3);
-      expect(body.data.some((promptMeta) => promptMeta.name === "prompt-1")).toBe(true);
-      expect(body.data.some((promptMeta) => promptMeta.name === otherProjectPromptName)).toBe(false);
+      expect(
+        body.data.some((promptMeta) => promptMeta.name === "prompt-1"),
+      ).toBe(true);
+      expect(
+        body.data.some(
+          (promptMeta) => promptMeta.name === otherProjectPromptName,
+        ),
+      ).toBe(false);
     });
 
     it("should fetch a prompt meta list", async () => {
@@ -1140,7 +1256,11 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       const body = response.body as unknown as PromptsMetaResponse;
 
       expect(body.data).toHaveLength(3);
-      expect(body.data.some((promptMeta) => promptMeta.name === otherProjectPromptName)).toBe(false);
+      expect(
+        body.data.some(
+          (promptMeta) => promptMeta.name === otherProjectPromptName,
+        ),
+      ).toBe(false);
 
       const [promptMeta1, promptMeta2, promptMeta3] = body.data;
 
@@ -1183,7 +1303,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
     });
 
     it("should fetch a prompt meta list with name filter", async () => {
-      const response = await makeAPICall("GET", `${baseURI}?name=prompt-1`, undefined, auth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}?name=prompt-1`,
+        undefined,
+        auth,
+      );
       expect(response.status).toBe(200);
       const body = response.body as unknown as PromptsMetaResponse;
 
@@ -1201,7 +1326,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(body.meta.totalItems).toBe(1);
 
       // Test with a different name
-      const response2 = await makeAPICall("GET", `${baseURI}?name=prompt-2`, undefined, auth);
+      const response2 = await makeAPICall(
+        "GET",
+        `${baseURI}?name=prompt-2`,
+        undefined,
+        auth,
+      );
       expect(response2.status).toBe(200);
       const body2 = response2.body as unknown as PromptsMetaResponse;
 
@@ -1219,14 +1349,24 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(body2.meta.totalItems).toBe(1);
 
       // Return 200 with empty list if name does not exist
-      const response3 = await makeAPICall("GET", `${baseURI}?name=non-existent`, undefined, auth);
+      const response3 = await makeAPICall(
+        "GET",
+        `${baseURI}?name=non-existent`,
+        undefined,
+        auth,
+      );
       expect(response3.status).toBe(200);
       // @ts-expect-error
       expect(response3.body.data).toEqual([]);
     });
 
     it("should fetch a prompt meta list with tag filter", async () => {
-      const response = await makeAPICall("GET", `${baseURI}?tag=tag-1`, undefined, auth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}?tag=tag-1`,
+        undefined,
+        auth,
+      );
       expect(response.status).toBe(200);
       const body = response.body as unknown as PromptsMetaResponse;
 
@@ -1244,27 +1384,45 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(body.meta.totalItems).toBe(1);
 
       // Return 200 with empty list if tag does not exist
-      const response3 = await makeAPICall("GET", `${baseURI}?tag=non-existent`, undefined, auth);
+      const response3 = await makeAPICall(
+        "GET",
+        `${baseURI}?tag=non-existent`,
+        undefined,
+        auth,
+      );
       expect(response3.status).toBe(200);
       // @ts-expect-error
       expect(response3.body.data).toEqual([]);
     });
 
     it("should fetch a prompt meta list with label filter", async () => {
-      const response = await makeAPICall("GET", `${baseURI}?label=production`, undefined, auth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}?label=production`,
+        undefined,
+        auth,
+      );
       expect(response.status).toBe(200);
       const body = response.body as unknown as PromptsMetaResponse;
 
       expect(body.data).toHaveLength(3);
-      expect(body.data.some((promptMeta) => promptMeta.name === "prompt-1")).toBe(true);
-      expect(body.data.some((promptMeta) => promptMeta.name === "prompt-2")).toBe(true);
-      expect(body.data.some((promptMeta) => promptMeta.name === "prompt-3")).toBe(true);
+      expect(
+        body.data.some((promptMeta) => promptMeta.name === "prompt-1"),
+      ).toBe(true);
+      expect(
+        body.data.some((promptMeta) => promptMeta.name === "prompt-2"),
+      ).toBe(true);
+      expect(
+        body.data.some((promptMeta) => promptMeta.name === "prompt-3"),
+      ).toBe(true);
       const expectedTypesByName: Record<string, PromptType> = {
         "prompt-1": PromptType.Text,
         "prompt-2": PromptType.Text,
         "prompt-3": PromptType.Chat,
       };
-      body.data.forEach((promptMeta) => expect(promptMeta.type).toBe(expectedTypesByName[promptMeta.name]));
+      body.data.forEach((promptMeta) =>
+        expect(promptMeta.type).toBe(expectedTypesByName[promptMeta.name]),
+      );
 
       // Validate pagination
       expect(body.meta.page).toBe(1);
@@ -1273,7 +1431,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(body.meta.totalItems).toBe(3);
 
       // Test with a different label
-      const response2 = await makeAPICall("GET", `${baseURI}?label=dev`, undefined, auth);
+      const response2 = await makeAPICall(
+        "GET",
+        `${baseURI}?label=dev`,
+        undefined,
+        auth,
+      );
       expect(response2.status).toBe(200);
       const body2 = response2.body as unknown as PromptsMetaResponse;
 
@@ -1291,7 +1454,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       expect(body2.meta.totalItems).toBe(1);
 
       // Return 200 with empty list if label does not exist
-      const response3 = await makeAPICall("GET", `${baseURI}?label=non-existent`, undefined, auth);
+      const response3 = await makeAPICall(
+        "GET",
+        `${baseURI}?label=non-existent`,
+        undefined,
+        auth,
+      );
       expect(response3.status).toBe(200);
       // @ts-expect-error
       expect(response3.body.data).toEqual([]);
@@ -1302,9 +1470,16 @@ describe("/api/public/v2/prompts API Endpoint", () => {
     const { auth, projectId } = await createOrgProjectAndApiKey();
     const { projectId: otherProjectId } = await createOrgProjectAndApiKey();
 
-    await Promise.all(getMockPrompts(projectId, otherProjectId).map(createPromptInDB));
+    await Promise.all(
+      getMockPrompts(projectId, otherProjectId).map(createPromptInDB),
+    );
 
-    const response = await makeAPICall("GET", `${baseURI}?page=1&limit=1`, undefined, auth);
+    const response = await makeAPICall(
+      "GET",
+      `${baseURI}?page=1&limit=1`,
+      undefined,
+      auth,
+    );
     expect(response.status).toBe(200);
     const body = response.body as unknown as PromptsMetaResponse;
 
@@ -1319,28 +1494,45 @@ describe("/api/public/v2/prompts API Endpoint", () => {
     const { auth, projectId } = await createOrgProjectAndApiKey();
     const { projectId: otherProjectId } = await createOrgProjectAndApiKey();
 
-    await Promise.all(getMockPrompts(projectId, otherProjectId).map(createPromptInDB));
+    await Promise.all(
+      getMockPrompts(projectId, otherProjectId).map(createPromptInDB),
+    );
     // no filters
     const response = await makeAPICall("GET", `${baseURI}`, undefined, auth);
     expect(response.status).toBe(200);
     const body = response.body as unknown as PromptsMetaResponse;
 
     expect(body.data).toHaveLength(3);
-    expect(body.data.some((promptMeta) => promptMeta.name === "prompt-1")).toBe(true);
-    expect(body.data.some((promptMeta) => promptMeta.name === "prompt-2")).toBe(true);
-    expect(body.data.some((promptMeta) => promptMeta.name === "prompt-3")).toBe(true);
-    const prompt1 = body.data.find((promptMeta) => promptMeta.name === "prompt-1");
+    expect(body.data.some((promptMeta) => promptMeta.name === "prompt-1")).toBe(
+      true,
+    );
+    expect(body.data.some((promptMeta) => promptMeta.name === "prompt-2")).toBe(
+      true,
+    );
+    expect(body.data.some((promptMeta) => promptMeta.name === "prompt-3")).toBe(
+      true,
+    );
+    const prompt1 = body.data.find(
+      (promptMeta) => promptMeta.name === "prompt-1",
+    );
     expect(prompt1).toBeDefined();
     expect(prompt1?.lastConfig).toEqual({ version: 4 });
     expect(prompt1?.type).toBe(PromptType.Text);
 
-    const prompt2 = body.data.find((promptMeta) => promptMeta.name === "prompt-2");
+    const prompt2 = body.data.find(
+      (promptMeta) => promptMeta.name === "prompt-2",
+    );
     expect(prompt2).toBeDefined();
     expect(prompt2?.lastConfig).toEqual({});
     expect(prompt2?.type).toBe(PromptType.Text);
 
     // validate with label filter
-    const response2 = await makeAPICall("GET", `${baseURI}?label=version2`, undefined, auth);
+    const response2 = await makeAPICall(
+      "GET",
+      `${baseURI}?label=version2`,
+      undefined,
+      auth,
+    );
     expect(response2.status).toBe(200);
     const body2 = response2.body as unknown as PromptsMetaResponse;
 
@@ -1350,12 +1542,19 @@ describe("/api/public/v2/prompts API Endpoint", () => {
     expect(body2.data[0].type).toBe(PromptType.Text);
 
     // validate with version filter
-    const response3 = await makeAPICall("GET", `${baseURI}?version=1`, undefined, auth);
+    const response3 = await makeAPICall(
+      "GET",
+      `${baseURI}?version=1`,
+      undefined,
+      auth,
+    );
     expect(response3.status).toBe(200);
     const body3 = response3.body as unknown as PromptsMetaResponse;
 
     expect(body3.data).toHaveLength(3);
-    const prompt1v1 = body3.data.find((promptMeta) => promptMeta.name === "prompt-1");
+    const prompt1v1 = body3.data.find(
+      (promptMeta) => promptMeta.name === "prompt-1",
+    );
     expect(prompt1v1?.lastConfig).toEqual({ version: 1 });
     expect(prompt1v1?.type).toBe(PromptType.Text);
   });
@@ -1364,7 +1563,9 @@ describe("/api/public/v2/prompts API Endpoint", () => {
     const { auth, projectId } = await createOrgProjectAndApiKey();
     const { projectId: otherProjectId } = await createOrgProjectAndApiKey();
 
-    await Promise.all(getMockPrompts(projectId, otherProjectId).map(createPromptInDB));
+    await Promise.all(
+      getMockPrompts(projectId, otherProjectId).map(createPromptInDB),
+    );
     // to and from
     const from = new Date("2024-01-02T00:00:00.000Z");
     const to = new Date("2024-01-04T00:00:00.000Z");
@@ -1385,7 +1586,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
     expect(body.meta.totalItems).toBe(1);
 
     // only from
-    const response2 = await makeAPICall("GET", `${baseURI}?fromUpdatedAt=${from.toISOString()}`, undefined, auth);
+    const response2 = await makeAPICall(
+      "GET",
+      `${baseURI}?fromUpdatedAt=${from.toISOString()}`,
+      undefined,
+      auth,
+    );
     expect(response2.status).toBe(200);
     const body2 = response2.body as unknown as PromptsMetaResponse;
 
@@ -1397,7 +1603,12 @@ describe("/api/public/v2/prompts API Endpoint", () => {
     expect(body2.meta.totalItems).toBe(1);
 
     // only to
-    const response3 = await makeAPICall("GET", `${baseURI}?toUpdatedAt=${to.toISOString()}`, undefined, auth);
+    const response3 = await makeAPICall(
+      "GET",
+      `${baseURI}?toUpdatedAt=${to.toISOString()}`,
+      undefined,
+      auth,
+    );
     expect(response3.status).toBe(200);
     const body3 = response3.body as unknown as PromptsMetaResponse;
 
@@ -1546,7 +1757,9 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       const body = response.body as Prompt;
       // Should be unresolved (keep @@@hanzoPrompt tags)
       expect(body.prompt).toContain("@@@hanzoPrompt");
-      expect(body.prompt).toContain(`@@@hanzoPrompt:name=${childPromptName}|label=production@@@`);
+      expect(body.prompt).toContain(
+        `@@@hanzoPrompt:name=${childPromptName}|label=production@@@`,
+      );
       expect(body.prompt).not.toContain("Child content");
     });
 
@@ -1600,7 +1813,9 @@ describe("/api/public/v2/prompts API Endpoint", () => {
       // Verify the chat messages still contain unresolved tags
       const messages = body.prompt as Array<{ role: string; content: string }>;
       expect(messages[0].content).toContain("@@@hanzoPrompt");
-      expect(messages[0].content).toContain(`@@@hanzoPrompt:name=${childPromptName}|label=production@@@`);
+      expect(messages[0].content).toContain(
+        `@@@hanzoPrompt:name=${childPromptName}|label=production@@@`,
+      );
     });
 
     it("should work with production label when no version specified and resolve=false", async () => {
@@ -1653,9 +1868,11 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
   let actionId: string;
 
   it("should update the labels of a prompt", async () => {
-    const { projectId: newProjectId, auth: newAuth } = await createOrgProjectAndApiKey();
+    const { projectId: newProjectId, auth: newAuth } =
+      await createOrgProjectAndApiKey();
 
-    const { actionId: newActionId, triggerId: newTriggerId } = await setupTriggerAndAction(newProjectId);
+    const { actionId: newActionId, triggerId: newTriggerId } =
+      await setupTriggerAndAction(newProjectId);
 
     const originalPrompt = await prisma.prompt.create({
       data: {
@@ -1704,9 +1921,11 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
   });
 
   it("should remove label from previous version when adding to new version", async () => {
-    const { projectId: newProjectId, auth: newAuth } = await createOrgProjectAndApiKey();
+    const { projectId: newProjectId, auth: newAuth } =
+      await createOrgProjectAndApiKey();
 
-    const { actionId: newActionId, triggerId: newTriggerId } = await setupTriggerAndAction(newProjectId);
+    const { actionId: newActionId, triggerId: newTriggerId } =
+      await setupTriggerAndAction(newProjectId);
     actionId = newActionId;
     triggerId = newTriggerId;
 
@@ -1796,7 +2015,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
   });
 
   it("trying to set 'latest' label results in 400 error", async () => {
-    const { projectId: newProjectId, auth: newAuth } = await createOrgProjectAndApiKey();
+    const { projectId: newProjectId, auth: newAuth } =
+      await createOrgProjectAndApiKey();
     // Create initial prompt version
     await prisma.prompt.create({
       data: {
@@ -1840,7 +2060,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
 
   describe("prompt composability", () => {
     it("can create a prompt with dependencies linked via label", async () => {
-      const { projectId: newProjectId, auth: newAuth } = await createOrgProjectAndApiKey();
+      const { projectId: newProjectId, auth: newAuth } =
+        await createOrgProjectAndApiKey();
 
       // Create child prompt
       await makeAPICall(
@@ -1856,7 +2077,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Create parent prompt with dependency
-      const parentPromptContent = "Parent prompt with dependency: @@@hanzoPrompt:name=child-prompt|label=production@@@";
+      const parentPromptContent =
+        "Parent prompt with dependency: @@@hanzoPrompt:name=child-prompt|label=production@@@";
       const response = await makeAPICall(
         "POST",
         baseURI,
@@ -1882,7 +2104,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       expect(dependencies[0].childLabel).toBe("production");
 
       // Get the resolved prompt
-      const getResponse = await makeAPICall("GET", `${baseURI}/parent-prompt?version=1`, undefined, newAuth);
+      const getResponse = await makeAPICall(
+        "GET",
+        `${baseURI}/parent-prompt?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(getResponse.status).toBe(200);
       const responseBody = getResponse.body as unknown as Prompt;
@@ -1909,7 +2136,9 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       });
 
       // Verify the dependency was resolved correctly
-      expect(parsedPrompt).toBe("Parent prompt with dependency: I am a child prompt");
+      expect(parsedPrompt).toBe(
+        "Parent prompt with dependency: I am a child prompt",
+      );
 
       // Create another version of the child prompt with the same name and production label
       // This will automatically strip the production label from the previous version
@@ -1926,13 +2155,21 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Get the resolved prompt again to check if it now uses the new version
-      const getResponseAfterUpdate = await makeAPICall("GET", `${baseURI}/parent-prompt?version=1`, undefined, newAuth);
+      const getResponseAfterUpdate = await makeAPICall(
+        "GET",
+        `${baseURI}/parent-prompt?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(getResponseAfterUpdate.status).toBe(200);
-      const responseBodyAfterUpdate = getResponseAfterUpdate.body as unknown as Prompt;
+      const responseBodyAfterUpdate =
+        getResponseAfterUpdate.body as unknown as Prompt;
       const parsedPromptAfterUpdate = responseBodyAfterUpdate.prompt as string;
 
-      expect(parsedPromptAfterUpdate).toBe("Parent prompt with dependency: I am an updated child prompt");
+      expect(parsedPromptAfterUpdate).toBe(
+        "Parent prompt with dependency: I am an updated child prompt",
+      );
 
       expect(responseBodyAfterUpdate.resolutionGraph).toEqual({
         root: {
@@ -1986,7 +2223,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         baseURI,
         {
           name: "intermediate",
-          prompt: "Intermediate with dependency: @@@hanzoPrompt:name=nested-child|label=production@@@",
+          prompt:
+            "Intermediate with dependency: @@@hanzoPrompt:name=nested-child|label=production@@@",
           type: "text",
           labels: ["production"],
         },
@@ -1999,14 +2237,20 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         baseURI,
         {
           name: "nested-parent",
-          prompt: "Parent with nested dependency: @@@hanzoPrompt:name=intermediate|label=production@@@",
+          prompt:
+            "Parent with nested dependency: @@@hanzoPrompt:name=intermediate|label=production@@@",
           type: "text",
         },
         newAuth,
       );
 
       // Get the resolved prompt
-      const response = await makeAPICall("GET", `${baseURI}/nested-parent?version=1`, undefined, newAuth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}/nested-parent?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(response.status).toBe(200);
       const responseBody = response.body as unknown as Prompt;
@@ -2048,11 +2292,18 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Get the resolved prompt
-      const response = await makeAPICall("GET", `${baseURI}/version-linked-parent?version=1`, undefined, newAuth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}/version-linked-parent?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(response.status).toBe(200);
       const responseBody = response.body as unknown as Prompt;
-      expect(responseBody.prompt).toBe("Parent with version dependency: I am version 3 of the child prompt");
+      expect(responseBody.prompt).toBe(
+        "Parent with version dependency: I am version 3 of the child prompt",
+      );
       expect(responseBody.prompt).not.toContain("@@@hanzoPrompt");
     });
 
@@ -2078,7 +2329,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         baseURI,
         {
           name: "circular-b",
-          prompt: "Prompt B with dependency: @@@hanzoPrompt:name=circular-a|label=production@@@",
+          prompt:
+            "Prompt B with dependency: @@@hanzoPrompt:name=circular-a|label=production@@@",
           type: "text",
           labels: ["production"],
         },
@@ -2090,7 +2342,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         baseURI,
         {
           name: "circular-a",
-          prompt: "Prompt A with dependency: @@@hanzoPrompt:name=circular-b|label=production@@@",
+          prompt:
+            "Prompt A with dependency: @@@hanzoPrompt:name=circular-b|label=production@@@",
           type: "text",
           labels: ["production"],
         },
@@ -2154,14 +2407,20 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         baseURI,
         {
           name: "level-1",
-          prompt: "Level 1 with dependency: @@@hanzoPrompt:name=level-2|label=production@@@",
+          prompt:
+            "Level 1 with dependency: @@@hanzoPrompt:name=level-2|label=production@@@",
           type: "text",
         },
         newAuth,
       );
 
       // Get the resolved prompt
-      const response = await makeAPICall("GET", `${baseURI}/level-1?version=1`, undefined, newAuth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}/level-1?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(response.status).toBe(200);
       const responseBody = response.body as unknown as Prompt;
@@ -2226,7 +2485,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Get the resolved prompt
-      const response = await makeAPICall("GET", `${baseURI}/multi-parent?version=1`, undefined, newAuth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}/multi-parent?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(response.status).toBe(200);
       const responseBody = response.body as unknown as Prompt;
@@ -2266,7 +2530,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Create parent prompt with version-specific dependency
-      const parentPromptContent = "Parent with version dependency: @@@hanzoPrompt:name=versioned-child|version=1@@@";
+      const parentPromptContent =
+        "Parent with version dependency: @@@hanzoPrompt:name=versioned-child|version=1@@@";
 
       await makeAPICall(
         "POST",
@@ -2280,11 +2545,18 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Get the resolved prompt
-      const response = await makeAPICall("GET", `${baseURI}/version-parent?version=1`, undefined, newAuth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}/version-parent?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(response.status).toBe(200);
       const responseBody = response.body as unknown as Prompt;
-      expect(responseBody.prompt).toBe("Parent with version dependency: I am version 1");
+      expect(responseBody.prompt).toBe(
+        "Parent with version dependency: I am version 1",
+      );
       expect(responseBody.prompt).not.toContain("@@@hanzoPrompt");
     });
 
@@ -2309,7 +2581,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         { role: "system", content: "You are a helpful assistant" },
         {
           role: "user",
-          content: "Here's some context: @@@hanzoPrompt:name=chat-child-text|label=production@@@",
+          content:
+            "Here's some context: @@@hanzoPrompt:name=chat-child-text|label=production@@@",
         },
       ];
 
@@ -2325,7 +2598,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Get the resolved prompt
-      const response = await makeAPICall("GET", `${baseURI}/chat-parent?version=1`, undefined, newAuth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}/chat-parent?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(response.status).toBe(200);
       const responseBody = response.body as unknown as Prompt;
@@ -2333,10 +2611,13 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         { role: "system", content: "You are a helpful assistant" },
         {
           role: "user",
-          content: "Here's some context: I am a text prompt used in a chat prompt",
+          content:
+            "Here's some context: I am a text prompt used in a chat prompt",
         },
       ]);
-      expect(JSON.stringify(responseBody.prompt)).not.toContain("@@@hanzoPrompt");
+      expect(JSON.stringify(responseBody.prompt)).not.toContain(
+        "@@@hanzoPrompt",
+      );
     });
 
     it("supports nested dependencies in chat prompts", async () => {
@@ -2376,7 +2657,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         { role: "system", content: "You are a helpful assistant" },
         {
           role: "user",
-          content: "Here's some context: @@@hanzoPrompt:name=intermediate-prompt|label=production@@@",
+          content:
+            "Here's some context: @@@hanzoPrompt:name=intermediate-prompt|label=production@@@",
         },
       ];
 
@@ -2392,7 +2674,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Get the resolved prompt
-      const response = await makeAPICall("GET", `${baseURI}/nested-chat-parent?version=1`, undefined, newAuth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}/nested-chat-parent?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(response.status).toBe(200);
       const responseBody = response.body as unknown as Prompt;
@@ -2401,7 +2688,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         { role: "system", content: "You are a helpful assistant" },
         {
           role: "user",
-          content: "Here's some context: Intermediate prompt with dependency: I am a nested child prompt",
+          content:
+            "Here's some context: Intermediate prompt with dependency: I am a nested child prompt",
         },
       ]);
       expect(JSON.stringify(parsedPrompt)).not.toContain("@@@hanzoPrompt");
@@ -2427,7 +2715,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Get the resolved prompt
-      const response = await makeAPICall("GET", `${baseURI}/prompt-with-invalid-tags?version=1`, undefined, newAuth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}/prompt-with-invalid-tags?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(response.status).toBe(200);
       const responseBody = response.body as unknown as Prompt;
@@ -2435,8 +2728,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
 
       // The invalid tags should remain unchanged in the resolved prompt
       expect(parsedPrompt.text).toContain("@@@hanzoPrompt:invalid@@@");
-      expect(parsedPrompt.text).toContain("@@@hanzoPrompt:name=missing-type@@@");
-      expect(parsedPrompt.text).toContain("@@@hanzoPrompt:name=no-version-or-label@@@");
+      expect(parsedPrompt.text).toContain(
+        "@@@hanzoPrompt:name=missing-type@@@",
+      );
+      expect(parsedPrompt.text).toContain(
+        "@@@hanzoPrompt:name=no-version-or-label@@@",
+      );
     });
 
     it("should handle duplicate dependency tags for the same prompt", async () => {
@@ -2470,7 +2767,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       );
 
       // Get the resolved prompt
-      const response = await makeAPICall("GET", `${baseURI}/prompt-with-duplicate-tags?version=1`, undefined, newAuth);
+      const response = await makeAPICall(
+        "GET",
+        `${baseURI}/prompt-with-duplicate-tags?version=1`,
+        undefined,
+        newAuth,
+      );
 
       expect(response.status).toBe(200);
 
@@ -2478,7 +2780,9 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       const parsedPrompt = responseBody.prompt as string;
 
       // The duplicate tags should be resolved to the same prompt
-      expect(parsedPrompt).toBe("This prompt has duplicate tags: I am a parent prompt and again I am a parent prompt");
+      expect(parsedPrompt).toBe(
+        "This prompt has duplicate tags: I am a parent prompt and again I am a parent prompt",
+      );
     });
 
     it("should handle special characters in prompt names", async () => {
@@ -2504,7 +2808,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
 
       // Create all the special character prompts
       for (const promptData of specialCharPrompts) {
-        const response = await makeAPICall("POST", baseURI, promptData, newAuth);
+        const response = await makeAPICall(
+          "POST",
+          baseURI,
+          promptData,
+          newAuth,
+        );
         expect(response.status).toBe(201);
       }
 
@@ -2594,7 +2903,9 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       // Expect the request to fail with a 400 Bad Request
       expect(updateResponse.status).toBe(400);
       // Check that the response contains an error about circular dependency
-      expect(JSON.stringify(updateResponse.body)).toContain("Circular dependency");
+      expect(JSON.stringify(updateResponse.body)).toContain(
+        "Circular dependency",
+      );
     });
 
     it("should return an error when a dependent prompt doesn't exist", async () => {
@@ -2726,7 +3037,9 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
 
       // Expect an error response
       expect(createResponse.status).toBe(400);
-      expect(JSON.stringify(createResponse.body)).toContain("Maximum nesting depth exceeded");
+      expect(JSON.stringify(createResponse.body)).toContain(
+        "Maximum nesting depth exceeded",
+      );
     }, 10_000);
   });
 
@@ -2761,7 +3074,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         ],
       });
 
-      const res = await makeAPICall("DELETE", `${baseURI}/${encodeURIComponent(name)}`, undefined, auth);
+      const res = await makeAPICall(
+        "DELETE",
+        `${baseURI}/${encodeURIComponent(name)}`,
+        undefined,
+        auth,
+      );
       expect(res.status).toBe(204);
 
       const remaining = await prisma.prompt.findMany({
@@ -2800,7 +3118,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         ],
       });
 
-      const res1 = await makeAPICall("DELETE", `${baseURI}/${encodeURIComponent(name)}?version=1`, undefined, auth);
+      const res1 = await makeAPICall(
+        "DELETE",
+        `${baseURI}/${encodeURIComponent(name)}?version=1`,
+        undefined,
+        auth,
+      );
       expect(res1.status).toBe(204);
 
       let remaining = await prisma.prompt.findMany({
@@ -2808,7 +3131,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       });
       expect(remaining.length).toBe(1);
 
-      const res2 = await makeAPICall("DELETE", `${baseURI}/${encodeURIComponent(name)}?label=dev`, undefined, auth);
+      const res2 = await makeAPICall(
+        "DELETE",
+        `${baseURI}/${encodeURIComponent(name)}?label=dev`,
+        undefined,
+        auth,
+      );
       expect(res2.status).toBe(204);
 
       remaining = await prisma.prompt.findMany({ where: { projectId, name } });
@@ -2832,7 +3160,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
         },
       });
 
-      const res = await makeAPICall("DELETE", `${baseURI}/${encodeURIComponent(name)}`, undefined, auth);
+      const res = await makeAPICall(
+        "DELETE",
+        `${baseURI}/${encodeURIComponent(name)}`,
+        undefined,
+        auth,
+      );
       expect(res.status).toBe(204);
 
       const remaining = await prisma.prompt.findMany({
@@ -2887,7 +3220,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       });
 
       // Try to delete child prompt (should fail because parent depends on it)
-      const res = await makeAPICall("DELETE", `${baseURI}/${encodeURIComponent(childName)}`, undefined, auth);
+      const res = await makeAPICall(
+        "DELETE",
+        `${baseURI}/${encodeURIComponent(childName)}`,
+        undefined,
+        auth,
+      );
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty("error");
@@ -3014,7 +3352,12 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
       // - parent1 depends on v1 specifically (version-based) ✓ BLOCKS
       // - parent3 depends on "latest" label (only v1 has it) ✓ BLOCKS
       // - parent2 depends on "production" label (v2 also has it) ✓ DOES NOT BLOCK
-      const res = await makeAPICall("DELETE", `${baseURI}/${encodeURIComponent(childName)}?version=1`, undefined, auth);
+      const res = await makeAPICall(
+        "DELETE",
+        `${baseURI}/${encodeURIComponent(childName)}?version=1`,
+        undefined,
+        auth,
+      );
 
       expect(res.status).toBe(400);
       // @ts-expect-error
@@ -3106,7 +3449,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
 
   describe("Parsing prompt dependency tags", () => {
     it("should extract prompt dependency tags with version", () => {
-      const content = "This is a test with @@@hanzoPrompt:name=test|version=1@@@ dependency";
+      const content =
+        "This is a test with @@@hanzoPrompt:name=test|version=1@@@ dependency";
       const result = parsePromptDependencyTags(content);
 
       expect(result).toHaveLength(1);
@@ -3155,7 +3499,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
     });
 
     it("should extract prompt dependency tags with label", () => {
-      const content = "This is a test with @@@hanzoPrompt:name=test|label=production@@@ dependency";
+      const content =
+        "This is a test with @@@hanzoPrompt:name=test|label=production@@@ dependency";
       const result = parsePromptDependencyTags(content);
 
       expect(result).toHaveLength(1);
@@ -3210,7 +3555,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
     });
 
     it("should handle tags with special characters in name", () => {
-      const content = "Tag with special chars @@@hanzoPrompt:name=test-prompt_123|version=2@@@";
+      const content =
+        "Tag with special chars @@@hanzoPrompt:name=test-prompt_123|version=2@@@";
       const result = parsePromptDependencyTags(content);
 
       expect(result).toHaveLength(1);
@@ -3222,7 +3568,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
     });
 
     it("should handle tags with special characters in label", () => {
-      const content = "Tag with special chars @@@hanzoPrompt:name=test|label=prod-v1.0_beta@@@";
+      const content =
+        "Tag with special chars @@@hanzoPrompt:name=test|label=prod-v1.0_beta@@@";
       const result = parsePromptDependencyTags(content);
 
       expect(result).toHaveLength(1);
@@ -3234,7 +3581,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
     });
 
     it("should correctly coerce version to number", () => {
-      const content = "Version as string @@@hanzoPrompt:name=test|version=123@@@";
+      const content =
+        "Version as string @@@hanzoPrompt:name=test|version=123@@@";
       const result = parsePromptDependencyTags(content);
 
       expect(result).toHaveLength(1);
@@ -3247,7 +3595,8 @@ describe("PATCH api/public/v2/prompts/[promptName]/versions/[version]", () => {
     });
 
     it("should handle tags with spaces in the content", () => {
-      const content = "Tag with spaces @@@hanzoPrompt:name=my prompt|label=production label@@@";
+      const content =
+        "Tag with spaces @@@hanzoPrompt:name=my prompt|label=production label@@@";
       const result = parsePromptDependencyTags(content);
 
       expect(result).toHaveLength(1);
@@ -3361,7 +3710,10 @@ const isPrompt = (x: unknown): x is Prompt => {
 
 const validatePrompt = (obj: Record<string, unknown>): ValidatedPrompt => {
   Object.keys(obj).forEach((key) => {
-    obj[key] = key === "createdAt" || key === "updatedAt" ? new Date(obj[key] as string) : obj[key];
+    obj[key] =
+      key === "createdAt" || key === "updatedAt"
+        ? new Date(obj[key] as string)
+        : obj[key];
   });
 
   return PromptSchema.parse(obj);

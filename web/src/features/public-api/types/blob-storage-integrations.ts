@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   AnalyticsIntegrationExportSource,
   OBSERVATION_FIELD_GROUPS_FULL,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import {
   validateAzureContainerName,
   validateExportFieldGroups,
@@ -12,11 +12,19 @@ import {
  * Enums
  */
 
-export const BlobStorageIntegrationType = z.enum(["S3", "S3_COMPATIBLE", "AZURE_BLOB_STORAGE"]);
+export const BlobStorageIntegrationType = z.enum([
+  "S3",
+  "S3_COMPATIBLE",
+  "AZURE_BLOB_STORAGE",
+]);
 
 export const BlobStorageIntegrationFileType = z.enum(["JSON", "CSV", "JSONL"]);
 
-export const BlobStorageExportMode = z.enum(["FULL_HISTORY", "FROM_TODAY", "FROM_CUSTOM_DATE"]);
+export const BlobStorageExportMode = z.enum([
+  "FULL_HISTORY",
+  "FROM_TODAY",
+  "FROM_CUSTOM_DATE",
+]);
 
 /**
  * Public REST enum for the blob-storage export source. Intentionally distinct
@@ -84,7 +92,10 @@ export const CreateBlobStorageIntegrationRequest = z
       .string()
       .optional()
       .default("")
-      .refine((value) => value === "" || value.endsWith("/"), "Prefix must be empty or end with a forward slash"),
+      .refine(
+        (value) => value === "" || value.endsWith("/"),
+        "Prefix must be empty or end with a forward slash",
+      ),
     exportFrequency: z.string(),
     enabled: z.boolean(),
     forcePathStyle: z.boolean(),
@@ -104,7 +115,8 @@ export const CreateBlobStorageIntegrationRequest = z
       return !(data.exportMode === "FROM_CUSTOM_DATE" && !data.exportStartDate);
     },
     {
-      message: "exportStartDate is required when exportMode is FROM_CUSTOM_DATE",
+      message:
+        "exportStartDate is required when exportMode is FROM_CUSTOM_DATE",
       path: ["exportStartDate"],
     },
   )
@@ -169,4 +181,6 @@ export const BlobStorageIntegrationResponse = z
   })
   .strict();
 
-export type BlobStorageIntegrationResponseType = z.infer<typeof BlobStorageIntegrationResponse>;
+export type BlobStorageIntegrationResponseType = z.infer<
+  typeof BlobStorageIntegrationResponse
+>;

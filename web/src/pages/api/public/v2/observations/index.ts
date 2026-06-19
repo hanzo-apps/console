@@ -1,5 +1,5 @@
-import { getObservationsV2FromEventsTableForPublicApi } from "@hanzo/console-core/src/server";
-import { NotImplementedError } from "@hanzo/console-core";
+import { getObservationsV2FromEventsTableForPublicApi } from "@hanzo/console/src/server";
+import { NotImplementedError } from "@hanzo/console";
 
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
@@ -19,7 +19,9 @@ export default withMiddlewares({
     responseSchema: GetObservationsV2Response,
     fn: async ({ query, auth }) => {
       if (env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS !== "true") {
-        throw new NotImplementedError("v2 APIs are currently in beta and only available on Hanzo Cloud");
+        throw new NotImplementedError(
+          "v2 APIs are currently in beta and only available on Hanzo Cloud",
+        );
       }
 
       // Extract field groups and metadata expansion keys

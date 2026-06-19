@@ -6,22 +6,22 @@ import {
   isException,
   ClickHouseResourceError,
   queryDatastoreWithProgress,
-} from "@langfuse/shared/src/server";
-import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@langfuse/shared";
-import { logger } from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
+import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@hanzo/console";
+import { logger } from "@hanzo/console/src/server";
 
 import { getServerAuthSession } from "@/src/server/auth";
 import { sendAdminAccessWebhook } from "@/src/server/adminAccessWebhook";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   prepareExecuteQuery,
   toDatastoreQueryOpts,
-} from "@langfuse/shared/query/server";
+} from "@hanzo/console/query/server";
 import {
   query as customQuery,
   validateQuery,
   viewVersions,
-} from "@langfuse/shared/query";
+} from "@hanzo/console/query";
 export type SSEEvent =
   | { type: "progress"; progress: object }
   | { type: "row"; row: Record<string, unknown> }

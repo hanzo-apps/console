@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { type ScoreDomain, type Prisma } from "@hanzo/shared";
+import { type ScoreDomain, type Prisma } from "@hanzo/console";
 import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import usePreserveRelativeScroll from "@/src/hooks/usePreserveRelativeScroll";
@@ -24,9 +24,15 @@ export interface ExpansionStateProps {
   inputExpansionState?: Record<string, boolean> | boolean;
   outputExpansionState?: Record<string, boolean> | boolean;
   metadataExpansionState?: Record<string, boolean> | boolean;
-  onInputExpansionChange?: (expansion: Record<string, boolean> | boolean) => void;
-  onOutputExpansionChange?: (expansion: Record<string, boolean> | boolean) => void;
-  onMetadataExpansionChange?: (expansion: Record<string, boolean> | boolean) => void;
+  onInputExpansionChange?: (
+    expansion: Record<string, boolean> | boolean,
+  ) => void;
+  onOutputExpansionChange?: (
+    expansion: Record<string, boolean> | boolean,
+  ) => void;
+  onMetadataExpansionChange?: (
+    expansion: Record<string, boolean> | boolean,
+  ) => void;
   // Combined expansion state (for advanced-json view only)
   // Paths are prefixed: "input.foo", "output.bar", "metadata.baz"
   // Input accepts ExpansionState (boolean shorthand allowed), callback receives Record (what viewer emits)
@@ -133,17 +139,19 @@ export function IOPreview({
   showCorrections = true,
 }: IOPreviewProps) {
   const capture = usePostHogClientCapture();
-  const [dismissedTraceViewNotifications, setDismissedTraceViewNotifications] = useLocalStorage<string[]>(
-    STORAGE_KEY,
-    [],
-  );
+  const [dismissedTraceViewNotifications, setDismissedTraceViewNotifications] =
+    useLocalStorage<string[]>(STORAGE_KEY, []);
 
   // View state management
-  const [localCurrentView, setLocalCurrentView] = useLocalStorage<ViewMode>("jsonViewPreference", "pretty");
+  const [localCurrentView, setLocalCurrentView] = useLocalStorage<ViewMode>(
+    "jsonViewPreference",
+    "pretty",
+  );
   const selectedView = currentView ?? localCurrentView;
   const showViewToggle = currentView === undefined;
 
-  const [compensateScrollRef, startPreserveScroll] = usePreserveRelativeScroll<HTMLDivElement>([selectedView]);
+  const [compensateScrollRef, startPreserveScroll] =
+    usePreserveRelativeScroll<HTMLDivElement>([selectedView]);
 
   // Notify parent about pretty view availability
   // Always true - we always show the toggle and let components decide rendering
@@ -271,7 +279,11 @@ export function IOPreview({
           environment={environment}
         />
       ) : (
-        <IOPreviewPretty {...sharedProps} observationName={observationName} showMetadata={showMetadata} />
+        <IOPreviewPretty
+          {...sharedProps}
+          observationName={observationName}
+          showMetadata={showMetadata}
+        />
       )}
 
       {showEmptyState && (
@@ -286,7 +298,9 @@ export function IOPreview({
                   notification_id: EMPTY_IO_ALERT_ID,
                 });
                 setDismissedTraceViewNotifications((prev) =>
-                  prev.includes(EMPTY_IO_ALERT_ID) ? prev : [...prev, EMPTY_IO_ALERT_ID],
+                  prev.includes(EMPTY_IO_ALERT_ID)
+                    ? prev
+                    : [...prev, EMPTY_IO_ALERT_ID],
                 );
               }}
               title="Dismiss"
@@ -297,7 +311,9 @@ export function IOPreview({
               <div className="bg-accent flex h-8 w-8 items-center justify-center rounded-full">
                 <BookOpen className="text-muted-foreground h-4 w-4" />
               </div>
-              <h3 className="text-sm font-semibold">Looks like this trace didn&apos;t receive an input or output.</h3>
+              <h3 className="text-sm font-semibold">
+                Looks like this trace didn&apos;t receive an input or output.
+              </h3>
             </div>
             <p className="text-muted-foreground max-w-sm text-sm">
               Add it in your code to make debugging a lot easier.

@@ -18,7 +18,7 @@ import {
   JobConfigState,
   orderBy,
   jsonSchema,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import {
   getQueue,
   getCostByEvaluatorIds,
@@ -31,11 +31,11 @@ import {
   DefaultEvalModelService,
   testModelCall,
   clearNoJobConfigsCache,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 import { EvalReferencedEvaluators } from "@/src/features/evals/types";
 import { EvaluatorStatus } from "../types";
-import { traceException } from "@hanzo/shared/src/server";
+import { traceException } from "@hanzo/console/src/server";
 import { isNotNullOrUndefined } from "@/src/utils/types";
 import { v4 as uuidv4 } from "uuid";
 import { env } from "@/src/env.mjs";

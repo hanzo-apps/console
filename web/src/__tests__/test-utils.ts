@@ -1,5 +1,5 @@
 import { env } from "@/src/env.mjs";
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   CodeEvalExecutionQueue,
   EvalExecutionQueue,
@@ -14,7 +14,7 @@ import {
   OtelIngestionQueue,
   QueueName,
   TraceUpsertQueue,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { type z } from "zod/v4";
 
 export const ensureTestDatabaseExists = async () => {

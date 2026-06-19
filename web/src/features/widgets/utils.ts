@@ -1,6 +1,6 @@
 import startCase from "lodash/startCase";
-import { type FilterState } from "@hanzo/console-core";
-import { type DashboardWidgetChartType } from "@hanzo/console-core/src/db";
+import { type FilterState } from "@hanzo/console";
+import { type DashboardWidgetChartType } from "@hanzo/console/src/db";
 
 // Shared widget chart configuration types
 export type WidgetChartConfig = {

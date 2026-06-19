@@ -2,8 +2,13 @@ import { Button } from "@/src/components/ui/button";
 import { Progress } from "@/src/components/ui/progress";
 import { api } from "@/src/utils/api";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
-import { BatchActionStatus } from "@hanzo/shared";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+import { BatchActionStatus } from "@hanzo/console";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Check, AlertCircle } from "lucide-react";
@@ -17,7 +22,13 @@ type StatusStepProps = {
   onClose: () => void;
 };
 
-export function StatusStep({ projectId, batchActionId, dataset, expectedCount, onClose }: StatusStepProps) {
+export function StatusStep({
+  projectId,
+  batchActionId,
+  dataset,
+  expectedCount,
+  onClose,
+}: StatusStepProps) {
   // Poll for status updates
   const status = api.batchAction.byId.useQuery(
     {
@@ -33,14 +44,18 @@ export function StatusStep({ projectId, batchActionId, dataset, expectedCount, o
   const totalCount = status.data?.totalCount ?? expectedCount;
   const processedCount = status.data?.processedCount ?? 0;
   const failedCount = status.data?.failedCount ?? 0;
-  const progressPercent = totalCount > 0 ? Math.round((processedCount / totalCount) * 100) : 0;
+  const progressPercent =
+    totalCount > 0 ? Math.round((processedCount / totalCount) * 100) : 0;
 
-  const isComplete = [BatchActionStatus.Completed, BatchActionStatus.Failed, BatchActionStatus.Partial].includes(
-    status.data?.status as BatchActionStatus,
-  );
+  const isComplete = [
+    BatchActionStatus.Completed,
+    BatchActionStatus.Failed,
+    BatchActionStatus.Partial,
+  ].includes(status.data?.status as BatchActionStatus);
   const isSuccess = status.data?.status === BatchActionStatus.Completed;
   const hasPartialSuccess =
-    status.data?.status === BatchActionStatus.Partial || status.data?.status === BatchActionStatus.Completed;
+    status.data?.status === BatchActionStatus.Partial ||
+    status.data?.status === BatchActionStatus.Completed;
 
   return (
     <div className="flex flex-col items-center justify-center p-6">
@@ -68,15 +83,19 @@ export function StatusStep({ projectId, batchActionId, dataset, expectedCount, o
             {isSuccess && "Successfully Added!"}
             {isComplete && !isSuccess && "Completed with Issues"}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            {!isComplete && `Adding ${totalCount} observations to ${dataset.name}`}
-            {isSuccess && `${processedCount} observations have been added to ${dataset.name}`}
-            {isComplete && !isSuccess && `${processedCount} observations added, ${failedCount} failed`}
+          <p className="text-muted-foreground text-sm">
+            {!isComplete &&
+              `Adding ${totalCount} observations to ${dataset.name}`}
+            {isSuccess &&
+              `${processedCount} observations have been added to ${dataset.name}`}
+            {isComplete &&
+              !isSuccess &&
+              `${processedCount} observations added, ${failedCount} failed`}
           </p>
           {!isComplete && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              You can safely close this dialog. The action is running in the background and you can track its progress
-              in the{" "}
+            <p className="text-muted-foreground mt-2 text-sm">
+              You can safely close this dialog. The action is running in the
+              background and you can track its progress in the{" "}
               <Link
                 href={`/project/${projectId}/settings/batch-actions`}
                 target="_blank"
@@ -95,8 +114,12 @@ export function StatusStep({ projectId, batchActionId, dataset, expectedCount, o
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{isComplete ? "Results" : "Progress"}</CardTitle>
-                <StatusBadge type={status.data?.status?.toLowerCase() ?? "pending"} />
+                <CardTitle className="text-base">
+                  {isComplete ? "Results" : "Progress"}
+                </CardTitle>
+                <StatusBadge
+                  type={status.data?.status?.toLowerCase() ?? "pending"}
+                />
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -119,7 +142,9 @@ export function StatusStep({ projectId, batchActionId, dataset, expectedCount, o
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Failed</span>
-                      <span className={`font-semibold ${failedCount > 0 ? "text-destructive" : ""}`}>
+                      <span
+                        className={`font-semibold ${failedCount > 0 ? "text-destructive" : ""}`}
+                      >
                         {failedCount}
                       </span>
                     </div>
@@ -130,20 +155,28 @@ export function StatusStep({ projectId, batchActionId, dataset, expectedCount, o
               {isComplete && failedCount > 0 && (
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Successfully processed</span>
+                    <span className="text-muted-foreground">
+                      Successfully processed
+                    </span>
                     <span className="font-semibold">{processedCount}</span>
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-muted-foreground">Failed</span>
-                    <span className="font-semibold text-destructive">{failedCount}</span>
+                    <span className="text-destructive font-semibold">
+                      {failedCount}
+                    </span>
                   </div>
                 </div>
               )}
 
               {status.data?.log && (
-                <div className="space-y-2 rounded-lg border border-destructive/50 bg-destructive/5 p-3">
-                  <p className="text-xs font-medium text-destructive">Error Summary:</p>
-                  <pre className="max-h-32 overflow-auto text-[10px] text-muted-foreground">{status.data.log}</pre>
+                <div className="border-destructive/50 bg-destructive/5 space-y-2 rounded-lg border p-3">
+                  <p className="text-destructive text-xs font-medium">
+                    Error Summary:
+                  </p>
+                  <pre className="text-muted-foreground max-h-32 overflow-auto text-[10px]">
+                    {status.data.log}
+                  </pre>
                 </div>
               )}
             </CardContent>
@@ -161,7 +194,10 @@ export function StatusStep({ projectId, batchActionId, dataset, expectedCount, o
               Close
             </Button>
             {isComplete && hasPartialSuccess && (
-              <Link href={`/project/${projectId}/datasets/${dataset.id}/items`} className="flex-1">
+              <Link
+                href={`/project/${projectId}/datasets/${dataset.id}/items`}
+                className="flex-1"
+              >
                 <Button className="w-full">Go to Dataset</Button>
               </Link>
             )}

@@ -51,7 +51,7 @@ import {
   type FilterState,
   type TableViewPresetTableName,
   type TableViewPresetDomain,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import { useMemo, useState } from "react";
 import {
   DropdownMenuItem,

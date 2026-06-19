@@ -1,6 +1,6 @@
-import { prisma, Prisma } from "@hanzo/console-core/src/db";
+import { prisma, Prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
-import { clearModelCacheForProject } from "@hanzo/console-core/src/server";
+import { clearModelCacheForProject } from "@hanzo/console/src/server";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
   GetModelsV1Query,
@@ -8,7 +8,7 @@ import {
   PostModelsV1Body,
   PostModelsV1Response,
 } from "@/src/features/public-api/types/models";
-import { InvalidRequestError } from "@hanzo/console-core";
+import { InvalidRequestError } from "@hanzo/console";
 import { isValidPostgresRegex } from "@/src/features/models/server/isValidPostgresRegex";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
@@ -33,7 +33,9 @@ export default withMiddlewares({
     fn: async ({ body, auth }) => {
       const validRegex = await isValidPostgresRegex(body.matchPattern, prisma);
       if (!validRegex) {
-        throw new InvalidRequestError("matchPattern is not a valid regex pattern (Postgres)");
+        throw new InvalidRequestError(
+          "matchPattern is not a valid regex pattern (Postgres)",
+        );
       }
       const { tokenizerConfig, pricingTiers: tierData, ...rest } = body;
 
@@ -46,7 +48,9 @@ export default withMiddlewares({
         });
 
         if (existingModelName) {
-          throw new InvalidRequestError(`Model name '${body.modelName}' already exists in project`);
+          throw new InvalidRequestError(
+            `Model name '${body.modelName}' already exists in project`,
+          );
         }
 
         // 1. Create model

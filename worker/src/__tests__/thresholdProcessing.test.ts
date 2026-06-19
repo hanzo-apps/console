@@ -7,7 +7,7 @@ vi.hoisted(() => {
 });
 
 // Mock prisma
-vi.mock("@langfuse/shared/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     organization: {
       update: vi.fn(),
@@ -22,18 +22,15 @@ vi.mock("@langfuse/shared/src/db", () => ({
 }));
 
 import { processThresholds } from "../ee/usageThresholds/thresholdProcessing";
-import { prisma } from "@langfuse/shared/src/db";
-import { type ParsedOrganization } from "@langfuse/shared";
+import { prisma } from "@hanzo/console/src/db";
+import { type ParsedOrganization } from "@hanzo/console";
 
 const mockOrgUpdate = prisma.organization.update as Mock;
-const mockOrgMembershipFindMany = prisma.organizationMembership
-  .findMany as Mock;
+const mockOrgMembershipFindMany = prisma.organizationMembership.findMany as Mock;
 const mockApiKeyFindMany = prisma.apiKey.findMany as Mock;
 
 // Mock organization helper
-const createMockOrg = (
-  overrides: Partial<ParsedOrganization> = {},
-): ParsedOrganization => ({
+const createMockOrg = (overrides: Partial<ParsedOrganization> = {}): ParsedOrganization => ({
   id: "org-1",
   name: "Test Org",
   cloudConfig: null,
@@ -322,10 +319,8 @@ describe("processThresholds", () => {
   describe("enforcement feature flag", () => {
     it("tracks usage but does not enforce when LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED is false", async () => {
       // Temporarily set enforcement to disabled
-      const originalEnv =
-        process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED;
-      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED =
-        "false";
+      const originalEnv = process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED;
+      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED = "false";
 
       // Need to reload the module to pick up the new env var
       vi.resetModules();
@@ -351,17 +346,14 @@ describe("processThresholds", () => {
       expect(result.emailFailed).toBe(false);
 
       // Restore original env
-      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED =
-        originalEnv;
+      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED = originalEnv;
       vi.resetModules();
     });
 
     it("clears state when enforcement is disabled and org was previously blocked", async () => {
       // Temporarily set enforcement to disabled
-      const originalEnv =
-        process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED;
-      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED =
-        "false";
+      const originalEnv = process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED;
+      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED = "false";
 
       // Need to reload the module to pick up the new env var
       vi.resetModules();
@@ -385,21 +377,17 @@ describe("processThresholds", () => {
       });
 
       // Restore original env
-      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED =
-        originalEnv;
+      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED = originalEnv;
       vi.resetModules();
     });
 
     it("enforces thresholds when LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED is true", async () => {
       // This is the default for all other tests, but let's be explicit
-      const originalEnv =
-        process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED;
-      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED =
-        "true";
+      const originalEnv = process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED;
+      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED = "true";
 
       vi.resetModules();
-      const { processThresholds: processThresholdsEnabled } =
-        await import("../ee/usageThresholds/thresholdProcessing");
+      const { processThresholds: processThresholdsEnabled } = await import("../ee/usageThresholds/thresholdProcessing");
 
       const org = createMockOrg({ cloudCurrentCycleUsage: 0 });
 
@@ -417,21 +405,17 @@ describe("processThresholds", () => {
       expect(result.actionTaken).toBe("BLOCKED");
 
       // Restore original env
-      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED =
-        originalEnv;
+      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED = originalEnv;
       vi.resetModules();
     });
 
     it("skips enforcement for paid plan orgs regardless of enforcement flag", async () => {
       // Set enforcement to enabled
-      const originalEnv =
-        process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED;
-      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED =
-        "true";
+      const originalEnv = process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED;
+      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED = "true";
 
       vi.resetModules();
-      const { processThresholds: processThresholdsEnabled } =
-        await import("../ee/usageThresholds/thresholdProcessing");
+      const { processThresholds: processThresholdsEnabled } = await import("../ee/usageThresholds/thresholdProcessing");
 
       const org = createMockOrg({
         cloudCurrentCycleUsage: 0,
@@ -459,8 +443,7 @@ describe("processThresholds", () => {
       expect(result.emailSent).toBe(false);
 
       // Restore original env
-      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED =
-        originalEnv;
+      process.env.LANGFUSE_FREE_TIER_USAGE_THRESHOLD_ENFORCEMENT_ENABLED = originalEnv;
       vi.resetModules();
     });
   });

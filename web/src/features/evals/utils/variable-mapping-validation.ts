@@ -1,6 +1,13 @@
 import { z } from "zod/v4";
-import { variableMapping, observationVariableMapping, type EvalTargetObject } from "@hanzo/console-core";
-import { isEventTarget, isExperimentTarget } from "@/src/features/evals/utils/typeHelpers";
+import {
+  variableMapping,
+  observationVariableMapping,
+  type EvalTargetObject,
+} from "@hanzo/console";
+import {
+  isEventTarget,
+  isExperimentTarget,
+} from "@/src/features/evals/utils/typeHelpers";
 
 type FormMappingValue = {
   templateVariable: string;
@@ -13,7 +20,9 @@ type FormMappingValue = {
 type ValidationResult =
   | {
       success: true;
-      data: z.infer<typeof variableMapping>[] | z.infer<typeof observationVariableMapping>[];
+      data:
+        | z.infer<typeof variableMapping>[]
+        | z.infer<typeof observationVariableMapping>[];
     }
   | {
       success: false;
@@ -28,11 +37,15 @@ export function validateAndTransformVariableMapping(
   mappings: FormMappingValue[],
   target: EvalTargetObject,
 ): ValidationResult {
-  const isEventOrExperimentTarget = isEventTarget(target) || isExperimentTarget(target);
+  const isEventOrExperimentTarget =
+    isEventTarget(target) || isExperimentTarget(target);
 
   // Check for incomplete mappings (missing selectedColumnId)
   const incompleteMappings = mappings.filter(
-    (m) => !m.selectedColumnId || m.selectedColumnId === null || m.selectedColumnId.trim() === "",
+    (m) =>
+      !m.selectedColumnId ||
+      m.selectedColumnId === null ||
+      m.selectedColumnId.trim() === "",
   );
 
   if (incompleteMappings.length > 0) {

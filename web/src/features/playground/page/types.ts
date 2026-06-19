@@ -7,7 +7,7 @@ import {
   type PlaceholderMessage,
   type PromptVariable,
   type UIModelParams,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 
 export type PlaygroundTool = LLMToolDefinition & {
   id: string;
@@ -30,7 +30,8 @@ export type PlaceholderMessageFillIn = {
 
 export type PlaygroundCache = {
   messages: (ChatMessage | PlaceholderMessage)[];
-  modelParams?: Partial<UIModelParams> & Pick<UIModelParams, "provider" | "model">;
+  modelParams?: Partial<UIModelParams> &
+    Pick<UIModelParams, "provider" | "model">;
   output?: string | null;
   promptVariables?: PromptVariable[];
   messagePlaceholders?: PlaceholderMessageFillIn[];

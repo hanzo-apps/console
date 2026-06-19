@@ -5,27 +5,36 @@ import {
   type ScoreTarget,
   type ScoreTargetSession,
   ScoreDataTypeEnum,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 
-export const isNumericDataType = (dataType: ScoreDataTypeType) => dataType === ScoreDataTypeEnum.NUMERIC;
+export const isNumericDataType = (dataType: ScoreDataTypeType) =>
+  dataType === ScoreDataTypeEnum.NUMERIC;
 
-export const isCategoricalDataType = (dataType: ScoreDataTypeType) => dataType === ScoreDataTypeEnum.CATEGORICAL;
+export const isCategoricalDataType = (dataType: ScoreDataTypeType) =>
+  dataType === ScoreDataTypeEnum.CATEGORICAL;
 
-export const isBooleanDataType = (dataType: ScoreDataTypeType) => dataType === ScoreDataTypeEnum.BOOLEAN;
+export const isBooleanDataType = (dataType: ScoreDataTypeType) =>
+  dataType === ScoreDataTypeEnum.BOOLEAN;
 
 export const isTextDataType = (dataType: ScoreDataTypeType) =>
   dataType === ScoreDataTypeEnum.TEXT;
 
 export const isScoreUnsaved = (scoreId?: string | null): boolean => !scoreId;
 
-export const toOrderedScoresList = (list: ScoreData[]): ScoreData[] => list.sort((a, b) => a.key.localeCompare(b.key));
+export const toOrderedScoresList = (list: ScoreData[]): ScoreData[] =>
+  list.sort((a, b) => a.key.localeCompare(b.key));
 
-export const isTraceScore = (scoreTarget: ScoreTarget): scoreTarget is ScoreTargetTrace => scoreTarget.type === "trace";
+export const isTraceScore = (
+  scoreTarget: ScoreTarget,
+): scoreTarget is ScoreTargetTrace => scoreTarget.type === "trace";
 
-export const isSessionScore = (scoreTarget: ScoreTarget): scoreTarget is ScoreTargetSession =>
-  scoreTarget.type === "session";
+export const isSessionScore = (
+  scoreTarget: ScoreTarget,
+): scoreTarget is ScoreTargetSession => scoreTarget.type === "session";
 
-export const formatAnnotateDescription = <Target extends ScoreTarget>(scoreTarget: Target): string => {
+export const formatAnnotateDescription = <Target extends ScoreTarget>(
+  scoreTarget: Target,
+): string => {
   let sourceEntity = "session";
   if (isTraceScore(scoreTarget)) {
     sourceEntity = scoreTarget.observationId ? "observation" : "trace";

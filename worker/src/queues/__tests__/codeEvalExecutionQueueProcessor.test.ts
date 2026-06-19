@@ -11,7 +11,7 @@ const JobExecutionStatus = {
   ERROR: "ERROR",
 } as const;
 
-vi.mock("@langfuse/shared/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     jobExecution: {
       update: vi.fn(),
@@ -27,8 +27,8 @@ vi.mock("../../features/evaluation/codeBased", () => ({
   executeCodeBasedEvaluation: vi.fn(),
 }));
 
-vi.mock("@langfuse/shared/src/server", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@langfuse/shared/src/server")>();
+vi.mock("@hanzo/console/src/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@hanzo/console/src/server")>();
   const { CodeEvalExecutionError } = await import("../../../../packages/shared/src/server/evals/codeEvalExecution");
 
   return {
@@ -60,9 +60,9 @@ vi.mock("../../errors/UnrecoverableError", async () => {
   };
 });
 
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { processObservationEval } from "../../features/evaluation/observationEval";
-import { traceException } from "@langfuse/shared/src/server";
+import { traceException } from "@hanzo/console/src/server";
 import { CodeEvalDispatcherErrorCodes } from "../../../../packages/shared/src/server/evals/codeEvalDispatcherTypes";
 import { CodeEvalExecutionError } from "../../../../packages/shared/src/server/evals/codeEvalExecution";
 import { isUnrecoverableError } from "../../errors/UnrecoverableError";

@@ -11,13 +11,13 @@
  * ResourceSpan -> processToEvent() -> createEventRecord() -> convertEventRecordToObservationForEval()
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { OtelIngestionProcessor } from "@hanzo/console-core/src/server";
+import { OtelIngestionProcessor } from "@hanzo/console/src/server";
 import {
   convertEventRecordToObservationForEval,
   observationForEvalSchema,
   type ObservationForEval,
-} from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { IngestionService } from "../../services/IngestionService";
 import * as datastoreWriterExports from "../../services/DatastoreWriter";
 
@@ -625,12 +625,8 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
                 spanId: createBufferId("1122334455667799"),
                 name: "ai.generateText.doGenerate",
                 kind: 1,
-                startTimeUnixNano: createNanoTimestamp(
-                  BigInt(1738241387865000000),
-                ),
-                endTimeUnixNano: createNanoTimestamp(
-                  BigInt(1738241389310000000),
-                ),
+                startTimeUnixNano: createNanoTimestamp(BigInt(1738241387865000000)),
+                endTimeUnixNano: createNanoTimestamp(BigInt(1738241389310000000)),
                 attributes: [
                   {
                     key: "ai.model.id",
@@ -678,8 +674,7 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
         ],
       };
 
-      const observations =
-        await processOtelSpanToObservationForEval(vercelAIToolCallSpan);
+      const observations = await processOtelSpanToObservationForEval(vercelAIToolCallSpan);
 
       expect(observations).toHaveLength(1);
       const obs = observations[0];
@@ -713,9 +708,7 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
       };
       const resourceSpan = {
         resource: {
-          attributes: [
-            { key: "service.name", value: { stringValue: "agent-service" } },
-          ],
+          attributes: [{ key: "service.name", value: { stringValue: "agent-service" } }],
         },
         scopeSpans: [
           {
@@ -726,12 +719,8 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
                 spanId: createBufferId("bbbbbbbbbbbbbbbb"),
                 name: "agent-event-span",
                 kind: 1,
-                startTimeUnixNano: createNanoTimestamp(
-                  BigInt(1714488530686000000),
-                ),
-                endTimeUnixNano: createNanoTimestamp(
-                  BigInt(1714488530687000000),
-                ),
+                startTimeUnixNano: createNanoTimestamp(BigInt(1714488530686000000)),
+                endTimeUnixNano: createNanoTimestamp(BigInt(1714488530687000000)),
                 attributes: [
                   {
                     key: "gen_ai.tool.definitions",
@@ -741,9 +730,7 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
                 events: [
                   {
                     name: "gen_ai.user.message",
-                    timeUnixNano: createNanoTimestamp(
-                      BigInt(1714488530686000000),
-                    ),
+                    timeUnixNano: createNanoTimestamp(BigInt(1714488530686000000)),
                     attributes: [
                       {
                         key: "content",
@@ -753,9 +740,7 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
                   },
                   {
                     name: "gen_ai.choice",
-                    timeUnixNano: createNanoTimestamp(
-                      BigInt(1714488530687000000),
-                    ),
+                    timeUnixNano: createNanoTimestamp(BigInt(1714488530687000000)),
                     attributes: [
                       {
                         key: "tool_calls",
@@ -788,25 +773,18 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
 
       expect(eventInputs).toHaveLength(1);
       expect(typeof eventInputs[0].input).toBe("object");
-      expect(
-        eventInputs[0].metadata.attributes?.["gen_ai.tool.definitions"],
-      ).toBeUndefined();
+      expect(eventInputs[0].metadata.attributes?.["gen_ai.tool.definitions"]).toBeUndefined();
       expect(eventInputs[0].toolDefinitions).toHaveProperty("calculator");
       expect(eventInputs[0].toolCallNames).toEqual(["calculator"]);
 
-      const eventRecord = await ingestionService.createEventRecord(
-        eventInputs[0],
-        "test/otel/tools.json",
-      );
+      const eventRecord = await ingestionService.createEventRecord(eventInputs[0], "test/otel/tools.json");
 
       expect(typeof eventRecord.input).toBe("string");
       expect(JSON.parse(eventRecord.input)).toEqual({
         messages: [{ role: "user", content: "What is 2 + 2?" }],
         tools: [tool],
       });
-      expect(eventRecord.metadata_names).not.toContain(
-        "attributes.gen_ai.tool.definitions",
-      );
+      expect(eventRecord.metadata_names).not.toContain("attributes.gen_ai.tool.definitions");
       expect(eventRecord.tool_definitions).toHaveProperty("calculator");
       expect(JSON.parse(eventRecord.tool_definitions.calculator)).toEqual({
         description: "Do math",
@@ -824,9 +802,7 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
       const observation = convertEventRecordToObservationForEval(eventRecord);
       const result = observationForEvalSchema.safeParse(observation);
       expect(result.success).toBe(true);
-      expect(observation.tool_definitions).toEqual(
-        eventRecord.tool_definitions,
-      );
+      expect(observation.tool_definitions).toEqual(eventRecord.tool_definitions);
     });
   });
 
@@ -1633,12 +1609,8 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
                 spanId: createBufferId("00b001567890abcd"),
                 name: "no-tools-test",
                 kind: 1,
-                startTimeUnixNano: createNanoTimestamp(
-                  BigInt(1738242387865000000),
-                ),
-                endTimeUnixNano: createNanoTimestamp(
-                  BigInt(1738242389310000000),
-                ),
+                startTimeUnixNano: createNanoTimestamp(BigInt(1738242387865000000)),
+                endTimeUnixNano: createNanoTimestamp(BigInt(1738242389310000000)),
                 attributes: [
                   {
                     key: "langfuse.observation.type",
@@ -1660,8 +1632,7 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
         ],
       };
 
-      const observations =
-        await processOtelSpanToObservationForEval(noToolsSpan);
+      const observations = await processOtelSpanToObservationForEval(noToolsSpan);
 
       expect(observations).toHaveLength(1);
       expect(observations[0].tool_call_count).toBe(0);
@@ -1684,12 +1655,8 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
                 spanId: createBufferId("malformed12345678"),
                 name: "malformed-test",
                 kind: 1,
-                startTimeUnixNano: createNanoTimestamp(
-                  BigInt(1738242287865000000),
-                ),
-                endTimeUnixNano: createNanoTimestamp(
-                  BigInt(1738242289310000000),
-                ),
+                startTimeUnixNano: createNanoTimestamp(BigInt(1738242287865000000)),
+                endTimeUnixNano: createNanoTimestamp(BigInt(1738242289310000000)),
                 attributes: [
                   {
                     key: "langfuse.observation.type",
@@ -1752,34 +1719,31 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
         expectedUsage: { input: 100, output: 200 },
         expectedCost: {},
       },
-    ])(
-      "should handle $name without data corruption",
-      async ({ usage, cost, expectedUsage, expectedCost }) => {
-        const attrs: Array<{
-          key: string;
-          value: Record<string, unknown>;
-        }> = [];
-        if (usage)
-          attrs.push({
-            key: "langfuse.observation.usage_details",
-            value: usage,
-          });
-        if (cost)
-          attrs.push({
-            key: "langfuse.observation.cost_details",
-            value: cost,
-          });
+    ])("should handle $name without data corruption", async ({ usage, cost, expectedUsage, expectedCost }) => {
+      const attrs: Array<{
+        key: string;
+        value: Record<string, unknown>;
+      }> = [];
+      if (usage)
+        attrs.push({
+          key: "langfuse.observation.usage_details",
+          value: usage,
+        });
+      if (cost)
+        attrs.push({
+          key: "langfuse.observation.cost_details",
+          value: cost,
+        });
 
-        const span = buildSpanWithRawAttributes(attrs);
-        const observations = await processOtelSpanToObservationForEval(span);
+      const span = buildSpanWithRawAttributes(attrs);
+      const observations = await processOtelSpanToObservationForEval(span);
 
-        expect(observations).toHaveLength(1);
-        const obs = observations[0];
-        expect(observationForEvalSchema.safeParse(obs).success).toBe(true);
-        expect(obs.provided_usage_details).toEqual(expectedUsage);
-        expect(obs.provided_cost_details).toEqual(expectedCost);
-      },
-    );
+      expect(observations).toHaveLength(1);
+      const obs = observations[0];
+      expect(observationForEvalSchema.safeParse(obs).success).toBe(true);
+      expect(obs.provided_usage_details).toEqual(expectedUsage);
+      expect(obs.provided_cost_details).toEqual(expectedCost);
+    });
 
     it("should fall through to gen_ai.usage.* when usage_details is invalid JSON", async () => {
       const span = buildSpanWithRawAttributes(

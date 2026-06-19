@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Decimal } from "decimal.js";
 import { z } from "zod/v4";
-import { validateRegexPattern } from "@hanzo/console-core";
-import { matchPricingTier, type PricingTierWithPrices } from "@hanzo/console-core/src/server";
+import { validateRegexPattern } from "@hanzo/console";
+import { matchPricingTier, type PricingTierWithPrices } from "@hanzo/console/src/server";
 import { DefaultModelPriceSchema } from "../scripts/upsertDefaultModelPrices";
 import defaultModelPrices from "../constants/default-model-prices.json";
 

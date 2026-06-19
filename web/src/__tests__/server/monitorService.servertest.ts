@@ -3,9 +3,9 @@ import {
   createOrgProjectAndApiKey,
   MonitorService,
   type SessionContext,
-} from "@langfuse/shared/src/server";
-import { prisma } from "@langfuse/shared/src/db";
-import { LangfuseNotFoundError } from "@langfuse/shared";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { LangfuseNotFoundError } from "@hanzo/console";
 
 const baseMonitorInput = (projectId: string) => ({
   projectId,

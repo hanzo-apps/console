@@ -1,5 +1,5 @@
 import type { Session } from "next-auth";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import {
@@ -13,12 +13,12 @@ import {
   getTraceByIdFromEventsTable,
   createObservation,
   createObservationsCh,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import waitForExpect from "wait-for-expect";
 import { randomUUID } from "crypto";
 import { env } from "@/src/env.mjs";
 import { composeAggregateScoreKey } from "@/src/features/scores/lib/aggregateScores";
-import { BatchExportFileFormat, BatchTableNames } from "@langfuse/shared";
+import { BatchExportFileFormat, BatchTableNames } from "@hanzo/console";
 
 describe("traces trpc", () => {
   const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
@@ -445,7 +445,10 @@ describe("traces trpc", () => {
     });
 
     it("access trace without any authentication", async () => {
-      const unAuthedSession = createInnerTRPCContext({ session: null, headers: {} });
+      const unAuthedSession = createInnerTRPCContext({
+        session: null,
+        headers: {},
+      });
       const unAuthedCaller = appRouter.createCaller({
         ...unAuthedSession,
         prisma,
@@ -509,10 +512,14 @@ describe("traces trpc", () => {
       });
 
       // Find the sentiment score in categorical scores
-      const sentimentScore = filterOptions.score_categories.find((score) => score.label === "sentiment");
+      const sentimentScore = filterOptions.score_categories.find(
+        (score) => score.label === "sentiment",
+      );
 
       expect(sentimentScore).toBeDefined();
-      expect(sentimentScore?.values).toEqual(expect.arrayContaining(["custom", "positive", "neutral", "negative"]));
+      expect(sentimentScore?.values).toEqual(
+        expect.arrayContaining(["custom", "positive", "neutral", "negative"]),
+      );
       // Should include all possible values from config, not just the actual score value
       expect(sentimentScore?.values).toHaveLength(4);
     });
@@ -642,7 +649,10 @@ describe("traces trpc", () => {
 
   describe("traces.getAgentGraphData", () => {
     it("should allow unauthenticated access to public trace agent graph data", async () => {
-      const unAuthedSession = createInnerTRPCContext({ session: null, headers: {} });
+      const unAuthedSession = createInnerTRPCContext({
+        session: null,
+        headers: {},
+      });
       const unAuthedCaller = appRouter.createCaller({
         ...unAuthedSession,
         prisma,
@@ -662,8 +672,12 @@ describe("traces trpc", () => {
       await createTracesCh([trace]);
       await createObservationsCh([observation]);
 
-      const minStartTime = new Date(new Date(trace.timestamp).getTime() - 1000).toISOString();
-      const maxStartTime = new Date(new Date(trace.timestamp).getTime() + 1000).toISOString();
+      const minStartTime = new Date(
+        new Date(trace.timestamp).getTime() - 1000,
+      ).toISOString();
+      const maxStartTime = new Date(
+        new Date(trace.timestamp).getTime() + 1000,
+      ).toISOString();
 
       const agentGraphData = await unAuthedCaller.traces.getAgentGraphData({
         projectId,
@@ -677,7 +691,10 @@ describe("traces trpc", () => {
     });
 
     it("should deny unauthenticated access to private trace agent graph data", async () => {
-      const unAuthedSession = createInnerTRPCContext({ session: null, headers: {} });
+      const unAuthedSession = createInnerTRPCContext({
+        session: null,
+        headers: {},
+      });
       const unAuthedCaller = appRouter.createCaller({
         ...unAuthedSession,
         prisma,
@@ -697,8 +714,12 @@ describe("traces trpc", () => {
       await createTracesCh([trace]);
       await createObservationsCh([observation]);
 
-      const minStartTime = new Date(new Date(trace.timestamp).getTime() - 1000).toISOString();
-      const maxStartTime = new Date(new Date(trace.timestamp).getTime() + 1000).toISOString();
+      const minStartTime = new Date(
+        new Date(trace.timestamp).getTime() - 1000,
+      ).toISOString();
+      const maxStartTime = new Date(
+        new Date(trace.timestamp).getTime() + 1000,
+      ).toISOString();
 
       await expect(
         unAuthedCaller.traces.getAgentGraphData({

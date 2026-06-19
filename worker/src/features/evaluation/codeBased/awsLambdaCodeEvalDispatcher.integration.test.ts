@@ -4,7 +4,7 @@ import {
   CodeEvalDispatcherError,
   type CodeEvalRuntimeLanguage,
   type DispatchInput,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 const endpoint = process.env.LANGFUSE_CODE_EVAL_AWS_LAMBDA_ENDPOINT;
 const describeWithFloci = endpoint ? describe : describe.skip;

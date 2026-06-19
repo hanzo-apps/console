@@ -3,7 +3,7 @@ import {
   createTRPCRouter,
   protectedProjectProcedure,
 } from "@/src/server/api/trpc";
-import { Prisma, type Dataset } from "@hanzo/shared/src/db";
+import { Prisma, type Dataset } from "@hanzo/console/src/db";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import {
@@ -19,7 +19,7 @@ import {
   optionalPaginationZod,
   HanzoConflictError,
   HanzoNotFoundError,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import { TRPCError } from "@trpc/server";
 import {
   datasetRunsTableSchema,
@@ -63,13 +63,13 @@ import {
   getDatasetItemVersionHistory,
   getDatasetItemChangesSinceVersion,
   getDatasetItemsCountGrouped,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
 import {
   updateDataset,
   upsertDataset,
 } from "@/src/features/datasets/server/actions/createDataset";
-import { type BulkDatasetItemValidationError } from "@hanzo/shared";
+import { type BulkDatasetItemValidationError } from "@hanzo/console";
 import { v4 } from "uuid";
 
 // Batch size kept small (100) as items may have large input/output/metadata JSON

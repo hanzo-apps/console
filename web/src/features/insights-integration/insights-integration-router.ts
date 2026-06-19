@@ -2,45 +2,50 @@ import { z } from "zod/v4";
 
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { decrypt, encrypt } from "@hanzo/console-core/encryption";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
+import { decrypt, encrypt } from "@hanzo/console/encryption";
 import { insightsIntegrationFormSchema } from "@/src/features/insights-integration/types";
 import { TRPCError } from "@trpc/server";
 import { env } from "@/src/env.mjs";
-import { validateWebhookURL } from "@hanzo/console-core/src/server";
+import { validateWebhookURL } from "@hanzo/console/src/server";
 
 export const insightsIntegrationRouter = createTRPCRouter({
-  get: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "integrations:CRUD",
-    });
-    try {
-      const dbConfig = await ctx.prisma.insightsIntegration.findFirst({
-        where: {
-          projectId: input.projectId,
-        },
+  get: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "integrations:CRUD",
       });
+      try {
+        const dbConfig = await ctx.prisma.insightsIntegration.findFirst({
+          where: {
+            projectId: input.projectId,
+          },
+        });
 
-      if (!dbConfig) {
-        return null;
+        if (!dbConfig) {
+          return null;
+        }
+
+        const { encryptedInsightsApiKey, exportSource, ...config } = dbConfig;
+
+        return {
+          ...config,
+          exportSource,
+          insightsApiKey: decrypt(encryptedInsightsApiKey),
+        };
+      } catch (e) {
+        console.error("insights integration get", e);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+        });
       }
-
-      const { encryptedInsightsApiKey, exportSource, ...config } = dbConfig;
-
-      return {
-        ...config,
-        exportSource,
-        insightsApiKey: decrypt(encryptedInsightsApiKey),
-      };
-    } catch (e) {
-      console.error("insights integration get", e);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-      });
-    }
-  }),
+    }),
 
   update: protectedProjectProcedure
     .input(insightsIntegrationFormSchema.extend({ projectId: z.string() }))
@@ -107,30 +112,32 @@ export const insightsIntegrationRouter = createTRPCRouter({
         },
       });
     }),
-  delete: protectedProjectProcedure.input(z.object({ projectId: z.string() })).mutation(async ({ input, ctx }) => {
-    try {
-      throwIfNoProjectAccess({
-        session: ctx.session,
-        projectId: input.projectId,
-        scope: "integrations:CRUD",
-      });
-      await auditLog({
-        session: ctx.session,
-        action: "delete",
-        resourceType: "insightsIntegration",
-        resourceId: input.projectId,
-      });
-
-      await ctx.prisma.insightsIntegration.delete({
-        where: {
+  delete: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        throwIfNoProjectAccess({
+          session: ctx.session,
           projectId: input.projectId,
-        },
-      });
-    } catch (e) {
-      console.log("insights integration delete", e);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-      });
-    }
-  }),
+          scope: "integrations:CRUD",
+        });
+        await auditLog({
+          session: ctx.session,
+          action: "delete",
+          resourceType: "insightsIntegration",
+          resourceId: input.projectId,
+        });
+
+        await ctx.prisma.insightsIntegration.delete({
+          where: {
+            projectId: input.projectId,
+          },
+        });
+      } catch (e) {
+        console.log("insights integration delete", e);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+        });
+      }
+    }),
 });

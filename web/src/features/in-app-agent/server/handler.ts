@@ -20,14 +20,14 @@ import {
   ForbiddenError,
   InvalidRequestError,
   UnauthorizedError,
-} from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { assertUnreachable } from "@/src/utils/types";
 import {
   createAndAddApiKeysToDb,
   deleteApiKeyFromDb,
-} from "@langfuse/shared/src/server/auth/apiKeys";
-import { logger } from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server/auth/apiKeys";
+import { logger } from "@hanzo/console/src/server";
 
 const IN_APP_AGENT_API_KEY_NOTE = "In-app agent MCP session";
 const MAX_IN_APP_AGENT_INPUT_BYTES = 1024 * 1024;

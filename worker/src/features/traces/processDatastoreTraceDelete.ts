@@ -9,9 +9,9 @@ import {
   StorageService,
   StorageServiceFactory,
   traceException,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { env } from "../../env";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { chunk } from "lodash";
 
 let s3MediaStorageClient: StorageService;

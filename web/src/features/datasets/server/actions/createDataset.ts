@@ -1,10 +1,6 @@
-import {
-  DatasetNameSchema,
-  InvalidRequestError,
-  Prisma,
-} from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
-import { validateAllDatasetItems } from "@hanzo/console-core/src/server";
+import { DatasetNameSchema, InvalidRequestError, Prisma } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
+import { validateAllDatasetItems } from "@hanzo/console/src/server";
 
 type DatasetJson =
   | Prisma.InputJsonObject

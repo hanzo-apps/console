@@ -26,8 +26,8 @@ import {
   useDatasetCompareFields,
 } from "@/src/features/datasets/contexts/DatasetCompareFieldsContext";
 import { useColumnFilterState } from "@/src/features/filters/hooks/useColumnFilterState";
-import { type Prisma } from "@hanzo/shared";
-import { type EnrichedDatasetRunItem } from "@hanzo/shared/src/server";
+import { type Prisma } from "@hanzo/console";
+import { type EnrichedDatasetRunItem } from "@hanzo/console/src/server";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
 import { PeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
 
@@ -53,7 +53,10 @@ function DatasetCompareRunsTableInternal(props: {
     convertToColumnFilterList,
   } = useColumnFilterState();
   const { setDetailPageList } = useDetailPageLists();
-  const [rowHeight, setRowHeight] = useRowHeightLocalStorage("datasetCompareRuns", "m");
+  const [rowHeight, setRowHeight] = useRowHeightLocalStorage(
+    "datasetCompareRuns",
+    "m",
+  );
 
   useEffect(() => {
     const allFilters = convertToColumnFilterList();
@@ -69,14 +72,16 @@ function DatasetCompareRunsTableInternal(props: {
     pageSize: withDefault(NumberParam, 50),
   });
 
-  const datasetItemsWithRunData = api.datasets.datasetItemsWithRunData.useQuery({
-    projectId: props.projectId,
-    datasetId: props.datasetId,
-    runIds: props.runIds,
-    filterByRun: convertToColumnFilterList(),
-    page: paginationState.pageIndex,
-    limit: paginationState.pageSize,
-  });
+  const datasetItemsWithRunData = api.datasets.datasetItemsWithRunData.useQuery(
+    {
+      projectId: props.projectId,
+      datasetId: props.datasetId,
+      runIds: props.runIds,
+      filterByRun: convertToColumnFilterList(),
+      page: paginationState.pageIndex,
+      limit: paginationState.pageSize,
+    },
+  );
 
   const totalCountQuery = api.datasets.runItemCompareCount.useQuery({
     projectId: props.projectId,
@@ -107,13 +112,14 @@ function DatasetCompareRunsTableInternal(props: {
     },
   });
 
-  const { runAggregateColumns, isLoading: cellsLoading } = useDatasetRunAggregateColumns({
-    projectId: props.projectId,
-    runIds: props.runIds,
-    datasetId: props.datasetId,
-    updateRunFilters,
-    getFiltersForRun,
-  });
+  const { runAggregateColumns, isLoading: cellsLoading } =
+    useDatasetRunAggregateColumns({
+      projectId: props.projectId,
+      runIds: props.runIds,
+      datasetId: props.datasetId,
+      updateRunFilters,
+      getFiltersForRun,
+    });
 
   const columns: HanzoColumnDef<DatasetCompareRunRowData>[] = [
     {
@@ -125,7 +131,12 @@ function DatasetCompareRunsTableInternal(props: {
       defaultHidden: true,
       cell: ({ row }) => {
         const id: string = row.getValue("id");
-        return <TableLink path={`/project/${props.projectId}/datasets/${props.datasetId}/items/${id}`} value={id} />;
+        return (
+          <TableLink
+            path={`/project/${props.projectId}/datasets/${props.datasetId}/items/${id}`}
+            value={id}
+          />
+        );
       },
     },
     {
@@ -135,7 +146,9 @@ function DatasetCompareRunsTableInternal(props: {
       size: 200,
       enableHiding: true,
       cell: ({ row }) => {
-        const input = row.getValue("input") as DatasetCompareRunRowData["input"];
+        const input = row.getValue(
+          "input",
+        ) as DatasetCompareRunRowData["input"];
         return input !== null ? (
           <div className="h-full w-full">
             <IOTableCell data={input} />
@@ -150,10 +163,15 @@ function DatasetCompareRunsTableInternal(props: {
       size: 200,
       enableHiding: true,
       cell: ({ row }) => {
-        const expectedOutput = row.getValue("expectedOutput") as DatasetCompareRunRowData["expectedOutput"];
+        const expectedOutput = row.getValue(
+          "expectedOutput",
+        ) as DatasetCompareRunRowData["expectedOutput"];
         return expectedOutput !== null ? (
           <div className="h-full w-full">
-            <IOTableCell data={expectedOutput} className="bg-accent-light-green" />
+            <IOTableCell
+              data={expectedOutput}
+              className="bg-accent-light-green"
+            />
           </div>
         ) : null;
       },
@@ -166,7 +184,9 @@ function DatasetCompareRunsTableInternal(props: {
       enableHiding: true,
       defaultHidden: true,
       cell: ({ row }) => {
-        const metadata = row.getValue("metadata") as DatasetCompareRunRowData["metadata"];
+        const metadata = row.getValue(
+          "metadata",
+        ) as DatasetCompareRunRowData["metadata"];
         return metadata !== null ? <IOTableCell data={metadata} /> : null;
       },
     },
@@ -182,10 +202,11 @@ function DatasetCompareRunsTableInternal(props: {
       runs: item.runData,
     })) ?? [];
 
-  const [columnVisibility, setColumnVisibility] = useColumnVisibility<DatasetCompareRunRowData>(
-    "datasetCompareRunsColumnVisibility",
-    columns,
-  );
+  const [columnVisibility, setColumnVisibility] =
+    useColumnVisibility<DatasetCompareRunRowData>(
+      "datasetCompareRunsColumnVisibility",
+      columns,
+    );
 
   return (
     <>
@@ -198,12 +219,17 @@ function DatasetCompareRunsTableInternal(props: {
         actionButtons={
           <DropdownMenu open={isFieldsDropdownOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" onClick={() => setIsFieldsDropdownOpen(!isFieldsDropdownOpen)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsFieldsDropdownOpen(!isFieldsDropdownOpen)}
+              >
                 <LayoutList className="mr-2 h-4 w-4" />
                 <span>Fields</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent onPointerDownOutside={() => setIsFieldsDropdownOpen(false)}>
+            <DropdownMenuContent
+              onPointerDownOutside={() => setIsFieldsDropdownOpen(false)}
+            >
               <DropdownMenuCheckboxItem
                 checked={isFieldSelected("output")}
                 onCheckedChange={() => toggleField("output")}

@@ -1,5 +1,9 @@
 import { Decimal } from "decimal.js";
-import { type EvalTemplate, EvalTargetObject, JobConfigState } from "@hanzo/console-core";
+import {
+  type EvalTemplate,
+  EvalTargetObject,
+  JobConfigState,
+} from "@hanzo/console";
 import { type PartialConfig } from "@/src/features/evals/types";
 import { createDefaultVariableMappings } from "@/src/features/experiments/utils/evaluatorMappingUtils";
 

@@ -1,4 +1,4 @@
-import { StorageService, StorageServiceFactory } from "@hanzo/console-core/src/server";
+import { StorageService, StorageServiceFactory } from "@hanzo/console/src/server";
 import { env } from "../../env";
 
 /**

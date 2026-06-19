@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-vi.mock("@langfuse/shared/src/server", () => ({
+vi.mock("@hanzo/console/src/server", () => ({
   convertQueueNameToMetricName: vi.fn().mockImplementation((name) => name),
   logger: {
     info: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock("@langfuse/shared/src/server", () => ({
   recordDistribution: vi.fn(),
 }));
 
-vi.mock("@langfuse/shared/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     datasetRuns: {
       findFirstOrThrow: vi.fn(),
@@ -25,8 +25,8 @@ vi.mock("crypto", () => ({
   randomUUID: vi.fn().mockReturnValue("retry-job-id"),
 }));
 
-import { prisma } from "@langfuse/shared/src/db";
-import { logger, recordDistribution } from "@langfuse/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { logger, recordDistribution } from "@hanzo/console/src/server";
 import { retryLLMRateLimitError } from "./retry-handler";
 
 describe("retryLLMRateLimitError", () => {
@@ -64,17 +64,12 @@ describe("retryLLMRateLimitError", () => {
       outcome: "queue_unavailable",
     });
     expect(add).toHaveBeenCalledOnce();
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to enqueue retry job"),
-      expect.any(Error),
-    );
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("Failed to enqueue retry job"), expect.any(Error));
     expect(recordDistribution).toHaveBeenCalledTimes(2);
   });
 
   it("returns queue_unavailable instead of throwing when age lookup fails", async () => {
-    (prisma.jobExecution.findFirstOrThrow as Mock).mockRejectedValue(
-      new Error("database unavailable"),
-    );
+    (prisma.jobExecution.findFirstOrThrow as Mock).mockRejectedValue(new Error("database unavailable"));
 
     const result = await retryLLMRateLimitError(
       {
@@ -99,10 +94,7 @@ describe("retryLLMRateLimitError", () => {
     expect(result).toEqual({
       outcome: "queue_unavailable",
     });
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to handle 429 retry"),
-      expect.any(Error),
-    );
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Failed to handle 429 retry"), expect.any(Error));
     expect(recordDistribution).not.toHaveBeenCalled();
   });
 });

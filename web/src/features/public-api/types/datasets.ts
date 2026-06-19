@@ -10,8 +10,8 @@ import {
   removeObjectKeys,
   type DatasetRunItemDomain,
   type DatasetItemDomain,
-} from "@hanzo/console-core";
-import { DatasetJSONSchema } from "@hanzo/console-core/src/server";
+} from "@hanzo/console";
+import { DatasetJSONSchema } from "@hanzo/console/src/server";
 import { z } from "zod/v4";
 
 /**
@@ -82,13 +82,15 @@ const APIDatasetItem = z
 
 export const transformDbDatasetRunToAPIDatasetRun = (
   dbDatasetRun: DbDatasetRuns & { datasetName: string },
-): z.infer<typeof APIDatasetRun> => removeObjectKeys(dbDatasetRun, ["projectId"]);
+): z.infer<typeof APIDatasetRun> =>
+  removeObjectKeys(dbDatasetRun, ["projectId"]);
 
 export const transformDbDatasetItemDomainToAPIDatasetItem = (
   dbDatasetItem: DatasetItemDomain & {
     datasetName: string;
   },
-): z.infer<typeof APIDatasetItem> => removeObjectKeys(dbDatasetItem, ["projectId", "validFrom"]);
+): z.infer<typeof APIDatasetItem> =>
+  removeObjectKeys(dbDatasetItem, ["projectId", "validFrom"]);
 
 export const transformDbDatasetRunItemToAPIDatasetRunItemCh = (
   dbDatasetRunItem: DatasetRunItemDomain,
@@ -106,7 +108,9 @@ export const transformDbDatasetRunItemToAPIDatasetRunItemCh = (
     "error",
   ]);
 
-export const transformDbDatasetToAPIDataset = (dataset: DbDataset): z.infer<typeof APIDataset> =>
+export const transformDbDatasetToAPIDataset = (
+  dataset: DbDataset,
+): z.infer<typeof APIDataset> =>
   removeObjectKeys(dataset, ["remoteExperimentUrl", "remoteExperimentPayload"]);
 
 /**

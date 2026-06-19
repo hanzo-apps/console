@@ -1,7 +1,7 @@
-import { type views } from "@langfuse/shared/query";
+import { type views } from "@hanzo/console/query";
 import { type z } from "zod";
 import { BeakerIcon, type LucideIcon } from "lucide-react";
-import { type FilterState } from "@langfuse/shared";
+import { type FilterState } from "@hanzo/console";
 
 /**
  * Widget filter preset definition.

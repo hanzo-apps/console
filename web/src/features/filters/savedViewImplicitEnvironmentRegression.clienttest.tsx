@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { TableViewPresetTableName, type FilterState } from "@langfuse/shared";
+import { TableViewPresetTableName, type FilterState } from "@hanzo/console";
 import { useState } from "react";
 import { useSidebarFilterState } from "./hooks/useSidebarFilterState";
 import { DEFAULT_SIDEBAR_HIDDEN_ENVIRONMENTS } from "./constants/internal-environments";

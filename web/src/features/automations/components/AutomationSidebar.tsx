@@ -1,6 +1,6 @@
 import React from "react";
 import { api } from "@/src/utils/api";
-import { JobConfigState, type AutomationDomain } from "@hanzo/console-core";
+import { JobConfigState, type AutomationDomain } from "@hanzo/console";
 import { cn } from "@/src/utils/tailwind";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
 
@@ -15,51 +15,75 @@ export const AutomationSidebar: React.FC<AutomationSidebarProps> = ({
   selectedAutomation,
   onAutomationSelect,
 }) => {
-  const { data: automations, isLoading } = api.automations.getAutomations.useQuery({
-    projectId,
-  });
+  const { data: automations, isLoading } =
+    api.automations.getAutomations.useQuery({
+      projectId,
+    });
 
   const sidebarWidth = "w-40 sm:w-64";
 
   if (isLoading) {
     return (
-      <div className={cn("flex h-full flex-col border-r bg-muted/10", sidebarWidth)}>
-        <div className="p-4 text-center text-sm text-muted-foreground">Loading automations...</div>
+      <div
+        className={cn(
+          "bg-muted/10 flex h-full flex-col border-r",
+          sidebarWidth,
+        )}
+      >
+        <div className="text-muted-foreground p-4 text-center text-sm">
+          Loading automations...
+        </div>
       </div>
     );
   }
 
   if (!automations || automations.length === 0) {
     return (
-      <div className={cn("flex h-full flex-col border-r bg-muted/10", sidebarWidth)}>
-        <div className="p-4 text-center text-sm text-muted-foreground">
-          No automations configured. Create your first automation to streamline workflows.
+      <div
+        className={cn(
+          "bg-muted/10 flex h-full flex-col border-r",
+          sidebarWidth,
+        )}
+      >
+        <div className="text-muted-foreground p-4 text-center text-sm">
+          No automations configured. Create your first automation to streamline
+          workflows.
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn("flex h-full flex-col border-r bg-muted/10", sidebarWidth)}>
+    <div
+      className={cn("bg-muted/10 flex h-full flex-col border-r", sidebarWidth)}
+    >
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="px-4 pt-4">
           <div className="space-y-2">
             {automations.map((automation) => {
-              const isSelected = selectedAutomation?.automationId === automation.id;
+              const isSelected =
+                selectedAutomation?.automationId === automation.id;
 
               return (
                 <div
                   key={automation.id}
                   className={cn(
-                    "group relative rounded-lg border p-3 transition-colors hover:bg-background/50",
-                    isSelected ? "border-primary bg-primary/5" : "border-border bg-background/20",
+                    "group hover:bg-background/50 relative rounded-lg border p-3 transition-colors",
+                    isSelected
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background/20",
                   )}
                 >
-                  <div className="cursor-pointer" onClick={() => onAutomationSelect(automation)}>
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => onAutomationSelect(automation)}
+                  >
                     <div className="space-y-2">
                       {/* Top row: Name and Active badge */}
                       <div className="flex items-center justify-between gap-2">
-                        <h4 className="truncate text-sm font-medium leading-tight">{automation.name}</h4>
+                        <h4 className="truncate text-sm leading-tight font-medium">
+                          {automation.name}
+                        </h4>
                         {automation.trigger.status === JobConfigState.ACTIVE ? (
                           <StatusBadge type={"active"} />
                         ) : (
@@ -68,8 +92,10 @@ export const AutomationSidebar: React.FC<AutomationSidebarProps> = ({
                       </div>
 
                       {/* Bottom row: eventSource -> automation type */}
-                      <p className="text-xs text-muted-foreground">
-                        <span className="font-mono">{automation.trigger.eventSource}</span>
+                      <p className="text-muted-foreground text-xs">
+                        <span className="font-mono">
+                          {automation.trigger.eventSource}
+                        </span>
                         {" → "}
                         {automation.action.type === "WEBHOOK"
                           ? "Webhook"

@@ -1,4 +1,4 @@
-import { CommentObjectType } from "@langfuse/shared";
+import { CommentObjectType } from "@hanzo/console";
 import { z } from "zod";
 import { createCommentForApi } from "@/src/features/comments/server/publicCommentService";
 import {

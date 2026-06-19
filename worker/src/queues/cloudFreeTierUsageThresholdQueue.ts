@@ -1,5 +1,5 @@
 import { Processor } from "@hanzo/mq";
-import { instrumentAsync, logger, QueueJobs } from "@langfuse/shared/src/server";
+import { instrumentAsync, logger, QueueJobs } from "@hanzo/console/src/server";
 import { handleCloudFreeTierUsageThresholdJob } from "../ee/usageThresholds/handleCloudFreeTierUsageThresholdJob";
 import { SpanKind } from "@opentelemetry/api";
 

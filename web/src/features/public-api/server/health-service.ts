@@ -1,12 +1,12 @@
 import { VERSION } from "@/src/constants";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   convertDateToDatastoreDateTime,
   logger,
   measureAndReturn,
   queryDatastore,
   traceException,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 type HealthCheckInput = {
   failIfDatabaseUnavailable: boolean;

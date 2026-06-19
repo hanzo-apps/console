@@ -1,5 +1,5 @@
 import type { Session } from "next-auth";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import {
@@ -8,7 +8,7 @@ import {
   createTracesCh,
   createObservation,
   createObservationsCh,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 
 describe("Observations Comment Filtering", () => {

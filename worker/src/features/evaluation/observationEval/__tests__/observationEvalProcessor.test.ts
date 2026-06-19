@@ -11,7 +11,7 @@ import {
 import { UnrecoverableError } from "../../../../errors/UnrecoverableError";
 
 // Mock prisma
-vi.mock("@hanzo/console-core/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     jobExecution: {
       findFirst: vi.fn(),
@@ -29,8 +29,8 @@ vi.mock("../../evalService", () => ({
 }));
 
 // Mock logger
-vi.mock("@hanzo/console-core/src/server", async () => {
-  const actual = await vi.importActual("@hanzo/console-core/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     logger: {
@@ -43,7 +43,7 @@ vi.mock("@hanzo/console-core/src/server", async () => {
   };
 });
 
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { executeLLMAsJudgeEvaluation } from "../../evalService";
 
 describe("processObservationEval", () => {

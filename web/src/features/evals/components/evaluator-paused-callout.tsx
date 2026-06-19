@@ -10,7 +10,7 @@ import {
   JobConfigState,
   getEvaluatorBlockMetadata,
   getEvaluatorBlockResolutionPath,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { AlertTriangle, ExternalLinkIcon, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { Fragment } from "react";

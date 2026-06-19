@@ -4,7 +4,7 @@ import {
   isProgressRow,
   isRow,
   isException,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 async function getDatastoreMajorVersion(): Promise<number> {
   const rows = await queryDatastore<{ v: string }>({

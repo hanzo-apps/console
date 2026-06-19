@@ -1,4 +1,7 @@
-import { ConsoleInternalTraceEnvironment, observationEvalVariableColumns } from "@hanzo/console-core";
+import {
+  ConsoleInternalTraceEnvironment,
+  observationEvalVariableColumns,
+} from "@hanzo/console";
 
 /**
  * Constant for observation-based evaluators (event/experiment).
@@ -27,7 +30,13 @@ export const COLUMN_IDENTIFIERS_THAT_REQUIRE_PROPAGATION = new Set([
   "tags",
 ]);
 
-export const OUTPUT_MAPPING = ["generation", "output", "response", "answer", "completion"];
+export const OUTPUT_MAPPING = [
+  "generation",
+  "output",
+  "response",
+  "answer",
+  "completion",
+];
 
 export const INTERNAL_ENVIRONMENTS = [
   ConsoleInternalTraceEnvironment.LLMJudge,

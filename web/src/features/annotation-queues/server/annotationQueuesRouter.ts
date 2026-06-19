@@ -12,8 +12,8 @@ import {
   ConsoleNotFoundError,
   optionalPaginationZod,
   Prisma,
-} from "@hanzo/console-core";
-import { getObservationById, logger } from "@hanzo/console-core/src/server";
+} from "@hanzo/console";
+import { getObservationById, logger } from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 

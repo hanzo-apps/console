@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { type FilterState, type ScoreAggregate } from "@langfuse/shared";
+import { type FilterState, type ScoreAggregate } from "@hanzo/console";
 import { api } from "@/src/utils/api";
 import { joinTableCoreAndMetrics } from "@/src/components/table/utils/joinTableCoreAndMetrics";
 

@@ -1,5 +1,5 @@
-// Ensure Role type includes 'ADMIN_BILLING' in @hanzo/console-core/src/db
-import { type Role } from "@hanzo/console-core/src/db";
+// Ensure Role type includes 'ADMIN_BILLING' in @hanzo/console/src/db
+import { type Role } from "@hanzo/console/src/db";
 
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
 // (used for type extraction via typeof, which is a legitimate pattern)

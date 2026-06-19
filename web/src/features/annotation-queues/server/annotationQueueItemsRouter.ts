@@ -17,12 +17,12 @@ import {
   HanzoNotFoundError,
   paginationZod,
   Prisma,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import {
   getObservationById,
   getTraceIdsForObservations,
   logger,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { env } from "@/src/env.mjs";

@@ -9,7 +9,7 @@ import {
   type ScoreConfigDomain,
   type ScoreDomain,
   ScoreConfigDataType,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 import { type z } from "zod/v4";
 
 export type HistogramBin = { binLabel: string; count: number };
@@ -72,7 +72,11 @@ export type AnnotationScore = {
 
 type AnalyticsData = {
   type: "trace" | "session";
-  source: "TraceDetail" | "SessionDetail" | "AnnotationQueue" | "DatasetCompare";
+  source:
+    | "TraceDetail"
+    | "SessionDetail"
+    | "AnnotationQueue"
+    | "DatasetCompare";
 };
 
 export type AnnotateDrawerProps<Target extends ScoreTarget> = {
@@ -89,10 +93,13 @@ export type AnnotateDrawerProps<Target extends ScoreTarget> = {
 };
 
 export type AnnotateFormSchemaType = z.infer<typeof AnnotateFormSchema>;
-export type AnnotationScoreSchemaType = z.infer<typeof AnnotationScoreDataSchema>;
+export type AnnotationScoreSchemaType = z.infer<
+  typeof AnnotationScoreDataSchema
+>;
 
 export type AnnotationScoreDataType = ScoreConfigDataType;
-export const ANNOTATION_SCORE_DATA_TYPES_ARRAY = Object.values(ScoreConfigDataType);
+export const ANNOTATION_SCORE_DATA_TYPES_ARRAY =
+  Object.values(ScoreConfigDataType);
 
 export type ScoreColumn = {
   key: string;
@@ -101,7 +108,9 @@ export type ScoreColumn = {
   dataType: AnnotationScoreDataType;
 };
 
-export type ScoreConfigSelection = { mode: "fixed"; configs: ScoreConfigDomain[] } | { mode: "selectable" };
+export type ScoreConfigSelection =
+  | { mode: "fixed"; configs: ScoreConfigDomain[] }
+  | { mode: "selectable" };
 
 export type AnnotationForm<Target extends ScoreTarget> = {
   scoreTarget: Target;
