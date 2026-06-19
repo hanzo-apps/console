@@ -1,14 +1,20 @@
 import { StarSessionToggle } from "@/src/components/star-toggle";
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { DataTableControlsProvider, DataTableControls } from "@/src/components/table/data-table-controls";
+import {
+  DataTableControlsProvider,
+  DataTableControls,
+} from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import TableLink from "@/src/components/table/table-link";
 import { type HanzoColumnDef } from "@/src/components/table/types";
 import { TokenUsageBadge } from "@/src/components/token-usage-badge";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFilterState";
-import { sessionFilterConfig, SESSION_COLUMN_TO_BACKEND_KEY } from "@/src/features/filters/config/sessions-config";
+import {
+  sessionFilterConfig,
+  SESSION_COLUMN_TO_BACKEND_KEY,
+} from "@/src/features/filters/config/sessions-config";
 import { transformFiltersForBackend } from "@/src/features/filters/lib/filter-transform";
 import {
   type FilterState,
@@ -18,7 +24,7 @@ import {
   BatchActionType,
   ActionId,
   type TimeFilter,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
 import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
 import { api } from "@/src/utils/api";
@@ -38,7 +44,7 @@ import useColumnOrder from "@/src/features/column-visibility/hooks/useColumnOrde
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { useTableViewManager } from "@/src/components/table/table-view-presets/hooks/useTableViewManager";
 import { Badge } from "@/src/components/ui/badge";
-import { type ScoreAggregate } from "@hanzo/shared";
+import { type ScoreAggregate } from "@hanzo/console";
 import { useSelectAll } from "@/src/features/table/hooks/useSelectAll";
 import { type TableAction } from "@/src/features/table/types";
 import { TableActionMenu } from "@/src/features/table/components/TableActionMenu";
@@ -73,7 +79,11 @@ export type SessionTableProps = {
   omittedFilter?: string[];
 };
 
-export default function SessionsTable({ projectId, userId, omittedFilter = [] }: SessionTableProps) {
+export default function SessionsTable({
+  projectId,
+  userId,
+  omittedFilter = [],
+}: SessionTableProps) {
   const { setDetailPageList } = useDetailPageLists();
   const { timeRange, setTimeRange } = useTableDateRange(projectId);
 
@@ -115,22 +125,25 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       ]
     : [];
 
-  const environmentFilterOptions = api.projects.environmentFilterOptions.useQuery(
-    {
-      projectId,
-      fromTimestamp: dateRange?.from,
-    },
-    {
-      trpc: { context: { skipBatch: true } },
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      staleTime: Infinity,
-    },
-  );
+  const environmentFilterOptions =
+    api.projects.environmentFilterOptions.useQuery(
+      {
+        projectId,
+        fromTimestamp: dateRange?.from,
+      },
+      {
+        trpc: { context: { skipBatch: true } },
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: Infinity,
+      },
+    );
 
   const environmentOptions = useMemo(
-    () => environmentFilterOptions.data?.map((value) => value.environment) ?? undefined,
+    () =>
+      environmentFilterOptions.data?.map((value) => value.environment) ??
+      undefined,
     [environmentFilterOptions.data],
   );
 
@@ -152,7 +165,10 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
   const filterOptions = api.sessions.filterOptions.useQuery(
     {
       projectId,
-      timestampFilter: dateRangeFilter.length > 0 ? (dateRangeFilter as TimeFilter[]) : undefined,
+      timestampFilter:
+        dateRangeFilter.length > 0
+          ? (dateRangeFilter as TimeFilter[])
+          : undefined,
     },
     {
       trpc: {
@@ -221,9 +237,15 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
   const queryFilterRef = useRef(queryFilter);
   queryFilterRef.current = queryFilter;
 
-  const setFiltersWrapper = useCallback((filters: FilterState) => queryFilterRef.current?.setFilterState(filters), []);
+  const setFiltersWrapper = useCallback(
+    (filters: FilterState) => queryFilterRef.current?.setFilterState(filters),
+    [],
+  );
 
-  const combinedFilterState = queryFilter.filterState.concat(userIdFilter, dateRangeFilter);
+  const combinedFilterState = queryFilter.filterState.concat(
+    userIdFilter,
+    dateRangeFilter,
+  );
 
   const backendFilterState = transformFiltersForBackend(
     combinedFilterState,
@@ -264,12 +286,13 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
     },
   });
 
-  const { scoreColumns, isLoading: isColumnLoading } = useScoreColumns<SessionTableRow>({
-    projectId,
-    scoreColumnKey: "scores",
-    fromTimestamp: dateRange?.from,
-    filter: scoreFilters.forSessions(),
-  });
+  const { scoreColumns, isLoading: isColumnLoading } =
+    useScoreColumns<SessionTableRow>({
+      projectId,
+      scoreColumnKey: "scores",
+      fromTimestamp: dateRange?.from,
+      filter: scoreFilters.forSessions(),
+    });
 
   const sessionMetrics = api.sessions.metrics.useQuery(
     {
@@ -285,10 +308,10 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
   type SessionCoreOutput = RouterOutput["sessions"]["all"]["sessions"][number];
   type SessionMetricOutput = RouterOutput["sessions"]["metrics"][number];
 
-  const sessionRowData = joinTableCoreAndMetrics<SessionCoreOutput, SessionMetricOutput>(
-    sessions.data?.sessions,
-    sessionMetrics.data,
-  );
+  const sessionRowData = joinTableCoreAndMetrics<
+    SessionCoreOutput,
+    SessionMetricOutput
+  >(sessions.data?.sessions, sessionMetrics.data);
 
   const totalCount = sessionCountQuery.data?.totalCount ?? null;
   useEffect(() => {
@@ -308,7 +331,13 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
     setSelectAll,
   });
 
-  const handleAddToAnnotationQueue = async ({ projectId, targetId }: { projectId: string; targetId: string }) => {
+  const handleAddToAnnotationQueue = async ({
+    projectId,
+    targetId,
+  }: {
+    projectId: string;
+    targetId: string;
+  }) => {
     const selectedSessionIds = Object.keys(selectedRows).filter((sessionId) =>
       sessions.data?.sessions.map((t) => t.id).includes(sessionId),
     );
@@ -351,11 +380,18 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       size: 50,
       loadingCell: <TableIconButtonLoadingCell />,
       cell: ({ row }) => {
-        const bookmarked: SessionTableRow["bookmarked"] = row.getValue("bookmarked");
+        const bookmarked: SessionTableRow["bookmarked"] =
+          row.getValue("bookmarked");
         const sessionId: SessionTableRow["id"] = row.getValue("id");
 
-        return typeof sessionId === "string" && typeof bookmarked === "boolean" ? (
-          <StarSessionToggle sessionId={sessionId} projectId={projectId} value={bookmarked} size="icon-xs" />
+        return typeof sessionId === "string" &&
+          typeof bookmarked === "boolean" ? (
+          <StarSessionToggle
+            sessionId={sessionId}
+            projectId={projectId}
+            value={bookmarked}
+            size="icon-xs"
+          />
         ) : undefined;
       },
       enableSorting: false,
@@ -370,7 +406,10 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       cell: ({ row }) => {
         const value: SessionTableRow["id"] = row.getValue("id");
         return value && typeof value === "string" ? (
-          <TableLink path={`/project/${projectId}/sessions/${encodeURIComponent(value)}`} value={value} />
+          <TableLink
+            path={`/project/${projectId}/sessions/${encodeURIComponent(value)}`}
+            value={value}
+          />
         ) : undefined;
       },
       enableSorting: true,
@@ -395,11 +434,14 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableHiding: true,
       loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
-        const value: SessionTableRow["sessionDuration"] = row.getValue("sessionDuration");
+        const value: SessionTableRow["sessionDuration"] =
+          row.getValue("sessionDuration");
         if (!sessionMetrics.isSuccess) {
           return <TableTextLoadingCell />;
         }
-        return value && typeof value === "number" ? formatIntervalSeconds(value) : undefined;
+        return value && typeof value === "number"
+          ? formatIntervalSeconds(value)
+          : undefined;
       },
       enableSorting: true,
     },
@@ -411,9 +453,13 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableHiding: true,
       loadingCell: <TableBadgeLoadingCell />,
       cell: ({ row }) => {
-        const value: SessionTableRow["environment"] = row.getValue("environment");
+        const value: SessionTableRow["environment"] =
+          row.getValue("environment");
         return value ? (
-          <Badge variant="secondary" className="max-w-fit truncate rounded-sm px-1 font-normal">
+          <Badge
+            variant="secondary"
+            className="max-w-fit truncate rounded-sm px-1 font-normal"
+          >
             {value}
           </Badge>
         ) : null;
@@ -446,7 +492,11 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
         return value && Array.isArray(value) ? (
           <div className="flex gap-1">
             {(value as string[]).map((user) => (
-              <TableLink key={user} path={`/project/${projectId}/users/${encodeURIComponent(user)}`} value={user} />
+              <TableLink
+                key={user}
+                path={`/project/${projectId}/users/${encodeURIComponent(user)}`}
+                value={user}
+              />
             ))}
           </div>
         ) : undefined;
@@ -464,7 +514,8 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableSorting: true,
       loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
-        const value: SessionTableRow["countTraces"] = row.getValue("countTraces");
+        const value: SessionTableRow["countTraces"] =
+          row.getValue("countTraces");
         if (!sessionMetrics.isSuccess) {
           return <TableTextLoadingCell />;
         }
@@ -485,7 +536,9 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
         if (!sessionMetrics.isSuccess) {
           return <TableTextLoadingCell />;
         }
-        return value ? <span>{usdFormatter(value.toNumber())}</span> : undefined;
+        return value ? (
+          <span>{usdFormatter(value.toNumber())}</span>
+        ) : undefined;
       },
     },
     {
@@ -502,7 +555,9 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
         if (!sessionMetrics.isSuccess) {
           return <TableTextLoadingCell />;
         }
-        return value ? <span>{usdFormatter(value.toNumber())}</span> : undefined;
+        return value ? (
+          <span>{usdFormatter(value.toNumber())}</span>
+        ) : undefined;
       },
     },
     {
@@ -518,7 +573,9 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
         if (!sessionMetrics.isSuccess) {
           return <TableTextLoadingCell />;
         }
-        return value ? <span>{usdFormatter(value.toNumber())}</span> : undefined;
+        return value ? (
+          <span>{usdFormatter(value.toNumber())}</span>
+        ) : undefined;
       },
     },
     {
@@ -531,11 +588,14 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableSorting: true,
       loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
-        const value: SessionTableRow["inputTokens"] = row.getValue("inputTokens");
+        const value: SessionTableRow["inputTokens"] =
+          row.getValue("inputTokens");
         if (!sessionMetrics.isSuccess) {
           return <TableTextLoadingCell />;
         }
-        return value ? <span>{numberFormatter(Number(value), 0)}</span> : undefined;
+        return value ? (
+          <span>{numberFormatter(Number(value), 0)}</span>
+        ) : undefined;
       },
     },
     {
@@ -548,11 +608,14 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableSorting: true,
       loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
-        const value: SessionTableRow["outputTokens"] = row.getValue("outputTokens");
+        const value: SessionTableRow["outputTokens"] =
+          row.getValue("outputTokens");
         if (!sessionMetrics.isSuccess) {
           return <TableTextLoadingCell />;
         }
-        return value ? <span>{numberFormatter(Number(value), 0)}</span> : undefined;
+        return value ? (
+          <span>{numberFormatter(Number(value), 0)}</span>
+        ) : undefined;
       },
     },
     {
@@ -565,11 +628,14 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableSorting: true,
       loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
-        const value: SessionTableRow["totalTokens"] = row.getValue("totalTokens");
+        const value: SessionTableRow["totalTokens"] =
+          row.getValue("totalTokens");
         if (!sessionMetrics.isSuccess) {
           return <TableTextLoadingCell />;
         }
-        return value ? <span>{numberFormatter(Number(value), 0)}</span> : undefined;
+        return value ? (
+          <span>{numberFormatter(Number(value), 0)}</span>
+        ) : undefined;
       },
     },
     {
@@ -581,9 +647,12 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
       enableSorting: true,
       loadingCell: <TableTextLoadingCell />,
       cell: ({ row }) => {
-        const promptTokens: SessionTableRow["inputTokens"] = row.getValue("inputTokens");
-        const completionTokens: SessionTableRow["outputTokens"] = row.getValue("outputTokens");
-        const totalTokens: SessionTableRow["totalTokens"] = row.getValue("totalTokens");
+        const promptTokens: SessionTableRow["inputTokens"] =
+          row.getValue("inputTokens");
+        const completionTokens: SessionTableRow["outputTokens"] =
+          row.getValue("outputTokens");
+        const totalTokens: SessionTableRow["totalTokens"] =
+          row.getValue("totalTokens");
         if (!sessionMetrics.isSuccess) {
           return <TableTextLoadingCell />;
         }
@@ -612,7 +681,12 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
         }
         return (
           value && (
-            <div className={cn("flex gap-x-2 gap-y-1", rowHeight !== "s" && "flex-wrap")}>
+            <div
+              className={cn(
+                "flex gap-x-2 gap-y-1",
+                rowHeight !== "s" && "flex-wrap",
+              )}
+            >
               <TagList selectedTags={value} isLoading={false} viewOnly />
             </div>
           )
@@ -621,12 +695,13 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
     },
   ];
 
-  const [columnVisibility, setColumnVisibility] = useColumnVisibility<SessionTableRow>(
-    "sessionsColumnVisibility",
+  const [columnVisibility, setColumnVisibility] =
+    useColumnVisibility<SessionTableRow>("sessionsColumnVisibility", columns);
+
+  const [columnOrder, setColumnOrder] = useColumnOrder<SessionTableRow>(
+    "sessionsColumnOrder",
     columns,
   );
-
-  const [columnOrder, setColumnOrder] = useColumnOrder<SessionTableRow>("sessionsColumnOrder", columns);
 
   const { isLoading: isViewLoading, ...viewControllers } = useTableViewManager({
     tableName: TableViewPresetTableName.Sessions,
@@ -728,25 +803,27 @@ export default function SessionsTable({ projectId, userId, omittedFilter = [] }:
                     : {
                         isLoading: false,
                         isError: false,
-                        data: sessionRowData.rows?.map<SessionTableRow>((session) => {
-                          return {
-                            id: session.id,
-                            createdAt: session.createdAt,
-                            bookmarked: session.bookmarked,
-                            userIds: session.userIds,
-                            countTraces: session.countTraces,
-                            sessionDuration: session.sessionDuration,
-                            inputCost: session.inputCost,
-                            outputCost: session.outputCost,
-                            totalCost: session.totalCost,
-                            inputTokens: session.promptTokens,
-                            outputTokens: session.completionTokens,
-                            totalTokens: session.totalTokens,
-                            traceTags: session.traceTags,
-                            environment: session.environment,
-                            scores: session.scores,
-                          };
-                        }),
+                        data: sessionRowData.rows?.map<SessionTableRow>(
+                          (session) => {
+                            return {
+                              id: session.id,
+                              createdAt: session.createdAt,
+                              bookmarked: session.bookmarked,
+                              userIds: session.userIds,
+                              countTraces: session.countTraces,
+                              sessionDuration: session.sessionDuration,
+                              inputCost: session.inputCost,
+                              outputCost: session.outputCost,
+                              totalCost: session.totalCost,
+                              inputTokens: session.promptTokens,
+                              outputTokens: session.completionTokens,
+                              totalTokens: session.totalTokens,
+                              traceTags: session.traceTags,
+                              environment: session.environment,
+                              scores: session.scores,
+                            };
+                          },
+                        ),
                       }
               }
               pagination={{

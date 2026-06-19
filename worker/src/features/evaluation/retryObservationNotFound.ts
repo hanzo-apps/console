@@ -6,7 +6,7 @@ import {
   QueueName,
   QueueJobs,
   DatasetRunItemUpsertQueue,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 import type { ObservationNotFoundError } from "../../errors/ObservationNotFoundError";
 

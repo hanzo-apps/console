@@ -31,7 +31,7 @@ import {
   ScoreSourceEnum,
   ScoreDataTypeEnum,
   CORRECTION_NAME,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import {
   getScoresGroupedByNameSourceType,
   getScoresUiCount,
@@ -55,7 +55,7 @@ import {
   deleteScores,
   getTracesIdentifierForSession,
   validateConfigAgainstBody,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { v4 } from "uuid";
 import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEntitlement";
 import { createBatchActionJob } from "@/src/features/table/server/createBatchActionJob";

@@ -1,4 +1,4 @@
-import { createEvent, createEventsCh } from "@langfuse/shared/src/server";
+import { createEvent, createEventsCh } from "@hanzo/console/src/server";
 import { env } from "@/src/env.mjs";
 
 const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";

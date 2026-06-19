@@ -1,6 +1,6 @@
-import { convertQueueNameToMetricName, logger, recordDistribution, RetryBaggage } from "@hanzo/console-core/src/server";
+import { convertQueueNameToMetricName, logger, recordDistribution, RetryBaggage } from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
-import { kyselyPrisma } from "@hanzo/console-core/src/db";
+import { kyselyPrisma } from "@hanzo/console/src/db";
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -132,10 +132,7 @@ export async function retryLLMRateLimitError(
         { delay },
       );
     } catch (addErr) {
-      logger.warn(
-        `Failed to enqueue retry job for ${jobId}. Falling back to normal error handling.`,
-        addErr,
-      );
+      logger.warn(`Failed to enqueue retry job for ${jobId}. Falling back to normal error handling.`, addErr);
 
       return {
         outcome: "queue_unavailable",

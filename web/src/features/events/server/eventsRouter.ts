@@ -9,7 +9,7 @@ import {
   type OrderByState,
   paginationZod,
   timeFilter,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import { EventsTableOptions } from "./types";
 import {
   getEventList,
@@ -22,7 +22,7 @@ import {
   getScoresAndCorrectionsForTraces,
   convertDateToDatastoreDateTime,
   getAgentGraphDataFromEventsTable,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   AgentGraphDataSchema,
   type AgentGraphDataResponse,

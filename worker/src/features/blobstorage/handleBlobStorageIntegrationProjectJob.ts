@@ -1,6 +1,6 @@
 import { pipeline } from "stream";
 import { Job } from "@hanzo/mq";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   QueueName,
   TQueueJobTypes,
@@ -16,9 +16,9 @@ import {
   BlobStorageIntegrationProcessingQueue,
   queryDatastore,
   QueueJobs,
-} from "@hanzo/console-core/src/server";
-import { BlobStorageIntegrationType, BlobStorageIntegrationFileType, BlobStorageExportMode } from "@hanzo/console-core";
-import { decrypt } from "@hanzo/console-core/encryption";
+} from "@hanzo/console/src/server";
+import { BlobStorageIntegrationType, BlobStorageIntegrationFileType, BlobStorageExportMode } from "@hanzo/console";
+import { decrypt } from "@hanzo/console/encryption";
 import { randomUUID } from "crypto";
 import { env } from "../../env";
 
@@ -353,8 +353,7 @@ export const handleBlobStorageIntegrationProjectJob = async (
     // for integrations created on or after 2026-04-01. Before this date, v4 blob
     // export returned these fields in milliseconds. We preserve that behavior for
     // existing integrations to avoid silently breaking their pipelines.
-    const convertV4LatencyToSeconds =
-      blobStorageIntegration.createdAt >= new Date("2026-04-01T00:00:00Z");
+    const convertV4LatencyToSeconds = blobStorageIntegration.createdAt >= new Date("2026-04-01T00:00:00Z");
 
     const executionConfig = {
       projectId,
@@ -373,8 +372,7 @@ export const handleBlobStorageIntegrationProjectJob = async (
       fileType: blobStorageIntegration.fileType,
       compressed: blobStorageIntegration.compressed,
       convertV4LatencyToSeconds,
-      exportFieldGroups:
-        blobStorageIntegration.exportFieldGroups as ObservationFieldGroupFull[],
+      exportFieldGroups: blobStorageIntegration.exportFieldGroups as ObservationFieldGroupFull[],
     };
 
     // Check if this project should only export traces (legacy behavior via env var)
@@ -484,11 +482,7 @@ export const handleBlobStorageIntegrationProjectJob = async (
 function notifyBlobStorageExportFailedInBackground(projectId: string): void {
   (async () => {
     try {
-      const cooldownMs =
-        env.LANGFUSE_BLOB_STORAGE_FAILURE_NOTIFICATION_COOLDOWN_HOURS *
-        60 *
-        60 *
-        1000;
+      const cooldownMs = env.LANGFUSE_BLOB_STORAGE_FAILURE_NOTIFICATION_COOLDOWN_HOURS * 60 * 60 * 1000;
 
       // Atomic claim: set timestamp before sending to prevent duplicate emails on concurrent retries.
       // If the email send subsequently fails, the cooldown still applies — the next failure
@@ -509,9 +503,7 @@ function notifyBlobStorageExportFailedInBackground(projectId: string): void {
       });
 
       if (claimed.count === 0) {
-        logger.info(
-          `[BLOB INTEGRATION] Skipping failure notification for project ${projectId}, cooldown still active`,
-        );
+        logger.info(`[BLOB INTEGRATION] Skipping failure notification for project ${projectId}, cooldown still active`);
         return;
       }
 
@@ -522,11 +514,7 @@ function notifyBlobStorageExportFailedInBackground(projectId: string): void {
         CLOUD_CRM_EMAIL: env.CLOUD_CRM_EMAIL,
       };
 
-      if (
-        !emailEnv.EMAIL_FROM_ADDRESS ||
-        !emailEnv.SMTP_CONNECTION_URL ||
-        !emailEnv.NEXTAUTH_URL
-      ) {
+      if (!emailEnv.EMAIL_FROM_ADDRESS || !emailEnv.SMTP_CONNECTION_URL || !emailEnv.NEXTAUTH_URL) {
         return;
       }
 
@@ -552,10 +540,7 @@ function notifyBlobStorageExportFailedInBackground(projectId: string): void {
         receiverEmails: adminEmails,
       });
     } catch (error) {
-      logger.error(
-        `[BLOB INTEGRATION] Failed to send failure notification for project ${projectId}`,
-        error,
-      );
+      logger.error(`[BLOB INTEGRATION] Failed to send failure notification for project ${projectId}`, error);
     }
   })();
 }

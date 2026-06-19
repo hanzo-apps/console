@@ -1,4 +1,4 @@
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   getTraceCountsByProjectAndDay,
   getObservationCountsByProjectAndDay,
@@ -9,10 +9,10 @@ import {
   getDaysToLookBack,
   recordIncrement,
   instrumentAsync,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
-import { parseDbOrg, type ParsedOrganization } from "@langfuse/shared";
-import { logger } from "@langfuse/shared/src/server";
+import { parseDbOrg, type ParsedOrganization } from "@hanzo/console";
+import { logger } from "@hanzo/console/src/server";
 import { backOff } from "exponential-backoff";
 
 import { processThresholds, type ThresholdProcessingResult, type OrgUpdateData } from "./thresholdProcessing";

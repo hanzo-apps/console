@@ -1,12 +1,12 @@
 import { env } from "@/src/env.mjs";
-import { type TracingSearchType } from "@langfuse/shared";
+import { type TracingSearchType } from "@hanzo/console";
 import {
   datastoreSearchCondition,
   createEvent,
   createEventsCh,
   getObservationsWithModelDataFromEventsTable,
   queryDatastore,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 
 const maybeEventsTable =

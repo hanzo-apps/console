@@ -1,10 +1,10 @@
 import { Job } from "@hanzo/mq";
 
-import { BaseError, BatchExportStatus, ConsoleNotFoundError } from "@hanzo/console-core";
-import { kyselyPrisma } from "@hanzo/console-core/src/db";
+import { BaseError, BatchExportStatus, ConsoleNotFoundError } from "@hanzo/console";
+import { kyselyPrisma } from "@hanzo/console/src/db";
 
-import { traceException, logger } from "@hanzo/console-core/src/server";
-import { QueueName, TQueueJobTypes } from "@hanzo/console-core/src/server";
+import { traceException, logger } from "@hanzo/console/src/server";
+import { QueueName, TQueueJobTypes } from "@hanzo/console/src/server";
 import { handleBatchExportJob } from "../features/batchExport/handleBatchExportJob";
 
 export const batchExportQueueProcessor = async (job: Job<TQueueJobTypes[QueueName.BatchExport]>) => {

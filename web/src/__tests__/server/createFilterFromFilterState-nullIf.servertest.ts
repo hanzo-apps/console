@@ -1,4 +1,4 @@
-import { createFilterFromFilterState } from "@langfuse/shared/src/server";
+import { createFilterFromFilterState } from "@hanzo/console/src/server";
 
 /**
  * Unit tests for the emptyEqualsNull flag on filter classes, passed through

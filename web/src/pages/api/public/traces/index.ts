@@ -8,17 +8,17 @@ import {
   TRACE_FIELD_GROUPS,
   type TraceFieldGroup,
 } from "@/src/features/public-api/types/traces";
-import { InvalidRequestError } from "@hanzo/console-core";
+import { InvalidRequestError } from "@hanzo/console";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
-import { processEventBatch } from "@hanzo/console-core/src/server";
+import { processEventBatch } from "@hanzo/console/src/server";
 import {
   eventTypes,
   logger,
   traceDeletionProcessor,
   getTracesFromEventsTableForPublicApi,
   getTracesCountFromEventsTableForPublicApi,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { v4 } from "uuid";
 import { telemetry } from "@/src/features/telemetry";
 import { auditLog } from "@/src/features/audit-logs/auditLog";

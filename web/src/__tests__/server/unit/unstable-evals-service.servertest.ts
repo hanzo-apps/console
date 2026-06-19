@@ -30,8 +30,8 @@ vi.mock("../../../features/evals/server/unstable-public-api/queries", () => ({
   findPublicEvaluationRuleOrThrow: vi.fn(),
 }));
 
-vi.mock("@langfuse/shared/src/server", async () => ({
-  ...(await vi.importActual("@langfuse/shared/src/server")),
+vi.mock("@hanzo/console/src/server", async () => ({
+  ...(await vi.importActual("@hanzo/console/src/server")),
   invalidateProjectEvalConfigCaches: vi.fn(),
   ClickHouseClientManager: {
     getInstance: () => ({
@@ -43,7 +43,7 @@ vi.mock("@langfuse/shared/src/server", async () => ({
   },
 }));
 
-vi.mock("@langfuse/shared/src/db", async () => {
+vi.mock("@hanzo/console/src/db", async () => {
   const { EvalTemplateType } =
     await vi.importActual<typeof PrismaClientModule>("@prisma/client");
 
@@ -88,8 +88,8 @@ import {
   createNumericEvalOutputDefinition,
   EvalTargetObject,
   JobConfigState,
-} from "@langfuse/shared";
-import { EvalTemplateType, prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { EvalTemplateType, prisma } from "@hanzo/console/src/db";
 import { createUnstablePublicApiError } from "@/src/features/public-api/server/unstable-public-api-error-contract";
 import {
   createPublicEvaluationRule,

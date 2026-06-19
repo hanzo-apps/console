@@ -1,4 +1,4 @@
-import { logger, getCurrentSpan } from "@hanzo/console-core/src/server";
+import { logger, getCurrentSpan } from "@hanzo/console/src/server";
 import { PeriodicRunner } from "./PeriodicRunner";
 import { OnUnavailableBehavior, RedisLock } from "./RedisLock";
 

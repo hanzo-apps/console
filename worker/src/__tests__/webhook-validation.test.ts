@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateWebhookURL } from "@hanzo/console-core/src/server";
+import { validateWebhookURL } from "@hanzo/console/src/server";
 
 describe("Webhook URL Validation", () => {
   describe("validateWebhookURL", () => {
@@ -93,26 +93,20 @@ describe("Webhook URL Validation", () => {
       const encodedDelimiters = ["%2F", "%23", "%3F", "%5C"];
 
       for (const delimiter of encodedDelimiters) {
-        await expect(
-          validateWebhookURL(`http://example.com${delimiter}@127.0.0.1/hook`),
-        ).rejects.toThrow(
+        await expect(validateWebhookURL(`http://example.com${delimiter}@127.0.0.1/hook`)).rejects.toThrow(
           "URL credentials are not allowed. Use authentication headers instead.",
         );
       }
     });
 
     it("should reject URLs with embedded credentials", async () => {
-      await expect(
-        validateWebhookURL("https://user:pass@example.com/hook"),
-      ).rejects.toThrow(
+      await expect(validateWebhookURL("https://user:pass@example.com/hook")).rejects.toThrow(
         "URL credentials are not allowed. Use authentication headers instead.",
       );
     });
 
     it("should validate IDN hostnames using their punycoded hostname", async () => {
-      await expect(
-        validateWebhookURL("http://тест.example.com/hook"),
-      ).resolves.not.toThrow();
+      await expect(validateWebhookURL("http://тест.example.com/hook")).resolves.not.toThrow();
 
       expect(resolve4Mock).toHaveBeenCalledWith("xn--e1aybc.example.com");
       expect(resolve6Mock).toHaveBeenCalledWith("xn--e1aybc.example.com");

@@ -1,4 +1,4 @@
-import { type FilterState } from "@langfuse/shared";
+import { type FilterState } from "@hanzo/console";
 
 const SYSTEM_PRESET_ID_PREFIX = "__langfuse_";
 

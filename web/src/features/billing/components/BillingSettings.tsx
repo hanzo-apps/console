@@ -9,7 +9,7 @@ import Header from "@/src/components/layouts/header";
 // import { Card } from "@/src/components/ui/card";
 // import { numberFormatter, compactNumberFormatter } from "@/src/utils/numbers";
 import { useHasEntitlement } from "@/src/features/entitlements/hooks";
-// import { type Plan, planLabels } from "@hanzo/shared";
+// import { type Plan, planLabels } from "@hanzo/console";
 import { useRouter } from "next/router";
 import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { BillingOverview } from "./overview/BillingOverview";
@@ -22,7 +22,9 @@ import { Receipt, CreditCard } from "lucide-react";
 export const BillingSettings = () => {
   const router = useRouter();
   const orgId = router.query.organizationId as string | undefined;
-  const [activeView, setActiveView] = useState<"history" | "payment">("history");
+  const [activeView, setActiveView] = useState<"history" | "payment">(
+    "history",
+  );
 
   const hasAccess = useHasOrganizationAccess({
     organizationId: orgId,
@@ -37,7 +39,8 @@ export const BillingSettings = () => {
       <Alert>
         <AlertTitle>Access Denied</AlertTitle>
         <AlertDescription>
-          You do not have permission to view the billing settings of this organization.
+          You do not have permission to view the billing settings of this
+          organization.
         </AlertDescription>
       </Alert>
     );

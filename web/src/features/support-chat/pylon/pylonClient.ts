@@ -1,4 +1,4 @@
-import { logger } from "@langfuse/shared/src/server";
+import { logger } from "@hanzo/console/src/server";
 
 const PYLON_API_BASE = "https://api.usepylon.com";
 

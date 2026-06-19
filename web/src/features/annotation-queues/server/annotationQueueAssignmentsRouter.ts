@@ -1,8 +1,15 @@
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { HanzoNotFoundError, optionalPaginationZod, Prisma } from "@hanzo/shared";
-import { getUserProjectRoles } from "@hanzo/shared/src/server";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
+import {
+  HanzoNotFoundError,
+  optionalPaginationZod,
+  Prisma,
+} from "@hanzo/console";
+import { getUserProjectRoles } from "@hanzo/console/src/server";
 import partition from "lodash/partition";
 import z from "zod";
 
@@ -54,7 +61,10 @@ export const queueAssignmentRouter = createTRPCRouter({
       const validUserIdSet = new Set(users.map((u) => u.id));
 
       // Partition the input user IDs into valid and invalid using lodash
-      const [validUserIds, invalidUserIds] = partition(input.userIds, (userId) => validUserIdSet.has(userId));
+      const [validUserIds, invalidUserIds] = partition(
+        input.userIds,
+        (userId) => validUserIdSet.has(userId),
+      );
 
       // Create assignments (using createMany with skipDuplicates)
       await ctx.prisma.annotationQueueAssignment.createMany({

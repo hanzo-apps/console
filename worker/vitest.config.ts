@@ -7,15 +7,13 @@ config({ path: "../.env" });
 
 export default defineConfig({
   test: {
-    reporters: process.env.CI
-      ? ["default", new VitestCiReporter()]
-      : ["default"],
+    reporters: process.env.CI ? ["default", new VitestCiReporter()] : ["default"],
     retry: process.env.CI ? 3 : 0,
     dir: "./src",
     pool: "forks",
     server: {
       deps: {
-        inline: ["@langfuse/shared"],
+        inline: ["@hanzo/console"],
       },
     },
     coverage: {

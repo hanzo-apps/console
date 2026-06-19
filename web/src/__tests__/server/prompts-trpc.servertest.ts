@@ -1,8 +1,8 @@
 import { disconnectQueues } from "@/src/__tests__/test-utils";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@hanzo/console-core/src/db";
-import { createOrgProjectAndApiKey } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import type { Session } from "next-auth";
 import { v4 } from "uuid";
 import waitForExpect from "wait-for-expect";
@@ -196,7 +196,9 @@ describe("prompts trpc", () => {
       const updatedPrompt2 = await prisma.prompt.findUnique({
         where: { id: prompt2.id },
       });
-      expect(updatedPrompt2?.labels).toEqual(expect.arrayContaining(["production", "latest"]));
+      expect(updatedPrompt2?.labels).toEqual(
+        expect.arrayContaining(["production", "latest"]),
+      );
 
       await waitForExpect(async () => {
         const executions = await prisma.automationExecution.findMany({
@@ -323,7 +325,9 @@ describe("prompts trpc", () => {
 
       expect(updatedPrompts).toHaveLength(3);
       updatedPrompts.forEach((prompt) => {
-        expect(prompt.tags).toEqual(expect.arrayContaining(["new-tag", "updated-tag"]));
+        expect(prompt.tags).toEqual(
+          expect.arrayContaining(["new-tag", "updated-tag"]),
+        );
         expect(prompt.tags).not.toContain("old-tag");
       });
 
@@ -920,7 +924,9 @@ describe("prompts trpc", () => {
       });
 
       expect(contentSearchResults.prompts).toHaveLength(1);
-      expect(contentSearchResults.prompts[0].name).toBe("customer-service-prompt");
+      expect(contentSearchResults.prompts[0].name).toBe(
+        "customer-service-prompt",
+      );
 
       // Test 2: Search by prompt name
       const nameSearchResults = await caller.prompts.all({

@@ -10,14 +10,14 @@ import {
   type MediaContentType,
   type PatchMediaBody,
 } from "@/src/features/media/validation";
-import { InternalServerError, LangfuseNotFoundError } from "@langfuse/shared";
-import { Prisma, prisma } from "@langfuse/shared/src/db";
+import { InternalServerError, LangfuseNotFoundError } from "@hanzo/console";
+import { Prisma, prisma } from "@hanzo/console/src/db";
 import {
   getCurrentSpan,
   logger,
   recordHistogram,
   recordIncrement,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 export async function createMediaUploadUrl(params: {
   projectId: string;

@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EvalTemplateType } from "@langfuse/shared/src/db";
+import { EvalTemplateType } from "@hanzo/console/src/db";
 
 const addToLLMQueue = vi.fn();
 const addToCodeQueue = vi.fn();
 const getLLMQueueInstance = vi.fn(() => ({ add: addToLLMQueue }));
 const getCodeQueueInstance = vi.fn(() => ({ add: addToCodeQueue }));
 
-vi.mock("@langfuse/shared/src/server", async () => {
-  const actual = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
 
   return {
     ...actual,
@@ -26,8 +26,7 @@ describe("createObservationEvalSchedulerDeps", () => {
   });
 
   it("routes LLM-as-judge observation eval jobs to the LLM queue", async () => {
-    const { createObservationEvalSchedulerDeps } =
-      await import("../createSchedulerDeps");
+    const { createObservationEvalSchedulerDeps } = await import("../createSchedulerDeps");
 
     await createObservationEvalSchedulerDeps().enqueueEvalJob({
       projectId: "project-1",
@@ -53,8 +52,7 @@ describe("createObservationEvalSchedulerDeps", () => {
   });
 
   it("routes code observation eval jobs to the code eval queue", async () => {
-    const { createObservationEvalSchedulerDeps } =
-      await import("../createSchedulerDeps");
+    const { createObservationEvalSchedulerDeps } = await import("../createSchedulerDeps");
 
     await createObservationEvalSchedulerDeps().enqueueEvalJob({
       projectId: "project-1",

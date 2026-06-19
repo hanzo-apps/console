@@ -1,9 +1,9 @@
-import { NULL_IF_EMPTY_RE } from "@langfuse/shared/query/server";
+import { NULL_IF_EMPTY_RE } from "@hanzo/console/query/server";
 import {
   StringFilter,
   StringOptionsFilter,
   NullFilter,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 // ─── NULL_IF_EMPTY_RE ───────────────────────────────────────────────────────
 

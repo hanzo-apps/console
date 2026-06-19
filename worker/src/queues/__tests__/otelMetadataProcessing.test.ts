@@ -5,8 +5,8 @@
  * NOTE: The dual-write path (otel-dual-write) uses mapKeys() in SQL which doesn't flatten.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { metadataArraysToRecord, OtelIngestionProcessor } from "@langfuse/shared/src/server";
-import { prisma } from "@langfuse/shared/src/db";
+import { metadataArraysToRecord, OtelIngestionProcessor } from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { IngestionService } from "../../services/IngestionService";
 import * as datastoreWriterExports from "../../services/DatastoreWriter";
 

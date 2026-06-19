@@ -1,1 +1,1 @@
-export { geminiAdapter } from "@hanzo/console-core";
+export { geminiAdapter } from "@hanzo/console";

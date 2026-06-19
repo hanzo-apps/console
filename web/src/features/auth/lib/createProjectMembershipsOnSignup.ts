@@ -1,12 +1,15 @@
 import { env } from "@/src/env.mjs";
-import { prisma, Role } from "@hanzo/shared/src/db";
-import { logger } from "@hanzo/shared/src/server";
+import { prisma, Role } from "@hanzo/console/src/db";
+import { logger } from "@hanzo/console/src/server";
 import { ServerPosthog } from "@/src/features/posthog-analytics/ServerPosthog";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import { getOrganizationPlanServerSide } from "@/src/features/entitlements/server/getPlan";
 import { shouldAutoEnableV4 } from "@/src/features/events/lib/v4Rollout";
 
-export async function createProjectMembershipsOnSignup(user: { id: string; email: string | null }) {
+export async function createProjectMembershipsOnSignup(user: {
+  id: string;
+  email: string | null;
+}) {
   try {
     const isCloudDeployment = Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION);
 
@@ -165,7 +168,11 @@ export async function createProjectMembershipsOnSignup(user: { id: string; email
     }
 
     // for conversion metric tracking in posthog: did a new user sign up?
-    if (isNewUser && env.NEXT_PUBLIC_HANZO_CLOUD_REGION && ["EU", "US"].includes(env.NEXT_PUBLIC_HANZO_CLOUD_REGION)) {
+    if (
+      isNewUser &&
+      env.NEXT_PUBLIC_HANZO_CLOUD_REGION &&
+      ["EU", "US"].includes(env.NEXT_PUBLIC_HANZO_CLOUD_REGION)
+    ) {
       try {
         const posthog = new ServerPosthog();
         posthog.capture({
@@ -214,8 +221,8 @@ async function processMembershipInvitations(email: string, userId: string) {
       : {}),
   }));
 
-  const createOrgMembershipsPromises = createOrgMembershipData.map((inviteData) =>
-    prisma.organizationMembership.create({ data: inviteData }),
+  const createOrgMembershipsPromises = createOrgMembershipData.map(
+    (inviteData) => prisma.organizationMembership.create({ data: inviteData }),
   );
 
   await prisma.$transaction([

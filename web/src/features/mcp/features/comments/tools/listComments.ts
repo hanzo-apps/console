@@ -1,4 +1,4 @@
-import { CommentObjectType, publicApiPaginationZod } from "@langfuse/shared";
+import { CommentObjectType, publicApiPaginationZod } from "@hanzo/console";
 import { z } from "zod";
 import { listCommentsForApi } from "@/src/features/comments/server/publicCommentService";
 import {

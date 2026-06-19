@@ -5,7 +5,7 @@ import {
   observationEvalFilterColumns,
   observationEvalVariableColumns,
   eventsEvalFilterColumns,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 
 describe("observationForEvalSchema", () => {
   describe("schema field validation", () => {

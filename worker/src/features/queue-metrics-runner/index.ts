@@ -1,6 +1,6 @@
 import { Queue } from "@hanzo/mq";
 
-import { QueueName, convertQueueNameToMetricName, recordGauge, logger } from "@langfuse/shared/src/server";
+import { QueueName, convertQueueNameToMetricName, recordGauge, logger } from "@hanzo/console/src/server";
 
 import { PeriodicRunner } from "../../utils/PeriodicRunner";
 import { env } from "../../env";

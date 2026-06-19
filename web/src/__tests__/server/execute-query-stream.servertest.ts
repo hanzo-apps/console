@@ -6,7 +6,7 @@ import {
   createTrace,
   createTracesCh,
   type TraceRecordInsertType,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import handler from "../../pages/api/dashboard/execute-query-stream";
 
 // --- Auth mock (only thing we need to mock — no real session in tests) ---

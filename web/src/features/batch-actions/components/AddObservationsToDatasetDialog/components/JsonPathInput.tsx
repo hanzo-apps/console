@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { lightTheme } from "@/src/components/editor/light-theme";
 import { darkTheme } from "@/src/components/editor/dark-theme";
 import { cn } from "@/src/utils/tailwind";
-import { evaluateJsonPath } from "@hanzo/shared";
+import { evaluateJsonPath } from "@hanzo/console";
 
 // JSONPath language mode for syntax highlighting
 const jsonPathLanguage = StreamLanguage.define({
@@ -148,9 +148,15 @@ export function JsonPathInput({
         onChange={handleChange}
         onBlur={onBlur}
         placeholder={placeholder}
-        className={cn("overflow-hidden rounded-md border text-sm", displayError && "border-destructive", className)}
+        className={cn(
+          "overflow-hidden rounded-md border text-sm",
+          displayError && "border-destructive",
+          className,
+        )}
       />
-      {displayError && <p className="text-xs text-destructive">{displayError}</p>}
+      {displayError && (
+        <p className="text-destructive text-xs">{displayError}</p>
+      )}
     </div>
   );
 }

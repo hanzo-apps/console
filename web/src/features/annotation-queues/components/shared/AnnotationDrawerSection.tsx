@@ -1,6 +1,11 @@
 import { Card } from "@/src/components/ui/card";
 import { type ScoreTarget } from "@/src/features/scores/types";
-import { type AnnotationQueueItem, type ScoreDomain, isPresent, type ScoreConfigDomain } from "@hanzo/shared";
+import {
+  type AnnotationQueueItem,
+  type ScoreDomain,
+  isPresent,
+  type ScoreConfigDomain,
+} from "@hanzo/console";
 import { TriangleAlertIcon } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { AnnotationForm } from "@/src/features/scores/components/AnnotationForm";
@@ -17,18 +22,16 @@ interface AnnotationDrawerSectionProps {
   environment?: string;
 }
 
-export const AnnotationDrawerSection: React.FC<AnnotationDrawerSectionProps> = ({
-  item,
-  scoreTarget,
-  scores,
-  configs,
-  environment,
-}) => {
+export const AnnotationDrawerSection: React.FC<
+  AnnotationDrawerSectionProps
+> = ({ item, scoreTarget, scores, configs, environment }) => {
   const session = useSession();
 
   const isLockedByOtherUser = item.lockedByUserId !== session.data?.user?.id;
 
-  const hasNonAnnotationScores = scores.some((score) => score.source !== "ANNOTATION");
+  const hasNonAnnotationScores = scores.some(
+    (score) => score.source !== "ANNOTATION",
+  );
 
   return (
     <Card className="col-span-2 flex h-full flex-col overflow-y-auto border-none p-3">
@@ -48,15 +51,17 @@ export const AnnotationDrawerSection: React.FC<AnnotationDrawerSectionProps> = (
         }}
         actionButtons={
           isLockedByOtherUser && isPresent(item.lockedByUser?.name) ? (
-            <div className="flex items-center justify-center rounded-sm border border-dark-red bg-light-red p-1">
-              <TriangleAlertIcon className="mr-1 h-4 w-4 text-dark-red" />
-              <span className="text-xs text-dark-red">Currently edited by {item.lockedByUser.name}</span>
+            <div className="border-dark-red bg-light-red flex items-center justify-center rounded-sm border p-1">
+              <TriangleAlertIcon className="text-dark-red mr-1 h-4 w-4" />
+              <span className="text-dark-red text-xs">
+                Currently edited by {item.lockedByUser.name}
+              </span>
             </div>
           ) : undefined
         }
       />
       {hasNonAnnotationScores && (
-        <div className="mt-4 text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-4 text-xs">
           API and eval scores visible on left. Add manual annotations above.
         </div>
       )}

@@ -1,9 +1,9 @@
 import { Processor } from "@hanzo/mq";
-import { CloudUsageMeteringQueue, instrumentAsync, logger, QueueJobs } from "@langfuse/shared/src/server";
+import { CloudUsageMeteringQueue, instrumentAsync, logger, QueueJobs } from "@hanzo/console/src/server";
 import { handleCloudUsageMeteringJob } from "../ee/cloudUsageMetering/handleCloudUsageMeteringJob";
 import { cloudUsageMeteringDbCronJobName } from "../ee/cloudUsageMetering/constants";
 import { CloudUsageMeteringDbCronJobStates } from "../ee/cloudUsageMetering/constants";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { SpanKind } from "@opentelemetry/api";
 
 export const cloudUsageMeteringQueueProcessor: Processor = async (job) => {

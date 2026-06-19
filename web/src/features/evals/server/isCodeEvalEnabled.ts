@@ -1,5 +1,5 @@
-import { EvalTemplateSourceCodeLanguage } from "@langfuse/shared";
-import { env } from "@langfuse/shared/src/env";
+import { EvalTemplateSourceCodeLanguage } from "@hanzo/console";
+import { env } from "@hanzo/console/src/env";
 
 export type CodeEvalCapabilities = {
   enabled: boolean;

@@ -4,16 +4,16 @@ import {
   createTrace,
   createSessionScore,
   createDatasetRunScore,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import {
   createObservationsCh,
   createScoresCh,
   createTracesCh,
   createOrgProjectAndApiKey,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { makeZodVerifiedAPICall } from "@/src/__tests__/test-utils";
-import { GetScoreResponseV2, GetScoresResponseV2 } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+import { GetScoreResponseV2, GetScoresResponseV2 } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { v4 } from "uuid";
 import { z } from "zod";
 
@@ -490,11 +490,15 @@ describe("/api/public/v2/scores API Endpoint", () => {
               expect.objectContaining({
                 trace: null,
                 ...(val.sessionId === sessionId ? { sessionId } : {}),
-                ...(val.datasetRunId ? { datasetRunId: expect.any(String) } : {}),
+                ...(val.datasetRunId
+                  ? { datasetRunId: expect.any(String) }
+                  : {}),
               }),
             );
             // Check that one of the two conditions is true
-            expect(val.sessionId === sessionId || val.datasetRunId).toBeTruthy();
+            expect(
+              val.sessionId === sessionId || val.datasetRunId,
+            ).toBeTruthy();
           }
         }
 
@@ -622,7 +626,9 @@ describe("/api/public/v2/scores API Endpoint", () => {
         });
         for (const val of getAllScore.body.data) {
           expect(val.traceId).toBe(traceId);
-          expect((val as any).trace?.tags?.sort()).toEqual(["prod", "test"].sort());
+          expect((val as any).trace?.tags?.sort()).toEqual(
+            ["prod", "test"].sort(),
+          );
           expect((val as any).trace?.userId).toBe("user-name");
         }
       });
@@ -713,7 +719,11 @@ describe("/api/public/v2/scores API Endpoint", () => {
             environment: "staging",
           });
 
-          await createScoresCh([sessionScoreWithEnv, sessionScoreDefaultEnv, traceScoreWithEnv]);
+          await createScoresCh([
+            sessionScoreWithEnv,
+            sessionScoreDefaultEnv,
+            traceScoreWithEnv,
+          ]);
         });
 
         it("should return session scores when filtering by environment", async () => {
@@ -1444,7 +1454,9 @@ describe("/api/public/v2/scores API Endpoint", () => {
             }),
           ]),
         );
-        expect(getScore.body.data.find((s: any) => s.id === sId3)).toBeUndefined();
+        expect(
+          getScore.body.data.find((s: any) => s.id === sId3),
+        ).toBeUndefined();
       });
     });
 
@@ -1714,7 +1726,9 @@ describe("/api/public/v2/scores API Endpoint", () => {
         );
 
         expect(response.status).toBe(400);
-        expect(response.body.message).toContain("Scores needs to be selected always");
+        expect(response.body.message).toContain(
+          "Scores needs to be selected always",
+        );
       });
 
       it("should handle multiple scores with fields=score", async () => {
@@ -1796,7 +1810,9 @@ describe("/api/public/v2/scores API Endpoint", () => {
         );
 
         expect(response.status).toBe(400);
-        expect(response.body.message).toContain("Cannot filter by trace properties");
+        expect(response.body.message).toContain(
+          "Cannot filter by trace properties",
+        );
       });
 
       it("should return 400 when filtering by traceTags without trace field", async () => {
@@ -1812,7 +1828,9 @@ describe("/api/public/v2/scores API Endpoint", () => {
         );
 
         expect(response.status).toBe(400);
-        expect(response.body.message).toContain("Cannot filter by trace properties");
+        expect(response.body.message).toContain(
+          "Cannot filter by trace properties",
+        );
       });
 
       it("should allow userId filter when trace field is included", async () => {

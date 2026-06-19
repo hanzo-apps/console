@@ -1,4 +1,4 @@
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   makeZodVerifiedAPICall,
   makeAPICall,
@@ -16,8 +16,8 @@ import {
 import {
   AnnotationQueueObjectType,
   AnnotationQueueStatus,
-} from "@langfuse/shared";
-import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import { v4 as uuidv4 } from "uuid";
 
 const TOTAL_TEST_QUEUES = 10; // Create enough queues to test pagination

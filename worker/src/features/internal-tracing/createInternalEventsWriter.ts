@@ -3,9 +3,9 @@ import type {
   InternalEventsWriter,
   InternalTraceEventInput,
   InternalTraceExperimentContext,
-} from "@langfuse/shared/src/server";
-import { datastoreClient, redis } from "@langfuse/shared/src/server";
-import { prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console/src/server";
+import { datastoreClient, redis } from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { DatastoreWriter } from "../../services/DatastoreWriter";
 import { IngestionService } from "../../services/IngestionService";
 import { env } from "../../env";

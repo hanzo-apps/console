@@ -1,5 +1,5 @@
 import { Job } from "@hanzo/mq";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   QueueName,
   TQueueJobTypes,
@@ -9,8 +9,8 @@ import {
   getScoresForAnalyticsIntegrations,
   getEventsForAnalyticsIntegrations,
   getCurrentSpan,
-} from "@hanzo/console-core/src/server";
-import { decrypt } from "@hanzo/console-core/encryption";
+} from "@hanzo/console/src/server";
+import { decrypt } from "@hanzo/console/encryption";
 import { MixpanelClient } from "./mixpanelClient";
 import {
   transformTraceForMixpanel,

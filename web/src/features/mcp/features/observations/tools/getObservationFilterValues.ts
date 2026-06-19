@@ -2,7 +2,7 @@ import {
   InvalidRequestError,
   ObservationTypeDomain,
   type timeFilter,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { z } from "zod";
 import { getEventFilterValuePage } from "@/src/features/events/server/eventsService";
 import { defineTool } from "../../../core/define-tool";

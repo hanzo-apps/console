@@ -1,7 +1,7 @@
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@hanzo/shared/src/db";
-import { createOrgProjectAndApiKey } from "@hanzo/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import type { Session } from "next-auth";
 import { v4 } from "uuid";
 import {
@@ -10,9 +10,9 @@ import {
   type SafeWebhookActionConfig,
   type WebhookActionConfigWithSecrets,
   isWebhookAction,
-} from "@hanzo/shared";
-import { encrypt, decrypt } from "@hanzo/shared/encryption";
-import { generateWebhookSecret } from "@hanzo/shared/encryption";
+} from "@hanzo/console";
+import { encrypt, decrypt } from "@hanzo/console/encryption";
+import { generateWebhookSecret } from "@hanzo/console/encryption";
 import { TRPCError } from "@trpc/server";
 
 const __orgIds: string[] = [];

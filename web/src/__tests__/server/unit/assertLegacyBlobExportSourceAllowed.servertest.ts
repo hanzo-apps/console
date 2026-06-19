@@ -3,7 +3,7 @@ import { assertLegacyBlobExportSourceAllowed } from "@/src/features/blobstorage-
 import {
   isLegacyBlobExportAllowed,
   LEGACY_BLOB_EXPORT_CUTOFF,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PRE_CUTOFF = new Date(LEGACY_BLOB_EXPORT_CUTOFF.getTime() - MS_PER_DAY);

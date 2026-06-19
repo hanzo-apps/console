@@ -1,4 +1,4 @@
-import { type ObservationLevelType } from "@hanzo/console-core";
+import { type ObservationLevelType } from "@hanzo/console";
 
 export const LevelColors = {
   DEFAULT: { text: "", bg: "" },

@@ -7,7 +7,7 @@ import {
   StringFilter,
   StringObjectFilter,
   queryDatastore,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 const maybeEventsTable =
   env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true"

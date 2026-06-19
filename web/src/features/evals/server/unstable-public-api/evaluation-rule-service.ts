@@ -1,6 +1,6 @@
-import { invalidateProjectEvalConfigCaches } from "@langfuse/shared/src/server";
-import { EvalTemplateType, prisma } from "@langfuse/shared/src/db";
-import { EvalTargetObject, JobConfigState } from "@langfuse/shared";
+import { invalidateProjectEvalConfigCaches } from "@hanzo/console/src/server";
+import { EvalTemplateType, prisma } from "@hanzo/console/src/db";
+import { EvalTargetObject, JobConfigState } from "@hanzo/console";
 import type {
   PatchUnstableEvaluationRuleBodyType,
   PostUnstableEvaluationRuleBodyType,

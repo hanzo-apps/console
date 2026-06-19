@@ -1,4 +1,4 @@
-import { logger, instrumentAsync } from "@hanzo/console-core/src/server";
+import { logger, instrumentAsync } from "@hanzo/console/src/server";
 import { SpanKind } from "@opentelemetry/api";
 
 /**

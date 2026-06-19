@@ -1,8 +1,8 @@
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import { resolveTxtFresh } from "@/src/ee/features/verified-domains/server/dnsLookup";
-import { prisma, Prisma } from "@langfuse/shared/src/db";
-import { Role } from "@langfuse/shared";
+import { prisma, Prisma } from "@hanzo/console/src/db";
+import { Role } from "@hanzo/console";
 import { TRPCError } from "@trpc/server";
 import type { Session } from "next-auth";
 import type { Mock } from "vitest";

@@ -1,4 +1,4 @@
-import { type Role } from "@hanzo/console-core/src/db";
+import { type Role } from "@hanzo/console/src/db";
 
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
 // (used for type extraction via typeof, which is a legitimate pattern)
@@ -289,4 +289,5 @@ export const projectRoleAccessRights: Record<Role, ProjectScope[]> = {
   NONE: [],
 };
 
-export const projectNoneRoleComment = "Do not override the organization role for this project.";
+export const projectNoneRoleComment =
+  "Do not override the organization role for this project.";

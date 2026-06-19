@@ -1,12 +1,6 @@
 import { Job, Processor } from "@hanzo/mq";
-import {
-  getCurrentSpan,
-  logger,
-  QueueName,
-  shouldSkipDeletionFor,
-  TQueueJobTypes,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+import { getCurrentSpan, logger, QueueName, shouldSkipDeletionFor, TQueueJobTypes } from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 
 import { processDatastoreTraceDelete } from "../features/traces/processDatastoreTraceDelete";
 import { processPostgresTraceDelete } from "../features/traces/processPostgresTraceDelete";

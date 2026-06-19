@@ -1,10 +1,10 @@
-import { createFilterFromFilterState } from "@langfuse/shared/src/server";
+import { createFilterFromFilterState } from "@hanzo/console/src/server";
 import {
   InvalidRequestError,
   type UiColumnMapping,
   type ColumnDefinition,
   type EventsTableFilterState,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 describe("createFilterFromFilterState filter type validation", () => {
   const mappings: Record<string, UiColumnMapping> = {

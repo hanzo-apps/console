@@ -1,5 +1,5 @@
 import { env } from "@/src/env.mjs";
-import { logger } from "@langfuse/shared/src/server";
+import { logger } from "@hanzo/console/src/server";
 
 type AdminAccessWebhookPayload = {
   email: string;

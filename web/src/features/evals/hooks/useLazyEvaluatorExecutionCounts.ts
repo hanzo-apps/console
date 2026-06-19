@@ -3,7 +3,7 @@ import {
   deriveEvaluatorDisplayStateFromExecutionCounts,
   type EvaluatorExecutionCountsByEvaluatorId,
   type EvaluatorExecutionStatusCount,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { api, type RouterOutputs } from "@/src/utils/api";
 
 type EvaluatorExecutionStateInput = Pick<

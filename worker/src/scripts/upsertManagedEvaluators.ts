@@ -1,8 +1,8 @@
 import { z } from "zod/v4";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import managedEvaluators from "../constants/managed-evaluators.json";
-import { logger } from "@hanzo/console-core/src/server";
-import { extractVariables } from "@hanzo/console-core";
+import { logger } from "@hanzo/console/src/server";
+import { extractVariables } from "@hanzo/console";
 
 const ManagedEvaluatorSchema = z.object({
   id: z.string(),

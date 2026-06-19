@@ -13,7 +13,7 @@ import {
   type CustomDialogTableAction,
 } from "@/src/features/table/types";
 import { TableActionDialog } from "@/src/features/table/components/TableActionDialog";
-import { type BatchExportTableName } from "@hanzo/console-core";
+import { type BatchExportTableName } from "@hanzo/console";
 
 type TableActionMenuProps = {
   projectId: string;

@@ -94,7 +94,7 @@ import {
   getScoresUiTable,
   getScoresUiCount,
   upsertScore,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 
 const ScoreAllOptions = z.object({
   projectId: z.string(),
@@ -272,7 +272,7 @@ import {
   PostScoresBodyV1,
   PostScoresResponseV1,
 } from "@hanzo/console";
-import { eventTypes, processEventBatch } from "@hanzo/console-core/src/server";
+import { eventTypes, processEventBatch } from "@hanzo/console/src/server";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";
 
 export default withMiddlewares({
@@ -384,7 +384,7 @@ import {
   _handleGetScoresCountForPublicApi,
   type ScoreQueryType,
 } from "@/src/features/public-api/server/scores";
-import { _handleGetScoreById } from "@hanzo/console-core/src/server";
+import { _handleGetScoreById } from "@hanzo/console/src/server";
 
 export class ScoresApiService {
   constructor(private readonly apiVersion: "v1" | "v2") {}

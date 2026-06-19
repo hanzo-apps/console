@@ -5,9 +5,8 @@ const { mockFetchLLMCompletion } = vi.hoisted(() => ({
   mockFetchLLMCompletion: vi.fn(),
 }));
 
-vi.mock("@langfuse/shared/src/server", async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import("@langfuse/shared/src/server")>();
+vi.mock("@hanzo/console/src/server", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@hanzo/console/src/server")>();
   return {
     ...original,
     fetchLLMCompletion: mockFetchLLMCompletion,

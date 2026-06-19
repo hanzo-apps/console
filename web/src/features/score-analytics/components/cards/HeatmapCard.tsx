@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useScoreAnalytics } from "../ScoreAnalyticsProvider";
 import { Heatmap } from "../charts/Heatmap";
@@ -8,7 +14,7 @@ import { getHeatmapCellColor } from "@/src/features/score-analytics/lib/color-sc
 import { type HeatmapCell } from "@/src/features/score-analytics/lib/heatmap-utils";
 import { useCallback } from "react";
 import { SamplingDetailsHoverCard } from "../SamplingDetailsHoverCard";
-import { type ScoreDataTypeType } from "@hanzo/console-core";
+import { type ScoreDataTypeType } from "@hanzo/console";
 
 interface HeatmapTooltipContentProps {
   cell: HeatmapCell;
@@ -51,9 +57,12 @@ function HeatmapTooltipContent({
 
       {/* Primary Metrics Section */}
       <div className="space-y-1">
-        <p className="text-base font-semibold text-foreground">{cell.value.toLocaleString()} observations</p>
-        <p className="text-xs text-muted-foreground">
-          {percentage.toFixed(1)}% of {totalMatchedPairs.toLocaleString()} matched pairs
+        <p className="text-foreground text-base font-semibold">
+          {cell.value.toLocaleString()} observations
+        </p>
+        <p className="text-muted-foreground text-xs">
+          {percentage.toFixed(1)}% of {totalMatchedPairs.toLocaleString()}{" "}
+          matched pairs
         </p>
       </div>
 
@@ -62,8 +71,11 @@ function HeatmapTooltipContent({
         {dataType === "NUMERIC" ? (
           <>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 flex-shrink-0 rounded-sm" style={{ backgroundColor: score1Color }} />
-              <span className="flex-1 text-xs text-muted-foreground">
+              <div
+                className="h-3 w-3 flex-shrink-0 rounded-sm"
+                style={{ backgroundColor: score1Color }}
+              />
+              <span className="text-muted-foreground flex-1 text-xs">
                 {score1.name} ({score1.source})
               </span>
               <span className="text-muted-foreground text-xs">
@@ -72,8 +84,11 @@ function HeatmapTooltipContent({
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 flex-shrink-0 rounded-sm" style={{ backgroundColor: score2Color }} />
-              <span className="flex-1 text-xs text-muted-foreground">
+              <div
+                className="h-3 w-3 flex-shrink-0 rounded-sm"
+                style={{ backgroundColor: score2Color }}
+              />
+              <span className="text-muted-foreground flex-1 text-xs">
                 {score2?.name} ({score2?.source})
               </span>
               <span className="text-muted-foreground text-xs">
@@ -85,14 +100,20 @@ function HeatmapTooltipContent({
         ) : (
           <>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 flex-shrink-0 rounded-sm" style={{ backgroundColor: score1Color }} />
-              <span className="text-xs text-muted-foreground">
+              <div
+                className="h-3 w-3 flex-shrink-0 rounded-sm"
+                style={{ backgroundColor: score1Color }}
+              />
+              <span className="text-muted-foreground text-xs">
                 {score1.name} ({score1.source})
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 flex-shrink-0 rounded-sm" style={{ backgroundColor: score2Color }} />
-              <span className="text-xs text-muted-foreground">
+              <div
+                className="h-3 w-3 flex-shrink-0 rounded-sm"
+                style={{ backgroundColor: score2Color }}
+              />
+              <span className="text-muted-foreground text-xs">
                 {score2?.name} ({score2?.source})
               </span>
             </div>
@@ -173,7 +194,8 @@ export function HeatmapCard() {
   // Get total matched pairs for tooltip context
   const totalMatchedPairs = statistics.comparison?.matchedCount ?? 0;
 
-  const title = dataType === "NUMERIC" ? "Score Comparison Heatmap" : "Confusion Matrix";
+  const title =
+    dataType === "NUMERIC" ? "Score Comparison Heatmap" : "Confusion Matrix";
 
   const description =
     mode === "single"
@@ -214,7 +236,12 @@ export function HeatmapCard() {
   // Calculate dynamic cell height based on available space
   // Magic number 230px represents approximate available height for grid
   // (card height minus header, labels, legend, gaps)
-  const numRows = dataType === "NUMERIC" ? 10 : heatmap && "rows" in heatmap ? heatmap.rows : 10;
+  const numRows =
+    dataType === "NUMERIC"
+      ? 10
+      : heatmap && "rows" in heatmap
+        ? heatmap.rows
+        : 10;
   const calculatedCellHeight = Math.floor(200 / numRows);
 
   return (
@@ -226,12 +253,23 @@ export function HeatmapCard() {
               <CardTitle className="flex items-center gap-2">
                 {title}
                 {data.samplingMetadata.isSampled && (
-                  <SamplingDetailsHoverCard samplingMetadata={data.samplingMetadata} showLabel />
+                  <SamplingDetailsHoverCard
+                    samplingMetadata={data.samplingMetadata}
+                    showLabel
+                  />
                 )}
               </CardTitle>
               <CardDescription>{description}</CardDescription>
             </div>
-            {hasData && <HeatmapLegend min={0} max={maxValue} scoreNumber={1} orientation="horizontal" steps={5} />}
+            {hasData && (
+              <HeatmapLegend
+                min={0}
+                max={maxValue}
+                scoreNumber={1}
+                orientation="horizontal"
+                steps={5}
+              />
+            )}
           </div>
           {/* Placeholder to align with tabs in other cards */}
           <div className="h-10" />
@@ -243,8 +281,20 @@ export function HeatmapCard() {
             height="100%"
             cellHeight={calculatedCellHeight}
             data={heatmap.cells}
-            rows={dataType === "NUMERIC" ? 10 : "rows" in heatmap ? (heatmap.rows as number) : 0}
-            cols={dataType === "NUMERIC" ? 10 : "cols" in heatmap ? (heatmap.cols as number) : 0}
+            rows={
+              dataType === "NUMERIC"
+                ? 10
+                : "rows" in heatmap
+                  ? (heatmap.rows as number)
+                  : 0
+            }
+            cols={
+              dataType === "NUMERIC"
+                ? 10
+                : "cols" in heatmap
+                  ? (heatmap.cols as number)
+                  : 0
+            }
             rowLabels={heatmap.rowLabels}
             colLabels={heatmap.colLabels}
             xAxisLabel={`${score2?.name} (${score2?.source})`}
@@ -266,7 +316,13 @@ export function HeatmapCard() {
         ) : (
           <HeatmapSkeleton
             rows={numRows}
-            cols={dataType === "NUMERIC" ? 10 : heatmap && "cols" in heatmap ? (heatmap.cols as number) : 10}
+            cols={
+              dataType === "NUMERIC"
+                ? 10
+                : heatmap && "cols" in heatmap
+                  ? (heatmap.cols as number)
+                  : 10
+            }
             cellHeight={calculatedCellHeight}
             showLabels={true}
             showAxisLabels={true}

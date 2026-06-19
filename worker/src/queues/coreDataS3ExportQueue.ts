@@ -1,6 +1,6 @@
 import { Processor } from "@hanzo/mq";
-import { logger, StorageService, StorageServiceFactory } from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+import { logger, StorageService, StorageServiceFactory } from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { env } from "../env";
 
 const PROMPT_EXPORT_PAGE_SIZE = 1_000;
@@ -32,10 +32,7 @@ type PromptCoreData = {
   updatedAt: Date;
 };
 
-type FetchPromptPage = (args: {
-  skip: number;
-  take: number;
-}) => Promise<PromptCoreData[]>;
+type FetchPromptPage = (args: { skip: number; take: number }) => Promise<PromptCoreData[]>;
 
 async function* createPromptJsonlStream({
   fetchPromptPage,

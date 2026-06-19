@@ -1,5 +1,5 @@
 import { api } from "@/src/utils/api";
-import { type FilterState } from "@hanzo/shared";
+import { type FilterState } from "@hanzo/console";
 import { ExpandListButton } from "@/src/features/dashboard/components/cards/ChevronButton";
 import { useState } from "react";
 import { DashboardCard } from "@/src/features/dashboard/components/cards/DashboardCard";
@@ -7,7 +7,10 @@ import { TotalMetric } from "@/src/features/dashboard/components/TotalMetric";
 import { BarList } from "@tremor/react";
 import { compactNumberFormatter } from "@/src/utils/numbers";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
-import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
+import {
+  type QueryType,
+  mapLegacyUiTableFilterToView,
+} from "@/src/features/query";
 
 export const TracesBarListChart = ({
   className,
@@ -107,7 +110,9 @@ export const TracesBarListChart = ({
       <>
         <TotalMetric
           metric={compactNumberFormatter(
-            totalTraces.data?.[0]?.count_count ? Number(totalTraces.data[0].count_count) : 0,
+            totalTraces.data?.[0]?.count_count
+              ? Number(totalTraces.data[0].count_count)
+              : 0,
           )}
           description={"Total traces tracked"}
         />
@@ -115,8 +120,10 @@ export const TracesBarListChart = ({
           <>
             <BarList
               data={adjustedData}
-              valueFormatter={(number: number) => Intl.NumberFormat("en-US").format(number).toString()}
-              className="mt-6 [&_*]:text-muted-foreground [&_p]:text-muted-foreground [&_span]:text-muted-foreground"
+              valueFormatter={(number: number) =>
+                Intl.NumberFormat("en-US").format(number).toString()
+              }
+              className="[&_*]:text-muted-foreground [&_p]:text-muted-foreground [&_span]:text-muted-foreground mt-6"
               showAnimation={true}
               color={"indigo"}
             />

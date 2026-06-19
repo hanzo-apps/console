@@ -1,8 +1,8 @@
 import {
   experimentEvalFilterColumns,
   observationEvalFilterColumns,
-} from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { JSONPath } from "jsonpath-plus";
 import type {
   PublicEvaluationRuleFilterType,

@@ -1,9 +1,5 @@
-import {
-  ChatMessageRole,
-  ChatMessageType,
-  parseUnknownToString,
-} from "@langfuse/shared";
-import { type ExtractedVariable } from "@langfuse/shared/src/server";
+import { ChatMessageRole, ChatMessageType, parseUnknownToString } from "@hanzo/console";
+import { type ExtractedVariable } from "@hanzo/console/src/server";
 import { compileTemplateString } from "../utils";
 
 export interface CompileEvalPromptParams {
@@ -16,10 +12,7 @@ export function compileEvalPrompt(params: CompileEvalPromptParams): string {
   // the upstream extractor can preserve original shapes for code-eval and
   // template substitution still gets a flat string per variable.
   const variableMap = Object.fromEntries(
-    params.variables.map(({ var: key, value }) => [
-      key,
-      parseUnknownToString(value),
-    ]),
+    params.variables.map(({ var: key, value }) => [key, parseUnknownToString(value)]),
   );
 
   return compileTemplateString(params.templatePrompt, variableMap);
@@ -53,8 +46,6 @@ export function buildEvalMessages(prompt: string) {
   ];
 }
 
-export function getEnvironmentFromVariables(
-  variables: ExtractedVariable[],
-): string | undefined {
+export function getEnvironmentFromVariables(variables: ExtractedVariable[]): string | undefined {
   return variables.find((variable) => variable.environment)?.environment;
 }

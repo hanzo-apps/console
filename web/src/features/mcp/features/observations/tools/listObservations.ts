@@ -13,8 +13,8 @@ import {
   stringOptionsFilter,
   timeFilter,
   type ColumnDefinition,
-} from "@langfuse/shared";
-import { getObservationsV2FromEventsTableForPublicApi } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { getObservationsV2FromEventsTableForPublicApi } from "@hanzo/console/src/server";
 import { z } from "zod";
 import {
   EncodedObservationsCursorV2,

@@ -1,5 +1,5 @@
 import { CommentList } from "@/src/features/comments/CommentList";
-import { type AnnotationQueueObjectType } from "@hanzo/console-core";
+import { type AnnotationQueueObjectType } from "@hanzo/console";
 
 interface CommentsSectionProps {
   projectId: string;
@@ -8,7 +8,12 @@ interface CommentsSectionProps {
   onDraftChange?: (hasDraft: boolean) => void;
 }
 
-export const CommentsSection: React.FC<CommentsSectionProps> = ({ projectId, objectId, objectType, onDraftChange }) => {
+export const CommentsSection: React.FC<CommentsSectionProps> = ({
+  projectId,
+  objectId,
+  objectType,
+  onDraftChange,
+}) => {
   return (
     <CommentList
       projectId={projectId}

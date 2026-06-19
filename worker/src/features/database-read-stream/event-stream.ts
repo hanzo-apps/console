@@ -7,7 +7,7 @@
  * so no JOINs are needed for trace-level fields.
  */
 
-import { FilterCondition, type ScoreDataTypeType, TimeFilter, TracingSearchType } from "@hanzo/console-core";
+import { FilterCondition, type ScoreDataTypeType, TimeFilter, TracingSearchType } from "@hanzo/console";
 import {
   getDistinctScoreNames,
   queryDatastoreStream,
@@ -18,7 +18,7 @@ import {
   datastoreSearchCondition,
   EventsQueryBuilder,
   eventsScoresAggregation,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { Readable } from "stream";
 import { env } from "../../env";
 import { getChunkWithFlattenedScores, prepareScoresForOutput } from "./getDatabaseReadStream";

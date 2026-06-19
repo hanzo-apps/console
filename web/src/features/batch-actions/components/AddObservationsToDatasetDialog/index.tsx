@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from "@/src/components/ui/dialog";
 import { ChevronLeft } from "lucide-react";
-import type { BatchActionQuery } from "@hanzo/console-core";
+import type { BatchActionQuery } from "@hanzo/console";
 
 // Step components
 import { DatasetChoiceStep } from "./DatasetChoiceStep";
@@ -30,7 +30,9 @@ type AddObservationsToDatasetDialogProps = {
   onClose: () => void;
 } & UseAddToDatasetWizardProps;
 
-export function AddObservationsToDatasetDialog(props: AddObservationsToDatasetDialogProps) {
+export function AddObservationsToDatasetDialog(
+  props: AddObservationsToDatasetDialogProps,
+) {
   const { projectId, onClose } = props;
 
   const {
@@ -67,16 +69,24 @@ export function AddObservationsToDatasetDialog(props: AddObservationsToDatasetDi
         <DialogHeader>
           <DialogTitle>
             Add {displayCount} Observation(s) to dataset
-            {!["select", "create", "choice"].includes(step) ? " " + state.dataset.name : ""}
+            {!["select", "create", "choice"].includes(step)
+              ? " " + state.dataset.name
+              : ""}
           </DialogTitle>
-          <DialogDescription className="mt-1">{dialogDescription}</DialogDescription>
+          <DialogDescription className="mt-1">
+            {dialogDescription}
+          </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="flex-1 overflow-y-auto p-0">
           {step === "choice" && <DatasetChoiceStep onSelectMode={selectMode} />}
 
           {step === "select" && (
-            <DatasetSelectStep projectId={projectId} dataset={state.dataset} onDatasetSelect={handleDatasetSelect} />
+            <DatasetSelectStep
+              projectId={projectId}
+              dataset={state.dataset}
+              onDatasetSelect={handleDatasetSelect}
+            />
           )}
 
           {step === "create" && (
@@ -138,15 +148,18 @@ export function AddObservationsToDatasetDialog(props: AddObservationsToDatasetDi
             />
           )}
 
-          {step === "status" && state.submission.batchActionId && state.dataset.id && state.dataset.name && (
-            <StatusStep
-              projectId={projectId}
-              batchActionId={state.submission.batchActionId}
-              dataset={{ id: state.dataset.id, name: state.dataset.name }}
-              expectedCount={displayCount}
-              onClose={onClose}
-            />
-          )}
+          {step === "status" &&
+            state.submission.batchActionId &&
+            state.dataset.id &&
+            state.dataset.name && (
+              <StatusStep
+                projectId={projectId}
+                batchActionId={state.submission.batchActionId}
+                dataset={{ id: state.dataset.id, name: state.dataset.name }}
+                expectedCount={displayCount}
+                onClose={onClose}
+              />
+            )}
         </DialogBody>
 
         {/* Footer with navigation buttons */}
@@ -161,7 +174,11 @@ export function AddObservationsToDatasetDialog(props: AddObservationsToDatasetDi
               )}
             </div>
             <div>
-              <Button onClick={handleNextClick} disabled={isNextDisabled} loading={isLoading}>
+              <Button
+                onClick={handleNextClick}
+                disabled={isNextDisabled}
+                loading={isLoading}
+              >
                 {nextButtonLabel}
               </Button>
             </div>

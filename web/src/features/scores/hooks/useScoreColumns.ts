@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import { api } from "@/src/utils/api";
-import { type ScoreDataTypeType, type FilterCondition, type ScoreAggregate } from "@hanzo/shared";
+import {
+  type ScoreDataTypeType,
+  type FilterCondition,
+  type ScoreAggregate,
+} from "@hanzo/console";
 import { type HanzoColumnDef } from "@/src/components/table/types";
 import { ScoresTableCell } from "@/src/components/scores-table-cell";
 import { toOrderedScoresList } from "@/src/features/scores/lib/helpers";
@@ -101,7 +105,12 @@ export function useScoreColumns<T extends Record<string, any>>({
       defaultHidden,
       rawKey,
     );
-  }, [scoreColumnsQuery.data?.scoreColumns, scoreColumnKey, prefix, displayFormat]);
+  }, [
+    scoreColumnsQuery.data?.scoreColumns,
+    scoreColumnKey,
+    prefix,
+    displayFormat,
+  ]);
 
   return {
     scoreColumns,

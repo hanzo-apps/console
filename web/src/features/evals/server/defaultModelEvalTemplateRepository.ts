@@ -1,4 +1,4 @@
-import { EvalTemplateType, type Prisma } from "@langfuse/shared/src/db";
+import { EvalTemplateType, type Prisma } from "@hanzo/console/src/db";
 
 export async function findDefaultModelEvalTemplateIds({
   tx,

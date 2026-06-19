@@ -5,7 +5,7 @@ import {
   type FilterState,
   singleFilter,
   type OrderByState,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { api } from "@/src/utils/api";
 import {
   getLazyEvaluatorDisplayStatus,

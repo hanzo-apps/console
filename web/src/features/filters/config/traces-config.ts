@@ -1,4 +1,4 @@
-import { tracesTableCols } from "@hanzo/console-core";
+import { tracesTableCols } from "@hanzo/console";
 import type { FilterConfig } from "@/src/features/filters/lib/filter-config";
 
 export const traceFilterConfig: FilterConfig = {

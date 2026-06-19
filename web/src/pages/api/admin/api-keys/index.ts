@@ -1,7 +1,7 @@
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { z } from "zod/v4";
-import { prisma } from "@hanzo/console-core/src/db";
-import { logger, redis } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { logger, redis } from "@hanzo/console/src/server";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { AdminApiAuthService } from "@/src/features/admin-api/server/adminApiAuth";
 
@@ -20,9 +20,15 @@ const InvalidateApiKeySchema = z.object({
   projectIds: z.array(z.string()),
 });
 
-const ApiKeyAction = z.discriminatedUnion("action", [DeleteApiKeySchema, InvalidateApiKeySchema]);
+const ApiKeyAction = z.discriminatedUnion("action", [
+  DeleteApiKeySchema,
+  InvalidateApiKeySchema,
+]);
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   try {
     // allow only POST requests
     if (req.method !== "POST") {
@@ -42,7 +48,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (body.data.action === "delete") {
-      logger.info(`trying to remove API keys for projects ${body.data.projectIds.join(", ")}`);
+      logger.info(
+        `trying to remove API keys for projects ${body.data.projectIds.join(", ")}`,
+      );
 
       // delete the API keys in the database first
       const apiKeysToBeDeleted = await prisma.apiKey.findMany({
@@ -69,7 +77,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         `projects ${body.data.projectIds.join(", ")}`,
       );
 
-      logger.info(`Removed API keys for projects ${body.data.projectIds.join(", ")}`);
+      logger.info(
+        `Removed API keys for projects ${body.data.projectIds.join(", ")}`,
+      );
 
       return res.status(200).json({ message: "API keys deleted" });
     } else if (body.data.action === "invalidate") {
@@ -89,7 +99,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         `projects ${body.data.projectIds.join(", ")}`,
       );
 
-      logger.info(`Invalidated API keys for projects ${body.data.projectIds.join(", ")}`);
+      logger.info(
+        `Invalidated API keys for projects ${body.data.projectIds.join(", ")}`,
+      );
       return res.status(200).json({ message: "API keys invalidated" });
     }
 

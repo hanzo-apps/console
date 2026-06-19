@@ -8,8 +8,8 @@ import {
   ClickHouseClientManager,
   logger,
   redis,
-} from "@hanzo/shared/src/server";
-import { prisma } from "@hanzo/shared/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { RateLimitService } from "@/src/features/public-api/server/RateLimitService";
 
 const TIMEOUT = 110_000;

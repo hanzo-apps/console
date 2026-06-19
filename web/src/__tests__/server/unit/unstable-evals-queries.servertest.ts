@@ -1,7 +1,7 @@
 import type * as PrismaClientModule from "@prisma/client";
 import type { Mock } from "vitest";
 
-vi.mock("@langfuse/shared/src/db", async () => {
+vi.mock("@hanzo/console/src/db", async () => {
   const { EvalTemplateType } =
     await vi.importActual<typeof PrismaClientModule>("@prisma/client");
 
@@ -27,7 +27,7 @@ vi.mock("@langfuse/shared/src/db", async () => {
   };
 });
 
-import { EvalTemplateType, prisma } from "@langfuse/shared/src/db";
+import { EvalTemplateType, prisma } from "@hanzo/console/src/db";
 import {
   countActiveEvaluationRules,
   countEvaluationRulesForEvaluatorIds,

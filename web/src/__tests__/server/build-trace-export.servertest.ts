@@ -1,5 +1,5 @@
-import { LangfuseNotFoundError, UnauthorizedError } from "@langfuse/shared";
-import { env } from "@langfuse/shared/src/env";
+import { LangfuseNotFoundError, UnauthorizedError } from "@hanzo/console";
+import { env } from "@hanzo/console/src/env";
 import { beforeEach, afterAll, describe, expect, it, vi } from "vitest";
 import {
   buildTraceExport,
@@ -25,8 +25,8 @@ const {
   mockSendAdminAccessWebhook: vi.fn(),
 }));
 
-vi.mock("@langfuse/shared/src/server", async () => ({
-  ...(await vi.importActual("@langfuse/shared/src/server")),
+vi.mock("@hanzo/console/src/server", async () => ({
+  ...(await vi.importActual("@hanzo/console/src/server")),
   getTraceByIdFromEventsTable: (...args: unknown[]) =>
     mockGetTraceByIdFromEventsTable(...args),
   getObservationsCountFromEventsTable: (...args: unknown[]) =>
@@ -37,7 +37,7 @@ vi.mock("@langfuse/shared/src/server", async () => ({
     mockGetScoresAndCorrectionsForTraces(...args),
 }));
 
-vi.mock("@langfuse/shared/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     traceSession: {
       findFirst: (...args: unknown[]) => mockTraceSessionFindFirst(...args),

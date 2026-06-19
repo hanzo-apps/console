@@ -1,14 +1,17 @@
 import { api } from "@/src/utils/api";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
-import { type DefaultViewScope } from "@hanzo/console-core/src/server";
+import { type DefaultViewScope } from "@hanzo/console/src/server";
 
 interface UseDefaultViewMutationsProps {
   tableName: string;
   projectId: string;
 }
 
-export function useDefaultViewMutations({ tableName, projectId }: UseDefaultViewMutationsProps) {
+export function useDefaultViewMutations({
+  tableName,
+  projectId,
+}: UseDefaultViewMutationsProps) {
   const utils = api.useUtils();
 
   const setAsDefault = api.TableViewPresets.setAsDefault.useMutation({

@@ -17,8 +17,8 @@ import {
   SecondaryIngestionQueue,
   TQueueJobTypes,
   traceException,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 
 import { env } from "../env";
 import { IngestionService } from "../services/IngestionService";

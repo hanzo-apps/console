@@ -10,13 +10,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// The shared workspace package is published as `@hanzo/console-core`, but a large
-// amount of code still imports it under its historical `@hanzo/shared` name and the
-// even older upstream `@langfuse/shared` name (the @langfuse/* -> @hanzo/* brand
-// rename is still in flight). Turbopack resolves `@hanzo/shared` via
-// `turbopack.resolveAlias` above; the webpack production build (`next build
-// --webpack`) needs equivalent aliases. Point every shared subpath (both legacy
-// names) at the shared package's TS SOURCE — identical to the turbopack alias — so
+// The shared product-core workspace package is `@hanzo/console` (it lives in
+// `packages/shared`). The webpack production build (`next build --webpack`) needs
+// explicit subpath aliases that point every `@hanzo/console` subpath at the
+// package's TS SOURCE — identical to the turbopack alias below — so
 // `transpilePackages` recompiles it ESM-aware (the prebuilt CJS dist re-require()s
 // ESM-only deps like uuid, which webpack rejects).
 const sharedSrc = path.resolve(__dirname, "../packages/shared/src");
@@ -31,9 +28,7 @@ const aliasForPrefix = (prefix) => ({
   [`${prefix}$`]: path.join(sharedSrc, "index.ts"),
 });
 const sharedAlias = {
-  ...aliasForPrefix("@hanzo/console-core"),
-  ...aliasForPrefix("@hanzo/shared"),
-  ...aliasForPrefix("@langfuse/shared"),
+  ...aliasForPrefix("@hanzo/console"),
   // The query subsystem (dataModel, queryBuilder, queryExecutor, types, validateQuery)
   // moved out of web into the shared package, but a number of web modules still import
   // it under its old web-local `@/src/features/query` path. Redirect to the shared
@@ -98,7 +93,7 @@ const nextConfig = {
   // Agent/browser tooling often targets 127.0.0.1 instead of localhost in dev.
   allowedDevOrigins: ["127.0.0.1"],
   staticPageGenerationTimeout: 500, // default is 60. Required for build process for amd
-  transpilePackages: ["@hanzo/shared", "@langfuse/shared", "@hanzo/console-core", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
+  transpilePackages: ["@hanzo/console", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
   reactStrictMode: true,
   serverExternalPackages: [
     "dd-trace",
@@ -118,7 +113,7 @@ const nextConfig = {
   },
   turbopack: {
     resolveAlias: {
-      "@hanzo/shared": "./packages/shared/src",
+      "@hanzo/console": "./packages/shared/src",
       // this is an ugly hack to get turbopack to work with react-resizable, used in the
       // web/src/features/widgets/components/DashboardGrid.tsx file. This **only** affects
       // the dev server. The CSS is included in the non-turbopack based prod build anyways.
@@ -282,8 +277,8 @@ const nextConfig = {
   },
 
   webpack(config, { isServer, webpack }) {
-    // Resolve the historical `@hanzo/shared` package name to the built shared
-    // package (real name `@hanzo/console-core`) for the webpack production build.
+    // Resolve every `@hanzo/console` subpath to the shared package TS source for
+    // the webpack production build (mirrors the turbopack resolveAlias above).
     config.resolve = config.resolve || {};
     config.resolve.alias = { ...(config.resolve.alias || {}), ...sharedAlias };
 

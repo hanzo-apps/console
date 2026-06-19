@@ -3,7 +3,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/src/components/ui/button";
-import { DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
+import {
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -21,7 +27,7 @@ import { showSuccessToast } from "@/src/features/notifications/showSuccessToast"
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { CodeMirrorEditor } from "@/src/components/editor/CodeMirrorEditor";
 import { Loader2 } from "lucide-react";
-import { type Prisma } from "@hanzo/console-core";
+import { type Prisma } from "@hanzo/console";
 import { Skeleton } from "@hanzo/ui";
 import { getFormattedPayload } from "@/src/features/experiments/utils/format";
 import Spinner from "@/src/components/design-system/Spinner/Spinner";
@@ -69,35 +75,44 @@ export const RemoteExperimentUpsertForm = ({
     },
   });
 
-  const upsertRemoteExperimentMutation = api.datasets.upsertRemoteExperiment.useMutation({
-    onSuccess: () => {
-      showSuccessToast({
-        title: "Setup successfully",
-        description: "Your changes have been saved.",
-      });
-      setShowRemoteExperimentUpsertForm(false);
-      utils.datasets.getRemoteExperiment.invalidate({
-        projectId,
-        datasetId,
-      });
-    },
-    onError: (error) => {
-      showErrorToast(error.message || "Failed to setup", "Please check your URL and config and try again.");
-    },
-  });
+  const upsertRemoteExperimentMutation =
+    api.datasets.upsertRemoteExperiment.useMutation({
+      onSuccess: () => {
+        showSuccessToast({
+          title: "Setup successfully",
+          description: "Your changes have been saved.",
+        });
+        setShowRemoteExperimentUpsertForm(false);
+        utils.datasets.getRemoteExperiment.invalidate({
+          projectId,
+          datasetId,
+        });
+      },
+      onError: (error) => {
+        showErrorToast(
+          error.message || "Failed to setup",
+          "Please check your URL and config and try again.",
+        );
+      },
+    });
 
-  const deleteRemoteExperimentMutation = api.datasets.deleteRemoteExperiment.useMutation({
-    onSuccess: () => {
-      showSuccessToast({
-        title: "Deleted successfully",
-        description: "The remote dataset run trigger has been removed from this dataset.",
-      });
-      setShowRemoteExperimentUpsertForm(false);
-    },
-    onError: (error) => {
-      showErrorToast(error.message || "Failed to delete remote dataset run trigger", "Please try again.");
-    },
-  });
+  const deleteRemoteExperimentMutation =
+    api.datasets.deleteRemoteExperiment.useMutation({
+      onSuccess: () => {
+        showSuccessToast({
+          title: "Deleted successfully",
+          description:
+            "The remote dataset run trigger has been removed from this dataset.",
+        });
+        setShowRemoteExperimentUpsertForm(false);
+      },
+      onError: (error) => {
+        showErrorToast(
+          error.message || "Failed to delete remote dataset run trigger",
+          "Please try again.",
+        );
+      },
+    });
 
   const onSubmit = (data: RemoteExperimentSetupForm) => {
     if (data.defaultPayload.trim()) {
@@ -121,7 +136,11 @@ export const RemoteExperimentUpsertForm = ({
   };
 
   const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this remote dataset run trigger?")) {
+    if (
+      confirm(
+        "Are you sure you want to delete this remote dataset run trigger?",
+      )
+    ) {
       deleteRemoteExperimentMutation.mutate({
         projectId,
         datasetId,
@@ -148,7 +167,9 @@ export const RemoteExperimentUpsertForm = ({
           ← Back
         </Button>
         <DialogTitle>
-          {existingRemoteExperiment ? "Edit remote dataset run trigger" : "Set up remote dataset run trigger in UI"}
+          {existingRemoteExperiment
+            ? "Edit remote dataset run trigger"
+            : "Set up remote dataset run trigger in UI"}
         </DialogTitle>
         <DialogDescription>
           Enable your team to run custom dataset runs on dataset{" "}
@@ -159,8 +180,9 @@ export const RemoteExperimentUpsertForm = ({
               <Spinner size="sm" display="inline" />
             )}
           </strong>
-          . Configure a webhook URL to trigger remote custom dataset runs from UI. We will send dataset info (name, id)
-          and config to your service, which can run against the dataset and post results to Hanzo.
+          . Configure a webhook URL to trigger remote custom dataset runs from
+          UI. We will send dataset info (name, id) and config to your service,
+          which can run against the dataset and post results to Hanzo.
         </DialogDescription>
       </DialogHeader>
 
@@ -174,10 +196,14 @@ export const RemoteExperimentUpsertForm = ({
                 <FormItem>
                   <FormLabel>URL</FormLabel>
                   <FormDescription>
-                    The URL that will be called when the remote dataset run is triggered.
+                    The URL that will be called when the remote dataset run is
+                    triggered.
                   </FormDescription>
                   <FormControl>
-                    <Input placeholder="https://your-service.com/webhook" {...field} />
+                    <Input
+                      placeholder="https://your-service.com/webhook"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -191,8 +217,9 @@ export const RemoteExperimentUpsertForm = ({
                 <FormItem>
                   <FormLabel>Default config</FormLabel>
                   <FormDescription>
-                    Set a default config that will be sent to the remote dataset run URL. This can be modified before
-                    starting a new run. View docs for more details.
+                    Set a default config that will be sent to the remote dataset
+                    run URL. This can be modified before starting a new run.
+                    View docs for more details.
                   </FormDescription>
                   <CodeMirrorEditor
                     value={field.value}
@@ -240,12 +267,19 @@ export const RemoteExperimentUpsertForm = ({
                   onClick={handleDelete}
                   disabled={deleteRemoteExperimentMutation.isPending}
                 >
-                  {deleteRemoteExperimentMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {deleteRemoteExperimentMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Delete
                 </Button>
               )}
-              <Button type="submit" disabled={upsertRemoteExperimentMutation.isPending}>
-                {upsertRemoteExperimentMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              <Button
+                type="submit"
+                disabled={upsertRemoteExperimentMutation.isPending}
+              >
+                {upsertRemoteExperimentMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
                 {existingRemoteExperiment ? "Update" : "Set up"}
               </Button>
             </div>

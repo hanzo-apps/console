@@ -13,9 +13,9 @@ import {
   createEvent,
   createEventsCh,
   getEventsForBlobStorageExport,
-} from "@hanzo/console-core/src/server";
-import { BatchExportTableName, DatasetStatus } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console/src/server";
+import { BatchExportTableName, DatasetStatus } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { getDatabaseReadStreamPaginated } from "../features/database-read-stream/getDatabaseReadStream";
 import { getObservationStream } from "../features/database-read-stream/observation-stream";
 import { getTraceStream } from "../features/database-read-stream/trace-stream";
@@ -4271,19 +4271,7 @@ maybeDescribe("getEventsForBlobStorageExport", () => {
       projectId,
       new Date(now - 60 * 60 * 1000),
       new Date(now + 60 * 60 * 1000),
-      [
-        "core",
-        "basic",
-        "time",
-        "io",
-        "metadata",
-        "model",
-        "usage",
-        "prompt",
-        "metrics",
-        "tools",
-        "trace_context",
-      ],
+      ["core", "basic", "time", "io", "metadata", "model", "usage", "prompt", "metrics", "tools", "trace_context"],
     );
 
     const rows: Record<string, unknown>[] = [];

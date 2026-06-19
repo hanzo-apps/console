@@ -34,11 +34,11 @@ import {
   SecondaryOtelIngestionQueue,
   TraceUpsertQueue,
   EventPropagationQueue,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { env } from "./env";
 import { ingestionQueueProcessorBuilder } from "./queues/ingestionQueue";
 import { BackgroundMigrationManager } from "./backgroundMigrations/backgroundMigrationManager";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { DatastoreReadSkipCache } from "./utils/datastoreReadSkipCache";
 import { experimentCreateQueueProcessor } from "./queues/experimentQueue";
 import { traceDeleteProcessor } from "./queues/traceDelete";
@@ -239,14 +239,9 @@ if (env.QUEUE_CONSUMER_OTEL_INGESTION_QUEUE_IS_ENABLED === "true") {
 if (env.QUEUE_CONSUMER_OTEL_INGESTION_SECONDARY_QUEUE_IS_ENABLED === "true") {
   const shardNames = SecondaryOtelIngestionQueue.getShardNames();
   shardNames.forEach((shardName) => {
-    WorkerManager.register(
-      shardName as QueueName,
-      otelIngestionQueueProcessorBuilder(false),
-      {
-        concurrency:
-          env.LANGFUSE_OTEL_INGESTION_SECONDARY_QUEUE_PROCESSING_CONCURRENCY,
-      },
-    );
+    WorkerManager.register(shardName as QueueName, otelIngestionQueueProcessorBuilder(false), {
+      concurrency: env.LANGFUSE_OTEL_INGESTION_SECONDARY_QUEUE_PROCESSING_CONCURRENCY,
+    });
   });
 }
 
@@ -430,10 +425,7 @@ if (env.HANZO_BATCH_DATA_RETENTION_CLEANER_ENABLED === "true") {
 // Batch project media cleaner for S3 media cleanup of soft-deleted projects
 export let batchProjectMediaCleaner: BatchProjectMediaCleaner | null = null;
 
-if (
-  env.LANGFUSE_BATCH_PROJECT_CLEANER_ENABLED === "true" &&
-  env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET
-) {
+if (env.LANGFUSE_BATCH_PROJECT_CLEANER_ENABLED === "true" && env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET) {
   batchProjectMediaCleaner = new BatchProjectMediaCleaner();
   batchProjectMediaCleaner.start();
 }
@@ -441,10 +433,7 @@ if (
 // Batch project blob cleaner for ingestion event S3/ClickHouse cleanup of soft-deleted projects
 export let batchProjectBlobCleaner: BatchProjectBlobCleaner | null = null;
 
-if (
-  env.LANGFUSE_BATCH_PROJECT_CLEANER_ENABLED === "true" &&
-  env.LANGFUSE_ENABLE_BLOB_STORAGE_FILE_LOG === "true"
-) {
+if (env.LANGFUSE_BATCH_PROJECT_CLEANER_ENABLED === "true" && env.LANGFUSE_ENABLE_BLOB_STORAGE_FILE_LOG === "true") {
   batchProjectBlobCleaner = new BatchProjectBlobCleaner();
   batchProjectBlobCleaner.start();
 }

@@ -1,11 +1,11 @@
 import { z } from "zod/v4";
-import { DEFAULT_TRACE_ENVIRONMENT, LLMAsJudgeExecutionEventSchema, logger } from "@hanzo/console-core/src/server";
+import { DEFAULT_TRACE_ENVIRONMENT, LLMAsJudgeExecutionEventSchema, logger } from "@hanzo/console/src/server";
 import {
   observationForEvalSchema,
   observationVariableMappingList,
   type ObservationVariableMapping,
-} from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { UnrecoverableError } from "../../../errors/UnrecoverableError";
 import { extractObservationVariables } from "./extractObservationVariables";
 import { executeLLMAsJudgeEvaluation } from "../evalService";

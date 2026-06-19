@@ -1,12 +1,12 @@
-import { parseDbOrg, Role } from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
+import { parseDbOrg, Role } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import Stripe from "stripe";
 import { env } from "../../env";
-import { logger } from "@langfuse/shared/src/server";
-import { recordIncrement, traceException } from "@langfuse/shared/src/server";
+import { logger } from "@hanzo/console/src/server";
+import { recordIncrement, traceException } from "@hanzo/console/src/server";
 import { Job } from "@hanzo/mq";
 import { backOff } from "exponential-backoff";
-import { sendCloudSpendAlertEmail } from "@langfuse/shared/src/server";
+import { sendCloudSpendAlertEmail } from "@hanzo/console/src/server";
 
 const recordMissingBillingConfigSkip = (reason: "missing_stripe_customer_id" | "missing_stripe_subscription_id") => {
   recordIncrement("langfuse.queue.cloud_spend_alert_queue.skipped_orgs_missing_billing_config", 1, {

@@ -30,7 +30,7 @@ import {
   DEFAULT_TRACE_ENVIRONMENT,
   setNoEvalConfigsCache,
   DatasetRunItemUpsertEventType,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { mapTraceFilterColumn, requiresDatabaseLookup } from "./traceFilterUtils";
 import {
   Prisma,
@@ -45,8 +45,8 @@ import {
   TraceDomain,
   Observation,
   EvalTargetObject,
-} from "@hanzo/console-core";
-import { kyselyPrisma, prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console";
+import { kyselyPrisma, prisma } from "@hanzo/console/src/db";
 import { createW3CTraceId } from "../utils";
 import { UnrecoverableError } from "../../errors/UnrecoverableError";
 import { ObservationNotFoundError } from "../../errors/ObservationNotFoundError";
@@ -329,10 +329,7 @@ export const createEvalJobs = async ({
     // Self-hosted only: Skip trace-level evaluators with invalid filters.
     // A bug (ff4b03c0b, Feb 2026) allowed score filters on trace evaluators, which the worker doesn't support.
     // Cloud deployments are fixed; self-hosters need this runtime check.
-    if (
-      !env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION &&
-      config.targetObject === EvalTargetObject.TRACE
-    ) {
+    if (!env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION && config.targetObject === EvalTargetObject.TRACE) {
       const filterValidation = validateEvaluatorFiltersForTarget({
         targetObject: EvalTargetObject.TRACE,
         filter: config.filter,
@@ -812,10 +809,7 @@ export async function runLLMAsJudgeEvaluation({
   });
 }
 
-function toNormalizedScores(params: {
-  outputResult: EvalOutputResult;
-  scoreName: string;
-}): CodeEvalScoreWithName[] {
+function toNormalizedScores(params: { outputResult: EvalOutputResult; scoreName: string }): CodeEvalScoreWithName[] {
   const { outputResult, scoreName } = params;
   const baseFields = {
     name: scoreName,
@@ -850,10 +844,7 @@ function toNormalizedScores(params: {
 }
 
 export async function executeLLMAsJudgeEvaluation(
-  params: Omit<
-    Parameters<typeof runLLMAsJudgeEvaluation>[0],
-    "deps" | "executionMetadata"
-  > & {
+  params: Omit<Parameters<typeof runLLMAsJudgeEvaluation>[0], "deps" | "executionMetadata"> & {
     environment: string;
     deps?: EvalExecutionDeps;
   },
@@ -927,9 +918,7 @@ export const evaluate = async ({ event }: { event: z.infer<typeof EvalExecutionE
   }
 
   if (!isJobConfigExecutable(config)) {
-    logger.debug(
-      `Skipping non-executable config ${config.id} for job ${job.id}`,
-    );
+    logger.debug(`Skipping non-executable config ${config.id} for job ${job.id}`);
     await prisma.jobExecution.update({
       where: {
         id: job.id,
@@ -1174,8 +1163,7 @@ export async function extractVariablesFromTracingData({
   return results;
 }
 
-const snakeToCamel = (s: string) =>
-  s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+const snakeToCamel = (s: string) => s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 
 // Returns the typed value extracted from a database row. LLM-as-judge
 // stringifies at template-substitution time via `compileEvalPrompt`; code-
@@ -1185,9 +1173,7 @@ export const parseDatabaseRowValue = (
   mapping: z.infer<typeof variableMapping>,
 ): unknown => {
   // Prisma returns camelCase keys, but selectedColumnId may be snake_case
-  const selectedColumn =
-    dbRow[mapping.selectedColumnId] ??
-    dbRow[snakeToCamel(mapping.selectedColumnId)];
+  const selectedColumn = dbRow[mapping.selectedColumnId] ?? dbRow[snakeToCamel(mapping.selectedColumnId)];
 
   let jsonSelectedColumn;
 

@@ -1,4 +1,4 @@
-import { ScoreDataTypeEnum } from "@langfuse/shared";
+import { ScoreDataTypeEnum } from "@hanzo/console";
 
 export const numericOutputDefinitionDefaults = {
   scoreDataType: ScoreDataTypeEnum.NUMERIC,

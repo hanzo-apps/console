@@ -1,1 +1,1 @@
-export { aisdkAdapter } from "@hanzo/console-core";
+export { aisdkAdapter } from "@hanzo/console";

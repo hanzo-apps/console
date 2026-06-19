@@ -7,7 +7,7 @@ import {
   TextPromptContentSchema,
   COMMIT_MESSAGE_MAX_LENGTH,
   PromptType,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 
 const NewPromptBaseSchema = z.object({
   name: PromptNameSchema,
@@ -31,7 +31,10 @@ const NewChatPromptSchema = NewPromptBaseSchema.extend({
       (messages: Array<{ type?: ChatMessageType; content?: string }>) =>
         messages.every((message) => {
           const isPlaceholder = message?.type === ChatMessageType.Placeholder;
-          return !isPlaceholder || PlaceholderMessageSchema.safeParse(message).success;
+          return (
+            !isPlaceholder ||
+            PlaceholderMessageSchema.safeParse(message).success
+          );
         }),
       "Placeholder name must start with a letter and contain only alphanumeric characters and underscores",
     )
@@ -52,7 +55,10 @@ const NewTextPromptSchema = NewPromptBaseSchema.extend({
   textPrompt: TextPromptContentSchema,
 });
 
-export const NewPromptFormSchema = z.discriminatedUnion("type", [NewChatPromptSchema, NewTextPromptSchema]);
+export const NewPromptFormSchema = z.discriminatedUnion("type", [
+  NewChatPromptSchema,
+  NewTextPromptSchema,
+]);
 export type NewPromptFormSchemaType = z.infer<typeof NewPromptFormSchema>;
 
 export const PromptVariantSchema = z.union([

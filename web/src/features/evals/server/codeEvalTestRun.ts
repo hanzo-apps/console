@@ -12,7 +12,7 @@ import {
   type CodeEvalUserVisibleError,
   type DispatchResult,
   type InternalTraceWriteInput,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 
 import {
@@ -24,8 +24,8 @@ import {
   type FilterCondition,
   type ObservationForEval,
   type ObservationVariableMapping,
-} from "@langfuse/shared";
-import { EvalTemplateType, type PrismaClient } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { EvalTemplateType, type PrismaClient } from "@hanzo/console/src/db";
 import { env } from "@/src/env.mjs";
 import { getExperimentEvalPreviewFilters } from "@/src/features/evals/utils/experiment-eval-preview-utils";
 import {

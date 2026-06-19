@@ -25,7 +25,7 @@
  * SQL builder. Testing-Trophy weighting: heavy on integration, light on unit.
  */
 import type { Session } from "next-auth";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import {
@@ -35,8 +35,8 @@ import {
   createObservation,
   createObservationsCh,
   getTraceById,
-} from "@langfuse/shared/src/server";
-import { type TracingSearchType } from "@langfuse/shared";
+} from "@hanzo/console/src/server";
+import { type TracingSearchType } from "@hanzo/console";
 import { makeAPICall } from "@/src/__tests__/test-utils";
 import waitForExpect from "wait-for-expect";
 import { randomUUID } from "crypto";

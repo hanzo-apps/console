@@ -1,68 +1,93 @@
 import { z } from "zod/v4";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import {
   TableViewService,
   CreateTableViewPresetsInput,
   UpdateTableViewPresetsInput,
   UpdateTableViewPresetsNameInput,
-} from "@hanzo/shared/src/server";
-import { HanzoConflictError, Prisma, TableViewPresetTableName } from "@hanzo/shared";
+} from "@hanzo/console/src/server";
+import {
+  HanzoConflictError,
+  Prisma,
+  TableViewPresetTableName,
+} from "@hanzo/console";
 
 export const TableViewPresetsRouter = createTRPCRouter({
-  create: protectedProjectProcedure.input(CreateTableViewPresetsInput).mutation(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "TableViewPresets:CUD",
-    });
+  create: protectedProjectProcedure
+    .input(CreateTableViewPresetsInput)
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "TableViewPresets:CUD",
+      });
 
-    try {
-      const view = await TableViewService.createTableViewPresets(input, ctx.session.user?.id);
+      try {
+        const view = await TableViewService.createTableViewPresets(
+          input,
+          ctx.session.user?.id,
+        );
+
+        return {
+          success: true,
+          view,
+        };
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          throw new HanzoConflictError(
+            "Table view preset with this name already exists. Please choose a different name.",
+          );
+        }
+        throw error;
+      }
+    }),
+
+  update: protectedProjectProcedure
+    .input(UpdateTableViewPresetsInput)
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "TableViewPresets:CUD",
+      });
+
+      const view = await TableViewService.updateTableViewPresets(
+        input,
+        ctx.session.user?.id,
+      );
 
       return {
         success: true,
         view,
       };
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new HanzoConflictError(
-          "Table view preset with this name already exists. Please choose a different name.",
-        );
-      }
-      throw error;
-    }
-  }),
+    }),
 
-  update: protectedProjectProcedure.input(UpdateTableViewPresetsInput).mutation(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "TableViewPresets:CUD",
-    });
+  updateName: protectedProjectProcedure
+    .input(UpdateTableViewPresetsNameInput)
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "TableViewPresets:CUD",
+      });
 
-    const view = await TableViewService.updateTableViewPresets(input, ctx.session.user?.id);
+      const view = await TableViewService.updateTableViewPresetsName(
+        input,
+        ctx.session.user?.id,
+      );
 
-    return {
-      success: true,
-      view,
-    };
-  }),
-
-  updateName: protectedProjectProcedure.input(UpdateTableViewPresetsNameInput).mutation(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "TableViewPresets:CUD",
-    });
-
-    const view = await TableViewService.updateTableViewPresetsName(input, ctx.session.user?.id);
-
-    return {
-      success: true,
-      view,
-    };
-  }),
+      return {
+        success: true,
+        view,
+      };
+    }),
 
   delete: protectedProjectProcedure
     .input(
@@ -78,7 +103,10 @@ export const TableViewPresetsRouter = createTRPCRouter({
         scope: "TableViewPresets:CUD",
       });
 
-      await TableViewService.deleteTableViewPresets(input.tableViewPresetsId, input.projectId);
+      await TableViewService.deleteTableViewPresets(
+        input.tableViewPresetsId,
+        input.projectId,
+      );
 
       return {
         success: true,
@@ -100,7 +128,10 @@ export const TableViewPresetsRouter = createTRPCRouter({
         scope: "TableViewPresets:read",
       });
 
-      return await TableViewService.getTableViewPresetsByTableName(input.tableName, input.projectId);
+      return await TableViewService.getTableViewPresetsByTableName(
+        input.tableName,
+        input.projectId,
+      );
     }),
 
   getById: protectedProjectProcedure
@@ -112,7 +143,10 @@ export const TableViewPresetsRouter = createTRPCRouter({
         scope: "TableViewPresets:read",
       });
 
-      return await TableViewService.getTableViewPresetsById(input.viewId, input.projectId);
+      return await TableViewService.getTableViewPresetsById(
+        input.viewId,
+        input.projectId,
+      );
     }),
 
   generatePermalink: protectedProjectProcedure
@@ -131,6 +165,11 @@ export const TableViewPresetsRouter = createTRPCRouter({
         scope: "TableViewPresets:read",
       });
 
-      return await TableViewService.generatePermalink(input.baseUrl, input.viewId, input.tableName, input.projectId);
+      return await TableViewService.generatePermalink(
+        input.baseUrl,
+        input.viewId,
+        input.tableName,
+        input.projectId,
+      );
     }),
 });

@@ -1,1 +1,1 @@
-export { openAIAdapter } from "@hanzo/console-core";
+export { openAIAdapter } from "@hanzo/console";

@@ -1,2 +1,2 @@
 // Re-export from shared (moved to enable worker tests)
-export { ChatMlMessageSchema, ChatMlArraySchema } from "@hanzo/console-core";
+export { ChatMlMessageSchema, ChatMlArraySchema } from "@hanzo/console";

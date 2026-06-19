@@ -8,9 +8,9 @@ import {
   PostScoreConfigResponse,
   PutScoreConfigResponse,
 } from "@/src/features/public-api/types/score-configs";
-import { ScoreConfigDataType } from "@langfuse/shared";
-import { type ScoreConfig, prisma } from "@langfuse/shared/src/db";
-import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
+import { ScoreConfigDataType } from "@hanzo/console";
+import { type ScoreConfig, prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import { v4 } from "uuid";
 
 const configOne = [

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { v4 } from "uuid";
 import type Stripe from "stripe";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { handleSubscriptionChanged } from "@/src/ee/features/billing/server/stripeWebhookHandler";
 import { env } from "@/src/env.mjs";
 

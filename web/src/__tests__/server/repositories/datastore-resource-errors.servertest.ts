@@ -2,7 +2,7 @@ import {
   queryDatastore,
   queryDatastoreStream,
   ClickHouseResourceError,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { fail } from "assert";
 
 describe("ClickHouse Resource Error Handling", () => {

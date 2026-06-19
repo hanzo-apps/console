@@ -1,5 +1,5 @@
-vi.mock("@langfuse/shared/src/server", async () => ({
-  ...(await vi.importActual("@langfuse/shared/src/server")),
+vi.mock("@hanzo/console/src/server", async () => ({
+  ...(await vi.importActual("@hanzo/console/src/server")),
   DefaultEvalModelService: {
     fetchValidModelConfig: vi.fn(),
   },
@@ -9,14 +9,11 @@ vi.mock("@langfuse/shared/src/server", async () => ({
   testModelCall: vi.fn(),
 }));
 
-import {
-  createNumericEvalOutputDefinition,
-  LLMAdapter,
-} from "@langfuse/shared";
+import { createNumericEvalOutputDefinition, LLMAdapter } from "@hanzo/console";
 import {
   DefaultEvalModelService,
   testModelCall,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { getEvaluatorDefinitionPreflightError } from "@/src/features/evals/server/evaluator-preflight";
 
 const numericOutputDefinition = createNumericEvalOutputDefinition({

@@ -21,7 +21,7 @@ const {
   mockSendCloudSpendAlertEmail: vi.fn(),
 }));
 
-vi.mock("@langfuse/shared", () => ({
+vi.mock("@hanzo/console", () => ({
   parseDbOrg: (org: unknown) => org,
   Role: {
     ADMIN: "ADMIN",
@@ -29,7 +29,7 @@ vi.mock("@langfuse/shared", () => ({
   },
 }));
 
-vi.mock("@langfuse/shared/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     organization: {
       findFirst: mockOrganizationFindFirst,
@@ -43,7 +43,7 @@ vi.mock("@langfuse/shared/src/db", () => ({
   },
 }));
 
-vi.mock("@langfuse/shared/src/server", () => ({
+vi.mock("@hanzo/console/src/server", () => ({
   logger: {
     info: mockLoggerInfo,
     warn: mockLoggerWarn,

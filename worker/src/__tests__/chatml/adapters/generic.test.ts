@@ -5,7 +5,7 @@ import {
   normalizeOutput,
   combineInputOutputMessages,
   cleanLegacyOutput,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 
 describe("Generic Adapter", () => {
   it("should always detect (fallback)", () => {

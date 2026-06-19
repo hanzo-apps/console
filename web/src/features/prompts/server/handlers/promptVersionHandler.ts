@@ -1,15 +1,17 @@
-import { logger } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
 import { z } from "zod/v4";
-import { LATEST_PROMPT_LABEL } from "@hanzo/console-core";
+import { LATEST_PROMPT_LABEL } from "@hanzo/console";
 
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import { updatePromptLabelsForApi } from "@/src/features/prompts/server/prompt-api-service";
 
 const UpdatePromptBodySchema = z.object({
-  newLabels: z.array(z.string()).refine((labels) => !labels.includes(LATEST_PROMPT_LABEL), {
-    message: "Label 'latest' is always assigned to the latest prompt version",
-  }),
+  newLabels: z
+    .array(z.string())
+    .refine((labels) => !labels.includes(LATEST_PROMPT_LABEL), {
+      message: "Label 'latest' is always assigned to the latest prompt version",
+    }),
 });
 
 export const promptVersionHandler = withMiddlewares({

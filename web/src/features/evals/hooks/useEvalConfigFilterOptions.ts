@@ -1,8 +1,15 @@
 import { api } from "@/src/utils/api";
-import { type ExperimentEvalOptions, type ObservationEvalOptions } from "@hanzo/console-core";
+import {
+  type ExperimentEvalOptions,
+  type ObservationEvalOptions,
+} from "@hanzo/console";
 import { useMemo } from "react";
 
-export function useEvalConfigFilterOptions({ projectId }: { projectId: string }) {
+export function useEvalConfigFilterOptions({
+  projectId,
+}: {
+  projectId: string;
+}) {
   const traceFilterOptionsResponse = api.traces.filterOptions.useQuery(
     { projectId },
     {
@@ -14,23 +21,25 @@ export function useEvalConfigFilterOptions({ projectId }: { projectId: string })
     },
   );
 
-  const environmentFilterOptionsResponse = api.projects.environmentFilterOptions.useQuery(
-    {
-      projectId,
-    },
-    {
-      trpc: { context: { skipBatch: true } },
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      staleTime: Infinity,
-    },
-  );
+  const environmentFilterOptionsResponse =
+    api.projects.environmentFilterOptions.useQuery(
+      {
+        projectId,
+      },
+      {
+        trpc: { context: { skipBatch: true } },
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: Infinity,
+      },
+    );
 
-  const observationsFilterOptionsResponse = api.generations.filterOptions.useQuery({
-    projectId,
-    observationType: "ALL",
-  });
+  const observationsFilterOptionsResponse =
+    api.generations.filterOptions.useQuery({
+      projectId,
+      observationType: "ALL",
+    });
 
   const traceFilterOptions = useMemo(() => {
     // Normalize API response to match TraceOptions type (count should be number, not string)
@@ -102,7 +111,11 @@ export function useEvalConfigFilterOptions({ projectId }: { projectId: string })
           value: t.value,
         })),
     };
-  }, [traceFilterOptionsResponse.data, environmentFilterOptionsResponse.data, observationsFilterOptionsResponse.data]);
+  }, [
+    traceFilterOptionsResponse.data,
+    environmentFilterOptionsResponse.data,
+    observationsFilterOptionsResponse.data,
+  ]);
 
   const experimentEvalFilterOptions: ExperimentEvalOptions = useMemo(() => {
     return {

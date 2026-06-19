@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it, afterAll, vi } from "vitest";
-import type * as SharedEnvModule from "@langfuse/shared/src/env";
+import type * as SharedEnvModule from "@hanzo/console/src/env";
 
 vi.hoisted(() => {
   process.env.LANGFUSE_CODE_EVAL_DISPATCHER = "insecure-local";
 });
 
-vi.mock("@langfuse/shared/src/env", async (importOriginal) => {
+vi.mock("@hanzo/console/src/env", async (importOriginal) => {
   const actual = await importOriginal<typeof SharedEnvModule>();
 
   return {
@@ -27,7 +27,7 @@ import {
 import { env } from "@/src/env.mjs";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   createEvent,
   createEventsCh,
@@ -37,8 +37,8 @@ import {
   createTrace,
   createTracesCh,
   queryDatastore,
-} from "@langfuse/shared/src/server";
-import { EvalTargetObject } from "@langfuse/shared";
+} from "@hanzo/console/src/server";
+import { EvalTargetObject } from "@hanzo/console";
 
 const orgIds: string[] = [];
 

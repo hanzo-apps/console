@@ -2,7 +2,7 @@ import {
   createTracesCh,
   createTrace,
   getEnvironmentsForProject,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 
 describe("Datastore Project Repository Test", () => {

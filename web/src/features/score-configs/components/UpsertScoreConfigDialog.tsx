@@ -13,12 +13,29 @@ import {
 import { PlusIcon, Trash } from "lucide-react";
 import { type UseFormReturn, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/src/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
 import { api } from "@/src/utils/api";
 import { Textarea } from "@/src/components/ui/textarea";
-import { isBooleanDataType, isCategoricalDataType, isNumericDataType } from "@/src/features/scores/lib/helpers";
+import {
+  isBooleanDataType,
+  isCategoricalDataType,
+  isNumericDataType,
+} from "@/src/features/scores/lib/helpers";
 import DocPopup from "@/src/components/layouts/doc-popup";
 import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import {
@@ -28,7 +45,7 @@ import {
   type UpdateConfig,
 } from "@/src/features/score-configs/lib/upsertFormTypes";
 import { validateScoreConfigUpsertFormInput } from "@/src/features/score-configs/lib/validateScoreConfigUpsertFormInput";
-import { ScoreConfigDataType } from "@hanzo/shared";
+import { ScoreConfigDataType } from "@hanzo/console";
 
 export function UpsertScoreConfigDialog({
   projectId,
@@ -54,12 +71,14 @@ export function UpsertScoreConfigDialog({
   const utils = api.useUtils();
   const createScoreConfig = api.scoreConfigs.create.useMutation({
     onSuccess: () => utils.scoreConfigs.invalidate(),
-    onError: (error) => setFormError(error.message ?? "An error occurred while creating config."),
+    onError: (error) =>
+      setFormError(error.message ?? "An error occurred while creating config."),
   });
 
   const updateScoreConfig = api.scoreConfigs.update.useMutation({
     onSuccess: () => utils.scoreConfigs.invalidate(),
-    onError: (error) => setFormError(error.message ?? "An error occurred while updating config."),
+    onError: (error) =>
+      setFormError(error.message ?? "An error occurred while updating config."),
   });
 
   const form = useForm({
@@ -137,7 +156,9 @@ export function UpsertScoreConfigDialog({
         </DialogTrigger>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{id ? "Update score config" : "Add new score config"}</DialogTitle>
+            <DialogTitle>
+              {id ? "Update score config" : "Add new score config"}
+            </DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
@@ -149,7 +170,13 @@ export function UpsertScoreConfigDialog({
                     <FormItem>
                       <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input {...field} type="text" onBlur={(e) => field.onChange(e.target.value.trimEnd())} />
+                        <Input
+                          {...field}
+                          type="text"
+                          onBlur={(e) =>
+                            field.onChange(e.target.value.trimEnd())
+                          }
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -177,7 +204,9 @@ export function UpsertScoreConfigDialog({
                           } else {
                             form.setValue("minValue", undefined);
                             form.setValue("maxValue", undefined);
-                            if (isBooleanDataType(value as ScoreConfigDataType)) {
+                            if (
+                              isBooleanDataType(value as ScoreConfigDataType)
+                            ) {
                               replace([
                                 { label: "True", value: 1 },
                                 { label: "False", value: 0 },
@@ -194,11 +223,13 @@ export function UpsertScoreConfigDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.values(ScoreConfigDataType).map((dataType) => (
-                            <SelectItem value={dataType} key={dataType}>
-                              {dataType}
-                            </SelectItem>
-                          ))}
+                          {Object.values(ScoreConfigDataType).map(
+                            (dataType) => (
+                              <SelectItem value={dataType} key={dataType}>
+                                {dataType}
+                              </SelectItem>
+                            ),
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -220,7 +251,9 @@ export function UpsertScoreConfigDialog({
                               // manually manage controlled input state
                               onChange={(e) => {
                                 const value = e.target.value;
-                                field.onChange(value === "" ? undefined : Number(value));
+                                field.onChange(
+                                  value === "" ? undefined : Number(value),
+                                );
                               }}
                               type="number"
                             />
@@ -242,7 +275,9 @@ export function UpsertScoreConfigDialog({
                               // manually manage controlled input state
                               onChange={(e) => {
                                 const value = e.target.value;
-                                field.onChange(value === "" ? undefined : Number(value));
+                                field.onChange(
+                                  value === "" ? undefined : Number(value),
+                                );
                               }}
                               type="number"
                             />
@@ -265,7 +300,11 @@ export function UpsertScoreConfigDialog({
                                 Value
                                 <DocPopup
                                   description={`This is how the ${
-                                    isCategoricalDataType(form.getValues("dataType")) ? "category" : "boolean"
+                                    isCategoricalDataType(
+                                      form.getValues("dataType"),
+                                    )
+                                      ? "category"
+                                      : "boolean"
                                   } label is mapped to an integer value internally.`}
                                 />
                               </FormLabel>
@@ -283,7 +322,13 @@ export function UpsertScoreConfigDialog({
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} readOnly disabled inputMode="numeric" className="text-center" />
+                                      <Input
+                                        {...field}
+                                        readOnly
+                                        disabled
+                                        inputMode="numeric"
+                                        className="text-center"
+                                      />
                                     </FormControl>
                                     <FormMessage />
                                   </FormItem>
@@ -299,20 +344,30 @@ export function UpsertScoreConfigDialog({
                                         <Input
                                           {...field}
                                           type="text"
-                                          onBlur={(e) => field.onChange(e.target.value.trimEnd())}
-                                          readOnly={isBooleanDataType(form.getValues("dataType"))}
+                                          onBlur={(e) =>
+                                            field.onChange(
+                                              e.target.value.trimEnd(),
+                                            )
+                                          }
+                                          readOnly={isBooleanDataType(
+                                            form.getValues("dataType"),
+                                          )}
                                         />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>
                                   )}
                                 />
-                                {isCategoricalDataType(form.getValues("dataType")) && (
+                                {isCategoricalDataType(
+                                  form.getValues("dataType"),
+                                ) && (
                                   <Button
                                     onClick={() => remove(index)}
                                     variant="outline"
                                     size="icon"
-                                    disabled={index === 0 || index !== fields.length - 1}
+                                    disabled={
+                                      index === 0 || index !== fields.length - 1
+                                    }
                                   >
                                     <Trash className="h-4 w-4" />
                                   </Button>
@@ -320,13 +375,21 @@ export function UpsertScoreConfigDialog({
                               </div>
                             </div>
                           ))}
-                          {isCategoricalDataType(form.getValues("dataType")) && (
+                          {isCategoricalDataType(
+                            form.getValues("dataType"),
+                          ) && (
                             <div className="grid-cols-auto grid">
                               <Button
                                 type="button"
                                 variant="secondary"
-                                disabled={isBooleanDataType(form.getValues("dataType")) && fields.length === 2}
-                                onClick={() => append({ label: "", value: fields.length })}
+                                disabled={
+                                  isBooleanDataType(
+                                    form.getValues("dataType"),
+                                  ) && fields.length === 2
+                                }
+                                onClick={() =>
+                                  append({ label: "", value: fields.length })
+                                }
                               >
                                 Add category
                               </Button>
@@ -364,7 +427,12 @@ export function UpsertScoreConfigDialog({
                       <span className="font-bold">Error:</span> {formError}
                     </p>
                   ) : null}
-                  <Button type="submit" loading={createScoreConfig.isPending || updateScoreConfig.isPending}>
+                  <Button
+                    type="submit"
+                    loading={
+                      createScoreConfig.isPending || updateScoreConfig.isPending
+                    }
+                  >
                     Submit
                   </Button>
                 </div>

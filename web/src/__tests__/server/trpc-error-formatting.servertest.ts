@@ -1,7 +1,7 @@
 import type { Session } from "next-auth";
 import { TRPCError } from "@trpc/server";
 import * as z from "zod";
-import { ClickHouseResourceError } from "@langfuse/shared/src/server";
+import { ClickHouseResourceError } from "@hanzo/console/src/server";
 import {
   createInnerTRPCContext,
   createTRPCRouter,

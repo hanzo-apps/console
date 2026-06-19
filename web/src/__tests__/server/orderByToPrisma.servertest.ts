@@ -3,12 +3,12 @@ import {
   orderByToDatastoreSql,
   orderByToPrismaSql,
   tracesTableUiColumnDefinitions,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   InvalidRequestError,
   normalizeOrderByForTable,
   tracesTableCols,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 // The test for the orderByToPrisma function
 describe("orderByToPrisma (Convert orderBy to Prisma.sql)", () => {

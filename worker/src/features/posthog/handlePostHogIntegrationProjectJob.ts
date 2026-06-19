@@ -1,5 +1,5 @@
 import { Job } from "@hanzo/mq";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   QueueName,
   TQueueJobTypes,
@@ -10,14 +10,14 @@ import {
   getEventsForAnalyticsIntegrations,
   getCurrentSpan,
   validateWebhookURL,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   transformTraceForPostHog,
   transformGenerationForPostHog,
   transformEventForPostHog,
   transformScoreForPostHog,
 } from "./transformers";
-import { decrypt } from "@langfuse/shared/encryption";
+import { decrypt } from "@hanzo/console/encryption";
 import { PostHog } from "posthog-node";
 
 type PostHogExecutionConfig = {

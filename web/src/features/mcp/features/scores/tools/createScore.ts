@@ -5,7 +5,7 @@ import {
   PostScoresBodyV1,
   PostScoresResponseV1,
   UnauthorizedError,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";
 import { defineTool } from "../../../core/define-tool";
 import { runMcpTool } from "../../../core/run-mcp-tool";

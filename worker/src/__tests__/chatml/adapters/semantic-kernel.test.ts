@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  semanticKernelAdapter,
-  selectAdapter,
-  SimpleChatMlArraySchema,
-  type NormalizerContext,
-} from "@hanzo/console-core";
+import { semanticKernelAdapter, selectAdapter, SimpleChatMlArraySchema, type NormalizerContext } from "@hanzo/console";
 
 const skMetadata = {
   scope: { name: "Microsoft.SemanticKernel.Diagnostics", version: "" },

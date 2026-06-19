@@ -1,4 +1,4 @@
-import { EvalTargetObject } from "@langfuse/shared";
+import { EvalTargetObject } from "@hanzo/console";
 import { resolveCheckboxOperator } from "@/src/features/filters/hooks/useSidebarFilterState";
 import { evalConfigFilterColumns } from "@/src/server/api/definitions/evalConfigsTable";
 

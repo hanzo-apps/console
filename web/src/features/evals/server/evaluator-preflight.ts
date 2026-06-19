@@ -2,11 +2,11 @@ import {
   compilePersistedEvalOutputDefinition,
   EvalTemplateType,
   PersistedEvalOutputDefinitionSchema,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import {
   DefaultEvalModelService,
   testModelCall,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 export type EvaluatorPreflightDefinition = {
   name: string;

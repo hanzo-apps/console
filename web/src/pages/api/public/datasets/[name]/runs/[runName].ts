@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   GetDatasetRunV1Query,
   GetDatasetRunV1Response,
@@ -8,9 +8,9 @@ import {
 } from "@/src/features/public-api/types/datasets";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
-import { ApiError, HanzoNotFoundError } from "@hanzo/shared";
+import { ApiError, HanzoNotFoundError } from "@hanzo/console";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
-import { addToDeleteDatasetQueue } from "@hanzo/shared/src/server";
+import { addToDeleteDatasetQueue } from "@hanzo/console/src/server";
 import { generateDatasetRunItemsForPublicApi } from "@/src/features/public-api/server/dataset-run-items";
 
 export default withMiddlewares({

@@ -5,14 +5,14 @@ import { SpanKind } from "@opentelemetry/api";
 
 import { env } from "@/src/env.mjs";
 
-import { parseDbOrg } from "@hanzo/shared";
+import { parseDbOrg } from "@hanzo/console";
 import {
   logger,
   getBillingCycleStart,
   getBillingCycleEnd,
   instrumentAsync,
   traceException,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 
 import {
   type Expanded,

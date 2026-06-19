@@ -13,13 +13,13 @@ import {
   TraceNullRecordInsertType,
   DatasetRunItemRecordInsertType,
   EventRecordInsertType,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 
 import { Decimal } from "decimal.js";
 
 import { env } from "../../env";
-import { logger } from "@hanzo/console-core/src/server";
-import { instrumentAsync } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
+import { instrumentAsync } from "@hanzo/console/src/server";
 import { backOff } from "exponential-backoff";
 
 export class DatastoreWriter {

@@ -2,8 +2,8 @@ import type { Session } from "next-auth";
 import * as z from "zod";
 import { env } from "@/src/env.mjs";
 
-vi.mock("@langfuse/shared/src/server", async () => {
-  const originalModule = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const originalModule = await vi.importActual("@hanzo/console/src/server");
   return {
     ...originalModule,
     getTraceById: vi.fn(),
@@ -18,7 +18,7 @@ import {
   protectedGetSessionProcedure,
 } from "@/src/server/api/trpc";
 import { resetAdminAccessWebhookCacheForTests } from "@/src/server/adminAccessWebhook";
-import { getTraceById } from "@langfuse/shared/src/server";
+import { getTraceById } from "@hanzo/console/src/server";
 
 const middlewareTestRouter = createTRPCRouter({
   project: protectedProjectProcedureWithoutTracing

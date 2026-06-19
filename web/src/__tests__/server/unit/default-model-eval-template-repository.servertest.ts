@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { EvalTemplateType, type Prisma } from "@langfuse/shared/src/db";
+import { EvalTemplateType, type Prisma } from "@hanzo/console/src/db";
 import { findDefaultModelEvalTemplateIds } from "@/src/features/evals/server/defaultModelEvalTemplateRepository";
 
 describe("findDefaultModelEvalTemplateIds", () => {

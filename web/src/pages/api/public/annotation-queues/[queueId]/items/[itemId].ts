@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -9,8 +9,8 @@ import {
   DeleteAnnotationQueueItemQuery,
   DeleteAnnotationQueueItemResponse,
 } from "@/src/features/public-api/types/annotation-queues";
-import { ConsoleNotFoundError } from "@hanzo/console-core";
-import { AnnotationQueueStatus } from "@hanzo/console-core";
+import { ConsoleNotFoundError } from "@hanzo/console";
+import { AnnotationQueueStatus } from "@hanzo/console";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({
@@ -87,7 +87,10 @@ export default withMiddlewares({
 
       const updateData = {
         ...body,
-        completedAt: body.status === AnnotationQueueStatus.COMPLETED ? new Date() : undefined,
+        completedAt:
+          body.status === AnnotationQueueStatus.COMPLETED
+            ? new Date()
+            : undefined,
       };
 
       const item = await prisma.annotationQueueItem.update({

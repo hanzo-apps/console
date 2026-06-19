@@ -1,4 +1,4 @@
-import { AnalyticsIntegrationExportSource } from "@hanzo/console-core";
+import { AnalyticsIntegrationExportSource } from "@hanzo/console";
 import { z } from "zod/v4";
 
 export const insightsIntegrationFormSchema = z.object({
@@ -8,5 +8,7 @@ export const insightsIntegrationFormSchema = z.object({
       "Hanzo Insights 'Project API Key' must start with 'phc_'. You can find it in the Hanzo Insights project settings.",
   }),
   enabled: z.boolean(),
-  exportSource: z.enum(AnalyticsIntegrationExportSource).default(AnalyticsIntegrationExportSource.TRACES_OBSERVATIONS),
+  exportSource: z
+    .enum(AnalyticsIntegrationExportSource)
+    .default(AnalyticsIntegrationExportSource.TRACES_OBSERVATIONS),
 });

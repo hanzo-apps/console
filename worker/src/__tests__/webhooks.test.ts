@@ -5,11 +5,11 @@ import {
   JobConfigState,
   PromptDomainSchema,
   WebhookActionConfigWithSecrets,
-} from "@hanzo/console-core";
-import { WebhookInput, createOrgProjectAndApiKey, getActionByIdWithSecrets } from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
-import { decrypt, encrypt, generateWebhookSignature } from "@hanzo/console-core/encryption";
-import { generateWebhookSecret } from "@hanzo/console-core/encryption";
+} from "@hanzo/console";
+import { WebhookInput, createOrgProjectAndApiKey, getActionByIdWithSecrets } from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { decrypt, encrypt, generateWebhookSignature } from "@hanzo/console/encryption";
+import { generateWebhookSecret } from "@hanzo/console/encryption";
 import { setupServer } from "msw/node";
 import { http, HttpResponse } from "msw";
 import { executeWebhook } from "../queues/webhooks";
@@ -608,15 +608,9 @@ describe("Webhook Integration Tests", () => {
       expect(typeof config.lastFailingExecutionId).toBe("string");
 
       // Encrypted request headers are preserved when lastFailingExecutionId is written.
-      expect(config.requestHeaders["x-secret-api-key"].value).toBe(
-        encryptedSecretHeaderValue,
-      );
-      expect(config.requestHeaders["x-secret-api-key"].value).not.toBe(
-        secretHeaderValue,
-      );
-      expect(decrypt(config.requestHeaders["x-secret-api-key"].value)).toBe(
-        secretHeaderValue,
-      );
+      expect(config.requestHeaders["x-secret-api-key"].value).toBe(encryptedSecretHeaderValue);
+      expect(config.requestHeaders["x-secret-api-key"].value).not.toBe(secretHeaderValue);
+      expect(decrypt(config.requestHeaders["x-secret-api-key"].value)).toBe(secretHeaderValue);
     });
 
     it("should execute webhook with secret headers correctly", async () => {
@@ -1140,7 +1134,7 @@ describe("Webhook Integration Tests", () => {
       });
 
       // Import the function to test it directly
-      const { getConsecutiveAutomationFailures } = await import("@hanzo/console-core/src/server");
+      const { getConsecutiveAutomationFailures } = await import("@hanzo/console/src/server");
 
       // Check that consecutive failures is 0 since there are no executions after the lastFailingExecutionId
       const failures = await getConsecutiveAutomationFailures({

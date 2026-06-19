@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { EvalTemplateSourceCodeLanguage } from "@langfuse/shared";
+import { EvalTemplateSourceCodeLanguage } from "@hanzo/console";
 
 import {
   type CodeEvalSourceCodeLanguage,

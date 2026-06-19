@@ -1,5 +1,5 @@
-vi.mock("@langfuse/shared/src/server", async () => {
-  const actual = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     fetchLLMCompletion: vi.fn(),
@@ -7,17 +7,17 @@ vi.mock("@langfuse/shared/src/server", async () => {
 });
 
 import type { Session } from "next-auth";
-import { BEDROCK_USE_DEFAULT_CREDENTIALS, LLMAdapter } from "@langfuse/shared";
+import { BEDROCK_USE_DEFAULT_CREDENTIALS, LLMAdapter } from "@hanzo/console";
 import { env } from "@/src/env.mjs";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { decrypt, encrypt } from "@langfuse/shared/encryption";
+import { decrypt, encrypt } from "@hanzo/console/encryption";
 import { AuthMethod } from "@/src/features/llm-api-key/types";
 import {
   createOrgProjectAndApiKey,
   fetchLLMCompletion,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 const mockFetchLLMCompletion = vi.mocked(fetchLLMCompletion);
 

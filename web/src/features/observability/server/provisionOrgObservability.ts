@@ -1,5 +1,5 @@
 import { env } from "@/src/env.mjs";
-import { logger } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
 
 interface ProvisionOrgObservabilityInput {
   orgId: string;
@@ -26,15 +26,23 @@ const headers = (token: string) => ({
  *
  * Returns config to be stored in org's cloudConfig.
  */
-export async function provisionOrgObservability(input: ProvisionOrgObservabilityInput): Promise<ObservabilityConfig> {
+export async function provisionOrgObservability(
+  input: ProvisionOrgObservabilityInput,
+): Promise<ObservabilityConfig> {
   const config: ObservabilityConfig = {};
 
-  await Promise.all([provisionUmami(input, config), provisionInsights(input, config)]);
+  await Promise.all([
+    provisionUmami(input, config),
+    provisionInsights(input, config),
+  ]);
 
   return config;
 }
 
-async function provisionUmami(input: ProvisionOrgObservabilityInput, config: ObservabilityConfig): Promise<void> {
+async function provisionUmami(
+  input: ProvisionOrgObservabilityInput,
+  config: ObservabilityConfig,
+): Promise<void> {
   if (!env.ANALYTICS_API_URL || !env.ANALYTICS_SERVICE_TOKEN) return;
 
   const baseUrl = env.ANALYTICS_API_URL;
@@ -49,7 +57,9 @@ async function provisionUmami(input: ProvisionOrgObservabilityInput, config: Obs
     });
 
     if (!teamRes.ok) {
-      logger.error(`Failed to create Umami team for org ${input.orgId}: ${teamRes.status} ${await teamRes.text()}`);
+      logger.error(
+        `Failed to create Umami team for org ${input.orgId}: ${teamRes.status} ${await teamRes.text()}`,
+      );
       return;
     }
 
@@ -70,16 +80,26 @@ async function provisionUmami(input: ProvisionOrgObservabilityInput, config: Obs
     if (siteRes.ok) {
       const website = (await siteRes.json()) as { id: string };
       config.analyticsWebsiteId = website.id;
-      logger.info(`Created Umami website for org ${input.orgId}: ${website.id}`);
+      logger.info(
+        `Created Umami website for org ${input.orgId}: ${website.id}`,
+      );
     } else {
-      logger.error(`Failed to create Umami website for org ${input.orgId}: ${siteRes.status} ${await siteRes.text()}`);
+      logger.error(
+        `Failed to create Umami website for org ${input.orgId}: ${siteRes.status} ${await siteRes.text()}`,
+      );
     }
   } catch (e) {
-    logger.error(`Error provisioning Umami for org ${input.orgId}`, e instanceof Error ? e.message : String(e));
+    logger.error(
+      `Error provisioning Umami for org ${input.orgId}`,
+      e instanceof Error ? e.message : String(e),
+    );
   }
 }
 
-async function provisionInsights(input: ProvisionOrgObservabilityInput, config: ObservabilityConfig): Promise<void> {
+async function provisionInsights(
+  input: ProvisionOrgObservabilityInput,
+  config: ObservabilityConfig,
+): Promise<void> {
   if (!env.INSIGHTS_API_URL || !env.INSIGHTS_SERVICE_TOKEN) return;
 
   const baseUrl = env.INSIGHTS_API_URL;
@@ -94,7 +114,9 @@ async function provisionInsights(input: ProvisionOrgObservabilityInput, config: 
     });
 
     if (!orgRes.ok) {
-      logger.error(`Failed to create Insights org for ${input.orgId}: ${orgRes.status} ${await orgRes.text()}`);
+      logger.error(
+        `Failed to create Insights org for ${input.orgId}: ${orgRes.status} ${await orgRes.text()}`,
+      );
       return;
     }
 
@@ -104,13 +126,16 @@ async function provisionInsights(input: ProvisionOrgObservabilityInput, config: 
 
     // 2. Create project under the organization
     // Insights API: POST /api/organizations/:id/projects/
-    const projRes = await fetch(`${baseUrl}/api/organizations/${org.id}/projects/`, {
-      method: "POST",
-      headers: auth,
-      body: JSON.stringify({
-        name: `${input.orgName} Production`,
-      }),
-    });
+    const projRes = await fetch(
+      `${baseUrl}/api/organizations/${org.id}/projects/`,
+      {
+        method: "POST",
+        headers: auth,
+        body: JSON.stringify({
+          name: `${input.orgName} Production`,
+        }),
+      },
+    );
 
     if (projRes.ok) {
       const project = (await projRes.json()) as {
@@ -121,9 +146,14 @@ async function provisionInsights(input: ProvisionOrgObservabilityInput, config: 
       config.insightsApiKey = project.api_token;
       logger.info(`Created Insights project for ${input.orgId}: ${project.id}`);
     } else {
-      logger.error(`Failed to create Insights project for ${input.orgId}: ${projRes.status} ${await projRes.text()}`);
+      logger.error(
+        `Failed to create Insights project for ${input.orgId}: ${projRes.status} ${await projRes.text()}`,
+      );
     }
   } catch (e) {
-    logger.error(`Error provisioning Insights for org ${input.orgId}`, e instanceof Error ? e.message : String(e));
+    logger.error(
+      `Error provisioning Insights for org ${input.orgId}`,
+      e instanceof Error ? e.message : String(e),
+    );
   }
 }

@@ -1,11 +1,6 @@
 import { IBackgroundMigration } from "./IBackgroundMigration";
-import {
-  datastoreClient,
-  convertDateToDatastoreDateTime,
-  logger,
-  queryDatastore,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+import { datastoreClient, convertDateToDatastoreDateTime, logger, queryDatastore } from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { env } from "../env";
 import {
   DatasetRunItem,

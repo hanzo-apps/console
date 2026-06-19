@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { api } from "@/src/utils/api";
 import { useCorrectionCache } from "@/src/features/corrections/contexts/CorrectionCacheContext";
-import { type ScoreDomain } from "@hanzo/console-core";
+import { type ScoreDomain } from "@hanzo/console";
 import { toast } from "sonner";
 import { v4 } from "uuid";
 
@@ -10,7 +10,10 @@ interface UseCorrectionMutationsParams {
   traceId: string;
   observationId: string | undefined;
   environment: string | undefined;
-  effectiveCorrection: Pick<ScoreDomain, "id" | "longStringValue" | "timestamp"> | null | undefined;
+  effectiveCorrection:
+    | Pick<ScoreDomain, "id" | "longStringValue" | "timestamp">
+    | null
+    | undefined;
 }
 
 /**
@@ -24,7 +27,9 @@ export function useCorrectionMutations({
   effectiveCorrection,
 }: UseCorrectionMutationsParams) {
   const correctionCache = useCorrectionCache();
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
 
   const upsertMutation = api.scores.upsertCorrection.useMutation({
     onMutate: async (variables) => {
@@ -78,14 +83,19 @@ export function useCorrectionMutations({
       toast.error("Failed to delete correction");
       // Rollback delete - restore to cache if we had a previous value
       if (context?.correctionId) {
-        correctionCache.rollbackDelete(context.correctionId, context.previousValue);
+        correctionCache.rollbackDelete(
+          context.correctionId,
+          context.previousValue,
+        );
       }
     },
   });
 
   const handleSave = useCallback(
     (value: string) => {
-      const isDeleted = correctionCache.isDeleted(effectiveCorrection?.id ?? "");
+      const isDeleted = correctionCache.isDeleted(
+        effectiveCorrection?.id ?? "",
+      );
 
       upsertMutation.mutate({
         projectId,
@@ -94,7 +104,9 @@ export function useCorrectionMutations({
         traceId,
         observationId,
         value,
-        timestamp: isDeleted ? new Date() : (effectiveCorrection?.timestamp ?? new Date()),
+        timestamp: isDeleted
+          ? new Date()
+          : (effectiveCorrection?.timestamp ?? new Date()),
       });
     },
     [

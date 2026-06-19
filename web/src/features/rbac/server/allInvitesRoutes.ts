@@ -1,7 +1,13 @@
-import { throwIfNoOrganizationAccess, hasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
+import {
+  throwIfNoOrganizationAccess,
+  hasOrganizationAccess,
+} from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { hasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { protectedOrganizationProcedure, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { paginationZod, type PrismaClient, Role } from "@hanzo/shared";
+import {
+  protectedOrganizationProcedure,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
+import { paginationZod, type PrismaClient, Role } from "@hanzo/console";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -15,7 +21,9 @@ const projectLevelInviteQuery = z.object({
 });
 async function getInvites(
   prisma: PrismaClient,
-  query: z.infer<typeof orgLevelInviteQuery> | (z.infer<typeof projectLevelInviteQuery> & { orgId: string }),
+  query:
+    | z.infer<typeof orgLevelInviteQuery>
+    | (z.infer<typeof projectLevelInviteQuery> & { orgId: string }),
   showAllOrgMembers: boolean = true,
 ) {
   const where: Prisma.MembershipInvitationWhereInput = {
@@ -70,39 +78,43 @@ async function getInvites(
 }
 
 export const allInvitesRoutes = {
-  allInvitesFromOrg: protectedOrganizationProcedure.input(orgLevelInviteQuery).query(async ({ input, ctx }) => {
-    throwIfNoOrganizationAccess({
-      session: ctx.session,
-      organizationId: input.orgId,
-      scope: "organizationMembers:read",
-    });
-    return getInvites(ctx.prisma, input);
-  }),
-  allInvitesFromProject: protectedProjectProcedure.input(projectLevelInviteQuery).query(async ({ input, ctx }) => {
-    const orgId = ctx.session.orgId;
-    const orgAccess = hasOrganizationAccess({
-      session: ctx.session,
-      organizationId: orgId,
-      scope: "organizationMembers:read",
-    });
-    const projectAccess = hasProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "projectMembers:read",
-    });
-    if (!orgAccess && !projectAccess) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "You do not have the required access rights",
+  allInvitesFromOrg: protectedOrganizationProcedure
+    .input(orgLevelInviteQuery)
+    .query(async ({ input, ctx }) => {
+      throwIfNoOrganizationAccess({
+        session: ctx.session,
+        organizationId: input.orgId,
+        scope: "organizationMembers:read",
       });
-    }
-    return getInvites(
-      ctx.prisma,
-      {
-        ...input,
-        orgId,
-      },
-      orgAccess,
-    );
-  }),
+      return getInvites(ctx.prisma, input);
+    }),
+  allInvitesFromProject: protectedProjectProcedure
+    .input(projectLevelInviteQuery)
+    .query(async ({ input, ctx }) => {
+      const orgId = ctx.session.orgId;
+      const orgAccess = hasOrganizationAccess({
+        session: ctx.session,
+        organizationId: orgId,
+        scope: "organizationMembers:read",
+      });
+      const projectAccess = hasProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "projectMembers:read",
+      });
+      if (!orgAccess && !projectAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have the required access rights",
+        });
+      }
+      return getInvites(
+        ctx.prisma,
+        {
+          ...input,
+          orgId,
+        },
+        orgAccess,
+      );
+    }),
 };

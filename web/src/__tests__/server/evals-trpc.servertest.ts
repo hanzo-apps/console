@@ -1,5 +1,5 @@
 import { beforeEach, vi } from "vitest";
-import type * as SharedEnvModule from "@langfuse/shared/src/env";
+import type * as SharedEnvModule from "@hanzo/console/src/env";
 
 const { runCodeEvalTestForJobConfigMock } = vi.hoisted(() => {
   process.env.LANGFUSE_CODE_EVAL_DISPATCHER = "insecure-local";
@@ -10,7 +10,7 @@ const { runCodeEvalTestForJobConfigMock } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@langfuse/shared/src/env", async (importOriginal) => {
+vi.mock("@hanzo/console/src/env", async (importOriginal) => {
   const actual = await importOriginal<typeof SharedEnvModule>();
 
   return {
@@ -34,15 +34,15 @@ import {
   EvalTemplateSourceCodeLanguage,
   EvalTemplateType,
 } from "@prisma/client";
-import { prisma } from "@langfuse/shared/src/db";
-import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import {
   createBooleanEvalOutputDefinition,
   createCategoricalEvalOutputDefinition,
   createNumericEvalOutputDefinition,
   EvalTargetObject,
   EvaluatorBlockReason,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import type { Session } from "next-auth";
 
 beforeEach(() => {

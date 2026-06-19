@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeAll, afterEach } from "vitest";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { backfillValidToForDatasetItems } from "../backgroundMigrations/utils/datasetItems";
 
 const t0 = new Date("2024-01-01T00:00:00Z");
@@ -230,9 +230,7 @@ describe("BackfillValidToForDatasetItems", () => {
   it("should use LEAD() correctly - validate version chain order", async () => {
     // Item with 3 versions at different times
     await prisma.datasetItem.createMany({
-      data: items.filter(
-        (item) => item.id === "1" && item.projectId === projectIdA,
-      ),
+      data: items.filter((item) => item.id === "1" && item.projectId === projectIdA),
     });
 
     // Run migration

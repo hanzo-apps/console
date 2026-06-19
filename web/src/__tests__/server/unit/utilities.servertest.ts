@@ -3,7 +3,7 @@ const { validateOutboundUrlHostMock } = vi.hoisted(() => ({
     vi.fn<(options: { url: URL }) => Promise<void>>(),
 }));
 
-vi.mock("@langfuse/shared/src/server", async (importOriginal) => {
+vi.mock("@hanzo/console/src/server", async (importOriginal) => {
   const actual = await importOriginal();
 
   return {

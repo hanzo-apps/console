@@ -5,20 +5,20 @@ import {
   ForbiddenError,
   InternalServerError,
   InvalidRequestError,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 
 import { InsightsCallbackHandler } from "./analytics/insightsCallback";
 import { authorizeRequestOrThrow } from "./authorizeRequest";
 import { validateChatCompletionBody } from "./validateChatCompletionBody";
 
 import { env } from "@/src/env.mjs";
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   LLMApiKeySchema,
   logger,
   fetchLLMCompletion,
   contextWithHanzoProps,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import * as opentelemetry from "@opentelemetry/api";
 
 export default async function chatCompletionHandler(req: NextRequest) {

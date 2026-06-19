@@ -21,10 +21,14 @@ import { useSession } from "next-auth/react";
 import { Download, ExternalLinkIcon } from "lucide-react";
 import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
 import Page from "@/src/components/layouts/page";
-import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/src/components/ui/popover";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { Label } from "@/src/components/ui/label";
-import { AnnotationQueueObjectType, type ScoreDomain } from "@hanzo/shared";
+import { AnnotationQueueObjectType, type ScoreDomain } from "@hanzo/console";
 import { CreateNewAnnotationQueueItem } from "@/src/features/annotation-queues/components/CreateNewAnnotationQueueItem";
 import { TablePeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
@@ -38,7 +42,13 @@ import { Switch } from "@/src/components/ui/switch";
 const INITIAL_USERS_DISPLAY_COUNT = 10;
 const USERS_PER_PAGE_IN_POPOVER = 50;
 
-export function SessionUsers({ projectId, users }: { projectId: string; users?: string[] }) {
+export function SessionUsers({
+  projectId,
+  users,
+}: {
+  projectId: string;
+  users?: string[];
+}) {
   const [page, setPage] = useState(0);
 
   if (!users) return null;
@@ -49,7 +59,10 @@ export function SessionUsers({ projectId, users }: { projectId: string; users?: 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {initialUsers.map((userId: string) => (
-        <Link key={userId} href={`/project/${projectId}/users/${encodeURIComponent(userId ?? "")}`}>
+        <Link
+          key={userId}
+          href={`/project/${projectId}/users/${encodeURIComponent(userId ?? "")}`}
+        >
           <Badge className="max-w-[300px]">
             <span className="truncate">User ID: {userId}</span>
             <ExternalLinkIcon className="ml-1 h-3 w-3" />
@@ -69,12 +82,15 @@ export function SessionUsers({ projectId, users }: { projectId: string; users?: 
             <ScrollArea className="h-[300px]">
               <div className="flex flex-col gap-2 p-2">
                 {remainingUsers
-                  .slice(page * USERS_PER_PAGE_IN_POPOVER, (page + 1) * USERS_PER_PAGE_IN_POPOVER)
+                  .slice(
+                    page * USERS_PER_PAGE_IN_POPOVER,
+                    (page + 1) * USERS_PER_PAGE_IN_POPOVER,
+                  )
                   .map((userId: string) => (
                     <Link
                       key={userId}
                       href={`/project/${projectId}/users/${encodeURIComponent(userId ?? "")}`}
-                      className="block hover:bg-accent"
+                      className="hover:bg-accent block"
                     >
                       <Badge className="max-w-[260px]">
                         <span className="truncate">User ID: {userId}</span>
@@ -94,14 +110,18 @@ export function SessionUsers({ projectId, users }: { projectId: string; users?: 
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {page + 1} of {Math.ceil(remainingUsers.length / USERS_PER_PAGE_IN_POPOVER)}
+                <span className="text-muted-foreground text-sm">
+                  Page {page + 1} of{" "}
+                  {Math.ceil(remainingUsers.length / USERS_PER_PAGE_IN_POPOVER)}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
-                  disabled={(page + 1) * USERS_PER_PAGE_IN_POPOVER >= remainingUsers.length}
+                  disabled={
+                    (page + 1) * USERS_PER_PAGE_IN_POPOVER >=
+                    remainingUsers.length
+                  }
                 >
                   Next
                 </Button>
@@ -114,7 +134,11 @@ export function SessionUsers({ projectId, users }: { projectId: string; users?: 
   );
 }
 
-const SessionScores = ({ scores }: { scores: WithStringifiedMetadata<ScoreDomain>[] }) => {
+const SessionScores = ({
+  scores,
+}: {
+  scores: WithStringifiedMetadata<ScoreDomain>[];
+}) => {
   return (
     <div className="flex flex-wrap gap-1">
       <GroupedScoreBadges scores={scores} />
@@ -138,13 +162,20 @@ export const SessionPage: React.FC<{
     },
     {
       retry(failureCount, error) {
-        if (error.data?.code === "UNAUTHORIZED" || error.data?.code === "NOT_FOUND") return false;
+        if (
+          error.data?.code === "UNAUTHORIZED" ||
+          error.data?.code === "NOT_FOUND"
+        )
+          return false;
         return failureCount < 3;
       },
     },
   );
 
-  const [showCorrections, setShowCorrections] = useLocalStorage("showCorrections", false);
+  const [showCorrections, setShowCorrections] = useLocalStorage(
+    "showCorrections",
+    false,
+  );
 
   const sessionComments = api.comments.getByObjectId.useQuery({
     projectId,
@@ -195,16 +226,17 @@ export const SessionPage: React.FC<{
     capture("session_detail:download_button_click");
   }, [session.data, sessionId, projectId, capture, sessionComments, utils]);
 
-  const { openPeek, closePeek, resolveDetailNavigationPath, expandPeek } = usePeekNavigation({
-    expandConfig: {
-      // Expand peeked traces to the trace detail route; sessions list traces
-      basePath: `/project/${projectId}/traces`,
-    },
-    queryParams: ["observation", "display", "timestamp"],
-    extractParamsValuesFromRow: (row: any) => ({
-      timestamp: row.timestamp.toISOString(),
-    }),
-  });
+  const { openPeek, closePeek, resolveDetailNavigationPath, expandPeek } =
+    usePeekNavigation({
+      expandConfig: {
+        // Expand peeked traces to the trace detail route; sessions list traces
+        basePath: `/project/${projectId}/traces`,
+      },
+      queryParams: ["observation", "display", "timestamp"],
+      extractParamsValuesFromRow: (row: any) => ({
+        timestamp: row.timestamp.toISOString(),
+      }),
+    });
 
   useEffect(() => {
     if (session.isSuccess) {
@@ -228,13 +260,14 @@ export const SessionPage: React.FC<{
     { enabled: session.isSuccess && userSession.status === "authenticated" },
   );
 
-  const traceCommentCounts = api.comments.getTraceCommentCountsBySessionId.useQuery(
-    {
-      projectId,
-      sessionId,
-    },
-    { enabled: session.isSuccess && userSession.status === "authenticated" },
-  );
+  const traceCommentCounts =
+    api.comments.getTraceCommentCountsBySessionId.useQuery(
+      {
+        projectId,
+        sessionId,
+      },
+      { enabled: session.isSuccess && userSession.status === "authenticated" },
+    );
 
   // Virtualizer measures cheap skeleton, then updates once when hydrated
   const virtualizer = useVirtualizer({
@@ -243,7 +276,10 @@ export const SessionPage: React.FC<{
     estimateSize: () => 300,
     overscan: 1, // Render 1 item above/below viewport
     getItemKey: (index) => session.data?.traces[index]?.id ?? index,
-    measureElement: typeof window !== "undefined" ? (element) => element.getBoundingClientRect().height : undefined,
+    measureElement:
+      typeof window !== "undefined"
+        ? (element) => element.getBoundingClientRect().height
+        : undefined,
   });
 
   if (session.error?.data?.code === "UNAUTHORIZED")
@@ -296,11 +332,18 @@ export const SessionPage: React.FC<{
               <DetailPageNav
                 key="nav"
                 currentId={encodeURIComponent(sessionId)}
-                path={(entry) => `/project/${projectId}/sessions/${encodeURIComponent(entry.id)}`}
+                path={(entry) =>
+                  `/project/${projectId}/sessions/${encodeURIComponent(entry.id)}`
+                }
                 listKey="sessions"
               />
             )}
-            <Button variant="outline" size="icon" onClick={downloadSessionAsJson} title="Download session as JSON">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={downloadSessionAsJson}
+              title="Download session as JSON"
+            >
               <Download className="h-4 w-4" />
             </Button>
             <CommentDrawerButton
@@ -333,18 +376,32 @@ export const SessionPage: React.FC<{
               />
             </div>
             <div className="flex items-center">
-              <Switch checked={showCorrections} onCheckedChange={setShowCorrections} className="scale-75" />
-              <span className="text-xs text-muted-foreground">Show corrections</span>
+              <Switch
+                checked={showCorrections}
+                onCheckedChange={setShowCorrections}
+                className="scale-75"
+              />
+              <span className="text-muted-foreground text-xs">
+                Show corrections
+              </span>
             </div>
           </>
         ),
       }}
     >
       <div className="flex h-full flex-col overflow-auto">
-        <div className="sticky top-0 z-40 flex flex-wrap gap-2 border-b bg-background p-4">
-          {session.data?.users?.length ? <SessionUsers projectId={projectId} users={session.data.users} /> : null}
-          <Badge variant="outline">Total traces: {session.data?.traces.length}</Badge>
-          {session.data && <Badge variant="outline">Total cost: {usdFormatter(session.data.totalCost, 2)}</Badge>}
+        <div className="bg-background sticky top-0 z-40 flex flex-wrap gap-2 border-b p-4">
+          {session.data?.users?.length ? (
+            <SessionUsers projectId={projectId} users={session.data.users} />
+          ) : null}
+          <Badge variant="outline">
+            Total traces: {session.data?.traces.length}
+          </Badge>
+          {session.data && (
+            <Badge variant="outline">
+              Total cost: {usdFormatter(session.data.totalCost, 2)}
+            </Badge>
+          )}
           <SessionScores scores={session.data?.scores ?? []} />
         </div>
         <div ref={parentRef} className="flex-1 overflow-auto p-4">
@@ -382,7 +439,9 @@ export const SessionPage: React.FC<{
                     onLoad={() => {
                       // Force virtualizer to remeasure this specific item
                       virtualizer.measureElement(
-                        document.querySelector(`[data-index="${virtualItem.index}"]`) as HTMLElement,
+                        document.querySelector(
+                          `[data-index="${virtualItem.index}"]`,
+                        ) as HTMLElement,
                       );
                     }}
                   />
@@ -443,7 +502,10 @@ export const SessionIO = ({
   return (
     <div className="flex w-full flex-col gap-2 overflow-hidden p-0">
       {!trace.data ? (
-        <JsonSkeleton className="h-full w-full overflow-hidden px-2 py-1" numRows={4} />
+        <JsonSkeleton
+          className="h-full w-full overflow-hidden px-2 py-1"
+          numRows={4}
+        />
       ) : trace.data.input || trace.data.output ? (
         <IOPreview
           key={traceId}
@@ -459,7 +521,9 @@ export const SessionIO = ({
           showCorrections={showCorrections}
         />
       ) : (
-        <div className="p-2 text-xs text-muted-foreground">This trace has no input or output.</div>
+        <div className="text-muted-foreground p-2 text-xs">
+          This trace has no input or output.
+        </div>
       )}
     </div>
   );

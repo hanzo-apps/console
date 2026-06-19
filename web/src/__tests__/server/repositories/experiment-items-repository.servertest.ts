@@ -7,10 +7,10 @@ import {
   getExperimentItemsBatchIO,
   createTraceScore,
   type EventRecordInsertType,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 import { env } from "@/src/env.mjs";
-import { type FilterCondition } from "@langfuse/shared";
+import { type FilterCondition } from "@hanzo/console";
 
 /**
  * Helper to create an experiment event with experiment-specific fields populated.

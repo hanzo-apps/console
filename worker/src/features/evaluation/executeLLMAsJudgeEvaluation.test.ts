@@ -5,7 +5,7 @@ import { executeLLMAsJudgeEvaluation } from "./evalService";
 import { createMockEvalExecutionDeps } from "./evalExecutionDeps";
 import { UnrecoverableError } from "../../errors/UnrecoverableError";
 import { ExtractedVariable } from "./observationEval/extractObservationVariables";
-import { EvalTargetObject } from "@hanzo/console-core";
+import { EvalTargetObject } from "@hanzo/console";
 
 /**
  * Unit tests for executeLLMAsJudgeEvaluation with mocked dependencies.
@@ -447,8 +447,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
 
       await executeLLMAsJudgeEvaluation(createExecutionParams({ deps }));
 
-      const structuredOutputSchema = callLLM.mock.calls[0][0]
-        .structuredOutputSchema as z.ZodTypeAny;
+      const structuredOutputSchema = callLLM.mock.calls[0][0].structuredOutputSchema as z.ZodTypeAny;
 
       expect(
         structuredOutputSchema.safeParse({
@@ -482,8 +481,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
         }),
       );
 
-      const structuredOutputSchema = callLLM.mock.calls[0][0]
-        .structuredOutputSchema as z.ZodTypeAny;
+      const structuredOutputSchema = callLLM.mock.calls[0][0].structuredOutputSchema as z.ZodTypeAny;
 
       expect(
         structuredOutputSchema.safeParse({
@@ -500,10 +498,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
     });
 
     it("should pass categorical multi-match structured output schema to LLM", async () => {
-      const callLLM = mockSuccessfulLLMCall(
-        ["correct", "partial"],
-        "Both categories apply.",
-      );
+      const callLLM = mockSuccessfulLLMCall(["correct", "partial"], "Both categories apply.");
       const deps = createSuccessfulDeps({ callLLM });
 
       await executeLLMAsJudgeEvaluation(
@@ -527,8 +522,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
         }),
       );
 
-      const structuredOutputSchema = callLLM.mock.calls[0][0]
-        .structuredOutputSchema as z.ZodTypeAny;
+      const structuredOutputSchema = callLLM.mock.calls[0][0].structuredOutputSchema as z.ZodTypeAny;
 
       expect(
         structuredOutputSchema.safeParse({
@@ -551,10 +545,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
     });
 
     it("should pass boolean structured output schema to LLM", async () => {
-      const callLLM = mockSuccessfulLLMCall(
-        false,
-        "The answer does not satisfy the criteria.",
-      );
+      const callLLM = mockSuccessfulLLMCall(false, "The answer does not satisfy the criteria.");
       const deps = createSuccessfulDeps({ callLLM });
 
       await executeLLMAsJudgeEvaluation(
@@ -569,16 +560,14 @@ describe("executeLLMAsJudgeEvaluation", () => {
                 description: "Explain the verdict",
               },
               score: {
-                description:
-                  "Return true if the answer satisfies the criteria, otherwise false",
+                description: "Return true if the answer satisfies the criteria, otherwise false",
               },
             },
           },
         }),
       );
 
-      const structuredOutputSchema = callLLM.mock.calls[0][0]
-        .structuredOutputSchema as z.ZodTypeAny;
+      const structuredOutputSchema = callLLM.mock.calls[0][0].structuredOutputSchema as z.ZodTypeAny;
 
       expect(
         structuredOutputSchema.safeParse({
@@ -827,10 +816,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
     it("should persist categorical eval scores", async () => {
       const uploadScore = vi.fn();
       const deps = createSuccessfulDeps({
-        callLLM: mockSuccessfulLLMCall(
-          "correct",
-          "The answer is fully supported by the context.",
-        ),
+        callLLM: mockSuccessfulLLMCall("correct", "The answer is fully supported by the context."),
         uploadScore,
       });
 
@@ -870,10 +856,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
     it("should persist boolean eval scores", async () => {
       const uploadScore = vi.fn();
       const deps = createSuccessfulDeps({
-        callLLM: mockSuccessfulLLMCall(
-          true,
-          "The answer satisfies the criteria.",
-        ),
+        callLLM: mockSuccessfulLLMCall(true, "The answer satisfies the criteria."),
         uploadScore,
       });
 
@@ -889,8 +872,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
                 description: "Explain the verdict",
               },
               score: {
-                description:
-                  "Return true if the answer satisfies the criteria, otherwise false",
+                description: "Return true if the answer satisfies the criteria, otherwise false",
               },
             },
           },
@@ -912,10 +894,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
 
     it("should fail boolean evals when the model returns a string", async () => {
       const deps = createSuccessfulDeps({
-        callLLM: mockSuccessfulLLMCall(
-          "true",
-          "Strings should not be accepted for boolean evaluators.",
-        ),
+        callLLM: mockSuccessfulLLMCall("true", "Strings should not be accepted for boolean evaluators."),
       });
 
       await expect(
@@ -931,8 +910,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
                   description: "Explain the verdict",
                 },
                 score: {
-                  description:
-                    "Return true if the answer satisfies the criteria, otherwise false",
+                  description: "Return true if the answer satisfies the criteria, otherwise false",
                 },
               },
             },
@@ -943,10 +921,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
 
     it("should fail categorical evals when the model returns a category outside the allowed set", async () => {
       const deps = createSuccessfulDeps({
-        callLLM: mockSuccessfulLLMCall(
-          "incorrect",
-          "This category is not configured on the evaluator.",
-        ),
+        callLLM: mockSuccessfulLLMCall("incorrect", "This category is not configured on the evaluator."),
       });
 
       await expect(
@@ -974,10 +949,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
 
     it("should fail categorical evals when the model returns multiple matches for a single-match evaluator", async () => {
       const deps = createSuccessfulDeps({
-        callLLM: mockSuccessfulLLMCall(
-          ["correct", "partial"],
-          "This should fail because only one match is allowed.",
-        ),
+        callLLM: mockSuccessfulLLMCall(["correct", "partial"], "This should fail because only one match is allowed."),
       });
 
       await expect(
@@ -1008,10 +980,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
       const enqueueScoreIngestion = vi.fn();
       const updateJobExecution = vi.fn();
       const deps = createSuccessfulDeps({
-        callLLM: mockSuccessfulLLMCall(
-          ["correct", "partial"],
-          "Both categories apply to the answer.",
-        ),
+        callLLM: mockSuccessfulLLMCall(["correct", "partial"], "Both categories apply to the answer."),
         uploadScore,
         enqueueScoreIngestion,
         updateJobExecution,
@@ -1046,19 +1015,11 @@ describe("executeLLMAsJudgeEvaluation", () => {
 
       expect(firstUploadCall.event.body.value).toBe("correct");
       expect(secondUploadCall.event.body.value).toBe("partial");
-      expect(firstUploadCall.event.body.comment).toBe(
-        "Both categories apply to the answer.",
-      );
-      expect(secondUploadCall.event.body.comment).toBe(
-        "Both categories apply to the answer.",
-      );
+      expect(firstUploadCall.event.body.comment).toBe("Both categories apply to the answer.");
+      expect(secondUploadCall.event.body.comment).toBe("Both categories apply to the answer.");
       expect(firstUploadCall.scoreId).not.toBe(secondUploadCall.scoreId);
-      expect(firstUploadCall.event.body.executionTraceId).toBe(
-        secondUploadCall.event.body.executionTraceId,
-      );
-      expect(firstUploadCall.event.body.metadata).toEqual(
-        secondUploadCall.event.body.metadata,
-      );
+      expect(firstUploadCall.event.body.executionTraceId).toBe(secondUploadCall.event.body.executionTraceId);
+      expect(firstUploadCall.event.body.metadata).toEqual(secondUploadCall.event.body.metadata);
 
       expect(updateJobExecution).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1071,10 +1032,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
 
     it("should fail multi-match categorical evals when the model returns a scalar", async () => {
       const deps = createSuccessfulDeps({
-        callLLM: mockSuccessfulLLMCall(
-          "correct",
-          "This should fail because multi-match expects an array.",
-        ),
+        callLLM: mockSuccessfulLLMCall("correct", "This should fail because multi-match expects an array."),
       });
 
       await expect(
@@ -1103,10 +1061,7 @@ describe("executeLLMAsJudgeEvaluation", () => {
 
     it("should fail multi-match categorical evals when the model returns duplicate matches", async () => {
       const deps = createSuccessfulDeps({
-        callLLM: mockSuccessfulLLMCall(
-          ["correct", "correct"],
-          "This should fail because duplicates are not allowed.",
-        ),
+        callLLM: mockSuccessfulLLMCall(["correct", "correct"], "This should fail because duplicates are not allowed."),
       });
 
       await expect(

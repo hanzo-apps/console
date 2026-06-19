@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { applyCommentFilters } from "@hanzo/shared/src/server";
+import { applyCommentFilters } from "@hanzo/console/src/server";
 import {
   createTRPCRouter,
   protectedGetSessionProcedure,
@@ -18,8 +18,8 @@ import {
   type SessionOptions,
   type ScoreDomain,
   AGGREGATABLE_SCORE_TYPES,
-} from "@hanzo/shared";
-import { Prisma } from "@hanzo/shared/src/db";
+} from "@hanzo/console";
+import { Prisma } from "@hanzo/console/src/db";
 import { TRPCError } from "@trpc/server";
 import Decimal from "decimal.js";
 import {
@@ -39,7 +39,7 @@ import {
   getNumericScoresGroupedByName,
   getCategoricalScoresGroupedByName,
   tracesTableUiColumnDefinitions,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import chunk from "lodash/chunk";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
 import { toDomainArrayWithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";

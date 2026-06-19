@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { validateFieldAgainstSchema } from "@hanzo/console-core";
-import type { Prisma } from "@hanzo/console-core";
+import { validateFieldAgainstSchema } from "@hanzo/console";
+import type { Prisma } from "@hanzo/console";
 
 type Dataset = {
   id: string;
@@ -54,7 +54,9 @@ export const useDatasetItemValidation = (
     }
 
     try {
-      outputData = expectedOutputString ? JSON.parse(expectedOutputString) : null;
+      outputData = expectedOutputString
+        ? JSON.parse(expectedOutputString)
+        : null;
     } catch (_e) {
       // Invalid JSON - skip validation (Zod will catch this)
       return { isValid: true, errors: [], hasSchemas: false };

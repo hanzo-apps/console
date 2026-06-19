@@ -10,7 +10,7 @@ import { type NextRouter } from "next/router";
 import {
   EvalTargetObject,
   type EvalTargetObject as EvalTargetObjectType,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import {
   isEventTarget,
   isExperimentTarget,

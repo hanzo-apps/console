@@ -15,8 +15,8 @@ import {
   StorageService,
   StorageServiceFactory,
   TQueueJobTypes,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { Prisma } from "@prisma/client";
 import { env } from "../env";
 
@@ -59,9 +59,7 @@ export const projectDeleteProcessor: Processor = async (
     await deleteMediaFiles({
       projectId,
       mediaFiles: mediaFilesToDelete,
-      storageClient: getS3MediaStorageClient(
-        env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET,
-      ),
+      storageClient: getS3MediaStorageClient(env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET),
     });
     const mediaStorageClient = getS3MediaStorageClient(env.S3_MEDIA_UPLOAD_BUCKET);
     // Delete from Cloud Storage

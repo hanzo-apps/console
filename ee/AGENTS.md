@@ -28,7 +28,7 @@ Use root [AGENTS.md](../AGENTS.md) for monorepo-level rules.
 - Build: `pnpm --filter @langfuse/ee run build`
 
 ## Integration Notes
-- `ee` depends on `@langfuse/shared`; coordinate shared type changes carefully.
+- `ee` depends on `@hanzo/console`; coordinate shared type changes carefully.
 - Validate downstream usage in `../web/src/ee/*` and `../worker/src/ee/*` when EE
   exports change.
 

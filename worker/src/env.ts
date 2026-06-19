@@ -1,4 +1,4 @@
-import { applyDatastoreEnvBackCompat, removeEmptyEnvVariables } from "@hanzo/console-core";
+import { applyDatastoreEnvBackCompat, removeEmptyEnvVariables } from "@hanzo/console";
 import { z } from "zod/v4";
 
 const EnvSchema = z.object({

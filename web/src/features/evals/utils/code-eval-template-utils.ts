@@ -4,7 +4,7 @@ import {
   EvalTemplateType,
   type EvalTemplate,
   type ObservationVariableMapping,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 export const isCodeEvalTemplate = (
   template: Partial<Pick<EvalTemplate, "type">> | null | undefined,

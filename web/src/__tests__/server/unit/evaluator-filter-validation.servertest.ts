@@ -2,7 +2,7 @@ import {
   EvalTargetObject,
   validateEvaluatorFiltersForTarget,
   type FilterState,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 describe("validateEvaluatorFiltersForTarget", () => {
   it.each([

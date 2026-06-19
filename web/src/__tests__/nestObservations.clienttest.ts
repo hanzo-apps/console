@@ -1,5 +1,5 @@
 // Mock shared dependencies
-jest.mock("@hanzo/console-core", () => ({
+jest.mock("@hanzo/console", () => ({
   ObservationLevel: {
     DEBUG: "DEBUG",
     DEFAULT: "DEFAULT",
@@ -12,7 +12,9 @@ import { nestObservations } from "@/src/components/trace/lib/helpers";
 import { type ObservationReturnType } from "@/src/server/api/routers/traces";
 
 describe("nestObservations", () => {
-  const createMockObservation = (overrides: Partial<ObservationReturnType> = {}): ObservationReturnType => ({
+  const createMockObservation = (
+    overrides: Partial<ObservationReturnType> = {},
+  ): ObservationReturnType => ({
     id: "mock-id",
     name: "Mock Observation",
     type: "SPAN",

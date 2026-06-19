@@ -5,12 +5,12 @@ import {
   EvalTemplateType,
   PersistedEvalOutputDefinitionSchema,
   ZodModelConfig,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import {
   CODE_EVAL_SOURCE_MAX_BYTES,
   DefaultEvalModelService,
   testModelCall,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 import { assertUnreachable } from "@/src/utils/types";
 import { EvalReferencedEvaluators } from "@/src/features/evals/types";

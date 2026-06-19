@@ -9,7 +9,7 @@
  *
  */
 
-import { sendCloudSpendAlertEmail, logger } from "@hanzo/console-core/src/server";
+import { sendCloudSpendAlertEmail, logger } from "@hanzo/console/src/server";
 import { env } from "../env";
 
 const TEST_EMAILS: string[] = [

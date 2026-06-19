@@ -3,9 +3,15 @@ import { Button } from "@/src/components/ui/button";
 import { Pencil } from "lucide-react";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
 import type { FinalPreviewStepProps, DialogStep } from "./types";
-import { applyFullMapping } from "@hanzo/shared";
+import { applyFullMapping } from "@hanzo/console";
 
-export function FinalPreviewStep({ dataset, mapping, observationData, totalCount, onEditStep }: FinalPreviewStepProps) {
+export function FinalPreviewStep({
+  dataset,
+  mapping,
+  observationData,
+  totalCount,
+  onEditStep,
+}: FinalPreviewStepProps) {
   // Compute the full preview
   const previewResult = useMemo(() => {
     if (!observationData) return null;
@@ -24,19 +30,22 @@ export function FinalPreviewStep({ dataset, mapping, observationData, totalCount
     <div className="h-[62vh] space-y-6 p-6">
       <div>
         <h3 className="text-lg font-semibold">Review Configuration</h3>
-        <p className="text-sm text-muted-foreground">
-          Adding {totalCount} observation{totalCount !== 1 ? "s" : ""} to dataset &quot;
+        <p className="text-muted-foreground text-sm">
+          Adding {totalCount} observation{totalCount !== 1 ? "s" : ""} to
+          dataset &quot;
           {dataset.name}&quot;
         </p>
       </div>
 
-      <div className="text-sm text-muted-foreground">
+      <div className="text-muted-foreground text-sm">
         Sample dataset item preview (from first selected observation):
       </div>
 
       {!observationData ? (
-        <div className="flex h-64 items-center justify-center rounded-md border bg-muted/30 p-4">
-          <p className="text-sm text-muted-foreground">No observation data available for preview</p>
+        <div className="bg-muted/30 flex h-64 items-center justify-center rounded-md border p-4">
+          <p className="text-muted-foreground text-sm">
+            No observation data available for preview
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -102,9 +111,14 @@ type PreviewCardProps = {
 function PreviewCard({ label, data, onEdit }: PreviewCardProps) {
   return (
     <div className="rounded-lg border">
-      <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2">
+      <div className="bg-muted/30 flex items-center justify-between border-b px-4 py-2">
         <span className="text-sm font-medium">{label}</span>
-        <Button variant="ghost" size="sm" onClick={onEdit} className="h-7 gap-1 text-xs">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onEdit}
+          className="h-7 gap-1 text-xs"
+        >
           <Pencil className="h-3 w-3" />
           Edit
         </Button>

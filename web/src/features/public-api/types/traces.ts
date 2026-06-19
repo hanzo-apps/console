@@ -6,15 +6,21 @@ import {
   publicApiPaginationZod,
   singleFilter,
   InvalidRequestError,
-} from "@hanzo/console-core";
-import { stringDateTime, TraceBody } from "@hanzo/console-core/src/server";
+} from "@hanzo/console";
+import { stringDateTime, TraceBody } from "@hanzo/console/src/server";
 import { z } from "zod/v4";
 import { useEventsTableSchema } from "../../query";
 
 /**
  * Field groups for selective field fetching
  */
-export const TRACE_FIELD_GROUPS = ["core", "io", "scores", "observations", "metrics"] as const;
+export const TRACE_FIELD_GROUPS = [
+  "core",
+  "io",
+  "scores",
+  "observations",
+  "metrics",
+] as const;
 
 export type TraceFieldGroup = (typeof TRACE_FIELD_GROUPS)[number];
 

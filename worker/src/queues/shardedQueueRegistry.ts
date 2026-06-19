@@ -12,7 +12,7 @@ import {
   SecondaryEvalExecutionQueue,
   LLMAsJudgeExecutionQueue,
   CodeEvalExecutionQueue,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 export type ShardedQueueDef = {
   baseQueueName: QueueName;
