@@ -1,5 +1,6 @@
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
+import { PlanUsageRollup } from "@/src/features/billing/components/overview/PlanUsageRollup";
 import { PlanSelectionModal } from "@/src/features/billing/components/PlanSectionModal";
 import { stripeProducts } from "@/src/features/billing/utils/stripeProducts";
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
@@ -74,6 +75,9 @@ export const BillingOverview = () => {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      {/* Commerce-backed plan + included-usage + overage + balance rollup */}
+      <PlanUsageRollup />
+
       {/* Active Subscription Card */}
       <Card className="p-6">
         <div className="flex items-start justify-between">
