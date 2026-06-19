@@ -10,7 +10,34 @@ import * as z from "zod";
 import { throwIfNoOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { getObservationCountOfProjectsSinceCreationDate } from "@hanzo/shared/src/server";
+import { commerceGet } from "@/src/features/billing/server/commerceClient";
 import type Stripe from "stripe";
+
+/**
+ * Shape returned by Hanzo Commerce GET /v1/billing/usage-rollup — the single
+ * billing source of truth for plan + included-usage + overage + balance.
+ * Commerce derives every figure from the same balance transactions the gateway
+ * prepaid gate reads, so this view is consistent with enforcement.
+ */
+export type CommerceUsageRollup = {
+  user: string;
+  plan: string;
+  currency: string;
+  period: string;
+  included: {
+    monthlyCents: number; // catalog allotment for the plan
+    grantedCents: number; // actually granted to the balance this period
+    consumedCents: number; // included credit consumed so far
+    remainingCents: number; // included credit left
+  };
+  consumedCents: number; // total usage this period
+  overageCents: number; // usage beyond the included credit
+  balance: {
+    balanceCents: number;
+    holdsCents: number;
+    availableCents: number; // the value the gateway gate reads (available > 0)
+  };
+};
 
 export const cloudBillingRouter = createTRPCRouter({
   createStripeCheckoutSession: protectedOrganizationProcedure
@@ -952,5 +979,49 @@ export const cloudBillingRouter = createTRPCRouter({
           message: error instanceof Error ? `Unexpected error: ${error.message}` : "Unknown error occurred",
         });
       }
+    }),
+
+  // Commerce-backed plan + included-usage rollup. Read-only: commerce is the
+  // single billing source of truth; the console only displays. Keyed by the
+  // commerce user identity (<org>/<userId>); when not supplied we fall back to
+  // the org slug so the page shows the org's plan/usage aggregate.
+  getCommerceUsageRollup: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        // Optional explicit commerce user key ("<org>/<userId>"). When omitted,
+        // the org slug is used.
+        user: z.string().optional(),
+        // Optional plan slug override; commerce resolves from the subscription
+        // when omitted.
+        plan: z.string().optional(),
+      }),
+    )
+    .query(async ({ input, ctx }): Promise<CommerceUsageRollup> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      // Commerce namespaces tenants by org slug; the rollup `user` key follows
+      // the gateway convention (<org>/<userId>) but also accepts the org slug
+      // alone for an org-level view.
+      const user = input.user ?? organization.name;
+
+      return commerceGet<CommerceUsageRollup>("/v1/billing/usage-rollup", {
+        user,
+        plan: input.plan,
+      });
     }),
 });
