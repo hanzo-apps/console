@@ -19,18 +19,18 @@ import {
   type ExpandedNullable,
   isExpanded,
   isExpandedOrNullable,
-} from "@/src/features/billing/utils/stripeExpand";
+} from "@/src/ee/features/billing/utils/stripeExpand";
 import { stripeClient as defaultStripeClient } from "@/src/features/billing/utils/stripe";
-import { StripeCatalogue } from "@/src/features/billing/utils/stripeCatalogue";
-import { createStripeClientReference } from "@/src/features/billing/utils/stripeClientReference";
+import { StripeCatalogue } from "@/src/ee/features/billing/utils/stripeCatalogue";
+import { createStripeClientReference } from "@/src/ee/features/billing/utils/stripeClientReference";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
 import {
   makeIdempotencyKey,
   IdempotencyKind,
-} from "@/src/features/billing/utils/stripeIdempotencyKey";
+} from "@/src/ee/features/billing/utils/stripeIdempotencyKey";
 
-import { type StripeSubscriptionMetadata } from "@/src/features/billing/utils/stripeSubscriptionMetadata";
+import { type StripeSubscriptionMetadata } from "@/src/ee/features/billing/utils/stripeSubscriptionMetadata";
 
 type ProductWithDefaultPrice = Expanded<Stripe.Product, "default_price">;
 type SubscriptionWithSchedule = ExpandedNullable<

@@ -1,12 +1,14 @@
 import { api } from "@/src/utils/api";
 import { Badge } from "@/src/components/ui/badge";
-import { useBillingInformation } from "@/src/ee/features/billing/components/useBillingInformation";
+import { useBillingInformation } from "@/src/features/billing/components/useBillingInformation";
 import { BillingDiscountCodeButton } from "@/src/ee/features/billing/components/BillingDiscountCodeButton";
 
 export const BillingDiscountView = () => {
   const { organization } = useBillingInformation();
 
-  const shouldRenderComponent = Boolean(organization?.cloudConfig?.stripe?.customerId);
+  const shouldRenderComponent = Boolean(
+    organization?.cloudConfig?.stripe?.customerId,
+  );
 
   const { data } = api.cloudBilling.getSubscriptionInfo.useQuery(
     { orgId: organization?.id ?? "" },
