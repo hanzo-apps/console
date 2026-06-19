@@ -200,7 +200,7 @@ describe("buildTraceExport", () => {
         truncated: true,
         shouldJsonParse: false,
       },
-      clickhouseFeatureTag: "tracing-download",
+      datastoreFeatureTag: "tracing-download",
     });
     expect(mockGetObservationsCountFromEventsTable).toHaveBeenCalledWith({
       projectId,

@@ -39,7 +39,7 @@ const prepare = async () => {
       ],
       featureFlags: {
         templateFlag: true,
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
       },
       admin: true,
     },

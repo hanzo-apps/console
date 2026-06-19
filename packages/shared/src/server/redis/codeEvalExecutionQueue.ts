@@ -1,19 +1,12 @@
-import { Queue } from "bullmq";
+import { Queue } from "@hanzo/mq";
 import { logger } from "../logger";
 import { TQueueJobTypes, QueueName } from "../queues";
-import {
-  createNewRedisInstance,
-  redisQueueRetryOptions,
-  getQueuePrefix,
-} from "./redis";
+import { createNewRedisInstance, redisQueueRetryOptions, getQueuePrefix } from "./redis";
 import { getShardIndex } from "./sharding";
 import { env } from "../../env";
 
 export class CodeEvalExecutionQueue {
-  private static instances: Map<
-    number,
-    Queue<TQueueJobTypes[QueueName.CodeEvalExecution]> | null
-  > = new Map();
+  private static instances: Map<number, Queue<TQueueJobTypes[QueueName.CodeEvalExecution]> | null> = new Map();
 
   public static getShardNames() {
     return Array.from(
@@ -22,18 +15,13 @@ export class CodeEvalExecutionQueue {
     );
   }
 
-  static getShardIndexFromShardName(
-    shardName: string | undefined,
-  ): number | null {
+  static getShardIndexFromShardName(shardName: string | undefined): number | null {
     if (!shardName) return null;
 
     const shardIndex =
       shardName === QueueName.CodeEvalExecution
         ? 0
-        : parseInt(
-            shardName.replace(`${QueueName.CodeEvalExecution}-`, ""),
-            10,
-          );
+        : parseInt(shardName.replace(`${QueueName.CodeEvalExecution}-`, ""), 10);
 
     if (isNaN(shardIndex)) return null;
     return shardIndex;
@@ -49,10 +37,7 @@ export class CodeEvalExecutionQueue {
     const shardIndex =
       CodeEvalExecutionQueue.getShardIndexFromShardName(shardName) ??
       (env.REDIS_CLUSTER_ENABLED === "true" && shardingKey
-        ? getShardIndex(
-            shardingKey,
-            env.LANGFUSE_CODE_EVAL_EXECUTION_QUEUE_SHARD_COUNT,
-          )
+        ? getShardIndex(shardingKey, env.LANGFUSE_CODE_EVAL_EXECUTION_QUEUE_SHARD_COUNT)
         : 0);
 
     if (CodeEvalExecutionQueue.instances.has(shardIndex)) {

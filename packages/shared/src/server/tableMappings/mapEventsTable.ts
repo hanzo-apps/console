@@ -2,10 +2,6 @@
 // The frontend only sends the column names to the backend. This needs to be changed in the future to send column IDs.
 
 import { UiColumnMappings } from "../../tableDefinitions";
-import {
-  eventsTableHasParentObservationSql,
-  eventsTableIsRootObservationSql,
-} from "../../eventsTable";
 
 export const eventsTableNativeUiColumnDefinitions: UiColumnMappings = [
   {
@@ -172,8 +168,8 @@ export const eventsTableNativeUiColumnDefinitions: UiColumnMappings = [
   {
     uiTableName: "Prompt Version",
     uiTableId: "promptVersion",
-    clickhouseTableName: "events_proto",
-    clickhouseSelect: "e.prompt_version",
+    datastoreTableName: "events_proto",
+    datastoreSelect: "e.prompt_version",
   },
   {
     uiTableName: "Input",
@@ -256,8 +252,8 @@ export const eventsTableNativeUiColumnDefinitions: UiColumnMappings = [
   {
     uiTableName: "Is Experiment Item Root Span",
     uiTableId: "isExperimentItemRootSpan",
-    clickhouseTableName: "events_proto",
-    clickhouseSelect: "e.experiment_item_root_span_id = e.span_id",
+    datastoreTableName: "events_proto",
+    datastoreSelect: "e.experiment_item_root_span_id = e.span_id",
   },
   {
     uiTableName: "Available Tools",
@@ -310,14 +306,14 @@ export const eventsTableUiColumnDefinitions: UiColumnMappings = [
   {
     uiTableName: "Trace Scores (numeric)",
     uiTableId: "trace_scores_avg",
-    clickhouseTableName: "scores",
-    clickhouseSelect: "ts.scores_avg",
+    datastoreTableName: "scores",
+    datastoreSelect: "ts.scores_avg",
   },
   {
     uiTableName: "Trace Scores (categorical)",
     uiTableId: "trace_score_categories",
-    clickhouseTableName: "scores",
-    clickhouseSelect: "ts.score_categories",
+    datastoreTableName: "scores",
+    datastoreSelect: "ts.score_categories",
   },
   {
     uiTableName: "Comment Count",

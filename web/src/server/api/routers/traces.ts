@@ -3,7 +3,11 @@ import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
 import { applyCommentFilters } from "@hanzo/shared/src/server";
-import { createTRPCRouter, protectedGetTraceProcedure, protectedProjectProcedure } from "@/src/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedGetTraceProcedure,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
 import {
   BatchActionQuerySchema,
   BatchTableNames,
@@ -34,12 +38,12 @@ import {
   getTraceById,
   logger,
   upsertTrace,
-  convertTraceDomainToClickhouse,
+  convertTraceDomainToDatastore,
   hasAnyTrace,
   traceDeletionProcessor,
   getTracesTableMetrics,
   getCategoricalScoresGroupedByName,
-  convertDateToClickhouseDateTime,
+  convertDateToDatastoreDateTime,
   getAgentGraphData,
   tracesTableUiColumnDefinitions,
   getTracesGroupedByUsers,
@@ -50,7 +54,10 @@ import {
 import { TRPCError } from "@trpc/server";
 import { createBatchActionJob } from "@/src/features/table/server/createBatchActionJob";
 import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEntitlement";
-import { type AgentGraphDataResponse, AgentGraphDataSchema } from "@/src/features/trace-graph-view/types";
+import {
+  type AgentGraphDataResponse,
+  AgentGraphDataSchema,
+} from "@/src/features/trace-graph-view/types";
 import { env } from "@/src/env.mjs";
 import {
   toDomainWithStringifiedMetadata,
@@ -71,7 +78,10 @@ const TraceFilterOptions = TraceCountOptions.extend({
 });
 type TraceFilterOptions = z.infer<typeof TraceFilterOptions>;
 
-export type ObservationReturnTypeWithMetadata = Omit<Observation, "input" | "output" | "metadata"> & {
+export type ObservationReturnTypeWithMetadata = Omit<
+  Observation,
+  "input" | "output" | "metadata"
+> & {
   traceId: string;
   metadata: string | null;
   traceName?: string | null;
@@ -81,7 +91,10 @@ export type ObservationReturnTypeWithMetadata = Omit<Observation, "input" | "out
   sessionId?: string | null;
 };
 
-export type ObservationReturnType = Omit<ObservationReturnTypeWithMetadata, "metadata">;
+export type ObservationReturnType = Omit<
+  ObservationReturnTypeWithMetadata,
+  "metadata"
+>;
 
 export const traceRouter = createTRPCRouter({
   hasTracingConfigured: protectedProjectProcedure
@@ -111,54 +124,58 @@ export const traceRouter = createTRPCRouter({
 
       return !!(project?.retentionDays && project.retentionDays > 0);
     }),
-  all: protectedProjectProcedure.input(TraceFilterOptions).query(async ({ input, ctx }) => {
-    const { filterState, hasNoMatches } = await applyCommentFilters({
-      filterState: input.filter ?? [],
-      prisma: ctx.prisma,
-      projectId: ctx.session.projectId,
-      objectType: "TRACE",
-    });
+  all: protectedProjectProcedure
+    .input(TraceFilterOptions)
+    .query(async ({ input, ctx }) => {
+      const { filterState, hasNoMatches } = await applyCommentFilters({
+        filterState: input.filter ?? [],
+        prisma: ctx.prisma,
+        projectId: ctx.session.projectId,
+        objectType: "TRACE",
+      });
 
-    if (hasNoMatches) {
-      return { traces: [] };
-    }
+      if (hasNoMatches) {
+        return { traces: [] };
+      }
 
-    const traces = await getTracesTable({
-      projectId: ctx.session.projectId,
-      filter: filterState,
-      searchQuery: input.searchQuery ?? undefined,
-      searchType: input.searchType ?? ["id"],
-      orderBy: input.orderBy,
-      limit: input.limit,
-      page: input.page,
-    });
-    return { traces };
-  }),
-  countAll: protectedProjectProcedure.input(TraceFilterOptions).query(async ({ input, ctx }) => {
-    const { filterState, hasNoMatches } = await applyCommentFilters({
-      filterState: input.filter ?? [],
-      prisma: ctx.prisma,
-      projectId: ctx.session.projectId,
-      objectType: "TRACE",
-    });
+      const traces = await getTracesTable({
+        projectId: ctx.session.projectId,
+        filter: filterState,
+        searchQuery: input.searchQuery ?? undefined,
+        searchType: input.searchType ?? ["id"],
+        orderBy: input.orderBy,
+        limit: input.limit,
+        page: input.page,
+      });
+      return { traces };
+    }),
+  countAll: protectedProjectProcedure
+    .input(TraceFilterOptions)
+    .query(async ({ input, ctx }) => {
+      const { filterState, hasNoMatches } = await applyCommentFilters({
+        filterState: input.filter ?? [],
+        prisma: ctx.prisma,
+        projectId: ctx.session.projectId,
+        objectType: "TRACE",
+      });
 
-    if (hasNoMatches) {
-      return { totalCount: 0 };
-    }
+      if (hasNoMatches) {
+        return { totalCount: 0 };
+      }
 
-    const count = await getTracesTableCount({
-      projectId: ctx.session.projectId,
-      filter: filterState,
-      searchType: input.searchType,
-      searchQuery: input.searchQuery ?? undefined,
-      limit: 1,
-      page: 0,
-    });
+      const count = await getTracesTableCount({
+        projectId: ctx.session.projectId,
+        filter: filterState,
+        searchType: input.searchType,
+        searchQuery: input.searchQuery ?? undefined,
+        limit: 1,
+        page: 0,
+      });
 
-    return {
-      totalCount: count,
-    };
-  }),
+      return {
+        totalCount: count,
+      };
+    }),
   metrics: protectedProjectProcedure
     .input(
       z.object({
@@ -170,12 +187,13 @@ export const traceRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       if (input.traceIds.length === 0) return [];
 
-      const { filterState, hasNoMatches, matchingIds } = await applyCommentFilters({
-        filterState: input.filter ?? [],
-        prisma: ctx.prisma,
-        projectId: ctx.session.projectId,
-        objectType: "TRACE",
-      });
+      const { filterState, hasNoMatches, matchingIds } =
+        await applyCommentFilters({
+          filterState: input.filter ?? [],
+          prisma: ctx.prisma,
+          projectId: ctx.session.projectId,
+          objectType: "TRACE",
+        });
 
       if (hasNoMatches) {
         return [];
@@ -184,7 +202,9 @@ export const traceRouter = createTRPCRouter({
       // If comment filters returned matching IDs, intersect with input.traceIds
       let filteredTraceIds = input.traceIds;
       if (matchingIds !== null) {
-        filteredTraceIds = input.traceIds.filter((id) => matchingIds.includes(id));
+        filteredTraceIds = input.traceIds.filter((id) =>
+          matchingIds.includes(id),
+        );
 
         if (filteredTraceIds.length === 0) {
           return [];
@@ -193,7 +213,12 @@ export const traceRouter = createTRPCRouter({
 
       // Remove the comment filter's ID injection and use filteredTraceIds instead
       const filterWithoutCommentIds = filterState.filter(
-        (f) => !(f.type === "stringOptions" && f.column === "id" && f.operator === "any of"),
+        (f) =>
+          !(
+            f.type === "stringOptions" &&
+            f.column === "id" &&
+            f.operator === "any of"
+          ),
       );
 
       const res = await getTracesTableMetrics({
@@ -228,7 +253,9 @@ export const traceRouter = createTRPCRouter({
 
       return res.map((row) => ({
         ...row,
-        scores: aggregateScores(validatedScores.filter((s) => s.traceId === row.id)),
+        scores: aggregateScores(
+          validatedScores.filter((s) => s.traceId === row.id),
+        ),
       }));
     }),
   filterOptions: protectedProjectProcedure
@@ -248,16 +275,42 @@ export const traceRouter = createTRPCRouter({
         ...scoreFilters.forTraceScopedAggregates(),
       ];
 
-      const [numericScoreNames, categoricalScoreNames, traceNames, tags, userIds, sessionIds] = await Promise.all([
+      const [
+        numericScoreNames,
+        categoricalScoreNames,
+        traceNames,
+        tags,
+        userIds,
+        sessionIds,
+      ] = await Promise.all([
         getNumericScoresGroupedByName(input.projectId, timestampFilter ?? []),
-        getCategoricalScoresGroupedByName(input.projectId, timestampFilter ?? []),
-        getTracesGroupedByName(input.projectId, tracesTableUiColumnDefinitions, timestampFilter ?? []),
+        getCategoricalScoresGroupedByName(
+          input.projectId,
+          timestampFilter ?? [],
+        ),
+        getTracesGroupedByName(
+          input.projectId,
+          tracesTableUiColumnDefinitions,
+          timestampFilter ?? [],
+        ),
         getTracesGroupedByTags({
           projectId: input.projectId,
           filter: timestampFilter ?? [],
         }),
-        getTracesGroupedByUsers(input.projectId, timestampFilter ?? [], undefined, 100, 0),
-        getTracesGroupedBySessionId(input.projectId, timestampFilter ?? [], undefined, 100, 0),
+        getTracesGroupedByUsers(
+          input.projectId,
+          timestampFilter ?? [],
+          undefined,
+          100,
+          0,
+        ),
+        getTracesGroupedBySessionId(
+          input.projectId,
+          timestampFilter ?? [],
+          undefined,
+          100,
+          0,
+        ),
       ]);
 
       return {
@@ -290,7 +343,9 @@ export const traceRouter = createTRPCRouter({
         ...ctx.trace,
         input: ctx.trace.input as string,
         output: ctx.trace.output as string,
-        metadata: ctx.trace.metadata ? JSON.stringify(ctx.trace.metadata) : undefined,
+        metadata: ctx.trace.metadata
+          ? JSON.stringify(ctx.trace.metadata)
+          : undefined,
       };
     }),
   byIdWithObservationsAndScores: protectedGetTraceProcedure
@@ -330,9 +385,14 @@ export const traceRouter = createTRPCRouter({
         onParseError: traceException,
       });
 
-      const [corrections, scores] = partition(validatedScores, (s) => s.dataType === ScoreDataTypeEnum.CORRECTION);
+      const [corrections, scores] = partition(
+        validatedScores,
+        (s) => s.dataType === ScoreDataTypeEnum.CORRECTION,
+      );
 
-      const obsStartTimes = observations.map((o) => o.startTime).sort((a, b) => a.getTime() - b.getTime());
+      const obsStartTimes = observations
+        .map((o) => o.startTime)
+        .sort((a, b) => a.getTime() - b.getTime());
       const obsEndTimes = observations
         .map((o) => o.endTime)
         .filter((t) => t)
@@ -340,13 +400,16 @@ export const traceRouter = createTRPCRouter({
       const latencyMs =
         obsStartTimes.length > 0
           ? obsEndTimes.length > 0
-            ? (obsEndTimes[obsEndTimes.length - 1] as Date).getTime() - obsStartTimes[0]!.getTime()
+            ? (obsEndTimes[obsEndTimes.length - 1] as Date).getTime() -
+              obsStartTimes[0]!.getTime()
             : obsStartTimes.length > 1
-              ? obsStartTimes[obsStartTimes.length - 1]!.getTime() - obsStartTimes[0]!.getTime()
+              ? obsStartTimes[obsStartTimes.length - 1]!.getTime() -
+                obsStartTimes[0]!.getTime()
               : undefined
           : undefined;
 
-      const scoresDomain = toDomainArrayWithStringifiedMetadata<ScoreDomain>(scores);
+      const scoresDomain =
+        toDomainArrayWithStringifiedMetadata<ScoreDomain>(scores);
 
       return {
         ...toDomainWithStringifiedMetadata(ctx.trace),
@@ -433,27 +496,31 @@ export const traceRouter = createTRPCRouter({
 
         let trace;
 
-        const clickhouseTrace = await getTraceById({
+        const datastoreTrace = await getTraceById({
           traceId: input.traceId,
           projectId: input.projectId,
-          clickhouseFeatureTag: "tracing-trpc",
+          datastoreFeatureTag: "tracing-trpc",
         });
-        if (clickhouseTrace) {
-          trace = clickhouseTrace;
-          clickhouseTrace.bookmarked = input.bookmarked;
-          const promises = [upsertTrace(convertTraceDomainToClickhouse(clickhouseTrace))];
+        if (datastoreTrace) {
+          trace = datastoreTrace;
+          datastoreTrace.bookmarked = input.bookmarked;
+          const promises = [
+            upsertTrace(convertTraceDomainToDatastore(datastoreTrace)),
+          ];
           if (env.HANZO_ENABLE_EVENTS_TABLE_FLAGS === "true") {
             promises.push(
               updateEvents(
                 input.projectId,
-                { traceIds: [clickhouseTrace.id], rootOnly: true },
+                { traceIds: [datastoreTrace.id], rootOnly: true },
                 { bookmarked: input.bookmarked },
               ),
             );
           }
           await Promise.all(promises);
         } else {
-          logger.error(`Trace not found in Clickhouse: ${input.traceId}. Skipping bookmark.`);
+          logger.error(
+            `Trace not found in Datastore: ${input.traceId}. Skipping bookmark.`,
+          );
         }
 
         return trace;
@@ -487,25 +554,35 @@ export const traceRouter = createTRPCRouter({
           after: input.public,
         });
 
-        const clickhouseTrace = await getTraceById({
+        const datastoreTrace = await getTraceById({
           traceId: input.traceId,
           projectId: input.projectId,
-          clickhouseFeatureTag: "tracing-trpc",
+          datastoreFeatureTag: "tracing-trpc",
         });
-        if (!clickhouseTrace) {
-          logger.error(`Trace not found in Clickhouse: ${input.traceId}. Skipping publishing.`);
+        if (!datastoreTrace) {
+          logger.error(
+            `Trace not found in Datastore: ${input.traceId}. Skipping publishing.`,
+          );
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Trace not found",
           });
         }
-        clickhouseTrace.public = input.public;
-        const promises = [upsertTrace(convertTraceDomainToClickhouse(clickhouseTrace))];
+        datastoreTrace.public = input.public;
+        const promises = [
+          upsertTrace(convertTraceDomainToDatastore(datastoreTrace)),
+        ];
         if (env.HANZO_ENABLE_EVENTS_TABLE_FLAGS === "true") {
-          promises.push(updateEvents(input.projectId, { traceIds: [clickhouseTrace.id] }, { public: input.public }));
+          promises.push(
+            updateEvents(
+              input.projectId,
+              { traceIds: [datastoreTrace.id] },
+              { public: input.public },
+            ),
+          );
         }
         await Promise.all(promises);
-        return clickhouseTrace;
+        return datastoreTrace;
       } catch (error) {
         logger.error("Failed to call traces.publish", error);
         throw new TRPCError({
@@ -536,20 +613,22 @@ export const traceRouter = createTRPCRouter({
           after: input.tags,
         });
 
-        const clickhouseTrace = await getTraceById({
+        const datastoreTrace = await getTraceById({
           traceId: input.traceId,
           projectId: input.projectId,
-          clickhouseFeatureTag: "tracing-trpc",
+          datastoreFeatureTag: "tracing-trpc",
         });
-        if (!clickhouseTrace) {
-          logger.error(`Trace not found in Clickhouse: ${input.traceId}. Skipping tag update.`);
+        if (!datastoreTrace) {
+          logger.error(
+            `Trace not found in Datastore: ${input.traceId}. Skipping tag update.`,
+          );
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Trace not found",
           });
         }
-        clickhouseTrace.tags = input.tags;
-        await upsertTrace(convertTraceDomainToClickhouse(clickhouseTrace));
+        datastoreTrace.tags = input.tags;
+        await upsertTrace(convertTraceDomainToDatastore(datastoreTrace));
       } catch (error) {
         logger.error("Failed to call traces.updateTags", error);
         throw new TRPCError({
@@ -573,8 +652,12 @@ export const traceRouter = createTRPCRouter({
     .query(async ({ input }): Promise<Required<AgentGraphDataResponse>[]> => {
       const { traceId, projectId, minStartTime, maxStartTime } = input;
 
-      const chMinStartTime = convertDateToClickhouseDateTime(new Date(minStartTime));
-      const chMaxStartTime = convertDateToClickhouseDateTime(new Date(maxStartTime));
+      const chMinStartTime = convertDateToDatastoreDateTime(
+        new Date(minStartTime),
+      );
+      const chMaxStartTime = convertDateToDatastoreDateTime(
+        new Date(maxStartTime),
+      );
 
       const records = await getAgentGraphData({
         projectId,

@@ -68,11 +68,7 @@ export const checkTraceExistsAndGetTimestamp = async ({
   ) as DateTimeFilter | undefined;
 
   tracesFilter.push(
-    ...createFilterFromFilterState(
-      filter,
-      tracesTableUiColumnDefinitions,
-      tracesTableCols,
-    ),
+    ...createFilterFromFilterState(filter, tracesTableUiColumnDefinitions, tracesTableCols),
     new StringFilter({
       datastoreTable: "t",
       field: "id",
@@ -603,7 +599,7 @@ export const getTracesGroupedByName = async (
         query,
         params: input.params,
         tags: input.tags,
-        preferredClickhouseService: "ReadOnly",
+        preferredDatastoreService: "ReadOnly",
       });
     },
   });
@@ -671,7 +667,7 @@ export const getTracesGroupedBySessionId = async (
         query,
         params: input.params,
         tags: input.tags,
-        preferredClickhouseService: "ReadOnly",
+        preferredDatastoreService: "ReadOnly",
       });
     },
   });
@@ -739,7 +735,7 @@ export const getTracesGroupedByUsers = async (
         query,
         params: input.params,
         tags: input.tags,
-        preferredClickhouseService: "ReadOnly",
+        preferredDatastoreService: "ReadOnly",
       });
     },
   });
@@ -790,7 +786,7 @@ export const getTracesGroupedByTags = async (props: GroupedTracesQueryProp) => {
         query,
         params: input.params,
         tags: input.tags,
-        preferredClickhouseService: "ReadOnly",
+        preferredDatastoreService: "ReadOnly",
       });
     },
   });
@@ -1525,7 +1521,7 @@ export const getTraceCountsByProjectAndDay = async ({ startDate, endDate }: { st
       startDate: convertDateToDatastoreDateTime(startDate),
       endDate: convertDateToDatastoreDateTime(endDate),
     },
-    clickhouseConfigs: { request_timeout: 120_000 },
+    datastoreConfigs: { request_timeout: 120_000 },
     tags: {
       feature: "tracing",
       type: "trace",

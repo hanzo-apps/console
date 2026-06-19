@@ -797,7 +797,7 @@ export const getObservationsGroupedByModel = async (projectId: string, filter: F
       kind: "analytic",
       projectId,
     },
-    preferredClickhouseService: "ReadOnly",
+    preferredDatastoreService: "ReadOnly",
   });
   return res.map((r) => ({ model: r.name }));
 };
@@ -840,7 +840,7 @@ export const getObservationsGroupedByModelId = async (projectId: string, filter:
       kind: "analytic",
       projectId,
     },
-    preferredClickhouseService: "ReadOnly",
+    preferredDatastoreService: "ReadOnly",
   });
   return res.map((r) => ({ modelId: r.modelId }));
 };
@@ -888,7 +888,7 @@ export const getObservationsGroupedByName = async (
       kind: "analytic",
       projectId,
     },
-    preferredClickhouseService: "ReadOnly",
+    preferredDatastoreService: "ReadOnly",
   });
   return res;
 };
@@ -929,7 +929,7 @@ export const getObservationsGroupedByToolName = async (projectId: string, filter
       kind: "analytic",
       projectId,
     },
-    preferredClickhouseService: "ReadOnly",
+    preferredDatastoreService: "ReadOnly",
   });
   return res;
 };
@@ -970,7 +970,7 @@ export const getObservationsGroupedByCalledToolName = async (projectId: string, 
       kind: "analytic",
       projectId,
     },
-    preferredClickhouseService: "ReadOnly",
+    preferredDatastoreService: "ReadOnly",
   });
   return res;
 };
@@ -1014,7 +1014,7 @@ export const getObservationsGroupedByPromptName = async (projectId: string, filt
       kind: "analytic",
       projectId,
     },
-    preferredClickhouseService: "ReadOnly",
+    preferredDatastoreService: "ReadOnly",
   });
 
   const prompts = res.map((r) => r.id).filter((r): r is string => Boolean(r));
@@ -1256,12 +1256,8 @@ export const getObservationsWithPromptName = async (projectId: string, promptNam
     params: {
       projectId,
       promptNames,
-      fromTimestamp: fromTimestamp
-        ? convertDateToClickhouseDateTime(fromTimestamp)
-        : undefined,
-      toTimestamp: toTimestamp
-        ? convertDateToClickhouseDateTime(toTimestamp)
-        : undefined,
+      fromTimestamp: fromTimestamp ? convertDateToDatastoreDateTime(fromTimestamp) : undefined,
+      toTimestamp: toTimestamp ? convertDateToDatastoreDateTime(toTimestamp) : undefined,
     },
     tags: {
       feature: "tracing",
@@ -1329,12 +1325,8 @@ export const getObservationMetricsForPrompts = async (projectId: string, promptI
     params: {
       projectId,
       promptIds,
-      ...(fromTimestamp
-        ? { fromTimestamp: convertDateToClickhouseDateTime(fromTimestamp) }
-        : {}),
-      ...(toTimestamp
-        ? { toTimestamp: convertDateToClickhouseDateTime(toTimestamp) }
-        : {}),
+      ...(fromTimestamp ? { fromTimestamp: convertDateToDatastoreDateTime(fromTimestamp) } : {}),
+      ...(toTimestamp ? { toTimestamp: convertDateToDatastoreDateTime(toTimestamp) } : {}),
     },
     tags: {
       feature: "tracing",
@@ -1522,7 +1514,7 @@ export const getObservationCountsByProjectInCreationInterval = async ({ start, e
       start: convertDateToDatastoreDateTime(start),
       end: convertDateToDatastoreDateTime(end),
     },
-    clickhouseConfigs: {
+    datastoreConfigs: {
       request_timeout: 120000, // 2 minutes timeout
     },
     tags: {
@@ -1663,7 +1655,7 @@ export const getObservationsForBlobStorageExport = function (
     datastoreConfig: {
       request_timeout: env.DATASTORE_DATA_EXPORT_REQUEST_TIMEOUT_MS,
     },
-    preferredClickhouseService: "ReadOnly",
+    preferredDatastoreService: "ReadOnly",
   });
 
   return records;
@@ -1836,7 +1828,7 @@ export const getObservationCountsByProjectAndDay = async ({
       startDate: convertDateToDatastoreDateTime(startDate),
       endDate: convertDateToDatastoreDateTime(endDate),
     },
-    clickhouseConfigs: { request_timeout: 120_000 },
+    datastoreConfigs: { request_timeout: 120_000 },
     tags: {
       feature: "tracing",
       type: "observation",

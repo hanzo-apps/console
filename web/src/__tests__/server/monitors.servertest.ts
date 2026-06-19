@@ -49,7 +49,7 @@ const buildSession = (params: {
     featureFlags: {
       inAppAgent: false,
       templateFlag: false,
-      excludeClickhouseRead: false,
+      excludeDatastoreRead: false,
       v4BetaToggleVisible: false,
       observationEvals: false,
       experimentsV4Enabled: false,

@@ -14,7 +14,6 @@ import {
   recordHistogram,
   recordIncrement,
   redis,
-  SecondaryOtelIngestionQueue,
   TQueueJobTypes,
   traceException,
   compareVersions,
@@ -62,8 +61,7 @@ export function checkHeaderBasedDirectWrite(params: {
   try {
     // compareVersions returns null when current >= minimum (no update needed).
     // Strip pre-release/build metadata so that e.g. 4.0.0-rc.1 qualifies as 4.0.0.
-    // Also normalize Python PEP440 shorthand (e.g. 4.0.0b1, 4.0.0rc1) to the core version.
-    const baseVersion = extractBaseSdkVersion(sdkVersion);
+    const baseVersion = sdkVersion.split(/[-+]/)[0];
 
     if (sdkName === "python") {
       return compareVersions(baseVersion, "v4.0.0") === null;
@@ -77,23 +75,6 @@ export function checkHeaderBasedDirectWrite(params: {
   }
 
   return false;
-}
-
-function extractBaseSdkVersion(sdkVersion: string): string {
-  const version = sdkVersion.trim();
-
-  // Standard semver / semver pre-release / build metadata
-  if (/^v?\d+\.\d+\.\d+(?:[-+].+)?$/i.test(version)) {
-    return version.split(/[-+]/)[0];
-  }
-
-  // Python PEP 440 pre-release shorthand: 4.0.0a1, 4.0.0b1, 4.0.0rc1
-  const pep440Match = version.match(/^(v?\d+\.\d+\.\d+)(?:a|b|rc)\d+$/i);
-  if (pep440Match?.[1]) {
-    return pep440Match[1];
-  }
-
-  return version;
 }
 
 /**
@@ -168,13 +149,14 @@ export function checkSdkVersionRequirements(sdkInfo: SdkInfo, isSdkExperimentBat
   }
 }
 
-export const otelIngestionQueueProcessorBuilder = (
-  enableRedirectToSecondaryQueue: boolean,
-): Processor => {
-  const projectIdsToRedirectToSecondaryQueue =
-    env.LANGFUSE_SECONDARY_OTEL_INGESTION_QUEUE_ENABLED_PROJECT_IDS?.split(
-      ",",
-    ) ?? [];
+export const otelIngestionQueueProcessor: Processor = async (
+  job: Job<TQueueJobTypes[QueueName.OtelIngestionQueue]>,
+): Promise<void> => {
+  try {
+    const projectId = job.data.payload.authCheck.scope.projectId;
+    const publicKey = job.data.payload.data.publicKey;
+    const fileKey = job.data.payload.data.fileKey;
+    const auth = job.data.payload.authCheck;
 
     const span = getCurrentSpan();
     if (span) {
@@ -184,8 +166,10 @@ export const otelIngestionQueueProcessorBuilder = (
     }
     logger.debug(`Processing ${fileKey} for project ${projectId}`);
 
-      // Parse spans from S3 download
-      let parsedSpans = JSON.parse(resourceSpans);
+    // TODO: Do we need to add these files into the blob_storage_file_log?
+    // We could recommend lifecycle rules due to the immutability properties.
+    // Otherwise, we'd probably have to upsert one row per generated event further below.
+    // Easy change, but needs alignment.
 
     // Download file from blob storage
     const resourceSpans = await getS3EventStorageClient(env.S3_EVENT_UPLOAD_BUCKET).download(fileKey);
@@ -355,31 +339,16 @@ export const otelIngestionQueueProcessorBuilder = (
           eventRecord = await ingestionService.createEventRecord(eventInput, fileKey);
         } catch (error) {
           traceException(error);
-          logger.warn(
-            `Failed to fetch observation eval configs for project ${projectId}`,
+          logger.error(
+            `Failed to create event record for project ${eventInput.projectId} and observation ${eventInput.spanId}`,
             error,
           );
 
-          return [];
-        },
-      );
-      const hasEvalConfigs = evalConfigs.length > 0;
+          return;
+        }
 
-      // Early exit if no processing needed
-      if (!hasEvalConfigs && !shouldWriteToEventsTable) {
-        return;
-      }
-
-      // Create scheduler deps only if we have eval configs
-      const evalSchedulerDeps = hasEvalConfigs
-        ? createObservationEvalSchedulerDeps()
-        : null;
-
-      await Promise.all(
-        // Process each event independently
-        eventInputs.map(async (eventInput) => {
-          // Step 1: Create enriched event record (required for both evals and writes)
-          let eventRecord;
+        // Step 2: Schedule observation evals (independent of event writes)
+        if (hasEvalConfigs && evalSchedulerDeps) {
           try {
             const observation = convertEventRecordToObservationForEval(eventRecord);
 
@@ -395,63 +364,25 @@ export const otelIngestionQueueProcessorBuilder = (
               `Failed to schedule observation evals for project ${eventInput.projectId} and observation ${eventInput.spanId}`,
               error,
             );
+          }
+        }
+
+        // Step 3: Write to events table (independent of eval scheduling)
+        if (shouldWriteToEventsTable) {
+          try {
+            ingestionService.writeEventRecord(eventRecord);
           } catch (error) {
             traceException(error);
             logger.error(`Failed to write event record for ${eventInput.spanId}`, error);
           }
-
-          // Step 2: Schedule observation evals (independent of event writes)
-          if (hasEvalConfigs && evalSchedulerDeps) {
-            try {
-              const observation =
-                convertEventRecordToObservationForEval(eventRecord);
-
-              await scheduleObservationEvals({
-                observation,
-                configs: evalConfigs,
-                schedulerDeps: evalSchedulerDeps,
-              });
-            } catch (error) {
-              traceException(error);
-
-              logger.error(
-                `Failed to schedule observation evals for project ${eventInput.projectId} and observation ${eventInput.spanId}`,
-                { error, fileKey },
-              );
-            }
-          }
-
-          // Step 3: Write to events table (independent of eval scheduling)
-          if (shouldWriteToEventsTable) {
-            try {
-              ingestionService.writeEventRecord(eventRecord);
-            } catch (error) {
-              traceException(error);
-              logger.error(
-                `Failed to write event record for ${eventInput.spanId}`,
-                { error, fileKey },
-              );
-            }
-          }
-        }),
-      );
-    } catch (e) {
-      const fileKey = job.data.payload.data.fileKey;
-      if (e instanceof ForbiddenError) {
-        traceException(e);
-        logger.warn(`Failed to parse otel observation: ${e.message}`, {
-          error: e,
-          fileKey,
-        });
-        return;
-      }
-
-      logger.error(
-        `Failed job otel ingestion processing for ${job.data.payload.authCheck.scope.projectId}`,
-        { error: e, fileKey },
-      );
+        }
+      }),
+    );
+  } catch (e) {
+    if (e instanceof ForbiddenError) {
       traceException(e);
-      throw e;
+      logger.warn(`Failed to parse otel observation: ${e.message}`, e);
+      return;
     }
 
     logger.error(`Failed job otel ingestion processing for ${job.data.payload.authCheck.scope.projectId}`, e);

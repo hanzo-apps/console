@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import { Button } from "@/src/components/ui/button";
-import { Play } from "lucide-react";
+import { Play, Loader2 } from "lucide-react";
 import { ResetPlaygroundButton } from "@/src/features/playground/page/components/ResetPlaygroundButton";
 import { useWindowCoordination } from "@/src/features/playground/page/hooks/useWindowCoordination";
 import { usePersistedWindowIds } from "@/src/features/playground/page/hooks/usePersistedWindowIds";
@@ -9,12 +9,7 @@ import { type MultiWindowState } from "@/src/features/playground/page/types";
 import Page from "@/src/components/layouts/page";
 import MultiWindowPlayground from "@/src/features/playground/page/components/MultiWindowPlayground";
 import { NoModelConfiguredAlert } from "@/src/features/playground/page/components/NoModelConfiguredAlert";
-import {
-  MessageSearchProvider,
-  MessageSearchToolbar,
-} from "@/src/components/ChatMessages/MessageSearch";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
-import Spinner from "@/src/components/design-system/Spinner/Spinner";
 
 /**
  * PlaygroundPage Component
@@ -38,14 +33,9 @@ import Spinner from "@/src/components/design-system/Spinner/Spinner";
  * - Clean single-header design
  */
 export default function PlaygroundPage() {
-  const [isMac, setIsMac] = useState(false);
-
-  useEffect(() => {
-    setIsMac(window.navigator.userAgent.includes("Mac"));
-  }, []);
-
   const projectId = useProjectIdFromURL();
-  const { windowIds, isLoaded, addWindowWithCopy, removeWindowId } = usePersistedWindowIds();
+  const { windowIds, isLoaded, addWindowWithCopy, removeWindowId } =
+    usePersistedWindowIds();
 
   // Global coordination hook for managing window actions
   const {
@@ -93,12 +83,6 @@ export default function PlaygroundPage() {
     executeAllWindows();
   });
 
-  const getMessageSearchPageLabel = useCallback(
-    (_pageId: string, pageIndex: number) =>
-      windowIds.length > 1 ? `Window ${pageIndex + 1}` : null,
-    [windowIds.length],
-  );
-
   // Don't render until window IDs are loaded
   if (!isLoaded) {
     return (
@@ -107,13 +91,14 @@ export default function PlaygroundPage() {
         headerProps={{
           title: "Playground",
           help: {
-            description: "A sandbox to test and iterate your prompts across multiple windows",
+            description:
+              "A sandbox to test and iterate your prompts across multiple windows",
             href: "https://hanzo.com/docs/prompt-management/features/playground",
           },
         }}
       >
         <div className="flex h-full items-center justify-center">
-          <Spinner size="xl" />
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </Page>
     );
@@ -121,7 +106,8 @@ export default function PlaygroundPage() {
 
   // Execution status and control states
   const executionStatus = globalIsExecutingAll
-    ? getExecutionStatus() || `Executing ${windowIds.length} window${windowIds.length === 1 ? "" : "s"}`
+    ? getExecutionStatus() ||
+      `Executing ${windowIds.length} window${windowIds.length === 1 ? "" : "s"}`
     : getExecutionStatus();
   const isRunAllDisabled = globalIsExecutingAll || !hasAnyModelConfigured;
 
@@ -137,13 +123,14 @@ export default function PlaygroundPage() {
       headerProps={{
         title: "Playground",
         help: {
-          description: "A sandbox to test and iterate your prompts across multiple windows",
+          description:
+            "A sandbox to test and iterate your prompts across multiple windows",
           href: "https://hanzo.com/docs/prompt-management/features/playground",
         },
         actionButtonsRight: (
           <div className="flex flex-nowrap items-center gap-2">
             {/* Window Count Display - Hidden on mobile */}
-            <div className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
+            <div className="text-muted-foreground hidden items-center gap-2 text-sm md:flex">
               <span className="whitespace-nowrap">
                 {windowIds.length} window
                 {windowIds.length === 1 ? "" : "s"}
@@ -153,7 +140,9 @@ export default function PlaygroundPage() {
                   <span className="hidden sm:inline">•</span>
                   <div className="flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    <span className="hidden whitespace-nowrap sm:inline">{executionStatus}</span>
+                    <span className="hidden whitespace-nowrap sm:inline">
+                      {executionStatus}
+                    </span>
                   </div>
                 </>
               )}
@@ -171,7 +160,11 @@ export default function PlaygroundPage() {
                   : "Execute all playground windows simultaneously"
               }
             >
-              {globalIsExecutingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+              {globalIsExecutingAll ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Play className="h-3 w-3" />
+              )}
               <span className="hidden lg:inline">Run All (Ctrl + Enter)</span>
             </Button>
 
@@ -182,11 +175,17 @@ export default function PlaygroundPage() {
       }}
     >
       <div className="flex h-full flex-col">
-        {!hasAnyModelConfigured && projectId && <NoModelConfiguredAlert projectId={projectId} />}
+        {!hasAnyModelConfigured && projectId && (
+          <NoModelConfiguredAlert projectId={projectId} />
+        )}
         <div className="flex-1 overflow-hidden">
-          <MultiWindowPlayground windowState={windowState} onRemoveWindow={removeWindow} onAddWindow={addWindow} />
+          <MultiWindowPlayground
+            windowState={windowState}
+            onRemoveWindow={removeWindow}
+            onAddWindow={addWindow}
+          />
         </div>
-      </Page>
-    </MessageSearchProvider>
+      </div>
+    </Page>
   );
 }

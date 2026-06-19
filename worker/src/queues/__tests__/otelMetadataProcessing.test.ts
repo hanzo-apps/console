@@ -5,32 +5,29 @@
  * NOTE: The dual-write path (otel-dual-write) uses mapKeys() in SQL which doesn't flatten.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import {
-  metadataArraysToRecord,
-  OtelIngestionProcessor,
-} from "@langfuse/shared/src/server";
+import { metadataArraysToRecord, OtelIngestionProcessor } from "@langfuse/shared/src/server";
 import { prisma } from "@langfuse/shared/src/db";
 import { IngestionService } from "../../services/IngestionService";
-import * as clickhouseWriterExports from "../../services/ClickhouseWriter";
+import * as datastoreWriterExports from "../../services/DatastoreWriter";
 
 // vi.hoisted ensures this is declared before vi.mock's hoisted factory runs.
 // Without it, the variable would be undefined when the factory executes.
-const { mockAddToClickhouseWriter } = vi.hoisted(() => ({
-  mockAddToClickhouseWriter: vi.fn(),
+const { mockAddToDatastoreWriter } = vi.hoisted(() => ({
+  mockAddToDatastoreWriter: vi.fn(),
 }));
-vi.mock("../../services/ClickhouseWriter", async (importOriginal) => {
+vi.mock("../../services/DatastoreWriter", async (importOriginal) => {
   const original = (await importOriginal()) as object;
   return {
     ...original,
-    ClickhouseWriter: {
+    DatastoreWriter: {
       getInstance: () => ({
-        addToQueue: mockAddToClickhouseWriter,
+        addToQueue: mockAddToDatastoreWriter,
       }),
     },
   };
 });
 
-const mockClickhouseClient = {
+const mockDatastoreClient = {
   query: async () => ({
     json: async () => [],
     query_id: "test-query-id",
@@ -41,8 +38,8 @@ const mockClickhouseClient = {
 const ingestionService = new IngestionService(
   null as any,
   prisma,
-  clickhouseWriterExports.ClickhouseWriter.getInstance() as any,
-  mockClickhouseClient as any,
+  datastoreWriterExports.DatastoreWriter.getInstance() as any,
+  mockDatastoreClient as any,
 );
 
 function createNanoTimestamp(nanoTime: bigint): {
@@ -115,40 +112,26 @@ function buildOtelSpan(params: {
   };
 }
 
-async function processAndCreateEvent(
-  otelSpan: ReturnType<typeof buildOtelSpan>,
-) {
+async function processAndCreateEvent(otelSpan: ReturnType<typeof buildOtelSpan>) {
   const processor = new OtelIngestionProcessor({ projectId: "test-project" });
   const eventInputs = processor.processToEvent([otelSpan]);
   expect(eventInputs.length).toBeGreaterThan(0);
 
-  const eventRecord = await ingestionService.createEventRecord(
-    eventInputs[0],
-    "test/otel/test.json",
-  );
+  const eventRecord = await ingestionService.createEventRecord(eventInputs[0], "test/otel/test.json");
 
   console.log("metadata_names:", JSON.stringify(eventRecord.metadata_names));
   console.log("metadata_values:", JSON.stringify(eventRecord.metadata_values));
 
-  const nameToValue = metadataArraysToRecord(
-    eventRecord.metadata_names,
-    eventRecord.metadata_values,
-  );
+  const nameToValue = metadataArraysToRecord(eventRecord.metadata_names, eventRecord.metadata_values);
 
   return { eventRecord, nameToValue };
 }
 
-function arraysToRecord(
-  names: string[],
-  values: Array<string | null | undefined>,
-) {
-  return names.reduce<Record<string, string | null | undefined>>(
-    (acc, name, index) => {
-      acc[name] = values[index];
-      return acc;
-    },
-    {},
-  );
+function arraysToRecord(names: string[], values: Array<string | null | undefined>) {
+  return names.reduce<Record<string, string | null | undefined>>((acc, name, index) => {
+    acc[name] = values[index];
+    return acc;
+  }, {});
 }
 
 describe("OTel metadata processing", () => {
@@ -214,9 +197,7 @@ describe("OTel metadata processing", () => {
             scope: {
               name: "langfuse-sdk",
               version: "4.5.0",
-              attributes: [
-                { key: "public_key", value: { stringValue: "pk-test" } },
-              ],
+              attributes: [{ key: "public_key", value: { stringValue: "pk-test" } }],
             },
             spans: [
               {
@@ -224,12 +205,8 @@ describe("OTel metadata processing", () => {
                 spanId: createBufferId("c874c627f90e96a6"),
                 name: "experiment-child-span",
                 kind: 1,
-                startTimeUnixNano: createNanoTimestamp(
-                  BigInt(1777044156622912000),
-                ),
-                endTimeUnixNano: createNanoTimestamp(
-                  BigInt(1777044156622993000),
-                ),
+                startTimeUnixNano: createNanoTimestamp(BigInt(1777044156622912000)),
+                endTimeUnixNano: createNanoTimestamp(BigInt(1777044156622993000)),
                 attributes: [
                   {
                     key: "langfuse.observation.type",
@@ -300,29 +277,20 @@ describe("OTel metadata processing", () => {
         ],
       };
 
-      const { eventRecord, nameToValue } =
-        await processAndCreateEvent(otelSpan);
+      const { eventRecord, nameToValue } = await processAndCreateEvent(otelSpan);
 
       expect(eventRecord.experiment_id).toBe("972b5387f1607558");
       expect(eventRecord.experiment_item_id).toBe("80db4ccdca106d37");
       expect(nameToValue["continent"]).toBe("observation-continent");
 
-      expect(
-        arraysToRecord(
-          eventRecord.experiment_metadata_names,
-          eventRecord.experiment_metadata_values,
-        ),
-      ).toEqual({
+      expect(arraysToRecord(eventRecord.experiment_metadata_names, eventRecord.experiment_metadata_values)).toEqual({
         source: "serialized",
         override: "flattened-value",
         "nested.key": "nested-value",
         region: "emea",
       });
       expect(
-        arraysToRecord(
-          eventRecord.experiment_item_metadata_names,
-          eventRecord.experiment_item_metadata_values,
-        ),
+        arraysToRecord(eventRecord.experiment_item_metadata_names, eventRecord.experiment_item_metadata_values),
       ).toEqual({
         legacy: "true",
         continent: "Europe",

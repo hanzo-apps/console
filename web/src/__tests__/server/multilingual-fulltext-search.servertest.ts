@@ -8,14 +8,14 @@
  * payload is stored in ClickHouse **verbatim as the JSON string the SDK produced**. Python's
  * `json.dumps(...)` defaults to `ensure_ascii=True`, so a value like `你好` is persisted on
  * disk as the literal 12-byte ASCII string `\u4f60\u597d`. The UI's display layer parses that
- * JSON back, so the user *sees* `你好` — but full-text search (`clickhouseSearchCondition`)
+ * JSON back, so the user *sees* `你好` — but full-text search (`datastoreSearchCondition`)
  * runs a literal `input ILIKE '%你好%'`, which can never match the stored bytes `\u4f60\u597d`.
  * ASCII text (`Hello`) is not escaped, so it matches.
  *
  * These tests reproduce that: they store trace/observation I/O in the exact escaped form the
  * Python SDK produces (via `pythonJsonDumps`, an `ensure_ascii=True` equivalent), then search
  * for the *raw* (human-readable) text and assert it is found. Today they all FAIL. After the
- * fix to `clickhouseSearchCondition` (also matching the `\uXXXX`-escaped form of the query),
+ * fix to `datastoreSearchCondition` (also matching the `\uXXXX`-escaped form of the query),
  * they must all PASS.
  *
  * Coverage: one integration test per writing system used by ≥ 1 million people (with separate
@@ -29,7 +29,7 @@ import { prisma } from "@langfuse/shared/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import {
-  clickhouseSearchCondition,
+  datastoreSearchCondition,
   createTrace,
   createTracesCh,
   createObservation,
@@ -108,7 +108,7 @@ describe("multilingual full-text search (issue #11538)", () => {
           ],
         },
       ],
-      featureFlags: { excludeClickhouseRead: false, templateFlag: true },
+      featureFlags: { excludeDatastoreRead: false, templateFlag: true },
       admin: true,
     },
     environment: {} as any,
@@ -461,13 +461,13 @@ describe("multilingual full-text search (issue #11538)", () => {
 
   // -------------------------------------------------------------------------
   // 4. Unit — the SQL builder itself (light, per the Testing Trophy).
-  //    `clickhouseSearchCondition` must, for a non-ASCII query, also bind the JSON-\u-escaped
+  //    `datastoreSearchCondition` must, for a non-ASCII query, also bind the JSON-\u-escaped
   //    form so it can match content written by `ensure_ascii=True` serialisers.
   // -------------------------------------------------------------------------
-  describe("clickhouseSearchCondition — escaped-form parameter", () => {
+  describe("datastoreSearchCondition — escaped-form parameter", () => {
     const paramValues = (q: string, t: TracingSearchType[]) =>
       Object.values(
-        clickhouseSearchCondition({
+        datastoreSearchCondition({
           query: q,
           searchType: t,
           tablePrefix: "t",
@@ -475,7 +475,7 @@ describe("multilingual full-text search (issue #11538)", () => {
       );
 
     it("binds the \\u-escaped form of a CJK query in addition to the raw form (content search)", () => {
-      const result = clickhouseSearchCondition({
+      const result = datastoreSearchCondition({
         query: "你好",
         searchType: ["content"],
         tablePrefix: "t",

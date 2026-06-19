@@ -1,16 +1,35 @@
+import dns from "node:dns/promises";
+import { URL } from "node:url";
+import { isIPBlocked, isIPAddress, isHostnameBlocked } from "./ipBlocking";
 import { env } from "../../env";
-import {
-  type OutboundUrlValidationWhitelist,
-  parseOutboundUrl,
-  resolveHost,
-  validateOutboundUrlHost,
-} from "../outbound-url";
+import { logger } from "../logger";
 
 export async function resolveHost(hostname: string): Promise<string[]> {
   // Returns every A + AAAA address
   const [v4, v6] = await Promise.allSettled([dns.resolve4(hostname), dns.resolve6(hostname)]);
 
-export const WEBHOOK_URL_VALIDATION_LOG_CONTEXT = "Webhook";
+  const ips: string[] = [];
+  if (v4.status === "fulfilled") {
+    // Filter out any undefined/null values
+    const validV4Ips = v4.value.filter((ip) => ip && typeof ip === "string");
+
+    ips.push(...validV4Ips);
+  }
+  if (v6.status === "fulfilled") {
+    // Filter out any undefined/null values
+    const validV6Ips = v6.value.filter((ip) => ip && typeof ip === "string");
+
+    ips.push(...validV6Ips);
+  }
+  if (!ips.length) throw new Error(`DNS lookup failed for ${hostname}`);
+  return ips;
+}
+
+export interface WebhookValidationWhitelist {
+  hosts: string[];
+  ips: string[];
+  ip_ranges: string[];
+}
 
 export function whitelistFromEnv(): WebhookValidationWhitelist {
   return {
@@ -32,12 +51,21 @@ export async function validateWebhookURL(
   urlString: string,
   whitelist: WebhookValidationWhitelist = whitelistFromEnv(),
 ): Promise<void> {
-  const url = parseOutboundUrl(urlString);
+  // Step 1: Basic URL parsing and normalization
+  let url: URL;
+  try {
+    // Normalize the URL string first to handle encoding issues
+    const normalizedUrl = normalizeURL(urlString);
+    url = new URL(normalizedUrl);
+  } catch {
+    throw new Error("Invalid URL syntax");
+  }
 
   if (!["https:", "http:"].includes(url.protocol)) {
     throw new Error("Only HTTP and HTTPS protocols are allowed");
   }
 
+  // Step 2: Port validation
   if (url.port && !["443", "80"].includes(url.port)) {
     throw new Error("Only ports 80 and 443 are allowed");
   }

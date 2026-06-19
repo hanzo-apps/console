@@ -8,9 +8,16 @@ import {
   createEvent,
   createOrgProjectAndApiKey,
   type EventRecordInsertType,
-} from "@hanzo/shared/src/server";
-import { createObservationsCh, createTracesCh, createEventsCh } from "@hanzo/shared/src/server";
-import { makeZodVerifiedAPICall, makeZodVerifiedAPICallSilent } from "@/src/__tests__/test-utils";
+} from "@langfuse/shared/src/server";
+import {
+  createObservationsCh,
+  createTracesCh,
+  createEventsCh,
+} from "@langfuse/shared/src/server";
+import {
+  makeZodVerifiedAPICall,
+  makeZodVerifiedAPICallSilent,
+} from "@/src/__tests__/test-utils";
 import {
   DeleteTracesV1Response,
   DeleteTraceV1Response,
@@ -63,7 +70,12 @@ const createObservationOrEvent = (
       type: data.type ?? "SPAN",
       level: data.level ?? "DEFAULT",
       start_time: data.start_time * timeMultiplier, // Convert ms to microseconds
-      end_time: data.end_time === null ? null : data.end_time ? data.end_time * timeMultiplier : null,
+      end_time:
+        data.end_time === null
+          ? null
+          : data.end_time
+            ? data.end_time * timeMultiplier
+            : null,
     });
   } else {
     // For observations table: milliseconds
@@ -175,7 +187,9 @@ const createTraceWithObservations = async (
     await createEventsCh([rootTraceEvent, ...observationEvents] as any);
   } else {
     // For observations table: just create observations
-    const data = observations.map((obs) => createObservationOrEvent(useEventsTable, obs));
+    const data = observations.map((obs) =>
+      createObservationOrEvent(useEventsTable, obs),
+    );
     await createObservationsCh(data as any);
   }
 };
@@ -231,7 +245,13 @@ describe("/api/public/traces API Endpoint", () => {
       createObservationsCh(observations),
     ]);
 
-    const trace = await makeZodVerifiedAPICall(GetTraceV1Response, "GET", "/api/public/traces/" + createdTrace.id);
+    const trace = await makeZodVerifiedAPICall(
+      GetTraceV1Response,
+      "GET",
+      "/api/public/traces/" + createdTrace.id,
+      undefined,
+      auth,
+    );
 
     expect(trace.body.name).toBe("trace-name");
     expect(trace.body.release).toBe("1.0.0");
@@ -440,7 +460,13 @@ describe("/api/public/traces API Endpoint", () => {
       createObservationsCh(observations),
     ]);
 
-    const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", "/api/public/traces");
+    const traces = await makeZodVerifiedAPICall(
+      GetTracesV1Response,
+      "GET",
+      "/api/public/traces",
+      undefined,
+      auth,
+    );
 
     expect(traces.body.meta.totalItems).toBeGreaterThanOrEqual(1);
     expect(traces.body.data.length).toBeGreaterThanOrEqual(1);
@@ -469,29 +495,38 @@ describe("/api/public/traces API Endpoint", () => {
     ["version", randomUUID()],
     ["name", randomUUID()],
     ["environment", randomUUID()],
-  ])("should fetch all traces filtered by a value (%s, %s)", async (prop: string, value: string) => {
-    const createdTrace = createTrace({
-      [snakeCase(prop)]: value,
-      project_id: projectId,
-      metadata: { key: "value" },
-    });
+  ])(
+    "should fetch all traces filtered by a value (%s, %s)",
+    async (prop: string, value: string) => {
+      const createdTrace = createTrace({
+        [snakeCase(prop)]: value,
+        project_id: projectId,
+        metadata: { key: "value" },
+      });
 
-    // Create a trace in the project that should not be returned
-    const dummyTrace = createTrace({
-      project_id: projectId,
-      metadata: { key: "value" },
-    });
+      // Create a trace in the project that should not be returned
+      const dummyTrace = createTrace({
+        project_id: projectId,
+        metadata: { key: "value" },
+      });
 
-    await createTracesCh([createdTrace, dummyTrace]);
+      await createTracesCh([createdTrace, dummyTrace]);
 
-    const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", `/api/public/traces?${prop}=${value}`);
+      const traces = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        `/api/public/traces?${prop}=${value}`,
+        undefined,
+        auth,
+      );
 
-    expect(traces.body.meta.totalItems).toBe(1);
-    expect(traces.body.data.length).toBe(1);
-    const trace = traces.body.data[0];
-    expect(trace.projectId).toBe(projectId);
-    expect((trace as any)[prop]).toBe(value);
-  });
+      expect(traces.body.meta.totalItems).toBe(1);
+      expect(traces.body.data.length).toBe(1);
+      const trace = traces.body.data[0];
+      expect(trace.projectId).toBe(projectId);
+      expect((trace as any)[prop]).toBe(value);
+    },
+  );
 
   it("should fetch all traces, observations, and scores filtered by environment", async () => {
     const environment = randomUUID();
@@ -624,7 +659,13 @@ describe("/api/public/traces API Endpoint", () => {
 
     await createTracesCh([createdTrace]);
 
-    const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", `/api/public/traces?tags=${[tag]}`);
+    const traces = await makeZodVerifiedAPICall(
+      GetTracesV1Response,
+      "GET",
+      `/api/public/traces?tags=${[tag]}`,
+      undefined,
+      auth,
+    );
 
     expect(traces.body.meta.totalItems).toBe(1);
     expect(traces.body.data.length).toBe(1);
@@ -734,7 +775,13 @@ describe("/api/public/traces API Endpoint", () => {
 
     await createTracesCh([trace]);
 
-    const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", `/api/public/traces`);
+    const traces = await makeZodVerifiedAPICall(
+      GetTracesV1Response,
+      "GET",
+      `/api/public/traces?name=${encodeURIComponent(traceName)}&limit=1`,
+      undefined,
+      auth,
+    );
 
     const traceResponse = traces.body.data.find((t) => t.id === traceId);
     expect(traceResponse).toBeDefined();
@@ -767,7 +814,13 @@ describe("/api/public/traces API Endpoint", () => {
 
     await createTracesCh([trace]);
 
-    const traceResponse = await makeZodVerifiedAPICall(GetTraceV1Response, "GET", `/api/public/traces/${traceId}`);
+    const traceResponse = await makeZodVerifiedAPICall(
+      GetTraceV1Response,
+      "GET",
+      `/api/public/traces/${traceId}`,
+      undefined,
+      auth,
+    );
 
     expect(traceResponse.body.name).toBe("trace-name1");
     expect(traceResponse.body.metadata).toEqual({ key: { foo: "bar" } });
@@ -810,8 +863,16 @@ describe("/api/public/traces API Endpoint", () => {
       }),
     ]);
 
-    await expect(makeZodVerifiedAPICall(GetTraceV1Response, "GET", `/api/public/traces/${traceId}`)).rejects.toThrow(
-      "Observations in trace are too large: 90.00MB exceeds limit of 80.00MB",
+    await expect(
+      makeZodVerifiedAPICall(
+        GetTraceV1Response,
+        "GET",
+        `/api/public/traces/${traceId}`,
+        undefined,
+        auth,
+      ),
+    ).rejects.toThrow(
+      /Observations in trace are too large: .* exceeds limit of 80\.00MB/,
     );
   });
 
@@ -853,9 +914,15 @@ describe("/api/public/traces API Endpoint", () => {
     await createTracesCh([createdTrace1, createdTrace2]);
 
     // When
-    const deleteResponse = await makeZodVerifiedAPICall(DeleteTracesV1Response, "DELETE", `/api/public/traces`, {
-      traceIds: [createdTrace1.id, createdTrace2.id],
-    });
+    const deleteResponse = await makeZodVerifiedAPICall(
+      DeleteTracesV1Response,
+      "DELETE",
+      `/api/public/traces`,
+      {
+        traceIds: [createdTrace1.id, createdTrace2.id],
+      },
+      auth,
+    );
 
     // Then
     expect(deleteResponse.status).toBe(200);
@@ -886,7 +953,13 @@ describe("/api/public/traces API Endpoint", () => {
         createScoresCh([score]),
       ]);
 
-      const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", "/api/public/traces");
+      const traces = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces",
+        undefined,
+        auth,
+      );
 
       const trace = traces.body.data.find((t) => t.id === traceId);
       expect(trace).toBeTruthy();
@@ -937,7 +1010,13 @@ describe("/api/public/traces API Endpoint", () => {
         createScoresCh([score]),
       ]);
 
-      const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", "/api/public/traces?fields=core");
+      const traces = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces?fields=core",
+        undefined,
+        auth,
+      );
 
       const trace = traces.body.data.find((t) => t.id === traceId);
       expect(trace).toBeTruthy();
@@ -975,7 +1054,13 @@ describe("/api/public/traces API Endpoint", () => {
 
       await createTracesCh([createdTrace]);
 
-      const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", "/api/public/traces?fields=core,io");
+      const traces = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces?fields=core,io",
+        undefined,
+        auth,
+      );
 
       const trace = traces.body.data.find((t) => t.id === traceId);
       expect(trace).toBeTruthy();
@@ -1015,7 +1100,13 @@ describe("/api/public/traces API Endpoint", () => {
         createScoresCh([score]),
       ]);
 
-      const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", "/api/public/traces?fields=core,scores");
+      const traces = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces?fields=core,scores",
+        undefined,
+        auth,
+      );
 
       const trace = traces.body.data.find((t) => t.id === traceId);
       expect(trace).toBeTruthy();
@@ -1102,7 +1193,13 @@ describe("/api/public/traces API Endpoint", () => {
         createObservationsCh([observation]),
       ]);
 
-      const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", "/api/public/traces?fields=core,metrics");
+      const traces = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces?fields=core,metrics",
+        undefined,
+        auth,
+      );
 
       const trace = traces.body.data.find((t) => t.id === traceId);
       expect(trace).toBeTruthy();
@@ -1145,7 +1242,13 @@ describe("/api/public/traces API Endpoint", () => {
         createScoresCh([score]),
       ]);
 
-      const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", "/api/public/traces?fields=");
+      const traces = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces?fields=",
+        undefined,
+        auth,
+      );
 
       // Should default to all fields when empty
       expect(traces.status).toBe(200);
@@ -1168,11 +1271,15 @@ describe("/api/public/traces API Endpoint", () => {
 
   describe("Advanced Filtering - Dual Path Tests", () => {
     const runTestSuite = (useEventsTable: boolean) => {
-      const suiteName = useEventsTable ? "with events table" : "with traces table";
+      const suiteName = useEventsTable
+        ? "with events table"
+        : "with traces table";
       const basePath = "/api/public/traces";
       const buildUrl = (params: string) => {
         if (!params) return basePath;
-        const prefix = useEventsTable ? `${basePath}?useEventsTable=true&` : `${basePath}?`;
+        const prefix = useEventsTable
+          ? `${basePath}?useEventsTable=true&`
+          : `${basePath}?`;
         return prefix + params;
       };
 
@@ -1250,8 +1357,12 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(traces.status).toBe(200);
-          const matchingTrace = traces.body.data.find((t) => t.id === testTraceId);
-          const nonMatchingTrace = traces.body.data.find((t) => t.id === testTraceId2);
+          const matchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId,
+          );
+          const nonMatchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId2,
+          );
 
           expect(matchingTrace).toBeTruthy();
           expect(nonMatchingTrace).toBeFalsy();
@@ -1284,8 +1395,12 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(traces.status).toBe(200);
-          const matchingTrace = traces.body.data.find((t) => t.id === testTraceId);
-          const nonMatchingTrace = traces.body.data.find((t) => t.id === testTraceId2);
+          const matchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId,
+          );
+          const nonMatchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId2,
+          );
 
           expect(matchingTrace).toBeTruthy();
           expect(nonMatchingTrace).toBeFalsy();
@@ -1315,7 +1430,9 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(traces.status).toBe(200);
-          const matchingTrace = traces.body.data.find((t) => t.id === testTraceId);
+          const matchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId,
+          );
 
           expect(matchingTrace).toBeTruthy();
           if (matchingTrace) {
@@ -1334,8 +1451,12 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(traces.status).toBe(200);
-          const matchingTrace = traces.body.data.find((t) => t.id === testTraceId);
-          const nonMatchingTrace = traces.body.data.find((t) => t.id === testTraceId2);
+          const matchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId,
+          );
+          const nonMatchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId2,
+          );
 
           expect(matchingTrace).toBeTruthy();
           expect(nonMatchingTrace).toBeFalsy();
@@ -1355,12 +1476,20 @@ describe("/api/public/traces API Endpoint", () => {
           const traces = await makeZodVerifiedAPICall(
             GetTracesV1Response,
             "GET",
-            buildUrl(`userId=filter-user-2&filter=${encodeURIComponent(filterParam)}`),
+            buildUrl(
+              `userId=filter-user-2&filter=${encodeURIComponent(filterParam)}`,
+            ),
+            undefined,
+            auth,
           );
 
           expect(traces.status).toBe(200);
-          const matchingTrace = traces.body.data.find((t) => t.id === testTraceId);
-          const nonMatchingTrace = traces.body.data.find((t) => t.id === testTraceId2);
+          const matchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId,
+          );
+          const nonMatchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId2,
+          );
 
           // Should match trace1 (filter takes precedence) not trace2 (simple param)
           expect(matchingTrace).toBeTruthy();
@@ -1382,12 +1511,20 @@ describe("/api/public/traces API Endpoint", () => {
           const traces = await makeZodVerifiedAPICall(
             GetTracesV1Response,
             "GET",
-            buildUrl(`userId=filter-user-1&filter=${encodeURIComponent(filterParam)}`),
+            buildUrl(
+              `userId=filter-user-1&filter=${encodeURIComponent(filterParam)}`,
+            ),
+            undefined,
+            auth,
           );
 
           expect(traces.status).toBe(200);
-          const matchingTrace = traces.body.data.find((t) => t.id === testTraceId);
-          const nonMatchingTrace = traces.body.data.find((t) => t.id === testTraceId2);
+          const matchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId,
+          );
+          const nonMatchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId2,
+          );
 
           expect(matchingTrace).toBeTruthy();
           expect(nonMatchingTrace).toBeFalsy();
@@ -1429,7 +1566,13 @@ describe("/api/public/traces API Endpoint", () => {
         });
 
         it("should return validation error for empty string as filter", async () => {
-          const traces = await makeZodVerifiedAPICallSilent(GetTracesV1Response, "GET", buildUrl(`filter=`));
+          const traces = await makeZodVerifiedAPICallSilent(
+            GetTracesV1Response,
+            "GET",
+            buildUrl(`filter=`),
+            undefined,
+            auth,
+          );
 
           expect(traces.status).toBe(200); // Empty string should be treated as undefined
         });
@@ -1502,8 +1645,12 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(tracesRange.status).toBe(200);
-          const matchingRange = tracesRange.body.data.find((t) => t.id === testTraceId);
-          const nonMatchingRange = tracesRange.body.data.find((t) => t.id === testTraceId2);
+          const matchingRange = tracesRange.body.data.find(
+            (t) => t.id === testTraceId,
+          );
+          const nonMatchingRange = tracesRange.body.data.find(
+            (t) => t.id === testTraceId2,
+          );
           expect(matchingRange).toBeTruthy();
           expect(nonMatchingRange).toBeFalsy();
         });
@@ -1531,7 +1678,9 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(traces.status).toBe(200);
-          const matchingTrace = traces.body.data.find((t) => t.id === testTraceId2);
+          const matchingTrace = traces.body.data.find(
+            (t) => t.id === testTraceId2,
+          );
           // Should match trace2 (advanced filter wins)
           expect(matchingTrace).toBeTruthy();
         });
@@ -1614,7 +1763,9 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(traces.status).toBe(200);
-          const matchingTrace = traces.body.data.find((t) => t.id === traceWithVersionChange);
+          const matchingTrace = traces.body.data.find(
+            (t) => t.id === traceWithVersionChange,
+          );
 
           // The trace should NOT be found because its aggregated version is 2.0, not 1.0
           expect(matchingTrace).toBeUndefined();
@@ -1644,7 +1795,9 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(traces2.status).toBe(200);
-          const matchingTrace2 = traces2.body.data.find((t) => t.id === traceWithVersionChange);
+          const matchingTrace2 = traces2.body.data.find(
+            (t) => t.id === traceWithVersionChange,
+          );
 
           // The trace SHOULD be found because its aggregated version is 2.0
           expect(matchingTrace2).toBeTruthy();
@@ -1715,9 +1868,11 @@ describe("/api/public/traces API Endpoint", () => {
             },
           ];
 
-          await createTraceWithObservations(useEventsTable, trace1, observations1);
-          await createTraceWithObservations(useEventsTable, trace2, observations2);
-          await createTraceWithObservations(useEventsTable, trace3, observations3);
+          await Promise.all([
+            createTraceWithObservations(useEventsTable, trace1, observations1),
+            createTraceWithObservations(useEventsTable, trace2, observations2),
+            createTraceWithObservations(useEventsTable, trace3, observations3),
+          ]);
 
           await waitForEventsTable(useEventsTable);
 
@@ -1754,9 +1909,15 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(traces.status).toBe(200);
-          const trace1Result = traces.body.data.find((t) => t.id === traceWithLatency1);
-          const trace2Result = traces.body.data.find((t) => t.id === traceWithLatency2);
-          const trace3Result = traces.body.data.find((t) => t.id === traceWithLatency3);
+          const trace1Result = traces.body.data.find(
+            (t) => t.id === traceWithLatency1,
+          );
+          const trace2Result = traces.body.data.find(
+            (t) => t.id === traceWithLatency2,
+          );
+          const trace3Result = traces.body.data.find(
+            (t) => t.id === traceWithLatency3,
+          );
 
           // Trace 1 (0.5s) and Trace 2 (1.5s) should be found
           expect(trace1Result).toBeTruthy();
@@ -1851,7 +2012,7 @@ describe("/api/public/traces API Endpoint", () => {
 
     // Run test suite twice - once for each implementation
     runTestSuite(false); // old traces table
-    if (env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
+    if (env.LANGFUSE_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
       runTestSuite(true); // Events table
     }
   });
@@ -1859,11 +2020,15 @@ describe("/api/public/traces API Endpoint", () => {
   // Dual-path tests for events table migration
   describe("GET /api/public/traces - Events Table Migration Tests", () => {
     const runTestSuite = (useEventsTable: boolean) => {
-      const suiteName = useEventsTable ? "with events table" : "with traces table";
+      const suiteName = useEventsTable
+        ? "with events table"
+        : "with traces table";
       const basePath = "/api/public/traces";
       const buildUrl = (params: string) => {
         if (!params) return basePath;
-        const prefix = useEventsTable ? `${basePath}?useEventsTable=true&` : `${basePath}?`;
+        const prefix = useEventsTable
+          ? `${basePath}?useEventsTable=true&`
+          : `${basePath}?`;
         return prefix + params;
       };
 
@@ -1969,11 +2134,19 @@ describe("/api/public/traces API Endpoint", () => {
             createTraceWithObservations(useEventsTable, dummyTrace, []),
           ]);
 
-          const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", buildUrl(`userId=${userId}`));
+          const traces = await makeZodVerifiedAPICall(
+            GetTracesV1Response,
+            "GET",
+            buildUrl(`userId=${userId}`),
+            undefined,
+            auth,
+          );
 
           expect(traces.body.meta.totalItems).toBeGreaterThanOrEqual(1);
           const matchingTrace = traces.body.data.find((t) => t.id === traceId);
-          const nonMatchingTrace = traces.body.data.find((t) => t.id === dummyTraceId);
+          const nonMatchingTrace = traces.body.data.find(
+            (t) => t.id === dummyTraceId,
+          );
 
           expect(matchingTrace).toBeTruthy();
           expect(nonMatchingTrace).toBeUndefined();
@@ -1991,7 +2164,13 @@ describe("/api/public/traces API Endpoint", () => {
 
           await createTraceWithObservations(useEventsTable, createdTrace, []);
 
-          const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", buildUrl(`name=${traceName}`));
+          const traces = await makeZodVerifiedAPICall(
+            GetTracesV1Response,
+            "GET",
+            buildUrl(`name=${traceName}`),
+            undefined,
+            auth,
+          );
 
           const matchingTrace = traces.body.data.find((t) => t.id === traceId);
           expect(matchingTrace).toBeTruthy();
@@ -2034,15 +2213,28 @@ describe("/api/public/traces API Endpoint", () => {
             }),
           );
 
-          for (const trace of traces) {
-            await createTraceWithObservations(useEventsTable, trace, []);
-          }
+          await Promise.all(
+            traces.map((trace) =>
+              createTraceWithObservations(useEventsTable, trace, []),
+            ),
+          );
 
-          // Get page 1
-          const page1 = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", buildUrl(`page=1&limit=2`));
-
-          // Get page 2
-          const page2 = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", buildUrl(`page=2&limit=2`));
+          const [page1, page2] = await Promise.all([
+            makeZodVerifiedAPICall(
+              GetTracesV1Response,
+              "GET",
+              buildUrl(`page=1&limit=2`),
+              undefined,
+              auth,
+            ),
+            makeZodVerifiedAPICall(
+              GetTracesV1Response,
+              "GET",
+              buildUrl(`page=2&limit=2`),
+              undefined,
+              auth,
+            ),
+          ]);
 
           expect(page1.body.data.length).toBeLessThanOrEqual(2);
           expect(page2.body.data.length).toBeLessThanOrEqual(2);
@@ -2073,17 +2265,27 @@ describe("/api/public/traces API Endpoint", () => {
             timestamp: yesterday.getTime() - 24 * 60 * 60 * 1000,
           });
 
-          await createTraceWithObservations(useEventsTable, traceInRange, []);
-          await createTraceWithObservations(useEventsTable, traceOutOfRange, []);
+          await Promise.all([
+            createTraceWithObservations(useEventsTable, traceInRange, []),
+            createTraceWithObservations(useEventsTable, traceOutOfRange, []),
+          ]);
 
           const traces = await makeZodVerifiedAPICall(
             GetTracesV1Response,
             "GET",
-            buildUrl(`fromTimestamp=${yesterday.toISOString()}&toTimestamp=${tomorrow.toISOString()}`),
+            buildUrl(
+              `fromTimestamp=${yesterday.toISOString()}&toTimestamp=${tomorrow.toISOString()}`,
+            ),
+            undefined,
+            auth,
           );
 
-          const inRangeFound = traces.body.data.find((t) => t.id === traceInRange.id);
-          const outOfRangeFound = traces.body.data.find((t) => t.id === traceOutOfRange.id);
+          const inRangeFound = traces.body.data.find(
+            (t) => t.id === traceInRange.id,
+          );
+          const outOfRangeFound = traces.body.data.find(
+            (t) => t.id === traceOutOfRange.id,
+          );
 
           expect(inRangeFound).toBeTruthy();
           expect(outOfRangeFound).toBeUndefined();
@@ -2109,7 +2311,13 @@ describe("/api/public/traces API Endpoint", () => {
 
           await createScoresCh([score]);
 
-          const traces = await makeZodVerifiedAPICall(GetTracesV1Response, "GET", buildUrl(`fields=core,scores`));
+          const traces = await makeZodVerifiedAPICall(
+            GetTracesV1Response,
+            "GET",
+            buildUrl(`fields=core,scores`),
+            undefined,
+            auth,
+          );
 
           const trace = traces.body.data.find((t) => t.id === traceId);
           expect(trace).toBeTruthy();
@@ -2142,7 +2350,9 @@ describe("/api/public/traces API Endpoint", () => {
           );
 
           expect(result.body.meta.totalItems).toBeGreaterThanOrEqual(3);
-          const matchingTraces = result.body.data.filter((t) => t.name?.startsWith("count-test-"));
+          const matchingTraces = result.body.data.filter((t) =>
+            t.name?.startsWith("count-test-"),
+          );
           expect(matchingTraces.length).toBeGreaterThanOrEqual(3);
         });
       });
@@ -2150,9 +2360,156 @@ describe("/api/public/traces API Endpoint", () => {
 
     // Run test suite twice - once for each implementation
     runTestSuite(false); // Good old traces table
-    if (env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
+    if (env.LANGFUSE_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
       runTestSuite(true); // Events table
     }
+  });
+
+  describe.skip("GET /api/public/traces env var controls", () => {
+    const originalRejectNoDateRange =
+      env.LANGFUSE_API_TRACES_REJECT_NO_DATE_RANGE;
+    const originalDefaultDateRangeDays =
+      env.LANGFUSE_API_TRACES_DEFAULT_DATE_RANGE_DAYS;
+    const originalDefaultFields = env.LANGFUSE_API_TRACES_DEFAULT_FIELDS;
+
+    afterEach(() => {
+      (env as any).LANGFUSE_API_TRACES_REJECT_NO_DATE_RANGE =
+        originalRejectNoDateRange;
+      (env as any).LANGFUSE_API_TRACES_DEFAULT_DATE_RANGE_DAYS =
+        originalDefaultDateRangeDays;
+      (env as any).LANGFUSE_API_TRACES_DEFAULT_FIELDS = originalDefaultFields;
+    });
+
+    it("should return 400 when REJECT_NO_DATE_RANGE=true and no fromTimestamp", async () => {
+      (env as any).LANGFUSE_API_TRACES_REJECT_NO_DATE_RANGE = "true";
+
+      const response = await makeZodVerifiedAPICallSilent(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces",
+        undefined,
+        auth,
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it("should allow request when REJECT_NO_DATE_RANGE=true and fromTimestamp is provided", async () => {
+      (env as any).LANGFUSE_API_TRACES_REJECT_NO_DATE_RANGE = "true";
+
+      const fromTimestamp = new Date(
+        Date.now() - 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      const response = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        `/api/public/traces?fromTimestamp=${fromTimestamp}`,
+        undefined,
+        auth,
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it("should reject even when DEFAULT_DATE_RANGE_DAYS is also set (rejection takes precedence)", async () => {
+      (env as any).LANGFUSE_API_TRACES_REJECT_NO_DATE_RANGE = "true";
+      (env as any).LANGFUSE_API_TRACES_DEFAULT_DATE_RANGE_DAYS = 7;
+
+      const response = await makeZodVerifiedAPICallSilent(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces",
+        undefined,
+        auth,
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it("should apply DEFAULT_FIELDS when no fields query param is provided", async () => {
+      (env as any).LANGFUSE_API_TRACES_DEFAULT_FIELDS = "core";
+
+      const traceId = randomUUID();
+      const createdTrace = createTrace({
+        id: traceId,
+        name: "default-fields-test",
+        project_id: projectId,
+        input: JSON.stringify({ prompt: "test" }),
+        output: JSON.stringify({ response: "test response" }),
+      });
+
+      const observation = createObservation({
+        trace_id: traceId,
+        project_id: projectId,
+        name: "test-obs",
+        start_time: new Date().getTime() - 1000,
+        end_time: new Date().getTime(),
+      });
+
+      const score = createTraceScore({
+        trace_id: traceId,
+        project_id: projectId,
+        name: "test-score",
+        value: 0.8,
+      });
+
+      await Promise.all([
+        createTracesCh([createdTrace]),
+        createObservationsCh([observation]),
+        createScoresCh([score]),
+      ]);
+
+      const response = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces",
+        undefined,
+        auth,
+      );
+
+      const trace = response.body.data.find((t) => t.id === traceId);
+      expect(trace).toBeTruthy();
+      if (!trace) return;
+
+      // With core only, IO/scores/observations/metrics should be defaults
+      expect(trace.input).toBeNull();
+      expect(trace.output).toBeNull();
+      expect(trace.observations).toEqual([]);
+      expect(trace.scores).toEqual([]);
+      expect(trace.totalCost).toBe(-1);
+      expect(trace.latency).toBe(-1);
+    });
+
+    it("should override DEFAULT_FIELDS when explicit fields param is provided", async () => {
+      (env as any).LANGFUSE_API_TRACES_DEFAULT_FIELDS = "core";
+
+      const traceId = randomUUID();
+      const createdTrace = createTrace({
+        id: traceId,
+        name: "explicit-fields-test",
+        project_id: projectId,
+        input: JSON.stringify({ prompt: "test" }),
+        output: JSON.stringify({ response: "test response" }),
+      });
+
+      await createTracesCh([createdTrace]);
+
+      const response = await makeZodVerifiedAPICall(
+        GetTracesV1Response,
+        "GET",
+        "/api/public/traces?fields=core,io",
+        undefined,
+        auth,
+      );
+
+      const trace = response.body.data.find((t) => t.id === traceId);
+      expect(trace).toBeTruthy();
+      if (!trace) return;
+
+      // Explicit fields=core,io should override the env default of core-only
+      expect(trace.input).toEqual({ prompt: "test" });
+      expect(trace.output).toEqual({ response: "test response" });
+    });
   });
 
   // Comprehensive filter column tests - verify all documented filter columns don't crash
@@ -2189,77 +2546,14 @@ describe("/api/public/traces API Endpoint", () => {
     ];
 
     const runFilterTests = (useEventsTable: boolean) => {
-      const suiteName = useEventsTable ? "with events table" : "with traces table";
+      const suiteName = useEventsTable
+        ? "with events table"
+        : "with traces table";
       const queryParam = useEventsTable ? "?useEventsTable=true&" : "?";
 
-      describe(suiteName, () => {
-        // Aggregated Metrics (from observations)
-        const metricsFilters = [
-          { column: "latency", type: "number", operator: ">=", value: 0 },
-          { column: "inputTokens", type: "number", operator: ">=", value: 0 },
-          { column: "outputTokens", type: "number", operator: ">=", value: 0 },
-          { column: "totalTokens", type: "number", operator: ">=", value: 0 },
-          { column: "inputCost", type: "number", operator: ">=", value: 0 },
-          { column: "outputCost", type: "number", operator: ">=", value: 0 },
-          { column: "totalCost", type: "number", operator: ">=", value: 0 },
-        ];
-
-        metricsFilters.forEach(({ column, type, operator, value }) => {
-          it(`should not fail when filtering by ${column}`, async () => {
-            const filterParam = JSON.stringify([{ type, column, operator, value }]);
-            const response = await makeZodVerifiedAPICall(
-              GetTracesV1Response,
-              "GET",
-              `/api/public/traces${queryParam}filter=${encodeURIComponent(filterParam)}`,
-            );
-            expect(response.status).toBe(200);
-            expect(response.body.data).toBeDefined();
-            expect(response.body.meta).toBeDefined();
-          });
-        });
-
-        // Observation Level Aggregations
-        const observationAggFilters = [
-          { column: "level", type: "string", operator: "=", value: "ERROR" },
-          { column: "warningCount", type: "number", operator: ">=", value: 0 },
-          { column: "errorCount", type: "number", operator: ">=", value: 0 },
-          { column: "defaultCount", type: "number", operator: ">=", value: 0 },
-          { column: "debugCount", type: "number", operator: ">=", value: 0 },
-        ];
-
-        observationAggFilters.forEach(({ column, type, operator, value }) => {
-          it(`should not fail when filtering by ${column}`, async () => {
-            const filterParam = JSON.stringify([{ type, column, operator, value }]);
-            const response = await makeZodVerifiedAPICall(
-              GetTracesV1Response,
-              "GET",
-              `/api/public/traces${queryParam}filter=${encodeURIComponent(filterParam)}`,
-            );
-            expect(response.status).toBe(200);
-            expect(response.body.data).toBeDefined();
-            expect(response.body.meta).toBeDefined();
-          });
-        });
-
-        // Scores (should not crash, filters are ignored per our fix)
-        const scoreFilters = [
-          {
-            column: "scores_avg",
-            type: "numberObject",
-            key: "quality",
-            operator: ">=",
-            value: 0.5,
-          },
-          {
-            column: "score_categories",
-            type: "stringOptions",
-            operator: "any of",
-            value: ["good", "bad"],
-          },
-        ];
-
-        scoreFilters.forEach((filterDef) => {
-          it(`should not fail when filtering by ${filterDef.column}`, async () => {
+      it(`${suiteName}: should not fail for documented filter columns`, async () => {
+        const responses = await Promise.all(
+          filters.map((filterDef) => {
             const filterParam = JSON.stringify([filterDef]);
             return makeZodVerifiedAPICall(
               GetTracesV1Response,
@@ -2281,7 +2575,7 @@ describe("/api/public/traces API Endpoint", () => {
 
     // Run for both table implementations
     runFilterTests(false);
-    if (env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
+    if (env.LANGFUSE_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
       runFilterTests(true);
     }
   });

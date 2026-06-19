@@ -11,25 +11,20 @@ export type UiColumnMappings = readonly UiColumnMapping[];
 
 export type UiColumnMapping = UiColumnMatchable &
   Readonly<{
-    clickhouseTableName: string;
-    clickhouseSelect: string;
-    clickhouseTypeOverwrite?: string;
+    datastoreTableName: string;
+    datastoreSelect: string;
+    datastoreTypeOverwrite?: string;
     queryPrefix?: string;
     emptyEqualsNull?: boolean;
   }>;
 
-export const matchesUiColumnMapping = (
-  columnDef: UiColumnMatchable,
-  column: string | undefined,
-): boolean => {
+export const matchesUiColumnMapping = (columnDef: UiColumnMatchable, column: string | undefined): boolean => {
   if (column === undefined) {
     return false;
   }
 
   return (
-    columnDef.uiTableId === column ||
-    columnDef.uiTableName === column ||
-    columnDef.aliases?.includes(column) === true
+    columnDef.uiTableId === column || columnDef.uiTableName === column || columnDef.aliases?.includes(column) === true
   );
 };
 
@@ -37,9 +32,7 @@ export const findUiColumnMapping = <T extends UiColumnMatchable>(
   columnDefs: readonly T[],
   column: string | undefined,
 ): T | undefined => {
-  return columnDefs.find((columnDef) =>
-    matchesUiColumnMapping(columnDef, column),
-  );
+  return columnDefs.find((columnDef) => matchesUiColumnMapping(columnDef, column));
 };
 
 export type SingleValueOption = {

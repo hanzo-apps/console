@@ -18,22 +18,8 @@ export type MappingError = {
   message: string;
 };
 
-export type JsonPathMissInfo = {
-  sourceField: SourceField;
-  jsonPath: string;
-  mappingKey: string | null;
-};
-
-export type JsonPathErrorInfo = JsonPathMissInfo & { message: string };
-
-export type FieldMappingResult = {
-  value: unknown;
-  misses: JsonPathMissInfo[];
-  errors: JsonPathErrorInfo[];
-};
-
 /**
- * Test if a JSONPath is valid against the given data
+ * Test if a JSON path is valid against the given data
  */
 export function testJsonPath(props: { jsonPath: string; data: unknown }): {
   success: boolean;
@@ -52,7 +38,7 @@ export function testJsonPath(props: { jsonPath: string; data: unknown }): {
 }
 
 /**
- * Evaluate a JSONPath against the given data and return the result
+ * Evaluate a JSON path against the given data and return the result
  */
 export function evaluateJsonPath(data: unknown, jsonPath: string): unknown {
   const parsed = typeof data === "string" ? parseJsonPrioritised(data) : data;
@@ -60,14 +46,13 @@ export function evaluateJsonPath(data: unknown, jsonPath: string): unknown {
     path: jsonPath,
     json: parsed as string | object,
     wrap: false,
-    eval: false,
   });
 
   return result;
 }
 
 /**
- * Check if a value is a JSONPath (starts with $)
+ * Check if a value is a JSON path (starts with $)
  */
 export function isJsonPath(value: string): boolean {
   return value.startsWith("$");
@@ -99,82 +84,83 @@ export function applyFieldMappingConfig(props: {
 
   switch (config.mode) {
     case "full":
-      return withValue(observation[defaultSourceField]);
+      // Return the full source field
+      return observation[defaultSourceField];
 
     case "none":
-      // null is written as Prisma.DbNull
-      return withValue(null);
+      // Return null (will be written as Prisma.DbNull)
+      return null;
 
-    case "custom": {
-      if (!config.custom) return withValue(observation[defaultSourceField]);
+    case "custom":
+      if (!config.custom) {
+        return observation[defaultSourceField];
+      }
 
       if (config.custom.type === "root") {
+        // Root mode: extract single value using JSON path
         const rootConfig = config.custom.rootConfig;
-        if (!rootConfig) return withValue(observation[defaultSourceField]);
+        if (!rootConfig) {
+          return observation[defaultSourceField];
+        }
 
-        const evaluated = safeEvaluate(
-          rootConfig.sourceField,
-          rootConfig.jsonPath,
-          null,
-        );
-        if (!evaluated.success) return withValue(undefined);
-        if (evaluated.value === undefined) {
-          misses.push({
+        const sourceData = observation[rootConfig.sourceField];
+        const result = evaluateJsonPath(sourceData, rootConfig.jsonPath);
+        if (result === undefined && onJsonPathMiss) {
+          onJsonPathMiss({
             sourceField: rootConfig.sourceField,
             jsonPath: rootConfig.jsonPath,
             mappingKey: null,
           });
         }
-        return withValue(evaluated.value);
+        return result;
       }
 
       if (config.custom.type === "keyValueMap") {
+        // Key-value map mode: build object from entries
+        // Supports dot notation for nested objects (e.g., "context.user_id")
         const keyValueMapConfig = config.custom.keyValueMapConfig;
         if (!keyValueMapConfig || keyValueMapConfig.entries.length === 0) {
-          return withValue(observation[defaultSourceField]);
+          return observation[defaultSourceField];
         }
 
         const result: Record<string, unknown> = {};
         for (const entry of keyValueMapConfig.entries) {
-          if (!entry.value && entry.value !== "") continue;
+          // Skip entries with empty values
+          if (!entry.value && entry.value !== "") {
+            continue;
+          }
 
           let resolvedValue: unknown;
           if (isJsonPath(entry.value)) {
-            const evaluated = safeEvaluate(
-              entry.sourceField,
-              entry.value,
-              entry.key,
-            );
-            if (!evaluated.success) {
-              resolvedValue = undefined;
-            } else {
-              resolvedValue = evaluated.value;
-              if (resolvedValue === undefined) {
-                misses.push({
-                  sourceField: entry.sourceField,
-                  jsonPath: entry.value,
-                  mappingKey: entry.key,
-                });
-              }
+            // It's a JSON path - evaluate it
+            const sourceData = observation[entry.sourceField];
+            resolvedValue = evaluateJsonPath(sourceData, entry.value);
+            if (resolvedValue === undefined && onJsonPathMiss) {
+              onJsonPathMiss({
+                sourceField: entry.sourceField,
+                jsonPath: entry.value,
+                mappingKey: entry.key,
+              });
             }
           } else {
+            // It's a literal string (including empty string)
             resolvedValue = entry.value;
           }
 
+          // Use dot notation path setter for nested objects
           if (entry.key.includes(".")) {
             setNestedValue(result, entry.key, resolvedValue);
           } else {
             result[entry.key] = resolvedValue;
           }
         }
-        return withValue(result);
+        return result;
       }
 
-      return withValue(observation[defaultSourceField]);
-    }
+      return observation[defaultSourceField];
 
     default:
-      return withValue(observation[defaultSourceField]);
+      return observation[defaultSourceField];
   }
 }
 
@@ -223,10 +209,11 @@ export function applyFullMapping(props: { observation: ObservationData; mapping:
     };
 
     try {
-      const result = applyFieldMappingConfig({
+      results[field.key] = applyFieldMappingConfig({
         observation,
         config: field.config,
         defaultSourceField: field.defaultSourceField,
+        onJsonPathMiss,
       });
     } catch (error) {
       // Capture rare JSONPath evaluation errors (e.g. malformed filter expressions)
@@ -239,37 +226,13 @@ export function applyFullMapping(props: { observation: ObservationData; mapping:
           ? (field.config.custom.rootConfig?.jsonPath ?? "")
           : "";
 
-      for (const miss of result.misses) {
-        errors.push({
-          type: "json_path_miss",
-          targetField: field.key,
-          sourceField: miss.sourceField,
-          jsonPath: miss.jsonPath,
-          mappingKey: miss.mappingKey,
-          message: `JSONPath "${miss.jsonPath}" did not match any data in "${miss.sourceField}"${miss.mappingKey ? ` (key: "${miss.mappingKey}")` : ""}`,
-        });
-      }
-
-      for (const err of result.errors) {
-        errors.push({
-          type: "json_path_error",
-          targetField: field.key,
-          sourceField: err.sourceField,
-          jsonPath: err.jsonPath,
-          mappingKey: err.mappingKey,
-          message: `JSONPath evaluation error for "${field.key}"${err.mappingKey ? ` (key: "${err.mappingKey}")` : ""}: ${err.message}`,
-        });
-      }
-    } catch (error) {
-      // Isolate per-field faults so a throw from one mapping doesn't abort
-      // the remaining fields on the same observation.
       errors.push({
         type: "json_path_error",
         targetField: field.key,
-        sourceField: field.defaultSourceField,
-        jsonPath: "",
+        sourceField,
+        jsonPath,
         mappingKey: null,
-        message: `JSONPath evaluation error for "${field.key}": ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `JSON path evaluation error for "${field.key}": ${error instanceof Error ? error.message : "Unknown error"}`,
       });
       results[field.key] = undefined;
     }
@@ -284,7 +247,7 @@ export function applyFullMapping(props: { observation: ObservationData; mapping:
 }
 
 /**
- * Generate autocomplete suggestions for JSONPaths based on the data structure
+ * Generate autocomplete suggestions for JSON paths based on the data structure
  */
 export function generateJsonPathSuggestions(data: unknown, prefix: string = "$"): string[] {
   const suggestions: string[] = [];

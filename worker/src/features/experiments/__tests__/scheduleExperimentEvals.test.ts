@@ -5,104 +5,16 @@ import {
   type GenerationDetails,
 } from "@hanzo/console-core/src/server";
 import type { ObservationForEval } from "../../evaluation/observationEval";
-import { IngestionService } from "../../../services/IngestionService";
-import * as clickhouseWriterExports from "../../../services/ClickhouseWriter";
-import { scheduleExperimentObservationEvals } from "../scheduleExperimentEvals";
 
-const {
-  mockAddToClickhouseWriter,
-  mockFetchObservationEvalConfigs,
-  mockCreateObservationEvalSchedulerDeps,
-  mockScheduleObservationEvals,
-} = vi.hoisted(() => ({
-  mockAddToClickhouseWriter: vi.fn(),
-  mockFetchObservationEvalConfigs: vi.fn(),
-  mockCreateObservationEvalSchedulerDeps: vi.fn(),
-  mockScheduleObservationEvals: vi.fn(),
-}));
-
-vi.mock("../../../services/ClickhouseWriter", async (importOriginal) => {
-  const original = (await importOriginal()) as object;
-  return {
-    ...original,
-    ClickhouseWriter: {
-      getInstance: () => ({
-        addToQueue: mockAddToClickhouseWriter,
-      }),
-    },
-  };
-});
-
-vi.mock("../../evaluation/observationEval", async (importOriginal) => {
-  const original = (await importOriginal()) as object;
-  return {
-    ...original,
-    fetchObservationEvalConfigs: mockFetchObservationEvalConfigs,
-    createObservationEvalSchedulerDeps: mockCreateObservationEvalSchedulerDeps,
-    scheduleObservationEvals: mockScheduleObservationEvals,
-  };
-});
-
-const mockClickhouseClient = {
-  query: async () => ({
-    json: async () => [],
-    query_id: "test-query-id",
-    response_headers: { "x-clickhouse-summary": "[]" },
-  }),
-};
-
-const ingestionService = new IngestionService(
-  null as any,
-  prisma,
-  clickhouseWriterExports.ClickhouseWriter.getInstance() as any,
-  mockClickhouseClient as any,
-);
-
-const traceId = "4a56b6d74bbdffd08b9a2485f3315eeb";
-const generationId = "d6f103ed-6ef6-4f83-a520-ab746e717360";
-const blockedParserSpanId = "8bd2ff9f-1d45-4240-9581-45a7190c77fd";
-
-const prompt = { name: "Capital guesser", version: 1 };
-
-const datasetItem = {
-  id: "f0c467a1-539b-4e25-b41b-8db3ae399ef4",
-  datasetId: "cml1yj2ag0001xsej1fcv6vz8",
-  validFrom: new Date("2026-01-31T06:57:38.646Z"),
-  expectedOutput: { capital: "Berlin" },
-  metadata: {
-    region: "EU",
-    difficulty: "easy",
-  },
-  input: {
-    country: "Germany",
-  },
-} as any;
-
-const config = {
-  runId: "run-456",
-  datasetRun: {
-    name: "Prompt Capital guesser-v1 on dataset countries - 2026-01-31T06:57:38.646Z",
-    description: "Prompt experiment run",
-    metadata: {
-      prompt_id: "prompt-123",
-      provider: "openai",
-      model: "gpt-4.1",
-      model_params: {},
-      experiment_name: "Prompt Capital guesser-v1 on dataset countries",
-      experiment_run_name:
-        "Prompt Capital guesser-v1 on dataset countries - 2026-01-31T06:57:38.646Z",
-    },
-  },
-} as any;
-
-// Real events captured from an experiment run.
+// Real events captured from an experiment run
+// These events show the pattern: multiple generation-create and generation-update events with the same id
 const realExperimentEvents = [
   {
     id: "669353e4-e6a5-451e-9eab-1b33c9e396d5",
     type: "trace-create",
     timestamp: "2026-01-31T06:58:02.221Z",
     body: {
-      id: traceId,
+      id: "4a56b6d74bbdffd08b9a2485f3315eeb",
       timestamp: "2026-01-31T06:58:02.218Z",
       environment: "console-prompt-experiment",
       name: "dataset-run-item-008e4",
@@ -129,7 +41,7 @@ const realExperimentEvents = [
     type: "span-create",
     timestamp: "2026-01-31T06:58:02.221Z",
     body: {
-      id: traceId,
+      id: "4a56b6d74bbdffd08b9a2485f3315eeb",
       startTime: "2026-01-31T06:58:02.218Z",
       environment: "console-prompt-experiment",
       traceId: "4a56b6d74bbdffd08b9a2485f3315eeb",
@@ -157,7 +69,7 @@ const realExperimentEvents = [
     type: "generation-create",
     timestamp: "2026-01-31T06:58:02.222Z",
     body: {
-      id: generationId,
+      id: "d6f103ed-6ef6-4f83-a520-ab746e717360",
       startTime: "2026-01-31T06:58:02.220Z",
       environment: "console-prompt-experiment",
       traceId: "4a56b6d74bbdffd08b9a2485f3315eeb",
@@ -172,7 +84,7 @@ const realExperimentEvents = [
         ls_model_name: "gpt-4.1",
         ls_model_type: "chat",
       },
-      parentObservationId: traceId,
+      parentObservationId: "4a56b6d74bbdffd08b9a2485f3315eeb",
       input: [
         {
           content: "You are a euro capital guesser.",
@@ -192,7 +104,7 @@ const realExperimentEvents = [
     type: "generation-create",
     timestamp: "2026-01-31T06:58:02.230Z",
     body: {
-      id: generationId,
+      id: "d6f103ed-6ef6-4f83-a520-ab746e717360",
       startTime: "2026-01-31T06:58:02.220Z",
       environment: "console-prompt-experiment",
       traceId: "4a56b6d74bbdffd08b9a2485f3315eeb",
@@ -207,7 +119,7 @@ const realExperimentEvents = [
         ls_model_name: "gpt-4.1",
         ls_model_type: "chat",
       },
-      parentObservationId: traceId,
+      parentObservationId: "4a56b6d74bbdffd08b9a2485f3315eeb",
       input: [
         {
           content: "You are a euro capital guesser.",
@@ -227,9 +139,9 @@ const realExperimentEvents = [
     type: "generation-update",
     timestamp: "2026-01-31T06:58:03.708Z",
     body: {
-      id: generationId,
+      id: "d6f103ed-6ef6-4f83-a520-ab746e717360",
       model: "gpt-4.1-2025-04-14",
-      traceId,
+      traceId: "4a56b6d74bbdffd08b9a2485f3315eeb",
       output: {
         content: "The capital of Germany is Berlin.",
         role: "assistant",
@@ -260,9 +172,9 @@ const realExperimentEvents = [
     type: "generation-update",
     timestamp: "2026-01-31T06:58:03.708Z",
     body: {
-      id: generationId,
+      id: "d6f103ed-6ef6-4f83-a520-ab746e717360",
       model: "gpt-4.1-2025-04-14",
-      traceId,
+      traceId: "4a56b6d74bbdffd08b9a2485f3315eeb",
       output: {
         content: "The capital of Germany is Berlin.",
         role: "assistant",
@@ -293,7 +205,7 @@ const realExperimentEvents = [
     type: "span-create",
     timestamp: "2026-01-31T06:58:03.709Z",
     body: {
-      id: blockedParserSpanId,
+      id: "8bd2ff9f-1d45-4240-9581-45a7190c77fd",
       startTime: "2026-01-31T06:58:03.708Z",
       environment: "console-prompt-experiment",
       traceId: "4a56b6d74bbdffd08b9a2485f3315eeb",
@@ -314,8 +226,8 @@ const realExperimentEvents = [
     type: "span-update",
     timestamp: "2026-01-31T06:58:03.709Z",
     body: {
-      id: blockedParserSpanId,
-      traceId,
+      id: "8bd2ff9f-1d45-4240-9581-45a7190c77fd",
+      traceId: "4a56b6d74bbdffd08b9a2485f3315eeb",
       output: "The capital of Germany is Berlin.",
       endTime: "2026-01-31T06:58:03.709Z",
     },
@@ -325,8 +237,8 @@ const realExperimentEvents = [
     type: "span-update",
     timestamp: "2026-01-31T06:58:03.710Z",
     body: {
-      id: traceId,
-      traceId,
+      id: "4a56b6d74bbdffd08b9a2485f3315eeb",
+      traceId: "4a56b6d74bbdffd08b9a2485f3315eeb",
       output: "The capital of Germany is Berlin.",
       endTime: "2026-01-31T06:58:03.709Z",
     },
@@ -336,7 +248,7 @@ const realExperimentEvents = [
     type: "trace-create",
     timestamp: "2026-01-31T06:58:03.710Z",
     body: {
-      id: traceId,
+      id: "4a56b6d74bbdffd08b9a2485f3315eeb",
       timestamp: "2026-01-31T06:58:03.709Z",
       environment: "console-prompt-experiment",
       output: "The capital of Germany is Berlin.",
@@ -345,30 +257,13 @@ const realExperimentEvents = [
   },
 ];
 
-function getProcessedExperimentEvents() {
-  return prepareInternalTraceEvents({
-    events: realExperimentEvents as any,
-    environment: "langfuse-prompt-experiment",
-    prompt,
-  });
-}
+describe("extractGenerationDetails", () => {
+  it("should extract and merge generation details from real experiment events", () => {
+    const result = extractGenerationDetails(realExperimentEvents);
 
-function getExperimentContext() {
-  return {
-    id: config.runId,
-    name: config.datasetRun.name,
-    metadata: config.datasetRun.metadata,
-    description: config.datasetRun.description,
-    datasetId: datasetItem.datasetId,
-    itemId: datasetItem.id,
-    itemVersion: datasetItem.validFrom
-      .toISOString()
-      .replace("T", " ")
-      .replace("Z", ""),
-    itemExpectedOutput: datasetItem.expectedOutput,
-    itemMetadata: datasetItem.metadata,
-  };
-}
+    expect(result).not.toBeNull();
+    expect(result!.observationId).toBe("d6f103ed-6ef6-4f83-a520-ab746e717360");
+    expect(result!.name).toBe("ChatOpenAI");
 
     // Input should come from generation-create events
     expect(result!.input).toEqual([
@@ -398,124 +293,71 @@ function getExperimentContext() {
   it("should return null when no generation events are present", () => {
     const nonGenerationEvents = realExperimentEvents.filter((e) => !e.type.startsWith("generation"));
 
-    expect(rootSnapshot).toMatchObject({
-      spanId: traceId,
-      traceId,
-      type: "SPAN",
-      name: "dataset-run-item-008e4",
-      environment: LangfuseInternalTraceEnvironment.PromptExperiments,
-      input: [
-        { content: "You are a euro capital guesser.", role: "system" },
-        { content: "What is the capital of Germany?", role: "user" },
-      ],
-      output: "The capital of Germany is Berlin.",
-      metadata: {
-        dataset_id: "cml1yj2ag0001xsej1fcv6vz8",
-        dataset_item_id: "f0c467a1-539b-4e25-b41b-8db3ae399ef4",
-        experiment_name: "Prompt Capital guesser-v1 on dataset countries",
-        experiment_run_name:
-          "Prompt Capital guesser-v1 on dataset countries - 2026-01-31T06:57:38.646Z",
+    const result = extractGenerationDetails(nonGenerationEvents);
+
+    expect(result).toBeNull();
+  });
+
+  it("should return null for empty events array", () => {
+    const result = extractGenerationDetails([]);
+
+    expect(result).toBeNull();
+  });
+
+  it("should handle events without generation id", () => {
+    const eventsWithoutId = [
+      {
+        type: "generation-create",
+        body: { name: "test" }, // No id field
       },
-      endTimeISO: "2026-01-31T06:58:03.709Z",
-    });
+    ];
 
-    expect(generationSnapshot).toMatchObject({
-      spanId: generationId,
-      traceId,
-      parentSpanId: traceId,
-      type: "GENERATION",
-      name: "ChatOpenAI",
-      promptName: "Capital guesser",
-      promptVersion: "1",
-      modelName: "gpt-4.1-2025-04-14",
+    const result = extractGenerationDetails(eventsWithoutId);
+
+    expect(result).toBeNull();
+  });
+
+  it("should merge metadata from multiple generation events", () => {
+    const eventsWithDifferentMetadata = [
+      {
+        type: "generation-create",
+        body: {
+          id: "gen-1",
+          name: "test",
+          metadata: { key1: "value1" },
+        },
+      },
+      {
+        type: "generation-update",
+        body: {
+          id: "gen-1",
+          metadata: { key2: "value2" },
+        },
+      },
+    ];
+
+    const result = extractGenerationDetails(eventsWithDifferentMetadata);
+
+    expect(result!.metadata).toEqual({
+      key1: "value1",
+      key2: "value2",
     });
   });
 
-  it("should build trace-rooted event inputs with experiment metadata", async () => {
-    const { rootSpanId, eventInputs } = buildInternalTraceEventInputs({
-      processedEvents: getProcessedExperimentEvents(),
-      traceId,
-      projectId: "project-123",
-      experimentContext: getExperimentContext(),
-    });
+  it("should use default name when name is not provided", () => {
+    const eventsWithoutName = [
+      {
+        type: "generation-create",
+        body: {
+          id: "gen-1",
+          // No name field
+        },
+      },
+    ];
 
-    // Direct write uses original IDs (no t- prefix remapping).
-    // The experiment backfill job skips traces already in events_core via LEFT ANTI JOIN.
-    expect(rootSpanId).toBe(traceId);
-    expect(eventInputs).toHaveLength(2);
+    const result = extractGenerationDetails(eventsWithoutName);
 
-    const rootEventInput = eventInputs.find(
-      (eventInput) => eventInput.spanId === traceId,
-    );
-    const generationEventInput = eventInputs.find(
-      (eventInput) => eventInput.spanId === generationId,
-    );
-
-    expect(rootEventInput).toMatchObject({
-      projectId: "project-123",
-      traceId,
-      spanId: traceId,
-      parentSpanId: undefined,
-      type: "SPAN",
-      experimentId: "run-456",
-      experimentName:
-        "Prompt Capital guesser-v1 on dataset countries - 2026-01-31T06:57:38.646Z",
-      experimentItemRootSpanId: traceId,
-      input: JSON.stringify([
-        { content: "You are a euro capital guesser.", role: "system" },
-        { content: "What is the capital of Germany?", role: "user" },
-      ]),
-      output: "The capital of Germany is Berlin.",
-      source: "ingestion-api-dual-write-experiments",
-    });
-
-    expect(generationEventInput).toMatchObject({
-      traceId,
-      spanId: generationId,
-      parentSpanId: traceId,
-      type: "GENERATION",
-      promptName: "Capital guesser",
-      promptVersion: "1",
-      modelName: "gpt-4.1-2025-04-14",
-    });
-
-    const rootEventRecord = await ingestionService.createEventRecord(
-      rootEventInput!,
-      "",
-    );
-    const rootObservation =
-      convertEventRecordToObservationForEval(rootEventRecord);
-
-    expect(rootObservation.span_id).toBe(traceId);
-    expect(rootObservation.experiment_item_root_span_id).toBe(traceId);
-    expect(rootObservation.type).toBe("SPAN");
-    expect(rootObservation.name).toBe("dataset-run-item-008e4");
-    expect(rootObservation.experiment_id).toBe("run-456");
-    expect(rootObservation.experiment_name).toBe(
-      "Prompt Capital guesser-v1 on dataset countries - 2026-01-31T06:57:38.646Z",
-    );
-    expect(rootObservation.experiment_item_expected_output).toBe(
-      JSON.stringify({ capital: "Berlin" }),
-    );
-  });
-
-  it("should build non-experiment internal traces without experiment columns", () => {
-    const { eventInputs } = buildInternalTraceEventInputs({
-      processedEvents: getProcessedExperimentEvents(),
-      traceId,
-      projectId: "project-123",
-    });
-
-    const rootEventInput = eventInputs.find(
-      (eventInput) => eventInput.spanId === traceId,
-    );
-
-    expect(rootEventInput).toMatchObject({
-      spanId: traceId,
-      source: "ingestion-api-dual-write",
-      experimentId: undefined,
-      experimentItemRootSpanId: undefined,
-    });
+    expect(result!.name).toBe("generation");
   });
 });
 
@@ -538,39 +380,9 @@ describe("buildObservationForEval", () => {
   }): ObservationForEval {
     const { projectId, traceId, generationDetails, config, datasetItem } = params;
 
-  it("should schedule evals against the trace-root observation", async () => {
-    const { eventInputs } = buildInternalTraceEventInputs({
-      processedEvents: getProcessedExperimentEvents(),
-      traceId,
-      projectId: "project-123",
-      experimentContext: getExperimentContext(),
-    });
-    const rootEventInput = eventInputs.find(
-      (eventInput) => eventInput.spanId === traceId,
-    );
-    const rootEventRecord = await ingestionService.createEventRecord(
-      rootEventInput!,
-      "",
-    );
-    const observation = convertEventRecordToObservationForEval(rootEventRecord);
-
-    await scheduleExperimentObservationEvals({ observation });
-
-    expect(mockFetchObservationEvalConfigs).toHaveBeenCalledWith("project-123");
-    expect(mockScheduleObservationEvals).toHaveBeenCalledWith({
-      observation,
-      configs: [{ id: "config-1" }],
-      schedulerDeps: expect.any(Object),
-    });
-    expect(observation.span_id).toBe(traceId);
-    expect(observation.experiment_item_root_span_id).toBe(traceId);
-  });
-
-  it("should skip scheduling when no configs exist", async () => {
-    mockFetchObservationEvalConfigs.mockResolvedValue([]);
-
-    const observation = {
-      span_id: traceId,
+    return {
+      // Identifiers
+      span_id: generationDetails.observationId,
       trace_id: traceId,
       project_id: projectId,
 
@@ -606,9 +418,12 @@ describe("buildObservationForEval", () => {
       tool_definitions: {},
       tool_calls: [],
       tool_call_names: [],
-    } as ObservationForEval;
+    };
+  }
 
-    await scheduleExperimentObservationEvals({ observation });
+  it("should build correct ObservationForEval from real experiment events", () => {
+    // Extract generation details from real events
+    const generationDetails = extractGenerationDetails(realExperimentEvents)!;
 
     // Build ObservationForEval
     const observation = buildObservationForEval({

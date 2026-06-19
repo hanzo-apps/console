@@ -1,10 +1,10 @@
 import { VERSION } from "@/src/constants";
 import { prisma } from "@langfuse/shared/src/db";
 import {
-  convertDateToClickhouseDateTime,
+  convertDateToDatastoreDateTime,
   logger,
   measureAndReturn,
-  queryClickhouse,
+  queryDatastore,
   traceException,
 } from "@langfuse/shared/src/server";
 
@@ -43,16 +43,16 @@ export const runHealthCheck = async ({
     try {
       if (failIfNoRecentEvents) {
         const now = new Date();
-        const clickhouseNow = convertDateToClickhouseDateTime(now);
+        const datastoreNow = convertDateToDatastoreDateTime(now);
 
         const traces = await measureAndReturn({
           operationName: "healthCheckTraces",
           projectId: "__CROSS_PROJECT__",
           input: {
-            now: clickhouseNow,
+            now: datastoreNow,
           },
           fn: async (params: { now: string }) =>
-            queryClickhouse<{ id: string }>({
+            queryDatastore<{ id: string }>({
               query: `
                 SELECT id
                 FROM traces
@@ -68,7 +68,7 @@ export const runHealthCheck = async ({
             }),
         });
 
-        const observations = await queryClickhouse<{ id: string }>({
+        const observations = await queryDatastore<{ id: string }>({
           query: `
             SELECT id
             FROM observations
@@ -77,7 +77,7 @@ export const runHealthCheck = async ({
             LIMIT 1
           `,
           params: {
-            now: clickhouseNow,
+            now: datastoreNow,
           },
           tags: {
             feature: "health-check",

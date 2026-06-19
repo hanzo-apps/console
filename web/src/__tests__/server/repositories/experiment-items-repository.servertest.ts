@@ -85,7 +85,7 @@ const maybe =
     ? describe
     : describe.skip;
 
-describe("Clickhouse Experiment Items Repository Test", () => {
+describe("Datastore Experiment Items Repository Test", () => {
   it("should kill redis connection", () => {
     // we need at least one test case to avoid hanging
     // redis connection when everything else is skipped.

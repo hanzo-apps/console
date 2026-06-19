@@ -31,7 +31,7 @@ const session: Session = {
       },
     ],
     featureFlags: {
-      excludeClickhouseRead: false,
+      excludeDatastoreRead: false,
       templateFlag: true,
     },
     admin: true,

@@ -1,7 +1,10 @@
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { createBatchActionJob } from "@/src/features/table/server/createBatchActionJob";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
 import {
   ActionId,
   type AnnotationQueueItem,
@@ -15,13 +18,21 @@ import {
   paginationZod,
   Prisma,
 } from "@hanzo/shared";
-import { getObservationById, getTraceIdsForObservations, logger } from "@hanzo/shared/src/server";
+import {
+  getObservationById,
+  getTraceIdsForObservations,
+  logger,
+} from "@hanzo/shared/src/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { env } from "@/src/env.mjs";
 
 const isItemLocked = (item: AnnotationQueueItem) => {
-  return item.lockedByUserId && item.lockedAt && new Date(item.lockedAt) > new Date(Date.now() - 5 * 60 * 1000);
+  return (
+    item.lockedByUserId &&
+    item.lockedAt &&
+    new Date(item.lockedAt) > new Date(Date.now() - 5 * 60 * 1000)
+  );
 };
 
 const MAP_OBJECT_TYPE_TO_ACTION_PROPS: Record<
@@ -119,7 +130,7 @@ export const queueItemRouter = createTRPCRouter({
       };
 
       if (item.objectType === AnnotationQueueObjectType.OBSERVATION) {
-        const clickhouseObservation =
+        const datastoreObservation =
           env.LANGFUSE_ENABLE_EVENTS_TABLE_UI === "true"
             ? await getObservationByIdFromEventsTable({
                 id: item.objectId,
@@ -130,13 +141,13 @@ export const queueItemRouter = createTRPCRouter({
                 projectId: input.projectId,
               });
 
-        if (!clickhouseObservation) {
+        if (!datastoreObservation) {
           throw new HanzoNotFoundError("Observation not found");
         }
 
         return {
           ...inflatedItem,
-          parentTraceId: clickhouseObservation?.traceId,
+          parentTraceId: datastoreObservation?.traceId,
         };
       }
 
@@ -201,16 +212,21 @@ export const queueItemRouter = createTRPCRouter({
       ]);
 
       const observationIds = queueItems
-        .filter((item) => item.objectType === AnnotationQueueObjectType.OBSERVATION)
+        .filter(
+          (item) => item.objectType === AnnotationQueueObjectType.OBSERVATION,
+        )
         .map((item) => item.objectId);
 
       const traceIds =
-        observationIds.length > 0 ? await getTraceIdsForObservations(input.projectId, observationIds) : [];
+        observationIds.length > 0
+          ? await getTraceIdsForObservations(input.projectId, observationIds)
+          : [];
 
       return {
         queueItems: queueItems.map((item) => ({
           ...item,
-          parentTraceId: traceIds.find((t) => t.id === item.objectId)?.traceId || null,
+          parentTraceId:
+            traceIds.find((t) => t.id === item.objectId)?.traceId || null,
         })),
         totalItems,
       };
@@ -247,7 +263,9 @@ export const queueItemRouter = createTRPCRouter({
       z.object({
         projectId: z.string(),
         queueId: z.string(),
-        objectIds: z.array(z.string()).min(1, "Minimum 1 object_id is required."),
+        objectIds: z
+          .array(z.string())
+          .min(1, "Minimum 1 object_id is required."),
         objectType: z.enum(AnnotationQueueObjectType),
         query: BatchActionQuerySchema.optional(),
         isBatchAction: z.boolean().default(false),
@@ -263,7 +281,10 @@ export const queueItemRouter = createTRPCRouter({
       let createdCount = 0;
 
       if (input.isBatchAction && input.query) {
-        const actionProps = MAP_OBJECT_TYPE_TO_ACTION_PROPS[input.objectType as "TRACE" | "SESSION"];
+        const actionProps =
+          MAP_OBJECT_TYPE_TO_ACTION_PROPS[
+            input.objectType as "TRACE" | "SESSION"
+          ];
         if (!actionProps) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -421,10 +442,14 @@ export const queueItemRouter = createTRPCRouter({
         if (error instanceof TRPCError) {
           throw error;
         }
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "The item to complete was not found, it was likely deleted.",
+            message:
+              "The item to complete was not found, it was likely deleted.",
           });
         }
         throw error;

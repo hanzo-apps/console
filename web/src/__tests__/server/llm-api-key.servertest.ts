@@ -92,7 +92,7 @@ describe("llmApiKey.all RPC", () => {
         ],
         featureFlags: {
           templateFlag: true,
-          excludeClickhouseRead: false,
+          excludeDatastoreRead: false,
         },
         admin: true,
       },

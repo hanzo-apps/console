@@ -44,7 +44,7 @@ describe("annotationQueueItems trpc", () => {
         ],
         featureFlags: {
           templateFlag: true,
-          excludeClickhouseRead: false,
+          excludeDatastoreRead: false,
         },
       },
       environment: {} as Session["environment"],

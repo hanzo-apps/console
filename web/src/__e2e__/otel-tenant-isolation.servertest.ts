@@ -1,6 +1,6 @@
 import {
   createOrgProjectAndApiKey,
-  queryClickhouse,
+  queryDatastore,
 } from "@langfuse/shared/src/server";
 import { prisma } from "@langfuse/shared/src/db";
 import waitForExpect from "wait-for-expect";
@@ -78,7 +78,7 @@ describe("OTEL ingestion tenant isolation", () => {
 
     await waitForExpect(
       async () => {
-        const rowsA = await queryClickhouse<{ count: string }>({
+        const rowsA = await queryDatastore<{ count: string }>({
           // ReplacingMergeTree: dedup with `LIMIT 1 BY id, project_id` so a
           // retry-induced duplicate insert (the OtelIngestionQueue is
           // configured with attempts: 6) cannot inflate the count and make
@@ -94,7 +94,7 @@ describe("OTEL ingestion tenant isolation", () => {
         });
         expect(Number(rowsA[0]?.count)).toBe(1);
 
-        const rowsB = await queryClickhouse<{ count: string }>({
+        const rowsB = await queryDatastore<{ count: string }>({
           // ReplacingMergeTree: dedup with `LIMIT 1 BY id, project_id` so a
           // retry-induced duplicate insert (the OtelIngestionQueue is
           // configured with attempts: 6) cannot inflate the count and make

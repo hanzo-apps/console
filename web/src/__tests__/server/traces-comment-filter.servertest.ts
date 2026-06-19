@@ -1,51 +1,58 @@
 import type { Session } from "next-auth";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@langfuse/shared/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { createTrace, createTracesCh } from "@hanzo/console-core/src/server";
+import {
+  createOrgProjectAndApiKey,
+  createTrace,
+  createTracesCh,
+} from "@langfuse/shared/src/server";
 import { randomUUID } from "crypto";
 
 describe("Traces Comment Filtering", () => {
   let projectId: string;
   let caller: ReturnType<typeof appRouter.createCaller>;
 
-  const session: Session = {
-    expires: "1",
-    user: {
-      id: "user-1",
-      canCreateOrganizations: true,
-      name: "Demo User",
-      organizations: [
-        {
-          id: "seed-org-id",
-          name: "Test Organization",
-          role: "OWNER",
-          plan: "cloud:hobby",
-          cloudConfig: undefined,
-          metadata: {},
-          aiFeaturesEnabled: true,
-          projects: [
-            {
-              id: projectId,
-              role: "ADMIN",
-              retentionDays: 30,
-              deletedAt: null,
-              name: "Test Project",
-              metadata: {},
-            },
-          ],
+  beforeAll(async () => {
+    const setup = await createOrgProjectAndApiKey();
+    projectId = setup.projectId;
+
+    const session: Session = {
+      expires: "1",
+      user: {
+        id: "user-1",
+        canCreateOrganizations: true,
+        name: "Demo User",
+        organizations: [
+          {
+            id: setup.orgId,
+            name: "Test Organization",
+            role: "OWNER",
+            plan: "cloud:hobby",
+            cloudConfig: undefined,
+            projects: [
+              {
+                id: projectId,
+                role: "ADMIN",
+                retentionDays: 30,
+                deletedAt: null,
+                name: "Test Project",
+              },
+            ],
+          },
+        ],
+        featureFlags: {
+          excludeDatastoreRead: false,
+          templateFlag: true,
         },
-      ],
-      featureFlags: {
-        excludeDatastoreRead: false,
-        templateFlag: true,
-        v4BetaToggleVisible: false,
+        admin: true,
       },
       environment: {} as any,
     };
 
-  const ctx = createInnerTRPCContext({ session, headers: {} });
-  const caller = appRouter.createCaller({ ...ctx, prisma });
+    const ctx = createInnerTRPCContext({ session });
+    caller = appRouter.createCaller({ ...ctx, prisma });
+  });
 
   // Helper to create standard query params
   const createQueryParams = (filter: any[]) => ({
@@ -253,8 +260,6 @@ describe("Traces Comment Filtering", () => {
 
       const countResult = await caller.traces.countAll({
         projectId,
-        page: 0,
-        limit: 50,
         filter: [
           {
             type: "number",

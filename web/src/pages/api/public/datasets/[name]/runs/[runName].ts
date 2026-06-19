@@ -4,6 +4,7 @@ import {
   GetDatasetRunV1Response,
   DeleteDatasetRunV1Query,
   DeleteDatasetRunV1Response,
+  transformDbDatasetRunToAPIDatasetRun,
 } from "@/src/features/public-api/types/datasets";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
@@ -37,8 +38,10 @@ export default withMiddlewares({
         },
       });
 
-      if (datasetRuns.length > 1) throw new ApiError("Found more than one dataset run with this name");
-      if (!datasetRuns[0]) throw new HanzoNotFoundError("Dataset run not found");
+      if (datasetRuns.length > 1)
+        throw new ApiError("Found more than one dataset run with this name");
+      if (!datasetRuns[0])
+        throw new HanzoNotFoundError("Dataset run not found");
 
       const { dataset, ...run } = datasetRuns[0];
 
@@ -81,7 +84,9 @@ export default withMiddlewares({
         throw new HanzoNotFoundError("Dataset run not found");
       }
       if (datasetRuns.length > 1) {
-        throw new ApiError("Found more than one dataset run with this name and dataset");
+        throw new ApiError(
+          "Found more than one dataset run with this name and dataset",
+        );
       }
       const datasetRun = datasetRuns[0];
 
@@ -102,8 +107,20 @@ export default withMiddlewares({
         projectId: auth.scope.projectId,
         orgId: auth.scope.orgId,
         apiKeyId: auth.scope.apiKeyId,
-        name: query.name,
-        runName: query.runName,
-      }),
+        before: datasetRun,
+      });
+
+      // Trigger async delete of dataset run items
+      await addToDeleteDatasetQueue({
+        deletionType: "dataset-runs",
+        projectId: auth.scope.projectId,
+        datasetRunIds: [datasetRun.id],
+        datasetId: datasetRun.datasetId,
+      });
+
+      return {
+        message: "Dataset run successfully deleted" as const,
+      };
+    },
   }),
 });

@@ -1,20 +1,11 @@
 import { z } from "zod";
 import { singleFilter } from "../../interfaces/filters";
 import type { ColumnDefinition } from "../../tableDefinitions";
-import {
-  evalDatasetFormFilterCols,
-  evalTraceTableCols,
-} from "../../tableDefinitions/tracesTable";
+import { evalDatasetFormFilterCols, evalTraceTableCols } from "../../tableDefinitions/tracesTable";
 import type { FilterCondition, FilterState } from "../../types";
-import {
-  experimentEvalFilterColumns,
-  observationEvalFilterColumns,
-} from "./observationForEval";
-import { COMPATIBLE_FILTER_TYPES } from "../../server/queries/clickhouse-sql/filterTypeCompatibility";
-import {
-  EvalTargetObject,
-  type EvalTargetObject as EvalTargetObjectType,
-} from "./types";
+import { experimentEvalFilterColumns, observationEvalFilterColumns } from "./observationForEval";
+import { COMPATIBLE_FILTER_TYPES } from "../../server/queries/datastore-sql/filterTypeCompatibility";
+import { EvalTargetObject, type EvalTargetObject as EvalTargetObjectType } from "./types";
 
 export type EvaluatorFilterValidationIssueCode =
   | "invalid_filter_shape"
@@ -38,9 +29,7 @@ export type EvaluatorFilterValidationResult = {
 
 const parsedFilterSchema = z.array(singleFilter).nullable();
 
-const getSupportedColumnsForTarget = (
-  targetObject: EvalTargetObjectType,
-): ColumnDefinition[] => {
+const getSupportedColumnsForTarget = (targetObject: EvalTargetObjectType): ColumnDefinition[] => {
   switch (targetObject) {
     case EvalTargetObject.TRACE:
       return evalTraceTableCols;
@@ -58,10 +47,7 @@ const findMatchingColumnDefinition = (
   columns: ColumnDefinition[],
 ): ColumnDefinition | undefined =>
   columns.find(
-    (column) =>
-      column.id === filterColumn ||
-      column.name === filterColumn ||
-      column.aliases?.includes(filterColumn),
+    (column) => column.id === filterColumn || column.name === filterColumn || column.aliases?.includes(filterColumn),
   );
 
 export function validateEvaluatorFiltersForTarget(params: {
@@ -78,8 +64,7 @@ export function validateEvaluatorFiltersForTarget(params: {
       issues: [
         {
           code: "invalid_filter_shape",
-          message:
-            "Evaluator filters are invalid. Remove unsupported or incomplete filters and try again.",
+          message: "Evaluator filters are invalid. Remove unsupported or incomplete filters and try again.",
           index: null,
           column: null,
           filterType: null,
@@ -112,10 +97,7 @@ export function validateEvaluatorFiltersForTarget(params: {
 
       const compatibleFilterTypes = COMPATIBLE_FILTER_TYPES[column.type];
 
-      if (
-        compatibleFilterTypes &&
-        compatibleFilterTypes.includes(filter.type)
-      ) {
+      if (compatibleFilterTypes && compatibleFilterTypes.includes(filter.type)) {
         return [];
       }
 

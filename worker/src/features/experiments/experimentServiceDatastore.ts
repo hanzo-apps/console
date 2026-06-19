@@ -1,7 +1,7 @@
 import { DatasetItemDomain, Prisma } from "@hanzo/console-core";
 import {
   ChatMessage,
-  convertDateToClickhouseDateTime,
+  convertDateToDatastoreDateTime,
   createDatasetItemFilterState,
   DatasetRunItemUpsertQueue,
   eventTypes,
@@ -180,7 +180,7 @@ async function processLLMCall(
         description: config.datasetRun.description,
         datasetId: datasetItem.datasetId,
         itemId: datasetItem.id,
-        itemVersion: convertDateToClickhouseDateTime(datasetItem.validFrom),
+        itemVersion: convertDateToDatastoreDateTime(datasetItem.validFrom),
         itemExpectedOutput: datasetItem.expectedOutput,
         itemMetadata: asRecord(datasetItem.metadata),
       },

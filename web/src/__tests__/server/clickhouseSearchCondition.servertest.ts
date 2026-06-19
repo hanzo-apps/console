@@ -1,11 +1,11 @@
 import { env } from "@/src/env.mjs";
 import { type TracingSearchType } from "@langfuse/shared";
 import {
-  clickhouseSearchCondition,
+  datastoreSearchCondition,
   createEvent,
   createEventsCh,
   getObservationsWithModelDataFromEventsTable,
-  queryClickhouse,
+  queryDatastore,
 } from "@langfuse/shared/src/server";
 import { randomUUID } from "crypto";
 
@@ -40,7 +40,7 @@ const matchingIds = async (opts: {
   searchType: TracingSearchType[];
   useEventsTablePath?: boolean;
 }) => {
-  const search = clickhouseSearchCondition({
+  const search = datastoreSearchCondition({
     query: opts.query,
     searchType: opts.searchType,
     tablePrefix: "e",
@@ -48,7 +48,7 @@ const matchingIds = async (opts: {
     useEventsTablePath: opts.useEventsTablePath,
   });
 
-  const rows = await queryClickhouse<{ id: string }>({
+  const rows = await queryDatastore<{ id: string }>({
     query: `
       SELECT e.id AS id
       FROM (${searchFixture}) AS e
@@ -57,9 +57,9 @@ const matchingIds = async (opts: {
       ORDER BY e.id ASC
     `,
     params: search.params,
-    preferredClickhouseService: "EventsReadOnly",
+    preferredDatastoreService: "EventsReadOnly",
     tags: {
-      feature: "clickhouse-search-condition-test",
+      feature: "datastore-search-condition-test",
       type: "events",
       kind: "test",
     },
@@ -68,7 +68,7 @@ const matchingIds = async (opts: {
   return rows.map((row) => row.id);
 };
 
-describe("clickhouseSearchCondition", () => {
+describe("datastoreSearchCondition", () => {
   it.each([
     { query: undefined, searchType: ["content"], expected: false },
     { query: "alpha", searchType: undefined, expected: false },
@@ -81,7 +81,7 @@ describe("clickhouseSearchCondition", () => {
     "detects whether $searchType search needs the full events table",
     ({ query, searchType, expected }) => {
       expect(
-        clickhouseSearchCondition({
+        datastoreSearchCondition({
           query,
           searchType: searchType as TracingSearchType[] | undefined,
         }).requiresEventsFull,
@@ -164,7 +164,7 @@ describe("clickhouseSearchCondition", () => {
     });
 
     it("matches JSON-escaped Unicode content on events tables with the FTS prefilter", async () => {
-      const search = clickhouseSearchCondition({
+      const search = datastoreSearchCondition({
         query: "東京",
         searchType: ["content"],
         tablePrefix: "e",
@@ -229,7 +229,7 @@ describe("clickhouseSearchCondition", () => {
         }),
       ]);
 
-      const stored = await queryClickhouse<{ span_id: string; input: string }>({
+      const stored = await queryDatastore<{ span_id: string; input: string }>({
         query: `
           SELECT span_id, input
           FROM events_full
@@ -242,9 +242,9 @@ describe("clickhouseSearchCondition", () => {
           rawSpanId,
           escapedSpanId,
         },
-        preferredClickhouseService: "EventsReadOnly",
+        preferredDatastoreService: "EventsReadOnly",
         tags: {
-          feature: "clickhouse-search-condition-test",
+          feature: "datastore-search-condition-test",
           type: "events",
           kind: "test",
         },
@@ -275,7 +275,7 @@ describe("clickhouseSearchCondition", () => {
   });
 
   it("generates FTS predicates for events input/output searches", () => {
-    const search = clickhouseSearchCondition({
+    const search = datastoreSearchCondition({
       query: "alpha",
       searchType: ["content"],
       tablePrefix: "e",
@@ -288,7 +288,7 @@ describe("clickhouseSearchCondition", () => {
   });
 
   it("does not generate FTS predicates for id searches", () => {
-    const ftsSearch = clickhouseSearchCondition({
+    const ftsSearch = datastoreSearchCondition({
       query: "alpha",
       searchType: ["id"],
       tablePrefix: "e",

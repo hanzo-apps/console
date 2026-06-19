@@ -8,7 +8,7 @@ import {
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { InvalidRequestError, LangfuseNotFoundError } from "../../../errors";
+import { InvalidRequestError, ConsoleNotFoundError } from "../../../errors";
 import { singleFilter } from "../../../interfaces/filters";
 import {
   MonitorSeveritySchema,
@@ -55,10 +55,7 @@ const stringOptionsFilter = (column: string, value: string[]): Filter => ({
 
 describe("sortFiltersCanonically", () => {
   it("returns a new array sorted by column", () => {
-    const input: Filter[] = [
-      stringFilter("env", "production"),
-      stringFilter("app", "faq-bot"),
-    ];
+    const input: Filter[] = [stringFilter("env", "production"), stringFilter("app", "faq-bot")];
     const sorted = sortFiltersCanonically(input);
 
     expect(sorted.map((f) => f.column)).toEqual(["app", "env"]);
@@ -90,15 +87,9 @@ describe("sortFiltersCanonically", () => {
     // `any of` / `none of` / `all of` operators over a `string[]` value, and
     // element order is semantically irrelevant — must canonicalize the array
     // so equivalent filters hash the same.
-    const input: Filter[] = [
-      stringOptionsFilter("env", ["staging", "production", "dev"]),
-    ];
+    const input: Filter[] = [stringOptionsFilter("env", ["staging", "production", "dev"])];
     const sorted = sortFiltersCanonically(input);
-    expect(sorted[0].value as string[]).toEqual([
-      "dev",
-      "production",
-      "staging",
-    ]);
+    expect(sorted[0].value as string[]).toEqual(["dev", "production", "staging"]);
   });
 
   it("breaks column+operator ties by `key` for stringObject filters", () => {
@@ -127,10 +118,7 @@ describe("sortFiltersCanonically", () => {
   });
 
   it("is idempotent", () => {
-    const input: Filter[] = [
-      stringFilter("env", "production"),
-      stringFilter("app", "faq-bot"),
-    ];
+    const input: Filter[] = [stringFilter("env", "production"), stringFilter("app", "faq-bot")];
     const once = sortFiltersCanonically(input);
     const twice = sortFiltersCanonically(once);
     expect(twice).toEqual(once);
@@ -161,17 +149,12 @@ describe("calculateSchedulerBatchId", () => {
   const base = {
     projectId: "proj_01",
     view: "observations" as const,
-    filters: [
-      stringFilter("env", "production"),
-      stringFilter("app", "faq-bot"),
-    ],
+    filters: [stringFilter("env", "production"), stringFilter("app", "faq-bot")],
     windowMs: 5n * 60_000n,
   };
 
   it("is deterministic across calls", () => {
-    expect(calculateSchedulerBatchId(base)).toBe(
-      calculateSchedulerBatchId(base),
-    );
+    expect(calculateSchedulerBatchId(base)).toBe(calculateSchedulerBatchId(base));
   });
 
   it("is filter-order-insensitive", () => {
@@ -179,9 +162,7 @@ describe("calculateSchedulerBatchId", () => {
       ...base,
       filters: [...base.filters].reverse(),
     };
-    expect(calculateSchedulerBatchId(reordered)).toBe(
-      calculateSchedulerBatchId(base),
-    );
+    expect(calculateSchedulerBatchId(reordered)).toBe(calculateSchedulerBatchId(base));
   });
 
   it("is permutation-invariant for set-semantics value arrays", () => {
@@ -276,15 +257,11 @@ describe("calculateSchedulerBatchId", () => {
   });
 
   it("changes when projectId changes", () => {
-    expect(
-      calculateSchedulerBatchId({ ...base, projectId: "proj_02" }),
-    ).not.toBe(calculateSchedulerBatchId(base));
+    expect(calculateSchedulerBatchId({ ...base, projectId: "proj_02" })).not.toBe(calculateSchedulerBatchId(base));
   });
 
   it("changes when view changes", () => {
-    expect(
-      calculateSchedulerBatchId({ ...base, view: "scores-numeric" }),
-    ).not.toBe(calculateSchedulerBatchId(base));
+    expect(calculateSchedulerBatchId({ ...base, view: "scores-numeric" })).not.toBe(calculateSchedulerBatchId(base));
   });
 
   it("changes when window changes", () => {
@@ -306,11 +283,7 @@ describe("calculateSchedulerBatchId", () => {
   });
 
   it("returns a nonneg i63 (fits Postgres BIGINT)", () => {
-    for (const view of [
-      "observations",
-      "scores-numeric",
-      "scores-categorical",
-    ] as const) {
+    for (const view of ["observations", "scores-numeric", "scores-categorical"] as const) {
       const id = calculateSchedulerBatchId({ ...base, view });
       expect(id >= 0n).toBe(true);
       expect(id < 1n << 63n).toBe(true);
@@ -344,25 +317,13 @@ describe("calculateLastRunAt", () => {
     const batchId = 42n;
 
     // two `now`s within the same minute-after-offset window
-    const a = calculateLastRunAt(
-      new Date("2026-05-19T12:34:50.000Z"),
-      cadence,
-      batchId,
-    );
-    const b = calculateLastRunAt(
-      new Date("2026-05-19T12:34:55.123Z"),
-      cadence,
-      batchId,
-    );
+    const a = calculateLastRunAt(new Date("2026-05-19T12:34:50.000Z"), cadence, batchId);
+    const b = calculateLastRunAt(new Date("2026-05-19T12:34:55.123Z"), cadence, batchId);
     expect(a.getTime()).toBe(b.getTime());
   });
 
   it("computes a deterministic slot for the 30-minute cadence", () => {
-    const result = calculateLastRunAt(
-      new Date("2026-05-19T12:45:00.000Z"),
-      THIRTY_MIN,
-      45n,
-    );
+    const result = calculateLastRunAt(new Date("2026-05-19T12:45:00.000Z"), THIRTY_MIN, 45n);
     // most recent boundary <= 12:45:00 with offset=45s is 12:30:45
     expect(result.toISOString()).toBe("2026-05-19T12:30:45.000Z");
   });
@@ -374,8 +335,7 @@ describe("calculateLastRunAt", () => {
 
     const cadenceMs = Number(FORTY_EIGHT_HOURS);
     const offsetMs = 7 * 1000;
-    const expected =
-      Math.floor((now.getTime() - offsetMs) / cadenceMs) * cadenceMs + offsetMs;
+    const expected = Math.floor((now.getTime() - offsetMs) / cadenceMs) * cadenceMs + offsetMs;
     expect(result.getTime()).toBe(expected);
     expect(result.getTime()).toBeLessThanOrEqual(now.getTime());
   });
@@ -388,16 +348,8 @@ describe("calculateLastRunAt", () => {
     const cadence = ONE_MINUTE;
     const batchId = 30n;
 
-    const a = calculateLastRunAt(
-      new Date("2026-05-19T12:00:10.000Z"),
-      cadence,
-      batchId,
-    );
-    const b = calculateLastRunAt(
-      new Date("2026-05-19T12:00:40.000Z"),
-      cadence,
-      batchId,
-    );
+    const a = calculateLastRunAt(new Date("2026-05-19T12:00:10.000Z"), cadence, batchId);
+    const b = calculateLastRunAt(new Date("2026-05-19T12:00:40.000Z"), cadence, batchId);
 
     const cadenceMs = Number(cadence);
     const offsetMs = Number(batchId % 60n) * 1000;
@@ -431,24 +383,18 @@ describe("statusToPrisma / statusFromPrisma", () => {
     expect(statusFromPrisma(statusToPrisma(status))).toBe(status);
   });
 
-  it.each(Object.values(PrismaMonitorStatus))(
-    "round-trips Prisma %s",
-    (status) => {
-      expect(statusToPrisma(statusFromPrisma(status))).toBe(status);
-    },
-  );
+  it.each(Object.values(PrismaMonitorStatus))("round-trips Prisma %s", (status) => {
+    expect(statusToPrisma(statusFromPrisma(status))).toBe(status);
+  });
 });
 
 describe("severityFromPrisma", () => {
   // No `severityToPrisma`: severity is owned by the scheduler/worker, never by
   // a caller submitting an input. Only the reverse mapping is needed.
-  it.each(Object.values(PrismaMonitorSeverity))(
-    "maps Prisma %s to a valid MonitorSeverity",
-    (severity) => {
-      const mapped = severityFromPrisma(severity);
-      expect(MonitorSeveritySchema.options).toContain(mapped);
-    },
-  );
+  it.each(Object.values(PrismaMonitorSeverity))("maps Prisma %s to a valid MonitorSeverity", (severity) => {
+    const mapped = severityFromPrisma(severity);
+    expect(MonitorSeveritySchema.options).toContain(mapped);
+  });
 });
 
 describe("thresholdOperatorToPrisma / thresholdOperatorFromPrisma", () => {
@@ -456,14 +402,9 @@ describe("thresholdOperatorToPrisma / thresholdOperatorFromPrisma", () => {
     expect(thresholdOperatorFromPrisma(thresholdOperatorToPrisma(op))).toBe(op);
   });
 
-  it.each(Object.values(PrismaMonitorThresholdOperator))(
-    "round-trips Prisma %s",
-    (op) => {
-      expect(thresholdOperatorToPrisma(thresholdOperatorFromPrisma(op))).toBe(
-        op,
-      );
-    },
-  );
+  it.each(Object.values(PrismaMonitorThresholdOperator))("round-trips Prisma %s", (op) => {
+    expect(thresholdOperatorToPrisma(thresholdOperatorFromPrisma(op))).toBe(op);
+  });
 });
 
 describe("decimalToPrisma", () => {
@@ -479,13 +420,13 @@ describe("decimalToPrisma", () => {
 });
 
 describe("errorFromPrisma", () => {
-  it("maps P2025 (row not found) to LangfuseNotFoundError", () => {
+  it("maps P2025 (row not found) to ConsoleNotFoundError", () => {
     const e = new Prisma.PrismaClientKnownRequestError("not found", {
       code: "P2025",
       clientVersion: "test",
     });
     const mapped = errorFromPrisma("mon_01", "proj_01", e);
-    expect(mapped).toBeInstanceOf(LangfuseNotFoundError);
+    expect(mapped).toBeInstanceOf(ConsoleNotFoundError);
     expect(mapped.message).toContain("mon_01");
     expect(mapped.message).toContain("proj_01");
   });
@@ -556,8 +497,6 @@ describe("monitorFromPrisma", () => {
   });
 
   it("throws when windowMs doesn't match a tier", () => {
-    expect(() =>
-      monitorFromPrisma({ ...prismaRow, windowMs: 7n * 60_000n }),
-    ).toThrow(InvalidRequestError);
+    expect(() => monitorFromPrisma({ ...prismaRow, windowMs: 7n * 60_000n })).toThrow(InvalidRequestError);
   });
 });

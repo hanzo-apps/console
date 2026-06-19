@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { AlertCircle, CreditCard } from "lucide-react";
 import Link from "next/link";
@@ -11,13 +11,11 @@ import { env } from "@/src/env.mjs";
 import { hasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { cva } from "class-variance-authority";
 
-const PAYMENT_BANNER_ID = "payment-banner";
-const PAYMENT_BANNER_ORDER = 10;
-
 export function PaymentBanner() {
   const session = useSession();
   const { organization } = useQueryProjectOrOrganization();
   const isCloudBilling = useIsCloudBillingAvailable();
+  const { setBannerHeight } = usePaymentBannerHeight();
   const bannerRef = useRef<HTMLDivElement>(null);
 
   const subscriptionStatus = useMemo(() => {
@@ -25,29 +23,34 @@ export function PaymentBanner() {
     // - Not cloud billing environment
     // - Not authenticated
     // - No organization context
-    if (!isCloudBilling || session.status !== "authenticated" || !organization) {
+    if (
+      !isCloudBilling ||
+      session.status !== "authenticated" ||
+      !organization
+    ) {
       return null;
     }
 
-    return organization?.cloudConfig?.billing?.subscriptionStatus ?? organization?.cloudConfig?.stripe?.subscriptionStatus;
+    return (
+      organization?.cloudConfig?.billing?.subscriptionStatus ??
+      organization?.cloudConfig?.stripe?.subscriptionStatus
+    );
   }, [isCloudBilling, session.status, organization]);
 
-  const canManageBilling = useMemo(() => {
-    if (!organization) {
-      return false;
+  // Update banner height when component mounts/unmounts or when visibility changes
+  useEffect(() => {
+    if (!bannerRef.current) {
+      setBannerHeight(0);
+      return;
     }
-    return hasOrganizationAccess({
-      session: session.data,
-      organizationId: organization.id,
-      scope: "langfuseCloudBilling:CRUD",
-    });
-  }, [organization, session.data]);
 
-  const hasBillingIssue =
-    subscriptionStatus === "past_due" || subscriptionStatus === "unpaid";
-  const isVisible = Boolean(
-    organization && hasBillingIssue && canManageBilling,
-  );
+    const updateHeight = () => {
+      if (bannerRef.current) {
+        setBannerHeight(bannerRef.current.offsetHeight);
+      } else {
+        setBannerHeight(0);
+      }
+    };
 
     // Update height initially
     updateHeight();
@@ -87,12 +90,13 @@ export function PaymentBanner() {
   const basePath = env.NEXT_PUBLIC_BASE_PATH ?? "";
 
   const drawerVariants = cva(
-    "fixed top-0 z-51 flex w-full items-center justify-between gap-4 px-4 py-1 sm:px-4 lg:px-4",
+    "fixed top-0 z-[51] flex w-full items-center justify-between gap-4 px-4 py-1 sm:px-4 lg:px-4",
     {
       variants: {
         type: {
           info: "bg-foreground text-background",
-          warning: "bg-amber-500 text-amber-950 dark:bg-amber-600 dark:text-amber-50",
+          warning:
+            "bg-amber-500 text-amber-950 dark:bg-amber-600 dark:text-amber-50",
           critical: "bg-destructive text-destructive-foreground",
         },
 
@@ -103,7 +107,7 @@ export function PaymentBanner() {
     },
   );
 
-  if (!isVisible || !organization) {
+  if (!canManageBilling) {
     return null;
   }
 
@@ -115,7 +119,7 @@ export function PaymentBanner() {
       aria-live="polite"
     >
       <div className="flex items-center gap-3">
-        <AlertCircle className="h-4 w-4 shrink-0" />
+        <AlertCircle className="h-4 w-4 flex-shrink-0" />
         <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
           <span className="text-sm font-semibold">Billing Issue:</span>
           <span className="text-sm">
@@ -129,7 +133,9 @@ export function PaymentBanner() {
       <div className="flex items-center gap-2">
         {canManageBilling && (
           <Button size="sm" variant="ghost" asChild>
-            <Link href={`${basePath}/organization/${organization.id}/settings/billing`}>
+            <Link
+              href={`${basePath}/organization/${organization.id}/settings/billing`}
+            >
               <CreditCard className="mr-2 h-4 w-4" />
               Update Payment
             </Link>
