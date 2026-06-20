@@ -6,8 +6,9 @@ import { logger } from "@hanzo/console/src/server";
  * Same-origin token-exchange proxy for the embedded `@hanzo/iam` BrowserIamSdk.
  *
  * The browser SDK POSTs a urlencoded `authorization_code` / `refresh_token`
- * grant here (its `proxyBaseUrl` is console's `/api/auth/iam`). We forward to
- * IAM server-side — attaching the confidential `client_secret` — so the token
+ * grant here (its `proxyBaseUrl` is console's `/v1/iam`, onto which the SDK
+ * appends `/auth/token`; the /v1/iam/* rewrite maps it to this file). We forward
+ * to IAM server-side — attaching the confidential `client_secret` — so the token
  * exchange never leaves the origin and works even when IAM does not emit CORS
  * headers. IAM remains the token issuer; console only relays.
  */
