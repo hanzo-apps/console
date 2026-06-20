@@ -1,20 +1,27 @@
-import { queryClickhouse, queryClickhouseStream, ClickHouseResourceError } from "@hanzo/shared/src/server";
+import {
+  queryDatastore,
+  queryDatastoreStream,
+  ClickHouseResourceError,
+} from "@hanzo/console/src/server";
 import { fail } from "assert";
 
 describe("ClickHouse Resource Error Handling", () => {
-  describe("queryClickhouse", () => {
+  describe("queryDatastore", () => {
     describe("Error transformation with throwIf", () => {
       // It is enough to test different block sizes on one error type only
       [1, 10_000].forEach((blockSize) => {
         it(`should transform OOM errors to ClickHouseResourceError; block size: ${blockSize}`, async () => {
           let res = Array<any>();
           try {
-            res = await queryClickhouse<any>({
+            res = await queryDatastore<any>({
               query: `SELECT throwIf(number >= 2, 'memory limit exceeded: would use 10.23 GiB') AS v FROM system.numbers LIMIT 2000`,
-              clickhouseSettings: { max_block_size: `${blockSize}` },
+              datastoreSettings: { max_block_size: `${blockSize}` },
               tags: { test: "marker" },
             });
-            fail("Should have thrown an error, observed instead " + JSON.stringify(res));
+            fail(
+              "Should have thrown an error, observed instead " +
+                JSON.stringify(res),
+            );
           } catch (error: any) {
             expect(error).toBeInstanceOf(ClickHouseResourceError);
             expect(error.errorType).toBe("MEMORY_LIMIT");
@@ -25,7 +32,7 @@ describe("ClickHouse Resource Error Handling", () => {
 
       it("should transform OvercommitTracker errors", async () => {
         try {
-          await queryClickhouse({
+          await queryDatastore({
             query: `SELECT throwIf(true, 'OvercommitTracker decision: Query was selected to stop by OvercommitTracker')`,
           });
           fail("Should have thrown an error");
@@ -37,7 +44,7 @@ describe("ClickHouse Resource Error Handling", () => {
 
       it("should transform timeout errors", async () => {
         try {
-          await queryClickhouse({
+          await queryDatastore({
             query: `SELECT throwIf(true, 'Timeout exceeded while reading from socket')`,
           });
           fail("Should have thrown an error");
@@ -49,13 +56,13 @@ describe("ClickHouse Resource Error Handling", () => {
 
       it("should NOT transform regular SQL errors", async () => {
         await expect(
-          queryClickhouse({
+          queryDatastore({
             query: `SELECT * FROM non_existent_table_xyz123`,
           }),
         ).rejects.toThrow();
 
         try {
-          await queryClickhouse({
+          await queryDatastore({
             query: `SELECT * FROM non_existent_table_xyz123`,
           });
         } catch (error: any) {
@@ -64,7 +71,7 @@ describe("ClickHouse Resource Error Handling", () => {
       });
 
       it("should pass through successful queries", async () => {
-        const result = await queryClickhouse<{ test_value: Number }>({
+        const result = await queryDatastore<{ test_value: Number }>({
           query: "SELECT 1 as test_value",
         });
 
@@ -77,14 +84,14 @@ describe("ClickHouse Resource Error Handling", () => {
     });
   });
 
-  describe("queryClickhouseStream", () => {
+  describe("queryDatastoreStream", () => {
     // We don't need to test all error types here, just one is enough
     // to verify streaming works with throwIf and different block sizes.
     [1, 10_000].forEach((blockSize) => {
       it(`should transform errors during streaming; block size ${blockSize}`, async () => {
-        const generator = queryClickhouseStream({
+        const generator = queryDatastoreStream({
           query: `SELECT throwIf(number = 2, 'memory limit exceeded: would use 10.23 GiB') as V FROM numbers(10)`,
-          clickhouseSettings: { max_block_size: `${blockSize}` },
+          datastoreSettings: { max_block_size: `${blockSize}` },
         });
 
         let fullResponse = [];
@@ -93,13 +100,16 @@ describe("ClickHouse Resource Error Handling", () => {
             for await (const item of generator) {
               fullResponse.push(item);
             }
-            fail("Should have thrown an error, observed instead " + JSON.stringify(fullResponse));
+            fail(
+              "Should have thrown an error, observed instead " +
+                JSON.stringify(fullResponse),
+            );
           })(),
         ).rejects.toThrow(ClickHouseResourceError);
       });
 
       it("should stream successful queries", async () => {
-        const generator = queryClickhouseStream({
+        const generator = queryDatastoreStream({
           query: "SELECT number FROM system.numbers LIMIT 3",
         });
 
@@ -159,25 +169,28 @@ describe("ClickHouse Resource Error Handling", () => {
       },
     ];
 
-    errorPatterns.forEach(({ name, errorMessage, shouldBeResourceError, errorType }) => {
-      it(`should correctly classify "${name}"`, () => {
-        const error = new Error(errorMessage);
-        const wrappedError = ClickHouseResourceError.wrapIfResourceError(error);
-        const isResourceError = ((err: Error) => {
-          if (err instanceof ClickHouseResourceError) {
-            return true;
-          } else {
-            return false;
+    errorPatterns.forEach(
+      ({ name, errorMessage, shouldBeResourceError, errorType }) => {
+        it(`should correctly classify "${name}"`, () => {
+          const error = new Error(errorMessage);
+          const wrappedError =
+            ClickHouseResourceError.wrapIfResourceError(error);
+          const isResourceError = ((err: Error) => {
+            if (err instanceof ClickHouseResourceError) {
+              return true;
+            } else {
+              return false;
+            }
+          })(wrappedError);
+
+          expect(isResourceError).toBe(shouldBeResourceError);
+
+          const resourceError = wrappedError as ClickHouseResourceError;
+          if (shouldBeResourceError && errorType) {
+            expect(resourceError.errorType).toBe(errorType);
           }
-        })(wrappedError);
-
-        expect(isResourceError).toBe(shouldBeResourceError);
-
-        const resourceError = wrappedError as ClickHouseResourceError;
-        if (shouldBeResourceError && errorType) {
-          expect(resourceError.errorType).toBe(errorType);
-        }
-      });
-    });
+        });
+      },
+    );
   });
 });

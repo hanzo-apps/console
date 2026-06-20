@@ -1,5 +1,5 @@
 import { api } from "@/src/utils/api";
-import { type FilterState, getGenerationLikeTypes } from "@hanzo/shared";
+import { type FilterState, getGenerationLikeTypes } from "@hanzo/console";
 import {
   extractTimeSeriesData,
   fillMissingValuesAndTransform,
@@ -13,8 +13,14 @@ import {
   dashboardDateRangeAggregationSettings,
 } from "@/src/utils/date-range-utils";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
-import { ModelSelectorPopover, useModelSelection } from "@/src/features/dashboard/components/ModelSelector";
-import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
+import {
+  ModelSelectorPopover,
+  useModelSelection,
+} from "@/src/features/dashboard/components/ModelSelector";
+import {
+  type QueryType,
+  mapLegacyUiTableFilterToView,
+} from "@/src/features/query";
 import type { DatabaseRow } from "@/src/server/api/services/sqlInterface";
 
 export const GenerationLatencyChart = ({
@@ -34,8 +40,19 @@ export const GenerationLatencyChart = ({
   toTimestamp: Date;
   isLoading?: boolean;
 }) => {
-  const { allModels, selectedModels, setSelectedModels, isAllSelected, buttonText, handleSelectAll } =
-    useModelSelection(projectId, globalFilterState, fromTimestamp, toTimestamp);
+  const {
+    allModels,
+    selectedModels,
+    setSelectedModels,
+    isAllSelected,
+    buttonText,
+    handleSelectAll,
+  } = useModelSelection(
+    projectId,
+    globalFilterState,
+    fromTimestamp,
+    toTimestamp,
+  );
 
   const latenciesQuery: QueryType = {
     view: "observations",
@@ -63,7 +80,8 @@ export const GenerationLatencyChart = ({
       },
     ],
     timeDimension: {
-      granularity: dashboardDateRangeAggregationSettings[agg].dateTrunc ?? "day",
+      granularity:
+        dashboardDateRangeAggregationSettings[agg].dateTrunc ?? "day",
     },
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
@@ -90,12 +108,16 @@ export const GenerationLatencyChart = ({
   const getData = (valueColumn: string) => {
     return latencies.data && selectedModels.length > 0
       ? fillMissingValuesAndTransform(
-          extractTimeSeriesData(latencies.data as DatabaseRow[], "time_dimension", [
-            {
-              uniqueIdentifierColumns: [{ accessor: "providedModelName" }],
-              valueColumn: valueColumn,
-            },
-          ]),
+          extractTimeSeriesData(
+            latencies.data as DatabaseRow[],
+            "time_dimension",
+            [
+              {
+                uniqueIdentifierColumns: [{ accessor: "providedModelName" }],
+                valueColumn: valueColumn,
+              },
+            ],
+          ),
           selectedModels,
         )
       : [];
@@ -129,7 +151,9 @@ export const GenerationLatencyChart = ({
       className={className}
       title="Model latencies"
       description="Latencies (seconds) per LLM generation"
-      isLoading={isLoading || (latencies.isPending && selectedModels.length > 0)}
+      isLoading={
+        isLoading || (latencies.isPending && selectedModels.length > 0)
+      }
       headerRight={
         <div className="flex items-center justify-end">
           <ModelSelectorPopover
@@ -158,7 +182,9 @@ export const GenerationLatencyChart = ({
                     valueFormatter={latencyFormatter}
                   />
                 ) : (
-                  <NoDataOrLoading isLoading={isLoading || latencies.isPending} />
+                  <NoDataOrLoading
+                    isLoading={isLoading || latencies.isPending}
+                  />
                 )}
               </>
             ),

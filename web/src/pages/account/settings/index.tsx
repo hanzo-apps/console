@@ -7,7 +7,13 @@ import { api } from "@/src/utils/api";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/src/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/src/components/ui/form";
 import {
   Dialog,
   DialogBody,
@@ -22,7 +28,7 @@ import { useSession, signOut } from "next-auth/react";
 import { SettingsDangerZone } from "@/src/components/SettingsDangerZone";
 import ContainerPage from "@/src/components/layouts/container-page";
 import { useRouter } from "next/router";
-import { StringNoHTML } from "@hanzo/console-core";
+import { StringNoHTML } from "@hanzo/console";
 import Link from "next/link";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
@@ -30,7 +36,10 @@ import { env } from "@/src/env.mjs";
 import { Shield, Loader2 } from "lucide-react";
 
 const displayNameSchema = z.object({
-  name: StringNoHTML.min(1, "Name cannot be empty").max(100, "Name must be at most 100 characters"),
+  name: StringNoHTML.min(1, "Name cannot be empty").max(
+    100,
+    "Name must be at most 100 characters",
+  ),
 });
 
 function UpdateDisplayName() {
@@ -87,7 +96,11 @@ function UpdateDisplayName() {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input placeholder={session?.user?.name ?? ""} {...field} className="flex-1" />
+                    <Input
+                      placeholder={session?.user?.name ?? ""}
+                      {...field}
+                      className="flex-1"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -158,12 +171,15 @@ function DeleteAccountButton() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">Delete Account</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">
+            Delete Account
+          </DialogTitle>
           <DialogDescription>
             {!canDelete && blockingOrganizations.length > 0 ? (
               <div>
                 <p className="mb-2">
-                  You cannot delete your account because you are the last owner of the following organization(s):
+                  You cannot delete your account because you are the last owner
+                  of the following organization(s):
                 </p>
                 <ul className="list-inside list-disc space-y-1">
                   {blockingOrganizations.map((org) => (
@@ -178,7 +194,8 @@ function DeleteAccountButton() {
                   ))}
                 </ul>
                 <p className="mt-2">
-                  Please add another owner or delete these organizations before deleting your account.
+                  Please add another owner or delete these organizations before
+                  deleting your account.
                 </p>
               </div>
             ) : (
@@ -236,36 +253,44 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
 };
 
 function ConnectedAccounts() {
-  const { data: accounts, isLoading } = api.userAccount.connectedAccounts.useQuery();
+  const { data: accounts, isLoading } =
+    api.userAccount.connectedAccounts.useQuery();
 
   return (
     <div>
       <Header title="Connected Accounts" />
       <Card className="p-3">
         {isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading connected accounts...
           </div>
         ) : accounts && accounts.length > 0 ? (
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               These are the authentication providers linked to your account.
             </p>
             {accounts.map((account) => (
-              <div key={account.id} className="flex items-center gap-3 rounded-md border p-3">
-                <Shield className="h-5 w-5 text-muted-foreground" />
+              <div
+                key={account.id}
+                className="flex items-center gap-3 rounded-md border p-3"
+              >
+                <Shield className="text-muted-foreground h-5 w-5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">{PROVIDER_DISPLAY_NAMES[account.provider] ?? account.provider}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {account.type === "oauth" ? "OAuth" : account.type} — ID: {account.providerAccountId}
+                  <p className="text-sm font-medium">
+                    {PROVIDER_DISPLAY_NAMES[account.provider] ??
+                      account.provider}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {account.type === "oauth" ? "OAuth" : account.type} — ID:{" "}
+                    {account.providerAccountId}
                   </p>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             No external authentication providers are linked to your account.
           </p>
         )}
@@ -292,7 +317,17 @@ const getAccountSettingsPages = (userEmail: string): AccountSettingsPage[] => [
   {
     title: "General",
     slug: "index",
-    cmdKKeywords: ["account", "user", "profile", "email", "password", "name", "display", "delete", "remove"],
+    cmdKKeywords: [
+      "account",
+      "user",
+      "profile",
+      "email",
+      "password",
+      "name",
+      "display",
+      "delete",
+      "remove",
+    ],
     content: (
       <div className="flex flex-col gap-6">
         <div>
@@ -307,12 +342,17 @@ const getAccountSettingsPages = (userEmail: string): AccountSettingsPage[] => [
         <div>
           <Header title="Password" />
           <Card className="p-3">
-            <p className="mb-4 text-sm text-primary">
-              To change your password, we will send you a secure link to your email address. Click the button below to
-              start the password reset process.
+            <p className="text-primary mb-4 text-sm">
+              To change your password, we will send you a secure link to your
+              email address. Click the button below to start the password reset
+              process.
             </p>
             <Button asChild variant="secondary">
-              <Link href={`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/auth/reset-password`}>Change Password</Link>
+              <Link
+                href={`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/auth/reset-password`}
+              >
+                Change Password
+              </Link>
             </Button>
           </Card>
         </div>
@@ -345,7 +385,10 @@ export default function AccountSettingsPage() {
         title: "Account Settings",
       }}
     >
-      <PagedSettingsContainer activeSlug={router.query.page as string | undefined} pages={pages} />
+      <PagedSettingsContainer
+        activeSlug={router.query.page as string | undefined}
+        pages={pages}
+      />
     </ContainerPage>
   );
 }

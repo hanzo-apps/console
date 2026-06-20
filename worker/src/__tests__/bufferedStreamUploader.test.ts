@@ -6,9 +6,9 @@ import {
   isTransientError,
   type ChunkedUploadStrategy,
   type CompletedPart,
-} from "@langfuse/shared/src/server";
-import { S3ChunkedUploadStrategy } from "@langfuse/shared/src/server";
-import { logger } from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
+import { S3ChunkedUploadStrategy } from "@hanzo/console/src/server";
+import { logger } from "@hanzo/console/src/server";
 
 /**
  * Creates a mock ChunkedUploadStrategy that records method calls.
@@ -78,9 +78,7 @@ describe("BufferedStreamUploader", () => {
 
       // Verify complete was called with the part
       const completeCall = mock.calls.find((c) => c.method === "complete");
-      expect(completeCall!.args[0]).toEqual([
-        { partIdentifier: "etag-1", partNumber: 1 },
-      ]);
+      expect(completeCall!.args[0]).toEqual([{ partIdentifier: "etag-1", partNumber: 1 }]);
     });
   });
 
@@ -179,9 +177,7 @@ describe("BufferedStreamUploader", () => {
         maxPartAttempts: 2,
       });
 
-      await expect(uploader.upload(streamFrom(["hello"]))).rejects.toThrow(
-        "socket hang up",
-      );
+      await expect(uploader.upload(streamFrom(["hello"]))).rejects.toThrow("socket hang up");
 
       const methods = mock.calls.map((c) => c.method);
       expect(methods).toContain("abort");
@@ -199,9 +195,7 @@ describe("BufferedStreamUploader", () => {
 
       const uploader = new BufferedStreamUploader(defaultParams(mock.strategy));
 
-      await expect(uploader.upload(streamFrom(["hello"]))).rejects.toThrow(
-        "AccessDenied",
-      );
+      await expect(uploader.upload(streamFrom(["hello"]))).rejects.toThrow("AccessDenied");
 
       // Should NOT have retried — AccessDenied is not transient
       expect(uploadAttempts).toBe(1);
@@ -219,9 +213,7 @@ describe("BufferedStreamUploader", () => {
         },
       });
 
-      await expect(uploader.upload(errorStream)).rejects.toThrow(
-        "ClickHouse connection timeout",
-      );
+      await expect(uploader.upload(errorStream)).rejects.toThrow("ClickHouse connection timeout");
 
       const methods = mock.calls.map((c) => c.method);
       expect(methods).toContain("initialize");
@@ -245,9 +237,7 @@ describe("BufferedStreamUploader", () => {
       await uploader.upload(streamFrom([largeChunk]));
 
       // Should have warned about the oversized chunk
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("exceeds configured part size"),
-      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("exceeds configured part size"));
 
       // Upload should still complete successfully
       const methods = mock.calls.map((c) => c.method);
@@ -307,9 +297,7 @@ describe("BufferedStreamUploader", () => {
       });
 
       // 5 parts: first 3 fire concurrently, parts 4-5 wait for slots
-      await uploader.upload(
-        streamFrom(["aaaaa", "bbbbb", "ccccc", "ddddd", "eeeee"]),
-      );
+      await uploader.upload(streamFrom(["aaaaa", "bbbbb", "ccccc", "ddddd", "eeeee"]));
 
       expect(maxActiveUploads).toBe(3);
 
@@ -364,11 +352,9 @@ describe("BufferedStreamUploader", () => {
       });
 
       // 6 chunks → 6 parts; part 2 fails immediately, should prevent later parts
-      await expect(
-        uploader.upload(
-          streamFrom(["aaaaa", "bbbbb", "ccccc", "ddddd", "eeeee", "fffff"]),
-        ),
-      ).rejects.toThrow("AccessDenied");
+      await expect(uploader.upload(streamFrom(["aaaaa", "bbbbb", "ccccc", "ddddd", "eeeee", "fffff"]))).rejects.toThrow(
+        "AccessDenied",
+      );
 
       // Parts 1-3 start concurrently, but part 2 failure should prevent 4+
       expect(partsStarted).toBeLessThanOrEqual(4);
@@ -498,9 +484,7 @@ describe("S3ChunkedUploadStrategy", () => {
 
       await strategy.uploadSingleObject(Buffer.alloc(0));
 
-      const putCmd = mock.sentCommands.find(
-        (c) => c.name === "PutObjectCommand",
-      );
+      const putCmd = mock.sentCommands.find((c) => c.name === "PutObjectCommand");
       expect(putCmd!.input.ServerSideEncryption).toBe("aws:kms");
       expect(putCmd!.input.SSEKMSKeyId).toBe("my-kms-key-id");
     });
@@ -520,9 +504,7 @@ describe("S3ChunkedUploadStrategy", () => {
       expect(result.partIdentifier).toBe('"etag-part-1"');
       expect(result.partNumber).toBe(1);
 
-      const uploadCmd = mock.sentCommands.find(
-        (c) => c.name === "UploadPartCommand",
-      );
+      const uploadCmd = mock.sentCommands.find((c) => c.name === "UploadPartCommand");
       expect(uploadCmd!.input.UploadId).toBe("test-upload-id");
       expect(uploadCmd!.input.PartNumber).toBe(1);
       expect(uploadCmd!.input.Body).toEqual(Buffer.from("hello"));
@@ -543,9 +525,7 @@ describe("S3ChunkedUploadStrategy", () => {
         { partIdentifier: "etag-2", partNumber: 2 },
       ]);
 
-      const completeCmd = mock.sentCommands.find(
-        (c) => c.name === "CompleteMultipartUploadCommand",
-      );
+      const completeCmd = mock.sentCommands.find((c) => c.name === "CompleteMultipartUploadCommand");
       expect(completeCmd!.input.UploadId).toBe("test-upload-id");
       expect(completeCmd!.input.MultipartUpload.Parts).toEqual([
         { ETag: "etag-1", PartNumber: 1 },
@@ -565,9 +545,7 @@ describe("S3ChunkedUploadStrategy", () => {
       await strategy.initialize();
       await strategy.abort();
 
-      const abortCmd = mock.sentCommands.find(
-        (c) => c.name === "AbortMultipartUploadCommand",
-      );
+      const abortCmd = mock.sentCommands.find((c) => c.name === "AbortMultipartUploadCommand");
       expect(abortCmd!.input.UploadId).toBe("test-upload-id");
     });
 
@@ -591,8 +569,7 @@ describe("S3ChunkedUploadStrategy", () => {
         send: vi.fn(async (command: any) => {
           const name = command.constructor.name;
           sentCommands.push({ name, input: command.input });
-          if (name === "CreateMultipartUploadCommand")
-            return { UploadId: "test-upload-id" };
+          if (name === "CreateMultipartUploadCommand") return { UploadId: "test-upload-id" };
           if (name === "UploadPartCommand") return { ETag: undefined };
           return {};
         }),
@@ -606,9 +583,7 @@ describe("S3ChunkedUploadStrategy", () => {
       });
 
       await strategy.initialize();
-      await expect(
-        strategy.uploadPart(Buffer.from("hello"), 1),
-      ).rejects.toThrow("returned no ETag");
+      await expect(strategy.uploadPart(Buffer.from("hello"), 1)).rejects.toThrow("returned no ETag");
     });
 
     it("should throw when initialize returns no UploadId", async () => {
@@ -623,19 +598,15 @@ describe("S3ChunkedUploadStrategy", () => {
         contentType: "text/csv",
       });
 
-      await expect(strategy.initialize()).rejects.toThrow(
-        "no UploadId returned",
-      );
+      await expect(strategy.initialize()).rejects.toThrow("no UploadId returned");
     });
 
     it("should swallow errors from abort without propagating", async () => {
       const client = {
         send: vi.fn(async (command: any) => {
           const name = command.constructor.name;
-          if (name === "CreateMultipartUploadCommand")
-            return { UploadId: "test-upload-id" };
-          if (name === "AbortMultipartUploadCommand")
-            throw new Error("S3 abort failed");
+          if (name === "CreateMultipartUploadCommand") return { UploadId: "test-upload-id" };
+          if (name === "AbortMultipartUploadCommand") throw new Error("S3 abort failed");
           return {};
         }),
       } as any;

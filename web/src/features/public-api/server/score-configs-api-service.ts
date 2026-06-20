@@ -8,9 +8,9 @@ import {
   LangfuseNotFoundError,
   validateDbScoreConfig,
   validateDbScoreConfigSafe,
-} from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
-import { traceException } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
+import { traceException } from "@hanzo/console/src/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import {
   type PostScoreConfigBody,

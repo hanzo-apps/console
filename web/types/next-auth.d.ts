@@ -4,10 +4,10 @@ import {
   type Project as PrismaProject,
   type Organization as PrismaOrganization,
   type Role,
-} from "@hanzo/shared/src/db";
+} from "@hanzo/console/src/db";
 import { type Flags } from "@/src/features/feature-flags/types";
-import { type CloudConfigSchema } from "@hanzo/shared";
-import { type Plan } from "@hanzo/shared";
+import { type CloudConfigSchema } from "@hanzo/console";
+import { type Plan } from "@hanzo/console";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`

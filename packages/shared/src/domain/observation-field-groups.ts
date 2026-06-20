@@ -27,7 +27,7 @@
  *   - packages/shared/src/server/repositories/events.ts:
  *     `enrichObservationsWithModelData` (v2 read path) and the export
  *     streaming path that gates `model_export`.
- *   - packages/shared/src/server/queries/clickhouse-sql/event-query-builder.ts:
+ *   - packages/shared/src/server/queries/datastore-sql/event-query-builder.ts:
  *     `FIELD_SETS` and `EVENTS_FIELDS` for the underlying column projections.
  */
 
@@ -44,13 +44,11 @@ export const OBSERVATION_FIELD_GROUPS_PUBLIC_API = [
   "trace_context", // tags, release, traceName (denormalized trace metadata)
 ] as const;
 
-export type ObservationFieldGroupPublicApi =
-  (typeof OBSERVATION_FIELD_GROUPS_PUBLIC_API)[number];
+export type ObservationFieldGroupPublicApi = (typeof OBSERVATION_FIELD_GROUPS_PUBLIC_API)[number];
 
 export const OBSERVATION_FIELD_GROUPS_FULL = [
   ...OBSERVATION_FIELD_GROUPS_PUBLIC_API,
   "tools", // toolDefinitions, toolCalls, toolCallNames
 ] as const;
 
-export type ObservationFieldGroupFull =
-  (typeof OBSERVATION_FIELD_GROUPS_FULL)[number];
+export type ObservationFieldGroupFull = (typeof OBSERVATION_FIELD_GROUPS_FULL)[number];

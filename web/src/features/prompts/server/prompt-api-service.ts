@@ -1,11 +1,11 @@
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import type {
   CreatePromptSchema,
   GetPromptByNameSchema,
   GetPromptsMetaSchema,
   Prompt,
-} from "@langfuse/shared";
-import { InvalidRequestError, LangfuseNotFoundError } from "@langfuse/shared";
+} from "@hanzo/console";
+import { InvalidRequestError, LangfuseNotFoundError } from "@hanzo/console";
 import type { z } from "zod";
 
 import { auditLog } from "@/src/features/audit-logs/auditLog";

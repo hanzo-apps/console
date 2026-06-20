@@ -10,7 +10,7 @@ import {
   PromptContent,
   PromptType,
   stringifyValue,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 import { compileTemplateString } from "../utils/utilities";
 import {
   logger,
@@ -21,8 +21,8 @@ import {
   ExperimentMetadataSchema,
   LLMApiKeySchema,
   PromptContentSchema,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import z from "zod/v4";
 import { UnrecoverableError } from "../../errors/UnrecoverableError";
 

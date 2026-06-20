@@ -40,9 +40,7 @@ const emptyValidateOpts: { normalizeUndefinedToNull?: boolean } = {};
 async function getDatasets(props: {
   projectId: string;
   datasetIds: string[];
-}): Promise<
-  Pick<Dataset, "id" | "name" | "inputSchema" | "expectedOutputSchema">[]
-> {
+}): Promise<Pick<Dataset, "id" | "name" | "inputSchema" | "expectedOutputSchema">[]> {
   const datasets = await prisma.dataset.findMany({
     where: {
       id: { in: props.datasetIds },
@@ -65,9 +63,7 @@ async function getDatasets(props: {
 async function getDatasetById(props: {
   projectId: string;
   datasetId: string;
-}): Promise<
-  Pick<Dataset, "id" | "name" | "inputSchema" | "expectedOutputSchema">
-> {
+}): Promise<Pick<Dataset, "id" | "name" | "inputSchema" | "expectedOutputSchema">> {
   const result = await getDatasets({
     projectId: props.projectId,
     datasetIds: [props.datasetId],
@@ -78,9 +74,7 @@ async function getDatasetById(props: {
 async function getDatasetByName(props: {
   projectId: string;
   datasetName: string;
-}): Promise<
-  Pick<Dataset, "id" | "name" | "inputSchema" | "expectedOutputSchema">
-> {
+}): Promise<Pick<Dataset, "id" | "name" | "inputSchema" | "expectedOutputSchema">> {
   const dataset = await prisma.dataset.findFirst({
     where: {
       name: props.datasetName,
@@ -357,9 +351,7 @@ export async function upsertDatasetItem(
         });
 
         if (current && current.datasetId !== dataset.id) {
-          throw new LangfuseNotFoundError(
-            `Dataset item with id ${itemId} not found for project ${props.projectId}`,
-          );
+          throw new ConsoleNotFoundError(`Dataset item with id ${itemId} not found for project ${props.projectId}`);
         }
 
         const baseTs = current?.validFrom.getTime() ?? 0;

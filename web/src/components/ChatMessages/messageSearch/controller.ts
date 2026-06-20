@@ -2,7 +2,7 @@
 
 import capitalize from "lodash/capitalize";
 import { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import { ChatMessageType, type ChatMessageWithId } from "@langfuse/shared";
+import { ChatMessageType, type ChatMessageWithId } from "@hanzo/console";
 import { EditorState } from "@codemirror/state";
 import { SearchQuery } from "@codemirror/search";
 import { type RefObject } from "react";

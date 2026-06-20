@@ -6,11 +6,15 @@ import { safeExtract } from "@/src/utils/map-utils";
 import { useQueryParams, withDefault, NumberParam } from "use-query-params";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
-import { type AnnotationQueueStatus } from "@hanzo/console-core";
+import { type AnnotationQueueStatus } from "@hanzo/console";
 import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-height-switch";
 import { ChevronDown, ListTree, Trash } from "lucide-react";
 import useColumnOrder from "@/src/features/column-visibility/hooks/useColumnOrder";
-import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/src/components/ui/avatar";
 import { type RouterOutput } from "@/src/utils/types";
 import { type RowSelectionState } from "@tanstack/react-table";
 import { useState } from "react";
@@ -90,7 +94,8 @@ const QueueItemTableMultiSelectAction = ({
           <DialogHeader>
             <DialogTitle>Delete queue items</DialogTitle>
             <DialogDescription>
-              This action cannot be undone and removes the selected annotation queue item(s), but
+              This action cannot be undone and removes the selected annotation
+              queue item(s), but
               <strong> does not delete associated scores.</strong>
             </DialogDescription>
           </DialogHeader>
@@ -152,7 +157,13 @@ export type QueueItemRowData = {
     }
 );
 
-export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: string; queueId: string }) {
+export function AnnotationQueueItemsTable({
+  projectId,
+  queueId,
+}: {
+  projectId: string;
+  queueId: string;
+}) {
   const [paginationState, setPaginationState] = useQueryParams({
     pageIndex: withDefault(NumberParam, 0),
     pageSize: withDefault(NumberParam, 50),
@@ -179,7 +190,11 @@ export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: s
           <div className="flex h-full items-center">
             <Checkbox
               checked={
-                table.getIsAllPageRowsSelected() ? true : table.getIsSomePageRowsSelected() ? "indeterminate" : false
+                table.getIsAllPageRowsSelected()
+                  ? true
+                  : table.getIsSomePageRowsSelected()
+                    ? "indeterminate"
+                    : false
               }
               onCheckedChange={(value: boolean | "indeterminate") => {
                 table.toggleAllPageRowsSelected(!!value);
@@ -197,7 +212,9 @@ export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: s
         return (
           <Checkbox
             checked={row.getIsSelected()}
-            onCheckedChange={(value: boolean | "indeterminate") => row.toggleSelected(!!value)}
+            onCheckedChange={(value: boolean | "indeterminate") =>
+              row.toggleSelected(!!value)
+            }
             aria-label="Select row"
             className="mt-1 opacity-60 data-[state=checked]:mt-[5px]"
           />
@@ -226,7 +243,8 @@ export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: s
       id: "objectType",
       size: 50,
       cell: ({ row }) => {
-        const objectType: QueueItemRowData["objectType"] = row.getValue("objectType");
+        const objectType: QueueItemRowData["objectType"] =
+          row.getValue("objectType");
         return <span className="capitalize">{objectType.toLowerCase()}</span>;
       },
     },
@@ -234,7 +252,8 @@ export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: s
       accessorKey: "source",
       header: "Source",
       headerTooltip: {
-        description: "Link to the source trace, observation or session based on which this item was added",
+        description:
+          "Link to the source trace, observation or session based on which this item was added",
       },
       id: "source",
       size: 50,
@@ -291,7 +310,13 @@ export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: s
       size: 60,
       cell: ({ row }) => {
         const status: QueueItemRowData["status"] = row.getValue("status");
-        return <StatusBadge className="capitalize" type={status.toLowerCase()} isLive={false} />;
+        return (
+          <StatusBadge
+            className="capitalize"
+            type={status.toLowerCase()}
+            isLive={false}
+          />
+        );
       },
     },
     {
@@ -309,14 +334,18 @@ export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: s
       enableHiding: true,
       size: 80,
       cell: ({ row }) => {
-        const annotatorUser: QueueItemRowData["annotatorUser"] = row.getValue("annotatorUser");
+        const annotatorUser: QueueItemRowData["annotatorUser"] =
+          row.getValue("annotatorUser");
         if (!annotatorUser || !annotatorUser.userId) return null;
 
         const { userId, userName, image } = annotatorUser;
         return (
           <div className="flex items-center space-x-2">
             <Avatar className="h-7 w-7">
-              <AvatarImage src={image ?? undefined} alt={userName ?? "User Avatar"} />
+              <AvatarImage
+                src={image ?? undefined}
+                alt={userName ?? "User Avatar"}
+              />
               <AvatarFallback>
                 {userName
                   ? userName
@@ -380,12 +409,16 @@ export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: s
     }
   };
 
-  const [columnVisibility, setColumnVisibility] = useColumnVisibility<QueueItemRowData>(
-    `queueItemsColumnVisibility-${projectId}`,
+  const [columnVisibility, setColumnVisibility] =
+    useColumnVisibility<QueueItemRowData>(
+      `queueItemsColumnVisibility-${projectId}`,
+      columns,
+    );
+
+  const [columnOrder, setColumnOrder] = useColumnOrder<QueueItemRowData>(
+    "queueItemsColumnOrder",
     columns,
   );
-
-  const [columnOrder, setColumnOrder] = useColumnOrder<QueueItemRowData>("queueItemsColumnOrder", columns);
 
   return (
     <>
@@ -398,8 +431,9 @@ export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: s
         rowHeight={rowHeight}
         setRowHeight={setRowHeight}
         actionButtons={[
-          Object.keys(selectedRows).filter((itemId) => items.data?.queueItems.map((item) => item.id).includes(itemId))
-            .length > 0 ? (
+          Object.keys(selectedRows).filter((itemId) =>
+            items.data?.queueItems.map((item) => item.id).includes(itemId),
+          ).length > 0 ? (
             <QueueItemTableMultiSelectAction
               // Exclude items that are not in the current page
               selectedItemIds={Object.keys(selectedRows).filter((itemId) =>
@@ -428,7 +462,9 @@ export function AnnotationQueueItemsTable({ projectId, queueId }: { projectId: s
               : {
                   isLoading: false,
                   isError: false,
-                  data: safeExtract(items.data, "queueItems", []).map((item) => convertToTableRow(item)),
+                  data: safeExtract(items.data, "queueItems", []).map((item) =>
+                    convertToTableRow(item),
+                  ),
                 }
         }
         help={{

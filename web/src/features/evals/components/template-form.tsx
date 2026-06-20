@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
-import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod/v4";
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
 import {
@@ -14,22 +14,18 @@ import {
 } from "@/src/components/ui/form";
 import { api } from "@/src/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { extractVariables, getIsCharOrUnderscore } from "@hanzo/console-core";
+import { extractVariables, getIsCharOrUnderscore } from "@hanzo/console";
 import router from "next/router";
-import { type EvalTemplate } from "@hanzo/console-core";
+import { type EvalTemplate } from "@hanzo/console";
 import { ModelParameters } from "@/src/components/ModelParameters";
-import { OutputSchema, type ModelParams, ZodModelConfig } from "@hanzo/console-core";
+import { OutputSchema, type ModelParams } from "@hanzo/console";
+import { ZodModelConfig } from "@hanzo/console/src/server/llm/types";
 import { PromptVariableListPreview } from "@/src/features/prompts/components/PromptVariableListPreview";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { getFinalModelParams } from "@/src/utils/getFinalModelParams";
 import { useModelParams } from "@/src/features/playground/page/hooks/useModelParams";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { EvalReferencedEvaluators } from "@/src/features/evals/types";
-import {
-  getDefaultOutputDefinitionFormValues,
-  shouldReplaceDefaultOutputDefinitionField,
-} from "@/src/features/evals/utils/template-form-defaults";
-import { templateFormSchema } from "@/src/features/evals/utils/template-form-schema";
 import { CodeMirrorEditor } from "@/src/components/editor";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { type RouterInput } from "@/src/utils/types";
@@ -37,51 +33,29 @@ import { useEvaluationModel } from "@/src/features/evals/hooks/useEvaluationMode
 import { Checkbox } from "@hanzo/ui";
 import { ManageDefaultEvalModel } from "@/src/features/evals/components/manage-default-eval-model";
 import { DialogFooter, DialogBody } from "@/src/components/ui/dialog";
-import { AlertCircle, AlertTriangle, PlusIcon, Trash } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useValidateCustomModel } from "@/src/features/evals/hooks/useValidateCustomModel";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/src/components/ui/select";
-import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
-import { CodeEvalTemplateFormBody } from "@/src/features/evals/components/code-eval-template-form-body";
-import {
-  type CodeEvalSourceCodeLanguage,
-  getCodeEvalSourceForEditor,
-  getDefaultCodeEvalSource,
-  formatAndStripCodeEvalSourceForSubmit,
-} from "@/src/features/evals/utils/code-eval-template-validation";
-import { useCodeEvalSourceValidation } from "@/src/features/evals/hooks/useCodeEvalSourceValidation";
-import {
-  EvalTemplateTypeSelector,
-  type EvalTemplateTypeSelectorMode,
-} from "@/src/features/evals/components/eval-template-type-selector";
-import { Alert, AlertDescription } from "@/src/components/ui/alert";
-import {
-  useEvalCapabilities,
-  type EvalCapabilities,
-} from "@/src/features/evals/hooks/useEvalCapabilities";
 
-type PartialEvalTemplate = Omit<EvalTemplate, "id" | "version" | "createdAt" | "updatedAt"> & { id?: string };
+type PartialEvalTemplate = Omit<
+  EvalTemplate,
+  "id" | "version" | "createdAt" | "updatedAt"
+> & { id?: string };
 
 export const EvalTemplateForm = (props: {
   projectId: string;
   useDialog: boolean;
   existingEvalTemplate?: PartialEvalTemplate;
-  preFilledFormValues?: EvalTemplateFormPreFill;
-  templateTypeSelectorMode?: EvalTemplateTypeSelectorMode;
   onFormSuccess?: (template?: EvalTemplate) => void;
-  onBeforeSubmit?: (template: RouterInput["evals"]["createTemplate"]) => boolean;
+  onBeforeSubmit?: (
+    template: RouterInput["evals"]["createTemplate"],
+  ) => boolean;
   isEditing?: boolean;
   setIsEditing?: (isEditing: boolean) => void;
   preventRedirect?: boolean;
   cloneSourceId?: string | null;
 }) => {
   return (
-    <div className={props.useDialog ? "max-w-6xl" : "w-full"}>
+    <div className="w-full">
       <InnerEvalTemplateForm
         key={props.existingEvalTemplate?.id ?? "new"}
         {...props}
@@ -95,25 +69,24 @@ export const EvalTemplateForm = (props: {
           props.existingEvalTemplate
             ? {
                 name: props.existingEvalTemplate.name,
-                prompt: props.existingEvalTemplate.prompt ?? "",
+                prompt: props.existingEvalTemplate.prompt,
                 vars: props.existingEvalTemplate.vars,
-                outputDefinition: props.existingEvalTemplate
-                  .outputDefinition as PersistedEvalOutputDefinition,
-                type: props.existingEvalTemplate.type,
-                sourceCode: props.existingEvalTemplate.sourceCode,
-                sourceCodeLanguage:
-                  props.existingEvalTemplate.sourceCodeLanguage ?? undefined,
+                outputSchema: props.existingEvalTemplate.outputSchema as {
+                  score: string;
+                  reasoning: string;
+                },
                 selectedModel: props.existingEvalTemplate.provider
                   ? {
                       provider: props.existingEvalTemplate.provider as string,
                       model: props.existingEvalTemplate.model as string,
-                      modelParams: props.existingEvalTemplate.modelParams as ModelParams & {
+                      modelParams: props.existingEvalTemplate
+                        .modelParams as ModelParams & {
                         maxTemperature: number;
                       },
                     }
                   : undefined,
               }
-            : props.preFilledFormValues
+            : undefined
         }
       />
     </div>
@@ -126,28 +99,43 @@ const selectedModelSchema = z.object({
   modelParams: ZodModelConfig,
 });
 
-const toOutputDefinitionFormValues = (
-  outputDefinition?: PersistedEvalOutputDefinition | null,
-) => {
-  if (!outputDefinition) {
-    return getDefaultOutputDefinitionFormValues();
-  }
+const formSchema = z.object({
+  name: z.string().min(1, "Enter a name"),
+  prompt: z
+    .string()
+    .min(1, "Enter a prompt")
+    .refine((val) => {
+      const variables = extractVariables(val);
+      const matches = variables.map((variable) => {
+        // check regex here
+        if (variable.match(/^[A-Za-z_]+$/)) {
+          return true;
+        }
+        return false;
+      });
+      return !matches.includes(false);
+    }, "Variables must only contain letters and underscores (_)"),
 
-  variables: z.array(z.string().min(1, "Variables must have at least one character")),
+  variables: z.array(
+    z.string().min(1, "Variables must have at least one character"),
+  ),
   outputScore: z.string().min(1, "Enter a score function"),
   outputReasoning: z.string().min(1, "Enter a reasoning function"),
-  referencedEvaluators: z.enum(EvalReferencedEvaluators).optional().default(EvalReferencedEvaluators.PERSIST),
+  referencedEvaluators: z
+    .enum(EvalReferencedEvaluators)
+    .optional()
+    .default(EvalReferencedEvaluators.PERSIST),
   shouldUseDefaultModel: z.boolean().default(true),
 });
 
 export type EvalTemplateFormPreFill = {
   name: string;
-  type?: EvalTemplateType;
   prompt: string;
   vars: string[];
-  outputDefinition?: PersistedEvalOutputDefinition | null;
-  sourceCode?: string | null;
-  sourceCodeLanguage?: CodeEvalSourceCodeLanguage | null;
+  outputSchema: {
+    score: string;
+    reasoning: string;
+  };
   selectedModel?: {
     provider: string;
     model: string;
@@ -162,7 +150,6 @@ export const InnerEvalTemplateForm = (props: {
   useDialog: boolean;
   // pre-filled values from hanzo-defined template or template from db
   preFilledFormValues?: EvalTemplateFormPreFill;
-  templateTypeSelectorMode?: EvalTemplateTypeSelectorMode;
   // template to be updated
   existingEvalTemplateId?: string;
   existingEvalTemplateName?: string;
@@ -175,13 +162,12 @@ export const InnerEvalTemplateForm = (props: {
 }) => {
   const capture = useInsightsCapture();
   const [formError, setFormError] = useState<string | null>(null);
-  const codeEvalCapabilities = useIsCodeEvalEnabled();
-  const { enabled: isCodeEvalEnabled } = codeEvalCapabilities;
-  const templateTypeSelectorMode = props.templateTypeSelectorMode ?? "all";
 
   // Determine if we should use default model or custom model
   // If existing template has no provider, it was using default model
-  const isExistingUsingDefault = props.preFilledFormValues?.selectedModel ? false : true;
+  const isExistingUsingDefault = props.preFilledFormValues?.selectedModel
+    ? false
+    : true;
 
   const { data: defaultModel } = api.defaultLlmModel.fetchDefaultModel.useQuery(
     { projectId: props.projectId },
@@ -200,142 +186,72 @@ export const InnerEvalTemplateForm = (props: {
     availableProviders,
   } = useModelParams();
 
-  useEvaluationModel(props.projectId, setModelParams, props.preFilledFormValues?.selectedModel);
-
-  const { isCustomModelValid } = useValidateCustomModel(availableProviders, props.preFilledFormValues?.selectedModel);
-
-  const outputDefinitionFormValues = toOutputDefinitionFormValues(
-    props.preFilledFormValues?.outputDefinition,
+  useEvaluationModel(
+    props.projectId,
+    setModelParams,
+    props.preFilledFormValues?.selectedModel,
   );
-  const defaultSourceCodeLanguage =
-    props.preFilledFormValues?.sourceCodeLanguage ??
-    EvalTemplateSourceCodeLanguage.TYPESCRIPT;
+
+  const { isCustomModelValid } = useValidateCustomModel(
+    availableProviders,
+    props.preFilledFormValues?.selectedModel,
+  );
 
   // updates the form based on the pre-filled data
   // either form update or from hanzo-generated template
   const form = useForm({
-    resolver: zodResolver(templateFormSchema),
+    resolver: zodResolver(formSchema),
     disabled: !props.isEditing,
     defaultValues: {
-      name: props.existingEvalTemplateName ?? props.preFilledFormValues?.name ?? "",
+      name:
+        props.existingEvalTemplateName ?? props.preFilledFormValues?.name ?? "",
       prompt: props.preFilledFormValues?.prompt ?? undefined,
       variables: props.preFilledFormValues?.vars ?? [],
-      sourceCode: props.preFilledFormValues?.sourceCode
-        ? getCodeEvalSourceForEditor({
-            sourceCode: props.preFilledFormValues.sourceCode,
-            sourceCodeLanguage: defaultSourceCodeLanguage,
-          })
-        : getDefaultCodeEvalSource(defaultSourceCodeLanguage),
-      sourceCodeLanguage: defaultSourceCodeLanguage,
-      scoreDataType: outputDefinitionFormValues.scoreDataType,
-      reasoningDescription: outputDefinitionFormValues.reasoningDescription,
-      scoreDescription: outputDefinitionFormValues.scoreDescription,
-      categories: outputDefinitionFormValues.categories,
-      shouldAllowMultipleMatches:
-        outputDefinitionFormValues.shouldAllowMultipleMatches,
+      outputReasoning: props.preFilledFormValues
+        ? OutputSchema.parse(props.preFilledFormValues?.outputSchema).reasoning
+        : "One sentence reasoning for the score",
+      outputScore: props.preFilledFormValues
+        ? OutputSchema.parse(props.preFilledFormValues?.outputSchema).score
+        : "Score between 0 and 1. Score 0 if false or negative and 1 if true or positive.",
       shouldUseDefaultModel: isExistingUsingDefault,
     },
   });
 
-  const {
-    fields: categoryFields,
-    append,
-    remove,
-    replace,
-  } = useFieldArray({
-    control: form.control,
-    name: "categories",
-  });
-
   const useDefaultModel = form.watch("shouldUseDefaultModel");
-  const evalTemplateType = form.watch("type");
-  const sourceCodeLanguage =
-    form.watch("sourceCodeLanguage") ??
-    EvalTemplateSourceCodeLanguage.TYPESCRIPT;
-  const sourceCode = form.watch("sourceCode") ?? "";
-  const showCodeTemplateForm =
-    isCodeEvalEnabled && evalTemplateType === EvalTemplateType.CODE;
-  const evalCapabilities = useEvalCapabilities(props.projectId, {
-    isCodeEvalTemplate: showCodeTemplateForm,
-  });
-  const {
-    isValid: isCodeEvalSourceValid,
-    validationResult: codeValidationResult,
-    validate: validateCodeEvalSource,
-    reset: resetCodeEvalSourceValidation,
-  } = useCodeEvalSourceValidation({
-    enabled: showCodeTemplateForm,
-    sourceCode,
-    sourceCodeLanguage,
-  });
-  const scoreDataType = form.watch("scoreDataType");
-  const isCategoricalOutput = scoreDataType === ScoreDataTypeEnum.CATEGORICAL;
-  const isBooleanOutput = scoreDataType === ScoreDataTypeEnum.BOOLEAN;
-  const shouldAllowMultipleMatches = form.watch("shouldAllowMultipleMatches");
-  const categoriesError = form.formState.errors.categories;
-  const categoriesErrorMessage =
-    typeof categoriesError?.message === "string"
-      ? categoriesError.message
-      : typeof categoriesError?.root?.message === "string"
-        ? categoriesError.root.message
-        : undefined;
 
-  const applyDefaultOutputDefinitionCopy = (params: {
-    scoreDataType:
-      | typeof ScoreDataTypeEnum.NUMERIC
-      | typeof ScoreDataTypeEnum.BOOLEAN
-      | typeof ScoreDataTypeEnum.CATEGORICAL;
-    shouldAllowMultipleMatches: boolean;
-  }) => {
-    const defaults = getDefaultOutputDefinitionFormValues(params);
-
-    if (
-      shouldReplaceDefaultOutputDefinitionField({
-        currentValue: form.getValues("reasoningDescription"),
-        field: "reasoningDescription",
-      })
-    ) {
-      form.setValue("reasoningDescription", defaults.reasoningDescription);
-    }
-
-    if (
-      shouldReplaceDefaultOutputDefinitionField({
-        currentValue: form.getValues("scoreDescription"),
-        field: "scoreDescription",
-      })
-    ) {
-      form.setValue("scoreDescription", defaults.scoreDescription);
-    }
-  };
-
-  const promptValue = form.watch("prompt");
-  const extractedVariables = promptValue
-    ? extractVariables(promptValue).filter(getIsCharOrUnderscore)
+  const extractedVariables = form.watch("prompt")
+    ? extractVariables(form.watch("prompt")).filter(getIsCharOrUnderscore)
     : undefined;
 
   const utils = api.useUtils();
   const createEvalTemplateMutation = api.evals.createTemplate.useMutation({
     onSuccess: () => {
       utils.models.invalidate();
-      if (form.getValues("referencedEvaluators") === EvalReferencedEvaluators.UPDATE && props.existingEvalTemplateId) {
+      if (
+        form.getValues("referencedEvaluators") ===
+          EvalReferencedEvaluators.UPDATE &&
+        props.existingEvalTemplateId
+      ) {
         showSuccessToast({
           title: "Updated evaluators",
-          description: "Updated referenced evaluators to use new template version.",
+          description:
+            "Updated referenced evaluators to use new template version.",
         });
       }
     },
     onError: (error) => setFormError(error.message),
   });
 
-  const evaluatorsByTemplateNameQuery = api.evals.jobConfigsByTemplateName.useQuery(
-    {
-      projectId: props.projectId,
-      evalTemplateName: props.existingEvalTemplateName as string,
-    },
-    {
-      enabled: !!props.existingEvalTemplateName,
-    },
-  );
+  const evaluatorsByTemplateNameQuery =
+    api.evals.jobConfigsByTemplateName.useQuery(
+      {
+        projectId: props.projectId,
+        evalTemplateName: props.existingEvalTemplateName as string,
+      },
+      {
+        enabled: !!props.existingEvalTemplateName,
+      },
+    );
 
   useEffect(() => {
     if (evaluatorsByTemplateNameQuery.data) {
@@ -349,71 +265,32 @@ export const InnerEvalTemplateForm = (props: {
   }, [evaluatorsByTemplateNameQuery.data, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    capture(props.isEditing ? "eval_templates:update_form_submit" : "eval_templates:new_form_submit");
-
-    if (values.type === EvalTemplateType.CODE) {
-      const submittedSourceCodeLanguage =
-        values.sourceCodeLanguage ?? EvalTemplateSourceCodeLanguage.TYPESCRIPT;
-      const isValidSource = await validateCodeEvalSource({
-        sourceCode: values.sourceCode ?? "",
-        sourceCodeLanguage: submittedSourceCodeLanguage,
-      });
-
-      if (!isValidSource) {
-        return;
-      }
-
-      const formattedSourceCode = await formatAndStripCodeEvalSourceForSubmit({
-        sourceCode: values.sourceCode ?? "",
-        sourceCodeLanguage: submittedSourceCodeLanguage,
-      });
-
-      const evalTemplate = {
-        type: EvalTemplateType.CODE,
-        name: values.name,
-        projectId: props.projectId,
-        sourceCode: formattedSourceCode,
-        sourceCodeLanguage: submittedSourceCodeLanguage,
-        referencedEvaluators: values.referencedEvaluators,
-        cloneSourceId: props.cloneSourceId ?? undefined,
-      } satisfies RouterInput["evals"]["createTemplate"];
-
-      await submitEvalTemplate(evalTemplate);
-      return;
-    }
-
-    const outputDefinition =
-      values.scoreDataType === ScoreDataTypeEnum.CATEGORICAL
-        ? createCategoricalEvalOutputDefinition({
-            scoreDescription: values.scoreDescription ?? "",
-            reasoningDescription: values.reasoningDescription ?? "",
-            categories: values.categories.map((category) => category.value),
-            shouldAllowMultipleMatches: values.shouldAllowMultipleMatches,
-          })
-        : values.scoreDataType === ScoreDataTypeEnum.BOOLEAN
-          ? createBooleanEvalOutputDefinition({
-              scoreDescription: values.scoreDescription ?? "",
-              reasoningDescription: values.reasoningDescription ?? "",
-            })
-          : createNumericEvalOutputDefinition({
-              scoreDescription: values.scoreDescription ?? "",
-              reasoningDescription: values.reasoningDescription ?? "",
-            });
+    capture(
+      props.isEditing
+        ? "eval_templates:update_form_submit"
+        : "eval_templates:new_form_submit",
+    );
 
     const evalTemplate = {
-      type: EvalTemplateType.LLM_AS_JUDGE,
       name: values.name,
       projectId: props.projectId,
-      prompt: values.prompt ?? "",
+      prompt: values.prompt,
       // Only include model details if not using default model
-      provider: values.shouldUseDefaultModel ? undefined : modelParams.provider.value,
+      provider: values.shouldUseDefaultModel
+        ? undefined
+        : modelParams.provider.value,
       model: values.shouldUseDefaultModel ? undefined : modelParams.model.value,
-      modelParams: values.shouldUseDefaultModel ? undefined : getFinalModelParams(modelParams),
+      modelParams: values.shouldUseDefaultModel
+        ? undefined
+        : getFinalModelParams(modelParams),
       vars: extractedVariables ?? [],
-      outputDefinition,
+      outputSchema: {
+        score: values.outputScore,
+        reasoning: values.outputReasoning,
+      },
       referencedEvaluators: values.referencedEvaluators,
-      cloneSourceId: props.cloneSourceId ?? undefined,
-    } satisfies RouterInput["evals"]["createTemplate"];
+      sourceTemplateId: props.cloneSourceId ?? undefined,
+    };
 
     // Only validate model if not using default
     if (!values.shouldUseDefaultModel) {
@@ -424,12 +301,16 @@ export const InnerEvalTemplateForm = (props: {
       });
 
       if (!parsedModel.success) {
-        setFormError(`${parsedModel.error.issues[0].path}: ${parsedModel.error.issues[0].message}`);
+        setFormError(
+          `${parsedModel.error.issues[0].path}: ${parsedModel.error.issues[0].message}`,
+        );
         return;
       }
     } else {
       if (!defaultModel) {
-        setFormError("No default evaluation model set. Set up default evaluation model or use a custom model");
+        setFormError(
+          "No default evaluation model set. Set up default evaluation model or use a custom model",
+        );
         return;
       }
     }
@@ -448,7 +329,9 @@ export const InnerEvalTemplateForm = (props: {
         if (props.preventRedirect) {
           return;
         }
-        void router.push(`/project/${props.projectId}/evals/templates/${res.id}`);
+        void router.push(
+          `/project/${props.projectId}/evals/templates/${res.id}`,
+        );
       })
       .catch((error) => {
         if ("message" in error && typeof error.message === "string") {
@@ -474,7 +357,7 @@ export const InnerEvalTemplateForm = (props: {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Select a name" />
+                      <Input {...field} placeholder="Select a template name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -486,29 +369,21 @@ export const InnerEvalTemplateForm = (props: {
         </>
       ) : undefined}
 
-      <EvalTemplateTypeSelector
-        form={form}
-        codeEvalCapabilities={codeEvalCapabilities}
-        mode={templateTypeSelectorMode}
-        hasExistingTemplate={Boolean(props.existingEvalTemplateId)}
-        onChange={() => {
-          resetCodeEvalSourceValidation();
-          setFormError(null);
-        }}
-      />
-
-      {showCodeTemplateForm ? (
-        <div className="space-y-3">
-          {props.isEditing ? (
-            <CodeEvalSdkVersionCallout evalCapabilities={evalCapabilities} />
-          ) : null}
+      {/* Model Selection Section */}
+      <Card>
+        <CardContent>
+          <p className="my-2 font-semibold">Model</p>
           <FormField
             control={form.control}
-            name="sourceCode"
+            name="shouldUseDefaultModel"
             render={({ field }) => (
-              <FormItem className="mt-3 flex flex-row items-center space-x-3 space-y-0">
+              <FormItem className="mt-3 flex flex-row items-center space-y-0 space-x-3">
                 <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={!props.isEditing} />
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={!props.isEditing}
+                  />
                 </FormControl>
                 <div className="space-y-0 leading-none">
                   <FormLabel>Use default evaluation model</FormLabel>
@@ -527,16 +402,21 @@ export const InnerEvalTemplateForm = (props: {
           {/* Only show model parameters if using custom model */}
           {!useDefaultModel &&
             (!props.isEditing && !isCustomModelValid ? (
-              <div className="mt-2 flex items-center space-x-1 text-sm text-destructive">
+              <div className="text-destructive mt-2 flex items-center space-x-1 text-sm">
                 <AlertCircle className="h-4 w-4" />
                 <p>
-                  This evaluator is configured to use {modelParams.provider.value}s models but no API key exists. Add a
-                  key or choose another provider.
+                  This evaluator is configured to use{" "}
+                  {modelParams.provider.value}s models but no API key exists.
+                  Add a key or choose another provider.
                 </p>
               </div>
             ) : (
               <ModelParameters
-                customHeader={<p className="text-sm font-medium leading-none">Custom model configuration</p>}
+                customHeader={
+                  <p className="text-sm leading-none font-medium">
+                    Custom model configuration
+                  </p>
+                }
                 {...{
                   modelParams,
                   availableModels,
@@ -544,7 +424,8 @@ export const InnerEvalTemplateForm = (props: {
                   availableProviders,
                   updateModelParamValue: updateModelParamValue,
                   setModelParamEnabled,
-                  modelParamsDescription: "Select a model which supports function calling.",
+                  modelParamsDescription:
+                    "Select a model which supports function calling.",
                 }}
                 formDisabled={!props.isEditing}
               />
@@ -564,54 +445,29 @@ export const InnerEvalTemplateForm = (props: {
                   <FormItem>
                     <FormLabel>Evaluation prompt</FormLabel>
                     <FormDescription>
-                      Define your llm-as-a-judge evaluation template. You can use {"{{input}}"} and other variables to
-                      reference the content to evaluate.
+                      Define your llm-as-a-judge evaluation template. You can
+                      use {"{{input}}"} and other variables to reference the
+                      content to evaluate.
                     </FormDescription>
                     <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={!props.isEditing}
+                      <CodeMirrorEditor
+                        value={field.value}
+                        onChange={field.onChange}
+                        editable={props.isEditing}
+                        mode="prompt"
+                        minHeight={200}
+                        maxHeight="50dvh"
                       />
                     </FormControl>
                     <FormMessage />
-                    <PromptVariableListPreview variables={extractedVariables ?? []} />
+                    <PromptVariableListPreview
+                      variables={extractedVariables ?? []}
+                    />
                   </FormItem>
-                )}
-              />
-              {/* Only show model parameters if using custom model */}
-              {!useDefaultModel &&
-                (!props.isEditing && !isCustomModelValid ? (
-                  <div className="text-destructive mt-2 flex items-center space-x-1 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    <p>
-                      This evaluator is configured to use{" "}
-                      {modelParams.provider.value}s models but no API key
-                      exists. Add a key or choose another provider.
-                    </p>
-                  </div>
-                ) : (
-                  <ModelParameters
-                    customHeader={
-                      <p className="text-sm leading-none font-medium">
-                        Custom model configuration
-                      </p>
-                    }
-                    {...{
-                      modelParams,
-                      availableModels,
-                      providerModelCombinations,
-                      availableProviders,
-                      updateModelParamValue: updateModelParamValue,
-                      setModelParamEnabled,
-                      modelParamsDescription:
-                        "Select a model which supports function calling.",
-                    }}
-                    formDisabled={!props.isEditing}
-                  />
-                ))}
-            </CardContent>
-          </Card>
+                </>
+              )}
+            />
+          </div>
 
           <FormField
             control={form.control}
@@ -620,8 +476,9 @@ export const InnerEvalTemplateForm = (props: {
               <FormItem>
                 <FormLabel>Score reasoning prompt</FormLabel>
                 <FormDescription>
-                  Define how the LLM should explain its evaluation. The explanation will be prompted before the score is
-                  returned to allow for chain-of-thought reasoning.
+                  Define how the LLM should explain its evaluation. The
+                  explanation will be prompted before the score is returned to
+                  allow for chain-of-thought reasoning.
                 </FormDescription>
                 <FormControl>
                   <Input {...field} />
@@ -638,8 +495,8 @@ export const InnerEvalTemplateForm = (props: {
               <FormItem>
                 <FormLabel>Score range prompt</FormLabel>
                 <FormDescription>
-                  Define how the LLM should return the evaluation score in natural language. Needs to yield a numeric
-                  value.
+                  Define how the LLM should return the evaluation score in
+                  natural language. Needs to yield a numeric value.
                 </FormDescription>
                 <FormControl>
                   <Input {...field} />
@@ -656,7 +513,11 @@ export const InnerEvalTemplateForm = (props: {
   const formFooter = (
     <div className="flex w-full flex-col items-end gap-4">
       {props.isEditing && (
-        <Button type="submit" loading={createEvalTemplateMutation.isPending} className="max-w-fit">
+        <Button
+          type="submit"
+          loading={createEvalTemplateMutation.isPending}
+          className="max-w-fit"
+        >
           Save
         </Button>
       )}
@@ -670,58 +531,15 @@ export const InnerEvalTemplateForm = (props: {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="mt-2 w-full space-y-4"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="mt-2 space-y-4">
         {props.useDialog ? <DialogBody>{formBody}</DialogBody> : formBody}
 
-        {props.useDialog ? <DialogFooter>{formFooter}</DialogFooter> : formFooter}
+        {props.useDialog ? (
+          <DialogFooter>{formFooter}</DialogFooter>
+        ) : (
+          formFooter
+        )}
       </form>
     </Form>
   );
 };
-
-function CodeEvalSdkVersionCallout({
-  evalCapabilities,
-}: {
-  evalCapabilities: EvalCapabilities;
-}) {
-  if (
-    evalCapabilities.isLoading ||
-    !evalCapabilities.compatibilityCheckWasPerformed ||
-    evalCapabilities.isNewCompatible
-  ) {
-    return null;
-  }
-
-  return (
-    <Alert
-      variant="default"
-      className="border-dark-yellow bg-light-yellow max-w-4xl"
-    >
-      <AlertTriangle className="text-dark-yellow h-4 w-4" />
-      <AlertDescription>
-        <div className="flex flex-col gap-1">
-          <span className="text-foreground font-medium">
-            Please verify your SDK version
-          </span>
-          <span className="text-foreground text-sm">
-            Code evaluators require JS SDK v4+ or Python SDK v3+. You can create
-            this evaluator now, but it will only run once your project ingests
-            data with a compatible SDK.{" "}
-            <a
-              href="https://langfuse.com/docs/observability/sdk/upgrade-path"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-dark-blue font-medium hover:opacity-80"
-            >
-              Learn more
-            </a>
-            .
-          </span>
-        </div>
-      </AlertDescription>
-    </Alert>
-  );
-}

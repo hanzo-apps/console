@@ -11,8 +11,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/src/components/ui/table";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { CreateApiKeyButton } from "@/src/features/public-api/components/CreateApiKeyButton";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
@@ -32,7 +39,9 @@ export function ApiKeyList(props: { entityId: string; scope: ApiKeyScope }) {
   const envCode = useHanzoEnvCode();
 
   if (!entityId) {
-    throw new Error(`${scope}Id is required for ApiKeyList with scope ${scope}`);
+    throw new Error(
+      `${scope}Id is required for ApiKeyList with scope ${scope}`,
+    );
   }
 
   const hasProjectAccess = useHasProjectAccess({
@@ -44,17 +53,20 @@ export function ApiKeyList(props: { entityId: string; scope: ApiKeyScope }) {
     scope: "organization:CRUD_apiKeys",
   });
 
-  const hasAccess = props.scope === "project" ? hasProjectAccess : hasOrganizationAccess;
+  const hasAccess =
+    props.scope === "project" ? hasProjectAccess : hasOrganizationAccess;
 
   const projectApiKeysQuery = api.projectApiKeys.byProjectId.useQuery(
     { projectId: entityId },
     { enabled: hasProjectAccess && props.scope === "project" },
   );
-  const organizationApiKeysQuery = api.organizationApiKeys.byOrganizationId.useQuery(
-    { orgId: entityId },
-    { enabled: hasOrganizationAccess && props.scope === "organization" },
-  );
-  const apiKeysQuery = props.scope === "project" ? projectApiKeysQuery : organizationApiKeysQuery;
+  const organizationApiKeysQuery =
+    api.organizationApiKeys.byOrganizationId.useQuery(
+      { orgId: entityId },
+      { enabled: hasOrganizationAccess && props.scope === "organization" },
+    );
+  const apiKeysQuery =
+    props.scope === "project" ? projectApiKeysQuery : organizationApiKeysQuery;
 
   if (!hasAccess) {
     return (
@@ -62,7 +74,9 @@ export function ApiKeyList(props: { entityId: string; scope: ApiKeyScope }) {
         <Header title="API Keys" />
         <Alert>
           <AlertTitle>Access Denied</AlertTitle>
-          <AlertDescription>You do not have permission to view API keys for this {scope}.</AlertDescription>
+          <AlertDescription>
+            You do not have permission to view API keys for this {scope}.
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -90,7 +104,9 @@ export function ApiKeyList(props: { entityId: string; scope: ApiKeyScope }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="hidden text-primary md:table-cell">Created</TableHead>
+              <TableHead className="text-primary hidden md:table-cell">
+                Created
+              </TableHead>
               <TableHead className="text-primary">Note</TableHead>
               <TableHead className="text-primary">Public Key</TableHead>
               <TableHead className="text-primary">Secret Key</TableHead>
@@ -111,20 +127,38 @@ export function ApiKeyList(props: { entityId: string; scope: ApiKeyScope }) {
               </TableRow>
             ) : (
               apiKeysQuery.data?.map((apiKey) => (
-                <TableRow key={apiKey.id} className="hover:bg-primary-foreground">
-                  <TableCell className="hidden md:table-cell">{apiKey.createdAt.toLocaleDateString()}</TableCell>
+                <TableRow
+                  key={apiKey.id}
+                  className="hover:bg-primary-foreground"
+                >
+                  <TableCell className="hidden md:table-cell">
+                    {apiKey.createdAt.toLocaleDateString()}
+                  </TableCell>
                   <TableCell>
-                    <ApiKeyNote apiKey={apiKey} entityId={entityId} scope={scope} />
+                    <ApiKeyNote
+                      apiKey={apiKey}
+                      entityId={entityId}
+                      scope={scope}
+                    />
                   </TableCell>
                   <TableCell className="font-mono">
-                    <CodeView className="inline-block text-xs" content={apiKey.publicKey} />
+                    <CodeView
+                      className="inline-block text-xs"
+                      content={apiKey.publicKey}
+                    />
                   </TableCell>
-                  <TableCell className="font-mono">{apiKey.displaySecretKey}</TableCell>
+                  <TableCell className="font-mono">
+                    {apiKey.displaySecretKey}
+                  </TableCell>
                   {/* <TableCell>
                   {apiKey.lastUsedAt?.toLocaleDateString() ?? "Never"}
                 </TableCell> */}
                   <TableCell>
-                    <DeleteApiKeyButton entityId={entityId} apiKeyId={apiKey.id} scope={scope} />
+                    <DeleteApiKeyButton
+                      entityId={entityId}
+                      apiKeyId={apiKey.id}
+                      scope={scope}
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -137,9 +171,13 @@ export function ApiKeyList(props: { entityId: string; scope: ApiKeyScope }) {
 }
 
 // show dialog to let user confirm that this is a destructive action
-function DeleteApiKeyButton(props: { entityId: string; apiKeyId: string; scope: ApiKeyScope }) {
+function DeleteApiKeyButton(props: {
+  entityId: string;
+  apiKeyId: string;
+  scope: ApiKeyScope;
+}) {
   const { entityId, apiKeyId, scope } = props;
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const hasProjectAccess = useHasProjectAccess({
     projectId: props.entityId,
@@ -150,7 +188,8 @@ function DeleteApiKeyButton(props: { entityId: string; apiKeyId: string; scope: 
     scope: "organization:CRUD_apiKeys",
   });
 
-  const hasAccess = props.scope === "project" ? hasProjectAccess : hasOrganizationAccess;
+  const hasAccess =
+    props.scope === "project" ? hasProjectAccess : hasOrganizationAccess;
 
   const utils = api.useUtils();
 
@@ -206,14 +245,17 @@ function DeleteApiKeyButton(props: { entityId: string; apiKeyId: string; scope: 
         <DialogHeader>
           <DialogTitle className="mb-5">Delete API key</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this API key? This action cannot be undone.
+            Are you sure you want to delete this API key? This action cannot be
+            undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
             variant="destructive"
             onClick={handleDelete}
-            loading={mutDeleteOrgApiKey.isPending || mutDeleteProjectApiKey.isPending}
+            loading={
+              mutDeleteOrgApiKey.isPending || mutDeleteProjectApiKey.isPending
+            }
           >
             Permanently delete
           </Button>
@@ -226,7 +268,15 @@ function DeleteApiKeyButton(props: { entityId: string; apiKeyId: string; scope: 
   );
 }
 
-function ApiKeyNote({ apiKey, entityId, scope }: { apiKey: ApiKeyEntity; entityId: string; scope: ApiKeyScope }) {
+function ApiKeyNote({
+  apiKey,
+  entityId,
+  scope,
+}: {
+  apiKey: ApiKeyEntity;
+  entityId: string;
+  scope: ApiKeyScope;
+}) {
   const utils = api.useUtils();
 
   const hasProjectAccess = useHasProjectAccess({
@@ -237,7 +287,8 @@ function ApiKeyNote({ apiKey, entityId, scope }: { apiKey: ApiKeyEntity; entityI
     organizationId: entityId,
     scope: "organization:CRUD_apiKeys",
   });
-  const hasEditAccess = scope === "project" ? hasProjectAccess : hasOrganizationAccess;
+  const hasEditAccess =
+    scope === "project" ? hasProjectAccess : hasOrganizationAccess;
 
   const mutUpdateProjectApiKey = api.projectApiKeys.updateNote.useMutation({
     onSuccess: () => utils.projectApiKeys.invalidate(),
@@ -272,12 +323,21 @@ function ApiKeyNote({ apiKey, entityId, scope }: { apiKey: ApiKeyEntity; entityI
 
   if (isEditing) {
     return (
-      <Input value={note} onChange={(e) => setNote(e.target.value)} onBlur={handleBlur} autoFocus className="h-8" />
+      <Input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        onBlur={handleBlur}
+        autoFocus
+        className="h-8"
+      />
     );
   }
 
   return (
-    <div onClick={() => setIsEditing(true)} className="-mx-2 cursor-pointer rounded px-2 py-1 hover:bg-secondary/50">
+    <div
+      onClick={() => setIsEditing(true)}
+      className="hover:bg-secondary/50 -mx-2 cursor-pointer rounded px-2 py-1"
+    >
       {note || "Click to add note"}
     </div>
   );

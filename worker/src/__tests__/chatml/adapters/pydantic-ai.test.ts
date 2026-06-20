@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pydanticAIAdapter, selectAdapter, SimpleChatMlArraySchema, type NormalizerContext } from "@hanzo/console-core";
+import { pydanticAIAdapter, selectAdapter, SimpleChatMlArraySchema, type NormalizerContext } from "@hanzo/console";
 
 // Test helper
 function normalizeInput(input: unknown, ctx: NormalizerContext = {}) {
@@ -229,9 +229,7 @@ describe("Pydantic AI Adapter", () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.data?.[0].content).toBe(
-        "Tell me a joke about programming.",
-      );
+      expect(result.data?.[0].content).toBe("Tell me a joke about programming.");
       expect(result.data?.[0].tools).toEqual([
         {
           name: "get_pun_suggestion",

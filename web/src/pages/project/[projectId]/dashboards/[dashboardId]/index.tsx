@@ -1,32 +1,30 @@
 import { useRouter } from "next/router";
 import { api } from "@/src/utils/api";
-import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
-import { useDashboardFilterOptions } from "@/src/hooks/useDashboardFilterOptions";
 import Page from "@/src/components/layouts/page";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
 import { TimeRangePicker } from "@/src/components/date-picker";
 import { PopoverFilterBuilder } from "@/src/features/filters/components/filter-builder";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import type { ColumnDefinition, FilterState } from "@hanzo/console-core";
+import type { ColumnDefinition, FilterState } from "@hanzo/console";
 import { Button } from "@/src/components/ui/button";
 import { PlusIcon, Copy } from "lucide-react";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
-import { SelectWidgetDialog, type WidgetItem } from "@/src/features/widgets/components/SelectWidgetDialog";
+import {
+  SelectWidgetDialog,
+  type WidgetItem,
+} from "@/src/features/widgets/components/SelectWidgetDialog";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { v4 as uuidv4 } from "uuid";
 import { useDebounce } from "@/src/hooks/useDebounce";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { DashboardGrid } from "@/src/features/widgets/components/DashboardGrid";
 import { useDashboardDateRange } from "@/src/hooks/useDashboardDateRange";
-import { DASHBOARD_AGGREGATION_OPTIONS, toAbsoluteTimeRange } from "@/src/utils/date-range-utils";
-import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
-import { useEnvironmentFilterOptionsCache } from "@/src/hooks/use-environment-filter-options-cache";
 import {
-  DashboardQuerySchedulerProvider,
-  getDashboardQuerySchedulerMaxConcurrent,
-  useDashboardQueryScheduler,
-} from "@/src/hooks/useDashboardQueryScheduler";
+  DASHBOARD_AGGREGATION_OPTIONS,
+  toAbsoluteTimeRange,
+} from "@/src/utils/date-range-utils";
+import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
 
 interface WidgetPlacement {
   id: string;
@@ -50,7 +48,6 @@ export default function DashboardDetail() {
   };
 
   const lookbackLimit = useEntitlementLimit("data-access-days");
-  const { isBetaEnabled } = useV4Beta();
 
   // Fetch dashboard data
   const dashboard = api.dashboard.getDashboard.useQuery({
@@ -77,7 +74,10 @@ export default function DashboardDetail() {
 
   // Date range state - use the hook for all date range logic
   const { timeRange, setTimeRange } = useDashboardDateRange();
-  const absoluteTimeRange = useMemo(() => toAbsoluteTimeRange(timeRange) ?? undefined, [timeRange]);
+  const absoluteTimeRange = useMemo(
+    () => toAbsoluteTimeRange(timeRange) ?? undefined,
+    [timeRange],
+  );
 
   // Check if current filters differ from saved filters
   const hasUnsavedFilterChanges = useMemo(() => {
@@ -93,36 +93,38 @@ export default function DashboardDetail() {
   const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
 
   // Mutation for updating dashboard definition
-  const updateDashboardDefinition = api.dashboard.updateDashboardDefinition.useMutation({
-    onSuccess: () => {
-      showSuccessToast({
-        title: "Dashboard updated",
-        description: "Your changes have been saved automatically",
-        duration: 2000,
-      });
-      // Invalidate the dashboard query to refetch the data
-      dashboard.refetch();
-    },
-    onError: (error) => {
-      showErrorToast("Error updating dashboard", error.message);
-    },
-  });
+  const updateDashboardDefinition =
+    api.dashboard.updateDashboardDefinition.useMutation({
+      onSuccess: () => {
+        showSuccessToast({
+          title: "Dashboard updated",
+          description: "Your changes have been saved automatically",
+          duration: 2000,
+        });
+        // Invalidate the dashboard query to refetch the data
+        dashboard.refetch();
+      },
+      onError: (error) => {
+        showErrorToast("Error updating dashboard", error.message);
+      },
+    });
 
   // Mutation for updating dashboard filters
-  const updateDashboardFilters = api.dashboard.updateDashboardFilters.useMutation({
-    onSuccess: () => {
-      showSuccessToast({
-        title: "Filters saved",
-        description: "Dashboard filters have been saved successfully",
-        duration: 2000,
-      });
-      // Update saved state to match current state
-      setSavedFilters(currentFilters);
-    },
-    onError: (error) => {
-      showErrorToast("Error saving filters", error.message);
-    },
-  });
+  const updateDashboardFilters =
+    api.dashboard.updateDashboardFilters.useMutation({
+      onSuccess: () => {
+        showSuccessToast({
+          title: "Filters saved",
+          description: "Dashboard filters have been saved successfully",
+          duration: 2000,
+        });
+        // Update saved state to match current state
+        setSavedFilters(currentFilters);
+      },
+      onError: (error) => {
+        showErrorToast("Error saving filters", error.message);
+      },
+    });
 
   const saveDashboardChanges = useDebounce(
     (definition: { widgets: WidgetPlacement[] }) => {
@@ -156,7 +158,9 @@ export default function DashboardDetail() {
       // Find the maximum y position to place the new widget at the bottom
       const maxY =
         localDashboardDefinition.widgets.length > 0
-          ? Math.max(...localDashboardDefinition.widgets.map((w) => w.y + w.y_size))
+          ? Math.max(
+              ...localDashboardDefinition.widgets.map((w) => w.y + w.y_size),
+            )
           : 0;
 
       // Create a new widget placement
@@ -178,29 +182,16 @@ export default function DashboardDetail() {
       setLocalDashboardDefinition(updatedDefinition);
       saveDashboardChanges(updatedDefinition);
     },
-    [localDashboardDefinition, setLocalDashboardDefinition, saveDashboardChanges],
+    [
+      localDashboardDefinition,
+      setLocalDashboardDefinition,
+      saveDashboardChanges,
+    ],
   );
 
-  const { nameOptions, tagsOptions } = useDashboardFilterOptions({
-    projectId,
-    isBetaEnabled,
-    timeRange,
-  });
-
-  const environmentOptionsState = useEnvironmentFilterOptionsCache({
-    projectId,
-    timeRange,
-  });
-  const environmentOptions = environmentOptionsState.environmentOptions.map(
-    (value) => ({
-      value,
-    }),
-  );
-
-  const environmentFilterOptions = api.projects.environmentFilterOptions.useQuery(
+  const traceFilterOptions = api.traces.filterOptions.useQuery(
     {
       projectId,
-      fromTimestamp: absoluteTimeRange?.from,
     },
     {
       trpc: {
@@ -214,6 +205,25 @@ export default function DashboardDetail() {
       staleTime: Infinity,
     },
   );
+
+  const environmentFilterOptions =
+    api.projects.environmentFilterOptions.useQuery(
+      {
+        projectId,
+        fromTimestamp: absoluteTimeRange?.from,
+      },
+      {
+        trpc: {
+          context: {
+            skipBatch: true,
+          },
+        },
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: Infinity,
+      },
+    );
   const environmentOptions =
     environmentFilterOptions.data?.map((value) => ({
       value: value.environment,
@@ -312,7 +322,11 @@ export default function DashboardDetail() {
 
   useEffect(() => {
     if (localDashboardDefinition && widgetToAdd.data && addWidgetId) {
-      if (!localDashboardDefinition.widgets.some((w) => w.widgetId === addWidgetId)) {
+      if (
+        !localDashboardDefinition.widgets.some(
+          (w) => w.widgetId === addWidgetId,
+        )
+      ) {
         addWidgetToDashboard(widgetToAdd.data);
       }
       // Remove the addWidgetId query parameter
@@ -321,12 +335,22 @@ export default function DashboardDetail() {
         query: { projectId, dashboardId },
       });
     }
-  }, [widgetToAdd.data, addWidgetId, addWidgetToDashboard, localDashboardDefinition, projectId, dashboardId, router]);
+  }, [
+    widgetToAdd.data,
+    addWidgetId,
+    addWidgetToDashboard,
+    localDashboardDefinition,
+    projectId,
+    dashboardId,
+    router,
+  ]);
 
   // Handle deleting a widget
   const handleDeleteWidget = (tileId: string) => {
     if (localDashboardDefinition) {
-      const updatedWidgets = localDashboardDefinition.widgets.filter((widget) => widget.id !== tileId);
+      const updatedWidgets = localDashboardDefinition.widgets.filter(
+        (widget) => widget.id !== tileId,
+      );
 
       const updatedDefinition = {
         ...localDashboardDefinition,
@@ -349,11 +373,13 @@ export default function DashboardDetail() {
 
   const mutateCloneDashboard = api.dashboard.cloneDashboard.useMutation({
     onSuccess: (data) => {
-      utils.dashboard.invalidate();
+      void utils.dashboard.invalidate();
       capture("dashboard:clone_dashboard");
       // Redirect to new dashboard
       if (data?.id) {
-        router.replace(`/project/${projectId}/dashboards/${encodeURIComponent(data.id)}`);
+        router.replace(
+          `/project/${projectId}/dashboards/${encodeURIComponent(data.id)}`,
+        );
       }
     },
     onError: (e) => {
@@ -367,55 +393,30 @@ export default function DashboardDetail() {
   };
 
   const dashboardTimeRangePresets = DASHBOARD_AGGREGATION_OPTIONS;
-  const widgetSchedulerPrefix = `dashboard:${projectId}:${dashboardId}:widget:`;
-  const widgetPlacements = useMemo(
-    () => localDashboardDefinition?.widgets ?? [],
-    [localDashboardDefinition?.widgets],
-  );
-
-  const getWidgetSchedulerId = useCallback(
-    (widgetPlacementId: string) =>
-      `${widgetSchedulerPrefix}${widgetPlacementId}`,
-    [widgetSchedulerPrefix],
-  );
-
-  const schedulerResetKey = useMemo(() => {
-    return [
-      projectId,
-      dashboardId,
-      absoluteTimeRange?.from?.toISOString() ?? "",
-      absoluteTimeRange?.to?.toISOString() ?? "",
-      JSON.stringify(currentFilters),
-      widgetPlacements.map((widget) => widget.id).join(","),
-    ].join("|");
-  }, [
-    absoluteTimeRange?.from,
-    absoluteTimeRange?.to,
-    currentFilters,
-    dashboardId,
-    projectId,
-    widgetPlacements,
-  ]);
-
-  const scheduler = useDashboardQueryScheduler({
-    maxConcurrent: getDashboardQuerySchedulerMaxConcurrent(timeRange),
-    resetKey: schedulerResetKey,
-  });
 
   return (
     <Page
       withPadding
       scrollable
       headerProps={{
-        title: (dashboard.data?.name || "Dashboard") + (dashboard.data?.owner === "HANZO" ? " (Hanzo Maintained)" : ""),
+        title:
+          (dashboard.data?.name || "Dashboard") +
+          (dashboard.data?.owner === "HANZO" ? " (Hanzo Maintained)" : ""),
         help: {
-          description: dashboard.data?.description || "No description available",
+          description:
+            dashboard.data?.description || "No description available",
         },
         actionButtonsRight: (
           <>
             {hasCUDAccess && hasUnsavedFilterChanges && (
-              <Button onClick={handleSaveFilters} disabled={updateDashboardFilters.isPending} variant="outline">
-                {updateDashboardFilters.isPending ? "Saving..." : "Save Filters"}
+              <Button
+                onClick={handleSaveFilters}
+                disabled={updateDashboardFilters.isPending}
+                variant="outline"
+              >
+                {updateDashboardFilters.isPending
+                  ? "Saving..."
+                  : "Save Filters"}
               </Button>
             )}
             {hasCUDAccess && (
@@ -425,7 +426,10 @@ export default function DashboardDetail() {
               </Button>
             )}
             {hasCloneAccess && (
-              <Button onClick={handleCloneDashboard} disabled={mutateCloneDashboard.isPending}>
+              <Button
+                onClick={handleCloneDashboard}
+                disabled={mutateCloneDashboard.isPending}
+              >
                 <Copy size={16} className="mr-1 h-4 w-4" />
                 Clone
               </Button>
@@ -445,7 +449,9 @@ export default function DashboardDetail() {
         <NoDataOrLoading isLoading={true} />
       ) : dashboard.isError ? (
         <div className="flex h-64 items-center justify-center">
-          <div className="text-destructive">Error: {dashboard.error.message}</div>
+          <div className="text-destructive">
+            Error: {dashboard.error.message}
+          </div>
         </div>
       ) : (
         <div>
@@ -459,65 +465,43 @@ export default function DashboardDetail() {
                 disabled={
                   lookbackLimit
                     ? {
-                        before: new Date(new Date().getTime() - lookbackLimit * 24 * 60 * 60 * 1000),
+                        before: new Date(
+                          new Date().getTime() -
+                            lookbackLimit * 24 * 60 * 60 * 1000,
+                        ),
                       }
                     : undefined
                 }
               />
-              <PopoverFilterBuilder columns={filterColumns} filterState={currentFilters} onChange={setCurrentFilters} />
+              <PopoverFilterBuilder
+                columns={filterColumns}
+                filterState={currentFilters}
+                onChange={setCurrentFilters}
+              />
             </div>
           </div>
-        ) : (
-          <div>
-            <div className="my-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-col gap-2 lg:flex-row lg:gap-3">
-                <TimeRangePicker
-                  timeRange={timeRange}
-                  onTimeRangeChange={setTimeRange}
-                  timeRangePresets={dashboardTimeRangePresets}
-                  className="my-0 max-w-full overflow-x-auto"
-                  disabled={
-                    lookbackLimit
-                      ? {
-                          before: new Date(
-                            new Date().getTime() -
-                              lookbackLimit * 24 * 60 * 60 * 1000,
-                          ),
-                        }
-                      : undefined
-                  }
-                />
-                <PopoverFilterBuilder
-                  columns={filterColumns}
-                  filterState={currentFilters}
-                  onChange={setCurrentFilters}
-                />
-              </div>
-            </div>
-            <DashboardGrid
-              widgets={localDashboardDefinition.widgets}
-              onChange={(updatedWidgets) => {
-                setLocalDashboardDefinition({
-                  ...localDashboardDefinition,
-                  widgets: updatedWidgets,
-                });
-                saveDashboardChanges({
-                  ...localDashboardDefinition,
-                  widgets: updatedWidgets,
-                });
-              }}
-              canEdit={hasCUDAccess}
-              dashboardId={dashboardId}
-              projectId={projectId}
-              dateRange={absoluteTimeRange}
-              filterState={currentFilters}
-              onDeleteWidget={handleDeleteWidget}
-              dashboardOwner={dashboard.data?.owner}
-              getWidgetSchedulerId={getWidgetSchedulerId}
-            />
-          </div>
-        )}
-      </Page>
-    </DashboardQuerySchedulerProvider>
+          <DashboardGrid
+            widgets={localDashboardDefinition.widgets}
+            onChange={(updatedWidgets) => {
+              setLocalDashboardDefinition({
+                ...localDashboardDefinition,
+                widgets: updatedWidgets,
+              });
+              saveDashboardChanges({
+                ...localDashboardDefinition,
+                widgets: updatedWidgets,
+              });
+            }}
+            canEdit={hasCUDAccess}
+            dashboardId={dashboardId}
+            projectId={projectId}
+            dateRange={absoluteTimeRange}
+            filterState={currentFilters}
+            onDeleteWidget={handleDeleteWidget}
+            dashboardOwner={dashboard.data?.owner}
+          />
+        </div>
+      )}
+    </Page>
   );
 }

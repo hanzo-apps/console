@@ -1,5 +1,5 @@
 import { isNumericDataType } from "@/src/features/scores/lib/helpers";
-import { isPresent, type ScoreConfigDomain } from "@hanzo/console-core";
+import { isPresent, type ScoreConfigDomain } from "@hanzo/console";
 import React from "react";
 
 export function ScoreConfigDetails({ config }: { config: ScoreConfigDomain }) {
@@ -10,7 +10,8 @@ export function ScoreConfigDetails({ config }: { config: ScoreConfigDomain }) {
   return (
     <div className="bg-background p-2 text-xs font-light text-wrap">
       {!!description && <p>{`Description: ${description}`}</p>}
-      {isNumericDataType(dataType) && (isPresent(minValue) || isPresent(maxValue)) ? (
+      {isNumericDataType(dataType) &&
+      (isPresent(minValue) || isPresent(maxValue)) ? (
         <p>{`Range: [${minValue ?? "-∞"}, ${maxValue ?? "∞"}]`}</p>
       ) : null}
       {isNameTruncated && <p>{`Full name: ${name}`}</p>}

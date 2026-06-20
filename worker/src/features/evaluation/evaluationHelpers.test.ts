@@ -11,8 +11,8 @@ import {
   PersistedEvalOutputDefinitionSchema,
   ScoreDataTypeEnum,
   validateEvalOutputResult,
-} from "@langfuse/shared";
-import { type ExtractedVariable } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { type ExtractedVariable } from "@hanzo/console/src/server";
 import { parseDispatchResult } from "../../../../packages/shared/src/server/evals/codeEvalDispatcherTypes";
 import { createDeterministicEvalScoreId } from "../../../../packages/shared/src/server/evals/evalScoreIds";
 import {
@@ -36,9 +36,7 @@ describe("evaluation helpers", () => {
       };
 
       const result = compileEvalPrompt(params);
-      expect(result).toBe(
-        "Evaluate user question and compare to model response",
-      );
+      expect(result).toBe("Evaluate user question and compare to model response");
     });
 
     it("should handle empty variables array", () => {
@@ -54,9 +52,7 @@ describe("evaluation helpers", () => {
     it("should handle variables with special characters", () => {
       const params = {
         templatePrompt: "Input: {{input}}",
-        variables: [
-          { var: "input", value: "text with \"quotes\" and 'apostrophes'" },
-        ] as ExtractedVariable[],
+        variables: [{ var: "input", value: "text with \"quotes\" and 'apostrophes'" }] as ExtractedVariable[],
       };
 
       const result = compileEvalPrompt(params);
@@ -66,9 +62,7 @@ describe("evaluation helpers", () => {
     it("should handle JSON values in variables", () => {
       const params = {
         templatePrompt: "Data: {{data}}",
-        variables: [
-          { var: "data", value: '{"key": "value", "count": 42}' },
-        ] as ExtractedVariable[],
+        variables: [{ var: "data", value: '{"key": "value", "count": 42}' }] as ExtractedVariable[],
       };
 
       const result = compileEvalPrompt(params);
@@ -81,8 +75,7 @@ describe("evaluation helpers", () => {
       // render `"[object Object]"` for object inputs and the comma-joined
       // form for arrays — both useless to an LLM.
       const params = {
-        templatePrompt:
-          "meta={{meta}} tools={{tools}} score={{score}} flag={{flag}} missing={{missing}}",
+        templatePrompt: "meta={{meta}} tools={{tools}} score={{score}} flag={{flag}} missing={{missing}}",
         variables: [
           { var: "meta", value: { key: "value", count: 42 } },
           { var: "tools", value: ["get_weather", "search_web"] },
@@ -167,8 +160,7 @@ describe("evaluation helpers", () => {
     it("should validate boolean responses", () => {
       const schema = buildEvalOutputResultSchema(
         createBooleanEvalOutputDefinition({
-          scoreDescription:
-            "Return true if the answer is correct, otherwise false",
+          scoreDescription: "Return true if the answer is correct, otherwise false",
           reasoningDescription: "Explain the verdict",
         }),
       );
@@ -184,8 +176,7 @@ describe("evaluation helpers", () => {
     it("should reject string values for boolean responses", () => {
       const schema = buildEvalOutputResultSchema(
         createBooleanEvalOutputDefinition({
-          scoreDescription:
-            "Return true if the answer is correct, otherwise false",
+          scoreDescription: "Return true if the answer is correct, otherwise false",
           reasoningDescription: "Explain the verdict",
         }),
       );
@@ -417,11 +408,7 @@ describe("evaluation helpers", () => {
       expect(attributes).toMatchObject({
         "eval.job_configuration.id": "config-123",
         "eval.job_configuration.target_object": EvalTargetObject.TRACE,
-        "eval.job_configuration.filter.dimensions": [
-          "name",
-          "metadata",
-          "scores_avg",
-        ],
+        "eval.job_configuration.filter.dimensions": ["name", "metadata", "scores_avg"],
         "eval.job_configuration.filter.dimension_count": 3,
         "eval.variable.source_fields": ["trace.input", "generation.output"],
         "eval.variable.source_field_count": 2,
@@ -655,12 +642,8 @@ describe("evaluation helpers", () => {
         executionMetadata: { job_execution_id: "job-1" },
       });
 
-      expect(result.map((payload) => payload.scoreId)).toEqual(
-        expectedScoreIds,
-      );
-      expect(result.map((payload) => payload.event.body.id)).toEqual(
-        expectedScoreIds,
-      );
+      expect(result.map((payload) => payload.scoreId)).toEqual(expectedScoreIds);
+      expect(result.map((payload) => payload.event.body.id)).toEqual(expectedScoreIds);
     });
 
     it("should build a single numeric score payload", () => {
@@ -877,8 +860,7 @@ describe("evaluation helpers", () => {
       });
       const result = validateEvalOutputResult({
         response: { score: 0.8, reasoning: "Good" },
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(true);
@@ -899,8 +881,7 @@ describe("evaluation helpers", () => {
 
       const result = validateEvalOutputResult({
         response: { score: "invalid", reasoning: "Test" },
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(false);
@@ -917,8 +898,7 @@ describe("evaluation helpers", () => {
 
       const result = validateEvalOutputResult({
         response: null,
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(false);
@@ -932,8 +912,7 @@ describe("evaluation helpers", () => {
 
       const result = validateEvalOutputResult({
         response: { score: 0.5 },
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(false);
@@ -941,15 +920,13 @@ describe("evaluation helpers", () => {
 
     it("should normalize boolean responses", () => {
       const outputDefinition = createBooleanEvalOutputDefinition({
-        scoreDescription:
-          "Return true if the answer is correct, otherwise false",
+        scoreDescription: "Return true if the answer is correct, otherwise false",
         reasoningDescription: "Why",
       });
 
       const result = validateEvalOutputResult({
         response: { score: false, reasoning: "The answer is incorrect." },
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(true);
@@ -964,8 +941,7 @@ describe("evaluation helpers", () => {
 
     it("should reject invalid boolean responses", () => {
       const outputDefinition = createBooleanEvalOutputDefinition({
-        scoreDescription:
-          "Return true if the answer is correct, otherwise false",
+        scoreDescription: "Return true if the answer is correct, otherwise false",
         reasoningDescription: "Why",
       });
 
@@ -974,8 +950,7 @@ describe("evaluation helpers", () => {
           score: "false",
           reasoning: "String booleans are invalid.",
         },
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(false);
@@ -990,8 +965,7 @@ describe("evaluation helpers", () => {
 
       const result = validateEvalOutputResult({
         response: { score: "correct", reasoning: "Supported by the context" },
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(true);
@@ -1017,8 +991,7 @@ describe("evaluation helpers", () => {
           score: ["correct", "incorrect"],
           reasoning: "Both labels apply in this synthetic test.",
         },
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(true);
@@ -1040,8 +1013,7 @@ describe("evaluation helpers", () => {
 
       const result = validateEvalOutputResult({
         response: { score: "partial", reasoning: "Not an allowed category" },
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(false);
@@ -1060,8 +1032,7 @@ describe("evaluation helpers", () => {
           score: ["correct", "correct"],
           reasoning: "Duplicates should be rejected.",
         },
-        compiledOutputDefinition:
-          compilePersistedEvalOutputDefinition(outputDefinition),
+        compiledOutputDefinition: compilePersistedEvalOutputDefinition(outputDefinition),
       });
 
       expect(result.success).toBe(false);
@@ -1124,8 +1095,7 @@ describe("evaluation helpers", () => {
     it("should accept versioned boolean schemas", () => {
       const result = PersistedEvalOutputDefinitionSchema.safeParse(
         createBooleanEvalOutputDefinition({
-          scoreDescription:
-            "Return true if the answer is correct, otherwise false",
+          scoreDescription: "Return true if the answer is correct, otherwise false",
           reasoningDescription: "Explain the verdict",
         }),
       );

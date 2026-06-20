@@ -1,8 +1,8 @@
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   createAndAddApiKeysToDb,
   createOrgProjectAndApiKey,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { handleGetApiKeys as handleGetProjectApiKeys } from "@/src/ee/features/admin-api/server/projects/projectById/apiKeys";
 import { handleDeleteApiKey as handleDeleteProjectApiKey } from "@/src/ee/features/admin-api/server/projects/projectById/apiKeys/apiKeyById";
 import { handleGetApiKeys as handleGetOrganizationApiKeys } from "@/src/ee/features/admin-api/server/organizations/apiKeys";

@@ -1,11 +1,14 @@
 import { type NextApiRequest, type NextApiResponse } from "next";
-import { prisma } from "@hanzo/console-core/src/db";
-import { logger, createAndAddApiKeysToDb } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { logger, createAndAddApiKeysToDb } from "@hanzo/console/src/server";
 import { AdminApiAuthService } from "@/src/features/admin-api/server/adminApiAuth";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import { getSelfHostedInstancePlanServerSide } from "@/src/features/entitlements/server/getPlan";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   try {
     if (req.method !== "POST" && req.method !== "GET") {
       res.status(405).json({ error: "Method Not Allowed" });

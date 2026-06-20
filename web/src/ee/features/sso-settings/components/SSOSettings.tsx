@@ -55,7 +55,7 @@ import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { VerifiedDomainsSettings } from "@/src/ee/features/verified-domains/components/VerifiedDomainsSettings";
-import { SsoProviderSchema } from "@/src/ee/features/multi-tenant-sso/types";
+import { SsoProviderSchema } from "@/src/features/multi-tenant-sso/types";
 import { api } from "@/src/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, TrashIcon } from "lucide-react";
@@ -135,10 +135,11 @@ export const SSOSettings = ({ orgId }: { orgId: string }) => {
   const heading = (
     <>
       <Header title="SSO Configuration" />
-      <p className="mb-4 text-sm text-muted-foreground">
-        Configure Single Sign-On (SSO) for your organization. SSO allows your team to use your existing identity
-        provider for authentication, e.g. Okta, AzureAD/EntraID. Alternatively, you can enforce the use of a public
-        provider such as Google, GitHub and Microsoft.
+      <p className="text-muted-foreground mb-4 text-sm">
+        Configure Single Sign-On (SSO) for your organization. SSO allows your
+        team to use your existing identity provider for authentication, e.g.
+        Okta, AzureAD/EntraID. Alternatively, you can enforce the use of a
+        public provider such as Google, GitHub and Microsoft.
       </p>
     </>
   );
@@ -151,7 +152,8 @@ export const SSOSettings = ({ orgId }: { orgId: string }) => {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Not available</AlertTitle>
           <AlertDescription>
-            Enterprise SSO and SSO Enforcement are not available on your plan. Please upgrade to access this feature.
+            Enterprise SSO and SSO Enforcement are not available on your plan.
+            Please upgrade to access this feature.
           </AlertDescription>
         </Alert>
       </div>
@@ -165,8 +167,14 @@ export const SSOSettings = ({ orgId }: { orgId: string }) => {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Contact Hanzo Support</AlertTitle>
         <AlertDescription className="flex flex-col gap-3">
-          <p>To set up or change your SSO configuration, please reach out to our support engineering team.</p>
-          <Button onClick={() => setSupportDrawerOpen(true)} className="self-start">
+          <p>
+            To set up or change your SSO configuration, please reach out to our
+            support engineering team.
+          </p>
+          <Button
+            onClick={() => setSupportDrawerOpen(true)}
+            className="self-start"
+          >
             Contact Support
           </Button>
         </AlertDescription>

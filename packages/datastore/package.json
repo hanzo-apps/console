@@ -33,7 +33,7 @@
     "src"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc || true",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm build"

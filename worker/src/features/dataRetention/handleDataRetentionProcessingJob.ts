@@ -8,9 +8,9 @@ import {
   getS3MediaStorageClient,
   removeIngestionEventsFromS3AndDeleteDatastoreRefsForProject,
   getCurrentSpan,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { Job } from "@hanzo/mq";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { env } from "../../env";
 
 export const handleDataRetentionProcessingJob = async (job: Job) => {

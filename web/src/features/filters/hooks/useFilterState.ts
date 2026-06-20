@@ -10,12 +10,19 @@ import {
   datasetItemFilterColumns,
   datasetRunItemsTableCols,
   usersTableCols,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import { scoresTableCols } from "@/src/server/api/definitions/scoresTable";
-import { useQueryParam, encodeDelimitedArray, decodeDelimitedArray, withDefault } from "use-query-params";
+import {
+  useQueryParam,
+  encodeDelimitedArray,
+  decodeDelimitedArray,
+  withDefault,
+} from "use-query-params";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { evalConfigFilterColumns } from "@/src/server/api/definitions/evalConfigsTable";
 import { evalExecutionsFilterCols } from "@/src/server/api/definitions/evalExecutionsTable";
+import { experimentsTableCols } from "@/src/features/experiments/components/table/filter-config";
+import { experimentItemsTableCols } from "@/src/features/experiments/config/experiment-items-filter-config";
 
 const DEBUG_QUERY_STATE = false;
 
@@ -34,11 +41,17 @@ const getCommaArrayParam = (table: TableName) => ({
           }
 
           const stringified = `${columnId};${f.type};${
-            f.type === "numberObject" || f.type === "stringObject" || f.type === "categoryOptions" ? f.key : ""
+            f.type === "numberObject" ||
+            f.type === "stringObject" ||
+            f.type === "categoryOptions"
+              ? f.key
+              : ""
           };${f.operator};${encodeURIComponent(
             f.type === "datetime"
               ? new Date(f.value).toISOString()
-              : f.type === "stringOptions" || f.type === "arrayOptions" || f.type === "categoryOptions"
+              : f.type === "stringOptions" ||
+                  f.type === "arrayOptions" ||
+                  f.type === "categoryOptions"
                 ? f.value.join("|")
                 : f.value,
           )}`;
@@ -56,7 +69,8 @@ const getCommaArrayParam = (table: TableName) => ({
         if (!f) return null;
         const [column, type, key, operator, value] = f.split(";");
 
-        if (DEBUG_QUERY_STATE) console.log("values", [column, type, key, operator, value]);
+        if (DEBUG_QUERY_STATE)
+          console.log("values", [column, type, key, operator, value]);
         const decodedValue = value ? decodeURIComponent(value) : undefined;
         const normalizedKey =
           type === "positionInTrace"
@@ -69,7 +83,9 @@ const getCommaArrayParam = (table: TableName) => ({
               ? new Date(decodedValue)
               : type === "number" || type === "numberObject"
                 ? Number(decodedValue)
-                : type === "stringOptions" || type === "arrayOptions" || type === "categoryOptions"
+                : type === "stringOptions" ||
+                    type === "arrayOptions" ||
+                    type === "categoryOptions"
                   ? decodedValue.split("|")
                   : type === "boolean"
                     ? decodedValue === "true"
@@ -95,10 +111,11 @@ export const useQueryFilterState = (
   table: TableName,
   projectId?: string, // Passing projectId is expected as filters might differ across projects. However, we can't call hooks conditionally. There is a case in the prompts table where this will only be used if projectId is defined, but it's not defined in all cases.
 ) => {
-  const [sessionFilterState, setSessionFilterState] = useSessionStorage<FilterState>(
-    !!projectId ? `${table}FilterState-${projectId}` : `${table}FilterState`,
-    initialState,
-  );
+  const [sessionFilterState, setSessionFilterState] =
+    useSessionStorage<FilterState>(
+      !!projectId ? `${table}FilterState-${projectId}` : `${table}FilterState`,
+      initialState,
+    );
   // Merge initial state with session state if filter elements don't exist
   const mergedInitialState = initialState.reduce(
     (acc, filter) => {
@@ -165,7 +182,8 @@ const tableCols = {
 function getColumnId(table: TableName, name: string): string | undefined {
   // TODO: make this more robust, will change with new filters
   // to give more leeway to LLMs, we check against name or id
-  return tableCols[table]?.find((col) => col.name === name || col.id === name)?.id;
+  return tableCols[table]?.find((col) => col.name === name || col.id === name)
+    ?.id;
 }
 
 function getColumnName(table: TableName, id: string): string | undefined {

@@ -2,11 +2,11 @@ import { env } from "@/src/env.mjs";
 import { isEmailVerificationRequired } from "@/src/features/auth-credentials/lib/credentialsUtils";
 import { validateSignupEligibility } from "@/src/features/auth-credentials/server/signupApiHandler";
 import { createProjectMembershipsOnSignup } from "@/src/features/auth/lib/createProjectMembershipsOnSignup";
-import { prisma } from "@langfuse/shared/src/db";
-import { logger } from "@langfuse/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { logger } from "@hanzo/console/src/server";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod/v4";
-import { noUrlCheck, StringNoHTMLNonEmpty } from "@langfuse/shared";
+import { noUrlCheck, StringNoHTMLNonEmpty } from "@hanzo/console";
 
 const signupVerifySchema = z.object({
   email: z.email(),
@@ -86,17 +86,17 @@ export default async function handler(
 
     // Trigger new user signup event
     if (
-      env.LANGFUSE_NEW_USER_SIGNUP_WEBHOOK &&
-      env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION &&
-      env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION !== "STAGING" &&
-      env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION !== "DEV"
+      env.HANZO_NEW_USER_SIGNUP_WEBHOOK &&
+      env.NEXT_PUBLIC_HANZO_CLOUD_REGION &&
+      env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== "STAGING" &&
+      env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== "DEV"
     ) {
-      await fetch(env.LANGFUSE_NEW_USER_SIGNUP_WEBHOOK, {
+      await fetch(env.HANZO_NEW_USER_SIGNUP_WEBHOOK, {
         method: "POST",
         body: JSON.stringify({
           name,
           email: normalizedEmail,
-          cloudRegion: env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION,
+          cloudRegion: env.NEXT_PUBLIC_HANZO_CLOUD_REGION,
           userId: newUser.id,
         }),
         headers: {

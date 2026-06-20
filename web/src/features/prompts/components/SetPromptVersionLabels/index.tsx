@@ -1,21 +1,24 @@
 import React, { useEffect, useState, useRef, type ReactNode } from "react";
-import { CircleFadingArrowUp } from "lucide-react";
+import { CircleFadingArrowUp, PlusIcon } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
 import {
   InputCommand,
   InputCommandGroup,
   InputCommandList,
   InputCommandSeparator,
 } from "@/src/components/ui/input-command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/src/components/ui/popover";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { api } from "@/src/utils/api";
-import { PRODUCTION_LABEL, type Prompt } from "@hanzo/shared";
+import { PRODUCTION_LABEL, type Prompt } from "@hanzo/console";
 import { AddLabelForm } from "./AddLabelForm";
 import { LabelCommandItem } from "./LabelCommandItem";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { isReservedPromptLabel } from "@/src/features/prompts/utils";
 import { TruncatedLabels } from "@/src/components/TruncatedLabels";
 import { cn } from "@/src/utils/tailwind";
@@ -39,45 +42,45 @@ export function SetPromptVersionLabels({
 }) {
   const projectId = useProjectIdFromURL();
   const utils = api.useUtils();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const hasAccess = useHasProjectAccess({ projectId, scope: "prompts:CUD" });
 
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [labels, setLabels] = useState<string[]>([]);
   const [isAddingLabel, setIsAddingLabel] = useState(false);
-  const labelsChanged = JSON.stringify([...selectedLabels].sort()) !== JSON.stringify([...prompt.labels].sort());
+  const labelsChanged =
+    JSON.stringify([...selectedLabels].sort()) !==
+    JSON.stringify([...prompt.labels].sort());
   const customLabelScrollRef = useRef<HTMLDivElement | null>(null);
-  const previousIsOpenRef = useRef(false);
-  const previousPromptIdRef = useRef(prompt.id);
 
   const usedLabelsInProject = api.prompts.allLabels.useQuery(
     {
-      projectId: projectId as string,
+      projectId: projectId as string, // Typecast as query is enabled only when projectId is present
     },
     { enabled: Boolean(projectId) },
   );
 
+  // Set initial labels and selected labels
   useEffect(() => {
     if (isOpen) {
-      setLabels([...new Set([...prompt.labels, ...(usedLabelsInProject.data ?? [])])]);
+      setLabels([
+        ...new Set([...prompt.labels, ...(usedLabelsInProject.data ?? [])]),
+      ]);
       setSelectedLabels(prompt.labels);
-      setCreatedLabels([]);
-      setSearchValue("");
     }
-
-    previousIsOpenRef.current = isOpen;
-    previousPromptIdRef.current = prompt.id;
-  }, [isOpen, prompt.id, prompt.labels]);
+  }, [isOpen, prompt.labels, usedLabelsInProject.data]);
 
   const isPromotingToProduction =
-    !prompt.labels.includes(PRODUCTION_LABEL) && selectedLabels.includes(PRODUCTION_LABEL);
+    !prompt.labels.includes(PRODUCTION_LABEL) &&
+    selectedLabels.includes(PRODUCTION_LABEL);
 
   const isDemotingFromProduction =
-    prompt.labels.includes(PRODUCTION_LABEL) && !selectedLabels.includes(PRODUCTION_LABEL);
+    prompt.labels.includes(PRODUCTION_LABEL) &&
+    !selectedLabels.includes(PRODUCTION_LABEL);
 
   const mutatePromptVersionLabels = api.prompts.setLabels.useMutation({
     onSuccess: () => {
-      utils.prompts.invalidate();
+      void utils.prompts.invalidate();
     },
   });
 
@@ -106,53 +109,6 @@ export function SetPromptVersionLabels({
     else setIsOpen(open);
   };
 
-  // Derived label lists
-  const labels = [
-    ...new Set([
-      ...prompt.labels,
-      ...(usedLabelsInProject.data ?? []),
-      ...createdLabels,
-    ]),
-  ];
-  const customLabels = labels.filter((l) => !isReservedPromptLabel(l));
-  const normalizedSearchValue = searchValue.toLowerCase().trim();
-  const filteredCustomLabels = customLabels.filter((l) =>
-    l.toLowerCase().includes(normalizedSearchValue),
-  );
-  const filteredCustomLabelSet = new Set(filteredCustomLabels);
-  const filteredUnselectedCount = filteredCustomLabels.filter(
-    (l) => !selectedLabels.includes(l),
-  ).length;
-  const hasFilteredSelection = filteredCustomLabels.some((l) =>
-    selectedLabels.includes(l),
-  );
-
-  // Validate new label creation from search input
-  const trimmedSearch = searchValue.trim();
-  const isValidNewLabel =
-    trimmedSearch.length > 0 &&
-    !isReservedPromptLabel(trimmedSearch) &&
-    PromptLabelSchema.safeParse(trimmedSearch).success &&
-    !labels.includes(trimmedSearch);
-  const noExactMatch =
-    trimmedSearch.length > 0 && !labels.includes(trimmedSearch);
-
-  const handleCreateLabel = () => {
-    if (!isValidNewLabel) return;
-    setCreatedLabels((prev) => [...prev, trimmedSearch]);
-    setSelectedLabels((prev) => [...new Set([...prev, trimmedSearch])]);
-    capture("prompt_detail:add_label_submit");
-    setSearchValue("");
-    setTimeout(
-      () =>
-        customLabelScrollRef.current?.scrollTo({
-          top: customLabelScrollRef.current?.scrollHeight,
-          behavior: "smooth",
-        }),
-      0,
-    );
-  };
-
   return (
     <Popover open={isOpen} onOpenChange={handleOnOpenChange} modal={false}>
       <PopoverTrigger asChild data-version-trigger="true">
@@ -163,7 +119,10 @@ export function SetPromptVersionLabels({
           )}
         >
           {title && title}
-          <TruncatedLabels labels={promptLabels} maxVisibleLabels={maxVisibleLabels} />
+          <TruncatedLabels
+            labels={promptLabels}
+            maxVisibleLabels={maxVisibleLabels}
+          />
           <Button
             variant="outline"
             title="Add prompt label"
@@ -177,11 +136,20 @@ export function SetPromptVersionLabels({
           </Button>
         </div>
       </PopoverTrigger>
-      <PopoverContent className="max-w-[90vw] sm:max-w-md" align="start" side="bottom" sideOffset={5}>
-        <div onClick={(event) => event.stopPropagation()} className="flex flex-col">
+      <PopoverContent
+        className="max-w-[90vw] sm:max-w-md"
+        align="start"
+        side="bottom"
+        sideOffset={5}
+      >
+        <div
+          onClick={(event) => event.stopPropagation()}
+          className="flex flex-col"
+        >
           <h2 className="text-md mb-3 font-semibold">Prompt labels</h2>
           <h2 className="mb-3 text-xs">
-            Use labels to fetch prompts via SDKs. The <strong>production</strong> labeled prompt will be served by
+            Use labels to fetch prompts via SDKs. The{" "}
+            <strong>production</strong> labeled prompt will be served by
             default.
           </h2>
           <InputCommand className="mx-0 my-3 px-0">
@@ -198,19 +166,58 @@ export function SetPromptVersionLabels({
               </InputCommandGroup>
               <InputCommandSeparator />
               <InputCommandGroup heading="Custom labels">
-                <div className="max-h-[300px] overflow-y-auto overflow-x-hidden" ref={customLabelScrollRef}>
+                <div
+                  className="max-h-[300px] overflow-x-hidden overflow-y-auto"
+                  ref={customLabelScrollRef}
+                >
                   {labels
                     .filter((l) => !isReservedPromptLabel(l))
                     .map((label) => (
-                      <LabelCommandItem key={label} {...{ selectedLabels, setSelectedLabels, label }} />
+                      <LabelCommandItem
+                        key={label}
+                        {...{ selectedLabels, setSelectedLabels, label }}
+                      />
                     ))}
                 </div>
               </InputCommandGroup>
             </InputCommandList>
+            <div className="px-1">
+              {isAddingLabel ? (
+                <AddLabelForm
+                  {...{
+                    setLabels,
+                    setSelectedLabels,
+                    onAddLabel: () => {
+                      setTimeout(
+                        () =>
+                          customLabelScrollRef.current?.scrollTo({
+                            top: customLabelScrollRef.current?.scrollHeight,
+                            behavior: "smooth",
+                          }),
+                        0,
+                      );
+                    },
+                  }}
+                />
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="mt-2 w-full justify-start px-2 py-1 text-sm font-normal"
+                  onClick={() => setIsAddingLabel(true)}
+                >
+                  <PlusIcon className="mr-2 h-4 w-4" />
+                  Add custom label
+                </Button>
+              )}
+            </div>
           </InputCommand>
           <Button
             type="button"
-            variant={isPromotingToProduction || isDemotingFromProduction ? "destructive" : "default"}
+            variant={
+              isPromotingToProduction || isDemotingFromProduction
+                ? "destructive"
+                : "default"
+            }
             loading={mutatePromptVersionLabels.isPending}
             disabled={!labelsChanged}
             className="w-full"

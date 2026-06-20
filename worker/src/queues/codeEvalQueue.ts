@@ -1,6 +1,6 @@
-import { Job, Processor } from "bullmq";
+import { Job, Processor } from "@hanzo/mq";
 import { EvalTemplateType, JobExecutionStatus } from "@prisma/client";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   CodeEvalExecutionError,
   getCodeEvalUserVisibleError,
@@ -9,14 +9,12 @@ import {
   QueueName,
   TQueueJobTypes,
   traceException,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { processObservationEval } from "../features/evaluation/observationEval";
 import { createW3CTraceId } from "../features/utils";
 import { isUnrecoverableError } from "../errors/UnrecoverableError";
 
-export const codeEvalExecutionQueueProcessorBuilder = (
-  _queueName: string,
-): Processor => {
+export const codeEvalExecutionQueueProcessorBuilder = (_queueName: string): Processor => {
   return async (job: Job<TQueueJobTypes[QueueName.CodeEvalExecution]>) => {
     try {
       logger.debug("Executing Code Evaluation Observation Job", job.data);
@@ -24,18 +22,9 @@ export const codeEvalExecutionQueueProcessorBuilder = (
       const span = getCurrentSpan();
 
       if (span) {
-        span.setAttribute(
-          "messaging.bullmq.job.input.jobExecutionId",
-          job.data.payload.jobExecutionId,
-        );
-        span.setAttribute(
-          "messaging.bullmq.job.input.projectId",
-          job.data.payload.projectId,
-        );
-        span.setAttribute(
-          "messaging.bullmq.job.input.retryBaggage.attempt",
-          job.data.retryBaggage?.attempt ?? 0,
-        );
+        span.setAttribute("messaging.bullmq.job.input.jobExecutionId", job.data.payload.jobExecutionId);
+        span.setAttribute("messaging.bullmq.job.input.projectId", job.data.payload.projectId);
+        span.setAttribute("messaging.bullmq.job.input.retryBaggage.attempt", job.data.retryBaggage?.attempt ?? 0);
       }
 
       await processObservationEval({
@@ -45,9 +34,7 @@ export const codeEvalExecutionQueueProcessorBuilder = (
 
       return true;
     } catch (e) {
-      const executionTraceId = createW3CTraceId(
-        job.data.payload.jobExecutionId,
-      );
+      const executionTraceId = createW3CTraceId(job.data.payload.jobExecutionId);
 
       const isTerminalError = isUnrecoverableError(e);
       const totalAttempts = job.opts.attempts ?? 1;
@@ -74,10 +61,7 @@ export const codeEvalExecutionQueueProcessorBuilder = (
       if (isTerminalError) return;
 
       traceException(e);
-      logger.error(
-        `Failed code eval execution job for id ${job.data.payload.jobExecutionId}`,
-        e,
-      );
+      logger.error(`Failed code eval execution job for id ${job.data.payload.jobExecutionId}`, e);
 
       throw e;
     }

@@ -1,6 +1,12 @@
 import { env } from "@/src/env.mjs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import {
   Dialog,
   DialogBody,
@@ -10,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
-import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 
 const regions =
   env.NEXT_PUBLIC_HANZO_CLOUD_REGION === "STAGING"
@@ -58,11 +64,15 @@ const regions =
           },
         ];
 
-export function CloudRegionSwitch({ isSignUpPage }: { isSignUpPage?: boolean }) {
-  const capture = usePostHogClientCapture();
-  const { isHanzoCloud, region: cloudRegion } = useHanzoCloudRegion();
+export function CloudRegionSwitch({
+  isSignUpPage,
+}: {
+  isSignUpPage?: boolean;
+}) {
+  const capture = useInsightsCapture();
+  const { isConsoleCloud, region: cloudRegion } = useConsoleCloudRegion();
 
-  if (!isHanzoCloud) return null;
+  if (!isConsoleCloud) return null;
 
   const currentRegion = regions.find((region) => region.name === cloudRegion);
 
@@ -75,7 +85,9 @@ export function CloudRegionSwitch({ isSignUpPage }: { isSignUpPage?: boolean }) 
             <DataRegionInfo />
           </span>
           {isSignUpPage && cloudRegion === "HIPAA" ? (
-            <p className="text-xs text-muted-foreground">Demo project is not available in the HIPAA data region.</p>
+            <p className="text-muted-foreground text-xs">
+              Demo project is not available in the HIPAA data region.
+            </p>
           ) : null}
         </div>
         <Select
@@ -113,7 +125,8 @@ export function CloudRegionSwitch({ isSignUpPage }: { isSignUpPage?: boolean }) 
         {cloudRegion === "HIPAA" && (
           <div className="bg-muted/50 text-muted-foreground mt-2 rounded-md p-3 text-xs">
             <p>
-              The Business Associate Agreement (BAA) is only effective on the Cloud Pro and Teams plans.{" "}
+              The Business Associate Agreement (BAA) is only effective on the
+              Cloud Pro and Teams plans.{" "}
               <a
                 href="https://hanzo.com/security/hipaa"
                 target="_blank"
@@ -152,13 +165,20 @@ const DataRegionInfo = () => (
           <ul className="list-disc pl-5">
             <li>US: Oregon (AWS us-west-2)</li>
             <li>EU: Ireland (AWS eu-west-1)</li>
-            <li>HIPAA: Oregon (AWS us-west-2) - HIPAA-compliant region (available with Pro and Teams plans)</li>
+            <li>
+              HIPAA: Oregon (AWS us-west-2) - HIPAA-compliant region (available
+              with Pro and Teams plans)
+            </li>
           </ul>
           <p>
-            Regions are strictly separated, and no data is shared across regions. Choosing a region close to you can
-            help improve speed and comply with local data residency laws and privacy regulations.
+            Regions are strictly separated, and no data is shared across
+            regions. Choosing a region close to you can help improve speed and
+            comply with local data residency laws and privacy regulations.
           </p>
-          <p>You can have accounts in multiple regions. Each region requires a separate subscription.</p>
+          <p>
+            You can have accounts in multiple regions. Each region requires a
+            separate subscription.
+          </p>
           <p>
             Learn more about{" "}
             <a

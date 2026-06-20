@@ -1,4 +1,4 @@
-import { EvalTemplateSourceCodeLanguage } from "@langfuse/shared";
+import { EvalTemplateSourceCodeLanguage } from "@hanzo/console";
 import { env } from "@/src/env.mjs";
 import { api } from "@/src/utils/api";
 
@@ -14,7 +14,7 @@ export function useIsCodeEvalEnabled(): {
   supportedSourceCodeLanguages: EvalTemplateSourceCodeLanguage[];
   isLoading: boolean;
 } {
-  if (env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION) {
+  if (env.NEXT_PUBLIC_HANZO_CLOUD_REGION) {
     return {
       enabled: true,
       supportedSourceCodeLanguages: CLOUD_SUPPORTED_SOURCE_CODE_LANGUAGES,

@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -7,7 +7,7 @@ import {
   PostDatasetRunItemsV1Body,
   PostDatasetRunItemsV1Response,
 } from "@/src/features/public-api/types/datasets";
-import { HanzoNotFoundError } from "@hanzo/shared";
+import { HanzoNotFoundError } from "@hanzo/console";
 import { addDatasetRunItemsToEvalQueue } from "@/src/features/evals/server/addDatasetRunItemsToEvalQueue";
 import {
   eventTypes,
@@ -15,7 +15,7 @@ import {
   processEventBatch,
   getObservationById,
   getDatasetItemById,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { v4 } from "uuid";
 import { createOrFetchDatasetRun } from "@/src/features/public-api/server/dataset-runs";
 import {
@@ -105,7 +105,9 @@ export default withMiddlewares({
       });
       if (ingestionResult.errors.length > 0) {
         const error = ingestionResult.errors[0];
-        res.status(error.status).json({ message: error.error ?? error.message });
+        res
+          .status(error.status)
+          .json({ message: error.error ?? error.message });
         // We will still return the mock dataset run item in the response for now. Logs are to be monitored.
       }
       if (ingestionResult.successes.length !== 1) {
@@ -155,7 +157,9 @@ export default withMiddlewares({
       });
 
       if (!datasetRun) {
-        throw new HanzoNotFoundError("Dataset run not found for the given project and dataset id");
+        throw new HanzoNotFoundError(
+          "Dataset run not found for the given project and dataset id",
+        );
       }
 
       const { datasetId, limit, page } = query;

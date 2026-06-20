@@ -2,7 +2,10 @@
 
 import * as React from "react";
 import { NavMain, type NavMainItem } from "@/src/components/nav/nav-main";
-import { NavUser, type UserNavigationProps } from "@/src/components/nav/nav-user";
+import {
+  NavUser,
+  type UserNavigationProps,
+} from "@/src/components/nav/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -23,7 +26,7 @@ import { HanzoLogo } from "@/src/components/HanzoLogo";
 import { SidebarNotifications } from "@/src/components/nav/sidebar-notifications";
 import { type RouteGroup } from "@/src/components/layouts/routes";
 import { ExternalLink, Grid2X2 } from "lucide-react";
-import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 
 type AppSidebarProps = {
   navItems: {
@@ -37,11 +40,16 @@ type AppSidebarProps = {
   userNavProps: UserNavigationProps;
 } & React.ComponentProps<typeof Sidebar>;
 
-export function AppSidebar({ navItems, secondaryNavItems, userNavProps, ...props }: AppSidebarProps) {
+export function AppSidebar({
+  navItems,
+  secondaryNavItems,
+  userNavProps,
+  ...props
+}: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
       <SidebarHeader>
-        <div className="flex min-h-9 items-center gap-2 py-2 pl-2 pr-0 group-data-[collapsible=icon]:p-3">
+        <div className="flex min-h-9 items-center gap-2 py-2 pr-0 pl-2 group-data-[collapsible=icon]:p-3">
           <HanzoLogo version />
         </div>
         <div className="h-1 flex-1 border-b" />
@@ -65,7 +73,7 @@ export function AppSidebar({ navItems, secondaryNavItems, userNavProps, ...props
 
 const DemoBadge = () => {
   const router = useRouter();
-  const { isHanzoCloud } = useHanzoCloudRegion();
+  const { isConsoleCloud } = useConsoleCloudRegion();
   const routerProjectId = router.query.projectId as string | undefined;
 
   if (
@@ -73,7 +81,7 @@ const DemoBadge = () => {
       env.NEXT_PUBLIC_DEMO_ORG_ID &&
       env.NEXT_PUBLIC_DEMO_PROJECT_ID &&
       routerProjectId === env.NEXT_PUBLIC_DEMO_PROJECT_ID &&
-      isHanzoCloud
+      isConsoleCloud
     )
   )
     return null;
@@ -84,8 +92,16 @@ const DemoBadge = () => {
       <SidebarGroupContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Use Demo App to create traces" variant="cta">
-              <Link href="https://hanzo.com/docs/demo" target="_blank" rel="noopener noreferrer">
+            <SidebarMenuButton
+              asChild
+              tooltip="Use Demo App to create traces"
+              variant="cta"
+            >
+              <Link
+                href="https://hanzo.com/docs/demo"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <ExternalLink className="h-4 w-4" />
                 <span>Use Demo App</span>
               </Link>

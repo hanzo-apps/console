@@ -8,16 +8,16 @@ import {
   getExperimentMetricsFromEvents,
   createTraceScore,
   createScoresCh,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
 
 const maybe =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true"
+  env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true"
     ? describe
     : describe.skip;
 
-describe("Clickhouse Experiment Repository Test", () => {
+describe("Datastore Experiment Repository Test", () => {
   it("should kill redis connection", () => {
     // we need at least one test case to avoid hanging
     // redis connection when everything else is skipped.

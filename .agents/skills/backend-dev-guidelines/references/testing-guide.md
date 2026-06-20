@@ -120,8 +120,8 @@ import {
   createEvent,
   createEventsCh,
   getObservationsWithModelDataFromEventsTable,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { randomUUID } from "crypto";
 
 describe("Event Repository Tests", () => {
@@ -231,8 +231,8 @@ Test tRPC procedures with caller pattern and auth context.
 ```typescript
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@hanzo/console-core/src/db";
-import { createOrgProjectAndApiKey } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import type { Session } from "next-auth";
 import { v4 } from "uuid";
 import { JobConfigState } from "@hanzo/console";
@@ -389,7 +389,7 @@ import {
   createScoresCh,
   createTrace,
   createTracesCh,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { getObservationStream } from "../features/database-read-stream/observation-stream";
 
 describe("batch export test suite", () => {

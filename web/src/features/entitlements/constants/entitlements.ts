@@ -1,4 +1,4 @@
-import { type Plan } from "@hanzo/shared";
+import { type Plan } from "@hanzo/console";
 
 // Entitlements: Binary feature access
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
@@ -21,13 +21,19 @@ export const entitlements = [
   "model-based-evaluations",
   "playground",
   "prompt-experiments",
-  "integration-posthog",
+  "integration-insights",
 ] as const;
 export type Entitlement = (typeof entitlements)[number];
 
-const cloudAllPlansEntitlements: Entitlement[] = ["cloud-billing", "trace-deletion"];
+const cloudAllPlansEntitlements: Entitlement[] = [
+  "cloud-billing",
+  "trace-deletion",
+];
 
-const selfHostedAllPlansEntitlements: Entitlement[] = ["trace-deletion", "scheduled-blob-exports"];
+const selfHostedAllPlansEntitlements: Entitlement[] = [
+  "trace-deletion",
+  "scheduled-blob-exports",
+];
 
 // Entitlement Limits: Limits on the number of resources that can be created/used
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
@@ -86,7 +92,11 @@ export const entitlementAccess: Record<
     },
   },
   "cloud:pro": {
-    entitlements: [...cloudAllPlansEntitlements, "cloud-spend-alerts", "data-retention"],
+    entitlements: [
+      ...cloudAllPlansEntitlements,
+      "cloud-spend-alerts",
+      "data-retention",
+    ],
     entitlementLimits: {
       "annotation-queue-count": false,
       "organization-member-count": false,
@@ -181,7 +191,7 @@ export const entitlementAccess: Record<
       "model-based-evaluations",
       "playground",
       "prompt-experiments",
-      "integration-posthog",
+      "integration-insights",
     ],
     entitlementLimits: {
       "annotation-queue-count": 1,

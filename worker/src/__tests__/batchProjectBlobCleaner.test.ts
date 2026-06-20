@@ -1,11 +1,7 @@
 import { expect, describe, it, vi, beforeEach, afterEach } from "vitest";
 import { randomUUID } from "crypto";
-import {
-  clickhouseClient,
-  createOrgProjectAndApiKey,
-  getDeletedProjects,
-} from "@langfuse/shared/src/server";
-import { prisma } from "@langfuse/shared/src/db";
+import { datastoreClient, createOrgProjectAndApiKey, getDeletedProjects } from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { BatchProjectBlobCleaner } from "../features/batch-project-blob-cleaner";
 
 // vi.hoisted ensures this is declared before vi.mock's hoisted factory runs.
@@ -14,14 +10,13 @@ const { mockRemoveIngestionEvents } = vi.hoisted(() => ({
   mockRemoveIngestionEvents: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@langfuse/shared/src/server", async () => {
-  const actual = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     getDeletedProjects: vi.fn(),
-    removeIngestionEventsFromS3AndDeleteClickhouseRefsForProject: (
-      ...args: unknown[]
-    ) => mockRemoveIngestionEvents(...args),
+    removeIngestionEventsFromS3AndDeleteDatastoreRefsForProject: (...args: unknown[]) =>
+      mockRemoveIngestionEvents(...args),
   };
 });
 
@@ -40,17 +35,14 @@ async function insertBlobRefs(projectId: string, count: number): Promise<void> {
     is_deleted: 0,
   }));
 
-  await clickhouseClient().insert({
+  await datastoreClient().insert({
     table: "blob_storage_file_log",
     format: "JSONEachRow",
     values,
   });
 }
 
-async function softDeleteBlobRefs(
-  projectId: string,
-  count: number,
-): Promise<void> {
+async function softDeleteBlobRefs(projectId: string, count: number): Promise<void> {
   const values = Array.from({ length: count }, () => ({
     id: randomUUID(),
     project_id: projectId,
@@ -65,7 +57,7 @@ async function softDeleteBlobRefs(
     is_deleted: 1,
   }));
 
-  await clickhouseClient().insert({
+  await datastoreClient().insert({
     table: "blob_storage_file_log",
     format: "JSONEachRow",
     values,
@@ -94,10 +86,7 @@ describe("BatchProjectBlobCleaner", () => {
     const cleaner = new BatchProjectBlobCleaner();
     await cleaner.processBatch();
 
-    expect(mockRemoveIngestionEvents).toHaveBeenCalledWith(
-      projectId,
-      undefined,
-    );
+    expect(mockRemoveIngestionEvents).toHaveBeenCalledWith(projectId, undefined);
   });
 
   it("should skip when no deleted projects exist", async () => {
@@ -141,10 +130,7 @@ describe("BatchProjectBlobCleaner", () => {
     const { projectId: smallProject } = await createOrgProjectAndApiKey();
     const { projectId: largeProject } = await createOrgProjectAndApiKey();
 
-    vi.mocked(getDeletedProjects).mockResolvedValue([
-      { id: smallProject },
-      { id: largeProject },
-    ]);
+    vi.mocked(getDeletedProjects).mockResolvedValue([{ id: smallProject }, { id: largeProject }]);
 
     await insertBlobRefs(smallProject, 2);
     await insertBlobRefs(largeProject, 10);

@@ -10,7 +10,7 @@
  * Fixed height component placed below NavigationHeader
  */
 
-import { ObservationLevel } from "@hanzo/console-core";
+import { ObservationLevel } from "@hanzo/console";
 import { useTraceData } from "../../contexts/TraceDataContext";
 import { useViewPreferences } from "../../contexts/ViewPreferencesContext";
 
@@ -31,7 +31,8 @@ export function TracePanelNavigationHiddenNotice() {
     <div className="flex shrink-0 items-center justify-end gap-1 border-b px-4 py-1">
       <span className="text-muted-foreground flex flex-col gap-1 text-xs sm:flex-row">
         <p>
-          {hiddenObservationsCount} hidden observations below {minObservationLevel} level.
+          {hiddenObservationsCount} hidden observations below{" "}
+          {minObservationLevel} level.
         </p>
         <p
           className="cursor-pointer underline"

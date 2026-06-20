@@ -3,7 +3,7 @@ import { getExperimentsAccess } from "@/src/features/experiments/utils/experimen
 describe("getExperimentsAccess", () => {
   it("returns enabled when cloud and v4 beta are both enabled", () => {
     const access = getExperimentsAccess({
-      isLangfuseCloud: true,
+      isConsoleCloud: true,
       isV4BetaEnabled: true,
     });
 
@@ -12,7 +12,7 @@ describe("getExperimentsAccess", () => {
 
   it("returns disabled when not on cloud", () => {
     const access = getExperimentsAccess({
-      isLangfuseCloud: false,
+      isConsoleCloud: false,
       isV4BetaEnabled: true,
     });
 
@@ -21,7 +21,7 @@ describe("getExperimentsAccess", () => {
 
   it("returns disabled when v4 beta is off", () => {
     const access = getExperimentsAccess({
-      isLangfuseCloud: true,
+      isConsoleCloud: true,
       isV4BetaEnabled: false,
     });
 
@@ -30,7 +30,7 @@ describe("getExperimentsAccess", () => {
 
   it("returns disabled when both cloud and v4 beta are off", () => {
     const access = getExperimentsAccess({
-      isLangfuseCloud: false,
+      isConsoleCloud: false,
       isV4BetaEnabled: false,
     });
 

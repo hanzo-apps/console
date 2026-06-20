@@ -10,7 +10,7 @@ import {
   recordIncrement,
   redisQueueRetryOptions,
   traceException,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 
 export class WorkerManager {
   private static workers: { [key: string]: Worker } = {};

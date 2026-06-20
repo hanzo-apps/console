@@ -1,4 +1,4 @@
-import { ChatMessageRole, ChatMessageType } from "@langfuse/shared";
+import { ChatMessageRole, ChatMessageType } from "@hanzo/console";
 import {
   applyCodeMirrorSearchQuery,
   setActiveSearchMarkCodeMirrorRange,

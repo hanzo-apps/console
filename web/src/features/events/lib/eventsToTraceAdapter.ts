@@ -1,11 +1,13 @@
-import { type EventsObservation, type TraceDomain } from "@hanzo/console-core";
+import { type EventsObservation, type TraceDomain } from "@hanzo/console";
 import { type ObservationReturnTypeWithMetadata } from "@/src/server/api/routers/traces";
 import {
   stringifyMetadata,
   type WithStringifiedMetadata,
 } from "@/src/utils/clientSideDomainTypes";
 
-export type SyntheticTrace = WithStringifiedMetadata<Omit<TraceDomain, "input" | "output">> & {
+export type SyntheticTrace = WithStringifiedMetadata<
+  Omit<TraceDomain, "input" | "output">
+> & {
   input: string | null;
   output: string | null;
   latency?: number;
@@ -44,7 +46,9 @@ export function adaptEventsToTraceFormat(params: {
   }
 
   // Sort by startTime to find earliest
-  const sorted = [...events].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+  const sorted = [...events].sort(
+    (a, b) => a.startTime.getTime() - b.startTime.getTime(),
+  );
   const earliest = sorted[0]!;
 
   // Prefer the explicit root observation when present; otherwise fall back to
@@ -69,9 +73,14 @@ export function adaptEventsToTraceFormat(params: {
 
   const traceTags = latestTaggedEvent?.traceTags;
 
-  const endTimes = events.map((e) => e.endTime).filter((t): t is Date => t !== null);
-  const latestEnd = endTimes.length > 0 ? Math.max(...endTimes.map((d) => d.getTime())) : null;
-  const latencyMs = latestEnd ? latestEnd - earliest.startTime.getTime() : undefined;
+  const endTimes = events
+    .map((e) => e.endTime)
+    .filter((t): t is Date => t !== null);
+  const latestEnd =
+    endTimes.length > 0 ? Math.max(...endTimes.map((d) => d.getTime())) : null;
+  const latencyMs = latestEnd
+    ? latestEnd - earliest.startTime.getTime()
+    : undefined;
 
   // Create synthetic trace from observations
   const trace: SyntheticTrace = {
@@ -105,7 +114,8 @@ export function adaptEventsToTraceFormat(params: {
   const observations: ObservationReturnTypeWithMetadata[] = events.map((e) => ({
     ...e,
     traceId: traceId,
-    metadata: typeof e.metadata === "string" ? e.metadata : JSON.stringify(e.metadata),
+    metadata:
+      typeof e.metadata === "string" ? e.metadata : JSON.stringify(e.metadata),
     input: undefined,
     output: undefined,
   }));

@@ -1,6 +1,6 @@
 import type { AnnotationScore, ScoreTarget } from "@/src/features/scores/types";
 import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
-import { type ScoreDomain } from "@hanzo/console-core";
+import { type ScoreDomain } from "@hanzo/console";
 
 /**
  * Filter scores to match exact target based on mode
@@ -10,7 +10,9 @@ import { type ScoreDomain } from "@hanzo/console-core";
  * @param mode - Filter mode: "target-scores-only" for exact match, "target-and-child-scores" for all
  * @returns Filtered scores matching the target
  */
-export function filterScoresByTarget<T extends WithStringifiedMetadata<ScoreDomain> | AnnotationScore>(
+export function filterScoresByTarget<
+  T extends WithStringifiedMetadata<ScoreDomain> | AnnotationScore,
+>(
   scores: T[],
   target: ScoreTarget,
   mode: "target-and-child-scores" | "target-scores-only",
@@ -26,6 +28,9 @@ export function filterScoresByTarget<T extends WithStringifiedMetadata<ScoreDoma
       return score.sessionId === target.sessionId;
     }
     // Trace target: match both traceId AND observationId
-    return score.traceId === target.traceId && (score.observationId ?? null) === (target.observationId ?? null);
+    return (
+      score.traceId === target.traceId &&
+      (score.observationId ?? null) === (target.observationId ?? null)
+    );
   });
 }

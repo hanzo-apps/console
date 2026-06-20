@@ -6,7 +6,7 @@ import {
   protectedOrganizationProcedure,
 } from "@/src/server/api/trpc";
 import { resolveTxtFresh } from "@/src/ee/features/verified-domains/server/dnsLookup";
-import { Prisma } from "@langfuse/shared/src/db";
+import { Prisma } from "@hanzo/console/src/db";
 import { TRPCError } from "@trpc/server";
 import * as z from "zod";
 

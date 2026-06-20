@@ -5,16 +5,23 @@ import {
   listPromptsForApi,
 } from "@/src/features/prompts/server/prompt-api-service";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { authorizePromptRequestOrThrow } from "../utils/authorizePromptRequest";
 import { RateLimitService } from "@/src/features/public-api/server/RateLimitService";
-import { CreatePromptSchema, GetPromptsMetaSchema, InvalidRequestError } from "@hanzo/shared";
+import {
+  CreatePromptSchema,
+  GetPromptsMetaSchema,
+  InvalidRequestError,
+} from "@hanzo/console";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
 const getPromptsHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   const authCheck = await authorizePromptRequestOrThrow(req);
 
-  const rateLimitCheck = await RateLimitService.getInstance().rateLimitRequest(authCheck.scope, "prompts");
+  const rateLimitCheck = await RateLimitService.getInstance().rateLimitRequest(
+    authCheck.scope,
+    "prompts",
+  );
 
   if (rateLimitCheck?.isRateLimited()) {
     return rateLimitCheck.sendRestResponseIfLimited(res);
@@ -29,10 +36,16 @@ const getPromptsHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   return res.status(200).json(promptsMetadata);
 };
 
-const postPromptsHandler = async (req: NextApiRequest, res: NextApiResponse) => {
+const postPromptsHandler = async (
+  req: NextApiRequest,
+  res: NextApiResponse,
+) => {
   const authCheck = await authorizePromptRequestOrThrow(req);
 
-  const rateLimitCheck = await RateLimitService.getInstance().rateLimitRequest(authCheck.scope, "prompts");
+  const rateLimitCheck = await RateLimitService.getInstance().rateLimitRequest(
+    authCheck.scope,
+    "prompts",
+  );
 
   if (rateLimitCheck?.isRateLimited()) {
     return rateLimitCheck.sendRestResponseIfLimited(res);

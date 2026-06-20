@@ -1,7 +1,7 @@
 import pLimit from "p-limit";
-import { prisma } from "@hanzo/console-core/src/db";
-import { BatchActionStatus, observationForEvalSchema } from "@hanzo/console-core";
-import { logger, traceException } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { BatchActionStatus, observationForEvalSchema } from "@hanzo/console";
+import { logger, traceException } from "@hanzo/console/src/server";
 import {
   createObservationEvalSchedulerDeps,
   scheduleObservationEvals,
@@ -44,9 +44,7 @@ export async function processBatchedObservationEval(params: {
     const results = await Promise.allSettled(
       batch.map((record) =>
         limit(async () => {
-          const toolCallNames = Array.isArray(record.tool_call_names)
-            ? record.tool_call_names
-            : [];
+          const toolCallNames = Array.isArray(record.tool_call_names) ? record.tool_call_names : [];
           const observation = observationForEvalSchema.parse({
             ...record,
             tool_call_count: toolCallNames.length,

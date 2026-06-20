@@ -1,4 +1,4 @@
-import type { FilterState } from "@langfuse/shared";
+import type { FilterState } from "@hanzo/console";
 import { computeSelectedValues } from "./filter-query-encoding";
 import { areStringSetsEqual } from "./stringSetUtils";
 

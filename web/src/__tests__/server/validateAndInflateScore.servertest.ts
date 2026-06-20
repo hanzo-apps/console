@@ -1,15 +1,15 @@
 /** @jest-environment node */
 import { v4 } from "uuid";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   createOrgProjectAndApiKey,
   validateAndInflateScore,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   InvalidRequestError,
   LangfuseNotFoundError,
   ScoreSourceEnum,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 describe("validateAndInflateScore", () => {
   describe("configId scoping", () => {

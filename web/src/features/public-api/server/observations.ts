@@ -3,13 +3,13 @@ import {
   deriveFilters,
   StringFilter,
   type ObservationRecordReadType,
-  queryClickhouse,
+  queryDatastore,
   measureAndReturn,
   observationsTableUiColumnDefinitions,
   convertObservation,
   shouldSkipObservationsFinal,
-} from "@hanzo/shared/src/server";
-import type { FilterState } from "@hanzo/shared";
+} from "@hanzo/console/src/server";
+import type { FilterState } from "@hanzo/console";
 
 type QueryType = {
   page: number;
@@ -29,10 +29,12 @@ type QueryType = {
 export const generateObservationsForPublicApi = async (props: QueryType) => {
   const chFilter = generateFilter(props);
   const appliedFilter = chFilter.apply();
-  const traceFilter = chFilter.find((f) => f.clickhouseTable === "traces");
+  const traceFilter = chFilter.find((f) => f.datastoreTable === "traces");
 
   // ClickHouse query optimizations for List Observations API
-  const disableObservationsFinal = await shouldSkipObservationsFinal(props.projectId);
+  const disableObservationsFinal = await shouldSkipObservationsFinal(
+    props.projectId,
+  );
 
   const query = `
     with clickhouse_keys as (
@@ -94,7 +96,9 @@ export const generateObservationsForPublicApi = async (props: QueryType) => {
         ...appliedFilter.params,
         projectId: props.projectId,
         ...(props.limit !== undefined ? { limit: props.limit } : {}),
-        ...(props.page !== undefined ? { offset: (props.page - 1) * props.limit } : {}),
+        ...(props.page !== undefined
+          ? { offset: (props.page - 1) * props.limit }
+          : {}),
       },
       tags: {
         feature: "tracing",
@@ -104,11 +108,11 @@ export const generateObservationsForPublicApi = async (props: QueryType) => {
       },
     },
     fn: async (input) => {
-      const result = await queryClickhouse<ObservationRecordReadType>({
+      const result = await queryDatastore<ObservationRecordReadType>({
         query: query.replace("__TRACE_TABLE__", "traces"),
         params: input.params,
         tags: input.tags,
-        preferredClickhouseService: "ReadOnly",
+        preferredDatastoreService: "ReadOnly",
       });
       return result.map((r) => convertObservation(r));
     },
@@ -118,7 +122,7 @@ export const generateObservationsForPublicApi = async (props: QueryType) => {
 export const getObservationsCountForPublicApi = async (props: QueryType) => {
   const chFilter = generateFilter(props);
   const filter = chFilter.apply();
-  const traceFilter = chFilter.find((f) => f.clickhouseTable === "traces");
+  const traceFilter = chFilter.find((f) => f.datastoreTable === "traces");
 
   const query = `
     SELECT count() as count
@@ -142,18 +146,22 @@ export const getObservationsCountForPublicApi = async (props: QueryType) => {
       },
     },
     fn: async (input) => {
-      const records = await queryClickhouse<{ count: string }>({
+      const records = await queryDatastore<{ count: string }>({
         query: query.replace("__TRACE_TABLE__", "traces"),
         params: input.params,
         tags: input.tags,
-        preferredClickhouseService: "ReadOnly",
+        preferredDatastoreService: "ReadOnly",
       });
       return records.map((record) => Number(record.count)).shift();
     },
   });
 };
 
-const filterParams = createPublicApiObservationsColumnMapping("observations", "o", "parent_observation_id");
+const filterParams = createPublicApiObservationsColumnMapping(
+  "observations",
+  "o",
+  "parent_observation_id",
+);
 
 const generateFilter = (query: QueryType) => {
   const { advancedFilters, ...simpleFilterProps } = query;
@@ -161,16 +169,20 @@ const generateFilter = (query: QueryType) => {
     simpleFilterProps,
     filterParams,
     advancedFilters,
-    observationsTableUiColumnDefinitions.filter((c) => c.clickhouseTableName !== "scores"),
+    observationsTableUiColumnDefinitions.filter(
+      (c) => c.datastoreTableName !== "scores",
+    ),
   );
 
   // Remove score filters since observations don't support scores in response
-  const filteredChFilter = chFilter.filter((f) => f.clickhouseTable !== "scores");
+  const filteredChFilter = chFilter.filter(
+    (f) => f.datastoreTable !== "scores",
+  );
 
   // Add project filter
   filteredChFilter.push(
     new StringFilter({
-      clickhouseTable: "observations",
+      datastoreTable: "observations",
       field: "project_id",
       operator: "=",
       value: query.projectId,

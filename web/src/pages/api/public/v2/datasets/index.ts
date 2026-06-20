@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   GetDatasetsV2Query,
   GetDatasetsV2Response,
@@ -16,7 +16,8 @@ export default withMiddlewares({
     responseSchema: PostDatasetsV2Response,
     rateLimitResource: "datasets",
     fn: async ({ body, auth }) => {
-      const { name, description, metadata, inputSchema, expectedOutputSchema } = body;
+      const { name, description, metadata, inputSchema, expectedOutputSchema } =
+        body;
 
       const dataset = await upsertDataset({
         input: {

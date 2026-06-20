@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { Job } from "@hanzo/mq";
 import { JobExecutionStatus } from "@prisma/client";
 import { llmAsJudgeExecutionQueueProcessor } from "../evalQueue";
-import { QueueName, type TQueueJobTypes } from "@hanzo/console-core/src/server";
+import { QueueName, type TQueueJobTypes } from "@hanzo/console/src/server";
 import { UnrecoverableError } from "../../errors/UnrecoverableError";
 
 const QueueName = {
@@ -20,7 +20,7 @@ const JobExecutionStatus = {
   ERROR: "ERROR",
 } as const;
 
-vi.mock("@langfuse/shared", () => ({
+vi.mock("@hanzo/console", () => ({
   removeEmptyEnvVariables: <T>(value: T) => value,
   EvalTemplateType: {
     LLM_AS_JUDGE: "LLM_AS_JUDGE",
@@ -32,7 +32,7 @@ vi.mock("@langfuse/shared", () => ({
 }));
 
 // Mock prisma
-vi.mock("@hanzo/console-core/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     jobExecution: {
       update: vi.fn(),
@@ -46,8 +46,8 @@ vi.mock("../../features/evaluation/observationEval", () => ({
 }));
 
 // Mock logger and span
-vi.mock("@hanzo/console-core/src/server", async () => {
-  const actual = await vi.importActual("@hanzo/console-core/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     QueueName: {
       LLMAsJudgeExecution: "llm-as-a-judge-execution-queue",
@@ -95,9 +95,9 @@ vi.mock("../../errors/UnrecoverableError", async () => {
   };
 });
 
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { processObservationEval } from "../../features/evaluation/observationEval";
-import { isLLMCompletionError, traceException } from "@hanzo/console-core/src/server";
+import { isLLMCompletionError, traceException } from "@hanzo/console/src/server";
 import { retryLLMRateLimitError } from "../../features/utils";
 import { isUnrecoverableError } from "../../errors/UnrecoverableError";
 
@@ -135,10 +135,8 @@ describe("llmAsJudgeExecutionQueueProcessor", () => {
   };
 
   beforeAll(async () => {
-    const { llmAsJudgeExecutionQueueProcessorBuilder } =
-      await import("../evalQueue");
-    llmAsJudgeExecutionQueueProcessor =
-      llmAsJudgeExecutionQueueProcessorBuilder(queueName);
+    const { llmAsJudgeExecutionQueueProcessorBuilder } = await import("../evalQueue");
+    llmAsJudgeExecutionQueueProcessor = llmAsJudgeExecutionQueueProcessorBuilder(queueName);
   });
 
   beforeEach(() => {
@@ -167,7 +165,7 @@ describe("llmAsJudgeExecutionQueueProcessor", () => {
 
     it("should set span attributes for tracing", async () => {
       const mockSpan = { setAttribute: vi.fn() };
-      const { getCurrentSpan } = await import("@hanzo/console-core/src/server");
+      const { getCurrentSpan } = await import("@hanzo/console/src/server");
       (getCurrentSpan as Mock).mockReturnValue(mockSpan);
       (processObservationEval as Mock).mockResolvedValue(undefined);
 
@@ -233,8 +231,7 @@ describe("llmAsJudgeExecutionQueueProcessor", () => {
       const rateLimitError = new Error("Rate limit exceeded");
       (processObservationEval as Mock).mockRejectedValue(rateLimitError);
       vi.mocked(isLLMCompletionError).mockReturnValue(true);
-      (rateLimitError as unknown as { isRetryable: boolean }).isRetryable =
-        true;
+      (rateLimitError as unknown as { isRetryable: boolean }).isRetryable = true;
       (retryLLMRateLimitError as Mock).mockResolvedValue({
         outcome: "skipped",
         reason: "too_old",
@@ -261,8 +258,7 @@ describe("llmAsJudgeExecutionQueueProcessor", () => {
       const rateLimitError = new Error("Rate limit exceeded");
       (processObservationEval as Mock).mockRejectedValue(rateLimitError);
       vi.mocked(isLLMCompletionError).mockReturnValue(true);
-      (rateLimitError as unknown as { isRetryable: boolean }).isRetryable =
-        true;
+      (rateLimitError as unknown as { isRetryable: boolean }).isRetryable = true;
       (retryLLMRateLimitError as Mock).mockResolvedValue({
         outcome: "queue_unavailable",
       });
@@ -434,7 +430,7 @@ describe("llmAsJudgeExecutionQueueProcessor", () => {
   describe("retry baggage tracking", () => {
     it("should track retry attempt in span attributes", async () => {
       const mockSpan = { setAttribute: vi.fn() };
-      const { getCurrentSpan } = await import("@hanzo/console-core/src/server");
+      const { getCurrentSpan } = await import("@hanzo/console/src/server");
       (getCurrentSpan as Mock).mockReturnValue(mockSpan);
       (processObservationEval as Mock).mockResolvedValue(undefined);
 
@@ -448,7 +444,7 @@ describe("llmAsJudgeExecutionQueueProcessor", () => {
 
     it("should default to 0 when retry baggage is missing", async () => {
       const mockSpan = { setAttribute: vi.fn() };
-      const { getCurrentSpan } = await import("@hanzo/console-core/src/server");
+      const { getCurrentSpan } = await import("@hanzo/console/src/server");
       (getCurrentSpan as Mock).mockReturnValue(mockSpan);
       (processObservationEval as Mock).mockResolvedValue(undefined);
 
@@ -463,7 +459,7 @@ describe("llmAsJudgeExecutionQueueProcessor", () => {
 
   describe("null span handling", () => {
     it("should handle null span gracefully", async () => {
-      const { getCurrentSpan } = await import("@hanzo/console-core/src/server");
+      const { getCurrentSpan } = await import("@hanzo/console/src/server");
       (getCurrentSpan as Mock).mockReturnValue(null);
       (processObservationEval as Mock).mockResolvedValue(undefined);
 

@@ -1,4 +1,4 @@
-import { InvalidRequestError, UnauthorizedError } from "@langfuse/shared";
+import { InvalidRequestError, UnauthorizedError } from "@hanzo/console";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import {
   buildTraceExport,

@@ -1,8 +1,8 @@
 import express from "express";
-import { traceException } from "@hanzo/console-core/src/server";
+import { traceException } from "@hanzo/console/src/server";
 
 import { checkContainerHealth } from "../features/health";
-import { logger } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
 const router = express.Router();
 
 router.get<{}, { status: string }>("/health", async (_req, res) => {

@@ -3,7 +3,7 @@ import {
   hasLegacyTracingIoSearch,
   LEGACY_IO_SEARCH_TYPES,
 } from "@/src/features/traces/lib/legacyIoSearch";
-import { BatchTableNames, type TracingSearchType } from "@langfuse/shared";
+import { BatchTableNames, type TracingSearchType } from "@hanzo/console";
 import { TRPCError } from "@trpc/server";
 
 const LEGACY_TRACING_TABLE_NAMES = new Set<BatchTableNames>([
@@ -12,7 +12,7 @@ const LEGACY_TRACING_TABLE_NAMES = new Set<BatchTableNames>([
 ]);
 
 export const isLegacyTracingIoSearchDisabled = () =>
-  env.LANGFUSE_DISABLE_LEGACY_TRACING_IO_SEARCH === "true";
+  env.HANZO_DISABLE_LEGACY_TRACING_IO_SEARCH === "true";
 
 export const hasSearchQuery = (searchQuery?: string | null) =>
   Boolean(searchQuery);

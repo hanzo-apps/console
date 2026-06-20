@@ -8,14 +8,8 @@ import {
   QueueName,
   TQueueJobTypes,
   traceDeletionProcessor,
-} from "@hanzo/console-core/src/server";
-import {
-  BatchActionType,
-  BatchActionStatus,
-  BatchTableNames,
-  FilterCondition,
-  EvalTargetObject,
-} from "@hanzo/console-core";
+} from "@hanzo/console/src/server";
+import { BatchActionType, BatchActionStatus, BatchTableNames, FilterCondition, EvalTargetObject } from "@hanzo/console";
 import Decimal from "decimal.js";
 import {
   getDatabaseReadStreamPaginated,
@@ -24,13 +18,13 @@ import {
 import { env } from "../../env";
 import { Job } from "@hanzo/mq";
 import { processAddObservationsToQueue, processAddSessionsToQueue, processAddTracesToQueue } from "./processAddToQueue";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { randomUUID } from "node:crypto";
 import { processDatastoreScoreDelete } from "../scores/processDatastoreScoreDelete";
 import { getObservationStream } from "../database-read-stream/observation-stream";
 import { getEventsStreamForEval, getEventsStreamForDataset } from "../database-read-stream/event-stream";
 import { processAddObservationsToDataset } from "./processAddObservationsToDataset";
-import { ObservationAddToDatasetConfigSchema } from "@hanzo/console-core";
+import { ObservationAddToDatasetConfigSchema } from "@hanzo/console";
 import { processBatchedObservationEval } from "./processBatchedObservationEval";
 
 const CHUNK_SIZE = 1000;
@@ -240,8 +234,7 @@ export const handleBatchActionJob = async (batchActionJob: Job<TQueueJobTypes[Qu
             rowLimit: env.HANZO_MAX_HISTORIC_EVAL_CREATION_LIMIT,
           });
 
-    const evalCreatorQueue =
-      deps.evalCreatorQueue ?? CreateEvalQueue.getInstance();
+    const evalCreatorQueue = deps.evalCreatorQueue ?? CreateEvalQueue.getInstance();
     if (!evalCreatorQueue) {
       logger.error("CreateEvalQueue is not initialized");
       return;

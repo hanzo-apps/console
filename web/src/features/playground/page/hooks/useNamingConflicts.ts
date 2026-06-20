@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { type PromptVariable } from "@hanzo/console-core";
+import { type PromptVariable } from "@hanzo/console";
 import { type PlaceholderMessageFillIn } from "../types";
 
 export interface NamingConflictInfo {
@@ -21,13 +21,17 @@ export const useNamingConflicts = (
     const variableNames = variables.map((v) => v.name);
     const placeholderNames = placeholders.map((p) => p.name);
 
-    const conflictingNames = variableNames.filter((name) => placeholderNames.includes(name));
+    const conflictingNames = variableNames.filter((name) =>
+      placeholderNames.includes(name),
+    );
 
     const hasConflicts = conflictingNames.length > 0;
 
-    const isVariableConflicting = (variableName: string) => conflictingNames.includes(variableName);
+    const isVariableConflicting = (variableName: string) =>
+      conflictingNames.includes(variableName);
 
-    const isPlaceholderConflicting = (placeholderName: string) => conflictingNames.includes(placeholderName);
+    const isPlaceholderConflicting = (placeholderName: string) =>
+      conflictingNames.includes(placeholderName);
 
     return {
       hasConflicts,

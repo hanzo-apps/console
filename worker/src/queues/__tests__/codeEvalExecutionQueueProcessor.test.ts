@@ -1,13 +1,5 @@
-import {
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-  type Mock,
-} from "vitest";
-import { Job } from "bullmq";
+import { beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { Job } from "@hanzo/mq";
 import { EvalTemplateType } from "@prisma/client";
 import { UnrecoverableError } from "../../errors/UnrecoverableError";
 
@@ -19,7 +11,7 @@ const JobExecutionStatus = {
   ERROR: "ERROR",
 } as const;
 
-vi.mock("@langfuse/shared/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     jobExecution: {
       update: vi.fn(),
@@ -35,11 +27,9 @@ vi.mock("../../features/evaluation/codeBased", () => ({
   executeCodeBasedEvaluation: vi.fn(),
 }));
 
-vi.mock("@langfuse/shared/src/server", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@langfuse/shared/src/server")>();
-  const { CodeEvalExecutionError } =
-    await import("../../../../packages/shared/src/server/evals/codeEvalExecution");
+vi.mock("@hanzo/console/src/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@hanzo/console/src/server")>();
+  const { CodeEvalExecutionError } = await import("../../../../packages/shared/src/server/evals/codeEvalExecution");
 
   return {
     ...actual,
@@ -70,9 +60,9 @@ vi.mock("../../errors/UnrecoverableError", async () => {
   };
 });
 
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { processObservationEval } from "../../features/evaluation/observationEval";
-import { traceException } from "@langfuse/shared/src/server";
+import { traceException } from "@hanzo/console/src/server";
 import { CodeEvalDispatcherErrorCodes } from "../../../../packages/shared/src/server/evals/codeEvalDispatcherTypes";
 import { CodeEvalExecutionError } from "../../../../packages/shared/src/server/evals/codeEvalExecution";
 import { isUnrecoverableError } from "../../errors/UnrecoverableError";
@@ -109,10 +99,8 @@ describe("codeEvalExecutionQueueProcessor", () => {
     }) as Job<any>;
 
   beforeAll(async () => {
-    const { codeEvalExecutionQueueProcessorBuilder } =
-      await import("../codeEvalQueue");
-    codeEvalExecutionQueueProcessor =
-      codeEvalExecutionQueueProcessorBuilder(queueName);
+    const { codeEvalExecutionQueueProcessorBuilder } = await import("../codeEvalQueue");
+    codeEvalExecutionQueueProcessor = codeEvalExecutionQueueProcessorBuilder(queueName);
   });
 
   beforeEach(() => {
@@ -137,9 +125,7 @@ describe("codeEvalExecutionQueueProcessor", () => {
   });
 
   it("should treat unrecoverable code eval errors as terminal", async () => {
-    const error = new UnrecoverableError(
-      "The evaluator returned an invalid result.",
-    );
+    const error = new UnrecoverableError("The evaluator returned an invalid result.");
     (processObservationEval as Mock).mockRejectedValue(error);
     (isUnrecoverableError as unknown as Mock).mockReturnValue(true);
 
@@ -178,9 +164,7 @@ describe("codeEvalExecutionQueueProcessor", () => {
   });
 
   it("should mark unrecoverable skeleton errors as terminal", async () => {
-    const error = new UnrecoverableError(
-      "Code-based eval execution is not implemented yet",
-    );
+    const error = new UnrecoverableError("Code-based eval execution is not implemented yet");
     (processObservationEval as Mock).mockRejectedValue(error);
     (isUnrecoverableError as unknown as Mock).mockReturnValue(true);
 
@@ -206,9 +190,7 @@ describe("codeEvalExecutionQueueProcessor", () => {
     const error = new Error("temporary dispatcher failure");
     (processObservationEval as Mock).mockRejectedValue(error);
 
-    await expect(
-      codeEvalExecutionQueueProcessor(createMockJob()),
-    ).rejects.toThrow(error);
+    await expect(codeEvalExecutionQueueProcessor(createMockJob())).rejects.toThrow(error);
 
     expect(prisma.jobExecution.update).not.toHaveBeenCalled();
     expect(traceException).toHaveBeenCalledWith(error);
@@ -219,9 +201,7 @@ describe("codeEvalExecutionQueueProcessor", () => {
     (processObservationEval as Mock).mockRejectedValue(error);
 
     await expect(
-      codeEvalExecutionQueueProcessor(
-        createMockJob({ attemptsMade: 9, opts: { attempts: 10 } }),
-      ),
+      codeEvalExecutionQueueProcessor(createMockJob({ attemptsMade: 9, opts: { attempts: 10 } })),
     ).rejects.toThrow(error);
 
     expect(prisma.jobExecution.update).toHaveBeenCalledWith({
@@ -250,9 +230,7 @@ describe("codeEvalExecutionQueueProcessor", () => {
     (processObservationEval as Mock).mockRejectedValue(error);
 
     await expect(
-      codeEvalExecutionQueueProcessor(
-        createMockJob({ attemptsMade: 9, opts: { attempts: 10 } }),
-      ),
+      codeEvalExecutionQueueProcessor(createMockJob({ attemptsMade: 9, opts: { attempts: 10 } })),
     ).rejects.toThrow(error);
 
     expect(prisma.jobExecution.update).toHaveBeenCalledWith({

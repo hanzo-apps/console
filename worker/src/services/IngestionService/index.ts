@@ -1,7 +1,7 @@
 import { Cluster, Redis } from "ioredis";
 import { v4 } from "uuid";
 import { Decimal } from "decimal.js";
-import { Model, ObservationLevel, PrismaClient, Prompt } from "@hanzo/console-core";
+import { Model, ObservationLevel, PrismaClient, Prompt } from "@hanzo/console";
 import {
   DatastoreClient,
   convertDateToDatastoreDateTime,
@@ -43,7 +43,7 @@ import {
   getDatasetItemById,
   normalizeToolsForObservation,
   hasNoEvalConfigsCache,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 
 import { tokenCountAsync } from "../../features/tokenisation/async-usage";
 import { tokenCount } from "../../features/tokenisation/usage";
@@ -224,9 +224,7 @@ export class IngestionService {
     const now = this.getMicrosecondTimestamp();
 
     // Flatten raw metadata first (before stringification destroys nested structure)
-    const flattened = eventData.metadata
-      ? flattenJsonToPathArrays(eventData.metadata)
-      : { names: [], values: [] };
+    const flattened = eventData.metadata ? flattenJsonToPathArrays(eventData.metadata) : { names: [], values: [] };
     const metadataNames = flattened.names;
     // Defensive: coerce null/undefined to empty string for Array(String) ClickHouse column.
     // Should not be required as convertValueToPlainJavascript() never returns null.

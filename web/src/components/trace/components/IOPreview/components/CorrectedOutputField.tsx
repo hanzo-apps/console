@@ -1,7 +1,7 @@
 import { Pencil, Trash, FileDiff, Check, Info } from "lucide-react";
 import { cn } from "@/src/utils/tailwind";
 import { Button } from "@/src/components/ui/button";
-import { type ScoreDomain } from "@hanzo/shared";
+import { type ScoreDomain } from "@hanzo/console";
 import { useCorrectionData } from "./hooks/useCorrectionData";
 import { useCorrectionMutations } from "./hooks/useCorrectionMutations";
 import { useCorrectionEditor } from "./hooks/useCorrectionEditor";
@@ -11,7 +11,11 @@ import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAcces
 import { Switch } from "@/src/components/ui/switch";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import { CorrectedOutputDiffDialog } from "./CorrectedOutputDiffDialog";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/src/components/ui/hover-card";
 import Link from "next/link";
 import Spinner from "@/src/components/design-system/Spinner/Spinner";
 
@@ -37,25 +41,40 @@ export function CorrectedOutputField({
   const hasAccess = useHasProjectAccess({ projectId, scope: "scores:CUD" });
 
   // JSON validation toggle (persisted in localStorage)
-  const [strictJsonMode, setStrictJsonMode] = useLocalStorage("correctionStrictJsonMode", false);
+  const [strictJsonMode, setStrictJsonMode] = useLocalStorage(
+    "correctionStrictJsonMode",
+    false,
+  );
 
   // Diff dialog state
   const [isDiffDialogOpen, setIsDiffDialogOpen] = useState(false);
 
   // Merge cache + server data
-  const { effectiveCorrection, correctionValue } = useCorrectionData(existingCorrection, observationId, traceId);
+  const { effectiveCorrection, correctionValue } = useCorrectionData(
+    existingCorrection,
+    observationId,
+    traceId,
+  );
 
   // Handle mutations with optimistic updates
-  const { saveStatus, setSaveStatus, handleSave, handleDelete } = useCorrectionMutations({
-    projectId,
-    traceId,
-    observationId,
-    environment,
-    effectiveCorrection,
-  });
+  const { saveStatus, setSaveStatus, handleSave, handleDelete } =
+    useCorrectionMutations({
+      projectId,
+      traceId,
+      observationId,
+      environment,
+      effectiveCorrection,
+    });
 
   // Manage editor state & debouncing
-  const { isEditing, setIsEditing, value, isValidJson, handleEdit, handleChange } = useCorrectionEditor({
+  const {
+    isEditing,
+    setIsEditing,
+    value,
+    isValidJson,
+    handleEdit,
+    handleChange,
+  } = useCorrectionEditor({
     correctionValue,
     actualOutput,
     onSave: handleSave,
@@ -65,7 +84,9 @@ export function CorrectedOutputField({
 
   // When not editing, use correctionValue (source of truth from cache/server)
   // When editing, use value (local state)
-  const hasContent = isEditing ? value.trim().length > 0 : correctionValue.trim().length > 0;
+  const hasContent = isEditing
+    ? value.trim().length > 0
+    : correctionValue.trim().length > 0;
 
   // Get display value based on mode
   // In text mode: unwrap JSON strings for easier editing
@@ -140,7 +161,12 @@ export function CorrectedOutputField({
         <div className="group relative rounded-md">
           <div className="flex items-center justify-between py-1.5">
             <div className="flex items-center gap-1">
-              <span className={cn("text-sm font-medium", compact ? "text-xs" : "text-sm")}>
+              <span
+                className={cn(
+                  "text-sm font-medium",
+                  compact ? "text-xs" : "text-sm",
+                )}
+              >
                 {compact ? "" : "Corrected Output (Beta)"}
               </span>
               <HoverCard>
@@ -151,8 +177,8 @@ export function CorrectedOutputField({
                 </HoverCardTrigger>
                 <HoverCardContent className="w-80 text-xs" side="right">
                   <p>
-                    Corrected outputs allow you to save the expected output for a trace or observation. Learn more in
-                    the{" "}
+                    Corrected outputs allow you to save the expected output for
+                    a trace or observation. Learn more in the{" "}
                     <Link
                       href="https://hanzo.com/docs/observability/features/corrections"
                       target="_blank"
@@ -170,13 +196,17 @@ export function CorrectedOutputField({
               <div className="flex items-center -space-x-1 opacity-0 transition-opacity group-hover:opacity-100">
                 {!isValidJson && isEditing && hasContent && (
                   <span className="mr-2 text-xs text-red-500">
-                    {strictJsonMode ? "Invalid JSON - fix to save" : "Cannot save empty content"}
+                    {strictJsonMode
+                      ? "Invalid JSON - fix to save"
+                      : "Cannot save empty content"}
                   </span>
                 )}
                 {isValidJson && saveStatus === "saving" && (
                   <div className="mr-2 flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    <span className="text-xs text-muted-foreground">Saving</span>
+                    <span className="text-muted-foreground text-xs">
+                      Saving
+                    </span>
                   </div>
                 )}
                 {isValidJson && saveStatus === "saved" && (

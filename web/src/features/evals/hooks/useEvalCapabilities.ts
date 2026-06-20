@@ -1,6 +1,6 @@
 import { useSession } from "next-auth/react";
 import { api } from "@/src/utils/api";
-import { useLangfuseCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
 import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
 
@@ -52,7 +52,7 @@ export function useEvalCapabilities(
   // Non-cloud deployments always see legacy options
   // Use === true to default to false while session is loading, preventing flash of legacy options
   // New users (canToggleV4 = false) default to observation-level evals regardless of v3/v4
-  const { isLangfuseCloud } = useLangfuseCloudRegion();
+  const { isConsoleCloud } = useConsoleCloudRegion();
   const canToggleV4 = session?.user?.canToggleV4 === true;
 
   return {
@@ -61,7 +61,7 @@ export function useEvalCapabilities(
     compatibilityCheckWasPerformed: isBetaEnabled,
     // Allow legacy if: not code eval AND (not cloud OR user has legacy evals OR user can toggle v4)
     allowLegacy:
-      !isCodeEvalConfig && (!isLangfuseCloud || hasLegacyEvals || canToggleV4),
+      !isCodeEvalConfig && (!isConsoleCloud || hasLegacyEvals || canToggleV4),
     // Allow propagation filters only when using OTEL and spans are propagating
     allowPropagationFilters: isOtel && isPropagating,
     isLoading:

@@ -7,12 +7,7 @@
  * so no JOINs are needed for trace-level fields.
  */
 
-import {
-  FilterCondition,
-  type ScoreDataTypeType,
-  TimeFilter,
-  TracingSearchType,
-} from "@hanzo/console-core";
+import { FilterCondition, type ScoreDataTypeType, TimeFilter, TracingSearchType } from "@hanzo/console";
 import {
   getDistinctScoreNames,
   queryDatastoreStream,
@@ -23,7 +18,7 @@ import {
   datastoreSearchCondition,
   EventsQueryBuilder,
   eventsScoresAggregation,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { Readable } from "stream";
 import { env } from "../../env";
 import { getChunkWithFlattenedScores, prepareScoresForOutput } from "./getDatabaseReadStream";
@@ -31,20 +26,10 @@ import { fetchCommentsForExport } from "./fetchCommentsForExport";
 import { BatchExportEventsRow } from "./types";
 
 const BATCH_SIZE = 1000; // Fetch comments in batches for efficiency
-const EVENT_SEARCH_COLUMNS = [
-  "span_id",
-  "name",
-  "trace_name",
-  "user_id",
-  "session_id",
-  "trace_id",
-] as const;
+const EVENT_SEARCH_COLUMNS = ["span_id", "name", "trace_name", "user_id", "session_id", "trace_id"] as const;
 
-const eventSearchCondition = (opts: {
-  query?: string;
-  searchType?: TracingSearchType[];
-}) =>
-  clickhouseSearchCondition({
+const eventSearchCondition = (opts: { query?: string; searchType?: TracingSearchType[] }) =>
+  datastoreSearchCondition({
     query: opts.query,
     searchType: opts.searchType,
     tablePrefix: "e",
@@ -210,7 +195,7 @@ export const getEventsStream = async (props: {
       kind: "export",
       projectId,
     },
-    preferredClickhouseService: "EventsReadOnly",
+    preferredDatastoreService: "EventsReadOnly",
   });
 
   // Helper function to process a single event row
@@ -561,7 +546,7 @@ export const getEventsStreamForDataset = async (props: {
       kind: "dataset",
       projectId,
     },
-    preferredClickhouseService: "EventsReadOnly",
+    preferredDatastoreService: "EventsReadOnly",
   });
 
   return Readable.from(
@@ -606,10 +591,7 @@ export const getEventsStreamForAnnotationQueue = async (props: {
       (col) => col.uiTableName === f.column || col.uiTableId === f.column,
     );
 
-    return (
-      columnDef?.clickhouseTableName !== "scores" &&
-      columnDef?.clickhouseTableName !== "comments"
-    );
+    return columnDef?.datastoreTableName !== "scores" && columnDef?.datastoreTableName !== "comments";
   });
 
   const eventsFilter = new FilterList(
@@ -652,10 +634,10 @@ export const getEventsStreamForAnnotationQueue = async (props: {
     trace_id: string;
   };
 
-  const asyncGenerator = queryClickhouseStream<AnnotationQueueEventRow>({
+  const asyncGenerator = queryDatastoreStream<AnnotationQueueEventRow>({
     query,
     params: queryParams,
-    clickhouseConfigs: {
+    datastoreConfigs: {
       request_timeout: 180_000,
       clickhouse_settings: {
         http_send_timeout: 300,
@@ -668,7 +650,7 @@ export const getEventsStreamForAnnotationQueue = async (props: {
       kind: "annotation",
       projectId,
     },
-    preferredClickhouseService: "EventsReadOnly",
+    preferredDatastoreService: "EventsReadOnly",
   });
 
   return Readable.from(

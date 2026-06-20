@@ -1,12 +1,7 @@
 import { expect, describe, it } from "vitest";
-import { prisma } from "@hanzo/console-core/src/db";
-import { createOrgProjectAndApiKey, redis } from "@hanzo/console-core/src/server";
-import {
-  findModel,
-  findModelInPostgres,
-  getRedisModelKey,
-  clearModelCacheForProject,
-} from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey, redis } from "@hanzo/console/src/server";
+import { findModel, findModelInPostgres, getRedisModelKey, clearModelCacheForProject } from "@hanzo/console/src/server";
 import { v4 as uuidv4 } from "uuid";
 
 type SharedServerModule = typeof import("../../../packages/shared/src/server");
@@ -19,16 +14,14 @@ let findModelInPostgres: SharedServerModule["findModelInPostgres"];
 let getRedisModelKey: SharedServerModule["getRedisModelKey"];
 let clearModelCacheForProject: SharedServerModule["clearModelCacheForProject"];
 
-const originalLocalCacheSetting =
-  process.env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_ENABLED;
+const originalLocalCacheSetting = process.env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_ENABLED;
 
 describe("modelMatch", () => {
   beforeAll(async () => {
     process.env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_ENABLED = "true";
     vi.resetModules();
 
-    const sharedServer: SharedServerModule =
-      await import("../../../packages/shared/src/server");
+    const sharedServer: SharedServerModule = await import("../../../packages/shared/src/server");
 
     ({
       createOrgProjectAndApiKey,
@@ -45,8 +38,7 @@ describe("modelMatch", () => {
     if (originalLocalCacheSetting === undefined) {
       delete process.env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_ENABLED;
     } else {
-      process.env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_ENABLED =
-        originalLocalCacheSetting;
+      process.env.LANGFUSE_LOCAL_CACHE_MODEL_MATCH_ENABLED = originalLocalCacheSetting;
     }
 
     vi.resetModules();

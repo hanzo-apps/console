@@ -1,8 +1,8 @@
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@langfuse/shared/src/db";
-import { decrypt, encrypt } from "@langfuse/shared/encryption";
-import { Role } from "@langfuse/shared";
+import { prisma } from "@hanzo/console/src/db";
+import { decrypt, encrypt } from "@hanzo/console/encryption";
+import { Role } from "@hanzo/console";
 import type { Session } from "next-auth";
 import { v4 as uuidv4 } from "uuid";
 
@@ -81,7 +81,7 @@ function createSession(
         },
       ],
       featureFlags: {
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
         templateFlag: true,
         v4BetaToggleVisible: false,
         observationEvals: false,

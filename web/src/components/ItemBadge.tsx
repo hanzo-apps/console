@@ -22,7 +22,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { cva } from "class-variance-authority";
-import { type ObservationType } from "@hanzo/console-core";
+import { type ObservationType } from "@hanzo/console";
 import { cn } from "@/src/utils/tailwind";
 
 export type ConsoleItemType =
@@ -96,7 +96,9 @@ export function renderFilterIcon(value: string): React.ReactNode {
   const type = value as ConsoleItemType;
   const Icon = iconMap[type];
   if (!Icon) return null;
-  return <Icon className={cn("h-3.5 w-3.5 shrink-0", iconVariants({ type }))} />;
+  return (
+    <Icon className={cn("h-3.5 w-3.5 shrink-0", iconVariants({ type }))} />
+  );
 }
 
 export function ItemBadge({
@@ -113,9 +115,14 @@ export function ItemBadge({
   const Icon = iconMap[type] || ListTree; // Default to ListTree if unknown type
 
   // Modify this line to ensure the icon is properly sized
-  const iconClass = cn(iconVariants({ type }), isSmall ? "h-3 w-3" : "h-4 w-4", className);
+  const iconClass = cn(
+    iconVariants({ type }),
+    isSmall ? "h-3 w-3" : "h-4 w-4",
+    className,
+  );
 
-  const label = String(type).charAt(0).toUpperCase() + String(type).slice(1).toLowerCase();
+  const label =
+    String(type).charAt(0).toUpperCase() + String(type).slice(1).toLowerCase();
 
   return (
     <Badge

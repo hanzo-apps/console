@@ -1,4 +1,4 @@
-import { type PrismaClient } from "@langfuse/shared/src/db";
+import { type PrismaClient } from "@hanzo/console/src/db";
 import {
   BlobStorageExportMode,
   BlobStorageIntegrationType,
@@ -6,10 +6,10 @@ import {
   AnalyticsIntegrationExportSource,
   type BlobStorageIntegrationFileType,
   type ObservationFieldGroupFull,
-} from "@langfuse/shared";
-import { encrypt } from "@langfuse/shared/encryption";
+} from "@hanzo/console";
+import { encrypt } from "@hanzo/console/encryption";
 import { env } from "@/src/env.mjs";
-import { validateBlobStorageEndpoint } from "@langfuse/shared/src/server";
+import { validateBlobStorageEndpoint } from "@hanzo/console/src/server";
 
 type UpsertBlobStorageIntegrationInput = {
   type: BlobStorageIntegrationType;
@@ -61,7 +61,7 @@ export async function upsertBlobStorageIntegration(params: {
 }) {
   const { prisma, projectId, data } = params;
 
-  const isSelfHosted = !env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
+  const isSelfHosted = !env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
   const canUseHostCredentials =
     isSelfHosted && data.type === BlobStorageIntegrationType.S3;
 

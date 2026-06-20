@@ -7,7 +7,7 @@ import {
   recordGauge,
   recordIncrement,
   traceException,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { env } from "../../env";
 import { PeriodicExclusiveRunner } from "../../utils/PeriodicExclusiveRunner";
 
@@ -28,9 +28,7 @@ export class BatchProjectMediaCleaner extends PeriodicExclusiveRunner {
   }
 
   constructor() {
-    const lockTtlSeconds =
-      Math.ceil(env.LANGFUSE_BATCH_PROJECT_CLEANER_DELETE_TIMEOUT_MS / 1000) +
-      300;
+    const lockTtlSeconds = Math.ceil(env.LANGFUSE_BATCH_PROJECT_CLEANER_DELETE_TIMEOUT_MS / 1000) + 300;
 
     super({
       name: "BatchProjectMediaCleaner",
@@ -59,10 +57,7 @@ export class BatchProjectMediaCleaner extends PeriodicExclusiveRunner {
           try {
             targetProjectId = await getDeletedProjectWithMedia();
           } catch (error) {
-            logger.error(
-              `${this.instanceName}: Failed to query target project`,
-              { error },
-            );
+            logger.error(`${this.instanceName}: Failed to query target project`, { error });
             traceException(error);
             return env.LANGFUSE_BATCH_PROJECT_CLEANER_SLEEP_ON_EMPTY_MS;
           }
@@ -106,9 +101,7 @@ export class BatchProjectMediaCleaner extends PeriodicExclusiveRunner {
     await deleteMediaFiles({
       projectId,
       mediaFiles,
-      storageClient: getS3MediaStorageClient(
-        env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET!,
-      ),
+      storageClient: getS3MediaStorageClient(env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET!),
     });
 
     recordIncrement(`${METRIC_PREFIX}.media_files_deleted`, mediaFiles.length, {

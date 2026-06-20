@@ -1,10 +1,17 @@
-import { type GetPromptsMetaType, type FilterState, promptsTableCols, type PromptType } from "@hanzo/shared";
-import { prisma } from "@hanzo/shared/src/db";
-import { tableColumnsToSqlFilterAndPrefix } from "@hanzo/shared/src/server";
+import {
+  type GetPromptsMetaType,
+  type FilterState,
+  promptsTableCols,
+  type PromptType,
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
+import { tableColumnsToSqlFilterAndPrefix } from "@hanzo/console/src/server";
 
 export type GetPromptsMetaParams = GetPromptsMetaType & { projectId: string };
 
-export const getPromptsMeta = async (params: GetPromptsMetaParams): Promise<PromptsMetaResponse> => {
+export const getPromptsMeta = async (
+  params: GetPromptsMetaParams,
+): Promise<PromptsMetaResponse> => {
   const { projectId, page, limit } = params;
 
   const promptsMeta = (await prisma.$queryRaw`

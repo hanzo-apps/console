@@ -35,11 +35,11 @@ export const isAnnotationScoreMissingConfigId = (body: {
   configId?: string | null;
   dataType?: ScoreDataTypeType;
 }): boolean =>
-  body.source === ScoreSourceEnum.ANNOTATION &&
-  !body.configId &&
-  body.dataType !== ScoreDataTypeEnum.CORRECTION;
+  body.source === ScoreSourceEnum.ANNOTATION && !body.configId && body.dataType !== ScoreDataTypeEnum.CORRECTION;
 
 export const CORRECTION_NAME = "output" as const;
+
+export const TEXT_SCORE_MAX_LENGTH = 500 as const;
 
 export const ScoreDataTypeArray = ["NUMERIC", "CATEGORICAL", "BOOLEAN", "CORRECTION"] as const;
 export const ScoreDataTypeEnum = {

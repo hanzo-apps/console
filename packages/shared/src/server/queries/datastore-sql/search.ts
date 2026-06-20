@@ -1,5 +1,4 @@
 import { TracingSearchType } from "../../../interfaces/search";
-import { ftsTextTokenConjunct } from "./fts";
 
 const regexIndefiniteCharacters = "%";
 
@@ -13,60 +12,21 @@ export const datastoreSearchCondition = (
 
   const cols = searchColumns ? searchColumns : [`${prefix}id`, `t.user_id`, `${prefix}name`];
 
-  const defaultCols = [`${prefix}id`, `t.user_id`, `${prefix}name`];
-  const cols = (searchColumns ?? defaultCols).map((col) =>
-    col.includes(".") ? col : `${prefix}${col}`,
-  );
-  const inputCol = `${prefix}input`;
-  const outputCol = `${prefix}output`;
-  const requiresEventsFull =
-    Boolean(query) &&
-    Boolean(
-      searchType?.includes("content") ||
-      searchType?.includes("input") ||
-      searchType?.includes("output"),
-    );
-
-  // For input/output (which can hold JSON written by an `ensure_ascii=True` serializer), also
-  // match the `\uXXXX`-escaped form of the query. ASCII-only queries are unaffected: the escaped
-  // form is identical, so no extra parameter or clause is emitted (keeps existing behaviour and
-  // query plans for the common case). See issue #11538 and `toJsonUnicodeEscaped` above.
-  const escapedQuery = query ? toJsonUnicodeEscaped(query) : undefined;
-  const hasEscapedVariant = !!query && escapedQuery !== query;
-
-  const ioColumnMatch = (col: string) =>
-    hasEscapedVariant
-      ? `${ilikeWithPrefilter(col)} OR ${ilikeWithPrefilter(
-          col,
-          "{searchStringEscaped: String}",
-        )}`
-      : ilikeWithPrefilter(col);
-
-  // The default cols include t.user_id for callers querying via traces CTE (traces.ts, observations.ts).
+  // We use a hard-coded prefix for user_id as it only occurs in the trace context.
   const conditions = [
     !searchType || searchType.includes("id")
       ? cols.map((col) => `${col} ILIKE {searchString: String}`).join(" OR ")
       : null,
     searchType && searchType.includes("content")
-      ? `${ioColumnMatch(inputCol)} OR ${ioColumnMatch(outputCol)}`
-      : null,
-    searchType && searchType.includes("input") ? ioColumnMatch(inputCol) : null,
-    searchType && searchType.includes("output")
-      ? ioColumnMatch(outputCol)
+      ? `${prefix}input ILIKE {searchString: String} OR ${prefix}output ILIKE {searchString: String}`
       : null,
   ].filter(Boolean);
 
   return {
     query: query ? `AND (${conditions.join(" OR ")})` : "",
-    requiresEventsFull,
     params: query
       ? {
           searchString: `${regexIndefiniteCharacters}${query}${regexIndefiniteCharacters}`,
-          ...(hasEscapedVariant
-            ? {
-                searchStringEscaped: `${regexIndefiniteCharacters}${escapedQuery}${regexIndefiniteCharacters}`,
-              }
-            : {}),
         }
       : {},
   };

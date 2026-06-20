@@ -1,8 +1,8 @@
 import { type UseFormReturn } from "react-hook-form";
 import { type CreateExperiment } from "@/src/features/experiments/types";
-import { type UIModelParams } from "@hanzo/console-core/src/server";
+import { type UIModelParams } from "@hanzo/console/src/server";
 import { type ModelParamsContext } from "@/src/components/ModelParameters";
-import { type EvalTemplate, type PromptType } from "@hanzo/console-core";
+import { type EvalTemplate, type PromptType } from "@hanzo/console";
 import { type PartialConfig } from "@/src/features/evals/types";
 
 type ValidationResult =
@@ -42,7 +42,9 @@ export type PromptModelState = {
   setSelectedPromptName: (name: string) => void;
   selectedPromptVersion: number | null;
   setSelectedPromptVersion: (version: number | null) => void;
-  promptsByName: Record<string, Array<{ id: string; version: number; labels: string[] }>> | undefined;
+  promptsByName:
+    | Record<string, Array<{ id: string; version: number; labels: string[] }>>
+    | undefined;
 };
 
 export type ModelState = {

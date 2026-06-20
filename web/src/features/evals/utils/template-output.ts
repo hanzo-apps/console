@@ -2,7 +2,7 @@ import {
   PersistedEvalOutputDefinitionSchema,
   resolvePersistedEvalOutputDefinition,
   ScoreDataTypeEnum,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 export const getTemplateResultType = (outputDefinition: unknown) => {
   if (typeof outputDefinition !== "object" || outputDefinition === null) {

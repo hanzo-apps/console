@@ -1,9 +1,12 @@
-import { CommentObjectType, type CreateCommentData } from "@hanzo/console-core";
+import { CommentObjectType, type CreateCommentData } from "@hanzo/console";
 import { type z } from "zod/v4";
-import { getObservationById, getTraceById } from "@hanzo/console-core/src/server";
+import { getObservationById, getTraceById } from "@hanzo/console/src/server";
 
 const isObservationOrTrace = (objectType: CommentObjectType) => {
-  return objectType === CommentObjectType.OBSERVATION || objectType === CommentObjectType.TRACE;
+  return (
+    objectType === CommentObjectType.OBSERVATION ||
+    objectType === CommentObjectType.TRACE
+  );
 };
 
 export const validateCommentReferenceObject = async ({

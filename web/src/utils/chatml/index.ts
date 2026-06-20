@@ -11,4 +11,4 @@ export {
   type NormalizerContext,
   type ProviderAdapter,
   type ToolEvent,
-} from "@hanzo/console-core";
+} from "@hanzo/console";

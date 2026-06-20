@@ -1,9 +1,9 @@
-import { NULL_IF_EMPTY_RE } from "@langfuse/shared/query/server";
+import { NULL_IF_EMPTY_RE } from "@hanzo/console/query/server";
 import {
   StringFilter,
   StringOptionsFilter,
   NullFilter,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 // ─── NULL_IF_EMPTY_RE ───────────────────────────────────────────────────────
 
@@ -117,7 +117,7 @@ describe("StringFilter with emptyEqualsNull", () => {
     },
   ])("$desc", ({ operator, value, expectedQuery, paramValues }) => {
     const { query, params } = new StringFilter({
-      clickhouseTable: "",
+      datastoreTable: "",
       field: C,
       operator,
       value,
@@ -167,7 +167,7 @@ describe("StringOptionsFilter with emptyEqualsNull", () => {
     },
   ])("$desc", ({ operator, values, expectedQuery, paramValues }) => {
     const { query, params } = new StringOptionsFilter({
-      clickhouseTable: "",
+      datastoreTable: "",
       field: C,
       operator,
       values,
@@ -197,7 +197,7 @@ describe("NullFilter with emptyEqualsNull", () => {
     },
   ])("$desc", ({ operator, expectedQuery }) => {
     const { query, params } = new NullFilter({
-      clickhouseTable: "",
+      datastoreTable: "",
       field: C,
       operator,
       emptyEqualsNull: true,

@@ -2,7 +2,7 @@ import {
   createBooleanEvalOutputDefinition,
   createCategoricalEvalOutputDefinition,
   createNumericEvalOutputDefinition,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { getTemplateResultType } from "./template-output";
 
 describe("getTemplateResultType", () => {

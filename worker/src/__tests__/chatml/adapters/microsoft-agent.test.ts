@@ -5,7 +5,7 @@ import {
   mapToChatMl,
   mapOutputToChatMl,
   type NormalizerContext,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 
 // Test helpers
 function normalizeInput(input: unknown, ctx: NormalizerContext = {}) {
@@ -224,9 +224,7 @@ describe("Microsoft Agent Framework Adapter", () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.data?.[0].content).toBe(
-        "What's the weather like in Portland?",
-      );
+      expect(result.data?.[0].content).toBe("What's the weather like in Portland?");
       expect(result.data?.[0].tools).toEqual([
         {
           name: "get_weather",

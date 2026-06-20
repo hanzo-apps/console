@@ -1,15 +1,8 @@
 import { type JobConfiguration } from "@prisma/client";
 import { z } from "zod";
-import {
-  EvalTargetObject,
-  observationVariableMappingList,
-  singleFilter,
-  variableMappingList,
-} from "@langfuse/shared";
+import { EvalTargetObject, observationVariableMappingList, singleFilter, variableMappingList } from "@hanzo/console";
 
-const dedupeStrings = (values: string[]): string[] => [
-  ...new Set(values.filter(Boolean)),
-];
+const dedupeStrings = (values: string[]): string[] => [...new Set(values.filter(Boolean))];
 
 const getFilterDimensions = (filter: JobConfiguration["filter"]): string[] => {
   const parsedFilter = z.array(singleFilter).safeParse(filter);
@@ -22,45 +15,28 @@ const getVariableSourceFields = (
   variableMappingJson: JobConfiguration["variableMapping"],
   targetObject: JobConfiguration["targetObject"],
 ): string[] => {
-  if (
-    targetObject === EvalTargetObject.EVENT ||
-    targetObject === EvalTargetObject.EXPERIMENT
-  ) {
-    const parsedObservationMapping =
-      observationVariableMappingList.safeParse(variableMappingJson);
+  if (targetObject === EvalTargetObject.EVENT || targetObject === EvalTargetObject.EXPERIMENT) {
+    const parsedObservationMapping = observationVariableMappingList.safeParse(variableMappingJson);
     if (!parsedObservationMapping.success) return [];
 
-    return dedupeStrings(
-      parsedObservationMapping.data.map(
-        ({ selectedColumnId }) => selectedColumnId,
-      ),
-    );
+    return dedupeStrings(parsedObservationMapping.data.map(({ selectedColumnId }) => selectedColumnId));
   }
 
   const parsedTraceMapping = variableMappingList.safeParse(variableMappingJson);
   if (!parsedTraceMapping.success) return [];
 
   return dedupeStrings(
-    parsedTraceMapping.data.map(
-      ({ langfuseObject, selectedColumnId }) =>
-        `${langfuseObject}.${selectedColumnId}`,
-    ),
+    parsedTraceMapping.data.map(({ langfuseObject, selectedColumnId }) => `${langfuseObject}.${selectedColumnId}`),
   );
 };
 
 export const buildEvalExecutionSpanAttributes = ({
   config,
 }: {
-  config: Pick<
-    JobConfiguration,
-    "id" | "filter" | "targetObject" | "variableMapping"
-  >;
+  config: Pick<JobConfiguration, "id" | "filter" | "targetObject" | "variableMapping">;
 }): Record<string, string | number | string[]> => {
   const filterDimensions = getFilterDimensions(config.filter);
-  const variableSourceFields = getVariableSourceFields(
-    config.variableMapping,
-    config.targetObject,
-  );
+  const variableSourceFields = getVariableSourceFields(config.variableMapping, config.targetObject);
 
   return {
     "eval.job_configuration.id": config.id,

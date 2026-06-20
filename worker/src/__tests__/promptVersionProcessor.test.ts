@@ -1,13 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { v4 } from "uuid";
-import {
-  ActionExecutionStatus,
-  JobConfigState,
-  TriggerEventSource,
-  PromptType,
-} from "@hanzo/console-core";
-import { createOrgProjectAndApiKey, redis, EntityChangeEventType } from "@hanzo/console-core/src/server";
-import { ActionType, prisma } from "@hanzo/console-core/src/db";
+import { ActionExecutionStatus, JobConfigState, TriggerEventSource, PromptType } from "@hanzo/console";
+import { createOrgProjectAndApiKey, redis, EntityChangeEventType } from "@hanzo/console/src/server";
+import { ActionType, prisma } from "@hanzo/console/src/db";
 import { promptVersionProcessor } from "../features/entityChange/promptVersionProcessor";
 
 describe("promptVersionChangeWorker", () => {
@@ -45,133 +40,125 @@ describe("promptVersionChangeWorker", () => {
       expected: 0,
     },
     {
-      description:
-        "should execute webhook when eventActions and filters are empty",
+      description: "should execute webhook when eventActions and filters are empty",
       trigger: { eventActions: [] as string[], nameFilter: null },
       event: { promptName: "test-prompt", action: "updated" as const },
       expected: 1,
     },
     // eventActions + name filter combinations
     {
-      description:
-        "should execute webhook when eventActions is empty and name filter matches",
+      description: "should execute webhook when eventActions is empty and name filter matches",
       trigger: { eventActions: [] as string[], nameFilter: "target-prompt" },
       event: { promptName: "target-prompt", action: "created" as const },
       expected: 1,
     },
     {
-      description:
-        "should execute webhook when eventActions and name filter both match",
+      description: "should execute webhook when eventActions and name filter both match",
       trigger: { eventActions: ["created"], nameFilter: "target-prompt" },
       event: { promptName: "target-prompt", action: "created" as const },
       expected: 1,
     },
     {
-      description:
-        "should not execute when eventActions matches but name filter does not",
+      description: "should not execute when eventActions matches but name filter does not",
       trigger: { eventActions: ["created"], nameFilter: "target-prompt" },
       event: { promptName: "different-prompt", action: "created" as const },
       expected: 0,
     },
     {
-      description:
-        "should not execute when eventActions does not match but name filter does",
+      description: "should not execute when eventActions does not match but name filter does",
       trigger: { eventActions: ["deleted"], nameFilter: "target-prompt" },
       event: { promptName: "target-prompt", action: "created" as const },
       expected: 0,
     },
-  ])(
-    "$description",
-    async ({ trigger, event: { promptName, action }, expected }) => {
-      const { eventActions, nameFilter } = trigger;
-      const promptId = v4();
+  ])("$description", async ({ trigger, event: { promptName, action }, expected }) => {
+    const { eventActions, nameFilter } = trigger;
+    const promptId = v4();
 
-      const actionId = v4();
-      await prisma.action.create({
-        data: {
-          id: actionId,
-          projectId,
-          type: ActionType.WEBHOOK,
-          config: {
-            type: "WEBHOOK",
-            url: "https://webhook.example.com/test",
-            headers: {},
-            method: "POST",
-          },
-        },
-      });
-
-      const triggerId = v4();
-      await prisma.trigger.create({
-        data: {
-          id: triggerId,
-          projectId,
-          eventSource: TriggerEventSource.Prompt,
-          eventActions,
-          status: JobConfigState.ACTIVE,
-          filter: nameFilter
-            ? [
-                {
-                  column: "Name",
-                  operator: "=",
-                  value: nameFilter,
-                  type: "string",
-                },
-              ]
-            : [],
-        },
-      });
-
-      const automationId = v4();
-      await prisma.automation.create({
-        data: {
-          id: automationId,
-          name: `automation-${v4()}`,
-          projectId,
-          triggerId,
-          actionId,
-        },
-      });
-
-      const event: EntityChangeEventType = {
-        entityType: "prompt-version",
+    const actionId = v4();
+    await prisma.action.create({
+      data: {
+        id: actionId,
         projectId,
-        promptId,
-        action,
-        prompt: {
-          id: promptId,
-          projectId,
-          name: promptName,
-          version: 1,
-          prompt: { messages: [{ role: "user", content: "Hello" }] },
-          config: null,
-          tags: [],
-          labels: [],
-          type: PromptType.Chat,
-          isActive: true,
-          createdBy: "test-user",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          commitMessage: null,
+        type: ActionType.WEBHOOK,
+        config: {
+          type: "WEBHOOK",
+          url: "https://webhook.example.com/test",
+          headers: {},
+          method: "POST",
         },
-        user: {
-          id: "test-user",
-          name: "Test User",
-          email: "test@example.com",
-        },
-      };
+      },
+    });
 
-      await promptVersionProcessor(event);
+    const triggerId = v4();
+    await prisma.trigger.create({
+      data: {
+        id: triggerId,
+        projectId,
+        eventSource: TriggerEventSource.Prompt,
+        eventActions,
+        status: JobConfigState.ACTIVE,
+        filter: nameFilter
+          ? [
+              {
+                column: "Name",
+                operator: "=",
+                value: nameFilter,
+                type: "string",
+              },
+            ]
+          : [],
+      },
+    });
 
-      const executions = await prisma.automationExecution.findMany({
-        where: { projectId, automationId },
-      });
+    const automationId = v4();
+    await prisma.automation.create({
+      data: {
+        id: automationId,
+        name: `automation-${v4()}`,
+        projectId,
+        triggerId,
+        actionId,
+      },
+    });
 
-      expect(executions).toHaveLength(expected);
-      if (expected > 0) {
-        expect(executions[0].status).toBe(ActionExecutionStatus.PENDING);
-        expect(executions[0].sourceId).toBe(promptId);
-      }
-    },
-  );
+    const event: EntityChangeEventType = {
+      entityType: "prompt-version",
+      projectId,
+      promptId,
+      action,
+      prompt: {
+        id: promptId,
+        projectId,
+        name: promptName,
+        version: 1,
+        prompt: { messages: [{ role: "user", content: "Hello" }] },
+        config: null,
+        tags: [],
+        labels: [],
+        type: PromptType.Chat,
+        isActive: true,
+        createdBy: "test-user",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        commitMessage: null,
+      },
+      user: {
+        id: "test-user",
+        name: "Test User",
+        email: "test@example.com",
+      },
+    };
+
+    await promptVersionProcessor(event);
+
+    const executions = await prisma.automationExecution.findMany({
+      where: { projectId, automationId },
+    });
+
+    expect(executions).toHaveLength(expected);
+    if (expected > 0) {
+      expect(executions[0].status).toBe(ActionExecutionStatus.PENDING);
+      expect(executions[0].sourceId).toBe(promptId);
+    }
+  });
 });

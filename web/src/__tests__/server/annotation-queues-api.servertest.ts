@@ -1,7 +1,8 @@
-/** @jest-environment node */
-
-import { prisma } from "@hanzo/shared/src/db";
-import { makeZodVerifiedAPICall, makeAPICall, pruneDatabase } from "@/src/__tests__/test-utils";
+import { prisma } from "@hanzo/console/src/db";
+import {
+  makeZodVerifiedAPICall,
+  makeAPICall,
+} from "@/src/__tests__/test-utils";
 import {
   GetAnnotationQueuesResponse,
   GetAnnotationQueueByIdResponse,
@@ -12,8 +13,11 @@ import {
   DeleteAnnotationQueueItemResponse,
   CreateAnnotationQueueResponse,
 } from "@/src/features/public-api/types/annotation-queues";
-import { AnnotationQueueObjectType, AnnotationQueueStatus } from "@hanzo/shared";
-import { createOrgProjectAndApiKey } from "@hanzo/shared/src/server";
+import {
+  AnnotationQueueObjectType,
+  AnnotationQueueStatus,
+} from "@hanzo/console";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import { v4 as uuidv4 } from "uuid";
 
 const TOTAL_TEST_QUEUES = 10; // Create enough queues to test pagination
@@ -23,11 +27,15 @@ describe("Annotation Queues API Endpoints", () => {
   let auth: string;
   let projectId: string;
 
-  beforeAll(async () => {
-    // Create organization, project, and API key for testing
-    const { auth: newAuth, projectId: newProjectId } = await createOrgProjectAndApiKey();
-    auth = newAuth;
-    projectId = newProjectId;
+  const createQueue = (overrides: Partial<{ name: string }> = {}) =>
+    prisma.annotationQueue.create({
+      data: {
+        name: overrides.name ?? "Test Queue 1",
+        description: "Test Queue Description 1",
+        scoreConfigIds: [],
+        projectId,
+      },
+    });
 
   const createQueues = async (count = TOTAL_TEST_QUEUES) =>
     Promise.all(
@@ -55,14 +63,11 @@ describe("Annotation Queues API Endpoints", () => {
             ? AnnotationQueueStatus.PENDING
             : AnnotationQueueStatus.COMPLETED;
 
-      // Alternate between PENDING and COMPLETED status
-      const status = i % 2 === 0 ? AnnotationQueueStatus.PENDING : AnnotationQueueStatus.COMPLETED;
+        // Set completedAt for COMPLETED items
+        const completedAt =
+          status === AnnotationQueueStatus.COMPLETED ? new Date() : null;
 
-      // Set completedAt for COMPLETED items
-      const completedAt = status === AnnotationQueueStatus.COMPLETED ? new Date() : null;
-
-      queueItemPromises.push(
-        prisma.annotationQueueItem.create({
+        return prisma.annotationQueueItem.create({
           data: {
             queueId: targetQueueId,
             objectId: uuidv4(),
@@ -130,7 +135,9 @@ describe("Annotation Queues API Endpoints", () => {
       expect(response.body.meta.limit).toBe(limit);
       expect(response.body.data.length).toBe(limit);
       expect(response.body.meta.totalItems).toBe(TOTAL_TEST_QUEUES);
-      expect(response.body.meta.totalPages).toBe(Math.ceil(TOTAL_TEST_QUEUES / limit));
+      expect(response.body.meta.totalPages).toBe(
+        Math.ceil(TOTAL_TEST_QUEUES / limit),
+      );
     });
 
     it("should return different results for different pages", async () => {
@@ -158,10 +165,14 @@ describe("Annotation Queues API Endpoints", () => {
 
       // Check that we got different items on each page
       const firstPageIds = firstPageResponse.body.data.map((queue) => queue.id);
-      const secondPageIds = secondPageResponse.body.data.map((queue) => queue.id);
+      const secondPageIds = secondPageResponse.body.data.map(
+        (queue) => queue.id,
+      );
 
       // No IDs should be in both pages
-      const intersection = firstPageIds.filter((id) => secondPageIds.includes(id));
+      const intersection = firstPageIds.filter((id) =>
+        secondPageIds.includes(id),
+      );
       expect(intersection.length).toBe(0);
 
       // Both pages should have the expected number of items
@@ -278,9 +289,10 @@ describe("Annotation Queues API Endpoints", () => {
     });
 
     it("should return 405 if the user is on the Hobby plan and has reached the maximum number of annotation queues", async () => {
-      const { auth: hobbyPlanAuth, projectId: hobbyProjectId } = await createOrgProjectAndApiKey({
-        plan: "Hobby",
-      });
+      const { auth: hobbyPlanAuth, projectId: hobbyProjectId } =
+        await createOrgProjectAndApiKey({
+          plan: "Hobby",
+        });
 
       const config = await prisma.scoreConfig.create({
         data: {
@@ -340,7 +352,12 @@ describe("Annotation Queues API Endpoints", () => {
 
     it("should return 404 for non-existent queue", async () => {
       const nonExistentId = uuidv4();
-      const response = await makeAPICall("GET", `/api/public/annotation-queues/${nonExistentId}`, undefined, auth);
+      const response = await makeAPICall(
+        "GET",
+        `/api/public/annotation-queues/${nonExistentId}`,
+        undefined,
+        auth,
+      );
 
       expect(response.status).toBe(404);
     });
@@ -369,7 +386,9 @@ describe("Annotation Queues API Endpoints", () => {
       expect(response.body.data[0]).toHaveProperty("id");
       expect(response.body.data[0]).toHaveProperty("queueId");
       expect(response.body.meta).toHaveProperty("totalItems");
-      expect(response.body.data.every((item) => item.queueId === queueId)).toBe(true);
+      expect(response.body.data.every((item) => item.queueId === queueId)).toBe(
+        true,
+      );
     });
 
     it("should support pagination with correct limits for queue items", async () => {
@@ -386,7 +405,9 @@ describe("Annotation Queues API Endpoints", () => {
       expect(response.body.meta.page).toBe(1);
       expect(response.body.meta.limit).toBe(limit);
       expect(response.body.data.length).toBeGreaterThan(0);
-      expect(response.body.data.every((item) => item.queueId === queueId)).toBe(true);
+      expect(response.body.data.every((item) => item.queueId === queueId)).toBe(
+        true,
+      );
     });
 
     it("should return different results for different pages of queue items", async () => {
@@ -435,7 +456,9 @@ describe("Annotation Queues API Endpoints", () => {
       const secondPageIds = secondPageResponse.body.data.map((item) => item.id);
 
       // No IDs should be in both pages
-      const intersection = firstPageIds.filter((id) => secondPageIds.includes(id));
+      const intersection = firstPageIds.filter((id) =>
+        secondPageIds.includes(id),
+      );
       expect(intersection.length).toBe(0);
 
       // Both pages should have items
@@ -455,7 +478,11 @@ describe("Annotation Queues API Endpoints", () => {
       expect(response.status).toBe(200);
       expect(response.body.data.length).toBeGreaterThan(0);
       expect(
-        response.body.data.every((item) => item.queueId === queueId && item.status === AnnotationQueueStatus.PENDING),
+        response.body.data.every(
+          (item) =>
+            item.queueId === queueId &&
+            item.status === AnnotationQueueStatus.PENDING,
+        ),
       ).toBe(true);
     });
 
@@ -588,24 +615,13 @@ describe("Annotation Queues API Endpoints", () => {
       ]);
 
       expect(traceResponse.status).toBe(200);
-      expect(traceResponse.body.objectType).toBe(AnnotationQueueObjectType.TRACE);
-
-      // Create a queue item with OBSERVATION object type
-      const observationObjectId = uuidv4();
-      const observationResponse = await makeZodVerifiedAPICall(
-        CreateAnnotationQueueItemResponse,
-        "POST",
-        `/api/public/annotation-queues/${queueId}/items`,
-        {
-          objectId: observationObjectId,
-          objectType: AnnotationQueueObjectType.OBSERVATION,
-          status: AnnotationQueueStatus.PENDING,
-        },
-        auth,
+      expect(traceResponse.body.objectType).toBe(
+        AnnotationQueueObjectType.TRACE,
       );
-
       expect(observationResponse.status).toBe(200);
-      expect(observationResponse.body.objectType).toBe(AnnotationQueueObjectType.OBSERVATION);
+      expect(observationResponse.body.objectType).toBe(
+        AnnotationQueueObjectType.OBSERVATION,
+      );
 
       // Verify we can retrieve items with different object types
       const itemsResponse = await makeZodVerifiedAPICall(
@@ -619,14 +635,20 @@ describe("Annotation Queues API Endpoints", () => {
       expect(itemsResponse.status).toBe(200);
 
       // Find our created items in the response
-      const traceItem = itemsResponse.body.data.find((item) => item.objectId === traceObjectId);
-      const observationItem = itemsResponse.body.data.find((item) => item.objectId === observationObjectId);
+      const traceItem = itemsResponse.body.data.find(
+        (item) => item.objectId === traceObjectId,
+      );
+      const observationItem = itemsResponse.body.data.find(
+        (item) => item.objectId === observationObjectId,
+      );
 
       expect(traceItem).toBeDefined();
       expect(traceItem?.objectType).toBe(AnnotationQueueObjectType.TRACE);
       expect(traceItem?.status).toBe(AnnotationQueueStatus.COMPLETED);
       expect(observationItem).toBeDefined();
-      expect(observationItem?.objectType).toBe(AnnotationQueueObjectType.OBSERVATION);
+      expect(observationItem?.objectType).toBe(
+        AnnotationQueueObjectType.OBSERVATION,
+      );
       expect(observationItem?.status).toBe(AnnotationQueueStatus.PENDING);
     });
 

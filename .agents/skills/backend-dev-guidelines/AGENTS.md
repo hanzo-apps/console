@@ -161,14 +161,14 @@ const validated = schema.parse(input);
 
 ```typescript
 // Services use Prisma directly for simple CRUD
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 
 const dataset = await prisma.dataset.findUnique({
   where: { id: datasetId, projectId }, // Always filter by projectId for tenant isolation
 });
 
 // Or use repositories for complex queries (traces, observations, scores)
-import { getTracesTable } from "@langfuse/shared/src/server";
+import { getTracesTable } from "@hanzo/console/src/server";
 
 const traces = await getTracesTable({
   projectId,
@@ -187,7 +187,7 @@ import {
   logger,          // Winston logger with OpenTelemetry/DataDog context
   traceException,  // Record exceptions to OpenTelemetry spans
   instrumentAsync, // Create instrumented spans
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 // Structured logging (includes trace_id, span_id, dd.trace_id)
 logger.info("Processing dataset", { datasetId, projectId });

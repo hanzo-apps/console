@@ -1,6 +1,6 @@
-import type z from "zod/v4";
-import type { ViewVersion, ViewDeclarationType, DimensionsDeclarationType, views } from "@/src/features/query/types";
-import { InvalidRequestError } from "@hanzo/shared";
+import { z } from "zod/v4";
+import type { ViewVersion, ViewDeclarationType, DimensionsDeclarationType, views } from "./types";
+import { InvalidRequestError } from "../../errors";
 
 // The data model defines all available dimensions, measures, and the timeDimension for a given view.
 // Make sure to update web/src/features/dashboard/lib/dashboardUiTableToViewMapping.ts if you make changes
@@ -244,8 +244,7 @@ export const eventsTracesView: ViewDeclarationType = {
       aggs: { agg: "any" },
       alias: "uniqueUserIds",
       type: "string",
-      description:
-        "User identifier; apply uniq aggregation to count distinct users.",
+      description: "User identifier; apply uniq aggregation to count distinct users.",
       unit: "users",
     },
     uniqueSessionIds: {
@@ -253,8 +252,7 @@ export const eventsTracesView: ViewDeclarationType = {
       aggs: { agg: "any" },
       alias: "uniqueSessionIds",
       type: "string",
-      description:
-        "Session identifier; apply uniq aggregation to count distinct sessions.",
+      description: "Session identifier; apply uniq aggregation to count distinct sessions.",
       unit: "sessions",
     },
     latency: {
@@ -1272,18 +1270,12 @@ export function requiresV2(params: {
   measures: { measure: string }[];
   filters?: { column: string }[];
 }): boolean {
-  const v1View =
-    viewDeclarations.v1[params.view as keyof (typeof viewDeclarations)["v1"]];
-  const v2View =
-    viewDeclarations.v2[params.view as keyof (typeof viewDeclarations)["v2"]];
+  const v1View = viewDeclarations.v1[params.view as keyof (typeof viewDeclarations)["v1"]];
+  const v2View = viewDeclarations.v2[params.view as keyof (typeof viewDeclarations)["v2"]];
   if (!v1View || !v2View) return false;
 
-  const v2OnlyDims = Object.keys(v2View.dimensions).filter(
-    (k) => !(k in v1View.dimensions),
-  );
-  const v2OnlyMeasures = Object.keys(v2View.measures).filter(
-    (k) => !(k in v1View.measures),
-  );
+  const v2OnlyDims = Object.keys(v2View.dimensions).filter((k) => !(k in v1View.dimensions));
+  const v2OnlyMeasures = Object.keys(v2View.measures).filter((k) => !(k in v1View.measures));
 
   return (
     params.dimensions.some((d) => v2OnlyDims.includes(d.field)) ||
@@ -1297,11 +1289,7 @@ export function requiresV2(params: {
  * if the view or measure is not found. Use this to drive display formatting
  * (e.g. unit === "millisecond" → convert to seconds before rendering).
  */
-function getMeasureUnit(
-  viewName: string,
-  measureName: string,
-  version: ViewVersion = "v1",
-): string | undefined {
+function getMeasureUnit(viewName: string, measureName: string, version: ViewVersion = "v1"): string | undefined {
   const versionViews = viewDeclarations[version];
   const view = versionViews[viewName as keyof typeof versionViews];
   return view?.measures[measureName]?.unit;
@@ -1329,8 +1317,5 @@ for (const versionViews of Object.values(viewDeclarations)) {
     Object.keys(view.measures).forEach((m) => measureNamesSet.add(m));
   }
 }
-const measureNames = Array.from(measureNamesSet).sort() as [
-  string,
-  ...string[],
-];
+const measureNames = Array.from(measureNamesSet).sort() as [string, ...string[]];
 export const measures = z.enum(measureNames);

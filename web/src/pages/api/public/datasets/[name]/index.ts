@@ -1,12 +1,17 @@
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
   GetDatasetV1Query,
   GetDatasetV1Response,
+  transformDbDatasetItemDomainToAPIDatasetItem,
+  transformDbDatasetToAPIDataset,
 } from "@/src/features/public-api/types/datasets";
-import { createDatasetItemFilterState, getDatasetItems } from "@hanzo/shared/src/server";
-import { HanzoNotFoundError } from "@hanzo/shared";
+import {
+  createDatasetItemFilterState,
+  getDatasetItems,
+} from "@hanzo/console/src/server";
+import { HanzoNotFoundError } from "@hanzo/console";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({
@@ -37,6 +42,20 @@ export default withMiddlewares({
 
       const datasetItems = await getDatasetItems({
         projectId: auth.scope.projectId,
-      }),
+        filterState: createDatasetItemFilterState({
+          datasetIds: [dataset.id],
+          status: "ACTIVE",
+        }),
+        includeDatasetName: true,
+      });
+
+      const { datasetRuns, ...params } = dataset;
+
+      return {
+        ...transformDbDatasetToAPIDataset(params),
+        items: datasetItems.map(transformDbDatasetItemDomainToAPIDatasetItem),
+        runs: datasetRuns.map((run) => run.name),
+      };
+    },
   }),
 });

@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -8,15 +8,15 @@ import {
   PutLlmConnectionV1Response,
   transformDbLlmConnectionToAPI,
 } from "@/src/features/public-api/types/llm-connections";
-import { encrypt } from "@hanzo/console-core/encryption";
+import { encrypt } from "@hanzo/console/encryption";
 import { getDisplaySecretKey } from "@/src/features/llm-api-key/server/router";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import {
   InvalidRequestError,
   BEDROCK_USE_DEFAULT_CREDENTIALS,
   LLMAdapter,
-} from "@langfuse/shared";
-import { validateLlmConnectionBaseURL } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { validateLlmConnectionBaseURL } from "@hanzo/console/src/server";
 import { env } from "@/src/env.mjs";
 
 export default withMiddlewares({
@@ -61,7 +61,9 @@ export default withMiddlewares({
       });
 
       // Transform and validate through strict schema
-      const transformedConnections = llmConnections.map(transformDbLlmConnectionToAPI);
+      const transformedConnections = llmConnections.map(
+        transformDbLlmConnectionToAPI,
+      );
 
       return {
         data: transformedConnections,
@@ -105,7 +107,7 @@ export default withMiddlewares({
         }
       }
 
-      const isLangfuseCloud = Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION);
+      const isLangfuseCloud = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
 
       if (body.secretKey === BEDROCK_USE_DEFAULT_CREDENTIALS) {
         if (isLangfuseCloud || body.adapter !== LLMAdapter.Bedrock) {
@@ -122,8 +124,12 @@ export default withMiddlewares({
         baseURL: body.baseURL || null,
         customModels: body.customModels || [],
         withDefaultModels: body.withDefaultModels,
-        extraHeaders: body.extraHeaders ? encrypt(JSON.stringify(body.extraHeaders)) : null,
-        extraHeaderKeys: body.extraHeaders ? Object.keys(body.extraHeaders) : [],
+        extraHeaders: body.extraHeaders
+          ? encrypt(JSON.stringify(body.extraHeaders))
+          : null,
+        extraHeaderKeys: body.extraHeaders
+          ? Object.keys(body.extraHeaders)
+          : [],
         config: body.config,
       };
 

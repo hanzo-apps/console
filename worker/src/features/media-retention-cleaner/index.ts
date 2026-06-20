@@ -1,4 +1,4 @@
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   deleteMediaFiles,
   findExpiredMediaByProjectId,
@@ -8,7 +8,7 @@ import {
   recordIncrement,
   removeIngestionEventsFromS3AndDeleteDatastoreRefsForProject,
   traceException,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { env } from "../../env";
 import { getRetentionCutoffDate } from "../utils";
 import { PeriodicExclusiveRunner } from "../../utils/PeriodicExclusiveRunner";
@@ -187,9 +187,7 @@ export class MediaRetentionCleaner extends PeriodicExclusiveRunner {
     await deleteMediaFiles({
       projectId: workload.projectId,
       mediaFiles,
-      storageClient: getS3MediaStorageClient(
-        env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET!,
-      ),
+      storageClient: getS3MediaStorageClient(env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET!),
     });
 
     // Record successful deletion metrics

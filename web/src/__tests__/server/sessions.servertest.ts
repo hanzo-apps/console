@@ -1,7 +1,7 @@
 import { makeZodVerifiedAPICall } from "@/src/__tests__/test-utils";
 import { PostTracesV1Response } from "@/src/features/public-api/types/traces";
-import { prisma } from "@langfuse/shared/src/db";
-import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 import waitForExpect from "wait-for-expect";
 

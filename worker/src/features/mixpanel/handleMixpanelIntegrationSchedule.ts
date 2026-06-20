@@ -1,5 +1,5 @@
-import { prisma } from "@hanzo/console-core/src/db";
-import { MixpanelIntegrationProcessingQueue, QueueJobs, logger } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { MixpanelIntegrationProcessingQueue, QueueJobs, logger } from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 
 export const handleMixpanelIntegrationSchedule = async () => {

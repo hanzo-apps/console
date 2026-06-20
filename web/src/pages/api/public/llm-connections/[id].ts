@@ -1,4 +1,4 @@
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -10,12 +10,12 @@ import {
   EvaluatorBlockReason,
   getEvaluatorBlockMetadata,
   LangfuseNotFoundError,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import {
   blockEvaluatorConfigsInTx,
   EvaluatorBlockSource,
   finalizeBlockedEvaluatorConfigBlocks,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { findDefaultModelEvalTemplateIds } from "@/src/features/evals/server/defaultModelEvalTemplateRepository";
 
 export default withMiddlewares({

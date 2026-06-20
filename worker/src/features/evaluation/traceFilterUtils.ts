@@ -1,5 +1,5 @@
-import { FilterState, TraceDomain } from "@hanzo/console-core";
-import { tracesTableUiColumnDefinitions } from "@hanzo/console-core/src/server";
+import { FilterState, TraceDomain } from "@hanzo/console";
+import { tracesTableUiColumnDefinitions } from "@hanzo/console/src/server";
 
 const _inMemoryTraceFilterColumns = [
   "id",
@@ -28,9 +28,7 @@ function getColumnDefinition(column: string) {
   return columnDef;
 }
 
-function getInMemoryTraceFilterColumn(
-  column: string,
-): InMemoryTraceFilterColumn | null {
+function getInMemoryTraceFilterColumn(column: string): InMemoryTraceFilterColumn | null {
   const columnDef = getColumnDefinition(column);
 
   switch (columnDef.uiTableId) {

@@ -1,4 +1,4 @@
-import { type Observation } from "@hanzo/console-core";
+import { type Observation } from "@hanzo/console";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 import { type AppRouter } from "@/src/server/api/root";
 import { type ObservationReturnType } from "@/src/server/api/routers/traces";
@@ -71,6 +71,9 @@ export type Guardrail = Observation & {
 export type RouterInput = inferRouterInputs<AppRouter>;
 export type RouterOutput = inferRouterOutputs<AppRouter>;
 
-export const isUndefinedOrNull = <T>(val?: T | null): val is undefined | null => val === undefined || val === null;
+export const isUndefinedOrNull = <T>(val?: T | null): val is undefined | null =>
+  val === undefined || val === null;
 
-export const isNotNullOrUndefined = <T>(val?: T | null): val is Exclude<T, null | undefined> => !isUndefinedOrNull(val);
+export const isNotNullOrUndefined = <T>(
+  val?: T | null,
+): val is Exclude<T, null | undefined> => !isUndefinedOrNull(val);

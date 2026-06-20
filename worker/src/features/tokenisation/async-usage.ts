@@ -1,6 +1,6 @@
 import { Worker } from "worker_threads";
-import { Model } from "@hanzo/console-core";
-import { logger } from "@hanzo/console-core/src/server";
+import { Model } from "@hanzo/console";
+import { logger } from "@hanzo/console/src/server";
 import path from "path";
 import { env } from "../../env";
 

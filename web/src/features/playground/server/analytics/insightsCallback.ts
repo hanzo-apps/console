@@ -3,7 +3,7 @@ import { ServerInsights } from "@/src/features/insights-analytics/ServerInsights
 import type { LLMResult } from "@langchain/core/outputs";
 import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
 
-import type { ChatMessage, ModelParams } from "@hanzo/console-core";
+import type { ChatMessage, ModelParams } from "@hanzo/console";
 
 export class InsightsCallbackHandler extends BaseCallbackHandler {
   public name = "InsightsCallbackHandler";
@@ -35,7 +35,10 @@ export class InsightsCallbackHandler extends BaseCallbackHandler {
   }
 
   private getInputLength() {
-    return this.messages.reduce((acc, message) => acc + message.content.length, 0);
+    return this.messages.reduce(
+      (acc, message) => acc + message.content.length,
+      0,
+    );
   }
 
   private getEventProperties(output: string): ChatCompletionEventProperties {

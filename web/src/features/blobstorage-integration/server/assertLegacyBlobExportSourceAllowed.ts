@@ -2,8 +2,8 @@ import {
   InvalidRequestError,
   isLegacyBlobExportAllowed,
   LEGACY_BLOB_EXPORT_SOURCES,
-} from "@langfuse/shared";
-import { type AnalyticsIntegrationExportSource } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { type AnalyticsIntegrationExportSource } from "@hanzo/console/src/db";
 
 export function assertLegacyBlobExportSourceAllowed({
   project,

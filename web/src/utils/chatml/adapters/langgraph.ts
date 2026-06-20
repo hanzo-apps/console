@@ -1,1 +1,1 @@
-export { langgraphAdapter } from "@hanzo/console-core";
+export { langgraphAdapter } from "@hanzo/console";

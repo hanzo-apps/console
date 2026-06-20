@@ -1,8 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import {
-  EvalTemplateSourceCodeLanguage,
-  EvalTemplateType,
-} from "@prisma/client";
+import { EvalTemplateSourceCodeLanguage, EvalTemplateType } from "@prisma/client";
 import {
   CodeEvalDispatcherError,
   CodeEvalDispatcherErrorCodes,
@@ -23,9 +20,8 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@langfuse/shared/src/server", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@langfuse/shared/src/server")>();
+vi.mock("@hanzo/console/src/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@hanzo/console/src/server")>();
   const { CodeEvalExecutionError, runCodeBasedEvaluationDispatch } =
     await import("../../../../../packages/shared/src/server/evals/codeEvalExecution");
 
@@ -484,9 +480,7 @@ describe("executeCodeBasedEvaluation", () => {
   });
 
   it("preserves a small invalid returned result in the structured trace error", async () => {
-    mocks.dispatcher.dispatch.mockImplementation(() =>
-      parseDispatchResult({ score: 1 }),
-    );
+    mocks.dispatcher.dispatch.mockImplementation(() => parseDispatchResult({ score: 1 }));
 
     const promise = executeCodeBasedEvaluation({
       projectId: "project-1",
@@ -514,9 +508,7 @@ describe("executeCodeBasedEvaluation", () => {
     });
 
     await expect(promise).rejects.toThrow(UnrecoverableError);
-    await expect(promise).rejects.toThrow(
-      "The evaluator returned an invalid result.",
-    );
+    await expect(promise).rejects.toThrow("The evaluator returned an invalid result.");
 
     const trace = mocks.writeInternalTrace.mock.calls[0]?.[0];
     const output = JSON.parse(trace.eventInputs[0].output);
@@ -538,8 +530,7 @@ describe("executeCodeBasedEvaluation", () => {
   });
 
   it("writes an actionable user-visible timeout error", async () => {
-    const rawTimeoutMessage =
-      "Function.TimedOut: Task timed out after 2 seconds";
+    const rawTimeoutMessage = "Function.TimedOut: Task timed out after 2 seconds";
     const error = new CodeEvalDispatcherError(rawTimeoutMessage, {
       code: CodeEvalDispatcherErrorCodes.TIMEOUT,
       retryable: true,
@@ -631,14 +622,12 @@ describe("executeCodeBasedEvaluation", () => {
         eventInputs: [
           expect.objectContaining({
             level: "ERROR",
-            statusMessage:
-              "Code eval execution failed: An internal error occurred",
+            statusMessage: "Code eval execution failed: An internal error occurred",
             output: expect.stringContaining("An internal error occurred"),
             metadata: expect.objectContaining({
               error_name: "CodeEvalDispatcherError",
               error_message: "An internal error occurred",
-              error_code:
-                CodeEvalDispatcherErrorCodes.LAMBDA_CONFIGURATION_ERROR,
+              error_code: CodeEvalDispatcherErrorCodes.LAMBDA_CONFIGURATION_ERROR,
               error_public_code: "INTERNAL_ERROR",
               error_retryable: false,
             }),

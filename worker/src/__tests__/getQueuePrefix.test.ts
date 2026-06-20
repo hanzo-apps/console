@@ -1,15 +1,12 @@
 import { describe, test, expect, beforeEach, afterAll } from "vitest";
-import { getQueuePrefix } from "@langfuse/shared/src/server";
+import { getQueuePrefix } from "@hanzo/console/src/server";
 
 // Import env by resolving the actual filesystem path, bypassing the package
 // exports map. This ensures we get the same env object that redis.js uses
 // internally via its relative "../../env" import.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require("path");
-const envPath = path.resolve(
-  __dirname,
-  "../../node_modules/@langfuse/shared/dist/src/env.js",
-);
+const envPath = path.resolve(__dirname, "../../node_modules/@hanzo/console/dist/src/env.js");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { env } = require(envPath);
 
@@ -64,9 +61,7 @@ describe("getQueuePrefix", () => {
     env.REDIS_KEY_PREFIX = "test-prefix";
     env.REDIS_CLUSTER_ENABLED = "true";
 
-    expect(getQueuePrefix("IngestionQueue")).toBe(
-      "{test-prefix:IngestionQueue}",
-    );
+    expect(getQueuePrefix("IngestionQueue")).toBe("{test-prefix:IngestionQueue}");
     expect(getQueuePrefix("TraceUpsert")).toBe("{test-prefix:TraceUpsert}");
     expect(getQueuePrefix("BatchExport")).toBe("{test-prefix:BatchExport}");
   });

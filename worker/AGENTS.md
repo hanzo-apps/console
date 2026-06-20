@@ -28,15 +28,15 @@ Use root [AGENTS.md](../AGENTS.md) for monorepo-level rules.
 
 ## Shared Package Imports
 
-- Prefer `@langfuse/shared/src/server` in worker runtime code for queue
+- Prefer `@hanzo/console/src/server` in worker runtime code for queue
   helpers/contracts, repositories, logger/instrumentation, Redis/ClickHouse
   helpers, auth helpers, and other shared backend services.
-- Use `@langfuse/shared` for cross-runtime types, schemas, domain contracts,
+- Use `@hanzo/console` for cross-runtime types, schemas, domain contracts,
   model-pricing helpers, and other frontend-safe utilities.
-- Use `@langfuse/shared/src/db` only when worker code or tests need direct
+- Use `@hanzo/console/src/db` only when worker code or tests need direct
   Prisma access.
-- Use narrower subpaths such as `@langfuse/shared/src/env` or
-  `@langfuse/shared/encryption` when you specifically need those focused
+- Use narrower subpaths such as `@hanzo/console/src/env` or
+  `@hanzo/console/encryption` when you specifically need those focused
   helpers instead of the broader barrels.
 - See `../packages/shared/AGENTS.md` for the full shared export map and what
   each entrypoint contains.

@@ -1,4 +1,4 @@
-# Codex Guidelines for `@langfuse/shared`
+# Codex Guidelines for `@hanzo/console`
 
 This file covers package-local guidance for this package.
 Use root [AGENTS.md](../../AGENTS.md) for monorepo-level rules.
@@ -41,25 +41,25 @@ Use root [AGENTS.md](../../AGENTS.md) for monorepo-level rules.
 
 ## Export Entry Points
 
-- `@langfuse/shared` via `src/index.ts`: default shared surface for
+- `@hanzo/console` via `src/index.ts`: default shared surface for
   cross-runtime types, zod schemas, table definitions, domain models, prompt
   helpers, eval/model-pricing helpers, and other frontend-safe utilities.
-- `@langfuse/shared/src/server` via `src/server/index.ts`: server-only barrel
+- `@hanzo/console/src/server` via `src/server/index.ts`: server-only barrel
   for shared backend services, repositories, queue helpers/contracts, Redis and
   ClickHouse helpers, auth helpers, logger/instrumentation, ingestion helpers,
   LLM execution helpers, and server test utilities.
-- `@langfuse/shared/src/db` via `src/db.ts`: Prisma client singleton plus
+- `@hanzo/console/src/db` via `src/db.ts`: Prisma client singleton plus
   Prisma namespace/types for direct database access. Never route this into
   frontend-safe code.
-- `@langfuse/shared/src/env` via `src/env.ts`: validated shared environment
+- `@hanzo/console/src/env` via `src/env.ts`: validated shared environment
   schema/accessors used by backend runtimes and scripts.
-- `@langfuse/shared/encryption` via `src/encryption/index.ts`: encryption and
+- `@hanzo/console/encryption` via `src/encryption/index.ts`: encryption and
   signature helpers for secrets and signed payloads.
-- `@langfuse/shared/query` via `src/features/query/index.ts`: dashboard query feature.
+- `@hanzo/console/query` via `src/features/query/index.ts`: dashboard query feature.
 - Narrower exported subpaths also exist for targeted imports:
-  `@langfuse/shared/src/server/auth/apiKeys`,
-  `@langfuse/shared/src/server/ee/ingestionMasking`, and
-  `@langfuse/shared/src/utils/chatml`.
+  `@hanzo/console/src/server/auth/apiKeys`,
+  `@hanzo/console/src/server/ee/ingestionMasking`, and
+  `@hanzo/console/src/utils/chatml`.
 
 When changing export surfaces, keep `package.json#exports`, the relevant barrel
 file (`src/index.ts`, `src/server/index.ts`, etc.), and this guide aligned in
@@ -78,14 +78,14 @@ the same PR.
 
 ## Quick Commands
 
-- Dev watch build: `pnpm --filter @langfuse/shared run dev`
-- Lint: `pnpm --filter @langfuse/shared run lint`
-- Lint fix: `pnpm --filter @langfuse/shared run lint:fix`
-- Typecheck: `pnpm --filter @langfuse/shared run typecheck`
-- Build: `pnpm --filter @langfuse/shared run build`
-- Prisma generate: `pnpm --filter @langfuse/shared run db:generate`
-- Prisma migrate (dev): `pnpm --filter @langfuse/shared run db:migrate`
-- ClickHouse reset: `pnpm --filter @langfuse/shared run ch:reset`
+- Dev watch build: `pnpm --filter @hanzo/console run dev`
+- Lint: `pnpm --filter @hanzo/console run lint`
+- Lint fix: `pnpm --filter @hanzo/console run lint:fix`
+- Typecheck: `pnpm --filter @hanzo/console run typecheck`
+- Build: `pnpm --filter @hanzo/console run build`
+- Prisma generate: `pnpm --filter @hanzo/console run db:generate`
+- Prisma migrate (dev): `pnpm --filter @hanzo/console run db:migrate`
+- ClickHouse reset: `pnpm --filter @hanzo/console run ch:reset`
 
 ## Playbooks
 

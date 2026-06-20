@@ -5,8 +5,8 @@ import {
 } from "@/src/server/adminAccessWebhook";
 
 describe("sendAdminAccessWebhook", () => {
-  const originalWebhook = env.LANGFUSE_ADMIN_ACCESS_WEBHOOK;
-  const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
+  const originalWebhook = env.HANZO_ADMIN_ACCESS_WEBHOOK;
+  const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
 
   beforeEach(() => {
     resetAdminAccessWebhookCacheForTests();
@@ -16,7 +16,7 @@ describe("sendAdminAccessWebhook", () => {
   afterEach(() => {
     vi.useRealTimers();
     (env as any).LANGFUSE_ADMIN_ACCESS_WEBHOOK = originalWebhook;
-    (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+    (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
   });
 
   it("should not send when webhook is not configured", async () => {
@@ -53,7 +53,7 @@ describe("sendAdminAccessWebhook", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-02-19T19:39:37.000Z"));
     (env as any).LANGFUSE_ADMIN_ACCESS_WEBHOOK = "https://example.com/hook";
-    (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = "HIPAA";
+    (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = "HIPAA";
 
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")

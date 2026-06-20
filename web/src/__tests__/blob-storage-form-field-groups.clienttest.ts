@@ -11,7 +11,7 @@ import {
   BlobStorageExportMode,
   BlobStorageIntegrationFileType,
   BlobStorageIntegrationType,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 const VALID_BASE: BlobStorageIntegrationFormSchema = {
   type: BlobStorageIntegrationType.S3,

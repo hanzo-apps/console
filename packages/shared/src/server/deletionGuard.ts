@@ -8,7 +8,7 @@ export async function shouldSkipDeletionFor(
   entityType: string,
 ): Promise<boolean> {
   // Check if project is in skip list
-  if (env.LANGFUSE_DELETE_SKIP_PROJECT_IDS.includes(projectId)) {
+  if (env.HANZO_DELETE_SKIP_PROJECT_IDS.includes(projectId)) {
     logger.info(
       `Skipping ${entityType} deletion for project ${projectId} (in skip list). No deletion processing will occur.`,
       {

@@ -6,7 +6,13 @@ import { type RouterOutputs, api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
 import { createColumnHelper } from "@tanstack/react-table";
 import { Copy, Pen } from "lucide-react";
-import { useQueryParams, withDefault, NumberParam, useQueryParam, StringParam } from "use-query-params";
+import {
+  useQueryParams,
+  withDefault,
+  NumberParam,
+  useQueryParam,
+  StringParam,
+} from "use-query-params";
 import { useEffect, useState } from "react";
 import TableIdOrName from "@/src/components/table/table-id";
 import { TablePeekViewEvaluatorTemplateDetail } from "@/src/components/table/peek/peek-evaluator-template-detail";
@@ -42,7 +48,7 @@ import {
   EvalTemplateSourceCodeLanguage,
   EvalTemplateType,
   type EvalTemplate,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
 import {
   CODE_EVAL_ESCAPE_CONFIRM_MESSAGE,
@@ -110,7 +116,11 @@ const templateTableRowHeights: CustomHeights = {
   l: "h-8",
 };
 
-export default function EvalsTemplateTable({ projectId }: { projectId: string }) {
+export default function EvalsTemplateTable({
+  projectId,
+}: {
+  projectId: string;
+}) {
   const router = useRouter();
   const codeEvalCapabilities = useIsCodeEvalEnabled();
   const { enabled: isCodeEvalEnabled, supportedSourceCodeLanguages } =
@@ -120,13 +130,17 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
     pageIndex: withDefault(NumberParam, 0),
     pageSize: withDefault(NumberParam, 50),
   });
-  const [searchQuery, setSearchQuery] = useQueryParam("search", withDefault(StringParam, null));
+  const [searchQuery, setSearchQuery] = useQueryParam(
+    "search",
+    withDefault(StringParam, null),
+  );
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const [cloneTemplateId, setCloneTemplateId] = useState<string | null>(null);
-  const [showReferenceUpdateDialog, setShowReferenceUpdateDialog] = useState(false);
-  const [pendingCloneSubmission, setPendingCloneSubmission] = useState<RouterInput["evals"]["createTemplate"] | null>(
-    null,
-  );
+  const [showReferenceUpdateDialog, setShowReferenceUpdateDialog] =
+    useState(false);
+  const [pendingCloneSubmission, setPendingCloneSubmission] = useState<
+    RouterInput["evals"]["createTemplate"] | null
+  >(null);
   const utils = api.useUtils();
   const templates = api.evals.templateNames.useQuery({
     projectId,
@@ -159,7 +173,9 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
     },
   );
 
-  const evaluatorLimit = useEntitlementLimit("model-based-evaluations-count-evaluators");
+  const evaluatorLimit = useEntitlementLimit(
+    "model-based-evaluations-count-evaluators",
+  );
 
   // Fetch counts of evaluator configs and templates
   const countsQuery = api.evals.counts.useQuery(
@@ -188,7 +204,8 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
       setShowReferenceUpdateDialog(false);
       showSuccessToast({
         title: "Evaluator cloned successfully",
-        description: "This evaluator is now available and maintained on project level.",
+        description:
+          "This evaluator is now available and maintained on project level.",
       });
     },
     onError: (error) => {
@@ -335,7 +352,9 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
               onClick={(e) => {
                 e.stopPropagation();
                 if (id) {
-                  void router.push(`/project/${projectId}/evals/new?evaluator=${id}`);
+                  void router.push(
+                    `/project/${projectId}/evals/new?evaluator=${id}`,
+                  );
                 }
               }}
             >
@@ -377,10 +396,11 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
     }),
   ] as HanzoColumnDef<EvalsTemplateRow>[];
 
-  const [columnVisibility, setColumnVisibility] = useColumnVisibility<EvalsTemplateRow>(
-    "evalTemplatesColumnVisibility",
-    columns,
-  );
+  const [columnVisibility, setColumnVisibility] =
+    useColumnVisibility<EvalsTemplateRow>(
+      "evalTemplatesColumnVisibility",
+      columns,
+    );
 
   const peekNavigationProps = usePeekNavigation({
     expandConfig: {
@@ -495,7 +515,9 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
               : {
                   isLoading: false,
                   isError: false,
-                  data: safeExtract(templates.data, "templates", []).map((t) => convertToTableRow(t)),
+                  data: safeExtract(templates.data, "templates", []).map((t) =>
+                    convertToTableRow(t),
+                  ),
                 }
         }
         pagination={{
@@ -585,7 +607,11 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
             cloneSourceId={cloneTemplateId}
             onBeforeSubmit={(template) => {
               // Only show reference dialog for Hanzo maintained templates
-              if (cloneTemplateId && cloneTemplate.data && !cloneTemplate.data.projectId) {
+              if (
+                cloneTemplateId &&
+                cloneTemplate.data &&
+                !cloneTemplate.data.projectId
+              ) {
                 setPendingCloneSubmission({
                   ...template,
                   cloneSourceId: cloneTemplateId,
@@ -601,7 +627,8 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
               utils.evals.templateNames.invalidate();
               showSuccessToast({
                 title: "Evaluator cloned successfully",
-                description: "This evaluator is now available and maintained on project level. ",
+                description:
+                  "This evaluator is now available and maintained on project level. ",
               });
             }}
           />
@@ -613,7 +640,8 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
         onOpenChange={(open) => {
           if (!open && pendingCloneSubmission) {
             // If dialog is closed without a decision, default to not updating references
-            pendingCloneSubmission.referencedEvaluators = EvalReferencedEvaluators.PERSIST;
+            pendingCloneSubmission.referencedEvaluators =
+              EvalReferencedEvaluators.PERSIST;
             createEvalTemplateMutation.mutate(pendingCloneSubmission);
           }
           setShowReferenceUpdateDialog(open);
@@ -623,12 +651,12 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
           <DialogHeader>
             <DialogTitle>Update running evaluators?</DialogTitle>
             <DialogDescription>
-              Do you want all running evaluators attached to the original Hanzo evaluator to reference your new
-              project-level version?
+              Do you want all running evaluators attached to the original Hanzo
+              evaluator to reference your new project-level version?
               <br />
               <br />
-              <strong>Warning:</strong> This might break workflows if you have changed variables or other critical
-              aspects of the template.
+              <strong>Warning:</strong> This might break workflows if you have
+              changed variables or other critical aspects of the template.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -637,7 +665,8 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
               onClick={() => {
                 if (pendingCloneSubmission) {
                   // Submit with PERSIST option
-                  pendingCloneSubmission.referencedEvaluators = EvalReferencedEvaluators.PERSIST;
+                  pendingCloneSubmission.referencedEvaluators =
+                    EvalReferencedEvaluators.PERSIST;
                   createEvalTemplateMutation.mutate(pendingCloneSubmission);
                 }
               }}
@@ -648,7 +677,8 @@ export default function EvalsTemplateTable({ projectId }: { projectId: string })
               onClick={() => {
                 if (pendingCloneSubmission) {
                   // Submit with UPDATE option
-                  pendingCloneSubmission.referencedEvaluators = EvalReferencedEvaluators.UPDATE;
+                  pendingCloneSubmission.referencedEvaluators =
+                    EvalReferencedEvaluators.UPDATE;
                   createEvalTemplateMutation.mutate(pendingCloneSubmission);
                 }
               }}

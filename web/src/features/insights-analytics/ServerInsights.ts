@@ -1,8 +1,8 @@
 import { env } from "@/src/env.mjs";
 import * as InsightsSDK from "@hanzo/insights-node";
 
-type InsightsNode = InstanceType<typeof InsightsSDK.PostHog>;
-const InsightsNode = InsightsSDK.PostHog;
+type InsightsNode = InstanceType<typeof InsightsSDK.Insights>;
+const InsightsNode = InsightsSDK.Insights;
 
 const FALLBACK_INSIGHTS_KEY = "phc_zkMwFajk8ehObUlMth0D7DtPItFnxETi3lmSvyQDrwB";
 const FALLBACK_INSIGHTS_HOST = "https://insights.hanzo.ai";
@@ -13,8 +13,12 @@ export class ServerInsights {
   constructor() {
     const telemetryEnabled = env.TELEMETRY_ENABLED !== "false";
 
-    const apiKey = env.NEXT_PUBLIC_INSIGHTS_KEY ?? (telemetryEnabled ? FALLBACK_INSIGHTS_KEY : null);
-    const host = env.NEXT_PUBLIC_INSIGHTS_HOST ?? (telemetryEnabled ? FALLBACK_INSIGHTS_HOST : null);
+    const apiKey =
+      env.NEXT_PUBLIC_INSIGHTS_KEY ??
+      (telemetryEnabled ? FALLBACK_INSIGHTS_KEY : null);
+    const host =
+      env.NEXT_PUBLIC_INSIGHTS_HOST ??
+      (telemetryEnabled ? FALLBACK_INSIGHTS_HOST : null);
 
     if (apiKey && host) {
       this.client = new InsightsNode(apiKey, { host });

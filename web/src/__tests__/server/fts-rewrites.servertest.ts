@@ -6,13 +6,11 @@ import {
   FTS_TEXT_OPERATORS,
   StringFilter,
   StringObjectFilter,
-  queryClickhouse,
-} from "@langfuse/shared/src/server";
+  queryDatastore,
+} from "@hanzo/console/src/server";
 
 const maybeEventsTable =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true"
-    ? describe
-    : describe.skip;
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? describe : describe.skip;
 
 type FilterResult = {
   query: string;
@@ -69,7 +67,7 @@ const filterFixture = `
 `;
 
 const matchingIds = async (filter: FilterResult) => {
-  const rows = await queryClickhouse<{ id: string }>({
+  const rows = await queryDatastore<{ id: string }>({
     query: `
       SELECT e.id AS id
       FROM (${filterFixture}) AS e
@@ -77,7 +75,7 @@ const matchingIds = async (filter: FilterResult) => {
       ORDER BY e.id ASC
     `,
     params: filter.params,
-    preferredClickhouseService: "EventsReadOnly",
+    preferredDatastoreService: "EventsReadOnly",
     tags: {
       feature: "fts-rewrites-test",
       type: "events",
@@ -155,13 +153,13 @@ maybeEventsTable("FTS filter rewrites", () => {
     async ({ table, field, operator, value }) => {
       const fieldExpr = `e.${field}`;
       const baseline = new StringFilter({
-        clickhouseTable: "traces",
+        datastoreTable: "traces",
         field: fieldExpr,
         operator,
         value,
       }).apply();
       const rewritten = new StringFilter({
-        clickhouseTable: table,
+        datastoreTable: table,
         field: fieldExpr,
         operator,
         value,
@@ -198,7 +196,7 @@ maybeEventsTable("FTS filter rewrites", () => {
         value,
       });
       const rewritten = new StringObjectFilter({
-        clickhouseTable: table,
+        datastoreTable: table,
         field: "metadata",
         operator,
         key: "topic",
@@ -226,7 +224,7 @@ maybeEventsTable("FTS filter rewrites", () => {
     async ({ table, field }) => {
       const fieldExpr = `e.${field}`;
       const rewritten = new StringFilter({
-        clickhouseTable: table,
+        datastoreTable: table,
         field: fieldExpr,
         operator: FTS_MATCH_OPERATOR,
         value: "alpha beta",
@@ -245,7 +243,7 @@ maybeEventsTable("FTS filter rewrites", () => {
     "uses case-sensitive key-scoped literal search for $table metadata matches",
     async (table) => {
       const rewritten = new StringObjectFilter({
-        clickhouseTable: table,
+        datastoreTable: table,
         field: "metadata",
         operator: FTS_MATCH_OPERATOR,
         key: "topic",

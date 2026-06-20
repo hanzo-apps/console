@@ -1,10 +1,10 @@
 import { type z } from "zod/v4";
-import { convertDateToClickhouseDateTime, shouldSkipObservationsFinal } from "@hanzo/shared/src/server";
+import { convertDateToDatastoreDateTime, shouldSkipObservationsFinal } from "../../../server";
 import type { QueryType, ViewDeclarationType, metricAggregations, granularities, ViewVersion, views } from "../types";
 import { query as queryModel } from "../types";
-import { getViewDeclaration } from "@/src/features/query/dataModel";
-import { FilterList, createFilterFromFilterState } from "@hanzo/shared/src/server";
-import { InvalidRequestError } from "@hanzo/shared";
+import { getViewDeclaration } from "../dataModel";
+import { FilterList, createFilterFromFilterState } from "../../../server";
+import { InvalidRequestError } from "../../../errors";
 
 type AppliedDimensionType = {
   table: string;
@@ -33,8 +33,7 @@ type MappedFilters = {
 export class QueryBuilder {
   private chartConfig?: { bins?: number; row_limit?: number };
   private version: ViewVersion;
-  private rootEventConditionMaxWindowHours: number =
-    env.LANGFUSE_ROOT_EVENT_CONDITION_MAX_WINDOW_HOURS;
+  private rootEventConditionMaxWindowHours: number = env.HANZO_ROOT_EVENT_CONDITION_MAX_WINDOW_HOURS;
 
   constructor(chartConfig?: { bins?: number; row_limit?: number }, version: ViewVersion = "v1") {
     this.chartConfig = chartConfig;
@@ -71,10 +70,14 @@ export class QueryBuilder {
         // Get histogram bins from chart config, fallback to 10
         const bins = this.chartConfig?.bins ?? 10;
         return `histogram(${bins})(toFloat64(${metric.alias || metric.sql}))`;
-      default:
+      }
+      case "uniq":
+        return `uniq(${metric.alias || metric.sql})`;
+      default: {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const exhaustiveCheck: never = metric.aggregation;
         throw new InvalidRequestError(`Invalid aggregation: ${metric.aggregation}`);
+      }
     }
   }
 
@@ -194,8 +197,8 @@ export class QueryBuilder {
     const normalMappings: Array<{
       uiTableName: string;
       uiTableId: string;
-      clickhouseTableName: string;
-      clickhouseSelect: string;
+      datastoreTableName: string;
+      datastoreSelect: string;
       queryPrefix: string;
       type: string;
       emptyEqualsNull?: boolean;
@@ -218,9 +221,9 @@ export class QueryBuilder {
       }
 
       // Normal dimension or special-case filter: build column mapping
-      let clickhouseSelect: string;
+      let datastoreSelect: string;
       let queryPrefix: string = "";
-      let clickhouseTableName: string = actualTableName;
+      let datastoreTableName: string = actualTableName;
       let type: string;
       let emptyEqualsNull: boolean | undefined;
 
@@ -229,37 +232,37 @@ export class QueryBuilder {
         // flag for index-friendly filtering while preserving '' ≡ NULL semantic.
         const nullIfMatch = NULL_IF_EMPTY_RE.exec(dimension.sql);
         if (nullIfMatch) {
-          clickhouseSelect = nullIfMatch[1];
+          datastoreSelect = nullIfMatch[1];
           emptyEqualsNull = true;
         } else {
-          clickhouseSelect = dimension.sql;
+          datastoreSelect = dimension.sql;
         }
         type = "string";
         if (dimension.relationTable) {
-          clickhouseTableName = dimension.relationTable;
+          datastoreTableName = dimension.relationTable;
         }
         // Filters on measures are underdefined and not allowed in the initial version
         // } else if (filter.column in view.measures) {
         //   const measure = view.measures[filter.column];
-        //   clickhouseSelect = measure.sql;
+        //   datastoreSelect = measure.sql;
         //   type = measure.type;
         //   if (measure.relationTable) {
-        //     clickhouseTableName = measure.relationTable;
+        //     datastoreTableName = measure.relationTable;
         //   }
       } else if (filter.column === view.timeDimension) {
-        clickhouseSelect = view.timeDimension;
-        queryPrefix = clickhouseTableName;
+        datastoreSelect = view.timeDimension;
+        queryPrefix = datastoreTableName;
         type = "datetime";
       } else if (filter.column === "metadata") {
-        clickhouseSelect = "metadata";
-        queryPrefix = clickhouseTableName;
+        datastoreSelect = "metadata";
+        queryPrefix = datastoreTableName;
         type = "stringObject";
       } else if (filter.column.endsWith("Name")) {
         // Sometimes, the filter does not update correctly and sends us scoreName instead of name for scores, etc.
         // If this happens, none of the conditions above apply, and we use this fallback to avoid raising an error.
         // As this is hard to catch, we include this workaround. (LFE-4838).
-        clickhouseSelect = "name";
-        queryPrefix = clickhouseTableName;
+        datastoreSelect = "name";
+        queryPrefix = datastoreTableName;
         type = "string";
       } else {
         throw new InvalidRequestError(
@@ -271,8 +274,8 @@ export class QueryBuilder {
       normalMappings.push({
         uiTableName: filter.column,
         uiTableId: filter.column,
-        clickhouseTableName,
-        clickhouseSelect,
+        datastoreTableName,
+        datastoreSelect,
         queryPrefix,
         type,
         emptyEqualsNull,
@@ -280,10 +283,7 @@ export class QueryBuilder {
     }
 
     // Create filters for non-filterSql dimensions using existing infrastructure
-    result.whereFilters = createFilterFromFilterState(
-      normalFilters,
-      normalMappings,
-    );
+    result.whereFilters = createFilterFromFilterState(normalFilters, normalMappings);
     return result;
   }
 
@@ -300,8 +300,8 @@ export class QueryBuilder {
     const projectIdMapping = {
       uiTableName: "project_id",
       uiTableId: "project_id",
-      clickhouseTableName: actualTableName,
-      clickhouseSelect: "project_id",
+      datastoreTableName: actualTableName,
+      datastoreSelect: "project_id",
       queryPrefix: actualTableName,
       type: "string",
     };
@@ -309,8 +309,8 @@ export class QueryBuilder {
     const timeDimensionMapping = {
       uiTableName: view.timeDimension,
       uiTableId: view.timeDimension,
-      clickhouseTableName: actualTableName,
-      clickhouseSelect: view.timeDimension,
+      datastoreTableName: actualTableName,
+      datastoreSelect: view.timeDimension,
       queryPrefix: actualTableName,
       type: "datetime",
     };
@@ -363,8 +363,8 @@ export class QueryBuilder {
       const segmentsMappings = view.segments.map((segment) => ({
         uiTableName: segment.column,
         uiTableId: segment.column,
-        clickhouseTableName: view.name,
-        clickhouseSelect: segment.column,
+        datastoreTableName: view.name,
+        datastoreSelect: segment.column,
         queryPrefix: view.name,
         type: segment.type,
       }));
@@ -397,8 +397,8 @@ export class QueryBuilder {
     });
     filters.forEach((filter) => {
       // Only add as relation table if it's not the base table
-      if (filter.clickhouseTable !== view.name && filter.clickhouseTable !== actualTableName) {
-        relationTables.add(filter.clickhouseTable);
+      if (filter.datastoreTable !== view.name && filter.datastoreTable !== actualTableName) {
+        relationTables.add(filter.datastoreTable);
       }
     });
     return relationTables;
@@ -455,8 +455,8 @@ export class QueryBuilder {
       const relationTimeDimensionMapping = {
         uiTableName: relation.timeDimension,
         uiTableId: relation.timeDimension,
-        clickhouseTableName: relation.name,
-        clickhouseSelect: relation.timeDimension,
+        datastoreTableName: relation.name,
+        datastoreSelect: relation.timeDimension,
         queryPrefix: relation.name,
         type: "datetime",
       };
@@ -541,7 +541,7 @@ export class QueryBuilder {
         return `toStartOfMonth(${sql})`;
       case "auto":
         throw new Error(`Granularity 'auto' is not supported for getTimeDimensionSql`);
-      default:
+      default: {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const exhaustiveCheck: never = granularity;
         throw new InvalidRequestError(
@@ -730,8 +730,8 @@ export class QueryBuilder {
         step = "INTERVAL 1 DAY"; // Default to day if granularity is unknown
     }
 
-    parameters["fillFromDate"] = convertDateToClickhouseDateTime(new Date(fromTimestamp));
-    parameters["fillToDate"] = convertDateToClickhouseDateTime(new Date(toTimestamp));
+    parameters["fillFromDate"] = convertDateToDatastoreDateTime(new Date(fromTimestamp));
+    parameters["fillToDate"] = convertDateToDatastoreDateTime(new Date(toTimestamp));
 
     return ` WITH FILL FROM ${this.getTimeDimensionSql("{fillFromDate: DateTime64(3)}", granularity)} TO ${this.getTimeDimensionSql("{fillToDate: DateTime64(3)}", granularity)} STEP ${step}`;
   }

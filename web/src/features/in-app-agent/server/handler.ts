@@ -20,14 +20,14 @@ import {
   ForbiddenError,
   InvalidRequestError,
   UnauthorizedError,
-} from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { assertUnreachable } from "@/src/utils/types";
 import {
   createAndAddApiKeysToDb,
   deleteApiKeyFromDb,
-} from "@langfuse/shared/src/server/auth/apiKeys";
-import { logger } from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server/auth/apiKeys";
+import { logger } from "@hanzo/console/src/server";
 
 const IN_APP_AGENT_API_KEY_NOTE = "In-app agent MCP session";
 const MAX_IN_APP_AGENT_INPUT_BYTES = 1024 * 1024;
@@ -41,7 +41,7 @@ export default async function handler(request: Request) {
       throw new UnauthorizedError("Unauthenticated");
     }
 
-    if (!env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION) {
+    if (!env.NEXT_PUBLIC_HANZO_CLOUD_REGION) {
       throw new BaseError(
         "PreconditionFailedError",
         412,
@@ -133,7 +133,7 @@ export default async function handler(request: Request) {
     }
 
     const sanitizedInput = sanitizeAgentInput(input);
-    const awsProfile = env.LANGFUSE_IN_APP_AGENT_AWS_PROFILE;
+    const awsProfile = env.HANZO_IN_APP_AGENT_AWS_PROFILE;
     return await withInAppAgentMcpApiKeyCleanup(
       projectId,
       (mcpApiKey, cleanupMcpApiKey) => {
@@ -152,7 +152,7 @@ export default async function handler(request: Request) {
               }),
             }),
             awsBedrock: {
-              region: env.LANGFUSE_AWS_BEDROCK_REGION,
+              region: env.HANZO_AWS_BEDROCK_REGION,
               ...(awsProfile ? { profile: awsProfile } : {}),
             },
             langfuseMcp: {

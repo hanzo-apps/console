@@ -1,8 +1,13 @@
 import type { Session } from "next-auth";
-import { prisma } from "@hanzo/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { createObservation, createObservationsCh, createTrace, createTracesCh } from "@hanzo/shared/src/server";
+import {
+  createObservation,
+  createObservationsCh,
+  createTrace,
+  createTracesCh,
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 
 describe("traces trpc", () => {
@@ -33,7 +38,7 @@ describe("traces trpc", () => {
         },
       ],
       featureFlags: {
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
         templateFlag: true,
       },
       admin: true,

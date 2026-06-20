@@ -1,5 +1,5 @@
-import { prisma } from "@hanzo/console-core/src/db";
-import { BlobStorageIntegrationProcessingQueue, QueueJobs, logger } from "@hanzo/console-core/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { BlobStorageIntegrationProcessingQueue, QueueJobs, logger } from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 
 let legacyJobsDrained = false;
@@ -41,9 +41,7 @@ export const handleBlobStorageIntegrationSchedule = async () => {
     // deduplication.
     await blobStorageIntegrationProcessingQueue.clean(0, 0, "failed");
     legacyJobsDrained = true;
-    logger.info(
-      "[BLOB INTEGRATION] Drained legacy failed jobs from processing queue",
-    );
+    logger.info("[BLOB INTEGRATION] Drained legacy failed jobs from processing queue");
   }
 
   await blobStorageIntegrationProcessingQueue.addBulk(

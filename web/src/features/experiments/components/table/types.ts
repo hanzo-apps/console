@@ -1,4 +1,4 @@
-import { type FilterState, type ScoreAggregate } from "@langfuse/shared";
+import { type FilterState, type ScoreAggregate } from "@hanzo/console";
 import { type VisibilityState } from "@tanstack/react-table";
 import { type ReactNode } from "react";
 

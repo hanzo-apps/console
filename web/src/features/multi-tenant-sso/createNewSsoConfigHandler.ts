@@ -1,17 +1,22 @@
-import { prisma } from "@hanzo/console-core/src/db";
-import { encrypt } from "@hanzo/console-core/encryption";
+import { prisma } from "@hanzo/console/src/db";
+import { encrypt } from "@hanzo/console/encryption";
 import { SsoProviderSchema } from "./types";
 import { validateSsoConfig } from "@/src/ee/features/multi-tenant-sso/validateSsoConfig";
 import { TRPCError } from "@trpc/server";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { env } from "@/src/env.mjs";
-import { logger } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
 import { multiTenantSsoAvailable } from "@/src/features/multi-tenant-sso/multiTenantSsoAvailable";
 
-export async function createNewSsoConfigHandler(req: NextApiRequest, res: NextApiResponse) {
+export async function createNewSsoConfigHandler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   try {
     if (!multiTenantSsoAvailable) {
-      res.status(403).json({ error: "Multi-tenant SSO is not available on your instance" });
+      res
+        .status(403)
+        .json({ error: "Multi-tenant SSO is not available on your instance" });
       return;
     }
     // allow only POST requests
@@ -26,7 +31,9 @@ export async function createNewSsoConfigHandler(req: NextApiRequest, res: NextAp
     // check bearer token
     const { authorization } = req.headers;
     if (!authorization) {
-      res.status(401).json({ error: "Unauthorized: No authorization header provided" });
+      res
+        .status(401)
+        .json({ error: "Unauthorized: No authorization header provided" });
       return;
     }
     const [scheme, token] = authorization.split(" ");
@@ -48,7 +55,9 @@ export async function createNewSsoConfigHandler(req: NextApiRequest, res: NextAp
       where: { domain },
     });
     if (existingConfig) {
-      logger.info(`Attempt to create duplicate SSO configuration for domain: ${domain}`);
+      logger.info(
+        `Attempt to create duplicate SSO configuration for domain: ${domain}`,
+      );
       res.status(409).json({
         error: `An SSO configuration already exists for domain '${domain}'`,
       });

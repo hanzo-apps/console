@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/src/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/src/components/ui/dialog";
 import { CreateLLMApiKeyForm } from "./CreateLLMApiKeyForm";
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
-import { type LlmApiKeys } from "@hanzo/console-core";
+import { type LlmApiKeys } from "@hanzo/console";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { PencilIcon } from "lucide-react";
 import { type RouterOutputs } from "@/src/utils/api";
@@ -42,7 +48,10 @@ export function UpdateLLMApiKeyDialog({
           <PencilIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90%] min-w-[40vw] overflow-auto" onClick={(e) => e.stopPropagation()}>
+      <DialogContent
+        className="max-h-[90%] min-w-[40vw] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>Update LLM Connection</DialogTitle>
         </DialogHeader>

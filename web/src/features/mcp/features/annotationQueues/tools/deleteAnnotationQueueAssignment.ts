@@ -1,6 +1,6 @@
 import { deleteAnnotationQueueAssignment } from "@/src/features/annotation-queues/server/publicAnnotationQueueService";
 import { DeleteAnnotationQueueAssignmentResponse } from "@/src/features/public-api/types/annotation-queues";
-import { LangfuseNotFoundError, Prisma } from "@langfuse/shared";
+import { LangfuseNotFoundError, Prisma } from "@hanzo/console";
 import { defineTool } from "../../../core/define-tool";
 import { runMcpTool } from "../../../core/run-mcp-tool";
 import { DeleteAnnotationQueueAssignmentToolSchema } from "../schema";

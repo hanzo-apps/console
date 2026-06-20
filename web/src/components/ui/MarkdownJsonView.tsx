@@ -1,4 +1,7 @@
-import { OpenAIContentSchema, type OpenAIOutputAudioType } from "@hanzo/console-core";
+import {
+  OpenAIContentSchema,
+  type OpenAIOutputAudioType,
+} from "@hanzo/console";
 import { StringOrMarkdownSchema } from "@/src/components/schemas/MarkdownSchema";
 import { Button } from "@/src/components/ui/button";
 import { PrettyJsonView } from "@/src/components/ui/PrettyJsonView";
@@ -48,7 +51,11 @@ export function MarkdownJsonViewHeader({
           }}
           className="hover:bg-border -mr-2"
         >
-          {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+          {isCopied ? (
+            <Check className="h-3 w-3" />
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
         </Button>
       </div>
     </div>
@@ -94,10 +101,19 @@ export function MarkdownJsonView({
   /** Content to render between header and main content (e.g., thinking blocks) */
   afterHeader?: React.ReactNode;
 }) {
-  const stringOrValidatedMarkdown = useMemo(() => StringOrMarkdownSchema.safeParse(content), [content]);
-  const validatedOpenAIContent = useMemo(() => OpenAIContentSchema.safeParse(content), [content]);
+  const stringOrValidatedMarkdown = useMemo(
+    () => StringOrMarkdownSchema.safeParse(content),
+    [content],
+  );
+  const validatedOpenAIContent = useMemo(
+    () => OpenAIContentSchema.safeParse(content),
+    [content],
+  );
 
-  const canEnableMarkdown = isSupportedMarkdownFormat(content, validatedOpenAIContent);
+  const canEnableMarkdown = isSupportedMarkdownFormat(
+    content,
+    validatedOpenAIContent,
+  );
 
   return (
     <>

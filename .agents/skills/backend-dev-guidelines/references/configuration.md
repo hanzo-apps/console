@@ -234,7 +234,7 @@ export const env: z.infer<typeof EnvSchema> =
 **Usage:**
 
 ```typescript
-import { env } from "@hanzo/console-core/src/env";
+import { env } from "@hanzo/console/src/env";
 
 const redisHost = env.REDIS_HOST;
 const datastoreUrl = env.DATASTORE_URL;
@@ -448,7 +448,7 @@ import { env } from "@/src/env.mjs";
 import { env } from "./env";
 
 // In shared package
-import { env } from "@hanzo/console-core/src/env";
+import { env } from "@hanzo/console/src/env";
 ```
 
 ### 3. Client Variables Must Start with NEXT*PUBLIC*

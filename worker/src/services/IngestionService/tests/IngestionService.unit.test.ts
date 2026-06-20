@@ -1,6 +1,6 @@
 import { expect, describe, it, vi } from "vitest";
 import { IngestionService } from "../../IngestionService";
-import { convertDateToDatastoreDateTime } from "@hanzo/console-core/src/server";
+import { convertDateToDatastoreDateTime } from "@hanzo/console/src/server";
 
 describe("IngestionService unit tests", () => {
   it("correctly sorts events in ascending order by timestamp", async () => {
@@ -26,12 +26,7 @@ describe("IngestionService unit tests", () => {
 
   it("keeps observation metadata values stringified after moving tool definitions to input", async () => {
     const addToQueue = vi.fn();
-    const ingestionService = new IngestionService(
-      {} as any,
-      {} as any,
-      { addToQueue } as any,
-      {} as any,
-    );
+    const ingestionService = new IngestionService({} as any, {} as any, { addToQueue } as any, {} as any);
     const tool = {
       type: "function",
       name: "get_weather",
@@ -59,13 +54,9 @@ describe("IngestionService unit tests", () => {
       },
     ];
 
-    vi.spyOn(ingestionService as any, "getClickhouseRecord").mockResolvedValue(
-      null,
-    );
+    vi.spyOn(ingestionService as any, "getDatastoreRecord").mockResolvedValue(null);
     vi.spyOn(ingestionService as any, "getPrompt").mockResolvedValue(null);
-    vi.spyOn(ingestionService as any, "getGenerationUsage").mockResolvedValue(
-      {},
-    );
+    vi.spyOn(ingestionService as any, "getGenerationUsage").mockResolvedValue({});
 
     await (ingestionService as any).processObservationEventList({
       projectId: "project-id",
@@ -75,9 +66,7 @@ describe("IngestionService unit tests", () => {
       writeToStagingTables: false,
     });
 
-    const observationRecord = addToQueue.mock.calls.find(
-      ([table]) => table === TableName.Observations,
-    )?.[1];
+    const observationRecord = addToQueue.mock.calls.find(([table]) => table === TableName.Observations)?.[1];
 
     expect(observationRecord?.metadata).toEqual({
       attributes: JSON.stringify({ "custom.attribute": "keep-me" }),

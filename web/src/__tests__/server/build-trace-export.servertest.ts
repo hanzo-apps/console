@@ -1,5 +1,5 @@
-import { LangfuseNotFoundError, UnauthorizedError } from "@langfuse/shared";
-import { env } from "@langfuse/shared/src/env";
+import { LangfuseNotFoundError, UnauthorizedError } from "@hanzo/console";
+import { env } from "@hanzo/console/src/env";
 import { beforeEach, afterAll, describe, expect, it, vi } from "vitest";
 import {
   buildTraceExport,
@@ -25,8 +25,8 @@ const {
   mockSendAdminAccessWebhook: vi.fn(),
 }));
 
-vi.mock("@langfuse/shared/src/server", async () => ({
-  ...(await vi.importActual("@langfuse/shared/src/server")),
+vi.mock("@hanzo/console/src/server", async () => ({
+  ...(await vi.importActual("@hanzo/console/src/server")),
   getTraceByIdFromEventsTable: (...args: unknown[]) =>
     mockGetTraceByIdFromEventsTable(...args),
   getObservationsCountFromEventsTable: (...args: unknown[]) =>
@@ -37,7 +37,7 @@ vi.mock("@langfuse/shared/src/server", async () => ({
     mockGetScoresAndCorrectionsForTraces(...args),
 }));
 
-vi.mock("@langfuse/shared/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     traceSession: {
       findFirst: (...args: unknown[]) => mockTraceSessionFindFirst(...args),
@@ -164,11 +164,11 @@ const makeScore = (overrides?: Record<string, unknown>) => ({
 
 describe("buildTraceExport", () => {
   const originalObservationLimit =
-    env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES;
+    env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES =
+    env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES =
       originalObservationLimit;
     mockGetTraceByIdFromEventsTable.mockResolvedValue(makeTrace());
     mockGetObservationsCountFromEventsTable.mockResolvedValue(1);
@@ -182,7 +182,7 @@ describe("buildTraceExport", () => {
   });
 
   afterAll(() => {
-    env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES =
+    env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES =
       originalObservationLimit;
   });
 
@@ -200,7 +200,7 @@ describe("buildTraceExport", () => {
         truncated: true,
         shouldJsonParse: false,
       },
-      clickhouseFeatureTag: "tracing-download",
+      datastoreFeatureTag: "tracing-download",
     });
     expect(mockGetObservationsCountFromEventsTable).toHaveBeenCalledWith({
       projectId,
@@ -349,7 +349,7 @@ describe("buildTraceExport", () => {
 
   it("reemits the observation payload limit error as a download-safe error", async () => {
     mockGetObservationsCountFromEventsTable.mockResolvedValue(10);
-    env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES = 100;
+    env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES = 100;
     mockGetObservationsForTraceFromEventsTable.mockResolvedValue({
       observations: [
         makeObservation({

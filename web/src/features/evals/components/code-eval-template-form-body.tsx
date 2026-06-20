@@ -8,7 +8,7 @@ import { linter, type Diagnostic } from "@codemirror/lint";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { foldEffect, foldable } from "@codemirror/language";
-import { EvalTemplateSourceCodeLanguage } from "@langfuse/shared";
+import { EvalTemplateSourceCodeLanguage } from "@hanzo/console";
 import { useTheme } from "next-themes";
 import {
   type ReactNode,

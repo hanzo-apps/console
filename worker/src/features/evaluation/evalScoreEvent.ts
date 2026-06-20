@@ -1,11 +1,11 @@
 import { randomUUID } from "crypto";
-import { ScoreSourceEnum } from "@langfuse/shared";
+import { ScoreSourceEnum } from "@hanzo/console";
 import {
   buildDeterministicEvalScoreIds,
   eventTypes,
   ScoreEventType,
   type CodeEvalScoreWithName,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 export type EvalScoreWritePayload = {
   eventId: string;

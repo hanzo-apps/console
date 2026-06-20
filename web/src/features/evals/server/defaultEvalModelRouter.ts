@@ -1,8 +1,11 @@
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
 import { z } from "zod/v4";
-import { ZodModelConfig } from "@hanzo/console-core";
-import { DefaultEvalModelService } from "@hanzo/console-core/src/server";
+import { ZodModelConfig } from "@hanzo/console";
+import { DefaultEvalModelService } from "@hanzo/console/src/server";
 
 export const defaultEvalModelRouter = createTRPCRouter({
   fetchDefaultModel: protectedProjectProcedure

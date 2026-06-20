@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { removeEmptyEnvVariables } from "./utils/environment";
+import { applyDatastoreEnvBackCompat, removeEmptyEnvVariables } from "./utils/environment";
 
 const EnvSchema = z.object({
   NEXT_PUBLIC_HANZO_CLOUD_REGION: z.string().optional(),
@@ -245,6 +245,10 @@ const EnvSchema = z.object({
 export type SharedEnv = z.infer<typeof EnvSchema>;
 
 export const env: SharedEnv =
-  process.env.DOCKER_BUILD === "1" // eslint-disable-line turbo/no-undeclared-env-vars
+  // DOCKER_BUILD is set in the Dockerfile; SKIP_ENV_VALIDATION is used for local
+  // frontend builds/dev. Mirror web/src/env.mjs so both env layers skip on the
+  // same signals (one way to skip validation across the monorepo).
+  process.env.DOCKER_BUILD === "1" || // eslint-disable-line turbo/no-undeclared-env-vars
+  process.env.SKIP_ENV_VALIDATION === "1" // eslint-disable-line turbo/no-undeclared-env-vars
     ? (process.env as any)
-    : EnvSchema.parse(removeEmptyEnvVariables(process.env));
+    : EnvSchema.parse(applyDatastoreEnvBackCompat(removeEmptyEnvVariables(process.env)));

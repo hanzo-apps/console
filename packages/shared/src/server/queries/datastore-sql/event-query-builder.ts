@@ -107,14 +107,12 @@ const EVENTS_FIELDS = {
 
   // Pricing tier
   usagePricingTierId: 'e.usage_pricing_tier_id as "usage_pricing_tier_id"',
-  usagePricingTierName:
-    'e.usage_pricing_tier_name as "usage_pricing_tier_name"',
+  usagePricingTierName: 'e.usage_pricing_tier_name as "usage_pricing_tier_name"',
 
   // I/O & metadata fields
   input: "e.input",
   output: "e.output",
-  metadata:
-    "mapFromArrays(arrayReverse(e.metadata_names), arrayReverse(e.metadata_values)) as metadata",
+  metadata: "mapFromArrays(arrayReverse(e.metadata_names), arrayReverse(e.metadata_values)) as metadata",
   // Trace-level denormalized fields
   tags: "e.tags as tags",
   release: "e.release as release",
@@ -129,14 +127,11 @@ const EVENTS_FIELDS = {
 
   // Experiment item fields
   experimentItemId: 'e.experiment_item_id as "experiment_item_id"',
-  experimentItemRootSpanId:
-    'e.experiment_item_root_span_id as "experiment_item_root_span_id"',
-  experimentItemExpectedOutput:
-    'e.experiment_item_expected_output as "experiment_item_expected_output"',
+  experimentItemRootSpanId: 'e.experiment_item_root_span_id as "experiment_item_root_span_id"',
+  experimentItemExpectedOutput: 'e.experiment_item_expected_output as "experiment_item_expected_output"',
   experimentItemMetadata:
     "mapFromArrays(e.experiment_item_metadata_names, e.experiment_item_metadata_values) as experiment_item_metadata",
-  experimentItemVersion:
-    'e.experiment_item_version as "experiment_item_version"',
+  experimentItemVersion: 'e.experiment_item_version as "experiment_item_version"',
 
   // Calculated fields
   latency: "if(isNull(e.end_time), NULL, date_diff('millisecond', e.start_time, e.end_time)) as latency",
@@ -287,13 +282,7 @@ const FIELD_SETS = {
   basic: ["name", "level", "statusMessage", "version", "environment", "bookmarked", "public", "userId", "sessionId"],
   time: ["completionStartTime", "createdAt", "updatedAt"],
   model: ["providedModelName", "internalModelId", "modelParameters"],
-  usage: [
-    "usageDetails",
-    "costDetails",
-    "totalCost",
-    "usagePricingTierId",
-    "usagePricingTierName",
-  ],
+  usage: ["usageDetails", "costDetails", "totalCost", "usagePricingTierId", "usagePricingTierName"],
   prompt: ["promptId", "promptName", "promptVersion"],
   metrics: ["latency", "timeToFirstToken"],
 
@@ -402,10 +391,7 @@ const FIELD_SETS = {
 export type FieldSetName = keyof typeof FIELD_SETS;
 
 export const OBSERVATION_FIELD_GROUP_FIELD_NAMES = Object.fromEntries(
-  OBSERVATION_FIELD_GROUPS_PUBLIC_API.map((group) => [
-    group,
-    FIELD_SETS[group],
-  ]),
+  OBSERVATION_FIELD_GROUPS_PUBLIC_API.map((group) => [group, FIELD_SETS[group]]),
 ) as {
   [K in ObservationFieldGroupPublicApi]: (typeof FIELD_SETS)[K];
 };
@@ -440,8 +426,7 @@ const EVENTS_AGGREGATION_FIELDS = {
 
   bookmarked: "argMaxIf(bookmarked, event_ts, parent_span_id = '') AS bookmarked",
   public: "max(public) AS public",
-  experiment_item_id:
-    "argMaxIf(experiment_item_id, event_ts, experiment_item_id <> '') AS experiment_item_id",
+  experiment_item_id: "argMaxIf(experiment_item_id, event_ts, experiment_item_id <> '') AS experiment_item_id",
 
   // Observation-level aggregations for filtering support
   usage_details: "sumMap(usage_details) as usage_details",
@@ -788,10 +773,7 @@ abstract class BaseEventsQueryBuilder<TFields extends Record<string, string>> ex
    */
   override applyFilters(filterList: FilterList): this {
     const traceIdFilter = filterList.find(
-      (f) =>
-        f.clickhouseTable.startsWith("events") &&
-        f.field === 'e."trace_id"' &&
-        f.operator === "=",
+      (f) => f.datastoreTable.startsWith("events") && f.field === 'e."trace_id"' && f.operator === "=",
     );
     if (traceIdFilter instanceof StringFilter) {
       this.whereRaw("xxHash32(trace_id) = xxHash32({traceIdXxHash: String})", {
@@ -1450,10 +1432,7 @@ export class CTEQueryBuilder<
    * Add a JOIN of the specified kind.
    * Only accepts CTE names that have been registered via withCTE().
    */
-  private join<
-    Name extends keyof RegisteredCTEs & string,
-    Alias extends string,
-  >(
+  private join<Name extends keyof RegisteredCTEs & string, Alias extends string>(
     kind: "LEFT" | "INNER",
     cteName: Name,
     alias: Alias,
@@ -1690,14 +1669,12 @@ const EXPERIMENTS_AGGREGATION_FIELDS = {
   // Base aggregated fields
   experimentId: "e.experiment_id AS experiment_id",
   experimentName: "any(e.experiment_name) AS experiment_name",
-  experimentDescription:
-    "any(e.experiment_description) AS experiment_description",
+  experimentDescription: "any(e.experiment_description) AS experiment_description",
   experimentDatasetId: "any(e.experiment_dataset_id) AS experiment_dataset_id",
   startTime: "min(e.start_time) AS start_time",
   itemCount: "uniq(e.experiment_item_id) AS item_count",
   errorCount: "countIf(e.level = 'ERROR') AS error_count",
-  prompts:
-    "groupUniqArrayIf(tuple(e.prompt_name, e.prompt_version), e.prompt_name != '') AS prompts",
+  prompts: "groupUniqArrayIf(tuple(e.prompt_name, e.prompt_version), e.prompt_name != '') AS prompts",
   experimentMetadata:
     "any(mapFromArrays(e.experiment_metadata_names, e.experiment_metadata_values)) AS experiment_metadata",
 
@@ -1726,8 +1703,7 @@ const EXPERIMENTS_AGGREGATION_FIELD_SETS = {
   metrics: ["experimentId", "totalCost", "latencyAvg"] as const,
 } as const;
 
-export type ExperimentsAggregationFieldSetName =
-  keyof typeof EXPERIMENTS_AGGREGATION_FIELD_SETS;
+export type ExperimentsAggregationFieldSetName = keyof typeof EXPERIMENTS_AGGREGATION_FIELD_SETS;
 
 /**
  * ExperimentsAggregationQueryBuilder - Aggregates events by (experiment_id, project_id).
@@ -1736,11 +1712,8 @@ export type ExperimentsAggregationFieldSetName =
  * - Cost: SUM of all event costs for the experiment
  * - Latency: AVG of root span duration (where span_id = experiment_item_root_span_id)
  */
-export class ExperimentsAggregationQueryBuilder extends BaseEventsQueryBuilder<
-  typeof EXPERIMENTS_AGGREGATION_FIELDS
-> {
-  private selectedFieldSets: Set<ExperimentsAggregationFieldSetName> =
-    new Set();
+export class ExperimentsAggregationQueryBuilder extends BaseEventsQueryBuilder<typeof EXPERIMENTS_AGGREGATION_FIELDS> {
+  private selectedFieldSets: Set<ExperimentsAggregationFieldSetName> = new Set();
   private rawSelectExpressions: string[] = [];
 
   constructor(opts: { projectId: string }) {
@@ -1763,10 +1736,9 @@ export class ExperimentsAggregationQueryBuilder extends BaseEventsQueryBuilder<
    */
   withStartTimeFrom(startTimeFrom?: string | null): this {
     return this.when(Boolean(startTimeFrom), (b) =>
-      b.whereRaw(
-        `e.start_time >= {startTimeFrom: DateTime64(3)} - ${OBSERVATIONS_TO_TRACE_INTERVAL}`,
-        { startTimeFrom },
-      ),
+      b.whereRaw(`e.start_time >= {startTimeFrom: DateTime64(3)} - ${OBSERVATIONS_TO_TRACE_INTERVAL}`, {
+        startTimeFrom,
+      }),
     );
   }
 
@@ -1798,10 +1770,7 @@ export class ExperimentsAggregationQueryBuilder extends BaseEventsQueryBuilder<
     for (const setName of this.selectedFieldSets) {
       const fieldKeys = EXPERIMENTS_AGGREGATION_FIELD_SETS[setName];
       for (const key of fieldKeys) {
-        const fieldExpr =
-          EXPERIMENTS_AGGREGATION_FIELDS[
-            key as keyof typeof EXPERIMENTS_AGGREGATION_FIELDS
-          ];
+        const fieldExpr = EXPERIMENTS_AGGREGATION_FIELDS[key as keyof typeof EXPERIMENTS_AGGREGATION_FIELDS];
         if (fieldExpr) {
           fields.push(fieldExpr);
         }

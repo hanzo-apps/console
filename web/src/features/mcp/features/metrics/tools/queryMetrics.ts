@@ -1,12 +1,12 @@
-import { InvalidRequestError } from "@langfuse/shared";
-import { executeQuery } from "@langfuse/shared/query/server";
+import { InvalidRequestError } from "@hanzo/console";
+import { executeQuery } from "@hanzo/console/query/server";
 import {
   dimension,
   granularities,
   metric,
   validateQuery,
   viewsV2,
-} from "@langfuse/shared/query";
+} from "@hanzo/console/query";
 import { MetricsQueryObjectV2 } from "@/src/features/public-api/types/metrics";
 import { defineTool } from "../../../core/define-tool";
 import { runMcpTool } from "../../../core/run-mcp-tool";

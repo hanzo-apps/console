@@ -3,27 +3,27 @@ import type { Session } from "next-auth";
 
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { encrypt } from "@langfuse/shared/encryption";
-import { prisma } from "@langfuse/shared/src/db";
+import { encrypt } from "@hanzo/console/encryption";
+import { prisma } from "@hanzo/console/src/db";
 import {
   BlobStorageIntegrationProcessingQueue,
   createOrgProjectAndApiKey,
   QueueJobs,
   StorageServiceFactory,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import {
   OBSERVATION_FIELD_GROUPS_FULL,
   LEGACY_BLOB_EXPORT_CUTOFF,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { env } from "@/src/env.mjs";
-import { env as sharedEnv } from "@langfuse/shared/src/env";
+import { env as sharedEnv } from "@hanzo/console/src/env";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PRE_CUTOFF = new Date(LEGACY_BLOB_EXPORT_CUTOFF.getTime() - MS_PER_DAY);
 const POST_CUTOFF = new Date(LEGACY_BLOB_EXPORT_CUTOFF.getTime() + MS_PER_DAY);
 
-vi.mock("@langfuse/shared/src/server", async () => {
-  const actual = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     BlobStorageIntegrationProcessingQueue: {
@@ -67,7 +67,7 @@ const prepare = async () => {
         },
       ],
       featureFlags: {
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
         templateFlag: true,
       },
       admin: true,
@@ -347,17 +347,16 @@ describe("Blob Storage Integration tRPC Router", () => {
   describe("endpoint validation", () => {
     const originalAllowedIps =
       sharedEnv.LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_IPS;
-    const originalSharedCloudRegion =
-      sharedEnv.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
+    const originalSharedCloudRegion = sharedEnv.NEXT_PUBLIC_HANZO_CLOUD_REGION;
 
     beforeEach(() => {
-      sharedEnv.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = undefined;
+      sharedEnv.NEXT_PUBLIC_HANZO_CLOUD_REGION = undefined;
     });
 
     afterEach(() => {
       sharedEnv.LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_IPS =
         originalAllowedIps;
-      sharedEnv.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalSharedCloudRegion;
+      sharedEnv.NEXT_PUBLIC_HANZO_CLOUD_REGION = originalSharedCloudRegion;
     });
 
     it.each(["S3_COMPATIBLE", "AZURE_BLOB_STORAGE"] as const)(
@@ -385,12 +384,12 @@ describe("Blob Storage Integration tRPC Router", () => {
       const { validateBlobStorageEndpoint } =
         await import("../../../../packages/shared/src/server/services/blobStorageEndpointValidation");
       const originalValidationCloudRegion =
-        validationEnv.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
+        validationEnv.NEXT_PUBLIC_HANZO_CLOUD_REGION;
       const originalValidationAllowedIps =
         validationEnv.LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_IPS;
 
       try {
-        validationEnv.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = undefined;
+        validationEnv.NEXT_PUBLIC_HANZO_CLOUD_REGION = undefined;
         validationEnv.LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_IPS = [
           "127.0.0.1",
         ];
@@ -399,7 +398,7 @@ describe("Blob Storage Integration tRPC Router", () => {
           validateBlobStorageEndpoint("http://127.0.0.1:9000"),
         ).resolves.not.toThrow();
       } finally {
-        validationEnv.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION =
+        validationEnv.NEXT_PUBLIC_HANZO_CLOUD_REGION =
           originalValidationCloudRegion;
         validationEnv.LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_IPS =
           originalValidationAllowedIps;
@@ -517,8 +516,8 @@ describe("Blob Storage Integration tRPC Router", () => {
     });
 
     it("Cloud + pre-cutoff project + legacy source → allow", async () => {
-      const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = "us";
+      const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = "us";
       try {
         const { caller, project } = await prepare();
         await prisma.project.update({
@@ -533,13 +532,13 @@ describe("Blob Storage Integration tRPC Router", () => {
           }),
         ).resolves.not.toThrow();
       } finally {
-        (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+        (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
       }
     });
 
     it("Cloud + post-cutoff project + legacy source → BAD_REQUEST", async () => {
-      const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = "us";
+      const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = "us";
       try {
         const { caller, project } = await prepare();
         await prisma.project.update({
@@ -554,13 +553,13 @@ describe("Blob Storage Integration tRPC Router", () => {
           }),
         ).rejects.toMatchObject({ code: "BAD_REQUEST" });
       } finally {
-        (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+        (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
       }
     });
 
     it("Cloud + post-cutoff project + EVENTS → allow", async () => {
-      const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = "us";
+      const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = "us";
       try {
         const { caller, project } = await prepare();
         await prisma.project.update({
@@ -575,13 +574,13 @@ describe("Blob Storage Integration tRPC Router", () => {
           }),
         ).resolves.not.toThrow();
       } finally {
-        (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+        (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
       }
     });
 
     it("self-hosted + post-cutoff project + legacy source → allow (bypass)", async () => {
-      const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = undefined;
+      const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = undefined;
       try {
         const { caller, project } = await prepare();
         await prisma.project.update({
@@ -596,7 +595,7 @@ describe("Blob Storage Integration tRPC Router", () => {
           }),
         ).resolves.not.toThrow();
       } finally {
-        (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+        (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
       }
     });
   });

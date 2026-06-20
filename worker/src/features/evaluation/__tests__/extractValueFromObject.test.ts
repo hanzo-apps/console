@@ -1,18 +1,11 @@
 import { describe, it, expect } from "vitest";
-import {
-  extractValueFromObjectAsString,
-  extractValueFromObject,
-} from "@langfuse/shared";
+import { extractValueFromObjectAsString, extractValueFromObject } from "@hanzo/console";
 
 describe("extractValueFromObject", () => {
   describe("JSONPath slice expressions returning multiple elements", () => {
     it("should return full slice result for $[1:]", () => {
       const obj = {
-        data: JSON.stringify([
-          { role: "human" },
-          { role: "ai" },
-          { role: "human" },
-        ]),
+        data: JSON.stringify([{ role: "human" }, { role: "ai" }, { role: "human" }]),
       };
 
       const result = extractValueFromObject(obj, "data", "$[1:]");
@@ -22,11 +15,7 @@ describe("extractValueFromObject", () => {
 
     it("should return full result for $[*].role (wildcard multi-match)", () => {
       const obj = {
-        data: JSON.stringify([
-          { role: "human" },
-          { role: "ai" },
-          { role: "human" },
-        ]),
+        data: JSON.stringify([{ role: "human" }, { role: "ai" }, { role: "human" }]),
       };
 
       const result = extractValueFromObject(obj, "data", "$[*].role");
@@ -168,16 +157,10 @@ describe("extractValueFromObject", () => {
         missing: null,
       };
 
-      expect(extractValueFromObjectAsString(obj, "object").value).toBe(
-        '{"key":"value","count":42}',
-      );
-      expect(extractValueFromObjectAsString(obj, "array").value).toBe(
-        '["a","b"]',
-      );
+      expect(extractValueFromObjectAsString(obj, "object").value).toBe('{"key":"value","count":42}');
+      expect(extractValueFromObjectAsString(obj, "array").value).toBe('["a","b"]');
       expect(extractValueFromObjectAsString(obj, "zero").value).toBe("0");
-      expect(extractValueFromObjectAsString(obj, "falseValue").value).toBe(
-        "false",
-      );
+      expect(extractValueFromObjectAsString(obj, "falseValue").value).toBe("false");
       expect(extractValueFromObjectAsString(obj, "missing").value).toBe("");
     });
   });

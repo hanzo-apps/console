@@ -7,8 +7,8 @@ import {
   getCategoricalCategoryRuleViolations,
   getMinimumCategoricalCategoriesMessage,
   ScoreDataTypeEnum,
-  ZodModelConfig,
-} from "@langfuse/shared";
+} from "@hanzo/console";
+import { ZodModelConfig } from "@hanzo/console/src/server/llm/types";
 import { EvalReferencedEvaluators } from "@/src/features/evals/types";
 
 const selectedModelSchema = z.object({

@@ -3,8 +3,8 @@ import {
   OBSERVATION_FIELD_GROUPS_PUBLIC_API,
   type ObservationFieldGroupPublicApi,
   type ObservationMcpAllowedEventsTableFilterColumn,
-} from "@langfuse/shared";
-import { OBSERVATION_FIELD_GROUP_FIELD_NAMES } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { OBSERVATION_FIELD_GROUP_FIELD_NAMES } from "@hanzo/console/src/server";
 
 type ObservationMcpFieldMetadata = {
   type: ObservationMcpFieldType;

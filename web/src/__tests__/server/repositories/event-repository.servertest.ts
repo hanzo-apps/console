@@ -10,15 +10,18 @@ import {
   updateEvents,
   getTraceByIdFromEventsTable,
   getObservationsBatchIOFromEventsTable,
-} from "@hanzo/shared/src/server";
-import { prisma } from "@hanzo/shared/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { randomUUID } from "crypto";
 import { env } from "@/src/env.mjs";
-import { type FilterCondition } from "@hanzo/shared";
+import { type FilterCondition } from "@hanzo/console";
 
 const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
 
-const maybe = env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true" ? describe : describe.skip;
+const maybe =
+  env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true"
+    ? describe
+    : describe.skip;
 
 function idFilter(id: string): FilterCondition {
   return {
@@ -29,7 +32,7 @@ function idFilter(id: string): FilterCondition {
   };
 }
 
-describe("Clickhouse Events Repository Test", () => {
+describe("Datastore Events Repository Test", () => {
   it("should kill redis connection", () => {
     // we need at least one test case to avoid hanging
     // redis connection when everything else is skipped.
@@ -340,13 +343,15 @@ describe("Clickhouse Events Repository Test", () => {
         selectIOAndMetadata: true,
       });
 
-      const resultWithoutIO = await getObservationsWithModelDataFromEventsTable({
-        projectId,
-        filter: [idFilter(generationId)],
-        limit: 1000,
-        offset: 0,
-        selectIOAndMetadata: false,
-      });
+      const resultWithoutIO = await getObservationsWithModelDataFromEventsTable(
+        {
+          projectId,
+          filter: [idFilter(generationId)],
+          limit: 1000,
+          offset: 0,
+          selectIOAndMetadata: false,
+        },
+      );
 
       expect(resultWithIO.length).toBeGreaterThanOrEqual(1);
       expect(resultWithoutIO.length).toBeGreaterThanOrEqual(1);
@@ -807,7 +812,9 @@ describe("Clickhouse Events Repository Test", () => {
           offset: 0,
         });
 
-        const filteredObservations = result.filter((o) => [traceId1, traceId2, traceId3].includes(o.traceId ?? ""));
+        const filteredObservations = result.filter((o) =>
+          [traceId1, traceId2, traceId3].includes(o.traceId ?? ""),
+        );
         expect(filteredObservations.length).toBe(2);
         const traceIds = filteredObservations.map((o) => o.traceId).sort();
         expect(traceIds).toEqual([traceId1, traceId2].sort());
@@ -858,7 +865,9 @@ describe("Clickhouse Events Repository Test", () => {
           offset: 0,
         });
 
-        const filteredObservations = result.filter((o) => o.traceId === traceId1 || o.traceId === traceId2);
+        const filteredObservations = result.filter(
+          (o) => o.traceId === traceId1 || o.traceId === traceId2,
+        );
         expect(filteredObservations.length).toBe(1);
         expect(filteredObservations[0].name).toBe("user-1-event");
       });
@@ -917,7 +926,9 @@ describe("Clickhouse Events Repository Test", () => {
           offset: 0,
         });
 
-        const filteredObservations = result.filter((o) => [traceId1, traceId2, traceId3].includes(o.traceId ?? ""));
+        const filteredObservations = result.filter((o) =>
+          [traceId1, traceId2, traceId3].includes(o.traceId ?? ""),
+        );
         expect(filteredObservations.length).toBe(2);
         const names = filteredObservations.map((o) => o.name).sort();
         expect(names).toEqual(["user-alpha-event", "user-beta-event"]);
@@ -1030,7 +1041,9 @@ describe("Clickhouse Events Repository Test", () => {
           offset: 0,
         });
 
-        const filteredObservations = result.filter((o) => o.traceId === traceId1 || o.traceId === traceId2);
+        const filteredObservations = result.filter(
+          (o) => o.traceId === traceId1 || o.traceId === traceId2,
+        );
         expect(filteredObservations.length).toBe(1);
         expect(filteredObservations[0].name).toBe("event-with-user");
       });
@@ -1101,7 +1114,9 @@ describe("Clickhouse Events Repository Test", () => {
           offset: 0,
         });
 
-        const filteredObservations = result.filter((o) => [traceId1, traceId2, traceId3].includes(o.traceId ?? ""));
+        const filteredObservations = result.filter((o) =>
+          [traceId1, traceId2, traceId3].includes(o.traceId ?? ""),
+        );
         expect(filteredObservations.length).toBe(1);
         expect(filteredObservations[0].name).toBe("new-user-1");
       });
@@ -2263,7 +2278,11 @@ describe("Clickhouse Events Repository Test", () => {
       expect(result?.bookmarked).toBe(false);
 
       // Model setting bookmark as true on the root span
-      await updateEvents(projectId, { traceIds: [traceId], rootOnly: true }, { bookmarked: true });
+      await updateEvents(
+        projectId,
+        { traceIds: [traceId], rootOnly: true },
+        { bookmarked: true },
+      );
 
       result = await getTraceByIdFromEventsTable({ projectId, traceId });
       expect(result).toBeDefined();
@@ -2285,7 +2304,11 @@ describe("Clickhouse Events Repository Test", () => {
 
       // Removing bookmark on all span in a trace
       // including the non-root, added above
-      await updateEvents(projectId, { traceIds: [traceId] }, { bookmarked: false });
+      await updateEvents(
+        projectId,
+        { traceIds: [traceId] },
+        { bookmarked: false },
+      );
 
       result = await getTraceByIdFromEventsTable({ projectId, traceId });
       expect(result).toBeDefined();

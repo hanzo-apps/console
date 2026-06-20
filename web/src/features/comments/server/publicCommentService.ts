@@ -8,8 +8,8 @@ import type {
   GetCommentsV1Query,
   PostCommentsV1Body,
 } from "@/src/features/public-api/types/comments";
-import { LangfuseNotFoundError } from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
+import { LangfuseNotFoundError } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 
 type CommentAuditScope = {
   projectId: string;

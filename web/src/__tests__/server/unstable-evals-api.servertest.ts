@@ -12,18 +12,18 @@ import {
   GetUnstableEvaluatorsResponse,
   PostUnstableEvaluatorResponse,
 } from "@/src/features/public-api/types/unstable-evaluators";
-import { createNumericEvalOutputDefinition } from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
+import { createNumericEvalOutputDefinition } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import {
   createAndAddApiKeysToDb,
   createBasicAuthHeader,
   createOrgProjectAndApiKey,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { ApiKeyScope } from "@prisma/client";
 import { UnstablePublicApiErrorResponse } from "@/src/features/public-api/types/unstable-public-evals-contract";
 import type { z } from "zod";
-import { LLMAdapter } from "@langfuse/shared";
-import { encrypt } from "@langfuse/shared/encryption";
+import { LLMAdapter } from "@hanzo/console";
+import { encrypt } from "@hanzo/console/encryption";
 
 const __orgIds: string[] = [];
 const __managedTemplateIds: string[] = [];

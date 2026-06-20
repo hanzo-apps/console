@@ -1,5 +1,5 @@
 import { Job } from "@hanzo/mq";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   QueueName,
   TQueueJobTypes,
@@ -10,14 +10,14 @@ import {
   getEventsForAnalyticsIntegrations,
   getCurrentSpan,
   validateWebhookURL,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import {
   transformTraceForInsights,
   transformGenerationForInsights,
   transformEventForInsights,
   transformScoreForInsights,
 } from "./transformers";
-import { decrypt } from "@hanzo/console-core/encryption";
+import { decrypt } from "@hanzo/console/encryption";
 import { PostHog as Insights } from "posthog-node";
 
 type InsightsExecutionConfig = {

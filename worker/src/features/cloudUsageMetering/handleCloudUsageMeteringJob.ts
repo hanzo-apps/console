@@ -1,5 +1,5 @@
-import { parseDbOrg } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+import { parseDbOrg } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { env } from "../../env";
 import {
   CloudUsageMeteringQueue,
@@ -7,9 +7,9 @@ import {
   getScoreCountsByProjectInCreationInterval,
   getTraceCountsByProjectInCreationInterval,
   logger,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { cloudUsageMeteringDbCronJobName, CloudUsageMeteringDbCronJobStates } from "./constants";
-import { QueueJobs, recordGauge, traceException } from "@hanzo/console-core/src/server";
+import { QueueJobs, recordGauge, traceException } from "@hanzo/console/src/server";
 import { Job } from "@hanzo/mq";
 import { backOff } from "exponential-backoff";
 

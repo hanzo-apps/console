@@ -35,8 +35,8 @@ import {
   LangfuseNotFoundError,
   Prisma,
   UnauthorizedError,
-} from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { upsertDataset } from "./actions/createDataset";
 import {
   addToDeleteDatasetQueue,
@@ -51,7 +51,7 @@ import {
   processEventBatch,
   type AuthHeaderValidVerificationResultIngestion,
   upsertDatasetItem,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import type { z } from "zod";
 
 type DatasetAuditScope = {

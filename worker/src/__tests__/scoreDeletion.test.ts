@@ -8,7 +8,7 @@ import {
   getScoresByIds,
   StorageService,
   StorageServiceFactory,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 import { env } from "../env";
 import { processDatastoreScoreDelete } from "../features/scores/processDatastoreScoreDelete";

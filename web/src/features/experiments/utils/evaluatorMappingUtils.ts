@@ -1,6 +1,6 @@
-import { type EvalTemplate } from "@hanzo/shared";
+import { type EvalTemplate } from "@hanzo/console";
 
-// Define the type locally to match what's in @hanzo/shared
+// Define the type locally to match what's in @hanzo/console
 type VariableMapping = {
   templateVariable: string;
   hanzoObject: "trace" | "generation" | "span" | "score" | "dataset_item";
@@ -23,9 +23,18 @@ const defaultMappings = new Map<string, Partial<VariableMapping>>([
   ["completion", { hanzoObject: "trace", selectedColumnId: "output" }],
 
   // Common ground truth variables
-  ["expected_output", { hanzoObject: "dataset_item", selectedColumnId: "expected_output" }],
-  ["ground_truth", { hanzoObject: "dataset_item", selectedColumnId: "expected_output" }],
-  ["reference", { hanzoObject: "dataset_item", selectedColumnId: "expected_output" }],
+  [
+    "expected_output",
+    { hanzoObject: "dataset_item", selectedColumnId: "expected_output" },
+  ],
+  [
+    "ground_truth",
+    { hanzoObject: "dataset_item", selectedColumnId: "expected_output" },
+  ],
+  [
+    "reference",
+    { hanzoObject: "dataset_item", selectedColumnId: "expected_output" },
+  ],
 ]);
 
 /**
@@ -34,7 +43,9 @@ const defaultMappings = new Map<string, Partial<VariableMapping>>([
  * @param template - The evaluation template containing variables
  * @returns Array of variable mappings
  */
-export function createDefaultVariableMappings(template: EvalTemplate): VariableMapping[] {
+export function createDefaultVariableMappings(
+  template: EvalTemplate,
+): VariableMapping[] {
   if (!template.vars || template.vars.length === 0) {
     return [];
   }

@@ -9,8 +9,8 @@ import {
   MethodNotAllowedError,
   UnauthorizedError,
   type RateLimitResult,
-} from "@langfuse/shared";
-import { ClickHouseResourceError } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { ClickHouseResourceError } from "@hanzo/console/src/server";
 import type {
   UnstablePublicApiErrorCodeType,
   UnstablePublicApiErrorDetailsType,

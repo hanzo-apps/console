@@ -5,8 +5,8 @@ import {
   commandDatastore,
   traceException,
   recordIncrement,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 
 export const BATCH_DELETION_TABLES = [
   "traces",
@@ -88,9 +88,7 @@ export class BatchProjectCleaner extends PeriodicExclusiveRunner {
     // Step 1: Query PG for deleted projects (no lock needed)
     let deletedProjects: Array<{ id: string }>;
     try {
-      deletedProjects = await getDeletedProjects(
-        env.LANGFUSE_BATCH_PROJECT_CLEANER_PROJECT_LIMIT,
-      );
+      deletedProjects = await getDeletedProjects(env.LANGFUSE_BATCH_PROJECT_CLEANER_PROJECT_LIMIT);
     } catch (error) {
       logger.error(`${this.instanceName}: Failed to query deleted projects`, {
         error,

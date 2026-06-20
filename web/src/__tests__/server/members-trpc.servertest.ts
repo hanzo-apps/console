@@ -1,7 +1,7 @@
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@langfuse/shared/src/db";
-import { Role, type Plan } from "@langfuse/shared";
+import { prisma } from "@hanzo/console/src/db";
+import { Role, type Plan } from "@hanzo/console";
 import type { Session } from "next-auth";
 import { v4 as uuidv4 } from "uuid";
 
@@ -85,7 +85,7 @@ function createSession(
         },
       ],
       featureFlags: {
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
         templateFlag: true,
       },
       admin: false, // Not admin to test actual limits

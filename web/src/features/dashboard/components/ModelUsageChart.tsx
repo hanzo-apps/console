@@ -15,9 +15,15 @@ import {
   dashboardDateRangeAggregationSettings,
 } from "@/src/utils/date-range-utils";
 import { compactNumberFormatter } from "@/src/utils/numbers";
-import { type FilterState, getGenerationLikeTypes } from "@hanzo/shared";
-import { ModelSelectorPopover, useModelSelection } from "@/src/features/dashboard/components/ModelSelector";
-import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
+import { type FilterState, getGenerationLikeTypes } from "@hanzo/console";
+import {
+  ModelSelectorPopover,
+  useModelSelection,
+} from "@/src/features/dashboard/components/ModelSelector";
+import {
+  type QueryType,
+  mapLegacyUiTableFilterToView,
+} from "@/src/features/query";
 import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
 
 export const ModelUsageChart = ({
@@ -39,8 +45,19 @@ export const ModelUsageChart = ({
   userAndEnvFilterState: FilterState;
   isLoading?: boolean;
 }) => {
-  const { allModels, selectedModels, setSelectedModels, isAllSelected, buttonText, handleSelectAll } =
-    useModelSelection(projectId, userAndEnvFilterState, fromTimestamp, toTimestamp);
+  const {
+    allModels,
+    selectedModels,
+    setSelectedModels,
+    isAllSelected,
+    buttonText,
+    handleSelectAll,
+  } = useModelSelection(
+    projectId,
+    userAndEnvFilterState,
+    fromTimestamp,
+    toTimestamp,
+  );
 
   const modelUsageQuery: QueryType = {
     view: "observations",
@@ -65,7 +82,8 @@ export const ModelUsageChart = ({
       },
     ],
     timeDimension: {
-      granularity: dashboardDateRangeAggregationSettings[agg].dateTrunc ?? "day",
+      granularity:
+        dashboardDateRangeAggregationSettings[agg].dateTrunc ?? "day",
     },
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
@@ -117,14 +135,17 @@ export const ModelUsageChart = ({
         {
           type: "datetime",
           column: "startTime",
-          temporalUnit: dashboardDateRangeAggregationSettings[agg].dateTrunc ?? "day",
+          temporalUnit:
+            dashboardDateRangeAggregationSettings[agg].dateTrunc ?? "day",
         },
         {
           type: "string",
           column: "model",
         },
       ],
-      orderBy: [{ column: "calculatedTotalCost", direction: "DESC", agg: "SUM" }],
+      orderBy: [
+        { column: "calculatedTotalCost", direction: "DESC", agg: "SUM" },
+      ],
       queryName: "observations-cost-by-type-timeseries",
       version: metricsVersion,
     },
@@ -166,7 +187,8 @@ export const ModelUsageChart = ({
         {
           type: "datetime",
           column: "startTime",
-          temporalUnit: dashboardDateRangeAggregationSettings[agg].dateTrunc ?? "day",
+          temporalUnit:
+            dashboardDateRangeAggregationSettings[agg].dateTrunc ?? "day",
         },
         {
           type: "string",
@@ -216,12 +238,16 @@ export const ModelUsageChart = ({
   const unitsByModel =
     queryResult.data && allModels.length > 0
       ? fillMissingValuesAndTransform(
-          extractTimeSeriesData(queryResult.data as DatabaseRow[], "time_dimension", [
-            {
-              uniqueIdentifierColumns: [{ accessor: "providedModelName" }],
-              valueColumn: "sum_totalTokens",
-            },
-          ]),
+          extractTimeSeriesData(
+            queryResult.data as DatabaseRow[],
+            "time_dimension",
+            [
+              {
+                uniqueIdentifierColumns: [{ accessor: "providedModelName" }],
+                valueColumn: "sum_totalTokens",
+              },
+            ],
+          ),
           selectedModels,
         )
       : [];
@@ -229,23 +255,31 @@ export const ModelUsageChart = ({
   const costByModel =
     queryResult.data && allModels.length > 0
       ? fillMissingValuesAndTransform(
-          extractTimeSeriesData(queryResult.data as DatabaseRow[], "time_dimension", [
-            {
-              uniqueIdentifierColumns: [{ accessor: "providedModelName" }],
-              valueColumn: "sum_totalCost",
-            },
-          ]),
+          extractTimeSeriesData(
+            queryResult.data as DatabaseRow[],
+            "time_dimension",
+            [
+              {
+                uniqueIdentifierColumns: [{ accessor: "providedModelName" }],
+                valueColumn: "sum_totalCost",
+              },
+            ],
+          ),
           selectedModels,
         )
       : [];
 
   const totalCost = queryResult.data?.reduce(
-    (acc, curr) => acc + (!isNaN(Number(curr.sum_totalCost)) ? Number(curr.sum_totalCost) : 0),
+    (acc, curr) =>
+      acc +
+      (!isNaN(Number(curr.sum_totalCost)) ? Number(curr.sum_totalCost) : 0),
     0,
   );
 
   const totalTokens = queryResult.data?.reduce(
-    (acc, curr) => acc + (!isNaN(Number(curr.sum_totalTokens)) ? Number(curr.sum_totalTokens) : 0),
+    (acc, curr) =>
+      acc +
+      (!isNaN(Number(curr.sum_totalTokens)) ? Number(curr.sum_totalTokens) : 0),
     0,
   );
 
@@ -273,7 +307,9 @@ export const ModelUsageChart = ({
     {
       tabTitle: "Usage by model",
       data: unitsByModel,
-      totalMetric: totalTokens ? compactNumberFormatter(totalTokens) : compactNumberFormatter(0),
+      totalMetric: totalTokens
+        ? compactNumberFormatter(totalTokens)
+        : compactNumberFormatter(0),
       metricDescription: `Units`,
       chartMetricLabel: "Tokens",
       chartUnit: "tokens",
@@ -281,7 +317,9 @@ export const ModelUsageChart = ({
     {
       tabTitle: "Usage by type",
       data: unitsByType,
-      totalMetric: totalTokens ? compactNumberFormatter(totalTokens) : compactNumberFormatter(0),
+      totalMetric: totalTokens
+        ? compactNumberFormatter(totalTokens)
+        : compactNumberFormatter(0),
       metricDescription: `Units`,
       chartMetricLabel: "Tokens",
       chartUnit: "tokens",
@@ -292,7 +330,9 @@ export const ModelUsageChart = ({
     <DashboardCard
       className={className}
       title="Model Usage"
-      isLoading={isLoading || (queryResult.isPending && selectedModels.length > 0)}
+      isLoading={
+        isLoading || (queryResult.isPending && selectedModels.length > 0)
+      }
       headerRight={
         <div className="flex items-center justify-end">
           <ModelSelectorPopover
@@ -312,9 +352,17 @@ export const ModelUsageChart = ({
             tabTitle: item.tabTitle,
             content: (
               <>
-                <TotalMetric metric={item.totalMetric} description={item.metricDescription} className="mb-4" />
-                {isEmptyTimeSeries({ data: item.data }) || isLoading || queryResult.isPending ? (
-                  <NoDataOrLoading isLoading={isLoading || queryResult.isPending} />
+                <TotalMetric
+                  metric={item.totalMetric}
+                  description={item.metricDescription}
+                  className="mb-4"
+                />
+                {isEmptyTimeSeries({ data: item.data }) ||
+                isLoading ||
+                queryResult.isPending ? (
+                  <NoDataOrLoading
+                    isLoading={isLoading || queryResult.isPending}
+                  />
                 ) : (
                   <BaseTimeSeriesChart
                     className="[&_text]:fill-muted-foreground [&_tspan]:fill-muted-foreground"

@@ -1,12 +1,12 @@
-import { ObservationLevel, singleFilter, EvalTargetObject } from "@hanzo/console-core";
-import { JobConfiguration, kyselyPrisma, prisma } from "@hanzo/console-core/src/db";
+import { ObservationLevel, singleFilter, EvalTargetObject } from "@hanzo/console";
+import { JobConfiguration, kyselyPrisma, prisma } from "@hanzo/console/src/db";
 import {
   convertDateToDatastoreDateTime,
   createOrgProjectAndApiKey,
   TraceRecordReadType,
   upsertObservation,
   upsertTrace,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 import Decimal from "decimal.js";
 import { afterAll, test as baseTest, beforeAll, describe } from "vitest";

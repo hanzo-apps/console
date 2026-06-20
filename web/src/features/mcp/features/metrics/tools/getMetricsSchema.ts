@@ -3,7 +3,7 @@ import {
   granularities,
   viewsV2,
   viewDeclarations,
-} from "@langfuse/shared/query";
+} from "@hanzo/console/query";
 import { z } from "zod";
 import { defineTool } from "../../../core/define-tool";
 import { runMcpTool } from "../../../core/run-mcp-tool";

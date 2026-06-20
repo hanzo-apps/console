@@ -4,7 +4,7 @@ import {
   logger,
   traceException,
   DatasetQueueEventType,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 
 export const processDatastoreDatasetDelete = async (jobPayload: DatasetQueueEventType) => {
   const { deletionType, projectId, datasetId } = jobPayload;

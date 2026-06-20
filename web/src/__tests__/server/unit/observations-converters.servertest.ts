@@ -1,17 +1,17 @@
-// Mock env before any @langfuse/shared module is loaded to prevent parse failures
+// Mock env before any @hanzo/console module is loaded to prevent parse failures
 // in environments without a .env file.
-vi.mock("@langfuse/shared/src/env", () => ({
+vi.mock("@hanzo/console/src/env", () => ({
   env: new Proxy({} as Record<string, unknown>, { get: () => undefined }),
   removeEmptyEnvVariables: (e: Record<string, string | undefined>) => e,
 }));
 
 // Prisma client creation is a module-level side effect; stub it out.
-vi.mock("@langfuse/shared/src/db", () => ({ prisma: {} }));
+vi.mock("@hanzo/console/src/db", () => ({ prisma: {} }));
 
 import {
   type EventsObservationRecordReadType,
   convertEventsObservation,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 const TRACE_CONTEXT_FIELDS = [
   "userId",

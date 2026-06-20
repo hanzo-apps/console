@@ -1,11 +1,11 @@
 import { env } from "@/src/env.mjs";
 import { createUserEmailPassword } from "@/src/features/auth-credentials/lib/credentialsServerUtils";
-import { prisma } from "@hanzo/shared/src/db";
-import { createAndAddApiKeysToDb } from "@hanzo/shared/src/server/auth/apiKeys";
+import { prisma } from "@hanzo/console/src/db";
+import { createAndAddApiKeysToDb } from "@hanzo/console/src/server/auth/apiKeys";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import { getOrganizationPlanServerSide } from "@/src/features/entitlements/server/getPlan";
-import { CloudConfigSchema } from "@hanzo/shared";
-import { logger } from "@hanzo/shared/src/server";
+import { CloudConfigSchema } from "@hanzo/console";
+import { logger } from "@hanzo/console/src/server";
 
 // Warn if HANZO_INIT_* variables are set but HANZO_INIT_ORG_ID is missing
 if (!env.HANZO_INIT_ORG_ID) {
@@ -57,7 +57,9 @@ if (env.HANZO_INIT_ORG_ID) {
 
   // Partial API key config
   if (hasPublicKey !== hasSecretKey) {
-    const missingKey = hasPublicKey ? "HANZO_INIT_PROJECT_SECRET_KEY" : "HANZO_INIT_PROJECT_PUBLIC_KEY";
+    const missingKey = hasPublicKey
+      ? "HANZO_INIT_PROJECT_SECRET_KEY"
+      : "HANZO_INIT_PROJECT_PUBLIC_KEY";
     logger.warn(
       `[Hanzo Init] Partial API key configuration: ${missingKey} is not set. ` +
         `Both HANZO_INIT_PROJECT_PUBLIC_KEY and HANZO_INIT_PROJECT_SECRET_KEY must be set to create API keys.`,
@@ -74,7 +76,9 @@ if (env.HANZO_INIT_ORG_ID) {
 
   // Partial user config
   if (hasEmail !== hasPassword) {
-    const missingVar = hasEmail ? "HANZO_INIT_USER_PASSWORD" : "HANZO_INIT_USER_EMAIL";
+    const missingVar = hasEmail
+      ? "HANZO_INIT_USER_PASSWORD"
+      : "HANZO_INIT_USER_EMAIL";
     logger.warn(
       `[Hanzo Init] Partial user configuration: ${missingVar} is not set. ` +
         `Both HANZO_INIT_USER_EMAIL and HANZO_INIT_USER_PASSWORD must be set to create a user.`,
@@ -104,20 +108,29 @@ if (env.HANZO_INIT_ORG_ID) {
     });
 
     // Add API Keys: Project -> API Key
-    if (env.HANZO_INIT_PROJECT_SECRET_KEY && env.HANZO_INIT_PROJECT_PUBLIC_KEY) {
+    if (
+      env.HANZO_INIT_PROJECT_SECRET_KEY &&
+      env.HANZO_INIT_PROJECT_PUBLIC_KEY
+    ) {
       const existingApiKey = await prisma.apiKey.findUnique({
         where: { publicKey: env.HANZO_INIT_PROJECT_PUBLIC_KEY },
       });
 
       // Delete key if project changed
-      if (existingApiKey && existingApiKey.projectId !== env.HANZO_INIT_PROJECT_ID) {
+      if (
+        existingApiKey &&
+        existingApiKey.projectId !== env.HANZO_INIT_PROJECT_ID
+      ) {
         await prisma.apiKey.delete({
           where: { publicKey: env.HANZO_INIT_PROJECT_PUBLIC_KEY },
         });
       }
 
       // Create new key if it doesn't exist or project changed
-      if (!existingApiKey || existingApiKey.projectId !== env.HANZO_INIT_PROJECT_ID) {
+      if (
+        !existingApiKey ||
+        existingApiKey.projectId !== env.HANZO_INIT_PROJECT_ID
+      ) {
         await createAndAddApiKeysToDb({
           prisma,
           entityId: env.HANZO_INIT_PROJECT_ID,
@@ -168,7 +181,7 @@ if (env.HANZO_INIT_ORG_ID) {
     // with LANGFUSE_DEFAULT_PROJECT_ROLE (e.g. VIEWER) before the OrgMembership was
     // set to OWNER above. Correct it to OWNER for the init user on the init project.
     if (
-      env.LANGFUSE_INIT_PROJECT_ID &&
+      env.HANZO_INIT_PROJECT_ID &&
       hasEntitlementBasedOnPlan({
         plan: getOrganizationPlanServerSide(cloudConfig),
         entitlement: "rbac-project-roles",
@@ -177,7 +190,7 @@ if (env.HANZO_INIT_ORG_ID) {
       await prisma.projectMembership.upsert({
         where: {
           projectId_userId: {
-            projectId: env.LANGFUSE_INIT_PROJECT_ID,
+            projectId: env.HANZO_INIT_PROJECT_ID,
             userId,
           },
         },
@@ -185,7 +198,7 @@ if (env.HANZO_INIT_ORG_ID) {
         create: {
           userId,
           orgMembershipId: orgMembership.id,
-          projectId: env.LANGFUSE_INIT_PROJECT_ID,
+          projectId: env.HANZO_INIT_PROJECT_ID,
           role: "OWNER",
         },
       });

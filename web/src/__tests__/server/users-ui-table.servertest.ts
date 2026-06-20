@@ -1,7 +1,13 @@
-import { createObservation as createObservationObject, createTrace } from "@hanzo/shared/src/server";
-import { createObservationsCh as createObservationsInClickhouse, createTracesCh } from "@hanzo/shared/src/server";
+import {
+  createObservation as createObservationObject,
+  createTrace,
+} from "@hanzo/console/src/server";
+import {
+  createObservationsCh as createObservationsInDatastore,
+  createTracesCh,
+} from "@hanzo/console/src/server";
 import { v4 as uuidv4 } from "uuid";
-import { getUserMetrics } from "@hanzo/shared/src/server";
+import { getUserMetrics } from "@hanzo/console/src/server";
 
 const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
 
@@ -44,7 +50,7 @@ describe("getUserMetrics function", () => {
       type: "GENERATION",
     });
 
-    await createObservationsInClickhouse([observation1, observation2]);
+    await createObservationsInDatastore([observation1, observation2]);
 
     const userMetrics = await getUserMetrics(projectId, [userId], []);
 
@@ -98,7 +104,7 @@ describe("getUserMetrics function", () => {
       type: "GENERATION",
     });
 
-    await createObservationsInClickhouse([observation1, observation2]);
+    await createObservationsInDatastore([observation1, observation2]);
 
     const userMetrics = await getUserMetrics(
       projectId,

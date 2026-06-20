@@ -1,4 +1,11 @@
-import React, { type PropsWithChildren, createContext, useContext, useState } from "react";
+import React, {
+  type PropsWithChildren,
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 export const detailPageListKeys = {
   traces: "traces",
@@ -43,7 +50,9 @@ const DetailPageLists = createContext<ListContextType | undefined>(undefined);
 export function useDetailPageLists(): ListContextType {
   const context = useContext(DetailPageLists);
   if (!context) {
-    throw new Error("useDetailPageLists must be used within a DetailPageListsProvider");
+    throw new Error(
+      "useDetailPageLists must be used within a DetailPageListsProvider",
+    );
   }
   return context;
 }
@@ -57,7 +66,9 @@ export function useFirstDetailPageListEntry<
 }
 
 export function DetailPageListsProvider(props: PropsWithChildren) {
-  const [detailPagelists, setLists] = useState<Record<string, Array<ListEntry>>>({});
+  const [detailPagelists, setLists] = useState<
+    Record<string, Array<ListEntry>>
+  >({});
 
   const setDetailPageList = useCallback<ListContextType["setDetailPageList"]>(
     (key, list) => {
@@ -72,6 +83,8 @@ export function DetailPageListsProvider(props: PropsWithChildren) {
   );
 
   return (
-    <DetailPageLists.Provider value={{ detailPagelists, setDetailPageList }}>{props.children}</DetailPageLists.Provider>
+    <DetailPageLists.Provider value={{ detailPagelists, setDetailPageList }}>
+      {props.children}
+    </DetailPageLists.Provider>
   );
 }

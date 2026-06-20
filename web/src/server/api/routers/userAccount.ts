@@ -1,12 +1,18 @@
 import { z } from "zod/v4";
-import { createTRPCRouter, authenticatedProcedure } from "@/src/server/api/trpc";
+import {
+  createTRPCRouter,
+  authenticatedProcedure,
+} from "@/src/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-import { StringNoHTML } from "@hanzo/console-core";
-import { Role, Prisma } from "@hanzo/console-core/src/db";
-import type { PrismaClient } from "@hanzo/console-core/src/db";
+import { StringNoHTML } from "@hanzo/console";
+import { Role, Prisma } from "@hanzo/console/src/db";
+import type { PrismaClient } from "@hanzo/console/src/db";
 
 const updateDisplayNameSchema = z.object({
-  name: StringNoHTML.min(1, "Name cannot be empty").max(100, "Name must be at most 100 characters"),
+  name: StringNoHTML.min(1, "Name cannot be empty").max(
+    100,
+    "Name must be at most 100 characters",
+  ),
 });
 
 /**
@@ -16,7 +22,15 @@ const updateDisplayNameSchema = z.object({
 async function checkUserCanBeDeleted(
   userId: string,
   prisma:
-    | Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
+    | Omit<
+        PrismaClient,
+        | "$connect"
+        | "$disconnect"
+        | "$on"
+        | "$transaction"
+        | "$use"
+        | "$extends"
+      >
     | Prisma.TransactionClient,
 ) {
   // Find all organizations where user is an owner
@@ -61,21 +75,23 @@ export const userAccountRouter = createTRPCRouter({
     return checkUserCanBeDeleted(userId, ctx.prisma);
   }),
 
-  updateDisplayName: authenticatedProcedure.input(updateDisplayNameSchema).mutation(async ({ input, ctx }) => {
-    const userId = ctx.session.user.id;
+  updateDisplayName: authenticatedProcedure
+    .input(updateDisplayNameSchema)
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
 
-    const updatedUser = await ctx.prisma.user.update({
-      where: { id: userId },
-      data: {
-        name: input.name,
-      },
-    });
+      const updatedUser = await ctx.prisma.user.update({
+        where: { id: userId },
+        data: {
+          name: input.name,
+        },
+      });
 
-    return {
-      success: true,
-      name: updatedUser.name,
-    };
-  }),
+      return {
+        success: true,
+        name: updatedUser.name,
+      };
+    }),
 
   delete: authenticatedProcedure.mutation(async ({ ctx }) => {
     const userId = ctx.session.user.id;
@@ -127,11 +143,11 @@ export const userAccountRouter = createTRPCRouter({
   setV4BetaEnabled: authenticatedProcedure
     .input(z.object({ enabled: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
-      const isCloudDeployment = Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION);
+      const isCloudDeployment = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
 
       if (
         !isCloudDeployment &&
-        process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION !== "DEV"
+        process.env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== "DEV"
       ) {
         return {
           success: true,

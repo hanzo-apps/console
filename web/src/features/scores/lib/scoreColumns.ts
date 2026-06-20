@@ -1,4 +1,9 @@
-import { type ScoreAggregate, type FilterCondition, type ScoreDataTypeType, type ScoreSourceType } from "@hanzo/shared";
+import {
+  type ScoreAggregate,
+  type FilterCondition,
+  type ScoreDataTypeType,
+  type ScoreSourceType,
+} from "@hanzo/console";
 
 const traceLevelScoreFilter = (): FilterCondition[] => [
   {
@@ -70,7 +75,11 @@ export const scoreFilters = {
   ],
 
   // Filter for dataset run level scores
-  forDatasetRuns: ({ datasetRunIds }: { datasetRunIds: string[] }): FilterCondition[] => [
+  forDatasetRuns: ({
+    datasetRunIds,
+  }: {
+    datasetRunIds: string[];
+  }): FilterCondition[] => [
     {
       type: "stringOptions",
       column: "datasetRunIds",
@@ -138,7 +147,10 @@ export const scoreFilters = {
   ],
 };
 
-export const addPrefixToScoreKeys = (scores: ScoreAggregate, prefix: string) => {
+export const addPrefixToScoreKeys = (
+  scores: ScoreAggregate,
+  prefix: string,
+) => {
   const prefixed: ScoreAggregate = {};
   for (const [key, value] of Object.entries(scores)) {
     prefixed[`${prefix}-${key}`] = value;

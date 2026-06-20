@@ -5,9 +5,9 @@ import {
   GetScoresResponseV2,
   filterAndValidateV2GetScoreList,
   InvalidRequestError,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";
-import { logger } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({
@@ -25,7 +25,9 @@ export default withMiddlewares({
       const includesTrace = requestedFields.includes("trace");
       const hasTraceFilters = Boolean(query.userId || query.traceTags);
 
-      logger.info(`fields: ${query.fields}, includesTrace: ${includesTrace}, hasTraceFilters: ${hasTraceFilters}`);
+      logger.info(
+        `fields: ${query.fields}, includesTrace: ${includesTrace}, hasTraceFilters: ${hasTraceFilters}`,
+      );
 
       if (!includesTrace && hasTraceFilters) {
         throw new InvalidRequestError(

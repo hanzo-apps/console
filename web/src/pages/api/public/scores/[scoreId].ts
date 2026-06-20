@@ -7,10 +7,14 @@ import {
   GetScoreResponseV1,
   InternalServerError,
   HanzoNotFoundError,
-} from "@hanzo/shared";
-import { logger, traceException, ScoreDeleteQueue } from "@hanzo/shared/src/server";
+} from "@hanzo/console";
+import {
+  logger,
+  traceException,
+  ScoreDeleteQueue,
+} from "@hanzo/console/src/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
-import { QueueJobs } from "@hanzo/shared/src/server";
+import { QueueJobs } from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";
 
