@@ -105,10 +105,11 @@ RUN set -eux; \
 # prisma CLI + engines into production and avoids the db-push-at-boot hang.
 RUN set -eux; \
     mkdir -p /app/seed; \
+    cd /app/packages/shared; \
     DATABASE_URL="file:/app/seed/app.db" \
-      pnpm exec prisma db push \
-        --schema=./packages/shared/prisma/schema.prisma --skip-generate --accept-data-loss; \
-    ls -la /app/seed/app.db
+      ./node_modules/.bin/prisma db push \
+        --schema=./prisma/schema.prisma --skip-generate --accept-data-loss; \
+    cd /app; ls -la /app/seed/app.db
 
 # ===== Development Stage =====
 FROM deps AS development
