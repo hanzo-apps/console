@@ -3,7 +3,7 @@ import { cn } from "@/src/utils/tailwind";
 import { X } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Command as CommandPrimitive } from "cmdk";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 
 type TagInputProps = React.ComponentPropsWithoutRef<
   typeof CommandPrimitive.Input
@@ -27,7 +27,7 @@ export const TagInput = React.forwardRef<
     },
     ref,
   ) => {
-    const capture = usePostHogClientCapture();
+    const capture = useInsightsCapture();
 
     const removeTag = (tagToRemove: string) => {
       if (setSelectedTags && allowTagRemoval) {

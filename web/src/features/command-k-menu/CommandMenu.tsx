@@ -11,7 +11,7 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { env } from "@/src/env.mjs";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useDebounce } from "@/src/hooks/useDebounce";
 import { useCommandMenu } from "@/src/features/command-k-menu/CommandMenuProvider";
 import { useProjectSettingsPages } from "@/src/pages/project/[projectId]/settings";
@@ -56,7 +56,7 @@ export function CommandMenu({
     keywords: page.cmdKKeywords || [],
   }));
 
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const debouncedSearchChange = useDebounce(
     (value: string) => {

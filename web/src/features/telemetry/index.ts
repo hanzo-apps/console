@@ -1,5 +1,5 @@
 import { VERSION } from "@/src/constants";
-import { ServerPosthog } from "@/src/features/posthog-analytics/ServerPosthog";
+import { ServerInsights } from "@/src/features/insights-analytics/ServerInsights";
 import { Prisma, prisma } from "@hanzo/console/src/db";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -39,7 +39,7 @@ export async function telemetry() {
       const { jobStartedAt, lastRun, clientId } = job;
 
       // Run telemetry job
-      await posthogTelemetry({
+      await insightsTelemetry({
         startTimeframe: lastRun,
         endTimeframe: jobStartedAt,
         clientId,
@@ -146,7 +146,7 @@ async function jobScheduler(): Promise<
   return { shouldRunJob: true, jobStartedAt, lastRun, clientId };
 }
 
-async function posthogTelemetry({
+async function insightsTelemetry({
   startTimeframe,
   endTimeframe,
   clientId,
@@ -156,7 +156,7 @@ async function posthogTelemetry({
   clientId: string;
 }) {
   try {
-    const posthog = new ServerPosthog();
+    const insights = new ServerInsights();
     // Count projects
     const totalProjects = await prisma.project.count({
       where: {
@@ -249,7 +249,7 @@ async function posthogTelemetry({
       LIMIT 30
     `;
 
-    posthog.capture({
+    insights.capture({
       distinctId: "docker:" + clientId,
       event: "telemetry",
       properties: {
@@ -276,7 +276,7 @@ async function posthogTelemetry({
       },
     });
 
-    await posthog.shutdown();
+    await insights.shutdown();
   } catch (error) {
     logger.error(error);
   }

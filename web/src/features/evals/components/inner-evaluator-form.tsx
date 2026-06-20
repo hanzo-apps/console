@@ -40,7 +40,7 @@ import { Slider } from "@/src/components/ui/slider";
 import { Card } from "@/src/components/ui/card";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
 import DocPopup from "@/src/components/layouts/doc-popup";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { cn } from "@/src/utils/tailwind";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import {
@@ -169,7 +169,7 @@ export const InnerEvaluatorForm = (props: {
   preprocessFormValues?: (values: any) => any;
 }) => {
   const [formError, setFormError] = useState<string | null>(null);
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const [showPreview, setShowPreview] = useState(false);
   const router = useRouter();
   const traceId = router.query.traceId as string;

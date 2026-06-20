@@ -13,7 +13,7 @@ import {
 import { CsvUploadDialog } from "@/src/features/datasets/components/CsvUploadDialog";
 import { NewDatasetItemForm } from "@/src/features/datasets/components/NewDatasetItemForm";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { cn } from "@/src/utils/tailwind";
 
 interface DatasetItemEntryPointRowProps {
@@ -78,7 +78,7 @@ export const DatasetItemsOnboarding = ({
   projectId: string;
   datasetId: string;
 }) => {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false);
 

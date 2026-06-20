@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import Header from "@/src/components/layouts/header";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import {
   useHanzoCloudRegion,
@@ -24,7 +24,7 @@ import { useSession } from "next-auth/react";
 export default function AIFeatureSwitch() {
   const { update: updateSession } = useSession();
   const { isHanzoCloud } = useHanzoCloudRegion();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const organization = useQueryOrganization();
   const [isAIFeatureSwitchEnabled, setIsAIFeatureSwitchEnabled] = useState(
     organization?.aiFeaturesEnabled ?? false,

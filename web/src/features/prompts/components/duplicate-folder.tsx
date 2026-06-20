@@ -28,7 +28,7 @@ import { z } from "zod/v4";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { Copy } from "lucide-react";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
 
 enum CopySettings {
@@ -49,7 +49,7 @@ export function DuplicateFolder({ folderPath }: { folderPath: string }) {
   const [error, setError] = useState<string | null>(null);
   const hasAccess = useHasProjectAccess({ projectId, scope: "prompts:CUD" });
   const promptLimit = useEntitlementLimit("prompt-management-count-prompts");
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const form = useForm({
     resolver: zodResolver(formSchema),

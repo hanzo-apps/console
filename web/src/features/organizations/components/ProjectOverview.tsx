@@ -76,7 +76,7 @@ const OrganizationProjectTiles = ({
 };
 
 const DemoOrganizationTile = () => {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   return (
     <Card>

@@ -10,7 +10,7 @@ import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { api } from "@/src/utils/api";
 import { Progress } from "@/src/components/ui/progress";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { DialogBody, DialogFooter } from "@/src/components/ui/dialog";
 import { CsvImportValidationError } from "./CsvImportValidationError";
 import { Checkbox } from "@/src/components/ui/checkbox";
@@ -52,7 +52,7 @@ export function PreviewCsvImport({
   setPreview: (preview: CsvPreviewResult | null) => void;
   setOpen?: (open: boolean) => void;
 }) {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   // Fetch dataset schema
   const { data: dataset } = api.datasets.byId.useQuery({

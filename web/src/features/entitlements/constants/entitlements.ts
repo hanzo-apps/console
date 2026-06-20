@@ -21,7 +21,7 @@ export const entitlements = [
   "model-based-evaluations",
   "playground",
   "prompt-experiments",
-  "integration-posthog",
+  "integration-insights",
 ] as const;
 export type Entitlement = (typeof entitlements)[number];
 
@@ -191,7 +191,7 @@ export const entitlementAccess: Record<
       "model-based-evaluations",
       "playground",
       "prompt-experiments",
-      "integration-posthog",
+      "integration-insights",
     ],
     entitlementLimits: {
       "annotation-queue-count": 1,

@@ -18,7 +18,7 @@ import {
   DialogBody,
 } from "@/src/components/ui/dialog";
 import Link from "next/link";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { type CreateExperiment } from "@/src/features/experiments/types";
 import { MultiStepExperimentForm } from "@/src/features/experiments/components/MultiStepExperimentForm";
 import { RemoteExperimentUpsertForm } from "@/src/features/experiments/components/RemoteExperimentUpsertForm";
@@ -55,7 +55,7 @@ export const CreateExperimentsForm = ({
   }) => Promise<void>;
   showSDKRunInfoPage?: boolean;
 }) => {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const [showPromptForm, setShowPromptForm] = useState(false);
   const [showRemoteExperimentUpsertForm, setShowRemoteExperimentUpsertForm] =
     useState(false);

@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import {
   mixpanelIntegrationFormSchema,
   MIXPANEL_REGIONS,
@@ -130,7 +130,7 @@ const MixpanelIntegrationSettingsForm = ({
   projectId: string;
   isLoading: boolean;
 }) => {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const mixpanelForm = useForm({
     resolver: zodResolver(mixpanelIntegrationFormSchema),
     defaultValues: {

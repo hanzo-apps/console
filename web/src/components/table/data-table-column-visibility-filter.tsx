@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight, Component, Menu, X } from "lucide-react";
 import { type HanzoColumnDef } from "@/src/components/table/types";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import DocPopup from "@/src/components/layouts/doc-popup";
 import {
   closestCenter,
@@ -297,7 +297,7 @@ export function DataTableColumnVisibilityFilter<TData, TValue>({
   columnOrder,
   setColumnOrder,
 }: DataTableColumnVisibilityFilterProps<TData, TValue>) {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(
     {},
   );
@@ -331,7 +331,7 @@ export function DataTableColumnVisibilityFilter<TData, TValue>({
         return newColumnVisibility;
       });
     },
-    // eslint disable is because we don't want the posthog capture as deps
+    // eslint disable is because we don't want the insights capture as deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [setColumnVisibility, columnVisibility],
   );
