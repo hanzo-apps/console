@@ -175,6 +175,30 @@ pnpm run nuke              # Remove all node_modules, build files, wipe database
 - **Database Dependencies**: Docker for local PostgreSQL, Datastore, Redis, MinIO
 - **Environment**: Copy `.env.dev.example` to `.env`
 
+### Production env delivery (KMS-native, console.hanzo.ai)
+
+In the `hanzo-k8s` cluster the console pod is reconciled by the Hanzo
+operator from the `HanzoService/console` CR
+(`hanzoai/universe:infra/k8s/operator/crs/console.yaml`). The deployed
+operator **drops the CR's inline `spec.env`** and carries only
+`envFrom: secretRef: console-secrets` onto the generated Deployment — so the
+live pod has zero inline env vars. Every env var the process needs, including
+the non-secret literals, must arrive through the KMS-synced `console-secrets`
+Secret.
+
+Consequences for env work here:
+- `console-secrets` is populated by the `KMSSecret/console-kms-sync` CR from
+  KMS `hanzo/prod/console-secrets`. Adding a NEW required env var (no
+  `.optional()` / `.default()` in `web/src/env.mjs` or
+  `packages/shared/src/env.ts`) means it MUST also be added to KMS and to that
+  CR's `keys[]`, or the prod pod fails boot validation.
+- Boot-blocking required literals already wired this way: `NEXTAUTH_URL`
+  (`web` env `z.url()`) and `S3_EVENT_UPLOAD_BUCKET` (`shared` env
+  `z.string()`).
+- The kms-operator sync is all-or-nothing: seed the value in KMS BEFORE adding
+  the key to the CR (see the seeder + ordering notes in
+  `hanzoai/universe:scripts/console-kms-seed-literals.sh`).
+
 ## Login for Development
 
 When running locally with seed data:
