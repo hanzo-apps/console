@@ -6,6 +6,7 @@ import { env } from "process";
 import kyselyExtension from "prisma-extension-kysely";
 import { Kysely, SqliteAdapter, SqliteIntrospector, SqliteQueryCompiler } from "kysely";
 import { DB } from ".";
+import { jsonArrayCodec } from "./db-json-arrays";
 import { logger } from "./server";
 
 export class PrismaClientSingleton {
@@ -44,7 +45,12 @@ const createPrismaInstance = () => {
   client.$on("error", (event) => {
     logger.error(`prisma:error ${event.message}`);
   });
-  return client;
+
+  // Install the SQLite JSON-array codec so the columns that were Postgres
+  // scalar lists round-trip as real arrays for every caller (see
+  // db-json-arrays.ts). The extension is transparent — it adds no new client
+  // surface — so we keep the PrismaClient type for the 300+ consumers.
+  return client.$extends(jsonArrayCodec) as unknown as PrismaClient;
 };
 
 export class KyselySingleton {
