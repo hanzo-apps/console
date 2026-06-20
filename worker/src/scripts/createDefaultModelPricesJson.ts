@@ -21,7 +21,9 @@ export async function getDefaultModelPrices() {
       tokenizer_id: string | null;
     }[]
   >`
-    SELECT DISTINCT ON (model_name)
+    -- SQLite has no DISTINCT ON; pick the newest (by start_date) row per
+    -- model_name with a window function.
+    SELECT
       id,
       model_name,
       match_pattern,
@@ -32,13 +34,17 @@ export async function getDefaultModelPrices() {
       updated_at,
       tokenizer_config,
       tokenizer_id
-    FROM
-      models
-    WHERE
-      project_id IS NULL
-    ORDER BY
-      model_name,
-      start_date DESC NULLS LAST;
+    FROM (
+      SELECT
+        m.*,
+        ROW_NUMBER() OVER (
+          PARTITION BY model_name ORDER BY start_date DESC NULLS LAST
+        ) AS rn
+      FROM models m
+      WHERE project_id IS NULL
+    ) ranked
+    WHERE rn = 1
+    ORDER BY model_name;
   `;
 
   return modelPricesFromDb

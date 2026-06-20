@@ -17,6 +17,15 @@ const JOB_INTERVAL_MINUTES = Prisma.raw("720"); // 12 hours
 // Timeout for job in minutes, if job is not finished in this time, it will be retried
 const JOB_TIMEOUT_MINUTES = Prisma.raw("10"); // 10 minutes
 
+// SQLite has no NOW()/INTERVAL and stores DateTime columns as epoch-ms
+// integers. These fragments produce "now" and the "now - <minutes>" cutoff in
+// epoch-ms so comparisons against last_run/job_started_at are correct.
+const NOW_MS = Prisma.raw("(CAST(unixepoch('now') AS INTEGER) * 1000)");
+const cutoffMs = (minutes: Prisma.Sql) =>
+  Prisma.sql`((CAST(unixepoch('now') AS INTEGER) - ${minutes} * 60) * 1000)`;
+const INTERVAL_CUTOFF = cutoffMs(JOB_INTERVAL_MINUTES);
+const TIMEOUT_CUTOFF = cutoffMs(JOB_TIMEOUT_MINUTES);
+
 export async function telemetry() {
   try {
     // Only run in prod
@@ -79,17 +88,17 @@ async function jobScheduler(): Promise<
   const checkNoLock = await prisma.$queryRaw<Array<{ status: boolean }>>`
     SELECT (
       EXISTS (
-        SELECT 1 
-        FROM cron_jobs 
-        WHERE name = 'telemetry' 
-        AND (last_run IS NULL OR last_run <= (NOW() - INTERVAL '${JOB_INTERVAL_MINUTES} minute')) 
-        AND (job_started_at IS NULL OR job_started_at <= (NOW() - INTERVAL '${JOB_TIMEOUT_MINUTES} minute'))
+        SELECT 1
+        FROM cron_jobs
+        WHERE name = 'telemetry'
+        AND (last_run IS NULL OR last_run <= ${INTERVAL_CUTOFF})
+        AND (job_started_at IS NULL OR job_started_at <= ${TIMEOUT_CUTOFF})
       )
       OR NOT EXISTS (
-        SELECT 1 
-        FROM cron_jobs 
+        SELECT 1
+        FROM cron_jobs
         WHERE name = 'telemetry'
-      ) 
+      )
     ) AS status;`;
   // Return if job should not run
   if (checkNoLock.length !== 1) {
@@ -98,9 +107,11 @@ async function jobScheduler(): Promise<
   }
   if (!checkNoLock[0]!.status) return { shouldRunJob: false };
 
-  // Lock table and update job_started_at if no other job was created in the meantime
+  // Update job_started_at if no other job was created in the meantime. SQLite
+  // has no table-level LOCK; writes within a transaction are already
+  // serialized, and the ON CONFLICT ... WHERE upsert is atomic. CURRENT_TIMESTAMP
+  // is replaced with epoch-ms so it matches the DateTime column representation.
   const res = await prisma.$transaction([
-    prisma.$executeRaw`LOCK TABLE cron_jobs IN SHARE ROW EXCLUSIVE MODE`,
     prisma.$queryRaw<
       Array<{
         name: string;
@@ -109,21 +120,21 @@ async function jobScheduler(): Promise<
         state: string | null;
       }>
     >`INSERT INTO cron_jobs (name, last_run, job_started_at, state)
-    VALUES ('telemetry', NULL, CURRENT_TIMESTAMP, NULL)
-    ON CONFLICT (name) 
-    DO UPDATE 
-    SET job_started_at = CASE 
-        WHEN (cron_jobs.last_run IS NULL OR cron_jobs.last_run <= (NOW() - INTERVAL '${JOB_INTERVAL_MINUTES} minutes')) 
-          AND (cron_jobs.job_started_at IS NULL OR cron_jobs.job_started_at <= (NOW() - INTERVAL '${JOB_TIMEOUT_MINUTES} minutes'))
-        THEN CURRENT_TIMESTAMP 
-        ELSE cron_jobs.job_started_at 
+    VALUES ('telemetry', NULL, ${NOW_MS}, NULL)
+    ON CONFLICT (name)
+    DO UPDATE
+    SET job_started_at = CASE
+        WHEN (cron_jobs.last_run IS NULL OR cron_jobs.last_run <= ${INTERVAL_CUTOFF})
+          AND (cron_jobs.job_started_at IS NULL OR cron_jobs.job_started_at <= ${TIMEOUT_CUTOFF})
+        THEN ${NOW_MS}
+        ELSE cron_jobs.job_started_at
         END
-    WHERE cron_jobs.name = 'telemetry' 
-      AND (cron_jobs.last_run IS NULL OR cron_jobs.last_run <= (NOW() - INTERVAL '${JOB_INTERVAL_MINUTES} minutes')) 
-      AND (cron_jobs.job_started_at IS NULL OR cron_jobs.job_started_at <= (NOW() - INTERVAL '${JOB_TIMEOUT_MINUTES} minutes'))
+    WHERE cron_jobs.name = 'telemetry'
+      AND (cron_jobs.last_run IS NULL OR cron_jobs.last_run <= ${INTERVAL_CUTOFF})
+      AND (cron_jobs.job_started_at IS NULL OR cron_jobs.job_started_at <= ${TIMEOUT_CUTOFF})
     RETURNING *`,
   ]);
-  const createJobLocked = res[1];
+  const createJobLocked = res[0];
 
   // Other job was created in the meantime
   if (createJobLocked.length !== 1) {
@@ -237,13 +248,14 @@ async function insightsTelemetry({
       0,
     );
 
-    // Domains (no PII)
+    // Domains (no PII). SQLite: substring(... FROM ...)/position -> SUBSTR/INSTR,
+    // ::int -> CAST(... AS INTEGER), ILIKE -> LIKE (ASCII case-insensitive).
     const domains = await prisma.$queryRaw<Array<{ domain: string }>>`
       SELECT
-        substring(email FROM position('@' in email) + 1) as domain,
-        count(id)::int as "userCount"
+        SUBSTR(email, INSTR(email, '@') + 1) as domain,
+        CAST(count(id) AS INTEGER) as "userCount"
       FROM users
-      WHERE email ILIKE '%@%'
+      WHERE email LIKE '%@%'
       GROUP BY 1
       ORDER BY count(id) desc
       LIMIT 30

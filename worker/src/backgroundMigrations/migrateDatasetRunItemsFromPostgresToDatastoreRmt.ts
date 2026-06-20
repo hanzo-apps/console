@@ -81,7 +81,9 @@ export default class MigrateDatasetRunItemsFromPostgresToDatastoreRmt implements
 
       const datasetRunItems = await prisma.$queryRaw<Array<Record<string, any>>>(Prisma.sql`
         WITH latest_dataset_items AS (
-          SELECT DISTINCT ON (id, project_id)
+          -- SQLite has no DISTINCT ON; pick the most recent version per
+          -- (id, project_id) with a window function.
+          SELECT
             id,
             project_id,
             dataset_id,
@@ -91,9 +93,16 @@ export default class MigrateDatasetRunItemsFromPostgresToDatastoreRmt implements
             created_at,
             valid_from,
             is_deleted
-          FROM dataset_items
-          WHERE valid_to IS NULL 
-          ORDER BY id, project_id, valid_from DESC  -- Pick the most recent version
+          FROM (
+            SELECT
+              di.*,
+              ROW_NUMBER() OVER (
+                PARTITION BY id, project_id ORDER BY valid_from DESC
+              ) AS rn
+            FROM dataset_items di
+            WHERE valid_to IS NULL
+          ) ranked
+          WHERE rn = 1
         )
         SELECT
           dri.id as id,

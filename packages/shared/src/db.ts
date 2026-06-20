@@ -104,3 +104,8 @@ export * from "@prisma/client";
 // Canonical decoder for JSON-array TEXT columns read via raw SQL (which
 // bypasses the transparent codec). See db-json-arrays.ts.
 export { decodeJsonArrayColumn } from "./db-json-arrays";
+
+// Re-export Kysely's `sql` tag so consumers of `kyselyPrisma` can build raw
+// fragments without depending on the `kysely` package directly (it is a
+// transitive dep of this package, not of web/worker).
+export { sql } from "kysely";
