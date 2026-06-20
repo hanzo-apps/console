@@ -1,11 +1,12 @@
 import { LlmApiKeys } from "@prisma/client";
 import z from "zod/v4";
-import { BedrockConfigSchema, VertexAIConfigSchema } from "../../interfaces/customLLMProviderConfigSchemas";
+import {
+  BedrockConfigSchema,
+  VertexAIConfigSchema,
+  OpenAIConfigSchema,
+} from "../../interfaces/customLLMProviderConfigSchemas";
 import { JSONObjectSchema } from "../../utils/zod";
-import type {
-  InternalTraceEventInput,
-  InternalTraceExperimentContext,
-} from "./internalTraceEvents";
+import type { InternalTraceEventInput, InternalTraceExperimentContext } from "./internalTraceEvents";
 
 // disable lint as this is exported and used in web/worker
 
@@ -503,9 +504,7 @@ export const LLMApiKeySchema = z
     baseURL: z.string().nullable(),
     customModels: z.array(z.string()),
     withDefaultModels: z.boolean(),
-    config: z
-      .union([BedrockConfigSchema, VertexAIConfigSchema, OpenAIConfigSchema])
-      .nullish(),
+    config: z.union([BedrockConfigSchema, VertexAIConfigSchema, OpenAIConfigSchema]).nullish(),
   })
   // strict mode to prevent extra keys. Thorws error otherwise
   // https://github.com/colinhacks/zod?tab=readme-ov-file#strict
@@ -529,9 +528,7 @@ export type InternalTraceWriteInput = {
   eventInputs: InternalTraceEventInput[];
 };
 
-export type InternalTraceWriter = (
-  params: InternalTraceWriteInput,
-) => Promise<void>;
+export type InternalTraceWriter = (params: InternalTraceWriteInput) => Promise<void>;
 
 /**
  * Configuration for direct writing of trace events to the events table.
