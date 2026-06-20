@@ -515,6 +515,8 @@ export type LLMApiKey = z.infer<typeof LLMApiKeySchema> extends LlmApiKeys ? z.i
 export enum ConsoleInternalTraceEnvironment {
   PromptExperiments = "hanzo-prompt-experiment",
   LLMJudge = "hanzo-llm-as-a-judge",
+  CodeEval = "hanzo-code-eval",
+  NaturalLanguageFilter = "hanzo-natural-language-filter",
 }
 
 export type ProcessedTraceEvent = {

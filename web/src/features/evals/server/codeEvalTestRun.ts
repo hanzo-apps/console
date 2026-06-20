@@ -17,7 +17,7 @@ import { TRPCError } from "@trpc/server";
 
 import {
   LangfuseNotFoundError,
-  LangfuseInternalTraceEnvironment,
+  ConsoleInternalTraceEnvironment,
   observationForEvalSchema,
   type EvalTargetObject,
   type EvalTemplateCodeBased,
@@ -239,7 +239,7 @@ async function getObservationForEvalById(params: {
   shouldReadFromObservationsTable?: boolean;
 }): Promise<ObservationForEval> {
   if (
-    env.LANGFUSE_ENABLE_EVENTS_TABLE_FLAGS !== "true" ||
+    env.HANZO_ENABLE_EVENTS_TABLE_FLAGS !== "true" ||
     params.shouldReadFromObservationsTable
   ) {
     return getObservationForEvalByIdFromLegacyObservations(params);
@@ -428,7 +428,7 @@ async function writeTraceViaIngestion(trace: InternalTraceWriteInput) {
 }
 
 function getInternalEvalEnvironment(environment: string | undefined) {
-  return environment === LangfuseInternalTraceEnvironment.CodeEval
-    ? LangfuseInternalTraceEnvironment.CodeEval
-    : LangfuseInternalTraceEnvironment.LLMJudge;
+  return environment === ConsoleInternalTraceEnvironment.CodeEval
+    ? ConsoleInternalTraceEnvironment.CodeEval
+    : ConsoleInternalTraceEnvironment.LLMJudge;
 }

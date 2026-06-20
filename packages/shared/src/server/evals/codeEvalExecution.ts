@@ -1,13 +1,6 @@
 import { stringifyValue } from "../../utils/stringChecks";
-import {
-  INTERNAL_TRACE_EVENT_SOURCE,
-  type InternalTraceEventInput,
-} from "../llm/internalTraceEvents";
-import {
-  LangfuseInternalTraceEnvironment,
-  type InternalTraceWriteInput,
-  type InternalTraceWriter,
-} from "../llm/types";
+import { INTERNAL_TRACE_EVENT_SOURCE, type InternalTraceEventInput } from "../llm/internalTraceEvents";
+import { ConsoleInternalTraceEnvironment, type InternalTraceWriteInput, type InternalTraceWriter } from "../llm/types";
 import { logger } from "../logger";
 import type { EvalTemplateCodeBased } from "../../features/evals/types";
 import {
@@ -34,9 +27,7 @@ const INTERNAL_CODE_EVAL_ERROR_CODES = new Set<CodeEvalDispatcherErrorCode>([
   CodeEvalDispatcherErrorCodes.LAMBDA_INVOCATION_ERROR,
 ]);
 
-const USER_VISIBLE_CODE_EVAL_ERROR_MESSAGE_BY_CODE: Partial<
-  Record<CodeEvalDispatcherErrorCode, string>
-> = {
+const USER_VISIBLE_CODE_EVAL_ERROR_MESSAGE_BY_CODE: Partial<Record<CodeEvalDispatcherErrorCode, string>> = {
   [CodeEvalDispatcherErrorCodes.INVALID_RESULT]: withCodeEvalDocs(
     "The evaluator returned an invalid result. Return { scores: [...] } with at least one score. Each score requires a name, dataType, and value; dataType must match the value type.",
   ),
@@ -57,16 +48,12 @@ const USER_VISIBLE_CODE_EVAL_ERROR_MESSAGE_BY_CODE: Partial<
 function formatCodeEvalByteLimit(bytes: number): string {
   const unit = bytes >= 1024 * 1024 ? "MB" : "KB";
   const value = bytes / (unit === "MB" ? 1024 * 1024 : 1024);
-  const formattedValue = Number.isInteger(value)
-    ? String(value)
-    : value.toFixed(1);
+  const formattedValue = Number.isInteger(value) ? String(value) : value.toFixed(1);
 
   return `${formattedValue} ${unit}`;
 }
 
-export type CodeEvalUserVisibleErrorCode =
-  | CodeEvalDispatcherErrorCode
-  | typeof INTERNAL_CODE_EVAL_ERROR_CODE;
+export type CodeEvalUserVisibleErrorCode = CodeEvalDispatcherErrorCode | typeof INTERNAL_CODE_EVAL_ERROR_CODE;
 
 export type CodeEvalUserVisibleError = {
   code: CodeEvalUserVisibleErrorCode;
@@ -106,9 +93,7 @@ function buildCodeEvalPayload(params: {
   extractedVariables: ExtractedVariable[];
   hasExperimentContext: boolean;
 }): CodeEvalPayload {
-  const byName = new Map(
-    params.extractedVariables.map((v) => [v.var, v.value]),
-  );
+  const byName = new Map(params.extractedVariables.map((v) => [v.var, v.value]));
   const payload: CodeEvalPayload = {
     observation: {
       input: byName.get("input") ?? null,
@@ -152,9 +137,7 @@ function getCodeEvalErrorDetails(error: unknown): {
   };
 }
 
-export function getCodeEvalUserVisibleError(
-  error: unknown,
-): CodeEvalUserVisibleError {
+export function getCodeEvalUserVisibleError(error: unknown): CodeEvalUserVisibleError {
   const details = getCodeEvalErrorDetails(error);
 
   if (details.code === INTERNAL_CODE_EVAL_ERROR_CODE) {
@@ -178,9 +161,7 @@ export function getCodeEvalUserVisibleError(
     code: details.code,
     message: message ?? details.message,
     retryable: details.retryable,
-    ...(details.returnedResult !== undefined
-      ? { returnedResult: details.returnedResult }
-      : {}),
+    ...(details.returnedResult !== undefined ? { returnedResult: details.returnedResult } : {}),
   };
 }
 
@@ -246,9 +227,7 @@ export async function runCodeBasedEvaluationDispatch(params: {
       code: visibleError.code,
       message: visibleError.message,
       retryable: errorDetails.retryable,
-      ...(visibleError.returnedResult !== undefined
-        ? { returnedResult: visibleError.returnedResult }
-        : {}),
+      ...(visibleError.returnedResult !== undefined ? { returnedResult: visibleError.returnedResult } : {}),
     };
     const errorCodeForTrace = errorDetails.code;
 
@@ -269,9 +248,7 @@ export async function runCodeBasedEvaluationDispatch(params: {
           error_name: errorDetails.name,
           error_message: visibleError.message,
           error_code: errorCodeForTrace,
-          ...(errorCodeForTrace !== visibleError.code
-            ? { error_public_code: visibleError.code }
-            : {}),
+          ...(errorCodeForTrace !== visibleError.code ? { error_public_code: visibleError.code } : {}),
           error_retryable: errorDetails.retryable,
         },
         sourceCode: params.template.sourceCode,
@@ -310,7 +287,7 @@ function buildCodeEvalTraceInput(params: {
     name: params.traceName,
     traceName: params.traceName,
     type: "SPAN",
-    environment: LangfuseInternalTraceEnvironment.CodeEval,
+    environment: ConsoleInternalTraceEnvironment.CodeEval,
     level: params.level ?? "DEFAULT",
     statusMessage: params.statusMessage,
     input: stringifyValue(params.payload),
@@ -328,10 +305,7 @@ function buildCodeEvalTraceInput(params: {
   };
 }
 
-async function writeCodeEvalTraceSafely(params: {
-  writeTrace?: InternalTraceWriter;
-  trace: InternalTraceWriteInput;
-}) {
+async function writeCodeEvalTraceSafely(params: { writeTrace?: InternalTraceWriter; trace: InternalTraceWriteInput }) {
   if (!params.writeTrace) return;
 
   try {
