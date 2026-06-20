@@ -9,7 +9,7 @@ import { AwsInstrumentation } from "@opentelemetry/instrumentation-aws-sdk";
 import {
   envDetector,
   processDetector,
-  Resource,
+  resourceFromAttributes,
 } from "@opentelemetry/resources";
 import { awsEcsDetector } from "@opentelemetry/resource-detector-aws";
 import { containerDetector } from "@opentelemetry/resource-detector-container";
