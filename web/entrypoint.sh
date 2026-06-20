@@ -5,24 +5,22 @@
 # all env vars come from docker-compose/k8s environment variables.
 rm -f .env 2>/dev/null || true
 
-# Run cleanup script before running migrations
-# Check if DATABASE_URL is not set
+# Application database is SQLite (Hanzo Base). DATABASE_URL is a Prisma SQLite
+# connection string ("file:<path>"). Default to a writable container path so a
+# single-node deployment boots with no external database. Mount this path on a
+# volume (or point it at a Base-managed shard) to persist data.
 if [ -z "$DATABASE_URL" ]; then
-    # Check if all required variables are provided
-    if [ -n "$DATABASE_HOST" ] && [ -n "$DATABASE_USERNAME" ] && [ -n "$DATABASE_PASSWORD" ]  && [ -n "$DATABASE_NAME" ]; then
-        # Construct DATABASE_URL from the provided variables
-        DATABASE_URL="postgresql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}/${DATABASE_NAME}"
-        export DATABASE_URL
-    else
-        echo "Error: Required database environment variables are not set. Provide a postgres url for DATABASE_URL."
-        exit 1
-    fi
-    if [ -n "$DATABASE_ARGS" ]; then
-        # Append ARGS to DATABASE_URL
-        DATABASE_URL="${DATABASE_URL}?$DATABASE_ARGS"
-        export DATABASE_URL
-    fi
+    export DATABASE_URL="file:/var/lib/hanzo/console/app.db"
 fi
+
+# Ensure the parent directory for a local "file:" SQLite database exists.
+case "$DATABASE_URL" in
+    file:*)
+        db_path="${DATABASE_URL#file:}"
+        db_dir=$(dirname "$db_path")
+        mkdir -p "$db_dir" 2>/dev/null || true
+        ;;
+esac
 
 # Check if DATASTORE_URL is not set
 if [ -z "$DATASTORE_URL" ]; then
@@ -30,26 +28,19 @@ if [ -z "$DATASTORE_URL" ]; then
     exit 1
 fi
 
-# Set DIRECT_URL to the value of DATABASE_URL if it is not set, required for migrations
-if [ -z "$DIRECT_URL" ]; then
-    export DIRECT_URL="${DATABASE_URL}"
-fi
-
-# Always execute the postgres migration, except when disabled.
-if [ "$HANZO_AUTO_POSTGRES_MIGRATION_DISABLED" != "true" ]; then
-    prisma db execute --url "$DIRECT_URL" --file "./packages/shared/scripts/cleanup.sql"
-
-    # Apply migrations
-    prisma migrate deploy --schema=./packages/shared/prisma/schema.prisma
+# Sync the SQLite schema on first boot (no migration history, no Postgres).
+# `prisma db push` creates/updates tables to match schema.prisma and is the
+# mandated startup path: no `prisma migrate deploy`, no shadow/direct database.
+if [ "$HANZO_AUTO_DB_PUSH_DISABLED" != "true" ]; then
+    prisma db push --schema=./packages/shared/prisma/schema.prisma --skip-generate --accept-data-loss
 fi
 status=$?
 
-# If migration fails (returns non-zero exit status), exit script with that status
+# If the schema sync fails (returns non-zero exit status), exit with that status.
 if [ $status -ne 0 ]; then
-    echo "Applying database migrations failed. Common causes:"
-    echo "  1. The database is unavailable or unreachable."
-    echo "  2. DATABASE_URL / DIRECT_URL credentials contain special characters that are not URL-encoded."
-    check_unencoded_credentials "$DIRECT_URL"
+    echo "Syncing the SQLite application schema failed. Common causes:"
+    echo "  1. DATABASE_URL does not point at a writable SQLite path (\"file:<path>\")."
+    echo "  2. The target directory is not writable by the container user."
     echo "Exiting..."
     exit $status
 fi

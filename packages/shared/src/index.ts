@@ -79,6 +79,11 @@ export {
 } from "./server/llm/compileChatMessages";
 
 // export db types only
+// SQLite (Hanzo Base) has no native enums; the former Prisma enums are surfaced
+// from ./db-enums as const objects + union types with identical names, so this
+// barrel keeps exporting `Role`, `JobExecutionStatus`, etc. as both values and
+// types. Re-export it before @prisma/client (which no longer carries them).
+export * from "./db-enums";
 export * from "@prisma/client";
 export * from "./server/repositories/types";
 
@@ -99,11 +104,7 @@ export * from "./utils/IORepresentation";
 
 // analytics integrations (client-safe)
 export * from "./features/analytics-integrations";
-export {
-  ChartConfigSchema,
-  DimensionSchema,
-  MetricSchema,
-} from "./server/services/DashboardService/types";
+export { ChartConfigSchema, DimensionSchema, MetricSchema } from "./server/services/DashboardService/types";
 
 // query (dashboard / monitor data model)
 export * from "./features/query/types";

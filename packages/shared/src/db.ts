@@ -4,7 +4,7 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { env } from "process";
 import kyselyExtension from "prisma-extension-kysely";
-import { Kysely, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from "kysely";
+import { Kysely, SqliteAdapter, SqliteIntrospector, SqliteQueryCompiler } from "kysely";
 import { DB } from ".";
 import { logger } from "./server";
 
@@ -60,12 +60,13 @@ export class KyselySingleton {
         kysely: (driver) =>
           new Kysely<DB>({
             dialect: {
-              // This is where the magic happens!
+              // The Prisma extension supplies the driver; the dialect only needs
+              // to describe the SQL flavour. The application database is SQLite
+              // (Hanzo Base), so use the SQLite adapter/introspector/compiler.
               createDriver: () => driver,
-              // Don't forget to customize these to match your database!
-              createAdapter: () => new PostgresAdapter(),
-              createIntrospector: (db) => new PostgresIntrospector(db),
-              createQueryCompiler: () => new PostgresQueryCompiler(),
+              createAdapter: () => new SqliteAdapter(),
+              createIntrospector: (db) => new SqliteIntrospector(db),
+              createQueryCompiler: () => new SqliteQueryCompiler(),
             },
           }),
       }),
@@ -88,4 +89,8 @@ if (process.env.NODE_ENV === "development") {
 export const prisma = globalThis.prismaGlobal ?? PrismaClientSingleton.getInstance();
 export const kyselyPrisma = globalThis.kyselyPrismaGlobal ?? KyselySingleton.getInstance();
 
+// SQLite (Hanzo Base) has no native enums; surface the former Prisma enum
+// values/types from ./db-enums (const objects with identical names) so that
+// `@hanzo/console/src/db` keeps exporting `Role`, `JobExecutionStatus`, etc.
+export * from "./db-enums";
 export * from "@prisma/client";
