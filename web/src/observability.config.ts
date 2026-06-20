@@ -6,8 +6,12 @@ import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
 import { WinstonInstrumentation } from "@opentelemetry/instrumentation-winston";
 import { AwsInstrumentation } from "@opentelemetry/instrumentation-aws-sdk";
-import { envDetector, processDetector, Resource } from "@opentelemetry/resources";
-import { awsEcsDetectorSync } from "@opentelemetry/resource-detector-aws";
+import {
+  envDetector,
+  processDetector,
+  Resource,
+} from "@opentelemetry/resources";
+import { awsEcsDetector } from "@opentelemetry/resource-detector-aws";
 import { containerDetector } from "@opentelemetry/resource-detector-container";
 import { env } from "@/src/env.mjs";
 
@@ -31,7 +35,9 @@ const sdk = new NodeSDK({
       requireParentforOutgoingSpans: true,
       ignoreIncomingRequestHook: (req) => {
         // Ignore health checks
-        return ["/api/public/health", "/api/public/ready", "/api/health"].some((path) => req.url?.includes(path));
+        return ["/api/public/health", "/api/public/ready", "/api/health"].some(
+          (path) => req.url?.includes(path),
+        );
       },
       ignoreOutgoingRequestHook: (req) => {
         return req.host === "127.0.0.1";
@@ -61,7 +67,12 @@ const sdk = new NodeSDK({
     new AwsInstrumentation(),
     new WinstonInstrumentation({ disableLogSending: true }),
   ],
-  resourceDetectors: [envDetector, processDetector, awsEcsDetectorSync, containerDetector],
+  resourceDetectors: [
+    envDetector,
+    processDetector,
+    awsEcsDetector,
+    containerDetector,
+  ],
   sampler: new TraceIdRatioBasedSampler(env.OTEL_TRACE_SAMPLING_RATIO),
 });
 
