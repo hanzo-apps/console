@@ -80,6 +80,7 @@ import { ScoreCacheProvider } from "@/src/features/scores/contexts/ScoreCacheCon
 import { CorrectionCacheProvider } from "@/src/features/corrections/contexts/CorrectionCacheContext";
 import { InAppAiAgentProvider } from "@/src/features/in-app-agent/components";
 import { V4_BETA_ENABLED_INSIGHTS_PROPERTY } from "@/src/features/insights-analytics/useInsightsCapture";
+import { IamSessionProvider } from "@/src/features/auth/components/IamSessionProvider";
 
 // Check that Insights is client-side (used to handle Next.js SSR) and that env vars are set
 if (
@@ -140,28 +141,30 @@ const MyApp: AppType<{ session: Session | null }> = ({
               refetchInterval={5 * 60} // 5 minutes
               basePath={`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}
             >
-              <DetailPageListsProvider>
-                <MarkdownContextProvider>
-                  <ThemeProvider
-                    attribute="class"
-                    enableSystem
-                    disableTransitionOnChange
-                  >
-                    <ScoreCacheProvider>
-                      <CorrectionCacheProvider>
-                        <SupportDrawerProvider defaultOpen={false}>
-                          <InAppAiAgentProvider defaultOpen={false}>
-                            <AppLayout>
-                              <Component {...pageProps} />
-                              <UserTracking />
-                            </AppLayout>
-                          </InAppAiAgentProvider>
-                        </SupportDrawerProvider>
-                      </CorrectionCacheProvider>
-                    </ScoreCacheProvider>
-                  </ThemeProvider>
-                </MarkdownContextProvider>
-              </DetailPageListsProvider>
+              <IamSessionProvider>
+                <DetailPageListsProvider>
+                  <MarkdownContextProvider>
+                    <ThemeProvider
+                      attribute="class"
+                      enableSystem
+                      disableTransitionOnChange
+                    >
+                      <ScoreCacheProvider>
+                        <CorrectionCacheProvider>
+                          <SupportDrawerProvider defaultOpen={false}>
+                            <InAppAiAgentProvider defaultOpen={false}>
+                              <AppLayout>
+                                <Component {...pageProps} />
+                                <UserTracking />
+                              </AppLayout>
+                            </InAppAiAgentProvider>
+                          </SupportDrawerProvider>
+                        </CorrectionCacheProvider>
+                      </ScoreCacheProvider>
+                    </ThemeProvider>
+                  </MarkdownContextProvider>
+                </DetailPageListsProvider>
+              </IamSessionProvider>
             </SessionProvider>
           </InsightsProvider>
         </CommandMenuProvider>
