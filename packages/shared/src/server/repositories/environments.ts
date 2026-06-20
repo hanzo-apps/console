@@ -1,4 +1,5 @@
 import { AGGREGATABLE_SCORE_TYPES } from "../../domain/scores";
+import { convertDateToDatastoreDateTime } from "../datastore/client";
 import { queryDatastore } from "./datastore";
 
 export type EnvironmentFilterProps = {
@@ -35,7 +36,7 @@ export const getEnvironmentsForProject = async (props: EnvironmentFilterProps): 
     query,
     params: {
       projectId,
-      fromTimestamp: fromTimestamp ? fromTimestamp.toISOString().replace("Z", "") : undefined,
+      fromTimestamp: fromTimestamp ? convertDateToDatastoreDateTime(fromTimestamp) : undefined,
       dataTypes: AGGREGATABLE_SCORE_TYPES,
     },
     tags: {
