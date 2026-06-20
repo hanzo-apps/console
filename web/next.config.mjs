@@ -43,10 +43,8 @@ const aliasForPrefix = (prefix) => ({
 });
 const sharedAlias = {
   ...aliasForPrefix("@hanzo/console"),
-  // @hanzo/mq (BullMQ-compatible queue facade w/ Temporal + in-process drivers) is a
-  // workspace package whose entry is ./dist; webpack resolves it before that dist is
-  // built, so alias to its TS source and let transpilePackages compile it.
-  "@hanzo/mq": path.resolve(__dirname, "../packages/mq/src/index.ts"),
+  // @hanzo/mq is a serverExternalPackage (resolved at runtime from its built dist,
+  // not bundled/aliased) so the Temporal driver's lazy eval-require stays opaque.
   // The query subsystem (dataModel, queryBuilder, queryExecutor, types, validateQuery)
   // moved out of web into the shared package, but a number of web modules still import
   // it under its old web-local `@/src/features/query` path. Redirect to the shared
@@ -111,7 +109,7 @@ const nextConfig = {
   // Agent/browser tooling often targets 127.0.0.1 instead of localhost in dev.
   allowedDevOrigins: ["127.0.0.1"],
   staticPageGenerationTimeout: 500, // default is 60. Required for build process for amd
-  transpilePackages: ["@hanzo/console", "@hanzo/mq", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
+  transpilePackages: ["@hanzo/console", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
   reactStrictMode: true,
   serverExternalPackages: [
     "dd-trace",
@@ -132,7 +130,6 @@ const nextConfig = {
   turbopack: {
     resolveAlias: {
       "@hanzo/console": "./packages/shared/src",
-      "@hanzo/mq": "./packages/mq/src/index.ts",
       // this is an ugly hack to get turbopack to work with react-resizable, used in the
       // web/src/features/widgets/components/DashboardGrid.tsx file. This **only** affects
       // the dev server. The CSS is included in the non-turbopack based prod build anyways.

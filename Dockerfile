@@ -91,6 +91,14 @@ RUN set -eux; \
     done; \
     ls -la /app/web/.next/standalone/web/.prisma/client
 
+# @hanzo/mq is a serverExternalPackage (resolved at runtime, not bundled). Its workspace
+# dist can be missed by standalone tracing — copy it into the bundle node_modules.
+RUN set -eux; \
+    if [ -d /app/packages/mq/dist ]; then \
+      D=/app/web/.next/standalone/node_modules/@hanzo/mq; mkdir -p "$D"; \
+      cp -a /app/packages/mq/package.json "$D"/; cp -a /app/packages/mq/dist "$D"/dist; \
+    fi
+
 # ===== Development Stage =====
 FROM deps AS development
 
