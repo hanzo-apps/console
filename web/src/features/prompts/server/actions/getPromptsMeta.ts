@@ -4,7 +4,7 @@ import {
   promptsTableCols,
   type PromptType,
 } from "@hanzo/console";
-import { prisma } from "@hanzo/console/src/db";
+import { prisma, decodeJsonArrayColumn } from "@hanzo/console/src/db";
 import { tableColumnsToSqlFilterAndPrefix } from "@hanzo/console/src/server";
 
 export type GetPromptsMetaParams = GetPromptsMetaType & { projectId: string };
@@ -37,17 +37,20 @@ export const getPromptsMeta = async (
         )
       AND p."project_id" = ${projectId}
     ), versions AS (
+      -- SQLite: tags/labels are JSON-TEXT columns. array_agg -> json_group_array
+      -- (returns a JSON string, decoded in JS below); LATERAL unnest -> json_each.
+      -- json_group_array over an empty group already yields '[]', so no COALESCE.
       SELECT
         p.name AS name,
         MAX(p.tags) AS tags,  -- use max to get tags, they are the same for all versions of a prompt
         MAX(p.updated_at) as "lastUpdatedAt",
-        array_agg(DISTINCT p.version) AS versions,
-        COALESCE(array_agg(DISTINCT label) FILTER (WHERE label IS NOT NULL), '{}'::text[]) AS labels --- COALESCE is necessary to return an empty array if there are no labels and remove NULLs
+        json_group_array(DISTINCT p.version) AS versions,
+        json_group_array(DISTINCT label.value) FILTER (WHERE label.value IS NOT NULL) AS labels
       FROM
           prompts p -- needs to be p for filter conditions
-      LEFT JOIN LATERAL unnest(p.labels) AS label ON true
-      WHERE 
-          p."project_id" = ${projectId} 
+      LEFT JOIN json_each(p.labels) AS label ON 1=1
+      WHERE
+          p."project_id" = ${projectId}
           ${getPromptsFilterCondition(params)}
       GROUP BY
           p.name
@@ -66,7 +69,22 @@ export const getPromptsMeta = async (
     FROM
       versions v
     LEFT JOIN latest_version_details l ON v.name = l.name
-  `) as PromptsMeta[];
+  `) as Array<
+    Omit<PromptsMeta, "versions" | "labels" | "tags"> & {
+      versions: unknown;
+      labels: unknown;
+      tags: unknown;
+    }
+  >;
+
+  // Raw SQL returns the json_group_array / MAX(json) columns as JSON strings;
+  // decode them back into arrays.
+  const promptsMetaDecoded: PromptsMeta[] = promptsMeta.map((row) => ({
+    ...row,
+    versions: decodeJsonArrayColumn<number>(row.versions),
+    labels: decodeJsonArrayColumn<string>(row.labels),
+    tags: decodeJsonArrayColumn<string>(row.tags),
+  }));
 
   const [{ count: totalItemsCount }] = (await prisma.$queryRaw`
     SELECT COUNT(DISTINCT p.name) AS count
@@ -79,7 +97,7 @@ export const getPromptsMeta = async (
   const totalPages = Math.ceil(totalItems / limit);
 
   return {
-    data: promptsMeta,
+    data: promptsMetaDecoded,
     meta: { page, limit, totalPages, totalItems },
 
     // necessary for backwards compatibility as we initially released the /v2/prompts endpoint with this structure which did not match the api spec

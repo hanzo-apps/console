@@ -273,9 +273,10 @@ export const evalRouter = createTRPCRouter({
         evalConfigsTableCols,
       );
 
+      // SQLite LIKE is ASCII case-insensitive (Postgres ILIKE replacement).
       const searchCondition =
         input.searchQuery && input.searchQuery.trim() !== ""
-          ? Prisma.sql`AND jc.score_name ILIKE ${`%${input.searchQuery}%`}`
+          ? Prisma.sql`AND jc.score_name LIKE ${`%${input.searchQuery}%`}`
           : Prisma.empty;
 
       const [configs, configsCount] = await Promise.all([
@@ -452,9 +453,10 @@ export const evalRouter = createTRPCRouter({
         scope: "evalTemplate:read",
       });
 
+      // SQLite LIKE is ASCII case-insensitive (Postgres ILIKE replacement).
       const searchCondition =
         input.searchQuery && input.searchQuery.trim() !== ""
-          ? Prisma.sql`AND name ILIKE ${`%${input.searchQuery}%`}`
+          ? Prisma.sql`AND name LIKE ${`%${input.searchQuery}%`}`
           : Prisma.empty;
 
       const [templates, count] = await Promise.all([
@@ -493,14 +495,20 @@ export const evalRouter = createTRPCRouter({
               AND jc.project_id = ${input.projectId}
             ) as usage_count
           FROM (
-            SELECT DISTINCT ON (project_id, name) *
-            FROM eval_templates
-            WHERE (project_id = ${input.projectId} OR project_id IS NULL)
-            ${searchCondition}
-            ORDER BY project_id, name, version DESC
+            -- SQLite has no DISTINCT ON; pick the latest version per
+            -- (project_id, name) with a window function.
+            SELECT * FROM (
+              SELECT *, ROW_NUMBER() OVER (
+                PARTITION BY project_id, name ORDER BY version DESC
+              ) AS rn
+              FROM eval_templates
+              WHERE (project_id = ${input.projectId} OR project_id IS NULL)
+              ${searchCondition}
+            ) ranked
+            WHERE rn = 1
           ) et
         )
-        SELECT 
+        SELECT
           id as "latestId",
           name,
           provider,
@@ -509,7 +517,7 @@ export const evalRouter = createTRPCRouter({
           project_id as "projectId",
           version,
           created_at as "latestCreatedAt",
-          COALESCE(usage_count, 0)::int as "usageCount"
+          CAST(COALESCE(usage_count, 0) AS INTEGER) as "usageCount"
         FROM 
           latest_templates
         ORDER BY project_id, partner, name
@@ -1319,16 +1327,20 @@ export const evalRouter = createTRPCRouter({
         AND jc.status = 'ACTIVE'
         AND (
           jc.filter IS NULL
-          OR jsonb_array_length(jc.filter) = 0
+          -- SQLite JSON: jsonb_array_length -> json_array_length;
+          -- jsonb_array_elements -> json_each (element in f.value);
+          -- f->>'k' -> json_extract(f.value,'$.k'); = ANY(jsonb_array_elements_text(...))
+          -- -> IN (SELECT value FROM json_each(json_extract(f.value,'$.value'))).
+          OR json_array_length(jc.filter) = 0
           OR EXISTS (
             SELECT 1
-            FROM jsonb_array_elements(jc.filter) as f
-            WHERE f->>'column' = 'Dataset'
-              AND f->>'type' = 'stringOptions'
+            FROM json_each(jc.filter) as f
+            WHERE json_extract(f.value, '$.column') = 'Dataset'
+              AND json_extract(f.value, '$.type') = 'stringOptions'
               AND (
-                (f->>'operator' = 'any of' AND ${Prisma.sql`${input.datasetId}`}::text = ANY(SELECT jsonb_array_elements_text(f->'value')))
+                (json_extract(f.value, '$.operator') = 'any of' AND ${input.datasetId} IN (SELECT value FROM json_each(json_extract(f.value, '$.value'))))
                 OR
-                (f->>'operator' = 'none of' AND NOT (${Prisma.sql`${input.datasetId}`}::text = ANY(SELECT jsonb_array_elements_text(f->'value'))))
+                (json_extract(f.value, '$.operator') = 'none of' AND ${input.datasetId} NOT IN (SELECT value FROM json_each(json_extract(f.value, '$.value'))))
               )
           )
         )
