@@ -1,7 +1,6 @@
 import dd from "dd-trace";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
-import { IORedisInstrumentation } from "@opentelemetry/instrumentation-ioredis";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
@@ -27,7 +26,6 @@ const sdk = new NodeSDK({
     url: `${env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`,
   }),
   instrumentations: [
-    new IORedisInstrumentation({ requestHook: ioredisRequestHook }),
     new HttpInstrumentation({
       requireParentforOutgoingSpans: true,
       ignoreIncomingRequestHook: (req) => {
