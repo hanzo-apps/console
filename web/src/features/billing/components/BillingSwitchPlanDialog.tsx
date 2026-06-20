@@ -21,7 +21,7 @@ import {
   isUpgrade,
 } from "@/src/ee/features/billing/utils/stripeCatalogue";
 import { ActionButton } from "@/src/components/ActionButton";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useBillingInformation } from "@/src/features/billing/components/useBillingInformation";
 import { api } from "@/src/utils/api";
 import { StripeCancellationButton } from "./StripeCancellationButton";

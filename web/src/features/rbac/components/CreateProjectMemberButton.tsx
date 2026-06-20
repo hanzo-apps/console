@@ -31,7 +31,7 @@ import {
 } from "@/src/components/ui/select";
 import { Input } from "@/src/components/ui/input";
 import { Role } from "@hanzo/console";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import {
   useHasEntitlement,

@@ -44,7 +44,7 @@ import {
 } from "@hanzo/console";
 import { NonEmptyString } from "@hanzo/console";
 import { cn } from "@/src/utils/tailwind";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import {
   formatSessionPositionInTraceFilterValue,
   getSessionPositionInTraceFilterMode,

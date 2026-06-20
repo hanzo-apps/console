@@ -2,14 +2,27 @@ import { Button } from "@/src/components/ui/button";
 import type * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/src/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
 import { api } from "@/src/utils/api";
 import { useSession } from "next-auth/react";
 import { projectNameSchema } from "@/src/features/auth/lib/projectNameSchema";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 
-export const NewProjectForm = ({ orgId, onSuccess }: { orgId: string; onSuccess: (projectId: string) => void }) => {
+export const NewProjectForm = ({
+  orgId,
+  onSuccess,
+}: {
+  orgId: string;
+  onSuccess: (projectId: string) => void;
+}) => {
   const capture = usePostHogClientCapture();
   const { update: updateSession } = useSession();
 
@@ -61,7 +74,11 @@ export const NewProjectForm = ({ orgId, onSuccess }: { orgId: string; onSuccess:
             <FormItem>
               <FormLabel>Project name</FormLabel>
               <FormControl>
-                <Input placeholder="my-llm-project" {...field} data-testid="new-project-name-input" />
+                <Input
+                  placeholder="my-llm-project"
+                  {...field}
+                  data-testid="new-project-name-input"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

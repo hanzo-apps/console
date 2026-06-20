@@ -18,7 +18,7 @@ import { usePlan } from "@/src/features/entitlements/hooks";
 import { isCloudPlan } from "@hanzo/console";
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
 import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 
 type SupportType = "in-app-support" | "custom" | "community";
 

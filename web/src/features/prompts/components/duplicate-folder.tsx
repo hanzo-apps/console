@@ -28,7 +28,7 @@ import { z } from "zod/v4";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { Copy } from "lucide-react";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
 
 enum CopySettings {

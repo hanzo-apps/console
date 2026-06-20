@@ -7,7 +7,7 @@ import { ApiKeyRender } from "@/src/features/public-api/components/CreateApiKeyB
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 import { type RouterOutput } from "@/src/utils/types";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { Check, Copy, LockIcon, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";

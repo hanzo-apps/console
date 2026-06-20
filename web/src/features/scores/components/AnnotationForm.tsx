@@ -44,7 +44,7 @@ import {
 } from "@/src/features/scores/lib/helpers";
 import { ToggleGroup, ToggleGroupItem } from "@/src/components/ui/toggle-group";
 import Header from "@/src/components/layouts/header";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { cn } from "@/src/utils/tailwind";
 import {
   type AnnotationScoreFormData,

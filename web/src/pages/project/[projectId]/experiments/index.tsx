@@ -9,7 +9,7 @@ import { CreateExperimentsForm } from "@/src/features/experiments/components/Cre
 import { ExperimentsBetaSwitch } from "@/src/features/experiments/components/ExperimentsBetaSwitch";
 import { ExperimentsTable } from "@/src/features/experiments/components/table";
 import { useExperimentAccess } from "@/src/features/experiments/hooks/useExperimentAccess";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 import { FlaskConical, Sparkles } from "lucide-react";

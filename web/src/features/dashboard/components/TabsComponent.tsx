@@ -1,4 +1,4 @@
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { cn } from "@/src/utils/tailwind";
 import { type ReactNode, useState } from "react";
 
@@ -31,8 +31,11 @@ export const TabComponent = ({ tabs }: TabComponentProps) => {
         </select>
       </div>
       <div className="hidden sm:block">
-        <div className="border-b border-border">
-          <nav className="-mb-px flex space-x-2 md:space-x-4 lg:space-x-6 xl:space-x-8" aria-label="Tabs">
+        <div className="border-border border-b">
+          <nav
+            className="-mb-px flex space-x-2 md:space-x-4 lg:space-x-6 xl:space-x-8"
+            aria-label="Tabs"
+          >
             {tabs.map((tab, index) => (
               <a
                 key={tab.tabTitle}
@@ -56,7 +59,9 @@ export const TabComponent = ({ tabs }: TabComponentProps) => {
           </nav>
         </div>
       </div>
-      <div className="mt-4 flex h-3/4 flex-col">{tabs[selectedIndex]?.content}</div>
+      <div className="mt-4 flex h-3/4 flex-col">
+        {tabs[selectedIndex]?.content}
+      </div>
     </div>
   );
 };

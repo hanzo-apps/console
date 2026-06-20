@@ -33,7 +33,7 @@ import Generations from "@/src/components/table/use-cases/observations";
 import { FlaskConical, MoreVertical, Plus } from "lucide-react";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { Button } from "@/src/components/ui/button";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import {
   Dialog,
   DialogContent,

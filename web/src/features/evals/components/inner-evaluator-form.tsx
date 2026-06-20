@@ -40,7 +40,7 @@ import { Slider } from "@/src/components/ui/slider";
 import { Card } from "@/src/components/ui/card";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
 import DocPopup from "@/src/components/layouts/doc-popup";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { cn } from "@/src/utils/tailwind";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import {
