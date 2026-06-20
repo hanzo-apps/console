@@ -1,7 +1,7 @@
 // Business rules for the legacy blob export source deprecation gate.
 // This is a client-safe file that can be imported from @hanzo/console.
 
-import { AnalyticsIntegrationExportSource } from "@prisma/client";
+import { AnalyticsIntegrationExportSource } from "../../db-enums";
 
 // Cloud projects created on or after this instant cannot use legacy export sources.
 // NEXT_PUBLIC_HANZO_BLOB_EXPORT_CUTOFF overrides the default for local dev testing.

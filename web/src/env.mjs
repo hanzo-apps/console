@@ -43,7 +43,12 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    DATABASE_URL: z.url(),
+    // SQLite (Hanzo Base) connection string. Prisma's SQLite connector expects a
+    // `file:` URL (absolute or relative to the schema), e.g.
+    // `file:/var/lib/hanzo/console/app.db`. We accept any non-empty string so
+    // both `file:` URLs and Base-managed paths validate; a network URL would be
+    // rejected at the Prisma layer if misconfigured.
+    DATABASE_URL: z.string().min(1),
     NODE_ENV: z.enum(["development", "test", "production"]),
     BUILD_ID: z.string().optional(),
     NEXTAUTH_SECRET:
@@ -588,6 +593,15 @@ export const env = createEnv({
       .enum(["true", "false"])
       .optional()
       .default("true"),
+
+    // Hanzo IAM — native identity. Client-side config for the embedded
+    // `@hanzo/iam` BrowserIamSdk (IamProvider). Mirror the server-side IAM_*
+    // values so the browser can drive OIDC discovery + PKCE directly.
+    // WARNING: Also add these to web/Dockerfile (NEXT_PUBLIC_* are compile-time).
+    NEXT_PUBLIC_IAM_SERVER_URL: z.string().optional(),
+    NEXT_PUBLIC_IAM_CLIENT_ID: z.string().optional(),
+    NEXT_PUBLIC_IAM_ORG_NAME: z.string().optional(),
+    NEXT_PUBLIC_IAM_APP_NAME: z.string().optional(),
   },
 
   /**
@@ -899,6 +913,10 @@ export const env = createEnv({
     IAM_ORG_NAME: process.env.IAM_ORG_NAME,
     IAM_APP_NAME: process.env.IAM_APP_NAME,
     IAM_ALLOW_ACCOUNT_LINKING: process.env.IAM_ALLOW_ACCOUNT_LINKING,
+    NEXT_PUBLIC_IAM_SERVER_URL: process.env.NEXT_PUBLIC_IAM_SERVER_URL,
+    NEXT_PUBLIC_IAM_CLIENT_ID: process.env.NEXT_PUBLIC_IAM_CLIENT_ID,
+    NEXT_PUBLIC_IAM_ORG_NAME: process.env.NEXT_PUBLIC_IAM_ORG_NAME,
+    NEXT_PUBLIC_IAM_APP_NAME: process.env.NEXT_PUBLIC_IAM_APP_NAME,
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
     SENTRY_CSP_REPORT_URI: process.env.SENTRY_CSP_REPORT_URI,
     HANZO_RATE_LIMITS_ENABLED: process.env.HANZO_RATE_LIMITS_ENABLED,

@@ -7,6 +7,7 @@ import {
 } from "@/src/server/api/trpc";
 import { CommentObjectType } from "@hanzo/console";
 import { Prisma, CreateCommentData, DeleteCommentData } from "@hanzo/console";
+import { decodeJsonArrayColumn } from "@hanzo/console/src/db";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { TRPCError } from "@trpc/server";
 import { validateCommentReferenceObject } from "@/src/features/comments/validateCommentReferenceObject";
@@ -233,13 +234,19 @@ export const commentsRouter = createTRPCRouter({
         WHERE
           c."project_id" = ${input.projectId}
           AND c."object_id" = ${input.objectId}
-          AND c."object_type"::text = ${input.objectType}
+          AND c."object_type" = ${input.objectType}
         ORDER BY
           c.created_at DESC
         `,
       );
 
-      return comments;
+      // Raw SQL bypasses the JSON-array codec, so decode the array columns.
+      return comments.map((comment) => ({
+        ...comment,
+        path: decodeJsonArrayColumn<string>(comment.path),
+        rangeStart: decodeJsonArrayColumn<number>(comment.rangeStart),
+        rangeEnd: decodeJsonArrayColumn<number>(comment.rangeEnd),
+      }));
     }),
   getCountByObjectId: protectedProjectProcedure
     .input(
@@ -440,16 +447,24 @@ export const commentsRouter = createTRPCRouter({
           LEFT JOIN users u ON u.id = c.author_user_id
           WHERE
             c."project_id" = ${input.projectId}
-            AND c."object_type"::text = 'TRACE'
-            AND c."object_id" = ANY(${traceIds}::text[])
+            AND c."object_type" = 'TRACE'
+            AND c."object_id" IN (${Prisma.join(traceIds)})
           ORDER BY
             c.created_at ASC
         `,
       );
 
+      // Raw SQL bypasses the JSON-array codec, so decode the array columns.
+      const decodedComments = enrichedComments.map((comment) => ({
+        ...comment,
+        path: decodeJsonArrayColumn<string>(comment.path),
+        rangeStart: decodeJsonArrayColumn<number>(comment.rangeStart),
+        rangeEnd: decodeJsonArrayColumn<number>(comment.rangeEnd),
+      }));
+
       // Group comments by trace ID
-      const commentsByTrace: Record<string, typeof enrichedComments> = {};
-      for (const comment of enrichedComments) {
+      const commentsByTrace: Record<string, typeof decodedComments> = {};
+      for (const comment of decodedComments) {
         if (!commentsByTrace[comment.objectId]) {
           commentsByTrace[comment.objectId] = [];
         }

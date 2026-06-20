@@ -1,5 +1,5 @@
 import { prisma } from "@hanzo/console/src/db";
-import { type CommentObjectType } from "@prisma/client";
+import { Prisma, type CommentObjectType } from "@hanzo/console";
 
 export type ExportComment = {
   id: string;
@@ -47,8 +47,8 @@ export async function fetchCommentsForExport(
     FROM comments c
     LEFT JOIN users u ON c.author_user_id = u.id
     WHERE c.project_id = ${projectId}
-      AND c.object_type = ${objectType}::"CommentObjectType"
-      AND c.object_id = ANY(${objectIds}::text[])
+      AND c.object_type = ${objectType}
+      AND c.object_id IN (${Prisma.join(objectIds)})
     ORDER BY c.created_at ASC
   `;
 

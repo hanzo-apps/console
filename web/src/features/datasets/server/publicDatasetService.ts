@@ -328,7 +328,9 @@ export const listDatasetsForApi = async ({
 }: ListDatasetsInput) => {
   const where: Prisma.DatasetWhereInput = {
     projectId,
-    ...(name ? { name: { contains: name, mode: "insensitive" } } : {}),
+    // SQLite `contains` (LIKE) is ASCII case-insensitive; Prisma's
+    // `mode: "insensitive"` is unsupported on SQLite, so it is omitted.
+    ...(name ? { name: { contains: name } } : {}),
   };
 
   const [datasets, totalItems] = await Promise.all([

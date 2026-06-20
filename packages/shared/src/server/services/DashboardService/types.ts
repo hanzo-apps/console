@@ -1,4 +1,4 @@
-import { DashboardWidgetChartType, DashboardWidgetViews } from "@prisma/client";
+import { DashboardWidgetChartType, DashboardWidgetViews } from "../../../db-enums";
 import { z } from "zod";
 import { singleFilter } from "../../../";
 
