@@ -2012,7 +2012,7 @@ describe("/api/public/traces API Endpoint", () => {
 
     // Run test suite twice - once for each implementation
     runTestSuite(false); // old traces table
-    if (env.LANGFUSE_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
+    if (env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
       runTestSuite(true); // Events table
     }
   });
@@ -2360,17 +2360,16 @@ describe("/api/public/traces API Endpoint", () => {
 
     // Run test suite twice - once for each implementation
     runTestSuite(false); // Good old traces table
-    if (env.LANGFUSE_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
+    if (env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
       runTestSuite(true); // Events table
     }
   });
 
   describe.skip("GET /api/public/traces env var controls", () => {
-    const originalRejectNoDateRange =
-      env.LANGFUSE_API_TRACES_REJECT_NO_DATE_RANGE;
+    const originalRejectNoDateRange = env.HANZO_API_TRACES_REJECT_NO_DATE_RANGE;
     const originalDefaultDateRangeDays =
-      env.LANGFUSE_API_TRACES_DEFAULT_DATE_RANGE_DAYS;
-    const originalDefaultFields = env.LANGFUSE_API_TRACES_DEFAULT_FIELDS;
+      env.HANZO_API_TRACES_DEFAULT_DATE_RANGE_DAYS;
+    const originalDefaultFields = env.HANZO_API_TRACES_DEFAULT_FIELDS;
 
     afterEach(() => {
       (env as any).LANGFUSE_API_TRACES_REJECT_NO_DATE_RANGE =
@@ -2575,7 +2574,7 @@ describe("/api/public/traces API Endpoint", () => {
 
     // Run for both table implementations
     runFilterTests(false);
-    if (env.LANGFUSE_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
+    if (env.HANZO_ENABLE_EVENTS_TABLE_OBSERVATIONS === "true") {
       runFilterTests(true);
     }
   });

@@ -181,7 +181,7 @@ if (env.HANZO_INIT_ORG_ID) {
     // with LANGFUSE_DEFAULT_PROJECT_ROLE (e.g. VIEWER) before the OrgMembership was
     // set to OWNER above. Correct it to OWNER for the init user on the init project.
     if (
-      env.LANGFUSE_INIT_PROJECT_ID &&
+      env.HANZO_INIT_PROJECT_ID &&
       hasEntitlementBasedOnPlan({
         plan: getOrganizationPlanServerSide(cloudConfig),
         entitlement: "rbac-project-roles",
@@ -190,7 +190,7 @@ if (env.HANZO_INIT_ORG_ID) {
       await prisma.projectMembership.upsert({
         where: {
           projectId_userId: {
-            projectId: env.LANGFUSE_INIT_PROJECT_ID,
+            projectId: env.HANZO_INIT_PROJECT_ID,
             userId,
           },
         },
@@ -198,7 +198,7 @@ if (env.HANZO_INIT_ORG_ID) {
         create: {
           userId,
           orgMembershipId: orgMembership.id,
-          projectId: env.LANGFUSE_INIT_PROJECT_ID,
+          projectId: env.HANZO_INIT_PROJECT_ID,
           role: "OWNER",
         },
       });

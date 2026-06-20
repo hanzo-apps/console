@@ -27,11 +27,11 @@ describe("evaluator preflight", () => {
   );
   const mockTestModelCall = vi.mocked(testModelCall);
   const originalSkipFlag =
-    process.env.LANGFUSE_SKIP_EVALUATOR_MODEL_CALL_VALIDATION;
+    process.env.HANZO_SKIP_EVALUATOR_MODEL_CALL_VALIDATION;
 
   beforeEach(() => {
     vi.resetAllMocks();
-    delete process.env.LANGFUSE_SKIP_EVALUATOR_MODEL_CALL_VALIDATION;
+    delete process.env.HANZO_SKIP_EVALUATOR_MODEL_CALL_VALIDATION;
     mockFetchValidModelConfig.mockResolvedValue({
       valid: true,
       config: {
@@ -51,16 +51,15 @@ describe("evaluator preflight", () => {
 
   afterAll(() => {
     if (originalSkipFlag === undefined) {
-      delete process.env.LANGFUSE_SKIP_EVALUATOR_MODEL_CALL_VALIDATION;
+      delete process.env.HANZO_SKIP_EVALUATOR_MODEL_CALL_VALIDATION;
       return;
     }
 
-    process.env.LANGFUSE_SKIP_EVALUATOR_MODEL_CALL_VALIDATION =
-      originalSkipFlag;
+    process.env.HANZO_SKIP_EVALUATOR_MODEL_CALL_VALIDATION = originalSkipFlag;
   });
 
   it("skips the live provider call when the explicit test flag is enabled", async () => {
-    process.env.LANGFUSE_SKIP_EVALUATOR_MODEL_CALL_VALIDATION = "true";
+    process.env.HANZO_SKIP_EVALUATOR_MODEL_CALL_VALIDATION = "true";
 
     const result = await getEvaluatorDefinitionPreflightError({
       projectId: "project_test",

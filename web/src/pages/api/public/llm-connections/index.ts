@@ -107,7 +107,7 @@ export default withMiddlewares({
         }
       }
 
-      const isLangfuseCloud = Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION);
+      const isLangfuseCloud = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
 
       if (body.secretKey === BEDROCK_USE_DEFAULT_CREDENTIALS) {
         if (isLangfuseCloud || body.adapter !== LLMAdapter.Bedrock) {

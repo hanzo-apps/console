@@ -587,7 +587,7 @@ export const PlaygroundProvider: React.FC<PlaygroundProviderProps> = ({
         if (hasAnyContent) {
           // Read streaming preference from localStorage (same key as SubmitButton in Messages.tsx)
           const defaultStreaming =
-            env.NEXT_PUBLIC_LANGFUSE_PLAYGROUND_STREAMING_ENABLED_DEFAULT ===
+            env.NEXT_PUBLIC_HANZO_PLAYGROUND_STREAMING_ENABLED_DEFAULT ===
             "true";
           let streaming = defaultStreaming;
           try {

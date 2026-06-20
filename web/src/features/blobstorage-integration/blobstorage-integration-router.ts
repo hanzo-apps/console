@@ -80,7 +80,7 @@ export const blobStorageIntegrationRouter = createTRPCRouter({
           assertLegacyBlobExportSourceAllowed({
             project,
             nextInternalExportSource: input.exportSource,
-            isCloud: Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION),
+            isCloud: Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION),
           });
         }
 

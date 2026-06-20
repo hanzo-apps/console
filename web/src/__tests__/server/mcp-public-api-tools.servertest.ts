@@ -1,6 +1,5 @@
-process.env.LANGFUSE_DATASET_SERVICE_READ_FROM_VERSIONED_IMPLEMENTATION =
-  "true";
-process.env.LANGFUSE_DATASET_SERVICE_WRITE_TO_VERSIONED_IMPLEMENTATION = "true";
+process.env.HANZO_DATASET_SERVICE_READ_FROM_VERSIONED_IMPLEMENTATION = "true";
+process.env.HANZO_DATASET_SERVICE_WRITE_TO_VERSIONED_IMPLEMENTATION = "true";
 
 vi.mock("@hanzo/console/src/server", async () => {
   const actual = await vi.importActual("@hanzo/console/src/server");

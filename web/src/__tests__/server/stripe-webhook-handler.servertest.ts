@@ -15,7 +15,7 @@ const buildSubscription = (args: {
     customer: `cus_test_${v4()}`,
     metadata: {
       orgId: args.orgId,
-      cloudRegion: env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION,
+      cloudRegion: env.NEXT_PUBLIC_HANZO_CLOUD_REGION,
     },
     items: {
       data: [

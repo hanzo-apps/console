@@ -18,7 +18,7 @@ export const publicRouter = createTRPCRouter({
     .input(z.object({ projectId: z.string() }))
     .query(() => ({
       legacyTracingIoSearchEnabled:
-        env.LANGFUSE_DISABLE_LEGACY_TRACING_IO_SEARCH !== "true",
+        env.HANZO_DISABLE_LEGACY_TRACING_IO_SEARCH !== "true",
     })),
   checkUpdate: publicProcedure.query(async () => {
     // Skip update check on Hanzo Cloud

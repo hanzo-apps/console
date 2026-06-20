@@ -199,9 +199,9 @@ export async function buildTraceExport({
 
       payloadSize += JSON.stringify(observation.metadata).length;
 
-      if (payloadSize >= env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES) {
+      if (payloadSize >= env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES) {
         throw new TraceDownloadTooLargeError(
-          `Observations in trace are too large: ${(payloadSize / 1e6).toFixed(2)}MB exceeds limit of ${(env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES / 1e6).toFixed(2)}MB`,
+          `Observations in trace are too large: ${(payloadSize / 1e6).toFixed(2)}MB exceeds limit of ${(env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES / 1e6).toFixed(2)}MB`,
         );
       }
     }

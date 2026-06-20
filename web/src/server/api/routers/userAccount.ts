@@ -143,11 +143,11 @@ export const userAccountRouter = createTRPCRouter({
   setV4BetaEnabled: authenticatedProcedure
     .input(z.object({ enabled: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
-      const isCloudDeployment = Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION);
+      const isCloudDeployment = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
 
       if (
         !isCloudDeployment &&
-        process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION !== "DEV"
+        process.env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== "DEV"
       ) {
         return {
           success: true,

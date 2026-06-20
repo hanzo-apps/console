@@ -86,17 +86,17 @@ export default async function handler(
 
     // Trigger new user signup event
     if (
-      env.LANGFUSE_NEW_USER_SIGNUP_WEBHOOK &&
-      env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION &&
-      env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION !== "STAGING" &&
-      env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION !== "DEV"
+      env.HANZO_NEW_USER_SIGNUP_WEBHOOK &&
+      env.NEXT_PUBLIC_HANZO_CLOUD_REGION &&
+      env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== "STAGING" &&
+      env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== "DEV"
     ) {
-      await fetch(env.LANGFUSE_NEW_USER_SIGNUP_WEBHOOK, {
+      await fetch(env.HANZO_NEW_USER_SIGNUP_WEBHOOK, {
         method: "POST",
         body: JSON.stringify({
           name,
           email: normalizedEmail,
-          cloudRegion: env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION,
+          cloudRegion: env.NEXT_PUBLIC_HANZO_CLOUD_REGION,
           userId: newUser.id,
         }),
         headers: {

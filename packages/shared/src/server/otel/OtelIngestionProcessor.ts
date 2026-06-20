@@ -261,19 +261,16 @@ export class OtelIngestionProcessor {
                 const spanMetadata = this.extractMetadata(spanAttributes, "observation");
                 const traceMetadata = this.extractMetadata(spanAttributes, "trace");
 
-                const { input, output, filteredAttributes } =
-                  this.extractInputAndOutput({
-                    events: span?.events ?? [],
-                    attributes: spanAttributes,
-                    instrumentationScopeName: scopeSpan?.scope?.name ?? "",
-                  });
+                const { input, output, filteredAttributes } = this.extractInputAndOutput({
+                  events: span?.events ?? [],
+                  attributes: spanAttributes,
+                  instrumentationScopeName: scopeSpan?.scope?.name ?? "",
+                });
 
                 // Construct metadata object with the specified structure
                 // Match v3 path: store full scope object (name, version, attributes)
                 const metadata = {
-                  ...(isLangfuseSDKSpans
-                    ? {}
-                    : { attributes: filteredAttributes }),
+                  ...(isLangfuseSDKSpans ? {} : { attributes: filteredAttributes }),
                   resourceAttributes: resourceAttributes,
                   scope: {
                     ...(scopeSpan.scope || {}),
@@ -285,11 +282,7 @@ export class OtelIngestionProcessor {
                   ...spanMetadata,
                   ...traceMetadata,
                 };
-                const normalizedTools = normalizeToolsForObservation(
-                  input,
-                  output,
-                  metadata,
-                );
+                const normalizedTools = normalizeToolsForObservation(input, output, metadata);
 
                 // Extract instrumentation metadata
                 const serviceName = resourceAttributes?.["service.name"] as string | undefined;
@@ -870,10 +863,7 @@ export class OtelIngestionProcessor {
       resourceAttributes,
       scope: { ...scopeSpan.scope, attributes: scopeAttributes },
     };
-    const normalizedToolMetadata = normalizeToolMetadataForObservation(
-      input,
-      metadata,
-    );
+    const normalizedToolMetadata = normalizeToolMetadataForObservation(input, metadata);
 
     const observation = {
       id: this.parseId(span.spanId?.data ?? span.spanId),
@@ -1003,9 +993,7 @@ export class OtelIngestionProcessor {
     );
   }
 
-  private static isPlainObject(
-    value: unknown,
-  ): value is Record<string, unknown> {
+  private static isPlainObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
   }
 
@@ -1096,7 +1084,7 @@ export class OtelIngestionProcessor {
     spanAttributes: Record<string, unknown>,
     context: { spanId: string; traceId: string; eventBytes: number },
   ): void {
-    const maxBytes = env.LANGFUSE_OTEL_MAX_SPAN_BYTES;
+    const maxBytes = env.HANZO_OTEL_MAX_SPAN_BYTES;
     if (context.eventBytes <= maxBytes) return;
 
     const fieldThreshold = 1_000_000; // 1MB
@@ -1354,12 +1342,8 @@ export class OtelIngestionProcessor {
 
     // Genkit
     if (instrumentationScopeName === "genkit-tracer") {
-      const genkitInput =
-        this.parseJsonPayload(attributes["genkit:input"]) ??
-        attributes["genkit:input"];
-      const genkitOutput =
-        this.parseJsonPayload(attributes["genkit:output"]) ??
-        attributes["genkit:output"];
+      const genkitInput = this.parseJsonPayload(attributes["genkit:input"]) ?? attributes["genkit:input"];
+      const genkitOutput = this.parseJsonPayload(attributes["genkit:output"]) ?? attributes["genkit:output"];
 
       if (genkitInput != null || genkitOutput != null) {
         // For model spans prefer messages[] as input and message object as output.
@@ -1578,10 +1562,7 @@ export class OtelIngestionProcessor {
       input = attributes["pydantic_ai.all_messages"] ?? null;
       output = attributes["final_result"] ?? null;
       if (input && attributes["gen_ai.system_instructions"]) {
-        input = this.prependSystemInstructions(
-          input,
-          attributes["gen_ai.system_instructions"],
-        );
+        input = this.prependSystemInstructions(input, attributes["gen_ai.system_instructions"]);
       }
       if (input || output) {
         return { input, output, filteredAttributes };
@@ -1637,10 +1618,7 @@ export class OtelIngestionProcessor {
     input = attributes["gen_ai.input.messages"];
     output = attributes["gen_ai.output.messages"];
     if (input && attributes["gen_ai.system_instructions"]) {
-      input = this.prependSystemInstructions(
-        input,
-        attributes["gen_ai.system_instructions"],
-      );
+      input = this.prependSystemInstructions(input, attributes["gen_ai.system_instructions"]);
     }
     if (input || output) {
       return { input, output, filteredAttributes };
@@ -2059,9 +2037,7 @@ export class OtelIngestionProcessor {
     return this.extractGenericGenAiUsageDetails(attributes);
   }
 
-  private extractGenericGenAiUsageDetails(
-    attributes: Record<string, unknown>,
-  ): Record<string, number> {
+  private extractGenericGenAiUsageDetails(attributes: Record<string, unknown>): Record<string, number> {
     const usageDetails = Object.keys(attributes).filter(
       (key) => (key.startsWith("gen_ai.usage.") && key !== "gen_ai.usage.cost") || key.startsWith("llm.token_count"),
     );
@@ -2172,9 +2148,7 @@ export class OtelIngestionProcessor {
     if (typeof value === "string") {
       try {
         const parsed = JSON.parse(value);
-        return parsed && typeof parsed === "object"
-          ? (parsed as Record<string, unknown>)
-          : {};
+        return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
       } catch {
         return {};
       }

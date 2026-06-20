@@ -762,7 +762,7 @@ export const getExperimentItemsBatchIO = async (props: {
     experimentIds: allExperimentIds,
     experimentItemIds: itemIds,
   })
-    .selectIO(true, env.LANGFUSE_SERVER_SIDE_IO_CHAR_LIMIT)
+    .selectIO(true, env.HANZO_SERVER_SIDE_IO_CHAR_LIMIT)
     .selectRaw(
       "leftUTF8(e.experiment_item_expected_output, {truncateLength: UInt32}) as expected_output",
       "e.experiment_item_id as item_id",

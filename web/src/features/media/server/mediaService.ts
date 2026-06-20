@@ -65,7 +65,7 @@ export async function createMediaUploadUrl(params: {
       });
     }
 
-    const uploadBucket = env.LANGFUSE_S3_MEDIA_UPLOAD_BUCKET;
+    const uploadBucket = env.HANZO_S3_MEDIA_UPLOAD_BUCKET;
 
     if (!uploadBucket) {
       throw new InternalServerError(
@@ -134,7 +134,7 @@ export async function getMedia(params: { projectId: string; mediaId: string }) {
     );
   }
 
-  const ttlSeconds = env.LANGFUSE_S3_MEDIA_DOWNLOAD_URL_EXPIRY_SECONDS;
+  const ttlSeconds = env.HANZO_S3_MEDIA_DOWNLOAD_URL_EXPIRY_SECONDS;
   const url = await getMediaStorageServiceClient(media.bucketName).getSignedUrl(
     media.bucketPath,
     ttlSeconds,
@@ -292,7 +292,7 @@ function getBucketPath(params: {
   contentType: MediaContentType;
 }) {
   const { projectId, mediaId, contentType } = params;
-  const prefix = env.LANGFUSE_S3_MEDIA_UPLOAD_PREFIX ?? "";
+  const prefix = env.HANZO_S3_MEDIA_UPLOAD_PREFIX ?? "";
   const fileExtension = getFileExtensionFromContentType(contentType);
 
   return `${prefix}${projectId}/${mediaId}.${fileExtension}`;

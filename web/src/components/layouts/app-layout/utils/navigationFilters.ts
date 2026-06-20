@@ -79,7 +79,7 @@ export const filters = {
     }
 
     if (route.featureFlag === "v4BetaToggleVisible") {
-      const isDev = process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION === "DEV";
+      const isDev = process.env.NEXT_PUBLIC_HANZO_CLOUD_REGION === "DEV";
       const canToggleV4 = isDev || ctx.session?.user?.canToggleV4 === true;
       return canToggleV4 && ctx.isConsoleCloud ? route : null;
     }

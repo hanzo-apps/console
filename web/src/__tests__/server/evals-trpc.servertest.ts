@@ -2,8 +2,8 @@ import { beforeEach, vi } from "vitest";
 import type * as SharedEnvModule from "@hanzo/console/src/env";
 
 const { runCodeEvalTestForJobConfigMock } = vi.hoisted(() => {
-  process.env.LANGFUSE_CODE_EVAL_DISPATCHER = "insecure-local";
-  process.env.LANGFUSE_ENABLE_EVENTS_TABLE_UI = "true";
+  process.env.HANZO_CODE_EVAL_DISPATCHER = "insecure-local";
+  process.env.HANZO_ENABLE_EVENTS_TABLE_UI = "true";
 
   return {
     runCodeEvalTestForJobConfigMock: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock("@hanzo/console/src/env", async (importOriginal) => {
     env: {
       ...actual.env,
       LANGFUSE_CODE_EVAL_DISPATCHER: "insecure-local",
-      NEXT_PUBLIC_LANGFUSE_CLOUD_REGION: undefined,
+      NEXT_PUBLIC_HANZO_CLOUD_REGION: undefined,
     },
   };
 });

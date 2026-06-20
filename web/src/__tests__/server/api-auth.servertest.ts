@@ -723,12 +723,12 @@ describe("Authenticate API calls", () => {
       const redisKey = `api-key:${apiKey?.fastHashedSecretKey}`;
       const ttl = await getRedisTtl(redis, redisKey);
 
-      expect(ttl).toBeGreaterThan(env.LANGFUSE_CACHE_API_KEY_TTL_SECONDS - 2);
+      expect(ttl).toBeGreaterThan(env.HANZO_CACHE_API_KEY_TTL_SECONDS - 2);
 
       await redis.expire(redisKey, 10);
       const shortenedTtl = await getRedisTtl(redis, redisKey);
       expect(shortenedTtl).toBeGreaterThan(0);
-      expect(shortenedTtl).toBeLessThan(env.LANGFUSE_CACHE_API_KEY_TTL_SECONDS);
+      expect(shortenedTtl).toBeLessThan(env.HANZO_CACHE_API_KEY_TTL_SECONDS);
 
       await new ApiAuthService(
         mockPrisma as unknown as PrismaClient,
@@ -737,7 +737,7 @@ describe("Authenticate API calls", () => {
 
       const ttl2 = await getRedisTtl(redis, redisKey);
 
-      expect(ttl2).toBeGreaterThan(env.LANGFUSE_CACHE_API_KEY_TTL_SECONDS - 2);
+      expect(ttl2).toBeGreaterThan(env.HANZO_CACHE_API_KEY_TTL_SECONDS - 2);
     });
 
     it("should delete API keys from cache and db", async () => {

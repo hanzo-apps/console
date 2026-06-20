@@ -79,7 +79,7 @@ export const mixpanelIntegrationRouter = createTRPCRouter({
         assertLegacyBlobExportSourceAllowed({
           project,
           nextInternalExportSource: input.exportSource,
-          isCloud: Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION),
+          isCloud: Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION),
         });
       }
 

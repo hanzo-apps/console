@@ -29,7 +29,7 @@ export async function prepareExecuteQuery(opts: {
   const { query: compiledQuery, parameters } = await queryBuilder.build(
     query,
     projectId,
-    enableSingleLevelOptimization || env.LANGFUSE_ENABLE_SINGLE_LEVEL_QUERY_OPTIMIZATION === "true",
+    enableSingleLevelOptimization || env.HANZO_ENABLE_SINGLE_LEVEL_QUERY_OPTIMIZATION === "true",
   );
 
   // v2 score views are score-based, but can add events_core joins for

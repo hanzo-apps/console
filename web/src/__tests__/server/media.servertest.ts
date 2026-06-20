@@ -23,9 +23,9 @@ describe("Media Upload API", () => {
   const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
   const staticFixtureDir = path.join(__dirname, "..", "static");
   const isAzureBlobMode =
-    process.env.LANGFUSE_USE_AZURE_BLOB === "true" ||
-    env.LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID === "devstoreaccount1" ||
-    env.LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT?.includes(":10000/") === true;
+    process.env.HANZO_USE_AZURE_BLOB === "true" ||
+    env.HANZO_S3_MEDIA_UPLOAD_ACCESS_KEY_ID === "devstoreaccount1" ||
+    env.HANZO_S3_MEDIA_UPLOAD_ENDPOINT?.includes(":10000/") === true;
   const describeIfNotAzureBlobStorage = isAzureBlobMode
     ? describe.skip
     : describe;

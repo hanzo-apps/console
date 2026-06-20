@@ -61,7 +61,7 @@ export async function upsertBlobStorageIntegration(params: {
 }) {
   const { prisma, projectId, data } = params;
 
-  const isSelfHosted = !env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
+  const isSelfHosted = !env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
   const canUseHostCredentials =
     isSelfHosted && data.type === BlobStorageIntegrationType.S3;
 
