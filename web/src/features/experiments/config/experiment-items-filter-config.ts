@@ -1,5 +1,5 @@
 import type { FilterConfig } from "@/src/features/filters/lib/filter-config";
-import type { ColumnDefinition, ObservationLevelType } from "@langfuse/shared";
+import type { ColumnDefinition, ObservationLevelType } from "@hanzo/console";
 
 /**
  * Column definitions for experiment items table.

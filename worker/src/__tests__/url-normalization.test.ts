@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateWebhookURL } from "@hanzo/console-core/src/server";
+import { validateWebhookURL } from "@hanzo/console/src/server";
 
 describe("URL Normalization and Edge Cases", () => {
   describe("URL encoding bypass attempts", () => {

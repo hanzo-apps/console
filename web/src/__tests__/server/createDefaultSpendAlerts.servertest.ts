@@ -1,5 +1,5 @@
-import { prisma } from "@langfuse/shared/src/db";
-import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import { createDefaultSpendAlerts } from "@/src/ee/features/billing/server/stripeWebhookHandler";
 import { stripeProducts } from "@/src/ee/features/billing/utils/stripeCatalogue";
 

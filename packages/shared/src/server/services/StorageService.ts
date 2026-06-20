@@ -29,19 +29,14 @@ import * as objectstorage from "oci-objectstorage";
 import * as common from "oci-common";
 import { UploadManager as OciUploadManager } from "oci-objectstorage";
 import { URL } from "node:url";
-import {
-  getSecureOutboundHttpAgents,
-  type OutboundUrlConnectionValidationOptions,
-} from "../outbound-url";
+import { getSecureOutboundHttpAgents, type OutboundUrlConnectionValidationOptions } from "../outbound-url";
 
 export interface S3SseConfig {
   serverSideEncryption?: string;
   sseKmsKeyId?: string;
 }
 
-export function buildS3SseParams(
-  sseConfig?: S3SseConfig,
-): Record<string, string> {
+export function buildS3SseParams(sseConfig?: S3SseConfig): Record<string, string> {
   const params: Record<string, string> = {};
   if (sseConfig?.serverSideEncryption) {
     params.ServerSideEncryption = sseConfig.serverSideEncryption;
@@ -85,10 +80,8 @@ function handleStorageError(err: unknown, operation: string): never {
   throw new Error(`Failed to ${operation}`, { cause: err });
 }
 
-function createS3RequestHandler(
-  connectionValidation?: OutboundUrlConnectionValidationOptions,
-): NodeHttpHandler {
-  const maxSockets = env.LANGFUSE_S3_CONCURRENT_WRITES;
+function createS3RequestHandler(connectionValidation?: OutboundUrlConnectionValidationOptions): NodeHttpHandler {
+  const maxSockets = env.HANZO_S3_CONCURRENT_WRITES;
 
   if (!connectionValidation) {
     return new NodeHttpHandler({
@@ -96,10 +89,7 @@ function createS3RequestHandler(
     });
   }
 
-  const { httpAgent, httpsAgent } = getSecureOutboundHttpAgents(
-    connectionValidation,
-    { maxSockets },
-  );
+  const { httpAgent, httpsAgent } = getSecureOutboundHttpAgents(connectionValidation, { maxSockets });
 
   return new NodeHttpHandler({
     httpAgent,
@@ -114,9 +104,7 @@ function createAzureBlobPipeline(
   const pipeline = newPipeline(sharedKeyCredential);
 
   if (connectionValidation) {
-    pipeline.factories.push(
-      createSecureAzureBlobRequestPolicyFactory(connectionValidation),
-    );
+    pipeline.factories.push(createSecureAzureBlobRequestPolicyFactory(connectionValidation));
   }
 
   return pipeline;
@@ -125,17 +113,15 @@ function createAzureBlobPipeline(
 function createSecureAzureBlobRequestPolicyFactory(
   connectionValidation: OutboundUrlConnectionValidationOptions,
 ): RequestPolicyFactory {
-  const { httpAgent, httpsAgent } = getSecureOutboundHttpAgents(
-    connectionValidation,
-    { maxSockets: env.LANGFUSE_S3_CONCURRENT_WRITES },
-  );
+  const { httpAgent, httpsAgent } = getSecureOutboundHttpAgents(connectionValidation, {
+    maxSockets: env.HANZO_S3_CONCURRENT_WRITES,
+  });
 
   return {
     create(nextPolicy) {
       return {
         sendRequest(request) {
-          request.agent =
-            new URL(request.url).protocol === "http:" ? httpAgent : httpsAgent;
+          request.agent = new URL(request.url).protocol === "http:" ? httpAgent : httpsAgent;
           return nextPolicy.sendRequest(request);
         },
       };
@@ -223,7 +209,7 @@ export class StorageServiceFactory {
     if (
       params.useOCIObjectStorage !== undefined
         ? params.useOCIObjectStorage
-        : env.LANGFUSE_USE_OCI_NATIVE_OBJECT_STORAGE === "true"
+        : env.HANZO_USE_OCI_NATIVE_OBJECT_STORAGE === "true"
     ) {
       // Same as GCS above: OCI is currently deployment-configured internal
       // storage only, not a user-controlled blob integration endpoint.
@@ -566,13 +552,8 @@ class S3StorageService implements StorageService {
     }
   }
 
-  public async uploadFileBuffered({
-    fileName,
-    fileType,
-    data,
-    partSizeBytes,
-  }: UploadFileBuffered): Promise<void> {
-    if (env.LANGFUSE_S3_UPLOAD_ENABLE_BUFFERED !== "true") {
+  public async uploadFileBuffered({ fileName, fileType, data, partSizeBytes }: UploadFileBuffered): Promise<void> {
+    if (env.HANZO_S3_UPLOAD_ENABLE_BUFFERED !== "true") {
       return this.uploadFile({ fileName, fileType, data });
     }
 
@@ -590,8 +571,8 @@ class S3StorageService implements StorageService {
     const uploader = new BufferedStreamUploader({
       strategy,
       partSizeBytes,
-      maxPartAttempts: env.LANGFUSE_S3_UPLOAD_MAX_PART_ATTEMPTS,
-      maxConcurrentParts: env.LANGFUSE_S3_UPLOAD_MAX_CONCURRENT_PARTS,
+      maxPartAttempts: env.HANZO_S3_UPLOAD_MAX_PART_ATTEMPTS,
+      maxConcurrentParts: env.HANZO_S3_UPLOAD_MAX_CONCURRENT_PARTS,
       key: fileName,
     });
 
@@ -984,7 +965,7 @@ class OCIObjectStorageService implements StorageService {
 
   private async initClient(params: { endpoint?: string; region?: string }) {
     let provider: common.AuthenticationDetailsProvider;
-    switch (env.LANGFUSE_OCI_AUTH_TYPE) {
+    switch (env.HANZO_OCI_AUTH_TYPE) {
       case "workload_identity": {
         provider =
           new common.OkeWorkloadIdentityAuthenticationDetailsProvider.OkeWorkloadIdentityAuthenticationDetailsProviderBuilder().build();
@@ -993,33 +974,28 @@ class OCIObjectStorageService implements StorageService {
       }
 
       case "instance_principal": {
-        provider =
-          await new common.InstancePrincipalsAuthenticationDetailsProviderBuilder().build();
+        provider = await new common.InstancePrincipalsAuthenticationDetailsProviderBuilder().build();
 
         break;
       }
 
       case "resource_principal": {
-        provider =
-          common.ResourcePrincipalAuthenticationDetailsProvider.builder();
+        provider = common.ResourcePrincipalAuthenticationDetailsProvider.builder();
 
         break;
       }
 
       case "oci_profile": {
         provider = new common.ConfigFileAuthenticationDetailsProvider(
-          env.LANGFUSE_OCI_CONFIG_FILE,
-          env.LANGFUSE_OCI_CONFIG_PROFILE,
+          env.HANZO_OCI_CONFIG_FILE,
+          env.HANZO_OCI_CONFIG_PROFILE,
         );
 
         break;
       }
 
       case "session_token": {
-        provider = new common.SessionAuthDetailProvider(
-          env.LANGFUSE_OCI_CONFIG_FILE,
-          env.LANGFUSE_OCI_CONFIG_PROFILE,
-        );
+        provider = new common.SessionAuthDetailProvider(env.HANZO_OCI_CONFIG_FILE, env.HANZO_OCI_CONFIG_PROFILE);
 
         break;
       }
@@ -1043,8 +1019,7 @@ class OCIObjectStorageService implements StorageService {
 
   private async ensureClient() {
     await this.clientInit;
-    if (!this.client)
-      throw new Error("OCI ObjectStorage client failed to initialize");
+    if (!this.client) throw new Error("OCI ObjectStorage client failed to initialize");
     return this.client;
   }
 
@@ -1088,10 +1063,7 @@ class OCIObjectStorageService implements StorageService {
     };
 
     // 1) Node.js Readable (EventEmitter style)
-    if (
-      typeof readable.on === "function" &&
-      typeof readable.read !== "undefined"
-    ) {
+    if (typeof readable.on === "function" && typeof readable.read !== "undefined") {
       return await new Promise<string>((resolve, reject) => {
         const chunks: Buffer[] = [];
         readable.on("data", (chunk: any) => {
@@ -1132,10 +1104,8 @@ class OCIObjectStorageService implements StorageService {
 
     // 3) Buffer / Uint8Array / ArrayBuffer direct
     if (Buffer.isBuffer(readable)) return readable.toString("utf8");
-    if (readable instanceof Uint8Array)
-      return Buffer.from(readable).toString("utf8");
-    if (readable instanceof ArrayBuffer)
-      return Buffer.from(readable).toString("utf8");
+    if (readable instanceof Uint8Array) return Buffer.from(readable).toString("utf8");
+    if (readable instanceof ArrayBuffer) return Buffer.from(readable).toString("utf8");
 
     // 4) Blob (browser)
     if (typeof Blob !== "undefined" && readable instanceof Blob) {
@@ -1169,13 +1139,7 @@ class OCIObjectStorageService implements StorageService {
       throw new TypeError("Unsupported body type passed to streamToString");
     }
   }
-  public async uploadFile({
-    fileName,
-    fileType,
-    data,
-    partSize,
-    queueSize,
-  }: UploadFile): Promise<void> {
+  public async uploadFile({ fileName, fileType, data, partSize, queueSize }: UploadFile): Promise<void> {
     try {
       const { client, namespaceName } = await this.getClientAndNamespace();
       const uploadManager = new OciUploadManager(client, {
@@ -1215,20 +1179,12 @@ class OCIObjectStorageService implements StorageService {
 
       return;
     } catch (err) {
-      logger.error(
-        `Failed to upload file to OCI Object Storage  ${fileName}`,
-        err,
-      );
+      logger.error(`Failed to upload file to OCI Object Storage  ${fileName}`, err);
       handleStorageError(err, "upload file to OCI Object Storage ");
     }
   }
 
-  public async uploadFileBuffered({
-    fileName,
-    fileType,
-    data,
-    partSizeBytes,
-  }: UploadFileBuffered): Promise<void> {
+  public async uploadFileBuffered({ fileName, fileType, data, partSizeBytes }: UploadFileBuffered): Promise<void> {
     await this.uploadFile({
       fileName,
       fileType,
@@ -1252,14 +1208,8 @@ class OCIObjectStorageService implements StorageService {
 
       return { signedUrl };
     } catch (err) {
-      logger.error(
-        `Failed to upload file to OCI Object Storage  ${fileName}`,
-        err,
-      );
-      handleStorageError(
-        err,
-        "upload file to OCI Object Storage  or generate signed URL",
-      );
+      logger.error(`Failed to upload file to OCI Object Storage  ${fileName}`, err);
+      handleStorageError(err, "upload file to OCI Object Storage  or generate signed URL");
     }
   }
 
@@ -1291,22 +1241,15 @@ class OCIObjectStorageService implements StorageService {
         objectName: path,
       };
       const response = await client.getObject(req);
-      const bodyStream = (response as any).value as
-        | NodeJS.ReadableStream
-        | undefined;
+      const bodyStream = (response as any).value as NodeJS.ReadableStream | undefined;
       return await this.streamToString(bodyStream);
     } catch (err) {
-      logger.error(
-        `Failed to download file from OCI Object Storage  ${path}`,
-        err,
-      );
+      logger.error(`Failed to download file from OCI Object Storage  ${path}`, err);
       handleStorageError(err, "download file from OCI Object Storage ");
     }
   }
 
-  public async listFiles(
-    prefix: string,
-  ): Promise<{ file: string; createdAt: Date }[]> {
+  public async listFiles(prefix: string): Promise<{ file: string; createdAt: Date }[]> {
     try {
       const { client, namespaceName } = await this.getClientAndNamespace();
       const req: objectstorage.requests.ListObjectsRequest = {
@@ -1325,28 +1268,19 @@ class OCIObjectStorageService implements StorageService {
             ? [
                 {
                   file: obj.name,
-                  createdAt: obj.timeCreated
-                    ? new Date(obj.timeCreated as any)
-                    : new Date(),
+                  createdAt: obj.timeCreated ? new Date(obj.timeCreated as any) : new Date(),
                 },
               ]
             : [],
         ) ?? []
       );
     } catch (err) {
-      logger.error(
-        `Failed to list files from OCI Object Storage  ${prefix}`,
-        err,
-      );
+      logger.error(`Failed to list files from OCI Object Storage  ${prefix}`, err);
       handleStorageError(err, "list files from OCI Object Storage ");
     }
   }
 
-  public async getSignedUrl(
-    fileName: string,
-    ttlSeconds: number,
-    asAttachment: boolean = true,
-  ): Promise<string> {
+  public async getSignedUrl(fileName: string, ttlSeconds: number, asAttachment: boolean = true): Promise<string> {
     try {
       const { client, namespaceName } = await this.getClientAndNamespace();
       const expiresOn = new Date(Date.now() + ttlSeconds * 1000);
@@ -1361,14 +1295,11 @@ class OCIObjectStorageService implements StorageService {
         } as any,
       };
       const resp = await client.createPreauthenticatedRequest(req);
-      const accessUri = (resp.preauthenticatedRequest as any)
-        .accessUri as string;
+      const accessUri = (resp.preauthenticatedRequest as any).accessUri as string;
       const base = this.externalEndpoint ?? client.endpoint;
 
       if (!base) {
-        throw new Error(
-          "Cannot build PAR URL: no externalEndpoint configured and client.endpoint is empty",
-        );
+        throw new Error("Cannot build PAR URL: no externalEndpoint configured and client.endpoint is empty");
       }
       const baseUrl = new URL(base);
       const parUrl = new URL(accessUri, baseUrl);
@@ -1378,10 +1309,7 @@ class OCIObjectStorageService implements StorageService {
       const url = parUrl.toString();
       return url;
     } catch (err) {
-      logger.error(
-        `Failed to generate presigned URL (PAR) for OCI Object Storage  ${fileName}`,
-        err,
-      );
+      logger.error(`Failed to generate presigned URL (PAR) for OCI Object Storage  ${fileName}`, err);
       handleStorageError(err, "generate signed URL for OCI Object Storage ");
     }
   }
@@ -1428,27 +1356,18 @@ class OCIObjectStorageService implements StorageService {
         } as any,
       };
       const resp = await client.createPreauthenticatedRequest(req);
-      const accessUri = (resp.preauthenticatedRequest as any)
-        .accessUri as string;
+      const accessUri = (resp.preauthenticatedRequest as any).accessUri as string;
       const base = this.externalEndpoint ?? client.endpoint;
 
       if (!base) {
-        throw new Error(
-          "Cannot build PAR URL: no externalEndpoint configured and client.endpoint is empty",
-        );
+        throw new Error("Cannot build PAR URL: no externalEndpoint configured and client.endpoint is empty");
       }
       const baseUrl = new URL(base);
       let url = new URL(accessUri, baseUrl).toString();
       return url;
     } catch (err) {
-      logger.error(
-        `Failed to generate presigned upload URL (PAR) for OCI Object Storage  ${path}`,
-        err,
-      );
-      handleStorageError(
-        err,
-        "generate presigned upload URL for OCI Object Storage ",
-      );
+      logger.error(`Failed to generate presigned upload URL (PAR) for OCI Object Storage  ${path}`, err);
+      handleStorageError(err, "generate presigned upload URL for OCI Object Storage ");
     }
   }
 }

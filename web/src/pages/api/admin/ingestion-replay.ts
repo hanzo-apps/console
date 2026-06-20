@@ -7,8 +7,8 @@ import {
   QueueJobs,
   SecondaryIngestionQueue,
   OtelIngestionQueue,
-} from "@langfuse/shared/src/server";
-import type { QueueName, TQueueJobTypes } from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
+import type { QueueName, TQueueJobTypes } from "@hanzo/console/src/server";
 import { AdminApiAuthService } from "@/src/ee/features/admin-api/server/adminApiAuth";
 
 const IngestionReplayBody = z.object({

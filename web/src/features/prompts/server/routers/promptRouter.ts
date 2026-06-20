@@ -2,8 +2,11 @@ import { z } from "zod";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { throwIfNoEntitlement } from "@/src/features/entitlements/server/hasEntitlement";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { type Prompt, Prisma } from "@hanzo/shared/src/db";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
+import { type Prompt, Prisma } from "@hanzo/console/src/db";
 import { createPrompt, duplicatePrompt } from "../actions/createPrompt";
 import { checkHasProtectedLabels } from "../utils/checkHasProtectedLabels";
 import {
@@ -17,8 +20,8 @@ import {
   PromptType,
   StringNoHTMLNonEmpty,
   TracingSearchType,
-} from "@hanzo/shared";
-import { orderBy, singleFilter } from "@hanzo/shared";
+} from "@hanzo/console";
+import { orderBy, singleFilter } from "@hanzo/console";
 import {
   orderByToPrismaSql,
   PromptService,
@@ -28,7 +31,7 @@ import {
   getObservationsWithPromptName,
   getObservationMetricsForPrompts,
   getAggregatedScoresForPrompts,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
 import { TRPCError } from "@trpc/server";
 import { promptChangeEventSourcing } from "@/src/features/prompts/server/promptChangeEventSourcing";
@@ -47,14 +50,18 @@ const buildPromptSearchFilter = (
 
   if (types.includes("id")) {
     searchConditions.push(Prisma.sql`p.name ILIKE ${`%${q}%`}`);
-    searchConditions.push(Prisma.sql`EXISTS (SELECT 1 FROM UNNEST(p.tags) AS tag WHERE tag ILIKE ${`%${q}%`})`);
+    searchConditions.push(
+      Prisma.sql`EXISTS (SELECT 1 FROM UNNEST(p.tags) AS tag WHERE tag ILIKE ${`%${q}%`})`,
+    );
   }
 
   if (types.includes("content")) {
     searchConditions.push(Prisma.sql`p.prompt::text ILIKE ${`%${q}%`}`);
   }
 
-  return searchConditions.length > 0 ? Prisma.sql` AND (${Prisma.join(searchConditions, " OR ")})` : Prisma.empty;
+  return searchConditions.length > 0
+    ? Prisma.sql` AND (${Prisma.join(searchConditions, " OR ")})`
+    : Prisma.empty;
 };
 const PromptFilterOptions = z.object({
   projectId: z.string(), // Required for protectedProjectProcedure
@@ -103,34 +110,49 @@ export const promptRouter = createTRPCRouter({
 
       return prompt !== null;
     }),
-  all: protectedProjectProcedure.input(PromptFilterOptions).query(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "prompts:read",
-    });
+  all: protectedProjectProcedure
+    .input(PromptFilterOptions)
+    .query(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "prompts:read",
+      });
 
-    const orderByCondition = orderByToPrismaSql(input.orderBy, promptsTableCols);
+      const orderByCondition = orderByToPrismaSql(
+        input.orderBy,
+        promptsTableCols,
+      );
 
-    const filterCondition = tableColumnsToSqlFilterAndPrefix(input.filter ?? [], promptsTableCols, "prompts");
+      const filterCondition = tableColumnsToSqlFilterAndPrefix(
+        input.filter ?? [],
+        promptsTableCols,
+        "prompts",
+      );
 
-    // pathFilter: SQL WHERE clause to filter prompts by folder (e.g., "AND p.name LIKE 'folder/%'")
-    const pathFilter = input.pathPrefix
-      ? (() => {
-          const prefix = input.pathPrefix;
-          // Escape backslashes and other LIKE special characters for pattern matching
-          const escapedPrefix = prefix.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
-          return Prisma.sql` AND (p.name LIKE ${`${escapedPrefix}/%`} OR p.name = ${escapedPrefix})`;
-        })()
-      : Prisma.empty;
+      // pathFilter: SQL WHERE clause to filter prompts by folder (e.g., "AND p.name LIKE 'folder/%'")
+      const pathFilter = input.pathPrefix
+        ? (() => {
+            const prefix = input.pathPrefix;
+            // Escape backslashes and other LIKE special characters for pattern matching
+            const escapedPrefix = prefix
+              .replace(/\\/g, "\\\\")
+              .replace(/%/g, "\\%")
+              .replace(/_/g, "\\_");
+            return Prisma.sql` AND (p.name LIKE ${`${escapedPrefix}/%`} OR p.name = ${escapedPrefix})`;
+          })()
+        : Prisma.empty;
 
-    const searchFilter = buildPromptSearchFilter(input.searchQuery, input.searchType);
+      const searchFilter = buildPromptSearchFilter(
+        input.searchQuery,
+        input.searchType,
+      );
 
-    const [prompts, promptCount] = await Promise.all([
-      // prompts
-      ctx.prisma.$queryRaw<Array<Prompt & { row_type: "folder" | "prompt" }>>(
-        generatePromptQuery(
-          Prisma.sql`
+      const [prompts, promptCount] = await Promise.all([
+        // prompts
+        ctx.prisma.$queryRaw<Array<Prompt & { row_type: "folder" | "prompt" }>>(
+          generatePromptQuery(
+            Prisma.sql`
           p.id,
           p.name,
           p.version,
@@ -142,37 +164,38 @@ export const promptRouter = createTRPCRouter({
           p.labels,
           p.tags,
           p.row_type`,
-          input.projectId,
-          filterCondition,
-          orderByCondition,
-          input.limit,
-          input.page,
-          pathFilter, // SQL WHERE clause: filters DB to only prompts in current folder, derived from prefix.
-          searchFilter,
-          input.pathPrefix, // Raw folder path: used for segment splitting & folder detection logic
+            input.projectId,
+            filterCondition,
+            orderByCondition,
+            input.limit,
+            input.page,
+            pathFilter, // SQL WHERE clause: filters DB to only prompts in current folder, derived from prefix.
+            searchFilter,
+            input.pathPrefix, // Raw folder path: used for segment splitting & folder detection logic
+          ),
         ),
-      ),
-      // promptCount
-      ctx.prisma.$queryRaw<Array<{ totalCount: bigint }>>(
-        generatePromptQuery(
-          Prisma.sql`count(*) AS "totalCount"`,
-          input.projectId,
-          filterCondition,
-          Prisma.empty,
-          1, // limit
-          0, // input.page,
-          pathFilter,
-          searchFilter,
-          input.pathPrefix,
+        // promptCount
+        ctx.prisma.$queryRaw<Array<{ totalCount: bigint }>>(
+          generatePromptQuery(
+            Prisma.sql`count(*) AS "totalCount"`,
+            input.projectId,
+            filterCondition,
+            Prisma.empty,
+            1, // limit
+            0, // input.page,
+            pathFilter,
+            searchFilter,
+            input.pathPrefix,
+          ),
         ),
-      ),
-    ]);
+      ]);
 
-    return {
-      prompts: prompts,
-      totalCount: promptCount.length > 0 ? Number(promptCount[0]?.totalCount) : 0,
-    };
-  }),
+      return {
+        prompts: prompts,
+        totalCount:
+          promptCount.length > 0 ? Number(promptCount[0]?.totalCount) : 0,
+      };
+    }),
   count: protectedProjectProcedure
     .input(
       z.object({
@@ -192,7 +215,11 @@ export const promptRouter = createTRPCRouter({
 
       const filterCondition =
         input.filter && input.filter.length > 0
-          ? tableColumnsToSqlFilterAndPrefix(input.filter, promptsTableCols, "prompts")
+          ? tableColumnsToSqlFilterAndPrefix(
+              input.filter,
+              promptsTableCols,
+              "prompts",
+            )
           : Prisma.empty;
 
       const pathFilter = input.pathPrefix
@@ -202,7 +229,10 @@ export const promptRouter = createTRPCRouter({
           })()
         : Prisma.empty;
 
-      const searchFilter = buildPromptSearchFilter(input.searchQuery, input.searchType);
+      const searchFilter = buildPromptSearchFilter(
+        input.searchQuery,
+        input.searchType,
+      );
 
       const count = await ctx.prisma.$queryRaw<Array<{ totalCount: bigint }>>(
         generatePromptQuery(
@@ -236,7 +266,10 @@ export const promptRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       if (input.promptNames.length === 0) return [];
-      const res = await getObservationsWithPromptName(input.projectId, input.promptNames);
+      const res = await getObservationsWithPromptName(
+        input.projectId,
+        input.promptNames,
+      );
       return res.map(({ promptName, count }) => ({
         promptName,
         observationCount: count,
@@ -262,51 +295,54 @@ export const promptRouter = createTRPCRouter({
         },
       });
     }),
-  create: protectedProjectProcedure.input(CreatePromptTRPCSchema).mutation(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "prompts:CUD",
-    });
-
-    const { hasProtectedLabels, protectedLabels } = await checkHasProtectedLabels({
-      prisma: ctx.prisma,
-      projectId: input.projectId,
-      labelsToCheck: input.labels,
-    });
-
-    if (hasProtectedLabels) {
+  create: protectedProjectProcedure
+    .input(CreatePromptTRPCSchema)
+    .mutation(async ({ input, ctx }) => {
       throwIfNoProjectAccess({
         session: ctx.session,
         projectId: input.projectId,
-        scope: "promptProtectedLabels:CUD",
-        forbiddenErrorMessage: `You don't have permission to create a prompt with a protected label. Please contact your project admin for assistance.\n\n Protected labels are: ${protectedLabels.join(", ")}`,
+        scope: "prompts:CUD",
       });
-    }
 
-    const prompt = await createPrompt({
-      ...input,
-      prisma: ctx.prisma,
-      createdBy: ctx.session.user.id,
-    });
+      const { hasProtectedLabels, protectedLabels } =
+        await checkHasProtectedLabels({
+          prisma: ctx.prisma,
+          projectId: input.projectId,
+          labelsToCheck: input.labels,
+        });
 
-    if (!prompt) {
-      throw new Error("Failed to create prompt");
-    }
+      if (hasProtectedLabels) {
+        throwIfNoProjectAccess({
+          session: ctx.session,
+          projectId: input.projectId,
+          scope: "promptProtectedLabels:CUD",
+          forbiddenErrorMessage: `You don't have permission to create a prompt with a protected label. Please contact your project admin for assistance.\n\n Protected labels are: ${protectedLabels.join(", ")}`,
+        });
+      }
 
-    await auditLog(
-      {
-        session: ctx.session,
-        resourceType: "prompt",
-        resourceId: prompt.id,
-        action: "create",
-        after: prompt,
-      },
-      ctx.prisma,
-    );
+      const prompt = await createPrompt({
+        ...input,
+        prisma: ctx.prisma,
+        createdBy: ctx.session.user.id,
+      });
 
-    return prompt;
-  }),
+      if (!prompt) {
+        throw new Error("Failed to create prompt");
+      }
+
+      await auditLog(
+        {
+          session: ctx.session,
+          resourceType: "prompt",
+          resourceId: prompt.id,
+          action: "create",
+          after: prompt,
+        },
+        ctx.prisma,
+      );
+
+      return prompt;
+    }),
   duplicatePrompt: protectedProjectProcedure
     .input(
       z.object({
@@ -354,48 +390,50 @@ export const promptRouter = createTRPCRouter({
 
       return prompt;
     }),
-  filterOptions: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async ({ input, ctx }) => {
-    const [names, tags, labels] = await Promise.all([
-      ctx.prisma.prompt.groupBy({
-        where: {
-          projectId: input.projectId,
-        },
-        by: ["name"],
-        // limiting to 1k prompt names to avoid performance issues.
-        // some users have unique names for large amounts of prompts
-        // sending all prompt names to the FE exceeds the cloud function return size limit
-        take: 1000,
-        orderBy: {
-          name: "asc",
-        },
-      }),
-      ctx.prisma.$queryRaw<{ value: string }[]>`
+  filterOptions: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const [names, tags, labels] = await Promise.all([
+        ctx.prisma.prompt.groupBy({
+          where: {
+            projectId: input.projectId,
+          },
+          by: ["name"],
+          // limiting to 1k prompt names to avoid performance issues.
+          // some users have unique names for large amounts of prompts
+          // sending all prompt names to the FE exceeds the cloud function return size limit
+          take: 1000,
+          orderBy: {
+            name: "asc",
+          },
+        }),
+        ctx.prisma.$queryRaw<{ value: string }[]>`
           SELECT tags.tag as value
           FROM prompts, UNNEST(prompts.tags) AS tags(tag)
           WHERE prompts.project_id = ${input.projectId}
           GROUP BY tags.tag
           ORDER BY tags.tag ASC;
         `,
-      ctx.prisma.$queryRaw<{ value: string }[]>`
+        ctx.prisma.$queryRaw<{ value: string }[]>`
           SELECT labels.label as value
           FROM prompts, UNNEST(prompts.labels) AS labels(label)
           WHERE prompts.project_id = ${input.projectId}
           GROUP BY labels.label
           ORDER BY labels.label ASC;
         `,
-    ]);
+      ]);
 
-    const res = {
-      name: names
-        .filter((n) => n.name !== null)
-        .map((name) => ({
-          value: name.name ?? "undefined",
-        })),
-      labels: labels,
-      tags: tags,
-    };
-    return res;
-  }),
+      const res = {
+        name: names
+          .filter((n) => n.name !== null)
+          .map((name) => ({
+            value: name.name ?? "undefined",
+          })),
+        labels: labels,
+        tags: tags,
+      };
+      return res;
+    }),
   delete: protectedProjectProcedure
     .input(
       z.object({
@@ -458,11 +496,12 @@ export const promptRouter = createTRPCRouter({
         }
 
         // Check if any prompt has a protected label
-        const { hasProtectedLabels, protectedLabels } = await checkHasProtectedLabels({
-          prisma: ctx.prisma,
-          projectId: input.projectId,
-          labelsToCheck: prompts.flatMap((prompt) => prompt.labels),
-        });
+        const { hasProtectedLabels, protectedLabels } =
+          await checkHasProtectedLabels({
+            prisma: ctx.prisma,
+            projectId: input.projectId,
+            labelsToCheck: prompts.flatMap((prompt) => prompt.labels),
+          });
 
         if (hasProtectedLabels) {
           throwIfNoProjectAccess({
@@ -507,7 +546,10 @@ export const promptRouter = createTRPCRouter({
         // Trigger webhooks for prompt deletion
         await Promise.all(
           prompts.map(async (prompt) =>
-            promptChangeEventSourcing(await promptService.resolvePrompt(prompt), "deleted"),
+            promptChangeEventSourcing(
+              await promptService.resolvePrompt(prompt),
+              "deleted",
+            ),
           ),
         );
       } catch (e) {
@@ -541,11 +583,12 @@ export const promptRouter = createTRPCRouter({
         const { name: promptName, version, labels } = promptVersion;
 
         // Check if prompt has a protected label
-        const { hasProtectedLabels, protectedLabels } = await checkHasProtectedLabels({
-          prisma: ctx.prisma,
-          projectId: input.projectId,
-          labelsToCheck: promptVersion.labels,
-        });
+        const { hasProtectedLabels, protectedLabels } =
+          await checkHasProtectedLabels({
+            prisma: ctx.prisma,
+            projectId: input.projectId,
+            labelsToCheck: promptVersion.labels,
+          });
 
         if (hasProtectedLabels) {
           throwIfNoProjectAccess({
@@ -655,7 +698,10 @@ export const promptRouter = createTRPCRouter({
         await promptService.invalidateCache({ projectId });
 
         // Trigger webhooks for prompt version deletion
-        await promptChangeEventSourcing(await promptService.resolvePrompt(promptVersion), "deleted");
+        await promptChangeEventSourcing(
+          await promptService.resolvePrompt(promptVersion),
+          "deleted",
+        );
       } catch (e) {
         logger.error(e);
         throw e;
@@ -712,11 +758,12 @@ export const promptRouter = createTRPCRouter({
         }
 
         // Check if any label is protected (both new and to be removed)
-        const { hasProtectedLabels, protectedLabels } = await checkHasProtectedLabels({
-          prisma: ctx.prisma,
-          projectId: input.projectId,
-          labelsToCheck: [...addedLabels, ...removedLabels],
-        });
+        const { hasProtectedLabels, protectedLabels } =
+          await checkHasProtectedLabels({
+            prisma: ctx.prisma,
+            projectId: input.projectId,
+            labelsToCheck: [...addedLabels, ...removedLabels],
+          });
 
         if (hasProtectedLabels) {
           throwIfNoProjectAccess({
@@ -839,7 +886,10 @@ export const promptRouter = createTRPCRouter({
         // Send webhooks for ALL affected prompts
         await Promise.all(
           updatedPrompts.map(async (prompt) =>
-            promptChangeEventSourcing(await promptService.resolvePrompt(prompt), "updated"),
+            promptChangeEventSourcing(
+              await promptService.resolvePrompt(prompt),
+              "updated",
+            ),
           ),
         );
       } catch (e) {
@@ -847,22 +897,24 @@ export const promptRouter = createTRPCRouter({
         throw e;
       }
     }),
-  allLabels: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "prompts:read",
-    });
+  allLabels: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
+        projectId: input.projectId,
+        scope: "prompts:read",
+      });
 
-    const labels = await ctx.prisma.$queryRaw<{ label: string }[]>`
+      const labels = await ctx.prisma.$queryRaw<{ label: string }[]>`
         SELECT DISTINCT UNNEST(labels) AS label
         FROM prompts
         WHERE project_id = ${input.projectId}
         AND labels IS NOT NULL;
       `;
 
-    return labels.map((l) => l.label);
-  }),
+      return labels.map((l) => l.label);
+    }),
   allNames: protectedProjectProcedure
     .input(
       z.object({
@@ -979,7 +1031,10 @@ export const promptRouter = createTRPCRouter({
 
         await Promise.all(
           prompts.map(async (prompt) =>
-            promptChangeEventSourcing(await promptService.resolvePrompt(prompt), "updated"),
+            promptChangeEventSourcing(
+              await promptService.resolvePrompt(prompt),
+              "updated",
+            ),
           ),
         );
       } catch (e) {
@@ -987,28 +1042,30 @@ export const promptRouter = createTRPCRouter({
         throw e;
       }
     }),
-  allPromptMeta: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async ({ input, ctx }) => {
-    throwIfNoProjectAccess({
-      session: ctx.session,
-      projectId: input.projectId,
-      scope: "prompts:read",
-    });
-
-    return await ctx.prisma.prompt.findMany({
-      select: {
-        id: true,
-        name: true,
-        version: true,
-        type: true,
-        prompt: true,
-        labels: true,
-      },
-      where: {
+  allPromptMeta: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      throwIfNoProjectAccess({
+        session: ctx.session,
         projectId: input.projectId,
-      },
-      orderBy: [{ version: "desc" }],
-    });
-  }),
+        scope: "prompts:read",
+      });
+
+      return await ctx.prisma.prompt.findMany({
+        select: {
+          id: true,
+          name: true,
+          version: true,
+          type: true,
+          prompt: true,
+          labels: true,
+        },
+        where: {
+          projectId: input.projectId,
+        },
+        orderBy: [{ version: "desc" }],
+      });
+    }),
   allVersions: protectedProjectProcedure
     .input(
       z.object({
@@ -1051,7 +1108,9 @@ export const promptRouter = createTRPCRouter({
         }),
       ]);
 
-      const userIds = prompts.map((p) => p.createdBy).filter((id) => id !== "API");
+      const userIds = prompts
+        .map((p) => p.createdBy)
+        .filter((id) => id !== "API");
       const users = await ctx.prisma.user.findMany({
         select: {
           // never select passwords as they should never be returned to the FE
@@ -1114,8 +1173,12 @@ export const promptRouter = createTRPCRouter({
       ]);
 
       return observations.map((r) => {
-        const promptObservationScores = observationScores.find((score) => score.promptId === r.promptId);
-        const promptTraceScores = traceScores.find((score) => score.promptId === r.promptId);
+        const promptObservationScores = observationScores.find(
+          (score) => score.promptId === r.promptId,
+        );
+        const promptTraceScores = traceScores.find(
+          (score) => score.promptId === r.promptId,
+        );
 
         return {
           id: r.promptId,
@@ -1126,7 +1189,9 @@ export const promptRouter = createTRPCRouter({
           medianInputTokens: r.medianInputUsage,
           medianTotalCost: r.medianTotalCost,
           medianLatency: r.medianLatencyMs,
-          observationScores: aggregateScores(promptObservationScores?.scores ?? []),
+          observationScores: aggregateScores(
+            promptObservationScores?.scores ?? [],
+          ),
           traceScores: aggregateScores(promptTraceScores?.scores ?? []),
         };
       });
@@ -1307,7 +1372,11 @@ const getScoresForPromptIds = async (
     toTimestamp?: Date;
   } = {},
 ) => {
-  const scores = await getAggregatedScoresForPrompts(projectId, promptIds, fetchScoreRelation);
+  const scores = await getAggregatedScoresForPrompts(
+    projectId,
+    promptIds,
+    fetchScoreRelation,
+  );
 
   return promptIds.map((promptId) => {
     const promptScores = scores.filter((score) => score.promptId === promptId);

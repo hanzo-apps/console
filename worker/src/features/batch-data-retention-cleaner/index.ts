@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 
-import { percentile } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+import { percentile } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import {
   commandDatastore,
   convertDateToDatastoreDateTime,
@@ -9,19 +9,13 @@ import {
   queryDatastore,
   recordGauge,
   recordIncrement,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { env } from "../../env";
 import { getRetentionCutoffDate } from "../utils";
 import { PeriodicExclusiveRunner } from "../../utils/PeriodicExclusiveRunner";
 
 // Tables for batch data retention cleaning (Datastore only; also no dataset_run_items)
-export const BATCH_DATA_RETENTION_TABLES = [
-  "traces",
-  "observations",
-  "scores",
-  "events_full",
-  "events_core",
-] as const;
+export const BATCH_DATA_RETENTION_TABLES = ["traces", "observations", "scores", "events_full", "events_core"] as const;
 
 export type BatchDataRetentionTable = (typeof BATCH_DATA_RETENTION_TABLES)[number];
 

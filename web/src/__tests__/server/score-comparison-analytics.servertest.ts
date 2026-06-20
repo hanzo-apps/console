@@ -1,5 +1,5 @@
 import type { Session } from "next-auth";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import {
@@ -7,7 +7,7 @@ import {
   createScoresCh,
   createSessionScore,
   createDatasetRunScore,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { v4 } from "uuid";
 
 describe("Score Comparison Analytics tRPC", () => {
@@ -281,7 +281,9 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(result.samplingMetadata.isSampled).toBe(false); // No sampling for small dataset
       expect(result.samplingMetadata.samplingMethod).toBe("none");
       expect(result.samplingMetadata.samplingRate).toBe(1.0);
-      expect(result.samplingMetadata.estimatedTotalMatches).toBeGreaterThanOrEqual(0);
+      expect(
+        result.samplingMetadata.estimatedTotalMatches,
+      ).toBeGreaterThanOrEqual(0);
       expect(result.samplingMetadata.actualSampleSize).toBe(1); // Matches matchedCount
       expect(result.samplingMetadata.samplingExpression).toBeNull();
     });
@@ -433,12 +435,18 @@ describe("Score Comparison Analytics tRPC", () => {
       // Verify adaptive FINAL decision via samplingMetadata
       expect(result.samplingMetadata.adaptiveFinal).toBeDefined();
       expect(result.samplingMetadata.adaptiveFinal?.usedFinal).toBe(true);
-      expect(result.samplingMetadata.adaptiveFinal?.reason).toContain("Small dataset - using FINAL for accuracy");
+      expect(result.samplingMetadata.adaptiveFinal?.reason).toContain(
+        "Small dataset - using FINAL for accuracy",
+      );
 
       // Verify preflight estimates are included
       expect(result.samplingMetadata.preflightEstimates).toBeDefined();
-      expect(result.samplingMetadata.preflightEstimates?.score1Count).toBeLessThan(100_000);
-      expect(result.samplingMetadata.preflightEstimates?.score2Count).toBeLessThan(100_000);
+      expect(
+        result.samplingMetadata.preflightEstimates?.score1Count,
+      ).toBeLessThan(100_000);
+      expect(
+        result.samplingMetadata.preflightEstimates?.score2Count,
+      ).toBeLessThan(100_000);
     });
 
     // Test 5: Large matched datasets should skip FINAL and use hash sampling
@@ -456,7 +464,9 @@ describe("Score Comparison Analytics tRPC", () => {
 
       const batchSize = 101_000; // Exceed threshold
 
-      console.log(`Creating ${batchSize} scores for adaptive FINAL test (this may take a moment)...`);
+      console.log(
+        `Creating ${batchSize} scores for adaptive FINAL test (this may take a moment)...`,
+      );
 
       for (let i = 0; i < batchSize; i++) {
         const traceId = v4();
@@ -550,9 +560,15 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(result.samplingMetadata.preflightEstimates).toBeDefined();
       // Preflight uses 1% sampling, so estimates may have variance
       // For 101k scores, 1% sample could estimate anywhere from ~95k-105k
-      expect(result.samplingMetadata.preflightEstimates?.score1Count).toBeGreaterThan(90_000);
-      expect(result.samplingMetadata.preflightEstimates?.score2Count).toBeGreaterThan(90_000);
-      expect(result.samplingMetadata.preflightEstimates?.estimatedMatchedCount).toBeGreaterThan(90_000);
+      expect(
+        result.samplingMetadata.preflightEstimates?.score1Count,
+      ).toBeGreaterThan(90_000);
+      expect(
+        result.samplingMetadata.preflightEstimates?.score2Count,
+      ).toBeGreaterThan(90_000);
+      expect(
+        result.samplingMetadata.preflightEstimates?.estimatedMatchedCount,
+      ).toBeGreaterThan(90_000);
 
       // Verify adaptive FINAL decision via samplingMetadata
       expect(result.samplingMetadata.adaptiveFinal).toBeDefined();
@@ -560,7 +576,9 @@ describe("Score Comparison Analytics tRPC", () => {
       // If estimates are >= 100k threshold, usedFinal = false
       // If estimates are < 100k threshold, usedFinal = true
       // Both outcomes are valid for this test - what matters is the query completes successfully
-      expect(typeof result.samplingMetadata.adaptiveFinal?.usedFinal).toBe("boolean");
+      expect(typeof result.samplingMetadata.adaptiveFinal?.usedFinal).toBe(
+        "boolean",
+      );
       expect(result.samplingMetadata.adaptiveFinal?.reason).toBeDefined();
     }, 120000); // 2 minute timeout for large data insertion
 
@@ -583,7 +601,9 @@ describe("Score Comparison Analytics tRPC", () => {
 
       const batchSize = 150_000; // Well above threshold
 
-      console.log(`Creating ${batchSize} scores for large-scale adaptive FINAL test (this may take a moment)...`);
+      console.log(
+        `Creating ${batchSize} scores for large-scale adaptive FINAL test (this may take a moment)...`,
+      );
 
       for (let i = 0; i < batchSize; i++) {
         const traceId = v4();
@@ -675,12 +695,20 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(result.samplingMetadata.preflightEstimates).toBeDefined();
       // For 150k scores, even with 1% sampling variance, should reliably estimate >100k
       // 150k * 1% = 1500 sampled → extrapolated estimate should be 140k-160k range
-      expect(result.samplingMetadata.preflightEstimates?.score1Count).toBeGreaterThan(100_000);
-      expect(result.samplingMetadata.preflightEstimates?.score2Count).toBeGreaterThan(100_000);
-      expect(result.samplingMetadata.preflightEstimates?.estimatedMatchedCount).toBeGreaterThan(100_000);
+      expect(
+        result.samplingMetadata.preflightEstimates?.score1Count,
+      ).toBeGreaterThan(100_000);
+      expect(
+        result.samplingMetadata.preflightEstimates?.score2Count,
+      ).toBeGreaterThan(100_000);
+      expect(
+        result.samplingMetadata.preflightEstimates?.estimatedMatchedCount,
+      ).toBeGreaterThan(100_000);
 
       expect(result.samplingMetadata.adaptiveFinal?.usedFinal).toBe(false);
-      expect(result.samplingMetadata.adaptiveFinal?.reason).toContain("Large dataset - skipping FINAL for performance");
+      expect(result.samplingMetadata.adaptiveFinal?.reason).toContain(
+        "Large dataset - skipping FINAL for performance",
+      );
 
       expect(result.samplingMetadata.isSampled).toBe(true);
       expect(result.samplingMetadata.samplingMethod).toBe("hash");
@@ -704,11 +732,14 @@ describe("Score Comparison Analytics tRPC", () => {
 
       const batchSize = 120_000;
 
-      console.log(`Creating ${batchSize} matched scores for hash-based sampling test...`);
+      console.log(
+        `Creating ${batchSize} matched scores for hash-based sampling test...`,
+      );
 
       for (let i = 0; i < batchSize; i++) {
         const traceId = v4();
-        const scoreTimestamp = now.getTime() - Math.floor(Math.random() * 3600000);
+        const scoreTimestamp =
+          now.getTime() - Math.floor(Math.random() * 3600000);
 
         tracesBatch.push(
           createTrace({
@@ -774,10 +805,14 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(result.samplingMetadata.samplingMethod).toBe("hash");
       expect(result.samplingMetadata.samplingRate).toBeLessThan(1.0);
       expect(result.samplingMetadata.samplingRate).toBeGreaterThan(0);
-      expect(result.samplingMetadata.samplingExpression).toContain("cityHash64");
+      expect(result.samplingMetadata.samplingExpression).toContain(
+        "cityHash64",
+      );
 
       // Verify preflight estimates triggered sampling
-      expect(result.samplingMetadata.preflightEstimates?.estimatedMatchedCount).toBeGreaterThan(100_000);
+      expect(
+        result.samplingMetadata.preflightEstimates?.estimatedMatchedCount,
+      ).toBeGreaterThan(100_000);
 
       // Verify actualSampleSize is approximately TARGET_SAMPLE_SIZE (100k)
       // Allow for variance due to hash distribution
@@ -785,7 +820,9 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(result.samplingMetadata.actualSampleSize).toBeLessThan(totalRows);
 
       // Verify counts reflect sampling
-      expect(result.counts.matchedCount).toBe(result.samplingMetadata.actualSampleSize);
+      expect(result.counts.matchedCount).toBe(
+        result.samplingMetadata.actualSampleSize,
+      );
 
       // Verify data quality - all result arrays should have data
       expect(result.heatmap.length).toBeGreaterThan(0);
@@ -805,11 +842,14 @@ describe("Score Comparison Analytics tRPC", () => {
 
       const batchSize = 150_000;
 
-      console.log(`Creating ${batchSize} identical scores for perfect correlation test...`);
+      console.log(
+        `Creating ${batchSize} identical scores for perfect correlation test...`,
+      );
 
       for (let i = 0; i < batchSize; i++) {
         const traceId = v4();
-        const scoreTimestamp = now.getTime() - Math.floor(Math.random() * 3600000);
+        const scoreTimestamp =
+          now.getTime() - Math.floor(Math.random() * 3600000);
 
         tracesBatch.push(
           createTrace({
@@ -877,7 +917,9 @@ describe("Score Comparison Analytics tRPC", () => {
 
       // Verify all heatmap points are on the diagonal (bin1Index === bin2Index)
       // For identical scores, every point should have the same bin for both axes
-      const offDiagonalPoints = result.heatmap.filter((point) => point.binX !== point.binY);
+      const offDiagonalPoints = result.heatmap.filter(
+        (point) => point.binX !== point.binY,
+      );
       expect(offDiagonalPoints.length).toBe(0); // No points off diagonal
 
       expect(result.statistics?.spearmanCorrelation).toBeNull();
@@ -1013,7 +1055,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 6: Generates correct bins for heatmap
     it("should generate correct bins for numeric heatmap", async () => {
       const traces = [v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -1077,14 +1121,19 @@ describe("Score Comparison Analytics tRPC", () => {
       });
 
       // Total count across heatmap should equal matched count
-      const totalHeatmapCount = result.heatmap.reduce((sum, cell) => sum + cell.count, 0);
+      const totalHeatmapCount = result.heatmap.reduce(
+        (sum, cell) => sum + cell.count,
+        0,
+      );
       expect(totalHeatmapCount).toBe(result.counts.matchedCount);
     });
 
     // Test 7: Respects custom nBins parameter
     it("should respect a custom nBins value", async () => {
       const traceId = v4();
-      await createTracesCh([createTrace({ id: traceId, project_id: projectId })]);
+      await createTracesCh([
+        createTrace({ id: traceId, project_id: projectId }),
+      ]);
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -1137,7 +1186,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 8: Includes min/max ranges for heatmap bins
     it("should include accurate min/max ranges for each heatmap bin", async () => {
       const traces = [v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -1196,7 +1247,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 9: Generates confusion matrix for BOOLEAN scores
     it("should generate 2x2 confusion matrix for BOOLEAN scores", async () => {
       const traces = [v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -1259,14 +1312,19 @@ describe("Score Comparison Analytics tRPC", () => {
       });
 
       // Total count should equal matched count
-      const totalConfusionCount = result.confusionMatrix.reduce((sum, entry) => sum + entry.count, 0);
+      const totalConfusionCount = result.confusionMatrix.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
       expect(totalConfusionCount).toBe(result.counts.matchedCount);
     });
 
     // Test 10: Generates confusion matrix for CATEGORICAL scores
     it("should generate NxN confusion matrix for CATEGORICAL scores", async () => {
       const traces = [v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -1320,9 +1378,15 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(result.confusionMatrix.length).toBeGreaterThan(0);
 
       // Should have entries for (A,A), (A,B), (B,B)
-      const aaEntry = result.confusionMatrix.find((e) => e.rowCategory === "A" && e.colCategory === "A");
-      const abEntry = result.confusionMatrix.find((e) => e.rowCategory === "A" && e.colCategory === "B");
-      const bbEntry = result.confusionMatrix.find((e) => e.rowCategory === "B" && e.colCategory === "B");
+      const aaEntry = result.confusionMatrix.find(
+        (e) => e.rowCategory === "A" && e.colCategory === "A",
+      );
+      const abEntry = result.confusionMatrix.find(
+        (e) => e.rowCategory === "A" && e.colCategory === "B",
+      );
+      const bbEntry = result.confusionMatrix.find(
+        (e) => e.rowCategory === "B" && e.colCategory === "B",
+      );
 
       expect(aaEntry).toBeDefined();
       expect(abEntry).toBeDefined();
@@ -1338,7 +1402,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 11: Calculates perfect correlation correctly
     it("should calculate perfect correlation for identical scores", async () => {
       const traces = [v4(), v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -1399,7 +1465,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 12: Calculates statistics with known correlation
     it("should calculate statistics correctly for known dataset", async () => {
       const traces = [v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -1462,7 +1530,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 13: Aggregates time series by hour
     it("should aggregate time series correctly by hour", async () => {
       const traceId = v4();
-      await createTracesCh([createTrace({ id: traceId, project_id: projectId })]);
+      await createTracesCh([
+        createTrace({ id: traceId, project_id: projectId }),
+      ]);
 
       const baseTime = new Date("2024-01-01T10:00:00Z");
       const fromTimestamp = new Date("2024-01-01T09:00:00Z");
@@ -1550,7 +1620,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 14: Aggregates time series by day
     it("should aggregate time series correctly by day", async () => {
       const traces = [v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const day1 = new Date("2024-01-01T12:00:00Z");
       const day2 = new Date("2024-01-02T12:00:00Z");
@@ -1622,14 +1694,19 @@ describe("Score Comparison Analytics tRPC", () => {
 
       // Total count across MATCHED time series should equal matched count
       // Note: timeSeries (ALL) includes unmatched scores, so we check timeSeriesMatched
-      const totalMatchedTimeSeriesCount = result.timeSeriesMatched.reduce((sum, entry) => sum + entry.count, 0);
+      const totalMatchedTimeSeriesCount = result.timeSeriesMatched.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
       expect(totalMatchedTimeSeriesCount).toBe(result.counts.matchedCount);
     });
 
     // Test 15: Aggregates time series by week and month
     it("should aggregate time series correctly by week and month", async () => {
       const traceId = v4();
-      await createTracesCh([createTrace({ id: traceId, project_id: projectId })]);
+      await createTracesCh([
+        createTrace({ id: traceId, project_id: projectId }),
+      ]);
 
       const fromTimestamp = new Date("2024-01-01T00:00:00Z");
       const toTimestamp = new Date("2024-03-01T00:00:00Z");
@@ -1663,28 +1740,30 @@ describe("Score Comparison Analytics tRPC", () => {
       await createScoresCh(scores);
 
       // Test 7-day interval (week equivalent)
-      const weekResult = await caller.scoreAnalytics.getScoreComparisonAnalytics({
-        projectId,
-        score1: { name: scoreName1, dataType: "NUMERIC", source: "API" },
-        score2: { name: scoreName2, dataType: "NUMERIC", source: "API" },
-        fromTimestamp,
-        toTimestamp,
-        interval: { count: 7, unit: "day" },
-        nBins: 10,
-      });
+      const weekResult =
+        await caller.scoreAnalytics.getScoreComparisonAnalytics({
+          projectId,
+          score1: { name: scoreName1, dataType: "NUMERIC", source: "API" },
+          score2: { name: scoreName2, dataType: "NUMERIC", source: "API" },
+          fromTimestamp,
+          toTimestamp,
+          interval: { count: 7, unit: "day" },
+          nBins: 10,
+        });
 
       expect(weekResult.timeSeries.length).toBeGreaterThan(0);
 
       // Test month interval
-      const monthResult = await caller.scoreAnalytics.getScoreComparisonAnalytics({
-        projectId,
-        score1: { name: scoreName1, dataType: "NUMERIC", source: "API" },
-        score2: { name: scoreName2, dataType: "NUMERIC", source: "API" },
-        fromTimestamp,
-        toTimestamp,
-        interval: { count: 1, unit: "month" },
-        nBins: 10,
-      });
+      const monthResult =
+        await caller.scoreAnalytics.getScoreComparisonAnalytics({
+          projectId,
+          score1: { name: scoreName1, dataType: "NUMERIC", source: "API" },
+          score2: { name: scoreName2, dataType: "NUMERIC", source: "API" },
+          fromTimestamp,
+          toTimestamp,
+          interval: { count: 1, unit: "month" },
+          nBins: 10,
+        });
 
       expect(weekResult.timeSeries.length).toBeGreaterThan(0);
       expect(monthResult.timeSeries.length).toBeGreaterThan(0);
@@ -1693,7 +1772,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 16: Calculates distribution1 accurately
     it("should calculate distribution for first score accurately", async () => {
       const traces = [v4(), v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -1748,14 +1829,19 @@ describe("Score Comparison Analytics tRPC", () => {
       });
 
       // Total count should equal score1Total
-      const totalDist1Count = result.distribution1.reduce((sum, entry) => sum + entry.count, 0);
+      const totalDist1Count = result.distribution1.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
       expect(totalDist1Count).toBe(result.counts.score1Total);
     });
 
     // Test 17: Calculates distribution2 accurately
     it("should calculate distribution for second score accurately", async () => {
       const traces = [v4(), v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -1803,7 +1889,10 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(result.distribution2.length).toBeGreaterThan(0);
 
       // Total count should equal score2Total
-      const totalDist2Count = result.distribution2.reduce((sum, entry) => sum + entry.count, 0);
+      const totalDist2Count = result.distribution2.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
       expect(totalDist2Count).toBe(result.counts.score2Total);
     });
 
@@ -1876,7 +1965,9 @@ describe("Score Comparison Analytics tRPC", () => {
       const obs1 = v4();
       const obs2 = v4();
 
-      await createTracesCh([createTrace({ id: traceId, project_id: projectId })]);
+      await createTracesCh([
+        createTrace({ id: traceId, project_id: projectId }),
+      ]);
       await createObservationsCh([
         createObservation({
           id: obs1,
@@ -2013,7 +2104,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 22: Handles out-of-order timestamps
     it("should handle scores created in random order", async () => {
       const traces = [v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 7200000); // 2 hours ago
@@ -2106,7 +2199,9 @@ describe("Score Comparison Analytics tRPC", () => {
     it("should align 7-day intervals to Monday (ISO 8601 week)", async () => {
       // Test that 7-day intervals use Monday-aligned weeks, not Thursday-aligned epochs
       const traces = [v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       // Use a known Monday and Thursday
       // Nov 3, 2025 is a Monday
@@ -2144,7 +2239,9 @@ describe("Score Comparison Analytics tRPC", () => {
       await createScoresCh(scores);
 
       // Query with 7-day interval starting from Thursday (90 days back)
-      const fromTimestamp = new Date(thursday.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const fromTimestamp = new Date(
+        thursday.getTime() - 90 * 24 * 60 * 60 * 1000,
+      );
       const toTimestamp = new Date(monday.getTime() + 24 * 60 * 60 * 1000); // Day after Monday
 
       const result = await caller.scoreAnalytics.getScoreComparisonAnalytics({
@@ -2168,7 +2265,9 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(mondayBuckets.length).toBeGreaterThan(0);
 
       // The Monday bucket should contain our data
-      const mondayBucketWithData = mondayBuckets.find((ts) => ts.avg1 !== null && ts.avg2 !== null);
+      const mondayBucketWithData = mondayBuckets.find(
+        (ts) => ts.avg1 !== null && ts.avg2 !== null,
+      );
       expect(mondayBucketWithData).toBeDefined();
       expect(mondayBucketWithData?.avg1).toBe(1.0);
       expect(mondayBucketWithData?.avg2).toBe(2.0);
@@ -2389,7 +2488,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 26: Matched Distributions - Basic Functionality
     it("should return matched distributions excluding unmatched scores", async () => {
       const traces = [v4(), v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -2460,15 +2561,27 @@ describe("Score Comparison Analytics tRPC", () => {
       });
 
       // Matched distributions should only include the 3 matched pairs
-      const matchedCount1 = result.distribution1Matched.reduce((sum, entry) => sum + entry.count, 0);
-      const matchedCount2 = result.distribution2Matched.reduce((sum, entry) => sum + entry.count, 0);
+      const matchedCount1 = result.distribution1Matched.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const matchedCount2 = result.distribution2Matched.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
 
       expect(matchedCount1).toBe(3);
       expect(matchedCount2).toBe(3);
 
       // Regular distributions should include all scores (3 matched + 1 unmatched each)
-      const totalCount1 = result.distribution1.reduce((sum, entry) => sum + entry.count, 0);
-      const totalCount2 = result.distribution2.reduce((sum, entry) => sum + entry.count, 0);
+      const totalCount1 = result.distribution1.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const totalCount2 = result.distribution2.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
 
       expect(totalCount1).toBe(4);
       expect(totalCount2).toBe(4);
@@ -2482,7 +2595,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 27: Matched Distributions - Empty When No Matches
     it("should return empty matched distributions when no scores match", async () => {
       const traces = [v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -2546,7 +2661,9 @@ describe("Score Comparison Analytics tRPC", () => {
       const obs2 = v4();
       const obs3 = v4();
 
-      await createTracesCh([createTrace({ id: traceId, project_id: projectId })]);
+      await createTracesCh([
+        createTrace({ id: traceId, project_id: projectId }),
+      ]);
       await createObservationsCh([
         createObservation({
           id: obs1,
@@ -2646,15 +2763,27 @@ describe("Score Comparison Analytics tRPC", () => {
       // Only obs1 and obs3 should match
       expect(result.counts.matchedCount).toBe(2);
 
-      const matchedCount1 = result.distribution1Matched.reduce((sum, entry) => sum + entry.count, 0);
-      const matchedCount2 = result.distribution2Matched.reduce((sum, entry) => sum + entry.count, 0);
+      const matchedCount1 = result.distribution1Matched.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const matchedCount2 = result.distribution2Matched.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
 
       expect(matchedCount1).toBe(2);
       expect(matchedCount2).toBe(2);
 
       // Regular distributions should include all 3 score1s and 2 score2s
-      const totalCount1 = result.distribution1.reduce((sum, entry) => sum + entry.count, 0);
-      const totalCount2 = result.distribution2.reduce((sum, entry) => sum + entry.count, 0);
+      const totalCount1 = result.distribution1.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const totalCount2 = result.distribution2.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
 
       expect(totalCount1).toBe(3);
       expect(totalCount2).toBe(2);
@@ -2663,7 +2792,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 29: Individual Distributions - Correct Bounds for Numeric Scores with Different Ranges
     it("should use individual bounds for better visualization when score ranges differ", async () => {
       const traces = [v4(), v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -2709,10 +2840,22 @@ describe("Score Comparison Analytics tRPC", () => {
       });
 
       // Both distributions should have 5 entries total
-      const totalCount1 = result.distribution1.reduce((sum, entry) => sum + entry.count, 0);
-      const totalCount2 = result.distribution2.reduce((sum, entry) => sum + entry.count, 0);
-      const individualCount1 = result.distribution1Individual.reduce((sum, entry) => sum + entry.count, 0);
-      const individualCount2 = result.distribution2Individual.reduce((sum, entry) => sum + entry.count, 0);
+      const totalCount1 = result.distribution1.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const totalCount2 = result.distribution2.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const individualCount1 = result.distribution1Individual.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const individualCount2 = result.distribution2Individual.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
 
       expect(totalCount1).toBe(5);
       expect(totalCount2).toBe(5);
@@ -2740,7 +2883,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 30: Individual Distributions - Match Global When Ranges Similar
     it("should have similar distributions when score ranges are similar", async () => {
       const traces = [v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -2786,8 +2931,14 @@ describe("Score Comparison Analytics tRPC", () => {
       });
 
       // Counts should match across regular and individual distributions
-      const totalCount1 = result.distribution1.reduce((sum, entry) => sum + entry.count, 0);
-      const individualCount1 = result.distribution1Individual.reduce((sum, entry) => sum + entry.count, 0);
+      const totalCount1 = result.distribution1.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const individualCount1 = result.distribution1Individual.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
 
       expect(totalCount1).toBe(4);
       expect(individualCount1).toBe(4);
@@ -2809,7 +2960,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 31: Individual Distributions - Categorical Scores Reference Original
     it("should have individual distributions match regular distributions for categorical scores", async () => {
       const traces = [v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -2864,7 +3017,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 32: Cross-Data Type Handling
     it("should handle individual distributions correctly for cross-type comparison", async () => {
       const traces = [v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -2923,8 +3078,14 @@ describe("Score Comparison Analytics tRPC", () => {
       }
 
       // Counts should be consistent for numeric score
-      const totalCount1 = result.distribution1.reduce((sum, entry) => sum + entry.count, 0);
-      const individualCount1 = result.distribution1Individual.reduce((sum, entry) => sum + entry.count, 0);
+      const totalCount1 = result.distribution1.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const individualCount1 = result.distribution1Individual.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
 
       expect(totalCount1).toBe(3);
       expect(individualCount1).toBe(3);
@@ -2933,7 +3094,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 33: Time Series Matched - Two-Score Functionality
     it("should return matched time series excluding unmatched scores", async () => {
       const traces = [v4(), v4(), v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const day1 = new Date("2024-01-01T12:00:00Z");
       const day2 = new Date("2024-01-02T12:00:00Z");
@@ -3047,14 +3210,23 @@ describe("Score Comparison Analytics tRPC", () => {
       // timeSeriesMatched should only include matched pairs
       expect(result.timeSeriesMatched.length).toBeGreaterThan(0);
 
-      const totalMatchedCount = result.timeSeriesMatched.reduce((sum, entry) => sum + entry.count, 0);
+      const totalMatchedCount = result.timeSeriesMatched.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
 
       expect(totalMatchedCount).toBe(4); // 2 + 1 + 1 matched pairs
 
       // Verify each day's data
-      const day1Bucket = result.timeSeriesMatched.find((ts) => new Date(ts.timestamp).getUTCDate() === 1);
-      const day2Bucket = result.timeSeriesMatched.find((ts) => new Date(ts.timestamp).getUTCDate() === 2);
-      const day3Bucket = result.timeSeriesMatched.find((ts) => new Date(ts.timestamp).getUTCDate() === 3);
+      const day1Bucket = result.timeSeriesMatched.find(
+        (ts) => new Date(ts.timestamp).getUTCDate() === 1,
+      );
+      const day2Bucket = result.timeSeriesMatched.find(
+        (ts) => new Date(ts.timestamp).getUTCDate() === 2,
+      );
+      const day3Bucket = result.timeSeriesMatched.find(
+        (ts) => new Date(ts.timestamp).getUTCDate() === 3,
+      );
 
       expect(day1Bucket?.count).toBe(2);
       expect(day2Bucket?.count).toBe(1); // Unmatched score1 not included
@@ -3068,7 +3240,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // TODO: Known flaky test - day3All is undefined due to test setup issue
     it.skip("should return different data for timeSeries (all) vs timeSeriesMatched", async () => {
       const traces = [v4(), v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const day1 = new Date("2024-01-01T12:00:00Z");
       const day2 = new Date("2024-01-02T12:00:00Z");
@@ -3158,17 +3332,29 @@ describe("Score Comparison Analytics tRPC", () => {
       });
 
       // timeSeries (ALL) should have more observations than timeSeriesMatched
-      const totalAllCount = result.timeSeries.reduce((sum, entry) => sum + entry.count, 0);
-      const totalMatchedCount = result.timeSeriesMatched.reduce((sum, entry) => sum + entry.count, 0);
+      const totalAllCount = result.timeSeries.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
+      const totalMatchedCount = result.timeSeriesMatched.reduce(
+        (sum, entry) => sum + entry.count,
+        0,
+      );
 
       expect(totalAllCount).toBeGreaterThan(totalMatchedCount);
       expect(totalAllCount).toBe(6); // 2 matched pairs + 1 unmatched score1 + 1 unmatched score2 = 6 total
       expect(totalMatchedCount).toBe(2); // 2 matched pairs
 
       // Verify timeSeries includes data for all three days
-      const day1All = result.timeSeries.find((ts) => new Date(ts.timestamp).getUTCDate() === 1);
-      const day2All = result.timeSeries.find((ts) => new Date(ts.timestamp).getUTCDate() === 2);
-      const day3All = result.timeSeries.find((ts) => new Date(ts.timestamp).getUTCDate() === 3);
+      const day1All = result.timeSeries.find(
+        (ts) => new Date(ts.timestamp).getUTCDate() === 1,
+      );
+      const day2All = result.timeSeries.find(
+        (ts) => new Date(ts.timestamp).getUTCDate() === 2,
+      );
+      const day3All = result.timeSeries.find(
+        (ts) => new Date(ts.timestamp).getUTCDate() === 3,
+      );
 
       expect(day1All).toBeDefined();
       expect(day2All).toBeDefined();
@@ -3188,7 +3374,9 @@ describe("Score Comparison Analytics tRPC", () => {
 
       // Verify timeSeriesMatched only includes day 1 (matched pairs)
       expect(result.timeSeriesMatched.length).toBe(1);
-      const day1Matched = result.timeSeriesMatched.find((ts) => new Date(ts.timestamp).getUTCDate() === 1);
+      const day1Matched = result.timeSeriesMatched.find(
+        (ts) => new Date(ts.timestamp).getUTCDate() === 1,
+      );
       expect(day1Matched).toBeDefined();
       expect(day1Matched?.avg1).toBe(12.5); // (10 + 15) / 2
       expect(day1Matched?.avg2).toBe(22.5); // (20 + 25) / 2
@@ -3198,7 +3386,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 35: Time Series Matched - Single Score Mode
     it("should handle timeSeriesMatched in single-score mode", async () => {
       const traces = [v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const day1 = new Date("2024-01-01T12:00:00Z");
       const day2 = new Date("2024-01-02T12:00:00Z");
@@ -3262,7 +3452,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 36: Time Series Matched - Timestamp Precision (Critical)
     it("should return timestamps in seconds not milliseconds in timeSeriesMatched", async () => {
       const traceId = v4();
-      await createTracesCh([createTrace({ id: traceId, project_id: projectId })]);
+      await createTracesCh([
+        createTrace({ id: traceId, project_id: projectId }),
+      ]);
 
       // Use specific timestamp: 2024-01-15 12:30:45.123 UTC
       const specificTime = new Date("2024-01-15T12:30:45.123Z");
@@ -3335,7 +3527,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 37: Time Series Matched - Empty When No Matches
     it("should return empty timeSeriesMatched when no scores match", async () => {
       const traces = [v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const day1 = new Date("2024-01-01T12:00:00Z");
       const day2 = new Date("2024-01-02T12:00:00Z");
@@ -3405,7 +3599,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 38: Heatmap GlobalMin/GlobalMax - Correct Position
     it("should include globalMin and globalMax in heatmap with correct values", async () => {
       const traces = [v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -3474,7 +3670,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 39: Heatmap GlobalMin/GlobalMax - Single Score Scenario
     it("should have identical bounds in single-score mode for heatmap", async () => {
       const traces = [v4(), v4(), v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -3531,7 +3729,9 @@ describe("Score Comparison Analytics tRPC", () => {
     // Test 40: Heatmap GlobalMin/GlobalMax - Disjoint Ranges
     it("should have global bounds spanning disjoint score ranges", async () => {
       const traces = [v4(), v4(), v4()];
-      await createTracesCh(traces.map((id) => createTrace({ id, project_id: projectId })));
+      await createTracesCh(
+        traces.map((id) => createTrace({ id, project_id: projectId })),
+      );
 
       const now = new Date();
       const fromTimestamp = new Date(now.getTime() - 3600000);
@@ -3610,7 +3810,9 @@ describe("Score Comparison Analytics tRPC", () => {
       // Create boolean scores across multiple days
       const scores: any[] = [];
       for (let day = 0; day < 3; day++) {
-        const timestamp = new Date(Date.UTC(2024, 0, 1 + day, 12, 0, 0)).getTime();
+        const timestamp = new Date(
+          Date.UTC(2024, 0, 1 + day, 12, 0, 0),
+        ).getTime();
         const traceId = `trace-bool-${day}`;
 
         scores.push(
@@ -3663,8 +3865,12 @@ describe("Score Comparison Analytics tRPC", () => {
       }
 
       // Verify both true and false categories exist across the data
-      const categories1 = new Set(result.timeSeriesCategorical1.map((e) => e.category.toLowerCase()));
-      const categories2 = new Set(result.timeSeriesCategorical2.map((e) => e.category.toLowerCase()));
+      const categories1 = new Set(
+        result.timeSeriesCategorical1.map((e) => e.category.toLowerCase()),
+      );
+      const categories2 = new Set(
+        result.timeSeriesCategorical2.map((e) => e.category.toLowerCase()),
+      );
 
       expect(categories1.size).toBeGreaterThan(0);
       expect(categories2.size).toBeGreaterThan(0);
@@ -3681,7 +3887,9 @@ describe("Score Comparison Analytics tRPC", () => {
 
       const scores: any[] = [];
       for (let day = 0; day < 4; day++) {
-        const timestamp = new Date(Date.UTC(2024, 0, 1 + day, 12, 0, 0)).getTime();
+        const timestamp = new Date(
+          Date.UTC(2024, 0, 1 + day, 12, 0, 0),
+        ).getTime();
 
         for (let i = 0; i < 3; i++) {
           const traceId = `trace-cat-${day}-${i}`;
@@ -3728,8 +3936,12 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(result.timeSeriesCategorical2.length).toBeGreaterThan(0);
 
       // Verify all categories appear
-      const returnedCategories1 = new Set(result.timeSeriesCategorical1.map((e) => e.category));
-      const returnedCategories2 = new Set(result.timeSeriesCategorical2.map((e) => e.category));
+      const returnedCategories1 = new Set(
+        result.timeSeriesCategorical1.map((e) => e.category),
+      );
+      const returnedCategories2 = new Set(
+        result.timeSeriesCategorical2.map((e) => e.category),
+      );
 
       categories1.forEach((cat) => {
         expect(returnedCategories1.has(cat)).toBe(true);
@@ -3762,7 +3974,9 @@ describe("Score Comparison Analytics tRPC", () => {
 
       // Create 2 matched scores and 1 unmatched for each
       for (let day = 0; day < 3; day++) {
-        const timestamp = new Date(Date.UTC(2024, 0, 1 + day, 12, 0, 0)).getTime();
+        const timestamp = new Date(
+          Date.UTC(2024, 0, 1 + day, 12, 0, 0),
+        ).getTime();
 
         // Matched pair
         const matchedTraceId = `trace-matched-${day}`;
@@ -3835,14 +4049,30 @@ describe("Score Comparison Analytics tRPC", () => {
       expect(result.timeSeriesCategorical2Matched.length).toBeGreaterThan(0);
 
       // Verify unmatched categorical time series has more data
-      expect(result.timeSeriesCategorical1.length).toBeGreaterThan(result.timeSeriesCategorical1Matched.length);
-      expect(result.timeSeriesCategorical2.length).toBeGreaterThan(result.timeSeriesCategorical2Matched.length);
+      expect(result.timeSeriesCategorical1.length).toBeGreaterThan(
+        result.timeSeriesCategorical1Matched.length,
+      );
+      expect(result.timeSeriesCategorical2.length).toBeGreaterThan(
+        result.timeSeriesCategorical2Matched.length,
+      );
 
       // Count total entries
-      const totalCount1 = result.timeSeriesCategorical1.reduce((sum, e) => sum + e.count, 0);
-      const matchedCount1 = result.timeSeriesCategorical1Matched.reduce((sum, e) => sum + e.count, 0);
-      const totalCount2 = result.timeSeriesCategorical2.reduce((sum, e) => sum + e.count, 0);
-      const matchedCount2 = result.timeSeriesCategorical2Matched.reduce((sum, e) => sum + e.count, 0);
+      const totalCount1 = result.timeSeriesCategorical1.reduce(
+        (sum, e) => sum + e.count,
+        0,
+      );
+      const matchedCount1 = result.timeSeriesCategorical1Matched.reduce(
+        (sum, e) => sum + e.count,
+        0,
+      );
+      const totalCount2 = result.timeSeriesCategorical2.reduce(
+        (sum, e) => sum + e.count,
+        0,
+      );
+      const matchedCount2 = result.timeSeriesCategorical2Matched.reduce(
+        (sum, e) => sum + e.count,
+        0,
+      );
 
       // Each score has 3 matched + 3 unmatched = 6 total per score
       expect(totalCount1).toBe(6);
@@ -3862,7 +4092,9 @@ describe("Score Comparison Analytics tRPC", () => {
       // Create scores across 3 hours, 2 per hour
       for (let hour = 0; hour < 3; hour++) {
         for (let i = 0; i < 2; i++) {
-          const timestamp = new Date(Date.UTC(2024, 0, 1, hour, 0, 0)).getTime();
+          const timestamp = new Date(
+            Date.UTC(2024, 0, 1, hour, 0, 0),
+          ).getTime();
           const traceId = `trace-hour-${hour}-${i}`;
 
           scores.push(
@@ -3904,7 +4136,9 @@ describe("Score Comparison Analytics tRPC", () => {
 
       // Verify data is bucketed by hour
       const uniqueTimestamps = new Set(
-        result.timeSeriesCategorical1.map((e) => e.timestamp.toISOString().substring(0, 13)),
+        result.timeSeriesCategorical1.map((e) =>
+          e.timestamp.toISOString().substring(0, 13),
+        ),
       );
 
       // Should have 3 unique hour buckets
@@ -4034,46 +4268,52 @@ describe("Score Comparison Analytics tRPC", () => {
       };
 
       // Test 1: objectType = "all" should return all 4 matched pairs
-      const resultAll = await caller.scoreAnalytics.getScoreComparisonAnalytics({
-        ...baseParams,
-        objectType: "all",
-      });
+      const resultAll = await caller.scoreAnalytics.getScoreComparisonAnalytics(
+        {
+          ...baseParams,
+          objectType: "all",
+        },
+      );
       expect(resultAll.counts.matchedCount).toBe(4);
       expect(resultAll.counts.score1Total).toBe(4);
       expect(resultAll.counts.score2Total).toBe(4);
 
       // Test 2: objectType = "trace" should return only trace-level scores (1 pair)
-      const resultTrace = await caller.scoreAnalytics.getScoreComparisonAnalytics({
-        ...baseParams,
-        objectType: "trace",
-      });
+      const resultTrace =
+        await caller.scoreAnalytics.getScoreComparisonAnalytics({
+          ...baseParams,
+          objectType: "trace",
+        });
       expect(resultTrace.counts.matchedCount).toBe(1);
       expect(resultTrace.counts.score1Total).toBe(1);
       expect(resultTrace.counts.score2Total).toBe(1);
 
       // Test 3: objectType = "observation" should return only observation-level scores (1 pair)
-      const resultObservation = await caller.scoreAnalytics.getScoreComparisonAnalytics({
-        ...baseParams,
-        objectType: "observation",
-      });
+      const resultObservation =
+        await caller.scoreAnalytics.getScoreComparisonAnalytics({
+          ...baseParams,
+          objectType: "observation",
+        });
       expect(resultObservation.counts.matchedCount).toBe(1);
       expect(resultObservation.counts.score1Total).toBe(1);
       expect(resultObservation.counts.score2Total).toBe(1);
 
       // Test 4: objectType = "session" should return only session-level scores (1 pair)
-      const resultSession = await caller.scoreAnalytics.getScoreComparisonAnalytics({
-        ...baseParams,
-        objectType: "session",
-      });
+      const resultSession =
+        await caller.scoreAnalytics.getScoreComparisonAnalytics({
+          ...baseParams,
+          objectType: "session",
+        });
       expect(resultSession.counts.matchedCount).toBe(1);
       expect(resultSession.counts.score1Total).toBe(1);
       expect(resultSession.counts.score2Total).toBe(1);
 
       // Test 5: objectType = "dataset_run" should return only dataset_run-level scores (1 pair)
-      const resultDatasetRun = await caller.scoreAnalytics.getScoreComparisonAnalytics({
-        ...baseParams,
-        objectType: "dataset_run",
-      });
+      const resultDatasetRun =
+        await caller.scoreAnalytics.getScoreComparisonAnalytics({
+          ...baseParams,
+          objectType: "dataset_run",
+        });
       expect(resultDatasetRun.counts.matchedCount).toBe(1);
       expect(resultDatasetRun.counts.score1Total).toBe(1);
       expect(resultDatasetRun.counts.score2Total).toBe(1);

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { Readable } from "node:stream";
-import { type StorageService } from "@langfuse/shared/src/server";
+import { type StorageService } from "@hanzo/console/src/server";
 import { uploadPromptsCoreDataJsonl } from "../coreDataS3ExportQueue";
 
 const readStream = async (stream: Readable): Promise<string> => {
@@ -51,11 +51,7 @@ describe("coreDataS3ExportQueue", () => {
 
     const uploadFileBuffered = vi.fn(async ({ data }: { data: Readable }) => {
       expect(await readStream(data)).toBe(
-        [
-          JSON.stringify(pages[0][0]),
-          JSON.stringify(pages[0][1]),
-          JSON.stringify(pages[1][0]),
-        ].join("\n"),
+        [JSON.stringify(pages[0][0]), JSON.stringify(pages[0][1]), JSON.stringify(pages[1][0])].join("\n"),
       );
     });
 

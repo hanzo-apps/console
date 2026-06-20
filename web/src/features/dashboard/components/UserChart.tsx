@@ -1,5 +1,5 @@
 import { api } from "@/src/utils/api";
-import { type FilterState, getGenerationLikeTypes } from "@hanzo/shared";
+import { type FilterState, getGenerationLikeTypes } from "@hanzo/console";
 import { DashboardCard } from "@/src/features/dashboard/components/cards/DashboardCard";
 import { compactNumberFormatter } from "@/src/utils/numbers";
 import { TabComponent } from "@/src/features/dashboard/components/TabsComponent";
@@ -7,9 +7,12 @@ import { BarList } from "@tremor/react";
 import { TotalMetric } from "@/src/features/dashboard/components/TotalMetric";
 import { ExpandListButton } from "@/src/features/dashboard/components/cards/ChevronButton";
 import { useState } from "react";
-import { costFormatter } from "@/src/utils/numbers";
+import { totalCostDashboardFormatted } from "@/src/features/dashboard/lib/dashboard-utils";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
-import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
+import {
+  type QueryType,
+  mapLegacyUiTableFilterToView,
+} from "@/src/features/query";
 
 type BarChartDataPoint = {
   name: string;
@@ -32,8 +35,6 @@ export const UserChart = ({
   isLoading?: boolean;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const maxNumberOfEntries = { collapsed: 5, expanded: 20 } as const;
-
   const userCostQuery: QueryType = {
     view: "observations",
     dimensions: [{ field: "userId" }],
@@ -53,14 +54,10 @@ export const UserChart = ({
     timeDimension: null,
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
-    orderBy: [{ field: "sum_totalCost", direction: "desc" }],
-    chartConfig: {
-      type: "HORIZONTAL_BAR",
-      row_limit: maxNumberOfEntries.expanded,
-    },
+    orderBy: null,
   };
 
-  const user = useScheduledDashboardExecuteQuery(
+  const user = api.dashboard.executeQuery.useQuery(
     {
       projectId,
       query: userCostQuery,
@@ -71,7 +68,6 @@ export const UserChart = ({
           skipBatch: true,
         },
       },
-      queryId: `${schedulerId ?? "home:users"}:cost`,
       enabled: !isLoading,
     },
   );
@@ -84,19 +80,10 @@ export const UserChart = ({
     timeDimension: null,
     fromTimestamp: fromTimestamp.toISOString(),
     toTimestamp: toTimestamp.toISOString(),
-    orderBy: [
-      {
-        field: `${traceMetric.aggregation}_${traceMetric.measure}`,
-        direction: "desc",
-      },
-    ],
-    chartConfig: {
-      type: "HORIZONTAL_BAR",
-      row_limit: maxNumberOfEntries.expanded,
-    },
+    orderBy: null,
   };
 
-  const traces = useScheduledDashboardExecuteQuery(
+  const traces = api.dashboard.executeQuery.useQuery(
     {
       projectId,
       query: traceCountQuery,
@@ -107,7 +94,6 @@ export const UserChart = ({
           skipBatch: true,
         },
       },
-      queryId: `${schedulerId ?? "home:users"}:traces`,
       enabled: !isLoading,
     },
   );
@@ -134,13 +120,20 @@ export const UserChart = ({
         })
     : [];
 
-  const totalCost = user.data?.reduce((acc, curr) => acc + (Number(curr.sum_totalCost) || 0), 0);
+  const totalCost = user.data?.reduce(
+    (acc, curr) => acc + (Number(curr.sum_totalCost) || 0),
+    0,
+  );
 
-  const totalTraces = traces.data?.reduce((acc, curr) => acc + (Number(curr.count_count) || 0), 0);
+  const totalTraces = traces.data?.reduce(
+    (acc, curr) => acc + (Number(curr.count_count) || 0),
+    0,
+  );
 
   const maxNumberOfEntries = { collapsed: 5, expanded: 20 } as const;
 
-  const localUsdFormatter = (value: number) => totalCostDashboardFormatted(value);
+  const localUsdFormatter = (value: number) =>
+    totalCostDashboardFormatted(value);
 
   const data = [
     {
@@ -148,25 +141,28 @@ export const UserChart = ({
       data: isExpanded
         ? transformedCost.slice(0, maxNumberOfEntries.expanded)
         : transformedCost.slice(0, maxNumberOfEntries.collapsed),
-      totalMetric: costFormatter(totalCost),
+      totalMetric: totalCostDashboardFormatted(totalCost),
       metricDescription: "Total cost",
-      chartMetricLabel: "USD",
-      chartUnit: "USD",
+      formatter: localUsdFormatter,
     },
     {
       tabTitle: "Count of Traces",
       data: isExpanded
         ? transformedNumberOfTraces.slice(0, maxNumberOfEntries.expanded)
         : transformedNumberOfTraces.slice(0, maxNumberOfEntries.collapsed),
-      totalMetric: totalTraces ? compactNumberFormatter(totalTraces) : compactNumberFormatter(0),
+      totalMetric: totalTraces
+        ? compactNumberFormatter(totalTraces)
+        : compactNumberFormatter(0),
       metricDescription: "Total traces",
-      chartMetricLabel: "Traces",
-      chartUnit: "traces",
     },
-  ] as const;
+  ];
 
   return (
-    <DashboardCard className={className} title="User consumption" isLoading={isLoading || user.isPending}>
+    <DashboardCard
+      className={className}
+      title="User consumption"
+      isLoading={isLoading || user.isPending}
+    >
       <TabComponent
         tabs={data.map((item) => {
           return {
@@ -175,11 +171,14 @@ export const UserChart = ({
               <>
                 {item.data.length > 0 ? (
                   <>
-                    <TotalMetric metric={item.totalMetric} description={item.metricDescription} />
+                    <TotalMetric
+                      metric={item.totalMetric}
+                      description={item.metricDescription}
+                    />
                     <BarList
                       data={item.data}
                       valueFormatter={item.formatter}
-                      className="mt-2 [&_*]:text-muted-foreground [&_p]:text-muted-foreground [&_span]:text-muted-foreground"
+                      className="[&_*]:text-muted-foreground [&_p]:text-muted-foreground [&_span]:text-muted-foreground mt-2"
                       showAnimation={true}
                       color={"indigo"}
                     />
@@ -202,7 +201,9 @@ export const UserChart = ({
         totalLength={transformedCost.length}
         maxLength={maxNumberOfEntries.collapsed}
         expandText={
-          transformedCost.length > maxNumberOfEntries.expanded ? `Show top ${maxNumberOfEntries.expanded}` : "Show all"
+          transformedCost.length > maxNumberOfEntries.expanded
+            ? `Show top ${maxNumberOfEntries.expanded}`
+            : "Show all"
         }
       />
     </DashboardCard>

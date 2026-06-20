@@ -1,21 +1,21 @@
 import {
-  queryClickhouse,
-  queryClickhouseWithProgress,
+  queryDatastore,
+  queryDatastoreWithProgress,
   isProgressRow,
   isRow,
   isException,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
-async function getClickhouseMajorVersion(): Promise<number> {
-  const rows = await queryClickhouse<{ v: string }>({
+async function getDatastoreMajorVersion(): Promise<number> {
+  const rows = await queryDatastore<{ v: string }>({
     query: "SELECT version() AS v",
   });
   return parseInt(rows[0].v.split(".")[0], 10);
 }
 
-describe("queryClickhouseWithProgress", () => {
+describe("queryDatastoreWithProgress", () => {
   it("should yield data rows wrapped in { row: T }", async () => {
-    const generator = queryClickhouseWithProgress<{ number: string }>({
+    const generator = queryDatastoreWithProgress<{ number: string }>({
       query: "SELECT number FROM system.numbers LIMIT 5",
     });
 
@@ -34,7 +34,7 @@ describe("queryClickhouseWithProgress", () => {
     // Use a larger query to increase the chance of getting progress events.
     // Progress events are not guaranteed for small/fast queries, so we
     // verify the structure only when they appear.
-    const generator = queryClickhouseWithProgress<{ n: number }>({
+    const generator = queryDatastoreWithProgress<{ n: number }>({
       query: "SELECT number as n FROM system.numbers LIMIT 100000",
     });
 
@@ -62,15 +62,15 @@ describe("queryClickhouseWithProgress", () => {
   });
 
   it("should yield exception events for errors during streaming", async () => {
-    const majorVersion = await getClickhouseMajorVersion();
+    const majorVersion = await getDatastoreMajorVersion();
     if (majorVersion < 25) {
       // JSONEachRowWithProgress does not include exception rows on CH < 25
       return;
     }
 
-    const generator = queryClickhouseWithProgress({
+    const generator = queryDatastoreWithProgress({
       query: `SELECT throwIf(number = 2, 'memory limit exceeded: would use 10.23 GiB') AS v FROM numbers(10)`,
-      clickhouseSettings: { max_block_size: "1" },
+      datastoreSettings: { max_block_size: "1" },
     });
 
     let foundException = false;

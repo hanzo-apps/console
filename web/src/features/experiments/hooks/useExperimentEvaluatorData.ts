@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { type EvalTemplate } from "@hanzo/shared";
+import { type EvalTemplate } from "@hanzo/console";
 import { type RouterOutputs } from "@/src/utils/api";
 import { type PartialConfig } from "@/src/features/evals/types";
 
@@ -10,7 +10,10 @@ const partitionEvaluators = (
   const filteredEvaluators =
     evaluators?.filter(({ filter }) => {
       if (filter?.length === 0) return true;
-      return filter?.some(({ type, value }) => type === "stringOptions" && value.includes(datasetId));
+      return filter?.some(
+        ({ type, value }) =>
+          type === "stringOptions" && value.includes(datasetId),
+      );
     }) || [];
 
   const activeEvaluators = filteredEvaluators.filter((evaluator) =>
@@ -25,8 +28,12 @@ const partitionEvaluators = (
       evaluator.blockedAt !== null,
   );
 
-  const activeIds = activeEvaluators.map((evaluator) => evaluator.evalTemplateId);
-  const inactiveIds = pausedEvaluators.map((evaluator) => evaluator.evalTemplateId);
+  const activeIds = activeEvaluators.map(
+    (evaluator) => evaluator.evalTemplateId,
+  );
+  const inactiveIds = pausedEvaluators.map(
+    (evaluator) => evaluator.evalTemplateId,
+  );
 
   return {
     activeEvaluators: activeIds,
@@ -36,7 +43,10 @@ const partitionEvaluators = (
 
 interface UseExperimentEvaluatorDataProps {
   datasetId: string;
-  createDefaultEvaluator: (template: EvalTemplate, datasetId: string) => PartialConfig & { evalTemplate: EvalTemplate };
+  createDefaultEvaluator: (
+    template: EvalTemplate,
+    datasetId: string,
+  ) => PartialConfig & { evalTemplate: EvalTemplate };
   evaluatorsData?: RouterOutputs["evals"]["jobConfigsByTarget"];
   evalTemplatesData?: {
     templates: EvalTemplate[];
@@ -63,10 +73,15 @@ export function useExperimentEvaluatorData({
     (templateId: string, isEditing: boolean) => {
       // For editing existing evaluators
       if (isEditing) {
-        const config = evaluatorsData?.find((config) => config.evalTemplateId === templateId);
+        const config = evaluatorsData?.find(
+          (config) => config.evalTemplateId === templateId,
+        );
 
         if (!config || !config.evalTemplate) {
-          console.log("Config or evalTemplate not found for editing:", templateId);
+          console.log(
+            "Config or evalTemplate not found for editing:",
+            templateId,
+          );
           return null;
         }
 
@@ -74,7 +89,8 @@ export function useExperimentEvaluatorData({
           ...config,
           evalTemplate: {
             ...config.evalTemplate,
-            outputSchema: config.evalTemplate.outputSchema as EvalTemplate["outputSchema"],
+            outputSchema: config.evalTemplate
+              .outputSchema as EvalTemplate["outputSchema"],
           },
         } as PartialConfig & { evalTemplate: EvalTemplate };
 
@@ -85,7 +101,9 @@ export function useExperimentEvaluatorData({
       }
 
       // For new evaluators
-      const template = evalTemplatesData?.templates.find((t) => t.id === templateId);
+      const template = evalTemplatesData?.templates.find(
+        (t) => t.id === templateId,
+      );
 
       if (!template) {
         return null;

@@ -1,7 +1,7 @@
 import { type VariableMapping } from "@/src/features/evals/utils/evaluator-form-utils";
 import { api } from "@/src/utils/api";
 import { trpcErrorToast } from "@/src/utils/trpcErrorToast";
-import { extractValueFromObject } from "@hanzo/shared";
+import { extractValueFromObject } from "@hanzo/console";
 import { useEffect, useState, useRef } from "react";
 
 /**
@@ -52,14 +52,17 @@ export function useExtractVariables({
   isLoading: boolean;
 }) {
   const utils = api.useUtils();
-  const [extractedVariables, setExtractedVariables] = useState<ExtractedVariable[]>([]);
+  const [extractedVariables, setExtractedVariables] = useState<
+    ExtractedVariable[]
+  >([]);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] =
     useState<ExtractionError | null>(null);
   const previousMappingRef = useRef<string>("");
 
   // Create a stable string representation of the current mapping for comparison
-  const currentMappingString = variables.length > 0 ? JSON.stringify(variableMapping) : "";
+  const currentMappingString =
+    variables.length > 0 ? JSON.stringify(variableMapping) : "";
 
   // Create a stable reference to the trace ID
   const traceId = trace?.id;
@@ -106,7 +109,9 @@ export function useExtractVariables({
 
     // Clear existing variables immediately when trace changes to avoid showing stale data
     if (traceChanged) {
-      setExtractedVariables(variables.map((variable) => ({ variable, value: "n/a" })));
+      setExtractedVariables(
+        variables.map((variable) => ({ variable, value: "n/a" })),
+      );
     }
 
     // Set loading state and clear previous errors
@@ -115,7 +120,9 @@ export function useExtractVariables({
 
     // Process all variables and collect promises
     const extractPromises = variables.map(async (variable) => {
-      const mapping = variableMapping.find((m) => m.templateVariable === variable);
+      const mapping = variableMapping.find(
+        (m) => m.templateVariable === variable,
+      );
 
       if (!mapping || !mapping.selectedColumnId) {
         return { variable, value: "n/a" };
@@ -126,16 +133,20 @@ export function useExtractVariables({
         object = trace;
       } else if (mapping.objectName) {
         // For observations, find them in the pre-loaded trace data
-        const observation = getObservation(mapping.objectName, trace?.observations);
+        const observation = getObservation(
+          mapping.objectName,
+          trace?.observations,
+        );
 
         if (observation?.id) {
           try {
-            const observationWithInputAndOutput = await utils.observations.byId.fetch({
-              observationId: observation.id as string,
-              startTime: observation.startTime as Date | null,
-              traceId: trace?.id as string,
-              projectId: trace?.projectId as string,
-            });
+            const observationWithInputAndOutput =
+              await utils.observations.byId.fetch({
+                observationId: observation.id as string,
+                startTime: observation.startTime as Date | null,
+                traceId: trace?.id as string,
+                projectId: trace?.projectId as string,
+              });
             object = observationWithInputAndOutput;
           } catch (error) {
             console.error(`Error fetching observation data:`, error);
@@ -157,7 +168,9 @@ export function useExtractVariables({
     // Resolve all promises and update state
     Promise.all(extractPromises)
       .then((results) => {
-        const firstError = results.find((result) => result.error instanceof Error);
+        const firstError = results.find(
+          (result) => result.error instanceof Error,
+        );
         if (firstError) {
           const baseMessage = (firstError.error as Error).message;
           const message = firstError.jsonSelector
@@ -186,7 +199,15 @@ export function useExtractVariables({
         setIsExtracting(false);
       });
     // Include all dependencies that should trigger a re-extraction
-  }, [variables, variableMapping, currentMappingString, isLoading, traceId, utils.observations.byId, trace]);
+  }, [
+    variables,
+    variableMapping,
+    currentMappingString,
+    isLoading,
+    traceId,
+    utils.observations.byId,
+    trace,
+  ]);
 
   return { extractedVariables, isExtracting };
 }

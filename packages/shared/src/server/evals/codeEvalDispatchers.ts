@@ -12,10 +12,8 @@ let hasLoggedInsecureLocalWarning = false;
 
 export function resolveConfiguredCodeEvalDispatcher(): CodeEvalDispatcher | null {
   const dispatcherName =
-    env.LANGFUSE_CODE_EVAL_DISPATCHER ??
-    (env.NODE_ENV === "development" || env.NODE_ENV === "test"
-      ? "insecure-local"
-      : undefined);
+    env.HANZO_CODE_EVAL_DISPATCHER ??
+    (env.NODE_ENV === "development" || env.NODE_ENV === "test" ? "insecure-local" : undefined);
 
   if (!dispatcherName) return null;
 
@@ -31,10 +29,10 @@ export function resolveConfiguredCodeEvalDispatcher(): CodeEvalDispatcher | null
 
   if (dispatcherName === "aws-lambda") {
     return new AwsLambdaCodeEvalDispatcher({
-      endpoint: env.LANGFUSE_CODE_EVAL_AWS_LAMBDA_ENDPOINT,
+      endpoint: env.HANZO_CODE_EVAL_AWS_LAMBDA_ENDPOINT,
       functionNameByLanguage: {
-        PYTHON: env.LANGFUSE_CODE_EVAL_AWS_LAMBDA_PYTHON_FUNCTION_NAME,
-        TYPESCRIPT: env.LANGFUSE_CODE_EVAL_AWS_LAMBDA_NODE_FUNCTION_NAME,
+        PYTHON: env.HANZO_CODE_EVAL_AWS_LAMBDA_PYTHON_FUNCTION_NAME,
+        TYPESCRIPT: env.HANZO_CODE_EVAL_AWS_LAMBDA_NODE_FUNCTION_NAME,
       },
     });
   }

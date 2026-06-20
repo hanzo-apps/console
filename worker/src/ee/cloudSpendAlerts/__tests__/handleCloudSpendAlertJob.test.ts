@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Job } from "bullmq";
+import type { Job } from "@hanzo/mq";
 
 const {
   mockOrganizationFindFirst,
@@ -21,7 +21,7 @@ const {
   mockSendCloudSpendAlertEmail: vi.fn(),
 }));
 
-vi.mock("@langfuse/shared", () => ({
+vi.mock("@hanzo/console", () => ({
   parseDbOrg: (org: unknown) => org,
   Role: {
     ADMIN: "ADMIN",
@@ -29,7 +29,7 @@ vi.mock("@langfuse/shared", () => ({
   },
 }));
 
-vi.mock("@langfuse/shared/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     organization: {
       findFirst: mockOrganizationFindFirst,
@@ -43,7 +43,7 @@ vi.mock("@langfuse/shared/src/db", () => ({
   },
 }));
 
-vi.mock("@langfuse/shared/src/server", () => ({
+vi.mock("@hanzo/console/src/server", () => ({
   logger: {
     info: mockLoggerInfo,
     warn: mockLoggerWarn,
@@ -95,13 +95,9 @@ describe("handleCloudSpendAlertJob", () => {
       }),
     );
 
-    await expect(
-      handleCloudSpendAlertJob(createJob()),
-    ).resolves.toBeUndefined();
+    await expect(handleCloudSpendAlertJob(createJob())).resolves.toBeUndefined();
 
-    expect(mockLoggerWarn).toHaveBeenCalledWith(
-      "[CLOUD SPEND ALERTS] Stripe customer id not found for org org-1",
-    );
+    expect(mockLoggerWarn).toHaveBeenCalledWith("[CLOUD SPEND ALERTS] Stripe customer id not found for org org-1");
     expect(mockTraceException).not.toHaveBeenCalled();
     expect(mockLoggerError).not.toHaveBeenCalled();
     expect(mockRecordIncrement).toHaveBeenCalledWith(
@@ -124,13 +120,9 @@ describe("handleCloudSpendAlertJob", () => {
       }),
     );
 
-    await expect(
-      handleCloudSpendAlertJob(createJob()),
-    ).resolves.toBeUndefined();
+    await expect(handleCloudSpendAlertJob(createJob())).resolves.toBeUndefined();
 
-    expect(mockLoggerWarn).toHaveBeenCalledWith(
-      "[CLOUD SPEND ALERTS] Stripe subscription id not found for org org-1",
-    );
+    expect(mockLoggerWarn).toHaveBeenCalledWith("[CLOUD SPEND ALERTS] Stripe subscription id not found for org org-1");
     expect(mockTraceException).not.toHaveBeenCalled();
     expect(mockLoggerError).not.toHaveBeenCalled();
     expect(mockRecordIncrement).toHaveBeenCalledWith(

@@ -13,14 +13,22 @@ import {
   TraceUpsertQueue,
   IngestionEvent,
   OtelIngestionQueue,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { AdminApiAuthService } from "@/src/features/admin-api/server/adminApiAuth";
 
 /* 
 This API route is used by Hanzo Cloud to retry failed bullmq jobs.
 */
 
-const BullStatus = z.enum(["completed", "failed", "active", "delayed", "prioritized", "paused", "wait"]);
+const BullStatus = z.enum([
+  "completed",
+  "failed",
+  "active",
+  "delayed",
+  "prioritized",
+  "paused",
+  "wait",
+]);
 
 const ManageBullBody = z.discriminatedUnion("action", [
   z.object({
@@ -39,7 +47,10 @@ const ManageBullBody = z.discriminatedUnion("action", [
   }),
 ]);
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   try {
     // allow only POST and GET requests
     if (req.method !== "POST" && req.method !== "GET") {
@@ -108,7 +119,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               queue = getQueue(
                 queueName as Exclude<
                   QueueName,
-                  QueueName.IngestionQueue | QueueName.TraceUpsert | QueueName.OtelIngestionQueue
+                  | QueueName.IngestionQueue
+                  | QueueName.TraceUpsert
+                  | QueueName.OtelIngestionQueue
                 >,
               );
             }
@@ -131,7 +144,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === "POST" && body.data.action === "remove") {
-      logger.info(`Removing jobs for queues ${body.data.queueNames.join(", ")}`);
+      logger.info(
+        `Removing jobs for queues ${body.data.queueNames.join(", ")}`,
+      );
 
       for (const queueName of body.data.queueNames) {
         let queue;
@@ -169,7 +184,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           queue = getQueue(
             queueName as Exclude<
               QueueName,
-              QueueName.IngestionQueue | QueueName.TraceUpsert | QueueName.OtelIngestionQueue
+              | QueueName.IngestionQueue
+              | QueueName.TraceUpsert
+              | QueueName.OtelIngestionQueue
             >,
           );
         }
@@ -181,11 +198,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         do {
           if (loopCount >= maxLoops) {
-            logger.warn(`Circuit breaker activated: Stopped after ${maxLoops} iterations for queue ${queueName}`);
+            logger.warn(
+              `Circuit breaker activated: Stopped after ${maxLoops} iterations for queue ${queueName}`,
+            );
             break;
           }
 
-          failedCountInLoop = (await queue?.clean(0, 1000, body.data.bullStatus))?.length ?? 0;
+          failedCountInLoop =
+            (await queue?.clean(0, 1000, body.data.bullStatus))?.length ?? 0;
 
           totalCount += failedCountInLoop;
 
@@ -199,7 +219,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === "POST" && body.data.action === "retry") {
-      logger.info(`Retrying jobs for queues ${body.data.queueNames.join(", ")}`);
+      logger.info(
+        `Retrying jobs for queues ${body.data.queueNames.join(", ")}`,
+      );
 
       for (const queueName of body.data.queueNames) {
         let queue;
@@ -237,12 +259,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           queue = getQueue(
             queueName as Exclude<
               QueueName,
-              QueueName.IngestionQueue | QueueName.TraceUpsert | QueueName.OtelIngestionQueue
+              | QueueName.IngestionQueue
+              | QueueName.TraceUpsert
+              | QueueName.OtelIngestionQueue
             >,
           );
         }
         const jobCount = await queue?.getJobCounts("failed");
-        logger.info(`Retrying ${JSON.stringify(jobCount)} jobs for queue ${queueName}`);
+        logger.info(
+          `Retrying ${JSON.stringify(jobCount)} jobs for queue ${queueName}`,
+        );
 
         let count = 0;
         let failed;
@@ -251,7 +277,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         do {
           if (loopCount >= maxLoops) {
-            logger.warn(`Circuit breaker activated: Stopped after ${maxLoops} iterations for queue ${queueName}`);
+            logger.warn(
+              `Circuit breaker activated: Stopped after ${maxLoops} iterations for queue ${queueName}`,
+            );
             break;
           }
 

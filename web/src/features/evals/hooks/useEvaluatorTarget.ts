@@ -1,12 +1,19 @@
 import { useState, useEffect } from "react";
-import { EvalTargetObject, availableTraceEvalVariables, availableDatasetEvalVariables } from "@hanzo/console-core";
+import {
+  EvalTargetObject,
+  availableTraceEvalVariables,
+  availableDatasetEvalVariables,
+} from "@hanzo/console";
 import {
   isTraceTarget,
   isEventTarget,
   isExperimentTarget,
   isLegacyEvalTarget,
 } from "@/src/features/evals/utils/typeHelpers";
-import { type VariableMapping, type ConsoleObject } from "../utils/evaluator-form-utils";
+import {
+  type VariableMapping,
+  type ConsoleObject,
+} from "../utils/evaluator-form-utils";
 import { OBSERVATION_VARIABLES } from "../utils/evaluator-constants";
 
 /**
@@ -14,8 +21,11 @@ import { OBSERVATION_VARIABLES } from "../utils/evaluator-constants";
  * Maps internal target objects to UI tabs (trace/event/offline-experiment).
  */
 export const useUserFacingTarget = (targetObject?: string) => {
-  const [userFacingTarget, setUserFacingTarget] = useState<"trace" | "event" | "offline-experiment">("event");
-  const [useOtelDataForExperiment, setUseOtelDataForExperiment] = useState(true);
+  const [userFacingTarget, setUserFacingTarget] = useState<
+    "trace" | "event" | "offline-experiment"
+  >("event");
+  const [useOtelDataForExperiment, setUseOtelDataForExperiment] =
+    useState(true);
 
   useEffect(() => {
     const currentTarget = targetObject ?? EvalTargetObject.EVENT;
@@ -51,11 +61,17 @@ export const useEvaluatorTargetState = () => {
     if (isEventTarget(targetObject) || isExperimentTarget(targetObject)) {
       return OBSERVATION_VARIABLES;
     }
-    return isTraceTarget(targetObject) ? availableTraceEvalVariables : availableDatasetEvalVariables;
+    return isTraceTarget(targetObject)
+      ? availableTraceEvalVariables
+      : availableDatasetEvalVariables;
   };
 
-  const transformMapping = (currentMapping: VariableMapping[], targetObject: string): VariableMapping[] => {
-    const isObservationBased = isEventTarget(targetObject) || isExperimentTarget(targetObject);
+  const transformMapping = (
+    currentMapping: VariableMapping[],
+    targetObject: string,
+  ): VariableMapping[] => {
+    const isObservationBased =
+      isEventTarget(targetObject) || isExperimentTarget(targetObject);
 
     // Get valid column IDs for the target
     const validColumnIds = isEventTarget(targetObject)
@@ -85,7 +101,9 @@ export const useEvaluatorTargetState = () => {
       // Proper consoleObject for trace/dataset
       return {
         ...field,
-        consoleObject: (isTraceTarget(targetObject) ? "trace" : "dataset_item") as ConsoleObject,
+        consoleObject: (isTraceTarget(targetObject)
+          ? "trace"
+          : "dataset_item") as ConsoleObject,
         objectName: field.objectName ?? null,
       };
     });

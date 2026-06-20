@@ -1,4 +1,4 @@
-import { type FilterState, type TableViewPresetState } from "@langfuse/shared";
+import { type FilterState, type TableViewPresetState } from "@hanzo/console";
 import { formatSessionPositionInTraceFilterValue } from "@/src/components/session/session-position-in-trace";
 
 function formatFilterLabel(filter: FilterState[number]) {

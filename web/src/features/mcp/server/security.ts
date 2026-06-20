@@ -1,5 +1,5 @@
 import { env } from "@/src/env.mjs";
-import { ForbiddenError } from "@langfuse/shared";
+import { ForbiddenError } from "@hanzo/console";
 import { type NextApiRequest, type NextApiResponse } from "next";
 
 const LOCALHOST_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"] as const;

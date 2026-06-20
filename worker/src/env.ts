@@ -1,4 +1,4 @@
-import { removeEmptyEnvVariables } from "@hanzo/console-core";
+import { applyDatastoreEnvBackCompat, removeEmptyEnvVariables } from "@hanzo/console";
 import { z } from "zod/v4";
 
 const EnvSchema = z.object({
@@ -98,10 +98,7 @@ const EnvSchema = z.object({
 
   HANZO_ENABLE_BLOB_STORAGE_FILE_LOG: z.enum(["true", "false"]).default("true"),
 
-  LANGFUSE_BLOB_STORAGE_FAILURE_NOTIFICATION_COOLDOWN_HOURS: z.coerce
-    .number()
-    .positive()
-    .default(24),
+  LANGFUSE_BLOB_STORAGE_FAILURE_NOTIFICATION_COOLDOWN_HOURS: z.coerce.number().positive().default(24),
 
   // Comma-separated list of project IDs that should only export traces table (skip observations and scores)
   HANZO_BLOB_STORAGE_EXPORT_TRACE_ONLY_PROJECT_IDS: z
@@ -221,4 +218,4 @@ const EnvSchema = z.object({
 export const env: z.infer<typeof EnvSchema> =
   process.env.DOCKER_BUILD === "1" // eslint-disable-line turbo/no-undeclared-env-vars
     ? (process.env as any)
-    : EnvSchema.parse(removeEmptyEnvVariables(process.env));
+    : EnvSchema.parse(applyDatastoreEnvBackCompat(removeEmptyEnvVariables(process.env)));

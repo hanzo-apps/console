@@ -1,11 +1,13 @@
 import { type NextApiRequest, type NextApiResponse } from "next";
-import { prisma } from "@hanzo/shared/src/db";
-import { logger, redis } from "@hanzo/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { logger, redis } from "@hanzo/console/src/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { z } from "zod";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 
-export const validateQueryParams = (query: unknown): { organizationId: string; apiKeyId: string } | null => {
+export const validateQueryParams = (
+  query: unknown,
+): { organizationId: string; apiKeyId: string } | null => {
   const inputQuerySchema = z.object({
     organizationId: z.string(),
     apiKeyId: z.string(),
@@ -38,7 +40,11 @@ export async function handleDeleteApiKey(
   }
 
   // Delete the API key
-  const deleted = await new ApiAuthService(prisma, redis).deleteApiKey(apiKeyId, organizationId, "ORGANIZATION");
+  const deleted = await new ApiAuthService(prisma, redis).deleteApiKey(
+    apiKeyId,
+    organizationId,
+    "ORGANIZATION",
+  );
 
   if (!deleted) {
     return res.status(500).json({ error: "Failed to delete API key" });
@@ -54,7 +60,9 @@ export async function handleDeleteApiKey(
     apiKeyId: "ADMIN_KEY",
   });
 
-  logger.info(`Deleted API key ${apiKeyId} for organization ${organizationId} via admin API`);
+  logger.info(
+    `Deleted API key ${apiKeyId} for organization ${organizationId} via admin API`,
+  );
 
   return res.status(200).json({ success: true });
 }

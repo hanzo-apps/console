@@ -1,4 +1,4 @@
-import { JobConfiguration, JobExecutionStatus } from "@hanzo/console-core/src/db";
+import { JobConfiguration, JobExecutionStatus } from "@hanzo/console/src/db";
 
 /**
  * Re-export ObservationForEval as the canonical observation type for eval operations.
@@ -11,7 +11,7 @@ export {
   observationForEvalSchema,
   observationEvalFilterColumns,
   observationEvalVariableColumns,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 
 /**
  * Observation eval job configuration.

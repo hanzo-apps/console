@@ -1,7 +1,7 @@
 import { VERSION } from "@/src/constants/VERSION";
 import { env } from "@/src/env.mjs";
 import { createTRPCRouter, publicProcedure } from "@/src/server/api/trpc";
-import { logger, compareVersions } from "@hanzo/console-core/src/server";
+import { logger, compareVersions } from "@hanzo/console/src/server";
 import { z } from "zod/v4";
 
 const ReleaseApiRes = z.array(
@@ -18,7 +18,7 @@ export const publicRouter = createTRPCRouter({
     .input(z.object({ projectId: z.string() }))
     .query(() => ({
       legacyTracingIoSearchEnabled:
-        env.LANGFUSE_DISABLE_LEGACY_TRACING_IO_SEARCH !== "true",
+        env.HANZO_DISABLE_LEGACY_TRACING_IO_SEARCH !== "true",
     })),
   checkUpdate: publicProcedure.query(async () => {
     // Skip update check on Hanzo Cloud
@@ -26,25 +26,37 @@ export const publicRouter = createTRPCRouter({
 
     let body;
     try {
-      const response = await fetch(`https://hanzo.ai/api/latest-releases?repo=hanzoai/cloud&version=${VERSION}`);
+      const response = await fetch(
+        `https://hanzo.ai/api/latest-releases?repo=hanzoai/cloud&version=${VERSION}`,
+      );
       body = await response.json();
     } catch (error) {
-      logger.error("[trpc.public.checkUpdate] failed to fetch latest-release api", {
-        error,
-      });
+      logger.error(
+        "[trpc.public.checkUpdate] failed to fetch latest-release api",
+        {
+          error,
+        },
+      );
       return null;
     }
 
     const releases = ReleaseApiRes.safeParse(body);
     if (!releases.success) {
-      logger.error("[trpc.public.checkUpdate] Release API response is invalid, does not match schema", {
-        error: releases.error,
-      });
+      logger.error(
+        "[trpc.public.checkUpdate] Release API response is invalid, does not match schema",
+        {
+          error: releases.error,
+        },
+      );
       return null;
     }
-    const hanzoRelease = releases.data.find((release) => release.repo === "hanzoai/cloud");
+    const hanzoRelease = releases.data.find(
+      (release) => release.repo === "hanzoai/cloud",
+    );
     if (!hanzoRelease) {
-      logger.error("[trpc.public.checkUpdate] Release API response is invalid, does not contain hanzoai/cloud");
+      logger.error(
+        "[trpc.public.checkUpdate] Release API response is invalid, does not contain hanzoai/cloud",
+      );
       return null;
     }
 

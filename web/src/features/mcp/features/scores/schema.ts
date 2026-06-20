@@ -1,4 +1,4 @@
-import { ScoreConfigNameSchema } from "@langfuse/shared";
+import { ScoreConfigNameSchema } from "@hanzo/console";
 import { z } from "zod";
 
 const McpScoreConfigNameSchema = ScoreConfigNameSchema.describe(

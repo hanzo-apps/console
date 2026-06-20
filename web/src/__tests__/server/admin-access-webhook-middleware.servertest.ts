@@ -2,8 +2,8 @@ import type { Session } from "next-auth";
 import * as z from "zod";
 import { env } from "@/src/env.mjs";
 
-vi.mock("@langfuse/shared/src/server", async () => {
-  const originalModule = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const originalModule = await vi.importActual("@hanzo/console/src/server");
   return {
     ...originalModule,
     getTraceById: vi.fn(),
@@ -18,7 +18,7 @@ import {
   protectedGetSessionProcedure,
 } from "@/src/server/api/trpc";
 import { resetAdminAccessWebhookCacheForTests } from "@/src/server/adminAccessWebhook";
-import { getTraceById } from "@langfuse/shared/src/server";
+import { getTraceById } from "@hanzo/console/src/server";
 
 const middlewareTestRouter = createTRPCRouter({
   project: protectedProjectProcedureWithoutTracing
@@ -59,7 +59,7 @@ const createAdminSession = (
       },
     ],
     featureFlags: {
-      excludeClickhouseRead: false,
+      excludeDatastoreRead: false,
       templateFlag: true,
     },
     admin: true,
@@ -103,12 +103,12 @@ const createTestCaller = (params: {
 
 describe("admin access webhook in tRPC authorization middleware", () => {
   const mockGetTraceById = vi.mocked(getTraceById);
-  const originalWebhook = env.LANGFUSE_ADMIN_ACCESS_WEBHOOK;
-  const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
+  const originalWebhook = env.HANZO_ADMIN_ACCESS_WEBHOOK;
+  const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
 
   beforeAll(() => {
     (env as any).LANGFUSE_ADMIN_ACCESS_WEBHOOK = "https://example.com/hook";
-    (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = "US";
+    (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = "US";
   });
 
   beforeEach(() => {
@@ -127,7 +127,7 @@ describe("admin access webhook in tRPC authorization middleware", () => {
 
   afterAll(() => {
     (env as any).LANGFUSE_ADMIN_ACCESS_WEBHOOK = originalWebhook;
-    (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+    (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
   });
 
   it("sends webhook when admin accesses a project they are not a member of", async () => {

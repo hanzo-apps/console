@@ -1,6 +1,6 @@
 import { v4 } from "uuid";
-import { executeQuery } from "@langfuse/shared/query/server";
-import { type QueryType } from "@langfuse/shared/query";
+import { executeQuery } from "@hanzo/console/query/server";
+import { type QueryType } from "@hanzo/console/query";
 import {
   createOrgProjectAndApiKey,
   createTrace,
@@ -17,9 +17,9 @@ import {
   type ObservationRecordInsertType,
   type EventRecordInsertType,
   type ScoreRecordInsertType,
-} from "@hanzo/console-core/src/server";
-import { getGenerationLikeTypes, type FilterCondition } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console/src/server";
+import { getGenerationLikeTypes, type FilterCondition } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import type { Session } from "next-auth";
@@ -27,7 +27,8 @@ import { env } from "@/src/env.mjs";
 import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
 
 // Skip when events table is not enabled (v2 queries require events_core).
-const maybe = env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? describe : describe.skip;
+const maybe =
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? describe : describe.skip;
 
 // ── Constants mirroring packages/shared/scripts/seeder/utils/datastore-seed-constants.ts ──
 
@@ -40,7 +41,13 @@ const TRACE_NAMES = [
   "QueryExecution",
 ];
 
-const GENERATION_NAMES = ["ChatOpenAI", "GPT-4", "Claude-3", "Gemini", "Mistral"];
+const GENERATION_NAMES = [
+  "ChatOpenAI",
+  "GPT-4",
+  "Claude-3",
+  "Gemini",
+  "Mistral",
+];
 
 const SPAN_NAMES = ["agent", "tools", "search", "retrieval", "preprocessing"];
 
@@ -150,7 +157,9 @@ function buildMatchingEvents(
         tool_call_names: o.tool_call_names ?? [],
         start_time: o.start_time * 1000,
         end_time: o.end_time ? o.end_time * 1000 : null,
-        completion_start_time: o.completion_start_time ? o.completion_start_time * 1000 : null,
+        completion_start_time: o.completion_start_time
+          ? o.completion_start_time * 1000
+          : null,
         created_at: o.created_at * 1000,
         updated_at: o.updated_at * 1000,
         event_ts: o.event_ts * 1000,
@@ -204,12 +213,19 @@ async function seedFromSeeder(targetProjectId: string) {
     maxTsEvents = new Date(maxTsEventsResult[0]?.max_ts ?? Date.now());
   }
 
-  const effectiveMax = maxTs.getTime() > maxTsEvents.getTime() ? maxTs : maxTsEvents;
+  const effectiveMax =
+    maxTs.getTime() > maxTsEvents.getTime() ? maxTs : maxTsEvents;
 
   return {
-    toTimestamp: new Date(effectiveMax.getTime() + 60 * 60 * 1000).toISOString(),
-    fromTimestamp1d: new Date(effectiveMax.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    fromTimestamp7d: new Date(effectiveMax.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    toTimestamp: new Date(
+      effectiveMax.getTime() + 60 * 60 * 1000,
+    ).toISOString(),
+    fromTimestamp1d: new Date(
+      effectiveMax.getTime() - 24 * 60 * 60 * 1000,
+    ).toISOString(),
+    fromTimestamp7d: new Date(
+      effectiveMax.getTime() - 7 * 24 * 60 * 60 * 1000,
+    ).toISOString(),
   };
 }
 
@@ -253,14 +269,22 @@ async function seedSynthetic(targetProjectId: string) {
     let prevObsId: string | undefined;
     for (let oi = 0; oi < OBS_PER_TRACE; oi++) {
       const obsId = v4();
-      const obsTypes = ["GENERATION", "SPAN", "GENERATION", "TOOL", "GENERATION"] as const;
+      const obsTypes = [
+        "GENERATION",
+        "SPAN",
+        "GENERATION",
+        "TOOL",
+        "GENERATION",
+      ] as const;
       const obsType = obsTypes[oi % obsTypes.length];
 
       const isGeneration = obsType === "GENERATION";
       const obsName = isGeneration
         ? pick(GENERATION_NAMES, ti * OBS_PER_TRACE + oi)
         : pick(SPAN_NAMES, ti * OBS_PER_TRACE + oi);
-      const modelName = isGeneration ? pick(MODELS, ti * OBS_PER_TRACE + oi) : null;
+      const modelName = isGeneration
+        ? pick(MODELS, ti * OBS_PER_TRACE + oi)
+        : null;
 
       const obsStart = traceTs + 100 + oi * 500;
       const latencyMs = 200 + ((ti * OBS_PER_TRACE + oi) % 20) * 100;
@@ -284,7 +308,9 @@ async function seedSynthetic(targetProjectId: string) {
           start_time: obsStart,
           end_time: obsEnd,
           provided_model_name: modelName,
-          model_parameters: isGeneration ? JSON.stringify({ temperature: 0.7 }) : null,
+          model_parameters: isGeneration
+            ? JSON.stringify({ temperature: 0.7 })
+            : null,
           total_cost: isGeneration ? totalCost : null,
           cost_details: isGeneration ? { total: totalCost } : {},
           provided_cost_details: isGeneration ? { total: totalCost } : {},
@@ -311,7 +337,8 @@ async function seedSynthetic(targetProjectId: string) {
 
   for (let ti = 0; ti < TRACE_COUNT; ti++) {
     const trace = traces[ti];
-    const traceTs = baseTime - Math.floor(ti / 7) * 24 * 60 * 60 * 1000 + ti * 60_000 + 200;
+    const traceTs =
+      baseTime - Math.floor(ti / 7) * 24 * 60 * 60 * 1000 + ti * 60_000 + 200;
 
     // First 10 traces → "default", last 10 → "staging"
     const scoreEnv = ti < 10 ? "default" : "staging";
@@ -418,7 +445,10 @@ describe("dashboard v1 vs v2 consistency", () => {
     projectId = org.projectId;
     orgId = org.orgId;
 
-    const timestamps = DATA_MODE === "seeder" ? await seedFromSeeder(projectId) : await seedSynthetic(projectId);
+    const timestamps =
+      DATA_MODE === "seeder"
+        ? await seedFromSeeder(projectId)
+        : await seedSynthetic(projectId);
 
     fromTimestamp1d = timestamps.fromTimestamp1d;
     fromTimestamp7d = timestamps.fromTimestamp7d;
@@ -489,7 +519,10 @@ describe("dashboard v1 vs v2 consistency", () => {
    * If duplicate keys exist, later rows silently overwrite earlier ones.
    * This is fine for GROUP BY results where name/userId are unique per group.
    */
-  function toMap(rows: Array<Record<string, unknown>>, keyField: string): Map<string, Record<string, unknown>> {
+  function toMap(
+    rows: Array<Record<string, unknown>>,
+    keyField: string,
+  ): Map<string, Record<string, unknown>> {
     const map = new Map<string, Record<string, unknown>>();
     for (const row of rows) {
       map.set(String(row[keyField] ?? ""), row);
@@ -507,7 +540,8 @@ describe("dashboard v1 vs v2 consistency", () => {
   /** Run both versions and assert total count_count matches exactly. */
   async function expectExactTotalCount(query: QueryType) {
     const { v1, v2 } = await runBothVersions(query);
-    const sum = (rows: Array<Record<string, unknown>>) => rows.reduce((s, r) => s + Number(r.count_count), 0);
+    const sum = (rows: Array<Record<string, unknown>>) =>
+      rows.reduce((s, r) => s + Number(r.count_count), 0);
     expect(sum(v1)).toBe(sum(v2));
   }
 
@@ -528,80 +562,90 @@ describe("dashboard v1 vs v2 consistency", () => {
   // ─── 1. Traces tile - total count ──────────────────────────────────────
 
   maybe("traces total count", () => {
-    it.each(["1d", "7d"] as const)("should match exactly for %s window", async (window) => {
-      await expectExactTotalCount({
-        view: "traces",
-        dimensions: [],
-        metrics: [{ measure: "count", aggregation: "count" }],
-        timeDimension: null,
-        filters: [],
-        orderBy: null,
-        fromTimestamp: fromFor(window),
-        toTimestamp,
-      });
-    });
-  });
-
-  // ─── 2. Traces grouped by name ─────────────────────────────────────────
-
-  maybe("traces grouped by name", () => {
-    it.each(["1d", "7d"] as const)("should match exactly for %s window", async (window) => {
-      await expectExactGroupedCounts(
-        {
+    it.each(["1d", "7d"] as const)(
+      "should match exactly for %s window",
+      async (window) => {
+        await expectExactTotalCount({
           view: "traces",
-          dimensions: [{ field: "name" }],
+          dimensions: [],
           metrics: [{ measure: "count", aggregation: "count" }],
           timeDimension: null,
           filters: [],
           orderBy: null,
           fromTimestamp: fromFor(window),
           toTimestamp,
-        },
-        "name",
-      );
-    });
+        });
+      },
+    );
+  });
+
+  // ─── 2. Traces grouped by name ─────────────────────────────────────────
+
+  maybe("traces grouped by name", () => {
+    it.each(["1d", "7d"] as const)(
+      "should match exactly for %s window",
+      async (window) => {
+        await expectExactGroupedCounts(
+          {
+            view: "traces",
+            dimensions: [{ field: "name" }],
+            metrics: [{ measure: "count", aggregation: "count" }],
+            timeDimension: null,
+            filters: [],
+            orderBy: null,
+            fromTimestamp: fromFor(window),
+            toTimestamp,
+          },
+          "name",
+        );
+      },
+    );
   });
 
   // ─── 3. Traces time series ─────────────────────────────────────────────
 
   maybe("traces by time (day granularity)", () => {
-    it.each(["1d", "7d"] as const)("should have matching per-bucket counts for %s window", async (window) => {
-      const query: QueryType = {
-        view: "traces",
-        dimensions: [],
-        metrics: [{ measure: "count", aggregation: "count" }],
-        timeDimension: { granularity: "day" },
-        filters: [],
-        orderBy: null,
-        fromTimestamp: fromFor(window),
-        toTimestamp,
-      };
-      const { v1, v2 } = await runBothVersions(query);
+    it.each(["1d", "7d"] as const)(
+      "should have matching per-bucket counts for %s window",
+      async (window) => {
+        const query: QueryType = {
+          view: "traces",
+          dimensions: [],
+          metrics: [{ measure: "count", aggregation: "count" }],
+          timeDimension: { granularity: "day" },
+          filters: [],
+          orderBy: null,
+          fromTimestamp: fromFor(window),
+          toTimestamp,
+        };
+        const { v1, v2 } = await runBothVersions(query);
 
-      // Total must match (existing invariant)
-      const sum = (rows: Array<Record<string, unknown>>) => rows.reduce((s, r) => s + Number(r.count_count), 0);
-      expect(sum(v2)).toBe(sum(v1));
+        // Total must match (existing invariant)
+        const sum = (rows: Array<Record<string, unknown>>) =>
+          rows.reduce((s, r) => s + Number(r.count_count), 0);
+        expect(sum(v2)).toBe(sum(v1));
 
-      // Per-bucket counts must also match exactly.
-      // A mismatch here indicates traces are being assigned to wrong time
-      // buckets in v2 (e.g. due to using min(start_time) across all events
-      // instead of only the root event's timestamp).
-      const v1Map = toMap(
-        v1.filter((r) => Number(r.count_count) > 0),
-        "time_dimension",
-      );
-      const v2Map = toMap(
-        v2.filter((r) => Number(r.count_count) > 0),
-        "time_dimension",
-      );
+        // Per-bucket counts must also match exactly.
+        // A mismatch here indicates traces are being assigned to wrong time
+        // buckets in v2 (e.g. due to using min(start_time) across all events
+        // instead of only the root event's timestamp).
+        const v1Map = toMap(
+          v1.filter((r) => Number(r.count_count) > 0),
+          "time_dimension",
+        );
+        const v2Map = toMap(
+          v2.filter((r) => Number(r.count_count) > 0),
+          "time_dimension",
+        );
 
-      expect(v2Map.size).toBe(v1Map.size);
-      for (const [ts, v1Row] of v1Map) {
-        const v2Row = v2Map.get(ts);
-        expect(v2Row).toBeDefined();
-        expect(Number(v2Row!.count_count)).toBe(Number(v1Row.count_count));
-      }
-    });
+        expect(v2Map.size).toBe(v1Map.size);
+        for (const [ts, v1Row] of v1Map) {
+          const v2Row = v2Map.get(ts);
+          expect(v2Row).toBeDefined();
+          expect(Number(v2Row!.count_count)).toBe(Number(v1Row.count_count));
+        }
+      },
+    );
   });
 
   // ─── 4. User consumption - Token cost tab ──────────────────────────────
@@ -633,7 +677,9 @@ describe("dashboard v1 vs v2 consistency", () => {
     }
 
     it("should return matching counts for shared users in 7d window", async () => {
-      const { v1, v2 } = await runBothVersions(buildTokenCostQuery(fromTimestamp7d));
+      const { v1, v2 } = await runBothVersions(
+        buildTokenCostQuery(fromTimestamp7d),
+      );
 
       // v1 gets userId via LEFT JOIN traces (traces.user_id), v2 uses
       // denormalized user_id from events_core. Some users may appear in
@@ -652,7 +698,9 @@ describe("dashboard v1 vs v2 consistency", () => {
     });
 
     it("should have overlapping users with counts within 3x for 1d window", async () => {
-      const { v1, v2 } = await runBothVersions(buildTokenCostQuery(fromTimestamp1d));
+      const { v1, v2 } = await runBothVersions(
+        buildTokenCostQuery(fromTimestamp1d),
+      );
 
       const v1Map = toMap(v1, "userId");
       const v2Map = toMap(v2, "userId");
@@ -670,8 +718,14 @@ describe("dashboard v1 vs v2 consistency", () => {
       expect(sharedUsers.length / v1Map.size).toBeGreaterThan(0.25);
 
       // For shared users, aggregate counts still track within 3x.
-      const v1TotalCount = sharedUsers.reduce((s, u) => s + Number(v1Map.get(u)!.count_count), 0);
-      const v2TotalCount = sharedUsers.reduce((s, u) => s + Number(v2Map.get(u)!.count_count), 0);
+      const v1TotalCount = sharedUsers.reduce(
+        (s, u) => s + Number(v1Map.get(u)!.count_count),
+        0,
+      );
+      const v2TotalCount = sharedUsers.reduce(
+        (s, u) => s + Number(v2Map.get(u)!.count_count),
+        0,
+      );
       expectWithinFactor(v1TotalCount, v2TotalCount, 3);
     });
   });
@@ -679,22 +733,25 @@ describe("dashboard v1 vs v2 consistency", () => {
   // ─── 5. User consumption - count of traces ─────────────────────────────
 
   maybe("user consumption - trace count", () => {
-    it.each(["1d", "7d"] as const)("should match exactly for %s window", async (window) => {
-      await expectExactGroupedCounts(
-        {
-          view: "traces",
-          dimensions: [{ field: "userId" }],
-          metrics: [{ measure: "count", aggregation: "count" }],
-          timeDimension: null,
-          filters: [],
-          orderBy: [{ field: "count_count", direction: "desc" }],
-          chartConfig: { type: "table", row_limit: 100 },
-          fromTimestamp: fromFor(window),
-          toTimestamp,
-        },
-        "userId",
-      );
-    });
+    it.each(["1d", "7d"] as const)(
+      "should match exactly for %s window",
+      async (window) => {
+        await expectExactGroupedCounts(
+          {
+            view: "traces",
+            dimensions: [{ field: "userId" }],
+            metrics: [{ measure: "count", aggregation: "count" }],
+            timeDimension: null,
+            filters: [],
+            orderBy: [{ field: "count_count", direction: "desc" }],
+            chartConfig: { type: "table", row_limit: 100 },
+            fromTimestamp: fromFor(window),
+            toTimestamp,
+          },
+          "userId",
+        );
+      },
+    );
   });
 
   // ─── 6. Trace latency percentiles ──────────────────────────────────────
@@ -727,7 +784,9 @@ describe("dashboard v1 vs v2 consistency", () => {
         // Different trace sets (due to time filter) produce slightly different
         // name groups. In the 7d window the gap is ~3 names out of ~480 (<1%).
         // Allow up to 5%.
-        expect(Math.abs(v1Map.size - v2Map.size)).toBeLessThan(Math.max(v1Map.size, v2Map.size) * 0.05);
+        expect(Math.abs(v1Map.size - v2Map.size)).toBeLessThan(
+          Math.max(v1Map.size, v2Map.size) * 0.05,
+        );
 
         // For names present in both, latency percentiles should be within 10%.
         // Small differences arise because v2 may include/exclude a few
@@ -736,7 +795,12 @@ describe("dashboard v1 vs v2 consistency", () => {
           const v2Row = v2Map.get(name);
           if (!v2Row) continue;
 
-          for (const metric of ["p50_latency", "p90_latency", "p95_latency", "p99_latency"]) {
+          for (const metric of [
+            "p50_latency",
+            "p90_latency",
+            "p95_latency",
+            "p99_latency",
+          ]) {
             const v1Val = Number(v1Row[metric]);
             const v2Val = Number(v2Row[metric]);
 
@@ -758,10 +822,16 @@ describe("dashboard v1 vs v2 consistency", () => {
   // Synthetic data seeds environments "default" and "staging" explicitly.
   // Seeder data uses "default" and "console-prompt-experiment" for scores
   // (see data-generators.ts lines 240, 268, 600 and datastore-builder.ts).
-  const SCORE_ENVIRONMENTS = DATA_MODE === "seeder" ? ["default", "console-prompt-experiment"] : ["default", "staging"];
+  const SCORE_ENVIRONMENTS =
+    DATA_MODE === "seeder"
+      ? ["default", "console-prompt-experiment"]
+      : ["default", "staging"];
 
   maybe("score-aggregate tRPC endpoint v2", () => {
-    const chartInput = (version: "v1" | "v2", extraFilters: FilterCondition[] = []) => ({
+    const chartInput = (
+      version: "v1" | "v2",
+      extraFilters: FilterCondition[] = [],
+    ) => ({
       projectId,
       from: "traces_scores" as const,
       select: [
@@ -833,13 +903,18 @@ describe("dashboard v1 vs v2 consistency", () => {
 
       // Check order: both should be sorted by countScoreId DESC
       for (let i = 1; i < v1Result.length; i++) {
-        expect(Number(v1Result[i - 1].countScoreId)).toBeGreaterThanOrEqual(Number(v1Result[i].countScoreId));
+        expect(Number(v1Result[i - 1].countScoreId)).toBeGreaterThanOrEqual(
+          Number(v1Result[i].countScoreId),
+        );
       }
       for (let i = 1; i < v2Result.length; i++) {
-        expect(Number(v2Result[i - 1].countScoreId)).toBeGreaterThanOrEqual(Number(v2Result[i].countScoreId));
+        expect(Number(v2Result[i - 1].countScoreId)).toBeGreaterThanOrEqual(
+          Number(v2Result[i].countScoreId),
+        );
       }
 
-      const toKey = (r: Record<string, unknown>) => `${r.scoreName}|${r.scoreSource}|${r.scoreDataType}`;
+      const toKey = (r: Record<string, unknown>) =>
+        `${r.scoreName}|${r.scoreSource}|${r.scoreDataType}`;
       const v1Map = new Map(v1Result.map((r) => [toKey(r), r]));
       const v2Map = new Map(v2Result.map((r) => [toKey(r), r]));
 
@@ -875,7 +950,8 @@ describe("dashboard v1 vs v2 consistency", () => {
 
       expect(v1Result.length).toBe(v2Result.length);
 
-      const toKey = (r: Record<string, unknown>) => `${r.scoreName}|${r.scoreSource}|${r.scoreDataType}`;
+      const toKey = (r: Record<string, unknown>) =>
+        `${r.scoreName}|${r.scoreSource}|${r.scoreDataType}`;
       const v1Map = new Map(v1Result.map((r) => [toKey(r), r]));
       const v2Map = new Map(v2Result.map((r) => [toKey(r), r]));
 
@@ -918,7 +994,9 @@ describe("dashboard v1 vs v2 consistency", () => {
           const scoreSource = metric.scoreSource as string;
           const scoreDataType = metric.scoreDataType as string;
           const match = (item: Record<string, unknown>) =>
-            item.scoreName === scoreName && item.scoreSource === scoreSource && item.scoreDataType === scoreDataType;
+            item.scoreName === scoreName &&
+            item.scoreSource === scoreSource &&
+            item.scoreDataType === scoreDataType;
           const zeroRow = zero.find(match);
           const oneRow = one.find(match);
           return {
@@ -927,8 +1005,12 @@ describe("dashboard v1 vs v2 consistency", () => {
             scoreDataType,
             countScoreId: metric.countScoreId ? Number(metric.countScoreId) : 0,
             avgValue: metric.avgValue ? Number(metric.avgValue) : 0,
-            zeroValueScore: zeroRow?.countScoreId ? Number(zeroRow.countScoreId) : 0,
-            oneValueScore: oneRow?.countScoreId ? Number(oneRow.countScoreId) : 0,
+            zeroValueScore: zeroRow?.countScoreId
+              ? Number(zeroRow.countScoreId)
+              : 0,
+            oneValueScore: oneRow?.countScoreId
+              ? Number(oneRow.countScoreId)
+              : 0,
           };
         });
 
@@ -938,8 +1020,11 @@ describe("dashboard v1 vs v2 consistency", () => {
       expect(v2Data.length).toBe(v1Data.length);
 
       // Compare by key (order may differ due to tie-breaking)
-      const toKey = (r: { scoreName: string; scoreSource: string; scoreDataType: string }) =>
-        `${r.scoreName}|${r.scoreSource}|${r.scoreDataType}`;
+      const toKey = (r: {
+        scoreName: string;
+        scoreSource: string;
+        scoreDataType: string;
+      }) => `${r.scoreName}|${r.scoreSource}|${r.scoreDataType}`;
       const v1Map = new Map(v1Data.map((r) => [toKey(r), r]));
       const v2Map = new Map(v2Data.map((r) => [toKey(r), r]));
 
@@ -953,7 +1038,9 @@ describe("dashboard v1 vs v2 consistency", () => {
       }
 
       // Verify ordering matches: both sorted by countScoreId DESC
-      expect(v2Data.map((r) => r.countScoreId)).toEqual(v1Data.map((r) => r.countScoreId));
+      expect(v2Data.map((r) => r.countScoreId)).toEqual(
+        v1Data.map((r) => r.countScoreId),
+      );
     });
 
     it("should return matching results when environment filter is applied", async () => {
@@ -978,7 +1065,8 @@ describe("dashboard v1 vs v2 consistency", () => {
         expect(v1Result.length).toBeGreaterThan(0);
         expect(v2Result.length).toBeGreaterThan(0);
 
-        const toKey = (r: Record<string, unknown>) => `${r.scoreName}|${r.scoreSource}|${r.scoreDataType}`;
+        const toKey = (r: Record<string, unknown>) =>
+          `${r.scoreName}|${r.scoreSource}|${r.scoreDataType}`;
         const v1Map = new Map(v1Result.map((r) => [toKey(r), r]));
         const v2Map = new Map(v2Result.map((r) => [toKey(r), r]));
 
@@ -991,13 +1079,22 @@ describe("dashboard v1 vs v2 consistency", () => {
           const v2Row = v2Map.get(key);
           expect(v2Row).toBeDefined();
           expect(Number(v2Row!.countScoreId)).toBe(Number(v1Row.countScoreId));
-          expect(Number(v2Row!.avgValue)).toBeCloseTo(Number(v1Row.avgValue), 5);
+          expect(Number(v2Row!.avgValue)).toBeCloseTo(
+            Number(v1Row.avgValue),
+            5,
+          );
         }
 
         // Filtered counts should be less than unfiltered
         const unfilteredResult = await caller.dashboard.chart(chartInput("v2"));
-        const unfilteredTotal = unfilteredResult.reduce((s, r) => s + Number(r.countScoreId), 0);
-        const filteredTotal = v2Result.reduce((s, r) => s + Number(r.countScoreId), 0);
+        const unfilteredTotal = unfilteredResult.reduce(
+          (s, r) => s + Number(r.countScoreId),
+          0,
+        );
+        const filteredTotal = v2Result.reduce(
+          (s, r) => s + Number(r.countScoreId),
+          0,
+        );
         expect(filteredTotal).toBeLessThan(unfilteredTotal);
       }
     });
@@ -1016,7 +1113,12 @@ describe("dashboard v1 vs v2 consistency", () => {
       : { name: "relevance", source: "API", dataType: "BOOLEAN" };
 
   maybe("scoreHistogram tRPC endpoint v2", () => {
-    const histInput = (version: "v1" | "v2", scoreName: string, scoreSource: string, scoreDataType: string) => ({
+    const histInput = (
+      version: "v1" | "v2",
+      scoreName: string,
+      scoreSource: string,
+      scoreDataType: string,
+    ) => ({
       projectId,
       from: "traces_scores" as const,
       select: [{ column: "value" }],
@@ -1064,7 +1166,9 @@ describe("dashboard v1 vs v2 consistency", () => {
       chartData: Array<Record<string, unknown>>,
     ): Array<{ lower: number; upper: number; count: number }> {
       return chartData.map((bin) => {
-        const match = (bin.binLabel as string).match(/\[(-?[\d.]+),\s*(-?[\d.]+)\]/);
+        const match = (bin.binLabel as string).match(
+          /\[(-?[\d.]+),\s*(-?[\d.]+)\]/,
+        );
         expect(match).not.toBeNull();
         return {
           lower: Number(match![1]),
@@ -1081,13 +1185,22 @@ describe("dashboard v1 vs v2 consistency", () => {
       bins: Array<{ lower: number; upper: number; count: number }>,
       thresholds: number[],
     ): number[] {
-      return thresholds.map((t) => bins.filter((b) => (b.lower + b.upper) / 2 < t).reduce((s, b) => s + b.count, 0));
+      return thresholds.map((t) =>
+        bins
+          .filter((b) => (b.lower + b.upper) / 2 < t)
+          .reduce((s, b) => s + b.count, 0),
+      );
     }
 
     it("should return valid histogram data for v2", async () => {
       const caller = makeCaller();
       const result = await caller.dashboard.scoreHistogram(
-        histInput("v2", HIST_NUMERIC.name, HIST_NUMERIC.source, HIST_NUMERIC.dataType),
+        histInput(
+          "v2",
+          HIST_NUMERIC.name,
+          HIST_NUMERIC.source,
+          HIST_NUMERIC.dataType,
+        ),
       );
 
       expect(result.chartLabels).toEqual(["count"]);
@@ -1105,8 +1218,22 @@ describe("dashboard v1 vs v2 consistency", () => {
     it("should return matching histogram shape between v1 and v2 for NUMERIC scores", async () => {
       const caller = makeCaller();
       const [v1Result, v2Result] = await Promise.all([
-        caller.dashboard.scoreHistogram(histInput("v1", HIST_NUMERIC.name, HIST_NUMERIC.source, HIST_NUMERIC.dataType)),
-        caller.dashboard.scoreHistogram(histInput("v2", HIST_NUMERIC.name, HIST_NUMERIC.source, HIST_NUMERIC.dataType)),
+        caller.dashboard.scoreHistogram(
+          histInput(
+            "v1",
+            HIST_NUMERIC.name,
+            HIST_NUMERIC.source,
+            HIST_NUMERIC.dataType,
+          ),
+        ),
+        caller.dashboard.scoreHistogram(
+          histInput(
+            "v2",
+            HIST_NUMERIC.name,
+            HIST_NUMERIC.source,
+            HIST_NUMERIC.dataType,
+          ),
+        ),
       ]);
 
       expect(v1Result.chartData.length).toBeGreaterThan(0);
@@ -1145,8 +1272,22 @@ describe("dashboard v1 vs v2 consistency", () => {
     it("should return matching histogram shape between v1 and v2 for BOOLEAN scores", async () => {
       const caller = makeCaller();
       const [v1Result, v2Result] = await Promise.all([
-        caller.dashboard.scoreHistogram(histInput("v1", HIST_BOOLEAN.name, HIST_BOOLEAN.source, HIST_BOOLEAN.dataType)),
-        caller.dashboard.scoreHistogram(histInput("v2", HIST_BOOLEAN.name, HIST_BOOLEAN.source, HIST_BOOLEAN.dataType)),
+        caller.dashboard.scoreHistogram(
+          histInput(
+            "v1",
+            HIST_BOOLEAN.name,
+            HIST_BOOLEAN.source,
+            HIST_BOOLEAN.dataType,
+          ),
+        ),
+        caller.dashboard.scoreHistogram(
+          histInput(
+            "v2",
+            HIST_BOOLEAN.name,
+            HIST_BOOLEAN.source,
+            HIST_BOOLEAN.dataType,
+          ),
+        ),
       ]);
 
       expect(v1Result.chartData.length).toBeGreaterThan(0);
@@ -1183,7 +1324,10 @@ describe("dashboard v1 vs v2 consistency", () => {
   const USAGE_BY_TYPE_QUERY = "observations-usage-by-type-timeseries" as const;
 
   maybe("model usage by-type timeseries v2", () => {
-    const typeInput = (version: "v1" | "v2", queryName: typeof COST_BY_TYPE_QUERY | typeof USAGE_BY_TYPE_QUERY) => ({
+    const typeInput = (
+      version: "v1" | "v2",
+      queryName: typeof COST_BY_TYPE_QUERY | typeof USAGE_BY_TYPE_QUERY,
+    ) => ({
       projectId,
       from: "traces_observations" as const,
       select: [],
@@ -1225,11 +1369,15 @@ describe("dashboard v1 vs v2 consistency", () => {
     describe("cost by type timeseries v2", () => {
       it("should return valid cost by type data for v2", async () => {
         const caller = makeCaller();
-        const result = await caller.dashboard.chart(typeInput("v2", COST_BY_TYPE_QUERY));
+        const result = await caller.dashboard.chart(
+          typeInput("v2", COST_BY_TYPE_QUERY),
+        );
 
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBeGreaterThan(0);
-        const keys = new Set(result.map((r) => String((r as DatabaseRow)["key"])));
+        const keys = new Set(
+          result.map((r) => String((r as DatabaseRow)["key"])),
+        );
         // Both modes include "total". Seeder data additionally has "input"/"output"
         // because its cost_details maps are fully populated (see data-generators.ts).
         // Synthetic data uses { total: ... } only (see seedSynthetic in this file).
@@ -1276,11 +1424,15 @@ describe("dashboard v1 vs v2 consistency", () => {
     describe("usage by type timeseries v2", () => {
       it("should return valid usage by type data for v2", async () => {
         const caller = makeCaller();
-        const result = await caller.dashboard.chart(typeInput("v2", USAGE_BY_TYPE_QUERY));
+        const result = await caller.dashboard.chart(
+          typeInput("v2", USAGE_BY_TYPE_QUERY),
+        );
 
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBeGreaterThan(0);
-        const keys = new Set(result.map((r) => String((r as DatabaseRow)["key"])));
+        const keys = new Set(
+          result.map((r) => String((r as DatabaseRow)["key"])),
+        );
         // Both modes include "total". Seeder data additionally has "input"/"output".
         expect(keys.has("total")).toBe(true);
         if (DATA_MODE === "seeder") {
@@ -1720,8 +1872,14 @@ describe("dashboard v1 vs v2 consistency", () => {
           executeQuery(projectId, tracesQuery, "v2", true),
           executeQuery(projectId, obsQuery, "v2", true),
         ]);
-        const tracesCount = tracesResult.reduce((s, r) => s + Number(r.count_count), 0);
-        const obsCount = obsResult.reduce((s, r) => s + Number(r.uniq_traceId), 0);
+        const tracesCount = tracesResult.reduce(
+          (s, r) => s + Number(r.count_count),
+          0,
+        );
+        const obsCount = obsResult.reduce(
+          (s, r) => s + Number(r.uniq_traceId),
+          0,
+        );
         if (window === "7d") {
           expect(obsCount).toBe(tracesCount);
         } else {
@@ -1770,7 +1928,9 @@ describe("dashboard v1 vs v2 consistency", () => {
           for (const [name, tracesRow] of tracesMap) {
             const obsRow = obsMap.get(name);
             expect(obsRow).toBeDefined();
-            expect(Number(obsRow!.uniq_traceId)).toBe(Number(tracesRow.count_count));
+            expect(Number(obsRow!.uniq_traceId)).toBe(
+              Number(tracesRow.count_count),
+            );
           }
         } else {
           expect(obsMap.size).toBeGreaterThanOrEqual(tracesMap.size);
@@ -1813,7 +1973,9 @@ describe("dashboard v1 vs v2 consistency", () => {
         // picks one via argMaxIf, observations view sees raw per-event values),
         // so we allow approximate matching for both windows.
         expect(obsMap.size).toBeGreaterThanOrEqual(tracesMap.size);
-        expect(obsMap.size).toBeLessThan(tracesMap.size * (window === "7d" ? 2 : 10));
+        expect(obsMap.size).toBeLessThan(
+          tracesMap.size * (window === "7d" ? 2 : 10),
+        );
       },
     );
   });

@@ -1,12 +1,12 @@
 import { v4 as uuidv4 } from "uuid";
-import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
-import { DashboardService } from "@langfuse/shared/src/server";
-import { DashboardWidgetViews } from "@langfuse/shared/src/db";
-import { prisma } from "@langfuse/shared/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
+import { DashboardService } from "@hanzo/console/src/server";
+import { DashboardWidgetViews } from "@hanzo/console/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import type { Session } from "next-auth";
-import { requiresV2 } from "@langfuse/shared/query";
+import { requiresV2 } from "@hanzo/console/query";
 import {
   mapLegacyUiTableFilterToView,
   mapWidgetUiTableFilterToView,
@@ -71,7 +71,7 @@ describe("dashboard widget minVersion", () => {
           },
         ],
         featureFlags: {
-          excludeClickhouseRead: false,
+          excludeDatastoreRead: false,
           templateFlag: true,
           v4BetaToggleVisible: false,
           observationEvals: false,

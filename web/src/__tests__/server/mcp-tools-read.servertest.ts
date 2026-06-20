@@ -1,6 +1,6 @@
 // Mock queue operations to avoid Redis dependency in tests
-vi.mock("@langfuse/shared/src/server", async () => {
-  const actual = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     // Mock queue getInstance to return a no-op queue
@@ -22,14 +22,14 @@ vi.mock("@/src/features/media/server/getMediaStorageClient", () => ({
 import { nanoid } from "nanoid";
 import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   createEvent,
   createEventsCh,
   createScoresCh,
   createTraceScore,
-} from "@langfuse/shared/src/server";
-import { ScoreConfigDataType } from "@langfuse/shared";
+} from "@hanzo/console/src/server";
+import { ScoreConfigDataType } from "@hanzo/console";
 import {
   createMcpTestSetup,
   createPromptInDb,
@@ -127,11 +127,9 @@ import {
 } from "@/src/features/mcp/features/datasets/schema";
 
 const maybeEventsTable =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true"
-    ? describe
-    : describe.skip;
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? describe : describe.skip;
 const maybeEventsTableIt =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? it : it.skip;
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? it : it.skip;
 
 const createObservationEvent = (params: {
   projectId: string;

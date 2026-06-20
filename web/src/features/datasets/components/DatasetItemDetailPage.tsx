@@ -6,16 +6,20 @@ import { api } from "@/src/utils/api";
 import { ListTree, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { DatasetStatus } from "@hanzo/shared";
+import { DatasetStatus } from "@hanzo/console";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/src/components/ui/popover";
 import { useState } from "react";
 import { getDatasetItemTabs } from "@/src/features/navigation/utils/dataset-item-tabs";
 import { type DatasetItemTab } from "@/src/features/navigation/utils/dataset-item-tabs";
@@ -41,7 +45,7 @@ export const DatasetItemDetailPage = ({
   const datasetId = router.query.datasetId as string;
   const itemId = router.query.itemId as string;
   const hasAccess = useHasProjectAccess({ projectId, scope: "datasets:CUD" });
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const utils = api.useUtils();
   const [isArchivePopoverOpen, setIsArchivePopoverOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -84,7 +88,10 @@ export const DatasetItemDetailPage = ({
   const toggleArchiveStatus = () => {
     if (!item.data?.status || !hasAccess || mutUpdate.isPending) return;
 
-    const newStatus = item.data.status === DatasetStatus.ARCHIVED ? DatasetStatus.ACTIVE : DatasetStatus.ARCHIVED;
+    const newStatus =
+      item.data.status === DatasetStatus.ARCHIVED
+        ? DatasetStatus.ACTIVE
+        : DatasetStatus.ARCHIVED;
 
     capture("dataset_item:archive_toggle", {
       status: newStatus === DatasetStatus.ARCHIVED ? "archived" : "unarchived",
@@ -138,7 +145,10 @@ export const DatasetItemDetailPage = ({
         actionButtonsLeft: (
           <>
             {item.data?.status && (
-              <Popover open={isArchivePopoverOpen} onOpenChange={setIsArchivePopoverOpen}>
+              <Popover
+                open={isArchivePopoverOpen}
+                onOpenChange={setIsArchivePopoverOpen}
+              >
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="xs">
                     {item.data.status}
@@ -147,8 +157,10 @@ export const DatasetItemDetailPage = ({
                 <PopoverContent className="w-80" align="start" side="bottom">
                   <div className="flex flex-col gap-4">
                     <div className="space-y-2">
-                      <h4 className="font-medium leading-none">
-                        {item.data.status === DatasetStatus.ACTIVE ? "Archive this item?" : "Unarchive this item?"}
+                      <h4 className="leading-none font-medium">
+                        {item.data.status === DatasetStatus.ACTIVE
+                          ? "Archive this item?"
+                          : "Unarchive this item?"}
                       </h4>
                       <p className="text-muted-foreground text-sm">
                         {item.data.status === DatasetStatus.ACTIVE
@@ -159,7 +171,11 @@ export const DatasetItemDetailPage = ({
                     <Button
                       onClick={toggleArchiveStatus}
                       disabled={!hasAccess || mutUpdate.isPending}
-                      variant={item.data.status === DatasetStatus.ACTIVE ? "destructive" : "default"}
+                      variant={
+                        item.data.status === DatasetStatus.ACTIVE
+                          ? "destructive"
+                          : "default"
+                      }
                       size="sm"
                     >
                       {mutUpdate.isPending
@@ -194,7 +210,9 @@ export const DatasetItemDetailPage = ({
             )}
             <DetailPageNav
               currentId={itemId}
-              path={(entry) => `/project/${projectId}/datasets/${datasetId}/items/${entry.id}`}
+              path={(entry) =>
+                `/project/${projectId}/datasets/${datasetId}/items/${entry.id}`
+              }
               listKey="datasetItems"
             />
             {item.data ? (
@@ -229,7 +247,12 @@ export const DatasetItemDetailPage = ({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleDelete}
-                  disabled={!hasAccess || mutDelete.isPending || isViewingOldVersion || !item.data}
+                  disabled={
+                    !hasAccess ||
+                    mutDelete.isPending ||
+                    isViewingOldVersion ||
+                    !item.data
+                  }
                   className="text-destructive"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />

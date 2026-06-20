@@ -1,9 +1,12 @@
 import { getOrganizationPlanServerSide } from "@/src/features/entitlements/server/getPlan";
-import { CloudConfigSchema } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+import { CloudConfigSchema } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import type { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
@@ -42,7 +45,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const organizations = user.organizationMemberships.map((membership) => {
-      const parsedCloudConfig = CloudConfigSchema.safeParse(membership.organization.cloudConfig);
+      const parsedCloudConfig = CloudConfigSchema.safeParse(
+        membership.organization.cloudConfig,
+      );
 
       return {
         id: membership.organization.id,

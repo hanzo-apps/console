@@ -1,5 +1,5 @@
-vi.mock("@langfuse/shared/src/server", async () => {
-  const actual = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     fetchLLMCompletion: vi.fn(),
@@ -7,17 +7,17 @@ vi.mock("@langfuse/shared/src/server", async () => {
 });
 
 import type { Session } from "next-auth";
-import { BEDROCK_USE_DEFAULT_CREDENTIALS, LLMAdapter } from "@langfuse/shared";
+import { BEDROCK_USE_DEFAULT_CREDENTIALS, LLMAdapter } from "@hanzo/console";
 import { env } from "@/src/env.mjs";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { decrypt, encrypt } from "@langfuse/shared/encryption";
+import { decrypt, encrypt } from "@hanzo/console/encryption";
 import { AuthMethod } from "@/src/features/llm-api-key/types";
 import {
   createOrgProjectAndApiKey,
   fetchLLMCompletion,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 const mockFetchLLMCompletion = vi.mocked(fetchLLMCompletion);
 
@@ -92,7 +92,7 @@ describe("llmApiKey.all RPC", () => {
         ],
         featureFlags: {
           templateFlag: true,
-          excludeClickhouseRead: false,
+          excludeDatastoreRead: false,
         },
         admin: true,
       },
@@ -792,11 +792,11 @@ describe("llmApiKey.all RPC", () => {
 
   it("should update a Bedrock DefaultCredentials key to explicit Access keys", async () => {
     const provider = "bedrock";
-    const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
+    const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
 
     try {
       // Simulate self-hosted to allow default credentials
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = undefined;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = undefined;
 
       await caller.llmApiKey.create({
         projectId,
@@ -844,17 +844,17 @@ describe("llmApiKey.all RPC", () => {
       expect(updatedKey.displaySecretKey).toBe("...EKEY");
       expect(updatedKey.config).toEqual({ region: "eu-west-1" });
     } finally {
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
     }
   });
 
   it("should update a Bedrock DefaultCredentials key to a Bedrock API key", async () => {
     const provider = "bedrock";
-    const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
+    const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
 
     try {
       // Simulate self-hosted to allow default credentials
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = undefined;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = undefined;
 
       await caller.llmApiKey.create({
         projectId,
@@ -891,7 +891,7 @@ describe("llmApiKey.all RPC", () => {
       expect(updatedKey.displaySecretKey).toBe("...9999");
       expect(updatedKey.config).toEqual({ region: "eu-west-1" });
     } finally {
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
     }
   });
 
@@ -933,7 +933,7 @@ describe("llmApiKey.all RPC", () => {
 
   it("should update a Bedrock Access key auth back to DefaultCredentials (self-hosted)", async () => {
     const provider = "bedrock";
-    const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
+    const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
 
     await caller.llmApiKey.create({
       projectId,
@@ -954,7 +954,7 @@ describe("llmApiKey.all RPC", () => {
 
     try {
       // Simulate self-hosted deployment where default credentials are allowed
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = undefined;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = undefined;
 
       await caller.llmApiKey.update({
         id: existingKey.id,
@@ -967,7 +967,7 @@ describe("llmApiKey.all RPC", () => {
         config: { region: "eu-west-1" },
       });
     } finally {
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
     }
 
     const updatedKey = await prisma.llmApiKeys.findUniqueOrThrow({

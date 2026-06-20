@@ -6,6 +6,49 @@ import { withSentryConfig } from "@sentry/nextjs";
 import { env } from "./src/env.mjs";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import { scheduleCronJob } from "./src/server/serverCron.mjs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// The shared product-core workspace package is `@hanzo/console` (it lives in
+// `packages/shared`). The webpack production build (`next build --webpack`) needs
+// explicit subpath aliases that point every `@hanzo/console` subpath at the
+// package's TS SOURCE — identical to the turbopack alias below — so
+// `transpilePackages` recompiles it ESM-aware (the prebuilt CJS dist re-require()s
+// ESM-only deps like uuid, which webpack rejects).
+const sharedSrc = path.resolve(__dirname, "../packages/shared/src");
+const aliasForPrefix = (prefix) => ({
+  [`${prefix}/src/server/auth/apiKeys`]: path.join(sharedSrc, "server/auth/apiKeys.ts"),
+  // `server/llm/types.ts` is a leaf module (zod + prisma types only) that owns
+  // client-safe values like `ZodModelConfig` and `ConsoleInternalTraceEnvironment`.
+  // Exposing it as its own focused subpath lets module-scope consumers import
+  // these without pulling the full `@hanzo/console` barrel, which otherwise
+  // forms a webpack circular-chunk graph where the schema binding is still in
+  // its temporal dead zone at module-evaluation time (TDZ ReferenceError during
+  // Next page-data collection). Listed before `/src/server` so it wins.
+  [`${prefix}/src/server/llm/types`]: path.join(sharedSrc, "server/llm/types.ts"),
+  [`${prefix}/src/server`]: path.join(sharedSrc, "server/index.ts"),
+  [`${prefix}/src/db`]: path.join(sharedSrc, "db.ts"),
+  [`${prefix}/src/env`]: path.join(sharedSrc, "env.ts"),
+  [`${prefix}/src/utils/chatml`]: path.join(sharedSrc, "utils/chatml/index.ts"),
+  [`${prefix}/src/index`]: path.join(sharedSrc, "index.ts"),
+  // The query subsystem lives at `packages/shared/src/features/query`. It is
+  // published under the `@hanzo/console/query` and `@hanzo/console/query/server`
+  // subpaths (mirrors the package `exports` field). The `/server` exact-match
+  // alias is listed first so it wins over the broader `/query` exact-match.
+  [`${prefix}/query/server`]: path.join(sharedSrc, "features/query/server/index.ts"),
+  [`${prefix}/query`]: path.join(sharedSrc, "features/query/index.ts"),
+  [`${prefix}/encryption`]: path.join(sharedSrc, "encryption/index.ts"),
+  [`${prefix}$`]: path.join(sharedSrc, "index.ts"),
+});
+const sharedAlias = {
+  ...aliasForPrefix("@hanzo/console"),
+  // The query subsystem (dataModel, queryBuilder, queryExecutor, types, validateQuery)
+  // moved out of web into the shared package, but a number of web modules still import
+  // it under its old web-local `@/src/features/query` path. Redirect to the shared
+  // source so both names resolve to one implementation.
+  "@/src/features/query": path.join(sharedSrc, "features/query"),
+};
 
 /**
  * CSP headers
@@ -64,7 +107,7 @@ const nextConfig = {
   // Agent/browser tooling often targets 127.0.0.1 instead of localhost in dev.
   allowedDevOrigins: ["127.0.0.1"],
   staticPageGenerationTimeout: 500, // default is 60. Required for build process for amd
-  transpilePackages: ["@hanzo/shared", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
+  transpilePackages: ["@hanzo/console", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
   reactStrictMode: true,
   serverExternalPackages: [
     "dd-trace",
@@ -84,7 +127,7 @@ const nextConfig = {
   },
   turbopack: {
     resolveAlias: {
-      "@hanzo/shared": "./packages/shared/src",
+      "@hanzo/console": "./packages/shared/src",
       // this is an ugly hack to get turbopack to work with react-resizable, used in the
       // web/src/features/widgets/components/DashboardGrid.tsx file. This **only** affects
       // the dev server. The CSS is included in the non-turbopack based prod build anyways.
@@ -248,6 +291,11 @@ const nextConfig = {
   },
 
   webpack(config, { isServer, webpack }) {
+    // Resolve every `@hanzo/console` subpath to the shared package TS source for
+    // the webpack production build (mirrors the turbopack resolveAlias above).
+    config.resolve = config.resolve || {};
+    config.resolve.alias = { ...(config.resolve.alias || {}), ...sharedAlias };
+
     // Exclude Datadog packages from webpack bundling to avoid issues
     // see: https://docs.datadoghq.com/tracing/trace_collection/automatic_instrumentation/dd_libraries/nodejs/#bundling-with-nextjs
     config.externals.push("@datadog/pprof", "dd-trace");
@@ -302,4 +350,8 @@ const sentryConfig =
         automaticVercelMonitors: false,
       });
 
-export default sentryConfig;
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
+export default withBundleAnalyzer(sentryConfig);

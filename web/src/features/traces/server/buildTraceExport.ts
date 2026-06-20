@@ -3,15 +3,15 @@ import {
   LangfuseNotFoundError,
   ScoreDataTypeEnum,
   UnauthorizedError,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import {
   getScoresAndCorrectionsForTraces,
   getObservationsCountFromEventsTable,
   getObservationsForTraceFromEventsTable,
   getTraceByIdFromEventsTable,
-} from "@langfuse/shared/src/server";
-import { env } from "@langfuse/shared/src/env";
-import { prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console/src/server";
+import { env } from "@hanzo/console/src/env";
+import { prisma } from "@hanzo/console/src/db";
 import { sendAdminAccessWebhook } from "@/src/server/adminAccessWebhook";
 import { TRACE_DOWNLOAD_OMIT_LARGE_FIELDS_THRESHOLD } from "../shared/traceDownloadConfig";
 
@@ -99,24 +99,24 @@ async function getAuthorizedTrace(params: {
 }) {
   const { traceId, projectId, session } = params;
 
-  const clickhouseTrace = await getTraceByIdFromEventsTable({
+  const datastoreTrace = await getTraceByIdFromEventsTable({
     traceId,
     projectId,
     renderingProps: {
       truncated: true,
       shouldJsonParse: false,
     },
-    clickhouseFeatureTag: "tracing-download",
+    datastoreFeatureTag: "tracing-download",
   });
 
-  if (!clickhouseTrace) {
+  if (!datastoreTrace) {
     throw new LangfuseNotFoundError("Trace not found");
   }
 
-  const traceSession = clickhouseTrace.sessionId
+  const traceSession = datastoreTrace.sessionId
     ? await prisma.traceSession.findFirst({
         where: {
-          id: clickhouseTrace.sessionId,
+          id: datastoreTrace.sessionId,
           projectId,
         },
         select: {
@@ -128,7 +128,7 @@ async function getAuthorizedTrace(params: {
   const isSessionPublic = traceSession?.public === true;
   const isAdmin = session?.user.admin === true;
   const canReadTrace =
-    clickhouseTrace.public ||
+    datastoreTrace.public ||
     isSessionPublic ||
     isAdmin ||
     hasProjectAccess(session, projectId);
@@ -152,7 +152,7 @@ async function getAuthorizedTrace(params: {
     });
   }
 
-  return clickhouseTrace;
+  return datastoreTrace;
 }
 
 export async function buildTraceExport({
@@ -199,9 +199,9 @@ export async function buildTraceExport({
 
       payloadSize += JSON.stringify(observation.metadata).length;
 
-      if (payloadSize >= env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES) {
+      if (payloadSize >= env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES) {
         throw new TraceDownloadTooLargeError(
-          `Observations in trace are too large: ${(payloadSize / 1e6).toFixed(2)}MB exceeds limit of ${(env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES / 1e6).toFixed(2)}MB`,
+          `Observations in trace are too large: ${(payloadSize / 1e6).toFixed(2)}MB exceeds limit of ${(env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES / 1e6).toFixed(2)}MB`,
         );
       }
     }

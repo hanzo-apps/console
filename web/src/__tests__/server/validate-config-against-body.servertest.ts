@@ -2,7 +2,7 @@ import {
   validateConfigAgainstBody,
   type ScoreConfigDomain,
   type ScoreDomain,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 const baseTextConfig: ScoreConfigDomain = {
   id: "config-1",

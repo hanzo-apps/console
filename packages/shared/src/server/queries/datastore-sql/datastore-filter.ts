@@ -18,9 +18,7 @@ export class StringFilter implements Filter {
   public datastoreTable: string;
   public field: string;
   public value: string;
-  public operator:
-    | (typeof filterOperators)["string"][number]
-    | FtsMatchOperator;
+  public operator: (typeof filterOperators)["string"][number] | FtsMatchOperator;
   public tablePrefix?: string;
   public emptyEqualsNull?: boolean;
 
@@ -66,12 +64,8 @@ export class StringFilter implements Filter {
     switch (this.operator) {
       case "=":
         query = `${fieldWithPrefix} = {${varName}: String}`;
-        if (isFtsTextTarget(this.clickhouseTable, this.field, this.operator)) {
-          query = FTS_OPERATOR_DESCRIPTORS["="].textCondition(
-            fieldWithPrefix,
-            `{${varName}: String}`,
-            query,
-          );
+        if (isFtsTextTarget(this.datastoreTable, this.field, this.operator)) {
+          query = FTS_OPERATOR_DESCRIPTORS["="].textCondition(fieldWithPrefix, `{${varName}: String}`, query);
         }
         break;
       case "contains":
@@ -89,7 +83,7 @@ export class StringFilter implements Filter {
       case FTS_MATCH_OPERATOR:
         assertValidFtsMatchFilter({
           filterType: "string",
-          clickhouseTable: this.clickhouseTable,
+          datastoreTable: this.datastoreTable,
           field: this.field,
           value: this.value,
         });
@@ -223,9 +217,7 @@ export class StringOptionsFilter implements Filter {
       query = `(${query} OR ${fieldWithPrefix} IS NULL)`;
     } else if (this.emptyEqualsNull && this.operator === "none of") {
       // '' ≡ NULL: exclude empty/null (which are equivalent)
-      const guard = hasEmpty
-        ? `${fieldWithPrefix} IS NOT NULL`
-        : `${fieldWithPrefix} != ''`;
+      const guard = hasEmpty ? `${fieldWithPrefix} IS NOT NULL` : `${fieldWithPrefix} != ''`;
       query = `(${query} AND ${guard})`;
     }
 
@@ -298,17 +290,13 @@ export class StringObjectFilter implements Filter {
   public field: string;
   public key: string;
   public value: string;
-  public operator:
-    | (typeof filterOperators)["stringObject"][number]
-    | FtsMatchOperator;
+  public operator: (typeof filterOperators)["stringObject"][number] | FtsMatchOperator;
   public tablePrefix?: string;
 
   constructor(opts: {
     datastoreTable: string;
     field: string;
-    operator:
-      | (typeof filterOperators)["stringObject"][number]
-      | FtsMatchOperator;
+    operator: (typeof filterOperators)["stringObject"][number] | FtsMatchOperator;
     key: string;
     value: string;
     tablePrefix?: string;
@@ -331,7 +319,7 @@ export class StringObjectFilter implements Filter {
     const isEventsTable = ["events_proto", "events_core", "events_full"].includes(this.datastoreTable);
 
     let query: string;
-    if (isFtsEventsTable(this.clickhouseTable)) {
+    if (isFtsEventsTable(this.datastoreTable)) {
       // ClickHouse's index analyzer cannot extract `has(names, k)` from
       // `values[indexOf(names, k)] OP v` (cross-array arrayElement form), so a
       // bloom_filter skipping index on `names` would never prune granules.
@@ -369,13 +357,11 @@ export class StringObjectFilter implements Filter {
         case FTS_MATCH_OPERATOR:
           assertValidFtsMatchFilter({
             filterType: "stringObject",
-            clickhouseTable: this.clickhouseTable,
+            datastoreTable: this.datastoreTable,
             field: this.field,
             value: this.value,
           });
-          query = FTS_OPERATOR_DESCRIPTORS[
-            FTS_MATCH_OPERATOR
-          ].metadataArrayCondition({
+          query = FTS_OPERATOR_DESCRIPTORS[FTS_MATCH_OPERATOR].metadataArrayCondition({
             hasKey,
             valuesColumn,
             valueAccessor,

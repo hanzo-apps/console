@@ -1,4 +1,4 @@
-import { JsonNested, Prisma } from "@hanzo/console-core";
+import { JsonNested, Prisma } from "@hanzo/console";
 import { mergeWith, merge } from "lodash";
 
 // Theoretically this returns Record<string, unknown>, but it would be hard to align the typing accordingly.

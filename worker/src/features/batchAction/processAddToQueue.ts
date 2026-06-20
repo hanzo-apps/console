@@ -1,5 +1,5 @@
-import { logger, traceException } from "@hanzo/console-core/src/server";
-import { AnnotationQueueObjectType, prisma } from "@hanzo/console-core/src/db";
+import { logger, traceException } from "@hanzo/console/src/server";
+import { AnnotationQueueObjectType, prisma } from "@hanzo/console/src/db";
 
 const addToQueue = async ({
   projectId,

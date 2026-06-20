@@ -3,10 +3,10 @@ import type {
   InternalEventsWriter,
   InternalTraceEventInput,
   InternalTraceExperimentContext,
-} from "@langfuse/shared/src/server";
-import { clickhouseClient, redis } from "@langfuse/shared/src/server";
-import { prisma } from "@langfuse/shared/src/db";
-import { ClickhouseWriter } from "../../services/ClickhouseWriter";
+} from "@hanzo/console/src/server";
+import { datastoreClient, redis } from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { DatastoreWriter } from "../../services/DatastoreWriter";
 import { IngestionService } from "../../services/IngestionService";
 import { env } from "../../env";
 
@@ -17,8 +17,8 @@ function getInternalTraceIngestionService(): IngestionService {
     internalTraceIngestionService = new IngestionService(
       redis as any,
       prisma,
-      ClickhouseWriter.getInstance(),
-      clickhouseClient(),
+      DatastoreWriter.getInstance(),
+      datastoreClient(),
     );
   }
 
@@ -32,9 +32,7 @@ async function writeInternalEventInputs(params: {
   const service = getInternalTraceIngestionService();
 
   const eventRecords = await Promise.all(
-    params.eventInputs.map((eventInput) =>
-      service.createEventRecord(eventInput, ""),
-    ),
+    params.eventInputs.map((eventInput) => service.createEventRecord(eventInput, "")),
   );
 
   if (env.LANGFUSE_EXPERIMENT_INSERT_INTO_EVENTS_TABLE === "true") {
@@ -44,9 +42,7 @@ async function writeInternalEventInputs(params: {
   }
 
   return {
-    rootEventRecord: eventRecords.find(
-      (record) => record.span_id === params.rootSpanId,
-    ),
+    rootEventRecord: eventRecords.find((record) => record.span_id === params.rootSpanId),
   };
 }
 
@@ -59,16 +55,11 @@ async function writeInternalEventInputs(params: {
  */
 export function createInternalEventsWriter(params?: {
   experimentContext?: InternalTraceExperimentContext;
-  onRootEventRecordReady?: (
-    rootEventRecord: EventRecordInsertType,
-  ) => Promise<void>;
+  onRootEventRecordReady?: (rootEventRecord: EventRecordInsertType) => Promise<void>;
 }): InternalEventsWriter {
   return {
     experimentContext: params?.experimentContext,
-    write: async (writeParams: {
-      rootSpanId: string;
-      eventInputs: InternalTraceEventInput[];
-    }) => {
+    write: async (writeParams: { rootSpanId: string; eventInputs: InternalTraceEventInput[] }) => {
       const { rootSpanId, eventInputs } = writeParams;
       const { rootEventRecord } = await writeInternalEventInputs({
         rootSpanId,

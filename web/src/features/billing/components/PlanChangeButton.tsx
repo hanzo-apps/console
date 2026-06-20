@@ -1,4 +1,4 @@
-import { type planLabels } from "@hanzo/console-core";
+import { type planLabels } from "@hanzo/console";
 
 export const PlanChangeButton = (_props: {
   orgId: string | undefined;

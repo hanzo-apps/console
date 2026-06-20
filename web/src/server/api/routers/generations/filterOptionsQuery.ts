@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { timeFilter, type ObservationOptions } from "@hanzo/shared";
+import { timeFilter, type ObservationOptions } from "@hanzo/console";
 import { protectedProjectProcedure } from "@/src/server/api/trpc";
 import {
   getCategoricalScoresGroupedByName,
@@ -14,7 +14,7 @@ import {
   getTracesGroupedByName,
   getTracesGroupedByTags,
   tracesTableUiColumnDefinitions,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 
 export const filterOptionsQuery = protectedProjectProcedure
   .input(
@@ -37,7 +37,9 @@ export const filterOptionsQuery = protectedProjectProcedure
           }))
         : [];
 
-    const getClickhouseTraceName = async (): Promise<Array<{ traceName: string }>> => {
+    const getDatastoreTraceName = async (): Promise<
+      Array<{ traceName: string }>
+    > => {
       const traces = await getTracesGroupedByName(
         input.projectId,
         tracesTableUiColumnDefinitions,
@@ -46,7 +48,7 @@ export const filterOptionsQuery = protectedProjectProcedure
       return traces.map((i) => ({ traceName: i.name }));
     };
 
-    const getClickhouseTraceTags = async (): Promise<Array<{ tag: string }>> => {
+    const getDatastoreTraceTags = async (): Promise<Array<{ tag: string }>> => {
       const traces = await getTracesGroupedByTags({
         projectId: input.projectId,
         filter: traceTimestampFilters,
@@ -75,28 +77,38 @@ export const filterOptionsQuery = protectedProjectProcedure
       //name
       getObservationsGroupedByName(input.projectId, startTimeFilter ?? []),
       //prompt name
-      getObservationsGroupedByPromptName(input.projectId, startTimeFilter ?? []),
+      getObservationsGroupedByPromptName(
+        input.projectId,
+        startTimeFilter ?? [],
+      ),
       //trace name
-      getClickhouseTraceName(),
+      getDatastoreTraceName(),
       // trace tags
-      getClickhouseTraceTags(),
+      getDatastoreTraceTags(),
       // modelId
       getObservationsGroupedByModelId(input.projectId, startTimeFilter ?? []),
       // available tool names (from tool_definitions)
       getObservationsGroupedByToolName(input.projectId, startTimeFilter ?? []),
       // called tool names (from tool_call_names)
-      getObservationsGroupedByCalledToolName(input.projectId, startTimeFilter ?? []),
+      getObservationsGroupedByCalledToolName(
+        input.projectId,
+        startTimeFilter ?? [],
+      ),
     ]);
 
     // typecheck filter options, needs to include all columns with options
     const res: ObservationOptions = {
-      model: model.filter((i) => i.model !== null).map((i) => ({ value: i.model as string })),
+      model: model
+        .filter((i) => i.model !== null)
+        .map((i) => ({ value: i.model as string })),
       modelId: modelId
         .filter((i) => i.modelId !== null)
         .map((i) => ({
           value: i.modelId as string,
         })),
-      name: name.filter((i) => i.name !== null).map((i) => ({ value: i.name as string })),
+      name: name
+        .filter((i) => i.name !== null)
+        .map((i) => ({ value: i.name as string })),
       traceName: traceNames
         .filter((i) => i.traceName !== null)
         .map((i) => ({

@@ -1,13 +1,13 @@
 export type ExperimentsAccessInput = {
-  isLangfuseCloud: boolean;
+  isConsoleCloud: boolean;
   isV4BetaEnabled: boolean;
 };
 
 export function getExperimentsAccess({
-  isLangfuseCloud,
+  isConsoleCloud,
   isV4BetaEnabled,
 }: ExperimentsAccessInput) {
   return {
-    isEnabled: isLangfuseCloud && isV4BetaEnabled,
+    isEnabled: isConsoleCloud && isV4BetaEnabled,
   };
 }

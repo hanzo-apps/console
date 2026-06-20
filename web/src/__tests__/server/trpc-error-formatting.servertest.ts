@@ -1,7 +1,7 @@
 import type { Session } from "next-auth";
 import { TRPCError } from "@trpc/server";
 import * as z from "zod";
-import { ClickHouseResourceError } from "@langfuse/shared/src/server";
+import { ClickHouseResourceError } from "@hanzo/console/src/server";
 import {
   createInnerTRPCContext,
   createTRPCRouter,
@@ -17,7 +17,7 @@ describe("tRPC error formatting", () => {
     } as Session;
 
     const formatterTestRouter = createTRPCRouter({
-      clickhouse: protectedProcedureWithoutTracing
+      datastore: protectedProcedureWithoutTracing
         .input(z.object({}))
         .query(() => {
           throw new ClickHouseResourceError(
@@ -40,7 +40,7 @@ describe("tRPC error formatting", () => {
 
     let error: TRPCError | undefined;
     try {
-      await caller.clickhouse({});
+      await caller.datastore({});
     } catch (caught) {
       error = caught as TRPCError;
     }

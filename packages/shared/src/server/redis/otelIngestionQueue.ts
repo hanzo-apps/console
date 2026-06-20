@@ -83,31 +83,23 @@ export class OtelIngestionQueue {
 }
 
 export class SecondaryOtelIngestionQueue {
-  private static instances: Map<
-    number,
-    Queue<TQueueJobTypes[QueueName.OtelIngestionSecondaryQueue]> | null
-  > = new Map();
+  private static instances: Map<number, Queue<TQueueJobTypes[QueueName.OtelIngestionSecondaryQueue]> | null> =
+    new Map();
 
   public static getShardNames() {
     return Array.from(
-      { length: env.LANGFUSE_OTEL_INGESTION_SECONDARY_QUEUE_SHARD_COUNT },
-      (_, i) =>
-        `${QueueName.OtelIngestionSecondaryQueue}${i > 0 ? `-${i}` : ""}`,
+      { length: env.HANZO_OTEL_INGESTION_SECONDARY_QUEUE_SHARD_COUNT },
+      (_, i) => `${QueueName.OtelIngestionSecondaryQueue}${i > 0 ? `-${i}` : ""}`,
     );
   }
 
-  static getShardIndexFromShardName(
-    shardName: string | undefined,
-  ): number | null {
+  static getShardIndexFromShardName(shardName: string | undefined): number | null {
     if (!shardName) return null;
 
     const shardIndex =
       shardName === QueueName.OtelIngestionSecondaryQueue
         ? 0
-        : parseInt(
-            shardName.replace(`${QueueName.OtelIngestionSecondaryQueue}-`, ""),
-            10,
-          );
+        : parseInt(shardName.replace(`${QueueName.OtelIngestionSecondaryQueue}-`, ""), 10);
 
     if (isNaN(shardIndex)) return null;
     return shardIndex;
@@ -128,10 +120,7 @@ export class SecondaryOtelIngestionQueue {
     const shardIndex =
       SecondaryOtelIngestionQueue.getShardIndexFromShardName(shardName) ??
       (env.REDIS_CLUSTER_ENABLED === "true" && shardingKey
-        ? getShardIndex(
-            shardingKey,
-            env.LANGFUSE_OTEL_INGESTION_SECONDARY_QUEUE_SHARD_COUNT,
-          )
+        ? getShardIndex(shardingKey, env.HANZO_OTEL_INGESTION_SECONDARY_QUEUE_SHARD_COUNT)
         : 0);
 
     if (SecondaryOtelIngestionQueue.instances.has(shardIndex)) {
@@ -161,10 +150,7 @@ export class SecondaryOtelIngestionQueue {
       : null;
 
     queueInstance?.on("error", (err) => {
-      logger.error(
-        `SecondaryOtelIngestionQueue shard ${shardIndex} error`,
-        err,
-      );
+      logger.error(`SecondaryOtelIngestionQueue shard ${shardIndex} error`, err);
     });
 
     SecondaryOtelIngestionQueue.instances.set(shardIndex, queueInstance);

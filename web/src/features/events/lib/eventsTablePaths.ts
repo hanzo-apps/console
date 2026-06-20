@@ -1,4 +1,4 @@
-import { type FilterState } from "@langfuse/shared";
+import { type FilterState } from "@hanzo/console";
 import { encodeFiltersGeneric } from "@/src/features/filters/lib/filter-query-encoding";
 
 type BuildEventsTablePathForSpanNameParams = {

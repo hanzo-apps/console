@@ -5,7 +5,10 @@ import {
   useRowHeightLocalStorage,
 } from "@/src/components/table/data-table-row-height-switch";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { DataTableControlsProvider, DataTableControls } from "@/src/components/table/data-table-controls";
+import {
+  DataTableControlsProvider,
+  DataTableControls,
+} from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import TableLink from "@/src/components/table/table-link";
 import { type ConsoleColumnDef } from "@/src/components/table/types";
@@ -16,7 +19,7 @@ import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFi
 import { evalLogFilterConfig } from "@/src/features/filters/config/eval-logs-config";
 import { type RouterOutputs, api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
-import { type Prisma } from "@hanzo/console-core";
+import { type Prisma } from "@hanzo/console";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useQueryParams, withDefault, NumberParam } from "use-query-params";
 
@@ -133,7 +136,11 @@ export default function EvalLogTable({
       ),
       cell: (row) => {
         const value = row.getValue();
-        return value !== undefined && <IOTableCell data={value} singleLine={rowHeight === "s"} />;
+        return (
+          value !== undefined && (
+            <IOTableCell data={value} singleLine={rowHeight === "s"} />
+          )
+        );
       },
     }),
     columnHelper.accessor("error", {
@@ -151,7 +158,11 @@ export default function EvalLogTable({
       ),
       cell: (row) => {
         const value = row.getValue();
-        return value !== undefined && <IOTableCell data={value} singleLine={rowHeight === "s"} />;
+        return (
+          value !== undefined && (
+            <IOTableCell data={value} singleLine={rowHeight === "s"} />
+          )
+        );
       },
     }),
     columnHelper.accessor("traceId", {
@@ -160,7 +171,10 @@ export default function EvalLogTable({
       cell: (row) => {
         const traceId = row.getValue();
         return traceId ? (
-          <TableLink path={`/project/${projectId}/traces/${encodeURIComponent(traceId)}`} value={traceId} />
+          <TableLink
+            path={`/project/${projectId}/traces/${encodeURIComponent(traceId)}`}
+            value={traceId}
+          />
         ) : undefined;
       },
     }),
@@ -171,7 +185,10 @@ export default function EvalLogTable({
       cell: (row) => {
         const sessionId = row.getValue();
         return sessionId ? (
-          <TableLink path={`/project/${projectId}/sessions/${encodeURIComponent(sessionId)}`} value={sessionId} />
+          <TableLink
+            path={`/project/${projectId}/sessions/${encodeURIComponent(sessionId)}`}
+            value={sessionId}
+          />
         ) : undefined;
       },
     }),
@@ -182,7 +199,10 @@ export default function EvalLogTable({
       cell: (row) => {
         const traceId = row.getValue();
         return traceId ? (
-          <TableLink path={`/project/${projectId}/traces/${encodeURIComponent(traceId)}`} value={traceId} />
+          <TableLink
+            path={`/project/${projectId}/traces/${encodeURIComponent(traceId)}`}
+            value={traceId}
+          />
         ) : undefined;
       },
     }),
@@ -209,21 +229,27 @@ export default function EvalLogTable({
         cell: (row) => {
           const evaluatorId = row.getValue();
           return evaluatorId ? (
-            <TableLink path={`/project/${projectId}/evals/${encodeURIComponent(evaluatorId)}`} value={evaluatorId} />
+            <TableLink
+              path={`/project/${projectId}/evals/${encodeURIComponent(evaluatorId)}`}
+              value={evaluatorId}
+            />
           ) : undefined;
         },
       }) as ConsoleColumnDef<JobExecutionRow>,
     );
   }
 
-  const [columnVisibility, setColumnVisibility] = useColumnVisibility<JobExecutionRow>(
-    "evalLogColumnVisibility",
+  const [columnVisibility, setColumnVisibility] =
+    useColumnVisibility<JobExecutionRow>("evalLogColumnVisibility", columns);
+
+  const [columnOrder, setColumnOrder] = useColumnOrder<JobExecutionRow>(
+    "evalLogColumnOrder",
     columns,
   );
 
-  const [columnOrder, setColumnOrder] = useColumnOrder<JobExecutionRow>("evalLogColumnOrder", columns);
-
-  const convertToTableRow = (jobConfig: RouterOutputs["evals"]["getLogs"]["data"][number]): JobExecutionRow => {
+  const convertToTableRow = (
+    jobConfig: RouterOutputs["evals"]["getLogs"]["data"][number],
+  ): JobExecutionRow => {
     return {
       status: jobConfig.status,
       scoreName: jobConfig.score?.name ?? undefined,
@@ -277,7 +303,9 @@ export default function EvalLogTable({
                     : {
                         isLoading: false,
                         isError: false,
-                        data: safeExtract(logs.data, "data", []).map((t) => convertToTableRow(t)),
+                        data: safeExtract(logs.data, "data", []).map((t) =>
+                          convertToTableRow(t),
+                        ),
                       }
               }
               pagination={{

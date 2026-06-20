@@ -11,8 +11,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/src/components/ui/table";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 import { DialogDescription } from "@radix-ui/react-dialog";
@@ -38,7 +45,9 @@ export function LlmApiKeyList(props: { projectId: string }) {
     },
   );
 
-  const hasExtraHeaderKeys = apiKeys.data?.data.some((key) => key.extraHeaderKeys.length > 0);
+  const hasExtraHeaderKeys = apiKeys.data?.data.some(
+    (key) => key.extraHeaderKeys.length > 0,
+  );
 
   if (!hasAccess) {
     return (
@@ -46,7 +55,9 @@ export function LlmApiKeyList(props: { projectId: string }) {
         <Header title="LLM Connections" />
         <Alert>
           <AlertTitle>Access Denied</AlertTitle>
-          <AlertDescription>You do not have permission to view LLM API keys for this project.</AlertDescription>
+          <AlertDescription>
+            You do not have permission to view LLM API keys for this project.
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -56,18 +67,26 @@ export function LlmApiKeyList(props: { projectId: string }) {
     <div id="llm-api-keys">
       <Header title="LLM Connections" />
       <p className="mb-4 text-sm">
-        Connect your LLM services to enable evaluations and playground features. Your provider will charge based on
-        usage.
+        Connect your LLM services to enable evaluations and playground features.
+        Your provider will charge based on usage.
       </p>
       <Card className="mb-4 overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-primary md:table-cell">Provider</TableHead>
-              <TableHead className="text-primary md:table-cell">Adapter</TableHead>
-              <TableHead className="text-primary md:table-cell">Base URL</TableHead>
+              <TableHead className="text-primary md:table-cell">
+                Provider
+              </TableHead>
+              <TableHead className="text-primary md:table-cell">
+                Adapter
+              </TableHead>
+              <TableHead className="text-primary md:table-cell">
+                Base URL
+              </TableHead>
               <TableHead className="text-primary">API Key</TableHead>
-              {hasExtraHeaderKeys ? <TableHead className="text-primary">Extra headers</TableHead> : null}
+              {hasExtraHeaderKeys ? (
+                <TableHead className="text-primary">Extra headers</TableHead>
+              ) : null}
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -91,11 +110,20 @@ export function LlmApiKeyList(props: { projectId: string }) {
                 >
                   <TableCell className="font-mono">{apiKey.provider}</TableCell>
                   <TableCell className="font-mono">{apiKey.adapter}</TableCell>
-                  <TableCell className="max-w-md overflow-auto font-mono">{apiKey.baseURL ?? "default"}</TableCell>
-                  <TableCell className="font-mono">{apiKey.displaySecretKey}</TableCell>
-                  {hasExtraHeaderKeys ? <TableCell> {apiKey.extraHeaderKeys.join(", ")} </TableCell> : null}
+                  <TableCell className="max-w-md overflow-auto font-mono">
+                    {apiKey.baseURL ?? "default"}
+                  </TableCell>
+                  <TableCell className="font-mono">
+                    {apiKey.displaySecretKey}
+                  </TableCell>
+                  {hasExtraHeaderKeys ? (
+                    <TableCell> {apiKey.extraHeaderKeys.join(", ")} </TableCell>
+                  ) : null}
                   <TableCell className="text-right">
-                    <div className="flex justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="flex justify-end space-x-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <UpdateLLMApiKeyDialog
                         apiKey={apiKey}
                         projectId={props.projectId}
@@ -108,7 +136,10 @@ export function LlmApiKeyList(props: { projectId: string }) {
                           }
                         }}
                       />
-                      <DeleteApiKeyButton projectId={props.projectId} apiKeyId={apiKey.id} />
+                      <DeleteApiKeyButton
+                        projectId={props.projectId}
+                        apiKeyId={apiKey.id}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -124,7 +155,7 @@ export function LlmApiKeyList(props: { projectId: string }) {
 
 // show dialog to let user confirm that this is a destructive action
 function DeleteApiKeyButton(props: { projectId: string; apiKeyId: string }) {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const hasAccess = useHasProjectAccess({
     projectId: props.projectId,
     scope: "llmApiKeys:delete",
@@ -149,7 +180,8 @@ function DeleteApiKeyButton(props: { projectId: string; apiKeyId: string }) {
         <DialogHeader>
           <DialogTitle className="mb-5">Delete LLM Connection</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this connection? This action cannot be undone.
+            Are you sure you want to delete this connection? This action cannot
+            be undone.
           </DialogDescription>
         </DialogHeader>
 

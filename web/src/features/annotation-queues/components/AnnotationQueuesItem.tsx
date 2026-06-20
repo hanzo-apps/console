@@ -1,11 +1,16 @@
 import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/src/components/ui/tooltip";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { SupportOrUpgradePage } from "@/src/ee/features/billing/components/SupportOrUpgradePage";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { AnnotationQueueItemPage } from "@/src/features/annotation-queues/components/AnnotationQueueItemPage";
 import { api } from "@/src/utils/api";
-import { AnnotationQueueObjectType } from "@hanzo/shared";
+import { AnnotationQueueObjectType } from "@hanzo/console";
 import { Goal, Network } from "lucide-react";
 import Page from "@/src/components/layouts/page";
 
@@ -47,9 +52,14 @@ export const AnnotationQueuesItem = ({
     { enabled: !!itemId },
   );
 
-  const [view, setView] = useSessionStorage<"hideTree" | "showTree">(`annotationQueueView-${projectId}`, "hideTree");
+  const [view, setView] = useSessionStorage<"hideTree" | "showTree">(
+    `annotationQueueView-${projectId}`,
+    "hideTree",
+  );
 
-  const isSessionItem = !!currentItemType.data && currentItemType.data === AnnotationQueueObjectType.SESSION;
+  const isSessionItem =
+    !!currentItemType.data &&
+    currentItemType.data === AnnotationQueueObjectType.SESSION;
   const isDetailedViewDisabled = isSessionItem;
 
   if (!hasAccess) return <SupportOrUpgradePage />;
@@ -57,7 +67,9 @@ export const AnnotationQueuesItem = ({
   return (
     <Page
       headerProps={{
-        title: itemId ? `${queue.data?.name}: ${itemId}` : (queue.data?.name ?? annotationQueueId),
+        title: itemId
+          ? `${queue.data?.name}: ${itemId}`
+          : (queue.data?.name ?? annotationQueueId),
         itemType: "QUEUE_ITEM",
         breadcrumb: [
           {
@@ -90,7 +102,11 @@ export const AnnotationQueuesItem = ({
                       <TabsTrigger
                         value="showTree"
                         disabled={isDetailedViewDisabled}
-                        className={isDetailedViewDisabled ? "cursor-not-allowed opacity-50" : ""}
+                        className={
+                          isDetailedViewDisabled
+                            ? "cursor-not-allowed opacity-50"
+                            : ""
+                        }
                       >
                         <Network className="mr-1 h-4 w-4"></Network>
                         Detailed
@@ -99,7 +115,10 @@ export const AnnotationQueuesItem = ({
                   </TooltipTrigger>
                   {isDetailedViewDisabled && (
                     <TooltipContent>
-                      <p>Detailed view is only available for traces and observations</p>
+                      <p>
+                        Detailed view is only available for traces and
+                        observations
+                      </p>
                     </TooltipContent>
                   )}
                 </Tooltip>

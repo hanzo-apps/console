@@ -1,13 +1,12 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "vitest";
 import { env } from "../env";
 import { randomUUID } from "crypto";
-import { StorageService, StorageServiceFactory } from "@hanzo/console-core/src/server";
+import { StorageService, StorageServiceFactory } from "@hanzo/console/src/server";
 
 const { Readable } = require("stream");
 
 const describeIfConnectionValidationSupported =
-  env.LANGFUSE_USE_OCI_NATIVE_OBJECT_STORAGE === "true" ||
-  env.LANGFUSE_USE_GOOGLE_CLOUD_STORAGE === "true"
+  env.LANGFUSE_USE_OCI_NATIVE_OBJECT_STORAGE === "true" || env.LANGFUSE_USE_GOOGLE_CLOUD_STORAGE === "true"
     ? describe.skip
     : describe;
 
@@ -272,27 +271,23 @@ describe("StorageService", () => {
 
       const fileName = `${s3Prefix}${randomUUID()}.json`;
       const data = [{ hello: "validated world" }];
-      const endpointHost = new URL(env.LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT)
-        .hostname;
-      const storageServiceWithConnectionValidation =
-        StorageServiceFactory.getInstance({
-          accessKeyId: env.LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID,
-          secretAccessKey: env.LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY,
-          bucketName: env.LANGFUSE_S3_EVENT_UPLOAD_BUCKET,
-          endpoint: env.LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT,
-          region: env.LANGFUSE_S3_EVENT_UPLOAD_REGION,
-          forcePathStyle:
-            env.LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE === "true",
-          connectionValidation: {
-            whitelist: { hosts: [endpointHost], ips: [], ip_ranges: [] },
-            logContext: "Blob storage endpoint",
-          },
-        });
+      const endpointHost = new URL(env.LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT).hostname;
+      const storageServiceWithConnectionValidation = StorageServiceFactory.getInstance({
+        accessKeyId: env.LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID,
+        secretAccessKey: env.LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY,
+        bucketName: env.LANGFUSE_S3_EVENT_UPLOAD_BUCKET,
+        endpoint: env.LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT,
+        region: env.LANGFUSE_S3_EVENT_UPLOAD_REGION,
+        forcePathStyle: env.LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE === "true",
+        connectionValidation: {
+          whitelist: { hosts: [endpointHost], ips: [], ip_ranges: [] },
+          logContext: "Blob storage endpoint",
+        },
+      });
 
       await storageServiceWithConnectionValidation.uploadJson(fileName, data);
 
-      const file =
-        await storageServiceWithConnectionValidation.download(fileName);
+      const file = await storageServiceWithConnectionValidation.download(fileName);
       expect(JSON.parse(file)).toEqual(data);
     });
 
@@ -303,8 +298,7 @@ describe("StorageService", () => {
         bucketName: env.LANGFUSE_S3_EVENT_UPLOAD_BUCKET,
         endpoint: "http://localhost:1",
         region: env.LANGFUSE_S3_EVENT_UPLOAD_REGION,
-        forcePathStyle:
-          env.LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE === "true",
+        forcePathStyle: env.LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE === "true",
         awsSse: undefined,
         awsSseKmsKeyId: undefined,
         connectionValidation: {
@@ -313,9 +307,7 @@ describe("StorageService", () => {
         },
       });
 
-      const error = await blockedStorageService
-        .uploadJson("test.json", [])
-        .catch((err: unknown) => err);
+      const error = await blockedStorageService.uploadJson("test.json", []).catch((err: unknown) => err);
 
       const expectedMessage =
         env.LANGFUSE_USE_AZURE_BLOB === "true"

@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from "react";
-import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import { env } from "@/src/env.mjs";
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 
@@ -18,8 +18,11 @@ import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
  * @param navigation - Full navigation array for finding active item
  * @returns Metadata object with title and icon paths
  */
-export function useLayoutMetadata(activePathName: string | undefined, _navigation: NavigationItem[]) {
-  const { region } = useHanzoCloudRegion();
+export function useLayoutMetadata(
+  activePathName: string | undefined,
+  _navigation: NavigationItem[],
+) {
+  const { region } = useConsoleCloudRegion();
 
   return useMemo(() => {
     const basePath = env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -29,7 +32,8 @@ export function useLayoutMetadata(activePathName: string | undefined, _navigatio
 
     // Use dev favicon in DEV region for visual distinction
     // Using SVG for modern browsers with PNG fallback specified in sizes
-    const faviconPath = region === "DEV" ? `${basePath}/icon-dev.svg` : `${basePath}/icon.svg`;
+    const faviconPath =
+      region === "DEV" ? `${basePath}/icon-dev.svg` : `${basePath}/icon.svg`;
 
     return {
       title,

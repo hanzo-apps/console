@@ -3,8 +3,8 @@ import {
   GetScoreResponseV2,
   InternalServerError,
   LangfuseNotFoundError,
-} from "@langfuse/shared";
-import { logger, traceException } from "@langfuse/shared/src/server";
+} from "@hanzo/console";
+import { logger, traceException } from "@hanzo/console/src/server";
 import { defineTool } from "../../../core/define-tool";
 import { runMcpTool } from "../../../core/run-mcp-tool";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";

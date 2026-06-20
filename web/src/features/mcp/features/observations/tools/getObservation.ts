@@ -1,6 +1,6 @@
-import { LangfuseNotFoundError } from "@langfuse/shared";
+import { LangfuseNotFoundError } from "@hanzo/console";
 import { z } from "zod";
-import { getObservationsV2FromEventsTableForPublicApi } from "@langfuse/shared/src/server";
+import { getObservationsV2FromEventsTableForPublicApi } from "@hanzo/console/src/server";
 import { defineTool } from "../../../core/define-tool";
 import { runMcpTool } from "../../../core/run-mcp-tool";
 import {

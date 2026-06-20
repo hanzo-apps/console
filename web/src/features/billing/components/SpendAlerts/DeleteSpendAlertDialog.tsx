@@ -9,7 +9,7 @@ import {
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { api } from "@/src/utils/api";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { toast } from "sonner";
 
 interface DeleteSpendAlertDialogProps {
@@ -20,9 +20,15 @@ interface DeleteSpendAlertDialogProps {
   onSuccess: () => void;
 }
 
-export function DeleteSpendAlertDialog({ orgId, alertId, open, onOpenChange, onSuccess }: DeleteSpendAlertDialogProps) {
+export function DeleteSpendAlertDialog({
+  orgId,
+  alertId,
+  open,
+  onOpenChange,
+  onSuccess,
+}: DeleteSpendAlertDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const deleteMutation = api.spendAlerts.deleteSpendAlert.useMutation();
 
@@ -53,15 +59,24 @@ export function DeleteSpendAlertDialog({ orgId, alertId, open, onOpenChange, onS
         <DialogHeader>
           <DialogTitle>Delete Spend Alert</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this spend alert? This action cannot be undone and you will no longer
-            receive notifications for this threshold.
+            Are you sure you want to delete this spend alert? This action cannot
+            be undone and you will no longer receive notifications for this
+            threshold.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" disabled={isDeleting} onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            disabled={isDeleting}
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
             {isDeleting ? "Deleting..." : "Delete Alert"}
           </Button>
         </DialogFooter>

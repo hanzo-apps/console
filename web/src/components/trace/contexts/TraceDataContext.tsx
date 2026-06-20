@@ -12,7 +12,7 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { type TraceDomain, type ScoreDomain } from "@hanzo/console-core";
+import { type TraceDomain, type ScoreDomain } from "@hanzo/console";
 import { type ObservationReturnTypeWithMetadata } from "@/src/server/api/routers/traces";
 import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 import { type TreeNode, type TraceSearchListItem } from "../lib/types";
@@ -24,7 +24,10 @@ import {
 import { useViewPreferences } from "./ViewPreferencesContext";
 import { useMergedScores } from "@/src/features/scores/lib/useMergedScores";
 
-type TraceType = Omit<WithStringifiedMetadata<TraceDomain>, "input" | "output"> & {
+type TraceType = Omit<
+  WithStringifiedMetadata<TraceDomain>,
+  "input" | "output"
+> & {
   input: string | null;
   output: string | null;
 };
@@ -131,8 +134,20 @@ export function TraceDataProvider({
       hiddenObservationsCount,
       comments,
     }),
-    [trace, observations, serverScores, mergedScores, corrections, uiData, comments],
+    [
+      trace,
+      observations,
+      serverScores,
+      mergedScores,
+      corrections,
+      uiData,
+      comments,
+    ],
   );
 
-  return <TraceDataContext.Provider value={value}>{children}</TraceDataContext.Provider>;
+  return (
+    <TraceDataContext.Provider value={value}>
+      {children}
+    </TraceDataContext.Provider>
+  );
 }

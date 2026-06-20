@@ -14,7 +14,7 @@ import {
   buildEventsTablePathForSpanName,
 } from "@/src/features/events/lib/eventsTablePaths";
 import { copyTextToClipboard } from "@/src/utils/clipboard";
-import { type ObservationType } from "@langfuse/shared";
+import { type ObservationType } from "@hanzo/console";
 
 type IdItem = {
   name: string;

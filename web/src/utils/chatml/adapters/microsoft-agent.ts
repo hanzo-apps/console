@@ -1,1 +1,1 @@
-export { microsoftAgentAdapter } from "@hanzo/console-core";
+export { microsoftAgentAdapter } from "@hanzo/console";

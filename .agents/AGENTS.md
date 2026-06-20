@@ -97,10 +97,10 @@ langfuse/
 ```
 
 - Dependency direction:
-  - `web` -> `@langfuse/shared`, `@langfuse/ee`
-  - `worker` -> `@langfuse/shared`
-  - `@langfuse/ee` -> `@langfuse/shared`
-  - `@langfuse/shared` -> no imports from `web`, `worker`, or `ee`
+  - `web` -> `@hanzo/console`, `@langfuse/ee`
+  - `worker` -> `@hanzo/console`
+  - `@langfuse/ee` -> `@hanzo/console`
+  - `@hanzo/console` -> no imports from `web`, `worker`, or `ee`
 - Queue payload schemas and queue-name contracts are owned by
   `packages/shared/src/server/queues.ts`.
 - High-signal shared entry points:
@@ -134,8 +134,8 @@ Minimum verification matrix:
 | --- | --- |
 | `web/**` only | `pnpm --filter web run lint` + targeted web tests |
 | `worker/**` only | `pnpm --filter worker run lint` + targeted worker tests |
-| `packages/shared/**` (non-schema) | `pnpm --filter @langfuse/shared run lint` + one targeted web check + one targeted worker check |
-| `packages/shared/prisma/**` or `packages/shared/clickhouse/**` | `pnpm --filter @langfuse/shared run lint` + `pnpm run db:generate` + targeted web/worker regressions |
+| `packages/shared/**` (non-schema) | `pnpm --filter @hanzo/console run lint` + one targeted web check + one targeted worker check |
+| `packages/shared/prisma/**` or `packages/shared/clickhouse/**` | `pnpm --filter @hanzo/console run lint` + `pnpm run db:generate` + targeted web/worker regressions |
 | Public API contract (`web/src/pages/api/public/**`, `web/src/features/public-api/types/**`, `fern/apis/**`) | web lint + targeted server API tests + Fern update/regeneration; never hand-edit `generated/**` |
 | Cross-package refactor (`web` + `worker` + `shared`) | `pnpm run lint` + `pnpm run typecheck` + targeted tests per impacted package |
 

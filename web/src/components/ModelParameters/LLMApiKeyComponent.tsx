@@ -2,10 +2,13 @@ import Link from "next/link";
 
 import { Label } from "@hanzo/ui";
 import { api } from "@/src/utils/api";
-import { type UIModelParams } from "@hanzo/console-core";
+import { type UIModelParams } from "@hanzo/console";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 
-export const LLMApiKeyComponent = (p: { projectId: string; modelParams: UIModelParams }) => {
+export const LLMApiKeyComponent = (p: {
+  projectId: string;
+  modelParams: UIModelParams;
+}) => {
   const hasAccess = useHasProjectAccess({
     projectId: p.projectId,
     scope: "llmApiKeys:read",
@@ -15,7 +18,9 @@ export const LLMApiKeyComponent = (p: { projectId: string; modelParams: UIModelP
     return (
       <div>
         <Label className="text-xs font-semibold">API key</Label>
-        <p className="text-sm text-muted-foreground">LLM API Key only visible to Owner and Admin roles.</p>
+        <p className="text-muted-foreground text-sm">
+          LLM API Key only visible to Owner and Admin roles.
+        </p>
       </div>
     );
   }
@@ -42,7 +47,9 @@ export const LLMApiKeyComponent = (p: { projectId: string; modelParams: UIModelP
       <div>
         {apiKey ? (
           <Link href={`/project/${p.projectId}/settings/llm-connections`}>
-            <span className="mr-2 rounded-sm bg-input p-1 text-xs">{apiKey.displaySecretKey}</span>
+            <span className="bg-input mr-2 rounded-sm p-1 text-xs">
+              {apiKey.displaySecretKey}
+            </span>
           </Link>
         ) : undefined}
       </div>

@@ -7,9 +7,9 @@ import type {
   PostModelsV1Body,
 } from "@/src/features/public-api/types/models";
 import { prismaToApiModelDefinition } from "@/src/features/public-api/types/models";
-import { InvalidRequestError, LangfuseNotFoundError } from "@langfuse/shared";
-import { Prisma, prisma } from "@langfuse/shared/src/db";
-import { clearModelCacheForProject } from "@langfuse/shared/src/server";
+import { InvalidRequestError, LangfuseNotFoundError } from "@hanzo/console";
+import { Prisma, prisma } from "@hanzo/console/src/db";
+import { clearModelCacheForProject } from "@hanzo/console/src/server";
 import type { z } from "zod";
 
 const modelPricingInclude = {

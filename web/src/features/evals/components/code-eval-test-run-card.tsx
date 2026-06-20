@@ -18,7 +18,7 @@ import {
   deepParseJson,
   EvalTargetObject,
   type EvalTemplate,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { ExternalLink, ListTree, Play, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";

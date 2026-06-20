@@ -4,13 +4,13 @@ import {
   createOrgProjectAndApiKey,
   getDeletedProjectWithMedia,
   getS3MediaStorageClient,
-} from "@langfuse/shared/src/server";
-import { prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 import { BatchProjectMediaCleaner } from "../features/batch-project-media-cleaner";
 
 // Mock S3 storage client and project selection query
-vi.mock("@langfuse/shared/src/server", async () => {
-  const actual = await vi.importActual("@langfuse/shared/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     getS3MediaStorageClient: vi.fn(),
@@ -33,9 +33,7 @@ vi.mock("../env", async () => {
 const mockDeleteFiles = vi.fn().mockResolvedValue(undefined);
 const mockS3Client = { deleteFiles: mockDeleteFiles };
 
-async function createTestMedia(
-  projectId: string,
-): Promise<{ id: string; bucketPath: string }> {
+async function createTestMedia(projectId: string): Promise<{ id: string; bucketPath: string }> {
   const mediaId = randomUUID();
   const bucketPath = `projects/${projectId}/media/${mediaId}`;
 
@@ -87,9 +85,7 @@ describe("BatchProjectMediaCleaner", () => {
 
     expect(await getMediaCount(projectId)).toBe(0);
 
-    const allDeletedPaths = mockDeleteFiles.mock.calls.flatMap(
-      (call) => call[0] as string[],
-    );
+    const allDeletedPaths = mockDeleteFiles.mock.calls.flatMap((call) => call[0] as string[]);
     expect(allDeletedPaths).toContain(media1.bucketPath);
     expect(allDeletedPaths).toContain(media2.bucketPath);
   });
@@ -126,9 +122,7 @@ describe("BatchProjectMediaCleaner", () => {
     await createTestMedia(newerProject);
 
     // Simulate getDeletedProjectWithMedia returning oldest first, then newer
-    vi.mocked(getDeletedProjectWithMedia)
-      .mockResolvedValueOnce(olderProject)
-      .mockResolvedValueOnce(newerProject);
+    vi.mocked(getDeletedProjectWithMedia).mockResolvedValueOnce(olderProject).mockResolvedValueOnce(newerProject);
 
     const processedProjects: string[] = [];
     mockDeleteFiles.mockImplementation(async (paths: string[]) => {

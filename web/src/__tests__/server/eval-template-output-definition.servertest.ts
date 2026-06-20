@@ -4,7 +4,7 @@ import {
   createCategoricalEvalOutputDefinition,
   createNumericEvalOutputDefinition,
   ScoreDataTypeEnum,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 
 describe("CreateEvalTemplateInputSchema", () => {
   const baseInput = {

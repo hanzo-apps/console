@@ -1,4 +1,4 @@
-import { type SsoProviderSchema } from "@/src/ee/features/multi-tenant-sso/types";
+import { type SsoProviderSchema } from "@/src/features/multi-tenant-sso/types";
 import { TRPCError } from "@trpc/server";
 
 const DISCOVERY_TIMEOUT_MS = 5000;

@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  LangfuseInternalTraceEnvironment,
-  prepareInternalTraceEvents,
-} from "@langfuse/shared/src/server";
+import { LangfuseInternalTraceEnvironment, prepareInternalTraceEvents } from "@hanzo/console/src/server";
 
 describe("prepareInternalTraceEvents", () => {
   it("sets the configured environment on every forwarded event", () => {
@@ -79,16 +76,10 @@ describe("prepareInternalTraceEvents", () => {
       environment: LangfuseInternalTraceEnvironment.PromptExperiments,
     });
 
-    expect(preparedEvents.map((event) => event.body.id)).not.toContain(
-      "blocked-span",
-    );
+    expect(preparedEvents.map((event) => event.body.id)).not.toContain("blocked-span");
     expect(preparedEvents).toHaveLength(5);
     expect(
-      preparedEvents.every(
-        (event) =>
-          event.body.environment ===
-          LangfuseInternalTraceEnvironment.PromptExperiments,
-      ),
+      preparedEvents.every((event) => event.body.environment === LangfuseInternalTraceEnvironment.PromptExperiments),
     ).toBe(true);
   });
 

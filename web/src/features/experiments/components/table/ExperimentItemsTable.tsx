@@ -25,7 +25,7 @@ import {
   BatchExportTableName,
   ActionId,
   BatchActionType,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { ExperimentFilterPills } from "./ExperimentFilterPills";
 import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
 import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-height-switch";

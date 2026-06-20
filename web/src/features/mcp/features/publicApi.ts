@@ -1,5 +1,5 @@
-import { CloudConfigSchema, type Plan } from "@langfuse/shared";
-import { prisma } from "@langfuse/shared/src/db";
+import { CloudConfigSchema, type Plan } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { getOrganizationPlanServerSide } from "@/src/features/entitlements/server/getPlan";
 import type { ServerContext } from "../types";
 

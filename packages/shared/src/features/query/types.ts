@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { singleFilter } from "@hanzo/console-core";
+import { singleFilter } from "../../types";
 
 export type ViewDeclarationType = z.infer<typeof viewDeclaration>;
 export type DimensionsDeclarationType = z.infer<typeof viewDeclaration>["dimensions"];
@@ -122,11 +122,7 @@ export const metricAggregations = z.enum([
 export function getValidAggregationsForMeasureType(
   measureType: string | undefined,
 ): z.infer<typeof metricAggregations>[] {
-  if (
-    measureType === "integer" ||
-    measureType === "decimal" ||
-    measureType === "number"
-  ) {
+  if (measureType === "integer" || measureType === "decimal" || measureType === "number") {
     return [...metricAggregations.options];
   }
   return ["count", "uniq"];

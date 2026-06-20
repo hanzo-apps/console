@@ -1,5 +1,13 @@
 import { Button } from "@/src/components/ui/button";
-import { X, Plus, ChevronDown, Link, MoreVertical, Pen, Lock } from "lucide-react";
+import {
+  X,
+  Plus,
+  ChevronDown,
+  Link,
+  MoreVertical,
+  Pen,
+  Lock,
+} from "lucide-react";
 import {
   DrawerTrigger,
   DrawerContent,
@@ -20,31 +28,55 @@ import {
 } from "@/src/components/ui/command";
 import { useViewMutations } from "@/src/components/table/table-view-presets/hooks/useViewMutations";
 import { cn } from "@/src/utils/tailwind";
-import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogBody } from "@/src/components/ui/dialog";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/src/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogBody,
+} from "@/src/components/ui/dialog";
 import { Input } from "@/src/components/ui/input";
-import { type VisibilityState, type ColumnOrderState } from "@tanstack/react-table";
+import {
+  type VisibilityState,
+  type ColumnOrderState,
+} from "@tanstack/react-table";
 import {
   type OrderByState,
   type FilterState,
   type TableViewPresetTableName,
   type TableViewPresetDomain,
-} from "@hanzo/shared";
+} from "@hanzo/console";
 import { useMemo, useState } from "react";
-import { DropdownMenuItem, DropdownMenuTrigger } from "@/src/components/ui/dropdown-menu";
+import {
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/src/components/ui/dropdown-menu";
 import { DropdownMenu } from "@/src/components/ui/dropdown-menu";
 import { DropdownMenuContent } from "@/src/components/ui/dropdown-menu";
 import { DeleteButton } from "@/src/components/deleteButton";
 import { api } from "@/src/utils/api";
 import { Popover, PopoverContent } from "@/src/components/ui/popover";
 import { PopoverTrigger } from "@/src/components/ui/popover";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/src/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/src/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { useUniqueNameValidation } from "@/src/hooks/useUniqueNameValidation";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 
 interface SystemPreset {
@@ -68,7 +100,7 @@ interface TableViewPresetsDrawerProps {
     controllers: {
       selectedViewId: string | null;
       handleSetViewId: (viewId: string | null) => void;
-      applyViewState: (viewData: TableViewPresetState) => void;
+      applyViewState: (viewData: TableViewPresetDomain) => void;
     };
   };
   currentState: {
@@ -84,15 +116,23 @@ function formatOrderBy(orderBy?: OrderByState) {
   return orderBy?.column ? `${orderBy.column} ${orderBy.order}` : "none";
 }
 
-export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPresetsDrawerProps) {
+export function TableViewPresetsDrawer({
+  viewConfig,
+  currentState,
+}: TableViewPresetsDrawerProps) {
   const [searchQuery, setSearchQueryLocal] = useState("");
   const { tableName, projectId, controllers } = viewConfig;
   const { handleSetViewId, applyViewState, selectedViewId } = controllers;
   const { TableViewPresetsList } = useViewData({ tableName, projectId });
-  const { createMutation, updateConfigMutation, updateNameMutation, deleteMutation, generatePermalinkMutation } =
-    useViewMutations({ handleSetViewId });
+  const {
+    createMutation,
+    updateConfigMutation,
+    updateNameMutation,
+    deleteMutation,
+    generatePermalinkMutation,
+  } = useViewMutations({ handleSetViewId });
   const utils = api.useUtils();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const form = useForm({
     resolver: zodResolver(z.object({ name: z.string().min(1) })),
@@ -110,7 +150,9 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
   const [isEditPopoverOpen, setIsEditPopoverOpen] = useState<boolean>(false);
   const [dropdownId, setDropdownId] = useState<string | null>(null);
 
-  const selectedViewName = TableViewPresetsList?.find((view) => view.id === selectedViewId)?.name;
+  const selectedViewName = TableViewPresetsList?.find(
+    (view) => view.id === selectedViewId,
+  )?.name;
 
   const allViewNames = useMemo(
     () => TableViewPresetsList?.map((view) => ({ value: view.name })) ?? [],
@@ -124,10 +166,16 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
     errorMessage: "View name already exists.",
   });
 
-  const handleSelectView = (view: TableViewPresetState & { id: string }) => {
+  const handleSelectView = async (viewId: string) => {
+    // Handle system preset - just select it like any view
+    if (viewId === SYSTEM_PRESETS.DEFAULT.id) {
+      handleSetViewId(null);
+      return;
+    }
+
     capture("saved_views:view_selected", {
       tableName,
-      viewId: view.id,
+      viewId,
     });
 
     handleSetViewId(viewId);
@@ -141,7 +189,11 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
         applyViewState(fetchedViewData);
       }
     } catch {
-      showErrorToast("Failed to apply view selection", "Please try again", "WARNING");
+      showErrorToast(
+        "Failed to apply view selection",
+        "Please try again",
+        "WARNING",
+      );
     }
   };
 
@@ -249,7 +301,6 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
   return (
     <>
       <Drawer
-        forceDirection="responsive-left"
         onOpenChange={(open) => {
           if (open) {
             capture("saved_views:drawer_open", { tableName });
@@ -264,13 +315,15 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
             {selectedViewId ? (
               <ChevronDown className="ml-1 h-4 w-4" />
             ) : (
-              <div className="ml-1 rounded-sm bg-input px-1 text-xs">{TableViewPresetsList?.length ?? 0}</div>
+              <div className="bg-input ml-1 rounded-sm px-1 text-xs">
+                {TableViewPresetsList?.length ?? 0}
+              </div>
             )}
           </Button>
         </DrawerTrigger>
         <DrawerContent overlayClassName="bg-primary/10">
           <div className="mx-auto w-full">
-            <DrawerHeader className="flex flex-row items-center justify-between rounded-sm bg-background px-3 py-2">
+            <DrawerHeader className="bg-background flex flex-row items-center justify-between rounded-sm px-3 py-2">
               <DrawerTitle className="flex flex-row items-center gap-1">
                 Saved Table Views{" "}
                 <a
@@ -304,14 +357,18 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                     key={SYSTEM_PRESETS.DEFAULT.id}
                     onSelect={() => handleSelectView(SYSTEM_PRESETS.DEFAULT.id)}
                     className={cn(
-                      "group mt-1 flex cursor-pointer items-center justify-between rounded-md p-2 transition-colors hover:bg-muted/50",
+                      "group hover:bg-muted/50 mt-1 flex cursor-pointer items-center justify-between rounded-md p-2 transition-colors",
                       selectedViewId === null && "bg-muted font-medium",
                     )}
                     title="Reflects your current table settings without applying any saved custom table views"
                   >
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-muted-foreground">{SYSTEM_PRESETS.DEFAULT.name}</span>
-                      <span className="w-fit pl-0 text-xs text-muted-foreground">Your working view</span>
+                      <span className="text-muted-foreground text-sm font-medium">
+                        {SYSTEM_PRESETS.DEFAULT.name}
+                      </span>
+                      <span className="text-muted-foreground w-fit pl-0 text-xs">
+                        Your working view
+                      </span>
                     </div>
                   </CommandItem>
 
@@ -321,7 +378,7 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                       key={view.id}
                       onSelect={() => handleSelectView(view.id)}
                       className={cn(
-                        "group mt-1 flex cursor-pointer items-center justify-between rounded-md p-2 transition-colors hover:bg-muted/50",
+                        "group hover:bg-muted/50 mt-1 flex cursor-pointer items-center justify-between rounded-md p-2 transition-colors",
                         selectedViewId === view.id && "bg-muted font-medium",
                       )}
                     >
@@ -333,7 +390,9 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                             size="xs"
                             className={cn(
                               "w-fit pl-0 text-xs",
-                              hasWriteAccess ? "text-primary-accent" : "text-muted-foreground",
+                              hasWriteAccess
+                                ? "text-primary-accent"
+                                : "text-muted-foreground",
                             )}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -411,10 +470,19 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                                     Edit
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent onClick={(e) => e.stopPropagation()}>
-                                  <h2 className="text-md mb-3 font-semibold">Edit</h2>
+                                <PopoverContent
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <h2 className="text-md mb-3 font-semibold">
+                                    Edit
+                                  </h2>
                                   <Form {...form}>
-                                    <form onSubmit={form.handleSubmit(onSubmit(view.id))} className="space-y-2">
+                                    <form
+                                      onSubmit={form.handleSubmit(
+                                        onSubmit(view.id),
+                                      )}
+                                      className="space-y-2"
+                                    >
                                       <FormField
                                         control={form.control}
                                         name="name"
@@ -422,7 +490,10 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                                           <FormItem>
                                             <FormLabel>View name</FormLabel>
                                             <FormControl>
-                                              <Input defaultValue={view.name} {...field} />
+                                              <Input
+                                                defaultValue={view.name}
+                                                {...field}
+                                              />
                                             </FormControl>
                                             <FormMessage />
                                           </FormItem>
@@ -433,7 +504,9 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                                         <Button
                                           type="submit"
                                           loading={updateNameMutation.isPending}
-                                          disabled={!!form.formState.errors.name}
+                                          disabled={
+                                            !!form.formState.errors.name
+                                          }
                                         >
                                           Save
                                         </Button>
@@ -452,7 +525,9 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                                 executeDeleteMutation={async () => {
                                   await handleDeleteView(view.id);
                                 }}
-                                isDeleteMutationLoading={deleteMutation.isPending}
+                                isDeleteMutationLoading={
+                                  deleteMutation.isPending
+                                }
                                 invalidateFunc={() => {
                                   utils.TableViewPresets.invalidate();
                                 }}
@@ -467,7 +542,7 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <div className="flex items-center text-xs text-muted-foreground">
+                        <div className="text-muted-foreground flex items-center text-xs">
                           <Avatar className="h-6 w-6">
                             <AvatarImage
                               src={view.createdByUser?.image ?? undefined}
@@ -525,7 +600,10 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
             <DialogTitle>Save Current Table View</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit())} className="space-y-4">
+            <form
+              onSubmit={form.handleSubmit(onSubmit())}
+              className="space-y-4"
+            >
               <DialogBody>
                 <FormField
                   control={form.control}
@@ -544,21 +622,34 @@ export function TableViewPresetsDrawer({ viewConfig, currentState }: TableViewPr
                 <div className="text-muted-foreground mt-4 text-sm">
                   <p>This will save the current:</p>
                   <ul className="mt-2 list-disc pl-5">
-                    <li>Column arrangement ({currentState.columnOrder.length} columns)</li>
+                    <li>
+                      Column arrangement ({currentState.columnOrder.length}{" "}
+                      columns)
+                    </li>
                     <li>Filters ({currentState.filters.length} active)</li>
-                    <li>Sort order ({formatOrderBy(currentState.orderBy)} criteria)</li>
+                    <li>
+                      Sort order ({formatOrderBy(currentState.orderBy)}{" "}
+                      criteria)
+                    </li>
                     {currentState.searchQuery && <li>Search term</li>}
                   </ul>
                 </div>
               </DialogBody>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={createMutation.isPending || !!form.formState.errors.name || !hasWriteAccess}
+                  disabled={
+                    createMutation.isPending ||
+                    !!form.formState.errors.name ||
+                    !hasWriteAccess
+                  }
                 >
                   {!hasWriteAccess && <Lock className="mr-2 h-4 w-4" />}
                   {createMutation.isPending ? "Saving..." : "Save View"}

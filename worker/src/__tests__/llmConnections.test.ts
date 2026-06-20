@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
-import { fetchLLMCompletion } from "@hanzo/console-core/src/server";
-import { encrypt } from "@hanzo/console-core/encryption";
-import { ChatMessageType, LLMAdapter } from "@hanzo/console-core";
+import { fetchLLMCompletion } from "@hanzo/console/src/server";
+import { encrypt } from "@hanzo/console/encryption";
+import { ChatMessageType, LLMAdapter } from "@hanzo/console";
 import { z } from "zod/v4";
 
 /**
@@ -53,10 +53,7 @@ type EvalStructuredOutputTestCase = {
   prompt: string;
   outputDefinition: PersistedEvalOutputDefinition;
   responseSchema: z.ZodTypeAny;
-  assertParsed?: (data: {
-    score: number | boolean | string;
-    reasoning: string;
-  }) => void;
+  assertParsed?: (data: { score: number | boolean | string; reasoning: string }) => void;
 };
 
 const evalStructuredOutputTestCases: EvalStructuredOutputTestCase[] = [
@@ -65,8 +62,7 @@ const evalStructuredOutputTestCases: EvalStructuredOutputTestCase[] = [
     prompt:
       "Evaluate whether the answer '2 + 2 = 4' is correct. Return a numeric score from 0 to 100 and explain the score.",
     outputDefinition: {
-      score:
-        "Return a numeric score from 0 to 100, where 100 means the answer is completely correct.",
+      score: "Return a numeric score from 0 to 100, where 100 means the answer is completely correct.",
       reasoning: "Explain briefly why you chose that score.",
     },
     responseSchema: numericEvalResponseSchema,
@@ -76,8 +72,7 @@ const evalStructuredOutputTestCases: EvalStructuredOutputTestCase[] = [
     prompt:
       "Evaluate whether the answer '2 + 2 = 4' is correct. Return a numeric score from 0 to 100 and explain the score.",
     outputDefinition: createNumericEvalOutputDefinition({
-      scoreDescription:
-        "Return a numeric score from 0 to 100, where 100 means the answer is completely correct.",
+      scoreDescription: "Return a numeric score from 0 to 100, where 100 means the answer is completely correct.",
       reasoningDescription: "Explain briefly why you chose that score.",
     }),
     responseSchema: numericEvalResponseSchema,
@@ -87,8 +82,7 @@ const evalStructuredOutputTestCases: EvalStructuredOutputTestCase[] = [
     prompt:
       "Judge whether the answer '2 + 2 = 5' is correct. Return true only if it is mathematically correct, otherwise false, and explain briefly.",
     outputDefinition: createBooleanEvalOutputDefinition({
-      scoreDescription:
-        "Return true when the answer is mathematically correct, otherwise return false.",
+      scoreDescription: "Return true when the answer is mathematically correct, otherwise return false.",
       reasoningDescription: "Explain briefly why you chose that verdict.",
     }),
     responseSchema: booleanEvalResponseSchema,
@@ -101,8 +95,7 @@ const evalStructuredOutputTestCases: EvalStructuredOutputTestCase[] = [
     prompt:
       "Judge whether the answer '2 + 2 = 5' is correct. Select the best matching category and explain the choice.",
     outputDefinition: createCategoricalEvalOutputDefinition({
-      scoreDescription:
-        "Select 'correct' when the answer is mathematically accurate, otherwise select 'incorrect'.",
+      scoreDescription: "Select 'correct' when the answer is mathematically accurate, otherwise select 'incorrect'.",
       reasoningDescription: "Explain briefly why you selected that category.",
       categories: ["correct", "incorrect"],
     }),
@@ -135,9 +128,7 @@ function registerEvalStructuredOutputTests(params: {
             },
           ],
           modelParams: params.getModelParams(),
-          structuredOutputSchema: buildEvalOutputResultSchema(
-            testCase.outputDefinition,
-          ),
+          structuredOutputSchema: buildEvalOutputResultSchema(testCase.outputDefinition),
           llmConnection: params.getLLMConnection(),
         });
 

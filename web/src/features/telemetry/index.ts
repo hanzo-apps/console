@@ -1,6 +1,6 @@
 import { VERSION } from "@/src/constants";
-import { ServerPosthog } from "@/src/features/posthog-analytics/ServerPosthog";
-import { Prisma, prisma } from "@hanzo/shared/src/db";
+import { ServerInsights } from "@/src/features/insights-analytics/ServerInsights";
+import { Prisma, prisma } from "@hanzo/console/src/db";
 import { v4 as uuidv4 } from "uuid";
 import {
   getDatasetRunItemCountsByProjectInCreationInterval,
@@ -8,7 +8,7 @@ import {
   getScoreCountsByProjectInCreationInterval,
   getTraceCountsByProjectInCreationInterval,
   logger,
-} from "@hanzo/shared/src/server";
+} from "@hanzo/console/src/server";
 import { env } from "@/src/env.mjs";
 
 // Interval between jobs in minutes
@@ -24,7 +24,11 @@ export async function telemetry() {
     // Do not run in Hanzo Cloud cloud, separate telemetry is used
     if (env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== undefined) return;
     // Check if telemetry is not disabled, except for EE
-    if (env.TELEMETRY_ENABLED === "false" && env.HANZO_EE_LICENSE_KEY === undefined) return;
+    if (
+      env.TELEMETRY_ENABLED === "false" &&
+      env.HANZO_EE_LICENSE_KEY === undefined
+    )
+      return;
     // Do not run in CI
     if (process.env.CI) return;
 
@@ -35,7 +39,7 @@ export async function telemetry() {
       const { jobStartedAt, lastRun, clientId } = job;
 
       // Run telemetry job
-      await posthogTelemetry({
+      await insightsTelemetry({
         startTimeframe: lastRun,
         endTimeframe: jobStartedAt,
         clientId,
@@ -142,7 +146,7 @@ async function jobScheduler(): Promise<
   return { shouldRunJob: true, jobStartedAt, lastRun, clientId };
 }
 
-async function posthogTelemetry({
+async function insightsTelemetry({
   startTimeframe,
   endTimeframe,
   clientId,
@@ -152,7 +156,7 @@ async function posthogTelemetry({
   clientId: string;
 }) {
   try {
-    const posthog = new ServerPosthog();
+    const insights = new ServerInsights();
     // Count projects
     const totalProjects = await prisma.project.count({
       where: {
@@ -161,25 +165,37 @@ async function posthogTelemetry({
     });
 
     // Count traces
-    const countTracesClickhouse = await getTraceCountsByProjectInCreationInterval({
-      start: startTimeframe ?? new Date(0),
-      end: endTimeframe,
-    });
-    const countTraces = countTracesClickhouse.reduce((acc, curr) => acc + curr.count, 0);
+    const countTracesDatastore =
+      await getTraceCountsByProjectInCreationInterval({
+        start: startTimeframe ?? new Date(0),
+        end: endTimeframe,
+      });
+    const countTraces = countTracesDatastore.reduce(
+      (acc, curr) => acc + curr.count,
+      0,
+    );
 
     // Count scores
-    const countScoresClickhouse = await getScoreCountsByProjectInCreationInterval({
-      start: startTimeframe ?? new Date(0),
-      end: endTimeframe,
-    });
-    const countScores = countScoresClickhouse.reduce((acc, curr) => acc + curr.count, 0);
+    const countScoresDatastore =
+      await getScoreCountsByProjectInCreationInterval({
+        start: startTimeframe ?? new Date(0),
+        end: endTimeframe,
+      });
+    const countScores = countScoresDatastore.reduce(
+      (acc, curr) => acc + curr.count,
+      0,
+    );
 
     // Count observations
-    const countObservationsClickhouse = await getObservationCountsByProjectInCreationInterval({
-      start: startTimeframe ?? new Date(0),
-      end: endTimeframe,
-    });
-    const countObservations = countObservationsClickhouse.reduce((acc, curr) => acc + curr.count, 0);
+    const countObservationsDatastore =
+      await getObservationCountsByProjectInCreationInterval({
+        start: startTimeframe ?? new Date(0),
+        end: endTimeframe,
+      });
+    const countObservations = countObservationsDatastore.reduce(
+      (acc, curr) => acc + curr.count,
+      0,
+    );
 
     // Count datasets
     const countDatasets = await prisma.dataset.count({
@@ -211,11 +227,15 @@ async function posthogTelemetry({
       },
     });
 
-    const countDatasetRunItemsClickhouse = await getDatasetRunItemCountsByProjectInCreationInterval({
-      start: startTimeframe ?? new Date(0),
-      end: endTimeframe,
-    });
-    const countDatasetRunItems = countDatasetRunItemsClickhouse.reduce((acc, curr) => acc + curr.count, 0);
+    const countDatasetRunItemsDatastore =
+      await getDatasetRunItemCountsByProjectInCreationInterval({
+        start: startTimeframe ?? new Date(0),
+        end: endTimeframe,
+      });
+    const countDatasetRunItems = countDatasetRunItemsDatastore.reduce(
+      (acc, curr) => acc + curr.count,
+      0,
+    );
 
     // Domains (no PII)
     const domains = await prisma.$queryRaw<Array<{ domain: string }>>`
@@ -229,7 +249,7 @@ async function posthogTelemetry({
       LIMIT 30
     `;
 
-    posthog.capture({
+    insights.capture({
       distinctId: "docker:" + clientId,
       event: "telemetry",
       properties: {
@@ -256,7 +276,7 @@ async function posthogTelemetry({
       },
     });
 
-    await posthog.shutdown();
+    await insights.shutdown();
   } catch (error) {
     logger.error(error);
   }

@@ -1,7 +1,10 @@
 import { api } from "@/src/utils/api";
-import { isSessionScore, isTraceScore } from "@/src/features/scores/lib/helpers";
+import {
+  isSessionScore,
+  isTraceScore,
+} from "@/src/features/scores/lib/helpers";
 import { useScoreCache } from "@/src/features/scores/contexts/ScoreCacheContext";
-import { type ScoreTarget } from "@hanzo/console-core";
+import { type ScoreTarget } from "@hanzo/console";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 
 export function useScoreMutations({
@@ -42,7 +45,9 @@ export function useScoreMutations({
         projectId: scoreMetadata.projectId,
         environment: scoreMetadata.environment ?? "default",
         traceId: isTraceScore(scoreTarget) ? scoreTarget.traceId : null,
-        observationId: isTraceScore(scoreTarget) ? (scoreTarget.observationId ?? null) : null,
+        observationId: isTraceScore(scoreTarget)
+          ? (scoreTarget.observationId ?? null)
+          : null,
         sessionId: isSessionScore(scoreTarget) ? scoreTarget.sessionId : null,
         configId: variables.configId,
         name: variables.name,
@@ -75,7 +80,9 @@ export function useScoreMutations({
           projectId: scoreMetadata.projectId,
           environment: scoreMetadata.environment ?? "default",
           traceId: isTraceScore(scoreTarget) ? scoreTarget.traceId : null,
-          observationId: isTraceScore(scoreTarget) ? (scoreTarget.observationId ?? null) : null,
+          observationId: isTraceScore(scoreTarget)
+            ? (scoreTarget.observationId ?? null)
+            : null,
           sessionId: isSessionScore(scoreTarget) ? scoreTarget.sessionId : null,
           configId: variables.configId,
           name: variables.name,

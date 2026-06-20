@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  AwsLambdaCodeEvalDispatcher,
-  CodeEvalDispatcherError,
-  type DispatchInput,
-} from "@langfuse/shared/src/server";
+import { AwsLambdaCodeEvalDispatcher, CodeEvalDispatcherError, type DispatchInput } from "@hanzo/console/src/server";
 
 const baseInput: DispatchInput = {
   scope: {
@@ -99,9 +95,7 @@ describe("AwsLambdaCodeEvalDispatcher", () => {
 
     await dispatcher.dispatch(input);
 
-    const lambdaPayload = JSON.parse(
-      Buffer.from(send.mock.calls[0][0].input.Payload).toString("utf8"),
-    );
+    const lambdaPayload = JSON.parse(Buffer.from(send.mock.calls[0][0].input.Payload).toString("utf8"));
     expect(lambdaPayload.payload).toEqual(input.payload);
   });
 
@@ -260,8 +254,7 @@ describe("AwsLambdaCodeEvalDispatcher", () => {
       FunctionError: "Unhandled",
       Payload: Buffer.from(
         JSON.stringify({
-          errorMessage:
-            "RequestId: abc Error: Runtime exited with error: signal: killed",
+          errorMessage: "RequestId: abc Error: Runtime exited with error: signal: killed",
           errorType: "Runtime.ExitError",
         }),
       ),

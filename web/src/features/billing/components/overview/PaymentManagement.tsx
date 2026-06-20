@@ -5,7 +5,7 @@ import { api } from "@/src/utils/api";
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
 import { stripeProducts } from "@/src/features/billing/utils/stripeProducts";
 import { useRouter } from "next/router";
-import { planLabels, type Plan } from "@hanzo/shared";
+import { planLabels, type Plan } from "@hanzo/console";
 
 export const PaymentManagement = () => {
   const router = useRouter();
@@ -39,16 +39,19 @@ export const PaymentManagement = () => {
   );
 
   // Mutation for creating checkout session
-  const createCheckoutSession = api.cloudBilling.createStripeCheckoutSession.useMutation();
+  const createCheckoutSession =
+    api.cloudBilling.createStripeCheckoutSession.useMutation();
 
   // Update this to use useQuery
-  const { data: customerPortalUrl } = api.cloudBilling.getStripeCustomerPortalUrl.useQuery(
-    { orgId: organization?.id ?? "" },
-    { enabled: !!organization },
-  );
+  const { data: customerPortalUrl } =
+    api.cloudBilling.getStripeCustomerPortalUrl.useQuery(
+      { orgId: organization?.id ?? "" },
+      { enabled: !!organization },
+    );
 
   // Add this near your other hooks
-  const cancelSubscription = api.cloudBilling.cancelStripeSubscription.useMutation();
+  const cancelSubscription =
+    api.cloudBilling.cancelStripeSubscription.useMutation();
 
   const handleAddCredits = async () => {
     const creditsProduct = stripeProducts.find((p) => p.id === "credits-plan");
@@ -76,11 +79,15 @@ export const PaymentManagement = () => {
   const availableCredits = orgDetails?.credits || 0;
 
   // Check for active subscription
-  const hasActiveSubscription = Boolean(organization?.cloudConfig?.stripe?.activeSubscriptionId);
+  const hasActiveSubscription = Boolean(
+    organization?.cloudConfig?.stripe?.activeSubscriptionId,
+  );
 
   // Format billing period end date
   const billingPeriodEnd = subscription?.billingPeriod?.end;
-  const nextBillingDate = billingPeriodEnd ? new Date(billingPeriodEnd).toLocaleDateString() : "N/A";
+  const nextBillingDate = billingPeriodEnd
+    ? new Date(billingPeriodEnd).toLocaleDateString()
+    : "N/A";
 
   const invoices = invoiceData?.invoices || [];
 
@@ -92,8 +99,10 @@ export const PaymentManagement = () => {
           <div>
             <h3 className="text-lg font-medium">Current Plan</h3>
             <h2 className="mt-2 text-2xl font-bold">{currentPlan}</h2>
-            <p className="text-sm text-muted-foreground">
-              {hasActiveSubscription ? "Active subscription" : "No active subscription"}
+            <p className="text-muted-foreground text-sm">
+              {hasActiveSubscription
+                ? "Active subscription"
+                : "No active subscription"}
             </p>
           </div>
           <Button variant="outline" onClick={() => router.push("/pricing")}>
@@ -101,7 +110,9 @@ export const PaymentManagement = () => {
           </Button>
         </div>
         <div className="mt-4 flex items-center justify-between border-t pt-4">
-          <p className="text-sm text-muted-foreground">Next billing date: {nextBillingDate}</p>
+          <p className="text-muted-foreground text-sm">
+            Next billing date: {nextBillingDate}
+          </p>
           {hasActiveSubscription && (
             <Button
               variant="ghost"
@@ -128,12 +139,12 @@ export const PaymentManagement = () => {
           </Button>
         </div>
         <div className="mt-4 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-            <span className="text-xl font-bold text-primary-foreground">$</span>
+          <div className="bg-primary flex h-12 w-12 items-center justify-center rounded-full">
+            <span className="text-primary-foreground text-xl font-bold">$</span>
           </div>
           <div>
             <p className="text-2xl font-bold">${availableCredits.toFixed(2)}</p>
-            <p className="text-sm text-muted-foreground">Available credits</p>
+            <p className="text-muted-foreground text-sm">Available credits</p>
           </div>
         </div>
       </Card>
@@ -150,9 +161,13 @@ export const PaymentManagement = () => {
           <CreditCard className="h-6 w-6" />
           <div>
             <p className="font-medium">
-              {subscription?.hasValidPaymentMethod ? "Payment method on file" : "No payment method"}
+              {subscription?.hasValidPaymentMethod
+                ? "Payment method on file"
+                : "No payment method"}
             </p>
-            <p className="text-sm text-muted-foreground">Manage your payment method in Stripe Portal</p>
+            <p className="text-muted-foreground text-sm">
+              Manage your payment method in Stripe Portal
+            </p>
           </div>
         </div>
       </Card>
@@ -167,22 +182,32 @@ export const PaymentManagement = () => {
         </div>
         <div className="mt-4 space-y-4">
           {invoices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No invoices yet</p>
+            <p className="text-muted-foreground text-sm">No invoices yet</p>
           ) : (
             invoices.map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between border-b pb-4 last:border-0">
+              <div
+                key={invoice.id}
+                className="flex items-center justify-between border-b pb-4 last:border-0"
+              >
                 <div className="flex items-center gap-3">
                   <div className="text-sm">
-                    <p className="font-medium">{invoice.number || invoice.id}</p>
-                    <p className="text-muted-foreground">
-                      {invoice.created ? new Date(invoice.created * 1000).toLocaleDateString() : "N/A"}
+                    <p className="font-medium">
+                      {invoice.number || invoice.id}
                     </p>
-                    <p className="text-xs capitalize text-muted-foreground">{invoice.status || "Unknown"}</p>
+                    <p className="text-muted-foreground">
+                      {invoice.created
+                        ? new Date(invoice.created * 1000).toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                    <p className="text-muted-foreground text-xs capitalize">
+                      {invoice.status || "Unknown"}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-medium">
-                    {invoice.currency?.toUpperCase()} {(invoice.breakdown.totalCents / 100).toFixed(2)}
+                    {invoice.currency?.toUpperCase()}{" "}
+                    {(invoice.breakdown.totalCents / 100).toFixed(2)}
                   </p>
                   <Button
                     variant="ghost"

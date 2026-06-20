@@ -5,23 +5,23 @@ import {
   isRow,
   isException,
   ClickHouseResourceError,
-  queryClickhouseWithProgress,
-} from "@langfuse/shared/src/server";
-import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@langfuse/shared";
-import { logger } from "@langfuse/shared/src/server";
+  queryDatastoreWithProgress,
+} from "@hanzo/console/src/server";
+import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@hanzo/console";
+import { logger } from "@hanzo/console/src/server";
 
 import { getServerAuthSession } from "@/src/server/auth";
 import { sendAdminAccessWebhook } from "@/src/server/adminAccessWebhook";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   prepareExecuteQuery,
-  toClickhouseQueryOpts,
-} from "@langfuse/shared/query/server";
+  toDatastoreQueryOpts,
+} from "@hanzo/console/query/server";
 import {
   query as customQuery,
   validateQuery,
   viewVersions,
-} from "@langfuse/shared/query";
+} from "@hanzo/console/query";
 export type SSEEvent =
   | { type: "progress"; progress: object }
   | { type: "row"; row: Record<string, unknown> }
@@ -139,9 +139,9 @@ export default async function handler(
       version,
       enableSingleLevelOptimization: version === "v2",
     });
-    const chOpts = toClickhouseQueryOpts(prepared);
+    const chOpts = toDatastoreQueryOpts(prepared);
 
-    for await (const event of queryClickhouseWithProgress<
+    for await (const event of queryDatastoreWithProgress<
       Record<string, unknown>
     >(chOpts)) {
       if (aborted) break;

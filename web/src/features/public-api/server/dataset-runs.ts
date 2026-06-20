@@ -1,5 +1,5 @@
-import { type jsonSchema } from "@hanzo/console-core";
-import { prisma } from "@hanzo/console-core/src/db";
+import { type jsonSchema } from "@hanzo/console";
+import { prisma } from "@hanzo/console/src/db";
 import { v4 } from "uuid";
 import type z from "zod";
 

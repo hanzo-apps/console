@@ -1,11 +1,11 @@
 import type { Session } from "next-auth";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import {
   createAndAddApiKeysToDb,
   createOrgProjectAndApiKey,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 describe("project API keys trpc", () => {
   async function createProjectCaller() {
@@ -37,7 +37,7 @@ describe("project API keys trpc", () => {
           },
         ],
         featureFlags: {
-          excludeClickhouseRead: false,
+          excludeDatastoreRead: false,
           templateFlag: true,
         },
         admin: false,

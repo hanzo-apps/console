@@ -1,6 +1,6 @@
 // Mock queue operations to avoid Redis dependency in tests
-jest.mock("@hanzo/shared/src/server", () => {
-  const actual = jest.requireActual("@hanzo/shared/src/server");
+jest.mock("@hanzo/console/src/server", () => {
+  const actual = jest.requireActual("@hanzo/console/src/server");
   return {
     ...actual,
     // Mock queue getInstance to return a no-op queue
@@ -16,9 +16,18 @@ jest.mock("@hanzo/shared/src/server", () => {
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { ZodError } from "zod/v4";
 import { z } from "zod/v4";
-import { formatErrorForUser, wrapErrorHandling } from "@/src/features/mcp/core/error-formatting";
+import {
+  formatErrorForUser,
+  wrapErrorHandling,
+} from "@/src/features/mcp/core/error-formatting";
 import { UserInputError, ApiServerError } from "@/src/features/mcp/core/errors";
-import { UnauthorizedError, ForbiddenError, HanzoNotFoundError, InvalidRequestError, BaseError } from "@hanzo/shared";
+import {
+  UnauthorizedError,
+  ForbiddenError,
+  HanzoNotFoundError,
+  InvalidRequestError,
+  BaseError,
+} from "@hanzo/console";
 
 describe("MCP Error Formatting", () => {
   describe("formatErrorForUser", () => {
@@ -33,10 +42,14 @@ describe("MCP Error Formatting", () => {
       });
 
       it("should preserve UserInputError message exactly", () => {
-        const error = new UserInputError("Cannot specify both label and version");
+        const error = new UserInputError(
+          "Cannot specify both label and version",
+        );
         const mcpError = formatErrorForUser(error);
 
-        expect(mcpError.message).toContain("Cannot specify both label and version");
+        expect(mcpError.message).toContain(
+          "Cannot specify both label and version",
+        );
       });
 
       it("should handle UserInputError with special characters", () => {
@@ -55,12 +68,16 @@ describe("MCP Error Formatting", () => {
         expect(mcpError).toBeInstanceOf(McpError);
         expect(mcpError.code).toBe(ErrorCode.InternalError);
         // Should NOT expose internal error message
-        expect(mcpError.message).toContain("An internal server error occurred.");
+        expect(mcpError.message).toContain(
+          "An internal server error occurred.",
+        );
         expect(mcpError.message).not.toContain("Database");
       });
 
       it("should hide sensitive information in ApiServerError", () => {
-        const error = new ApiServerError("Redis connection to redis://password:secret@host:6379 failed");
+        const error = new ApiServerError(
+          "Redis connection to redis://password:secret@host:6379 failed",
+        );
         const mcpError = formatErrorForUser(error);
 
         expect(mcpError.message).not.toContain("password");
@@ -175,15 +192,24 @@ describe("MCP Error Formatting", () => {
       });
 
       it("should format InvalidRequestError with original message", () => {
-        const error = new InvalidRequestError("Cannot delete prompt with dependencies");
+        const error = new InvalidRequestError(
+          "Cannot delete prompt with dependencies",
+        );
         const mcpError = formatErrorForUser(error);
 
         expect(mcpError.code).toBe(ErrorCode.InvalidRequest);
-        expect(mcpError.message).toContain("Cannot delete prompt with dependencies");
+        expect(mcpError.message).toContain(
+          "Cannot delete prompt with dependencies",
+        );
       });
 
       it("should format BaseError as InvalidRequest", () => {
-        const error = new BaseError("Generic base error", 500, "Generic base error", true);
+        const error = new BaseError(
+          "Generic base error",
+          500,
+          "Generic base error",
+          true,
+        );
         const mcpError = formatErrorForUser(error);
 
         expect(mcpError.code).toBe(ErrorCode.InvalidRequest);
@@ -202,7 +228,9 @@ describe("MCP Error Formatting", () => {
       });
 
       it("should hide implementation details from generic Error", () => {
-        const error = new Error("TypeError: Cannot read property 'foo' of undefined");
+        const error = new Error(
+          "TypeError: Cannot read property 'foo' of undefined",
+        );
         const mcpError = formatErrorForUser(error);
 
         expect(mcpError.message).not.toContain("TypeError");

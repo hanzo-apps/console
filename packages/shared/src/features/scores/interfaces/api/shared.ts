@@ -3,7 +3,15 @@ import { publicApiPaginationZod } from "../../../../utils/zod";
 import { stringDateTime } from "../../../../utils/typeChecks";
 import { applyScoreValidation } from "../../../../utils/scores";
 import { PostScoreBodyFoundationSchema } from "../shared";
-import { ScoreDataTypeDomain, ScoreSourceDomain } from "../../../../domain/scores";
+import {
+  ANNOTATION_SCORE_REQUIRES_CONFIG_ID_MESSAGE,
+  isAnnotationScoreMissingConfigId,
+  PublicApiCreateScoreSourceDomain,
+  ScoreDataTypeDomain,
+  ScoreSourceDomain,
+  ScoreSourceEnum,
+  TEXT_SCORE_MAX_LENGTH,
+} from "../../../../domain/scores";
 import { singleFilter } from "../../../../interfaces/filters";
 import { InvalidRequestError } from "../../../../errors";
 

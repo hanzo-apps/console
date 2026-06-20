@@ -16,7 +16,7 @@ import {
   type BatchExportFileFormat,
   type OrderByState,
   BatchTableNames,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 import React from "react";
 import { api } from "@/src/utils/api";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
@@ -31,7 +31,9 @@ export type BatchExportTableButtonProps = {
   searchType?: any;
 };
 
-export const BatchExportTableButton: React.FC<BatchExportTableButtonProps> = (props) => {
+export const BatchExportTableButton: React.FC<BatchExportTableButtonProps> = (
+  props,
+) => {
   const [isExporting, setIsExporting] = React.useState(false);
   const createExport = api.batchExport.create.useMutation({
     onSettled: () => {
@@ -96,7 +98,11 @@ export const BatchExportTableButton: React.FC<BatchExportTableButtonProps> = (pr
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="icon" title="Export">
-          {isExporting ? <Loader className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          {isExporting ? (
+            <Loader className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuPortal>

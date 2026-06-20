@@ -1,18 +1,13 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import {
-  EvalTemplateSourceCodeLanguage,
-  EvalTemplateType,
-  JobExecutionStatus,
-  type Prisma,
-} from "@prisma/client";
+import { EvalTemplateSourceCodeLanguage, EvalTemplateType, JobExecutionStatus, type Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { scheduleObservationEvals } from "../scheduleObservationEvals";
 import { processObservationEval } from "../observationEvalProcessor";
 import { createTestObservation, createTestEvalConfig, createFullyMockedEvalPipeline } from "./fixtures";
-import { type ObservationForEval, EvalTargetObject } from "@hanzo/console-core";
+import { type ObservationForEval, EvalTargetObject } from "@hanzo/console";
 
 // Mock prisma for processObservationEval
-vi.mock("@hanzo/console-core/src/db", () => ({
+vi.mock("@hanzo/console/src/db", () => ({
   prisma: {
     jobExecution: {
       findFirst: vi.fn(),
@@ -34,8 +29,8 @@ vi.mock("../../../internal-tracing/createInternalEventsWriter", () => ({
 }));
 
 // Mock logger
-vi.mock("@hanzo/console-core/src/server", async () => {
-  const actual = await vi.importActual("@hanzo/console-core/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     logger: {
@@ -45,13 +40,11 @@ vi.mock("@hanzo/console-core/src/server", async () => {
       error: vi.fn(),
     },
     DEFAULT_TRACE_ENVIRONMENT: "default",
-    resolveConfiguredCodeEvalDispatcher: vi.fn(
-      () => new actual.LocalCodeEvalDispatcher(),
-    ),
+    resolveConfiguredCodeEvalDispatcher: vi.fn(() => new actual.LocalCodeEvalDispatcher()),
   };
 });
 
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { executeLLMAsJudgeEvaluation } from "../../evalService";
 
 describe("Observation Eval E2E Pipeline", () => {
@@ -59,9 +52,7 @@ describe("Observation Eval E2E Pipeline", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (runLLMAsJudgeEvaluation as Mock).mockResolvedValue(
-      mockEvalExecutionResult,
-    );
+    (runLLMAsJudgeEvaluation as Mock).mockResolvedValue(mockEvalExecutionResult);
   });
 
   describe("full pipeline: schedule → process → execute", () => {
@@ -326,13 +317,9 @@ describe("Observation Eval E2E Pipeline", () => {
         deps: pipeline.processorDeps,
       });
 
-      expect(
-        pipeline.processorDeps.downloadObservationFromS3,
-      ).toHaveBeenCalledWith("test-path");
+      expect(pipeline.processorDeps.downloadObservationFromS3).toHaveBeenCalledWith("test-path");
       expect(pipeline.executionDeps.uploadScore).toHaveBeenCalledTimes(1);
-      expect(
-        pipeline.executionDeps.enqueueScoreIngestion,
-      ).toHaveBeenCalledTimes(1);
+      expect(pipeline.executionDeps.enqueueScoreIngestion).toHaveBeenCalledTimes(1);
       expect(pipeline.executionDeps.updateJobExecution).toHaveBeenCalledWith(
         expect.objectContaining({
           id: job.id,

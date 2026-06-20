@@ -1,9 +1,6 @@
 import { MemoizedIOTableCell } from "@/src/components/ui/IOTableCell";
 import { Badge } from "@/src/components/ui/badge";
-import {
-  type ScoreAggregate,
-  type AggregatedScoreData,
-} from "@langfuse/shared";
+import { type ScoreAggregate, type AggregatedScoreData } from "@hanzo/console";
 import { useMemo, Fragment, useState } from "react";
 import { computeScoreDiffs } from "@/src/features/datasets/lib/computeScoreDiffs";
 import { type BaselineDiff } from "@/src/features/datasets/lib/calculateBaselineDiff";

@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockExportLocalEvents, mockProcessEventBatch, mockWrite } = vi.hoisted(
-  () => ({
-    mockExportLocalEvents: vi.fn(),
-    mockProcessEventBatch: vi.fn(),
-    mockWrite: vi.fn(),
-  }),
-);
+const { mockExportLocalEvents, mockProcessEventBatch, mockWrite } = vi.hoisted(() => ({
+  mockExportLocalEvents: vi.fn(),
+  mockProcessEventBatch: vi.fn(),
+  mockWrite: vi.fn(),
+}));
 
 vi.mock("langfuse-langchain", () => {
   return {
@@ -20,15 +18,12 @@ vi.mock("langfuse-langchain", () => {
   };
 });
 
-vi.mock(
-  "../../../../../packages/shared/src/server/ingestion/processEventBatch",
-  () => ({
-    processEventBatch: mockProcessEventBatch,
-  }),
-);
+vi.mock("../../../../../packages/shared/src/server/ingestion/processEventBatch", () => ({
+  processEventBatch: mockProcessEventBatch,
+}));
 
 import { getInternalTracingHandler } from "../../../../../packages/shared/src/server/llm/getInternalTracingHandler";
-import { LangfuseInternalTraceEnvironment } from "@langfuse/shared";
+import { LangfuseInternalTraceEnvironment } from "@hanzo/console";
 
 const traceId = "trace-123";
 const processedEventsFixture = [

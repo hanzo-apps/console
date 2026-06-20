@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { AnalyticsIntegrationExportSource } from "@langfuse/shared";
+import { AnalyticsIntegrationExportSource } from "@hanzo/console";
 
 export function validateExportFieldGroups(
   data: { exportSource: string; exportFieldGroups: unknown[] },

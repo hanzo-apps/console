@@ -12,7 +12,7 @@ import {
   MonitorService,
   type SessionContext,
   UpdateMonitorSchema,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 
 /** monitorsProcedure protects every monitors route behind the `monitors` flag. */
 const monitorsProcedure = protectedProjectProcedure.use(

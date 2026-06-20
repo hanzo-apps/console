@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it, afterAll, vi } from "vitest";
-import type * as SharedEnvModule from "@langfuse/shared/src/env";
+import type * as SharedEnvModule from "@hanzo/console/src/env";
 
 vi.hoisted(() => {
-  process.env.LANGFUSE_CODE_EVAL_DISPATCHER = "insecure-local";
+  process.env.HANZO_CODE_EVAL_DISPATCHER = "insecure-local";
 });
 
-vi.mock("@langfuse/shared/src/env", async (importOriginal) => {
+vi.mock("@hanzo/console/src/env", async (importOriginal) => {
   const actual = await importOriginal<typeof SharedEnvModule>();
 
   return {
@@ -14,7 +14,7 @@ vi.mock("@langfuse/shared/src/env", async (importOriginal) => {
     env: {
       ...actual.env,
       LANGFUSE_CODE_EVAL_DISPATCHER: "insecure-local",
-      NEXT_PUBLIC_LANGFUSE_CLOUD_REGION: undefined,
+      NEXT_PUBLIC_HANZO_CLOUD_REGION: undefined,
     },
   };
 });
@@ -27,7 +27,7 @@ import {
 import { env } from "@/src/env.mjs";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@langfuse/shared/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   createEvent,
   createEventsCh,
@@ -36,14 +36,14 @@ import {
   createOrgProjectAndApiKey,
   createTrace,
   createTracesCh,
-  queryClickhouse,
-} from "@langfuse/shared/src/server";
-import { EvalTargetObject } from "@langfuse/shared";
+  queryDatastore,
+} from "@hanzo/console/src/server";
+import { EvalTargetObject } from "@hanzo/console";
 
 const orgIds: string[] = [];
 
 const maybe =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_FLAGS === "true" ? describe : describe.skip;
+  env.HANZO_ENABLE_EVENTS_TABLE_FLAGS === "true" ? describe : describe.skip;
 
 async function prepare() {
   const { project, org } = await createOrgProjectAndApiKey();
@@ -79,7 +79,7 @@ async function prepare() {
         },
       ],
       featureFlags: {
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
         templateFlag: true,
         v4BetaToggleVisible: false,
         observationEvals: false,
@@ -211,7 +211,7 @@ maybe("evals.testRunCodeEval", () => {
       prisma.jobExecution.count({ where: { projectId: project.id } }),
     ).resolves.toBe(jobExecutionCountBefore);
 
-    const scoreCount = await queryClickhouse<{ count: string }>({
+    const scoreCount = await queryDatastore<{ count: string }>({
       query: `SELECT count() as count FROM scores WHERE project_id = {projectId: String}`,
       params: { projectId: project.id },
       tags: {
@@ -526,7 +526,7 @@ maybe("evals.testRunCodeEval", () => {
     const executionTraceId = response.executionTraceId;
 
     const findTrace = async () => {
-      const rows = await queryClickhouse<{
+      const rows = await queryDatastore<{
         environment: string;
         sourceCode: string;
       }>({

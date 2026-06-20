@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import * as serverExports from "@hanzo/console-core/src/server";
+import * as serverExports from "@hanzo/console/src/server";
 
 import { env } from "../../env";
-import { logger } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
 import { DatastoreWriter, TableName } from "../DatastoreWriter";
 
 // Mock recordHistogram, recordCount, recordGauge
-vi.mock("@hanzo/console-core/src/server", async (importOriginal) => {
+vi.mock("@hanzo/console/src/server", async (importOriginal) => {
   const original = (await importOriginal()) as {};
   return {
     ...original,
@@ -45,7 +45,7 @@ describe("DatastoreWriter", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    clickhouseClientMock = {
+    datastoreClientMock = {
       insert: vi.fn(),
     };
     vi.useFakeTimers();
@@ -138,11 +138,9 @@ describe("DatastoreWriter", () => {
     expect(mockInsert).toHaveBeenCalledTimes(writer.maxAttempts);
     expect(logger.error.mock.calls.some((call) => call[0].includes("Max attempts reached"))).toBe(true);
     expect(writer["queue"][TableName.Traces]).toHaveLength(0);
-    expect(serverExports.recordIncrement).toHaveBeenCalledWith(
-      "langfuse.queue.clickhouse_writer.rows_dropped",
-      1,
-      { entity_type: TableName.Traces },
-    );
+    expect(serverExports.recordIncrement).toHaveBeenCalledWith("langfuse.queue.clickhouse_writer.rows_dropped", 1, {
+      entity_type: TableName.Traces,
+    });
   });
 
   it("should shutdown gracefully", async () => {
@@ -344,9 +342,7 @@ describe("DatastoreWriter", () => {
         { input: Infinity, expected: [0, true], name: "positive Infinity" },
         { input: -Infinity, expected: [0, true], name: "negative Infinity" },
       ])("$name ($input)", ({ input, expected }) => {
-        expect(ClickhouseWriter["clampDecimal64Value"](input)).toEqual(
-          expected,
-        );
+        expect(DatastoreWriter["clampDecimal64Value"](input)).toEqual(expected);
       });
     });
 
@@ -402,9 +398,7 @@ describe("DatastoreWriter", () => {
 
     describe("flush integration", () => {
       it("clamps observation cost fields before inserting", async () => {
-        const mockInsert = vi
-          .spyOn(clickhouseClientMock, "insert")
-          .mockResolvedValue();
+        const mockInsert = vi.spyOn(datastoreClientMock, "insert").mockResolvedValue();
 
         writer.addToQueue(TableName.Observations, {
           id: "obs-1",

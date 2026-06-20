@@ -1,8 +1,8 @@
 import type { Session } from "next-auth";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@langfuse/shared/src/db";
-import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
+import { prisma } from "@hanzo/console/src/db";
+import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 
 const orgIds: string[] = [];
@@ -39,7 +39,7 @@ const prepare = async () => {
       ],
       featureFlags: {
         templateFlag: true,
-        excludeClickhouseRead: false,
+        excludeDatastoreRead: false,
       },
       admin: true,
     },

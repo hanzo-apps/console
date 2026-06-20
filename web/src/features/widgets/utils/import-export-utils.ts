@@ -5,7 +5,7 @@ import {
   viewDeclarations,
   views,
   type ViewVersion,
-} from "@langfuse/shared/query";
+} from "@hanzo/console/query";
 import {
   getWidgetImportFilterConfig,
   normalizeStoredWidgetFiltersForEditor,
@@ -19,7 +19,7 @@ import {
   MetricSchema,
   singleFilter,
   type FilterState,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import {
   MAX_PIVOT_TABLE_DIMENSIONS,
   MAX_PIVOT_TABLE_METRICS,

@@ -4,7 +4,7 @@ import {
   normalizeToolsForObservation,
   convertDefinitionsToMap,
   convertCallsToArrays,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 
 describe("extractToolsFromObservation", () => {
   describe("Tool metadata normalization", () => {
@@ -161,11 +161,7 @@ describe("extractToolsFromObservation", () => {
         },
       };
 
-      const result = normalizeToolsForObservation(
-        "What is the weather in Berlin?",
-        null,
-        metadata,
-      );
+      const result = normalizeToolsForObservation("What is the weather in Berlin?", null, metadata);
 
       expect(result.input).toEqual({
         prompt: "What is the weather in Berlin?",
@@ -1142,13 +1138,8 @@ describe("extractToolsFromObservation", () => {
       const normalized = normalizeToolsForObservation(input, null, metadata);
       const result = extractToolsFromObservation(normalized.input, output);
 
-      expect(result.toolDefinitions.map((t) => t.name)).toEqual([
-        "get_weather",
-        "web_search",
-      ]);
-      expect(result.toolDefinitions[0].parameters).toBe(
-        JSON.stringify(tools[0].inputSchema),
-      );
+      expect(result.toolDefinitions.map((t) => t.name)).toEqual(["get_weather", "web_search"]);
+      expect(result.toolDefinitions[0].parameters).toBe(JSON.stringify(tools[0].inputSchema));
       expect(result.toolArguments).toHaveLength(1);
       expect(result.toolArguments[0]).toMatchObject({
         id: "call_provider_search_1",

@@ -2,7 +2,11 @@ import { api } from "@/src/utils/api";
 
 import { BaseTimeSeriesChart } from "@/src/features/dashboard/components/BaseTimeSeriesChart";
 import { Card } from "@/src/components/ui/card";
-import { type ScoreSourceType, type FilterState, type ScoreDataTypeType } from "@hanzo/shared";
+import {
+  type ScoreSourceType,
+  type FilterState,
+  type ScoreDataTypeType,
+} from "@hanzo/console";
 import {
   extractTimeSeriesData,
   fillMissingValuesAndTransform,
@@ -15,7 +19,10 @@ import {
 } from "@/src/utils/date-range-utils";
 import React, { useMemo } from "react";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
-import { type QueryType, mapLegacyUiTableFilterToView } from "@/src/features/query";
+import {
+  type QueryType,
+  mapLegacyUiTableFilterToView,
+} from "@/src/features/query";
 import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
 
 export function NumericScoreTimeSeriesChart(props: {
@@ -57,7 +64,8 @@ export function NumericScoreTimeSeriesChart(props: {
       },
     ],
     timeDimension: {
-      granularity: dashboardDateRangeAggregationSettings[props.agg].dateTrunc ?? "day",
+      granularity:
+        dashboardDateRangeAggregationSettings[props.agg].dateTrunc ?? "day",
     },
     fromTimestamp: props.fromTimestamp.toISOString(),
     toTimestamp: props.toTimestamp.toISOString(),
@@ -82,12 +90,16 @@ export function NumericScoreTimeSeriesChart(props: {
   const extractedScores = useMemo(() => {
     return scores.data
       ? fillMissingValuesAndTransform(
-          extractTimeSeriesData(scores.data as DatabaseRow[], "time_dimension", [
-            {
-              uniqueIdentifierColumns: [{ accessor: "name" }],
-              valueColumn: "avg_value",
-            },
-          ]),
+          extractTimeSeriesData(
+            scores.data as DatabaseRow[],
+            "time_dimension",
+            [
+              {
+                uniqueIdentifierColumns: [{ accessor: "name" }],
+                valueColumn: "avg_value",
+              },
+            ],
+          ),
         )
       : [];
   }, [scores.data]);
@@ -96,7 +108,7 @@ export function NumericScoreTimeSeriesChart(props: {
     data: extractedScores,
     isNullValueAllowed: true,
   }) ? (
-    <Card className="min-h-[9rem] w-full flex-1 rounded-tremor-default border">
+    <Card className="rounded-tremor-default min-h-[9rem] w-full flex-1 border">
       <BaseTimeSeriesChart
         className="[&_text]:fill-muted-foreground [&_tspan]:fill-muted-foreground"
         agg={props.agg}

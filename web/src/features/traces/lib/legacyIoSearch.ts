@@ -1,4 +1,4 @@
-import type { TracingSearchType } from "@langfuse/shared";
+import type { TracingSearchType } from "@hanzo/console";
 
 export const LEGACY_IO_SEARCH_TYPES = new Set<TracingSearchType>([
   "content",

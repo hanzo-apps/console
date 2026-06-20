@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createMocks } from "node-mocks-http";
-import { LangfuseNotFoundError, UnauthorizedError } from "@langfuse/shared";
+import { LangfuseNotFoundError, UnauthorizedError } from "@hanzo/console";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import handler from "../../pages/api/traces/[traceId]/download";
 import { TraceDownloadTooLargeError } from "../../features/traces/server/buildTraceExport";

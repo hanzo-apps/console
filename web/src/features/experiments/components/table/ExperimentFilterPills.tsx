@@ -7,7 +7,7 @@ import {
 } from "@/src/components/ui/popover";
 import { ListFilter, ChevronsUpDown, X, Check } from "lucide-react";
 import { useMemo, useState } from "react";
-import { type FilterCondition, type FilterState } from "@langfuse/shared";
+import { type FilterCondition, type FilterState } from "@hanzo/console";
 import { cn } from "@/src/utils/tailwind";
 
 interface ExperimentFilterPillsProps {

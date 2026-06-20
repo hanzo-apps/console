@@ -12,20 +12,20 @@ import {
   type CodeEvalUserVisibleError,
   type DispatchResult,
   type InternalTraceWriteInput,
-} from "@langfuse/shared/src/server";
+} from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 
 import {
   LangfuseNotFoundError,
-  LangfuseInternalTraceEnvironment,
+  ConsoleInternalTraceEnvironment,
   observationForEvalSchema,
   type EvalTargetObject,
   type EvalTemplateCodeBased,
   type FilterCondition,
   type ObservationForEval,
   type ObservationVariableMapping,
-} from "@langfuse/shared";
-import { EvalTemplateType, type PrismaClient } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { EvalTemplateType, type PrismaClient } from "@hanzo/console/src/db";
 import { env } from "@/src/env.mjs";
 import { getExperimentEvalPreviewFilters } from "@/src/features/evals/utils/experiment-eval-preview-utils";
 import {
@@ -239,7 +239,7 @@ async function getObservationForEvalById(params: {
   shouldReadFromObservationsTable?: boolean;
 }): Promise<ObservationForEval> {
   if (
-    env.LANGFUSE_ENABLE_EVENTS_TABLE_FLAGS !== "true" ||
+    env.HANZO_ENABLE_EVENTS_TABLE_FLAGS !== "true" ||
     params.shouldReadFromObservationsTable
   ) {
     return getObservationForEvalByIdFromLegacyObservations(params);
@@ -428,7 +428,7 @@ async function writeTraceViaIngestion(trace: InternalTraceWriteInput) {
 }
 
 function getInternalEvalEnvironment(environment: string | undefined) {
-  return environment === LangfuseInternalTraceEnvironment.CodeEval
-    ? LangfuseInternalTraceEnvironment.CodeEval
-    : LangfuseInternalTraceEnvironment.LLMJudge;
+  return environment === ConsoleInternalTraceEnvironment.CodeEval
+    ? ConsoleInternalTraceEnvironment.CodeEval
+    : ConsoleInternalTraceEnvironment.LLMJudge;
 }

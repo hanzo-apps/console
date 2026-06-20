@@ -1,4 +1,4 @@
-import { createFilterFromFilterState } from "@langfuse/shared/src/server";
+import { createFilterFromFilterState } from "@hanzo/console/src/server";
 
 /**
  * Unit tests for the emptyEqualsNull flag on filter classes, passed through
@@ -18,8 +18,8 @@ describe("createFilterFromFilterState with emptyEqualsNull", () => {
   // Column mapping with emptyEqualsNull (used by v2 query engine for nullIf dimensions)
   const withEmptyEqualsNull = {
     ...baseMapping,
-    clickhouseTableName: "events_core",
-    clickhouseSelect: "events_observations.parent_span_id",
+    datastoreTableName: "events_core",
+    datastoreSelect: "events_observations.parent_span_id",
     queryPrefix: "",
     emptyEqualsNull: true,
   };
@@ -27,8 +27,8 @@ describe("createFilterFromFilterState with emptyEqualsNull", () => {
   // Column mapping without emptyEqualsNull — standard NullFilter behavior
   const withoutFlag = {
     ...baseMapping,
-    clickhouseTableName: "observations",
-    clickhouseSelect: "observations.parent_observation_id",
+    datastoreTableName: "observations",
+    datastoreSelect: "observations.parent_observation_id",
     queryPrefix: "",
   };
 

@@ -48,17 +48,17 @@
       "cache": false,
       "dependsOn": ["^db:generate"]
     },
-    "@langfuse/shared#db:generate": {
+    "@hanzo/console#db:generate": {
       "inputs": ["packages/shared/prisma/schema.prisma"],
       "cache": false,
       "dependsOn": ["^db:generate"],
       "outputLogs": "errors-only"
     },
-    "@langfuse/shared#db:seed": {
+    "@hanzo/console#db:seed": {
       "cache": false,
       "outputLogs": "errors-only"
     },
-    "@langfuse/shared#db:seed:examples": {
+    "@hanzo/console#db:seed:examples": {
       "cache": false,
       "outputLogs": "errors-only"
     },
@@ -82,7 +82,7 @@
     },
     "type-check": {
       "cache": false,
-      "dependsOn": ["db:generate", "@hanzo/console-core#build"]
+      "dependsOn": ["db:generate", "@hanzo/console#build"]
     },
     "test": {
       "dependsOn": ["^test", "db:generate"],

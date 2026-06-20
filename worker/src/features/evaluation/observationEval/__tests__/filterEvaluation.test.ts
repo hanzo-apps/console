@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
-import { type Prisma } from "@hanzo/console-core/src/db";
+import { type Prisma } from "@hanzo/console/src/db";
 import { scheduleObservationEvals } from "../scheduleObservationEvals";
 import { createTestObservation, createTestEvalConfig, createMockSchedulerDeps } from "./fixtures";
-import { type ObservationForEval, EvalTargetObject } from "@hanzo/console-core";
+import { type ObservationForEval, EvalTargetObject } from "@hanzo/console";
 
 // Mock logger to avoid noise in tests
-vi.mock("@hanzo/console-core/src/server", async () => {
-  const actual = await vi.importActual("@hanzo/console-core/src/server");
+vi.mock("@hanzo/console/src/server", async () => {
+  const actual = await vi.importActual("@hanzo/console/src/server");
   return {
     ...actual,
     logger: {

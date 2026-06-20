@@ -5,4 +5,4 @@ export {
   isRichToolResult,
   parseMetadata,
   getNestedProperty,
-} from "@hanzo/console-core";
+} from "@hanzo/console";

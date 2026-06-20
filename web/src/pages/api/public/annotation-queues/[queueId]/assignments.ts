@@ -1,7 +1,7 @@
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
-import { prisma } from "@hanzo/shared/src/db";
-import { HanzoNotFoundError, Prisma } from "@hanzo/shared";
+import { prisma } from "@hanzo/console/src/db";
+import { HanzoNotFoundError, Prisma } from "@hanzo/console";
 import {
   AnnotationQueueAssignmentQuery,
   CreateAnnotationQueueAssignmentBody,
@@ -9,7 +9,7 @@ import {
   DeleteAnnotationQueueAssignmentBody,
   DeleteAnnotationQueueAssignmentResponse,
 } from "@/src/features/public-api/types/annotation-queues";
-import { getUserProjectRoles } from "@hanzo/shared/src/server";
+import { getUserProjectRoles } from "@hanzo/console/src/server";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({
@@ -51,7 +51,9 @@ export default withMiddlewares({
       });
 
       if (!user || user.length === 0) {
-        throw new HanzoNotFoundError("User not found or not authorized for this project");
+        throw new HanzoNotFoundError(
+          "User not found or not authorized for this project",
+        );
       }
 
       // Create the assignment (upsert to handle duplicates gracefully)
@@ -75,11 +77,7 @@ export default withMiddlewares({
         userId: userId,
         projectId: auth.scope.projectId,
         queueId: query.queueId,
-        input: body,
-        auditScope: auth.scope,
-      });
-
-      return assignment;
+      };
     },
   }),
 
@@ -89,11 +87,14 @@ export default withMiddlewares({
     bodySchema: DeleteAnnotationQueueAssignmentBody,
     responseSchema: DeleteAnnotationQueueAssignmentResponse,
     fn: async ({ query, body, auth }) => {
-      const result = await deleteAnnotationQueueAssignmentForApi({
-        projectId: auth.scope.projectId,
-        queueId: query.queueId,
-        input: body,
-        auditScope: auth.scope,
+      const { userId } = body;
+
+      // Verify the annotation queue exists and belongs to the project
+      const queue = await prisma.annotationQueue.findUnique({
+        where: {
+          id: query.queueId,
+          projectId: auth.scope.projectId,
+        },
       });
 
       if (!queue) {
@@ -114,7 +115,12 @@ export default withMiddlewares({
       } catch (error) {
         // If the record doesn't exist, that's fine - we still return success
         // Only catch NotFound errors, re-throw other errors
-        if (error && typeof error === "object" && "code" in error && error.code !== "P2025") {
+        if (
+          error &&
+          typeof error === "object" &&
+          "code" in error &&
+          error.code !== "P2025"
+        ) {
           throw error;
         }
       }

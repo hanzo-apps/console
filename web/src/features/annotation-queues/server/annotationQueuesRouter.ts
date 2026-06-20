@@ -1,7 +1,9 @@
-import { env } from "@/src/env.mjs";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
 import {
   AnnotationQueueObjectType,
   AnnotationQueueStatus,
@@ -10,10 +12,10 @@ import {
   ConsoleNotFoundError,
   optionalPaginationZod,
   Prisma,
-} from "@hanzo/console-core";
-import { getObservationById, logger } from "@hanzo/console-core/src/server";
+} from "@hanzo/console";
+import { getObservationById, logger } from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export const queueRouter = createTRPCRouter({
   hasAny: protectedProjectProcedure
@@ -104,21 +106,26 @@ export const queueRouter = createTRPCRouter({
           }),
         ]);
 
-        const userQueueAssignments = await ctx.prisma.annotationQueueAssignment.findMany({
-          where: {
-            userId: ctx.session.user.id,
-          },
-          select: {
-            queueId: true,
-          },
-        });
+        const userQueueAssignments =
+          await ctx.prisma.annotationQueueAssignment.findMany({
+            where: {
+              userId: ctx.session.user.id,
+            },
+            select: {
+              queueId: true,
+            },
+          });
 
         return {
           totalCount,
           queues: queues.map((queue) => ({
             ...queue,
-            scoreConfigs: scoreConfigs.filter((config) => queue.scoreConfigIds.includes(config.id)),
-            isCurrentUserAssigned: userQueueAssignments.some((assignment) => assignment.queueId === queue.id),
+            scoreConfigs: scoreConfigs.filter((config) =>
+              queue.scoreConfigIds.includes(config.id),
+            ),
+            isCurrentUserAssigned: userQueueAssignments.some(
+              (assignment) => assignment.queueId === queue.id,
+            ),
           })),
         };
       } catch (error) {
@@ -162,22 +169,24 @@ export const queueRouter = createTRPCRouter({
         });
       }
     }),
-  count: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async ({ input, ctx }) => {
-    try {
-      return ctx.prisma.annotationQueue.count({
-        where: { projectId: input.projectId },
-      });
-    } catch (error) {
-      logger.error(error);
-      if (error instanceof TRPCError) {
-        throw error;
+  count: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      try {
+        return ctx.prisma.annotationQueue.count({
+          where: { projectId: input.projectId },
+        });
+      } catch (error) {
+        logger.error(error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Fetching annotation queue count failed.",
+        });
       }
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Fetching annotation queue count failed.",
-      });
-    }
-  }),
+    }),
   byId: protectedProjectProcedure
     .input(z.object({ queueId: z.string(), projectId: z.string() }))
     .query(async ({ input, ctx }) => {
@@ -311,7 +320,8 @@ export const queueRouter = createTRPCRouter({
           ) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "Maximum number of annotation queues reached on Hobby plan.",
+              message:
+                "Maximum number of annotation queues reached on Hobby plan.",
             });
           }
         }
@@ -454,22 +464,12 @@ export const queueRouter = createTRPCRouter({
         queueId: z.string(),
         projectId: z.string(),
         seenItemIds: z.array(z.string()),
-        isBetaEnabled: z.boolean().optional().default(false),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      throwIfNoProjectAccess({
-        session: ctx.session,
-        projectId: input.projectId,
-        scope: "annotationQueues:CUD",
-      });
-
-      const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-
-      const item = await ctx.prisma.annotationQueueItem.findFirst({
-        where: {
-          queueId: input.queueId,
+      try {
+        throwIfNoProjectAccess({
+          session: ctx.session,
           projectId: input.projectId,
           scope: "annotationQueues:CUD",
         });
@@ -482,50 +482,37 @@ export const queueRouter = createTRPCRouter({
             queueId: input.queueId,
             projectId: input.projectId,
             status: AnnotationQueueStatus.PENDING,
-            OR: [{ lockedAt: null }, { lockedAt: { lt: fiveMinutesAgo } }, { lockedByUserId: ctx.session.user.id }],
+            OR: [
+              { lockedAt: null },
+              { lockedAt: { lt: fiveMinutesAgo } },
+              { lockedByUserId: ctx.session.user.id },
+            ],
             NOT: {
               id: { in: input.seenItemIds },
             },
           },
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      });
+          orderBy: {
+            createdAt: "asc",
+          },
+        });
 
-      // Expected behavior, non-error case: all items have been seen AND/OR completed, no more unseen pending items
-      if (!item) return null;
+        // Expected behavior, non-error case: all items have been seen AND/OR completed, no more unseen pending items
+        if (!item) return null;
 
-      const updatedItem = await ctx.prisma.annotationQueueItem.update({
-        where: {
-          id: item.id,
-          projectId: input.projectId,
-        },
-        data: {
-          lockedAt: now,
-          lockedByUserId: ctx.session.user.id,
-        },
-      });
+        const updatedItem = await ctx.prisma.annotationQueueItem.update({
+          where: {
+            id: item.id,
+            projectId: input.projectId,
+          },
+          data: {
+            lockedAt: now,
+            lockedByUserId: ctx.session.user.id,
+          },
+        });
 
-      const inflatedUpdatedItem = {
-        ...updatedItem,
-        lockedByUser: { name: ctx.session.user.name },
-      };
-
-      if (item.objectType === AnnotationQueueObjectType.OBSERVATION) {
-        const clickhouseObservation =
-          env.LANGFUSE_ENABLE_EVENTS_TABLE_UI === "true"
-            ? await getObservationByIdFromEventsTable({
-                id: item.objectId,
-                projectId: input.projectId,
-              })
-            : await getObservationById({
-                id: item.objectId,
-                projectId: input.projectId,
-              });
-        return {
-          ...inflatedUpdatedItem,
-          parentTraceId: clickhouseObservation?.traceId,
+        const inflatedUpdatedItem = {
+          ...updatedItem,
+          lockedByUser: { name: ctx.session.user.name },
         };
 
         if (item.objectType === AnnotationQueueObjectType.OBSERVATION) {
@@ -550,7 +537,5 @@ export const queueRouter = createTRPCRouter({
           message: "Fetching and locking next annotation queue item failed.",
         });
       }
-
-      return inflatedUpdatedItem;
     }),
 });

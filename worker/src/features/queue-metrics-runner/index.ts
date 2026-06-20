@@ -1,33 +1,17 @@
-import { Queue } from "bullmq";
+import { Queue } from "@hanzo/mq";
 
-import {
-  QueueName,
-  convertQueueNameToMetricName,
-  recordGauge,
-  logger,
-} from "@langfuse/shared/src/server";
+import { QueueName, convertQueueNameToMetricName, recordGauge, logger } from "@hanzo/console/src/server";
 
 import { PeriodicRunner } from "../../utils/PeriodicRunner";
 import { env } from "../../env";
 import { WorkerManager } from "../../queues/workerManager";
-import {
-  SHARDED_QUEUES,
-  SHARDED_QUEUE_BASE_NAMES,
-  resolveQueueInstance,
-} from "../../queues/shardedQueueRegistry";
+import { SHARDED_QUEUES, SHARDED_QUEUE_BASE_NAMES, resolveQueueInstance } from "../../queues/shardedQueueRegistry";
 
 type DepthType = "waiting" | "failed" | "active";
 
-async function collectDepth(
-  queue: Queue,
-): Promise<Record<DepthType, number> | null> {
+async function collectDepth(queue: Queue): Promise<Record<DepthType, number> | null> {
   // Include "paused" to match getWaitingCount() semantics (which sums waiting + paused)
-  const counts = await queue.getJobCounts(
-    "waiting",
-    "paused",
-    "failed",
-    "active",
-  );
+  const counts = await queue.getJobCounts("waiting", "paused", "failed", "active");
   return {
     waiting: (counts.waiting ?? 0) + (counts.paused ?? 0),
     failed: counts.failed ?? 0,
@@ -35,11 +19,7 @@ async function collectDepth(
   };
 }
 
-function emitDepth(
-  metricBase: string,
-  depths: Record<DepthType, number>,
-  tags?: Record<string, string>,
-): void {
+function emitDepth(metricBase: string, depths: Record<DepthType, number>, tags?: Record<string, string>): void {
   for (const type of ["waiting", "failed", "active"] as const) {
     recordGauge(metricBase + ".depth", depths[type], {
       ...tags,
@@ -97,19 +77,14 @@ export class QueueMetricsRunner extends PeriodicRunner {
             }
           })
           .catch((err) => {
-            logger.error(
-              `Queue metrics: failed to collect depth for ${queueName}`,
-              err,
-            );
+            logger.error(`Queue metrics: failed to collect depth for ${queueName}`, err);
           }),
       );
     }
 
     // Sharded queues: only poll shards with registered workers
     for (const config of SHARDED_QUEUES) {
-      const shardNames = config
-        .getShardNames()
-        .filter((name) => registeredNames.has(name));
+      const shardNames = config.getShardNames().filter((name) => registeredNames.has(name));
       if (shardNames.length === 0) continue;
 
       const metricBase = convertQueueNameToMetricName(config.baseQueueName);
@@ -128,10 +103,7 @@ export class QueueMetricsRunner extends PeriodicRunner {
             return depths;
           })
           .catch((err) => {
-            logger.error(
-              `Queue metrics: failed to collect depth for ${shardName}`,
-              err,
-            );
+            logger.error(`Queue metrics: failed to collect depth for ${shardName}`, err);
             return null;
           });
       });

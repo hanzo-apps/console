@@ -10,8 +10,8 @@ import {
   createScoresCh,
   createTraceScore,
   queryDatastore,
-} from "@hanzo/console-core/src/server";
-import { prisma } from "@hanzo/console-core/src/db";
+} from "@hanzo/console/src/server";
+import { prisma } from "@hanzo/console/src/db";
 
 async function getDatastoreCount(table: string, projectId: string): Promise<number> {
   const result = await queryDatastore<{ count: number }>({

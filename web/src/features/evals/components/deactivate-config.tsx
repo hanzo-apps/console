@@ -1,9 +1,13 @@
 import { EvaluatorStatus } from "@/src/features/evals/types";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api, type RouterOutputs } from "@/src/utils/api";
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/src/components/ui/popover";
 import { Button } from "@/src/components/ui/button";
 import { Switch } from "@/src/components/ui/switch";
 
@@ -17,7 +21,7 @@ export function DeactivateEvalConfig({
   const utils = api.useUtils();
   const hasAccess = useHasProjectAccess({ projectId, scope: "evalJob:CUD" });
   const [isOpen, setIsOpen] = useState(false);
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const isActive = evalConfig?.status === EvaluatorStatus.ACTIVE;
 
   const mutEvaluator = api.evals.updateEvalJob.useMutation({
@@ -41,7 +45,11 @@ export function DeactivateEvalConfig({
         status: isActive ? EvaluatorStatus.INACTIVE : EvaluatorStatus.ACTIVE,
       },
     });
-    capture(prevStatus === EvaluatorStatus.ACTIVE ? "eval_config:deactivate" : "eval_config:activate");
+    capture(
+      prevStatus === EvaluatorStatus.ACTIVE
+        ? "eval_config:deactivate"
+        : "eval_config:activate",
+    );
     setIsOpen(false);
   };
 
@@ -50,7 +58,11 @@ export function DeactivateEvalConfig({
       <PopoverTrigger asChild>
         <div className="flex items-center">
           <Switch
-            disabled={!hasAccess || (evalConfig?.timeScope?.length === 1 && evalConfig.timeScope[0] === "EXISTING")}
+            disabled={
+              !hasAccess ||
+              (evalConfig?.timeScope?.length === 1 &&
+                evalConfig.timeScope[0] === "EXISTING")
+            }
             checked={isActive}
             className={isActive ? "data-[state=checked]:bg-dark-green" : ""}
           />
@@ -66,7 +78,9 @@ export function DeactivateEvalConfig({
         <div className="flex justify-end space-x-4">
           <Button
             type="button"
-            variant={evalConfig?.status === "ACTIVE" ? "destructive" : "default"}
+            variant={
+              evalConfig?.status === "ACTIVE" ? "destructive" : "default"
+            }
             loading={mutEvaluator.isPending}
             onClick={onClick}
           >

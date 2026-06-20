@@ -1,5 +1,5 @@
 import { type NextApiRequest, type NextApiResponse } from "next";
-import { logger } from "@hanzo/shared/src/server";
+import { logger } from "@hanzo/console/src/server";
 import { AdminApiAuthService } from "@/src/ee/features/admin-api/server/adminApiAuth";
 import {
   handleGetOrganizationById,
@@ -9,7 +9,10 @@ import {
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import { getSelfHostedInstancePlanServerSide } from "@/src/features/entitlements/server/getPlan";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   try {
     // Verify admin API authentication, only allow on self-hosted (not on Hanzo Cloud)
     if (!AdminApiAuthService.handleAdminAuth(req, res)) {

@@ -11,7 +11,7 @@ import { type NextApiRequest, type NextApiResponse } from "next";
 import { type Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { formatErrorForUser } from "../core/error-formatting";
-import { logger } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
 
 /**
  * Handle MCP request using Streamable HTTP transport.
@@ -33,7 +33,11 @@ import { logger } from "@hanzo/console-core/src/server";
  * @param req - Next.js API request
  * @param res - Next.js API response
  */
-export async function handleMcpRequest(server: Server, req: NextApiRequest, res: NextApiResponse): Promise<void> {
+export async function handleMcpRequest(
+  server: Server,
+  req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<void> {
   try {
     // Note: request validation, CORS headers, and OPTIONS handling happen in index.ts
 
@@ -49,7 +53,8 @@ export async function handleMcpRequest(server: Server, req: NextApiRequest, res:
           jsonrpc: "2.0",
           error: {
             code: -32600,
-            message: "Invalid Request: Accept header must include application/json or text/event-stream",
+            message:
+              "Invalid Request: Accept header must include application/json or text/event-stream",
           },
           id: null,
         });

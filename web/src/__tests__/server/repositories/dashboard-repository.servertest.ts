@@ -6,7 +6,7 @@ import {
   createTracesCh,
   createObservationsCh,
   createObservation,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 
 describe("orderByTimeSeries", () => {
   it("should return correct bucket size and query for 1 hour time range", () => {
@@ -91,7 +91,9 @@ describe("orderByTimeSeries", () => {
   });
 
   it("should handle empty filter by using default time range", () => {
-    expect(() => orderByTimeSeries([], "timestamp")).toThrow("Time Filter is required for time series queries");
+    expect(() => orderByTimeSeries([], "timestamp")).toThrow(
+      "Time Filter is required for time series queries",
+    );
   });
 
   describe("getObservationUsageByTypeByTime", () => {
@@ -150,7 +152,10 @@ describe("orderByTimeSeries", () => {
 
       await createObservationsCh([obs1, obs2, obs3]);
 
-      const result = await getObservationUsageByTypeByTime(projectId, mockFilter);
+      const result = await getObservationUsageByTypeByTime(
+        projectId,
+        mockFilter,
+      );
 
       // Verify the structure of the returned data
       expect(result).toEqual(

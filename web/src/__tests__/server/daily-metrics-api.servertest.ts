@@ -1,5 +1,8 @@
-import { createObservation, createTrace } from "@hanzo/console-core/src/server";
-import { createObservationsCh, createTracesCh } from "@hanzo/console-core/src/server";
+import { createObservation, createTrace } from "@hanzo/console/src/server";
+import {
+  createObservationsCh,
+  createTracesCh,
+} from "@hanzo/console/src/server";
 import { makeZodVerifiedAPICall } from "@/src/__tests__/test-utils";
 import { randomUUID } from "crypto";
 import { GetMetricsDailyV1Response } from "@/src/features/public-api/types/metrics";

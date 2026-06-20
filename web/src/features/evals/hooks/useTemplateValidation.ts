@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { api } from "@/src/utils/api";
 import { useState } from "react";
-import { type EvalTemplate } from "@hanzo/console-core/src/db";
+import { type EvalTemplate } from "@hanzo/console/src/db";
 
 export function useTemplateValidation({
   projectId,
@@ -10,7 +10,9 @@ export function useTemplateValidation({
   projectId: string;
   onValidSelection?: (template: EvalTemplate) => void;
 }) {
-  const [selectedTemplate, setSelectedTemplate] = useState<EvalTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<EvalTemplate | null>(
+    null,
+  );
   const [isSelectionValid, setIsSelectionValid] = useState(true);
 
   const defaultModel = api.defaultLlmModel.fetchDefaultModel.useQuery({

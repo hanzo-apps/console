@@ -1,4 +1,4 @@
-import { type MetadataDomain } from "@hanzo/console-core";
+import { type MetadataDomain } from "@hanzo/console";
 
 /**
  * Metadata serialized as string for client-side consumption.
@@ -16,7 +16,9 @@ export type MetadataDomainClient = string | null;
  * type ScoreFrontend = WithStringifiedMetadata<ScoreDomain>;
  * // Result: ScoreDomain but with metadata: string | null
  */
-export type WithStringifiedMetadata<T extends { metadata?: MetadataDomain | undefined }> = Omit<T, "metadata"> & {
+export type WithStringifiedMetadata<
+  T extends { metadata?: MetadataDomain | undefined },
+> = Omit<T, "metadata"> & {
   metadata: MetadataDomainClient;
 };
 
@@ -24,7 +26,9 @@ export type WithStringifiedMetadata<T extends { metadata?: MetadataDomain | unde
  * Stringifies metadata field for frontend consumption.
  * Returns null if metadata is null/undefined.
  */
-export const stringifyMetadata = (metadata: MetadataDomain | null | undefined): MetadataDomainClient => {
+export const stringifyMetadata = (
+  metadata: MetadataDomain | null | undefined,
+): MetadataDomainClient => {
   if (!metadata) return null;
   if (typeof metadata === "string") return metadata;
   return JSON.stringify(metadata);
@@ -37,7 +41,9 @@ export const stringifyMetadata = (metadata: MetadataDomain | null | undefined): 
  * @example
  * return toDomainWithStringifiedMetadata(score);
  */
-export const toDomainWithStringifiedMetadata = <T extends { metadata?: MetadataDomain | undefined }>(
+export const toDomainWithStringifiedMetadata = <
+  T extends { metadata?: MetadataDomain | undefined },
+>(
   obj: T,
 ): WithStringifiedMetadata<T> => {
   const { metadata, ...rest } = obj;
@@ -54,7 +60,9 @@ export const toDomainWithStringifiedMetadata = <T extends { metadata?: MetadataD
  * @example
  * return { scores: toDomainArrayWithStringifiedMetadata(scores) };
  */
-export const toDomainArrayWithStringifiedMetadata = <T extends { metadata?: MetadataDomain | undefined }>(
+export const toDomainArrayWithStringifiedMetadata = <
+  T extends { metadata?: MetadataDomain | undefined },
+>(
   arr: T[],
 ): WithStringifiedMetadata<T>[] => {
   return arr.map(toDomainWithStringifiedMetadata);

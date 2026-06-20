@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { extractVariables } from "@langfuse/shared";
+import { extractVariables } from "@hanzo/console";
 import { renderRichPromptContent } from "@/src/components/ui/PromptReferences";
 
 describe("renderRichPromptContent", () => {

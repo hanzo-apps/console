@@ -14,11 +14,11 @@ import {
   getTracesByIds,
   StorageService,
   StorageServiceFactory,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
 import { processDatastoreTraceDelete } from "../features/traces/processDatastoreTraceDelete";
 import { env } from "../env";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 
 describe("trace deletion", () => {
   let eventStorageService: StorageService;

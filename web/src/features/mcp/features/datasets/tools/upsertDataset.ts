@@ -4,7 +4,7 @@ import {
   PostDatasetsV2Body,
   PostDatasetsV2Response,
 } from "@/src/features/public-api/types/datasets";
-import { DatasetJSONSchema } from "@langfuse/shared/src/server";
+import { DatasetJSONSchema } from "@hanzo/console/src/server";
 import { defineTool } from "../../../core/define-tool";
 import { runMcpTool } from "../../../core/run-mcp-tool";
 

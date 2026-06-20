@@ -2,7 +2,7 @@ import { createNextApiHandler } from "@trpc/server/adapters/next";
 import { createTRPCContext } from "@/src/server/api/trpc";
 import { appRouter } from "@/src/server/api/root";
 import { env } from "@/src/env.mjs";
-import { logger, traceException } from "@hanzo/console-core/src/server";
+import { logger, traceException } from "@hanzo/console/src/server";
 
 export const config = {
   maxDuration: 240,
@@ -19,12 +19,24 @@ export default createNextApiHandler({
   createContext: createTRPCContext,
   onError: ({ path, error }) => {
     // User errors that should not be reported to Sentry
-    const userErrorCodes = ["NOT_FOUND", "UNAUTHORIZED", "FORBIDDEN", "BAD_REQUEST", "PRECONDITION_FAILED"];
+    const userErrorCodes = [
+      "NOT_FOUND",
+      "UNAUTHORIZED",
+      "FORBIDDEN",
+      "BAD_REQUEST",
+      "PRECONDITION_FAILED",
+    ];
 
     if (userErrorCodes.includes(error.code)) {
-      logger.info(`tRPC route failed on ${path ?? "<no-path>"}: ${error.message}`, error);
+      logger.info(
+        `tRPC route failed on ${path ?? "<no-path>"}: ${error.message}`,
+        error,
+      );
     } else {
-      logger.error(`tRPC route failed on ${path ?? "<no-path>"}: ${error.message}`, error);
+      logger.error(
+        `tRPC route failed on ${path ?? "<no-path>"}: ${error.message}`,
+        error,
+      );
       // Only report system errors to Sentry, not user errors
       traceException(error);
     }

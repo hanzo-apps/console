@@ -5,7 +5,7 @@ import {
   availableObservationEvalVariableColumns,
   ObservationEvalVariableColumn,
   type ObservationVariableMapping,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 
 describe("extractObservationVariables", () => {
   const mockObservation: ObservationForEval = {
@@ -382,10 +382,7 @@ describe("extractObservationVariables", () => {
         ...mockObservation,
         metadata: {
           attributes: {
-            tools: JSON.stringify([
-              { name: "get_weather" },
-              { name: "search_web" },
-            ]),
+            tools: JSON.stringify([{ name: "get_weather" }, { name: "search_web" }]),
           },
         },
       };

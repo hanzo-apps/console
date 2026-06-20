@@ -4,7 +4,7 @@ import {
   BooleanConfigFields,
   TextConfigFields,
   validateNumericRangeFields,
-} from "@hanzo/console-core";
+} from "@hanzo/console";
 import { z } from "zod/v4";
 import { type CreateConfig, type UpdateConfig } from "./upsertFormTypes";
 
@@ -16,15 +16,23 @@ const ScoreConfigBaseSchema = z.object({
 // Validation-only schema without metadata fields (ids, timestamps etc.)
 const ScoreConfigValidationSchema = ScoreConfigBaseSchema.and(
   z
-    .discriminatedUnion("dataType", [NumericConfigFields, CategoricalConfigFields, BooleanConfigFields])
+    .discriminatedUnion("dataType", [
+      NumericConfigFields,
+      CategoricalConfigFields,
+      BooleanConfigFields,
+    ])
     .superRefine(validateNumericRangeFields),
 );
 
-export const validateScoreConfigUpsertFormInput = (values: CreateConfig | UpdateConfig): string | null => {
+export const validateScoreConfigUpsertFormInput = (
+  values: CreateConfig | UpdateConfig,
+): string | null => {
   const result = ScoreConfigValidationSchema.safeParse({
     ...values,
     categories: values.categories?.length ? values.categories : undefined,
   });
 
-  return result.error ? result.error?.issues.map((issue) => issue.message).join(", ") : null;
+  return result.error
+    ? result.error?.issues.map((issue) => issue.message).join(", ")
+    : null;
 };

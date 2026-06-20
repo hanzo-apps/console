@@ -8,7 +8,7 @@ import {
   traceException,
   redis,
   recordGauge,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { Job } from "@hanzo/mq";
 import { env } from "../../env";
 

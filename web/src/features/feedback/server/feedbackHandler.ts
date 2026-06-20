@@ -1,10 +1,13 @@
 import { runFeedbackCorsMiddleware } from "@/src/features/feedback/server/corsMiddleware";
 import { sendToSlack } from "@/src/features/slack/server/slack-webhook";
 import { type NextApiRequest, type NextApiResponse } from "next";
-import { logger } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
 
 // Collects feedack from users that do not use the cloud version of the app
-export default async function feedbackApiHandler(req: NextApiRequest, res: NextApiResponse) {
+export default async function feedbackApiHandler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   await runFeedbackCorsMiddleware(req, res);
 
   try {

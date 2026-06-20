@@ -1,10 +1,10 @@
-import { createEvent, createEventsCh } from "@langfuse/shared/src/server";
+import { createEvent, createEventsCh } from "@hanzo/console/src/server";
 import { env } from "@/src/env.mjs";
 
 const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
 
 const isEventsTableV2Enabled =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? it : it.skip;
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? it : it.skip;
 let hasLegacyEventsTable = false;
 
 const maybeIt = (name: string, testFn: () => Promise<void>): void => {
@@ -82,7 +82,7 @@ describe("ClickHouse insert string edge cases", () => {
 
   describe("Invalid string length on oversized JSON payload", () => {
     maybeIt(
-      "should throw 'Size of JSON object' when input exceeds clickhouse byte limit",
+      "should throw 'Size of JSON object' when input exceeds datastore byte limit",
       async () => {
         const hugeString = "x".repeat(300 * 1024 * 1024);
 

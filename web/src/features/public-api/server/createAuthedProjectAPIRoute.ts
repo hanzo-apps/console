@@ -2,11 +2,16 @@ import crypto from "node:crypto";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { type ZodType, type z } from "zod";
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
-import { prisma } from "@hanzo/shared/src/db";
-import { redis, type AuthHeaderValidVerificationResult, traceException, logger } from "@hanzo/shared/src/server";
-import { type RateLimitResource } from "@hanzo/shared";
+import { prisma } from "@hanzo/console/src/db";
+import {
+  redis,
+  type AuthHeaderValidVerificationResult,
+  traceException,
+  logger,
+} from "@hanzo/console/src/server";
+import { type RateLimitResource } from "@hanzo/console";
 import { RateLimitService } from "@/src/features/public-api/server/RateLimitService";
-import { contextWithHanzoProps } from "@hanzo/shared/src/server";
+import { contextWithHanzoProps } from "@hanzo/console/src/server";
 import * as opentelemetry from "@opentelemetry/api";
 import { env } from "@/src/env.mjs";
 import { isZodError } from "@/src/features/public-api/server/withMiddlewares";
@@ -18,7 +23,11 @@ import {
   type PublicApiErrorContract,
 } from "@/src/features/public-api/server/unstable-public-api-error-contract";
 
-type RouteConfig<TQuery extends ZodType<any>, TBody extends ZodType<any>, TResponse extends ZodType<any>> = {
+type RouteConfig<
+  TQuery extends ZodType<any>,
+  TBody extends ZodType<any>,
+  TResponse extends ZodType<any>,
+> = {
   name: string;
   querySchema?: TQuery;
   bodySchema?: TBody;
@@ -83,7 +92,10 @@ async function verifyApiKeyAuth(
     scope: { projectId: string; accessLevel: RouteAccessLevel };
   }
 > {
-  const regularAuth = await new ApiAuthService(prisma, redis).verifyAuthHeaderAndReturnScope(authHeader);
+  const regularAuth = await new ApiAuthService(
+    prisma,
+    redis,
+  ).verifyAuthHeaderAndReturnScope(authHeader);
 
   if (!regularAuth.validKey) {
     throw { status: 401, message: regularAuth.error };
@@ -103,7 +115,8 @@ async function verifyApiKeyAuth(
   if (!regularAuth.scope.projectId) {
     throw {
       status: 401,
-      message: "Project ID not found for API token. Are you using an organization key?",
+      message:
+        "Project ID not found for API token. Are you using an organization key?",
     };
   }
 
@@ -166,8 +179,14 @@ async function verifyAdminApiKeyAuth(req: NextApiRequest): Promise<
   // web/src/ee/features/admin-api/server/adminApiAuth.ts.
   try {
     // timingSafeEqual throws on different input lengths, handle accordingly
-    const bearerTokenEqual = crypto.timingSafeEqual(Buffer.from(bearerToken), Buffer.from(adminApiKey));
-    const headerEqual = crypto.timingSafeEqual(Buffer.from(String(adminApiKeyHeader)), Buffer.from(adminApiKey));
+    const bearerTokenEqual = crypto.timingSafeEqual(
+      Buffer.from(bearerToken),
+      Buffer.from(adminApiKey),
+    );
+    const headerEqual = crypto.timingSafeEqual(
+      Buffer.from(String(adminApiKeyHeader)),
+      Buffer.from(adminApiKey),
+    );
     const isEqual = bearerTokenEqual && headerEqual;
 
     if (!isEqual) throw Error();
@@ -179,7 +198,8 @@ async function verifyAdminApiKeyAuth(req: NextApiRequest): Promise<
   if (!projectIdHeader || typeof projectIdHeader !== "string") {
     throw {
       status: 400,
-      message: "x-hanzo-project-id header is required for admin API key authentication",
+      message:
+        "x-hanzo-project-id header is required for admin API key authentication",
     };
   }
 
@@ -270,7 +290,10 @@ export const createAuthedProjectAPIRoute = <
 
     // Verify authentication (API key or admin API key)
     try {
-      auth = await verifyAuth(req, routeConfig.isAdminApiKeyAuthAllowed || false);
+      auth = await verifyAuth(
+        req,
+        routeConfig.isAdminApiKeyAuthAllowed || false,
+      );
     } catch (error: any) {
       const statusCode = error.status || 401;
       const message = error.message || "Authentication failed";
@@ -287,10 +310,11 @@ export const createAuthedProjectAPIRoute = <
       return;
     }
 
-    const rateLimitResponse = await RateLimitService.getInstance().rateLimitRequest(
-      auth.scope,
-      routeConfig.rateLimitResource || "public-api",
-    );
+    const rateLimitResponse =
+      await RateLimitService.getInstance().rateLimitRequest(
+        auth.scope,
+        routeConfig.rateLimitResource || "public-api",
+      );
 
     if (rateLimitResponse?.isRateLimited()) {
       return rateLimitResponse.sendRestResponseIfLimited(
@@ -299,13 +323,20 @@ export const createAuthedProjectAPIRoute = <
       );
     }
 
-    logger.debug(`Request to route ${routeConfig.name} projectId ${auth.scope.projectId}`, {
-      query: req.query,
-      body: req.body,
-    });
+    logger.debug(
+      `Request to route ${routeConfig.name} projectId ${auth.scope.projectId}`,
+      {
+        query: req.query,
+        body: req.body,
+      },
+    );
 
-    const query = routeConfig.querySchema ? routeConfig.querySchema.parse(req.query) : ({} as z.infer<TQuery>);
-    const body = routeConfig.bodySchema ? routeConfig.bodySchema.parse(req.body) : ({} as z.infer<TBody>);
+    const query = routeConfig.querySchema
+      ? routeConfig.querySchema.parse(req.query)
+      : ({} as z.infer<TQuery>);
+    const body = routeConfig.bodySchema
+      ? routeConfig.bodySchema.parse(req.body)
+      : ({} as z.infer<TBody>);
 
     const ctx = contextWithHanzoProps({
       headers: req.headers,
@@ -334,7 +365,9 @@ export const createAuthedProjectAPIRoute = <
       res
         .status(
           // Check whether status code was already set inside handler to non default value
-          res.statusCode !== 200 ? res.statusCode : routeConfig.successStatusCode || 200,
+          res.statusCode !== 200
+            ? res.statusCode
+            : routeConfig.successStatusCode || 200,
         )
         .json(response || { message: "OK" });
     });

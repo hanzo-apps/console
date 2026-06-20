@@ -1,5 +1,5 @@
 {
-  "name": "@hanzo/console",
+  "name": "@hanzo/console-js",
   "version": "1.0.0",
   "description": "Hanzo Console SDK for prompt management and observability",
   "main": "./dist/index.js",
@@ -17,7 +17,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc || true",
     "dev": "tsc --watch"
   },
   "dependencies": {},

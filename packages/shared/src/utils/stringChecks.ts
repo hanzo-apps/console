@@ -1,3 +1,7 @@
+// Unicode ranges for Hiragana, Katakana, and common CJK ideographs so prompt
+// variable names may contain Japanese characters in addition to ASCII letters.
+const JAPANESE_CHAR_RANGE = "぀-ゟ゠-ヿ一-鿿";
+
 export function getIsCharOrUnderscore(value: string): boolean {
   const charOrUnderscore = new RegExp(`^[a-zA-Z_${JAPANESE_CHAR_RANGE}]+$`, "u");
 

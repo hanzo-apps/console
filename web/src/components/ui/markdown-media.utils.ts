@@ -4,7 +4,7 @@ import {
   type OpenAIContentSchema,
   type OpenAIOutputAudioType,
   type ParsedMediaReferenceType,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { type MediaReturnType } from "@/src/features/media/validation";
 import { type z } from "zod";
 

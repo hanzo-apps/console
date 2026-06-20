@@ -4,7 +4,7 @@ import { usePlaygroundContext } from "@/src/features/playground/page/context";
 import { Button } from "@/src/components/ui/button";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { PlusIcon, PencilIcon, MinusCircle, BoxIcon } from "lucide-react";
-import { type LlmSchema } from "@hanzo/shared";
+import { type LlmSchema } from "@hanzo/console";
 import { api } from "@/src/utils/api";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { CreateOrEditLLMSchemaDialog } from "@/src/features/playground/page/components/CreateOrEditLLMSchemaDialog";
@@ -21,7 +21,8 @@ import { type PlaygroundSchema } from "@/src/features/playground/page/types";
 
 // Popover content component for use in CollapsibleSection action buttons
 export const StructuredOutputSchemaPopover = () => {
-  const { structuredOutputSchema, setStructuredOutputSchema } = usePlaygroundContext();
+  const { structuredOutputSchema, setStructuredOutputSchema } =
+    usePlaygroundContext();
   const projectId = useProjectIdFromURL();
 
   const { data: savedSchemas = [] } = api.llmSchemas.getAll.useQuery(
@@ -47,7 +48,10 @@ export const StructuredOutputSchemaPopover = () => {
   );
 
   const handleSelectSchema = (selectedLLMSchema: LlmSchema) => {
-    if (structuredOutputSchema && structuredOutputSchema.id === selectedLLMSchema.id) {
+    if (
+      structuredOutputSchema &&
+      structuredOutputSchema.id === selectedLLMSchema.id
+    ) {
       // Schema already selected, just update it
       setStructuredOutputSchema({
         ...structuredOutputSchema,
@@ -103,10 +107,12 @@ export const StructuredOutputSchemaPopover = () => {
               className="flex items-center justify-between px-1 py-2"
             >
               <div className="flex items-center gap-2">
-                <BoxIcon className="h-4 w-4 text-muted-foreground" />
+                <BoxIcon className="text-muted-foreground h-4 w-4" />
                 <div className="flex-1 overflow-hidden">
                   <div className="truncate font-medium">{schema.name}</div>
-                  <div className="line-clamp-1 text-xs text-muted-foreground">{schema.description}</div>
+                  <div className="text-muted-foreground line-clamp-1 text-xs">
+                    {schema.description}
+                  </div>
                 </div>
               </div>
               <CreateOrEditLLMSchemaDialog
@@ -130,7 +136,10 @@ export const StructuredOutputSchemaPopover = () => {
         <CommandSeparator />
       </CommandList>
       <div className="mt-auto p-1">
-        <CreateOrEditLLMSchemaDialog projectId={projectId as string} onSave={handleSelectSchema}>
+        <CreateOrEditLLMSchemaDialog
+          projectId={projectId as string}
+          onSave={handleSelectSchema}
+        >
           <Button variant="outline" size="default" className="w-full">
             <PlusIcon className="mr-2 h-4 w-4" />
             Create new schema
@@ -143,7 +152,8 @@ export const StructuredOutputSchemaPopover = () => {
 
 // Main component for embedding in CollapsibleSection content
 export const StructuredOutputSchemaSection = () => {
-  const { structuredOutputSchema, setStructuredOutputSchema } = usePlaygroundContext();
+  const { structuredOutputSchema, setStructuredOutputSchema } =
+    usePlaygroundContext();
   const projectId = useProjectIdFromURL();
 
   const { data: savedSchemas = [] } = api.llmSchemas.getAll.useQuery(
@@ -170,7 +180,9 @@ export const StructuredOutputSchemaSection = () => {
 
   useEffect(() => {
     if (structuredOutputSchema && !structuredOutputSchema.existingLlmSchema) {
-      const matchingSavedSchema = savedSchemas.find((savedSchema) => savedSchema.name === structuredOutputSchema.name);
+      const matchingSavedSchema = savedSchemas.find(
+        (savedSchema) => savedSchema.name === structuredOutputSchema.name,
+      );
 
       if (matchingSavedSchema) {
         setStructuredOutputSchema({
@@ -183,7 +195,10 @@ export const StructuredOutputSchemaSection = () => {
   }, [savedSchemas, structuredOutputSchema, setStructuredOutputSchema]);
 
   const handleSelectSchema = (selectedLLMSchema: LlmSchema) => {
-    if (structuredOutputSchema && structuredOutputSchema.id === selectedLLMSchema.id) {
+    if (
+      structuredOutputSchema &&
+      structuredOutputSchema.id === selectedLLMSchema.id
+    ) {
       // Schema already selected, just update it
       setStructuredOutputSchema({
         ...structuredOutputSchema,
@@ -240,23 +255,29 @@ export const StructuredOutputSchemaSection = () => {
                 ? {
                     name: structuredOutputSchema.name,
                     description: structuredOutputSchema.description,
-                    schema: JSON.stringify(structuredOutputSchema.schema, null, 2),
+                    schema: JSON.stringify(
+                      structuredOutputSchema.schema,
+                      null,
+                      2,
+                    ),
                   }
                 : undefined
             }
           >
-            <div className="cursor-pointer rounded-md border bg-background p-2 transition-colors duration-200 hover:bg-accent/50">
+            <div className="bg-background hover:bg-accent/50 cursor-pointer rounded-md border p-2 transition-colors duration-200">
               <div className="mb-1 flex items-center justify-between">
                 <div className="flex items-center gap-1">
-                  <BoxIcon className="h-4 w-4 text-muted-foreground" />
+                  <BoxIcon className="text-muted-foreground h-4 w-4" />
                   <h3
-                    className="max-w-[200px] truncate text-ellipsis text-sm font-medium"
+                    className="max-w-[200px] truncate text-sm font-medium text-ellipsis"
                     title={structuredOutputSchema.name}
                   >
                     {structuredOutputSchema.name}
                   </h3>
                   {!isSchemaSaved(structuredOutputSchema) ? (
-                    <span className="rounded bg-muted px-1 py-0.5 text-xs text-muted-foreground">Unsaved</span>
+                    <span className="bg-muted text-muted-foreground rounded px-1 py-0.5 text-xs">
+                      Unsaved
+                    </span>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-1">

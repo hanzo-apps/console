@@ -15,9 +15,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useEffect } from "react";
 import { api } from "@/src/utils/api";
 import { useObservationListBeta } from "@/src/features/events/hooks/useObservationListBeta";
-import { type ObservationReturnTypeWithMetadata, type ObservationReturnType } from "@/src/server/api/routers/traces";
+import {
+  type ObservationReturnTypeWithMetadata,
+  type ObservationReturnType,
+} from "@/src/server/api/routers/traces";
 import { stringifyMetadata } from "@/src/utils/clientSideDomainTypes";
-import type { ParseRequest, ParseResponse } from "@/src/workers/json-parser.worker";
+import type {
+  ParseRequest,
+  ParseResponse,
+} from "@/src/workers/json-parser.worker";
 
 type ObservationWithStringifiedIO = ObservationReturnTypeWithMetadata & {
   input: string | null;
@@ -53,7 +59,10 @@ function estimateSize(value: unknown): number {
 
 // Singleton worker instance shared across all hook calls
 let workerInstance: Worker | null = null;
-const pendingCallbacks = new Map<string, (data: ParseResponse & { error?: string }) => void>();
+const pendingCallbacks = new Map<
+  string,
+  (data: ParseResponse & { error?: string }) => void
+>();
 
 function getOrCreateWorker(): Worker | null {
   if (typeof window === "undefined" || !window.Worker) {
@@ -63,7 +72,9 @@ function getOrCreateWorker(): Worker | null {
   if (!workerInstance) {
     try {
       // Next.js will bundle this as a separate chunk
-      workerInstance = new Worker(new URL("@/src/workers/json-parser.worker.ts", import.meta.url));
+      workerInstance = new Worker(
+        new URL("@/src/workers/json-parser.worker.ts", import.meta.url),
+      );
 
       workerInstance.onmessage = (e: MessageEvent<ParseResponse>) => {
         const callback = pendingCallbacks.get(e.data.id);
@@ -104,8 +115,12 @@ interface ParsedData {
 /**
  * Sync parse helper - used for small payloads or when Web Worker unavailable
  */
-async function syncParseObservationData(input: unknown, output: unknown, metadata: unknown): Promise<ParsedData> {
-  const { deepParseJsonIterative } = await import("@hanzo/shared");
+async function syncParseObservationData(
+  input: unknown,
+  output: unknown,
+  metadata: unknown,
+): Promise<ParsedData> {
+  const { deepParseJsonIterative } = await import("@hanzo/console");
   const startTime = performance.now();
 
   return {
@@ -129,9 +144,14 @@ async function syncParseObservationData(input: unknown, output: unknown, metadat
  * Parse observation data in Web Worker (or sync for small payloads)
  * Returns a promise that resolves with parsed data
  */
-async function parseObservationData(input: unknown, output: unknown, metadata: unknown): Promise<ParsedData> {
+async function parseObservationData(
+  input: unknown,
+  output: unknown,
+  metadata: unknown,
+): Promise<ParsedData> {
   // Estimate total size to decide sync vs worker
-  const totalSize = estimateSize(input) + estimateSize(output) + estimateSize(metadata);
+  const totalSize =
+    estimateSize(input) + estimateSize(output) + estimateSize(metadata);
 
   // Small payloads: sync parse (faster, no message-passing overhead)
   if (totalSize < PARSE_IN_WEBWORKER_THRESHOLD) {
@@ -238,13 +258,18 @@ export function useParsedObservation({
   // Log warning if baseObservation missing when beta ON (helps catch issues in testing)
   useEffect(() => {
     if (isBetaEnabled && eventsQuery.data && !baseObservation) {
-      console.warn("[useParsedObservation] baseObservation missing - JumpToPlaygroundButton may not work correctly", {
-        observationId,
-      });
+      console.warn(
+        "[useParsedObservation] baseObservation missing - JumpToPlaygroundButton may not work correctly",
+        {
+          observationId,
+        },
+      );
     }
   }, [isBetaEnabled, eventsQuery.data, baseObservation, observationId]);
 
-  const isLoadingRaw = isBetaEnabled ? eventsQuery.isLoading : observationQuery.isLoading;
+  const isLoadingRaw = isBetaEnabled
+    ? eventsQuery.isLoading
+    : observationQuery.isLoading;
 
   // Step 2: Parse the data in Web Worker (React Query caches THIS too!)
   const parseQuery = useQuery({
@@ -261,7 +286,11 @@ export function useParsedObservation({
         throw new Error("No observation data to parse");
       }
 
-      return parseObservationData(mergedObservation.input, mergedObservation.output, mergedObservation.metadata);
+      return parseObservationData(
+        mergedObservation.input,
+        mergedObservation.output,
+        mergedObservation.metadata,
+      );
     },
     enabled: !!mergedObservation, // Only run when we have data
     staleTime: Infinity, // Parsed data never goes stale (input data is the source of truth)
@@ -280,9 +309,12 @@ export function useParsedObservation({
     // Loading states
     isLoadingObservation: isLoadingRaw,
     isParsing: parseQuery.isLoading,
-    isReady: !isLoadingRaw && !parseQuery.isLoading && parseQuery.data !== undefined,
+    isReady:
+      !isLoadingRaw && !parseQuery.isLoading && parseQuery.data !== undefined,
     // True when we have observation data but parsing hasn't completed yet
-    isWaitingForParsing: !!mergedObservation && (parseQuery.isLoading || parseQuery.data === undefined),
+    isWaitingForParsing:
+      !!mergedObservation &&
+      (parseQuery.isLoading || parseQuery.data === undefined),
 
     // Debug info
     parseTime: parseQuery.data?.parseTime,

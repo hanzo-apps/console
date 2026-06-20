@@ -4,13 +4,13 @@ process.env.HANZO_DATASET_SERVICE_WRITE_TO_VERSIONED_IMPLEMENTATION = "true";
 
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   createOrgProjectAndApiKey,
   createDatasetItem,
   getDatasetItems,
   createDatasetItemFilterState,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import type { Session } from "next-auth";
 import { v4 } from "uuid";
 

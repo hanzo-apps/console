@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { SlackMessageBuilder } from "../features/slack/slackMessageBuilder";
-import type { WebhookInput } from "@hanzo/console-core/src/server";
+import type { WebhookInput } from "@hanzo/console/src/server";
 
 describe("SlackMessageBuilder", () => {
   const mockPromptPayload: WebhookInput["payload"] = {
@@ -152,9 +152,7 @@ describe("SlackMessageBuilder", () => {
 
       // Check "Change author" falls back to email when name is null
       const detailsSection = blocks[2];
-      expect(detailsSection.fields[0].text).toBe(
-        "*Change author:*\ntest@example.com",
-      );
+      expect(detailsSection.fields[0].text).toBe("*Change author:*\ntest@example.com");
 
       // Check labels and tags show "None"
       expect(detailsSection.fields[3].text).toBe("*Labels:*\nNone");
@@ -191,13 +189,10 @@ describe("SlackMessageBuilder", () => {
         },
       };
 
-      const blocks =
-        SlackMessageBuilder.buildPromptVersionMessage(injectionPayload);
+      const blocks = SlackMessageBuilder.buildPromptVersionMessage(injectionPayload);
 
       const detailsSection = blocks[2];
-      expect(detailsSection.fields[0].text).toBe(
-        "*Change author:*\n&lt;!channel&gt;",
-      );
+      expect(detailsSection.fields[0].text).toBe("*Change author:*\n&lt;!channel&gt;");
     });
 
     it("should fall back to email when name is empty string", () => {
@@ -212,13 +207,10 @@ describe("SlackMessageBuilder", () => {
         },
       };
 
-      const blocks =
-        SlackMessageBuilder.buildPromptVersionMessage(emptyNamePayload);
+      const blocks = SlackMessageBuilder.buildPromptVersionMessage(emptyNamePayload);
 
       const detailsSection = blocks[2];
-      expect(detailsSection.fields[0].text).toBe(
-        "*Change author:*\nalice@example.com",
-      );
+      expect(detailsSection.fields[0].text).toBe("*Change author:*\nalice@example.com");
     });
 
     it("should generate correct action emojis for different actions", () => {

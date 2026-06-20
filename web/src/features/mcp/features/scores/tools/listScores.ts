@@ -5,7 +5,7 @@ import {
   ScoreSourceDomain,
   singleFilter,
   publicApiPaginationZod,
-} from "@langfuse/shared";
+} from "@hanzo/console";
 import { z } from "zod";
 import { defineTool } from "../../../core/define-tool";
 import { runMcpTool } from "../../../core/run-mcp-tool";

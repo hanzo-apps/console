@@ -1,9 +1,9 @@
 import type { Session } from "next-auth";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-import { createAndAddApiKeysToDb } from "@langfuse/shared/src/server";
+import { createAndAddApiKeysToDb } from "@hanzo/console/src/server";
 
 describe("organization API keys trpc", () => {
   const organizationId = "seed-org-id";
@@ -64,10 +64,16 @@ describe("organization API keys trpc", () => {
     environment: {} as any,
   };
 
-  const ownerCtx = createInnerTRPCContext({ session: ownerSession, headers: {} });
+  const ownerCtx = createInnerTRPCContext({
+    session: ownerSession,
+    headers: {},
+  });
   const ownerCaller = appRouter.createCaller({ ...ownerCtx, prisma });
 
-  const memberCtx = createInnerTRPCContext({ session: memberSession, headers: {} });
+  const memberCtx = createInnerTRPCContext({
+    session: memberSession,
+    headers: {},
+  });
   const memberCaller = appRouter.createCaller({ ...memberCtx, prisma });
 
   const unAuthedCtx = createInnerTRPCContext({ session: null, headers: {} });

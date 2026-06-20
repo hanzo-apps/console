@@ -1,9 +1,5 @@
 import { JobExecutionStatus } from "@prisma/client";
-import {
-  logger,
-  traceException,
-  type CodeEvalScoreWithName,
-} from "@langfuse/shared/src/server";
+import { logger, traceException, type CodeEvalScoreWithName } from "@hanzo/console/src/server";
 import { buildEvalScoreWritePayloads } from "./evalScoreEvent";
 import { type EvalExecutionDeps } from "./evalExecutionDeps";
 
@@ -71,14 +67,10 @@ export async function completeEvalExecution({
   } catch (e) {
     logger.error(`Failed to persist score: ${e}`, e);
     traceException(e);
-    throw new Error(
-      `Failed to write score ${jobOutputScoreId} into IngestionQueue`,
-    );
+    throw new Error(`Failed to write score ${jobOutputScoreId} into IngestionQueue`);
   }
 
-  logger.debug(
-    `Persisted ${scoreWritePayloads.length} score(s) for job ${jobExecutionId}`,
-  );
+  logger.debug(`Persisted ${scoreWritePayloads.length} score(s) for job ${jobExecutionId}`);
 
   await deps.updateJobExecution({
     id: jobExecutionId,

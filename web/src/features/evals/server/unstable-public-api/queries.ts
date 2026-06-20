@@ -2,8 +2,8 @@ import {
   EvalTargetObject,
   JobConfigState,
   LangfuseNotFoundError,
-} from "@langfuse/shared";
-import { EvalTemplateType, Prisma, prisma } from "@langfuse/shared/src/db";
+} from "@hanzo/console";
+import { EvalTemplateType, Prisma, prisma } from "@hanzo/console/src/db";
 import type {
   EvaluationRuleEvaluatorFamilyReference,
   PrismaClientLike,

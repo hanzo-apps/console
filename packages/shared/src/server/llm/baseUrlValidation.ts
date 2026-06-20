@@ -1,14 +1,10 @@
 import { env } from "../../env";
-import {
-  type OutboundUrlValidationWhitelist,
-  parseOutboundUrl,
-  validateOutboundUrlHost,
-} from "../outbound-url";
+import { type OutboundUrlValidationWhitelist, parseOutboundUrl, validateOutboundUrlHost } from "../outbound-url";
 
 export type LlmBaseUrlValidationWhitelist = OutboundUrlValidationWhitelist;
 
 export function llmBaseUrlWhitelistFromEnv(): LlmBaseUrlValidationWhitelist {
-  if (env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION) {
+  if (env.NEXT_PUBLIC_HANZO_CLOUD_REGION) {
     return {
       hosts: [],
       ips: [],
@@ -17,9 +13,9 @@ export function llmBaseUrlWhitelistFromEnv(): LlmBaseUrlValidationWhitelist {
   }
 
   return {
-    hosts: env.LANGFUSE_LLM_CONNECTION_WHITELISTED_HOST || [],
-    ips: env.LANGFUSE_LLM_CONNECTION_WHITELISTED_IPS || [],
-    ip_ranges: env.LANGFUSE_LLM_CONNECTION_WHITELISTED_IP_SEGMENTS || [],
+    hosts: env.HANZO_LLM_CONNECTION_WHITELISTED_HOST || [],
+    ips: env.HANZO_LLM_CONNECTION_WHITELISTED_IPS || [],
+    ip_ranges: env.HANZO_LLM_CONNECTION_WHITELISTED_IP_SEGMENTS || [],
   };
 }
 
@@ -27,7 +23,7 @@ export async function validateLlmConnectionBaseURL(
   urlString: string,
   whitelist: LlmBaseUrlValidationWhitelist = llmBaseUrlWhitelistFromEnv(),
 ): Promise<void> {
-  const effectiveWhitelist = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION
+  const effectiveWhitelist = env.NEXT_PUBLIC_HANZO_CLOUD_REGION
     ? {
         hosts: [],
         ips: [],
@@ -50,7 +46,7 @@ export async function validateLlmConnectionBaseURL(
     shouldSkipDnsCheckForLiteralIps: true,
   });
 
-  if (env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION && url.protocol !== "https:") {
+  if (env.NEXT_PUBLIC_HANZO_CLOUD_REGION && url.protocol !== "https:") {
     throw new Error("Only HTTPS base URLs are allowed on Langfuse Cloud");
   }
 }

@@ -1,14 +1,11 @@
-import { logger } from "@hanzo/console-core/src/server";
-import type { WebhookInput } from "@hanzo/console-core/src/server";
+import { logger } from "@hanzo/console/src/server";
+import type { WebhookInput } from "@hanzo/console/src/server";
 import { env } from "../../env";
 
 /** Escape Slack mrkdwn special characters to prevent injection (e.g. <!channel>)
  * @see https://docs.slack.dev/messaging/formatting-message-text/#escaping */
 function escapeSlackMrkdwn(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /**

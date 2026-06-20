@@ -38,15 +38,15 @@ Use root [AGENTS.md](../AGENTS.md) for monorepo-level rules.
 
 ## Shared Package Imports
 
-- Prefer `@langfuse/shared` in frontend-safe web code for shared types, zod
+- Prefer `@hanzo/console` in frontend-safe web code for shared types, zod
   schemas, domain contracts, table definitions, prompt/eval/model-pricing
   helpers, and other cross-runtime utilities.
-- Use `@langfuse/shared/src/server` only from server-only web code such as
+- Use `@hanzo/console/src/server` only from server-only web code such as
   `src/server/**`, `src/pages/api/**`, and server tests.
-- Use `@langfuse/shared/src/db` only in backend or test code that needs direct
+- Use `@hanzo/console/src/db` only in backend or test code that needs direct
   Prisma access; never route it into client bundles.
-- Use narrower subpaths such as `@langfuse/shared/src/env` or
-  `@langfuse/shared/encryption` only when that focused surface is the clearest
+- Use narrower subpaths such as `@hanzo/console/src/env` or
+  `@hanzo/console/encryption` only when that focused surface is the clearest
   dependency.
 - See `../packages/shared/AGENTS.md` for the full shared export map and what
   each entrypoint contains.

@@ -1,7 +1,7 @@
-import { DatasetItemDomain, Prisma } from "@hanzo/console-core";
+import { DatasetItemDomain, Prisma } from "@hanzo/console";
 import {
   ChatMessage,
-  convertDateToClickhouseDateTime,
+  convertDateToDatastoreDateTime,
   createDatasetItemFilterState,
   DatasetRunItemUpsertQueue,
   eventTypes,
@@ -16,7 +16,7 @@ import {
   QueueJobs,
   redis,
   TraceSinkParams,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { v4 } from "uuid";
 import z from "zod";
 import {
@@ -25,7 +25,7 @@ import {
   validateAndSetupExperiment,
   type PromptExperimentConfig,
 } from "./utils";
-import { validateDatasetItem, normalizeDatasetItemInput } from "@hanzo/console-core";
+import { validateDatasetItem, normalizeDatasetItemInput } from "@hanzo/console";
 import { randomUUID } from "crypto";
 import { createW3CTraceId } from "../utils";
 import { scheduleExperimentObservationEvals } from "./scheduleExperimentEvals";
@@ -180,7 +180,7 @@ async function processLLMCall(
         description: config.datasetRun.description,
         datasetId: datasetItem.datasetId,
         itemId: datasetItem.id,
-        itemVersion: convertDateToClickhouseDateTime(datasetItem.validFrom),
+        itemVersion: convertDateToDatastoreDateTime(datasetItem.validFrom),
         itemExpectedOutput: datasetItem.expectedOutput,
         itemMetadata: asRecord(datasetItem.metadata),
       },

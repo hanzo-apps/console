@@ -1,4 +1,4 @@
-import { type FilterCondition, type FilterState } from "@langfuse/shared";
+import { type FilterCondition, type FilterState } from "@hanzo/console";
 
 export const EXPERIMENT_ROOT_OBSERVATION_FILTER = {
   type: "boolean",

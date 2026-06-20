@@ -9,7 +9,7 @@ import { CreateExperimentsForm } from "@/src/features/experiments/components/Cre
 import { ExperimentsBetaSwitch } from "@/src/features/experiments/components/ExperimentsBetaSwitch";
 import { ExperimentsTable } from "@/src/features/experiments/components/table";
 import { useExperimentAccess } from "@/src/features/experiments/hooks/useExperimentAccess";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 import { FlaskConical, Sparkles } from "lucide-react";
@@ -24,7 +24,7 @@ export default function Experiments() {
   const projectId = router.query.projectId as string;
   const [isCreateExperimentDialogOpen, setIsCreateExperimentDialogOpen] =
     useState(false);
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const utils = api.useUtils();
 
   const hasExperimentWriteAccess = useHasProjectAccess({

@@ -1,6 +1,6 @@
 import { api } from "@/src/utils/api";
 import { useMemo } from "react";
-import { type FilterState, type TimeFilter } from "@langfuse/shared";
+import { type FilterState, type TimeFilter } from "@hanzo/console";
 
 // Process categorical scores into key-value format
 const processScoreCategories = (

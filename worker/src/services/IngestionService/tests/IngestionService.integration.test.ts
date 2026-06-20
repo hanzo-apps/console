@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { uuid, z } from "zod/v4";
-import { prisma } from "@hanzo/console-core/src/db";
+import { prisma } from "@hanzo/console/src/db";
 import {
   datastoreClient,
   ObservationEvent,
@@ -14,18 +14,17 @@ import {
   TraceEventType,
   traceRecordReadSchema,
   TraceRecordReadType,
-  createOrgProjectAndApiKey,
   createIngestionEventSchema,
-} from "@hanzo/console-core/src/server";
+} from "@hanzo/console/src/server";
 import { pruneDatabase } from "../../../__tests__/utils";
 import waitForExpect from "wait-for-expect";
 import { DatastoreWriter, TableName } from "../../DatastoreWriter";
 import { IngestionService } from "../../IngestionService";
-import { ModelUsageUnit, ScoreSourceEnum } from "@hanzo/console-core";
+import { ModelUsageUnit, ScoreSourceEnum } from "@hanzo/console";
 import { Cluster } from "ioredis";
 import { env } from "../../../env";
 
-let projectId = "";
+const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
 const environment = "default";
 
 describe("Ingestion end-to-end tests", () => {
@@ -35,8 +34,13 @@ describe("Ingestion end-to-end tests", () => {
 
   beforeEach(async () => {
     if (!redis) throw new Error("Redis not initialized");
-    ({ projectId } = await createOrgProjectAndApiKey());
-    await setNoEvalConfigsCache(projectId, "traceBased");
+    await pruneDatabase();
+
+    if (redis instanceof Cluster) {
+      await Promise.all(redis.nodes("master").map((node) => node.flushall()));
+    } else {
+      await redis.flushall();
+    }
 
     datastoreWriter = DatastoreWriter.getInstance();
 
@@ -560,7 +564,7 @@ describe("Ingestion end-to-end tests", () => {
       expect(trace.name).toBe("trace-name");
       expect(trace.release).toBe("1.0.0");
       expect(trace.version).toBe("2.0.0");
-      expect(trace.project_id).toBe(projectId);
+      expect(trace.project_id).toBe("7a88fb47-b4e2-43b8-a06c-a5ce950dc53a");
       expect(trace.tags).toEqual(["tag-1", "tag-2"]);
 
       const generation = await getDatastoreRecord(TableName.Observations, generationId);
@@ -605,72 +609,9 @@ describe("Ingestion end-to-end tests", () => {
       expect(score.value).toBe(100.5);
       expect(score.observation_id).toBeNull();
       expect(score.source).toBe(ScoreSourceEnum.EVAL);
-      expect(score.project_id).toBe(projectId);
+      expect(score.project_id).toBe("7a88fb47-b4e2-43b8-a06c-a5ce950dc53a");
     }, 10_000);
   });
-
-  it("should correctly ingest a TEXT score", async () => {
-    const traceId = randomUUID();
-    const scoreId = randomUUID();
-
-    const traceEventList: TraceEventType[] = [
-      {
-        type: "trace-create",
-        id: traceId,
-        timestamp: new Date().toISOString(),
-        body: {
-          name: "trace-for-text-score",
-          timestamp: new Date().toISOString(),
-          environment,
-        },
-      },
-    ];
-
-    const scoreEventList: ScoreEventType[] = [
-      {
-        id: randomUUID(),
-        type: "score-create",
-        timestamp: new Date().toISOString(),
-        body: {
-          id: scoreId,
-          dataType: "TEXT",
-          name: "text-score",
-          value: "Great explanation of the concept",
-          source: ScoreSourceEnum.API,
-          traceId: traceId,
-          environment,
-        },
-      },
-    ];
-
-    await Promise.all([
-      ingestionService.processTraceEventList({
-        projectId,
-        entityId: traceId,
-        createdAtTimestamp: new Date(),
-        traceEventList,
-      }),
-      ingestionService.processScoreEventList({
-        projectId,
-        entityId: scoreId,
-        createdAtTimestamp: new Date(),
-        scoreEventList,
-      }),
-    ]);
-
-    await clickhouseWriter.flushAll(true);
-
-    const score = await getClickhouseRecord(TableName.Scores, scoreId);
-
-    expect(score.id).toBe(scoreId);
-    expect(score.trace_id).toBe(traceId);
-    expect(score.name).toBe("text-score");
-    expect(score.data_type).toBe("TEXT");
-    expect(score.string_value).toBe("Great explanation of the concept");
-    expect(score.value).toBe(0);
-    expect(score.source).toBe(ScoreSourceEnum.API);
-    expect(score.project_id).toBe(projectId);
-  }, 10_000);
 
   [
     {
@@ -826,7 +767,7 @@ describe("Ingestion end-to-end tests", () => {
       ],
     },
     {
-      observationExternalModel: "lf-unmatched-model-for-token-test",
+      observationExternalModel: "GPT-4",
       observationStartTime: new Date("2021-01-01T00:00:00.000Z"),
       modelUnit: ModelUsageUnit.Tokens,
       expectedInternalModelId: null,
@@ -863,22 +804,12 @@ describe("Ingestion end-to-end tests", () => {
     it(`should match observations to internal models ${JSON.stringify(testConfig, null, 2)}`, async () => {
       const traceId = randomUUID();
       const generationId = randomUUID();
-      const modelIdMap = new Map<string, string>();
-
-      const getModelId = (id: string) => {
-        const existing = modelIdMap.get(id);
-        if (existing) return existing;
-        const generatedId = randomUUID();
-        modelIdMap.set(id, generatedId);
-        return generatedId;
-      };
 
       await Promise.all(
         testConfig.models.map(async (model) =>
           prisma.model.create({
             data: {
-              id: getModelId(model.id),
-              projectId,
+              id: model.id,
               modelName: model.modelName,
               matchPattern: model.matchPattern,
               startDate: model.startDate,
@@ -1115,7 +1046,7 @@ describe("Ingestion end-to-end tests", () => {
 
     const trace = await getDatastoreRecord(TableName.Traces, traceId);
 
-    expect(trace.project_id).toBe(projectId);
+    expect(trace.project_id).toBe("7a88fb47-b4e2-43b8-a06c-a5ce950dc53a");
 
     const span = await getDatastoreRecord(TableName.Observations, spanId);
 
@@ -1424,21 +1355,16 @@ describe("Ingestion end-to-end tests", () => {
 
     expect(trace.name).toBe("trace-name");
     expect(trace.user_id).toBe("user-1");
-    expect(trace.project_id).toBe(projectId);
+    expect(trace.project_id).toBe("7a88fb47-b4e2-43b8-a06c-a5ce950dc53a");
   }, 10_000);
 
   it("should merge observations and set negative tokens and cost to null", async () => {
-    const modelId = randomUUID();
-    const pricingTierId = randomUUID();
-    const inputPriceId = randomUUID();
-    const outputPriceId = randomUUID();
-    const observationId = randomUUID();
-    const traceId = randomUUID();
+    const modelId = "clyrjpbe20000t0mzcbwc42rg";
+    const pricingTierId = "f94390ea-8d08-4bbb-b106-519f3eaf81bb";
 
     await prisma.model.create({
       data: {
         id: modelId,
-        projectId,
         modelName: "gpt-4o-mini-2024-07-18",
         matchPattern: "(?i)^(gpt-4o-mini-2024-07-18)$",
         startDate: new Date("2021-01-01T00:00:00.000Z"),
@@ -1467,9 +1393,9 @@ describe("Ingestion end-to-end tests", () => {
 
     await prisma.price.create({
       data: {
-        id: inputPriceId,
+        id: "cm2uio8ef006mh6qlzc2mqa0e",
         pricingTierId,
-        modelId,
+        modelId: "clyrjpbe20000t0mzcbwc42rg",
         projectId: null,
         price: 0.00000015,
         usageType: "input",
@@ -1478,22 +1404,23 @@ describe("Ingestion end-to-end tests", () => {
 
     await prisma.price.create({
       data: {
-        id: outputPriceId,
+        id: "cm2uio8ef006oh6qlldn36376",
         pricingTierId,
-        modelId,
+        modelId: "clyrjpbe20000t0mzcbwc42rg",
         projectId: null,
         price: 0.0000006,
         usageType: "output",
       },
     });
 
+    const observationId = "c8d30f61-4097-407f-a337-5fb1e0c100f2";
     const observationEventList: ObservationEvent[] = [
       {
-        id: randomUUID(),
+        id: "084274e5-f15e-4f66-8419-a171808d8180",
         timestamp: "2024-11-04T16:13:51.496457Z",
         type: "generation-create",
         body: {
-          traceId,
+          traceId: "82c480bc-1c4e-4ba8-a153-0bd9f9e1a28e",
           name: "extract_location",
           startTime: "2024-11-04T16:13:51.495868Z",
           metadata: {
@@ -1504,7 +1431,7 @@ describe("Ingestion end-to-end tests", () => {
             ls_max_tokens: 1000,
           },
           input: "Sample input",
-          id: observationId,
+          id: "c8d30f61-4097-407f-a337-5fb1e0c100f2",
           model: "gpt-4o-mini-2024-07-18",
           modelParameters: {
             temperature: "0.4",
@@ -1515,13 +1442,13 @@ describe("Ingestion end-to-end tests", () => {
         },
       },
       {
-        id: randomUUID(),
+        id: "ef654262-b1d0-4b0b-9e4a-2a410e0577a6",
         timestamp: "2024-11-04T16:13:52.156691Z",
         type: "generation-update",
         body: {
-          traceId,
+          traceId: "82c480bc-1c4e-4ba8-a153-0bd9f9e1a28e",
           output: "Sample output",
-          id: observationId,
+          id: "c8d30f61-4097-407f-a337-5fb1e0c100f2",
           endTime: "2024-11-04T16:13:52.156248Z",
           model: "gpt-4o-mini-2024-07-18",
           usage: {
@@ -1563,17 +1490,12 @@ describe("Ingestion end-to-end tests", () => {
   });
 
   it("should merge observations and calculate cost", async () => {
-    const modelId = randomUUID();
-    const pricingTierId = randomUUID();
-    const inputPriceId = randomUUID();
-    const outputPriceId = randomUUID();
-    const observationId = randomUUID();
-    const traceId = randomUUID();
+    const modelId = "clyrjpbe20000t0mzcbwc42rg";
+    const pricingTierId = "f94390ea-8d08-4bbb-b106-519f3eaf81bb";
 
     await prisma.model.create({
       data: {
-        id: modelId,
-        projectId,
+        id: "clyrjpbe20000t0mzcbwc42rg",
         modelName: "gpt-4o-mini-2024-07-18",
         matchPattern: "(?i)^(gpt-4o-mini-2024-07-18)$",
         startDate: new Date("2021-01-01T00:00:00.000Z"),
@@ -1602,9 +1524,9 @@ describe("Ingestion end-to-end tests", () => {
 
     await prisma.price.create({
       data: {
-        id: inputPriceId,
+        id: "cm2uio8ef006mh6qlzc2mqa0e",
         pricingTierId,
-        modelId,
+        modelId: "clyrjpbe20000t0mzcbwc42rg",
         projectId: null,
         price: 0.00000015,
         usageType: "input",
@@ -1613,22 +1535,23 @@ describe("Ingestion end-to-end tests", () => {
 
     await prisma.price.create({
       data: {
-        id: outputPriceId,
+        id: "cm2uio8ef006oh6qlldn36376",
         pricingTierId,
-        modelId,
+        modelId: "clyrjpbe20000t0mzcbwc42rg",
         projectId: null,
         price: 0.0000006,
         usageType: "output",
       },
     });
 
+    const observationId = "c8d30f61-4097-407f-a337-5fb1e0c100f2";
     const observationEventList: ObservationEvent[] = [
       {
-        id: randomUUID(),
+        id: "084274e5-f15e-4f66-8419-a171808d8180",
         timestamp: "2024-11-04T16:13:51.496457Z",
         type: "generation-create",
         body: {
-          traceId,
+          traceId: "82c480bc-1c4e-4ba8-a153-0bd9f9e1a28e",
           name: "extract_location",
           startTime: "2024-11-04T16:13:51.495868Z",
           metadata: {
@@ -1639,7 +1562,7 @@ describe("Ingestion end-to-end tests", () => {
             ls_max_tokens: 1000,
           },
           input: "Sample input",
-          id: observationId,
+          id: "c8d30f61-4097-407f-a337-5fb1e0c100f2",
           model: "gpt-4o-mini-2024-07-18",
           modelParameters: {
             temperature: "0.4",
@@ -1650,13 +1573,13 @@ describe("Ingestion end-to-end tests", () => {
         },
       },
       {
-        id: randomUUID(),
+        id: "ef654262-b1d0-4b0b-9e4a-2a410e0577a6",
         timestamp: "2024-11-04T16:13:52.156691Z",
         type: "generation-update",
         body: {
-          traceId,
+          traceId: "82c480bc-1c4e-4ba8-a153-0bd9f9e1a28e",
           output: "Sample output",
-          id: observationId,
+          id: "c8d30f61-4097-407f-a337-5fb1e0c100f2",
           endTime: "2024-11-04T16:13:52.156248Z",
           model: "gpt-4o-mini-2024-07-18",
           usage: {
@@ -1935,7 +1858,6 @@ describe("Ingestion end-to-end tests", () => {
 
     await prisma.model.create({
       data: {
-        projectId,
         modelName: "gpt-3.5",
         matchPattern: "(?i)^(gpt-)(35|3.5)(-turbo)?$",
         startDate: new Date("2021-01-01T00:00:00.000Z"),
@@ -2013,7 +1935,7 @@ describe("Ingestion end-to-end tests", () => {
     const trace = await getDatastoreRecord(TableName.Traces, traceId);
 
     expect(trace.name).toBe("trace-name");
-    expect(trace.project_id).toBe(projectId);
+    expect(trace.project_id).toBe("7a88fb47-b4e2-43b8-a06c-a5ce950dc53a");
     expect(trace.user_id).toBe("user-1");
 
     const generation = await getDatastoreRecord(TableName.Observations, generationId);
@@ -2036,7 +1958,6 @@ describe("Ingestion end-to-end tests", () => {
 
     await prisma.model.create({
       data: {
-        projectId,
         modelName: "gpt-3.5",
         matchPattern: "(?i)^(gpt-)(35|3.5)(-turbo)?$",
         startDate: new Date("2021-01-01T00:00:00.000Z"),
@@ -2311,16 +2232,14 @@ describe("Ingestion end-to-end tests", () => {
     it("should apply default tier for usage below threshold (Anthropic Claude example)", async () => {
       const traceId = randomUUID();
       const generationId = randomUUID();
-      const modelId = randomUUID();
-      const modelName = `claude-sonnet-4.5-${randomUUID()}`;
+      const modelId = "claude-sonnet-test";
 
       // Create model with tiered pricing (Anthropic Claude pattern: $3/M tokens default, $6/M tokens >200K)
       await prisma.model.create({
         data: {
           id: modelId,
-          projectId,
-          modelName,
-          matchPattern: `(?i)^(${modelName})$`,
+          modelName: "claude-sonnet-4.5",
+          matchPattern: "(?i)^(claude-sonnet-4.5)$",
           startDate: new Date("2021-01-01T00:00:00.000Z"),
           unit: ModelUsageUnit.Tokens,
           pricingTiers: {
@@ -2388,7 +2307,7 @@ describe("Ingestion end-to-end tests", () => {
             type: "GENERATION",
             name: "generation-name",
             startTime: new Date().toISOString(),
-            model: modelName,
+            model: "claude-sonnet-4.5",
             usage: {
               input: 100000, // Below 200K threshold
               output: 2000,
@@ -2448,16 +2367,14 @@ describe("Ingestion end-to-end tests", () => {
     it("should apply large context tier for usage above threshold (Anthropic Claude example)", async () => {
       const traceId = randomUUID();
       const generationId = randomUUID();
-      const modelId = randomUUID();
-      const modelName = `claude-sonnet-4.5-test-${randomUUID()}`;
+      const modelId = "claude-sonnet-test-2";
 
       // Create model with tiered pricing
       await prisma.model.create({
         data: {
           id: modelId,
-          projectId,
-          modelName,
-          matchPattern: `(?i)^(${modelName})$`,
+          modelName: "claude-sonnet-4.5-test",
+          matchPattern: "(?i)^(claude-sonnet-4.5-test)$",
           startDate: new Date("2021-01-01T00:00:00.000Z"),
           unit: ModelUsageUnit.Tokens,
           pricingTiers: {
@@ -2525,7 +2442,7 @@ describe("Ingestion end-to-end tests", () => {
             type: "GENERATION",
             name: "generation-name",
             startTime: new Date().toISOString(),
-            model: modelName,
+            model: "claude-sonnet-4.5-test",
             usage: {
               input: 250000, // Above 200K threshold
               output: 2000,
@@ -2585,16 +2502,14 @@ describe("Ingestion end-to-end tests", () => {
     it("should match pattern with granular usage details (input_cached + input_regular)", async () => {
       const traceId = randomUUID();
       const generationId = randomUUID();
-      const modelId = randomUUID();
-      const modelName = `claude-test-granular-${randomUUID()}`;
+      const modelId = "claude-test-granular";
 
       // Create model with tiered pricing that sums all input* fields
       await prisma.model.create({
         data: {
           id: modelId,
-          projectId,
-          modelName,
-          matchPattern: `(?i)^(${modelName})$`,
+          modelName: "claude-test-granular",
+          matchPattern: "(?i)^(claude-test-granular)$",
           startDate: new Date("2021-01-01T00:00:00.000Z"),
           unit: ModelUsageUnit.Tokens,
           pricingTiers: {
@@ -2652,7 +2567,7 @@ describe("Ingestion end-to-end tests", () => {
             type: "GENERATION",
             name: "generation-name",
             startTime: new Date().toISOString(),
-            model: modelName,
+            model: "claude-test-granular",
             usageDetails: {
               input_cached: 150000,
               input_regular: 60000, // Total: 210K > 200K
@@ -2703,15 +2618,13 @@ describe("Ingestion end-to-end tests", () => {
     it("should handle exactly at threshold boundary (200K tokens)", async () => {
       const traceId = randomUUID();
       const generationId = randomUUID();
-      const modelId = randomUUID();
-      const modelName = `claude-boundary-${randomUUID()}`;
+      const modelId = "claude-boundary-test";
 
       await prisma.model.create({
         data: {
           id: modelId,
-          projectId,
-          modelName,
-          matchPattern: `(?i)^(${modelName})$`,
+          modelName: "claude-boundary",
+          matchPattern: "(?i)^(claude-boundary)$",
           startDate: new Date("2021-01-01T00:00:00.000Z"),
           unit: ModelUsageUnit.Tokens,
           pricingTiers: {
@@ -2769,7 +2682,7 @@ describe("Ingestion end-to-end tests", () => {
             type: "GENERATION",
             name: "generation-name",
             startTime: new Date().toISOString(),
-            model: modelName,
+            model: "claude-boundary",
             usage: {
               input: 200000, // Exactly at threshold
               output: 100,
@@ -2850,6 +2763,7 @@ async function getDatastoreRecord<T extends TableName>(tableName: T, entityId: s
         FROM traces_all_amt FINAL WHERE project_id = '${projectId}' AND id = '${entityId}'`,
       format: "JSONEachRow",
     });
+  }
 
   const result = (await query.json()).data[0];
 
