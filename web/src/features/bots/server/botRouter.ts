@@ -1,10 +1,11 @@
 import { z } from "zod/v4";
 import { TRPCError } from "@trpc/server";
+import { logger } from "@hanzo/console/src/server";
 import {
   createTRPCRouter,
   protectedProjectProcedure,
 } from "@/src/server/api/trpc";
-import { zapCallTool } from "./zapClient";
+import { zapCallTool, isBotGatewayConfigured } from "./zapClient";
 import {
   listPaymentMethods,
   addPaymentMethod,
@@ -30,9 +31,25 @@ export const botRouter = createTRPCRouter({
   list: protectedProjectProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ input }) => {
-      return zapCallTool<Bot[]>("bots.list", {
-        projectId: input.projectId,
-      });
+      // Bots are an optional, externally-hosted product surface. When the bot
+      // gateway is not wired up (or is transiently unreachable) for this
+      // deployment, degrade gracefully to an empty list so the page renders its
+      // in-console empty state. Throwing here would surface a hard error toast
+      // and, combined with a re-auth bounce, can eject the user out of console.
+      if (!isBotGatewayConfigured()) {
+        return [];
+      }
+      try {
+        return await zapCallTool<Bot[]>("bots.list", {
+          projectId: input.projectId,
+        });
+      } catch (err) {
+        logger.warn(
+          "bots.list: bot gateway unavailable, returning empty list",
+          err,
+        );
+        return [];
+      }
     }),
 
   getById: protectedProjectProcedure

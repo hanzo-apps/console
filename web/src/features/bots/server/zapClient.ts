@@ -16,10 +16,18 @@ function gatewayUrl(): string {
   );
 }
 
+/**
+ * Whether the bot gateway is configured (an auth token is present). Single
+ * source of truth so read-only callers can degrade gracefully (render an
+ * in-console empty state) instead of surfacing a hard error when the optional
+ * bot control plane is not wired up for this deployment.
+ */
+export function isBotGatewayConfigured(): boolean {
+  return Boolean(env.ZAP_BOT_GATEWAY_TOKEN ?? env.BOT_GATEWAY_TOKEN);
+}
+
 function gatewayToken(): string {
-  const token =
-    env.ZAP_BOT_GATEWAY_TOKEN ??
-    env.BOT_GATEWAY_TOKEN;
+  const token = env.ZAP_BOT_GATEWAY_TOKEN ?? env.BOT_GATEWAY_TOKEN;
   if (!token) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
