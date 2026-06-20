@@ -1,4 +1,4 @@
-import { ConsoleInternalTraceEnvironment } from "@hanzo/console";
+import { ConsoleInternalTraceEnvironment } from "@hanzo/console/src/server/llm/types";
 
 export const DEFAULT_SIDEBAR_HIDDEN_ENVIRONMENTS = [
   ConsoleInternalTraceEnvironment.PromptExperiments,

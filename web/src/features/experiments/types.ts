@@ -1,4 +1,4 @@
-import { ZodModelConfig } from "@hanzo/console";
+import { ZodModelConfig } from "@hanzo/console/src/server/llm/types";
 import z from "zod/v4";
 
 export const CreateExperimentData = z.object({
