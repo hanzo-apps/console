@@ -1,6 +1,9 @@
 import { env } from "@/src/env.mjs";
 import { createUserEmailPassword } from "@/src/features/auth-credentials/lib/credentialsServerUtils";
 import { signupSchema } from "@/src/features/auth/lib/signupSchema";
+import { iamSignup, isIamConfigured } from "@/src/features/auth/lib/iamServer";
+import { createProjectMembershipsOnSignup } from "@/src/features/auth/lib/createProjectMembershipsOnSignup";
+import { prisma } from "@hanzo/console/src/db";
 // Hanzo uses IAM — multi-tenant SSO not applicable
 function getSsoAuthProviderIdForDomain(_domain: string): string | null {
   return null;
@@ -110,20 +113,71 @@ export async function signupApiHandler(
 
   // create the user
   let userId: string;
-  try {
-    userId = await createUserEmailPassword(
-      body.email,
-      body.password,
-      body.name,
-    );
-  } catch (error) {
-    const message =
-      "Signup: Error creating user: " +
-      (error instanceof Error ? error.message : JSON.stringify(error));
-    logger.warn(message, body.email.toLowerCase(), body.name);
-    res.status(422).json({ message: message });
+  if (isIamConfigured()) {
+    // IAM-native signup: register the identity (and password) in IAM, which is
+    // the credential authority. The local console user row is created
+    // passwordless — IAM owns the password; credentials login verifies against
+    // IAM. This keeps the identity source in IAM while console retains the
+    // user/RBAC/project model keyed on email.
+    const iamResult = await iamSignup({
+      email: body.email,
+      password: body.password,
+      name: body.name,
+    });
+    if (!iamResult.ok) {
+      logger.warn(
+        "Signup: IAM registration failed: " + iamResult.error,
+        body.email.toLowerCase(),
+        body.name,
+      );
+      res.status(422).json({ message: iamResult.error });
+      return;
+    }
 
-    return;
+    try {
+      const existing = await prisma.user.findUnique({
+        where: { email: body.email.toLowerCase() },
+      });
+      if (existing) {
+        userId = existing.id;
+      } else {
+        const newUser = await prisma.user.create({
+          data: {
+            email: body.email.toLowerCase(),
+            name: body.name,
+            password: null, // IAM owns credentials
+          },
+        });
+        await createProjectMembershipsOnSignup(newUser, {
+          userWasJustCreated: true,
+        });
+        userId = newUser.id;
+      }
+    } catch (error) {
+      const message =
+        "Signup: Error creating local user record: " +
+        (error instanceof Error ? error.message : JSON.stringify(error));
+      logger.warn(message, body.email.toLowerCase(), body.name);
+      res.status(422).json({ message });
+      return;
+    }
+  } else {
+    // Transitional fallback (IAM not configured): local password user.
+    try {
+      userId = await createUserEmailPassword(
+        body.email,
+        body.password,
+        body.name,
+      );
+    } catch (error) {
+      const message =
+        "Signup: Error creating user: " +
+        (error instanceof Error ? error.message : JSON.stringify(error));
+      logger.warn(message, body.email.toLowerCase(), body.name);
+      res.status(422).json({ message: message });
+
+      return;
+    }
   }
 
   // Trigger new user signup event

@@ -173,9 +173,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async () => {
             : false,
         sso,
         hanzoIam:
-          env.HANZO_IAM_CLIENT_ID !== undefined &&
-          env.HANZO_IAM_CLIENT_SECRET !== undefined &&
-          env.HANZO_IAM_SERVER_URL !== undefined,
+          env.IAM_CLIENT_ID !== undefined && env.IAM_SERVER_URL !== undefined,
       },
       signUpDisabled: env.AUTH_DISABLE_SIGNUP === "true",
       runningOnHuggingFaceSpaces: env.NEXTAUTH_URL?.replace(
@@ -731,10 +729,10 @@ export default function SignIn({
     }
   }
 
-  useEffect(() => {
-    capture("sign_in:button_click", { provider: "hanzo-iam" });
-    void signIn("hanzo-iam");
-  }, [capture]);
+  // IAM-native: the embedded email/password form on this page is the primary
+  // sign-in UX (credentials are verified against IAM via the credentials
+  // provider). We deliberately do NOT force-redirect to a hosted IAM/NextAuth
+  // page on mount — social IAM login is available via the explicit button.
 
   return (
     <>
