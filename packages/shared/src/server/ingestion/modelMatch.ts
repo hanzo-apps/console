@@ -175,7 +175,7 @@ export async function findModelInPostgres(p: ModelMatchProps): Promise<Model | n
   // SQLite has no POSIX regex operator (`~`), so the `match_pattern` regex is
   // applied in JavaScript. We fetch the ordered candidate set (project-specific
   // first, then newest start_date) and return the first row whose pattern
-  // matches the model name — preserving the Postgres ordering/precedence.
+  // matches the model name, preserving the Postgres ordering/precedence.
   const sql = Prisma.sql`
     SELECT
       id,

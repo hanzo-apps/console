@@ -155,6 +155,17 @@ export const jsonArrayCodecExtension: {
   },
 };
 
+/**
+ * Decode a JSON-array TEXT column value (as returned by a raw `$queryRaw` that
+ * bypasses the codec) back into a real array. This is the canonical decoder:
+ * raw-SQL call sites that select one of the JSON-array columns must use this
+ * rather than hand-rolling `JSON.parse`.
+ */
+export function decodeJsonArrayColumn<T = unknown>(value: unknown): T[] {
+  const decoded = decodeArray(value);
+  return Array.isArray(decoded) ? (decoded as T[]) : [];
+}
+
 /** Exposed for targeted unit tests / manual use. */
 export const __jsonArrayInternals = {
   JSON_ARRAY_FIELDS,
