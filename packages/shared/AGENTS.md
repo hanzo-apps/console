@@ -31,12 +31,23 @@ Use root [AGENTS.md](../../AGENTS.md) for monorepo-level rules.
 - Queue payload schemas: `src/server/queues.ts`
 - Queue helpers: `src/server/redis/*`
 - Dashboard/monitor query feature (data model + server-only builder/executor): `src/features/query/*`
-- Postgres schema: `prisma/schema.prisma`
+- Application database schema (SQLite / Hanzo Base): `prisma/schema.prisma`
+  - SQLite has no native enums or scalar lists. Former Prisma enums live as
+    const objects + union types in `src/db-enums.ts` (re-exported from the
+    barrel and `src/db.ts`); import enum values/types from there or the
+    package, never from `@prisma/client`.
+  - Former `Type[]` columns are `String` JSON columns; the
+    `src/db-json-arrays.ts` Prisma `$extends` codec transparently
+    serializes/parses them, so callers keep using real arrays. Register any
+    new list column there.
+  - Startup needs no Postgres and no `prisma migrate deploy`: the schema is
+    materialized with `prisma db push` (see `web/entrypoint.sh`).
+    `DATABASE_URL` is a `file:` SQLite path.
 - For unstable public eval APIs, the public `evaluatorId` is currently the
   exact `EvalTemplate.id`. Latest-version family grouping is derived from
   `(projectId, name)` rather than stored on extra evaluator identity fields.
-- Prisma migrations: `prisma/migrations/*`
-- ClickHouse migrations: `clickhouse/migrations/{clustered,unclustered}/*`
+- ClickHouse (datastore) OLAP layer is unchanged: `DATASTORE_*` env,
+  `clickhouse/migrations/{clustered,unclustered}/*`.
 - Seeder and support scripts: `scripts/seeder/*`, `clickhouse/scripts/*`
 
 ## Export Entry Points
@@ -84,18 +95,21 @@ the same PR.
 - Typecheck: `pnpm --filter @hanzo/console run typecheck`
 - Build: `pnpm --filter @hanzo/console run build`
 - Prisma generate: `pnpm --filter @hanzo/console run db:generate`
-- Prisma migrate (dev): `pnpm --filter @hanzo/console run db:migrate`
+- Sync SQLite schema (no migrations): `pnpm --filter @hanzo/console run db:push`
 - ClickHouse reset: `pnpm --filter @hanzo/console run ch:reset`
 
 ## Playbooks
 
-### Postgres schema change
+### Application (SQLite) schema change
 
-1. Update `prisma/schema.prisma`.
-2. Add migration in `prisma/migrations/*`.
-3. Regenerate client/types via `db:generate`.
-4. Update affected repository/query code under `src/server/repositories/*`.
-5. Add/adjust `web` and/or `worker` tests for changed behavior.
+1. Update `prisma/schema.prisma`. Keep it SQLite-compatible: no native enums
+   (use a `String` column + an entry in `src/db-enums.ts`), no scalar lists
+   (use a `String` JSON column + an entry in `src/db-json-arrays.ts`), no
+   Postgres-only index types (`Hash`/`Gin`) or `@db.*` Postgres attributes.
+2. Regenerate client/types via `db:generate`; apply with `db:push` (there is
+   no migration history).
+3. Update affected repository/query code under `src/server/repositories/*`.
+4. Add/adjust `web` and/or `worker` tests for changed behavior.
 
 ### ClickHouse schema change
 
