@@ -11,6 +11,7 @@ import { SidebarProvider, SidebarInset } from "@/src/components/ui/sidebar";
 import { AppSidebar } from "@/src/components/nav/app-sidebar";
 import { CommandMenu } from "@/src/features/command-k-menu/CommandMenu";
 import { Toaster } from "@/src/components/ui/sonner";
+import { TopBannerProvider } from "@/src/features/top-banner";
 import {
   PaymentBanner,
   PaymentBannerProvider,
@@ -22,7 +23,7 @@ import {
   getAvailableCloudRegionOptions,
   getCloudRegionAuthUrl,
 } from "@/src/features/organizations/cloudRegions";
-import { useLangfuseCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import type { Session } from "next-auth";
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 import type { RouteGroup } from "@/src/components/layouts/routes";
@@ -85,8 +86,13 @@ export function AuthenticatedLayout({
   session,
   navigation,
   metadata,
+  aiFeaturesEnabled,
   onSignOut,
 }: AuthenticatedLayoutProps) {
+  const { isConsoleCloud, region: currentRegion } = useConsoleCloudRegion();
+  const assistantEnabled =
+    useIsFeatureEnabled("inAppAgent") && aiFeaturesEnabled;
+
   // Safe assertion: AuthenticatedLayout is only rendered after auth checks pass
   // in AppLayout, which guarantees session.user exists at this point
   const user = session.user;
@@ -120,7 +126,7 @@ export function AuthenticatedLayout({
     items: [
       { name: "Account Settings", href: "/account/settings" },
       { name: "Theme", onClick: () => {}, content: <ThemeToggle /> },
-      ...(isLangfuseCloud
+      ...(isConsoleCloud
         ? [
             {
               name: "Regions",
