@@ -131,15 +131,23 @@ export async function listPublicEvaluatorTemplates(params: {
     prisma.$queryRaw<Array<{ id: string }>>(
       Prisma.sql`
         WITH latest_templates AS (
-          SELECT DISTINCT ON (project_id, name)
-            id,
-            project_id,
-            name,
-            updated_at
-          FROM eval_templates
-          WHERE (project_id = ${params.projectId} OR project_id IS NULL)
-            AND type = ${EvalTemplateType.LLM_AS_JUDGE}::"EvalTemplateType"
-          ORDER BY project_id, name, version DESC
+          -- SQLite has no DISTINCT ON; pick the latest version per
+          -- (project_id, name) with a window function. The type column is
+          -- plain TEXT (no enums), so no enum cast is needed.
+          SELECT id, project_id, name, updated_at FROM (
+            SELECT
+              id,
+              project_id,
+              name,
+              updated_at,
+              ROW_NUMBER() OVER (
+                PARTITION BY project_id, name ORDER BY version DESC
+              ) AS rn
+            FROM eval_templates
+            WHERE (project_id = ${params.projectId} OR project_id IS NULL)
+              AND type = ${EvalTemplateType.LLM_AS_JUDGE}
+          ) ranked
+          WHERE rn = 1
         )
         SELECT id
         FROM latest_templates
@@ -159,7 +167,7 @@ export async function listPublicEvaluatorTemplates(params: {
           SELECT DISTINCT project_id, name
           FROM eval_templates
           WHERE (project_id = ${params.projectId} OR project_id IS NULL)
-            AND type = ${EvalTemplateType.LLM_AS_JUDGE}::"EvalTemplateType"
+            AND type = ${EvalTemplateType.LLM_AS_JUDGE}
         ) latest_template_families
       `,
     ),
