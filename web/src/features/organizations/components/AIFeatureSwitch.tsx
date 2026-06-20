@@ -1,7 +1,7 @@
 import { Button } from "@/src/components/ui/button";
 import { Switch } from "@/src/components/ui/switch";
 import { api } from "@/src/utils/api";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogBody,
