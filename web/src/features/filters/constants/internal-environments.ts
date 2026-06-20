@@ -1,10 +1,10 @@
-import { LangfuseInternalTraceEnvironment } from "@hanzo/console";
+import { ConsoleInternalTraceEnvironment } from "@hanzo/console";
 
 export const DEFAULT_SIDEBAR_HIDDEN_ENVIRONMENTS = [
-  LangfuseInternalTraceEnvironment.PromptExperiments,
-  LangfuseInternalTraceEnvironment.LLMJudge,
-  LangfuseInternalTraceEnvironment.CodeEval,
-  LangfuseInternalTraceEnvironment.NaturalLanguageFilter,
+  ConsoleInternalTraceEnvironment.PromptExperiments,
+  ConsoleInternalTraceEnvironment.LLMJudge,
+  ConsoleInternalTraceEnvironment.CodeEval,
+  ConsoleInternalTraceEnvironment.NaturalLanguageFilter,
   "langfuse-evaluation",
   "sdk-experiment",
 ] as const;
