@@ -173,6 +173,7 @@ const nextConfig = {
       "billing",
       "compute",
       "feedback",
+      "iam",
       "kms",
       "start-cron",
       "zap",
