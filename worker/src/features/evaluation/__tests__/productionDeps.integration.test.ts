@@ -7,7 +7,7 @@ import { EvalTargetObject } from "@hanzo/console";
 import { env } from "../../../env";
 import { createObservationEvalSchedulerDeps } from "../observationEval/createSchedulerDeps";
 import { createProductionEvalExecutionDeps } from "../evalExecutionDeps";
-import { JobExecutionStatus } from "@prisma/client";
+import { JobExecutionStatus } from "@hanzo/console";
 
 /**
  * Integration tests for production dependency factories.

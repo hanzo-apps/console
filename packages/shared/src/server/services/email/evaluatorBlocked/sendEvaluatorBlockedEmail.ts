@@ -1,6 +1,6 @@
 import { render } from "@react-email/render";
 import { createMailTransport } from "../transport";
-import { EvaluatorBlockReason } from "@prisma/client";
+import { EvaluatorBlockReason } from "../../../../db-enums";
 import { z } from "zod";
 import { sanitizeEmailSubject } from "../../../../utils/zod";
 import { logger } from "../../../logger";
@@ -8,13 +8,7 @@ import { EvaluatorBlockedEmailTemplate } from "./EvaluatorBlockedEmailTemplate";
 
 export type SendEvaluatorBlockedEmailParams = {
   env: Partial<
-    Record<
-      | "EMAIL_FROM_ADDRESS"
-      | "SMTP_CONNECTION_URL"
-      | "NEXTAUTH_URL"
-      | "CLOUD_CRM_EMAIL",
-      string | undefined
-    >
+    Record<"EMAIL_FROM_ADDRESS" | "SMTP_CONNECTION_URL" | "NEXTAUTH_URL" | "CLOUD_CRM_EMAIL", string | undefined>
   >;
   projectName: string;
   evaluatorName: string;
@@ -34,9 +28,7 @@ export const sendEvaluatorBlockedEmail = async ({
   receiverEmail,
 }: SendEvaluatorBlockedEmailParams) => {
   if (!env.EMAIL_FROM_ADDRESS || !env.SMTP_CONNECTION_URL) {
-    logger.error(
-      "Missing environment variables for sending evaluator blocked email.",
-    );
+    logger.error("Missing environment variables for sending evaluator blocked email.");
     return;
   }
 
@@ -74,9 +66,7 @@ export const sendEvaluatorBlockedEmail = async ({
       if (validationResult.success) {
         mailOptions.bcc = validationResult.data;
       } else {
-        logger.warn(
-          `Invalid CLOUD_CRM_EMAIL format: ${env.CLOUD_CRM_EMAIL}. Skipping BCC.`,
-        );
+        logger.warn(`Invalid CLOUD_CRM_EMAIL format: ${env.CLOUD_CRM_EMAIL}. Skipping BCC.`);
       }
     }
 

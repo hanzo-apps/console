@@ -4,7 +4,7 @@ import {
   authenticatedProcedure,
 } from "@/src/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-import { SurveyName } from "@prisma/client";
+import { SurveyName } from "@hanzo/console";
 import { logger } from "@hanzo/console/src/server";
 
 const surveyResponseSchema = z.object({

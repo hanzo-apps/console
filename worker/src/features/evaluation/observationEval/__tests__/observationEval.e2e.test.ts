@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import { EvalTemplateSourceCodeLanguage, EvalTemplateType, JobExecutionStatus, type Prisma } from "@prisma/client";
+import { type Prisma } from "@prisma/client";
+import { EvalTemplateSourceCodeLanguage, EvalTemplateType, JobExecutionStatus } from "@hanzo/console";
 import { randomUUID } from "crypto";
 import { scheduleObservationEvals } from "../scheduleObservationEvals";
 import { processObservationEval } from "../observationEvalProcessor";

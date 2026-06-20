@@ -1,5 +1,5 @@
 import { prisma } from "@hanzo/console/src/db";
-import { type CommentObjectType } from "@prisma/client";
+import { type CommentObjectType } from "@hanzo/console";
 
 export type ExportComment = {
   id: string;

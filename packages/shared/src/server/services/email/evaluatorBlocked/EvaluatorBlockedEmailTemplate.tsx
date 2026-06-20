@@ -13,7 +13,7 @@ import {
   Tailwind,
   Text,
 } from "@react-email/components";
-import { EvaluatorBlockReason } from "@prisma/client";
+import { EvaluatorBlockReason } from "../../../../db-enums";
 
 type EvaluatorBlockedEmailTemplateProps = {
   projectName: string;
@@ -47,8 +47,7 @@ const getResolutionSteps = (blockReason: EvaluatorBlockReason) => {
     case EvaluatorBlockReason.LLM_CONNECTION_AUTH_INVALID:
       return (
         <>
-          • Check the LLM connection credentials in Project Settings → LLM
-          Connections
+          • Check the LLM connection credentials in Project Settings → LLM Connections
           <br />
           • Save the corrected connection
           <br />• Reactivate the paused evaluator
@@ -57,8 +56,7 @@ const getResolutionSteps = (blockReason: EvaluatorBlockReason) => {
     case EvaluatorBlockReason.LLM_CONNECTION_MISSING:
       return (
         <>
-          • Add or restore the missing LLM connection in Project Settings → LLM
-          Connections
+          • Add or restore the missing LLM connection in Project Settings → LLM Connections
           <br />
           • Confirm the evaluator still points to the expected provider
           <br />• Reactivate the paused evaluator
@@ -138,19 +136,14 @@ export const EvaluatorBlockedEmailTemplate = ({
               </Heading>
               <Text className="text-gray-700 text-sm leading-6">
                 The LLM evaluator &quot;{evaluatorName}&quot; in project &quot;
-                {projectName}&quot; was automatically paused because{" "}
-                {getReasonSummary(blockReason).toLowerCase()}.
+                {projectName}&quot; was automatically paused because {getReasonSummary(blockReason).toLowerCase()}.
               </Text>
             </Section>
 
             <Section className="mt-8">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <Text className="text-amber-800 text-sm font-medium m-0 mb-1">
-                  Reason
-                </Text>
-                <Text className="text-amber-900 text-sm m-0">
-                  {blockMessage}
-                </Text>
+                <Text className="text-amber-800 text-sm font-medium m-0 mb-1">Reason</Text>
+                <Text className="text-amber-900 text-sm m-0">{blockMessage}</Text>
               </div>
             </Section>
 
@@ -164,20 +157,16 @@ export const EvaluatorBlockedEmailTemplate = ({
             </Section>
 
             <Section className="mt-8">
-              <Heading className="text-black text-[18px] font-semibold">
-                How to resolve
-              </Heading>
-              <Text className="text-gray-700 text-sm leading-6">
-                {getResolutionSteps(blockReason)}
-              </Text>
+              <Heading className="text-black text-[18px] font-semibold">How to resolve</Heading>
+              <Text className="text-gray-700 text-sm leading-6">{getResolutionSteps(blockReason)}</Text>
             </Section>
 
             <Hr className="border border-solid border-[#eaeaea] my-[26px] mx-0 w-full" />
 
             <Section>
               <Text className="text-[#666666] text-[12px] leading-[24px]">
-                This notification was sent to {receiverEmail} regarding the
-                paused evaluator &quot;{evaluatorName}&quot; in project &quot;
+                This notification was sent to {receiverEmail} regarding the paused evaluator &quot;{evaluatorName}&quot;
+                in project &quot;
                 {projectName}&quot;.
               </Text>
             </Section>
