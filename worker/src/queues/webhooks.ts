@@ -691,17 +691,18 @@ const setActionLastFailingExecutionId = async ({
   executionId: string;
 }) => {
   // The execution config may contain decrypted headers, so patch only this JSON
-  // key and leave the stored encrypted config untouched.
+  // key and leave the stored encrypted config untouched. SQLite:
+  // jsonb_set(...,'{k}',to_jsonb(v),true) -> json_set(config,'$.k',v);
+  // NOW() -> epoch-ms (updated_at is stored as a DateTime integer).
   await tx.$executeRaw`
     UPDATE actions
     SET
-      config = jsonb_set(
+      config = json_set(
         config,
-        '{lastFailingExecutionId}',
-        to_jsonb(${executionId}::text),
-        true
+        '$.lastFailingExecutionId',
+        ${executionId}
       ),
-      updated_at = NOW()
+      updated_at = (CAST(unixepoch('now') AS INTEGER) * 1000)
     WHERE id = ${actionId}
       AND project_id = ${projectId}
   `;

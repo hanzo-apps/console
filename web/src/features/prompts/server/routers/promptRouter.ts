@@ -6,7 +6,11 @@ import {
   createTRPCRouter,
   protectedProjectProcedure,
 } from "@/src/server/api/trpc";
-import { type Prompt, Prisma } from "@hanzo/console/src/db";
+import {
+  type Prompt,
+  Prisma,
+  decodeJsonArrayColumn,
+} from "@hanzo/console/src/db";
 import { createPrompt, duplicatePrompt } from "../actions/createPrompt";
 import { checkHasProtectedLabels } from "../utils/checkHasProtectedLabels";
 import {
@@ -49,14 +53,16 @@ const buildPromptSearchFilter = (
   const searchConditions: Prisma.Sql[] = [];
 
   if (types.includes("id")) {
-    searchConditions.push(Prisma.sql`p.name ILIKE ${`%${q}%`}`);
+    // SQLite LIKE is ASCII case-insensitive (Postgres ILIKE replacement);
+    // tags is a JSON-TEXT column, so iterate it with json_each.
+    searchConditions.push(Prisma.sql`p.name LIKE ${`%${q}%`}`);
     searchConditions.push(
-      Prisma.sql`EXISTS (SELECT 1 FROM UNNEST(p.tags) AS tag WHERE tag ILIKE ${`%${q}%`})`,
+      Prisma.sql`EXISTS (SELECT 1 FROM json_each(p.tags) AS tag WHERE tag.value LIKE ${`%${q}%`})`,
     );
   }
 
   if (types.includes("content")) {
-    searchConditions.push(Prisma.sql`p.prompt::text ILIKE ${`%${q}%`}`);
+    searchConditions.push(Prisma.sql`p.prompt LIKE ${`%${q}%`}`);
   }
 
   return searchConditions.length > 0
@@ -191,7 +197,12 @@ export const promptRouter = createTRPCRouter({
       ]);
 
       return {
-        prompts: prompts,
+        // Raw SQL bypasses the JSON-array codec, so decode tags/labels.
+        prompts: prompts.map((prompt) => ({
+          ...prompt,
+          tags: decodeJsonArrayColumn<string>(prompt.tags),
+          labels: decodeJsonArrayColumn<string>(prompt.labels),
+        })),
         totalCount:
           promptCount.length > 0 ? Number(promptCount[0]?.totalCount) : 0,
       };
@@ -407,19 +418,20 @@ export const promptRouter = createTRPCRouter({
             name: "asc",
           },
         }),
+        // SQLite: tags/labels are JSON-TEXT columns; UNNEST -> json_each.
         ctx.prisma.$queryRaw<{ value: string }[]>`
-          SELECT tags.tag as value
-          FROM prompts, UNNEST(prompts.tags) AS tags(tag)
+          SELECT tags.value as value
+          FROM prompts, json_each(prompts.tags) AS tags
           WHERE prompts.project_id = ${input.projectId}
-          GROUP BY tags.tag
-          ORDER BY tags.tag ASC;
+          GROUP BY tags.value
+          ORDER BY tags.value ASC;
         `,
         ctx.prisma.$queryRaw<{ value: string }[]>`
-          SELECT labels.label as value
-          FROM prompts, UNNEST(prompts.labels) AS labels(label)
+          SELECT labels.value as value
+          FROM prompts, json_each(prompts.labels) AS labels
           WHERE prompts.project_id = ${input.projectId}
-          GROUP BY labels.label
-          ORDER BY labels.label ASC;
+          GROUP BY labels.value
+          ORDER BY labels.value ASC;
         `,
       ]);
 
@@ -906,14 +918,19 @@ export const promptRouter = createTRPCRouter({
         scope: "prompts:read",
       });
 
-      const labels = await ctx.prisma.$queryRaw<{ label: string }[]>`
-        SELECT DISTINCT UNNEST(labels) AS label
-        FROM prompts
-        WHERE project_id = ${input.projectId}
-        AND labels IS NOT NULL;
-      `;
+      // SQLite has no UNNEST; labels is a JSON-TEXT column that the codec
+      // round-trips as a string[]. Flatten + dedupe across prompts in JS.
+      const rows = await ctx.prisma.prompt.findMany({
+        where: { projectId: input.projectId },
+        select: { labels: true },
+      });
 
-      return labels.map((l) => l.label);
+      const labels = new Set<string>();
+      for (const row of rows) {
+        for (const label of row.labels) labels.add(label);
+      }
+
+      return Array.from(labels);
     }),
   allNames: protectedProjectProcedure
     .input(
@@ -954,28 +971,36 @@ export const promptRouter = createTRPCRouter({
         scope: "prompts:read",
       });
 
-      const query = Prisma.sql`
-        SELECT
-          p.name,
-          array_agg(DISTINCT p.version) as "versions",
-          array_agg(DISTINCT l) FILTER (WHERE l IS NOT NULL) AS "labels"
-        FROM
-          prompts p
-          LEFT JOIN LATERAL unnest(labels) AS l ON TRUE
-        WHERE
-          project_id = ${input.projectId}
-          AND type = 'text'
-        GROUP BY
-          p.name
-      `;
+      // SQLite has no array_agg / LATERAL unnest. labels is a JSON-TEXT column
+      // the codec round-trips as string[]; group by prompt name in JS to
+      // collect distinct versions and distinct (non-null) labels.
+      const rows = await ctx.prisma.prompt.findMany({
+        where: { projectId: input.projectId, type: "text" },
+        select: { name: true, version: true, labels: true },
+      });
 
-      const result = await ctx.prisma.$queryRaw<
-        {
-          name: string;
-          versions: number[];
-          labels: string[];
-        }[]
-      >(query);
+      const byName = new Map<
+        string,
+        { name: string; versions: Set<number>; labels: Set<string> }
+      >();
+      for (const row of rows) {
+        let entry = byName.get(row.name);
+        if (!entry) {
+          entry = { name: row.name, versions: new Set(), labels: new Set() };
+          byName.set(row.name, entry);
+        }
+        entry.versions.add(row.version);
+        for (const label of row.labels) {
+          if (label != null) entry.labels.add(label);
+        }
+      }
+
+      const result: { name: string; versions: number[]; labels: string[] }[] =
+        Array.from(byName.values()).map((entry) => ({
+          name: entry.name,
+          versions: Array.from(entry.versions),
+          labels: Array.from(entry.labels),
+        }));
 
       return result;
     }),
@@ -1387,6 +1412,14 @@ const getScoresForPromptIds = async (
   });
 };
 
+/**
+ * SQLite equivalent of Postgres `SPLIT_PART(<expr>, '/', 1)`: the first path
+ * segment of <expr> (the whole string when there is no '/'). `<expr>` must be a
+ * trusted SQL fragment (column/expression), never user input.
+ */
+const promptFirstPathSegment = (expr: string) =>
+  `CASE WHEN INSTR(${expr}, '/') > 0 THEN SUBSTR(${expr}, 1, INSTR(${expr}, '/') - 1) ELSE ${expr} END`;
+
 const generatePromptQuery = (
   select: Prisma.Sql,
   projectId: string,
@@ -1429,13 +1462,19 @@ const generatePromptQuery = (
     // When we're inside a folder, show individual prompts within that folder
     // and folder representatives for subfolders
 
+    // SQLite: CHAR_LENGTH -> LENGTH; the prefix-relative name keeps the bound
+    // `prefix` param; the first-segment-after-prefix (Postgres SPLIT_PART)
+    // uses the SQLite CASE/INSTR/SUBSTR idiom.
+    const relativeName = Prisma.sql`SUBSTRING(p.name, LENGTH(${prefix}) + 2)`;
+    const firstSegmentOfRelative = Prisma.sql`CASE WHEN INSTR(${relativeName}, '/') > 0 THEN SUBSTR(${relativeName}, 1, INSTR(${relativeName}, '/') - 1) ELSE ${relativeName} END`;
+
     return Prisma.sql`
     WITH ${latestCTE},
     individual_prompts_in_folder AS (
       /* Individual prompts exactly at this folder level (no deeper slashes) */
       SELECT
         p.id,
-        SUBSTRING(p.name, CHAR_LENGTH(${prefix}) + 2) as name, -- Remove prefix, show relative name
+        ${relativeName} as name, -- Remove prefix, show relative name
         p.version,
         p.project_id,
         p.prompt,
@@ -1447,17 +1486,17 @@ const generatePromptQuery = (
         p.config,
         p.created_by,
         2 as sort_priority, -- Individual prompts second
-        'prompt'::text as row_type  -- Mark as individual prompt
+        'prompt' as row_type  -- Mark as individual prompt
       FROM latest p
-      WHERE SUBSTRING(p.name, CHAR_LENGTH(${prefix}) + 2) NOT LIKE '%/%'
-        AND SUBSTRING(p.name, CHAR_LENGTH(${prefix}) + 2) != ''  -- Exclude prompts that match prefix exactly
+      WHERE ${relativeName} NOT LIKE '%/%'
+        AND ${relativeName} != ''  -- Exclude prompts that match prefix exactly
         AND p.name != ${prefix}  -- Additional safety check
     ),
     subfolder_representatives AS (
       /* Folder representatives for deeper nested prompts */
       SELECT
         p.id,
-        SPLIT_PART(SUBSTRING(p.name, CHAR_LENGTH(${prefix}) + 2), '/', 1) as name, -- First segment after prefix
+        ${firstSegmentOfRelative} as name, -- First segment after prefix
         p.version,
         p.project_id,
         p.prompt,
@@ -1469,10 +1508,10 @@ const generatePromptQuery = (
         p.config,
         p.created_by,
         1 as sort_priority, -- Folders first
-        'folder'::text as row_type, -- Mark as folder representative
-        ROW_NUMBER() OVER (PARTITION BY SPLIT_PART(SUBSTRING(p.name, CHAR_LENGTH(${prefix}) + 2), '/', 1) ORDER BY p.version DESC) AS rn
+        'folder' as row_type, -- Mark as folder representative
+        ROW_NUMBER() OVER (PARTITION BY ${firstSegmentOfRelative} ORDER BY p.version DESC) AS rn
       FROM latest p
-      WHERE SUBSTRING(p.name, CHAR_LENGTH(${prefix}) + 2) LIKE '%/%'
+      WHERE ${relativeName} LIKE '%/%'
     ),
     combined AS (
       SELECT
@@ -1497,7 +1536,7 @@ const generatePromptQuery = (
     WITH ${latestCTE},
     individual_prompts AS (
       /* Individual prompts without folders */
-      SELECT p.*, 'prompt'::text as row_type
+      SELECT p.*, 'prompt' as row_type
       FROM latest p
       WHERE p.name NOT LIKE '%/%'
     ),
@@ -1505,7 +1544,7 @@ const generatePromptQuery = (
       /* One representative per folder - return folder name, not full prompt name */
       SELECT
         p.id,
-        SPLIT_PART(p.name, '/', 1) as name,  -- Return folder segment name instead of full name
+        ${Prisma.raw(promptFirstPathSegment("p.name"))} as name,  -- Return folder segment name instead of full name
         p.version,
         p.project_id,
         p.prompt,
@@ -1516,8 +1555,8 @@ const generatePromptQuery = (
         p.tags,
         p.config,
         p.created_by,
-        'folder'::text as row_type, -- Mark as folder representative
-        ROW_NUMBER() OVER (PARTITION BY SPLIT_PART(p.name, '/', 1) ORDER BY p.version DESC) AS rn
+        'folder' as row_type, -- Mark as folder representative
+        ROW_NUMBER() OVER (PARTITION BY ${Prisma.raw(promptFirstPathSegment("p.name"))} ORDER BY p.version DESC) AS rn
       FROM latest p
       WHERE p.name LIKE '%/%'
     ),

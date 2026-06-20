@@ -120,17 +120,22 @@ export class MediaRetentionCleaner extends PeriodicExclusiveRunner {
         seconds_past_cutoff: number;
       }>
     >`
+      -- SQLite: DateTime columns are epoch-ms integers and there is no
+      -- NOW()/interval/EXTRACT(EPOCH). The retention cutoff is
+      -- (now - retention_days) in epoch-ms; seconds_past_cutoff is the gap
+      -- between that cutoff and the oldest media, in seconds.
       SELECT
         p.id as project_id,
         p.retention_days,
-        EXTRACT(EPOCH FROM (
-          (NOW() - (p.retention_days || ' days')::interval) - MIN(m.created_at)
-        ))::int as seconds_past_cutoff
+        CAST(
+          (((CAST(unixepoch('now') AS INTEGER) - p.retention_days * 86400) * 1000) - MIN(m.created_at)) / 1000
+          AS INTEGER
+        ) as seconds_past_cutoff
       FROM projects p
       INNER JOIN media m ON m.project_id = p.id
       WHERE p.retention_days > 0
         AND p.deleted_at IS NULL
-        AND m.created_at <= NOW() - (p.retention_days || ' days')::interval
+        AND m.created_at <= ((CAST(unixepoch('now') AS INTEGER) - p.retention_days * 86400) * 1000)
       GROUP BY p.id, p.retention_days
       ORDER BY seconds_past_cutoff DESC
       LIMIT 1
