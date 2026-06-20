@@ -53,28 +53,19 @@ export function getIamClient(): IamClient | null {
   return cachedClient;
 }
 
-export type IamIdentity = {
-  /** IAM subject — canonical `org/username` user id. Authoritative identity. */
-  sub: string;
-  email: string;
-  name: string | null;
-  image: string | null;
-};
-
-export type IamLoginResult =
-  | { ok: true; identity: IamIdentity }
-  | { ok: false; error: string };
-
-/** Shape of the Casdoor `Response` envelope returned by IAM endpoints. */
-type IamResponse<T = unknown> = {
-  status: "ok" | "error";
-  msg?: string;
-  sub?: string;
-  name?: string;
-  data?: T;
-  data2?: unknown;
-  data3?: unknown;
-};
+// Pure identity types + parsing live in the env-free `iamIdentity` module so
+// they can be unit-tested in isolation. Re-export for a single import surface.
+export {
+  identityFromLoginResponse,
+  type IamIdentity,
+  type IamLoginResult,
+  type IamResponse,
+} from "@/src/features/auth/lib/iamIdentity";
+import {
+  identityFromLoginResponse,
+  type IamLoginResult,
+  type IamResponse,
+} from "@/src/features/auth/lib/iamIdentity";
 
 /**
  * Authenticate an email + password against IAM. IAM is the credential
@@ -106,24 +97,7 @@ export async function iamPasswordLogin(params: {
       },
     });
 
-    if (res.status !== "ok") {
-      return { ok: false, error: res.msg || "Invalid credentials" };
-    }
-
-    const sub = res.sub || (typeof res.data === "string" ? res.data : "");
-    if (!sub) {
-      return { ok: false, error: "IAM did not return an identity." };
-    }
-
-    return {
-      ok: true,
-      identity: {
-        sub,
-        email: params.email.toLowerCase(),
-        name: res.name || null,
-        image: null,
-      },
-    };
+    return identityFromLoginResponse(res, params.email);
   } catch (error) {
     return {
       ok: false,
