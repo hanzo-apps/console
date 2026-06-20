@@ -1,19 +1,19 @@
 import { logger, getCurrentSpan } from "@hanzo/console/src/server";
 import { PeriodicRunner } from "./PeriodicRunner";
-import { OnUnavailableBehavior, RedisLock } from "./RedisLock";
+import { OnUnavailableBehavior, AdvisoryLock } from "./AdvisoryLock";
 
 /**
  * Abstract base class for periodic tasks that require distributed locking.
  *
  * Extends PeriodicRunner with:
- * - Redis distributed locking (via RedisLock)
+ * - Cross-process advisory locking via the app DB (AdvisoryLock; Redis removed)
  * - Common stop() logging
  * - processBatch() public wrapper for testing
  * - withLock() helper for lock + error handling
  */
 export abstract class PeriodicExclusiveRunner extends PeriodicRunner {
   protected readonly instanceName: string;
-  protected readonly lock: RedisLock;
+  protected readonly lock: AdvisoryLock;
 
   constructor(params: {
     name: string;
@@ -23,7 +23,7 @@ export abstract class PeriodicExclusiveRunner extends PeriodicRunner {
   }) {
     super();
     this.instanceName = params.name;
-    this.lock = new RedisLock(params.lockKey, {
+    this.lock = new AdvisoryLock(params.lockKey, {
       ttlSeconds: params.lockTtlSeconds,
       name: params.name,
       onUnavailable: params.onUnavailable || "proceed",

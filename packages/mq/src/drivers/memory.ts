@@ -97,16 +97,7 @@ export class MemoryDriver implements MqDriver {
     const processor = q.processor;
     if (!processor) return;
 
-    const publicJob: Job = {
-      id: job.id,
-      name: job.name,
-      data: job.data,
-      opts: job.opts,
-      timestamp: job.timestamp,
-      attemptsMade: job.attemptsMade,
-      updateProgress: async () => undefined,
-      log: async () => 0,
-    };
+    const publicJob: Job = this.toPublicJob(job, queueName);
 
     try {
       await processor(publicJob);
@@ -263,22 +254,7 @@ export class MemoryDriver implements MqDriver {
     return this.stateCounts(queueName);
   }
 
-  async getJobs(queueName: string): Promise<Job[]> {
-    const q = this.queues.get(queueName);
-    if (!q) return [];
-    return [...q.jobs.values()].map((j) => ({
-      id: j.id,
-      name: j.name,
-      data: j.data,
-      opts: j.opts,
-      timestamp: j.timestamp,
-      attemptsMade: j.attemptsMade,
-    }));
-  }
-
-  async getJob(queueName: string, jobId: string): Promise<Job | undefined> {
-    const j = this.queues.get(queueName)?.jobs.get(jobId);
-    if (!j) return undefined;
+  private toPublicJob(j: InternalJob, queueName?: string): Job {
     return {
       id: j.id,
       name: j.name,
@@ -286,7 +262,30 @@ export class MemoryDriver implements MqDriver {
       opts: j.opts,
       timestamp: j.timestamp,
       attemptsMade: j.attemptsMade,
+      updateProgress: async () => undefined,
+      log: async () => 0,
+      retry: async () => {
+        // Re-enqueue: reset attempts and mark waiting, then pump.
+        j.attemptsMade = 0;
+        j.state = "waiting";
+        if (queueName) this.schedulePump(queueName);
+      },
+      remove: async () => {
+        if (queueName) this.queues.get(queueName)?.jobs.delete(j.id);
+      },
     };
+  }
+
+  async getJobs(queueName: string): Promise<Job[]> {
+    const q = this.queues.get(queueName);
+    if (!q) return [];
+    return [...q.jobs.values()].map((j) => this.toPublicJob(j, queueName));
+  }
+
+  async getJob(queueName: string, jobId: string): Promise<Job | undefined> {
+    const j = this.queues.get(queueName)?.jobs.get(jobId);
+    if (!j) return undefined;
+    return this.toPublicJob(j, queueName);
   }
 
   async remove(queueName: string, jobId: string): Promise<void> {

@@ -87,26 +87,39 @@ export interface WorkerOptions {
 /**
  * A unit of work handed to a processor. Mirrors the subset of BullMQ `Job` the
  * console processors read (`id`, `name`, `data`, `timestamp`, `attemptsMade`).
+ *
+ * Generic defaults match BullMQ (`any`) so the typed processors in `worker/`
+ * — e.g. `(job: Job<TQueueJobTypes[Q]>) => Promise<boolean>` — remain assignable
+ * to the un-parameterized `Processor`/`Worker` surface, exactly as with bullmq.
  */
-export interface Job<DataType = unknown, ReturnType = unknown, NameType extends string = string> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface Job<DataType = any, ReturnType = any, NameType extends string = string> {
   id?: string;
   name: NameType;
   data: DataType;
   opts: JobsOptions;
   timestamp: number;
   attemptsMade: number;
-  /** Progress accessor; no-op in the facade unless the driver supports it. */
-  updateProgress?: (progress: number | object) => Promise<void>;
-  /** Append to job log; no-op unless the driver supports it. */
-  log?: (row: string) => Promise<number>;
+  /** Progress accessor. Always present (drivers supply it); may be a no-op. */
+  updateProgress: (progress: number | object) => Promise<void>;
+  /** Append to job log. Always present; may be a no-op. */
+  log: (row: string) => Promise<number>;
+  /** Re-enqueue a failed job. Best-effort per driver. */
+  retry: (state?: "completed" | "failed") => Promise<void>;
+  /** Remove this job. Best-effort per driver. */
+  remove: () => Promise<void>;
   /** @internal carries the resolved return value for drivers that need it. */
   returnvalue?: ReturnType;
 }
 
-/** Processor signature. Mirrors BullMQ `Processor`. */
-export type Processor<DataType = unknown, ReturnType = unknown, NameType extends string = string> = (
-  job: Job<DataType, ReturnType, NameType>,
-) => Promise<ReturnType>;
+/** Processor signature. Mirrors BullMQ `Processor` (defaults `any`). */
+export type Processor<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  DataType = any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ReturnType = any,
+  NameType extends string = string,
+> = (job: Job<DataType, ReturnType, NameType>) => Promise<ReturnType>;
 
 /** Aggregate job counts. Mirrors BullMQ `JobCounts`. */
 export interface JobCounts {

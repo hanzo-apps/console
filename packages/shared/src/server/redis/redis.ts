@@ -14,11 +14,12 @@
  *      object so the `const q = conn ? new Queue(...) : null` guards in every
  *      `XxxQueue.getInstance()` keep producing real `@hanzo/mq` queues. The
  *      facade ignores the connection; the active driver owns transport.
- *   2. Cache/lock store — the same object implements the small ioredis subset
- *      the caches and `RedisLock` call (`get/set/setex/del/exists/smembers/
- *      sadd/eval/keys`), backed by a bounded TTL map. Per-process by design: the
- *      app DB is SQLite (single-writer, co-located), so a cross-process cache
- *      buys little; short TTLs bound staleness.
+ *   2. Cache store — the same object implements the small ioredis subset the
+ *      caches call (`get/set/setex/del/exists/smembers/sadd/keys`), backed by a
+ *      bounded TTL map. Per-process by design: the app DB is SQLite
+ *      (single-writer, co-located), so a cross-process cache buys little; short
+ *      TTLs bound staleness. (Cross-process *locks* moved to the app DB —
+ *      see worker AdvisoryLock — not this in-process store.)
  */
 import { env } from "../../env";
 import { logger } from "../logger";
