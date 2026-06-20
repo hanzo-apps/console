@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { Job } from "@hanzo/mq";
-import { JobExecutionStatus } from "@prisma/client";
+import { JobExecutionStatus } from "@hanzo/console";
 import { llmAsJudgeExecutionQueueProcessor } from "../evalQueue";
 import { QueueName, type TQueueJobTypes } from "@hanzo/console/src/server";
 import { UnrecoverableError } from "../../errors/UnrecoverableError";

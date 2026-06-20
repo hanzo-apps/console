@@ -1,4 +1,4 @@
-import { EvaluatorBlockReason } from "@prisma/client";
+import { EvaluatorBlockReason } from "../../db-enums";
 
 const LLMCompletionErrorName = "LLMCompletionError";
 
@@ -21,9 +21,7 @@ export function inferLLMCompletionBlockReason(params: {
     return EvaluatorBlockReason.EVAL_MODEL_UNAVAILABLE;
   }
 
-  const reasonByMessage = BLOCK_REASON_PATTERNS.find((entry) =>
-    params.message.includes(entry.pattern),
-  );
+  const reasonByMessage = BLOCK_REASON_PATTERNS.find((entry) => params.message.includes(entry.pattern));
 
   return reasonByMessage?.blockReason ?? null;
 }

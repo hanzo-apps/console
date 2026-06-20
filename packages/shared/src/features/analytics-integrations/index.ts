@@ -1,11 +1,8 @@
 // Export source options for analytics integrations (Insights, Mixpanel, Blob Storage)
 // This is a client-safe file that can be imported from @hanzo/console
 
-import { AnalyticsIntegrationExportSource } from "@prisma/client";
-import {
-  OBSERVATION_FIELD_GROUPS_FULL,
-  type ObservationFieldGroupFull,
-} from "../../domain/observation-field-groups";
+import { AnalyticsIntegrationExportSource } from "../../db-enums";
+import { OBSERVATION_FIELD_GROUPS_FULL, type ObservationFieldGroupFull } from "../../domain/observation-field-groups";
 
 export * from "./blob-export-gate";
 
@@ -42,13 +39,11 @@ export type ExportSourceValue = ExportSourceOption["value"];
 const EXPORT_FIELD_GROUP_LABELS = {
   core: {
     label: "Core",
-    description:
-      "id, trace_id, start_time, end_time, project_id, parent_observation_id, type",
+    description: "id, trace_id, start_time, end_time, project_id, parent_observation_id, type",
   },
   basic: {
     label: "Basic",
-    description:
-      "name, level, status_message, version, environment, bookmarked, public, user_id, session_id",
+    description: "name, level, status_message, version, environment, bookmarked, public, user_id, session_id",
   },
   time: {
     label: "Time",
@@ -64,13 +59,11 @@ const EXPORT_FIELD_GROUP_LABELS = {
   },
   model: {
     label: "Model",
-    description:
-      "provided_model_name, model_id, model_parameters, input_price, output_price, total_price",
+    description: "provided_model_name, model_id, model_parameters, input_price, output_price, total_price",
   },
   usage: {
     label: "Usage",
-    description:
-      "usage_details, cost_details, total_cost, usage_pricing_tier_id, usage_pricing_tier_name",
+    description: "usage_details, cost_details, total_cost, usage_pricing_tier_id, usage_pricing_tier_name",
   },
   prompt: {
     label: "Prompt",
@@ -88,11 +81,9 @@ const EXPORT_FIELD_GROUP_LABELS = {
     label: "Trace Context",
     description: "tags, release, trace_name",
   },
-} satisfies Record<
-  ObservationFieldGroupFull,
-  { label: string; description: string }
->;
+} satisfies Record<ObservationFieldGroupFull, { label: string; description: string }>;
 
-export const EXPORT_FIELD_GROUP_OPTIONS = OBSERVATION_FIELD_GROUPS_FULL.map(
-  (value) => ({ value, ...EXPORT_FIELD_GROUP_LABELS[value] }),
-);
+export const EXPORT_FIELD_GROUP_OPTIONS = OBSERVATION_FIELD_GROUPS_FULL.map((value) => ({
+  value,
+  ...EXPORT_FIELD_GROUP_LABELS[value],
+}));
