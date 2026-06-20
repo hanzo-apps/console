@@ -67,6 +67,9 @@ ENV DOCKER_BUILD=1
 # webpack to compile and pages to generate. (Residual query/eval type-shape
 # errors from the shared-package merge are tracked separately.)
 ENV NEXT_IGNORE_BUILD_ERRORS=true
+# Inlined at build so server-side telemetry() early-returns (Hanzo Cloud uses separate
+# telemetry) instead of running the cron/insights path that made /api/public/health hang.
+ENV NEXT_PUBLIC_HANZO_CLOUD_REGION=US
 
 # Ensure .next dir is owned by nextjs before cache mount creates subdirectory
 RUN mkdir -p /app/web/.next
