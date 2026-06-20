@@ -1,4 +1,3 @@
-import { Cluster, Redis } from "ioredis";
 import { v4 } from "uuid";
 import { Decimal } from "decimal.js";
 import { Model, ObservationLevel, PrismaClient, Prompt } from "@hanzo/console";
@@ -43,6 +42,7 @@ import {
   getDatasetItemById,
   normalizeToolsForObservation,
   hasNoEvalConfigsCache,
+  type RedisClient,
 } from "@hanzo/console/src/server";
 
 import { tokenCountAsync } from "../../features/tokenisation/async-usage";
@@ -111,7 +111,7 @@ export class IngestionService {
   private promptService: PromptService;
 
   constructor(
-    private redis: Redis | Cluster,
+    private redis: RedisClient,
     private prisma: PrismaClient,
     private datastoreWriter: DatastoreWriter,
     private datastoreClient: DatastoreClient,

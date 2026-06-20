@@ -1,5 +1,5 @@
 import { Prompt, PrismaClient } from "@prisma/client";
-import { Redis, Cluster } from "ioredis";
+import type { RedisClient } from "../../redis/redis";
 import { randomBytes } from "crypto";
 import { env } from "../../../env";
 import { logger } from "../../logger";
@@ -27,7 +27,7 @@ export class PromptService {
 
   constructor(
     private prisma: PrismaClient,
-    private redis: Redis | Cluster | null,
+    private redis: RedisClient | null,
 
     private metricIncrementer?: // used for otel metrics
 

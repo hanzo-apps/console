@@ -22,9 +22,8 @@ import {
   type ApiKeyScope,
 } from "@hanzo/console/src/db";
 import { isPrismaException } from "@/src/utils/exceptions";
-import { type Redis, type Cluster } from "ioredis";
 import { getOrganizationPlanServerSide } from "@/src/features/entitlements/server/getPlan";
-import { API_KEY_NON_EXISTENT } from "@hanzo/console/src/server";
+import { API_KEY_NON_EXISTENT, type RedisClient } from "@hanzo/console/src/server";
 import { type z } from "zod/v4";
 import { CloudConfigSchema, isPlan } from "@hanzo/console";
 
@@ -34,9 +33,9 @@ type VerifyAuthHeaderOptions = {
 
 export class ApiAuthService {
   prisma: PrismaClient;
-  redis: Redis | Cluster | null;
+  redis: RedisClient | null;
 
-  constructor(prisma: PrismaClient, redis: Redis | Cluster | null) {
+  constructor(prisma: PrismaClient, redis: RedisClient | null) {
     this.prisma = prisma;
     this.redis = redis;
   }
