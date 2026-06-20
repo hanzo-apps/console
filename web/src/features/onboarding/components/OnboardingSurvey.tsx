@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/src/components/ui/button";
 import { Form } from "@/src/components/ui/form";
@@ -50,7 +50,14 @@ export function OnboardingSurvey() {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isLastStep, currentQuestion?.type, currentQuestion?.id, goNext, form, onSubmit]);
+  }, [
+    isLastStep,
+    currentQuestion?.type,
+    currentQuestion?.id,
+    goNext,
+    form,
+    onSubmit,
+  ]);
 
   // Auto-focus the first form control of the current step
   useEffect(() => {
@@ -71,10 +78,15 @@ export function OnboardingSurvey() {
   const signupReasonValue = form.watch("signupReason");
   const referralSourceValue = form.watch("referralSource");
 
-  const currentFieldId = currentQuestion?.id as keyof SurveyFormData | undefined;
-  const currentValue = currentFieldId ? form.watch(currentFieldId as Path<SurveyFormData>) : undefined;
+  const currentFieldId = currentQuestion?.id as
+    | keyof SurveyFormData
+    | undefined;
+  const currentValue = currentFieldId
+    ? form.watch(currentFieldId as Path<SurveyFormData>)
+    : undefined;
 
-  const isEmpty = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
+  const isEmpty = (v: unknown) =>
+    v == null || (typeof v === "string" && v.trim() === "");
   const allFields = {
     role: roleValue,
     signupReason: signupReasonValue,
@@ -92,7 +104,10 @@ export function OnboardingSurvey() {
 
       <div className="bg-background mt-6 rounded-lg px-6 py-6 shadow-sm sm:mx-auto sm:mt-16 sm:w-full sm:max-w-[480px] sm:px-12 sm:py-10">
         <Form {...form}>
-          <form className="flex h-full flex-col" onSubmit={form.handleSubmit(onSubmit)}>
+          <form
+            className="flex h-full flex-col"
+            onSubmit={form.handleSubmit(onSubmit)}
+          >
             <div className="flex-1">
               <FormField
                 control={form.control}
@@ -118,21 +133,39 @@ export function OnboardingSurvey() {
 
             <div className="flex justify-end pt-6">
               {showSkip ? (
-                <Button type="button" onClick={handleSkipButton} variant="ghost" className="w-20">
+                <Button
+                  type="button"
+                  onClick={handleSkipButton}
+                  variant="ghost"
+                  className="w-20"
+                >
                   Skip
                 </Button>
               ) : (
-                <Button type="button" onClick={handleSubmitButton} variant="default" className="w-20">
+                <Button
+                  type="button"
+                  onClick={handleSubmitButton}
+                  variant="default"
+                  className="w-20"
+                >
                   {isLastStep ? "Finish" : "Next"}
                 </Button>
               )}
 
               <div className="basis-[10rem] px-4">
-                <SurveyProgress currentStep={state.currentStep} totalSteps={totalSteps} />
+                <SurveyProgress
+                  currentStep={state.currentStep}
+                  totalSteps={totalSteps}
+                />
               </div>
 
               {!isFirstStep ? (
-                <Button type="button" variant="ghost" onClick={goBack} className="w-20">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={goBack}
+                  className="w-20"
+                >
                   Back
                 </Button>
               ) : (

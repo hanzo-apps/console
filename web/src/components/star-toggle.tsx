@@ -4,7 +4,7 @@ import { Button } from "@/src/components/ui/button";
 import { api } from "@/src/utils/api";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { type RouterInput } from "@/src/utils/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 // import { trpcErrorToast } from "@/src/utils/trpcErrorToast";
 // import { AnyColumnWithTable } from "kysely";
@@ -78,7 +78,9 @@ export function StarTraceToggle({
         return {
           ...old,
           traces: old.traces.map((trace: any) =>
-            trace.id === traceId ? { ...trace, bookmarked: newBookmarkState.bookmarked } : trace,
+            trace.id === traceId
+              ? { ...trace, bookmarked: newBookmarkState.bookmarked }
+              : trace,
           ),
         };
       });
@@ -160,14 +162,17 @@ export function StarTraceDetailsToggle({
       });
 
       // Optimistically update to the new value
-      utils.traces.byIdWithObservationsAndScores.setData({ traceId, projectId, timestamp }, (oldQueryData) => {
-        return oldQueryData
-          ? {
-              ...oldQueryData,
-              bookmarked: newBookmarkState.bookmarked,
-            }
-          : undefined;
-      });
+      utils.traces.byIdWithObservationsAndScores.setData(
+        { traceId, projectId, timestamp },
+        (oldQueryData) => {
+          return oldQueryData
+            ? {
+                ...oldQueryData,
+                bookmarked: newBookmarkState.bookmarked,
+              }
+            : undefined;
+        },
+      );
 
       return { prevData };
     },
@@ -175,7 +180,10 @@ export function StarTraceDetailsToggle({
       setIsLoading(false);
       //trpcErrorToast(err);
       // Rollback to the previous value if mutation fails
-      utils.traces.byIdWithObservationsAndScores.setData({ traceId, projectId, timestamp }, context?.prevData);
+      utils.traces.byIdWithObservationsAndScores.setData(
+        { traceId, projectId, timestamp },
+        context?.prevData,
+      );
     },
     onSettled: () => {
       setIsLoading(false);
