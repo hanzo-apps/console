@@ -46,7 +46,7 @@ import {
   Observation,
   EvalTargetObject,
 } from "@hanzo/console";
-import { kyselyPrisma, prisma } from "@hanzo/console/src/db";
+import { kyselyPrisma, prisma, sql } from "@hanzo/console/src/db";
 import { createW3CTraceId } from "../utils";
 import { UnrecoverableError } from "../../errors/UnrecoverableError";
 import { ObservationNotFoundError } from "../../errors/ObservationNotFoundError";
@@ -164,12 +164,14 @@ export const createEvalJobs = async ({
   }
 
   // Fetch all configs for a given project. Those may be dataset or trace configs.
+  // SQLite: job_type/status are TEXT columns (no enums), so compare them
+  // directly instead of casting with `::text`.
   let configsQuery = kyselyPrisma.$kysely
     .selectFrom("job_configurations")
     .selectAll()
-    .where(sql.raw("job_type::text"), "=", "EVAL")
+    .where("job_type", "=", "EVAL")
     .where("project_id", "=", event.projectId)
-    .where(sql.raw("status::text"), "=", "ACTIVE")
+    .where("status", "=", "ACTIVE")
     .where("target_object", "in", [EvalTargetObject.TRACE, EvalTargetObject.DATASET]);
 
   if ("configId" in event) {
@@ -180,7 +182,11 @@ export const createEvalJobs = async ({
   // for dataset_run_item_upsert queue + trace queue, we do not want to execute evals on configs,
   // which were only allowed to run on historic data. Hence, we need to filter all configs which have "NEW" in the time_scope column.
   if (enforcedJobTimeScope) {
-    configsQuery = configsQuery.where("time_scope", "@>", sql<string[]>`ARRAY[${enforcedJobTimeScope}]`);
+    // SQLite: time_scope is a JSON-TEXT array column. Postgres `@> ARRAY[x]`
+    // (array contains x) -> EXISTS over json_each.
+    configsQuery = configsQuery.where(
+      sql<boolean>`EXISTS (SELECT 1 FROM json_each(time_scope) WHERE value = ${enforcedJobTimeScope})`,
+    );
   }
 
   const configs = await configsQuery.execute();
@@ -422,8 +428,9 @@ export const createEvalJobs = async ({
 
       // If the target object is a dataset and the event type has a datasetItemId, we try to fetch it based on our filter
       if ("datasetItemId" in event && event.datasetItemId) {
+        // SQLite: bind the Date directly (epoch-ms); no Postgres timestamp cast.
         const versionCondition = event.datasetItemValidFrom
-          ? Prisma.sql`AND valid_from = ${event.datasetItemValidFrom}::timestamp with time zone at time zone 'UTC'`
+          ? Prisma.sql`AND valid_from = ${event.datasetItemValidFrom}`
           : Prisma.sql`AND valid_to IS NULL`;
 
         const datasetItems = await prisma.$queryRaw<Array<{ id: string; valid_from: Date }>>(Prisma.sql`

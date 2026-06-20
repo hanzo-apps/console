@@ -82,7 +82,7 @@ export const backfillValidToForDatasetItems = async (
         LEAD(valid_from) OVER (PARTITION BY id ORDER BY valid_from ASC) as next_valid_from
       FROM dataset_items
       WHERE project_id = ${projectId}
-        AND id = ANY(${idArray}::text[])
+        AND id IN (${Prisma.join(idArray)})
     )
     SELECT id, project_id, valid_from, next_valid_from
     FROM all_versions_with_lead
@@ -93,24 +93,26 @@ export const backfillValidToForDatasetItems = async (
   const rowsToUpdate = result.filter((row) => row.next_valid_from !== null);
 
   if (rowsToUpdate.length > 0) {
-    // Batch update all rows in a single query
-    await prisma.$executeRaw`
+    // Batch update all rows in a single query. SQLite has no
+    // `FROM (VALUES ...) AS x(cols)` with column aliases, so build the value
+    // set as `SELECT ? AS col ... UNION ALL ...`. Dates bind directly to the
+    // epoch-ms DateTime columns (no ::text/::timestamp casts needed).
+    const updatesValues = Prisma.join(
+      rowsToUpdate.map(
+        (row) =>
+          Prisma.sql`SELECT ${row.project_id} AS project_id, ${row.id} AS id, ${row.valid_from} AS valid_from, ${row.next_valid_from} AS next_valid_from`,
+      ),
+      " UNION ALL ",
+    );
+    await prisma.$executeRaw(Prisma.sql`
       UPDATE dataset_items
       SET valid_to = updates.next_valid_from
-      FROM (
-        VALUES
-          ${Prisma.join(
-            rowsToUpdate.map(
-              (row) =>
-                Prisma.sql`(${row.project_id}::text, ${row.id}::text, ${row.valid_from}::timestamp, ${row.next_valid_from}::timestamp)`,
-            ),
-          )}
-      ) AS updates(project_id, id, valid_from, next_valid_from)
+      FROM (${updatesValues}) AS updates
       WHERE dataset_items.project_id = ${projectId}
         AND dataset_items.id = updates.id
         AND dataset_items.valid_from = updates.valid_from
         AND dataset_items.valid_to IS NULL
-    `;
+    `);
   }
 
   logger.info(

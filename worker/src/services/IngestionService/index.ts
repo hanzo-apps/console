@@ -585,9 +585,11 @@ export class IngestionService {
       .find((t) => t.session_id);
     if (traceRecordWithSession) {
       try {
+        // SQLite: NOW() -> epoch-ms (created_at/updated_at are DateTime
+        // integers); ON CONFLICT (id, project_id) matches the composite PK.
         await this.prisma.$executeRaw`
           INSERT INTO trace_sessions (id, project_id, environment, created_at, updated_at)
-          VALUES (${traceRecordWithSession.session_id}, ${projectId}, ${traceRecordWithSession.environment}, NOW(), NOW())
+          VALUES (${traceRecordWithSession.session_id}, ${projectId}, ${traceRecordWithSession.environment}, (CAST(unixepoch('now') AS INTEGER) * 1000), (CAST(unixepoch('now') AS INTEGER) * 1000))
           ON CONFLICT (id, project_id)
           DO NOTHING
         `;
