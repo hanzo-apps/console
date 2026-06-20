@@ -1,10 +1,16 @@
 import { Button } from "@/src/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import useLocalStorage from "../useLocalStorage";
 import Link from "next/link";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 
 const NOTIFICATION_TTL_MS = 14 * 24 * 60 * 60 * 1000; // two weeks
 
@@ -67,7 +73,8 @@ export const notifications: SidebarNotification[] = [
   {
     id: "github-star",
     title: "Star HanzoCloud",
-    description: "See the latest releases and help grow the community on GitHub",
+    description:
+      "See the latest releases and help grow the community on GitHub",
     link: "https://github.com/hanzoai/cloud",
     linkContent: (
       // eslint-disable-next-line @next/next/no-img-element
@@ -83,9 +90,13 @@ const STORAGE_KEY = "dismissed-sidebar-notifications";
 
 export function SidebarNotifications() {
   const capture = usePostHogClientCapture();
-  const [currentNotificationIndex, setCurrentNotificationIndex] = useState<number | null>(null);
+  const [currentNotificationIndex, setCurrentNotificationIndex] = useState<
+    number | null
+  >(null);
 
-  const [dismissedNotifications, setDismissedNotifications] = useLocalStorage<string[]>(STORAGE_KEY, []);
+  const [dismissedNotifications, setDismissedNotifications] = useLocalStorage<
+    string[]
+  >(STORAGE_KEY, []);
 
   const isExpired = (notif: SidebarNotification) => {
     if (!notif.createdAt) return false;
@@ -96,10 +107,13 @@ export function SidebarNotifications() {
   // Find the oldest non-dismissed notification on mount or when dismissed list changes
   useEffect(() => {
     const firstAvailableIndex = notifications.findIndex(
-      (notif) => !dismissedNotifications.includes(notif.id) && !isExpired(notif),
+      (notif) =>
+        !dismissedNotifications.includes(notif.id) && !isExpired(notif),
     );
 
-    setCurrentNotificationIndex(firstAvailableIndex === -1 ? null : firstAvailableIndex);
+    setCurrentNotificationIndex(
+      firstAvailableIndex === -1 ? null : firstAvailableIndex,
+    );
   }, [dismissedNotifications]);
 
   const dismissNotification = (id: string) => {
@@ -113,11 +127,11 @@ export function SidebarNotifications() {
   const currentNotification = notifications[currentNotificationIndex];
 
   return (
-    <Card className="relative max-h-60 overflow-hidden rounded-md bg-opacity-50 shadow-none group-data-[collapsible=icon]:hidden">
+    <Card className="bg-opacity-50 relative max-h-60 overflow-hidden rounded-md shadow-none group-data-[collapsible=icon]:hidden">
       <Button
         variant="ghost"
         size="sm"
-        className="absolute right-1.5 top-2.5 h-5 w-5 p-0"
+        className="absolute top-2.5 right-1.5 h-5 w-5 p-0"
         onClick={() => {
           capture("notification:dismiss_notification", {
             notification_id: currentNotification.id,
@@ -128,11 +142,13 @@ export function SidebarNotifications() {
       >
         <X className="h-3.5 w-3.5" />
       </Button>
-      <CardHeader className="px-3 pb-0 pr-6 pt-2.5">
+      <CardHeader className="px-3 pt-2.5 pr-6 pb-0">
         <CardTitle className="text-sm">{currentNotification.title}</CardTitle>
-        <CardDescription className="mt-1">{currentNotification.description}</CardDescription>
+        <CardDescription className="mt-1">
+          {currentNotification.description}
+        </CardDescription>
       </CardHeader>
-      <CardContent className="px-3 pb-2.5 pt-1.5">
+      <CardContent className="px-3 pt-1.5 pb-2.5">
         {currentNotification.link &&
           (currentNotification.linkContent ? (
             <Link

@@ -39,7 +39,7 @@ import {
 import { TimeseriesChart } from "@/src/features/scores/components/TimeseriesChart";
 import { CompareViewAdapter } from "@/src/features/scores/adapters";
 import { isNumericDataType } from "@/src/features/scores/lib/helpers";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import {
   Dialog,

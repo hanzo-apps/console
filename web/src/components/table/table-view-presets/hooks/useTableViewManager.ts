@@ -15,7 +15,7 @@ import { useQueryParam } from "use-query-params";
 import { type HanzoColumnDef } from "@/src/components/table/types";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import isEqual from "lodash/isEqual";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { validateOrderBy, validateFilters } from "../validation";
 
 interface TableStateUpdaters {

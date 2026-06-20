@@ -28,7 +28,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { TimeRangePicker } from "@/src/components/date-picker";
 import {
   type TimeRange,

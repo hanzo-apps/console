@@ -1,6 +1,6 @@
 import { InputCommandItem } from "@/src/components/ui/input-command";
 import { Button } from "@/src/components/ui/button";
-import { usePostHogClientCapture } from "@/src/features/posthog-analytics/usePostHogClientCapture";
+import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { Checkbox } from "@/src/components/ui/checkbox";
 
 type TagCommandItemProps = {
@@ -9,7 +9,11 @@ type TagCommandItemProps = {
   setSelectedTags: (value: string[]) => void;
 };
 
-const TagCommandItem = ({ value, selectedTags, setSelectedTags }: TagCommandItemProps) => {
+const TagCommandItem = ({
+  value,
+  selectedTags,
+  setSelectedTags,
+}: TagCommandItemProps) => {
   const capture = usePostHogClientCapture();
   return (
     <InputCommandItem
