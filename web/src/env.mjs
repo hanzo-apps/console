@@ -43,7 +43,12 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    DATABASE_URL: z.url(),
+    // SQLite (Hanzo Base) connection string. Prisma's SQLite connector expects a
+    // `file:` URL (absolute or relative to the schema), e.g.
+    // `file:/var/lib/hanzo/console/app.db`. We accept any non-empty string so
+    // both `file:` URLs and Base-managed paths validate; a network URL would be
+    // rejected at the Prisma layer if misconfigured.
+    DATABASE_URL: z.string().min(1),
     NODE_ENV: z.enum(["development", "test", "production"]),
     BUILD_ID: z.string().optional(),
     NEXTAUTH_SECRET:
