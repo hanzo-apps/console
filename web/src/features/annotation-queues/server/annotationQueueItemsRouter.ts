@@ -53,7 +53,7 @@ const MAP_OBJECT_TYPE_TO_ACTION_PROPS: Record<
   [AnnotationQueueObjectType.OBSERVATION]: {
     actionId: ActionId.ObservationAddToAnnotationQueue,
     tableName:
-      env.LANGFUSE_ENABLE_EVENTS_TABLE_UI === "true"
+      env.HANZO_ENABLE_EVENTS_TABLE_UI === "true"
         ? BatchExportTableName.Events
         : BatchExportTableName.Observations,
   },
@@ -131,7 +131,7 @@ export const queueItemRouter = createTRPCRouter({
 
       if (item.objectType === AnnotationQueueObjectType.OBSERVATION) {
         const datastoreObservation =
-          env.LANGFUSE_ENABLE_EVENTS_TABLE_UI === "true"
+          env.HANZO_ENABLE_EVENTS_TABLE_UI === "true"
             ? await getObservationByIdFromEventsTable({
                 id: item.objectId,
                 projectId: input.projectId,

@@ -10,9 +10,7 @@ import {
 import { randomUUID } from "crypto";
 
 const maybeEventsTable =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true"
-    ? describe
-    : describe.skip;
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? describe : describe.skip;
 
 const searchFixture = `
   SELECT *

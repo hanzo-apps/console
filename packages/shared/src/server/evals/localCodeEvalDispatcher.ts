@@ -18,26 +18,24 @@ export class LocalCodeEvalDispatcher implements CodeEvalDispatcher {
   private readonly timeoutMs: number;
 
   constructor(params?: { timeoutMs?: number }) {
-    this.timeoutMs =
-      params?.timeoutMs ?? env.LANGFUSE_CODE_EVAL_LOCAL_TIMEOUT_MS;
+    this.timeoutMs = params?.timeoutMs ?? env.HANZO_CODE_EVAL_LOCAL_TIMEOUT_MS;
   }
 
   async dispatch(input: DispatchInput): Promise<DispatchResult> {
     if (input.runtime.language !== "TYPESCRIPT") {
-      throw new CodeEvalDispatcherError(
-        "Local code eval dispatcher only supports TypeScript/JavaScript evaluators",
-        { code: CodeEvalDispatcherErrorCodes.UNSUPPORTED_RUNTIME },
-      );
+      throw new CodeEvalDispatcherError("Local code eval dispatcher only supports TypeScript/JavaScript evaluators", {
+        code: CodeEvalDispatcherErrorCodes.UNSUPPORTED_RUNTIME,
+      });
     }
 
     let source: string;
     try {
       source = stripTypeScriptTypes(input.code.source, { mode: "strip" });
     } catch (error) {
-      throw new CodeEvalDispatcherError(
-        `Failed to strip TypeScript syntax: ${withCodeEvalDocs(formatError(error))}`,
-        { code: CodeEvalDispatcherErrorCodes.INVALID_SOURCE, cause: error },
-      );
+      throw new CodeEvalDispatcherError(`Failed to strip TypeScript syntax: ${withCodeEvalDocs(formatError(error))}`, {
+        code: CodeEvalDispatcherErrorCodes.INVALID_SOURCE,
+        cause: error,
+      });
     }
 
     const context = vm.createContext({
@@ -65,10 +63,10 @@ if (typeof evaluate !== "function") {
         { timeout: this.timeoutMs },
       );
     } catch (error) {
-      throw new CodeEvalDispatcherError(
-        `Failed to prepare evaluator source: ${formatError(error)}`,
-        { code: CodeEvalDispatcherErrorCodes.INVALID_SOURCE, cause: error },
-      );
+      throw new CodeEvalDispatcherError(`Failed to prepare evaluator source: ${formatError(error)}`, {
+        code: CodeEvalDispatcherErrorCodes.INVALID_SOURCE,
+        cause: error,
+      });
     }
 
     let result: unknown;
@@ -82,12 +80,7 @@ if (typeof evaluate !== "function") {
         evaluatorResult,
         new Promise<never>((_, reject) => {
           timeoutId = setTimeout(
-            () =>
-              reject(
-                new Error(
-                  `${SCRIPT_TIMEOUT_MESSAGE} after ${this.timeoutMs}ms`,
-                ),
-              ),
+            () => reject(new Error(`${SCRIPT_TIMEOUT_MESSAGE} after ${this.timeoutMs}ms`)),
             this.timeoutMs,
           );
         }),
@@ -110,12 +103,7 @@ if (typeof evaluate !== "function") {
 }
 
 function formatError(error: unknown): string {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof error.message === "string"
-  ) {
+  if (typeof error === "object" && error !== null && "message" in error && typeof error.message === "string") {
     return error.message;
   }
 

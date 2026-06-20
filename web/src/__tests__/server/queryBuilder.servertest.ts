@@ -4067,11 +4067,11 @@ describe("query builder measure-aggregation validation", () => {
 
   describe("events_traces traceName filter", () => {
     const isEventsTableV2Enabled =
-      env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? it : it.skip;
+      env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? it : it.skip;
     let hasLegacyEventsTable = false;
 
     beforeAll(async () => {
-      if (env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS !== "true") return;
+      if (env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS !== "true") return;
 
       try {
         const result = await datastoreClient().query({

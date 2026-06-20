@@ -10,9 +10,7 @@ import {
 } from "@hanzo/console/src/server";
 
 const maybeEventsTable =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true"
-    ? describe
-    : describe.skip;
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? describe : describe.skip;
 
 type FilterResult = {
   query: string;

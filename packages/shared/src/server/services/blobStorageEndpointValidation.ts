@@ -6,8 +6,7 @@ import {
   validateOutboundUrlHost,
 } from "../outbound-url";
 
-export const BLOB_STORAGE_ENDPOINT_VALIDATION_LOG_CONTEXT =
-  "Blob storage endpoint";
+export const BLOB_STORAGE_ENDPOINT_VALIDATION_LOG_CONTEXT = "Blob storage endpoint";
 
 const STRICT_BLOB_STORAGE_ENDPOINT_WHITELIST: OutboundUrlValidationWhitelist = {
   hosts: [],
@@ -16,14 +15,14 @@ const STRICT_BLOB_STORAGE_ENDPOINT_WHITELIST: OutboundUrlValidationWhitelist = {
 };
 
 export function blobStorageEndpointWhitelistFromEnv(): OutboundUrlValidationWhitelist {
-  if (env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION) {
+  if (env.NEXT_PUBLIC_HANZO_CLOUD_REGION) {
     return STRICT_BLOB_STORAGE_ENDPOINT_WHITELIST;
   }
 
   return {
-    hosts: env.LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_HOST || [],
-    ips: env.LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_IPS || [],
-    ip_ranges: env.LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_IP_SEGMENTS || [],
+    hosts: env.HANZO_BLOB_STORAGE_ENDPOINT_WHITELISTED_HOST || [],
+    ips: env.HANZO_BLOB_STORAGE_ENDPOINT_WHITELISTED_IPS || [],
+    ip_ranges: env.HANZO_BLOB_STORAGE_ENDPOINT_WHITELISTED_IP_SEGMENTS || [],
   };
 }
 
@@ -43,10 +42,8 @@ export async function validateBlobStorageEndpoint(
     throw new Error("Only HTTP and HTTPS protocols are allowed");
   }
 
-  if (env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION && url.protocol !== "https:") {
-    throw new Error(
-      "Only HTTPS blob storage endpoints are allowed on Langfuse Cloud",
-    );
+  if (env.NEXT_PUBLIC_HANZO_CLOUD_REGION && url.protocol !== "https:") {
+    throw new Error("Only HTTPS blob storage endpoints are allowed on Langfuse Cloud");
   }
 
   try {
@@ -59,8 +56,7 @@ export async function validateBlobStorageEndpoint(
       shouldSkipDnsCheckForLiteralIps: true,
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Validation failed";
+    const message = error instanceof Error ? error.message : "Validation failed";
     throw new Error(`${message}${getSelfHostedWhitelistGuidance()}`);
   }
 }
@@ -80,33 +76,23 @@ export function blobStorageEndpointConnectionValidationOptions(
   };
 }
 
-function getEffectiveWhitelist(
-  whitelist: OutboundUrlValidationWhitelist,
-): OutboundUrlValidationWhitelist {
-  return env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION
-    ? STRICT_BLOB_STORAGE_ENDPOINT_WHITELIST
-    : whitelist;
+function getEffectiveWhitelist(whitelist: OutboundUrlValidationWhitelist): OutboundUrlValidationWhitelist {
+  return env.NEXT_PUBLIC_HANZO_CLOUD_REGION ? STRICT_BLOB_STORAGE_ENDPOINT_WHITELIST : whitelist;
 }
 
-function isBlobStorageEndpointValidationEnabled(
-  whitelist: OutboundUrlValidationWhitelist,
-): boolean {
-  if (env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION) return true;
+function isBlobStorageEndpointValidationEnabled(whitelist: OutboundUrlValidationWhitelist): boolean {
+  if (env.NEXT_PUBLIC_HANZO_CLOUD_REGION) return true;
 
   // Compatibility rollout: self-hosted deployments may already point blob
   // exports at private MinIO/Azure endpoints. Keep the stricter SSRF/rebind
   // validation opt-in until operators configure the dedicated allowlist envs.
   // TODO(next major): enforce blob storage endpoint validation for self-hosted
   // deployments even when no allowlist env is configured.
-  return (
-    whitelist.hosts.length > 0 ||
-    whitelist.ips.length > 0 ||
-    whitelist.ip_ranges.length > 0
-  );
+  return whitelist.hosts.length > 0 || whitelist.ips.length > 0 || whitelist.ip_ranges.length > 0;
 }
 
 function getSelfHostedWhitelistGuidance(): string {
-  if (env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION) return "";
+  if (env.NEXT_PUBLIC_HANZO_CLOUD_REGION) return "";
 
   return " For self-hosted deployments with internal blob storage endpoints, configure LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_HOST, LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_IPS, or LANGFUSE_BLOB_STORAGE_ENDPOINT_WHITELISTED_IP_SEGMENTS.";
 }

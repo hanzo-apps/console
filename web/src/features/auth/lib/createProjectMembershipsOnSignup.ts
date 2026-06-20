@@ -11,7 +11,7 @@ export async function createProjectMembershipsOnSignup(user: {
   email: string | null;
 }) {
   try {
-    const isCloudDeployment = Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION);
+    const isCloudDeployment = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
 
     // in no case do we want to send duplicate sign up events to insights
     const isNewUser = !(await prisma.organizationMembership.findFirst({

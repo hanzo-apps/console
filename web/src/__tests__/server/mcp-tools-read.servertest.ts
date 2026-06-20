@@ -127,11 +127,9 @@ import {
 } from "@/src/features/mcp/features/datasets/schema";
 
 const maybeEventsTable =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true"
-    ? describe
-    : describe.skip;
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? describe : describe.skip;
 const maybeEventsTableIt =
-  env.LANGFUSE_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? it : it.skip;
+  env.HANZO_ENABLE_EVENTS_TABLE_V2_APIS === "true" ? it : it.skip;
 
 const createObservationEvent = (params: {
   projectId: string;

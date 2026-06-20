@@ -164,11 +164,11 @@ const makeScore = (overrides?: Record<string, unknown>) => ({
 
 describe("buildTraceExport", () => {
   const originalObservationLimit =
-    env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES;
+    env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES =
+    env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES =
       originalObservationLimit;
     mockGetTraceByIdFromEventsTable.mockResolvedValue(makeTrace());
     mockGetObservationsCountFromEventsTable.mockResolvedValue(1);
@@ -182,7 +182,7 @@ describe("buildTraceExport", () => {
   });
 
   afterAll(() => {
-    env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES =
+    env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES =
       originalObservationLimit;
   });
 
@@ -349,7 +349,7 @@ describe("buildTraceExport", () => {
 
   it("reemits the observation payload limit error as a download-safe error", async () => {
     mockGetObservationsCountFromEventsTable.mockResolvedValue(10);
-    env.LANGFUSE_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES = 100;
+    env.HANZO_API_TRACE_OBSERVATIONS_SIZE_LIMIT_BYTES = 100;
     mockGetObservationsForTraceFromEventsTable.mockResolvedValue({
       observations: [
         makeObservation({

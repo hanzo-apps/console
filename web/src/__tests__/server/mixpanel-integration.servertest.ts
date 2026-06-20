@@ -78,8 +78,8 @@ describe("Mixpanel Integration legacy export source cutoff gate", () => {
   };
 
   it("Cloud + pre-cutoff project + legacy source → allow", async () => {
-    const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-    (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = "us";
+    const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
+    (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = "us";
     try {
       const { caller, project } = await prepare();
       await prisma.project.update({
@@ -94,13 +94,13 @@ describe("Mixpanel Integration legacy export source cutoff gate", () => {
         }),
       ).resolves.not.toThrow();
     } finally {
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
     }
   });
 
   it("Cloud + post-cutoff project + legacy source → BAD_REQUEST", async () => {
-    const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-    (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = "us";
+    const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
+    (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = "us";
     try {
       const { caller, project } = await prepare();
       await prisma.project.update({
@@ -115,13 +115,13 @@ describe("Mixpanel Integration legacy export source cutoff gate", () => {
         }),
       ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     } finally {
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
     }
   });
 
   it("Cloud + post-cutoff project + TRACES_OBSERVATIONS_EVENTS → BAD_REQUEST", async () => {
-    const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-    (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = "us";
+    const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
+    (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = "us";
     try {
       const { caller, project } = await prepare();
       await prisma.project.update({
@@ -136,13 +136,13 @@ describe("Mixpanel Integration legacy export source cutoff gate", () => {
         }),
       ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     } finally {
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
     }
   });
 
   it("Cloud + post-cutoff project + EVENTS → allow", async () => {
-    const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-    (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = "us";
+    const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
+    (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = "us";
     try {
       const { caller, project } = await prepare();
       await prisma.project.update({
@@ -157,13 +157,13 @@ describe("Mixpanel Integration legacy export source cutoff gate", () => {
         }),
       ).resolves.not.toThrow();
     } finally {
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
     }
   });
 
   it("self-hosted + post-cutoff project + legacy source → allow (bypass)", async () => {
-    const originalRegion = env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-    (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = undefined;
+    const originalRegion = env.NEXT_PUBLIC_HANZO_CLOUD_REGION;
+    (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = undefined;
     try {
       const { caller, project } = await prepare();
       await prisma.project.update({
@@ -178,7 +178,7 @@ describe("Mixpanel Integration legacy export source cutoff gate", () => {
         }),
       ).resolves.not.toThrow();
     } finally {
-      (env as any).NEXT_PUBLIC_LANGFUSE_CLOUD_REGION = originalRegion;
+      (env as any).NEXT_PUBLIC_HANZO_CLOUD_REGION = originalRegion;
     }
   });
 });

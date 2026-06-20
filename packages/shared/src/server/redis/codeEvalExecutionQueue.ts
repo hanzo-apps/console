@@ -10,7 +10,7 @@ export class CodeEvalExecutionQueue {
 
   public static getShardNames() {
     return Array.from(
-      { length: env.LANGFUSE_CODE_EVAL_EXECUTION_QUEUE_SHARD_COUNT },
+      { length: env.HANZO_CODE_EVAL_EXECUTION_QUEUE_SHARD_COUNT },
       (_, i) => `${QueueName.CodeEvalExecution}${i > 0 ? `-${i}` : ""}`,
     );
   }
@@ -37,7 +37,7 @@ export class CodeEvalExecutionQueue {
     const shardIndex =
       CodeEvalExecutionQueue.getShardIndexFromShardName(shardName) ??
       (env.REDIS_CLUSTER_ENABLED === "true" && shardingKey
-        ? getShardIndex(shardingKey, env.LANGFUSE_CODE_EVAL_EXECUTION_QUEUE_SHARD_COUNT)
+        ? getShardIndex(shardingKey, env.HANZO_CODE_EVAL_EXECUTION_QUEUE_SHARD_COUNT)
         : 0);
 
     if (CodeEvalExecutionQueue.instances.has(shardIndex)) {

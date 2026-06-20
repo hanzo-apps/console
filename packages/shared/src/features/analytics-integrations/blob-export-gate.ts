@@ -4,9 +4,9 @@
 import { AnalyticsIntegrationExportSource } from "@prisma/client";
 
 // Cloud projects created on or after this instant cannot use legacy export sources.
-// NEXT_PUBLIC_LANGFUSE_BLOB_EXPORT_CUTOFF overrides the default for local dev testing.
-const _override = process.env.NEXT_PUBLIC_LANGFUSE_BLOB_EXPORT_CUTOFF
-  ? new Date(process.env.NEXT_PUBLIC_LANGFUSE_BLOB_EXPORT_CUTOFF)
+// NEXT_PUBLIC_HANZO_BLOB_EXPORT_CUTOFF overrides the default for local dev testing.
+const _override = process.env.NEXT_PUBLIC_HANZO_BLOB_EXPORT_CUTOFF
+  ? new Date(process.env.NEXT_PUBLIC_HANZO_BLOB_EXPORT_CUTOFF)
   : null;
 export const LEGACY_BLOB_EXPORT_CUTOFF =
   _override && !isNaN(_override.getTime()) ? _override : new Date("2026-05-20T00:00:00.000Z");

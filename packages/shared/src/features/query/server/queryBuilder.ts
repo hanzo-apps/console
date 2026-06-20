@@ -33,7 +33,7 @@ type MappedFilters = {
 export class QueryBuilder {
   private chartConfig?: { bins?: number; row_limit?: number };
   private version: ViewVersion;
-  private rootEventConditionMaxWindowHours: number = env.LANGFUSE_ROOT_EVENT_CONDITION_MAX_WINDOW_HOURS;
+  private rootEventConditionMaxWindowHours: number = env.HANZO_ROOT_EVENT_CONDITION_MAX_WINDOW_HOURS;
 
   constructor(chartConfig?: { bins?: number; row_limit?: number }, version: ViewVersion = "v1") {
     this.chartConfig = chartConfig;
