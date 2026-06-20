@@ -1,280 +1,294 @@
-import Redis, { RedisOptions, Cluster, ClusterOptions } from "ioredis";
-import fs from "fs";
+/**
+ * Connectionless replacement for the former ioredis-backed Redis layer.
+ *
+ * The CTO mandate is "kill redis, we don't use that anymore." The console queue
+ * layer now runs on `@hanzo/mq` (Temporal / in-process driver), and caches/locks
+ * run in-process or on the app DB. This module keeps the *export surface* the
+ * rest of the codebase imports — `createNewRedisInstance`, `redis`,
+ * `getQueuePrefix`, `redisQueueRetryOptions`, `scanKeys`, `safeMultiDel` — so
+ * the ~30 queue definitions and the cache callers compile and run unchanged,
+ * but with ZERO `ioredis` dependency.
+ *
+ * Two roles are served by one in-process implementation:
+ *   1. Queue connection sentinel — `createNewRedisInstance()` returns a truthy
+ *      object so the `const q = conn ? new Queue(...) : null` guards in every
+ *      `XxxQueue.getInstance()` keep producing real `@hanzo/mq` queues. The
+ *      facade ignores the connection; the active driver owns transport.
+ *   2. Cache/lock store — the same object implements the small ioredis subset
+ *      the caches and `RedisLock` call (`get/set/setex/del/exists/smembers/
+ *      sadd/eval/keys`), backed by a bounded TTL map. Per-process by design: the
+ *      app DB is SQLite (single-writer, co-located), so a cross-process cache
+ *      buys little; short TTLs bound staleness.
+ */
 import { env } from "../../env";
 import { logger } from "../logger";
 
-const defaultRedisOptions: Partial<RedisOptions> = {
-  enableReadyCheck: true,
-  maxRetriesPerRequest: null,
-  enableAutoPipelining: env.REDIS_ENABLE_AUTO_PIPELINING === "true",
-  keepAlive: 10000, // 10s — prevents middleboxes from killing idle connections
-  socketTimeout: 30000, // 30s — forces reconnect if no data received, prevents hung moveToCompleted() from blocking concurrency slots forever
-};
+const MAX_CACHE_ENTRIES = 50_000;
 
-const REDIS_SCAN_COUNT = 1000;
+interface Entry {
+  value: string;
+  /** Epoch ms when this entry expires, or null for no expiry. */
+  expiresAt: number | null;
+}
 
-export const redisQueueRetryOptions: Partial<RedisOptions> = {
-  retryStrategy: (times: number) => {
-    if (times >= 5) {
-      // A few retries are expected and no cause for action.
-      logger.warn(`Connection to redis lost. Retry attempt: ${times}`);
+/**
+ * Minimal in-process implementation of the ioredis methods the console uses.
+ * Strings + sets only; TTL via lazy expiry on read plus a bounded LRU-ish cap.
+ */
+export class InProcessRedis {
+  /** Marks this as the connectionless replacement (diagnostics only). */
+  public readonly inProcess = true;
+  /** ioredis-compatible status; always "ready" so callers proceed. */
+  public readonly status: string = "ready";
+
+  private store = new Map<string, Entry>();
+  private sets = new Map<string, Set<string>>();
+  private readonly keyPrefix: string;
+
+  constructor(opts: { keyPrefix?: string } = {}) {
+    this.keyPrefix = opts.keyPrefix ?? "";
+  }
+
+  private k(key: string): string {
+    return this.keyPrefix ? `${this.keyPrefix}${key}` : key;
+  }
+
+  private isExpired(e: Entry): boolean {
+    return e.expiresAt != null && e.expiresAt <= Date.now();
+  }
+
+  private evictIfNeeded(): void {
+    if (this.store.size <= MAX_CACHE_ENTRIES) return;
+    // Drop the oldest insertion (Map preserves insertion order).
+    const oldest = this.store.keys().next().value;
+    if (oldest !== undefined) this.store.delete(oldest);
+  }
+
+  async get(key: string): Promise<string | null> {
+    const e = this.store.get(this.k(key));
+    if (!e) return null;
+    if (this.isExpired(e)) {
+      this.store.delete(this.k(key));
+      return null;
     }
-    // Retries forever. Waits at least 1s and at most 20s between retries.
-    return Math.max(Math.min(Math.exp(times), 20000), 1000);
-  },
-  reconnectOnError: (err) => {
-    // MOVED/ASK are normal cluster redirections handled by ioredis — not real errors.
-    if (err.message.includes("MOVED")) {
-      logger.debug(`Redis cluster redirect: ${err.message}`);
-      return false;
+    return e.value;
+  }
+
+  /**
+   * Supports the call shapes used in the codebase:
+   *   set(key, value)
+   *   set(key, value, "EX", seconds)
+   *   set(key, value, "PX", ms)
+   *   set(key, value, "EX", seconds, "NX")  // returns "OK" or null
+   */
+  async set(key: string, value: string, ...args: Array<string | number>): Promise<"OK" | null> {
+    let expiresAt: number | null = null;
+    let nx = false;
+    for (let i = 0; i < args.length; i++) {
+      const token = String(args[i]).toUpperCase();
+      if (token === "EX") {
+        expiresAt = Date.now() + Number(args[++i]) * 1000;
+      } else if (token === "PX") {
+        expiresAt = Date.now() + Number(args[++i]);
+      } else if (token === "NX") {
+        nx = true;
+      } else if (token === "XX") {
+        if (!this.store.has(this.k(key))) return null;
+      }
     }
-
-    // Reconnects on READONLY errors and auto-retries the command.
-    logger.warn(`Redis connection error: ${err.message}`);
-    return err.message.includes("READONLY") ? 2 : false;
-  },
-};
-
-/**
- * Parse Redis node definitions from environment variable
- * Format: "host1:port1,host2:port2,host3:port3"
- */
-const parseRedisNodes = (nodesString: string): Array<{ host: string; port: number }> => {
-  return nodesString.split(",").map((node) => {
-    const [host, port] = node.trim().split(":");
-    if (!host || !port) {
-      throw new Error(`Invalid Redis node format: ${node}. Expected format: host:port`);
+    if (nx) {
+      const existing = this.store.get(this.k(key));
+      if (existing && !this.isExpired(existing)) return null;
     }
-    return { host, port: parseInt(port, 10) };
-  });
-};
-const parseClusterNodes = parseRedisNodes;
-const parseSentinelNodes = parseRedisNodes;
-
-/**
- * Build TLS options for Redis connections from environment variables
- * Returns an object with tls configuration if TLS is enabled, otherwise empty object
- */
-const buildTlsOptions = (): Record<string, unknown> => {
-  if (env.REDIS_TLS_ENABLED !== "true") {
-    return {};
+    this.store.set(this.k(key), { value, expiresAt });
+    this.evictIfNeeded();
+    return "OK";
   }
 
-  return {
-    tls: {
-      ca: env.REDIS_TLS_CA_PATH ? fs.readFileSync(env.REDIS_TLS_CA_PATH) : undefined,
-      cert: env.REDIS_TLS_CERT_PATH ? fs.readFileSync(env.REDIS_TLS_CERT_PATH) : undefined,
-      key: env.REDIS_TLS_KEY_PATH ? fs.readFileSync(env.REDIS_TLS_KEY_PATH) : undefined,
-      ...(env.REDIS_TLS_REJECT_UNAUTHORIZED
-        ? {
-            rejectUnauthorized: env.REDIS_TLS_REJECT_UNAUTHORIZED !== "false",
-          }
-        : {}),
-      ...(env.REDIS_TLS_SERVERNAME ? { servername: env.REDIS_TLS_SERVERNAME } : {}),
-      ...(env.REDIS_TLS_CHECK_SERVER_IDENTITY === "false" ? { checkServerIdentity: () => undefined } : {}),
-      ...(env.REDIS_TLS_SECURE_PROTOCOL ? { secureProtocol: env.REDIS_TLS_SECURE_PROTOCOL } : {}),
-      ...(env.REDIS_TLS_CIPHERS ? { ciphers: env.REDIS_TLS_CIPHERS } : {}),
-      ...(env.REDIS_TLS_HONOR_CIPHER_ORDER
-        ? {
-            honorCipherOrder: env.REDIS_TLS_HONOR_CIPHER_ORDER === "true",
-          }
-        : {}),
-      ...(env.REDIS_TLS_KEY_PASSPHRASE ? { passphrase: env.REDIS_TLS_KEY_PASSPHRASE } : {}),
-    },
-  };
-};
-
-const createRedisClusterInstance = (additionalOptions: Partial<RedisOptions> = {}): Cluster | null => {
-  if (!env.REDIS_CLUSTER_NODES) {
-    logger.error("REDIS_CLUSTER_NODES is required when REDIS_CLUSTER_ENABLED is true");
-    return null;
+  async setex(key: string, seconds: number, value: string): Promise<"OK"> {
+    this.store.set(this.k(key), { value, expiresAt: Date.now() + seconds * 1000 });
+    this.evictIfNeeded();
+    return "OK";
   }
 
-  const nodes = parseClusterNodes(env.REDIS_CLUSTER_NODES);
-  const tlsOptions = buildTlsOptions();
-
-  const clusterOptions: ClusterOptions = {
-    // Return incoming addresses as-is - required for AWS ElastiCache Certificate resolution
-    dnsLookup: (address, callback) => {
-      callback(null, address);
-    },
-    slotsRefreshTimeout: env.REDIS_CLUSTER_SLOTS_REFRESH_TIMEOUT,
-    redisOptions: {
-      username: env.REDIS_USERNAME || undefined,
-      password: env.REDIS_AUTH || undefined,
-      ...defaultRedisOptions,
-      ...additionalOptions,
-      ...tlsOptions,
-    },
-    // Retry configuration for cluster
-    retryDelayOnFailover: 100,
-  };
-
-  const cluster = new Cluster(nodes, clusterOptions);
-
-  cluster.on("error", (error) => {
-    logger.error("Redis cluster error", error);
-  });
-
-  return cluster;
-};
-
-const createRedisSentinelInstance = (additionalOptions: Partial<RedisOptions> = {}): Redis | null => {
-  if (!env.REDIS_SENTINEL_MASTER_NAME) {
-    logger.error("REDIS_SENTINEL_MASTER_NAME is required when REDIS_SENTINEL_ENABLED is true");
-    return null;
+  async del(...keys: Array<string | string[]>): Promise<number> {
+    const flat = keys.flat();
+    let n = 0;
+    for (const key of flat) {
+      if (this.store.delete(this.k(key))) n++;
+      if (this.sets.delete(this.k(key))) n++;
+    }
+    return n;
   }
 
-  if (!env.REDIS_SENTINEL_NODES) {
-    logger.error("REDIS_SENTINEL_NODES is required when REDIS_SENTINEL_ENABLED is true");
-    return null;
+  async exists(...keys: string[]): Promise<number> {
+    let n = 0;
+    for (const key of keys) {
+      const e = this.store.get(this.k(key));
+      if (e && !this.isExpired(e)) n++;
+    }
+    return n;
   }
 
-  const sentinels = parseSentinelNodes(env.REDIS_SENTINEL_NODES);
-  const tlsOptions = buildTlsOptions();
-
-  const instance = new Redis({
-    sentinels,
-    name: env.REDIS_SENTINEL_MASTER_NAME,
-    username: env.REDIS_USERNAME || undefined,
-    password: env.REDIS_AUTH || undefined,
-    sentinelUsername: env.REDIS_SENTINEL_USERNAME || undefined,
-    sentinelPassword: env.REDIS_SENTINEL_PASSWORD || undefined,
-    ...defaultRedisOptions,
-    ...additionalOptions,
-    ...tlsOptions,
-  });
-
-  instance.on("error", (error) => {
-    logger.error("Redis sentinel error", error);
-  });
-
-  return instance;
-};
-
-export const createNewRedisInstance = (additionalOptions: Partial<RedisOptions> = {}): Redis | Cluster | null => {
-  if (env.REDIS_CLUSTER_ENABLED === "true" && env.REDIS_SENTINEL_ENABLED === "true") {
-    logger.error("Invalid Redis configuration: REDIS_CLUSTER_ENABLED and REDIS_SENTINEL_ENABLED cannot both be true");
-    return null;
+  async expire(key: string, seconds: number): Promise<number> {
+    const e = this.store.get(this.k(key));
+    if (!e || this.isExpired(e)) return 0;
+    e.expiresAt = Date.now() + seconds * 1000;
+    return 1;
   }
 
-  if (env.REDIS_CLUSTER_ENABLED === "true") {
-    return createRedisClusterInstance(additionalOptions);
+  async sadd(key: string, ...members: Array<string | string[]>): Promise<number> {
+    const set = this.sets.get(this.k(key)) ?? new Set<string>();
+    let added = 0;
+    for (const m of members.flat()) {
+      if (!set.has(m)) {
+        set.add(m);
+        added++;
+      }
+    }
+    this.sets.set(this.k(key), set);
+    return added;
   }
 
-  if (env.REDIS_SENTINEL_ENABLED === "true") {
-    return createRedisSentinelInstance(additionalOptions);
+  async srem(key: string, ...members: Array<string | string[]>): Promise<number> {
+    const set = this.sets.get(this.k(key));
+    if (!set) return 0;
+    let removed = 0;
+    for (const m of members.flat()) {
+      if (set.delete(m)) removed++;
+    }
+    return removed;
   }
 
-  const tlsOptions = buildTlsOptions();
-
-  const instance = env.REDIS_CONNECTION_STRING
-    ? new Redis(env.REDIS_CONNECTION_STRING, {
-        ...defaultRedisOptions,
-        ...additionalOptions,
-        ...tlsOptions,
-      })
-    : env.REDIS_HOST
-      ? new Redis({
-          host: String(env.REDIS_HOST),
-          port: Number(env.REDIS_PORT),
-          username: env.REDIS_USERNAME || undefined,
-          password: String(env.REDIS_AUTH),
-          ...defaultRedisOptions,
-          ...additionalOptions,
-          ...tlsOptions,
-        })
-      : null;
-
-  instance?.on("error", (error) => {
-    logger.error("Redis error", error);
-  });
-
-  return instance;
-};
-
-/**
- * Get the queue prefix for BullMQ cluster compatibility
- * In cluster mode, uses hash tags to ensure queue keys are on the same node
- * In single-node mode, returns the configured prefix or undefined
- */
-export const getQueuePrefix = (queueName: string): string | undefined => {
-  const redisKeyPrefix = env.REDIS_KEY_PREFIX;
-
-  if (env.REDIS_CLUSTER_ENABLED === "true") {
-    // Use hash tags for Redis cluster compatibility
-    // This ensures all keys for a queue are placed on the same hash slot
-    // Format: {prefix:queueName} ensures all keys land on same slot
-    return redisKeyPrefix
-      ? `{${redisKeyPrefix}:${queueName}}`
-      : `{${queueName}}`;
+  async smembers(key: string): Promise<string[]> {
+    return Array.from(this.sets.get(this.k(key)) ?? []);
   }
 
-  // Non-cluster mode: Return prefix or undefined
-  return redisKeyPrefix ?? undefined;
-};
-
-/**
- * Execute multiple Redis DEL operations safely in cluster mode
- */
-export const safeMultiDel = async (redis: Redis | Cluster | null, keys: string[]): Promise<void> => {
-  if (!redis || keys.length === 0) return;
-
-  if (env.REDIS_CLUSTER_ENABLED === "true") {
-    // In cluster mode, delete keys in separate commands to avoid CROSSSLOT errors
-    await Promise.all(keys.map(async (key: string) => redis.del(key)));
-  } else {
-    // In single-node mode, can delete all keys at once
-    await redis.del(keys);
-  }
-};
-
-const scanKeysForNode = async (client: Redis, pattern: string, collector: Set<string>) => {
-  let cursor = "0";
-
-  do {
-    const [nextCursor, keys]: [string, string[]] = await client.scan(
-      cursor,
-      "MATCH",
-      pattern,
-      "COUNT",
-      REDIS_SCAN_COUNT,
+  async keys(pattern: string): Promise<string[]> {
+    // Translate a glob-ish redis pattern to a RegExp. Supports `*` and `?`.
+    const stripped = this.keyPrefix && pattern.startsWith(this.keyPrefix);
+    const re = new RegExp(
+      "^" +
+        pattern
+          .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+          .replace(/\*/g, ".*")
+          .replace(/\?/g, ".") +
+        "$",
     );
-
-    keys.forEach((key) => collector.add(key));
-    cursor = nextCursor;
-  } while (cursor !== "0");
-};
-
-export const scanKeys = async (redis: Redis | Cluster | null, pattern: string): Promise<string[]> => {
-  if (!redis) return [];
-
-  const collectedKeys = new Set<string>();
-
-  if (env.REDIS_CLUSTER_ENABLED === "true") {
-    await Promise.all((redis as Cluster).nodes("master").map((node) => scanKeysForNode(node, pattern, collectedKeys)));
-  } else {
-    await scanKeysForNode(redis as Redis, pattern, collectedKeys);
+    const out: string[] = [];
+    for (const [storedKey, e] of this.store.entries()) {
+      if (this.isExpired(e)) continue;
+      const candidate = this.keyPrefix && !stripped ? storedKey : storedKey;
+      if (re.test(candidate)) out.push(candidate);
+    }
+    return out;
   }
 
-  return Array.from(collectedKeys);
+  async scan(
+    cursor: string | number,
+    ...args: Array<string | number>
+  ): Promise<[string, string[]]> {
+    // One-shot scan: ignore COUNT, honor MATCH, always return cursor "0".
+    let match = "*";
+    for (let i = 0; i < args.length; i++) {
+      if (String(args[i]).toUpperCase() === "MATCH") match = String(args[++i]);
+    }
+    return ["0", await this.keys(match)];
+  }
+
+  /**
+   * Evaluate the small Lua scripts the codebase uses. We do not run Lua; we
+   * pattern-match the two scripts in use (atomic check-and-delete for locks).
+   * Any other script resolves to null (no-op) — safe because callers treat a
+   * null/0 result as "not acted".
+   */
+  async eval(script: string, numKeys: number, ...args: Array<string | number>): Promise<unknown> {
+    const keys = args.slice(0, numKeys).map(String);
+    const argv = args.slice(numKeys).map(String);
+    // RedisLock release: delete key iff value matches.
+    if (script.includes('redis.call("get"') && script.includes('redis.call("del"')) {
+      const current = await this.get(keys[0]);
+      if (current === argv[0]) {
+        await this.del(keys[0]);
+        return 1;
+      }
+      return 0;
+    }
+    return null;
+  }
+
+  async ping(): Promise<"PONG"> {
+    return "PONG";
+  }
+
+  disconnect(): void {
+    this.store.clear();
+    this.sets.clear();
+  }
+
+  async quit(): Promise<"OK"> {
+    this.disconnect();
+    return "OK";
+  }
+
+  /** ioredis EventEmitter parity — no events ever fire in-process. */
+  on(): this {
+    return this;
+  }
+}
+
+/**
+ * Retained for source compatibility. BullMQ used these ioredis retry options;
+ * `@hanzo/mq` ignores connection options, so this is an inert object.
+ */
+export const redisQueueRetryOptions: Record<string, unknown> = {};
+
+/**
+ * Returns a connectionless sentinel. Truthy so `conn ? new Queue(...) : null`
+ * guards keep producing queues; also usable as an in-process cache client.
+ */
+export const createNewRedisInstance = (
+  additionalOptions: { keyPrefix?: string } = {},
+): InProcessRedis => {
+  return new InProcessRedis({ keyPrefix: additionalOptions.keyPrefix ?? env.REDIS_KEY_PREFIX ?? undefined });
 };
 
-const createRedisClient = () => {
+/**
+ * Queue key prefix. With the Temporal/in-process backend there is no Redis
+ * keyspace to namespace, but we keep the value so queue/task-queue names remain
+ * stable across the migration. `REDIS_KEY_PREFIX` is honored if still set.
+ */
+export const getQueuePrefix = (_queueName: string): string | undefined => {
+  return env.REDIS_KEY_PREFIX ?? undefined;
+};
+
+/** Delete many keys. Operates on the in-process client. */
+export const safeMultiDel = async (client: InProcessRedis | null, keys: string[]): Promise<void> => {
+  if (!client || keys.length === 0) return;
+  await client.del(keys);
+};
+
+/** Scan keys matching a pattern. Operates on the in-process client. */
+export const scanKeys = async (client: InProcessRedis | null, pattern: string): Promise<string[]> => {
+  if (!client) return [];
+  return client.keys(pattern);
+};
+
+const createCacheClient = (): InProcessRedis => {
   try {
-    return createNewRedisInstance({
-      keyPrefix: env.REDIS_KEY_PREFIX ?? undefined,
-    });
+    return new InProcessRedis({ keyPrefix: env.REDIS_KEY_PREFIX ?? undefined });
   } catch (e) {
-    logger.error("Failed to connect to redis", e);
-    return null;
+    logger.error("Failed to initialize in-process cache", e);
+    return new InProcessRedis();
   }
 };
 
 declare global {
-  var redis: undefined | ReturnType<typeof createRedisClient>;
+  // eslint-disable-next-line no-var
+  var redis: undefined | InProcessRedis;
 }
 
-export const redis = globalThis.redis ?? createRedisClient();
+/** Process-wide cache/lock singleton (replaces the former ioredis singleton). */
+export const redis: InProcessRedis = globalThis.redis ?? createCacheClient();
 
 if (env.NODE_ENV !== "production") globalThis.redis = redis;

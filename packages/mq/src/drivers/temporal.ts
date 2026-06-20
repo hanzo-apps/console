@@ -18,7 +18,7 @@
  * in-cluster `temporal.hanzo.svc:7233`, and a namespace (default `default`).
  */
 import { Client, Connection, ScheduleClient, type ScheduleSpec } from "@temporalio/client";
-import { NativeConnection, Worker as TemporalWorker } from "@temporalio/worker";
+import type { NativeConnection, Worker as TemporalWorker } from "@temporalio/worker";
 import type { AddedJobRef, MqDriver } from "../driver";
 import type { BackoffOptions, BulkJob, Job, JobCounts, JobsOptions, Processor, WorkerOptions } from "../types";
 import type { JobEnvelope, RetrySpec } from "./temporal-workflows";
@@ -27,6 +27,24 @@ export interface TemporalDriverConfig {
   address: string;
   namespace: string;
   taskQueuePrefix: string;
+}
+
+interface TemporalWorkerModule {
+  NativeConnection: typeof NativeConnection;
+  Worker: typeof TemporalWorker;
+}
+
+/**
+ * Load `@temporalio/worker` through an indirection opaque to static bundlers.
+ * `require` is resolved off a computed string so Next/webpack do not trace into
+ * it (which would drag `@swc/*` into the web bundle). Throws clearly if the
+ * worker package is absent — only the worker process should reach this.
+ */
+function loadTemporalWorker(): TemporalWorkerModule {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const dynamicRequire = eval("require") as NodeRequire;
+  const pkg = ["@temporalio", "worker"].join("/");
+  return dynamicRequire(pkg) as TemporalWorkerModule;
 }
 
 const DEFAULT_START_TO_CLOSE_MS = 60 * 60 * 1000; // 1 hour
@@ -174,6 +192,14 @@ export class TemporalDriver implements MqDriver {
   async startWorker(queueName: string, processor: Processor, opts: WorkerOptions): Promise<void> {
     if (this.workers.has(queueName)) return;
 
+    // `@temporalio/worker` pulls a heavy workflow bundler (`@swc/*`). Only the
+    // worker process ever starts workers, so we load it through a runtime
+    // indirection that bundlers (Next/webpack in the web app) cannot follow —
+    // the web app produces jobs via the client path above and never bundles
+    // this. See docs/architecture/kill-redis-temporal.md.
+    const workerMod = loadTemporalWorker();
+    const { NativeConnection, Worker: RuntimeWorker } = workerMod;
+
     const connection = await NativeConnection.connect({ address: this.cfg.address });
     const activities = {
       async process(envelope: JobEnvelope): Promise<unknown> {
@@ -191,7 +217,7 @@ export class TemporalDriver implements MqDriver {
       },
     };
 
-    const worker = await TemporalWorker.create({
+    const worker = await RuntimeWorker.create({
       connection,
       namespace: this.cfg.namespace,
       taskQueue: this.taskQueue(queueName),

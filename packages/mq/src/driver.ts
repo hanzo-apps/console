@@ -75,9 +75,11 @@ export function getDriver(): MqDriver {
 
   const temporalAddress = process.env.TEMPORAL_ADDRESS;
   if (temporalAddress && temporalAddress.length > 0) {
-    // Lazy require keeps @temporalio out of the build/runtime graph unless used.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { TemporalDriver } = require("./drivers/temporal") as typeof import("./drivers/temporal");
+    // Load the Temporal driver through an indirection opaque to static bundlers
+    // (Next/webpack), so `@temporalio/*` is never pulled into the web bundle.
+    // It is resolved at runtime only when TEMPORAL_ADDRESS is set.
+    const dynamicRequire = eval("require") as NodeRequire;
+    const { TemporalDriver } = dynamicRequire("./drivers/temporal") as typeof import("./drivers/temporal");
     activeDriver = new TemporalDriver({
       address: temporalAddress,
       namespace: process.env.TEMPORAL_NAMESPACE || "default",
@@ -86,6 +88,8 @@ export function getDriver(): MqDriver {
     return activeDriver;
   }
 
+  // The in-process driver is plain TS with no heavy deps; a normal require is
+  // fine and keeps it bundleable for environments that run jobs in-process.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { MemoryDriver } = require("./drivers/memory") as typeof import("./drivers/memory");
   activeDriver = new MemoryDriver();
