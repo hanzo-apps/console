@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
-import { createTRPCRouter, adminProcedure, authenticatedProcedure } from "@/src/server/api/trpc";
+import {
+  createTRPCRouter,
+  adminProcedure,
+  authenticatedProcedure,
+} from "@/src/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { env } from "@/src/env.mjs";
 
@@ -13,7 +17,7 @@ const denyOnHanzoCloud = () => {
 };
 
 export const backgroundMigrationsRouter = createTRPCRouter({
-  all: adminProcedure.query(async ({ ctx }) => {
+  all: authenticatedProcedure.query(async ({ ctx }) => {
     denyOnHanzoCloud();
     const backgroundMigrations = await ctx.prisma.backgroundMigration.findMany({
       orderBy: {
@@ -23,7 +27,7 @@ export const backgroundMigrationsRouter = createTRPCRouter({
 
     return { migrations: backgroundMigrations };
   }),
-  status: adminProcedure.query(async ({ ctx }) => {
+  status: authenticatedProcedure.query(async ({ ctx }) => {
     denyOnHanzoCloud();
     const backgroundMigrations = await ctx.prisma.backgroundMigration.findMany({
       orderBy: {
@@ -35,7 +39,11 @@ export const backgroundMigrationsRouter = createTRPCRouter({
       return { status: "FAILED" };
     }
 
-    if (backgroundMigrations.some((m) => m.finishedAt === null && m.failedAt === null)) {
+    if (
+      backgroundMigrations.some(
+        (m) => m.finishedAt === null && m.failedAt === null,
+      )
+    ) {
       return { status: "ACTIVE" };
     }
 
@@ -46,11 +54,12 @@ export const backgroundMigrationsRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       denyOnHanzoCloud();
 
-      const backgroundMigration = await ctx.prisma.backgroundMigration.findUnique({
-        where: {
-          name: input.name,
-        },
-      });
+      const backgroundMigration =
+        await ctx.prisma.backgroundMigration.findUnique({
+          where: {
+            name: input.name,
+          },
+        });
 
       if (!backgroundMigration) {
         throw new TRPCError({

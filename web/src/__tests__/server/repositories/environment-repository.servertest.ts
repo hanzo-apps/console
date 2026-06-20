@@ -43,4 +43,33 @@ describe("Datastore Project Repository Test", () => {
       ]),
     );
   });
+
+  it("should accept a fromTimestamp Date without a datastore BAD_QUERY_PARAMETER error", async () => {
+    // Regression: a raw JS Date used to reach the datastore as
+    // Date.prototype.toString() ("Fri Jun 19 2026 ... GMT+0000"), which
+    // ClickHouse rejects for DateTime64(3) (Code: 457 BAD_QUERY_PARAMETER).
+    // The repository must serialize Date params the one canonical way, via
+    // convertDateToDatastoreDateTime, like every other repository.
+    const projectId = randomUUID();
+    const environmentId = randomUUID();
+    await createTracesCh([
+      createTrace({
+        project_id: projectId,
+        environment: environmentId,
+        timestamp: Date.now(),
+      }),
+    ]);
+
+    const environments = await getEnvironmentsForProject({
+      projectId,
+      fromTimestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    });
+
+    expect(environments).toEqual(
+      expect.arrayContaining([
+        { environment: environmentId },
+        { environment: "default" },
+      ]),
+    );
+  });
 });
