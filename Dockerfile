@@ -99,6 +99,17 @@ RUN set -eux; \
       cp -a /app/packages/mq/package.json "$D"/; cp -a /app/packages/mq/dist "$D"/dist; \
     fi
 
+# Seed the SQLite app DB at build time (prisma CLI is available here, not in the slim
+# runtime). `prisma db push` materializes all 68 tables into a seed file; the runtime
+# entrypoint copies it onto the (initially-empty) PVC on first boot. Avoids shipping the
+# prisma CLI + engines into production and avoids the db-push-at-boot hang.
+RUN set -eux; \
+    mkdir -p /app/seed; \
+    DATABASE_URL="file:/app/seed/app.db" \
+      pnpm exec prisma db push \
+        --schema=./packages/shared/prisma/schema.prisma --skip-generate --accept-data-loss; \
+    ls -la /app/seed/app.db
+
 # ===== Development Stage =====
 FROM deps AS development
 
@@ -134,6 +145,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
 # Copy worker if it exists
 COPY --from=builder --chown=nextjs:nodejs /app/worker/dist ./worker/dist
 
+# Copy the build-time SQLite seed (68 tables) — the entrypoint seeds the PVC from it.
+COPY --from=builder --chown=nextjs:nodejs /app/seed/app.db ./seed/app.db
+
 # Switch to nextjs user for security
 USER nextjs
 
@@ -157,11 +171,11 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     req.on('error', () => process.exit(1)); \
     req.end();" || exit 1
 
-# Use tini for proper signal handling
-ENTRYPOINT ["/sbin/tini", "--"]
-
-# Production command
-CMD ["node", "web/server.js"]
+# tini for signal handling; seed the SQLite app DB onto the (empty) PVC on first boot
+# from the build-time seed (68 tables), then start the Next standalone server. Avoids
+# running prisma db push at runtime (no prisma CLI in the slim image) and the resulting
+# DB-less health-endpoint hang.
+ENTRYPOINT ["/sbin/tini", "--", "sh", "-c", "set -e; DBPATH=\"${DATABASE_URL#file:}\"; : \"${DBPATH:=/var/lib/hanzo/console/app.db}\"; mkdir -p \"$(dirname \"$DBPATH\")\"; if [ ! -f \"$DBPATH\" ]; then echo \"seeding SQLite db -> $DBPATH\"; cp /app/seed/app.db \"$DBPATH\"; fi; exec node web/server.js"]
 
 # ===== Default to production =====
 FROM production
