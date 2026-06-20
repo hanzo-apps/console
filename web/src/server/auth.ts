@@ -65,6 +65,7 @@ import { createSupportEmailHash } from "@/src/features/support-chat/createSuppor
 import { canToggleV4 } from "@/src/features/events/lib/v4Rollout";
 import {
   iamPasswordLogin,
+  iamValidateToken,
   isIamConfigured,
 } from "@/src/features/auth/lib/iamServer";
 import { HanzoIamProvider } from "@hanzo/iam/nextauth";
@@ -196,6 +197,51 @@ const staticProviders: Provider[] = [
       };
 
       return userObj;
+    },
+  }),
+  // IAM token bridge: accepts an IAM-issued access token (obtained client-side
+  // by the embedded `@hanzo/iam` BrowserIamSdk via the embedded login form or a
+  // social `/v1/iam/oauth/authorize` redirect), validates it against IAM's
+  // JWKS, and mints the console session. This is how an IAM token becomes the
+  // console identity without a NextAuth provider redirect page.
+  CredentialsProvider({
+    id: "iam-token",
+    name: "Hanzo IAM",
+    credentials: {
+      accessToken: { label: "IAM access token", type: "text" },
+    },
+    async authorize(credentials, _req) {
+      if (!credentials?.accessToken) throw new Error("No IAM token");
+      if (!isIamConfigured()) throw new Error("IAM is not configured.");
+
+      const result = await iamValidateToken(credentials.accessToken);
+      if (!result.ok) throw new Error(result.error);
+      if (!result.identity.email)
+        throw new Error("IAM token has no email claim.");
+
+      const dbUser = await prisma.user.upsert({
+        where: { email: result.identity.email },
+        create: {
+          email: result.identity.email,
+          name: result.identity.name,
+          image: result.identity.image,
+        },
+        update: {
+          name: result.identity.name ?? undefined,
+          image: result.identity.image ?? undefined,
+        },
+      });
+
+      return {
+        id: dbUser.id,
+        name: dbUser.name,
+        email: dbUser.email,
+        image: dbUser.image,
+        emailVerified: dbUser.emailVerified?.toISOString(),
+        featureFlags: parseFlags(dbUser.featureFlags),
+        canCreateOrganizations: canCreateOrganizations(dbUser.email),
+        organizations: [],
+      } satisfies User;
     },
   }),
 ];
