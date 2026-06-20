@@ -3,7 +3,10 @@ import {
   safeMultiDel,
   scanKeys,
 } from "@hanzo/console/src/server";
-import type { RedisOptions } from "ioredis";
+
+// Redis was removed; createNewRedisInstance returns an in-process client that
+// ignores connection options. Options are accepted for source compatibility.
+type RedisOptions = Record<string, unknown>;
 
 export type RedisTestClient = NonNullable<
   ReturnType<typeof createNewRedisInstance>

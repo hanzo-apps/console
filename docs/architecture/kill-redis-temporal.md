@@ -118,7 +118,43 @@ same retry/delay semantics, so the build and unit tests are hermetic.
 
 ## Verification
 
-- `cd web && SKIP_ENV_VALIDATION=1 NEXT_IGNORE_BUILD_ERRORS=true npx next build --webpack` → exit 0 at each checkpoint.
-- End state: 0 `ioredis` imports, 0 `REDIS_*` env references (or documented).
+- `cd web && NODE_OPTIONS=--max-old-space-size=8192 SKIP_ENV_VALIDATION=1
+  NEXT_IGNORE_BUILD_ERRORS=true ./node_modules/.bin/next build --webpack`
+  → exit 0 at every checkpoint (run the local `next` bin, not `npx`, or it
+  fetches a different version). `--max-old-space-size` avoids an OOM on large
+  webpack graphs.
+- End state: **0 `ioredis` imports** in `web/`, `worker/`, `packages/shared/`
+  (verified by grep); `ioredis`, `@opentelemetry/instrumentation-ioredis`, and
+  `@appsignal/opentelemetry-instrumentation-bullmq` removed from all three
+  package.json. Worker `tsc` error count == pre-migration baseline (no net new
+  type errors; worker builds via `tsc || true`).
+
+## REDIS_* env: documented exceptions
+
+All redis *connection* env was deleted from `packages/shared/src/env.ts`
+(HOST/PORT/AUTH/USERNAME/CONNECTION_STRING/all TLS_*/all SENTINEL_*/CLUSTER_NODES/
+CLUSTER_SLOTS_REFRESH_TIMEOUT/ENABLE_AUTO_PIPELINING). Two legacy-named keys are
+retained **only** because their meaning is no longer "connect to redis" and
+renaming them would touch five sharded-queue files:
+
+- `REDIS_KEY_PREFIX` — prefix for queue / Temporal task-queue names and the
+  in-process cache keyspace (multi-tenant isolation).
+- `REDIS_CLUSTER_ENABLED` — legacy gate that turns on consistent-hash sharding
+  of the high-throughput queues (`ingestion`, `otel-ingestion`, `trace-upsert`)
+  across shard task-queues. Unrelated to redis clustering.
+
+A future cosmetic pass can rename these to `MQ_KEY_PREFIX` / `MQ_SHARDING_ENABLED`.
+
+## What remains (honest tail)
+
+- The Temporal driver (`packages/mq/src/drivers/temporal.ts`) is complete and
+  type-checks, but has **not been exercised against a live Temporal frontend**
+  from this codebase yet. The in-process driver is the default and is what the
+  green build/tests run on. Bringing Temporal online needs: set `TEMPORAL_ADDRESS`
+  (in-cluster `temporal.hanzo.svc:7233`), `TEMPORAL_NAMESPACE`, deploy the worker
+  with `@temporalio/worker` resolvable, and confirm the workflow bundle builds in
+  the worker image.
+- `hanzoai/tasks` is the intended Hanzo-native end state; swap is one file
+  (`drivers/`) once it ships a TS client + a non-501 execution engine.
 </content>
 </invoke>

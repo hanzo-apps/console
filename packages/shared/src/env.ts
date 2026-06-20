@@ -5,40 +5,19 @@ const EnvSchema = z.object({
   NEXT_PUBLIC_HANZO_CLOUD_REGION: z.string().optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   NEXTAUTH_URL: z.string().url().optional(),
-  REDIS_HOST: z.string().nullish(),
-  REDIS_PORT: z.coerce
-    .number() // .env files convert numbers to strings, therefore we have to enforce them to be numbers
-    .positive()
-    .max(65536, `options.port should be >= 0 and < 65536`)
-    .default(6379)
-    .nullable(),
-  REDIS_AUTH: z.string().nullish(),
-  REDIS_USERNAME: z.string().nullish(),
-  REDIS_CONNECTION_STRING: z.string().nullish(),
-  // Optional prefix for Redis keys. Used by BullMQ queues via their native prefix option
-  // and by the singleton cache instance via ioredis keyPrefix. Useful for multi-tenant Redis.
+  // --- Legacy redis-named knobs (NO redis connection anymore) ---
+  // Redis was removed (queues -> Temporal-backed @hanzo/mq; caches/locks ->
+  // in-process / app DB). These two keys are retained ONLY as documented
+  // exceptions because their meaning is no longer "connect to redis":
+  //   - REDIS_KEY_PREFIX: prefix for queue / Temporal task-queue names and the
+  //     in-process cache keyspace (multi-tenant isolation).
+  //   - REDIS_CLUSTER_ENABLED: legacy gate that enables consistent-hash sharding
+  //     of the high-throughput queues across shard task-queues. Kept under its
+  //     old name to avoid a cross-file rename; it is unrelated to redis clustering.
+  // All redis *connection* env (HOST/PORT/AUTH/USERNAME/CONNECTION_STRING/TLS_*/
+  // SENTINEL_*/CLUSTER_NODES/ENABLE_AUTO_PIPELINING) was deleted.
   REDIS_KEY_PREFIX: z.string().nullish(),
-  REDIS_TLS_ENABLED: z.enum(["true", "false"]).default("false"),
-  REDIS_TLS_CA_PATH: z.string().optional(),
-  REDIS_TLS_CERT_PATH: z.string().optional(),
-  REDIS_TLS_KEY_PATH: z.string().optional(),
-  REDIS_TLS_SERVERNAME: z.string().optional(),
-  REDIS_TLS_REJECT_UNAUTHORIZED: z.enum(["true", "false"]).optional(),
-  REDIS_TLS_CHECK_SERVER_IDENTITY: z.enum(["true", "false"]).optional(),
-  REDIS_TLS_SECURE_PROTOCOL: z.string().optional(),
-  REDIS_TLS_CIPHERS: z.string().optional(),
-  REDIS_TLS_HONOR_CIPHER_ORDER: z.enum(["true", "false"]).optional(),
-  REDIS_TLS_KEY_PASSPHRASE: z.string().optional(),
-  REDIS_ENABLE_AUTO_PIPELINING: z.enum(["true", "false"]).default("true"),
-  // Redis Cluster Configuration
   REDIS_CLUSTER_ENABLED: z.enum(["true", "false"]).default("false"),
-  REDIS_CLUSTER_NODES: z.string().optional(),
-  REDIS_CLUSTER_SLOTS_REFRESH_TIMEOUT: z.coerce.number().int().positive().default(5000),
-  REDIS_SENTINEL_ENABLED: z.enum(["true", "false"]).default("false"),
-  REDIS_SENTINEL_NODES: z.string().optional(),
-  REDIS_SENTINEL_MASTER_NAME: z.string().optional(),
-  REDIS_SENTINEL_USERNAME: z.string().optional(),
-  REDIS_SENTINEL_PASSWORD: z.string().optional(),
   ENCRYPTION_KEY: z
     .string()
     .length(

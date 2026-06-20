@@ -21,7 +21,6 @@ import waitForExpect from "wait-for-expect";
 import { DatastoreWriter, TableName } from "../../DatastoreWriter";
 import { IngestionService } from "../../IngestionService";
 import { ModelUsageUnit, ScoreSourceEnum } from "@hanzo/console";
-import { Cluster } from "ioredis";
 import { env } from "../../../env";
 
 const projectId = "7a88fb47-b4e2-43b8-a06c-a5ce950dc53a";
@@ -33,14 +32,10 @@ describe("Ingestion end-to-end tests", () => {
   let IngestionEventBatchSchema: z.ZodType<any>;
 
   beforeEach(async () => {
-    if (!redis) throw new Error("Redis not initialized");
+    if (!redis) throw new Error("Cache not initialized");
     await pruneDatabase();
 
-    if (redis instanceof Cluster) {
-      await Promise.all(redis.nodes("master").map((node) => node.flushall()));
-    } else {
-      await redis.flushall();
-    }
+    await redis.flushall();
 
     datastoreWriter = DatastoreWriter.getInstance();
 
