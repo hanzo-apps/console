@@ -238,6 +238,13 @@ export class InProcessRedis {
 }
 
 /**
+ * Stable name for "the cache/lock client" across the codebase. Formerly this
+ * was `Redis | Cluster` from ioredis; it is now the connectionless in-process
+ * implementation. Callers that only need the type should import this.
+ */
+export type RedisClient = InProcessRedis;
+
+/**
  * Retained for source compatibility. BullMQ used these ioredis retry options;
  * `@hanzo/mq` ignores connection options, so this is an inert object.
  */

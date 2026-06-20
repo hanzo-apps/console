@@ -1,6 +1,5 @@
-import { type Redis, type Cluster } from "ioredis";
 import { type z } from "zod";
-import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
+import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
 import { env } from "@/src/env.mjs";
 import {
   type RateLimitResult,
@@ -8,13 +7,7 @@ import {
   type RateLimitConfig,
   type Plan,
 } from "@hanzo/console";
-import {
-  recordIncrement,
-  type ApiAccessScope,
-  logger,
-  createNewRedisInstance,
-  redisQueueRetryOptions,
-} from "@hanzo/console/src/server";
+import { recordIncrement, type ApiAccessScope, logger } from "@hanzo/console/src/server";
 import { type NextApiResponse } from "next";
 import {
   createUnstablePublicApiRateLimitError,
@@ -27,36 +20,48 @@ export const RATE_LIMIT_REDIS_KEY_PREFIX = "rate-limit";
 
 // Business Logic
 // - rate limit strategy is based on org-id, org plan, and resources. Rate limits are applied in buckets of minutes.
-// - rate limits are not applied for self hosters and are also not applied when Redis is not available
-// - infos for rate-limits are taken from the API access scope. Info for this scope is stored alongside API Keys in Redis for efficient access.
+// - rate limits are not applied for self hosters.
+// - rate limiting is in-process (RateLimiterMemory). Redis was removed per the
+//   "kill redis" mandate; cross-pod rate-limit accuracy, if ever needed, is the
+//   hanzoai/gateway's responsibility, not the app's. See
+//   docs/architecture/kill-redis-temporal.md.
+// - infos for rate-limits are taken from the API access scope.
 // - isRateLimited returns false for self-hosters
 // - sendRestResponseIfLimited sends a 429 response with headers if the rate limit is exceeded. Return this from the route handler.
 export class RateLimitService {
-  private static redis: Redis | Cluster | null;
   private static instance: RateLimitService | null = null;
+  // One in-process limiter per (resource, points, duration). Buckets persist
+  // for the lifetime of the process so repeated requests share state.
+  private static limiters = new Map<string, RateLimiterMemory>();
 
-  public static getInstance(redis: Redis | null = null) {
+  public static getInstance() {
     if (!RateLimitService.instance) {
-      RateLimitService.redis =
-        redis ??
-        createNewRedisInstance({
-          keyPrefix: sharedEnv.REDIS_KEY_PREFIX ?? undefined, // For multi-tenant Redis isolation
-          enableAutoPipelining: false, // This may help avoid https://github.com/redis/ioredis/issues/1931
-          enableOfflineQueue: false,
-          lazyConnect: true, // Connect when first command is sent
-          ...redisQueueRetryOptions,
-        });
       RateLimitService.instance = new RateLimitService();
     }
     return RateLimitService.instance;
   }
 
   public static shutdown() {
-    if (RateLimitService.redis && RateLimitService.redis.status !== "end") {
-      RateLimitService.redis.disconnect();
-    }
-    RateLimitService.redis = null;
+    RateLimitService.limiters.clear();
     RateLimitService.instance = null;
+  }
+
+  private getLimiter(
+    resource: z.infer<typeof RateLimitResource>,
+    points: number,
+    durationInSec: number,
+  ): RateLimiterMemory {
+    const key = `${this.rateLimitPrefix(resource)}:${points}:${durationInSec}`;
+    let limiter = RateLimitService.limiters.get(key);
+    if (!limiter) {
+      limiter = new RateLimiterMemory({
+        points,
+        duration: durationInSec,
+        keyPrefix: this.rateLimitPrefix(resource),
+      });
+      RateLimitService.limiters.set(key, limiter);
+    }
+    return limiter;
   }
 
   async rateLimitRequest(
@@ -69,11 +74,6 @@ export class RateLimitService {
     }
 
     if (env.HANZO_RATE_LIMITS_ENABLED === "false") {
-      return new RateLimitHelper(undefined);
-    }
-
-    if (!RateLimitService.redis) {
-      logger.warn("Rate limiting not available without Redis");
       return new RateLimitHelper(undefined);
     }
 
@@ -95,24 +95,11 @@ export class RateLimitService {
       return;
     }
 
-    // Connect Redis if not initialized
-    if (RateLimitService?.redis?.status !== "ready") {
-      try {
-        await RateLimitService?.redis?.connect();
-      } catch (_err) {
-        // Do nothing here. We will fail open if Redis is not available.
-      }
-    }
-
-    const rateLimiter = new RateLimiterRedis({
-      // Basic options
-      points: effectiveConfig.points, // Number of points
-      duration: effectiveConfig.durationInSec, // Per second(s)
-
-      keyPrefix: this.rateLimitPrefix(resource), // must be unique for limiters with different purpose
-      storeClient: RateLimitService.redis,
-      rejectIfRedisNotReady: true,
-    });
+    const rateLimiter = this.getLimiter(
+      resource,
+      effectiveConfig.points,
+      effectiveConfig.durationInSec,
+    );
 
     let res: RateLimitResult | undefined = undefined;
     try {

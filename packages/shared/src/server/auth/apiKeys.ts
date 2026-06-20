@@ -2,7 +2,7 @@ import { PrismaClient, ApiKeyScope } from "@prisma/client";
 import { compare, hash } from "bcryptjs";
 import { randomUUID } from "crypto";
 import * as crypto from "crypto";
-import type { Cluster, Redis } from "ioredis";
+import type { RedisClient } from "../redis/redis";
 import { env } from "../../env";
 import { logger } from "../index";
 
@@ -174,7 +174,7 @@ export async function deleteApiKeyFromDb(p: {
   id: string;
   entityId: string;
   scope: ApiKeyScope;
-  redis?: Redis | Cluster | null;
+  redis?: RedisClient | null;
 }) {
   const entity =
     p.scope === "PROJECT" ? { projectId: p.entityId } : { orgId: p.entityId };

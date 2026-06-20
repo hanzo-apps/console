@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
 import { redis, safeMultiDel } from "..";
 import { logger } from "../logger";
-import type { Cluster, Redis } from "ioredis";
+import type { RedisClient } from "../redis/redis";
 
 import { type ApiKey } from "../../db";
 
@@ -51,7 +51,7 @@ export async function invalidateCachedApiKeys(apiKeys: ApiKey[], identifier: str
  */
 export async function invalidateCachedOrgApiKeys(
   orgId: string,
-  redisClient: Redis | Cluster | null = redis,
+  redisClient: RedisClient | null = redis,
 ): Promise<void> {
   const apiKeys = await prisma.apiKey.findMany({
     where: {
