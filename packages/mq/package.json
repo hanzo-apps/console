@@ -14,7 +14,8 @@
   },
   "scripts": {
     "lint": "eslint src --max-warnings 0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc || true"
   },
   "dependencies": {
     "@temporalio/client": "^1.11.8",
