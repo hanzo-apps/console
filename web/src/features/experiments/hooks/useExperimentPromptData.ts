@@ -7,8 +7,8 @@ import {
   PromptType,
   extractPlaceholderNames,
   type PromptMessage,
-  ZodModelConfig,
 } from "@hanzo/console";
+import { ZodModelConfig } from "@hanzo/console/src/server/llm/types";
 
 type ExperimentPromptDataProps = {
   projectId: string;

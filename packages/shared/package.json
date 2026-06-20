@@ -39,6 +39,10 @@
       "import": "./dist/src/server/auth/apiKeys.js",
       "require": "./dist/src/server/auth/apiKeys.js"
     },
+    "./src/server/llm/types": {
+      "import": "./dist/src/server/llm/types.js",
+      "require": "./dist/src/server/llm/types.js"
+    },
     "./src/utils/chatml": {
       "import": "./dist/src/utils/chatml/index.js",
       "require": "./dist/src/utils/chatml/index.js"

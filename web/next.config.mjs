@@ -19,6 +19,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const sharedSrc = path.resolve(__dirname, "../packages/shared/src");
 const aliasForPrefix = (prefix) => ({
   [`${prefix}/src/server/auth/apiKeys`]: path.join(sharedSrc, "server/auth/apiKeys.ts"),
+  // `server/llm/types.ts` is a leaf module (zod + prisma types only) that owns
+  // client-safe values like `ZodModelConfig` and `ConsoleInternalTraceEnvironment`.
+  // Exposing it as its own focused subpath lets module-scope consumers import
+  // these without pulling the full `@hanzo/console` barrel, which otherwise
+  // forms a webpack circular-chunk graph where the schema binding is still in
+  // its temporal dead zone at module-evaluation time (TDZ ReferenceError during
+  // Next page-data collection). Listed before `/src/server` so it wins.
+  [`${prefix}/src/server/llm/types`]: path.join(sharedSrc, "server/llm/types.ts"),
   [`${prefix}/src/server`]: path.join(sharedSrc, "server/index.ts"),
   [`${prefix}/src/db`]: path.join(sharedSrc, "db.ts"),
   [`${prefix}/src/env`]: path.join(sharedSrc, "env.ts"),
