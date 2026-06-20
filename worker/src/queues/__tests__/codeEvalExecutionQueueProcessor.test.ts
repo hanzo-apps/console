@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { Job } from "@hanzo/mq";
-import { EvalTemplateType } from "@prisma/client";
+import { EvalTemplateType } from "@hanzo/console";
 import { UnrecoverableError } from "../../errors/UnrecoverableError";
 
 const QueueName = {

@@ -1,4 +1,5 @@
-import { PrismaClient, ApiKeyScope } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { ApiKeyScope } from "../../db-enums";
 import { compare, hash } from "bcryptjs";
 import { randomUUID } from "crypto";
 import * as crypto from "crypto";
@@ -176,8 +177,7 @@ export async function deleteApiKeyFromDb(p: {
   scope: ApiKeyScope;
   redis?: Redis | Cluster | null;
 }) {
-  const entity =
-    p.scope === "PROJECT" ? { projectId: p.entityId } : { orgId: p.entityId };
+  const entity = p.scope === "PROJECT" ? { projectId: p.entityId } : { orgId: p.entityId };
 
   const apiKey = await p.prisma.apiKey.findFirstOrThrow({
     where: {

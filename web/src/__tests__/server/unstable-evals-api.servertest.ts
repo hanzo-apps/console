@@ -19,7 +19,7 @@ import {
   createBasicAuthHeader,
   createOrgProjectAndApiKey,
 } from "@hanzo/console/src/server";
-import { ApiKeyScope } from "@prisma/client";
+import { ApiKeyScope } from "@hanzo/console";
 import { UnstablePublicApiErrorResponse } from "@/src/features/public-api/types/unstable-public-evals-contract";
 import type { z } from "zod";
 import { LLMAdapter } from "@hanzo/console";

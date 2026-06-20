@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { JobExecutionStatus } from "@prisma/client";
+import { JobExecutionStatus } from "@hanzo/console";
 import { prisma } from "@hanzo/console/src/db";
 import {
   DefaultEvalModelService,

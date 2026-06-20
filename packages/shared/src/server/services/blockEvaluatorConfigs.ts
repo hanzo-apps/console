@@ -1,10 +1,8 @@
-import { EvaluatorBlockReason, JobConfigState, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { EvaluatorBlockReason, JobConfigState } from "../../db-enums";
 import { prisma } from "../../db";
 import { env } from "../../env";
-import {
-  getEvaluatorBlockMetadata,
-  getEvaluatorBlockResolutionPath,
-} from "../../features/evals/evalConfigBlocking";
+import { getEvaluatorBlockMetadata, getEvaluatorBlockResolutionPath } from "../../features/evals/evalConfigBlocking";
 import { invalidateProjectEvalConfigCaches } from "../evalJobConfigCache";
 import { recordIncrement } from "../instrumentation";
 import { logger } from "../logger";
@@ -18,8 +16,7 @@ export const EvaluatorBlockSource = {
   LLM_COMPLETION_ERROR: "llm_completion_error",
 } as const;
 
-export type EvaluatorBlockSource =
-  (typeof EvaluatorBlockSource)[keyof typeof EvaluatorBlockSource];
+export type EvaluatorBlockSource = (typeof EvaluatorBlockSource)[keyof typeof EvaluatorBlockSource];
 
 type BlockEvaluatorConfigsBaseParams = {
   projectId: string;
@@ -129,9 +126,7 @@ export async function finalizeBlockedEvaluatorConfigBlocks(params: {
   source: EvaluatorBlockSource;
   blockedByReason: BlockedEvaluatorConfigIdsByReason;
 }): Promise<void> {
-  const blockedNotifications = getBlockedEvaluatorConfigNotifications(
-    params.blockedByReason,
-  );
+  const blockedNotifications = getBlockedEvaluatorConfigNotifications(params.blockedByReason);
 
   if (blockedNotifications.length === 0) {
     return;
@@ -161,26 +156,20 @@ export async function finalizeBlockedEvaluatorConfigBlocks(params: {
 const getBlockedEvaluatorConfigNotifications = (
   blockedByReason: BlockedEvaluatorConfigIdsByReason,
 ): BlockedEvaluatorConfigNotification[] =>
-  Object.entries(blockedByReason).flatMap(
-    ([blockReason, blockedJobConfigIds]) =>
-      blockedJobConfigIds?.length
-        ? [
-            {
-              blockReason: blockReason as EvaluatorBlockReason,
-              blockedJobConfigIds,
-            },
-          ]
-        : [],
+  Object.entries(blockedByReason).flatMap(([blockReason, blockedJobConfigIds]) =>
+    blockedJobConfigIds?.length
+      ? [
+          {
+            blockReason: blockReason as EvaluatorBlockReason,
+            blockedJobConfigIds,
+          },
+        ]
+      : [],
   );
 
-const notifyBlockedEvaluatorConfigsInBackground = (
-  params: NotifyBlockedEvaluatorConfigsParams,
-): void => {
+const notifyBlockedEvaluatorConfigsInBackground = (params: NotifyBlockedEvaluatorConfigsParams): void => {
   notifyBlockedEvaluatorConfigs(params).catch((error) =>
-    logger.error(
-      "[EVALUATOR BLOCK] Failed to send blocked evaluator notifications",
-      error,
-    ),
+    logger.error("[EVALUATOR BLOCK] Failed to send blocked evaluator notifications", error),
   );
 };
 
@@ -208,22 +197,14 @@ export async function notifyBlockedEvaluatorConfigs({
     CLOUD_CRM_EMAIL: env.CLOUD_CRM_EMAIL,
   };
 
-  if (
-    !emailEnv.EMAIL_FROM_ADDRESS ||
-    !emailEnv.SMTP_CONNECTION_URL ||
-    !emailEnv.NEXTAUTH_URL
-  ) {
-    logger.warn(
-      `[EVALUATOR BLOCK] Missing email env vars. Skipping notifications for project ${projectId}.`,
-    );
+  if (!emailEnv.EMAIL_FROM_ADDRESS || !emailEnv.SMTP_CONNECTION_URL || !emailEnv.NEXTAUTH_URL) {
+    logger.warn(`[EVALUATOR BLOCK] Missing email env vars. Skipping notifications for project ${projectId}.`);
     return;
   }
 
   const adminEmails = await getProjectAdminEmails(projectId);
   if (adminEmails.length === 0) {
-    logger.warn(
-      `[EVALUATOR BLOCK] No project admins found for project ${projectId}.`,
-    );
+    logger.warn(`[EVALUATOR BLOCK] No project admins found for project ${projectId}.`);
     return;
   }
 
@@ -237,9 +218,7 @@ export async function notifyBlockedEvaluatorConfigs({
   });
 
   if (!project) {
-    logger.warn(
-      `[EVALUATOR BLOCK] Project ${projectId} not found. Skipping notifications.`,
-    );
+    logger.warn(`[EVALUATOR BLOCK] Project ${projectId} not found. Skipping notifications.`);
     return;
   }
 
@@ -274,13 +253,11 @@ export async function notifyBlockedEvaluatorConfigs({
         evaluatorName: config.evalTemplate?.name ?? config.scoreName,
         blockReason,
         blockMessage,
-        resolutionUrl: `${emailEnv.NEXTAUTH_URL}${getEvaluatorBlockResolutionPath(
-          {
-            projectId,
-            blockReason,
-            templateId: config.evalTemplate?.id,
-          },
-        )}`,
+        resolutionUrl: `${emailEnv.NEXTAUTH_URL}${getEvaluatorBlockResolutionPath({
+          projectId,
+          blockReason,
+          templateId: config.evalTemplate?.id,
+        })}`,
         receiverEmail,
       }),
     ),

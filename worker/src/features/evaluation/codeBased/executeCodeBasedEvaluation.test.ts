@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { EvalTemplateSourceCodeLanguage, EvalTemplateType } from "@prisma/client";
+import { EvalTemplateSourceCodeLanguage, EvalTemplateType } from "@hanzo/console";
 import {
   CodeEvalDispatcherError,
   CodeEvalDispatcherErrorCodes,

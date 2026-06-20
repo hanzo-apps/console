@@ -1,5 +1,5 @@
 import { Job, Processor } from "@hanzo/mq";
-import { EvalTemplateType, JobExecutionStatus } from "@prisma/client";
+import { EvalTemplateType, JobExecutionStatus } from "@hanzo/console";
 import { prisma } from "@hanzo/console/src/db";
 import {
   CodeEvalExecutionError,
