@@ -8,7 +8,7 @@ import { env } from "@/src/env.mjs";
  * console code can use `useIam()` for IAM-native session/login/logout. IAM is
  * the native identity; the BrowserIamSdk drives OIDC discovery + PKCE against
  * `NEXT_PUBLIC_IAM_SERVER_URL` and proxies token/userinfo through console's own
- * `/api/auth/iam/*` routes to avoid cross-origin issues.
+ * `/v1/iam/*` routes to avoid cross-origin issues.
  *
  * When the client IAM env is not configured this is a transparent pass-through,
  * so the app shell is unaffected on instances that have not enabled IAM-native
@@ -32,7 +32,9 @@ export function IamSessionProvider({ children }: { children: ReactNode }) {
       scope: "openid profile email",
       // Route token/userinfo through console so the browser never hits IAM
       // cross-origin (and so console can bridge the IAM token into a session).
-      proxyBaseUrl: `${origin}${basePath}/api/auth/iam`,
+      // The SDK appends `/auth/token` + `/auth/userinfo`; with the /v1/iam/*
+      // rewrite in next.config.mjs those resolve to pages/api/iam/auth/*.
+      proxyBaseUrl: `${origin}${basePath}/v1/iam`,
     };
   }, []);
 
