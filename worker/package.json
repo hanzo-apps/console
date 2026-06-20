@@ -30,7 +30,6 @@
   "author": "engineering@hanzo.ai",
   "dependencies": {
     "@anthropic-ai/tokenizer": "^0.0.4",
-    "@appsignal/opentelemetry-instrumentation-bullmq": "^0.7.3",
     "@aws-sdk/client-s3": "^3.675.0",
     "@hanzo/console": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
@@ -39,7 +38,6 @@
     "@opentelemetry/instrumentation-aws-sdk": "^0.68.0",
     "@opentelemetry/instrumentation-express": "^0.61.0",
     "@opentelemetry/instrumentation-http": "^0.218.0",
-    "@opentelemetry/instrumentation-ioredis": "^0.61.0",
     "@opentelemetry/instrumentation-winston": "^0.57.0",
     "@opentelemetry/resource-detector-aws": "^2.13.0",
     "@opentelemetry/resource-detector-container": "^0.8.4",
@@ -56,7 +54,6 @@
     "exponential-backoff": "^3.1.2",
     "express": "^5.2.1",
     "helmet": "^7.1.0",
-    "ioredis": "^5.10.1",
     "jsonpath-plus": "10.3.0",
     "lodash": "4.18.1",
     "p-limit": "^7.3.0",

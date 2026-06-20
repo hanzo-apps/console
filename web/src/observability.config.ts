@@ -2,12 +2,10 @@ import dd from "dd-trace";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-base";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
-import { IORedisInstrumentation } from "@opentelemetry/instrumentation-ioredis";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
 import { WinstonInstrumentation } from "@opentelemetry/instrumentation-winston";
 import { AwsInstrumentation } from "@opentelemetry/instrumentation-aws-sdk";
-import { BullMQInstrumentation } from "@appsignal/opentelemetry-instrumentation-bullmq";
 import { envDetector, processDetector, Resource } from "@opentelemetry/resources";
 import { awsEcsDetectorSync } from "@opentelemetry/resource-detector-aws";
 import { containerDetector } from "@opentelemetry/resource-detector-container";
@@ -27,7 +25,8 @@ const sdk = new NodeSDK({
     url: `${env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`,
   }),
   instrumentations: [
-    new IORedisInstrumentation({ requestHook: ioredisRequestHook }),
+    // Redis instrumentation removed — console no longer uses redis. The
+    // Temporal-backed @hanzo/mq carries its own OTel via the Temporal SDK.
     new HttpInstrumentation({
       requireParentforOutgoingSpans: true,
       ignoreIncomingRequestHook: (req) => {
@@ -61,7 +60,6 @@ const sdk = new NodeSDK({
     }),
     new AwsInstrumentation(),
     new WinstonInstrumentation({ disableLogSending: true }),
-    new BullMQInstrumentation({ useProducerSpanAsConsumerParent: true }),
   ],
   resourceDetectors: [envDetector, processDetector, awsEcsDetectorSync, containerDetector],
   sampler: new TraceIdRatioBasedSampler(env.OTEL_TRACE_SAMPLING_RATIO),

@@ -1,43 +1,19 @@
 import { createHttpHeaderFromRateLimit, RateLimitService } from "@/src/features/public-api/server/RateLimitService";
-import { Redis } from "ioredis";
+import { randomUUID } from "crypto";
 
+// Rate limiting is now in-process (RateLimiterMemory); redis was removed.
+// Each test resets the service so buckets do not leak between cases.
 describe("RateLimitService", () => {
   const orgId = `rate-limit-test-org-${randomUUID()}`;
   const projectId = `rate-limit-test-project-${randomUUID()}`;
-  const rateLimitKeysPattern = `${RATE_LIMIT_REDIS_KEY_PREFIX}:*:${orgId}`;
-  let redis: RedisTestClient;
 
-  const createRedisClient = (): RedisTestClient => {
-    return createRedisTestClient({
-      maxRetriesPerRequest: null,
-      enableAutoPipelining: false, // Align with our settings overwrite for rate limit service
-    });
-  };
-
-  beforeAll(async () => {
+  beforeEach(() => {
     RateLimitService.shutdown();
-    redis = createRedisClient();
-    await ensureRedisReady(redis);
-  }, 20_000);
+  });
 
-  beforeEach(async () => {
-    if (redis.status === "close" || redis.status === "end") {
-      RateLimitService.shutdown();
-      redis = createRedisClient();
-    }
-    await ensureRedisReady(redis);
-    await clearRedisKeysByPatternSafely(redis, rateLimitKeysPattern);
-  }, 20_000);
-
-  afterEach(async () => {
-    await clearRedisKeysByPatternSafely(redis, rateLimitKeysPattern);
-  }, 20_000);
-
-  afterAll(async () => {
-    await clearRedisKeysByPatternSafely(redis, rateLimitKeysPattern);
-    redis.disconnect();
+  afterAll(() => {
     RateLimitService.shutdown();
-  }, 20_000);
+  });
 
   it("should create correct ratelimit headers", () => {
     const rateLimitRes = {
@@ -75,9 +51,7 @@ describe("RateLimitService", () => {
       rateLimitOverrides: [],
     };
 
-    expect(redis).toBeDefined();
-
-    const rateLimitService = RateLimitService.getInstance(redis);
+    const rateLimitService = RateLimitService.getInstance();
     const result = await rateLimitService.rateLimitRequest(scope, "public-api");
 
     expect(result?.res).toEqual({
@@ -91,14 +65,6 @@ describe("RateLimitService", () => {
     });
 
     expect(result?.isRateLimited()).toBe(false);
-
-    // check redis for the rate limit key
-    const value = await redis.get(
-      `${RATE_LIMIT_REDIS_KEY_PREFIX}:public-api:${orgId}`,
-    );
-
-    expect(value).toBeDefined();
-    expect(parseInt(value ?? "0")).toBeGreaterThan(0);
   });
 
   it("should increment the rate limit count", async () => {
@@ -110,7 +76,7 @@ describe("RateLimitService", () => {
       rateLimitOverrides: [],
     };
 
-    const rateLimitService = RateLimitService.getInstance(redis);
+    const rateLimitService = RateLimitService.getInstance();
     await rateLimitService.rateLimitRequest(scope, "public-api");
 
     const result = await rateLimitService.rateLimitRequest(scope, "public-api");
@@ -136,7 +102,7 @@ describe("RateLimitService", () => {
       rateLimitOverrides: [{ resource: "public-api" as const, points: 100, durationInSec: 2 }],
     };
 
-    const rateLimitService = RateLimitService.getInstance(redis);
+    const rateLimitService = RateLimitService.getInstance();
     await rateLimitService.rateLimitRequest(scope, "public-api");
 
     const firstResult = await rateLimitService.rateLimitRequest(scope, "public-api");
@@ -152,9 +118,9 @@ describe("RateLimitService", () => {
       isFirstInDuration: false,
     });
 
-    await redis.del(`${RATE_LIMIT_REDIS_KEY_PREFIX}:public-api:${orgId}`);
-
-    const secondResult = await rateLimitService.rateLimitRequest(scope, "public-api");
+    // Reset the in-process buckets to simulate the window expiring.
+    RateLimitService.shutdown();
+    const secondResult = await RateLimitService.getInstance().rateLimitRequest(scope, "public-api");
 
     expect(secondResult?.res).toEqual({
       scope: scope,
@@ -178,7 +144,7 @@ describe("RateLimitService", () => {
       rateLimitOverrides: [{ resource: "public-api" as const, points: 5, durationInSec: 60 }],
     };
 
-    const rateLimitService = RateLimitService.getInstance(redis);
+    const rateLimitService = RateLimitService.getInstance();
 
     for (let i = 0; i < 5; i++) {
       await rateLimitService.rateLimitRequest(scope, "public-api");
@@ -207,7 +173,7 @@ describe("RateLimitService", () => {
       rateLimitOverrides: [{ resource: "public-api" as const, points: 5, durationInSec: 10 }],
     };
 
-    const rateLimitService = RateLimitService.getInstance(redis);
+    const rateLimitService = RateLimitService.getInstance();
 
     const result = await rateLimitService.rateLimitRequest(scope, "public-api");
 
@@ -231,7 +197,7 @@ describe("RateLimitService", () => {
       rateLimitOverrides: [{ resource: "public-api" as const, points: 5, durationInSec: 10 }],
     };
 
-    const rateLimitService = RateLimitService.getInstance(redis);
+    const rateLimitService = RateLimitService.getInstance();
 
     const result = await rateLimitService.rateLimitRequest(scope, "prompts");
 
@@ -248,7 +214,7 @@ describe("RateLimitService", () => {
       rateLimitOverrides: [{ resource: "ingestion" as const, points: null, durationInSec: null }],
     };
 
-    const rateLimitService = RateLimitService.getInstance(redis);
+    const rateLimitService = RateLimitService.getInstance();
 
     const result = await rateLimitService.rateLimitRequest(scope, "ingestion");
 
@@ -284,7 +250,7 @@ describe("RateLimitService", () => {
       rateLimitOverrides: [],
     };
 
-    const rateLimitService = RateLimitService.getInstance(redis);
+    const rateLimitService = RateLimitService.getInstance();
 
     const result = await rateLimitService.rateLimitRequest(scope, "public-api");
 
@@ -301,7 +267,7 @@ describe("RateLimitService", () => {
       rateLimitOverrides: [],
     };
 
-    const rateLimitService = RateLimitService.getInstance(redis);
+    const rateLimitService = RateLimitService.getInstance();
     const result = await rateLimitService.rateLimitRequest(
       scope,
       "score-delete",

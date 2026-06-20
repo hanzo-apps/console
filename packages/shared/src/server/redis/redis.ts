@@ -232,6 +232,13 @@ export class InProcessRedis {
     return "OK";
   }
 
+  /** Clear the entire in-process store (ioredis FLUSHALL parity; used by tests). */
+  async flushall(): Promise<"OK"> {
+    this.store.clear();
+    this.sets.clear();
+    return "OK";
+  }
+
   /** ioredis EventEmitter parity — no events ever fire in-process. */
   on(): this {
     return this;
