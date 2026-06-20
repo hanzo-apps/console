@@ -100,3 +100,7 @@ export const kyselyPrisma = globalThis.kyselyPrismaGlobal ?? KyselySingleton.get
 // `@hanzo/console/src/db` keeps exporting `Role`, `JobExecutionStatus`, etc.
 export * from "./db-enums";
 export * from "@prisma/client";
+
+// Canonical decoder for JSON-array TEXT columns read via raw SQL (which
+// bypasses the transparent codec). See db-json-arrays.ts.
+export { decodeJsonArrayColumn } from "./db-json-arrays";

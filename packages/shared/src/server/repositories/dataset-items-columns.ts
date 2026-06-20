@@ -32,7 +32,8 @@ export const datasetItemsFilterCols: ColumnDefinition[] = [
     name: "Status",
     id: "status",
     type: "stringOptions",
-    internal: "di.status::text",
+    // SQLite: `status` is a TEXT column (no enums), so no cast is needed.
+    internal: "di.status",
     options: Object.values(DatasetStatus).map((value) => ({ value })),
   },
   {
