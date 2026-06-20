@@ -5,7 +5,8 @@ export const evalExecutionsFilterCols: ColumnDefinition[] = [
     name: "Status",
     id: "status",
     type: "stringOptions",
-    internal: 'je."status"::text',
+    // SQLite: `status` is a TEXT column (no enums), so no `::text` cast is needed.
+    internal: 'je."status"',
     options: Object.values(JobExecutionStatus)
       .filter((value) => value !== JobExecutionStatus.CANCELLED)
       .map((value) => ({ value })),

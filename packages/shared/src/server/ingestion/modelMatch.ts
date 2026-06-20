@@ -170,11 +170,12 @@ export async function findPricingTiersForModel(modelId: string): Promise<Pricing
 
 export async function findModelInPostgres(p: ModelMatchProps): Promise<Model | null> {
   const { projectId, model } = p;
-  // either get the model from the existing observation
-  // or match pattern on the user provided model name
-  const modelCondition = model ? Prisma.sql`AND ${model} ~ match_pattern` : undefined;
-  if (!modelCondition) return null;
+  if (!model) return null;
 
+  // SQLite has no POSIX regex operator (`~`), so the `match_pattern` regex is
+  // applied in JavaScript. We fetch the ordered candidate set (project-specific
+  // first, then newest start_date) and return the first row whose pattern
+  // matches the model name — preserving the Postgres ordering/precedence.
   const sql = Prisma.sql`
     SELECT
       id,
@@ -194,16 +195,28 @@ export async function findModelInPostgres(p: ModelMatchProps): Promise<Model | n
       models
       WHERE (project_id = ${projectId}
       OR project_id IS NULL)
-    ${modelCondition}
     ORDER BY
       project_id ASC,
       start_date DESC NULLS LAST
-    LIMIT 1
   `;
 
-  const foundModels = await prisma.$queryRaw<Array<Model>>(sql);
+  const candidateModels = await prisma.$queryRaw<Array<Model>>(sql);
 
-  return foundModels[0] ?? null;
+  for (const candidate of candidateModels) {
+    if (!candidate.matchPattern) continue;
+    let regex: RegExp;
+    try {
+      regex = new RegExp(candidate.matchPattern);
+    } catch {
+      // Skip patterns that are not valid JavaScript regexes.
+      continue;
+    }
+    if (regex.test(model)) {
+      return candidate;
+    }
+  }
+
+  return null;
 }
 
 const NOT_FOUND_TOKEN = "HANZO_MODEL_MATCH_NOT_FOUND" as const;
