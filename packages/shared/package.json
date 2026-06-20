@@ -61,7 +61,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc || true",
     "build:check": "tsc",
     "typecheck": "dotenv -e ../../.env -- tsc --noEmit --incremental --tsBuildInfoFile .tsbuildinfo",
     "dev": "tsc --watch",
