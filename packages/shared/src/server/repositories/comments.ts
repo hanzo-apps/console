@@ -20,8 +20,8 @@ export type CommentCountOperator = (typeof filterOperators.number)[number] | "!=
 export type CommentContentOperator = (typeof filterOperators.string)[number];
 
 /**
- * Query PostgreSQL for object IDs that have a specific number of comments.
- * Uses GROUP BY + HAVING to efficiently filter by comment count.
+ * Query the application database for object IDs that have a specific number of
+ * comments. Uses GROUP BY + HAVING to efficiently filter by comment count.
  *
  * @example
  * // Get traces with >= 3 comments
@@ -52,10 +52,11 @@ export async function getObjectIdsByCommentCount({
     throw new Error(`Invalid operator: ${operator}`);
   }
 
+  // SQLite: `object_type` is a TEXT column (no enums), so no cast is needed.
   const rawQuery = Prisma.sql`
     SELECT object_id
     FROM comments
-    WHERE project_id = ${projectId} AND object_type = ${objectType}::"CommentObjectType"
+    WHERE project_id = ${projectId} AND object_type = ${objectType}
     GROUP BY object_id
     HAVING COUNT(*) ${Prisma.raw(operator)} ${value}
   `;
@@ -65,9 +66,9 @@ export async function getObjectIdsByCommentCount({
 }
 
 /**
- * Query PostgreSQL for object IDs where comments match a text search query.
- * Uses PostgreSQL's full-text search with GIN index for "contains" operator.
- * Falls back to ILIKE for other operators.
+ * Query the application database for object IDs where comments match a text
+ * search query. SQLite has no Postgres full-text search, so "contains" and the
+ * other operators degrade to case-insensitive substring matching (LIKE).
  *
  * @example
  * // Get traces with comments containing "bug"
@@ -93,26 +94,34 @@ export async function getObjectIdsByCommentContent({
   operator?: CommentContentOperator;
 }): Promise<string[]> {
   if (operator === "contains") {
-    // Use full-text search with GIN index for best performance
-    // plainto_tsquery() automatically sanitizes special characters and handles tokenization
     const trimmedQuery = searchQuery.trim();
 
     if (!trimmedQuery) {
       return [];
     }
 
-    const rawResults = await prisma.$queryRaw<{ object_id: string }[]>`
-      SELECT DISTINCT object_id
-      FROM comments
-      WHERE project_id = ${projectId}
-        AND object_type = ${objectType}::"CommentObjectType"
-        AND to_tsvector('english', content) @@ plainto_tsquery('english', ${trimmedQuery})
-    `;
+    // SQLite does not have Postgres full-text search (`to_tsvector @@
+    // plainto_tsquery`). The `comments` table is a plain table with no FTS5
+    // virtual companion, so we degrade to a case-insensitive substring match
+    // (SQLite `LIKE` is ASCII case-insensitive by default). Difference vs
+    // Postgres: no stemming/tokenization — "running" no longer matches "run",
+    // and matches are substring rather than whole-word.
+    const comments = await prisma.comment.findMany({
+      where: {
+        projectId,
+        objectType,
+        content: { contains: trimmedQuery },
+      },
+      select: { objectId: true },
+      distinct: ["objectId"],
+    });
 
-    return rawResults.map((r) => r.object_id);
+    return comments.map((c) => c.objectId);
   }
 
-  // For other operators, use Prisma's query builder with ILIKE
+  // For other operators, use Prisma's query builder. SQLite `LIKE` (which
+  // backs contains/startsWith/endsWith) is ASCII case-insensitive by default;
+  // Prisma's `mode: "insensitive"` is unsupported on SQLite, so it is omitted.
   let whereCondition: Prisma.CommentWhereInput;
 
   if (operator === "does not contain") {
@@ -122,7 +131,6 @@ export async function getObjectIdsByCommentContent({
       NOT: {
         content: {
           contains: searchQuery,
-          mode: "insensitive",
         },
       },
     };
@@ -132,7 +140,6 @@ export async function getObjectIdsByCommentContent({
       objectType,
       content: {
         startsWith: searchQuery,
-        mode: "insensitive",
       },
     };
   } else if (operator === "ends with") {
@@ -141,7 +148,6 @@ export async function getObjectIdsByCommentContent({
       objectType,
       content: {
         endsWith: searchQuery,
-        mode: "insensitive",
       },
     };
   } else {
@@ -151,7 +157,6 @@ export async function getObjectIdsByCommentContent({
       objectType,
       content: {
         contains: searchQuery,
-        mode: "insensitive",
       },
     };
   }

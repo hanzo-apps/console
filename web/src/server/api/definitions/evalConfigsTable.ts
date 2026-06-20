@@ -14,10 +14,11 @@ export const evalConfigTargetValues = evalConfigTargetOptions.map(
   (option) => option.value,
 );
 
+// SQLite: `status` is a TEXT column (no enums), so no `::text` cast is needed.
 const evaluatorDisplayStatusSql = `CASE
   WHEN jc."status" = 'INACTIVE' THEN 'INACTIVE'
   WHEN jc."blocked_at" IS NOT NULL THEN 'PAUSED'
-  ELSE jc."status"::text
+  ELSE jc."status"
 END`;
 
 const evaluatorStatusSortRankSql = `CASE
