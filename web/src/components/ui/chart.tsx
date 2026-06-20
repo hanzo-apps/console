@@ -295,6 +295,36 @@ function ChartLegend({ itemSorter = null, ...props }: ChartLegendProps) {
   return <RechartsPrimitive.Legend itemSorter={itemSorter} {...props} />;
 }
 
+function ChartActiveReferenceLine({
+  stroke = "hsl(var(--border))",
+  strokeDasharray = "4 4",
+  strokeOpacity = 0.8,
+  zIndex = 350,
+}: {
+  stroke?: string;
+  strokeDasharray?: string;
+  strokeOpacity?: number;
+  zIndex?: number;
+}) {
+  const activeLabel = RechartsPrimitive.useActiveTooltipLabel();
+  const isTooltipActive = RechartsPrimitive.useIsTooltipActive();
+
+  if (!isTooltipActive || activeLabel === undefined || activeLabel === null) {
+    return null;
+  }
+
+  return (
+    <RechartsPrimitive.ReferenceLine
+      x={activeLabel}
+      stroke={stroke}
+      strokeDasharray={strokeDasharray}
+      strokeOpacity={strokeOpacity}
+      ifOverflow="extendDomain"
+      zIndex={zIndex}
+    />
+  );
+}
+
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> &
