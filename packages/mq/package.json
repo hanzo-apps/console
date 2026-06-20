@@ -1,0 +1,32 @@
+{
+  "name": "@hanzo/mq",
+  "version": "1.0.0",
+  "description": "BullMQ-API-compatible job-queue facade for Hanzo Console, backed by Temporal (with an in-process driver for dev/test). Replaces the redis-backed bullmq alias.",
+  "private": true,
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@temporalio/client": "^1.11.8",
+    "@temporalio/worker": "^1.11.8",
+    "@temporalio/workflow": "^1.11.8",
+    "@temporalio/activity": "^1.11.8",
+    "@temporalio/common": "^1.11.8",
+    "cron-parser": "^4.9.0",
+    "nanoid": "^3.3.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.4.5"
+  }
+}
