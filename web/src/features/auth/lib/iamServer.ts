@@ -181,29 +181,38 @@ export type IamSendCodeResult = { ok: true } | { ok: false; error: string };
 
 /**
  * Request an email verification code from IAM for the embedded signup flow.
+ *
+ * Unlike login/signup (which IAM parses as JSON), `/v1/iam/send-verification-code`
+ * is parsed via Casdoor `ParseForm` and therefore requires form-encoded data —
+ * so this posts `application/x-www-form-urlencoded` directly rather than going
+ * through the JSON `IamClient.apiRequest`.
  */
 export async function iamSendVerificationCode(params: {
   email: string;
 }): Promise<IamSendCodeResult> {
-  const client = getIamClient();
-  if (!client) return { ok: false, error: "IAM is not configured." };
+  const config = getIamConfig();
+  if (!config) return { ok: false, error: "IAM is not configured." };
 
   try {
-    const res = await client.apiRequest<IamResponse>(
-      "/v1/iam/send-verification-code",
+    const body = new URLSearchParams({
+      dest: params.email,
+      type: "email",
+      // Casdoor requires applicationId in "<owner>/<app>" form.
+      applicationId: `admin/${config.appName ?? "app"}`,
+      method: "signup",
+      checkUser: "",
+      captchaType: "none",
+    });
+
+    const resp = await fetch(
+      `${config.serverUrl.replace(/\/+$/, "")}/v1/iam/send-verification-code`,
       {
         method: "POST",
-        body: {
-          dest: params.email,
-          type: "email",
-          applicationId: env.IAM_ORG_NAME
-            ? `admin/${env.IAM_APP_NAME}`
-            : env.IAM_APP_NAME,
-          method: "signup",
-          checkUser: "",
-        },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
       },
     );
+    const res = (await resp.json()) as IamResponse;
 
     if (res.status !== "ok") {
       return { ok: false, error: res.msg || "Failed to send code." };
