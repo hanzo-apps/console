@@ -7,7 +7,7 @@ env:
   HANZO_CLUSTER_ID: 1a153000-90a6-48ad-9375-7ef901a9bf7f
 jobs:
   check-logs:
-    runs-on: ubuntu-latest
+    runs-on: hanzo-deploy-linux-amd64
     timeout-minutes: 5
     steps:
       - name: Install doctl

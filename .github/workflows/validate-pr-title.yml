@@ -13,7 +13,7 @@ on:
 
 jobs:
   validate-pr-title:
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     permissions:
       statuses: write
       pull-requests: read
