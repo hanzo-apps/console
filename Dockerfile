@@ -176,7 +176,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # from the build-time seed (68 tables), then start the Next standalone server. Avoids
 # running prisma db push at runtime (no prisma CLI in the slim image) and the resulting
 # DB-less health-endpoint hang.
-ENTRYPOINT ["/sbin/tini", "--", "sh", "-c", "set -e; DBPATH=\"${DATABASE_URL#file:}\"; : \"${DBPATH:=/var/lib/hanzo/console/app.db}\"; mkdir -p \"$(dirname \"$DBPATH\")\"; if [ ! -f \"$DBPATH\" ]; then echo \"seeding SQLite db -> $DBPATH\"; cp /app/seed/app.db \"$DBPATH\"; fi; exec node web/server.js"]
+ENTRYPOINT ["/sbin/tini", "--", "sh", "-c", "set -e; DBPATH=\"${DATABASE_URL#file:}\"; : \"${DBPATH:=/var/lib/hanzo/console/app.db}\"; mkdir -p \"$(dirname \"$DBPATH\")\"; SEED=/app/seed/app.db; cur=$(wc -c < \"$DBPATH\" 2>/dev/null || echo 0); seedsz=$(wc -c < \"$SEED\"); if [ ! -f \"$DBPATH\" ] || [ \"$cur\" -lt \"$seedsz\" ]; then echo \"seeding SQLite db (cur=$cur seed=$seedsz) -> $DBPATH\"; cp \"$SEED\" \"$DBPATH\"; else echo \"existing SQLite db kept ($cur bytes)\"; fi; exec node web/server.js"]
 
 # ===== Default to production =====
 FROM production
