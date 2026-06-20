@@ -4,6 +4,10 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["views", "relationJoins", "metrics"]
+  // Alpine (node:24-alpine, musl + openssl 3.0.x) is the runtime image. Without
+  // this the query-engine .so.node for the runtime libc isn't emitted, so the
+  // Next.js standalone bundle can't load Prisma at request time.
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

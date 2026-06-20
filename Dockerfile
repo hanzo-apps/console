@@ -74,6 +74,19 @@ RUN mkdir -p /app/web/.next
 RUN --mount=type=cache,target=/app/web/.next/cache,uid=1001,gid=1001 \
     NODE_OPTIONS='--max-old-space-size-percentage=75' pnpm build
 
+# Prisma query engine: Next.js standalone file-tracing misses the runtime-loaded
+# native engine (.so.node) + generated client. Consolidate the generated client
+# into the standalone bundle so Prisma resolves at request time on alpine/musl.
+RUN set -eux; \
+    SRC="$(dirname "$(find /app/node_modules -name 'libquery_engine-linux-musl-openssl-3.0.x.so.node' -print -quit)")"; \
+    DEST=/app/web/.next/standalone/node_modules/.prisma/client; \
+    mkdir -p "$DEST"; cp -a "$SRC"/. "$DEST"/; \
+    # mirror the engine next to every bundled @prisma/client (pnpm resolves there too)
+    for d in $(find /app/web/.next/standalone -type d -path '*@prisma/client'); do \
+      cp "$DEST"/libquery_engine-*.so.node "$d"/ 2>/dev/null || true; \
+    done; \
+    ls -la "$DEST"
+
 # ===== Development Stage =====
 FROM deps AS development
 
