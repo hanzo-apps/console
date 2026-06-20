@@ -14,7 +14,7 @@ import Header from "@/src/components/layouts/header";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import {
-  useHanzoCloudRegion,
+  useConsoleCloudRegion,
   useQueryOrganization,
 } from "@/src/features/organizations/hooks";
 import { Card } from "@/src/components/ui/card";
@@ -23,7 +23,7 @@ import { useSession } from "next-auth/react";
 
 export default function AIFeatureSwitch() {
   const { update: updateSession } = useSession();
-  const { isHanzoCloud } = useHanzoCloudRegion();
+  const { isConsoleCloud } = useConsoleCloudRegion();
   const capture = useInsightsCapture();
   const organization = useQueryOrganization();
   const [isAIFeatureSwitchEnabled, setIsAIFeatureSwitchEnabled] = useState(
@@ -104,7 +104,7 @@ export default function AIFeatureSwitch() {
     });
   }
 
-  if (!isHanzoCloud) return null;
+  if (!isConsoleCloud) return null;
 
   return (
     <div>

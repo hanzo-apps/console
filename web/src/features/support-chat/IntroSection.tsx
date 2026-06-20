@@ -17,7 +17,7 @@ import { Separator } from "@/src/components/ui/separator";
 import { usePlan } from "@/src/features/entitlements/hooks";
 import { isCloudPlan } from "@hanzo/console";
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
-import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 
 type SupportType = "in-app-support" | "custom" | "community";
@@ -29,7 +29,7 @@ export function IntroSection({
   displayDensity?: "default" | "compact";
 }) {
   const uiCustomization = useUiCustomization();
-  const { isHanzoCloud } = useHanzoCloudRegion();
+  const { isConsoleCloud } = useConsoleCloudRegion();
   const capture = useInsightsCapture();
 
   // Note: We previously added an entitlement for in-app support, but removed it for now.
@@ -38,7 +38,7 @@ export function IntroSection({
   //       false if asked. However on these pages, the in-app-chat should be available.
   //       Therefore we now check for whether wer are in a cloud deployment instead.
   // const hasInAppSupportEntitlement = useHasEntitlement("in-app-support");
-  const hasInAppSupportEntitlement = !!isHanzoCloud;
+  const hasInAppSupportEntitlement = !!isConsoleCloud;
   const plan = usePlan();
 
   const supportType: SupportType = useMemo(() => {

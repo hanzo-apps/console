@@ -40,7 +40,7 @@ import {
 } from "@/src/components/ui/popover";
 import { DataTableAIFilters } from "@/src/components/table/data-table-ai-filters";
 import { type FilterState } from "@hanzo/console";
-import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 
 interface ControlsContextType {
   open: boolean;
@@ -108,7 +108,7 @@ export function DataTableControls({
   queryFilter,
   filterWithAI,
 }: DataTableControlsProps) {
-  const { isHanzoCloud } = useHanzoCloudRegion();
+  const { isConsoleCloud } = useConsoleCloudRegion();
   const [aiPopoverOpen, setAiPopoverOpen] = useState(false);
 
   const handleFiltersGenerated = useCallback(
@@ -157,7 +157,7 @@ export function DataTableControls({
               <TooltipContent>Clear all filters</TooltipContent>
             </Tooltip>
           )}
-          {filterWithAI && isHanzoCloud && (
+          {filterWithAI && isConsoleCloud && (
             <Popover open={aiPopoverOpen} onOpenChange={setAiPopoverOpen}>
               <Tooltip>
                 <TooltipTrigger asChild>
