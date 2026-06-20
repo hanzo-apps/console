@@ -41,8 +41,9 @@ function buildUserSearchFilter(searchQuery: string | undefined | null) {
   const q = searchQuery;
   const searchConditions: Prisma.Sql[] = [];
 
-  searchConditions.push(Prisma.sql`u.name ILIKE ${`%${q}%`}`);
-  searchConditions.push(Prisma.sql`u.email ILIKE ${`%${q}%`}`);
+  // SQLite LIKE is ASCII case-insensitive (Postgres ILIKE replacement).
+  searchConditions.push(Prisma.sql`u.name LIKE ${`%${q}%`}`);
+  searchConditions.push(Prisma.sql`u.email LIKE ${`%${q}%`}`);
 
   return searchConditions.length > 0
     ? Prisma.sql` AND (${Prisma.join(searchConditions, " OR ")})`

@@ -904,8 +904,10 @@ function buildPrismaWhereFromFilterState(filterState: FilterState): any {
 }
 
 /**
- * Builds SQL search filter for full-text search on dataset items.
- * Applies ILIKE search on id, input, expectedOutput, and metadata fields.
+ * Builds SQL search filter for substring search on dataset items.
+ * Applies LIKE search on id, input, expectedOutput, and metadata fields.
+ * SQLite `LIKE` is ASCII case-insensitive by default (Postgres `ILIKE`
+ * replacement) and coerces JSON/text columns to text, so no cast is needed.
  * Returns Prisma.empty if no search query provided.
  *
  * @param tableAlias - The table alias to use (default 'di' for dataset items)
@@ -923,13 +925,13 @@ function buildDatasetItemSearchCondition(
   const searchConditions: Prisma.Sql[] = [];
 
   if (types.includes("id")) {
-    searchConditions.push(Prisma.sql`${Prisma.raw(tableAlias)}.id ILIKE ${`%${searchQuery}%`}`);
+    searchConditions.push(Prisma.sql`${Prisma.raw(tableAlias)}.id LIKE ${`%${searchQuery}%`}`);
   }
 
   if (types.includes("content")) {
-    searchConditions.push(Prisma.sql`${Prisma.raw(tableAlias)}.input::text ILIKE ${`%${searchQuery}%`}`);
-    searchConditions.push(Prisma.sql`${Prisma.raw(tableAlias)}.expected_output::text ILIKE ${`%${searchQuery}%`}`);
-    searchConditions.push(Prisma.sql`${Prisma.raw(tableAlias)}.metadata::text ILIKE ${`%${searchQuery}%`}`);
+    searchConditions.push(Prisma.sql`${Prisma.raw(tableAlias)}.input LIKE ${`%${searchQuery}%`}`);
+    searchConditions.push(Prisma.sql`${Prisma.raw(tableAlias)}.expected_output LIKE ${`%${searchQuery}%`}`);
+    searchConditions.push(Prisma.sql`${Prisma.raw(tableAlias)}.metadata LIKE ${`%${searchQuery}%`}`);
   }
 
   return searchConditions.length > 0 ? Prisma.sql` AND (${Prisma.join(searchConditions, " OR ")})` : Prisma.empty;
@@ -1126,13 +1128,17 @@ function buildDatasetItemsCountQuery(
  * Builds the SQL query for counting latest dataset items grouped by dataset_id.
  */
 function buildDatasetItemsLatestCountGroupedQuery(projectId: string, datasetIds: string[]): Prisma.Sql {
+  // SQLite has no array type; an empty `IN ()` is invalid, so short-circuit.
+  if (datasetIds.length === 0) {
+    return Prisma.sql`SELECT di.dataset_id, COUNT(*) as count FROM dataset_items di WHERE 1 = 0 GROUP BY di.dataset_id`;
+  }
   return Prisma.sql`
     SELECT
       di.dataset_id,
       COUNT(*) as count
     FROM dataset_items di
     WHERE di.project_id = ${projectId}
-      AND di.dataset_id = ANY(${datasetIds})
+      AND di.dataset_id IN (${Prisma.join(datasetIds)})
       AND di.is_deleted = false
       AND di.valid_to IS NULL
     GROUP BY di.dataset_id

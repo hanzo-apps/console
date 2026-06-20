@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, type Mock } from "vitest";
-import { JobExecutionStatus } from "@prisma/client";
+import { JobExecutionStatus } from "@hanzo/console";
 import z from "zod";
 import { executeLLMAsJudgeEvaluation } from "./evalService";
 import { createMockEvalExecutionDeps } from "./evalExecutionDeps";

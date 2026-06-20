@@ -1,4 +1,4 @@
-import { JobExecutionStatus } from "@prisma/client";
+import { JobExecutionStatus } from "@hanzo/console";
 import { logger, traceException, type CodeEvalScoreWithName } from "@hanzo/console/src/server";
 import { buildEvalScoreWritePayloads } from "./evalScoreEvent";
 import { type EvalExecutionDeps } from "./evalExecutionDeps";

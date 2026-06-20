@@ -1,9 +1,7 @@
-import { Role } from "@prisma/client";
+import { Role } from "../../db-enums";
 import { prisma } from "../../db";
 
-export async function getProjectAdminEmails(
-  projectId: string,
-): Promise<string[]> {
+export async function getProjectAdminEmails(projectId: string): Promise<string[]> {
   const projectAdmins = await prisma.projectMembership.findMany({
     where: {
       projectId,
@@ -22,9 +20,7 @@ export async function getProjectAdminEmails(
 
   const projectAdminEmails = Array.from(
     new Set(
-      projectAdmins
-        .map((membership) => membership.user.email)
-        .filter((email): email is string => Boolean(email)),
+      projectAdmins.map((membership) => membership.user.email).filter((email): email is string => Boolean(email)),
     ),
   );
 
@@ -62,10 +58,6 @@ export async function getProjectAdminEmails(
   });
 
   return Array.from(
-    new Set(
-      orgAdmins
-        .map((membership) => membership.user.email)
-        .filter((email): email is string => Boolean(email)),
-    ),
+    new Set(orgAdmins.map((membership) => membership.user.email).filter((email): email is string => Boolean(email))),
   );
 }
