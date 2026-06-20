@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import { JobExecutionStatus } from "@prisma/client";
+import { JobExecutionStatus } from "@hanzo/console";
 import { processObservationEval, type ObservationEvalProcessorDeps } from "../observationEvalProcessor";
 import {
   createTestObservation,
