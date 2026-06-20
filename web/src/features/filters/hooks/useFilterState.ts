@@ -21,6 +21,8 @@ import {
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { evalConfigFilterColumns } from "@/src/server/api/definitions/evalConfigsTable";
 import { evalExecutionsFilterCols } from "@/src/server/api/definitions/evalExecutionsTable";
+import { experimentsTableCols } from "@/src/features/experiments/components/table/filter-config";
+import { experimentItemsTableCols } from "@/src/features/experiments/config/experiment-items-filter-config";
 
 const DEBUG_QUERY_STATE = false;
 
