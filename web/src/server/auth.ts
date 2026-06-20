@@ -63,6 +63,11 @@ import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/ha
 import { getSSOBlockedDomains } from "@/src/features/auth-credentials/server/signupApiHandler";
 import { createSupportEmailHash } from "@/src/features/support-chat/createSupportEmailHash";
 import { canToggleV4 } from "@/src/features/events/lib/v4Rollout";
+import {
+  iamPasswordLogin,
+  isIamConfigured,
+} from "@/src/features/auth/lib/iamServer";
+import { HanzoIamProvider } from "@hanzo/iam/nextauth";
 
 function canCreateOrganizations(userEmail: string | null): boolean {
   const instancePlan = getSelfHostedInstancePlanServerSide();
@@ -117,6 +122,44 @@ const staticProviders: Provider[] = [
         throw new Error(ENTERPRISE_SSO_REQUIRED_MESSAGE);
       }
 
+      // IAM-native identity: when Hanzo IAM is configured it is the credential
+      // authority. Verify the password against IAM (`/v1/iam/login`) instead of
+      // a local bcrypt hash, then upsert the IAM-verified identity into the
+      // console user table so RBAC/projects can attach. The NextAuth JWT below
+      // is only the session transport for this IAM-derived identity.
+      if (isIamConfigured()) {
+        const iamResult = await iamPasswordLogin({
+          email: credentials.email,
+          password: credentials.password,
+        });
+        if (!iamResult.ok) throw new Error(iamResult.error);
+
+        const dbUser = await prisma.user.upsert({
+          where: { email: iamResult.identity.email },
+          create: {
+            email: iamResult.identity.email,
+            name: iamResult.identity.name,
+            image: iamResult.identity.image,
+          },
+          update: {
+            name: iamResult.identity.name ?? undefined,
+            image: iamResult.identity.image ?? undefined,
+          },
+        });
+
+        return {
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          image: dbUser.image,
+          emailVerified: dbUser.emailVerified?.toISOString(),
+          featureFlags: parseFlags(dbUser.featureFlags),
+          canCreateOrganizations: canCreateOrganizations(dbUser.email),
+          organizations: [],
+        } satisfies User;
+      }
+
+      // Transitional fallback (IAM not configured): local credentials.
       const dbUser = await prisma.user.findUnique({
         where: {
           email: credentials.email.toLowerCase(),
@@ -1027,123 +1070,119 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
     },
   };
 
-  // Add Hanzo IAM provider
-  data.providers.push({
-    id: "hanzo-iam",
-    name: "Hanzo IAM",
-    type: "oauth" as const,
-    clientId: env.HANZO_IAM_CLIENT_ID,
-    clientSecret: env.HANZO_IAM_CLIENT_SECRET,
-    wellKnown: `${env.HANZO_IAM_SERVER_URL}/.well-known/openid-configuration`,
-    authorization: {
-      params: {
-        scope: "openid email profile",
-        prompt: "select_account",
-        response_type: "code",
-      },
-      url: `${env.HANZO_IAM_SERVER_URL}/oauth/authorize`,
-    },
-    token: {
-      url: `${env.HANZO_IAM_SERVER_URL}/oauth/token`,
-    },
-    userinfo: {
-      url: `${env.HANZO_IAM_SERVER_URL}/oauth/userinfo`,
-    },
-    checks: ["state", "pkce"],
-    client: {
-      token_endpoint_auth_method: "client_secret_basic",
-    },
-    allowDangerousEmailAccountLinking:
-      env.HANZO_IAM_ALLOW_ACCOUNT_LINKING === "true",
-    async profile(profile, _tokens) {
-      const dbUser = await prisma.user.upsert({
-        where: { email: profile.email },
-        create: {
-          email: profile.email,
-          name: profile.name,
-          image: profile.picture,
-        },
-        update: {
-          name: profile.name,
-          image: profile.picture,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          image: true,
-          emailVerified: true,
-          featureFlags: true,
-          organizationMemberships: {
-            include: {
-              organization: {
-                select: {
-                  id: true,
-                  name: true,
-                  cloudConfig: true,
-                  metadata: true,
-                  aiFeaturesEnabled: true,
-                  projects: {
-                    select: {
-                      id: true,
-                      name: true,
-                      retentionDays: true,
-                      deletedAt: true,
-                      metadata: true,
+  // Hanzo IAM — native identity provider. Social/SSO logins route through IAM's
+  // OIDC surface via the canonical `@hanzo/iam` NextAuth provider (OIDC
+  // discovery + PKCE). The custom `profile()` upserts the IAM identity and
+  // hydrates the console session shape (orgs/projects/roles) from Postgres.
+  if (isIamConfigured()) {
+    data.providers.push({
+      ...HanzoIamProvider({
+        serverUrl: env.IAM_SERVER_URL!,
+        clientId: env.IAM_CLIENT_ID!,
+        clientSecret: env.IAM_CLIENT_SECRET,
+        orgName: env.IAM_ORG_NAME,
+        appName: env.IAM_APP_NAME,
+        checks: ["state", "pkce"],
+      }),
+      id: "hanzo-iam",
+      name: "Hanzo IAM",
+      allowDangerousEmailAccountLinking:
+        env.IAM_ALLOW_ACCOUNT_LINKING === "true",
+      async profile(profile, _tokens) {
+        const dbUser = await prisma.user.upsert({
+          where: { email: profile.email },
+          create: {
+            email: profile.email,
+            name: profile.name,
+            image: profile.picture,
+          },
+          update: {
+            name: profile.name,
+            image: profile.picture,
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            image: true,
+            emailVerified: true,
+            featureFlags: true,
+            organizationMemberships: {
+              include: {
+                organization: {
+                  select: {
+                    id: true,
+                    name: true,
+                    cloudConfig: true,
+                    metadata: true,
+                    aiFeaturesEnabled: true,
+                    projects: {
+                      select: {
+                        id: true,
+                        name: true,
+                        retentionDays: true,
+                        deletedAt: true,
+                        metadata: true,
+                      },
                     },
                   },
                 },
               },
             },
           },
-        },
-      });
+        });
 
-      const user = {
-        id: profile.sub,
-        name: profile.name,
-        email: profile.email,
-        image: profile.picture,
-        emailVerified: dbUser.emailVerified?.toISOString(),
-        canCreateOrganizations: canCreateOrganizations(profile.email),
-        organizations: dbUser.organizationMemberships.map((orgMembership) => {
-          const parsedCloudConfig = CloudConfigSchema.safeParse(
-            orgMembership.organization.cloudConfig,
-          );
-          return {
-            id: orgMembership.organization.id,
-            name: orgMembership.organization.name,
-            role: orgMembership.role,
-            cloudConfig: parsedCloudConfig.data,
-            metadata: (orgMembership.organization.metadata ?? {}) as Record<
-              string,
-              unknown
-            >,
-            aiFeaturesEnabled:
-              orgMembership.organization.aiFeaturesEnabled ?? true,
-            projects: orgMembership.organization.projects
-              .map((project) => {
-                return {
-                  id: project.id,
-                  name: project.name,
-                  role: orgMembership.role,
-                  retentionDays: project.retentionDays,
-                  deletedAt: project.deletedAt,
-                  metadata: (project.metadata ?? {}) as Record<string, unknown>,
-                };
-              })
-              .filter((project) =>
-                projectRoleAccessRights[project.role].includes("project:read"),
-              ),
-            plan: getOrganizationPlanServerSide(parsedCloudConfig.data),
-          };
-        }),
-        featureFlags: parseFlags(dbUser.featureFlags),
-      };
+        const user = {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          emailVerified: dbUser.emailVerified?.toISOString(),
+          canCreateOrganizations: canCreateOrganizations(profile.email),
+          organizations: dbUser.organizationMemberships.map((orgMembership) => {
+            const parsedCloudConfig = CloudConfigSchema.safeParse(
+              orgMembership.organization.cloudConfig,
+            );
+            return {
+              id: orgMembership.organization.id,
+              name: orgMembership.organization.name,
+              role: orgMembership.role,
+              cloudConfig: parsedCloudConfig.data,
+              metadata: (orgMembership.organization.metadata ?? {}) as Record<
+                string,
+                unknown
+              >,
+              aiFeaturesEnabled:
+                orgMembership.organization.aiFeaturesEnabled ?? true,
+              projects: orgMembership.organization.projects
+                .map((project) => {
+                  return {
+                    id: project.id,
+                    name: project.name,
+                    role: orgMembership.role,
+                    retentionDays: project.retentionDays,
+                    deletedAt: project.deletedAt,
+                    metadata: (project.metadata ?? {}) as Record<
+                      string,
+                      unknown
+                    >,
+                  };
+                })
+                .filter((project) =>
+                  projectRoleAccessRights[project.role].includes(
+                    "project:read",
+                  ),
+                ),
+              plan: getOrganizationPlanServerSide(parsedCloudConfig.data),
+            };
+          }),
+          featureFlags: parseFlags(dbUser.featureFlags),
+        };
 
-      return user;
-    },
-  });
+        return user;
+      },
+    });
+  }
 
   return data;
 }
