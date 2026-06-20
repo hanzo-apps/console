@@ -57,19 +57,19 @@ async function getMembers(
           ],
         }
       : {}),
+    // SQLite `contains` (LIKE) is ASCII case-insensitive by default; Prisma's
+    // `mode: "insensitive"` is unsupported on SQLite, so it is omitted.
     ...(query.searchQuery && {
       user: {
         OR: [
           {
             name: {
               contains: query.searchQuery,
-              mode: "insensitive" as const,
             },
           },
           {
             email: {
               contains: query.searchQuery,
-              mode: "insensitive" as const,
             },
           },
         ],

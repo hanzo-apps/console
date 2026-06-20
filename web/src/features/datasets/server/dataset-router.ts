@@ -85,9 +85,17 @@ const REMOTE_EXPERIMENT_MAX_REDIRECTS = 10;
 const resolveSearchCondition = (searchQuery?: string | null) => {
   if (!searchQuery || searchQuery.trim() === "") return Prisma.empty;
 
-  // Add case-insensitive search condition
-  return Prisma.sql`AND d.name ILIKE ${`%${searchQuery}%`}`;
+  // SQLite LIKE is ASCII case-insensitive (Postgres ILIKE replacement).
+  return Prisma.sql`AND d.name LIKE ${`%${searchQuery}%`}`;
 };
+
+/**
+ * SQLite equivalent of Postgres `SPLIT_PART(<expr>, '/', 1)`: the first path
+ * segment of <expr> (the whole string when there is no '/'). `<expr>` must be a
+ * trusted SQL fragment (column/expression), never user input.
+ */
+const firstPathSegment = (expr: string) =>
+  `CASE WHEN INSTR(${expr}, '/') > 0 THEN SUBSTR(${expr}, 1, INSTR(${expr}, '/') - 1) ELSE ${expr} END`;
 
 /**
  * Determines whether the given filters require Dataset Run Items (DRI) metrics from ClickHouse.
@@ -160,13 +168,20 @@ const generateDatasetQuery = ({
     // When we're inside a folder, show individual datasets within that folder
     // and folder representatives for subfolders
 
+    // SQLite: CHAR_LENGTH -> LENGTH. The prefix-relative name (Postgres
+    // SUBSTRING(d.name, CHAR_LENGTH(prefix)+2)) keeps the bound `pathPrefix`
+    // param; the first-segment-after-prefix (Postgres SPLIT_PART(..., '/', 1))
+    // is expressed with the SQLite CASE/INSTR/SUBSTR idiom.
+    const relativeName = Prisma.sql`SUBSTRING(d.name, LENGTH(${pathPrefix}) + 2)`;
+    const firstSegmentOfRelative = Prisma.sql`CASE WHEN INSTR(${relativeName}, '/') > 0 THEN SUBSTR(${relativeName}, 1, INSTR(${relativeName}, '/') - 1) ELSE ${relativeName} END`;
+
     return Prisma.sql`
     WITH ${datasetsCTE},
     individual_datasets_in_folder AS (
       /* Individual datasets exactly at this folder level (no deeper slashes) */
       SELECT
         d.id,
-        SUBSTRING(d.name, CHAR_LENGTH(${pathPrefix}) + 2) as name, -- Remove prefix, show relative name
+        ${relativeName} as name, -- Remove prefix, show relative name
         d.description,
         d.metadata,
         d.project_id,
@@ -175,17 +190,17 @@ const generateDatasetQuery = ({
         d.input_schema,
         d.expected_output_schema,
         2 as sort_priority, -- Individual datasets second
-        'dataset'::text as row_type  -- Mark as individual dataset
+        'dataset' as row_type  -- Mark as individual dataset
       FROM filtered_datasets d
-      WHERE SUBSTRING(d.name, CHAR_LENGTH(${pathPrefix}) + 2) NOT LIKE '%/%'
-        AND SUBSTRING(d.name, CHAR_LENGTH(${pathPrefix}) + 2) != ''  -- Exclude datasets that match prefix exactly
+      WHERE ${relativeName} NOT LIKE '%/%'
+        AND ${relativeName} != ''  -- Exclude datasets that match prefix exactly
         AND d.name != ${pathPrefix}  -- Additional safety check
     ),
     subfolder_representatives AS (
       /* Folder representatives for deeper nested datasets */
       SELECT
         d.id,
-        SPLIT_PART(SUBSTRING(d.name, CHAR_LENGTH(${pathPrefix}) + 2), '/', 1) as name, -- First segment after prefix
+        ${firstSegmentOfRelative} as name, -- First segment after prefix
         d.description,
         d.metadata,
         d.project_id,
@@ -194,13 +209,13 @@ const generateDatasetQuery = ({
         d.input_schema,
         d.expected_output_schema,
         1 as sort_priority, -- Folders first
-        'folder'::text as row_type, -- Mark as folder representative
+        'folder' as row_type, -- Mark as folder representative
         ROW_NUMBER() OVER (
-          PARTITION BY SPLIT_PART(SUBSTRING(d.name, CHAR_LENGTH(${pathPrefix}) + 2), '/', 1)
+          PARTITION BY ${firstSegmentOfRelative}
           ORDER BY LENGTH(d.name) - LENGTH(REPLACE(d.name, '/', '')) ASC, d.created_at DESC
         ) AS rn
       FROM filtered_datasets d
-      WHERE SUBSTRING(d.name, CHAR_LENGTH(${pathPrefix}) + 2) LIKE '%/%'
+      WHERE ${relativeName} LIKE '%/%'
     ),
     combined AS (
       SELECT
@@ -225,7 +240,7 @@ const generateDatasetQuery = ({
     WITH ${datasetsCTE},
     individual_datasets AS (
       /* Individual datasets without folders */
-      SELECT d.id, d.name, d.description, d.metadata, d.project_id, d.updated_at, d.created_at, d.input_schema, d.expected_output_schema, 'dataset'::text as row_type
+      SELECT d.id, d.name, d.description, d.metadata, d.project_id, d.updated_at, d.created_at, d.input_schema, d.expected_output_schema, 'dataset' as row_type
       FROM filtered_datasets d
       WHERE d.name NOT LIKE '%/%'
     ),
@@ -233,7 +248,7 @@ const generateDatasetQuery = ({
       /* One representative per folder - return folder name, not full dataset name */
       SELECT
         d.id,
-        SPLIT_PART(d.name, '/', 1) as name,  -- Return folder segment name instead of full name
+        ${Prisma.raw(firstPathSegment("d.name"))} as name,  -- Return folder segment name instead of full name
         d.description,
         d.metadata,
         d.project_id,
@@ -241,8 +256,8 @@ const generateDatasetQuery = ({
         d.created_at,
         d.input_schema,
         d.expected_output_schema,
-        'folder'::text as row_type, -- Mark as folder representative
-        ROW_NUMBER() OVER (PARTITION BY SPLIT_PART(d.name, '/', 1) ORDER BY LENGTH(d.name) ASC, d.updated_at DESC) AS rn
+        'folder' as row_type, -- Mark as folder representative
+        ROW_NUMBER() OVER (PARTITION BY ${Prisma.raw(firstPathSegment("d.name"))} ORDER BY LENGTH(d.name) ASC, d.updated_at DESC) AS rn
       FROM filtered_datasets d
       WHERE d.name LIKE '%/%'
     ),

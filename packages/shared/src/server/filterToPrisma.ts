@@ -77,7 +77,7 @@ export function tableColumnsToSqlFilter(
     switch (filter.type) {
       case "datetime": {
         // Prisma serializes a JS Date into a SQLite INTEGER (epoch ms), which
-        // is exactly how DateTime columns are stored — bind it directly.
+        // is exactly how DateTime columns are stored; bind it directly.
         const operator = Prisma.raw(filter.operator); // checked by zod
         return Prisma.sql`${col} ${operator} ${filter.value}`;
       }
@@ -160,9 +160,9 @@ function stringCondition(target: Prisma.Sql, operator: string, value: string): P
 
 /**
  * Array membership against a JSON-TEXT column (former Postgres `String[]`).
- *  - "any of"  → the array shares at least one value with the filter (overlap)
- *  - "all of"  → the array contains every filter value (containment)
- *  - "none of" → the array shares no value with the filter
+ *  - "any of":  the array shares at least one value with the filter (overlap)
+ *  - "all of":  the array contains every filter value (containment)
+ *  - "none of": the array shares no value with the filter
  */
 function arrayOptionsCondition(col: Prisma.Sql, operator: string, values: string[]): Prisma.Sql {
   // "all of" with an empty selection is the UI's "waiting for selection" state:

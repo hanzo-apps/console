@@ -104,7 +104,7 @@ export async function getObjectIdsByCommentContent({
     // plainto_tsquery`). The `comments` table is a plain table with no FTS5
     // virtual companion, so we degrade to a case-insensitive substring match
     // (SQLite `LIKE` is ASCII case-insensitive by default). Difference vs
-    // Postgres: no stemming/tokenization — "running" no longer matches "run",
+    // Postgres: no stemming/tokenization ("running" no longer matches "run"),
     // and matches are substring rather than whole-word.
     const comments = await prisma.comment.findMany({
       where: {
