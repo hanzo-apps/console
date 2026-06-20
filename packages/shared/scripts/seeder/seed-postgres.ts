@@ -63,7 +63,7 @@ async function main() {
       name: "Demo User",
       email: "demo@hanzo.ai",
       password: await hash("password", 12),
-      image: "https://static.hanzo.com/hanzo-dev%2Fexample-avatar.png",
+      image: "https://static.hanzo.ai/hanzo-dev%2Fexample-avatar.png",
     },
   });
   const user2 = await prisma.user.upsert({
