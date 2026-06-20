@@ -45,7 +45,7 @@ import {
   BlobStorageExportMode,
   type BlobStorageIntegration,
 } from "@hanzo/console";
-import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 
 export default function BlobStorageIntegrationSettings() {
   const router = useRouter();
@@ -232,19 +232,19 @@ const BlobStorageIntegrationSettingsForm = ({
   isLoading: boolean;
 }) => {
   const capture = useInsightsCapture();
-  const { isHanzoCloud } = useHanzoCloudRegion();
+  const { isConsoleCloud } = useConsoleCloudRegion();
   const [integrationType, setIntegrationType] =
     useState<BlobStorageIntegrationType>(BlobStorageIntegrationType.S3);
 
   // Check if this is a self-hosted instance (no cloud region set)
-  const isSelfHosted = !isHanzoCloud;
+  const isSelfHosted = !isConsoleCloud;
 
   // Post-cutoff Cloud projects may only use OBSERVATIONS_V2 (EVENTS). The
   // Export Source field is hidden in that case; the form value is pinned to
   // EVENTS via the default below.
   const isPostCutoffCloud =
     project?.createdAt != null &&
-    !isLegacyBlobExportAllowed(new Date(project.createdAt), isLangfuseCloud);
+    !isLegacyBlobExportAllowed(new Date(project.createdAt), isConsoleCloud);
   const showExportSourceField = isBetaEnabled && !isPostCutoffCloud;
 
   const blobStorageForm = useForm({

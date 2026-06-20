@@ -75,7 +75,7 @@ import { env } from "@/src/env.mjs";
 import { ThemeProvider } from "@/src/features/theming/ThemeProvider";
 import { MarkdownContextProvider } from "@/src/features/theming/useMarkdownContext";
 import { SupportDrawerProvider } from "@/src/features/support-chat/SupportDrawerProvider";
-import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import { ScoreCacheProvider } from "@/src/features/scores/contexts/ScoreCacheContext";
 import { CorrectionCacheProvider } from "@/src/features/corrections/contexts/CorrectionCacheContext";
 import { V4_BETA_ENABLED_INSIGHTS_PROPERTY } from "@/src/features/insights-analytics/useInsightsCapture";
@@ -173,7 +173,7 @@ export default api.withTRPC(MyApp);
 
 function UserTracking() {
   const session = useSession();
-  const { region } = useHanzoCloudRegion();
+  const { region } = useConsoleCloudRegion();
   const sessionUser = session.data?.user;
 
   // Track user identity and properties

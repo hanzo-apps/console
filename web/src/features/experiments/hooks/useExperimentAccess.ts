@@ -1,5 +1,5 @@
 import { useSession } from "next-auth/react";
-import { useLangfuseCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import { getExperimentsAccess } from "@/src/features/experiments/utils/experimentsAccess";
@@ -12,17 +12,17 @@ function getStorageKey(prefix: string, userId?: string) {
 
 export function useExperimentAccess() {
   const { data: session } = useSession();
-  const { isLangfuseCloud } = useLangfuseCloudRegion();
+  const { isConsoleCloud } = useConsoleCloudRegion();
   const { isBetaEnabled: isV4BetaEnabled, canToggleV4 } = useV4Beta();
 
   const userId = session?.user?.id;
 
   // New users (canToggleV4 = false) get experiments beta auto-enabled
   // Only compute isNewCloudUser after session loads to avoid treating all users as "new" during loading
-  const isNewCloudUser = isLangfuseCloud && !canToggleV4;
+  const isNewCloudUser = isConsoleCloud && !canToggleV4;
 
   const { isEnabled: canAccessExperiments } = getExperimentsAccess({
-    isLangfuseCloud,
+    isConsoleCloud,
     isV4BetaEnabled,
   });
 

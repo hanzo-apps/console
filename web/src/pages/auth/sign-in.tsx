@@ -41,7 +41,7 @@ import { useInsightsCapture } from "@/src/features/insights-analytics/useInsight
 import useLocalStorage from "@/src/components/useLocalStorage";
 import { AuthProviderButton } from "@/src/features/auth/components/AuthProviderButton";
 import { cn } from "@/src/utils/tailwind";
-import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import { getSafeRedirectPath } from "@/src/utils/redirect";
 
 const credentialAuthForm = z.object({
@@ -595,7 +595,7 @@ export default function SignIn({
     );
 
   const capture = useInsightsCapture();
-  const { isHanzoCloud } = useHanzoCloudRegion();
+  const { isConsoleCloud } = useConsoleCloudRegion();
 
   // Count available auth methods to determine if we should show "Last used" badge
   const availableProviders = Object.entries(authProviders).filter(
@@ -749,7 +749,7 @@ export default function SignIn({
           </h2>
         </div>
 
-        {isHanzoCloud && (
+        {isConsoleCloud && (
           <div className="bg-card mt-4 -mb-4 rounded-lg p-3 text-center text-sm sm:mx-auto sm:w-full sm:max-w-[480px] sm:rounded-lg sm:px-6">
             If you are experiencing issues signing in, please force refresh this
             page (CMD + SHIFT + R) or clear your browser cache.{" "}
@@ -866,7 +866,7 @@ export default function SignIn({
                 {credentialsFormError}
                 <br />
                 Contact support if this error is unexpected.{" "}
-                {isHanzoCloud &&
+                {isConsoleCloud &&
                   "Make sure you are using the correct cloud data region."}
               </div>
             ) : null}

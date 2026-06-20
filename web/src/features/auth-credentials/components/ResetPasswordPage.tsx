@@ -4,7 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Head from "next/head";
 import { Button } from "@/src/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/src/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
 import { PasswordInput } from "@/src/components/ui/password-input";
 import { HanzoCloudIcon } from "@/src/components/HanzoLogo";
@@ -19,7 +26,7 @@ import Link from "next/link";
 import { ErrorPage } from "@/src/components/error-page";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { passwordSchema } from "@/src/features/auth/lib/signupSchema";
-import { useLangfuseCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 
 const resetPasswordSchema = z
   .object({
@@ -32,13 +39,18 @@ const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
-export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAvailable: boolean }) {
+export function ResetPasswordPage({
+  passwordResetAvailable,
+}: {
+  passwordResetAvailable: boolean;
+}) {
   const session = useSession();
   const router = useRouter();
-  const { isLangfuseCloud, region } = useLangfuseCloudRegion();
+  const { isConsoleCloud, region } = useConsoleCloudRegion();
   const [formError, setFormError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [showResetPasswordEmailButton, setShowResetPasswordEmailButton] = useState(false);
+  const [showResetPasswordEmailButton, setShowResetPasswordEmailButton] =
+    useState(false);
 
   const capture = useInsightsCapture();
 
@@ -46,7 +58,9 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
   const isSetMode = session.data?.user?.hasPassword === false;
 
   const mutResetPassword = api.credentials.resetPassword.useMutation();
-  const emailVerified = isEmailVerifiedWithinCutoff(session.data?.user?.emailVerified);
+  const emailVerified = isEmailVerifiedWithinCutoff(
+    session.data?.user?.emailVerified,
+  );
 
   const form = useForm({
     resolver: zodResolver(resetPasswordSchema),
@@ -72,7 +86,7 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
         setIsSuccess(true);
         setTimeout(() => {
           const target =
-            isSetMode && isLangfuseCloud && region !== "DEV"
+            isSetMode && isConsoleCloud && region !== "DEV"
               ? "/onboarding"
               : "/";
           router.push(target);
@@ -140,7 +154,10 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
         <div className="bg-background mt-10 px-6 py-10 shadow-sm sm:mx-auto sm:w-full sm:max-w-[480px] sm:rounded-lg sm:px-12">
           <div className="space-y-6">
             <Form {...form}>
-              <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+              <form
+                className="space-y-6"
+                onSubmit={form.handleSubmit(onSubmit)}
+              >
                 <FormField
                   control={form.control}
                   name="email"
@@ -178,7 +195,10 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
                             {isSetMode ? "Password" : "New Password"}
                           </FormLabel>
                           <FormControl>
-                            <PasswordInput autoComplete="new-password" {...field} />
+                            <PasswordInput
+                              autoComplete="new-password"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -195,7 +215,10 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
                               : "Confirm New Password"}
                           </FormLabel>
                           <FormControl>
-                            <PasswordInput autoComplete="new-password" {...field} />
+                            <PasswordInput
+                              autoComplete="new-password"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -210,29 +233,44 @@ export function ResetPasswordPage({ passwordResetAvailable }: { passwordResetAva
                       className="w-full"
                       disabled={mutResetPassword.isPending}
                       loading={mutResetPassword.isPending}
-                      variant={showResetPasswordEmailButton ? "secondary" : "default"}
+                      variant={
+                        showResetPasswordEmailButton ? "secondary" : "default"
+                      }
                     >
                       {submitLabel}
                     </Button>
                   ) : (
-                    <RequestResetPasswordEmailButton email={form.watch("email")} className="w-full" />
+                    <RequestResetPasswordEmailButton
+                      email={form.watch("email")}
+                      className="w-full"
+                    />
                   )}
                 </div>
               </form>
             </Form>
-            {formError ? <div className="text-center text-sm font-medium text-destructive">{formError}</div> : null}
+            {formError ? (
+              <div className="text-destructive text-center text-sm font-medium">
+                {formError}
+              </div>
+            ) : null}
             {isSuccess && (
-              <div className="text-center text-sm font-medium">Password successfully updated. Redirecting ...</div>
+              <div className="text-center text-sm font-medium">
+                Password successfully updated. Redirecting ...
+              </div>
             )}
             {showResetPasswordEmailButton && (
-              <RequestResetPasswordEmailButton email={form.getValues("email")} className="w-full" />
+              <RequestResetPasswordEmailButton
+                email={form.getValues("email")}
+                className="w-full"
+              />
             )}
           </div>
         </div>
         {session.status !== "authenticated" && (
-          <div className="mx-auto mt-10 max-w-lg text-center text-xs text-muted-foreground">
-            You will only receive an email if an account with this email exists and you have signed up with email and
-            password. If you used an authentication provider like Google, Gitlab, Okta, or GitHub, please{" "}
+          <div className="text-muted-foreground mx-auto mt-10 max-w-lg text-center text-xs">
+            You will only receive an email if an account with this email exists
+            and you have signed up with email and password. If you used an
+            authentication provider like Google, Gitlab, Okta, or GitHub, please{" "}
             <Link href="/auth/sign-in" className="underline">
               sign in
             </Link>
