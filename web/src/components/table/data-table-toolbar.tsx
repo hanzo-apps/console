@@ -28,7 +28,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { TimeRangePicker } from "@/src/components/date-picker";
 import {
   type TimeRange,
@@ -206,7 +206,7 @@ export function DataTableToolbar<TData, TValue>({
     searchConfig?.currentQuery ?? "",
   );
 
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const { open: controlsPanelOpen, setOpen: setControlsPanelOpen } =
     useDataTableControls();
 

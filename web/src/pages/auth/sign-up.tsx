@@ -29,7 +29,7 @@ import { PasswordInput } from "@/src/components/ui/password-input";
 import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 import { useRouter } from "next/router";
 import { getSafeRedirectPath } from "@/src/utils/redirect";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import { noUrlCheck, StringNoHTMLNonEmpty } from "@hanzo/console";
 
@@ -45,7 +45,7 @@ export default function SignIn({
   useHuggingFaceRedirect(runningOnHuggingFaceSpaces);
   const { isHanzoCloud, region } = useHanzoCloudRegion();
   const router = useRouter();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   // Read query params for targetPath and email pre-population
   const queryTargetPath = router.query.targetPath as string | undefined;
@@ -282,7 +282,7 @@ function VerifiedSignupFlow({
   authProviders,
 }: Pick<PageProps, "authProviders" | "emailVerificationRequired">) {
   const router = useRouter();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const emailParam = router.query.email as string | undefined;
 
   const [formError, setFormError] = useState<string | null>(null);

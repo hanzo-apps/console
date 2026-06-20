@@ -9,7 +9,7 @@ import {
   type ListEntry,
   useDetailPageLists,
 } from "@/src/features/navigate-detail-pages/context";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/router";
 import { useCallback, useEffect } from "react";
@@ -22,7 +22,7 @@ export const DetailPageNav = (props: {
   const { detailPagelists } = useDetailPageLists();
   const entries = detailPagelists[listKey] ?? [];
 
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const router = useRouter();
   const currentIndex = entries.findIndex(
     (entry) => entry.id === props.currentId,

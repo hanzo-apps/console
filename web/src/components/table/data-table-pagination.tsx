@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import Spinner from "@/src/components/design-system/Spinner/Spinner";
 import { Input } from "@/src/components/ui/input";
 import { useEffect, useState } from "react";
@@ -34,7 +34,7 @@ export function DataTablePagination<TData>({
   hideTotalCount = false,
   canJumpPages = true,
 }: DataTablePaginationProps<TData>) {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const currentPage = table.getState().pagination.pageIndex + 1;
   const [inputState, setInputState] = useState<number | string>(currentPage);

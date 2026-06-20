@@ -39,7 +39,7 @@ import {
 import { TimeseriesChart } from "@/src/features/scores/components/TimeseriesChart";
 import { CompareViewAdapter } from "@/src/features/scores/adapters";
 import { isNumericDataType } from "@/src/features/scores/lib/helpers";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import {
   Dialog,
@@ -91,7 +91,7 @@ const DatasetRunTableMultiSelectAction = ({
   setRowSelection: (value: Record<string, boolean>) => void;
 }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const utils = api.useUtils();
   const mutDelete = api.datasets.deleteDatasetRuns.useMutation({
     onSuccess: () => {

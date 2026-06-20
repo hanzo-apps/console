@@ -1,7 +1,7 @@
 import { env } from "@/src/env.mjs";
 import { prisma, Role } from "@hanzo/console/src/db";
 import { logger } from "@hanzo/console/src/server";
-import { ServerPosthog } from "@/src/features/posthog-analytics/ServerPosthog";
+import { ServerInsights } from "@/src/features/insights-analytics/ServerInsights";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import { getOrganizationPlanServerSide } from "@/src/features/entitlements/server/getPlan";
 import { shouldAutoEnableV4 } from "@/src/features/events/lib/v4Rollout";
@@ -13,7 +13,7 @@ export async function createProjectMembershipsOnSignup(user: {
   try {
     const isCloudDeployment = Boolean(env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION);
 
-    // in no case do we want to send duplicate sign up events to posthog
+    // in no case do we want to send duplicate sign up events to insights
     const isNewUser = !(await prisma.organizationMembership.findFirst({
       where: { userId: user.id },
       select: { id: true },
@@ -167,15 +167,15 @@ export async function createProjectMembershipsOnSignup(user: {
       }
     }
 
-    // for conversion metric tracking in posthog: did a new user sign up?
+    // for conversion metric tracking in insights: did a new user sign up?
     if (
       isNewUser &&
       env.NEXT_PUBLIC_HANZO_CLOUD_REGION &&
       ["EU", "US"].includes(env.NEXT_PUBLIC_HANZO_CLOUD_REGION)
     ) {
       try {
-        const posthog = new ServerPosthog();
-        posthog.capture({
+        const insights = new ServerInsights();
+        insights.capture({
           distinctId: user.id,
           event: "cloud_signup_complete",
           properties: {
@@ -185,7 +185,7 @@ export async function createProjectMembershipsOnSignup(user: {
             hasDefaultProject: defaultProject !== undefined,
           },
         });
-        await posthog.shutdown();
+        await insights.shutdown();
       } catch {
         // analytics tracking failure is not critical, just fail
       }

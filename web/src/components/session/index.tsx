@@ -19,7 +19,7 @@ import { Button } from "@/src/components/ui/button";
 import { CommentDrawerButton } from "@/src/features/comments/CommentDrawerButton";
 import { useSession } from "next-auth/react";
 import { Download, ExternalLinkIcon } from "lucide-react";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import Page from "@/src/components/layouts/page";
 import {
   Popover,
@@ -152,7 +152,7 @@ export const SessionPage: React.FC<{
   const router = useRouter();
   const { setDetailPageList } = useDetailPageLists();
   const userSession = useSession();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const utils = api.useUtils();
   const parentRef = useRef<HTMLDivElement>(null);
   const session = api.sessions.byIdWithScores.useQuery(

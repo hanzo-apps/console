@@ -7,7 +7,7 @@ import { ApiKeyRender } from "@/src/features/public-api/components/CreateApiKeyB
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 import { type RouterOutput } from "@/src/utils/types";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { Check, Copy, LockIcon, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -61,7 +61,7 @@ export function TracesSetupOnboardingCard({
 }: {
   projectId: string;
 }) {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const hasApiKeyCreateAccess = useHasProjectAccess({
     projectId,
     scope: "apiKeys:CUD",

@@ -1,5 +1,5 @@
 import { Button } from "@/src/components/ui/button";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useSupportDrawer } from "@/src/features/support-chat/SupportDrawerProvider";
 import { AlertTriangle, X } from "lucide-react";
 
@@ -21,7 +21,7 @@ export const ErrorNotification: React.FC<ErrorNotificationProps> = ({
   path,
 }) => {
   const { setOpen } = useSupportDrawer();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const isError = type === "ERROR";
   const textColor = isError
     ? "text-destructive-foreground"

@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import {
   Dialog,
   DialogBody,
@@ -69,7 +69,7 @@ export function CloudRegionSwitch({
 }: {
   isSignUpPage?: boolean;
 }) {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const { isHanzoCloud, region: cloudRegion } = useHanzoCloudRegion();
 
   if (!isHanzoCloud) return null;

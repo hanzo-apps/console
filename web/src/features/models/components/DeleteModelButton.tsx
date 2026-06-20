@@ -7,7 +7,7 @@ import {
   PopoverTrigger,
 } from "@/src/components/ui/popover";
 import { type GetModelResult } from "@/src/features/models/validation";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { api } from "@/src/utils/api";
 
@@ -22,7 +22,7 @@ export const DeleteModelButton = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const utils = api.useUtils();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const mut = api.models.delete.useMutation({
     onSuccess: () => {
       utils.models.invalidate();

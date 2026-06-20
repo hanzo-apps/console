@@ -44,7 +44,7 @@ import {
 } from "@hanzo/console";
 import { NonEmptyString } from "@hanzo/console";
 import { cn } from "@/src/utils/tailwind";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import {
   formatSessionPositionInTraceFilterValue,
   getSessionPositionInTraceFilterMode,
@@ -78,7 +78,7 @@ export function PopoverFilterBuilder({
   filterWithAI?: boolean;
   buttonType?: "default" | "icon";
 }) {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const [wipFilterState, _setWipFilterState] =
     useState<WipFilterState>(filterState);
   const addNewFilter = () => {

@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/src/components/ui/table";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { CreateApiKeyButton } from "@/src/features/public-api/components/CreateApiKeyButton";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
@@ -177,7 +177,7 @@ function DeleteApiKeyButton(props: {
   scope: ApiKeyScope;
 }) {
   const { entityId, apiKeyId, scope } = props;
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const hasProjectAccess = useHasProjectAccess({
     projectId: props.entityId,

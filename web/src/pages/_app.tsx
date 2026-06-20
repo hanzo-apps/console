@@ -78,17 +78,18 @@ import { SupportDrawerProvider } from "@/src/features/support-chat/SupportDrawer
 import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
 import { ScoreCacheProvider } from "@/src/features/scores/contexts/ScoreCacheContext";
 import { CorrectionCacheProvider } from "@/src/features/corrections/contexts/CorrectionCacheContext";
-import { V4_BETA_ENABLED_POSTHOG_PROPERTY } from "@/src/features/insights-analytics/useInsightsCapture";
+import { V4_BETA_ENABLED_INSIGHTS_PROPERTY } from "@/src/features/insights-analytics/useInsightsCapture";
 
-// Check that PostHog is client-side (used to handle Next.js SSR) and that env vars are set
+// Check that Insights is client-side (used to handle Next.js SSR) and that env vars are set
 if (
   typeof window !== "undefined" &&
-  process.env.NEXT_PUBLIC_POSTHOG_KEY &&
-  process.env.NEXT_PUBLIC_POSTHOG_HOST
+  process.env.NEXT_PUBLIC_INSIGHTS_KEY &&
+  process.env.NEXT_PUBLIC_INSIGHTS_HOST
 ) {
-  insights.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.posthog.com",
-    ui_host: "https://eu.posthog.com",
+  insights.init(process.env.NEXT_PUBLIC_INSIGHTS_KEY, {
+    api_host:
+      process.env.NEXT_PUBLIC_INSIGHTS_HOST || "https://insights.hanzo.ai",
+    ui_host: "https://insights.hanzo.ai",
     // Enable debug mode in development
     loaded: (insights) => {
       if (process.env.NODE_ENV === "development") insights.debug();
@@ -113,8 +114,8 @@ const MyApp: AppType<{ session: Session | null }> = ({
   const router = useRouter();
 
   useEffect(() => {
-    // PostHog (cloud.hanzo.ai)
-    if (env.NEXT_PUBLIC_POSTHOG_KEY && env.NEXT_PUBLIC_POSTHOG_HOST) {
+    // Insights (cloud.hanzo.ai)
+    if (env.NEXT_PUBLIC_INSIGHTS_KEY && env.NEXT_PUBLIC_INSIGHTS_HOST) {
       const handleRouteChange = () => {
         insights.capture("$pageview");
       };
@@ -184,8 +185,8 @@ function UserTracking() {
       lastIdentifiedUser.current !== JSON.stringify(sessionUser)
     ) {
       lastIdentifiedUser.current = JSON.stringify(sessionUser);
-      // PostHog
-      if (env.NEXT_PUBLIC_POSTHOG_KEY && env.NEXT_PUBLIC_POSTHOG_HOST) {
+      // Insights
+      if (env.NEXT_PUBLIC_INSIGHTS_KEY && env.NEXT_PUBLIC_INSIGHTS_HOST) {
         insights.identify(sessionUser.id ?? undefined, {
           environment: process.env.NODE_ENV,
           email: sessionUser.email ?? undefined,
@@ -201,7 +202,7 @@ function UserTracking() {
           HANZO_CLOUD_REGION: region,
         });
         insights.register({
-          [V4_BETA_ENABLED_POSTHOG_PROPERTY]:
+          [V4_BETA_ENABLED_INSIGHTS_PROPERTY]:
             sessionUser.v4BetaEnabled ?? false,
         });
       }
@@ -213,7 +214,7 @@ function UserTracking() {
       });
     } else if (session.status === "unauthenticated") {
       lastIdentifiedUser.current = null;
-      insights.unregister(V4_BETA_ENABLED_POSTHOG_PROPERTY);
+      insights.unregister(V4_BETA_ENABLED_INSIGHTS_PROPERTY);
       // Sentry
       setUser(null);
     }

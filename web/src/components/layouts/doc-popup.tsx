@@ -3,7 +3,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/src/components/ui/hover-card";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { cn } from "@/src/utils/tailwind";
 import { Portal } from "@radix-ui/react-hover-card";
 import { Info } from "lucide-react";
@@ -19,7 +19,7 @@ export default function DocPopup({
   href,
   className,
 }: DocPopupProps) {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   return (
     <HoverCard

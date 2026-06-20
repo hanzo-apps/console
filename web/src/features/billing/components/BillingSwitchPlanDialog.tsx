@@ -21,7 +21,7 @@ import {
   isUpgrade,
 } from "@/src/ee/features/billing/utils/stripeCatalogue";
 import { ActionButton } from "@/src/components/ActionButton";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useBillingInformation } from "@/src/features/billing/components/useBillingInformation";
 import { api } from "@/src/utils/api";
 import { StripeCancellationButton } from "./StripeCancellationButton";
@@ -44,7 +44,7 @@ export const BillingSwitchPlanDialog = ({
     isLegacySubscription,
     hasValidPaymentMethod,
   } = useBillingInformation();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const mutCreateCheckoutSession =
     api.cloudBilling.createStripeCheckoutSession.useMutation({

@@ -9,7 +9,7 @@ import {
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { api } from "@/src/utils/api";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { toast } from "sonner";
 
 interface DeleteSpendAlertDialogProps {
@@ -28,7 +28,7 @@ export function DeleteSpendAlertDialog({
   onSuccess,
 }: DeleteSpendAlertDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const deleteMutation = api.spendAlerts.deleteSpendAlert.useMutation();
 

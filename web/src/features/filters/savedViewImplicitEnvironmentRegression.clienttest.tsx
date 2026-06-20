@@ -37,8 +37,8 @@ vi.mock("next/router", () => ({
   useRouter: () => mockUseRouter(),
 }));
 
-vi.mock("posthog-js/react", () => ({
-  usePostHog: () => ({
+vi.mock("insights-js/react", () => ({
+  useInsights: () => ({
     capture: mockCapture,
   }),
 }));

@@ -19,7 +19,7 @@ import {
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
 import { api } from "@/src/utils/api";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { toast } from "sonner";
 import { Info } from "lucide-react";
 
@@ -57,7 +57,7 @@ export function SpendAlertDialog({
   onSuccess,
 }: SpendAlertDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
 
   const form = useForm<SpendAlertFormInput, undefined, SpendAlertFormOutput>({
     resolver: zodResolver(spendAlertSchema),

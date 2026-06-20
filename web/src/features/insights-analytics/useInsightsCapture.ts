@@ -1,7 +1,7 @@
 import { type CaptureResult, type CaptureOptions } from "@hanzo/insights";
 import { useInsights } from "@hanzo/insights-react";
 
-export const V4_BETA_ENABLED_POSTHOG_PROPERTY = "v4BetaEnabled";
+export const V4_BETA_ENABLED_INSIGHTS_PROPERTY = "v4BetaEnabled";
 
 // resource:action, only use snake_case
 // Exported to silence @typescript-eslint/no-unused-vars v8 warning
@@ -104,7 +104,7 @@ export const events = {
     "delete_template_button_click",
   ],
   integrations: [
-    "posthog_form_submitted",
+    "insights_form_submitted",
     "blob_storage_form_submitted",
     "mixpanel_form_submitted",
   ],
@@ -217,7 +217,7 @@ type EventName = {
   [Resource in keyof typeof events]: `${Resource}:${(typeof events)[Resource][number]}`;
 }[keyof typeof events];
 
-export const usePostHogClientCapture = () => {
+export const useInsightsCapture = () => {
   const insights = useInsights();
 
   // wrapped insights.capture function that only allows events that are in the allowlist

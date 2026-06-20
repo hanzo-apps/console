@@ -1671,7 +1671,7 @@ export const getGenerationsForAnalyticsIntegrations = async function* (
   // Pre-filter traces in a CTE so the trace timestamp window prunes partitions
   // directly, instead of living alongside the LEFT JOIN where the planner
   // cannot push it down. LEFT JOIN keeps generations whose trace is missing or
-  // outside the 7-day window — they still ship to PostHog with NULL trace
+  // outside the 7-day window — they still ship to Insights with NULL trace
   // fields rather than being silently dropped.
   const query = `
     WITH selected_traces AS (
@@ -1683,7 +1683,7 @@ export const getGenerationsForAnalyticsIntegrations = async function* (
         t.user_id as user_id,
         t.release as release,
         t.tags as tags,
-        t.metadata['$posthog_session_id'] as posthog_session_id,
+        t.metadata['$insights_session_id'] as insights_session_id,
         t.metadata['$mixpanel_session_id'] as mixpanel_session_id
       FROM traces t FINAL
       WHERE t.project_id = {projectId: String}

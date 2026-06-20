@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import useLocalStorage from "../useLocalStorage";
 import Link from "next/link";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 
 const NOTIFICATION_TTL_MS = 14 * 24 * 60 * 60 * 1000; // two weeks
 
@@ -89,7 +89,7 @@ export const notifications: SidebarNotification[] = [
 const STORAGE_KEY = "dismissed-sidebar-notifications";
 
 export function SidebarNotifications() {
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const [currentNotificationIndex, setCurrentNotificationIndex] = useState<
     number | null
   >(null);

@@ -15,7 +15,7 @@ import { useQueryParam } from "use-query-params";
 import { type HanzoColumnDef } from "@/src/components/table/types";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import isEqual from "lodash/isEqual";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { validateOrderBy, validateFilters } from "../validation";
 
 interface TableStateUpdaters {
@@ -87,7 +87,7 @@ export function useTableViewManager({
   const isRouterReady = router.isReady;
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const pendingFiltersRef = useRef<FilterState | null>(null);
   const pendingFiltersPreviousStateRef = useRef<FilterState | null>(null);
 

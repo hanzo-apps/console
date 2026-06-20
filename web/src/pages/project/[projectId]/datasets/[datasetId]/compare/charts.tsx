@@ -16,7 +16,7 @@ import { TimeseriesChart } from "@/src/features/scores/components/TimeseriesChar
 import { isNumericDataType } from "@/src/features/scores/lib/helpers";
 import { CompareViewAdapter } from "@/src/features/scores/adapters";
 import { RESOURCE_METRICS } from "@/src/features/dashboard/lib/score-analytics-utils";
-import { usePostHogClientCapture } from "@/src/features/insights-analytics/useInsightsCapture";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import Page from "@/src/components/layouts/page";
 import { SubHeaderLabel } from "@/src/components/layouts/header";
 import {
@@ -37,7 +37,7 @@ import {
 
 export default function DatasetCompare() {
   const router = useRouter();
-  const capture = usePostHogClientCapture();
+  const capture = useInsightsCapture();
   const projectId = router.query.projectId as string;
   const datasetId = router.query.datasetId as string;
 
