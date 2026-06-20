@@ -2,7 +2,9 @@ import { Prisma } from "@prisma/client";
 import { TracingSearchType } from "../../../interfaces/search";
 
 /**
- * Builds PostgreSQL search condition for full-text search using ILIKE.
+ * Builds an application-database (SQLite) search condition for substring
+ * full-text search using LIKE. SQLite `LIKE` is case-insensitive for ASCII by
+ * default, so it is the direct replacement for Postgres `ILIKE`.
  * Returns Prisma.sql for use in raw queries, or Prisma.empty if no search query provided.
  *
  * Missing column definitions make it obvious which search types are NOT supported:
@@ -50,43 +52,30 @@ export function postgresSearchCondition(params: {
   // Search metadata columns (id, name, etc.)
   if (types.includes("id")) {
     for (const column of metadataColumns) {
-      searchConditions.push(
-        Prisma.sql`${Prisma.raw(`${prefix}${column}`)} ILIKE ${`%${searchQuery}%`}`,
-      );
+      searchConditions.push(Prisma.sql`${Prisma.raw(`${prefix}${column}`)} LIKE ${`%${searchQuery}%`}`);
     }
   }
 
-  // Search content - both input and output (only if columns are defined)
-  if (
-    types.includes("content") &&
-    contentColumns.content &&
-    contentColumns.content.length > 0
-  ) {
+  // Search content - both input and output (only if columns are defined).
+  // SQLite LIKE coerces any value to text, so no cast is needed.
+  if (types.includes("content") && contentColumns.content && contentColumns.content.length > 0) {
     for (const column of contentColumns.content) {
-      searchConditions.push(
-        Prisma.sql`${Prisma.raw(`${prefix}${column}`)}::text ILIKE ${`%${searchQuery}%`}`,
-      );
+      searchConditions.push(Prisma.sql`${Prisma.raw(`${prefix}${column}`)} LIKE ${`%${searchQuery}%`}`);
     }
   }
 
   // Search input only (only if column is defined)
   if (types.includes("input") && contentColumns.input) {
-    searchConditions.push(
-      Prisma.sql`${Prisma.raw(`${prefix}${contentColumns.input}`)}::text ILIKE ${`%${searchQuery}%`}`,
-    );
+    searchConditions.push(Prisma.sql`${Prisma.raw(`${prefix}${contentColumns.input}`)} LIKE ${`%${searchQuery}%`}`);
   }
 
   // Search output only (only if column is defined)
   if (types.includes("output") && contentColumns.output) {
-    searchConditions.push(
-      Prisma.sql`${Prisma.raw(`${prefix}${contentColumns.output}`)}::text ILIKE ${`%${searchQuery}%`}`,
-    );
+    searchConditions.push(Prisma.sql`${Prisma.raw(`${prefix}${contentColumns.output}`)} LIKE ${`%${searchQuery}%`}`);
   }
 
   // Add any additional custom conditions
   searchConditions.push(...additionalConditions);
 
-  return searchConditions.length > 0
-    ? Prisma.sql` AND (${Prisma.join(searchConditions, " OR ")})`
-    : Prisma.empty;
+  return searchConditions.length > 0 ? Prisma.sql` AND (${Prisma.join(searchConditions, " OR ")})` : Prisma.empty;
 }
