@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { z } from "zod/v4";
 import { api } from "@/src/utils/api";
 import { type UseFormReturn } from "react-hook-form";
 import {
@@ -6,6 +7,7 @@ import {
   PromptType,
   extractPlaceholderNames,
   type PromptMessage,
+  ZodModelConfig,
 } from "@hanzo/console";
 
 type ExperimentPromptDataProps = {
