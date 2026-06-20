@@ -66,13 +66,13 @@ const cspHeader = `
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com;
   img-src 'self' https: blob: data: http://localhost:* https://prod-uk-services-workspac-workspacefilespublicbuck-vs4gjqpqjkh6.s3.amazonaws.com https://prod-uk-services-attachm-attachmentsbucket28b3ccf-uwfssb4vt2us.s3.eu-west-2.amazonaws.com https://i0.wp.com;
   font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;
-  frame-src 'self' https://*.hanzo.ai https://challenges.cloudflare.com https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com https://app.cal.com https://cal.com;
+  frame-src 'self' https://*.hanzo.ai https://hanzo.id https://*.hanzo.id https://challenges.cloudflare.com https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com https://app.cal.com https://cal.com;
   worker-src 'self' blob:;
   object-src 'none';
   base-uri 'self';
-  form-action 'self' https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com;
+  form-action 'self' https://hanzo.id https://*.hanzo.id https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com;
   frame-ancestors 'none';
-  connect-src 'self' https://*.hanzo.com https://*.hanzo.ai https://*.hanzo.dev https://*.ingest.us.sentry.io https://*.sentry.io https://chat.uk.plain.com https://*.s3.amazonaws.com https://prod-uk-services-attachm-attachmentsuploadbucket2-1l2e4906o2asm.s3.eu-west-2.amazonaws.com https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com https://graph.microsoft.com https://app.cal.com https://cal.com;
+  connect-src 'self' https://*.hanzo.com https://*.hanzo.ai https://*.hanzo.dev https://hanzo.id https://*.hanzo.id https://*.ingest.us.sentry.io https://*.sentry.io https://chat.uk.plain.com https://*.s3.amazonaws.com https://prod-uk-services-attachm-attachmentsuploadbucket2-1l2e4906o2asm.s3.eu-west-2.amazonaws.com https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com https://graph.microsoft.com https://app.cal.com https://cal.com;
   media-src 'self' https: http://localhost:*;
   ${env.HANZO_CSP_ENFORCE_HTTPS === "true" ? "upgrade-insecure-requests; block-all-mixed-content;" : ""}
   ${env.SENTRY_CSP_REPORT_URI ? `report-uri ${env.SENTRY_CSP_REPORT_URI}; report-to csp-endpoint;` : ""}
