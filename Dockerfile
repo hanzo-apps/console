@@ -40,6 +40,7 @@ COPY --chown=nextjs:nodejs packages/config-typescript/package.json ./packages/co
 COPY --chown=nextjs:nodejs packages/console-js/package.json ./packages/console-js/
 COPY --chown=nextjs:nodejs packages/datastore/package.json ./packages/datastore/
 COPY --chown=nextjs:nodejs packages/langchain/package.json ./packages/langchain/
+COPY --chown=nextjs:nodejs packages/eslint-plugin/package.json ./packages/eslint-plugin/
 
 # Switch to nextjs user for security
 USER nextjs
