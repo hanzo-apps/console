@@ -152,7 +152,7 @@ jobs:
   # Lint + Prettier — merged into one job
   # ──────────────────────────────────────────────────────────────────────
   lint:
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     needs:
       - pre-job
     if: needs.pre-job.outputs.should_skip != 'true'
@@ -937,7 +937,7 @@ jobs:
   all-ci-passed:
     # This allows us to have a branch protection rule for tests and deploys with matrix.
     # Jobs not in this list still run but use continue-on-error so they don't block merging.
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     needs:
       [
         build,
