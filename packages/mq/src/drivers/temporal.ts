@@ -212,6 +212,10 @@ export class TemporalDriver implements MqDriver {
           attemptsMade: 0,
           updateProgress: async () => undefined,
           log: async () => 0,
+          // Retry is handled by Temporal's activity RetryPolicy (throwing from
+          // the processor triggers it); remove is a no-op for in-flight jobs.
+          retry: async () => undefined,
+          remove: async () => undefined,
         };
         return processor(job);
       },

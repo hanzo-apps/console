@@ -10,8 +10,10 @@ import { getDriver } from "./driver";
 import type { Job, Processor, WorkerOptions } from "./types";
 
 export class Worker<
-  DataType = unknown,
-  ResultType = unknown,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  DataType = any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ResultType = any,
   NameType extends string = string,
 > extends EventEmitter {
   public readonly name: string;
