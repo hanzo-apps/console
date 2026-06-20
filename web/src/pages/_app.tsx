@@ -78,6 +78,7 @@ import { SupportDrawerProvider } from "@/src/features/support-chat/SupportDrawer
 import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import { ScoreCacheProvider } from "@/src/features/scores/contexts/ScoreCacheContext";
 import { CorrectionCacheProvider } from "@/src/features/corrections/contexts/CorrectionCacheContext";
+import { InAppAiAgentProvider } from "@/src/features/in-app-agent/components";
 import { V4_BETA_ENABLED_INSIGHTS_PROPERTY } from "@/src/features/insights-analytics/useInsightsCapture";
 
 // Check that Insights is client-side (used to handle Next.js SSR) and that env vars are set
