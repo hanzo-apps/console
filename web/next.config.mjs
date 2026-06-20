@@ -24,6 +24,12 @@ const aliasForPrefix = (prefix) => ({
   [`${prefix}/src/env`]: path.join(sharedSrc, "env.ts"),
   [`${prefix}/src/utils/chatml`]: path.join(sharedSrc, "utils/chatml/index.ts"),
   [`${prefix}/src/index`]: path.join(sharedSrc, "index.ts"),
+  // The query subsystem lives at `packages/shared/src/features/query`. It is
+  // published under the `@hanzo/console/query` and `@hanzo/console/query/server`
+  // subpaths (mirrors the package `exports` field). The `/server` exact-match
+  // alias is listed first so it wins over the broader `/query` exact-match.
+  [`${prefix}/query/server`]: path.join(sharedSrc, "features/query/server/index.ts"),
+  [`${prefix}/query`]: path.join(sharedSrc, "features/query/index.ts"),
   [`${prefix}/encryption`]: path.join(sharedSrc, "encryption/index.ts"),
   [`${prefix}$`]: path.join(sharedSrc, "index.ts"),
 });

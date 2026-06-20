@@ -7,6 +7,8 @@ import {
   publicApiPaginationZod,
   singleFilter,
   InvalidRequestError,
+  OBSERVATION_FIELD_GROUPS_PUBLIC_API,
+  type ObservationFieldGroupPublicApi,
 } from "@hanzo/console";
 
 import {
@@ -17,7 +19,7 @@ import {
   type ObservationFieldGroup,
 } from "@hanzo/console/src/server";
 import { z } from "zod/v4";
-import { useEventsTableSchema } from "../../query/types";
+import { useEventsTableSchema } from "@/src/features/query/types";
 
 // Re-export for convenience
 export {

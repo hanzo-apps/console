@@ -9,7 +9,7 @@ import {
 } from "@hanzo/console";
 import { stringDateTime, TraceBody } from "@hanzo/console/src/server";
 import { z } from "zod/v4";
-import { useEventsTableSchema } from "../../query";
+import { useEventsTableSchema } from "@/src/features/query";
 
 /**
  * Field groups for selective field fetching
