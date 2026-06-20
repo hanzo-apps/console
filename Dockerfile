@@ -79,13 +79,16 @@ RUN --mount=type=cache,target=/app/web/.next/cache,uid=1001,gid=1001 \
 # into the standalone bundle so Prisma resolves at request time on alpine/musl.
 RUN set -eux; \
     SRC="$(dirname "$(find /app/node_modules -name 'libquery_engine-linux-musl-openssl-3.0.x.so.node' -print -quit)")"; \
-    DEST=/app/web/.next/standalone/node_modules/.prisma/client; \
-    mkdir -p "$DEST"; cp -a "$SRC"/. "$DEST"/; \
-    # mirror the engine next to every bundled @prisma/client (pnpm resolves there too)
-    for d in $(find /app/web/.next/standalone -type d -path '*@prisma/client'); do \
-      cp "$DEST"/libquery_engine-*.so.node "$d"/ 2>/dev/null || true; \
+    for DEST in \
+      /app/web/.next/standalone/web/.prisma/client \
+      /app/web/.next/standalone/node_modules/.prisma/client \
+      /app/web/.next/standalone/packages/shared/node_modules/.prisma/client ; do \
+      mkdir -p "$DEST"; cp -a "$SRC"/. "$DEST"/ 2>/dev/null || true; \
     done; \
-    ls -la "$DEST"
+    for d in $(find /app/web/.next/standalone -type d -path '*@prisma/client'); do \
+      cp "$SRC"/libquery_engine-*.so.node "$d"/ 2>/dev/null || true; \
+    done; \
+    ls -la /app/web/.next/standalone/web/.prisma/client
 
 # ===== Development Stage =====
 FROM deps AS development
@@ -133,6 +136,9 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1
+# Bulletproof: point Prisma directly at the bundled musl query engine, bypassing
+# the path-search heuristic (engine copied to web/.prisma/client in the builder).
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/web/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
