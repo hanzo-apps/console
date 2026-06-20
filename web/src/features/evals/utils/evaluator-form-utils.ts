@@ -3,6 +3,7 @@ import {
   singleFilter,
   type hanzoObjects,
   TimeScopeSchema,
+  EvalTargetObjectSchema,
 } from "@hanzo/console";
 import { wipVariableMapping } from "@hanzo/console";
 

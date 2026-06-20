@@ -28,6 +28,7 @@ import {
   datasetFormFilterColsWithOptions,
   availableDatasetEvalVariables,
   type ObservationType,
+  EvalTargetObjectSchema,
 } from "@hanzo/console";
 import { z } from "zod/v4";
 import { useEffect, useMemo, useState, memo } from "react";
