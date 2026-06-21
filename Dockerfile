@@ -9,6 +9,8 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# public/ may be empty (git doesn't track empty dirs) — ensure it exists for the runner COPY.
+RUN mkdir -p public
 ARG NEXT_PUBLIC_CLOUD_URL=https://console2.hanzo.ai
 ARG NEXT_PUBLIC_IAM_URL=https://iam.hanzo.ai
 ARG NEXT_PUBLIC_IAM_APP_NAME=hanzo-cloud
