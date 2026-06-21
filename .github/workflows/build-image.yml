@@ -1,0 +1,48 @@
+name: Build Docker Image
+# Builds + pushes ghcr.io/hanzoai/console2:<sha|latest> on main / dispatch,
+# on the self-hosted ARC runner. NEXT_PUBLIC_* are baked at build time.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    runs-on: [hanzo-build-linux-amd64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/hanzoai/console2
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_CLOUD_URL=https://console2.hanzo.ai
+            NEXT_PUBLIC_IAM_URL=https://iam.hanzo.ai
+            NEXT_PUBLIC_IAM_APP_NAME=hanzo-cloud
+            NEXT_PUBLIC_IAM_ORG_NAME=hanzo
+            NEXT_PUBLIC_IAM_CLIENT_ID=hanzo-cloud
