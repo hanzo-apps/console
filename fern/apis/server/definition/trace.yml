@@ -4,7 +4,7 @@ imports:
   commons: ./commons.yml
 service:
   auth: true
-  base-path: /api/public
+  base-path: /v1
   endpoints:
     get:
       docs: Get a specific trace

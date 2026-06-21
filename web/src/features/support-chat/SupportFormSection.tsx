@@ -214,7 +214,7 @@ export function SupportFormSection({ onCancel, onSuccess }: { onCancel: () => vo
       }),
     );
 
-    const res = await fetch("/api/support/upload-attachments", {
+    const res = await fetch("/v1/support/upload-attachments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ files: filePayloads }),

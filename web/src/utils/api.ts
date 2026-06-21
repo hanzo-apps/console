@@ -184,12 +184,12 @@ export const api = createTRPCNext<AppRouter>({
           },
           // when condition is true, use normal request
           true: httpLink({
-            url: `${getBaseUrl()}/api/trpc`,
+            url: `${getBaseUrl()}/v1/trpc`,
             transformer: superjson,
           }),
           // when condition is false, use batching
           false: httpBatchLink({
-            url: `${getBaseUrl()}/api/trpc`,
+            url: `${getBaseUrl()}/v1/trpc`,
             transformer: superjson,
             maxURLLength: 2083, // avoid too large batches
           }),
@@ -237,7 +237,7 @@ export const directApi = createTRPCProxyClient<AppRouter>({
       enabled: () => process.env.NODE_ENV === "development",
     }),
     httpBatchLink({
-      url: `${getBaseUrl()}/api/trpc`,
+      url: `${getBaseUrl()}/v1/trpc`,
       transformer: superjson,
       maxURLLength: 2083, // avoid too large batches
     }),

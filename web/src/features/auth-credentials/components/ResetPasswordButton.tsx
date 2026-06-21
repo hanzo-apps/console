@@ -65,7 +65,7 @@ export function RequestResetPasswordEmailButton({
       const formattedEmail = encodeURIComponent(email.toLowerCase().trim());
       const formattedCode = encodeURIComponent(code.trim());
       const callback = encodeURIComponent(`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/auth/reset-password`);
-      const url = `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/callback/email?email=${formattedEmail}&token=${formattedCode}&callbackUrl=${callback}`;
+      const url = `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/auth/callback/email?email=${formattedEmail}&token=${formattedCode}&callbackUrl=${callback}`;
       window.location.href = url;
     } catch (error) {
       console.error("Error verifying code:", error);

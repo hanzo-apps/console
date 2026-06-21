@@ -323,7 +323,7 @@ function SsoConfigDialog({
 
   const callbackUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
-    return `${window.location.origin}/api/auth/callback/${domain}.${selectedProvider}`;
+    return `${window.location.origin}/v1/auth/callback/${domain}.${selectedProvider}`;
   }, [domain, selectedProvider]);
 
   const saveMutation = api.ssoConfig.save.useMutation({

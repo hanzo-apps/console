@@ -4,7 +4,7 @@ imports:
   commons: ./commons.yml
 service:
   auth: true
-  base-path: /api/public
+  base-path: /v1
   endpoints:
     list:
       docs: Get sessions
@@ -31,7 +31,7 @@ service:
             docs: Optional filter for sessions where the environment is one of the provided values.
       response: PaginatedSessions
     get:
-      docs: Get a session. Please note that `traces` on this endpoint are not paginated, if you plan to fetch large sessions, consider `GET /api/public/traces?sessionId=<sessionId>`
+      docs: Get a session. Please note that `traces` on this endpoint are not paginated, if you plan to fetch large sessions, consider `GET /v1/traces?sessionId=<sessionId>`
       method: GET
       path: /sessions/{sessionId}
       path-parameters:

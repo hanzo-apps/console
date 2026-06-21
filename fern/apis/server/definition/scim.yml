@@ -4,7 +4,7 @@ imports:
 
 service:
   auth: true
-  base-path: /api/public/scim
+  base-path: /v1/scim
   endpoints:
     getServiceProviderConfig:
       docs: Get SCIM Service Provider Configuration (requires organization-scoped API key)

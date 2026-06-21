@@ -44,7 +44,7 @@ export class Hanzo {
    * Fetches a prompt from the Hanzo prompt management service.
    */
   async getPrompt(name: string, version?: number, options?: PromptOptions): Promise<PromptResponse> {
-    const url = new URL(`/api/public/v2/prompts/${encodeURIComponent(name)}`, this.baseUrl);
+    const url = new URL(`/v1/prompts/${encodeURIComponent(name)}`, this.baseUrl);
     if (version !== undefined) {
       url.searchParams.set("version", String(version));
     }

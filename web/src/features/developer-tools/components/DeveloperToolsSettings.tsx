@@ -59,7 +59,7 @@ export function DeveloperToolsSettings() {
           <CodeBlock
             language="shell"
             value={`claude mcp add --transport http langfuse \\
-  https://cloud.langfuse.com/api/public/mcp \\
+  https://cloud.hanzo.ai/v1/mcp \\
   --header "Authorization: Basic {your-base64-token}"`}
           />
           <div className="mt-4 flex items-center gap-2">

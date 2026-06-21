@@ -177,7 +177,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async () => {
       },
       signUpDisabled: env.AUTH_DISABLE_SIGNUP === "true",
       runningOnHuggingFaceSpaces: env.NEXTAUTH_URL?.replace(
-        "/api/auth",
+        "/v1/auth",
         "",
       ).endsWith(".hf.space"),
     },
@@ -685,7 +685,7 @@ export default function SignIn({
 
     try {
       const res = await fetch(
-        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/check-sso`,
+        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/auth/check-sso`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
