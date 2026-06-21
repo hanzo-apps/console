@@ -68,12 +68,25 @@ src/
     DashboardShell.tsx       sidebar (from registry) + topbar (adapts dashboard-shell recipe)
     AuthGate.tsx             gate authenticated routes
     SignInForm.tsx           adapts sign-in-form recipe; IAM redirect
-    ui/                      PageHeader, DataTable, ResourceList, Field*
+    ui/                      PageHeader, DataTable, Field*
     products/
       ProvidersModule.tsx    FULL surface: list + view/edit
       providers/             logic.ts (pure cascade/visibility), List/Edit views
-      Models|Applications|Stores|ChatModule.tsx   list surfaces
+      ModelsModule.tsx       routes list <-> new/edit
+      models/                logic.ts (newModelRoute), ModelRoute List/Edit views
+      ApplicationsModule.tsx routes list <-> edit
+      applications/          logic.ts (newApplication), List/Edit (deploy/undeploy)
+      StoresModule.tsx       routes list <-> edit
+      stores/                logic.ts (newStore), List (refresh-vectors)/Edit views
+      ChatModule.tsx         routes list <-> read-only chat view
+      chat/                  ChatListView + ChatView (message thread)
 ```
+
+Each product module mirrors Providers: a router module (`<X>Module.tsx`), a
+list view + an edit/view, and a pure `logic.ts` (new-record templates / option
+lists). Every module declares a `''` (list) and `:name` (edit/view) route in the
+registry; Models also handles `:name === 'new'` for create (model routes are
+keyed by `owner/modelName`, so modelName is form-entered, not generated).
 
 ## /v1 backend client
 

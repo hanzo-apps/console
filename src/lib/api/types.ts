@@ -42,37 +42,107 @@ export type Provider = Owned & {
   [key: string]: unknown
 }
 
-/** A model route (`/v1/*-model-route`). */
+/**
+ * A model route (`/v1/*-model-route`).
+ *
+ * Keyed by `owner`/`modelName` (NOT `owner/name` — the backend uses modelName as
+ * the identity). Maps a user-facing model name to a primary provider + upstream
+ * model id, with two fallbacks, pricing overrides, and visibility flags.
+ */
 export type ModelRoute = Owned & {
   modelName?: string
+  provider?: string
+  upstream?: string
+  ownedBy?: string
+  fallback1Provider?: string
+  fallback1Upstream?: string
+  fallback2Provider?: string
+  fallback2Upstream?: string
+  premium?: boolean
+  hidden?: boolean
+  inputPricePerMillion?: number
+  outputPricePerMillion?: number
+  enabled?: boolean
   state?: string
+  updatedTime?: string
   [key: string]: unknown
 }
 
-/** An application (`/v1/*-application`). */
+/**
+ * An application (`/v1/*-application`).
+ *
+ * A deployable app from a template, into a k8s namespace, with a deploy lifecycle
+ * (`status`: "Not Deployed" -> deployed). Keyed by `owner/name`.
+ */
 export type Application = Owned & {
   category?: string
+  description?: string
+  template?: string
+  namespace?: string
+  parameters?: string
+  status?: string
   state?: string
   isDefault?: boolean
   [key: string]: unknown
 }
 
-/** A knowledge store (`/v1/*-store`). */
+/**
+ * A knowledge store (`/v1/*-store`).
+ *
+ * The RAG/chat surface config: storage + model + embedding providers, chunking
+ * and search strategy, chat welcome copy, and limits. Keyed by `owner/name`.
+ */
 export type Store = Owned & {
+  title?: string
   storageProvider?: string
+  storageSubpath?: string
+  imageProvider?: string
+  splitProvider?: string
+  searchProvider?: string
   modelProvider?: string
   embeddingProvider?: string
+  agentProvider?: string
+  textToSpeechProvider?: string
+  speechToTextProvider?: string
+  memoryLimit?: number
+  frequency?: number
+  limitMinutes?: number
+  knowledgeCount?: number
+  suggestionCount?: number
+  welcome?: string
+  welcomeTitle?: string
+  welcomeText?: string
+  prompt?: string
+  themeColor?: string
   state?: string
   isDefault?: boolean
   [key: string]: unknown
 }
 
-/** A chat session (`/v1/*-chat`). */
+/** A chat session (`/v1/*-chat`). Keyed by `owner/name`. */
 export type Chat = Owned & {
   type?: string
   user?: string
   store?: string
+  category?: string
   messageCount?: number
+  tokenCount?: number
+  updatedTime?: string
+  [key: string]: unknown
+}
+
+/**
+ * A chat message (`/v1/get-messages`).
+ *
+ * `author` is "AI" for assistant turns, otherwise the user. `text` is the
+ * content; `reasonText` carries any reasoning trace.
+ */
+export type Message = Owned & {
+  chat?: string
+  author?: string
+  text?: string
+  reasonText?: string
+  replyTo?: string
   [key: string]: unknown
 }
 

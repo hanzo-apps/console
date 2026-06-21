@@ -1,26 +1,26 @@
 'use client'
 
-import { ChatApi, type Chat } from '~/lib/api'
-import { ResourceList } from '~/components/ui/ResourceList'
-import { useSession } from '~/lib/auth/session'
+/**
+ * Chat admin — session list + read-only chat view, native on @hanzo/gui.
+ *
+ * Logic ported from ChatListPage.js + ChatPage.js + backend/ChatBackend.js (and
+ * MessageBackend.js for the thread): list chats (`get-chats`), open one to read
+ * its message thread (`get-messages?owner&chat`), delete (`delete-chat`). UI
+ * rebuilt clean on GUI primitives (no antd).
+ *
+ * Routing: `/chat` lists; `/chat/<name>` views one session.
+ */
+import { useRouter } from 'next/navigation'
 
-export function ChatModule(_props: { params: Record<string, string> }) {
-  const { account } = useSession()
-  const user = account?.name ?? 'admin'
+import { ChatListView } from './chat/ChatListView'
+import { ChatView } from './chat/ChatView'
 
-  return (
-    <ResourceList<Chat>
-      title="Chat"
-      subtitle="Chat sessions and history."
-      rowKey={(r) => `${r.owner}/${r.name}`}
-      columns={[
-        { key: 'name', header: 'Name' },
-        { key: 'displayName', header: 'Display name' },
-        { key: 'user', header: 'User' },
-        { key: 'store', header: 'Store' },
-        { key: 'messageCount', header: 'Messages', width: 110 },
-      ]}
-      load={async () => (await ChatApi.list({ user })).rows}
-    />
-  )
+export function ChatModule({ params }: { params: Record<string, string> }) {
+  const router = useRouter()
+  const name = params.name
+
+  if (name) {
+    return <ChatView name={decodeURIComponent(name)} onDone={() => router.push('/chat')} />
+  }
+  return <ChatListView onOpen={(c) => router.push(`/chat/${encodeURIComponent(c.name)}`)} />
 }

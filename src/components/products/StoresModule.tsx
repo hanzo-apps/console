@@ -1,25 +1,25 @@
 'use client'
 
-import { StoreApi, type Store } from '~/lib/api'
-import { ResourceList } from '~/components/ui/ResourceList'
-import { useSession } from '~/lib/auth/session'
+/**
+ * Stores admin — list + edit, native on @hanzo/gui.
+ *
+ * Logic ported from StoreListPage.js + StoreEditPage.js + backend/StoreBackend.js:
+ * the new-store template, the provider/chunking/chat field set, and the add/update/
+ * delete + refresh-vectors calls. UI rebuilt clean on GUI primitives (no antd).
+ *
+ * Routing: `/stores` lists; `/stores/<name>` edits one.
+ */
+import { useRouter } from 'next/navigation'
 
-export function StoresModule(_props: { params: Record<string, string> }) {
-  const { account } = useSession()
-  const owner = account?.name ?? 'admin'
+import { StoreListView } from './stores/StoreListView'
+import { StoreEditView } from './stores/StoreEditView'
 
-  return (
-    <ResourceList<Store>
-      title="Stores"
-      subtitle="Knowledge stores and vectors."
-      rowKey={(r) => `${r.owner}/${r.name}`}
-      columns={[
-        { key: 'name', header: 'Name' },
-        { key: 'displayName', header: 'Display name' },
-        { key: 'modelProvider', header: 'Model provider' },
-        { key: 'embeddingProvider', header: 'Embedding provider' },
-      ]}
-      load={async () => await StoreApi.list(owner)}
-    />
-  )
+export function StoresModule({ params }: { params: Record<string, string> }) {
+  const router = useRouter()
+  const name = params.name
+
+  if (name) {
+    return <StoreEditView name={decodeURIComponent(name)} onDone={() => router.push('/stores')} />
+  }
+  return <StoreListView onOpen={(s) => router.push(`/stores/${encodeURIComponent(s.name)}`)} />
 }
