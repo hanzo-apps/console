@@ -23,6 +23,7 @@ import { env } from "@/src/env.mjs";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { HanzoLogo } from "@/src/components/HanzoLogo";
+import { AppSwitcher } from "@/src/components/nav/app-switcher";
 import { SidebarNotifications } from "@/src/components/nav/sidebar-notifications";
 import { type RouteGroup } from "@/src/components/layouts/routes";
 import { ExternalLink, Grid2X2 } from "lucide-react";
@@ -50,6 +51,7 @@ export function AppSidebar({
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
       <SidebarHeader>
         <div className="flex min-h-9 items-center gap-2 py-2 pr-0 pl-2 group-data-[collapsible=icon]:p-3">
+          <AppSwitcher />
           <HanzoLogo version />
         </div>
         <div className="h-1 flex-1 border-b" />
