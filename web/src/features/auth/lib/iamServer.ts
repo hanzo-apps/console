@@ -84,7 +84,11 @@ export async function iamPasswordLogin(params: {
   if (!client) return { ok: false, error: "IAM is not configured." };
 
   try {
-    // No `type` field ⇒ pure credential verification (no OAuth code dance).
+    // type:"login" ⇒ Casdoor verifies the password and returns the identity
+    // (`data: "<org>/<user>"`) directly — no OAuth code dance, and (verified
+    // against live IAM) no dependency on the app's redirectUris/grantTypes/
+    // enableSigninSession. Without a `type`, Casdoor errors "unknown response
+    // type". console mints its own session cookie from the returned identity.
     const res = await client.apiRequest<IamResponse<string>>("/v1/iam/login", {
       method: "POST",
       body: {
@@ -93,6 +97,7 @@ export async function iamPasswordLogin(params: {
         username: params.email,
         password: params.password,
         signinMethod: "Password",
+        type: "login",
         autoSignin: true,
       },
     });
