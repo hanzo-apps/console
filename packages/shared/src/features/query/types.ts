@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { singleFilter } from "../../types";
+import { singleFilter } from "../../interfaces/filters";
 
 export type ViewDeclarationType = z.infer<typeof viewDeclaration>;
 export type DimensionsDeclarationType = z.infer<typeof viewDeclaration>["dimensions"];

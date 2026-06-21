@@ -175,10 +175,9 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async () => {
           env.IAM_CLIENT_ID !== undefined && env.IAM_SERVER_URL !== undefined,
       },
       signUpDisabled: env.AUTH_DISABLE_SIGNUP === "true",
-      runningOnHuggingFaceSpaces: env.NEXTAUTH_URL?.replace(
-        "/v1/auth",
-        "",
-      ).endsWith(".hf.space"),
+      runningOnHuggingFaceSpaces:
+        env.NEXTAUTH_URL?.replace("/v1/auth", "").endsWith(".hf.space") ??
+        false,
     },
   };
 };
