@@ -158,7 +158,7 @@ export type ExperimentItemsTableProps = {
 };
 
 /**
- * Definition for a row within a grid cell - mirrors LangfuseColumnDef pattern.
+ * Definition for a row within a grid cell - mirrors HanzoColumnDef pattern.
  * Used by ExperimentGridCell to declaratively define sections with visibility control.
  */
 export type CellRowDef<TData> = {

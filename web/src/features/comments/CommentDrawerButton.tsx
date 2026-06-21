@@ -14,6 +14,7 @@ import { MessageCircleIcon, MessageCircleOff } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { type SelectionData } from "./contexts/InlineCommentSelectionContext";
+import { ButtonProps } from "@/src/components/ui/button";
 
 export function CommentDrawerButton({
   projectId,

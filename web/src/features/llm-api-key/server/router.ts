@@ -32,6 +32,23 @@ import {
 } from "@hanzo/console/src/server";
 import { env } from "@/src/env.mjs";
 import { TRPCError } from "@trpc/server";
+import {
+  EvaluatorBlockReason,
+  LLMConnectionConfig,
+  getEvaluatorBlockMetadata,
+} from "@hanzo/console";
+import {
+  EvaluatorBlockSource,
+  blockEvaluatorConfigsInTx,
+  finalizeBlockedEvaluatorConfigBlocks,
+  validateLlmConnectionBaseURL,
+} from "@hanzo/console/src/server";
+import { findDefaultModelEvalTemplateIds } from "@/src/features/evals/server/defaultModelEvalTemplateRepository";
+import {
+  AuthMethod,
+  BedrockAuthMethod,
+  SafeLlmApiKeySchema,
+} from "@/src/features/llm-api-key/types";
 
 export function getDisplaySecretKey(secretKey: string) {
   if (secretKey === BEDROCK_USE_DEFAULT_CREDENTIALS) {

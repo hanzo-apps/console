@@ -25,6 +25,8 @@ import {
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
 import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
+import { totalCostDashboardFormatted } from "@/src/features/dashboard/lib/dashboard-utils";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
 
 export const ModelUsageChart = ({
   className,

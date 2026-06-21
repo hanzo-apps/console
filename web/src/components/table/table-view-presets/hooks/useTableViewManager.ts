@@ -17,6 +17,7 @@ import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import isEqual from "lodash/isEqual";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { validateOrderBy, validateFilters } from "../validation";
+import { FilterStateMigration } from "@/src/features/filters/lib/filter-config";
 
 interface TableStateUpdaters {
   setColumnOrder: (columnOrder: string[]) => void;

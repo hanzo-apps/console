@@ -19,6 +19,7 @@ import {
 } from "@hanzo/console";
 import { prisma } from "@hanzo/console/src/db";
 import { traceException } from "@hanzo/console/src/server";
+import { config } from "@/src/middleware";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({

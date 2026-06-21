@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Bot } from "lucide-react";
 
 const DOCS_HREF =
-  "https://langfuse.com/docs/api-and-data-platform/features/agent-skill";
+  "https://hanzo.ai/docs/api-and-data-platform/features/agent-skill";
 
 /**
  * Informational, dismissible banner that highlights Langfuse's support for AI

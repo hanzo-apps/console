@@ -11,6 +11,8 @@ import {
   type QueryType,
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
+import { ObservationType } from "@hanzo/console";
 
 export const LatencyTables = ({
   projectId,

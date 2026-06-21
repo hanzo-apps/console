@@ -16,6 +16,7 @@ import {
   upsertDatasetItem,
 } from "@hanzo/console/src/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
+import { transformDbDatasetItemDomainToAPIDatasetItem } from "@/src/features/public-api/types/datasets";
 
 export const config = {
   api: {

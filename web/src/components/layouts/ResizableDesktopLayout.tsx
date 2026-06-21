@@ -5,6 +5,7 @@ import {
   ResizablePanelGroup,
 } from "@/src/components/ui/resizable";
 import type { ImperativePanelHandle } from "react-resizable-panels";
+import { useDefaultLayout, usePanelRef } from "@/src/components/ui/resizable";
 
 interface ResizableDesktopLayoutProps {
   mainContent: ReactNode;

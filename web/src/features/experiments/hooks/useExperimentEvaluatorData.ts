@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { type EvalTemplate } from "@hanzo/console";
 import { type RouterOutputs } from "@/src/utils/api";
 import { type PartialConfig } from "@/src/features/evals/types";
+import { JobConfigState, isJobConfigExecutable } from "@hanzo/console";
 
 const partitionEvaluators = (
   evaluators: RouterOutputs["evals"]["jobConfigsByTarget"] | undefined,

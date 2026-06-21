@@ -22,6 +22,8 @@ import {
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
 import type { DatabaseRow } from "@/src/server/api/services/sqlInterface";
+import { latencyFormatter } from "@/src/utils/numbers";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
 
 export const GenerationLatencyChart = ({
   className,

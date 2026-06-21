@@ -2,6 +2,10 @@ import { useEffect } from "react";
 import { api } from "@/src/utils/api";
 import { useState } from "react";
 import { type EvalTemplate } from "@hanzo/console/src/db";
+import {
+  isCodeEvalTemplate,
+  shouldShowEvalTemplate,
+} from "@/src/features/evals/utils/code-eval-template-utils";
 
 export function useTemplateValidation({
   projectId,

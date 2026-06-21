@@ -21,6 +21,9 @@ import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAcces
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { DownloadButton } from "@/src/features/widgets/chart-library/DownloadButton";
 import { formatMetricName } from "@/src/features/widgets/utils";
+import { QueryType, validateQuery } from "@hanzo/console";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
+import { getWidgetMetricPresentation } from "@/src/features/widgets/utils";
 
 export interface WidgetPlacement {
   id: string;

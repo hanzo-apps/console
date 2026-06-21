@@ -361,7 +361,7 @@ export const ExperimentGridCell = ({
     isLoading,
   };
 
-  // Define cell rows declaratively - mirrors LangfuseColumnDef pattern
+  // Define cell rows declaratively - mirrors HanzoColumnDef pattern
   // Fixed order: output, scores, trace scores, metadata
   const cellRows: CellRowDef<GridCellData>[] = useMemo(
     () => [

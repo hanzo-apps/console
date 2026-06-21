@@ -9,6 +9,7 @@ import { logger } from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { env } from "@/src/env.mjs";
+import { SlackApiError } from "@hanzo/console/src/server";
 
 export const slackRouter = createTRPCRouter({
   /**

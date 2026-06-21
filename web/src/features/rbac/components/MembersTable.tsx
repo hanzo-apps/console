@@ -292,7 +292,7 @@ export function MembersTable({
               );
             },
           },
-        ] satisfies LangfuseColumnDef<MembersTableRow>[])
+        ] satisfies HanzoColumnDef<MembersTableRow>[])
       : []),
     {
       accessorKey: "createdAt",

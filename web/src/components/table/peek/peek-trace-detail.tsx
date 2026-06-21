@@ -3,18 +3,24 @@ import { useRouter } from "next/router";
 import { Trace } from "@/src/components/trace2/Trace";
 import { Skeleton } from "@hanzo/ui";
 import { StringParam, useQueryParam, withDefault } from "use-query-params";
+import { TablePeekView } from "@/src/components/table/peek";
 
 export const PeekViewTraceDetail = ({ projectId }: { projectId: string }) => {
   const router = useRouter();
   const peekId = router.query.peek as string | undefined;
-  const timestamp = router.query.timestamp ? new Date(router.query.timestamp as string) : undefined;
+  const timestamp = router.query.timestamp
+    ? new Date(router.query.timestamp as string)
+    : undefined;
   const trace = usePeekData({
     projectId,
     traceId: peekId,
     timestamp,
   });
 
-  const [selectedTab, setSelectedTab] = useQueryParam("display", withDefault(StringParam, "details"));
+  const [selectedTab, setSelectedTab] = useQueryParam(
+    "display",
+    withDefault(StringParam, "details"),
+  );
 
   return !peekId || !trace.data ? (
     <Skeleton className="h-full w-full rounded-none" />

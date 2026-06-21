@@ -1,6 +1,9 @@
 import startCase from "lodash/startCase";
 import { type FilterState } from "@hanzo/console";
 import { type DashboardWidgetChartType } from "@hanzo/console/src/db";
+import { ViewVersion, getViewDeclaration, views } from "@hanzo/console";
+import { MetricFormatterFunction } from "@/src/features/widgets/chart-library/chart-props";
+import { formatMetric } from "@/src/features/widgets/chart-library/utils";
 
 // Shared widget chart configuration types
 export type WidgetChartConfig = {

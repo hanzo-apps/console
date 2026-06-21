@@ -28,6 +28,10 @@ import Link from "next/link";
 import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
 import { shouldShowEvalTemplate } from "@/src/features/evals/utils/code-eval-template-utils";
 import { SiPython, SiTypescript } from "react-icons/si";
+import {
+  EvalTemplateSourceCodeLanguage,
+  EvalTemplateType,
+} from "@hanzo/console";
 
 const CodeTemplateLanguageIcon = ({
   sourceCodeLanguage,

@@ -15,6 +15,8 @@ import {
   type MediaReturnType,
 } from "@/src/features/media/validation";
 import { File, Image as ImageIcon, Volume2 } from "lucide-react";
+import { isExpanded } from "@/src/ee/features/billing/utils/stripeExpand";
+import { ExternalLink } from "@/src/features/agents/components/ui/icon-bridge";
 
 export const HanzoMediaView = ({
   mediaReferenceString,

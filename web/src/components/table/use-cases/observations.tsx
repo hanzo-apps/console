@@ -81,6 +81,14 @@ import {
   type RefreshInterval,
   REFRESH_INTERVALS,
 } from "@/src/components/table/data-table-refresh-button";
+import { Skeleton } from "@/src/components/ui/skeleton";
+import {
+  TableBadgeLoadingCell,
+  TableTextLoadingCell,
+} from "@/src/components/table/loading-cells";
+import { PeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
+import { buildTraceDetailPath } from "@/src/utils/navigation";
+import { getSafeRedirectPath } from "@/src/utils/redirect";
 
 export type ObservationsTableRow = {
   // Shown by default
@@ -1163,7 +1171,7 @@ export default function ObservationsTable({
             return <span>{numberFormatter(value.totalUsage, 0)}</span>;
           },
         },
-      ] satisfies LangfuseColumnDef<ObservationsTableRow>[],
+      ] satisfies HanzoColumnDef<ObservationsTableRow>[],
     },
     {
       accessorKey: "cost",
@@ -1217,7 +1225,7 @@ export default function ObservationsTable({
           defaultHidden: true,
           enableSorting: true,
         },
-      ] satisfies LangfuseColumnDef<ObservationsTableRow>[],
+      ] satisfies HanzoColumnDef<ObservationsTableRow>[],
     },
   ];
 

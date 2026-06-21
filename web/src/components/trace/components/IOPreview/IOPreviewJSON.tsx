@@ -26,6 +26,7 @@ import { type CommentedPathsByField } from "@/src/components/ui/AdvancedJsonView
 import { type ExpansionState } from "@/src/components/ui/AdvancedJsonViewer/types";
 import { type ScoreDomain } from "@hanzo/console";
 import { CorrectedOutputField } from "./components/CorrectedOutputField";
+import { deepParseJson } from "@hanzo/console";
 
 const VIRTUALIZATION_THRESHOLD = 3333;
 

@@ -20,6 +20,7 @@ import {
   extractPlaceholderNames,
 } from "@hanzo/console/src/server";
 import { promptChangeEventSourcing } from "@/src/features/prompts/server/promptChangeEventSourcing";
+import { escapeSqlLikePattern } from "@hanzo/console/src/server";
 
 export type CreatePromptParams = CreatePromptTRPCType & {
   createdBy: string;

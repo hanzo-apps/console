@@ -3,6 +3,7 @@ import { api } from "@/src/utils/api";
 import { trpcErrorToast } from "@/src/utils/trpcErrorToast";
 import { extractValueFromObject } from "@hanzo/console";
 import { useEffect, useState, useRef } from "react";
+import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 
 /**
  * Helper function to find an observation by name in the trace data

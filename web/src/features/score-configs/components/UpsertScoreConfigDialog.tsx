@@ -46,6 +46,7 @@ import {
 } from "@/src/features/score-configs/lib/upsertFormTypes";
 import { validateScoreConfigUpsertFormInput } from "@/src/features/score-configs/lib/validateScoreConfigUpsertFormInput";
 import { ScoreConfigDataType } from "@hanzo/console";
+import { isTextDataType } from "@/src/features/scores/lib/helpers";
 
 export function UpsertScoreConfigDialog({
   projectId,

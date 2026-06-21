@@ -78,6 +78,21 @@ import {
   TooltipContent,
 } from "@/src/components/ui/tooltip";
 import { InfoIcon } from "lucide-react";
+import {
+  EvalTargetObject,
+  observationVariableMapping,
+  validateEvaluatorFiltersForTarget,
+} from "@hanzo/console";
+import {
+  getCodeEvalVariableMapping,
+  resolveCodeEvalTarget,
+} from "@/src/features/evals/utils/code-eval-template-utils";
+import {
+  isEventTarget,
+  isExperimentTarget,
+  isLegacyEvalTarget,
+} from "@/src/features/evals/utils/typeHelpers";
+import { getExperimentEvalPreviewFilters } from "@/src/features/evals/utils/experiment-eval-preview-utils";
 
 // Lazy load TracesTable
 const TracesTable = lazy(

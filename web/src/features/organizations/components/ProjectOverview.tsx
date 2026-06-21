@@ -12,7 +12,6 @@ import {
 import { Input } from "@/src/components/ui/input";
 import { env } from "@/src/env.mjs";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
-import { AgentToolsBanner } from "@/src/features/developer-tools/components/AgentToolsBanner";
 import {
   createOrganizationRoute,
   createProjectRoute,
@@ -33,6 +32,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Fragment } from "react";
 import { StringParam, useQueryParams } from "use-query-params";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 
 const OrganizationProjectTiles = ({
   org,
@@ -303,9 +303,6 @@ export const OrganizationProjectOverview = () => {
         ),
       }}
     >
-      <div className="mb-4">
-        <AgentToolsBanner />
-      </div>
       {showOnboarding && <Onboarding />}
       {organizations
         .sort((a, b) => {

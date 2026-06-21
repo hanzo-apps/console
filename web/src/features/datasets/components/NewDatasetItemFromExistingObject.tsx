@@ -25,6 +25,7 @@ import { parseJsonPrioritised } from "@hanzo/console";
 import { ActionButton } from "@/src/components/ActionButton";
 import { type MetadataDomainClient } from "@/src/utils/clientSideDomainTypes";
 import { type Prisma } from "@hanzo/console";
+import { ButtonProps } from "@/src/components/ui/button";
 
 /**
  * Component for creating a new dataset item from an existing object.

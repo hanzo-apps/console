@@ -13,6 +13,9 @@ import {
 } from "@hanzo/console";
 import { prisma } from "@hanzo/console/src/db";
 import { logger, instrumentAsync } from "@hanzo/console/src/server";
+import { getMediaStorageServiceClient } from "@/src/features/media/server/getMediaStorageClient";
+import { MediaContentType } from "@/src/features/media/validation";
+import { getFileExtensionFromContentType } from "@/src/features/media/server/getFileExtensionFromContentType";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({

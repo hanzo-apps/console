@@ -24,6 +24,7 @@ import { organizationFormSchema } from "@/src/features/organizations/utils/organ
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { SurveyName } from "@hanzo/console";
 import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { FormDescription } from "@/src/components/ui/form";
 
 export const NewOrganizationForm = ({
   onSuccess,

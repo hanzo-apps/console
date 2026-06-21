@@ -34,6 +34,7 @@ import { isCloudPlan, planLabels } from "@hanzo/console";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Fragment } from "react";
+import { Spinner } from "@/src/components/layouts/spinner";
 
 const LoadingMenuItem = () => (
   <DropdownMenuItem>

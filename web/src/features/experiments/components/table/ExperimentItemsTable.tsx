@@ -17,7 +17,7 @@ import {
   getExperimentItemsColumnName,
   experimentItemsFilterConfig,
 } from "../../config/experiment-items-filter-config";
-import { type LangfuseColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import {
   type FilterState,
   type FilterCondition,
@@ -512,9 +512,9 @@ export default function ExperimentItemsTable({
 
   const buildExperimentScoreColumns = useCallback(
     (
-      scoreColumns: LangfuseColumnDef<ExperimentItemData>[],
+      scoreColumns: HanzoColumnDef<ExperimentItemData>[],
       scoreField: "observationScores" | "traceScores",
-    ): LangfuseColumnDef<ExperimentItemsTableRow>[] =>
+    ): HanzoColumnDef<ExperimentItemsTableRow>[] =>
       scoreColumns.map((scoreCol) => ({
         ...scoreCol,
         // Override the cell renderer to show stacked scores for each experiment
@@ -578,7 +578,7 @@ export default function ExperimentItemsTable({
             />
           );
         },
-      })) as LangfuseColumnDef<ExperimentItemsTableRow>[],
+      })) as HanzoColumnDef<ExperimentItemsTableRow>[],
     [allExperimentIds, colorExperimentIds, hasBaseline, baselineId],
   );
 
@@ -609,7 +609,7 @@ export default function ExperimentItemsTable({
     [traceScoreColumns],
   );
 
-  const columns: LangfuseColumnDef<ExperimentItemsTableRow>[] = [
+  const columns: HanzoColumnDef<ExperimentItemsTableRow>[] = [
     ...(hideControls ? [] : [selectActionColumn]),
     {
       accessorKey: "itemId",

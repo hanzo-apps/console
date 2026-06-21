@@ -51,6 +51,12 @@ import { useSelectAll } from "@/src/features/table/hooks/useSelectAll";
 import { TableSelectionManager } from "@/src/features/table/components/TableSelectionManager";
 import { useTableViewManager } from "@/src/components/table/table-view-presets/hooks/useTableViewManager";
 import TableIdOrName from "@/src/components/table/table-id";
+import { UseSidebarFilterStateOptions } from "@/src/features/filters/hooks/useSidebarFilterState";
+import { DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG } from "@/src/features/filters/constants/internal-environments";
+import {
+  TableBadgeLoadingCell,
+  TableTextLoadingCell,
+} from "@/src/components/table/loading-cells";
 
 export type ScoresTableRow = {
   id: string;

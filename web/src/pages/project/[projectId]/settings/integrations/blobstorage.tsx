@@ -46,6 +46,7 @@ import {
   type BlobStorageIntegration,
 } from "@hanzo/console";
 import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { isLegacyBlobExportAllowed } from "@hanzo/console";
 
 export default function BlobStorageIntegrationSettings() {
   const router = useRouter();

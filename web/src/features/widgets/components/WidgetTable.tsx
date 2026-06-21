@@ -24,6 +24,9 @@ import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { useRouter } from "next/router";
 import { getChartTypeDisplayName } from "@/src/features/widgets/chart-library/utils";
 import { type DashboardWidgetChartType } from "@hanzo/console/src/db";
+import { downloadWidgetJson } from "@/src/features/widgets/utils/import-export-utils";
+import { metricAggregations } from "@hanzo/console";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
 
 type WidgetTableRow = {
   id: string;
