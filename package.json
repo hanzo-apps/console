@@ -1,0 +1,33 @@
+{
+  "name": "@hanzo/console2",
+  "version": "0.1.0",
+  "private": true,
+  "license": "BSD-3-Clause",
+  "author": "Hanzo AI <dev@hanzo.ai>",
+  "description": "Hanzo Cloud Console — unified admin console for Hanzo Cloud and all cloud products.",
+  "scripts": {
+    "dev": "next dev -p 4000",
+    "build": "next build",
+    "start": "next start -p 4000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hanzo/gui": "7.3.0",
+    "@hanzo/iam-js-sdk": "0.19.1",
+    "@hanzogui/config": "7.3.0",
+    "@hanzogui/core": "7.3.0",
+    "@hanzogui/lucide-icons-2": "7.3.0",
+    "@hanzogui/next-theme": "7.3.0",
+    "next": "15.5.19",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-native-web": "0.21.2"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.0",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "react-native": "0.83.9",
+    "typescript": "5.9.3"
+  }
+}
