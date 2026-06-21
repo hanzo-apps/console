@@ -4,8 +4,8 @@ import {
   BaseError,
   InvalidRequestError,
   InternalServerError,
-  LangfuseConflictError,
-  LangfuseNotFoundError,
+  ConsoleConflictError,
+  ConsoleNotFoundError,
   MethodNotAllowedError,
   UnauthorizedError,
   type RateLimitResult,
@@ -168,7 +168,7 @@ export function toUnstablePublicApiError(
     });
   }
 
-  if (error instanceof LangfuseNotFoundError) {
+  if (error instanceof ConsoleNotFoundError) {
     return createUnstablePublicApiError({
       httpCode: 404,
       code: "resource_not_found",
@@ -192,7 +192,7 @@ export function toUnstablePublicApiError(
     });
   }
 
-  if (error instanceof LangfuseConflictError) {
+  if (error instanceof ConsoleConflictError) {
     return createUnstablePublicApiError({
       httpCode: 409,
       code: "conflict",

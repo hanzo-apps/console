@@ -23,6 +23,7 @@ export const ModelCostTable = ({
   fromTimestamp,
   toTimestamp,
   isLoading = false,
+  schedulerId,
 }: {
   className: string;
   projectId: string;
@@ -30,6 +31,7 @@ export const ModelCostTable = ({
   fromTimestamp: Date;
   toTimestamp: Date;
   isLoading?: boolean;
+  schedulerId?: string;
 }) => {
   const modelCostQuery: QueryType = {
     view: "observations",

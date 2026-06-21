@@ -1,6 +1,5 @@
 import type React from "react";
-import type { ColumnDefinition } from "@hanzo/console";
-import { FilterState } from "@/src/features/agents/types/filters";
+import type { ColumnDefinition, FilterState } from "@hanzo/console";
 
 interface BaseFacet {
   column: string;

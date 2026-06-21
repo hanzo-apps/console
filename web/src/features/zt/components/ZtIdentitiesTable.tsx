@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { useZtIdentities, useDeleteZtIdentity } from "@/src/features/zt/hooks";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { CreateIdentityDialog } from "./CreateIdentityDialog";
@@ -50,7 +50,9 @@ export function ZtIdentitiesTable({ projectId }: { projectId: string }) {
     name: string;
   } | null>(null);
 
-  const identities: IdentityRow[] = ((query.data as { data?: ZtIdentity[] })?.data ?? []).map((i) => ({
+  const identities: IdentityRow[] = (
+    (query.data as { data?: ZtIdentity[] })?.data ?? []
+  ).map((i) => ({
     id: i.id,
     name: i.name,
     typeName: i.type.name,
@@ -60,7 +62,7 @@ export function ZtIdentitiesTable({ projectId }: { projectId: string }) {
     createdAt: i.createdAt,
   }));
 
-  const columns: ConsoleColumnDef<IdentityRow>[] = [
+  const columns: HanzoColumnDef<IdentityRow>[] = [
     {
       accessorKey: "name",
       id: "name",
@@ -94,7 +96,9 @@ export function ZtIdentitiesTable({ projectId }: { projectId: string }) {
       header: "Admin",
       size: 80,
       cell: ({ row }) => {
-        return row.original.isAdmin ? <Badge variant="secondary">Admin</Badge> : null;
+        return row.original.isAdmin ? (
+          <Badge variant="secondary">Admin</Badge>
+        ) : null;
       },
     },
     {
@@ -105,9 +109,11 @@ export function ZtIdentitiesTable({ projectId }: { projectId: string }) {
       cell: ({ row }) => {
         const attrs = row.original.roleAttributes;
         return attrs.length > 0 ? (
-          <span className="text-xs text-muted-foreground">{attrs.join(", ")}</span>
+          <span className="text-muted-foreground text-xs">
+            {attrs.join(", ")}
+          </span>
         ) : (
-          <span className="text-xs text-muted-foreground">-</span>
+          <span className="text-muted-foreground text-xs">-</span>
         );
       },
     },
@@ -137,7 +143,9 @@ export function ZtIdentitiesTable({ projectId }: { projectId: string }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/project/${projectId}/zt/identities/${identity.id}`}>
+                <Link
+                  href={`/project/${projectId}/zt/identities/${identity.id}`}
+                >
                   <Eye className="mr-2 h-4 w-4" />
                   View
                 </Link>
@@ -200,7 +208,9 @@ export function ZtIdentitiesTable({ projectId }: { projectId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete identity?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+              Are you sure you want to delete{" "}
+              <strong>{deleteTarget?.name}</strong>? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

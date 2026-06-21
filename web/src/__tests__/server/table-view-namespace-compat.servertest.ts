@@ -8,10 +8,7 @@ import {
   TableViewService,
 } from "@hanzo/console/src/server";
 import { randomUUID } from "crypto";
-import {
-  LangfuseConflictError,
-  TableViewPresetTableName,
-} from "@hanzo/console";
+import { ConsoleConflictError, TableViewPresetTableName } from "@hanzo/console";
 
 const createTableViewPreset = async ({
   projectId,
@@ -258,7 +255,7 @@ describe("table view namespace compatibility", () => {
         },
         "user-1",
       ),
-    ).rejects.toBeInstanceOf(LangfuseConflictError);
+    ).rejects.toBeInstanceOf(ConsoleConflictError);
   });
 
   it("surfaces a conflict when renaming a legacy preset into an existing events name", async () => {
@@ -286,6 +283,6 @@ describe("table view namespace compatibility", () => {
         },
         "user-1",
       ),
-    ).rejects.toBeInstanceOf(LangfuseConflictError);
+    ).rejects.toBeInstanceOf(ConsoleConflictError);
   });
 });

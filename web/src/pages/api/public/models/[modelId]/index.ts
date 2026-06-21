@@ -11,7 +11,6 @@ import {
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { clearModelCacheForProject } from "@hanzo/console/src/server";
 import { getModelForApi } from "@/src/features/models/server/publicApiModelService";
-import { prismaToApiModelDefinition } from "@/src/features/public-api/types/models";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({
@@ -23,12 +22,6 @@ export default withMiddlewares({
         projectId: auth.scope.projectId,
         modelId: query.modelId,
       });
-
-      if (!model) {
-        throw new ConsoleNotFoundError("No model with this id found.");
-      }
-
-      return prismaToApiModelDefinition(model);
     },
   }),
 

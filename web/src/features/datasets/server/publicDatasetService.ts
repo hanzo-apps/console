@@ -31,8 +31,8 @@ import {
 import {
   ApiError,
   type JSONValue,
-  LangfuseConflictError,
-  LangfuseNotFoundError,
+  ConsoleConflictError,
+  ConsoleNotFoundError,
   Prisma,
   UnauthorizedError,
 } from "@hanzo/console";
@@ -171,7 +171,7 @@ const getDatasetByNameOrThrow = async ({
   });
 
   if (!dataset) {
-    throw new LangfuseNotFoundError("Dataset not found");
+    throw new ConsoleNotFoundError("Dataset not found");
   }
 
   return dataset;
@@ -194,7 +194,7 @@ const getDatasetByIdOrThrow = async ({
   });
 
   if (!dataset) {
-    throw new LangfuseNotFoundError("Dataset not found");
+    throw new ConsoleNotFoundError("Dataset not found");
   }
 
   return dataset;
@@ -234,7 +234,7 @@ const getDatasetRunRecordOrThrow = async ({
   }
 
   if (!datasetRuns[0]) {
-    throw new LangfuseNotFoundError("Dataset run not found");
+    throw new ConsoleNotFoundError("Dataset run not found");
   }
 
   return datasetRuns[0];
@@ -314,7 +314,7 @@ const getDatasetRunRecordByIdOrThrow = async ({
   });
 
   if (!datasetRun || datasetRun.datasetId !== datasetId) {
-    throw new LangfuseNotFoundError("Dataset run not found");
+    throw new ConsoleNotFoundError("Dataset run not found");
   }
 
   return datasetRun;
@@ -469,7 +469,7 @@ export const getDatasetByNameForApi = async ({
   });
 
   if (!dataset) {
-    throw new LangfuseNotFoundError("Dataset not found");
+    throw new ConsoleNotFoundError("Dataset not found");
   }
 
   const datasetItems = await getDatasetItems({
@@ -553,7 +553,7 @@ export const getDatasetItemForApi = async ({
   });
 
   if (!datasetItem) {
-    throw new LangfuseNotFoundError("Dataset item not found");
+    throw new ConsoleNotFoundError("Dataset item not found");
   }
 
   const dataset = await prisma.dataset.findUnique({
@@ -568,7 +568,7 @@ export const getDatasetItemForApi = async ({
 
   // Note that we cascade items on delete, so returning a 404 here is expected.
   if (!dataset) {
-    throw new LangfuseNotFoundError("Dataset not found");
+    throw new ConsoleNotFoundError("Dataset not found");
   }
 
   return transformDbDatasetItemDomainToAPIDatasetItem({
@@ -641,7 +641,7 @@ export const createDatasetItemForApi = async ({
         logger.warn(
           `Failed to upsert dataset item. Dataset item ${input.id} already exists for a different dataset than ${datasetIdentifierForLog}`,
         );
-        throw new LangfuseNotFoundError(
+        throw new ConsoleNotFoundError(
           `The dataset item with id ${input.id} already exists in a dataset other than ${datasetIdentifierForLog}`,
         );
       }
@@ -653,7 +653,7 @@ export const createDatasetItemForApi = async ({
         logger.warn(
           `Failed to upsert dataset item due to version conflict. Dataset item ${input.id} was modified concurrently.`,
         );
-        throw new LangfuseConflictError(
+        throw new ConsoleConflictError(
           `Dataset item ${input.id ?? "new"} was modified concurrently. Please retry the request.`,
         );
       }
@@ -712,7 +712,7 @@ export const createDatasetRunItemForApi = async ({
   });
 
   if (!datasetItem) {
-    throw new LangfuseNotFoundError("Dataset item not found");
+    throw new ConsoleNotFoundError("Dataset item not found");
   }
 
   let finalTraceId = traceId;
@@ -725,13 +725,13 @@ export const createDatasetRunItemForApi = async ({
       fetchWithInputOutput: false,
     });
     if (!observation) {
-      throw new LangfuseNotFoundError("Observation not found");
+      throw new ConsoleNotFoundError("Observation not found");
     }
     finalTraceId = observation.traceId;
   }
 
   if (!finalTraceId) {
-    throw new LangfuseNotFoundError("Trace not found");
+    throw new ConsoleNotFoundError("Trace not found");
   }
 
   const metadata = {
@@ -851,7 +851,7 @@ export const listDatasetRunItemsForApi = async ({
   });
 
   if (!datasetRun) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "Dataset run not found for the given project and dataset id",
     );
   }
@@ -914,7 +914,7 @@ export const listDatasetRunItemsByRunIdForApi = async ({
   });
 
   if (!datasetRun || datasetRun.datasetId !== datasetId) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "Dataset run not found for the given project and dataset id",
     );
   }
@@ -975,7 +975,7 @@ export const listDatasetRunsForApi = async ({
   });
 
   if (!dataset) {
-    throw new LangfuseNotFoundError("Dataset not found");
+    throw new ConsoleNotFoundError("Dataset not found");
   }
 
   const totalItems = await prisma.datasetRuns.count({

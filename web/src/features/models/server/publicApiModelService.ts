@@ -7,7 +7,7 @@ import type {
   PostModelsV1Body,
 } from "@/src/features/public-api/types/models";
 import { prismaToApiModelDefinition } from "@/src/features/public-api/types/models";
-import { InvalidRequestError, LangfuseNotFoundError } from "@hanzo/console";
+import { InvalidRequestError, ConsoleNotFoundError } from "@hanzo/console";
 import { Prisma, prisma } from "@hanzo/console/src/db";
 import { clearModelCacheForProject } from "@hanzo/console/src/server";
 import type { z } from "zod";
@@ -104,7 +104,7 @@ export const getModelForApi = async ({ projectId, modelId }: GetModelInput) => {
   });
 
   if (!model) {
-    throw new LangfuseNotFoundError("No model with this id found.");
+    throw new ConsoleNotFoundError("No model with this id found.");
   }
 
   return prismaToApiModelDefinition(model);
@@ -257,7 +257,7 @@ export const deleteModelForApi = async ({
   });
 
   if (!model) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "No model with this id found. Note: You cannot delete built-in models, override them with a model with the same name.",
     );
   }

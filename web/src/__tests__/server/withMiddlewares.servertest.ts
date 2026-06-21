@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import {
   BaseError,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   UnauthorizedError,
   ServiceUnavailableError,
 } from "@hanzo/console";
@@ -92,9 +92,9 @@ describe("withMiddlewares error handling", () => {
     });
   });
 
-  describe("HanzoNotFoundError handling", () => {
-    it("should handle HanzoNotFoundError and log as info", async () => {
-      const error = new HanzoNotFoundError("Resource not found");
+  describe("ConsoleNotFoundError handling", () => {
+    it("should handle ConsoleNotFoundError and log as info", async () => {
+      const error = new ConsoleNotFoundError("Resource not found");
 
       const handler = withMiddlewares({
         GET: async () => {
@@ -115,7 +115,7 @@ describe("withMiddlewares error handling", () => {
       const jsonData = JSON.parse(res._getData());
       expect(jsonData).toMatchObject({
         message: "Resource not found",
-        error: "HanzoNotFoundError",
+        error: "ConsoleNotFoundError",
       });
       // Should log as info, not error
       expect(logger.info).toHaveBeenCalledWith(error);

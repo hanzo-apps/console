@@ -219,6 +219,7 @@ export const PivotTable: React.FC<PivotTableProps> = ({
   onSortChange,
   isLoading = false,
 }) => {
+  const units = config?.units;
   // Transform chart data into pivot table structure
   const pivotTableRows = useMemo(() => {
     if (!data || data.length === 0) {

@@ -81,6 +81,7 @@ export function ViewPreferencesProvider({
   traceContext = "fullscreen",
 }: ViewPreferencesProviderProps) {
   const isPeekMode = traceContext === "peek";
+  const isAnnotationMode = traceContext === "annotation";
   const [showDuration, setShowDuration] = useLocalStorage(
     "durationOnObservationTree",
     true,

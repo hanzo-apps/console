@@ -50,6 +50,7 @@ export function getHanzoClient(
   publicKey: string,
   secretKey: string,
   baseUrl?: string,
+  enabled?: boolean,
 ): Hanzo {
   if (!hanzoClient) {
     hanzoClient = new Hanzo({

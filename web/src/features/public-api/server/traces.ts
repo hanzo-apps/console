@@ -12,7 +12,11 @@ import {
   tracesTableUiColumnDefinitions,
   shouldSkipObservationsFinal,
 } from "@hanzo/console/src/server";
-import { AGGREGATABLE_SCORE_TYPES, type OrderByState } from "@hanzo/console";
+import {
+  AGGREGATABLE_SCORE_TYPES,
+  LISTABLE_SCORE_TYPES,
+  type OrderByState,
+} from "@hanzo/console";
 import {
   TRACE_FIELD_GROUPS,
   type TraceFieldGroup,

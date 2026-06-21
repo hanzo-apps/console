@@ -12,7 +12,7 @@ import {
   BaseError,
   UnauthorizedError,
   ForbiddenError,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   InvalidRequestError,
 } from "@hanzo/console";
 import { logger } from "@hanzo/console/src/server";
@@ -68,7 +68,7 @@ export function formatErrorForUser(error: unknown): McpError {
     );
   }
 
-  if (error instanceof HanzoNotFoundError) {
+  if (error instanceof ConsoleNotFoundError) {
     return new McpError(ErrorCode.InvalidRequest, error.message);
   }
 

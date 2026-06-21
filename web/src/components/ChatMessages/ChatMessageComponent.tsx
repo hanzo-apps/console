@@ -36,6 +36,7 @@ import {
   useOptionalMessageSearchActions,
   useOptionalMessageSearchPageId,
 } from "@/src/components/ChatMessages/MessageSearch";
+import { useOptionalPlaygroundContext } from "@/src/features/playground/page/context";
 
 type ChatMessageProps = Pick<
   MessagesContext,

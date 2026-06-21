@@ -13,7 +13,7 @@ import {
   useQueryParam,
   StringParam,
 } from "use-query-params";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TableIdOrName from "@/src/components/table/table-id";
 import { TablePeekViewEvaluatorTemplateDetail } from "@/src/components/table/peek/peek-evaluator-template-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
@@ -409,6 +409,21 @@ export default function EvalsTemplateTable({
       basePath: `/project/${projectId}/evals/templates`,
     },
   });
+
+  const peekConfig = useMemo(
+    () => ({
+      itemType: "EVALUATOR" as const,
+      detailNavigationKey: "eval-templates",
+      peekEventOptions: {
+        ignoredSelectors: [
+          "[aria-label='apply'], [aria-label='actions'], [aria-label='edit'], [aria-label='clone']",
+        ],
+      },
+      tableDataUpdatedAt: templates.dataUpdatedAt,
+      ...peekNavigationProps,
+    }),
+    [peekNavigationProps, templates.dataUpdatedAt],
+  );
 
   const convertToTableRow = (
     template: RouterOutputs["evals"]["templateNames"]["templates"][number],

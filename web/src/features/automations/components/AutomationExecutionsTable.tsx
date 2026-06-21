@@ -2,7 +2,7 @@ import React from "react";
 import { api } from "@/src/utils/api";
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
 import { IOTableCell } from "@/src/components/ui/IOTableCell";
 import { useQueryParams, withDefault, NumberParam } from "use-query-params";
@@ -27,22 +27,28 @@ interface AutomationExecutionsTableProps {
   automationId: string;
 }
 
-export const AutomationExecutionsTable: React.FC<AutomationExecutionsTableProps> = ({ projectId, automationId }) => {
+export const AutomationExecutionsTable: React.FC<
+  AutomationExecutionsTableProps
+> = ({ projectId, automationId }) => {
   const [paginationState, setPaginationState] = useQueryParams({
     pageIndex: withDefault(NumberParam, 0),
     pageSize: withDefault(NumberParam, 50),
   });
 
-  const [rowHeight, setRowHeight] = useRowHeightLocalStorage("automation-executions", "s");
+  const [rowHeight, setRowHeight] = useRowHeightLocalStorage(
+    "automation-executions",
+    "s",
+  );
 
-  const { data, isLoading, isError, error } = api.automations.getAutomationExecutions.useQuery({
-    projectId,
-    automationId,
-    page: paginationState.pageIndex,
-    limit: paginationState.pageSize,
-  });
+  const { data, isLoading, isError, error } =
+    api.automations.getAutomationExecutions.useQuery({
+      projectId,
+      automationId,
+      page: paginationState.pageIndex,
+      limit: paginationState.pageSize,
+    });
 
-  const columns: ConsoleColumnDef<ActionExecutionRow>[] = [
+  const columns: HanzoColumnDef<ActionExecutionRow>[] = [
     {
       accessorKey: "status",
       header: "Status",
@@ -62,8 +68,12 @@ export const AutomationExecutionsTable: React.FC<AutomationExecutionsTableProps>
         const date = new Date(value);
         return (
           <div className="flex flex-col">
-            <span className="text-xs">{formatDistanceToNow(date, { addSuffix: true })}</span>
-            <span className="text-xs text-muted-foreground">{date.toLocaleString()}</span>
+            <span className="text-xs">
+              {formatDistanceToNow(date, { addSuffix: true })}
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {date.toLocaleString()}
+            </span>
           </div>
         );
       },
@@ -75,7 +85,9 @@ export const AutomationExecutionsTable: React.FC<AutomationExecutionsTableProps>
       cell: ({ row }) => {
         const duration = row.getValue("duration") as number | null;
         if (!duration) return <span className="text-muted-foreground">-</span>;
-        return <span className="text-nowrap">{formatIntervalSeconds(duration)}</span>;
+        return (
+          <span className="text-nowrap">{formatIntervalSeconds(duration)}</span>
+        );
       },
     },
     {
@@ -122,19 +134,29 @@ export const AutomationExecutionsTable: React.FC<AutomationExecutionsTableProps>
         createdAt: execution.createdAt.toISOString(),
         startedAt: execution.startedAt?.toISOString() || null,
         duration: execution.finishedAt
-          ? (execution.finishedAt.getTime() - (execution.startedAt?.getTime() ?? 0)) / 1000
+          ? (execution.finishedAt.getTime() -
+              (execution.startedAt?.getTime() ?? 0)) /
+            1000
           : null,
       })) || []
     );
   }, [data]);
 
   if (isError) {
-    return <div className="py-4 text-center text-red-600">Error loading execution history: {error?.message}</div>;
+    return (
+      <div className="py-4 text-center text-red-600">
+        Error loading execution history: {error?.message}
+      </div>
+    );
   }
 
   return (
     <>
-      <DataTableToolbar columns={columns} rowHeight={rowHeight} setRowHeight={setRowHeight} />
+      <DataTableToolbar
+        columns={columns}
+        rowHeight={rowHeight}
+        setRowHeight={setRowHeight}
+      />
       <DataTable
         tableName={"automationExecutions"}
         columns={columns}

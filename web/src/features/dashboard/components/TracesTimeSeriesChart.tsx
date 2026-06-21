@@ -25,6 +25,7 @@ export const TracesAndObservationsTimeSeriesChart = ({
   toTimestamp,
   agg,
   isLoading = false,
+  schedulerId,
 }: {
   className?: string;
   projectId: string;
@@ -33,6 +34,7 @@ export const TracesAndObservationsTimeSeriesChart = ({
   toTimestamp: Date;
   agg: DashboardDateRangeAggregationOption;
   isLoading?: boolean;
+  schedulerId?: string;
 }) => {
   const tracesQuery: QueryType = {
     view: "traces",

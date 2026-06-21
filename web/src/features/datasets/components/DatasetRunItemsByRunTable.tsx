@@ -30,6 +30,7 @@ export function DatasetRunItemsByRunTable(props: {
   datasetId: string;
   datasetRunId: string;
 }) {
+  const { projectId, datasetId, datasetRunId } = props;
   const { setDetailPageList } = useDetailPageLists();
   const [paginationState, setPaginationState] = useQueryParams({
     pageIndex: withDefault(NumberParam, 0),

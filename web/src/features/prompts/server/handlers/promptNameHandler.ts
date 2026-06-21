@@ -6,7 +6,7 @@ import { withMiddlewares } from "@/src/features/public-api/server/withMiddleware
 import { authorizePromptRequestOrThrow } from "../utils/authorizePromptRequest";
 import {
   GetPromptByNameSchema,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   PRODUCTION_LABEL,
 } from "@hanzo/console";
 import { RateLimitService } from "@/src/features/public-api/server/RateLimitService";
@@ -49,7 +49,7 @@ const getPromptNameHandler = async (
       errorMessage += ` with label '${label ?? PRODUCTION_LABEL}'`;
     }
 
-    throw new HanzoNotFoundError(errorMessage);
+    throw new ConsoleNotFoundError(errorMessage);
   }
 
   res.status(200).json({

@@ -12,6 +12,7 @@ import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFi
 import {
   getEventsColumnName,
   observationEventsFilterConfig,
+  type ObservationEventsOmittableFilterColumn,
 } from "../config/filter-config";
 import { formatIntervalSeconds } from "@/src/utils/dates";
 import { type HanzoColumnDef } from "@/src/components/table/types";
@@ -41,7 +42,7 @@ import { InfoIcon, PlusCircle } from "lucide-react";
 import { UpsertModelFormDialog } from "@/src/features/models/components/UpsertModelFormDialog";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { Badge } from "@/src/components/ui/badge";
-import { type RowSelectionState } from "@tanstack/react-table";
+import { type Row, type RowSelectionState } from "@tanstack/react-table";
 import TableIdOrName from "@/src/components/table/table-id";
 import { ItemBadge } from "@/src/components/ItemBadge";
 import { TablePeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
@@ -156,11 +157,16 @@ export type EventsTableRow = {
 
 export type EventsTableProps = {
   projectId: string;
+  omittedFilter?: ObservationEventsOmittableFilterColumn[];
+  hideControls?: boolean;
 };
 
 export default function ObservationsEventsTable({
   projectId,
+  omittedFilter = [],
+  hideControls = false,
 }: EventsTableProps) {
+  const peekContext = usePeekTableState();
   const router = useRouter();
   const { viewId } = router.query;
   const eventsFilterConfig = useMemo(
@@ -415,6 +421,15 @@ export default function ObservationsEventsTable({
       projectId,
       filter: scoreFilters.forObservations(),
       fromTimestamp: dateRange?.from,
+    });
+
+  const { scoreColumns: traceScoreColumns, isLoading: isTraceColumnLoading } =
+    useScoreColumns<EventsTableRow>({
+      scoreColumnKey: "traceScores",
+      projectId,
+      filter: scoreFilters.forTraceLevel(),
+      fromTimestamp: dateRange?.from,
+      prefix: "Trace",
     });
 
   const { selectActionColumn } = TableSelectionManager<EventsTableRow>({

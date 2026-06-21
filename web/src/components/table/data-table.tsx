@@ -153,6 +153,8 @@ const getPinningClasses = <TData,>(column: Column<TData>): string => {
   );
 };
 
+type DataTableCellPadding = "compact" | "comfortable" | "none";
+
 const getCellPaddingClassName = (padding: DataTableCellPadding) => {
   switch (padding) {
     case "comfortable":

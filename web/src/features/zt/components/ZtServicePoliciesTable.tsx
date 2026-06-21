@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
-import { useZtServicePolicies, useDeleteZtServicePolicy } from "@/src/features/zt/hooks";
+import { type HanzoColumnDef } from "@/src/components/table/types";
+import {
+  useZtServicePolicies,
+  useDeleteZtServicePolicy,
+} from "@/src/features/zt/hooks";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { CreateServicePolicyDialog } from "./CreateServicePolicyDialog";
 import { Button } from "@/src/components/ui/button";
@@ -48,23 +51,27 @@ export function ZtServicePoliciesTable({ projectId }: { projectId: string }) {
     name: string;
   } | null>(null);
 
-  const policies: ServicePolicyRow[] = (query.data?.data ?? []).map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    type: item.type,
-    semantic: item.semantic,
-    identityRoles: item.identityRoles ?? [],
-    serviceRoles: item.serviceRoles ?? [],
-    createdAt: item.createdAt,
-  }));
+  const policies: ServicePolicyRow[] = (query.data?.data ?? []).map(
+    (item: any) => ({
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      semantic: item.semantic,
+      identityRoles: item.identityRoles ?? [],
+      serviceRoles: item.serviceRoles ?? [],
+      createdAt: item.createdAt,
+    }),
+  );
 
-  const columns: ConsoleColumnDef<ServicePolicyRow>[] = [
+  const columns: HanzoColumnDef<ServicePolicyRow>[] = [
     {
       accessorKey: "name",
       id: "name",
       header: "Name",
       size: 200,
-      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.name}</span>
+      ),
     },
     {
       accessorKey: "type",
@@ -74,7 +81,11 @@ export function ZtServicePoliciesTable({ projectId }: { projectId: string }) {
       cell: ({ row }) => {
         const t = row.original.type;
         return (
-          <StatusBadge type={t === "Bind" ? "active" : "pending"} isLive={false} showText={false}>
+          <StatusBadge
+            type={t === "Bind" ? "active" : "pending"}
+            isLive={false}
+            showText={false}
+          >
             {t}
           </StatusBadge>
         );
@@ -85,7 +96,9 @@ export function ZtServicePoliciesTable({ projectId }: { projectId: string }) {
       id: "semantic",
       header: "Semantic",
       size: 100,
-      cell: ({ row }) => <code className="text-xs">{row.original.semantic}</code>,
+      cell: ({ row }) => (
+        <code className="text-xs">{row.original.semantic}</code>
+      ),
     },
     {
       accessorKey: "identityRoles",
@@ -116,7 +129,10 @@ export function ZtServicePoliciesTable({ projectId }: { projectId: string }) {
       id: "createdAt",
       header: "Created",
       size: 150,
-      cell: ({ row }) => (row.original.createdAt ? new Date(row.original.createdAt).toLocaleString() : "-"),
+      cell: ({ row }) =>
+        row.original.createdAt
+          ? new Date(row.original.createdAt).toLocaleString()
+          : "-",
     },
     {
       accessorKey: "actions",
@@ -136,7 +152,9 @@ export function ZtServicePoliciesTable({ projectId }: { projectId: string }) {
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => setDeleteTarget({ id: policy.id, name: policy.name })}
+                onClick={() =>
+                  setDeleteTarget({ id: policy.id, name: policy.name })
+                }
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
@@ -184,7 +202,9 @@ export function ZtServicePoliciesTable({ projectId }: { projectId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete service policy?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+              Are you sure you want to delete{" "}
+              <strong>{deleteTarget?.name}</strong>? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -192,7 +212,10 @@ export function ZtServicePoliciesTable({ projectId }: { projectId: string }) {
             <AlertDialogAction
               onClick={() => {
                 if (!deleteTarget) return;
-                deletePolicy.mutate({ projectId, id: deleteTarget.id }, { onSuccess: () => setDeleteTarget(null) });
+                deletePolicy.mutate(
+                  { projectId, id: deleteTarget.id },
+                  { onSuccess: () => setDeleteTarget(null) },
+                );
               }}
             >
               Delete

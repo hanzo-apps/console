@@ -10,6 +10,15 @@ import {
 } from "@/src/features/batch-actions/components/AddObservationsToDatasetDialog/components/IssueBanner";
 import { cn } from "@/src/utils/tailwind";
 
+const STEP_FOR_FIELD: Record<string, DialogStep> = {
+  input: "input-mapping",
+  expectedOutput: "output-mapping",
+  metadata: "metadata-mapping",
+};
+
+const fieldLabel = (field: string) =>
+  field === "expectedOutput" ? "expected output" : field;
+
 export function FinalPreviewStep({
   dataset,
   mapping,

@@ -1,4 +1,4 @@
-import { LangfuseNotFoundError } from "@hanzo/console";
+import { ConsoleNotFoundError } from "@hanzo/console";
 import { z } from "zod";
 import { getObservationsV2FromEventsTableForPublicApi } from "@hanzo/console/src/server";
 import { defineTool } from "../../../core/define-tool";
@@ -66,7 +66,7 @@ export const [getObservationTool, handleGetObservation] = defineTool({
           (item) => item.id === input.observationId,
         );
         if (!observation) {
-          throw new LangfuseNotFoundError(
+          throw new ConsoleNotFoundError(
             `Observation ${input.observationId} not found`,
           );
         }

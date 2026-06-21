@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { useZtRouters, useDeleteZtRouter } from "@/src/features/zt/hooks";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { CreateRouterDialog } from "./CreateRouterDialog";
@@ -59,7 +59,7 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
       createdAt: r.createdAt,
     })) ?? [];
 
-  const columns: ConsoleColumnDef<RouterRow>[] = [
+  const columns: HanzoColumnDef<RouterRow>[] = [
     {
       accessorKey: "name",
       id: "name",
@@ -86,8 +86,12 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
         const online = row.original.isOnline;
         return (
           <span className="flex items-center gap-1.5">
-            <span className={`inline-block h-2.5 w-2.5 rounded-full ${online ? "bg-green-500" : "bg-gray-400"}`} />
-            <span className="text-xs text-muted-foreground">{online ? "Yes" : "No"}</span>
+            <span
+              className={`inline-block h-2.5 w-2.5 rounded-full ${online ? "bg-green-500" : "bg-gray-400"}`}
+            />
+            <span className="text-muted-foreground text-xs">
+              {online ? "Yes" : "No"}
+            </span>
           </span>
         );
       },
@@ -102,7 +106,7 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
         return verified ? (
           <Check className="h-4 w-4 text-green-600" />
         ) : (
-          <X className="h-4 w-4 text-muted-foreground" />
+          <X className="text-muted-foreground h-4 w-4" />
         );
       },
     },
@@ -113,7 +117,11 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
       size: 100,
       cell: ({ row }) => {
         const enabled = row.original.isTunnelerEnabled;
-        return <Badge variant={enabled ? "default" : "secondary"}>{enabled ? "Enabled" : "Disabled"}</Badge>;
+        return (
+          <Badge variant={enabled ? "default" : "secondary"}>
+            {enabled ? "Enabled" : "Disabled"}
+          </Badge>
+        );
       },
     },
     {
@@ -129,7 +137,8 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
       size: 200,
       cell: ({ row }) => {
         const attrs = row.original.roleAttributes;
-        if (!attrs.length) return <span className="text-muted-foreground">-</span>;
+        if (!attrs.length)
+          return <span className="text-muted-foreground">-</span>;
         return (
           <div className="flex flex-wrap gap-1">
             {attrs.map((attr) => (
@@ -174,7 +183,10 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
                 </Link>
               </DropdownMenuItem>
               {hasCUD && (
-                <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(router)}>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => setDeleteTarget(router)}
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
@@ -188,7 +200,9 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-end">{hasCUD && <CreateRouterDialog projectId={projectId} />}</div>
+      <div className="flex items-center justify-end">
+        {hasCUD && <CreateRouterDialog projectId={projectId} />}
+      </div>
 
       <DataTable
         tableName="ztRouters"
@@ -220,7 +234,9 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete router?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+              Are you sure you want to delete{" "}
+              <strong>{deleteTarget?.name}</strong>? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -228,7 +244,10 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
             <AlertDialogAction
               onClick={() => {
                 if (!deleteTarget) return;
-                deleteRouter.mutate({ projectId, id: deleteTarget.id }, { onSuccess: () => setDeleteTarget(null) });
+                deleteRouter.mutate(
+                  { projectId, id: deleteTarget.id },
+                  { onSuccess: () => setDeleteTarget(null) },
+                );
               }}
             >
               {deleteRouter.isPending ? "Deleting..." : "Delete"}

@@ -17,6 +17,7 @@ type ChartLoadingProps = {
 export function getChartLoadingStateProps({
   isPending,
   isError,
+  errorMessage,
 }: ChartQueryState): ChartLoadingProps {
   return {
     isLoading: isPending || isError,

@@ -43,6 +43,7 @@ type TableActionDialogProps = {
 export function TableActionDialog({
   isOpen,
   onClose,
+  onSuccess,
   action,
   projectId,
   tableName,

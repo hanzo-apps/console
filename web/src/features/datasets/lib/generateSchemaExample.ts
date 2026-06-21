@@ -1,6 +1,5 @@
 import jsf from "json-schema-faker";
 import type { Prisma } from "@hanzo/console";
-import { JsonSchema } from "@/src/features/agents/types/execution";
 
 /**
  * Generate an example object from a JSON Schema using json-schema-faker
@@ -15,12 +14,15 @@ export async function generateSchemaExample(
       return "";
     }
 
-    return await generateJson(schema as JsonSchema, {
+    jsf.option({
       alwaysFakeOptionals: true,
       useDefaultValue: true,
       useExamplesValue: true,
-      pretty: true,
     });
+
+    const generated = jsf.generate(schema);
+
+    return JSON.stringify(generated, null, 2);
   } catch (error) {
     console.warn("Failed to generate schema example:", error);
 

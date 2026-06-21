@@ -16,8 +16,8 @@ import type {
 import {
   AnnotationQueueStatus,
   InvalidRequestError,
-  LangfuseConflictError,
-  LangfuseNotFoundError,
+  ConsoleConflictError,
+  ConsoleNotFoundError,
   MethodNotAllowedError,
   Prisma,
 } from "@hanzo/console";
@@ -111,7 +111,7 @@ export const getAnnotationQueueRecordOrThrow = async ({
   });
 
   if (!queue) {
-    throw new LangfuseNotFoundError("Annotation queue not found");
+    throw new ConsoleNotFoundError("Annotation queue not found");
   }
 
   return queue;
@@ -275,7 +275,7 @@ export const createAnnotationQueueForApi = async ({
           );
         }
 
-        throw new LangfuseConflictError(
+        throw new ConsoleConflictError(
           "Concurrent annotation queue creation conflict. Please retry.",
         );
       }
@@ -366,7 +366,7 @@ export const getAnnotationQueueItemRecordOrThrow = async ({
   });
 
   if (!item) {
-    throw new LangfuseNotFoundError("Annotation queue item not found");
+    throw new ConsoleNotFoundError("Annotation queue item not found");
   }
 
   return item;
@@ -553,7 +553,7 @@ const verifyAssignmentUserAccess = async ({
   });
 
   if (!user || user.length === 0) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "User not found or not authorized for this project",
     );
   }

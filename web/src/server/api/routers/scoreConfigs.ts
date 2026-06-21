@@ -8,7 +8,7 @@ import {
 import {
   filterAndValidateDbScoreConfigList,
   InvalidRequestError,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   optionalPaginationZod,
   ScoreConfigCategory,
   ScoreConfigDataType,
@@ -124,7 +124,7 @@ export const scoreConfigsRouter = createTRPCRouter({
         },
       });
       if (!existingConfig) {
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           "No score config with this id in this project.",
         );
       }

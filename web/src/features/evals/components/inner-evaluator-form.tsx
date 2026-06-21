@@ -85,8 +85,12 @@ import {
 } from "@hanzo/console";
 import {
   getCodeEvalVariableMapping,
+  isCodeEvalTemplate,
   resolveCodeEvalTarget,
 } from "@/src/features/evals/utils/code-eval-template-utils";
+import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
+import { useVariableMappingSync } from "@/src/features/evals/hooks/useVariableMappingSync";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
 import {
   isEventTarget,
   isExperimentTarget,
@@ -171,6 +175,8 @@ const TracesPreview = memo(
 
 TracesPreview.displayName = "TracesPreview";
 
+const EMPTY_FILTER_STATE: z.infer<typeof singleFilter>[] = [];
+
 export const InnerEvaluatorForm = (props: {
   projectId: string;
   evalTemplate: EvalTemplate;
@@ -189,6 +195,10 @@ export const InnerEvaluatorForm = (props: {
   const [showPreview, setShowPreview] = useState(false);
   const router = useRouter();
   const traceId = router.query.traceId as string;
+  const { isBetaEnabled } = useV4Beta();
+  const { enabled: isCodeEvalEnabled } = useIsCodeEvalEnabled();
+  const isCodeEvalConfig =
+    isCodeEvalEnabled && isCodeEvalTemplate(props.evalTemplate);
 
   // Check if existing trace evaluator has invalid filters (e.g., score filters added by bug ff4b03c0b)
   const hasInvalidTraceFilters = useMemo(() => {
@@ -282,6 +292,12 @@ export const InnerEvaluatorForm = (props: {
     },
   }) as UseFormReturn<EvalFormType>;
 
+  const currentMapping = form.watch("mapping") ?? [];
+  const syncStatus = useVariableMappingSync({
+    templateVars: isCodeEvalConfig ? [] : props.evalTemplate?.vars,
+    currentMapping: currentMapping,
+  });
+
   const traceFilterOptionsResponse = api.traces.filterOptions.useQuery(
     { projectId: props.projectId },
     {
@@ -372,7 +388,9 @@ export const InnerEvaluatorForm = (props: {
   }, [form.watch("target"), props.disabled]);
 
   useEffect(() => {
-    if (props.evalTemplate && form.getValues("mapping").length === 0) {
+    const mapping = form.getValues("mapping");
+
+    if (props.evalTemplate && mapping.length === 0) {
       form.setValue(
         "mapping",
         props.evalTemplate.vars.map((v) => ({

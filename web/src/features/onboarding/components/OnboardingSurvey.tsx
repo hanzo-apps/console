@@ -1,11 +1,8 @@
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/src/components/ui/button";
-import { Form } from "@/src/components/ui/form";
-import { HanzoIcon } from "@/src/components/HanzoLogo";
-import { useSurveyForm } from "../hooks/useSurveyForm";
-import type { SurveyFormData } from "../lib/surveyTypes";
 import {
+  Form,
   FormControl,
   FormField,
   FormItem,
@@ -13,6 +10,9 @@ import {
   FormMessage,
 } from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
+import { HanzoIcon } from "@/src/components/HanzoLogo";
+import { useSurveyForm } from "../hooks/useSurveyForm";
+import type { SurveyFormData } from "../lib/surveyTypes";
 
 export function OnboardingSurvey() {
   const router = useRouter();
@@ -35,72 +35,10 @@ export function OnboardingSurvey() {
     [handleSkipButton, handleSubmit, router],
   );
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) on referralSource step submits the form
-      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-        if (currentQuestion?.id === "referralSource") {
-          event.preventDefault();
-          form.handleSubmit(onSubmit)();
-          return;
-        }
-      }
-
-      // Regular Enter advances to next step (existing behavior)
-      if (event.key === "Enter" && !isLastStep) {
-        if (currentQuestion?.type !== "text") {
-          goNext();
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [
-    isLastStep,
-    currentQuestion?.type,
-    currentQuestion?.id,
-    goNext,
-    form,
-    onSubmit,
-  ]);
-
-  // Auto-focus the first form control of the current step
-  useEffect(() => {
-    if (!currentQuestion?.id) return;
-    const field = currentQuestion.id as Path<SurveyFormData>;
-    const raf = requestAnimationFrame(() => {
-      try {
-        form.setFocus(field, { shouldSelect: true });
-      } catch {
-        // ignore if the control cannot be focused
-      }
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [currentQuestion?.id, form]);
-
-  // Determine labeling/behavior of the primary (right) button
-  const roleValue = form.watch("role");
-  const signupReasonValue = form.watch("signupReason");
-  const referralSourceValue = form.watch("referralSource");
-
-  const currentFieldId = currentQuestion?.id as
-    | keyof SurveyFormData
-    | undefined;
-  const currentValue = currentFieldId
-    ? form.watch(currentFieldId as Path<SurveyFormData>)
-    : undefined;
+  const currentValue = form.watch("referralSource");
 
   const isEmpty = (v: unknown) =>
     v == null || (typeof v === "string" && v.trim() === "");
-  const allFields = {
-    role: roleValue,
-    signupReason: signupReasonValue,
-    referralSource: referralSourceValue,
-  } as const;
-
   const currentEmpty = isEmpty(currentValue);
   const showSkip = currentEmpty;
 
@@ -115,6 +53,12 @@ export function OnboardingSurvey() {
           <form
             className="flex h-full flex-col"
             onSubmit={form.handleSubmit(onSubmit)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && currentEmpty) {
+                event.preventDefault();
+                handleSkipButton();
+              }
+            }}
           >
             <div className="flex-1">
               <FormField
@@ -150,34 +94,9 @@ export function OnboardingSurvey() {
                   Skip
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  onClick={handleSubmitButton}
-                  variant="default"
-                  className="w-20"
-                >
-                  {isLastStep ? "Finish" : "Next"}
+                <Button type="submit" variant="default" className="w-20">
+                  Finish
                 </Button>
-              )}
-
-              <div className="basis-[10rem] px-4">
-                <SurveyProgress
-                  currentStep={state.currentStep}
-                  totalSteps={totalSteps}
-                />
-              </div>
-
-              {!isFirstStep ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={goBack}
-                  className="w-20"
-                >
-                  Back
-                </Button>
-              ) : (
-                <div className="w-20" />
               )}
             </div>
           </form>

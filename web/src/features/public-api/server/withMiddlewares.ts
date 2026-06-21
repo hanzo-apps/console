@@ -4,7 +4,7 @@ import { type NextApiRequest, type NextApiResponse } from "next";
 import { type ZodError } from "zod/v4";
 import {
   BaseError,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   MethodNotAllowedError,
   UnauthorizedError,
 } from "@hanzo/console";
@@ -91,7 +91,7 @@ export function withMiddlewares(
         return await finalHandlers[method](req, res);
       } catch (error) {
         if (
-          error instanceof HanzoNotFoundError ||
+          error instanceof ConsoleNotFoundError ||
           error instanceof UnauthorizedError
         ) {
           logger.info(error);
@@ -151,7 +151,7 @@ export function withMiddlewares(
           });
 
           return res.status(524).json({
-            message: CH_ERROR_ADVICE_FULL,
+            message: errorMessage,
             error: "Request is taking too long to process.",
           });
         }

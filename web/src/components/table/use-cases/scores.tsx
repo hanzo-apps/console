@@ -12,9 +12,11 @@ import { IOTableCell } from "../../ui/IOTableCell";
 import { Avatar, AvatarImage } from "@/src/components/ui/avatar";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFilterState";
+import { usePeekTableState } from "@/src/components/table/peek/contexts/PeekTableStateContext";
 import {
-  scoreFilterConfig,
+  getScoreFilterConfig,
   SCORE_COLUMN_TO_BACKEND_KEY,
+  type ScoresTableHiddenColumn,
 } from "@/src/features/filters/config/scores-config";
 import { transformFiltersForBackend } from "@/src/features/filters/lib/filter-transform";
 import { isNumericDataType } from "@/src/features/scores/lib/helpers";
@@ -43,7 +45,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { BatchExportTableButton } from "@/src/components/BatchExportTableButton";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { TableActionMenu } from "@/src/features/table/components/TableActionMenu";
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import type { TableAction } from "@/src/features/table/types";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { useHasEntitlement } from "@/src/features/entitlements/hooks";
@@ -106,15 +108,27 @@ export default function ScoresTable({
   observationId,
   hiddenColumns = [],
   localStorageSuffix = "",
+  disableUrlPersistence = false,
 }: {
   projectId: string;
   userId?: string;
   traceId?: string;
   observationId?: string;
   omittedFilter?: string[];
-  hiddenColumns?: string[];
+  hiddenColumns?: ScoresTableHiddenColumn[];
   localStorageSuffix?: string;
+  disableUrlPersistence?: boolean;
 }) {
+  const peekContext = usePeekTableState();
+
+  const scoresFilterConfig = useMemo(
+    () => getScoreFilterConfig(hiddenColumns),
+    [hiddenColumns],
+  );
+  const hiddenColumnSet = useMemo(
+    () => new Set<string>(hiddenColumns),
+    [hiddenColumns],
+  );
   const utils = api.useUtils();
   const [selectedRows, setSelectedRows] = useState<RowSelectionState>({});
   const [paginationState, setPaginationState] = useQueryParams({
@@ -696,7 +710,7 @@ export default function ScoresTable({
   ];
 
   const columns = rawColumns.filter(
-    (c) => !!c.id && !hiddenColumns.includes(c.id),
+    (c) => !!c.id && !hiddenColumnSet.has(c.id),
   );
 
   const [columnVisibility, setColumnVisibility] =

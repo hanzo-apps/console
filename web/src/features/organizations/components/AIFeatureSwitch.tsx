@@ -26,8 +26,13 @@ export default function AIFeatureSwitch() {
   const { isConsoleCloud } = useConsoleCloudRegion();
   const capture = useInsightsCapture();
   const organization = useQueryOrganization();
+  const aiFeaturesEnabled = organization?.aiFeaturesEnabled;
+  const aiTelemetryEnabled = organization?.aiTelemetryEnabled;
   const [isAIFeatureSwitchEnabled, setIsAIFeatureSwitchEnabled] = useState(
-    organization?.aiFeaturesEnabled ?? false,
+    aiFeaturesEnabled ?? false,
+  );
+  const [isAITelemetrySwitchEnabled, setIsAITelemetrySwitchEnabled] = useState(
+    aiTelemetryEnabled ?? true,
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const hasAccess = useHasOrganizationAccess({

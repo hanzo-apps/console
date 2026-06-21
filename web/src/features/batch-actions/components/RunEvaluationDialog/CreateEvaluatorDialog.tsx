@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { EvalTargetObject } from "@hanzo/console";
+import {
+  EvalTargetObject,
+  type EvalTargetObject as EvalTargetObjectType,
+} from "@hanzo/console";
 import { api } from "@/src/utils/api";
 import {
   Dialog,

@@ -5,6 +5,7 @@ import {
   type ScoreSourceType,
   type ScoreDomain,
   type AggregatableScoreDataType,
+  type ListableScore,
 } from "@hanzo/console";
 import { ScoreDataTypeType } from "@hanzo/console";
 

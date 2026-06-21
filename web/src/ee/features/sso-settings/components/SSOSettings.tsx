@@ -54,6 +54,7 @@ import { useHasEntitlement } from "@/src/features/entitlements/hooks";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
+import { useSupportDrawer } from "@/src/features/support-chat/SupportDrawerProvider";
 import { VerifiedDomainsSettings } from "@/src/ee/features/verified-domains/components/VerifiedDomainsSettings";
 import { SsoProviderSchema } from "@/src/features/multi-tenant-sso/types";
 import { api } from "@/src/utils/api";
@@ -131,8 +132,9 @@ export const SSOSettings = ({ orgId }: { orgId: string }) => {
     organizationId: orgId,
     scope: "organization:update",
   });
+  const { setOpen: setSupportDrawerOpen } = useSupportDrawer();
 
-  const heading = (
+  const commonContent = (
     <>
       <Header title="SSO Configuration" />
       <p className="text-muted-foreground mb-4 text-sm">

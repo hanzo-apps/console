@@ -31,6 +31,9 @@ export interface WebhookValidationWhitelist {
   ip_ranges: string[];
 }
 
+/** Log context label for outbound webhook URL/redirect validation. */
+export const WEBHOOK_URL_VALIDATION_LOG_CONTEXT = "Webhook";
+
 export function whitelistFromEnv(): WebhookValidationWhitelist {
   return {
     hosts: env.HANZO_WEBHOOK_WHITELISTED_HOST || [],

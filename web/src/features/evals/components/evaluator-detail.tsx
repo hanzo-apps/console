@@ -25,8 +25,8 @@ const JobExecutionCounts = ({
     return null;
   }
 
-  const counts = generateJobExecutionCounts(jobExecutionCounts);
-  return <LevelCountsDisplay counts={counts} isLoading={isLoading} />;
+  const counts = generateJobExecutionCounts(jobExecutionsByState);
+  return <LevelCountsDisplay counts={counts} />;
 };
 
 export const EvaluatorDetail = () => {
