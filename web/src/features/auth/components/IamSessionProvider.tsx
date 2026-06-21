@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { IamProvider as HanzoIamReactProvider } from "@hanzo/iam/react";
 import { type BrowserIamConfig } from "@hanzo/iam/browser";
 import { env } from "@/src/env.mjs";
@@ -36,7 +36,14 @@ export function IamSessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  if (!config) return <>{children}</>;
+  // The IAM browser SDK reads `sessionStorage` at construction, so the provider
+  // must never instantiate during SSR/static prerender (no `window`). Defer it
+  // to a client-only mount; `useIam()` consumers (callback, social login) all
+  // run after hydration anyway.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!config || !mounted) return <>{children}</>;
 
   return (
     <HanzoIamReactProvider config={config} autoInit>
