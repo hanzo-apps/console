@@ -69,28 +69,40 @@ export const productModules: ProductModule[] = [
     label: 'Models',
     icon: RouteIcon,
     description: 'Model routes and routing policy.',
-    routes: [{ path: '', component: ModelsModule }],
+    routes: [
+      { path: '', component: ModelsModule },
+      { path: ':name', component: ModelsModule },
+    ],
   },
   {
     id: 'applications',
     label: 'Applications',
     icon: Boxes,
     description: 'Deployed applications.',
-    routes: [{ path: '', component: ApplicationsModule }],
+    routes: [
+      { path: '', component: ApplicationsModule },
+      { path: ':name', component: ApplicationsModule },
+    ],
   },
   {
     id: 'stores',
     label: 'Stores',
     icon: Database,
     description: 'Knowledge stores and vectors.',
-    routes: [{ path: '', component: StoresModule }],
+    routes: [
+      { path: '', component: StoresModule },
+      { path: ':name', component: StoresModule },
+    ],
   },
   {
     id: 'chat',
     label: 'Chat',
     icon: MessageSquare,
     description: 'Chat sessions and history.',
-    routes: [{ path: '', component: ChatModule }],
+    routes: [
+      { path: '', component: ChatModule },
+      { path: ':name', component: ChatModule },
+    ],
   },
 ]
 

@@ -1,25 +1,33 @@
 'use client'
 
-import { ApplicationApi, type Application } from '~/lib/api'
-import { ResourceList } from '~/components/ui/ResourceList'
-import { useSession } from '~/lib/auth/session'
+/**
+ * Applications admin — list + edit with deploy/undeploy, native on @hanzo/gui.
+ *
+ * Logic ported from ApplicationListPage.js + ApplicationEditPage.js +
+ * backend/ApplicationBackend.js: the new-application template, the field set
+ * (template/namespace/parameters/status), and the deploy/undeploy lifecycle. UI
+ * rebuilt clean on GUI primitives (no antd).
+ *
+ * Routing: `/applications` lists; `/applications/<name>` edits one.
+ */
+import { useRouter } from 'next/navigation'
 
-export function ApplicationsModule(_props: { params: Record<string, string> }) {
-  const { account } = useSession()
-  const owner = account?.name ?? 'admin'
+import { ApplicationListView } from './applications/ApplicationListView'
+import { ApplicationEditView } from './applications/ApplicationEditView'
 
+export function ApplicationsModule({ params }: { params: Record<string, string> }) {
+  const router = useRouter()
+  const name = params.name
+
+  if (name) {
+    return (
+      <ApplicationEditView
+        name={decodeURIComponent(name)}
+        onDone={() => router.push('/applications')}
+      />
+    )
+  }
   return (
-    <ResourceList<Application>
-      title="Applications"
-      subtitle="Deployed applications."
-      rowKey={(r) => `${r.owner}/${r.name}`}
-      columns={[
-        { key: 'name', header: 'Name' },
-        { key: 'displayName', header: 'Display name' },
-        { key: 'category', header: 'Category', width: 140 },
-        { key: 'state', header: 'State', width: 120 },
-      ]}
-      load={async () => (await ApplicationApi.list({ owner })).rows}
-    />
+    <ApplicationListView onOpen={(a) => router.push(`/applications/${encodeURIComponent(a.name)}`)} />
   )
 }
