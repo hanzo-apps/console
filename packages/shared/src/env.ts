@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { applyDatastoreEnvBackCompat, removeEmptyEnvVariables } from "./utils/environment";
 
+// Present in browser bundles, absent in Node. Declared (rather than pulling the
+// DOM lib into this Node-targeted package) so the `typeof window` client guard
+// below type-checks while staying the exact literal webpack statically strips.
+declare const window: unknown;
+
 const EnvSchema = z.object({
   NEXT_PUBLIC_HANZO_CLOUD_REGION: z.string().optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -231,7 +236,16 @@ export const env: SharedEnv =
   // DOCKER_BUILD is set in the Dockerfile; SKIP_ENV_VALIDATION is used for local
   // frontend builds/dev. Mirror web/src/env.mjs so both env layers skip on the
   // same signals (one way to skip validation across the monorepo).
+  //
+  // `typeof window !== "undefined"` completes the mirror: @t3-oss/env-nextjs
+  // (web/src/env.mjs) never validates *server* vars in the browser, and this
+  // barrel re-exports `env`, so any client module importing from @hanzo/console
+  // pulls this in. Server-only vars (e.g. S3_EVENT_UPLOAD_BUCKET) are absent
+  // client-side; validating them there throws and crashes the bundle. The guard
+  // is statically `true` in the client bundle, so webpack also dead-code-strips
+  // the parse (and its schema) out of client output entirely.
   process.env.DOCKER_BUILD === "1" || // eslint-disable-line turbo/no-undeclared-env-vars
-  process.env.SKIP_ENV_VALIDATION === "1" // eslint-disable-line turbo/no-undeclared-env-vars
+  process.env.SKIP_ENV_VALIDATION === "1" || // eslint-disable-line turbo/no-undeclared-env-vars
+  typeof window !== "undefined"
     ? (process.env as any)
     : EnvSchema.parse(applyDatastoreEnvBackCompat(removeEmptyEnvVariables(process.env)));
