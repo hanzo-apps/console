@@ -5,6 +5,14 @@ import { Form } from "@/src/components/ui/form";
 import { HanzoIcon } from "@/src/components/HanzoLogo";
 import { useSurveyForm } from "../hooks/useSurveyForm";
 import type { SurveyFormData } from "../lib/surveyTypes";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/src/components/ui/form";
+import { Input } from "@/src/components/ui/input";
 
 export function OnboardingSurvey() {
   const router = useRouter();

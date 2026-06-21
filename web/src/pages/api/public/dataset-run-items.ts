@@ -22,6 +22,8 @@ import {
   generateDatasetRunItemsForPublicApi,
   getDatasetRunItemsCountForPublicApi,
 } from "@/src/features/public-api/server/dataset-run-items";
+import { APIDatasetRunItem } from "@/src/features/public-api/types/datasets";
+import { listDatasetRunItemsForApi } from "@/src/features/datasets/server/publicDatasetService";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({

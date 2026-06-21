@@ -18,6 +18,11 @@ import {
 import { views } from "@/src/features/query";
 import { TRPCError } from "@trpc/server";
 import { HanzoConflictError } from "@hanzo/console";
+import {
+  ViewVersion,
+  getValidAggregationsForMeasureType,
+  getViewDeclaration,
+} from "@hanzo/console";
 
 const CreateDashboardWidgetInput = z.object({
   projectId: z.string(),

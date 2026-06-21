@@ -2,6 +2,8 @@ import { eventsTableCols } from "@hanzo/console";
 import type { FilterConfig } from "@/src/features/filters/lib/filter-config";
 import type { ColumnToBackendKeyMap } from "@/src/features/filters/lib/filter-transform";
 import { renderFilterIcon } from "@/src/components/ItemBadge";
+import { FilterState } from "@/src/features/agents/types/filters";
+import { omitFilterFacets } from "@/src/features/filters/lib/filter-config";
 
 // Helper function to get column name from eventsTableCols by ID
 export const getEventsColumnName = (id: string): string => {

@@ -6,9 +6,21 @@ import { StatusBadge } from "@/src/components/layouts/status-badge";
 import { DetailPageNav } from "@/src/features/navigate-detail-pages/DetailPageNav";
 import Page from "@/src/components/layouts/page";
 import { LevelCountsDisplay } from "@/src/components/level-counts-display";
-import { type JobExecutionState, generateJobExecutionCounts } from "@/src/features/evals/utils/job-execution-utils";
+import {
+  type JobExecutionState,
+  generateJobExecutionCounts,
+} from "@/src/features/evals/utils/job-execution-utils";
+import { useLazyEvaluatorExecutionCounts } from "@/src/features/evals/hooks/useLazyEvaluatorExecutionCounts";
+import {
+  EvalTargetObject,
+  validateEvaluatorFiltersForTarget,
+} from "@hanzo/console";
 
-const JobExecutionCounts = ({ jobExecutionsByState }: { jobExecutionsByState?: JobExecutionState[] }) => {
+const JobExecutionCounts = ({
+  jobExecutionsByState,
+}: {
+  jobExecutionsByState?: JobExecutionState[];
+}) => {
   if (!jobExecutionsByState || jobExecutionsByState.length === 0) {
     return null;
   }
@@ -55,7 +67,12 @@ export const EvaluatorDetail = () => {
     },
   );
 
-  if (evaluator.isPending || !evaluator.data || allTemplates.isLoading || !allTemplates.data) {
+  if (
+    evaluator.isPending ||
+    !evaluator.data ||
+    allTemplates.isLoading ||
+    !allTemplates.data
+  ) {
     return <div className="p-3">Loading...</div>;
   }
 
@@ -79,7 +96,9 @@ export const EvaluatorDetail = () => {
   return (
     <Page
       headerProps={{
-        title: evaluator.data ? `${evaluator.data.scoreName}: ${evaluator.data.id}` : "Loading...",
+        title: evaluator.data
+          ? `${evaluator.data.scoreName}: ${evaluator.data.id}`
+          : "Loading...",
         itemType: "EVALUATOR",
         breadcrumb: [
           {
@@ -91,17 +110,25 @@ export const EvaluatorDetail = () => {
         actionButtonsRight: (
           <>
             {evaluator.data?.jobExecutionsByState && (
-              <div className="flex flex-col items-center justify-center rounded-md bg-muted-gray px-2">
-                <JobExecutionCounts jobExecutionsByState={evaluator.data.jobExecutionsByState} />
+              <div className="bg-muted-gray flex flex-col items-center justify-center rounded-md px-2">
+                <JobExecutionCounts
+                  jobExecutionsByState={evaluator.data.jobExecutionsByState}
+                />
               </div>
             )}
-            <StatusBadge type={evaluator.data?.finalStatus.toLowerCase()} isLive className="max-h-8" />
+            <StatusBadge
+              type={evaluator.data?.finalStatus.toLowerCase()}
+              isLive
+              className="max-h-8"
+            />
 
             {evaluator.data && (
               <DetailPageNav
                 key="nav"
                 currentId={encodeURIComponent(evaluator.data.id)}
-                path={(entry) => `/project/${projectId}/evals/${encodeURIComponent(entry.id)}`}
+                path={(entry) =>
+                  `/project/${projectId}/evals/${encodeURIComponent(entry.id)}`
+                }
                 listKey="evals"
               />
             )}
@@ -111,7 +138,10 @@ export const EvaluatorDetail = () => {
     >
       {existingEvaluator && (
         <div className="flex h-full flex-col overflow-hidden">
-          <EvalLogTable projectId={projectId} jobConfigurationId={existingEvaluator.id} />
+          <EvalLogTable
+            projectId={projectId}
+            jobConfigurationId={existingEvaluator.id}
+          />
         </div>
       )}
     </Page>

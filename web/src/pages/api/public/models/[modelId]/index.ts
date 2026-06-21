@@ -10,6 +10,8 @@ import {
 } from "@/src/features/public-api/types/models";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { clearModelCacheForProject } from "@hanzo/console/src/server";
+import { getModelForApi } from "@/src/features/models/server/publicApiModelService";
+import { prismaToApiModelDefinition } from "@/src/features/public-api/types/models";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({

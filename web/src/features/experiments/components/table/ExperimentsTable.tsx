@@ -14,7 +14,7 @@ import {
   getExperimentsColumnName,
   isExperimentsOmittableFilterColumn,
 } from "./filter-config";
-import { type LangfuseColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import {
   type FilterState,
   TableViewPresetTableName,
@@ -249,7 +249,7 @@ export default function ExperimentsTable({
     setSelectAll: () => {}, // Experiments table doesn't support select-all
   });
 
-  const columns: LangfuseColumnDef<ExperimentsTableRow>[] = [
+  const columns: HanzoColumnDef<ExperimentsTableRow>[] = [
     selectActionColumn,
     {
       accessorKey: "name",

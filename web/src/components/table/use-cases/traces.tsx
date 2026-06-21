@@ -96,6 +96,13 @@ import {
 import { useScoreColumns } from "@/src/features/scores/hooks/useScoreColumns";
 import { scoreFilters } from "@/src/features/scores/lib/scoreColumns";
 import TagList from "@/src/features/tag/components/TagList";
+import { Skeleton } from "@/src/components/ui/skeleton";
+import {
+  TableBadgeLoadingCell,
+  TableTextLoadingCell,
+} from "@/src/components/table/loading-cells";
+import { PeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
+import { usePeekTableState } from "@/src/components/table/peek/contexts/PeekTableStateContext";
 
 export type TracesTableRow = {
   // Shown by default
@@ -616,7 +623,7 @@ export default function TracesTable({
             },
             enableSorting,
           },
-        ] satisfies LangfuseColumnDef<TracesTableRow>[])),
+        ] satisfies HanzoColumnDef<TracesTableRow>[])),
     {
       accessorKey: "timestamp",
       header: "Timestamp",
@@ -1074,7 +1081,7 @@ export default function TracesTable({
           defaultHidden: true,
           enableSorting,
         },
-      ] satisfies LangfuseColumnDef<TracesTableRow>[],
+      ] satisfies HanzoColumnDef<TracesTableRow>[],
     },
     {
       accessorKey: "usage",
@@ -1133,7 +1140,7 @@ export default function TracesTable({
           defaultHidden: true,
           enableSorting,
         },
-      ] satisfies LangfuseColumnDef<TracesTableRow>[],
+      ] satisfies HanzoColumnDef<TracesTableRow>[],
     },
     ...(hideControls
       ? []
@@ -1168,7 +1175,7 @@ export default function TracesTable({
               );
             },
           },
-        ] satisfies LangfuseColumnDef<TracesTableRow>[])),
+        ] satisfies HanzoColumnDef<TracesTableRow>[])),
   ];
 
   const [columnVisibility, setColumnVisibility] =

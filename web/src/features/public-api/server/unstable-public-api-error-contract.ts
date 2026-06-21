@@ -214,7 +214,7 @@ export function toUnstablePublicApiError(
       code: "unprocessable_content",
       message: [
         ClickHouseResourceError.ERROR_ADVICE_MESSAGE,
-        "See https://langfuse.com/docs/api-and-data-platform/features/public-api for more details.",
+        "See https://hanzo.ai/docs/api-and-data-platform/features/public-api for more details.",
       ].join("\n"),
     });
   }

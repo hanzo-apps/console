@@ -23,6 +23,7 @@ import { useKeyedSessionStorageState } from "./useKeyedSessionStorageState";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import type { FilterConfig } from "../lib/filter-config";
+import { PeekTableStateContextValue } from "@/src/components/table/peek/contexts/PeekTableStateContext";
 
 /**
  * Decodes filters from URL query string and normalizes display names to column IDs.

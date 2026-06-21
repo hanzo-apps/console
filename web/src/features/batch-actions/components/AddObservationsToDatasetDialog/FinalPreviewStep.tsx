@@ -4,6 +4,11 @@ import { Pencil } from "lucide-react";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
 import type { FinalPreviewStepProps, DialogStep } from "./types";
 import { applyFullMapping } from "@hanzo/console";
+import {
+  IssueVariant,
+  issueTextVariants,
+} from "@/src/features/batch-actions/components/AddObservationsToDatasetDialog/components/IssueBanner";
+import { cn } from "@/src/utils/tailwind";
 
 export function FinalPreviewStep({
   dataset,

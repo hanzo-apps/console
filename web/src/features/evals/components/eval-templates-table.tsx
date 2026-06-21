@@ -55,6 +55,8 @@ import {
   shouldShowEvalTemplate,
 } from "@/src/features/evals/utils/code-eval-template-utils";
 import { SiPython, SiTypescript } from "react-icons/si";
+import { CustomHeights } from "@/src/components/table/data-table-row-height-switch";
+import { PeekViewEvaluatorTemplateDetail } from "@/src/components/table/peek/peek-evaluator-template-detail";
 
 export type EvalsTemplateRow = {
   name: string;

@@ -15,6 +15,7 @@ import { type HeatmapCell } from "@/src/features/score-analytics/lib/heatmap-uti
 import { useCallback } from "react";
 import { SamplingDetailsHoverCard } from "../SamplingDetailsHoverCard";
 import { type ScoreDataTypeType } from "@hanzo/console";
+import { Spinner } from "@/src/components/layouts/spinner";
 
 interface HeatmapTooltipContentProps {
   cell: HeatmapCell;

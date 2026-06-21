@@ -53,6 +53,7 @@ import {
   getValueStringLength,
 } from "@/src/components/table/ValueCell";
 import { ItemBadge, type HanzoItemType } from "@/src/components/ItemBadge";
+import { decodeUnicodeEscapesOnly } from "@/src/utils/unicode";
 
 // Constants for table layout
 const INDENTATION_PER_LEVEL = 16;

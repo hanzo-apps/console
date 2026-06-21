@@ -1,5 +1,6 @@
 import { api } from "@/src/utils/api";
 import { type EvalTemplate } from "@hanzo/console";
+import { isCodeEvalTemplate } from "@/src/features/evals/utils/code-eval-template-utils";
 
 export function useSingleTemplateValidation({
   projectId,

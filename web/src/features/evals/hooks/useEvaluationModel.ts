@@ -5,6 +5,7 @@ import {
   type UIModelParams,
 } from "@hanzo/console";
 import { type Dispatch, type SetStateAction, useEffect } from "react";
+import { getEnabledModelParamState } from "@/src/utils/getFinalModelParams";
 
 export function useEvaluationModel(
   projectId: string,

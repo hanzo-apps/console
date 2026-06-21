@@ -8,6 +8,7 @@ import {
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import { createDatasetForApi } from "@/src/features/datasets/server/publicDatasetService";
+import { upsertDataset } from "@/src/features/datasets/server/actions/createDataset";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({

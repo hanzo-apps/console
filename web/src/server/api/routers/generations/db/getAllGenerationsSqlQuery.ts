@@ -9,6 +9,8 @@ import {
   traceException,
 } from "@hanzo/console/src/server";
 import { type GetAllGenerationsInput } from "../getAllQueries";
+import { env } from "@hanzo/console";
+import { getObservationsWithModelDataFromEventsTable } from "@hanzo/console/src/server";
 
 export async function getAllGenerations({
   input,

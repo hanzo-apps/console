@@ -54,6 +54,13 @@ import { TableSelectionManager } from "@/src/features/table/components/TableSele
 import { useScoreColumns } from "@/src/features/scores/hooks/useScoreColumns";
 import { scoreFilters } from "@/src/features/scores/lib/scoreColumns";
 import { BatchExportTableButton } from "@/src/components/BatchExportTableButton";
+import { UseSidebarFilterStateOptions } from "@/src/features/filters/hooks/useSidebarFilterState";
+import { DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG } from "@/src/features/filters/constants/internal-environments";
+import {
+  TableBadgeLoadingCell,
+  TableIconButtonLoadingCell,
+  TableTextLoadingCell,
+} from "@/src/components/table/loading-cells";
 
 export type SessionTableRow = {
   id: string;

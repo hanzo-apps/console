@@ -1,4 +1,5 @@
 import { type ModelParams, type UIModelParams } from "@hanzo/console";
+import { ModelConfig } from "@/src/features/cloud-models/types";
 
 export function getFinalModelParams(modelParams: UIModelParams): ModelParams {
   return Object.entries(modelParams)

@@ -26,6 +26,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { env } from "@/src/env.mjs";
+import { getObservationByIdFromEventsTable } from "@hanzo/console/src/server";
 
 const isItemLocked = (item: AnnotationQueueItem) => {
   return (

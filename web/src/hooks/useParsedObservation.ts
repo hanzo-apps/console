@@ -24,6 +24,7 @@ import type {
   ParseRequest,
   ParseResponse,
 } from "@/src/workers/json-parser.worker";
+import { EventBatchIOOutput } from "@/src/features/events/server/eventsRouter";
 
 type ObservationWithStringifiedIO = ObservationReturnTypeWithMetadata & {
   input: string | null;

@@ -34,6 +34,9 @@ import {
   DATASET_RUN_COMPARE_TABS,
   getDatasetRunCompareTabs,
 } from "@/src/features/navigation/utils/dataset-run-compare-tabs";
+import { Spinner } from "@/src/components/layouts/spinner";
+import { toExperimentsResultsUrl } from "@/src/features/experiments/utils/experimentUrlTranslation";
+import { ExperimentsBetaSwitch } from "@/src/features/experiments/components/ExperimentsBetaSwitch";
 
 export default function DatasetCompare() {
   const router = useRouter();

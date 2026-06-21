@@ -45,6 +45,7 @@ import {
   type MetadataDomainClient,
 } from "@/src/utils/clientSideDomainTypes";
 import { type ScoreDomain } from "@hanzo/console";
+import { CopyIdsPopover } from "@/src/components/trace/components/_shared/CopyIdsPopover";
 
 export interface ObservationDetailViewHeaderProps {
   observation: ObservationReturnTypeWithMetadata;

@@ -46,7 +46,7 @@ export async function createPylonIssue(
     requester_email: requesterEmail,
     destination_metadata: {
       destination: "email",
-      email: "support@langfuse.com",
+      email: "support@hanzo.ai",
     },
   };
 

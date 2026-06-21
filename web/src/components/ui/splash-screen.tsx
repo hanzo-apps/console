@@ -4,6 +4,7 @@ import Image from "next/image";
 import { InfoIcon } from "lucide-react";
 import { ActionButton } from "@/src/components/ActionButton";
 import { Alert, AlertTitle, AlertDescription } from "@hanzo/ui";
+import { StatusBadge } from "@/src/components/layouts/status-badge";
 
 export interface ValueProposition {
   title: string;
@@ -52,9 +53,12 @@ function VideoPlayer({ videoSrc }: { videoSrc: string }) {
 
   return (
     <div
-      className={cn("my-6 w-full max-w-3xl overflow-hidden rounded-lg border border-border", {
-        hidden: !isLoaded || hasError,
-      })}
+      className={cn(
+        "border-border my-6 w-full max-w-3xl overflow-hidden rounded-lg border",
+        {
+          hidden: !isLoaded || hasError,
+        },
+      )}
     >
       <video
         src={videoSrc}
@@ -122,13 +126,22 @@ export function SplashScreen({
       <div className="mb-8 flex w-full flex-wrap justify-center gap-4">
         {primaryAction &&
           (primaryAction.component || (
-            <ActionButton size="lg" onClick={primaryAction.onClick} href={primaryAction.href}>
+            <ActionButton
+              size="lg"
+              onClick={primaryAction.onClick}
+              href={primaryAction.href}
+            >
               {primaryAction.label}
             </ActionButton>
           ))}
         {secondaryAction &&
           (secondaryAction.component || (
-            <ActionButton variant="outline" size="lg" onClick={secondaryAction.onClick} href={secondaryAction.href}>
+            <ActionButton
+              variant="outline"
+              size="lg"
+              onClick={secondaryAction.onClick}
+              href={secondaryAction.href}
+            >
               {secondaryAction.label}
             </ActionButton>
           ))}
@@ -146,7 +159,13 @@ export function SplashScreen({
 
       {!videoSrc && image && (
         <div className="my-6 w-full max-w-3xl">
-          <Image src={image.src} alt={image.alt} width={image.width} height={image.height} className="rounded-md" />
+          <Image
+            src={image.src}
+            alt={image.alt}
+            width={image.width}
+            height={image.height}
+            className="rounded-md"
+          />
         </div>
       )}
 

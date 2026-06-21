@@ -21,6 +21,7 @@ import {
   stringifyDatasetItemData,
   type DatasetSchema,
 } from "../utils/datasetItemUtils";
+import { DatasetItemFormValues } from "@/src/features/datasets/components/DatasetItemFields";
 
 const formSchema = z.object({
   input: z.string().refine(

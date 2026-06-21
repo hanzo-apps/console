@@ -158,7 +158,7 @@ async function evaluate(ctx: EvaluationContext): Promise<EvaluationResult> {
     const result = await validateCodeEvalSourceWithLanguage({
       source: `${TYPESCRIPT_CODE_EVAL_CONTRACT}
 function evaluate(ctx: EvaluationContext): EvaluationResult {
-  const url = new URL("https://user:pass@langfuse.com:443/docs?source=eval#section");
+  const url = new URL("https://user:pass@hanzo.ai:443/docs?source=eval#section");
   const urlScore =
     url.origin.length +
     url.protocol.length +

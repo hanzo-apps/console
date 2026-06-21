@@ -13,6 +13,8 @@ import {
   type QueryType,
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
+import { totalCostDashboardFormatted } from "@/src/features/dashboard/lib/dashboard-utils";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
 
 export const ModelCostTable = ({
   className,

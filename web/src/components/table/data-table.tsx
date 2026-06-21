@@ -606,8 +606,7 @@ function TableBodyComponent<TData>({
               const cellValue = cell.getValue();
               const isStringCell = typeof cellValue === "string";
               const isSmallRowHeight = (rowHeight ?? "s") === "s";
-              const columnDef = cell.column
-                .columnDef as LangfuseColumnDef<TData>;
+              const columnDef = cell.column.columnDef as HanzoColumnDef<TData>;
 
               return (
                 <TableCell

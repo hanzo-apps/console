@@ -22,6 +22,7 @@ import {
   unstablePublicEvalsErrorContract,
   type PublicApiErrorContract,
 } from "@/src/features/public-api/server/unstable-public-api-error-contract";
+import { ApiAccessLevel } from "@hanzo/console/src/server";
 
 type RouteConfig<
   TQuery extends ZodType<any>,

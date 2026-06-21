@@ -14,6 +14,7 @@ import {
 } from "@hanzo/console/src/server";
 import { ScoresApiService } from "@/src/features/public-api/server/scores-api-service";
 import { randomUUID } from "crypto";
+import { ForbiddenError } from "@hanzo/console";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({

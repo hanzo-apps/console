@@ -2,6 +2,7 @@ import { type EvalFormType } from "@/src/features/evals/utils/evaluator-form-uti
 import { api } from "@/src/utils/api";
 import { type ObservationType } from "@hanzo/console";
 import { type UseFormReturn } from "react-hook-form";
+import { usePreviewData } from "@/src/features/evals/hooks/usePreviewData";
 
 export function useEvalConfigMappingData(
   projectId: string,

@@ -14,6 +14,10 @@ import {
   PostScoreConfigBody,
   PostScoreConfigResponse,
 } from "@/src/features/public-api/types/score-configs";
+import {
+  createScoreConfig,
+  listScoreConfigs,
+} from "@/src/features/public-api/server/score-configs-api-service";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({

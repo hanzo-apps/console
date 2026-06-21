@@ -37,6 +37,8 @@ import { LazyTraceRow } from "@/src/components/session/TraceRow";
 import { useParsedTrace } from "@/src/hooks/useParsedTrace";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import { Switch } from "@/src/components/ui/switch";
+import { TablePeekView } from "@/src/components/table/peek";
+import { PeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
 
 // some projects have thousands of users in a session, paginate to avoid rendering all at once
 const INITIAL_USERS_DISPLAY_COUNT = 10;

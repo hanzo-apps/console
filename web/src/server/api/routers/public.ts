@@ -3,6 +3,7 @@ import { env } from "@/src/env.mjs";
 import { createTRPCRouter, publicProcedure } from "@/src/server/api/trpc";
 import { logger, compareVersions } from "@hanzo/console/src/server";
 import { z } from "zod/v4";
+import { protectedProjectProcedure } from "@/src/server/api/trpc";
 
 const ReleaseApiRes = z.array(
   z.object({

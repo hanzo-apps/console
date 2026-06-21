@@ -11,6 +11,9 @@ import { useEffect, useMemo } from "react";
 import { StringParam, useQueryParam } from "use-query-params";
 import { AnnotationDrawerSection } from "../shared/AnnotationDrawerSection";
 import { AnnotationProcessingLayout } from "../shared/AnnotationProcessingLayout";
+import { castToNumberMap } from "@/src/utils/map-utils";
+import { useIsAuthenticatedAndProjectMember } from "@/src/features/auth/hooks";
+import { api } from "@/src/utils/api";
 
 interface TraceAnnotationProcessorProps {
   item: AnnotationQueueItem & {

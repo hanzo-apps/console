@@ -11,6 +11,7 @@ import {
 import { InvalidRequestError } from "@hanzo/console";
 import { isValidPostgresRegex } from "@/src/features/models/server/isValidPostgresRegex";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
+import { listModelsForApi } from "@/src/features/models/server/publicApiModelService";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({

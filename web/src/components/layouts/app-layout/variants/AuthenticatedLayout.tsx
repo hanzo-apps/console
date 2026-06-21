@@ -5,7 +5,6 @@
  */
 
 import type { PropsWithChildren } from "react";
-import dynamic from "next/dynamic";
 import Head from "next/head";
 import { SidebarProvider, SidebarInset } from "@/src/components/ui/sidebar";
 import { AppSidebar } from "@/src/components/nav/app-sidebar";
@@ -27,26 +26,6 @@ import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import type { Session } from "@/src/features/auth/session-types";
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 import type { RouteGroup } from "@/src/components/layouts/routes";
-
-const V4EnabledBanner = dynamic(
-  () =>
-    import("@/src/features/events/components/V4EnabledBanner").then((mod) => ({
-      default: mod.V4EnabledBanner,
-    })),
-  {
-    ssr: false,
-  },
-);
-
-const V4PromoBanner = dynamic(
-  () =>
-    import("@/src/features/events/components/V4PromoBanner").then((mod) => ({
-      default: mod.V4PromoBanner,
-    })),
-  {
-    ssr: false,
-  },
-);
 
 /** Grouped navigation structure returned by processNavigation */
 type GroupedNavigation = {
@@ -165,8 +144,6 @@ export function AuthenticatedLayout({
           <SidebarProvider>
             <div className="flex h-dvh w-full flex-col">
               <PaymentBanner />
-              <V4EnabledBanner />
-              <V4PromoBanner />
               <div className="pt-banner-offset flex min-h-0 flex-1">
                 <AppSidebar
                   navItems={navigation.mainNavigation}

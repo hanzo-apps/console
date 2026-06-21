@@ -76,6 +76,17 @@ import {
 } from "@/src/components/table/data-table-refresh-button";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { api } from "@/src/utils/api";
+import { PeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
+import { buildTraceDetailPath } from "@/src/utils/navigation";
+import { getSafeRedirectPath } from "@/src/utils/redirect";
+import { getObservationEventsFilterConfig } from "@/src/features/events/config/filter-config";
+import { UseSidebarFilterStateOptions } from "@/src/features/filters/hooks/useSidebarFilterState";
+import { DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG } from "@/src/features/filters/constants/internal-environments";
+import { Skeleton } from "@/src/components/ui/skeleton";
+import {
+  TableBadgeLoadingCell,
+  TableTextLoadingCell,
+} from "@/src/components/table/loading-cells";
 
 export type EventsTableRow = {
   // Identity fields
@@ -707,7 +718,7 @@ export default function ObservationsEventsTable({
           defaultHidden: true,
           enableSorting: true,
         },
-      ] satisfies LangfuseColumnDef<EventsTableRow>[],
+      ] satisfies HanzoColumnDef<EventsTableRow>[],
     },
     {
       accessorKey: "timeToFirstToken",
@@ -818,7 +829,7 @@ export default function ObservationsEventsTable({
             return <span>{numberFormatter(value.totalUsage, 0)}</span>;
           },
         },
-      ] satisfies LangfuseColumnDef<EventsTableRow>[],
+      ] satisfies HanzoColumnDef<EventsTableRow>[],
     },
     {
       accessorKey: "providedModelName",

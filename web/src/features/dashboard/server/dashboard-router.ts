@@ -32,6 +32,7 @@ import {
   singleFilter,
 } from "@hanzo/console";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
+import { executeQuery } from "@hanzo/console";
 
 // Define the dashboard list input schema
 const ListDashboardsInput = z.object({

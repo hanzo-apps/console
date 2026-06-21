@@ -15,6 +15,10 @@ import {
   type ConsoleObject,
 } from "../utils/evaluator-form-utils";
 import { OBSERVATION_VARIABLES } from "../utils/evaluator-constants";
+import {
+  eventTargetEvalVariableColumns,
+  experimentTargetEvalVariableColumns,
+} from "@hanzo/console";
 
 /**
  * Custom hook to manage user-facing target state.

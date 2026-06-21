@@ -7,6 +7,8 @@ import { TRPCError } from "@trpc/server";
 import { StringNoHTML } from "@hanzo/console";
 import { Role, Prisma } from "@hanzo/console/src/db";
 import type { PrismaClient } from "@hanzo/console/src/db";
+import { env } from "@hanzo/console";
+import { canToggleV4 } from "@/src/features/events/lib/v4Rollout";
 
 const updateDisplayNameSchema = z.object({
   name: StringNoHTML.min(1, "Name cannot be empty").max(

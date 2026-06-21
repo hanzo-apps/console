@@ -15,6 +15,7 @@ import {
   Prisma,
   TableViewPresetTableName,
 } from "@hanzo/console";
+import { TableViewPresetsNamesCreatorListSchema } from "@hanzo/console/src/server";
 
 export const TableViewPresetsRouter = createTRPCRouter({
   create: protectedProjectProcedure

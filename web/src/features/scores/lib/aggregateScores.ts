@@ -6,6 +6,7 @@ import {
   type ScoreDomain,
   type AggregatableScoreDataType,
 } from "@hanzo/console";
+import { ScoreDataTypeType } from "@hanzo/console";
 
 /**
  * Normalizes score names for comparison by converting - and . to _

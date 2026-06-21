@@ -8,6 +8,7 @@ import { env } from "@/src/env.mjs";
 import { getServerAuthSession } from "@/src/server/auth";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { prisma } from "@hanzo/console/src/db";
+import { SLACK_BOT_SCOPES } from "@hanzo/console/src/server";
 
 /**
  * SlackOAuthHandlers

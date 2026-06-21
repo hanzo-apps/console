@@ -4,6 +4,8 @@ import {
   stringifyMetadata,
   type WithStringifiedMetadata,
 } from "@/src/utils/clientSideDomainTypes";
+import { FullEventsObservations } from "@hanzo/console/src/server";
+import { MetadataDomain } from "@hanzo/console";
 
 export type SyntheticTrace = WithStringifiedMetadata<
   Omit<TraceDomain, "input" | "output">

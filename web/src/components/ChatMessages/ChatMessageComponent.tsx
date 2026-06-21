@@ -32,6 +32,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
+import {
+  useOptionalMessageSearchActions,
+  useOptionalMessageSearchPageId,
+} from "@/src/components/ChatMessages/MessageSearch";
 
 type ChatMessageProps = Pick<
   MessagesContext,

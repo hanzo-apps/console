@@ -70,6 +70,8 @@ import { useRouter } from "next/router";
 import { useAnnotationScoreConfigs } from "@/src/features/scores/hooks/useScoreConfigs";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import Spinner from "@/src/components/design-system/Spinner/Spinner";
+import { isTextDataType } from "@/src/features/scores/lib/helpers";
+import { TEXT_SCORE_MAX_LENGTH } from "@hanzo/console";
 
 const CHAR_CUTOFF = 6;
 
