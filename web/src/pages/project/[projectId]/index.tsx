@@ -37,6 +37,7 @@ import {
 } from "@/src/hooks/use-environment-filter";
 import { Button } from "@/src/components/ui/button";
 import { api } from "@/src/utils/api";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -48,6 +49,8 @@ export default function Dashboard() {
   );
 
   const uiCustomization = useUiCustomization();
+
+  const { isBetaEnabled } = useV4Beta();
 
   const lookbackLimit = useEntitlementLimit("data-access-days");
 

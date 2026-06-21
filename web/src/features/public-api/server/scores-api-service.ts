@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { z } from "zod/v4";
 
 import {
   _handleGenerateScoresForPublicApi,

@@ -13,7 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/src/components/ui/popover";
-import { getAllModels } from "@/src/features/dashboard/components/hooks";
+import { useAllModels } from "@/src/features/dashboard/components/hooks";
 import { cn } from "@/src/utils/tailwind";
 import { type FilterState } from "@hanzo/console";
 import { Check, ChevronsUpDown } from "lucide-react";
@@ -107,7 +107,7 @@ export const useModelSelection = (
   fromTimestamp: Date,
   toTimestamp: Date,
 ) => {
-  const allModels = getAllModels(
+  const allModels = useAllModels(
     projectId,
     globalFilterState,
     fromTimestamp,
