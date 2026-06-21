@@ -18,6 +18,7 @@ export * from "./services/InMemoryFilterService";
 export * from "./automations";
 export * from "./services/DatasetService";
 export * from "./services/commentFilterService";
+export * from "./services/blockEvaluatorConfigs";
 export * from "./datasets/schemaValidation";
 export * from "./datasets/schemaTypes";
 export * from "./evalJobConfigCache";

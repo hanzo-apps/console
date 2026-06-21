@@ -94,6 +94,7 @@ export * from "./server/utils/metadata_conversion";
 export * from "./errors/index";
 
 export * from "./utils/environment";
+export { env, type SharedEnv } from "./env";
 export * from "./interfaces/search";
 
 // domain
@@ -110,3 +111,4 @@ export { ChartConfigSchema, DimensionSchema, MetricSchema } from "./server/servi
 export * from "./features/query/types";
 export * from "./features/query/dataModel";
 export * from "./features/query/validateQuery";
+export { executeQuery } from "./features/query/server/queryExecutor";

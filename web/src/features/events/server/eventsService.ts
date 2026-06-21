@@ -26,6 +26,7 @@ import {
 } from "@hanzo/console/src/server";
 import { type timeFilter, type FilterState } from "@hanzo/console";
 import { type EventBatchIOOutput } from "@/src/features/events/server/eventsRouter";
+import { assertUnreachable } from "@/src/utils/types";
 
 type TimeFilter = z.infer<typeof timeFilter>;
 
@@ -51,7 +52,13 @@ interface GetObservationsFilterOptionsParams {
   projectId: string;
   startTimeFilter?: TimeFilter[];
   hasParentObservation?: boolean;
+  observationType?: string;
 }
+
+type EventFilterValueOption = {
+  value: string;
+  count?: number;
+};
 
 /**
  * Get paginated list of events
@@ -278,6 +285,216 @@ export async function getEventFilterOptions(
       .filter((i) => i.calledToolName !== null)
       .map((i) => ({ value: i.calledToolName as string })),
   };
+}
+
+type EventFilterValueColumn =
+  | "traceTags"
+  | "hasParentObservation"
+  | "providedModelName"
+  | "modelId"
+  | "name"
+  | "traceName"
+  | "type"
+  | "userId"
+  | "version"
+  | "sessionId"
+  | "level"
+  | "environment"
+  | "promptName";
+
+/**
+ * Get a paginated page of distinct filter values for a single events-table column.
+ *
+ * The underlying grouped queries return the full set of distinct values ordered by
+ * descending count, so pagination is applied in-memory. The returned `nextOffset` is
+ * populated only when more values are available beyond the requested page.
+ */
+export async function getEventFilterValuePage(
+  params: GetObservationsFilterOptionsParams & {
+    column: EventFilterValueColumn;
+    limit: number;
+    offset: number;
+  },
+) {
+  const {
+    projectId,
+    column,
+    limit,
+    offset,
+    startTimeFilter,
+    hasParentObservation,
+    observationType,
+  } = params;
+
+  // Build filter with optional scoping for filter options.
+  const eventsFilter: FilterState = [
+    ...(startTimeFilter ?? []),
+    ...(hasParentObservation !== undefined
+      ? [
+          {
+            column: "hasParentObservation" as const,
+            type: "boolean" as const,
+            operator: "=" as const,
+            value: hasParentObservation,
+          },
+        ]
+      : []),
+    ...(observationType
+      ? [
+          {
+            column: "type" as const,
+            type: "string" as const,
+            operator: "=" as const,
+            value: observationType,
+          },
+        ]
+      : []),
+  ];
+
+  // Map startTimeFilter to Timestamp column for trace tag queries
+  const traceTimestampFilters =
+    startTimeFilter && startTimeFilter.length > 0
+      ? startTimeFilter.map((f) => ({
+          column: "Timestamp" as const,
+          operator: f.operator,
+          value: f.value,
+          type: "datetime" as const,
+        }))
+      : [];
+
+  const paginate = (values: EventFilterValueOption[]) => ({
+    values: values.slice(offset, offset + limit),
+    nextOffset: values.length > offset + limit ? offset + limit : undefined,
+  });
+
+  switch (column) {
+    case "hasParentObservation": {
+      const results = await getEventsGroupedByHasParentObservation(
+        projectId,
+        eventsFilter,
+      );
+      return paginate(
+        results.map((i) => ({
+          value: i.hasParentObservation ? "true" : "false",
+          count: i.count,
+        })),
+      );
+    }
+    case "traceTags": {
+      const traces = await getTracesGroupedByTags({
+        projectId,
+        filter: traceTimestampFilters,
+      });
+      // Trace tags do not support counting right now
+      return paginate(
+        traces
+          .filter((i) => i.value !== null)
+          .map((i) => ({ value: i.value as string })),
+      );
+    }
+    case "providedModelName": {
+      const results = await getEventsGroupedByModel(projectId, eventsFilter);
+      return paginate(
+        results
+          .filter((i) => i.model !== null)
+          .map((i) => ({ value: i.model as string, count: i.count })),
+      );
+    }
+    case "modelId": {
+      const results = await getEventsGroupedByModelId(projectId, eventsFilter);
+      return paginate(
+        results
+          .filter((i) => i.modelId !== null)
+          .map((i) => ({ value: i.modelId as string, count: i.count })),
+      );
+    }
+    case "name": {
+      const results = await getEventsGroupedByName(projectId, eventsFilter);
+      return paginate(
+        results
+          .filter((i) => i.name !== null)
+          .map((i) => ({ value: i.name as string, count: i.count })),
+      );
+    }
+    case "traceName": {
+      const results = await getEventsGroupedByTraceName(
+        projectId,
+        eventsFilter,
+      );
+      return paginate(
+        results
+          .filter((i) => i.traceName !== null)
+          .map((i) => ({ value: i.traceName as string, count: i.count })),
+      );
+    }
+    case "type": {
+      const results = await getEventsGroupedByType(projectId, eventsFilter);
+      return paginate(
+        results
+          .filter((i) => i.type !== null)
+          .map((i) => ({ value: i.type as string, count: i.count })),
+      );
+    }
+    case "userId": {
+      const results = await getEventsGroupedByUserId(projectId, eventsFilter);
+      return paginate(
+        results
+          .filter((i) => i.userId !== null)
+          .map((i) => ({ value: i.userId as string, count: i.count })),
+      );
+    }
+    case "version": {
+      const results = await getEventsGroupedByVersion(projectId, eventsFilter);
+      return paginate(
+        results
+          .filter((i) => i.version !== null)
+          .map((i) => ({ value: i.version as string, count: i.count })),
+      );
+    }
+    case "sessionId": {
+      const results = await getEventsGroupedBySessionId(
+        projectId,
+        eventsFilter,
+      );
+      return paginate(
+        results
+          .filter((i) => i.sessionId !== null)
+          .map((i) => ({ value: i.sessionId as string, count: i.count })),
+      );
+    }
+    case "level": {
+      const results = await getEventsGroupedByLevel(projectId, eventsFilter);
+      return paginate(
+        results
+          .filter((i) => i.level !== null)
+          .map((i) => ({ value: i.level as string, count: i.count })),
+      );
+    }
+    case "environment": {
+      const results = await getEventsGroupedByEnvironment(
+        projectId,
+        eventsFilter,
+      );
+      return paginate(
+        results
+          .filter((i) => i.environment !== null)
+          .map((i) => ({ value: i.environment as string, count: i.count })),
+      );
+    }
+    case "promptName": {
+      const results = await getEventsGroupedByPromptName(
+        projectId,
+        eventsFilter,
+      );
+      return paginate(
+        results
+          .filter((i) => i.promptName !== null)
+          .map((i) => ({ value: i.promptName as string, count: i.count })),
+      );
+    }
+    default:
+      return assertUnreachable(column);
+  }
 }
 
 interface GetEventBatchIOParams {
