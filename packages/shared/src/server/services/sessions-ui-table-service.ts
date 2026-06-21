@@ -1,6 +1,7 @@
 import type { DatastoreClientConfig } from "../datastore/types";
 import { OrderByState } from "../../interfaces/orderBy";
 import { sessionCols } from "../tableMappings/mapSessionTable";
+import { sessionsViewCols } from "../../tableDefinitions/sessionsView";
 import { FilterState } from "../../types";
 import { convertDateToDatastoreDateTime } from "../datastore/client";
 import { measureAndReturn } from "../datastore/measureAndReturn";
@@ -167,9 +168,7 @@ const getSessionsTableGeneric = async <T>(props: FetchSessionsTableProps) => {
     tracesPrefix: "s",
   });
 
-  tracesFilter.push(
-    ...createFilterFromFilterState(filter, sessionCols, sessionsViewCols),
-  );
+  tracesFilter.push(...createFilterFromFilterState(filter, sessionCols, sessionsViewCols));
 
   const tracesFilterRes = tracesFilter.filter((f) => f.field !== "environment").apply();
   const scoresFilterRes = scoresFilter.apply();

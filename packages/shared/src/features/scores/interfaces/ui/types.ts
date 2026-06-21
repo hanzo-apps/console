@@ -1,4 +1,5 @@
 import { AggregatableScoreDataType, MetadataDomain, ScoreSourceType } from "../../../../domain";
+import { type ListableScoreDataType } from "../../../../domain/scores";
 
 export type BaseAggregate = {
   comment?: string | null;

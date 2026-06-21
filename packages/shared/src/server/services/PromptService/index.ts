@@ -1,5 +1,6 @@
 import { Prompt, PrismaClient } from "@prisma/client";
 import type { RedisClient } from "../../redis/redis";
+import { safeMultiDel } from "../../redis/redis";
 import { randomBytes } from "crypto";
 import { env } from "../../../env";
 import { logger } from "../../logger";

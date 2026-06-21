@@ -10,6 +10,7 @@ import {
   CTEWithSchema,
   EventsAggQueryBuilder,
   StringFilter,
+  DateTimeFilter,
 } from "../queries";
 import { createFilterFromFilterState } from "../queries/datastore-sql/factory";
 import {
@@ -20,14 +21,36 @@ import {
   eventsScoresAggregation,
   eventsTracesScoresAggregation,
 } from "../queries/datastore-sql/query-fragments";
-import { extractTimeFilter, queryDatastore } from "../repositories";
+import { queryDatastore } from "../repositories";
 import { parseDatastoreUTCDateTimeFormat } from "../repositories/datastore";
+import { convertDateToDatastoreDateTime } from "../datastore/client";
 import { experimentItemsTableNativeUiColumnDefinitions } from "../tableMappings/mapExperimentItemsTable";
 import {
   experimentPreAggCols,
   experimentScoreAggCols,
   experimentOrderByCols,
 } from "../tableMappings/mapExperimentTable";
+
+/**
+ * Internal helper: extract and convert time filter from FilterList
+ * Common pattern: find time filter and convert to Datastore DateTime format
+ */
+function extractTimeFilter(
+  filter: FilterList,
+  tableName: "events_proto" | "traces" = "events_proto",
+  fieldName: "start_time" | "timestamp" = "start_time",
+  prefix?: "e" | "t",
+): string | null {
+  const timeFilter = filter.find(
+    (f) =>
+      // For events tables, match any events_* prefix (events_proto, events_core, events_full)
+      (tableName === "events_proto" ? f.datastoreTable.startsWith("events_") : f.datastoreTable === tableName) &&
+      f.field === (prefix ? `${prefix}.${fieldName}` : fieldName) &&
+      (f.operator === ">=" || f.operator === ">"),
+  );
+
+  return timeFilter ? convertDateToDatastoreDateTime((timeFilter as DateTimeFilter).value) : null;
+}
 
 export type ExperimentEventsDataReturnType = {
   experiment_id: string;

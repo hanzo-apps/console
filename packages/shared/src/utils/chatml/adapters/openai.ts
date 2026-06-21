@@ -1,5 +1,11 @@
 import type { NormalizerContext, ProviderAdapter } from "../types";
-import { removeNullFields, stringifyToolResultContent, parseMetadata, isRichToolResult } from "../helpers";
+import {
+  removeNullFields,
+  stringifyToolResultContent,
+  parseMetadata,
+  isRichToolResult,
+  getNestedProperty,
+} from "../helpers";
 import { z } from "zod/v4";
 
 /**
@@ -363,18 +369,13 @@ export const openAIAdapter: ProviderAdapter = {
 
         if (
           scope.name === "agent_framework" ||
-          (typeof scope.name === "string" &&
-            scope.name.includes("Microsoft.Extensions.AI"))
+          (typeof scope.name === "string" && scope.name.includes("Microsoft.Extensions.AI"))
         ) {
           return false;
         }
       }
 
-      const providerName = getNestedProperty(
-        meta,
-        "attributes",
-        "gen_ai.provider.name",
-      );
+      const providerName = getNestedProperty(meta, "attributes", "gen_ai.provider.name");
       if (providerName === "microsoft.agent_framework") return false;
 
       // Pydantic ai

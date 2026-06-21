@@ -13,6 +13,7 @@ import { v4 } from "uuid";
 import { FieldValidationError } from "../../utils/jsonSchemaValidation";
 import { DatasetItemDomain, DatasetItemDomainWithoutIO } from "../../domain";
 import { parseDatastoreUTCDateTimeFormat, queryDatastore } from "./datastore";
+import { TracingSearchType } from "../../interfaces/search";
 
 const emptyNormalizeOpts: { sanitizeControlChars?: boolean } = {};
 const emptyValidateOpts: { normalizeUndefinedToNull?: boolean } = {};

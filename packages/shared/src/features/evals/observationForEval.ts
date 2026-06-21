@@ -2,7 +2,6 @@ import { z } from "zod";
 import { DEFAULT_TRACE_ENVIRONMENT } from "../../server/ingestion/types";
 import { type EventRecordBaseType } from "../../server/repositories/definitions";
 import { ObservationLevel, ObservationType } from "../../domain";
-import { metadataArraysToRecord } from "../../server/utils/metadata_conversion";
 import { SingleValueOption } from "../../tableDefinitions";
 import { ColumnDefinition } from "../../tableDefinitions";
 import { formatColumnOptions } from "../../tableDefinitions/typeHelpers";
@@ -97,11 +96,7 @@ export type ObservationEvalFilterColumnInternal =
 
 export type ObservationEvalMappingColumnInternal = keyof Pick<
   ObservationForEval,
-  | "input"
-  | "output"
-  | "metadata"
-  | "experiment_item_expected_output"
-  | "experiment_item_metadata"
+  "input" | "output" | "metadata" | "experiment_item_expected_output" | "experiment_item_metadata"
 >;
 
 export interface ObservationEvalVariableColumn {
@@ -138,23 +133,22 @@ export const eventTargetEvalVariableColumns: ObservationEvalVariableColumn[] = [
   },
 ];
 
-export const experimentTargetEvalVariableColumns: ObservationEvalVariableColumn[] =
-  [
-    ...eventTargetEvalVariableColumns,
-    {
-      id: "experimentItemExpectedOutput",
-      name: "Expected Output",
-      description: "Expected output from experiment item",
-      internal: "experiment_item_expected_output",
-    },
-    {
-      id: "experimentItemMetadata",
-      name: "Experiment Item Metadata",
-      description: "Metadata from experiment item",
-      type: "stringObject",
-      internal: "experiment_item_metadata",
-    },
-  ];
+export const experimentTargetEvalVariableColumns: ObservationEvalVariableColumn[] = [
+  ...eventTargetEvalVariableColumns,
+  {
+    id: "experimentItemExpectedOutput",
+    name: "Expected Output",
+    description: "Expected output from experiment item",
+    internal: "experiment_item_expected_output",
+  },
+  {
+    id: "experimentItemMetadata",
+    name: "Experiment Item Metadata",
+    description: "Metadata from experiment item",
+    type: "stringObject",
+    internal: "experiment_item_metadata",
+  },
+];
 
 /**
  * Columns available for variable extraction in observation-based evals.
@@ -163,9 +157,7 @@ export const experimentTargetEvalVariableColumns: ObservationEvalVariableColumn[
  * When configuring an eval, users can map these columns to template
  * variables like {{input}}, {{output}}, {{expected_output}}, etc.
  */
-export const observationEvalVariableColumns: ObservationEvalVariableColumn[] = [
-  ...experimentTargetEvalVariableColumns,
-];
+export const observationEvalVariableColumns: ObservationEvalVariableColumn[] = [...experimentTargetEvalVariableColumns];
 
 export const availableObservationEvalVariableColumns = [
   ...observationEvalVariableColumns,

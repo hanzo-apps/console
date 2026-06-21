@@ -1,26 +1,20 @@
 import CallbackHandler from "@hanzo/langchain";
-import { GenerationDetails, TraceSinkParams } from "./types";
+import { ProcessedTraceEvent, TraceSinkParams } from "./types";
+import { buildInternalTraceEventInputs } from "./internalTraceEvents";
 import { processEventBatch } from "../ingestion/processEventBatch";
 import { logger } from "../logger";
 import { traceException } from "../instrumentation";
 
-/**
- * Extracts and merges generation details from a list of processed events.
- * Handles multiple generation-create and generation-update events with the same id.
- *
- * Events are merged following the "last non-null value wins" pattern:
- * - generation-create events contain: id, name, input, metadata
- * - generation-update events contain: output, usage, usageDetails
- *
- * @returns GenerationDetails or null if no generation events found
- */
-export function extractGenerationDetails(
-  processedEvents: Array<{ type: string; body: Record<string, unknown> }>,
-): GenerationDetails | null {
-  // 1. Filter to only generation events
-  const generationEvents = processedEvents.filter(
-    (event) => event.type === "generation-create" || event.type === "generation-update",
-  );
+export function prepareInternalTraceEvents(params: {
+  events: Array<{
+    type: string;
+    timestamp: string;
+    body: Record<string, unknown>;
+  }>;
+  environment: string;
+  prompt?: TraceSinkParams["prompt"];
+}): ProcessedTraceEvent[] {
+  const { events, environment, prompt } = params;
 
   const blockedSpanIds = new Set();
   const blockedSpanNameSubstrings = ["RunnableLambda", "OutputParser"];
@@ -33,9 +27,7 @@ export function extractGenerationDetails(
     }
 
     if (
-      blockedSpanNameSubstrings.some((blockedSubstring) =>
-        eventName.includes(blockedSubstring),
-      ) &&
+      blockedSpanNameSubstrings.some((blockedSubstring) => eventName.includes(blockedSubstring)) &&
       "id" in event.body &&
       event.type !== "trace-create"
     ) {
@@ -43,31 +35,10 @@ export function extractGenerationDetails(
     }
   }
 
-  // 2. Get the generation id from first event
-  const generationId = generationEvents[0].body.id as string;
-  if (!generationId) {
-    return null;
-  }
-
-  // 3. Filter to events for this generation id only
-  const eventsForGeneration = generationEvents.filter((event) => event.body.id === generationId);
-
-  // 4. Merge event bodies (last non-null/non-undefined value wins)
-  // Similar to IngestionService pattern but simplified for our use case
-  const mergedBody = eventsForGeneration.reduce(
-    (acc: Record<string, unknown>, event) => {
-      for (const [key, value] of Object.entries(event.body)) {
-        if (value !== undefined && value !== null) {
-          // Special handling for metadata: deep merge
-          if (key === "metadata" && typeof value === "object" && !Array.isArray(value)) {
-            acc[key] = {
-              ...((acc[key] as Record<string, unknown>) || {}),
-              ...(value as Record<string, unknown>),
-            };
-          } else {
-            acc[key] = value;
-          }
-        }
+  return events
+    .filter((event) => {
+      if ("id" in event.body) {
+        return !blockedSpanIds.has(event.body.id);
       }
 
       return true;
@@ -102,8 +73,7 @@ export function getInternalTracingHandler(traceSinkParams: TraceSinkParams): {
   handler: CallbackHandler;
   processTracedEvents: () => Promise<void>;
 } {
-  const { prompt, targetProjectId, environment, userId, eventsWriter } =
-    traceSinkParams;
+  const { prompt, targetProjectId, environment, userId, eventsWriter } = traceSinkParams;
   const handler = new CallbackHandler({
     _projectId: targetProjectId,
     _isLocalEventExportEnabled: true,
