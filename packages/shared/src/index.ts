@@ -107,8 +107,9 @@ export * from "./utils/IORepresentation";
 export * from "./features/analytics-integrations";
 export { ChartConfigSchema, DimensionSchema, MetricSchema } from "./server/services/DashboardService/types";
 
-// query (dashboard / monitor data model)
+// query (dashboard / monitor data model) — client-safe types/schemas only.
+// `executeQuery` is server-only (pulls StorageService → @google-cloud/storage →
+// fs); it lives on the `@hanzo/console/query/server` subpath, never this barrel.
 export * from "./features/query/types";
 export * from "./features/query/dataModel";
 export * from "./features/query/validateQuery";
-export { executeQuery } from "./features/query/server/queryExecutor";
