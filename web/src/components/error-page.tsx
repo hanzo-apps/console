@@ -1,6 +1,6 @@
 import { Button } from "@/src/components/ui/button";
 import { AlertCircle } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Link from "next/link";

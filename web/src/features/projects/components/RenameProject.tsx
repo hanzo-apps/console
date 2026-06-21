@@ -11,7 +11,7 @@ import Header from "@/src/components/layouts/header";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { LockIcon } from "lucide-react";
 import { useQueryProject } from "@/src/features/projects/hooks";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 
 export default function RenameProject() {

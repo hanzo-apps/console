@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { AlertCircle, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/src/components/ui/button";

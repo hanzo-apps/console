@@ -1,15 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getIamClient, getIamConfig } from "@/src/features/auth/lib/iamServer";
+import {
+  establishIamSessionFromToken,
+  sessionSetCookie,
+} from "@/src/features/auth/lib/iamSession";
 import { logger } from "@hanzo/console/src/server";
 
 /**
- * Same-origin token-exchange proxy for the embedded `@hanzo/iam` BrowserIamSdk.
+ * Same-origin token-exchange proxy for the embedded `@hanzo/iam` BrowserIamSdk
+ * (its `proxyBaseUrl` is console's `/v1/iam`, so it POSTs here for
+ * `${proxyBaseUrl}/oauth/token`). We forward to IAM server-side — attaching the
+ * confidential `client_secret` — so the exchange never leaves the origin and
+ * works even when IAM emits no CORS headers. IAM remains the token issuer.
  *
- * The browser SDK POSTs a urlencoded `authorization_code` / `refresh_token`
- * grant here (its `proxyBaseUrl` is console's `/api/auth/iam`). We forward to
- * IAM server-side — attaching the confidential `client_secret` — so the token
- * exchange never leaves the origin and works even when IAM does not emit CORS
- * headers. IAM remains the token issuer; console only relays.
+ * On a successful authorization_code exchange we ALSO set the signed
+ * `hi_session` cookie (validating the freshly-minted access token against IAM's
+ * JWKS) so the server session is live immediately after the redirect.
  */
 export default async function handler(
   req: NextApiRequest,
@@ -28,7 +34,6 @@ export default async function handler(
     return;
   }
 
-  // Body arrives urlencoded; Next parses it into req.body for that content-type.
   const params = new URLSearchParams(
     typeof req.body === "string"
       ? req.body
@@ -44,6 +49,10 @@ export default async function handler(
         return;
       }
       const tokens = await client.refreshToken(refreshToken);
+      if (tokens.access_token) {
+        const session = await establishIamSessionFromToken(tokens.access_token);
+        if (session.ok) res.setHeader("Set-Cookie", sessionSetCookie(session.cookie));
+      }
       res.status(200).json(tokens);
       return;
     }
@@ -56,11 +65,11 @@ export default async function handler(
       res.status(400).json({ error: "Missing code or redirect_uri" });
       return;
     }
-    const tokens = await client.exchangeCode({
-      code,
-      redirectUri,
-      codeVerifier,
-    });
+    const tokens = await client.exchangeCode({ code, redirectUri, codeVerifier });
+    if (tokens.access_token) {
+      const session = await establishIamSessionFromToken(tokens.access_token);
+      if (session.ok) res.setHeader("Set-Cookie", sessionSetCookie(session.cookie));
+    }
     res.status(200).json(tokens);
   } catch (error) {
     const message =

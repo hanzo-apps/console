@@ -24,7 +24,7 @@ import {
   Settings,
   Slash,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import {
   createOrganizationRoute,

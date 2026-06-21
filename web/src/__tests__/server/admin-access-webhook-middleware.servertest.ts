@@ -1,4 +1,4 @@
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import * as z from "zod";
 import { env } from "@/src/env.mjs";
 

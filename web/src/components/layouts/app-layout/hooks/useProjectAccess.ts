@@ -14,7 +14,7 @@
 
 import { useRouter } from "next/router";
 import { useMemo } from "react";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { env } from "@/src/env.mjs";
 
 /**

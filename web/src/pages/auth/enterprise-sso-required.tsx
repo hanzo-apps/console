@@ -2,7 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn } from "@/src/features/auth/session";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
@@ -74,7 +74,7 @@ export default function EnterpriseSsoRequiredPage() {
     }
 
     try {
-      const response = await fetch(`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/auth/check-sso`, {
+      const response = await fetch(`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/iam/check-sso`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain }),

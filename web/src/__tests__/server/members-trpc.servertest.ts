@@ -2,7 +2,7 @@ import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import { prisma } from "@hanzo/console/src/db";
 import { Role, type Plan } from "@hanzo/console";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { v4 as uuidv4 } from "uuid";
 
 async function createTestOrg(plan: Plan) {

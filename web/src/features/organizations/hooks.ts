@@ -1,5 +1,5 @@
 import { env } from "@/src/env.mjs";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useRouter } from "next/router";
 
 /**

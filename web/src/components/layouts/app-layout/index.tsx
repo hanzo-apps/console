@@ -11,7 +11,7 @@
 
 import { type PropsWithChildren, useEffect } from "react";
 import { useRouter } from "next/router";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/src/features/auth/session";
 import insights from "@hanzo/insights";
 import { env } from "@/src/env.mjs";
 import { useQueryProjectOrOrganization } from "@/src/features/projects/hooks";

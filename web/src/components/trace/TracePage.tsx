@@ -7,7 +7,7 @@ import { ErrorPage } from "@/src/components/error-page";
 import { DeleteTraceButton } from "@/src/components/deleteButton";
 import Page from "@/src/components/layouts/page";
 import { Trace } from "@/src/components/trace/Trace";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useIsAuthenticatedAndProjectMember } from "@/src/features/auth/hooks";
 import { Button } from "@/src/components/ui/button";
 import Link from "next/link";

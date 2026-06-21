@@ -1,5 +1,5 @@
 import { type Flag } from "@/src/features/feature-flags/types";
-import { type SessionContextValue, useSession } from "next-auth/react";
+import { type SessionContextValue, useSession } from "@/src/features/auth/session";
 
 const isAdminOrExperimentalFeatures = (session: SessionContextValue): boolean => {
   const enableExperimentalFeatures = session.data?.environment?.enableExperimentalFeatures ?? false;

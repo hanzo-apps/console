@@ -9,7 +9,7 @@ import {
 } from "@/src/components/ui/command";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { env } from "@/src/env.mjs";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { useDebounce } from "@/src/hooks/useDebounce";

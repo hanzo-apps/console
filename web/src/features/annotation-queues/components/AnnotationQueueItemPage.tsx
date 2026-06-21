@@ -16,7 +16,7 @@ import { useAnnotationObjectData } from "./shared/hooks/useAnnotationObjectData"
 import { TraceAnnotationProcessor } from "./processors/TraceAnnotationProcessor";
 import { SessionAnnotationProcessor } from "./processors/SessionAnnotationProcessor";
 import { ObjectNotFoundCard } from "@/src/components/ui/object-not-found-card";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 
 export const AnnotationQueueItemPage: React.FC<{
   annotationQueueId: string;

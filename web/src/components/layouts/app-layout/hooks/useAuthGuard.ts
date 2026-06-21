@@ -7,7 +7,7 @@ import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { PATH_CONSTANTS } from "../utils/pathClassification";
 import { getSafeRedirectPath, stripBasePath } from "@/src/utils/redirect";
-import type { SessionContextValue } from "next-auth/react";
+import type { SessionContextValue } from "@/src/features/auth/session";
 
 /** Actions the auth guard can request */
 export type AuthGuardAction = "allow" | "loading" | "redirect" | "sign-out";

@@ -59,7 +59,6 @@ const sharedAlias = {
 // preserved (/v1/<seg>/* ↔ /api/<seg>/*). The public SDK API is handled
 // separately by collapsing /api/public/* ↔ /v1/* (the redundant `public` drops).
 const V1_PASS_THROUGH = [
-  "auth", // NextAuth (basePath is /v1/auth)
   "trpc", // tRPC web RPC
   "admin",
   "agents",
@@ -330,7 +329,7 @@ const nextConfig = {
       ...(env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== undefined
         ? [
             {
-              source: "/v1/auth/session",
+              source: "/v1/iam/session",
               headers: [
                 {
                   key: "Access-Control-Allow-Origin",

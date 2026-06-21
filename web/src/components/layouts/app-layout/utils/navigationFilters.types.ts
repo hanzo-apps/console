@@ -2,7 +2,7 @@
  * Type definitions for navigation filtering system
  */
 
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import type { Route } from "@/src/components/layouts/routes";
 import type { Entitlement } from "@/src/features/entitlements/constants/entitlements";
 

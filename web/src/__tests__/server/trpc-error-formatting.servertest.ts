@@ -1,4 +1,4 @@
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { TRPCError } from "@trpc/server";
 import * as z from "zod";
 import { ClickHouseResourceError } from "@hanzo/console/src/server";

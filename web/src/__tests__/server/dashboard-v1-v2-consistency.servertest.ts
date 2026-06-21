@@ -22,7 +22,7 @@ import { getGenerationLikeTypes, type FilterCondition } from "@hanzo/console";
 import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { env } from "@/src/env.mjs";
 import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
 

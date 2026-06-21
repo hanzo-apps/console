@@ -24,7 +24,7 @@ import {
   getCloudRegionAuthUrl,
 } from "@/src/features/organizations/cloudRegions";
 import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 import type { RouteGroup } from "@/src/components/layouts/routes";
 

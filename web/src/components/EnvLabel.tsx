@@ -1,6 +1,6 @@
 import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import { cn } from "@/src/utils/tailwind";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useState } from "react";
 
 export const EnvLabel = ({ className }: { className?: string }) => {

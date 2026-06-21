@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import { signIn } from "next-auth/react";
 import { useIam } from "@hanzo/iam/react";
 import { env } from "@/src/env.mjs";
 import { HanzoCloudIcon } from "@/src/components/HanzoLogo";
 import { getSafeRedirectPath } from "@/src/utils/redirect";
 
 /**
- * OAuth callback for the embedded `@hanzo/iam` flow (social login and any
- * redirect-based IAM sign-in). Completes the PKCE code exchange via the IAM
- * BrowserIamSdk, then bridges the resulting IAM access token into a console
- * NextAuth session through the `iam-token` credentials provider.
+ * OAuth callback for the IAM-native PKCE flow (social login + any redirect-based
+ * IAM sign-in). `handleCallback()` exchanges the code through console's
+ * same-origin `/v1/iam/oauth/token` proxy, which validates the access token
+ * against IAM's JWKS and sets the signed `hi_session` cookie. So once the
+ * exchange returns, the console session is live — we just redirect.
  *
- * IAM is the identity here; NextAuth is only the session transport that carries
- * the IAM-derived identity (orgs/projects/roles hydrate from console Postgres).
+ * IAM is the identity authority; console holds only the signed session cookie.
  */
 export default function IamCallback() {
   const router = useRouter();
@@ -33,16 +32,8 @@ export default function IamCallback() {
 
     void (async () => {
       try {
-        const tokens = await handleCallback();
-        const result = await signIn("iam-token", {
-          accessToken: tokens.access_token,
-          redirect: false,
-          callbackUrl: targetPath ?? `${basePath}/`,
-        });
-        if (!result || !result.ok) {
-          setError(result?.error ?? "Failed to establish a session.");
-          return;
-        }
+        // Exchanges the code via /v1/iam/oauth/token (sets the hi_session cookie).
+        await handleCallback();
         await router.replace(targetPath ?? `${basePath}/`);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Sign-in failed.");

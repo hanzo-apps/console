@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 
 /**
  * Hook to check if the user is authenticated and a member of the project.

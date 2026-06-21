@@ -26,8 +26,8 @@ import {
   Settings,
   Users,
 } from "lucide-react";
-import { type User } from "next-auth";
-import { useSession } from "next-auth/react";
+import { type User } from "@/src/features/auth/session-types";
+import { useSession } from "@/src/features/auth/session";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Fragment } from "react";

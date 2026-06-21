@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import type { Flag } from "../types";
 
 export default function useIsFeatureEnabled(feature: Flag): boolean {

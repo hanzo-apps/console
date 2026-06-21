@@ -1,8 +1,8 @@
 import { type AppType } from "next/app";
-import { type Session } from "next-auth";
-import { SessionProvider } from "next-auth/react";
+import { type Session } from "@/src/features/auth/session-types";
+import { SessionProvider } from "@/src/features/auth/session";
 import { setUser } from "@sentry/nextjs";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { TooltipProvider } from "@/src/components/ui/tooltip";
 import { CommandMenuProvider } from "@/src/features/command-k-menu/CommandMenuProvider";
 
