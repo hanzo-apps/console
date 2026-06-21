@@ -149,16 +149,11 @@ const nextConfig = {
     turbopackFileSystemCacheForBuild: true,
   },
 
-  /**
-   * If you have `experimental: { appDir: true }` set, then you must comment the below `i18n` config
-   * out.
-   *
-   * @see https://github.com/vercel/next.js/issues/41980
-   */
-  i18n: {
-    locales: ["en"],
-    defaultLocale: "en",
-  },
+  // NOTE: the single-locale `i18n` config was removed. It provided no
+  // translation (only "en", no next-i18next / useTranslation / serverSideTranslations)
+  // but force-prefixed every rewrite/redirect/middleware matcher with the locale
+  // (`/en/...`), which broke the canonical /v1/* surface. Without it, the raw
+  // /v1/* and /api/* paths match the middleware matcher directly.
   output: "standalone",
 
   // The canonical /v1/* ↔ /api/* surface is handled in web/middleware.ts, NOT
