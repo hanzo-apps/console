@@ -53,7 +53,9 @@ export function signSession(identity: { sub: string; email: string }): string {
     exp: Math.floor(nowSeconds()) + SESSION_TTL_SECONDS,
   };
   const body = b64url(Buffer.from(JSON.stringify(payload)));
-  const sig = b64url(createHmac("sha256", sessionSecret()).update(body).digest());
+  const sig = b64url(
+    createHmac("sha256", sessionSecret()).update(body).digest(),
+  );
   return `${body}.${sig}`;
 }
 
@@ -73,7 +75,8 @@ function verifySession(value: string | undefined): SessionRef | null {
     const ref = JSON.parse(
       Buffer.from(body, "base64url").toString("utf8"),
     ) as SessionRef;
-    if (!ref.email || !ref.exp || ref.exp < Math.floor(nowSeconds())) return null;
+    if (!ref.email || !ref.exp || ref.exp < Math.floor(nowSeconds()))
+      return null;
     return ref;
   } catch {
     return null;
@@ -134,15 +137,30 @@ function canCreateOrganizations(userEmail: string | null): boolean {
 }
 
 /**
+ * Instance-admin by email domain. Any user whose email domain is listed in
+ * HANZO_ADMIN_EMAIL_DOMAINS (comma-separated, e.g. "hanzo.ai") is granted the
+ * admin flag — full access to the admin dashboard — in addition to the per-user
+ * `User.admin` DB flag. White-label: each brand console sets its own domains.
+ */
+function isInstanceAdminEmail(email: string | null): boolean {
+  if (!email || !env.HANZO_ADMIN_EMAIL_DOMAINS) return false;
+  const domains = env.HANZO_ADMIN_EMAIL_DOMAINS.toLowerCase()
+    .split(",")
+    .map((d) => d.trim().replace(/^@/, ""))
+    .filter(Boolean);
+  const at = email.lastIndexOf("@");
+  if (at < 0) return false;
+  return domains.includes(email.slice(at + 1).toLowerCase());
+}
+
+/**
  * Hydrate the full console session for an IAM-verified email — the single
  * source of the session shape (replaces NextAuth's `session()` callback). The
  * shape is byte-for-byte what consumers already read (`session.user.organizations[].projects[].role`,
  * entitlements, admin flag) so the ~495 protected procedures + 277 `session.user`
  * reads are unchanged.
  */
-export async function hydrateSession(
-  email: string,
-): Promise<Session> {
+export async function hydrateSession(email: string): Promise<Session> {
   return instrumentAsync({ name: "iam-session-hydrate" }, async (span) => {
     const dbUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -188,48 +206,51 @@ export async function hydrateSession(
                 ? createSupportEmailHash(dbUser.email)
                 : undefined,
               image: dbUser.image,
-              admin: dbUser.admin,
+              admin: dbUser.admin || isInstanceAdminEmail(dbUser.email),
               canCreateOrganizations: canCreateOrganizations(dbUser.email),
-              organizations: dbUser.organizationMemberships.map((membership) => {
-                const parsedCloudConfig = CloudConfigSchema.safeParse(
-                  membership.organization.cloudConfig,
-                );
-                return {
-                  id: membership.organization.id,
-                  name: membership.organization.name,
-                  role: membership.role,
-                  metadata:
-                    (membership.organization.metadata as Record<
-                      string,
-                      unknown
-                    >) ?? {},
-                  aiFeaturesEnabled: membership.organization.aiFeaturesEnabled,
-                  cloudConfig: parsedCloudConfig.data,
-                  projects: membership.organization.projects
-                    .map((project) => {
-                      const projectRole = resolveProjectRole({
-                        projectId: project.id,
-                        projectMemberships: membership.ProjectMemberships,
-                        orgMembershipRole: membership.role,
-                      });
-                      return {
-                        id: project.id,
-                        name: project.name,
-                        role: projectRole,
-                        retentionDays: project.retentionDays,
-                        deletedAt: project.deletedAt,
-                        metadata:
-                          (project.metadata as Record<string, unknown>) ?? {},
-                      };
-                    })
-                    .filter((project) =>
-                      projectRoleAccessRights[project.role].includes(
-                        "project:read",
+              organizations: dbUser.organizationMemberships.map(
+                (membership) => {
+                  const parsedCloudConfig = CloudConfigSchema.safeParse(
+                    membership.organization.cloudConfig,
+                  );
+                  return {
+                    id: membership.organization.id,
+                    name: membership.organization.name,
+                    role: membership.role,
+                    metadata:
+                      (membership.organization.metadata as Record<
+                        string,
+                        unknown
+                      >) ?? {},
+                    aiFeaturesEnabled:
+                      membership.organization.aiFeaturesEnabled,
+                    cloudConfig: parsedCloudConfig.data,
+                    projects: membership.organization.projects
+                      .map((project) => {
+                        const projectRole = resolveProjectRole({
+                          projectId: project.id,
+                          projectMemberships: membership.ProjectMemberships,
+                          orgMembershipRole: membership.role,
+                        });
+                        return {
+                          id: project.id,
+                          name: project.name,
+                          role: projectRole,
+                          retentionDays: project.retentionDays,
+                          deletedAt: project.deletedAt,
+                          metadata:
+                            (project.metadata as Record<string, unknown>) ?? {},
+                        };
+                      })
+                      .filter((project) =>
+                        projectRoleAccessRights[project.role].includes(
+                          "project:read",
+                        ),
                       ),
-                    ),
-                  plan: getOrganizationPlanServerSide(parsedCloudConfig.data),
-                };
-              }),
+                    plan: getOrganizationPlanServerSide(parsedCloudConfig.data),
+                  };
+                },
+              ),
               emailVerified: dbUser.emailVerified?.toISOString(),
               featureFlags: parseFlags(dbUser.featureFlags),
               hasPassword: Boolean(dbUser.password),
