@@ -23,6 +23,11 @@ import { ObservationTypeMapperRegistry } from "./ObservationTypeMapper";
 import { env } from "../../env";
 import { OtelIngestionQueue } from "../redis/otelIngestionQueue";
 import { isValidDateString, flattenJsonToPathArrays } from "./utils";
+import {
+  convertCallsToArrays,
+  convertDefinitionsToMap,
+  extractToolsFromObservation,
+} from "../ingestion/extractToolsBackend";
 
 // Type definitions for internal processor state
 interface TraceState {
@@ -256,6 +261,8 @@ export class OtelIngestionProcessor {
                   startTimeUnixNano: span.startTimeUnixNano,
                   endTimeUnixNano: span.endTimeUnixNano,
                 });
+
+                const isLangfuseSDKSpans = scopeSpan.scope?.name?.startsWith("langfuse-sdk") ?? false;
 
                 // Extract metadata from different sources
                 const spanMetadata = this.extractMetadata(spanAttributes, "observation");
@@ -859,7 +866,7 @@ export class OtelIngestionProcessor {
     const metadata = {
       ...resourceAttributeMetadata,
       ...spanAttributeMetadata,
-      ...(isLangfuseSDKSpans ? {} : { attributes: filteredAttributes }),
+      ...(isHanzoSDKSpans ? {} : { attributes: filteredAttributes }),
       resourceAttributes,
       scope: { ...scopeSpan.scope, attributes: scopeAttributes },
     };
@@ -1695,6 +1702,8 @@ export class OtelIngestionProcessor {
     attributes: Record<string, unknown>,
     domain: "trace" | "observation",
   ): Record<string, unknown> {
+    let topLevelMetadata: Record<string, unknown> = {};
+
     const metadataKeyPrefix =
       domain === "observation" ? HanzoOtelSpanAttributes.OBSERVATION_METADATA : HanzoOtelSpanAttributes.TRACE_METADATA;
 
@@ -2043,6 +2052,16 @@ export class OtelIngestionProcessor {
     );
 
     if (usageDetails.length === 0) return {};
+
+    const usageDetailKeyMapping: Record<string, string> = {
+      prompt_tokens: "input",
+      completion_tokens: "output",
+      total_tokens: "total",
+      input_tokens: "input",
+      output_tokens: "output",
+      prompt: "input",
+      completion: "output",
+    };
 
     return usageDetails.reduce((acc: any, key) => {
       const usageDetailKey = key.replace("gen_ai.usage.", "").replace("llm.token_count.", "");

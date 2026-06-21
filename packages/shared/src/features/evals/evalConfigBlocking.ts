@@ -1,27 +1,17 @@
-import {
-  EvaluatorBlockReason,
-  JobConfigState,
-  JobExecutionStatus,
-} from "@prisma/client";
+import { EvaluatorBlockReason, JobConfigState, JobExecutionStatus } from "../../db-enums";
 import { z } from "zod";
 
 export const PausedEvaluatorDisplayState = "PAUSED" as const;
 export type PausedEvaluatorDisplayState = typeof PausedEvaluatorDisplayState;
 
-export type EvaluatorDisplayState =
-  | JobConfigState
-  | PausedEvaluatorDisplayState
-  | "FINISHED";
+export type EvaluatorDisplayState = JobConfigState | PausedEvaluatorDisplayState | "FINISHED";
 
 export type EvaluatorExecutionStatusCount = {
   status: JobExecutionStatus;
   count: number;
 };
 
-export type EvaluatorExecutionCountsByEvaluatorId = Record<
-  string,
-  EvaluatorExecutionStatusCount[]
->;
+export type EvaluatorExecutionCountsByEvaluatorId = Record<string, EvaluatorExecutionStatusCount[]>;
 
 type BlockStateLike = {
   status: JobConfigState;
@@ -39,10 +29,7 @@ export function isJobConfigExecutable(config: BlockStateLike) {
   return config.status === JobConfigState.ACTIVE && !isJobConfigBlocked(config);
 }
 
-export function isJobConfigExecutableForExecutionMode(
-  config: BlockStateLike,
-  executionMode?: JobConfigExecutionMode,
-) {
+export function isJobConfigExecutableForExecutionMode(config: BlockStateLike, executionMode?: JobConfigExecutionMode) {
   if (executionMode === "MANUAL") {
     // Manual batch runs bypass only the live-traffic toggle, not blocked configs.
     return !isJobConfigBlocked(config);
@@ -56,10 +43,7 @@ type EvaluatorBlockMetadata = {
   shortLabel: string;
 };
 
-export const EVALUATOR_BLOCK_METADATA: Record<
-  EvaluatorBlockReason,
-  EvaluatorBlockMetadata
-> = {
+export const EVALUATOR_BLOCK_METADATA: Record<EvaluatorBlockReason, EvaluatorBlockMetadata> = {
   LLM_CONNECTION_AUTH_INVALID: {
     message:
       "Evaluator paused: LLM authentication failed. Update the LLM connection used by this evaluator and then reactivate it.",
@@ -92,9 +76,7 @@ export const EVALUATOR_BLOCK_METADATA: Record<
   },
 };
 
-export function getEvaluatorBlockMetadata(
-  reason: EvaluatorBlockReason,
-): EvaluatorBlockMetadata {
+export function getEvaluatorBlockMetadata(reason: EvaluatorBlockReason): EvaluatorBlockMetadata {
   return EVALUATOR_BLOCK_METADATA[reason];
 }
 
@@ -144,8 +126,7 @@ export function deriveEvaluatorDisplayState(params: {
   hasPendingJobs: boolean;
   totalJobCount: number;
 }): EvaluatorDisplayState {
-  const { status, blockedAt, timeScope, hasPendingJobs, totalJobCount } =
-    params;
+  const { status, blockedAt, timeScope, hasPendingJobs, totalJobCount } = params;
 
   if (status === JobConfigState.INACTIVE) {
     return JobConfigState.INACTIVE;
@@ -155,12 +136,7 @@ export function deriveEvaluatorDisplayState(params: {
     return PausedEvaluatorDisplayState;
   }
 
-  if (
-    timeScope.length === 1 &&
-    timeScope[0] === "EXISTING" &&
-    !hasPendingJobs &&
-    totalJobCount > 0
-  ) {
+  if (timeScope.length === 1 && timeScope[0] === "EXISTING" && !hasPendingJobs && totalJobCount > 0) {
     return "FINISHED";
   }
 
@@ -179,12 +155,7 @@ export function deriveEvaluatorDisplayStateFromExecutionCounts(params: {
     status,
     blockedAt,
     timeScope,
-    hasPendingJobs: executionCounts.some(
-      (executionCount) => executionCount.status === JobExecutionStatus.PENDING,
-    ),
-    totalJobCount: executionCounts.reduce(
-      (total, executionCount) => total + executionCount.count,
-      0,
-    ),
+    hasPendingJobs: executionCounts.some((executionCount) => executionCount.status === JobExecutionStatus.PENDING),
+    totalJobCount: executionCounts.reduce((total, executionCount) => total + executionCount.count, 0),
   });
 }

@@ -1,5 +1,12 @@
-import { filterOperators } from "../../../interfaces/filters";
+import { filterOperators, type FtsMatchOperator } from "../../../interfaces/filters";
 import { datastoreCompliantRandomCharacters } from "../../repositories";
+import {
+  FTS_MATCH_OPERATOR,
+  FTS_OPERATOR_DESCRIPTORS,
+  assertValidFtsMatchFilter,
+  isFtsEventsTable,
+  isFtsTextTarget,
+} from "./fts";
 
 export type DatastoreOperator = (typeof filterOperators)[keyof typeof filterOperators][number] | "!=";
 export interface Filter {
@@ -473,6 +480,7 @@ export class NullFilter implements Filter {
   }
 
   apply(): DatastoreFilter {
+    const fieldWithPrefix = `${this.tablePrefix ? this.tablePrefix + "." : ""}${this.field}`;
     return {
       query: `${fieldWithPrefix} ${this.operator}`,
       params: {},

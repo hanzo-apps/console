@@ -1,10 +1,10 @@
+import { Prisma } from "@prisma/client";
 import {
   MonitorSeverity as PrismaMonitorSeverity,
   MonitorStatus as PrismaMonitorStatus,
   MonitorThresholdOperator as PrismaMonitorThresholdOperator,
   MonitorView as PrismaMonitorView,
-  Prisma,
-} from "@prisma/client";
+} from "../../../db-enums";
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 

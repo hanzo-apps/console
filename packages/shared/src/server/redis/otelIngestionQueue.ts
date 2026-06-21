@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { Queue } from "@hanzo/mq";
 import { QueueName, TQueueJobTypes } from "../queues";
 import { createNewRedisInstance, redisQueueRetryOptions, getQueuePrefix } from "./redis";

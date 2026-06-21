@@ -1,14 +1,12 @@
 import z from "zod/v4";
-import { singleFilter } from "../../../interfaces/filters";
-import { FilterCondition } from "../../../types";
+import { singleFilter, FTS_MATCH_OPERATOR } from "../../../interfaces/filters";
+import { FilterCondition, type EventsTableFilterState } from "../../../types";
+import { InvalidRequestError } from "../../../errors";
 import { isValidTableName } from "../../datastore/schemaUtils";
 import { logger } from "../../logger";
-import {
-  findUiColumnMapping,
-  type ColumnDefinition,
-  type UiColumnMappings,
-} from "../../../tableDefinitions";
+import { findUiColumnMapping, type ColumnDefinition, type UiColumnMappings } from "../../../tableDefinitions";
 import { COMPATIBLE_FILTER_TYPES } from "./filterTypeCompatibility";
+import { assertValidFtsMatchFilter } from "./fts";
 import {
   StringFilter,
   DateTimeFilter,
@@ -36,7 +34,11 @@ const NULL_IF_EMPTY_RE = /^nullIf\((.+),\s*''\)$/;
 // This function ensures that the user only selects valid columns from the datastore schema.
 // The filter property in this column needs to be zod verified.
 // User input for values (e.g. project_id = <value>) are sent to Datastore as parameters to prevent SQL injection
-export const createFilterFromFilterState = (filter: FilterCondition[], columnMapping: UiColumnMappings) => {
+export const createFilterFromFilterState = (
+  filter: FilterCondition[],
+  columnMapping: UiColumnMappings,
+  columnDefinitions?: ColumnDefinition[],
+) => {
   const applicableFilters = filter
     .filter((frontEndFilter) => frontEndFilter.type !== "positionInTrace")
     .filter((frontEndFilter) => frontEndFilter.column !== "levelInTrace");
@@ -176,6 +178,32 @@ export const createFilterFromFilterState = (filter: FilterCondition[], columnMap
         throw new QueryBuilderError(`Invalid filter type`);
     }
   });
+};
+
+const validateEventsTableMatchesFilter = (filter: EventsTableFilterState[number], column: UiColumnMappings[number]) => {
+  if (!("operator" in filter) || filter.operator !== FTS_MATCH_OPERATOR) {
+    return;
+  }
+
+  if (filter.type === "string") {
+    assertValidFtsMatchFilter({
+      filterType: "string",
+      datastoreTable: column.datastoreTableName,
+      field: column.datastoreSelect,
+      value: filter.value,
+    });
+    return;
+  } else if (filter.type === "stringObject") {
+    assertValidFtsMatchFilter({
+      filterType: "stringObject",
+      datastoreTable: column.datastoreTableName,
+      field: column.datastoreSelect,
+      value: filter.value,
+    });
+    return;
+  }
+
+  throw new QueryBuilderError(`Invalid filter type`);
 };
 
 const matchAndVerifyTracesUiColumn = (filter: z.infer<typeof singleFilter>, uiTableDefinitions: UiColumnMappings) => {
