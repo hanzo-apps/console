@@ -160,29 +160,31 @@ export function AuthenticatedLayout({
         <link rel="apple-touch-icon" href={metadata.appleTouchIconPath} />
       </Head>
 
-      <TopBannerProvider>
-        <SidebarProvider>
-          <div className="flex h-dvh w-full flex-col">
-            <PaymentBanner />
-            <V4EnabledBanner />
-            <V4PromoBanner />
-            <div className="pt-banner-offset flex min-h-0 flex-1">
-              <AppSidebar
-                navItems={navigation.mainNavigation}
-                secondaryNavItems={navigation.secondaryNavigation}
-                userNavProps={userNavProps}
-              />
-              <SidebarInset className="h-screen-with-banner max-w-full md:peer-data-[state=collapsed]:w-[calc(100vw-var(--sidebar-width-icon))] md:peer-data-[state=expanded]:w-[calc(100vw-var(--sidebar-width))]">
-                <ResizableContent aiAgentEnabled={assistantEnabled}>
-                  {children}
-                </ResizableContent>
-                <Toaster visibleToasts={1} />
-                <CommandMenu mainNavigation={navigation.navigation} />
-              </SidebarInset>
+      <PaymentBannerProvider>
+        <TopBannerProvider>
+          <SidebarProvider>
+            <div className="flex h-dvh w-full flex-col">
+              <PaymentBanner />
+              <V4EnabledBanner />
+              <V4PromoBanner />
+              <div className="pt-banner-offset flex min-h-0 flex-1">
+                <AppSidebar
+                  navItems={navigation.mainNavigation}
+                  secondaryNavItems={navigation.secondaryNavigation}
+                  userNavProps={userNavProps}
+                />
+                <SidebarInset className="h-screen-with-banner max-w-full md:peer-data-[state=collapsed]:w-[calc(100vw-var(--sidebar-width-icon))] md:peer-data-[state=expanded]:w-[calc(100vw-var(--sidebar-width))]">
+                  <ResizableContent aiAgentEnabled={assistantEnabled}>
+                    {children}
+                  </ResizableContent>
+                  <Toaster visibleToasts={1} />
+                  <CommandMenu mainNavigation={navigation.navigation} />
+                </SidebarInset>
+              </div>
             </div>
-          </div>
-        </SidebarProvider>
-      </TopBannerProvider>
+          </SidebarProvider>
+        </TopBannerProvider>
+      </PaymentBannerProvider>
     </>
   );
 }
