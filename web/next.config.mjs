@@ -190,59 +190,79 @@ const nextConfig = {
   // and redirects() are BOTH derived from V1_PASS_THROUGH (above) so the two
   // directions can never drift. A specific rule (internal trace export) is
   // listed before the public-API catch-all so it wins by order.
+  //
+  // NOTE: every rule sets `locale: false`. With `i18n` configured, Next.js
+  // otherwise prefixes each source with the locale (`/en/v1/*`), so a raw
+  // `/v1/ready` request would never match. `locale: false` matches the raw path.
   async rewrites() {
-    // Frontend-only mode: proxy BOTH surfaces to a live console, no local API.
-    if (process.env.SKIP_ENV_VALIDATION === "1") {
-      const target = process.env.CONSOLE_API_URL || "https://console.hanzo.ai";
-      return [
-        { source: "/v1/:path*", destination: `${target}/v1/:path*` },
-        { source: "/api/:path*", destination: `${target}/api/:path*` },
-      ];
-    }
     const passThrough = V1_PASS_THROUGH.flatMap((seg) => [
-      { source: `/v1/${seg}/:path*`, destination: `/api/${seg}/:path*` },
-      { source: `/v1/${seg}`, destination: `/api/${seg}` },
+      { source: `/v1/${seg}/:path*`, destination: `/api/${seg}/:path*`, locale: false },
+      { source: `/v1/${seg}`, destination: `/api/${seg}`, locale: false },
     ]);
     const v2Rewrites = V1_FROM_V2.flatMap((seg) => [
-      { source: `/v1/${seg}/:path*`, destination: `/api/public/v2/${seg}/:path*` },
-      { source: `/v1/${seg}`, destination: `/api/public/v2/${seg}` },
+      { source: `/v1/${seg}/:path*`, destination: `/api/public/v2/${seg}/:path*`, locale: false },
+      { source: `/v1/${seg}`, destination: `/api/public/v2/${seg}`, locale: false },
     ]);
-    return [
+    const local = [
       // internal trace export must win over the public-API catch-all below
       {
         source: "/v1/traces/:traceId/download",
         destination: "/api/traces/:traceId/download",
+        locale: false,
       },
       ...passThrough,
       // v2-current resources at /v1/<resource> (no /v1/v2) — precede catch-all
       ...v2Rewrites,
       // public SDK API — the redundant /api/public segment is dropped
-      { source: "/v1/:path*", destination: "/api/public/:path*" },
+      { source: "/v1/:path*", destination: "/api/public/:path*", locale: false },
     ];
+    // Frontend-only deployment also proxies the physical /api/* to a live
+    // backend. Gated on CONSOLE_API_URL (an explicit deploy signal) — NOT on
+    // the build-time SKIP_ENV_VALIDATION, so the local rewrites always bake.
+    if (process.env.CONSOLE_API_URL) {
+      return [
+        ...local,
+        {
+          source: "/api/:path*",
+          destination: `${process.env.CONSOLE_API_URL}/api/:path*`,
+          locale: false,
+        },
+      ];
+    }
+    return local;
   },
 
   // Inverse of rewrites(): every legacy /api/* 307s to canonical /v1/*. 307
   // (not 308) keeps a rollback from sticking in browser caches.
   async redirects() {
-    if (process.env.SKIP_ENV_VALIDATION === "1") return [];
+    // Frontend-only mode proxies /api/* to the backend — no local redirect.
+    if (process.env.CONSOLE_API_URL) return [];
     const passThrough = V1_PASS_THROUGH.flatMap((seg) => [
       {
         source: `/api/${seg}/:path*`,
         destination: `/v1/${seg}/:path*`,
         permanent: false,
+        locale: false,
       },
-      { source: `/api/${seg}`, destination: `/v1/${seg}`, permanent: false },
+      {
+        source: `/api/${seg}`,
+        destination: `/v1/${seg}`,
+        permanent: false,
+        locale: false,
+      },
     ]);
     const v2Redirects = V1_FROM_V2.flatMap((seg) => [
       {
         source: `/api/public/v2/${seg}/:path*`,
         destination: `/v1/${seg}/:path*`,
         permanent: false,
+        locale: false,
       },
       {
         source: `/api/public/v2/${seg}`,
         destination: `/v1/${seg}`,
         permanent: false,
+        locale: false,
       },
     ]);
     return [
@@ -250,6 +270,7 @@ const nextConfig = {
         source: "/api/traces/:traceId/download",
         destination: "/v1/traces/:traceId/download",
         permanent: false,
+        locale: false,
       },
       ...passThrough,
       // /api/public/v2/<resource> → /v1/<resource> (precede the general rule)
@@ -258,6 +279,7 @@ const nextConfig = {
         source: "/api/public/:path*",
         destination: "/v1/:path*",
         permanent: false,
+        locale: false,
       },
     ];
   },
