@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
 service:
   auth: false
-  base-path: /api/public
+  base-path: /v1
   endpoints:
     health:
       docs: Check health of API and database

@@ -6,7 +6,7 @@ imports:
 
 service:
   auth: true
-  base-path: /api/public/unstable
+  base-path: /v1/unstable
   endpoints:
     create:
       docs: |

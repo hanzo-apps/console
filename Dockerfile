@@ -130,7 +130,7 @@ ENV PORT=3000
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "const http = require('http'); \
-    const req = http.request({hostname: 'localhost', port: 3000, path: '/api/health', method: 'GET'}, \
+    const req = http.request({hostname: 'localhost', port: 3000, path: '/v1/ready', method: 'GET'}, \
     (res) => process.exit(res.statusCode === 200 ? 0 : 1)); \
     req.on('error', () => process.exit(1)); \
     req.end();" || exit 1
@@ -170,7 +170,7 @@ ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/web/.prisma/client/libquery_engine-linux-mu
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "const http = require('http'); \
-    const req = http.request({hostname: 'localhost', port: 3000, path: '/api/health', method: 'GET'}, \
+    const req = http.request({hostname: 'localhost', port: 3000, path: '/v1/ready', method: 'GET'}, \
     (res) => process.exit(res.statusCode === 200 ? 0 : 1)); \
     req.on('error', () => process.exit(1)); \
     req.end();" || exit 1

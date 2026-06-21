@@ -52,6 +52,35 @@ const sharedAlias = {
   "@/src/features/query": path.join(sharedSrc, "features/query"),
 };
 
+// Canonical URL surface (single source of truth). Every console HTTP path is
+// published at /v1/*; the Pages Router keeps handler files under pages/api/, so
+// /v1/* is rewritten onto them and every legacy /api/* is 307-forwarded back to
+// /v1/*. Both directions are derived from this one list (DRY) — segment name is
+// preserved (/v1/<seg>/* ↔ /api/<seg>/*). The public SDK API is handled
+// separately by collapsing /api/public/* ↔ /v1/* (the redundant `public` drops).
+const V1_PASS_THROUGH = [
+  "auth", // NextAuth (basePath is /v1/auth)
+  "trpc", // tRPC web RPC
+  "admin",
+  "agents",
+  "billing",
+  "compute",
+  "dashboard",
+  "feedback",
+  "kms",
+  "observe",
+  "start-cron",
+  "support",
+  "zap",
+  "chatCompletion",
+  "in-app-agent",
+];
+
+// Resources whose current version is Langfuse-internal "v2". There is NO /v1/v2
+// in the published surface — these are served at /v1/<resource> and routed onto
+// the v2 handler file. (House rule: one version segment, /v1, never a nested v2.)
+const V1_FROM_V2 = ["prompts", "scores"];
+
 /**
  * CSP headers
  * img-src https to allow loading images from SSO providers
@@ -157,38 +186,80 @@ const nextConfig = {
   },
   output: "standalone",
 
-  // Two purposes:
-  //  1. /v1/* → /api/* — Pages Router forces API files under `pages/api/`, but
-  //     the canonical published URL surface is /v1/*. This rewrite exposes the
-  //     Hanzo-owned (non-upstream) internal routes at /v1/*. Internal callers
-  //     in code (components, hooks, services) must reference /v1/* paths.
-  //     The Langfuse upstream surfaces (/api/public/*, /api/auth/*, /api/trpc/*,
-  //     /api/observe/*) keep their /api/* shapes because external SDKs and
-  //     NextAuth/tRPC libraries hardcode those.
-  //  2. Frontend-only mode proxies API calls to a production console.
+  // Canonical URL surface — exactly one way: /v1/*. The Pages Router forces
+  // handler files under pages/api/, so /v1/* is rewritten onto them. rewrites()
+  // and redirects() are BOTH derived from V1_PASS_THROUGH (above) so the two
+  // directions can never drift. A specific rule (internal trace export) is
+  // listed before the public-API catch-all so it wins by order.
   async rewrites() {
-    const v1ToApi = [
-      "admin",
-      "agents",
-      "billing",
-      "compute",
-      "feedback",
-      "kms",
-      "start-cron",
-      "zap",
-    ].map((seg) => ({
-      source: `/v1/${seg}/:path*`,
-      destination: `/api/${seg}/:path*`,
-    }));
-    // Top-level feedback / start-cron without /:path*
-    v1ToApi.push({ source: "/v1/feedback", destination: "/api/feedback" });
-    v1ToApi.push({ source: "/v1/start-cron", destination: "/api/start-cron" });
-
-    if (process.env.SKIP_ENV_VALIDATION !== "1") return v1ToApi;
-    const target = process.env.CONSOLE_API_URL || "https://console.hanzo.ai";
+    // Frontend-only mode: proxy BOTH surfaces to a live console, no local API.
+    if (process.env.SKIP_ENV_VALIDATION === "1") {
+      const target = process.env.CONSOLE_API_URL || "https://console.hanzo.ai";
+      return [
+        { source: "/v1/:path*", destination: `${target}/v1/:path*` },
+        { source: "/api/:path*", destination: `${target}/api/:path*` },
+      ];
+    }
+    const passThrough = V1_PASS_THROUGH.flatMap((seg) => [
+      { source: `/v1/${seg}/:path*`, destination: `/api/${seg}/:path*` },
+      { source: `/v1/${seg}`, destination: `/api/${seg}` },
+    ]);
+    const v2Rewrites = V1_FROM_V2.flatMap((seg) => [
+      { source: `/v1/${seg}/:path*`, destination: `/api/public/v2/${seg}/:path*` },
+      { source: `/v1/${seg}`, destination: `/api/public/v2/${seg}` },
+    ]);
     return [
-      ...v1ToApi,
-      { source: "/api/:path*", destination: `${target}/api/:path*` },
+      // internal trace export must win over the public-API catch-all below
+      {
+        source: "/v1/traces/:traceId/download",
+        destination: "/api/traces/:traceId/download",
+      },
+      ...passThrough,
+      // v2-current resources at /v1/<resource> (no /v1/v2) — precede catch-all
+      ...v2Rewrites,
+      // public SDK API — the redundant /api/public segment is dropped
+      { source: "/v1/:path*", destination: "/api/public/:path*" },
+    ];
+  },
+
+  // Inverse of rewrites(): every legacy /api/* 307s to canonical /v1/*. 307
+  // (not 308) keeps a rollback from sticking in browser caches.
+  async redirects() {
+    if (process.env.SKIP_ENV_VALIDATION === "1") return [];
+    const passThrough = V1_PASS_THROUGH.flatMap((seg) => [
+      {
+        source: `/api/${seg}/:path*`,
+        destination: `/v1/${seg}/:path*`,
+        permanent: false,
+      },
+      { source: `/api/${seg}`, destination: `/v1/${seg}`, permanent: false },
+    ]);
+    const v2Redirects = V1_FROM_V2.flatMap((seg) => [
+      {
+        source: `/api/public/v2/${seg}/:path*`,
+        destination: `/v1/${seg}/:path*`,
+        permanent: false,
+      },
+      {
+        source: `/api/public/v2/${seg}`,
+        destination: `/v1/${seg}`,
+        permanent: false,
+      },
+    ]);
+    return [
+      {
+        source: "/api/traces/:traceId/download",
+        destination: "/v1/traces/:traceId/download",
+        permanent: false,
+      },
+      ...passThrough,
+      // /api/public/v2/<resource> → /v1/<resource> (precede the general rule)
+      ...v2Redirects,
+      {
+        source: "/api/public/:path*",
+        destination: "/v1/:path*",
+        permanent: false,
+      },
     ];
   },
 
@@ -240,9 +311,9 @@ const nextConfig = {
           value: host,
         })),
       },
-      // CSP header
+      // CSP header (skip the API surface — both /api/* and the canonical /v1/*)
       {
-        source: "/:path((?!api).*)*",
+        source: "/:path((?!api|v1).*)*",
         headers: [
           {
             key: "Content-Security-Policy",
@@ -259,7 +330,7 @@ const nextConfig = {
       ...(env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== undefined
         ? [
             {
-              source: "/api/auth/session",
+              source: "/v1/auth/session",
               headers: [
                 {
                   key: "Access-Control-Allow-Origin",

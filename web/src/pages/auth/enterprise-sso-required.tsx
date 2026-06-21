@@ -74,7 +74,7 @@ export default function EnterpriseSsoRequiredPage() {
     }
 
     try {
-      const response = await fetch(`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/check-sso`, {
+      const response = await fetch(`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/auth/check-sso`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain }),

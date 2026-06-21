@@ -736,7 +736,7 @@ async function getChatCompletionWithTools(
   });
 
   const result = await fetch(
-    `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chatCompletion`,
+    `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/chatCompletion`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -781,7 +781,7 @@ async function getChatCompletionWithStructuredOutput(
   });
 
   const result = await fetch(
-    `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chatCompletion`,
+    `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/chatCompletion`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -829,7 +829,7 @@ async function* getChatCompletionStream(
   });
 
   const result = await fetch(
-    `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chatCompletion`,
+    `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/chatCompletion`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -889,7 +889,7 @@ async function getChatCompletionNonStreaming(
   });
 
   const result = await fetch(
-    `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chatCompletion`,
+    `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/chatCompletion`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

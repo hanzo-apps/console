@@ -192,10 +192,10 @@ export default async function handler(request: Request) {
 }
 
 function getLangfuseMcpUrl(): string {
-  const rawUrl = env.NEXTAUTH_URL.replace(/\/api\/auth\/?$/, "");
+  const rawUrl = env.NEXTAUTH_URL.replace(/\/v1\/auth\/?$/, "");
   const baseUrl = new URL(rawUrl);
 
-  baseUrl.pathname = `${baseUrl.pathname.replace(/\/$/, "")}/api/public/mcp`;
+  baseUrl.pathname = `${baseUrl.pathname.replace(/\/$/, "")}/v1/mcp`;
   baseUrl.search = "";
   baseUrl.hash = "";
 

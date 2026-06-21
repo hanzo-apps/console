@@ -27,7 +27,7 @@ import type {
 let API_BASE_URL =
   (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_AGENTS_URL) ||
   (typeof window !== "undefined" && (window as any).__VITE_API_BASE_URL__) ||
-  "/api/agents/ui/v1";
+  "/v1/agents/ui/v1";
 
 /** Override the API base URL at runtime (called by AgentsProvider). */
 export function setBaseUrl(url: string) {
@@ -611,7 +611,7 @@ export async function registerServerlessAgent(invocationUrl: string): Promise<{
 }> {
   // Use /api/agents/v1 base for this endpoint (not /api/agents/ui/v1).
   // Routes through the Console proxy which forwards to AGENTS_API_URL.
-  const API_V1_BASE = "/api/agents/v1";
+  const API_V1_BASE = "/v1/agents/v1";
   const timeout = 15000;
 
   // Create AbortController for timeout

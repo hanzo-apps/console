@@ -111,7 +111,7 @@ export default function SignIn({
 
     try {
       const res = await fetch(
-        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/check-sso`,
+        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/auth/check-sso`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -158,7 +158,7 @@ export default function SignIn({
     try {
       setFormError(null);
       const res = await fetch(
-        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/signup`,
+        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/auth/signup`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

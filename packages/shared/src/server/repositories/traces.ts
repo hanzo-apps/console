@@ -1360,7 +1360,7 @@ export const getTracesForAnalyticsIntegrations = async function* (
     },
   });
 
-  const baseUrl = env.NEXTAUTH_URL?.replace("/api/auth", "");
+  const baseUrl = env.NEXTAUTH_URL?.replace("/v1/auth", "");
 
   for await (const record of records) {
     yield {

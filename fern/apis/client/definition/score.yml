@@ -2,7 +2,7 @@
 
 service:
   auth: true
-  base-path: /api/public
+  base-path: /v1
   endpoints:
     create:
       docs: Add a score to the database, upserts on id
