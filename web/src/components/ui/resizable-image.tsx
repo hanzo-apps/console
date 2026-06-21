@@ -7,7 +7,7 @@ import { ImageOff, Maximize2, Minimize2 } from "lucide-react";
 import { api } from "@/src/utils/api";
 import { Skeleton } from "@hanzo/ui";
 import { captureException } from "@sentry/nextjs";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { buildResizableImageSrc } from "./resizable-image.utils";
 import { getSafeImageUrl } from "@/src/components/ui/safe-url";
 

@@ -1,6 +1,6 @@
 import React, { useCallback } from "react";
 import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useQueryParams, StringParam } from "use-query-params";
 import TracesTable from "@/src/components/table/use-cases/traces";
 import Page from "@/src/components/layouts/page";

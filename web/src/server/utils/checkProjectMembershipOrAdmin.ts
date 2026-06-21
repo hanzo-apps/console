@@ -1,4 +1,4 @@
-import { type User } from "next-auth";
+import { type User } from "@/src/features/auth/session-types";
 
 export const isProjectMemberOrAdmin = (user: User | null | undefined, projectId: string): boolean => {
   if (!user) return false;

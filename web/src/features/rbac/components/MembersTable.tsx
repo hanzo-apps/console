@@ -21,7 +21,7 @@ import type { RouterOutput } from "@/src/utils/types";
 import { Role } from "@hanzo/console";
 import { type Row } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { useHasEntitlement } from "@/src/features/entitlements/hooks";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";

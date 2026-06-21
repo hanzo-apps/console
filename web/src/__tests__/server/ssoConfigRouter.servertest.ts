@@ -3,7 +3,7 @@ import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import { prisma } from "@hanzo/console/src/db";
 import { decrypt, encrypt } from "@hanzo/console/encryption";
 import { Role } from "@hanzo/console";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { v4 as uuidv4 } from "uuid";
 
 // `validateSsoConfig` does a live OIDC discovery fetch. Default mock returns

@@ -12,7 +12,7 @@ import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganiz
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
 import { Card } from "@/src/components/ui/card";
 import { LockIcon } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 
 export default function RenameOrganization() {
   const { update: updateSession } = useSession();

@@ -1,5 +1,5 @@
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useRouter } from "next/router";
 
 export const useQueryProject = () => {

@@ -19,7 +19,7 @@ import {
 } from "@/src/features/organizations/hooks";
 import { Card } from "@/src/components/ui/card";
 import { LockIcon, ExternalLink } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 
 export default function AIFeatureSwitch() {
   const { update: updateSession } = useSession();

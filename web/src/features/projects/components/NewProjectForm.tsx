@@ -12,7 +12,7 @@ import {
 } from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
 import { api } from "@/src/utils/api";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { projectNameSchema } from "@/src/features/auth/lib/projectNameSchema";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 

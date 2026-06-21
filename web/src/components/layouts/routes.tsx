@@ -51,7 +51,7 @@ import {
 } from "lucide-react";
 import { type ReactNode } from "react";
 import { type Entitlement } from "@/src/features/entitlements/constants/entitlements";
-import { type User } from "next-auth";
+import { type User } from "@/src/features/auth/session-types";
 import { type OrganizationScope } from "@/src/features/rbac/constants/organizationAccessRights";
 import { SupportButton } from "@/src/components/nav/support-button";
 import { InAppAiAgentButton } from "@/src/components/nav/in-app-ai-agent-button";

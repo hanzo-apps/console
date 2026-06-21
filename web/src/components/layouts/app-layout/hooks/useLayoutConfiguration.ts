@@ -6,7 +6,7 @@
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { classifyPath, type LayoutType } from "../utils/pathClassification";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 
 export type LayoutConfiguration = {
   /** The layout variant to render */

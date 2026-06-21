@@ -10,7 +10,7 @@
  * Opens billing in a new tab instead of iframe (billing.hanzo.ai blocks framing).
  */
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { ExternalLink, CreditCard } from "lucide-react";

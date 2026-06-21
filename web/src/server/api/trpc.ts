@@ -16,7 +16,7 @@
  */
 import { tracing } from "@baselime/trpc-opentelemetry-middleware";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
-import { type Session } from "next-auth";
+import { type Session } from "@/src/features/auth/session-types";
 import { getServerAuthSession } from "@/src/server/auth";
 import { prisma, Role } from "@hanzo/console/src/db";
 import * as z from "zod/v4";

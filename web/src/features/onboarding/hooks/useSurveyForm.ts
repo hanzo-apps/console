@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import type { SurveyFormData } from "../lib/surveyTypes";
 import { api } from "@/src/utils/api";
 import { SurveyName } from "@hanzo/console";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 

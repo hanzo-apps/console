@@ -1,6 +1,6 @@
 import React from "react";
 import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import ObservationsTable from "@/src/components/table/use-cases/observations";
 import Page from "@/src/components/layouts/page";
 import { api } from "@/src/utils/api";

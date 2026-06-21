@@ -1,5 +1,5 @@
 import type { Mock } from "vitest";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";

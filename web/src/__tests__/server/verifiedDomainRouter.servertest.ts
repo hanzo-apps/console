@@ -4,7 +4,7 @@ import { resolveTxtFresh } from "@/src/ee/features/verified-domains/server/dnsLo
 import { prisma, Prisma } from "@hanzo/console/src/db";
 import { Role } from "@hanzo/console";
 import { TRPCError } from "@trpc/server";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import type { Mock } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 

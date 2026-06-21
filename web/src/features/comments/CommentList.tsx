@@ -31,7 +31,7 @@ import { cn } from "@/src/utils/tailwind";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type CommentObjectType, CreateCommentData } from "@hanzo/console";
 import { ArrowUpToLine, LoaderCircle, Search, Trash, X } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import React, {
   useCallback,
   useEffect,

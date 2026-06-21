@@ -1,4 +1,4 @@
-import { getServerSession } from "next-auth";
+import { getIamSessionFromRequest } from "@/src/features/auth/lib/iamSession";
 
 import { env } from "@/src/env.mjs";
 import {
@@ -13,7 +13,6 @@ import {
   signInAppAgentSessionToken,
   verifyInAppAgentSessionToken,
 } from "@/src/features/in-app-agent/server/auth";
-import { getAuthOptions } from "@/src/server/auth";
 import { isProjectMemberOrAdmin } from "@/src/server/utils/checkProjectMembershipOrAdmin";
 import {
   BaseError,
@@ -34,8 +33,7 @@ const MAX_IN_APP_AGENT_INPUT_BYTES = 1024 * 1024;
 
 export default async function handler(request: Request) {
   try {
-    const authOptions = await getAuthOptions();
-    const session = await getServerSession(authOptions);
+    const session = await getIamSessionFromRequest(request);
 
     if (!session?.user) {
       throw new UnauthorizedError("Unauthenticated");

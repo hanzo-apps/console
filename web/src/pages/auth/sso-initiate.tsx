@@ -1,4 +1,4 @@
-import { signIn } from "next-auth/react";
+import { signIn } from "@/src/features/auth/session";
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";

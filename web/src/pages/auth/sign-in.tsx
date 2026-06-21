@@ -25,7 +25,7 @@ import {
   SiWordpress,
 } from "react-icons/si";
 import { TbBrandAzure, TbBrandOauth } from "react-icons/tb";
-import { signIn } from "next-auth/react";
+import { signIn } from "@/src/features/auth/session";
 import Head from "next/head";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -685,7 +685,7 @@ export default function SignIn({
 
     try {
       const res = await fetch(
-        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/auth/check-sso`,
+        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/iam/check-sso`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
