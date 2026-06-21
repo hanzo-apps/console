@@ -28,7 +28,7 @@ export function useEventsFilterOptions({
       projectId,
       startTimeFilter:
         startTimeFilters.length > 0 ? startTimeFilters : undefined,
-      hasParentObservation,
+      isRootObservation,
     },
     {
       trpc: {

@@ -10,7 +10,7 @@ import {
   ForbiddenError,
 } from "@hanzo/console";
 import { InvalidRequestError } from "@hanzo/console";
-import type { BlobStorageIntegrationStatusResponseType } from "@/src/features/public-api/types/blob-storage-integrations";
+import type { BlobStorageIntegrationResponseType } from "@/src/features/public-api/types/blob-storage-integrations";
 import { deriveSyncStatus } from "@/src/features/blobstorage-integration/deriveSyncStatus";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
@@ -142,7 +142,7 @@ async function handleGetBlobStorageIntegrationStatus(
     throw new ConsoleNotFoundError("Blob storage integration not found");
   }
 
-  const responseData: BlobStorageIntegrationStatusResponseType = {
+  const responseData: BlobStorageIntegrationResponseType = {
     id: integration.projectId,
     projectId: integration.projectId,
     syncStatus: deriveSyncStatus(integration),
