@@ -6,7 +6,7 @@ import {
 } from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import TableLink from "@/src/components/table/table-link";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
 import { DeletePrompt } from "@/src/features/prompts/components/delete-prompt";
 import { DeleteFolder } from "@/src/features/prompts/components/delete-folder";
@@ -368,7 +368,7 @@ export function PromptTable() {
         return <DeletePrompt promptName={promptPath} />;
       },
     }),
-  ] as HanzoColumnDef<PromptTableRow>[];
+  ] as ColumnDef<PromptTableRow>[];
 
   return (
     <DataTableControlsProvider

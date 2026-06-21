@@ -1,5 +1,5 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useZtSessions } from "@/src/features/zt/hooks";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
 
@@ -22,7 +22,7 @@ export function ZtSessionsTable({ projectId }: { projectId: string }) {
     createdAt: item.createdAt,
   }));
 
-  const columns: HanzoColumnDef<SessionRow>[] = [
+  const columns: ColumnDef<SessionRow>[] = [
     {
       accessorKey: "identityName",
       id: "identityName",

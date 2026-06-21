@@ -1,4 +1,4 @@
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   type FilterState,
   type ColumnDefinition,
@@ -13,7 +13,7 @@ import type { FilterStateMigration } from "@/src/features/filters/lib/filter-con
  */
 export function validateOrderBy(
   orderBy: OrderByState | null,
-  columns?: HanzoColumnDef<any, any>[],
+  columns?: ColumnDef<any, any>[],
 ): OrderByState | null {
   if (!orderBy || !columns || columns.length === 0) return null;
 

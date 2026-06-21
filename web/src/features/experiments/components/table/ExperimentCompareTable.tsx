@@ -5,7 +5,7 @@ import { type RowSelectionState } from "@tanstack/react-table";
 import { type OnChangeFn, type VisibilityState } from "@tanstack/react-table";
 import { type ColumnOrderState } from "@tanstack/react-table";
 import { type RowHeight } from "@/src/components/table/data-table-row-height-switch";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { type ExperimentItemsTableRow } from "./types";
 import { type PaginationState } from "@tanstack/react-table";
 import { type ReactNode } from "react";
@@ -18,7 +18,7 @@ const LIST_VIEW_ROW_HEIGHTS = {
 
 type ExperimentCompareTableProps = {
   dataUpdatedAt: number;
-  columns: HanzoColumnDef<ExperimentItemsTableRow>[];
+  columns: ColumnDef<ExperimentItemsTableRow>[];
   rows: ExperimentItemsTableRow[];
   isLoading: boolean;
   isError: boolean;

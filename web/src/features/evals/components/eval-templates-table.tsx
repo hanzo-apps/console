@@ -1,6 +1,6 @@
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { type RouterOutputs, api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
@@ -396,7 +396,7 @@ export default function EvalsTemplateTable({
         );
       },
     }),
-  ] as HanzoColumnDef<EvalsTemplateRow>[];
+  ] as ColumnDef<EvalsTemplateRow>[];
 
   const [columnVisibility, setColumnVisibility] =
     useColumnVisibility<EvalsTemplateRow>(

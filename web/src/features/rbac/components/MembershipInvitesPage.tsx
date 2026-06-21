@@ -1,6 +1,6 @@
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   Avatar,
   AvatarFallback,
@@ -95,7 +95,7 @@ export function MembershipInvitesPage({
     scope: "organizationMembers:CUD",
   });
 
-  const columns: HanzoColumnDef<InvitesTableRow>[] = [
+  const columns: ColumnDef<InvitesTableRow>[] = [
     {
       accessorKey: "email",
       id: "email",

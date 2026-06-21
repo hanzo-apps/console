@@ -15,7 +15,7 @@ import {
   type ObservationEventsOmittableFilterColumn,
 } from "../config/filter-config";
 import { formatIntervalSeconds } from "@/src/utils/dates";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   type ObservationLevelType,
   type FilterState,
@@ -453,7 +453,7 @@ export default function ObservationsEventsTable({
     },
   ];
 
-  const columns: HanzoColumnDef<EventsTableRow>[] = [
+  const columns: ColumnDef<EventsTableRow>[] = [
     selectActionColumn,
     {
       accessorKey: "startTime",
@@ -733,7 +733,7 @@ export default function ObservationsEventsTable({
           defaultHidden: true,
           enableSorting: true,
         },
-      ] satisfies HanzoColumnDef<EventsTableRow>[],
+      ] satisfies ColumnDef<EventsTableRow>[],
     },
     {
       accessorKey: "timeToFirstToken",
@@ -844,7 +844,7 @@ export default function ObservationsEventsTable({
             return <span>{numberFormatter(value.totalUsage, 0)}</span>;
           },
         },
-      ] satisfies HanzoColumnDef<EventsTableRow>[],
+      ] satisfies ColumnDef<EventsTableRow>[],
     },
     {
       accessorKey: "providedModelName",

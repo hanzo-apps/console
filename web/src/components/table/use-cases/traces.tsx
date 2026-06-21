@@ -7,7 +7,7 @@ import {
 } from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import { Badge } from "@/src/components/ui/badge";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { TokenUsageBadge } from "@/src/components/token-usage-badge";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { api } from "@/src/utils/api";
@@ -606,7 +606,7 @@ export default function TracesTable({
 
   const enableSorting = !hideControls;
 
-  const columns: HanzoColumnDef<TracesTableRow>[] = [
+  const columns: ColumnDef<TracesTableRow>[] = [
     ...(hideControls
       ? []
       : ([
@@ -634,7 +634,7 @@ export default function TracesTable({
             },
             enableSorting,
           },
-        ] satisfies HanzoColumnDef<TracesTableRow>[])),
+        ] satisfies ColumnDef<TracesTableRow>[])),
     {
       accessorKey: "timestamp",
       header: "Timestamp",
@@ -1092,7 +1092,7 @@ export default function TracesTable({
           defaultHidden: true,
           enableSorting,
         },
-      ] satisfies HanzoColumnDef<TracesTableRow>[],
+      ] satisfies ColumnDef<TracesTableRow>[],
     },
     {
       accessorKey: "usage",
@@ -1151,7 +1151,7 @@ export default function TracesTable({
           defaultHidden: true,
           enableSorting,
         },
-      ] satisfies HanzoColumnDef<TracesTableRow>[],
+      ] satisfies ColumnDef<TracesTableRow>[],
     },
     ...(hideControls
       ? []
@@ -1186,7 +1186,7 @@ export default function TracesTable({
               );
             },
           },
-        ] satisfies HanzoColumnDef<TracesTableRow>[])),
+        ] satisfies ColumnDef<TracesTableRow>[])),
   ];
 
   const [columnVisibility, setColumnVisibility] =

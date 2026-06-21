@@ -1,5 +1,5 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useZtTerminators } from "@/src/features/zt/hooks";
 
 type TerminatorRow = {
@@ -29,7 +29,7 @@ export function ZtTerminatorsTable({ projectId }: { projectId: string }) {
     }),
   );
 
-  const columns: HanzoColumnDef<TerminatorRow>[] = [
+  const columns: ColumnDef<TerminatorRow>[] = [
     {
       accessorKey: "serviceName",
       id: "serviceName",

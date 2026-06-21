@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   useVectorCollections,
   useDeleteCollection,
@@ -60,7 +60,7 @@ export function CollectionsTable({ projectId }: { projectId: string }) {
       createdAt: c.createdAt,
     })) ?? [];
 
-  const columns: HanzoColumnDef<CollectionRow>[] = [
+  const columns: ColumnDef<CollectionRow>[] = [
     {
       accessorKey: "name",
       id: "name",

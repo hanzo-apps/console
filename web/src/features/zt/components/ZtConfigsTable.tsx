@@ -1,5 +1,5 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useZtConfigs } from "@/src/features/zt/hooks";
 
 type ConfigRow = {
@@ -19,7 +19,7 @@ export function ZtConfigsTable({ projectId }: { projectId: string }) {
     createdAt: item.createdAt,
   }));
 
-  const columns: HanzoColumnDef<ConfigRow>[] = [
+  const columns: ColumnDef<ConfigRow>[] = [
     {
       accessorKey: "name",
       id: "name",
