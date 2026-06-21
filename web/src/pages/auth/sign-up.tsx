@@ -26,7 +26,7 @@ import {
   type PageProps,
 } from "@/src/pages/auth/sign-in";
 import { PasswordInput } from "@/src/components/ui/password-input";
-import { useHanzoCloudRegion } from "@/src/features/organizations/hooks";
+import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 import { useRouter } from "next/router";
 import { getSafeRedirectPath } from "@/src/utils/redirect";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
@@ -42,7 +42,7 @@ export default function SignIn({
   runningOnHuggingFaceSpaces,
 }: PageProps) {
   useHuggingFaceRedirect(runningOnHuggingFaceSpaces);
-  const { isHanzoCloud, region } = useHanzoCloudRegion();
+  const { isConsoleCloud, region } = useConsoleCloudRegion();
   const router = useRouter();
   const capture = useInsightsCapture();
 
@@ -177,7 +177,7 @@ export default function SignIn({
         password: values.password,
         callbackUrl:
           targetPath ??
-          (isHanzoCloud && region !== "DEV"
+          (isConsoleCloud && region !== "DEV"
             ? `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/onboarding`
             : `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/`),
       });
@@ -199,11 +199,11 @@ export default function SignIn({
       <div className="flex flex-1 flex-col py-6 sm:min-h-full sm:justify-center sm:px-6 sm:py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <HanzoCloudIcon className="mx-auto" />
-          <h2 className="text-primary mt-4 text-center text-2xl leading-9 font-bold tracking-tight">
+          <h2 className="text-primary mt-4 text-center text-2xl font-bold leading-9 tracking-tight">
             Create new account
           </h2>
         </div>
-        {isHanzoCloud ? (
+        {isConsoleCloud ? (
           <div className="text-center sm:mx-auto sm:w-full sm:max-w-[480px]">
             No credit card required.
           </div>
@@ -306,7 +306,7 @@ export default function SignIn({
             Already have an account?{" "}
             <Link
               href={`/auth/sign-in${router.asPath.includes("?") ? router.asPath.substring(router.asPath.indexOf("?")) : ""}`}
-              className="text-primary-accent hover:text-hover-primary-accent leading-6 font-semibold"
+              className="text-primary-accent hover:text-hover-primary-accent font-semibold leading-6"
             >
               Sign in
             </Link>

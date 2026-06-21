@@ -47,7 +47,7 @@ COPY --chown=nextjs:nodejs packages/mq/package.json ./packages/mq/
 USER nextjs
 
 # Install dependencies with frozen lockfile
-RUN --mount=type=cache,id=pnpm,target=/app/.pnpm-store pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # ===== Builder Stage =====
 FROM deps AS builder
@@ -75,7 +75,7 @@ ENV NEXT_PUBLIC_HANZO_CLOUD_REGION=US
 RUN mkdir -p /app/web/.next
 
 # Build the application (adaptive memory to avoid OOM)
-RUN --mount=type=cache,target=/app/web/.next/cache,uid=1001,gid=1001 \
+RUN \
     NODE_OPTIONS='--max-old-space-size-percentage=75' pnpm build
 
 # Prisma query engine: Next.js standalone file-tracing misses the runtime-loaded
