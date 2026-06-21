@@ -52,33 +52,9 @@ const sharedAlias = {
   "@/src/features/query": path.join(sharedSrc, "features/query"),
 };
 
-// Canonical URL surface (single source of truth). Every console HTTP path is
-// published at /v1/*; the Pages Router keeps handler files under pages/api/, so
-// /v1/* is rewritten onto them and every legacy /api/* is 307-forwarded back to
-// /v1/*. Both directions are derived from this one list (DRY) — segment name is
-// preserved (/v1/<seg>/* ↔ /api/<seg>/*). The public SDK API is handled
-// separately by collapsing /api/public/* ↔ /v1/* (the redundant `public` drops).
-const V1_PASS_THROUGH = [
-  "trpc", // tRPC web RPC
-  "admin",
-  "agents",
-  "billing",
-  "compute",
-  "dashboard",
-  "feedback",
-  "kms",
-  "observe",
-  "start-cron",
-  "support",
-  "zap",
-  "chatCompletion",
-  "in-app-agent",
-];
-
-// Resources whose current version is Langfuse-internal "v2". There is NO /v1/v2
-// in the published surface — these are served at /v1/<resource> and routed onto
-// the v2 handler file. (House rule: one version segment, /v1, never a nested v2.)
-const V1_FROM_V2 = ["prompts", "scores"];
+// The canonical /v1/* ↔ /api/* surface (segment pass-through, v2-at-/v1, public
+// catch-all) is the ONE source of truth in web/middleware.ts — see the note on
+// `rewrites`/`headers` below for why it lives in middleware (i18n) and not here.
 
 /**
  * CSP headers
@@ -185,104 +161,10 @@ const nextConfig = {
   },
   output: "standalone",
 
-  // Canonical URL surface — exactly one way: /v1/*. The Pages Router forces
-  // handler files under pages/api/, so /v1/* is rewritten onto them. rewrites()
-  // and redirects() are BOTH derived from V1_PASS_THROUGH (above) so the two
-  // directions can never drift. A specific rule (internal trace export) is
-  // listed before the public-API catch-all so it wins by order.
-  //
-  // NOTE: every rule sets `locale: false`. With `i18n` configured, Next.js
-  // otherwise prefixes each source with the locale (`/en/v1/*`), so a raw
-  // `/v1/ready` request would never match. `locale: false` matches the raw path.
-  async rewrites() {
-    const passThrough = V1_PASS_THROUGH.flatMap((seg) => [
-      { source: `/v1/${seg}/:path*`, destination: `/api/${seg}/:path*`, locale: false },
-      { source: `/v1/${seg}`, destination: `/api/${seg}`, locale: false },
-    ]);
-    const v2Rewrites = V1_FROM_V2.flatMap((seg) => [
-      { source: `/v1/${seg}/:path*`, destination: `/api/public/v2/${seg}/:path*`, locale: false },
-      { source: `/v1/${seg}`, destination: `/api/public/v2/${seg}`, locale: false },
-    ]);
-    const local = [
-      // internal trace export must win over the public-API catch-all below
-      {
-        source: "/v1/traces/:traceId/download",
-        destination: "/api/traces/:traceId/download",
-        locale: false,
-      },
-      ...passThrough,
-      // v2-current resources at /v1/<resource> (no /v1/v2) — precede catch-all
-      ...v2Rewrites,
-      // public SDK API — the redundant /api/public segment is dropped
-      { source: "/v1/:path*", destination: "/api/public/:path*", locale: false },
-    ];
-    // Frontend-only deployment also proxies the physical /api/* to a live
-    // backend. Gated on CONSOLE_API_URL (an explicit deploy signal) — NOT on
-    // the build-time SKIP_ENV_VALIDATION, so the local rewrites always bake.
-    if (process.env.CONSOLE_API_URL) {
-      return [
-        ...local,
-        {
-          source: "/api/:path*",
-          destination: `${process.env.CONSOLE_API_URL}/api/:path*`,
-          locale: false,
-        },
-      ];
-    }
-    return local;
-  },
-
-  // Inverse of rewrites(): every legacy /api/* 307s to canonical /v1/*. 307
-  // (not 308) keeps a rollback from sticking in browser caches.
-  async redirects() {
-    // Frontend-only mode proxies /api/* to the backend — no local redirect.
-    if (process.env.CONSOLE_API_URL) return [];
-    const passThrough = V1_PASS_THROUGH.flatMap((seg) => [
-      {
-        source: `/api/${seg}/:path*`,
-        destination: `/v1/${seg}/:path*`,
-        permanent: false,
-        locale: false,
-      },
-      {
-        source: `/api/${seg}`,
-        destination: `/v1/${seg}`,
-        permanent: false,
-        locale: false,
-      },
-    ]);
-    const v2Redirects = V1_FROM_V2.flatMap((seg) => [
-      {
-        source: `/api/public/v2/${seg}/:path*`,
-        destination: `/v1/${seg}/:path*`,
-        permanent: false,
-        locale: false,
-      },
-      {
-        source: `/api/public/v2/${seg}`,
-        destination: `/v1/${seg}`,
-        permanent: false,
-        locale: false,
-      },
-    ]);
-    return [
-      {
-        source: "/api/traces/:traceId/download",
-        destination: "/v1/traces/:traceId/download",
-        permanent: false,
-        locale: false,
-      },
-      ...passThrough,
-      // /api/public/v2/<resource> → /v1/<resource> (precede the general rule)
-      ...v2Redirects,
-      {
-        source: "/api/public/:path*",
-        destination: "/v1/:path*",
-        permanent: false,
-        locale: false,
-      },
-    ];
-  },
+  // The canonical /v1/* ↔ /api/* surface is handled in web/middleware.ts, NOT
+  // here: this app has `i18n` configured, and Next prefixes config-rewrite
+  // sources/destinations with the locale (`/en/...`), which breaks rewrites onto
+  // locale-agnostic API routes. Middleware runs before i18n on the raw path.
 
   async headers() {
     return [
