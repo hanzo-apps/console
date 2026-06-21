@@ -1,6 +1,6 @@
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
 import {
-  AGGREGATABLE_SCORE_TYPES,
+  LISTABLE_SCORE_TYPES,
   filterAndValidateDbScoreList,
 } from "@hanzo/console";
 import {
@@ -9,7 +9,7 @@ import {
   traceException,
 } from "@hanzo/console/src/server";
 import { type GetAllGenerationsInput } from "../getAllQueries";
-import { env } from "@hanzo/console";
+import { env } from "@/src/env.mjs";
 import { getObservationsWithModelDataFromEventsTable } from "@hanzo/console/src/server";
 
 export async function getAllGenerations({

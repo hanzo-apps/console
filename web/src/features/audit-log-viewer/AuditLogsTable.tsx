@@ -1,5 +1,5 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
 import { useQueryParams, withDefault, NumberParam } from "use-query-params";
@@ -54,7 +54,7 @@ export function AuditLogsTable(props: AuditLogsTableProps) {
   const tableId = props.scope === "project" ? "auditLogs" : "orgAuditLogs";
   const [rowHeight, setRowHeight] = useRowHeightLocalStorage(tableId, "s");
 
-  const columns: ConsoleColumnDef<AuditLogRow>[] = [
+  const columns: HanzoColumnDef<AuditLogRow>[] = [
     {
       accessorKey: "createdAt",
       header: "Time",

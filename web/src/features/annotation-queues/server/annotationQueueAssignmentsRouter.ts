@@ -5,7 +5,7 @@ import {
   protectedProjectProcedure,
 } from "@/src/server/api/trpc";
 import {
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   optionalPaginationZod,
   Prisma,
 } from "@hanzo/console";
@@ -38,7 +38,7 @@ export const queueAssignmentRouter = createTRPCRouter({
       });
 
       if (!queue) {
-        throw new HanzoNotFoundError("Annotation queue not found");
+        throw new ConsoleNotFoundError("Annotation queue not found");
       }
 
       // Verify the users exist and have access to the project
@@ -115,7 +115,7 @@ export const queueAssignmentRouter = createTRPCRouter({
       });
 
       if (!queue) {
-        throw new HanzoNotFoundError("Annotation queue not found");
+        throw new ConsoleNotFoundError("Annotation queue not found");
       }
 
       // Remove memberships
@@ -164,7 +164,7 @@ export const queueAssignmentRouter = createTRPCRouter({
       });
 
       if (!queue) {
-        throw new HanzoNotFoundError("Annotation queue not found");
+        throw new ConsoleNotFoundError("Annotation queue not found");
       }
 
       const assignments = await ctx.prisma.annotationQueueAssignment.findMany({

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { Badge } from "@/src/components/ui/badge";
 import { useCloudModels } from "../hooks";
 import { providerLabels, type CloudModel, type ModelPricing } from "../types";
@@ -28,11 +28,20 @@ export function ModelsTable({ projectId }: { projectId: string }) {
   const [providerFilter, setProviderFilter] = useState<string | null>(null);
 
   const allModels: ModelRow[] = useMemo(() => {
-    const raw = (modelsQuery.data as { data?: Array<CloudModel & { pricing?: ModelPricing | null }> })?.data ?? [];
+    const raw =
+      (
+        modelsQuery.data as {
+          data?: Array<CloudModel & { pricing?: ModelPricing | null }>;
+        }
+      )?.data ?? [];
     return raw.map((m) => {
       const p = (m as { pricing?: ModelPricing | null }).pricing ?? null;
-      const inPrice = p?.inputCostPerMTok ?? (p?.inputCostPerToken ? p.inputCostPerToken * 1_000_000 : undefined);
-      const outPrice = p?.outputCostPerMTok ?? (p?.outputCostPerToken ? p.outputCostPerToken * 1_000_000 : undefined);
+      const inPrice =
+        p?.inputCostPerMTok ??
+        (p?.inputCostPerToken ? p.inputCostPerToken * 1_000_000 : undefined);
+      const outPrice =
+        p?.outputCostPerMTok ??
+        (p?.outputCostPerToken ? p.outputCostPerToken * 1_000_000 : undefined);
       return {
         id: m.id,
         ownedBy: m.owned_by,
@@ -54,13 +63,15 @@ export function ModelsTable({ projectId }: { projectId: string }) {
     return allModels.filter((m) => m.ownedBy === providerFilter);
   }, [allModels, providerFilter]);
 
-  const columns: ConsoleColumnDef<ModelRow>[] = [
+  const columns: HanzoColumnDef<ModelRow>[] = [
     {
       accessorKey: "id",
       id: "id",
       header: "Model",
       size: 240,
-      cell: ({ row }) => <span className="font-mono text-sm">{row.original.id}</span>,
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
     },
     {
       accessorKey: "ownedBy",
@@ -69,7 +80,11 @@ export function ModelsTable({ projectId }: { projectId: string }) {
       size: 160,
       cell: ({ row }) => {
         const provider = row.original.ownedBy;
-        return <span className="text-sm">{providerLabels[provider] ?? provider}</span>;
+        return (
+          <span className="text-sm">
+            {providerLabels[provider] ?? provider}
+          </span>
+        );
       },
     },
     {
@@ -78,28 +93,37 @@ export function ModelsTable({ projectId }: { projectId: string }) {
       header: "Tier",
       size: 90,
       cell: ({ row }) =>
-        row.original.premium ? <Badge variant="default">Premium</Badge> : <Badge variant="secondary">Free</Badge>,
+        row.original.premium ? (
+          <Badge variant="default">Premium</Badge>
+        ) : (
+          <Badge variant="secondary">Free</Badge>
+        ),
     },
     {
       accessorKey: "inputPrice",
       id: "inputPrice",
       header: "Input / MTok",
       size: 120,
-      cell: ({ row }) => <span className="text-sm tabular-nums">{row.original.inputPrice}</span>,
+      cell: ({ row }) => (
+        <span className="text-sm tabular-nums">{row.original.inputPrice}</span>
+      ),
     },
     {
       accessorKey: "outputPrice",
       id: "outputPrice",
       header: "Output / MTok",
       size: 120,
-      cell: ({ row }) => <span className="text-sm tabular-nums">{row.original.outputPrice}</span>,
+      cell: ({ row }) => (
+        <span className="text-sm tabular-nums">{row.original.outputPrice}</span>
+      ),
     },
     {
       accessorKey: "created",
       id: "created",
       header: "Available Since",
       size: 140,
-      cell: ({ row }) => new Date(row.original.created * 1000).toLocaleDateString(),
+      cell: ({ row }) =>
+        new Date(row.original.created * 1000).toLocaleDateString(),
     },
   ];
 
@@ -109,7 +133,7 @@ export function ModelsTable({ projectId }: { projectId: string }) {
         <h3 className="text-lg font-semibold">
           Available Models
           {!modelsQuery.isPending && (
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
+            <span className="text-muted-foreground ml-2 text-sm font-normal">
               ({filteredModels.length}
               {providerFilter ? ` of ${allModels.length}` : ""})
             </span>
@@ -118,7 +142,11 @@ export function ModelsTable({ projectId }: { projectId: string }) {
       </div>
 
       {providers.length > 1 && (
-        <ProviderFilter providers={providers} selected={providerFilter} onSelect={setProviderFilter} />
+        <ProviderFilter
+          providers={providers}
+          selected={providerFilter}
+          onSelect={setProviderFilter}
+        />
       )}
 
       <DataTable

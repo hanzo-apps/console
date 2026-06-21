@@ -1,6 +1,6 @@
 import { ApiAuthService } from "@/src/features/public-api/server/apiAuth";
 import { cors, runMiddleware } from "@/src/features/public-api/server/cors";
-import { prisma, type User, type Role } from "@hanzo/console/src/db";
+import { Prisma, prisma, type User, type Role } from "@hanzo/console/src/db";
 import { logger, redis } from "@hanzo/console/src/server";
 import { z } from "zod";
 import { type NextApiRequest, type NextApiResponse } from "next";
@@ -97,6 +97,74 @@ export default async function handler(
       detail: "Internal server error",
       status: 500,
     });
+  }
+}
+
+// Mirrors the tRPC `deleteMembership` invariant. Wraps the owner-count check
+// and the membership delete in a single Serializable transaction so two
+// concurrent SCIM deprovision requests cannot both pass the guard and orphan
+// the org. Returns false (with the response already written) when the caller
+// must stop; returns true after the membership has been removed.
+async function deprovisionOrReject(
+  res: NextApiResponse,
+  userId: string,
+  orgId: string,
+): Promise<boolean> {
+  try {
+    const outcome = await prisma.$transaction(
+      async (tx) => {
+        const membership = await tx.organizationMembership.findUnique({
+          where: { orgId_userId: { orgId, userId } },
+          select: { role: true },
+        });
+        if (membership?.role === "OWNER") {
+          const ownerCount = await tx.organizationMembership.count({
+            where: { orgId, role: "OWNER" },
+          });
+          if (ownerCount <= 1) {
+            return "lastOwner" as const;
+          }
+        }
+        await tx.organizationMembership.deleteMany({
+          where: { userId, orgId },
+        });
+        return "deleted" as const;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    if (outcome === "lastOwner") {
+      logger.warn(
+        `[SCIM] Refused to remove last OWNER ${userId} from org ${orgId}`,
+      );
+      res.status(403).json({
+        schemas: ["urn:ietf:params:scim:api:messages:2.0:Error"],
+        detail:
+          "Cannot remove the last owner of an organization. Assign new owner or delete organization.",
+        status: 403,
+      });
+      return false;
+    }
+    return true;
+  } catch (error) {
+    // Postgres maps a serialization failure to Prisma error code P2034 ("could
+    // not serialize access due to concurrent update"). Surface as 409 so the
+    // SCIM client retries; on retry the guard will see the updated owner count.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2034"
+    ) {
+      logger.warn(
+        `[SCIM] Concurrent deprovision conflict for user ${userId} in org ${orgId}`,
+      );
+      res.status(409).json({
+        schemas: ["urn:ietf:params:scim:api:messages:2.0:Error"],
+        detail: "Concurrent deprovision conflict for this user. Please retry.",
+        status: 409,
+      });
+      return false;
+    }
+    throw error;
   }
 }
 

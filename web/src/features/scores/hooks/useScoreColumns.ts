@@ -21,6 +21,8 @@ function createScoreColumns<T extends Record<string, any>>(
   scoreColumnKey: keyof T & string,
   displayFormat: "smart" | "aggregate",
   prefix?: string,
+  defaultHidden?: boolean,
+  rawKey?: boolean,
 ): HanzoColumnDef<T>[] {
   return scoreColumns.map(({ key, name, source, dataType }) => {
     // Apply prefix to both column ID/accessor and header

@@ -2,6 +2,8 @@ import { tracesTableCols } from "@hanzo/console";
 import type { FilterConfig } from "@/src/features/filters/lib/filter-config";
 import { omitFilterFacets } from "@/src/features/filters/lib/filter-config";
 
+export type TraceOmittableFilterColumn = "userId" | "sessionId";
+
 export const traceFilterConfig: FilterConfig = {
   tableName: "traces",
 

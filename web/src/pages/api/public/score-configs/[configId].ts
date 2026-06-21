@@ -11,15 +11,6 @@ import {
   PutScoreConfigQuery as PatchScoreConfigQuery,
   PutScoreConfigResponse as PatchScoreConfigResponse,
 } from "@/src/features/public-api/types/score-configs";
-import {
-  InternalServerError,
-  InvalidRequestError,
-  HanzoNotFoundError,
-  validateDbScoreConfigSafe,
-} from "@hanzo/console";
-import { prisma } from "@hanzo/console/src/db";
-import { traceException } from "@hanzo/console/src/server";
-import { config } from "@/src/middleware";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({
@@ -31,20 +22,6 @@ export default withMiddlewares({
         projectId: auth.scope.projectId,
         configId: query.configId,
       });
-
-      if (!config) {
-        throw new HanzoNotFoundError(
-          "Score config not found within authorized project",
-        );
-      }
-
-      const parsedConfig = validateDbScoreConfigSafe(config);
-      if (!parsedConfig.success) {
-        traceException(parsedConfig.error);
-        throw new InternalServerError("Requested score config is corrupted");
-      }
-
-      return parsedConfig.data;
     },
   }),
   PATCH: createAuthedProjectAPIRoute({
@@ -58,33 +35,6 @@ export default withMiddlewares({
         configId: query.configId,
         body,
       });
-
-      if (!existingConfig) {
-        throw new HanzoNotFoundError(
-          "Score config not found within authorized project",
-        );
-      }
-
-      // Merge the body with the existing config and verify schema compliance
-      const result = validateDbScoreConfigSafe({ ...existingConfig, ...body });
-
-      if (!result.success) {
-        throw new InvalidRequestError(
-          result.error.issues.map((issue) => issue.message).join(", "),
-        );
-      }
-
-      await prisma.scoreConfig.update({
-        where: {
-          id: query.configId,
-          projectId: auth.scope.projectId,
-        },
-        data: {
-          ...body,
-        },
-      });
-
-      return result.data;
     },
   }),
 });

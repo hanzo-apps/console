@@ -63,6 +63,18 @@ export default function NewEvaluatorPage() {
     (t) => t.id === evaluatorId,
   );
 
+  const templatesForCurrentName = api.evals.allTemplatesForName.useQuery(
+    {
+      projectId,
+      name: currentTemplate?.name ?? "",
+      isUserManaged: Boolean(currentTemplate?.projectId),
+    },
+    {
+      enabled: !!projectId && !!currentTemplate?.name,
+      refetchOnMount: "always",
+    },
+  );
+
   const latestTemplate = templatesForCurrentName.data?.templates[0];
   const hasNewerTemplate =
     !!currentTemplate &&

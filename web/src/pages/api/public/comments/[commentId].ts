@@ -1,7 +1,7 @@
 import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
-import { HanzoNotFoundError } from "@hanzo/console";
+import { ConsoleNotFoundError } from "@hanzo/console";
 import {
   GetCommentV1Query,
   GetCommentV1Response,
@@ -23,7 +23,7 @@ export default withMiddlewares({
       });
 
       if (!comment) {
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           "Comment not found within authorized project",
         );
       }

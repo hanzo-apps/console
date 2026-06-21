@@ -2,6 +2,10 @@ import React from "react";
 import { ChartContainer, ChartTooltip } from "@/src/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import { type ChartProps } from "@/src/features/widgets/chart-library/chart-props";
+import {
+  formatMetric,
+  toFullMetricString,
+} from "@/src/features/widgets/chart-library/utils";
 
 /**
  * VerticalBarChart component
@@ -20,6 +24,7 @@ export const VerticalBarChart: React.FC<ChartProps> = ({
     },
   },
   accessibilityLayer = true,
+  metricFormatter = (value, options) => formatMetric(value, options),
 }) => {
   const formatValue = (value: number) =>
     toFullMetricString(metricFormatter(value, { style: "compact" }));

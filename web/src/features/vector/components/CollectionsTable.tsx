@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
-import { useVectorCollections, useDeleteCollection } from "@/src/features/vector/hooks";
+import { type HanzoColumnDef } from "@/src/components/table/types";
+import {
+  useVectorCollections,
+  useDeleteCollection,
+} from "@/src/features/vector/hooks";
 import { CreateCollectionDialog } from "./CreateCollectionDialog";
 import { Button } from "@/src/components/ui/button";
 import {
@@ -46,7 +49,9 @@ export function CollectionsTable({ projectId }: { projectId: string }) {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const collections: CollectionRow[] =
-    (collectionsQuery.data as { collections?: VectorCollection[] })?.collections?.map((c) => ({
+    (
+      collectionsQuery.data as { collections?: VectorCollection[] }
+    )?.collections?.map((c) => ({
       name: c.name,
       vectorCount: c.vectorCount,
       dimension: c.dimension,
@@ -55,7 +60,7 @@ export function CollectionsTable({ projectId }: { projectId: string }) {
       createdAt: c.createdAt,
     })) ?? [];
 
-  const columns: ConsoleColumnDef<CollectionRow>[] = [
+  const columns: HanzoColumnDef<CollectionRow>[] = [
     {
       accessorKey: "name",
       id: "name",
@@ -119,7 +124,10 @@ export function CollectionsTable({ projectId }: { projectId: string }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(collection.name)}>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => setDeleteTarget(collection.name)}
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </DropdownMenuItem>
@@ -167,8 +175,9 @@ export function CollectionsTable({ projectId }: { projectId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete collection?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteTarget}</strong>? All vectors will be permanently removed.
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{deleteTarget}</strong>?
+              All vectors will be permanently removed. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -176,7 +185,10 @@ export function CollectionsTable({ projectId }: { projectId: string }) {
             <AlertDialogAction
               onClick={() => {
                 if (!deleteTarget) return;
-                deleteCollection.mutate({ projectId, name: deleteTarget }, { onSuccess: () => setDeleteTarget(null) });
+                deleteCollection.mutate(
+                  { projectId, name: deleteTarget },
+                  { onSuccess: () => setDeleteTarget(null) },
+                );
               }}
             >
               Delete

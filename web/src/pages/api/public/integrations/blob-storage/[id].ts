@@ -5,11 +5,12 @@ import { redis } from "@hanzo/console/src/server";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/hasEntitlement";
 import {
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   UnauthorizedError,
   ForbiddenError,
 } from "@hanzo/console";
 import { InvalidRequestError } from "@hanzo/console";
+import type { BlobStorageIntegrationStatusResponseType } from "@/src/features/public-api/types/blob-storage-integrations";
 import { deriveSyncStatus } from "@/src/features/blobstorage-integration/deriveSyncStatus";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 
@@ -69,7 +70,7 @@ async function handleDeleteBlobStorageIntegration(
   });
 
   if (!integration || integration.project.orgId !== authCheck.scope.orgId) {
-    throw new HanzoNotFoundError("Blob storage integration not found");
+    throw new ConsoleNotFoundError("Blob storage integration not found");
   }
 
   // Delete the integration
@@ -138,7 +139,7 @@ async function handleGetBlobStorageIntegrationStatus(
   });
 
   if (!integration || integration.project.orgId !== authCheck.scope.orgId) {
-    throw new LangfuseNotFoundError("Blob storage integration not found");
+    throw new ConsoleNotFoundError("Blob storage integration not found");
   }
 
   const responseData: BlobStorageIntegrationStatusResponseType = {

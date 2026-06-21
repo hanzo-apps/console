@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { api } from "@/src/utils/api";
 import { useState } from "react";
 import { type EvalTemplate } from "@hanzo/console/src/db";
+import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
 import {
   isCodeEvalTemplate,
   shouldShowEvalTemplate,
@@ -18,6 +19,7 @@ export function useTemplateValidation({
     null,
   );
   const [isSelectionValid, setIsSelectionValid] = useState(true);
+  const codeEvalCapabilities = useIsCodeEvalEnabled();
 
   const defaultModel = api.defaultLlmModel.fetchDefaultModel.useQuery({
     projectId,

@@ -17,7 +17,7 @@ import {
   timeFilter,
   type SessionOptions,
   type ScoreDomain,
-  AGGREGATABLE_SCORE_TYPES,
+  LISTABLE_SCORE_TYPES,
 } from "@hanzo/console";
 import { Prisma } from "@hanzo/console/src/db";
 import { TRPCError } from "@trpc/server";

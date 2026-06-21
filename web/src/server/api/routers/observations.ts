@@ -3,7 +3,7 @@ import {
   createTRPCRouter,
   protectedGetTraceProcedure,
 } from "@/src/server/api/trpc";
-import { HanzoNotFoundError, parseIO } from "@hanzo/console";
+import { ConsoleNotFoundError, parseIO } from "@hanzo/console";
 import {
   getObservationById,
   getObservationByIdFromEventsTable,
@@ -39,7 +39,7 @@ export const observationsRouter = createTRPCRouter({
           ? await getObservationByIdFromEventsTable(queryOpts)
           : await getObservationById(queryOpts);
       if (!obs) {
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           "Observation not found within authorized project",
         );
       }

@@ -23,7 +23,10 @@ import {
 } from "@hanzo/console/src/db";
 import { isPrismaException } from "@/src/utils/exceptions";
 import { getOrganizationPlanServerSide } from "@/src/features/entitlements/server/getPlan";
-import { API_KEY_NON_EXISTENT, type RedisClient } from "@hanzo/console/src/server";
+import {
+  API_KEY_NON_EXISTENT,
+  type RedisClient,
+} from "@hanzo/console/src/server";
 import { type z } from "zod/v4";
 import { CloudConfigSchema, isPlan } from "@hanzo/console";
 
@@ -100,6 +103,7 @@ export class ApiAuthService {
 
   async verifyAuthHeaderAndReturnScope(
     authHeader: string | undefined,
+    options: VerifyAuthHeaderOptions = {},
   ): Promise<AuthHeaderVerificationResult> {
     const result: AuthHeaderVerificationResult = await instrumentAsync(
       { name: "api-auth-verify" },

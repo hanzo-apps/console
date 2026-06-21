@@ -16,6 +16,8 @@ import {
   BatchActionStatus,
   ActionId,
   EvalTargetObject,
+  BatchEvalSourceTable,
+  getEvalTargetObjectFromSourceTable,
 } from "@hanzo/console";
 import { env } from "@/src/env.mjs";
 import { CreateObservationBatchEvaluationActionSchema } from "../validation";

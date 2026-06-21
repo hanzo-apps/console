@@ -10,6 +10,11 @@ import {
 } from "@hanzo/console";
 import { ZodModelConfig } from "@hanzo/console/src/server/llm/types";
 
+export type ExperimentPromptModelConfig = {
+  provider?: string;
+  model: string;
+};
+
 type ExperimentPromptDataProps = {
   projectId: string;
   form: UseFormReturn<any>;

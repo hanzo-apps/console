@@ -254,7 +254,7 @@ export const promptRouter = createTRPCRouter({
           1, // limit
           0, // page
           pathFilter,
-          searchCondition,
+          searchFilter,
           input.pathPrefix,
         ),
       );

@@ -91,12 +91,22 @@ export const usePlaygroundContext = () => {
   return context;
 };
 
+/**
+ * Returns the playground context if rendered within a PlaygroundProvider,
+ * otherwise `undefined`. Use this from components that may render both inside
+ * and outside the playground (e.g. shared chat message components).
+ */
+export const useOptionalPlaygroundContext = () => {
+  return useContext(PlaygroundContext);
+};
+
 export const PlaygroundProvider: React.FC<PlaygroundProviderProps> = ({
   children,
   windowId,
 }) => {
   const capture = useInsightsCapture();
   const projectId = useProjectIdFromURL();
+  const effectiveWindowId = windowId || MULTI_WINDOW_CONFIG.DEFAULT_WINDOW_ID;
   const { playgroundCache, setPlaygroundCache } = usePlaygroundCache(windowId);
   const [promptVariables, setPromptVariables] = useState<PromptVariable[]>([]);
   const [messagePlaceholders, setMessagePlaceholders] = useState<

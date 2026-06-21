@@ -55,11 +55,12 @@ import { InfoIcon, PlusCircle } from "lucide-react";
 import { UpsertModelFormDialog } from "@/src/features/models/components/UpsertModelFormDialog";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { Badge } from "@/src/components/ui/badge";
-import { type RowSelectionState } from "@tanstack/react-table";
+import { type RowSelectionState, type Row } from "@tanstack/react-table";
 import TableIdOrName from "@/src/components/table/table-id";
 import { ItemBadge } from "@/src/components/ItemBadge";
 import { TablePeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
+import { usePeekTableState } from "@/src/components/table/peek/contexts/PeekTableStateContext";
 import {
   detailPageListKeys,
   useDetailPageLists,
@@ -140,7 +141,9 @@ export type ObservationsTableProps = {
   promptName?: string;
   promptVersion?: number;
   modelId?: string;
-  omittedFilter?: string[];
+  omittedFilter?: ObservationsOmittableFilterColumn[];
+  // External control props for embedded preview tables
+  hideControls?: boolean;
 };
 
 export default function ObservationsTable({
@@ -148,7 +151,16 @@ export default function ObservationsTable({
   promptName,
   promptVersion,
   modelId,
+  omittedFilter = [],
+  hideControls = false,
 }: ObservationsTableProps) {
+  const peekContext = usePeekTableState();
+
+  const observationsFilterConfig = useMemo(
+    () => getObservationsFilterConfig(omittedFilter),
+    [omittedFilter],
+  );
+
   const router = useRouter();
   const { viewId } = router.query;
   const utils = api.useUtils();

@@ -14,7 +14,7 @@ import {
   BatchActionType,
   BatchExportTableName,
   type BatchTableNames,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   paginationZod,
   Prisma,
 } from "@hanzo/console";
@@ -143,7 +143,7 @@ export const queueItemRouter = createTRPCRouter({
               });
 
         if (!datastoreObservation) {
-          throw new HanzoNotFoundError("Observation not found");
+          throw new ConsoleNotFoundError("Observation not found");
         }
 
         return {

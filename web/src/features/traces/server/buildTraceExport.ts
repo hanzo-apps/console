@@ -1,6 +1,6 @@
 import {
   BaseError,
-  LangfuseNotFoundError,
+  ConsoleNotFoundError,
   ScoreDataTypeEnum,
   UnauthorizedError,
 } from "@hanzo/console";
@@ -110,7 +110,7 @@ async function getAuthorizedTrace(params: {
   });
 
   if (!datastoreTrace) {
-    throw new LangfuseNotFoundError("Trace not found");
+    throw new ConsoleNotFoundError("Trace not found");
   }
 
   const traceSession = datastoreTrace.sessionId

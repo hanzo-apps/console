@@ -3,7 +3,7 @@ import {
   SplashScreen,
   type ValueProposition,
 } from "@/src/components/ui/splash-screen";
-import { Bot, Gauge, Zap, BarChart4 } from "lucide-react";
+import { Bot, Gauge, Zap, BarChart4, Code2 } from "lucide-react";
 import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
 import { EvalTemplateSourceCodeLanguage } from "@hanzo/console";
 

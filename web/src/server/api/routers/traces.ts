@@ -25,6 +25,7 @@ import {
   type ScoreDomain,
   ScoreDataTypeArray,
   ScoreDataTypeEnum,
+  LISTABLE_SCORE_TYPES,
 } from "@hanzo/console";
 import {
   traceException,

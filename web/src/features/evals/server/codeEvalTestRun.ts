@@ -16,7 +16,7 @@ import {
 import { TRPCError } from "@trpc/server";
 
 import {
-  LangfuseNotFoundError,
+  ConsoleNotFoundError,
   ConsoleInternalTraceEnvironment,
   observationForEvalSchema,
   type EvalTargetObject,
@@ -298,7 +298,7 @@ async function getObservationForEvalByIdFromLegacyObservations(params: {
     startTime: params.startTime,
     fetchWithInputOutput: true,
   }).catch((error) => {
-    if (error instanceof LangfuseNotFoundError) {
+    if (error instanceof ConsoleNotFoundError) {
       throwObservationNotFound();
     }
 

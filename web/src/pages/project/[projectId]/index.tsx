@@ -25,6 +25,8 @@ import { useDashboardDateRange } from "@/src/hooks/useDashboardDateRange";
 import { useDebounce } from "@/src/hooks/useDebounce";
 import { ScoreAnalytics } from "@/src/features/dashboard/components/score-analytics/ScoreAnalytics";
 import SetupTracingButton from "@/src/features/setup/components/SetupTracingButton";
+import { FeedbackButtonWrapper } from "@/src/features/feedback/component/FeedbackButton";
+import { BarChart2 } from "lucide-react";
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
 import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
 import Page from "@/src/components/layouts/page";
@@ -44,6 +46,8 @@ export default function Dashboard() {
     () => toAbsoluteTimeRange(timeRange),
     [timeRange],
   );
+
+  const uiCustomization = useUiCustomization();
 
   const lookbackLimit = useEntitlementLimit("data-access-days");
 

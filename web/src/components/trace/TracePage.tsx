@@ -1,3 +1,4 @@
+import { StringParam, useQueryParam, withDefault } from "use-query-params";
 import { PublishTraceSwitch } from "@/src/components/publish-object-switch";
 import { DetailPageNav } from "@/src/features/navigate-detail-pages/DetailPageNav";
 import { useRouter } from "next/router";
@@ -16,7 +17,13 @@ import { Badge } from "@/src/components/ui/badge";
 import { useObservationListBeta } from "@/src/features/events/hooks/useObservationListBeta";
 import { useEventsTraceData } from "@/src/features/events/hooks/useEventsTraceData";
 
-export function TracePage({ traceId, timestamp }: { traceId: string; timestamp?: Date }) {
+export function TracePage({
+  traceId,
+  timestamp,
+}: {
+  traceId: string;
+  timestamp?: Date;
+}) {
   const router = useRouter();
   const session = useSession();
   const routeProjectId = (router.query.projectId as string) ?? "";
@@ -32,7 +39,11 @@ export function TracePage({ traceId, timestamp }: { traceId: string; timestamp?:
     {
       enabled: !isBetaEnabled,
       retry(failureCount, error) {
-        if (error.data?.code === "UNAUTHORIZED" || error.data?.code === "NOT_FOUND") return false;
+        if (
+          error.data?.code === "UNAUTHORIZED" ||
+          error.data?.code === "NOT_FOUND"
+        )
+          return false;
         return failureCount < 3;
       },
     },
@@ -56,9 +67,14 @@ export function TracePage({ traceId, timestamp }: { traceId: string; timestamp?:
     : tracesQuery;
 
   const projectIdForAccessCheck = trace.data?.projectId ?? routeProjectId;
-  const hasProjectAccess = useIsAuthenticatedAndProjectMember(projectIdForAccessCheck);
+  const hasProjectAccess = useIsAuthenticatedAndProjectMember(
+    projectIdForAccessCheck,
+  );
 
-  const [selectedTab, setSelectedTab] = useQueryParam("display", withDefault(StringParam, "details"));
+  const [selectedTab, setSelectedTab] = useQueryParam(
+    "display",
+    withDefault(StringParam, "details"),
+  );
 
   // Handle errors - for events path, we check if there's no data after loading
   if (!isBetaEnabled && tracesQuery.error?.data?.code === "UNAUTHORIZED")
@@ -93,15 +109,31 @@ export function TracePage({ traceId, timestamp }: { traceId: string; timestamp?:
 
   const isSharedTrace = trace.data.public;
   const showPublicIndicators = isSharedTrace && !hasProjectAccess;
-  const encodedTargetPath = encodeURIComponent(stripBasePath(router.asPath || "/"));
+  const encodedTargetPath = encodeURIComponent(
+    stripBasePath(router.asPath || "/"),
+  );
   const leadingControl = showPublicIndicators ? (
     session.status === "authenticated" ? (
-      <Button asChild size="sm" variant="outline" title="Back to Console" className="px-3">
+      <Button
+        asChild
+        size="sm"
+        variant="outline"
+        title="Back to Console"
+        className="px-3"
+      >
         <Link href="/">Console</Link>
       </Button>
     ) : (
-      <Button asChild size="sm" variant="default" title="Sign in to Hanzo Console" className="px-3">
-        <Link href={`/auth/sign-in?targetPath=${encodedTargetPath}`}>Sign in</Link>
+      <Button
+        asChild
+        size="sm"
+        variant="default"
+        title="Sign in to Hanzo Console"
+        className="px-3"
+      >
+        <Link href={`/auth/sign-in?targetPath=${encodedTargetPath}`}>
+          Sign in
+        </Link>
       </Button>
     )
   ) : undefined;
@@ -114,7 +146,9 @@ export function TracePage({ traceId, timestamp }: { traceId: string; timestamp?:
   return (
     <Page
       headerProps={{
-        title: trace.data.name ? `${trace.data.name}: ${trace.data.id}` : trace.data.id,
+        title: trace.data.name
+          ? `${trace.data.name}: ${trace.data.id}`
+          : trace.data.id,
         itemType: "TRACE",
         breadcrumb: [
           {
@@ -155,13 +189,17 @@ export function TracePage({ traceId, timestamp }: { traceId: string; timestamp?:
                   ...(typeof display === "string" ? { display } : {}),
                 });
                 const timestamp =
-                  entry.params && entry.params.timestamp ? encodeURIComponent(entry.params.timestamp) : undefined;
+                  entry.params && entry.params.timestamp
+                    ? encodeURIComponent(entry.params.timestamp)
+                    : undefined;
 
                 if (timestamp) {
                   queryParams.set("timestamp", timestamp);
                 }
 
-                const finalQueryString = queryParams.size ? `?${queryParams.toString()}` : "";
+                const finalQueryString = queryParams.size
+                  ? `?${queryParams.toString()}`
+                  : "";
 
                 return `/project/${projectId as string}/traces/${entry.id}${finalQueryString}`;
               }}

@@ -85,6 +85,15 @@ interface SystemPreset {
   isSystem: true;
 }
 
+// Frontend-only system presets use a sentinel id prefix so they are never
+// confused with backend-persisted view ids. Both brands' sentinels are
+// recognized so presets created under either prefix (e.g. session-detail
+// presets) resolve as system presets.
+export const SYSTEM_PRESET_ID_PREFIXES = ["__hanzo_", "__langfuse_"] as const;
+
+export const isSystemPresetId = (id: string | undefined | null): boolean =>
+  !!id && SYSTEM_PRESET_ID_PREFIXES.some((prefix) => id.startsWith(prefix));
+
 const SYSTEM_PRESETS: { DEFAULT: SystemPreset } = {
   DEFAULT: {
     id: "__hanzo_default__",

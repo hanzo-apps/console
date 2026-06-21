@@ -7,7 +7,7 @@ import {
   PostDatasetItemsV1Body,
   PostDatasetItemsV1Response,
 } from "@/src/features/public-api/types/datasets";
-import { HanzoNotFoundError, Prisma } from "@hanzo/console";
+import { ConsoleNotFoundError, Prisma } from "@hanzo/console";
 import {
   createDatasetItemFilterState,
   getDatasetItems,
@@ -84,7 +84,7 @@ export default withMiddlewares({
             logger.warn(
               `Failed to upsert dataset item. Dataset item ${id} in project ${auth.scope.projectId} already exists for a different dataset than ${datasetName}`,
             );
-            throw new HanzoNotFoundError(
+            throw new ConsoleNotFoundError(
               `The dataset item with id ${id} already exists in a dataset other than ${datasetName}`,
             );
           }
@@ -111,7 +111,7 @@ export default withMiddlewares({
           },
         });
         if (!dataset) {
-          throw new HanzoNotFoundError("Dataset not found");
+          throw new ConsoleNotFoundError("Dataset not found");
         }
         datasetId = dataset.id;
       }

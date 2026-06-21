@@ -119,6 +119,8 @@ function transformAggregates(
     // Multi-value aggregates (no id) are child observation scores - skip them
     if (source !== "ANNOTATION" || !aggregate.id) return;
 
+    const dataType = rawDataType as AnnotationScoreDataType;
+
     const config = configs.find(
       (c) => normalizeScoreName(c.name) === name && c.dataType === dataType,
     );

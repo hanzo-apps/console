@@ -1,5 +1,5 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type HanzoColumnDef } from "@/src/components/table/types";
 import { useZtSessions } from "@/src/features/zt/hooks";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
 
@@ -22,20 +22,24 @@ export function ZtSessionsTable({ projectId }: { projectId: string }) {
     createdAt: item.createdAt,
   }));
 
-  const columns: ConsoleColumnDef<SessionRow>[] = [
+  const columns: HanzoColumnDef<SessionRow>[] = [
     {
       accessorKey: "identityName",
       id: "identityName",
       header: "Identity",
       size: 200,
-      cell: ({ row }) => <span className="font-medium">{row.original.identityName}</span>,
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.identityName}</span>
+      ),
     },
     {
       accessorKey: "serviceName",
       id: "serviceName",
       header: "Service",
       size: 200,
-      cell: ({ row }) => <span className="font-medium">{row.original.serviceName}</span>,
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.serviceName}</span>
+      ),
     },
     {
       accessorKey: "type",
@@ -45,7 +49,11 @@ export function ZtSessionsTable({ projectId }: { projectId: string }) {
       cell: ({ row }) => {
         const t = row.original.type;
         return (
-          <StatusBadge type={t === "Bind" ? "active" : "pending"} isLive={false} showText={false}>
+          <StatusBadge
+            type={t === "Bind" ? "active" : "pending"}
+            isLive={false}
+            showText={false}
+          >
             {t}
           </StatusBadge>
         );
@@ -56,7 +64,10 @@ export function ZtSessionsTable({ projectId }: { projectId: string }) {
       id: "createdAt",
       header: "Created",
       size: 150,
-      cell: ({ row }) => (row.original.createdAt ? new Date(row.original.createdAt).toLocaleString() : "-"),
+      cell: ({ row }) =>
+        row.original.createdAt
+          ? new Date(row.original.createdAt).toLocaleString()
+          : "-",
     },
   ];
 

@@ -1,4 +1,3 @@
-import { prisma } from "@hanzo/console/src/db";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import {
@@ -7,7 +6,7 @@ import {
   PostDatasetRunItemsV1Body,
   PostDatasetRunItemsV1Response,
 } from "@/src/features/public-api/types/datasets";
-import { HanzoNotFoundError } from "@hanzo/console";
+import { ConsoleNotFoundError } from "@hanzo/console";
 import { addDatasetRunItemsToEvalQueue } from "@/src/features/evals/server/addDatasetRunItemsToEvalQueue";
 import {
   eventTypes,
@@ -18,10 +17,6 @@ import {
 } from "@hanzo/console/src/server";
 import { v4 } from "uuid";
 import { createOrFetchDatasetRun } from "@/src/features/public-api/server/dataset-runs";
-import {
-  generateDatasetRunItemsForPublicApi,
-  getDatasetRunItemsCountForPublicApi,
-} from "@/src/features/public-api/server/dataset-run-items";
 import { APIDatasetRunItem } from "@/src/features/public-api/types/datasets";
 import { listDatasetRunItemsForApi } from "@/src/features/datasets/server/publicDatasetService";
 
@@ -44,7 +39,7 @@ export default withMiddlewares({
       });
 
       if (!datasetItem) {
-        throw new HanzoNotFoundError("Dataset item not found");
+        throw new ConsoleNotFoundError("Dataset item not found");
       }
 
       let finalTraceId = traceId;
@@ -57,13 +52,13 @@ export default withMiddlewares({
           fetchWithInputOutput: false,
         });
         if (observationId && !observation) {
-          throw new HanzoNotFoundError("Observation not found");
+          throw new ConsoleNotFoundError("Observation not found");
         }
         finalTraceId = observation?.traceId;
       }
 
       if (!finalTraceId) {
-        throw new HanzoNotFoundError("Trace not found");
+        throw new ConsoleNotFoundError("Trace not found");
       }
 
       /********************
@@ -157,49 +152,6 @@ export default withMiddlewares({
         limit: query.limit,
         page: query.page,
       });
-
-      if (!datasetRun) {
-        throw new HanzoNotFoundError(
-          "Dataset run not found for the given project and dataset id",
-        );
-      }
-
-      const { datasetId, limit, page } = query;
-      /**************
-       * RESPONSE *
-       **************/
-
-      const [items, count] = await Promise.all([
-        generateDatasetRunItemsForPublicApi({
-          props: {
-            datasetId,
-            runId: datasetRun.id,
-            projectId: auth.scope.projectId,
-            limit,
-            page,
-          },
-        }),
-        getDatasetRunItemsCountForPublicApi({
-          props: {
-            datasetId,
-            runId: datasetRun.id,
-            projectId: auth.scope.projectId,
-            limit,
-            page,
-          },
-        }),
-      ]);
-
-      const finalCount = count || 0;
-      return {
-        data: items,
-        meta: {
-          page,
-          limit,
-          totalItems: finalCount,
-          totalPages: Math.ceil(finalCount / limit),
-        },
-      };
     },
   }),
 });

@@ -20,12 +20,14 @@ export const LatencyTables = ({
   fromTimestamp,
   toTimestamp,
   isLoading = false,
+  schedulerId,
 }: {
   projectId: string;
   globalFilterState: FilterState;
   fromTimestamp: Date;
   toTimestamp: Date;
   isLoading?: boolean;
+  schedulerId?: string;
 }) => {
   const generationsLatenciesQuery: QueryType = {
     view: "observations",
@@ -94,7 +96,7 @@ export const LatencyTables = ({
   const observationsLatencies = useScheduledDashboardExecuteQuery(
     {
       projectId,
-      query: spansLatenciesQuery,
+      query: observationsLatenciesQuery,
     },
     {
       trpc: {

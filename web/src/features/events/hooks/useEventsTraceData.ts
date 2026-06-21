@@ -83,6 +83,7 @@ export function useEventsTraceData(
   }, [eventsQuery.data]);
 
   // Prefer the root observation when present, otherwise fall back to the earliest one.
+  const observations = eventsQuery.data?.observations;
   const primaryObservation = useMemo(() => {
     if (!observations?.length) return null;
     if (rootObservation) return rootObservation;

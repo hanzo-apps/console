@@ -17,8 +17,8 @@ import {
   timeFilter,
   isDatastoreFilterColumn,
   optionalPaginationZod,
-  HanzoConflictError,
-  HanzoNotFoundError,
+  ConsoleConflictError,
+  ConsoleNotFoundError,
 } from "@hanzo/console";
 import { TRPCError } from "@trpc/server";
 import {
@@ -63,6 +63,7 @@ import {
   getDatasetItemVersionHistory,
   getDatasetItemChangesSinceVersion,
   getDatasetItemsCountGrouped,
+  WEBHOOK_URL_VALIDATION_LOG_CONTEXT,
 } from "@hanzo/console/src/server";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
 import {
@@ -398,24 +399,8 @@ export const datasetRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       if (input.datasetIds.length === 0) return { metrics: [] };
 
-      // Get dataset runs metrics
-      const query = DB.selectFrom("datasets")
-        .leftJoin("dataset_runs", (join) =>
-          join
-            .onRef("datasets.id", "=", "dataset_runs.dataset_id")
-            .on("dataset_runs.project_id", "=", input.projectId),
-        )
-        .select(({ eb }) => [
-          "datasets.id",
-          eb.fn.count("dataset_runs.id").distinct().as("countDatasetRuns"),
-          eb.fn.max("dataset_runs.created_at").as("lastRunAt"),
-        ])
-        .where("datasets.project_id", "=", input.projectId)
-        .where("datasets.id", "in", input.datasetIds)
-        .groupBy("datasets.id");
-
-      const compiledQuery = query.compile();
-
+      // Get dataset runs metrics (Prisma raw SQL; upstream #12692 replaced the
+      // former Kysely builder with Prisma for all queries).
       const runsMetrics = await ctx.prisma.$queryRawUnsafe<
         Array<{
           id: string;
@@ -700,7 +685,7 @@ export const datasetRouter = createTRPCRouter({
         datasetId: input.datasetId,
       });
       if (!item) {
-        throw new HanzoNotFoundError("Dataset item not found");
+        throw new ConsoleNotFoundError("Dataset item not found");
       }
       return item;
     }),
@@ -1032,7 +1017,7 @@ export const datasetRouter = createTRPCRouter({
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2025"
         ) {
-          throw new HanzoConflictError(
+          throw new ConsoleConflictError(
             "The dataset you are trying to delete has likely been deleted",
           );
         }

@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
-import { useSearchIndexes, useDeleteIndex, useReindex } from "@/src/features/search/hooks";
+import { type HanzoColumnDef } from "@/src/components/table/types";
+import {
+  useSearchIndexes,
+  useDeleteIndex,
+  useReindex,
+} from "@/src/features/search/hooks";
 import { CreateIndexDialog } from "./CreateIndexDialog";
 import { Button } from "@/src/components/ui/button";
 import {
@@ -45,7 +49,7 @@ export function IndexesTable({ projectId }: { projectId: string }) {
       createdAt: idx.createdAt,
     })) ?? [];
 
-  const columns: ConsoleColumnDef<IndexRow>[] = [
+  const columns: HanzoColumnDef<IndexRow>[] = [
     {
       accessorKey: "name",
       id: "name",
@@ -99,7 +103,10 @@ export function IndexesTable({ projectId }: { projectId: string }) {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Reindex
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(index.name)}>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => setDeleteTarget(index.name)}
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </DropdownMenuItem>
@@ -147,8 +154,9 @@ export function IndexesTable({ projectId }: { projectId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete index?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteTarget}</strong>? All indexed documents will be removed.
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{deleteTarget}</strong>?
+              All indexed documents will be removed. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -156,7 +164,10 @@ export function IndexesTable({ projectId }: { projectId: string }) {
             <AlertDialogAction
               onClick={() => {
                 if (!deleteTarget) return;
-                deleteIndex.mutate({ projectId, storeName: deleteTarget }, { onSuccess: () => setDeleteTarget(null) });
+                deleteIndex.mutate(
+                  { projectId, storeName: deleteTarget },
+                  { onSuccess: () => setDeleteTarget(null) },
+                );
               }}
             >
               Delete

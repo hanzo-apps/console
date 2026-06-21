@@ -11,7 +11,7 @@ import {
   UpdateTableViewPresetsNameInput,
 } from "@hanzo/console/src/server";
 import {
-  HanzoConflictError,
+  ConsoleConflictError,
   Prisma,
   TableViewPresetTableName,
 } from "@hanzo/console";
@@ -42,7 +42,7 @@ export const TableViewPresetsRouter = createTRPCRouter({
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2002"
         ) {
-          throw new HanzoConflictError(
+          throw new ConsoleConflictError(
             "Table view preset with this name already exists. Please choose a different name.",
           );
         }

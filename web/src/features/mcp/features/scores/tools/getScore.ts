@@ -2,7 +2,7 @@ import {
   GetScoreQueryV2,
   GetScoreResponseV2,
   InternalServerError,
-  LangfuseNotFoundError,
+  ConsoleNotFoundError,
 } from "@hanzo/console";
 import { logger, traceException } from "@hanzo/console/src/server";
 import { defineTool } from "../../../core/define-tool";
@@ -30,7 +30,7 @@ export const [getScoreTool, handleGetScore] = defineTool({
         });
 
         if (!score) {
-          throw new LangfuseNotFoundError("Score not found");
+          throw new ConsoleNotFoundError("Score not found");
         }
 
         const parsedScore = GetScoreResponseV2.safeParse(score);

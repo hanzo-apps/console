@@ -5,7 +5,7 @@ import type {
   GetPromptsMetaSchema,
   Prompt,
 } from "@hanzo/console";
-import { InvalidRequestError, LangfuseNotFoundError } from "@hanzo/console";
+import { InvalidRequestError, ConsoleNotFoundError } from "@hanzo/console";
 import type { z } from "zod";
 
 import { auditLog } from "@/src/features/audit-logs/auditLog";
@@ -100,7 +100,7 @@ export const updatePromptLabelsForApi = async ({
   });
 
   if (!existingPrompt) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       `Prompt '${promptName}' version ${promptVersion} not found in project`,
     );
   }
