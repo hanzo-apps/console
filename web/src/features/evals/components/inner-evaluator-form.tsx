@@ -49,7 +49,7 @@ import {
   type EvalFormType,
   isTraceOrDatasetObject,
   isTraceTarget,
-  type HanzoObject,
+  type ConsoleObject,
   type VariableMapping,
 } from "@/src/features/evals/utils/evaluator-form-utils";
 import { ExecutionCountTooltip } from "@/src/features/evals/components/execution-count-tooltip";
@@ -113,9 +113,9 @@ const OUTPUT_MAPPING = [
 
 const inferDefaultMapping = (
   variable: string,
-): Pick<VariableMapping, "hanzoObject" | "selectedColumnId"> => {
+): Pick<VariableMapping, "consoleObject" | "selectedColumnId"> => {
   return {
-    hanzoObject: "trace" as const,
+    consoleObject: "trace" as const,
     selectedColumnId: OUTPUT_MAPPING.includes(variable.toLowerCase())
       ? "output"
       : "input",
@@ -274,7 +274,7 @@ export const InnerEvaluatorForm = (props: {
             props.evalTemplate
               ? props.evalTemplate.vars.map((v) => ({
                   templateVariable: v,
-                  hanzoObject: "trace" as const,
+                  consoleObject: "trace" as const,
                   selectedColumnId: "input",
                 }))
               : [],
@@ -688,14 +688,14 @@ export const InnerEvaluatorForm = (props: {
                       value={field.value}
                       onValueChange={(value) => {
                         const isTrace = isTraceTarget(value);
-                        const hanzoObject: HanzoObject = isTrace
+                        const consoleObject: ConsoleObject = isTrace
                           ? "trace"
                           : "dataset_item";
                         const newMapping = form
                           .getValues("mapping")
                           .map((field) => ({
                             ...field,
-                            hanzoObject,
+                            consoleObject,
                           }));
                         form.setValue("filter", []);
                         form.setValue("mapping", newMapping);
@@ -1042,8 +1042,8 @@ export const InnerEvaluatorForm = (props: {
                         </div>
                         <FormField
                           control={form.control}
-                          key={`${mappingField.id}-hanzoObject`}
-                          name={`mapping.${index}.hanzoObject`}
+                          key={`${mappingField.id}-consoleObject`}
+                          name={`mapping.${index}.consoleObject`}
                           render={({ field }) => (
                             <div className="flex items-center gap-2">
                               <VariableMappingDescription
@@ -1090,7 +1090,7 @@ export const InnerEvaluatorForm = (props: {
                         />
 
                         {!isTraceOrDatasetObject(
-                          form.watch(`mapping.${index}.hanzoObject`),
+                          form.watch(`mapping.${index}.consoleObject`),
                         ) ? (
                           <FormField
                             control={form.control}
@@ -1098,7 +1098,7 @@ export const InnerEvaluatorForm = (props: {
                             name={`mapping.${index}.objectName`}
                             render={({ field }) => {
                               const type = String(
-                                form.watch(`mapping.${index}.hanzoObject`),
+                                form.watch(`mapping.${index}.consoleObject`),
                               ).toUpperCase() as ObservationType;
                               const nameOptions = Array.from(
                                 observationTypeToNames.get(type) ?? [],
@@ -1229,7 +1229,7 @@ export const InnerEvaluatorForm = (props: {
                                           (evalObject) =>
                                             evalObject.id ===
                                             form.watch(
-                                              `mapping.${index}.hanzoObject`,
+                                              `mapping.${index}.consoleObject`,
                                             ),
                                         )?.availableColumns;
 
@@ -1249,7 +1249,7 @@ export const InnerEvaluatorForm = (props: {
                                           (evalObject) =>
                                             evalObject.id ===
                                             form.watch(
-                                              `mapping.${index}.hanzoObject`,
+                                              `mapping.${index}.consoleObject`,
                                             ),
                                         )
                                         ?.availableColumns.map((column) => (

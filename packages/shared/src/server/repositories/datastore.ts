@@ -502,3 +502,132 @@ export function datastoreCompliantRandomCharacters() {
   });
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// Progress-stream event union + type guards
+//
+// queryDatastoreWithProgress emits a discriminated union mirroring the
+// JSONEachRowWithProgress contract: data rows, progress envelopes, and
+// exception envelopes. The guards let callers switch on the event kind.
+// ---------------------------------------------------------------------------
+
+/** Progress envelope emitted between data rows in a progress stream. */
+export interface DatastoreProgress {
+  read_rows: string;
+  read_bytes: string;
+  total_rows_to_read?: string;
+  elapsed_ns?: string;
+}
+
+/** A progress-stream event: a data row, a progress update, or an exception. */
+export type RowOrProgress<T> = { row: T } | { progress: DatastoreProgress } | { exception: string };
+
+export function isRow<T>(event: RowOrProgress<T>): event is { row: T } {
+  return typeof event === "object" && event !== null && "row" in event;
+}
+
+export function isProgressRow<T>(event: RowOrProgress<T>): event is { progress: DatastoreProgress } {
+  return typeof event === "object" && event !== null && "progress" in event;
+}
+
+export function isException<T>(event: RowOrProgress<T>): event is { exception: string } {
+  return typeof event === "object" && event !== null && "exception" in event;
+}
+
+/**
+ * Streaming query that yields a discriminated union of data rows, progress
+ * envelopes, and exception envelopes. Mirrors queryDatastoreStream but wraps
+ * each emitted item in the RowOrProgress union expected by progress-aware
+ * consumers (e.g. the dashboard execute-query SSE endpoint).
+ */
+export async function* queryDatastoreWithProgress<T>(opts: {
+  query: string;
+  params?: Record<string, unknown> | undefined;
+  datastoreConfig?: DatastoreClientConfig;
+  tags?: Record<string, string>;
+  preferredService?: PreferredDatastoreService;
+  datastoreSettings?: DatastoreSettings;
+  allowLegacyEventsRead?: boolean;
+}): AsyncGenerator<RowOrProgress<T>> {
+  if (!opts.allowLegacyEventsRead) assertNoLegacyEventsRead(opts.query);
+
+  const tracer = getTracer("datastore-query-progress");
+  const span = tracer.startSpan("datastore-query-progress", {
+    kind: SpanKind.CLIENT,
+  });
+
+  try {
+    const res = await context
+      .with(trace.setSpan(context.active(), span), async () => {
+        span.setAttribute("ch.query.text", opts.query);
+        span.setAttribute("db.system", "datastore");
+        span.setAttribute("db.query.text", opts.query);
+        span.setAttribute("db.operation.name", "SELECT");
+
+        const res = await datastoreClient(opts.datastoreConfig, opts.preferredService).query({
+          query: opts.query,
+          format: "JSONEachRowWithProgress",
+          query_params: opts.params,
+          datastore_settings: {
+            asterisk_include_alias_columns: 1,
+            asterisk_include_materialized_columns: 1,
+            ...opts.datastoreSettings,
+            log_comment: JSON.stringify(opts.tags ?? {}),
+          },
+        });
+
+        // same logic as for prisma. we want to see queries in development
+        if (env.NODE_ENV === "development") {
+          logger.info(`datastore:query ${res.query_id} ${opts.query}`);
+        }
+
+        span.setAttribute("ch.queryId", res.query_id);
+
+        // add summary headers to the span. Helps to tune performance
+        const summaryHeader = res.response_headers["x-datastore-summary"];
+        if (summaryHeader) {
+          try {
+            const summary = Array.isArray(summaryHeader) ? JSON.parse(summaryHeader[0]) : JSON.parse(summaryHeader);
+            for (const key in summary) {
+              span.setAttribute(`ch.${key}`, summary[key]);
+            }
+          } catch (error) {
+            logger.debug(`Failed to parse datastore summary header ${summaryHeader}`, error);
+          }
+        }
+        return res;
+      })
+      .catch((error) => {
+        throw DatastoreResourceError.wrapIfResourceError(error as Error);
+      });
+
+    for await (const rows of res.stream<RowOrProgress<T> | T>()) {
+      for (const wrapped of rows) {
+        const parsed = wrapped.json();
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          ("row" in parsed || "progress" in parsed || "exception" in parsed)
+        ) {
+          // Pass through pre-formed progress/exception/row envelopes unchanged.
+          const event = parsed as RowOrProgress<T>;
+          if (isException(event)) handleExceptionRow(event);
+          yield event;
+        } else {
+          // Bare data row: run the exception-row guard, then wrap as { row }.
+          yield { row: handleExceptionRow(parsed as T) };
+        }
+      }
+    }
+  } catch (error) {
+    if (error instanceof DatastoreResourceError) throw error;
+    throw DatastoreResourceError.wrapIfResourceError(error as Error);
+  } finally {
+    span.end();
+  }
+}
+
+// Backwards-compatible export name. The resource-error class was renamed
+// DatastoreResourceError during the clickhouse->datastore rename; consumers that
+// still reference the prior name resolve to the same class.
+export { DatastoreResourceError as ClickHouseResourceError };

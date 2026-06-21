@@ -448,3 +448,8 @@ export const datastoreClient = (
  */
 export const convertDateToDatastoreDateTime = (date: Date): string =>
   date.toISOString().replace("T", " ").replace("Z", "");
+
+// Backwards-compatible export name. The connection-pool manager was renamed
+// DatastoreClientManager during the clickhouse->datastore rename; consumers that
+// still reference the prior name resolve to the same class.
+export { DatastoreClientManager as ClickHouseClientManager };

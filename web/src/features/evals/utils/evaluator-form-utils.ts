@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import {
   singleFilter,
-  type hanzoObjects,
+  type consoleObjects,
   TimeScopeSchema,
   EvalTargetObjectSchema,
 } from "@hanzo/console";
@@ -23,6 +23,19 @@ export const evalConfigFormSchema = z.object({
 
 export type EvalFormType = z.infer<typeof evalConfigFormSchema>;
 
-export type HanzoObject = (typeof hanzoObjects)[number];
+export type ConsoleObject = (typeof consoleObjects)[number];
 
 export type VariableMapping = z.infer<typeof wipVariableMapping>;
+
+export const fieldHasJsonSelectorOption = (
+  selectedColumnId: string | undefined | null,
+): boolean =>
+  selectedColumnId === "input" ||
+  selectedColumnId === "output" ||
+  selectedColumnId === "metadata" ||
+  selectedColumnId === "expected_output" ||
+  selectedColumnId === "experiment_item_expected_output" ||
+  selectedColumnId === "experiment_item_metadata" ||
+  selectedColumnId === "expectedOutput" ||
+  selectedColumnId === "experimentItemExpectedOutput" ||
+  selectedColumnId === "experimentItemMetadata";

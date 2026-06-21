@@ -57,7 +57,7 @@ import {
   ValueCell,
   getValueStringLength,
 } from "@/src/components/table/ValueCell";
-import { ItemBadge, type HanzoItemType } from "@/src/components/ItemBadge";
+import { ItemBadge, type ConsoleItemType } from "@/src/components/ItemBadge";
 import { decodeUnicodeEscapesOnly } from "@/src/utils/unicode";
 
 // Constants for table layout
@@ -605,7 +605,7 @@ function JsonPrettyTable({
           "type" in row.original.value &&
           typeof (row.original.value as any).type === "string" &&
           (row.original.value as any).type
-            ? ((row.original.value as any).type as HanzoItemType)
+            ? ((row.original.value as any).type as ConsoleItemType)
             : null;
 
         const content = (

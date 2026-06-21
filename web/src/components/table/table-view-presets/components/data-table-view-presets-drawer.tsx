@@ -85,6 +85,13 @@ interface SystemPreset {
   isSystem: true;
 }
 
+export interface SystemFilterPreset {
+  id: string;
+  name: string;
+  description?: string;
+  filters: FilterState;
+}
+
 // Frontend-only system presets use a sentinel id prefix so they are never
 // confused with backend-persisted view ids. Both brands' sentinels are
 // recognized so presets created under either prefix (e.g. session-detail

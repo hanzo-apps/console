@@ -11,6 +11,7 @@ import {
   filterAndValidateDbScoreList,
   type FilterState,
   orderBy,
+  type OrderByState,
   paginationZod,
   type PrismaClient,
   singleFilter,
@@ -39,6 +40,9 @@ import {
   getNumericScoresGroupedByName,
   getCategoricalScoresGroupedByName,
   tracesTableUiColumnDefinitions,
+  getSessionMetricsFromEvents,
+  getSessionTracesFromEvents,
+  getObservationsWithModelDataFromEventsTable,
 } from "@hanzo/console/src/server";
 import chunk from "lodash/chunk";
 import { aggregateScores } from "@/src/features/scores/lib/aggregateScores";
@@ -51,6 +55,13 @@ const SessionCountOptions = z.object({
 });
 const SessionFilterOptions = SessionCountOptions.extend({
   ...paginationZod,
+});
+
+const SessionTraceObservationsInput = z.object({
+  projectId: z.string(),
+  sessionId: z.string(),
+  traceId: z.string(),
+  filter: z.array(singleFilter).nullable(),
 });
 
 const handleGetSessionById = async (input: {
@@ -408,6 +419,157 @@ export const sessionRouter = createTRPCRouter({
         ...session,
         scores: toDomainArrayWithStringifiedMetadata(validatedScores),
       };
+    }),
+  byIdWithScoresFromEvents: protectedGetSessionProcedure
+    .input(
+      z.object({
+        sessionId: z.string(), // used for security check
+        projectId: z.string(), // used for security check
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const postgresSession = await ctx.prisma.traceSession.findFirst({
+        where: {
+          id: input.sessionId,
+          projectId: input.projectId,
+        },
+      });
+
+      if (!postgresSession) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Session not found in project",
+        });
+      }
+
+      const [scores, sessionMetrics] = await Promise.all([
+        getScoresForSessions({
+          projectId: input.projectId,
+          sessionIds: [input.sessionId],
+        }),
+        getSessionMetricsFromEvents({
+          projectId: input.projectId,
+          sessionIds: [input.sessionId],
+        }).then((rows) => rows[0]),
+      ]);
+
+      const validatedScores: ScoreDomain[] = filterAndValidateDbScoreList({
+        scores,
+        dataTypes: LISTABLE_SCORE_TYPES,
+        onParseError: traceException,
+      });
+
+      return {
+        ...postgresSession,
+        users:
+          sessionMetrics?.user_ids?.filter(
+            (userId) => userId !== null && userId !== "",
+          ) ?? [],
+        countTraces: sessionMetrics?.trace_count ?? 0,
+        totalCost: sessionMetrics
+          ? Number(sessionMetrics.session_total_cost)
+          : 0,
+        environment: sessionMetrics?.environment,
+        scores: toDomainArrayWithStringifiedMetadata(validatedScores),
+      };
+    }),
+  tracesFromEvents: protectedGetSessionProcedure
+    .input(
+      z.object({
+        sessionId: z.string(), // used for security check
+        projectId: z.string(), // used for security check
+      }),
+    )
+    .query(async ({ input }) => {
+      const traces = await getSessionTracesFromEvents({
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+      });
+
+      const chunks = chunk(traces, 500);
+      const scores = await Promise.all(
+        chunks.map((traceChunk) =>
+          getScoresForTraces({
+            projectId: input.projectId,
+            traceIds: traceChunk.map((t) => t.id),
+            timestamp: new Date(
+              Math.min(...traceChunk.map((t) => t.timestamp.getTime())),
+            ),
+          }),
+        ),
+      ).then((results) => results.flat());
+
+      const validatedScores = filterAndValidateDbScoreList({
+        scores,
+        dataTypes: LISTABLE_SCORE_TYPES,
+        onParseError: traceException,
+      });
+
+      return traces.map((trace) => ({
+        ...trace,
+        scores: toDomainArrayWithStringifiedMetadata(
+          validatedScores.filter((s) => s.traceId === trace.id),
+        ),
+      }));
+    }),
+  observationsForTraceFromEvents: protectedGetSessionProcedure
+    .input(SessionTraceObservationsInput)
+    .query(async ({ input }) => {
+      const positionFilter = (input.filter ?? []).find(
+        (filter) => filter.type === "positionInTrace",
+      );
+      const baseFilters = (input.filter ?? []).filter(
+        (filter) => filter.type !== "positionInTrace",
+      );
+
+      const filterState: FilterState = [
+        ...baseFilters,
+        {
+          column: "traceId",
+          type: "string",
+          operator: "=",
+          value: input.traceId,
+        },
+        {
+          column: "sessionId",
+          type: "string",
+          operator: "=",
+          value: input.sessionId,
+        },
+      ];
+
+      let orderBy: OrderByState = { column: "startTime", order: "ASC" };
+      let limit: number | undefined;
+      let offset: number | undefined;
+
+      if (positionFilter) {
+        const fromEnd =
+          positionFilter.key === "last" || positionFilter.key === "nthFromEnd";
+        orderBy = { column: "startTime", order: fromEnd ? "DESC" : "ASC" };
+        const rawIndex =
+          positionFilter.key === "last" ||
+          positionFilter.key === "first" ||
+          positionFilter.key === "root"
+            ? 1
+            : (positionFilter.value ?? 1);
+        const safeIndex = Math.max(1, rawIndex);
+        offset = safeIndex - 1;
+        limit = 1;
+      }
+
+      const observations = await getObservationsWithModelDataFromEventsTable({
+        projectId: input.projectId,
+        filter: filterState,
+        searchQuery: undefined,
+        searchType: [],
+        orderBy,
+        limit,
+        offset,
+        selectIOAndMetadata: true,
+        renderingProps: { truncated: false, shouldJsonParse: true },
+      });
+
+      return observations;
     }),
   bookmark: protectedProjectProcedure
     .input(
