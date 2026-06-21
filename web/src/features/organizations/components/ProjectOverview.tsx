@@ -12,6 +12,7 @@ import {
 import { Input } from "@/src/components/ui/input";
 import { env } from "@/src/env.mjs";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
+import { AgentToolsBanner } from "@/src/features/developer-tools/components/AgentToolsBanner";
 import {
   createOrganizationRoute,
   createProjectRoute,

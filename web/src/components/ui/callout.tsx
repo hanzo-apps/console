@@ -1,7 +1,7 @@
 import { Alert, AlertDescription } from "@hanzo/ui";
 import { Button } from "@/src/components/ui/button";
 import useLocalStorage from "@/src/components/useLocalStorage";
-import { X } from "lucide-react";
+import { Info, TriangleAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const DEFAULT_STORAGE_KEY = "dismissed-callouts";
@@ -31,7 +31,10 @@ export function Callout({
   onDismiss,
   actions,
 }: CalloutProps) {
-  const [dismissedCallouts, setDismissedCallouts] = useLocalStorage<Callout[]>(id + "-" + DEFAULT_STORAGE_KEY, []);
+  const [dismissedCallouts, setDismissedCallouts] = useLocalStorage<Callout[]>(
+    id + "-" + DEFAULT_STORAGE_KEY,
+    [],
+  );
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -58,7 +61,9 @@ export function Callout({
   const handleDismiss = () => {
     // Add this callout to dismissed list
     const now = Date.now();
-    const updatedDismissedCallouts = dismissedCallouts.filter((c) => c.id !== id);
+    const updatedDismissedCallouts = dismissedCallouts.filter(
+      (c) => c.id !== id,
+    );
     updatedDismissedCallouts.push({ id: id, dismissedAt: now });
     setDismissedCallouts(updatedDismissedCallouts);
 
@@ -77,17 +82,25 @@ export function Callout({
   const alignmentClass = align === "middle" ? "items-center" : "items-start";
 
   const alignmentOverrides =
-    align === "middle" ? "[&>svg]:top-1/2 [&>svg]:-translate-y-1/2 [&>svg+div]:translate-y-0" : "";
+    align === "middle"
+      ? "[&>svg]:top-1/2 [&>svg]:-translate-y-1/2 [&>svg+div]:translate-y-0"
+      : "";
+
+  const Icon = variant === "warning" ? TriangleAlert : Info;
 
   return (
     <Alert className={`${variantClass} ${alignmentOverrides}`}>
       <Icon
         className={`h-4 w-4 ${
-          variant === "warning" ? "text-dark-yellow dark:text-dark-yellow" : "text-dark-blue dark:text-dark-blue"
+          variant === "warning"
+            ? "text-dark-yellow dark:text-dark-yellow"
+            : "text-dark-blue dark:text-dark-blue"
         }`}
       />
-      <AlertDescription className={`flex ${alignmentClass} ml-1 justify-between`}>
-        <div className="flex-1 text-sm text-foreground">{children}</div>
+      <AlertDescription
+        className={`flex ${alignmentClass} ml-1 justify-between`}
+      >
+        <div className="text-foreground flex-1 text-sm">{children}</div>
         <div className="ml-4 flex items-center gap-2">
           {actions && actions()}
           <Button
