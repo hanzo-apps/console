@@ -4,7 +4,7 @@ import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
 import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import { api } from "@/src/utils/api";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { createColumnHelper } from "@tanstack/react-table";
 import TableLink from "@/src/components/table/table-link";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
@@ -285,7 +285,7 @@ export function DashboardWidgetTable() {
         );
       },
     }),
-  ] as HanzoColumnDef<WidgetTableRow>[];
+  ] as ColumnDef<WidgetTableRow>[];
 
   return (
     <DataTable

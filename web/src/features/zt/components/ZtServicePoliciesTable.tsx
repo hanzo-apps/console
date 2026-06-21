@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   useZtServicePolicies,
   useDeleteZtServicePolicy,
@@ -63,7 +63,7 @@ export function ZtServicePoliciesTable({ projectId }: { projectId: string }) {
     }),
   );
 
-  const columns: HanzoColumnDef<ServicePolicyRow>[] = [
+  const columns: ColumnDef<ServicePolicyRow>[] = [
     {
       accessorKey: "name",
       id: "name",

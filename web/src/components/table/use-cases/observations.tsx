@@ -1,7 +1,7 @@
 import { api } from "@/src/utils/api";
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   DataTableControlsProvider,
   DataTableControls,
@@ -617,7 +617,7 @@ export default function ObservationsTable({
     },
   ];
 
-  const columns: HanzoColumnDef<ObservationsTableRow>[] = [
+  const columns: ColumnDef<ObservationsTableRow>[] = [
     selectActionColumn,
     {
       accessorKey: "startTime",
@@ -1183,7 +1183,7 @@ export default function ObservationsTable({
             return <span>{numberFormatter(value.totalUsage, 0)}</span>;
           },
         },
-      ] satisfies HanzoColumnDef<ObservationsTableRow>[],
+      ] satisfies ColumnDef<ObservationsTableRow>[],
     },
     {
       accessorKey: "cost",
@@ -1237,7 +1237,7 @@ export default function ObservationsTable({
           defaultHidden: true,
           enableSorting: true,
         },
-      ] satisfies HanzoColumnDef<ObservationsTableRow>[],
+      ] satisfies ColumnDef<ObservationsTableRow>[],
     },
   ];
 

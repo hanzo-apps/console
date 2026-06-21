@@ -1,7 +1,7 @@
 import { DataTable } from "@/src/components/table/data-table";
 import { useRowHeightLocalStorage } from "@/src/components/table/data-table-row-height-switch";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
 import { useRouter } from "next/router";
 import { api } from "@/src/utils/api";
@@ -164,7 +164,7 @@ export default function PromptVersionTable({
     prefix: "Generation",
   });
 
-  const columns: HanzoColumnDef<PromptVersionTableRow>[] = [
+  const columns: ColumnDef<PromptVersionTableRow>[] = [
     {
       accessorKey: "version",
       id: "version",

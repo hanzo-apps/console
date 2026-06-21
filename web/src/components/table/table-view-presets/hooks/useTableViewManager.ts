@@ -12,7 +12,7 @@ import { type VisibilityState } from "@tanstack/react-table";
 import { StringParam, withDefault } from "use-query-params";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { useQueryParam } from "use-query-params";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import isEqual from "lodash/isEqual";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
@@ -34,7 +34,7 @@ interface UseTableStateProps {
   projectId: string;
   stateUpdaters: TableStateUpdaters;
   validationContext?: {
-    columns?: HanzoColumnDef<any, any>[];
+    columns?: ColumnDef<any, any>[];
     filterColumnDefinition?: ColumnDefinition[];
     expandableFilterColumns?: string[];
     migrateFilterState?: FilterStateMigration;

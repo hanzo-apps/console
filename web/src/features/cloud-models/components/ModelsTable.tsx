@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { Badge } from "@/src/components/ui/badge";
 import { useCloudModels } from "../hooks";
 import { providerLabels, type CloudModel, type ModelPricing } from "../types";
@@ -63,7 +63,7 @@ export function ModelsTable({ projectId }: { projectId: string }) {
     return allModels.filter((m) => m.ownedBy === providerFilter);
   }, [allModels, providerFilter]);
 
-  const columns: HanzoColumnDef<ModelRow>[] = [
+  const columns: ColumnDef<ModelRow>[] = [
     {
       accessorKey: "id",
       id: "id",

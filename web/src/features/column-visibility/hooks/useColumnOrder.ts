@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import useLocalStorage from "@/src/components/useLocalStorage";
 
 // returns deep copy of local storage object
@@ -16,14 +16,22 @@ const readStoredColumnOrder = (localStorageKey: string): string[] => {
   }
 };
 
-function useColumnOrder<TData>(localStorageKey: string, columns: HanzoColumnDef<TData>[]) {
-  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(localStorageKey, []);
+function useColumnOrder<TData>(
+  localStorageKey: string,
+  columns: ColumnDef<TData>[],
+) {
+  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
+    localStorageKey,
+    [],
+  );
 
   useEffect(() => {
     const appColumnIds = columns.map((c) => c.accessorKey);
     const storedColumnIds = readStoredColumnOrder(localStorageKey);
 
-    const finalColumnOrder: string[] = storedColumnIds.filter((id) => appColumnIds.includes(id));
+    const finalColumnOrder: string[] = storedColumnIds.filter((id) =>
+      appColumnIds.includes(id),
+    );
 
     appColumnIds.forEach((id) => {
       if (!finalColumnOrder.includes(id)) {

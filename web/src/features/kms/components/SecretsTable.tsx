@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   useKmsSecrets,
   useKmsEnvironments,
@@ -85,7 +85,7 @@ export function SecretsTable({ projectId }: { projectId: string }) {
       updatedAt: s.updatedAt,
     })) ?? [];
 
-  const columns: HanzoColumnDef<SecretRow>[] = [
+  const columns: ColumnDef<SecretRow>[] = [
     {
       accessorKey: "secretKey",
       id: "secretKey",

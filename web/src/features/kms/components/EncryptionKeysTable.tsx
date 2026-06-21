@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   useKmsKeys,
   useUpdateKey,
@@ -76,7 +76,7 @@ export function EncryptionKeysTable({ projectId }: { projectId: string }) {
       createdAt: k.createdAt,
     })) ?? [];
 
-  const columns: HanzoColumnDef<KeyRow>[] = [
+  const columns: ColumnDef<KeyRow>[] = [
     {
       accessorKey: "name",
       id: "name",

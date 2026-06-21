@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   useSearchIndexes,
   useDeleteIndex,
@@ -49,7 +49,7 @@ export function IndexesTable({ projectId }: { projectId: string }) {
       createdAt: idx.createdAt,
     })) ?? [];
 
-  const columns: HanzoColumnDef<IndexRow>[] = [
+  const columns: ColumnDef<IndexRow>[] = [
     {
       accessorKey: "name",
       id: "name",

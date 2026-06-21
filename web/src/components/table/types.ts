@@ -1,4 +1,7 @@
-import { type RowData, type ColumnDef } from "@tanstack/react-table";
+import {
+  type RowData,
+  type ColumnDef as TanstackColumnDef,
+} from "@tanstack/react-table";
 import { type LucideIcon } from "lucide-react";
 
 export type TableRowOptions = {
@@ -7,7 +10,10 @@ export type TableRowOptions = {
 };
 
 // extends tanstack ColumnDef to include additional properties
-type ExtendedColumnDef<TData extends RowData, TValue = unknown> = ColumnDef<TData, TValue> & {
+type ExtendedColumnDef<
+  TData extends RowData,
+  TValue = unknown,
+> = TanstackColumnDef<TData, TValue> & {
   defaultHidden?: boolean;
   headerTooltip?: {
     description: string;
@@ -18,9 +24,12 @@ type ExtendedColumnDef<TData extends RowData, TValue = unknown> = ColumnDef<TDat
 };
 
 // limits types of defined tanstack ColumnDef properties to specific subset of tanstack type union
-export type HanzoColumnDef<TData extends RowData, TValue = unknown> = ExtendedColumnDef<TData, TValue> & {
-  // Enforce hanzo columns to be of type 'AccessorKeyColumnDefBase' with 'accessorKey' property of type string
+export type ColumnDef<
+  TData extends RowData,
+  TValue = unknown,
+> = ExtendedColumnDef<TData, TValue> & {
+  // Enforce columns to be of type 'AccessorKeyColumnDefBase' with 'accessorKey' property of type string
   accessorKey: string;
-  // Enforce hanzo group columns to have children of type 'HanzoColumnDef'
-  columns?: HanzoColumnDef<TData, TValue>[];
+  // Enforce group columns to have children of type 'ColumnDef'
+  columns?: ColumnDef<TData, TValue>[];
 };

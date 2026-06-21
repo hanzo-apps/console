@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useZtIdentities, useDeleteZtIdentity } from "@/src/features/zt/hooks";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { CreateIdentityDialog } from "./CreateIdentityDialog";
@@ -62,7 +62,7 @@ export function ZtIdentitiesTable({ projectId }: { projectId: string }) {
     createdAt: i.createdAt,
   }));
 
-  const columns: HanzoColumnDef<IdentityRow>[] = [
+  const columns: ColumnDef<IdentityRow>[] = [
     {
       accessorKey: "name",
       id: "name",

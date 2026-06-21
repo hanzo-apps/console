@@ -7,7 +7,7 @@ import {
 } from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import TableLink from "@/src/components/table/table-link";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { IOTableCell } from "../../ui/IOTableCell";
 import { Avatar, AvatarImage } from "@/src/components/ui/avatar";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
@@ -370,7 +370,7 @@ export default function ScoresTable({
     setSelectAll,
   });
 
-  const rawColumns: HanzoColumnDef<ScoresTableRow>[] = [
+  const rawColumns: ColumnDef<ScoresTableRow>[] = [
     selectActionColumn,
     {
       accessorKey: "id",

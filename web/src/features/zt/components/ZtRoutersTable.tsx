@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useZtRouters, useDeleteZtRouter } from "@/src/features/zt/hooks";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { CreateRouterDialog } from "./CreateRouterDialog";
@@ -59,7 +59,7 @@ export function ZtRoutersTable({ projectId }: { projectId: string }) {
       createdAt: r.createdAt,
     })) ?? [];
 
-  const columns: HanzoColumnDef<RouterRow>[] = [
+  const columns: ColumnDef<RouterRow>[] = [
     {
       accessorKey: "name",
       id: "name",

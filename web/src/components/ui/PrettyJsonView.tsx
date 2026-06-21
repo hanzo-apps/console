@@ -23,7 +23,7 @@ import {
   type ExpandedState,
   type Row,
 } from "@tanstack/react-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 
 // Custom expanded state type that allows false ("user intentionally collapsed all")
 type HanzoExpandedState = ExpandedState | false;
@@ -580,7 +580,7 @@ function JsonPrettyTable({
     }
   }, [stickyTopLevelKey, data, expanded]);
 
-  const columns: HanzoColumnDef<JsonTableRow, unknown>[] = [
+  const columns: ColumnDef<JsonTableRow, unknown>[] = [
     {
       accessorKey: "key",
       header: "Path",

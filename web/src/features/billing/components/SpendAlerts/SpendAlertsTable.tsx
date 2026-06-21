@@ -15,7 +15,7 @@ import { SpendAlertDialog } from "./SpendAlertDialog";
 import { DeleteSpendAlertDialog } from "./DeleteSpendAlertDialog";
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { usdFormatter } from "@/src/utils/numbers";
 
 interface SpendAlertsTableProps {
@@ -44,7 +44,10 @@ export function SpendAlertsTable({ orgId }: SpendAlertsTableProps) {
     isLoading,
     isError,
     refetch,
-  } = api.spendAlerts.getSpendAlerts.useQuery({ orgId }, { enabled: hasAccess });
+  } = api.spendAlerts.getSpendAlerts.useQuery(
+    { orgId },
+    { enabled: hasAccess },
+  );
 
   const rows = useMemo<AlertRow[]>(() => {
     return (spendAlerts ?? []).map((a: any) => ({
@@ -67,7 +70,7 @@ export function SpendAlertsTable({ orgId }: SpendAlertsTableProps) {
     return { isLoading: false, isError: false, data: rows } as const;
   }, [isLoading, isError, rows]);
 
-  const columns: HanzoColumnDef<AlertRow>[] = [
+  const columns: ColumnDef<AlertRow>[] = [
     {
       accessorKey: "title",
       id: "title",
@@ -122,7 +125,10 @@ export function SpendAlertsTable({ orgId }: SpendAlertsTableProps) {
               <Edit className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDeletingAlert(row.original.id)} className="text-destructive">
+            <DropdownMenuItem
+              onClick={() => setDeletingAlert(row.original.id)}
+              className="text-destructive"
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </DropdownMenuItem>

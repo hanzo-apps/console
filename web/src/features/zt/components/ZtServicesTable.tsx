@@ -3,7 +3,7 @@ import {
   DataTable,
   type AsyncTableData,
 } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useZtServices, useDeleteZtService } from "@/src/features/zt/hooks";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { Button } from "@/src/components/ui/button";
@@ -51,7 +51,7 @@ export function ZtServicesTable({ projectId }: { projectId: string }) {
     createdAt: s.createdAt as string,
   }));
 
-  const columns: HanzoColumnDef<ServiceRow>[] = [
+  const columns: ColumnDef<ServiceRow>[] = [
     {
       accessorKey: "name",
       id: "name",
