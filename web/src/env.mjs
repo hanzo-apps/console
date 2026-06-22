@@ -182,17 +182,6 @@ export const env = createEnv({
     AUTH_AUTH0_CLIENT_AUTH_METHOD: zAuthMethod,
     AUTH_AUTH0_CHECKS: zAuthChecks,
     AUTH_AUTH0_ID_TOKEN_SIGNED_RESPONSE_ALG: zIdTokenAlg,
-    // Langfuse Cloud only: "Sign in with ClickHouse Cloud" (Auth0 under the hood).
-    // NOT intended for self-hosted Langfuse — use AUTH_AUTH0_* instead.
-    AUTH_CLICKHOUSE_CLOUD_CLIENT_ID: z.string().optional(),
-    AUTH_CLICKHOUSE_CLOUD_CLIENT_SECRET: z.string().optional(),
-    AUTH_CLICKHOUSE_CLOUD_ISSUER: z.url().optional(),
-    AUTH_CLICKHOUSE_CLOUD_ALLOW_ACCOUNT_LINKING: z
-      .enum(["true", "false"])
-      .optional(),
-    AUTH_CLICKHOUSE_CLOUD_CLIENT_AUTH_METHOD: zAuthMethod,
-    AUTH_CLICKHOUSE_CLOUD_CHECKS: zAuthChecks,
-    AUTH_CLICKHOUSE_CLOUD_ID_TOKEN_SIGNED_RESPONSE_ALG: zIdTokenAlg,
     AUTH_COGNITO_CLIENT_ID: z.string().optional(),
     AUTH_COGNITO_CLIENT_SECRET: z.string().optional(),
     AUTH_COGNITO_ISSUER: z.url().optional(),
@@ -725,18 +714,6 @@ export const env = createEnv({
     AUTH_AUTH0_CHECKS: process.env.AUTH_AUTH0_CHECKS,
     AUTH_AUTH0_ID_TOKEN_SIGNED_RESPONSE_ALG:
       process.env.AUTH_AUTH0_ID_TOKEN_SIGNED_RESPONSE_ALG,
-    AUTH_CLICKHOUSE_CLOUD_CLIENT_ID:
-      process.env.AUTH_CLICKHOUSE_CLOUD_CLIENT_ID,
-    AUTH_CLICKHOUSE_CLOUD_CLIENT_SECRET:
-      process.env.AUTH_CLICKHOUSE_CLOUD_CLIENT_SECRET,
-    AUTH_CLICKHOUSE_CLOUD_ISSUER: process.env.AUTH_CLICKHOUSE_CLOUD_ISSUER,
-    AUTH_CLICKHOUSE_CLOUD_ALLOW_ACCOUNT_LINKING:
-      process.env.AUTH_CLICKHOUSE_CLOUD_ALLOW_ACCOUNT_LINKING,
-    AUTH_CLICKHOUSE_CLOUD_CLIENT_AUTH_METHOD:
-      process.env.AUTH_CLICKHOUSE_CLOUD_CLIENT_AUTH_METHOD,
-    AUTH_CLICKHOUSE_CLOUD_CHECKS: process.env.AUTH_CLICKHOUSE_CLOUD_CHECKS,
-    AUTH_CLICKHOUSE_CLOUD_ID_TOKEN_SIGNED_RESPONSE_ALG:
-      process.env.AUTH_CLICKHOUSE_CLOUD_ID_TOKEN_SIGNED_RESPONSE_ALG,
     AUTH_COGNITO_CLIENT_ID: process.env.AUTH_COGNITO_CLIENT_ID,
     AUTH_COGNITO_CLIENT_SECRET: process.env.AUTH_COGNITO_CLIENT_SECRET,
     AUTH_COGNITO_ISSUER: process.env.AUTH_COGNITO_ISSUER,
@@ -850,26 +827,17 @@ export const env = createEnv({
     PLAIN_AUTHENTICATION_SECRET: process.env.PLAIN_AUTHENTICATION_SECRET,
     PLAIN_API_KEY: process.env.PLAIN_API_KEY,
     PLAIN_CARDS_API_TOKEN: process.env.PLAIN_CARDS_API_TOKEN,
-    // Datastore (analytics database)
-    // DATASTORE_* is our naming; fall back to legacy upstream DATASTORE_* so
-    // existing production deployments keep working (datastore IS our ClickHouse
-    // fork — same wire protocol, only our naming changed).
-    DATASTORE_URL: process.env.DATASTORE_URL ?? process.env.CLICKHOUSE_URL,
-    DATASTORE_CLUSTER_NAME:
-      process.env.DATASTORE_CLUSTER_NAME ?? process.env.CLICKHOUSE_CLUSTER_NAME,
-    DATASTORE_DB: process.env.DATASTORE_DB ?? process.env.CLICKHOUSE_DB,
-    DATASTORE_USER: process.env.DATASTORE_USER ?? process.env.CLICKHOUSE_USER,
-    DATASTORE_PASSWORD:
-      process.env.DATASTORE_PASSWORD ?? process.env.CLICKHOUSE_PASSWORD,
-    DATASTORE_CLUSTER_ENABLED:
-      process.env.DATASTORE_CLUSTER_ENABLED ??
-      process.env.CLICKHOUSE_CLUSTER_ENABLED,
+    // Datastore (Hanzo Datastore, columnar analytics engine)
+    DATASTORE_URL: process.env.DATASTORE_URL,
+    DATASTORE_CLUSTER_NAME: process.env.DATASTORE_CLUSTER_NAME,
+    DATASTORE_DB: process.env.DATASTORE_DB,
+    DATASTORE_USER: process.env.DATASTORE_USER,
+    DATASTORE_PASSWORD: process.env.DATASTORE_PASSWORD,
+    DATASTORE_CLUSTER_ENABLED: process.env.DATASTORE_CLUSTER_ENABLED,
     DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY:
-      process.env.DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY ??
-      process.env.CLICKHOUSE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY,
+      process.env.DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY,
     DATASTORE_USE_QUERY_CONDITION_CACHE:
-      process.env.DATASTORE_USE_QUERY_CONDITION_CACHE ??
-      process.env.CLICKHOUSE_USE_QUERY_CONDITION_CACHE,
+      process.env.DATASTORE_USE_QUERY_CONDITION_CACHE,
     CONSOLE_ROOT_EVENT_CONDITION_MAX_WINDOW_HOURS:
       process.env.CONSOLE_ROOT_EVENT_CONDITION_MAX_WINDOW_HOURS,
     // EE ui customization

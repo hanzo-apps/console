@@ -62,7 +62,7 @@ behind a worker subsystem failure.
 
 | Layer | Location | Common failure modes |
 | --- | --- | --- |
-| ClickHouse access | `packages/shared/src/server/clickhouse/`, `packages/shared/src/server/repositories/` | OOM (`Code: 241`), buffer cancel (`Code: 734`), JOIN spills, slow queries on un-pre-filtered traces |
+| Datastore access | `packages/shared/src/server/datastore/`, `packages/shared/src/server/repositories/` | OOM (`Code: 241`), buffer cancel (`Code: 734`), JOIN spills, slow queries on un-pre-filtered traces |
 | Prisma access | `packages/shared/src/db.ts` and per-feature repos | `connection pool timeout` (worker default `connection_limit=5`), N+1 queries |
 | Queue contracts | `packages/shared/src/server/queues.ts` | wrong queue name, missing schema validation |
 | Logger / instrumentation | `packages/shared/src/server/logger.ts`, `packages/shared/src/server/instrumentation.ts` | log silently dropped because `LANGFUSE_LOG_LEVEL` set wrong, or span missing because handler doesn't call `instrumentAsync` |
@@ -79,7 +79,7 @@ behind a worker subsystem failure.
   but the upstream SDK does not.
 - **"DNS lookup failed":** distinguish actual DNS from `validateWebhookURL`
   rejection. The error message wrapping is misleading on purpose.
-- **"Cannot write to canceled buffer" (CH):** ClickHouse stream wasn't
+- **"Cannot write to canceled buffer" (CH):** Datastore stream wasn't
   aborted when the downstream consumer threw. Look for an `AbortController`
   threaded through the handler.
 - **"Connection pool timeout" (Prisma):** worker `connection_limit` is set

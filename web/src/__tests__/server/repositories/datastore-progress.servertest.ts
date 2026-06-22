@@ -85,7 +85,7 @@ describe("queryDatastoreWithProgress", () => {
         }
       }
     } catch {
-      // ClickHouse may throw at HTTP level depending on timing
+      // Datastore may throw at HTTP level depending on timing
       caughtError = true;
     }
 

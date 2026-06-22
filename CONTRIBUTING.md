@@ -154,7 +154,7 @@ Notes:
 - It does **not** start the full Langfuse stack. Local development still uses
   Docker and `pnpm run dx` / `pnpm run dev`.
 - Running the full application inside Codex requires external services for
-  PostgreSQL, Redis, ClickHouse, and object storage, plus matching environment
+  PostgreSQL, Redis, datastore, and object storage, plus matching environment
   variables in the Codex UI.
 
 ### Shared Agent Setup

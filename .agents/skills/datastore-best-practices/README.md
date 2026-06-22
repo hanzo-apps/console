@@ -1,11 +1,11 @@
-# ClickHouse Best Practices
+# Datastore Best Practices
 
-Agent skill providing comprehensive ClickHouse guidance for schema design, query optimization, and data ingestion.
+Agent skill providing comprehensive Datastore guidance for schema design, query optimization, and data ingestion.
 
 ## Installation
 
 ```bash
-npx skills add ClickHouse/clickhouse-agent-skills
+npx skills add Datastore/datastore-agent-skills
 ```
 
 ## What's Included
@@ -46,5 +46,5 @@ This skill activates when you:
 
 ## Related Documentation
 
-All rules link to official ClickHouse documentation:
-- [ClickHouse Best Practices](https://clickhouse.com/docs/best-practices)
+All rules link to official Datastore documentation:
+- [Datastore Best Practices](https://clickhouse.com/docs/best-practices)

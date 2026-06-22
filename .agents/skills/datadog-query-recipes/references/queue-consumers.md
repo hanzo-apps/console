@@ -214,8 +214,8 @@ Backward-compatible metrics may still appear:
 <metric_base>.processing_time
 ```
 
-For non-BullMQ internal write buffering, `ClickhouseWriter` emits
-`langfuse.queue.clickhouse_writer.*` metrics, but it is not a `QueueName`
+For non-BullMQ internal write buffering, `DatastoreWriter` emits
+`hanzo.queue.datastore_writer.*` metrics, but it is not a `QueueName`
 consumer.
 
 ## Consumer Running Checklist

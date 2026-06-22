@@ -25,7 +25,7 @@ env:
   # env context in jobs.<job_id>.name, so matrix jobs use matrix.node-version
   # for their display names.
   NODE_VERSION: 24
-  CLICKHOUSE_CLIENT_VERSION: "25.12.9.61"
+  DATASTORE_CLIENT_VERSION: "25.12.9.61"
 
   # Disable CI cache restores for fork PRs.
   #

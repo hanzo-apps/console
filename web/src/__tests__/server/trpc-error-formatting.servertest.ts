@@ -1,7 +1,7 @@
 import type { Session } from "next-auth";
 import { TRPCError } from "@trpc/server";
 import * as z from "zod";
-import { ClickHouseResourceError } from "@hanzo/console/src/server";
+import { DatastoreResourceError } from "@hanzo/console/src/server";
 import {
   createInnerTRPCContext,
   createTRPCRouter,
@@ -9,7 +9,7 @@ import {
 } from "@/src/server/api/trpc";
 
 describe("tRPC error formatting", () => {
-  it("ClickHouseResourceError", async () => {
+  it("DatastoreResourceError", async () => {
     const session = {
       user: {
         id: "user-1",
@@ -20,7 +20,7 @@ describe("tRPC error formatting", () => {
       datastore: protectedProcedureWithoutTracing
         .input(z.object({}))
         .query(() => {
-          throw new ClickHouseResourceError(
+          throw new DatastoreResourceError(
             "MEMORY_LIMIT",
             new Error("Memory limit exceeded"),
           );
@@ -59,12 +59,12 @@ describe("tRPC error formatting", () => {
       error: error!,
     });
 
-    expect(formatted.data["errorName"]).toBe("ClickHouseResourceError");
+    expect(formatted.data["errorName"]).toBe("DatastoreResourceError");
     expect(formatted.data["stack"]).toBeNull();
     expect(formatted.data["zodError"]).toBeNull();
   });
 
-  it("preserves the default stack behavior for non-ClickHouse errors", () => {
+  it("preserves the default stack behavior for non-Datastore errors", () => {
     const formatterTestRouter = createTRPCRouter({});
 
     const formatter = (formatterTestRouter as any)._def._config

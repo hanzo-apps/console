@@ -47,7 +47,7 @@ export async function* enrichObservationStream(
       enriched.total_price = pricing.totalPrice;
     }
 
-    // ClickHouse returns {} for Map columns even when not SELECTed — drop it
+    // Datastore returns {} for Map columns even when not SELECTed — drop it
     // when the metadata group was not requested.
     if (fieldGroups && !fieldGroups.includes("metadata")) {
       delete enriched.metadata;
@@ -555,7 +555,7 @@ function extractStorageErrorMessage(error: unknown): string {
     return cause.message.slice(0, 1000);
   }
 
-  // Fallback: ClickHouse errors or other non-wrapped errors
+  // Fallback: Datastore errors or other non-wrapped errors
   return error.message.slice(0, 1000);
 }
 

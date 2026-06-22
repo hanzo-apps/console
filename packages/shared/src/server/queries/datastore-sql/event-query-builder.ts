@@ -1663,7 +1663,7 @@ export class EventsAggQueryBuilder extends AbstractCTEQueryBuilder {
 
 /**
  * Aggregation fields for experiment-level queries.
- * These fields use ClickHouse aggregation functions and require GROUP BY experiment_id, project_id.
+ * These fields use Datastore aggregation functions and require GROUP BY experiment_id, project_id.
  */
 const EXPERIMENTS_AGGREGATION_FIELDS = {
   // Base aggregated fields

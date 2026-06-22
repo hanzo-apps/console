@@ -9,7 +9,7 @@ tags: [schema, primary-key, ORDER BY]
 
 **Impact: CRITICAL** (immutable after creation)
 
-ClickHouse's ORDER BY clause defines physical data ordering and the sparse index. Unlike other databases, **ORDER BY cannot be modified after table creation**. A wrong choice requires creating a new table and migrating all data.
+Datastore's ORDER BY clause defines physical data ordering and the sparse index. Unlike other databases, **ORDER BY cannot be modified after table creation**. A wrong choice requires creating a new table and migrating all data.
 
 **Incorrect (arbitrary ORDER BY without query analysis):**
 

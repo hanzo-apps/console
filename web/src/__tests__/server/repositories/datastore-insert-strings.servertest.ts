@@ -14,7 +14,7 @@ const maybeIt = (name: string, testFn: () => Promise<void>): void => {
   });
 };
 
-describe("ClickHouse insert string edge cases", () => {
+describe("Datastore insert string edge cases", () => {
   it("should pass", () => {
     // Apparently each test file needs at least one executed test and cannot have everything skipped
     expect(true).toBe(true);
@@ -57,7 +57,7 @@ describe("ClickHouse insert string edge cases", () => {
       "should fail or handle prompt_version as non-numeric string 'local'",
       async () => {
         // This is the exact scenario from the production error.
-        // prompt_version = "local" cannot be parsed as UInt16 by ClickHouse.
+        // prompt_version = "local" cannot be parsed as UInt16 by Datastore.
         const event = createEvent({
           project_id: projectId,
           prompt_version: "local",

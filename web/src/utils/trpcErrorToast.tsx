@@ -35,13 +35,14 @@ const errorTitleMap = {
 } as const;
 
 const getErrorTitleAndHttpCode = (error: TRPCClientError<any>) => {
-  const httpStatus: number = typeof error.data?.httpStatus === "number" ? error.data.httpStatus : 500;
+  const httpStatus: number =
+    typeof error.data?.httpStatus === "number" ? error.data.httpStatus : 500;
 
   if (
     httpStatus === 422 &&
-    error.data?.errorName === "ClickHouseResourceError"
+    error.data?.errorName === "DatastoreResourceError"
   ) {
-    // Handle ClickHouse resource limit errors with specific messaging
+    // Handle Datastore resource limit errors with specific messaging
     return {
       errorTitle: "Request Timed Out",
       httpStatus,
@@ -103,6 +104,10 @@ export const trpcErrorToast = (error: unknown) => {
       path,
     );
   } else {
-    showErrorToast("Unexpected Error", "An unexpected error occurred.", "ERROR");
+    showErrorToast(
+      "Unexpected Error",
+      "An unexpected error occurred.",
+      "ERROR",
+    );
   }
 };

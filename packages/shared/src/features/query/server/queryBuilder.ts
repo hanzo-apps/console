@@ -922,7 +922,7 @@ export class QueryBuilder {
   }
 
   /**
-   * We want to build a ClickHouse query based on the query provided and the viewDeclaration that was selected.
+   * We want to build a Datastore query based on the query provided and the viewDeclaration that was selected.
    *
    * When enableSingleLevelOptimization is false (default), the query follows a two-level pattern:
    * ```

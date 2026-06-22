@@ -51,7 +51,7 @@ async function writeInternalEventInputs(params: {
  * writes are disabled. Self-hosted setups may not have `events_full`
  * configured, but experiment eval scheduling still depends on the normalized
  * root event record. The env flag therefore gates only the actual enqueue into
- * ClickHouse, not creation of the writer or invocation of the ready callback.
+ * Datastore, not creation of the writer or invocation of the ready callback.
  */
 export function createInternalEventsWriter(params?: {
   experimentContext?: InternalTraceExperimentContext;

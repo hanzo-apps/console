@@ -227,9 +227,9 @@ describe("execute-query-stream handler", () => {
     expect(events.some((e) => e.event === "done")).toBe(true);
   });
 
-  // --- Integration tests (real ClickHouse) ---
+  // --- Integration tests (real Datastore) ---
 
-  it("should stream real trace count from ClickHouse and end with done", async () => {
+  it("should stream real trace count from Datastore and end with done", async () => {
     mockGetServerAuthSession.mockResolvedValue(makeSession());
     const { req, res } = createPostMocks(makeBody());
 

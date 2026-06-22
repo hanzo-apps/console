@@ -7,7 +7,7 @@ import {
   ServiceUnavailableError,
 } from "@hanzo/console";
 import {
-  ClickHouseResourceError,
+  DatastoreResourceError,
   logger,
   traceException,
 } from "@hanzo/console/src/server";
@@ -179,10 +179,10 @@ describe("withMiddlewares error handling", () => {
     });
   });
 
-  describe("ClickHouseResourceError handling", () => {
-    it("should handle ClickHouseResourceError with 400 status", async () => {
+  describe("DatastoreResourceError handling", () => {
+    it("should handle DatastoreResourceError with 400 status", async () => {
       const originalError = new Error("Memory limit exceeded: maximum: 10GB");
-      const resourceError = new ClickHouseResourceError(
+      const resourceError = new DatastoreResourceError(
         "MEMORY_LIMIT",
         originalError,
       );
@@ -206,7 +206,7 @@ describe("withMiddlewares error handling", () => {
       const jsonData = JSON.parse(res._getData());
       expect(jsonData["message"]).toBeDefined();
       expect(jsonData["message"]).toContain(
-        ClickHouseResourceError.ERROR_ADVICE_MESSAGE,
+        DatastoreResourceError.ERROR_ADVICE_MESSAGE,
       );
     });
   });

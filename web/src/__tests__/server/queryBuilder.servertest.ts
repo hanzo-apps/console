@@ -3230,7 +3230,7 @@ describe("queryBuilder", () => {
         expect(result.data).toHaveLength(1);
         const histogramData = result.data[0].histogram_totalCost;
 
-        // ClickHouse histogram returns array of tuples [lower, upper, height]
+        // Datastore histogram returns array of tuples [lower, upper, height]
         expect(Array.isArray(histogramData)).toBe(true);
         expect(histogramData.length).toBeGreaterThan(0);
         expect(histogramData.length).toBeLessThanOrEqual(20); // Should not exceed requested bins
@@ -3247,7 +3247,7 @@ describe("queryBuilder", () => {
           expect(height).toBeGreaterThan(0);
           // Cost values should be in expected range
           expect(lower).toBeGreaterThanOrEqual(0);
-          expect(upper).toBeLessThanOrEqual(1.1); // Allow some margin for ClickHouse binning
+          expect(upper).toBeLessThanOrEqual(1.1); // Allow some margin for Datastore binning
         });
 
         // Verify total count matches our data

@@ -424,7 +424,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       await createEventsCh([observation1, observation2]);
 
-      // Wait for ClickHouse to process
+      // Wait for Datastore to process
       await waitForExpect(
         async () => {
           const result = await queryDatastore<{ count: string }>({
@@ -604,7 +604,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       await createEventsCh([observation1, observation2]);
 
-      // Wait for ClickHouse to process
+      // Wait for Datastore to process
       await waitForExpect(
         async () => {
           const result = await queryDatastore<{ count: string }>({
@@ -1299,7 +1299,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       await createEventsCh([observation]);
 
-      // Wait for ClickHouse to process
+      // Wait for Datastore to process
       await waitForExpect(
         async () => {
           const result = await queryDatastore<{ count: string }>({
@@ -1359,7 +1359,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       await createEventsCh([observation]);
 
-      // Wait for ClickHouse to process
+      // Wait for Datastore to process
       await waitForExpect(
         async () => {
           const result = await queryDatastore<{ count: string }>({
@@ -1413,7 +1413,7 @@ describe("/api/public/v2/observations API Endpoint", () => {
 
       await createEventsCh([observation]);
 
-      // Wait for ClickHouse to process
+      // Wait for Datastore to process
       await waitForExpect(
         async () => {
           const result = await queryDatastore<{ count: string }>({

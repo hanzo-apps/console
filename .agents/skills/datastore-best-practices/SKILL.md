@@ -1,38 +1,38 @@
 ---
-name: clickhouse-best-practices
-description: MUST USE when reviewing ClickHouse schemas, queries, or configurations. Contains 28 rules that MUST be checked before providing recommendations. Always read relevant rule files and cite specific rules in responses.
+name: datastore-best-practices
+description: MUST USE when reviewing Datastore schemas, queries, or configurations. Contains 28 rules that MUST be checked before providing recommendations. Always read relevant rule files and cite specific rules in responses.
 license: Apache-2.0
 metadata:
-  author: ClickHouse Inc
+  author: Datastore Inc
   version: "0.3.0"
 ---
 
-# ClickHouse Best Practices
+# Datastore Best Practices
 
-Comprehensive guidance for ClickHouse covering schema design, query optimization, and data ingestion. Contains 28 rules across 3 main categories (schema, query, insert), prioritized by impact.
+Comprehensive guidance for Datastore covering schema design, query optimization, and data ingestion. Contains 28 rules across 3 main categories (schema, query, insert), prioritized by impact.
 
-> **Official docs:** [ClickHouse Best Practices](https://clickhouse.com/docs/best-practices)
+> **Official docs:** [Datastore Best Practices](https://clickhouse.com/docs/best-practices)
 
 ## IMPORTANT: How to Apply This Skill
 
-**Before answering ClickHouse questions, follow this priority order:**
+**Before answering Datastore questions, follow this priority order:**
 
 1. **Check for applicable rules** in the `rules/` directory
 2. **If rules exist:** Apply them and cite them in your response using "Per `rule-name`..."
-3. **If no rule exists:** Use the LLM's ClickHouse knowledge or search documentation
+3. **If no rule exists:** Use the LLM's Datastore knowledge or search documentation
 4. **If uncertain:** Use web search for current best practices
-5. **Always cite your source:** rule name, "general ClickHouse guidance", or URL
+5. **Always cite your source:** rule name, "general Datastore guidance", or URL
 
-**Why rules take priority:** ClickHouse has specific behaviors (columnar storage, sparse indexes, merge tree mechanics) where general database intuition can be misleading. The rules encode validated, ClickHouse-specific guidance.
+**Why rules take priority:** Datastore has specific behaviors (columnar storage, sparse indexes, merge tree mechanics) where general database intuition can be misleading. The rules encode validated, Datastore-specific guidance.
 
 ## Langfuse-Specific Rules
 
-- Use `packages/shared/src/server/queries/clickhouse-sql/event-query-builder.ts`
+- Use `packages/shared/src/server/queries/datastore-sql/event-query-builder.ts`
   for queries against the `events` table. Do not hand-roll `events` SQL unless
   you first confirm the query builder cannot express the query.
 - Never use `FINAL` on the `events` table; it is designed so `FINAL` is not
   required and the keyword hurts performance.
-- Any migration in `packages/shared/clickhouse/migrations/clustered/**` with
+- Any migration in `packages/shared/datastore/migrations/clustered/**` with
   more than one `ALTER` on the same table must end every metadata `ALTER`
   (`ADD/DROP/MODIFY COLUMN`, `ADD/DROP INDEX`) with `SETTINGS alter_sync = 2`,
   and every mutation-creating `ALTER` (`MATERIALIZE …`, `UPDATE`, `DELETE`)

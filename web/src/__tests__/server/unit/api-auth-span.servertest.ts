@@ -52,7 +52,7 @@ vi.mock("@hanzo/console/src/server", () => ({
   CachedApiKey: {
     safeParse: vi.fn((value) => ({ data: value, success: true })),
   },
-  ClickHouseClientManager: {
+  DatastoreClientManager: {
     getInstance: vi.fn(() => ({
       closeAllConnections: vi.fn(),
     })),

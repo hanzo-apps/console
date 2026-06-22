@@ -10,10 +10,10 @@ Dashboard:
 
 | Purpose | Table | ID |
 | --- | --- | --- |
-| Unified AWS and ClickHouse cost rows by provider, service, usage type, account, and day | `langfuse_prod.mart_daily_cost_chart` | `739` |
+| Unified AWS and Datastore cost rows by provider, service, usage type, account, and day | `langfuse_prod.mart_daily_cost_chart` | `739` |
 | Daily headline totals plus tracing event counts and cost per 100k events | `langfuse_prod.mart_daily_cost_with_events` | `784` |
 | Detailed AWS CUR summary by product, operation, account, and usage type | `langfuse_prod.mart_aws_cost_daily_by_service` | `610` |
-| Detailed ClickHouse costs by entity and metric | `langfuse_prod.mart_clickhouse_daily_cost` | `689` |
+| Detailed Datastore costs by entity and metric | `langfuse_prod.mart_datastore_daily_cost` | `689` |
 
 Prefer table `739` for structural breakdowns. Prefer table `784` for daily
 headline totals.
@@ -38,7 +38,7 @@ headline totals.
 | --- | --- |
 | `t784-0` | `usage_date` |
 | `t784-1` | `total_cost_usd` |
-| `t784-2` | `clickhouse_cost_usd` |
+| `t784-2` | `datastore_cost_usd` |
 | `t784-3` | `aws_cost_usd` |
 | `t784-5` | `s3_api_operations_cost_usd` |
 | `t784-6` | `total_tracing_events` |
@@ -107,7 +107,7 @@ Daily headline totals:
 
 - Table `784`
 - Filter `t784-0` by date.
-- Read `total_cost_usd`, `clickhouse_cost_usd`, `aws_cost_usd`,
+- Read `total_cost_usd`, `datastore_cost_usd`, `aws_cost_usd`,
   `total_tracing_events`, and `total_cost_per_100k_events`.
 
 Daily trend by provider:
@@ -129,8 +129,8 @@ Drilldown sequence for a cost spike:
   landed yet.
 - For stable recent analysis, prefer the last complete UTC days rather than
   including today.
-- ClickHouse cost rows are labeled `cost_usd` in the unified mart, but the
-  source metric is ClickHouse credits. Mention this when precision or billing
+- Datastore cost rows are labeled `cost_usd` in the unified mart, but the
+  source metric is Datastore credits. Mention this when precision or billing
   interpretation matters.
 - Field IDs can change if Metabase models are rebuilt. If a query fails, search
   Metabase for the table name and inspect the returned metadata before

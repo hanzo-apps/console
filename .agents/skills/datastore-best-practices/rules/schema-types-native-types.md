@@ -9,7 +9,7 @@ tags: [schema, data-types, storage]
 
 **Impact: CRITICAL**
 
-Using String for all data wastes storage, prevents compression optimization, and makes comparisons slower. ClickHouse's column-oriented architecture benefits directly from optimal type selection.
+Using String for all data wastes storage, prevents compression optimization, and makes comparisons slower. Datastore's column-oriented architecture benefits directly from optimal type selection.
 
 **Incorrect (String for everything):**
 

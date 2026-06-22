@@ -9,7 +9,7 @@ tags: [schema, JSON, semi-structured, flexibility]
 
 **Impact: MEDIUM**
 
-ClickHouse's JSON type splits JSON objects into separate sub-columns, enabling field-level query optimization. Use it for truly dynamic data, not everything.
+Datastore's JSON type splits JSON objects into separate sub-columns, enabling field-level query optimization. Use it for truly dynamic data, not everything.
 
 **Incorrect (schema bloat or opaque String):**
 

@@ -430,7 +430,7 @@ if (env.LANGFUSE_BATCH_PROJECT_CLEANER_ENABLED === "true" && env.LANGFUSE_S3_MED
   batchProjectMediaCleaner.start();
 }
 
-// Batch project blob cleaner for ingestion event S3/ClickHouse cleanup of soft-deleted projects
+// Batch project blob cleaner for ingestion event S3/Datastore cleanup of soft-deleted projects
 export let batchProjectBlobCleaner: BatchProjectBlobCleaner | null = null;
 
 if (env.LANGFUSE_BATCH_PROJECT_CLEANER_ENABLED === "true" && env.LANGFUSE_ENABLE_BLOB_STORAGE_FILE_LOG === "true") {

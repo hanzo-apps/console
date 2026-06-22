@@ -74,12 +74,12 @@ export class BatchProjectBlobCleaner extends PeriodicExclusiveRunner {
       return env.LANGFUSE_BATCH_PROJECT_CLEANER_SLEEP_ON_EMPTY_MS;
     }
 
-    // Step 2: Check ClickHouse for which projects still have blob refs
+    // Step 2: Check Datastore for which projects still have blob refs
     let blobCounts: Map<string, number>;
     try {
       blobCounts = await this.getBlobCounts(deletedProjects.map((p) => p.id));
     } catch (error) {
-      logger.error(`${this.instanceName}: Failed to query ClickHouse blob counts`, { error });
+      logger.error(`${this.instanceName}: Failed to query Datastore blob counts`, { error });
       traceException(error);
       return env.LANGFUSE_BATCH_PROJECT_CLEANER_SLEEP_ON_EMPTY_MS;
     }

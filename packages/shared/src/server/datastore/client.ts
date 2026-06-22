@@ -61,7 +61,7 @@ function parseJSONEachRow<T>(text: string): T[] {
   const lines = text.split("\n").filter((line) => line.trim().length > 0);
   if (lines.length === 0) return [];
 
-  // Detect non-JSON response (e.g. ClickHouse error or TabSeparated format).
+  // Detect non-JSON response (e.g. Datastore error or TabSeparated format).
   // JSONEachRow lines always start with '{'.
   const firstLine = lines[0].trimStart();
   if (firstLine.length > 0 && firstLine[0] !== "{") {

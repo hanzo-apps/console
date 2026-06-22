@@ -44,7 +44,7 @@ export class StringFilter implements Filter {
     const fieldWithPrefix = `${this.tablePrefix ? this.tablePrefix + "." : ""}${this.field}`;
 
     // '' ≡ NULL: when filtering with empty value, match both '' and NULL.
-    // ClickHouse functions like startsWith/endsWith/position return NULL (not true)
+    // Datastore functions like startsWith/endsWith/position return NULL (not true)
     // for NULL inputs, so we need an explicit OR IS NULL guard.
     if (this.emptyEqualsNull && this.value === "") {
       if (
@@ -320,7 +320,7 @@ export class StringObjectFilter implements Filter {
 
     let query: string;
     if (isFtsEventsTable(this.datastoreTable)) {
-      // ClickHouse's index analyzer cannot extract `has(names, k)` from
+      // Datastore's index analyzer cannot extract `has(names, k)` from
       // `values[indexOf(names, k)] OP v` (cross-array arrayElement form), so a
       // bloom_filter skipping index on `names` would never prune granules.
       // Emitting an explicit `has(names, k) AND (...)` prefix conjunct makes
