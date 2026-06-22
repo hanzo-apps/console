@@ -5,11 +5,7 @@ import { type z } from "zod";
 
 import { type singleFilter } from "../../interfaces/filters";
 import { getViewDeclaration } from "../query/dataModel";
-import {
-  getValidAggregationsForMeasureType,
-  type metric,
-  type viewsV2,
-} from "../query/types";
+import { getValidAggregationsForMeasureType, type metric, type viewsV2 } from "../query/types";
 
 /**
  * isValidQuery ensures:
@@ -45,7 +41,7 @@ export function isValidQuery(input: {
     };
   }
 
-  // `histogram` returns a bucket-array (Array(Tuple(...))) at the ClickHouse
+  // `histogram` returns a bucket-array (Array(Tuple(...))) at the Datastore
   // layer; monitor thresholds are scalars (`z.number()`) compared with
   // `gt`/`gte`/`lt`/`lte`/`eq`/`neq`. No defined comparison semantics →
   // reject at the input boundary rather than failing in the worker.
@@ -93,11 +89,7 @@ export function isValidQuery(input: {
     // Set-semantics value arrays must not contain duplicates — `any of` /
     // `none of` / `all of` are set operators, so duplicate elements produce
     // a logically identical filter that would fragment schedulerBatchId.
-    if (
-      filter.type === "stringOptions" ||
-      filter.type === "categoryOptions" ||
-      filter.type === "arrayOptions"
-    ) {
+    if (filter.type === "stringOptions" || filter.type === "categoryOptions" || filter.type === "arrayOptions") {
       if (new Set(filter.value).size !== filter.value.length) {
         return {
           valid: false,

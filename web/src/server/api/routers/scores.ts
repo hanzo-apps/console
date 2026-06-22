@@ -457,7 +457,7 @@ export const scoresRouter = createTRPCRouter({
         }
 
         logger.info(
-          `Score ${input.id} not found in ClickHouse for project ${input.projectId}, upserting with provided timestamp`,
+          `Score ${input.id} not found in Datastore for project ${input.projectId}, upserting with provided timestamp`,
         );
 
         // Validate config if provided

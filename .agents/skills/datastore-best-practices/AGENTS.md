@@ -1,6 +1,6 @@
-# ClickHouse Best Practices
+# Datastore Best Practices
 
-Start with `SKILL.md` for the ClickHouse review workflow, rule-selection
+Start with `SKILL.md` for the Datastore review workflow, rule-selection
 process, and response format. This file exists as a concise compatibility
 entrypoint for agents that open `AGENTS.md` directly.
 
@@ -10,12 +10,12 @@ responses.
 
 ## Langfuse-Specific Rules
 
-- Use `packages/shared/src/server/queries/clickhouse-sql/event-query-builder.ts`
+- Use `packages/shared/src/server/queries/datastore-sql/event-query-builder.ts`
   for queries against the `events` table. Do not hand-roll `events` SQL unless
   you first confirm the query builder cannot express the query.
 - Never use `FINAL` on the `events` table; it is designed so `FINAL` is not
   required and the keyword hurts performance.
-- Any migration in `packages/shared/clickhouse/migrations/clustered/**` with
+- Any migration in `packages/shared/datastore/migrations/clustered/**` with
   more than one `ALTER` on the same table must end every metadata `ALTER`
   (`ADD/DROP/MODIFY COLUMN`, `ADD/DROP INDEX`) with `SETTINGS alter_sync = 2`,
   and every mutation-creating `ALTER` (`MATERIALIZE …`, `UPDATE`, `DELETE`)

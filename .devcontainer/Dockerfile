@@ -6,7 +6,7 @@ ENV CGO_ENABLED=0 \
     GOBIN=/out \
     GOOS=${TARGETOS} \
     GOARCH=${TARGETARCH}
-# Build only the ClickHouse migrate CLI used in this repo.
+# Build only the Datastore migrate CLI (Go build tag is the literal upstream name) used in this repo.
 RUN /usr/local/go/bin/go install -trimpath -tags 'clickhouse' -ldflags='-s -w' \
     github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
 
@@ -20,7 +20,7 @@ RUN curl -L https://github.com/hanzoai/migrate/releases/download/v4.19.2/migrate
 # Activate the repo's pinned pnpm via Corepack
 RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
 
-# Install Clickhouse
+# Install Datastore (the upstream installer script is at clickhouse.com)
 RUN curl https://clickhouse.com/ | sh && \
     sudo ./clickhouse install
 

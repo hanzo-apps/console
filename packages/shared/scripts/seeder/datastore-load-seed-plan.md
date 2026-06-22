@@ -1,7 +1,7 @@
-# ClickHouse Load-Seed Plan — `traces` & `observations`
+# Datastore Load-Seed Plan — `traces` & `observations`
 
 Working notes for generating realistic, *cheaply parameterizable* seed data
-for a load test against ClickHouse. The goal is two `INSERT INTO ... SELECT
+for a load test against the datastore. The goal is two `INSERT INTO ... SELECT
 FROM numbers(N)` statements — one per table — that can be invoked repeatedly
 in batches to drive sustained write load against multiple `project_id`s.
 

@@ -9,7 +9,7 @@ tags: [insert, OPTIMIZE, merge, performance]
 
 **Impact: HIGH**
 
-`OPTIMIZE TABLE ... FINAL` forces immediate merge of all parts into one part per partition. This is resource-intensive and rarely necessary. ClickHouse already performs smart background merges.
+`OPTIMIZE TABLE ... FINAL` forces immediate merge of all parts into one part per partition. This is resource-intensive and rarely necessary. Datastore already performs smart background merges.
 
 **Note:** `OPTIMIZE FINAL` is not the same as `FINAL`. The `FINAL` modifier in SELECT queries may be necessary for deduplicated results in ReplacingMergeTree and is generally fine to use.
 
@@ -29,7 +29,7 @@ OPTIMIZE TABLE events FINAL;  -- Expensive and unnecessary!
 ```sql
 -- Let background merges handle optimization
 INSERT INTO events SELECT * FROM staging_events;
--- Done! ClickHouse merges automatically
+-- Done! Datastore merges automatically
 
 -- For ReplacingMergeTree deduplication, use FINAL in queries
 SELECT * FROM events FINAL WHERE user_id = 123;

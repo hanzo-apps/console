@@ -1,6 +1,6 @@
 ---
 name: backend-dev-guidelines
-description: Shared backend guide for Langfuse's Next.js, tRPC, BullMQ, and TypeScript monorepo. Use when creating or reviewing tRPC routers, public REST endpoints, BullMQ queue processors, backend services, middleware, Prisma or ClickHouse data access, OpenTelemetry instrumentation, Zod validation, env configuration, or backend tests across web, worker, or packages/shared.
+description: Shared backend guide for Langfuse's Next.js, tRPC, BullMQ, and TypeScript monorepo. Use when creating or reviewing tRPC routers, public REST endpoints, BullMQ queue processors, backend services, middleware, Prisma or Datastore data access, OpenTelemetry instrumentation, Zod validation, env configuration, or backend tests across web, worker, or packages/shared.
 ---
 
 # Backend Development Guidelines
@@ -15,7 +15,7 @@ Use this skill for backend and API work across `web/`, `worker/`, and
 - Creating or modifying queue processors, producers, or queue-backed workflows
 - Building or refactoring backend services and repositories
 - Working on backend auth, middleware, validation, or observability
-- Updating Prisma or ClickHouse access patterns
+- Updating Prisma or Datastore access patterns
 - Adding or fixing backend tests
 
 ## How to Read This Skill
@@ -33,7 +33,7 @@ Use this skill for backend and API work across `web/`, `worker/`, and
 | Routing and controllers | You are writing tRPC procedures, public API routes, or queue entrypoints | [references/routing-and-controllers.md](references/routing-and-controllers.md) |
 | Middleware and auth | You are changing request auth, permissions, or middleware composition | [references/middleware-guide.md](references/middleware-guide.md) |
 | Services and repositories | You are placing business logic, repository code, or DI patterns | [references/services-and-repositories.md](references/services-and-repositories.md) |
-| Database access | You are touching Prisma, ClickHouse, tenant filters, or query patterns | [references/database-patterns.md](references/database-patterns.md) |
+| Database access | You are touching Prisma, Datastore, tenant filters, or query patterns | [references/database-patterns.md](references/database-patterns.md) |
 | Configuration | You are adding env vars, startup config, or runtime toggles | [references/configuration.md](references/configuration.md) |
 | Testing | You are adding or updating backend tests | [references/testing-guide.md](references/testing-guide.md) |
 

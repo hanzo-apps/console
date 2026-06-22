@@ -5,7 +5,7 @@
  * ----------
  * When a trace / observation is ingested through the OpenTelemetry path (which is what the
  * Langfuse Python SDK v3 uses, and what the bug reporter used), its `input` / `output`
- * payload is stored in ClickHouse **verbatim as the JSON string the SDK produced**. Python's
+ * payload is stored in Datastore **verbatim as the JSON string the SDK produced**. Python's
  * `json.dumps(...)` defaults to `ensure_ascii=True`, so a value like `你好` is persisted on
  * disk as the literal 12-byte ASCII string `\u4f60\u597d`. The UI's display layer parses that
  * JSON back, so the user *sees* `你好` — but full-text search (`datastoreSearchCondition`)
@@ -353,7 +353,7 @@ describe("multilingual full-text search (issue #11538)", () => {
     });
 
     it("reproduces the exact issue #11538 scenario: a trace with {en, ar, zh} input is findable by the Arabic and Chinese text", async () => {
-      // This is byte-for-byte what the OpenTelemetry pipeline lands in ClickHouse for the
+      // This is byte-for-byte what the OpenTelemetry pipeline lands in Datastore for the
       // reporter's snippet (`span.update(input={"en": ..., "ar": ..., "zh": ...})`).
       const trace = await insertEscapedTrace({
         name: `issue-11538-${randomUUID()}`,
@@ -376,7 +376,7 @@ describe("multilingual full-text search (issue #11538)", () => {
       );
     });
 
-    it("reproduces issue #11538 through the real ingestion pipeline (POST /api/public/ingestion → worker → ClickHouse)", async () => {
+    it("reproduces issue #11538 through the real ingestion pipeline (POST /api/public/ingestion → worker → Datastore)", async () => {
       const traceId = randomUUID();
       // The Langfuse Python SDK serialises I/O to a JSON *string* (with ensure_ascii=True) before
       // putting it on the OTel span attribute, so the value arriving here is already escaped.

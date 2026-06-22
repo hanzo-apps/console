@@ -58,15 +58,15 @@ collect_prisma_migrations_not_in_production() {
     | sort -u
 }
 
-collect_clickhouse_migrations_not_in_production() {
-  git diff --name-only origin/production..HEAD -- packages/shared/clickhouse/migrations \
+collect_datastore_migrations_not_in_production() {
+  git diff --name-only origin/production..HEAD -- packages/shared/datastore/migrations \
     | sed -E 's#.*/([0-9]+_[^.]+)\.(up|down)\.sql#\1#' \
     | sort -u
 }
 
 confirm_migrations_are_applied() {
   local prisma_migrations="$1"
-  local clickhouse_migrations="$2"
+  local datastore_migrations="$2"
 
   log "Detected migrations in main that are not yet on production."
 
@@ -77,15 +77,15 @@ confirm_migrations_are_applied() {
     done <<< "$prisma_migrations"
   fi
 
-  if [[ -n "$clickhouse_migrations" ]]; then
-    log "ClickHouse migrations not yet promoted:"
+  if [[ -n "$datastore_migrations" ]]; then
+    log "Datastore migrations not yet promoted:"
     while IFS= read -r migration; do
       [[ -n "$migration" ]] && echo "  - $migration"
-    done <<< "$clickhouse_migrations"
+    done <<< "$datastore_migrations"
   fi
 
   echo
-  log "Confirm you have reviewed these migrations and applied them to the production Postgres and ClickHouse databases."
+  log "Confirm you have reviewed these migrations and applied them to the production Postgres and Datastore databases."
   read -r -p "Type '${MIGRATION_CONFIRMATION_TOKEN}' to continue: " confirmation
 
   if [[ "$confirmation" != "$MIGRATION_CONFIRMATION_TOKEN" ]]; then
@@ -111,14 +111,14 @@ main() {
   fetch_production_branch
 
   local prisma_migrations
-  local clickhouse_migrations
+  local datastore_migrations
   prisma_migrations="$(collect_prisma_migrations_not_in_production)"
-  clickhouse_migrations="$(collect_clickhouse_migrations_not_in_production)"
+  datastore_migrations="$(collect_datastore_migrations_not_in_production)"
 
-  if [[ -n "$prisma_migrations" || -n "$clickhouse_migrations" ]]; then
-    confirm_migrations_are_applied "$prisma_migrations" "$clickhouse_migrations"
+  if [[ -n "$prisma_migrations" || -n "$datastore_migrations" ]]; then
+    confirm_migrations_are_applied "$prisma_migrations" "$datastore_migrations"
   else
-    log "No Prisma or ClickHouse migration differences detected between main and production."
+    log "No Prisma or Datastore migration differences detected between main and production."
   fi
 
   trigger_cloud_promotion

@@ -5,19 +5,14 @@ import { z } from "zod";
 
 import { metric as MetricSchema } from "../../query/types";
 
-import {
-  MonitorAlertSchema,
-  MonitorFiltersSchema,
-  MonitorViewSchema,
-  MonitorWindowSchema,
-} from "../types";
+import { MonitorAlertSchema, MonitorFiltersSchema, MonitorViewSchema, MonitorWindowSchema } from "../types";
 
 /**
  * MonitorQueueEventSchema represents a batch of monitors that can be
  * evaluated together using the same set of parameters.
  *
  * All monitors in `monitors[]` share `view` / `filters` / `window`, so the
- * worker runs one ClickHouse query for the whole batch.
+ * worker runs one Datastore query for the whole batch.
  */
 export const MonitorQueueEventSchema = z.object({
   projectId: z.string(),
@@ -34,9 +29,7 @@ export const MonitorQueueEventSchema = z.object({
   metrics: z.array(MetricSchema),
 
   // Monitors map to metricNames returned by the above query params
-  monitors: z.array(
-    z.object({ monitorId: z.string(), metricName: z.string() }),
-  ),
+  monitors: z.array(z.object({ monitorId: z.string(), metricName: z.string() })),
 });
 export type MonitorQueueEvent = z.infer<typeof MonitorQueueEventSchema>;
 
@@ -49,6 +42,4 @@ export const MonitorWebhookQueueEventSchema = z.object({
   version: z.literal("v1"),
   payload: MonitorAlertSchema,
 });
-export type MonitorWebhookQueueEvent = z.infer<
-  typeof MonitorWebhookQueueEventSchema
->;
+export type MonitorWebhookQueueEvent = z.infer<typeof MonitorWebhookQueueEventSchema>;

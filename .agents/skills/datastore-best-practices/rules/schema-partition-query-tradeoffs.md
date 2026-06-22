@@ -13,7 +13,7 @@ Partitioning can help or hurt query performance:
 - **Potential improvement**: Queries filtering by partition key may benefit from partition pruning
 - **Potential degradation**: Queries spanning many partitions increase total parts scanned
 
-ClickHouse automatically builds **MinMax indexes** on partition columns. Data merges occur **within partitions only**, not across them.
+Datastore automatically builds **MinMax indexes** on partition columns. Data merges occur **within partitions only**, not across them.
 
 **Incorrect (query scans all partitions):**
 

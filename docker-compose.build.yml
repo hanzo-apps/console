@@ -12,7 +12,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      clickhouse:
+      datastore:
         condition: service_healthy
     ports:
       - "3000:3000"
@@ -35,11 +35,11 @@ services:
       LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
       LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-}
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
-      CLICKHOUSE_MIGRATION_URL: ${CLICKHOUSE_MIGRATION_URL:-clickhouse://clickhouse:9000}
-      CLICKHOUSE_URL: ${CLICKHOUSE_URL:-http://clickhouse:8123}
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
-      CLICKHOUSE_CLUSTER_ENABLED: ${CLICKHOUSE_CLUSTER_ENABLED:-false}
+      DATASTORE_MIGRATION_URL: ${DATASTORE_MIGRATION_URL:-clickhouse://datastore:9000}
+      DATASTORE_URL: ${DATASTORE_URL:-http://datastore:8123}
+      DATASTORE_USER: ${DATASTORE_USER:-hanzo}
+      DATASTORE_PASSWORD: ${DATASTORE_PASSWORD:-hanzo}
+      DATASTORE_CLUSTER_ENABLED: ${DATASTORE_CLUSTER_ENABLED:-false}
       LANGFUSE_S3_EVENT_UPLOAD_BUCKET: ${LANGFUSE_S3_EVENT_UPLOAD_BUCKET:-langfuse}
       LANGFUSE_S3_EVENT_UPLOAD_REGION: ${LANGFUSE_S3_EVENT_UPLOAD_REGION:-us-east-1}
       LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID:-minio}
@@ -79,16 +79,16 @@ services:
       timeout: 10s
       retries: 3
 
-  clickhouse:
-    image: docker.io/clickhouse/clickhouse-server
+  datastore:
+    image: ghcr.io/hanzoai/datastore:latest
     user: "101:101"
     environment:
-      CLICKHOUSE_DB: default
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      DATASTORE_DB: default
+      DATASTORE_USER: ${DATASTORE_USER:-hanzo}
+      DATASTORE_PASSWORD: ${DATASTORE_PASSWORD:-hanzo}
     volumes:
-      - langfuse_clickhouse_data:/var/lib/clickhouse
-      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+      - hanzo_datastore_data:/var/lib/clickhouse
+      - hanzo_datastore_logs:/var/log/clickhouse-server
     ports:
       - "8123:8123"
       - "9000:9000"
@@ -155,9 +155,9 @@ services:
 volumes:
   langfuse_postgres_data:
     driver: local
-  langfuse_clickhouse_data:
+  hanzo_datastore_data:
     driver: local
-  langfuse_clickhouse_logs:
+  hanzo_datastore_logs:
     driver: local
   langfuse_minio_data:
     driver: local

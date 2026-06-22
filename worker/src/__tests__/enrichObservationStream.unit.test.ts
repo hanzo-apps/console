@@ -31,7 +31,7 @@ async function collect(gen: AsyncGenerator<Record<string, unknown>>): Promise<Re
 
 describe("enrichObservationStream field group filtering", () => {
   it("does not add latency/time_to_first_token when row has no latency (metrics not selected)", async () => {
-    // Simulates a row from ClickHouse where metrics group was not SELECTed —
+    // Simulates a row from Datastore where metrics group was not SELECTed —
     // latency and time_to_first_token are absent from the row entirely.
     const rows = [{ id: "obs-1" }];
     const results = await collect(enrichObservationStream(rowStream(rows), "project-1", "model_id", true));
@@ -50,8 +50,8 @@ describe("enrichObservationStream field group filtering", () => {
     expect(results[0]).not.toHaveProperty("time_to_first_token");
   });
 
-  it("removes metadata when ClickHouse returns empty map and metadata is not selected", async () => {
-    // Simulates ClickHouse returning {} for an unselected Map column.
+  it("removes metadata when Datastore returns empty map and metadata is not selected", async () => {
+    // Simulates Datastore returning {} for an unselected Map column.
     const rows = [{ id: "obs-1", metadata: {} }];
     const results = await collect(
       enrichObservationStream(rowStream(rows), "project-1", "model_id", false, ["core" as ObservationFieldGroupFull]),

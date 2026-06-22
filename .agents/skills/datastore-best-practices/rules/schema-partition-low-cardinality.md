@@ -9,7 +9,7 @@ tags: [schema, partitioning, parts]
 
 **Impact: HIGH**
 
-Too many distinct partition values create excessive data parts, eventually triggering "too many parts" errors. ClickHouse enforces limits via `max_parts_in_total` and `parts_to_throw_insert` settings.
+Too many distinct partition values create excessive data parts, eventually triggering "too many parts" errors. Datastore enforces limits via `max_parts_in_total` and `parts_to_throw_insert` settings.
 
 **Incorrect (high cardinality partitioning):**
 

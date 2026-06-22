@@ -1,20 +1,20 @@
 services:
-  clickhouse:
+  datastore:
     # Upgrade from 24.3 to check behaviour on new events table.
     # Unit tests still verify 24.3 behaviour using -azure and -redis-cluster configs.
-    image: docker.io/clickhouse/clickhouse-server:25.12
+    image: ghcr.io/hanzoai/datastore:25.12
     user: "101:101"
-    container_name: ${CLICKHOUSE_CONTAINER_NAME:-langfuse-clickhouse}
+    container_name: ${DATASTORE_CONTAINER_NAME:-hanzo-datastore}
     environment:
-      CLICKHOUSE_DB: default
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      DATASTORE_DB: default
+      DATASTORE_USER: ${DATASTORE_USER:-hanzo}
+      DATASTORE_PASSWORD: ${DATASTORE_PASSWORD:-hanzo}
     volumes:
-      - langfuse_clickhouse_data:/var/lib/clickhouse
-      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+      - hanzo_datastore_data:/var/lib/clickhouse
+      - hanzo_datastore_logs:/var/log/clickhouse-server
     ports:
-      - ${HOST_IP:-127.0.0.1}:${CLICKHOUSE_HTTP_PORT:-8123}:8123
-      - ${HOST_IP:-127.0.0.1}:${CLICKHOUSE_NATIVE_PORT:-9000}:9000
+      - ${HOST_IP:-127.0.0.1}:${DATASTORE_HTTP_PORT:-8123}:8123
+      - ${HOST_IP:-127.0.0.1}:${DATASTORE_NATIVE_PORT:-9000}:9000
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
       interval: 5s
@@ -109,11 +109,11 @@ volumes:
   langfuse_postgres_data:
     name: ${POSTGRES_VOLUME_NAME:-langfuse_postgres_data}
     driver: local
-  langfuse_clickhouse_data:
-    name: ${CLICKHOUSE_DATA_VOLUME_NAME:-langfuse_clickhouse_data}
+  hanzo_datastore_data:
+    name: ${DATASTORE_DATA_VOLUME_NAME:-hanzo_datastore_data}
     driver: local
-  langfuse_clickhouse_logs:
-    name: ${CLICKHOUSE_LOGS_VOLUME_NAME:-langfuse_clickhouse_logs}
+  hanzo_datastore_logs:
+    name: ${DATASTORE_LOGS_VOLUME_NAME:-hanzo_datastore_logs}
     driver: local
   langfuse_minio_data:
     name: ${MINIO_VOLUME_NAME:-langfuse_minio_data}

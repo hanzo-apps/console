@@ -29,7 +29,7 @@ Use root [AGENTS.md](../AGENTS.md) for monorepo-level rules.
 ## Shared Package Imports
 
 - Prefer `@hanzo/console/src/server` in worker runtime code for queue
-  helpers/contracts, repositories, logger/instrumentation, Redis/ClickHouse
+  helpers/contracts, repositories, logger/instrumentation, Redis/Datastore
   helpers, auth helpers, and other shared backend services.
 - Use `@hanzo/console` for cross-runtime types, schemas, domain contracts,
   model-pricing helpers, and other frontend-safe utilities.
@@ -41,7 +41,7 @@ Use root [AGENTS.md](../AGENTS.md) for monorepo-level rules.
 - See `../packages/shared/AGENTS.md` for the full shared export map and what
   each entrypoint contains.
 - For the higher-level platform topology across web, worker, Postgres,
-  ClickHouse, Redis, and S3, also read the architecture handbook:
+  Datastore, Redis, and S3, also read the architecture handbook:
   [langfuse.com/handbook/product-engineering/architecture](https://langfuse.com/handbook/product-engineering/architecture)
   with source markdown in
   `../langfuse-docs/content/handbook/product-engineering/architecture.mdx`

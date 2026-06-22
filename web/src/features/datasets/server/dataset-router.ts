@@ -98,7 +98,7 @@ const firstPathSegment = (expr: string) =>
   `CASE WHEN INSTR(${expr}, '/') > 0 THEN SUBSTR(${expr}, 1, INSTR(${expr}, '/') - 1) ELSE ${expr} END`;
 
 /**
- * Determines whether the given filters require Dataset Run Items (DRI) metrics from ClickHouse.
+ * Determines whether the given filters require Dataset Run Items (DRI) metrics from Datastore.
  *
  * @param filters - Array of filter conditions to evaluate
  * @returns true if any filter requires DRI metrics, false if using basic dataset run data is sufficient
@@ -601,7 +601,7 @@ export const datasetRouter = createTRPCRouter({
         return {
           id: run.id,
           name: run.name,
-          // Use ClickHouse metrics if available, otherwise use defaults for runs without dataset_run_items_rmt
+          // Use Datastore metrics if available, otherwise use defaults for runs without dataset_run_items_rmt
           countRunItems: run.countRunItems ?? 0,
           avgTotalCost: run.avgTotalCost ?? null,
           totalCost: run.totalCost ?? null,

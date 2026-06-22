@@ -9,7 +9,7 @@ tags: [query, JOIN, algorithm, memory]
 
 **Impact: CRITICAL**
 
-ClickHouse's default hash join loads the RIGHT table entirely into memory. Choose the right algorithm based on table sizes and constraints.
+Datastore's default hash join loads the RIGHT table entirely into memory. Choose the right algorithm based on table sizes and constraints.
 
 **Algorithm selection:**
 
@@ -26,7 +26,7 @@ ClickHouse's default hash join loads the RIGHT table entirely into memory. Choos
 **Example usage:**
 
 ```sql
--- Let ClickHouse choose automatically
+-- Let Datastore choose automatically
 SET join_algorithm = 'auto';
 
 -- For large-to-large joins where memory is constrained
@@ -38,6 +38,6 @@ SET join_algorithm = 'full_sorting_merge';
 SELECT * FROM table_a a JOIN table_b b ON b.pk_col = a.pk_col;
 ```
 
-**Note:** ClickHouse 24.12+ automatically positions smaller tables on the right side. For earlier versions, manually ensure the smaller table is on the RIGHT.
+**Note:** Datastore 24.12+ automatically positions smaller tables on the right side. For earlier versions, manually ensure the smaller table is on the RIGHT.
 
 Reference: [Minimize and Optimize JOINs](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)

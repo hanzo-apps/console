@@ -65,7 +65,7 @@ async function buildTracesBaseQuery(
   params: Record<string, any>;
   fromTimeFilter?: DateTimeFilter | undefined;
 }> {
-  // ClickHouse query optimizations for List Traces API
+  // Datastore query optimizations for List Traces API
   const disableObservationsFinal = await shouldSkipObservationsFinal(
     props.projectId,
   );

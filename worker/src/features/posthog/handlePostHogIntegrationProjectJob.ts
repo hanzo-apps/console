@@ -27,7 +27,7 @@ type PostHogExecutionConfig = {
   maxTimestamp: Date;
   decryptedPostHogApiKey: string;
   postHogHost: string;
-  // First attempt uses ClickHouse `auto` join algorithm. We only fall back to
+  // First attempt uses Datastore `auto` join algorithm. We only fall back to
   // `grace_hash` (slower, but spills to disk) on retries so an OOM on the first
   // attempt recovers without manual intervention while healthy syncs stay fast.
   useGraceHash: boolean;
@@ -251,7 +251,7 @@ export const handlePostHogIntegrationProjectJob = async (
   // Cap maxTimestamp at the next UTC day boundary after minTimestamp. Bounds
   // per-run work so a stuck integration (or a backfill on an older project)
   // does not re-scan an ever-growing window on each hourly retry, and aligns
-  // with the toDate(...) ClickHouse partition/ordering keys for better
+  // with the toDate(...) Datastore partition/ordering keys for better
   // pruning. Healthy integrations are unaffected because uncappedMaxTimestamp
   // wins whenever the sync is within one day of present.
   const nextDayBoundary = new Date(

@@ -2,7 +2,7 @@
 name: analyze-cloud-costs
 description: |
   Analyze Langfuse Cloud infrastructure cost structure using Metabase cost
-  marts. Use when asked about cloud spend, AWS versus ClickHouse cost splits,
+  marts. Use when asked about cloud spend, AWS versus Datastore cost splits,
   cost drivers by provider/service/usage type/account, daily cost per tracing
   event, infra cost dashboards, or cost regressions visible in Metabase.
 ---
@@ -18,7 +18,7 @@ deliverable should name the time window, query grain, top drivers, and caveats.
 ## Workflow
 
 1. Clarify the question and choose the grain:
-   - Headline daily totals: total, AWS, ClickHouse, tracing events, and cost per
+   - Headline daily totals: total, AWS, Datastore, tracing events, and cost per
      100k events.
    - Cost structure: provider, service, usage type, operation, account, and day.
    - Driver or regression analysis: compare a recent complete-day window against
@@ -58,5 +58,5 @@ Summarize:
 - Total cost and provider split when relevant.
 - Top cost drivers by service, usage type, operation, or account.
 - Trend or baseline comparison when the user asks "why did this change?"
-- Caveats, especially incomplete current-day AWS data and ClickHouse credit
+- Caveats, especially incomplete current-day AWS data and Datastore credit
   labeling in the unified mart.

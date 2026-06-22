@@ -1,0 +1,150 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\hypersetup{colorlinks=true,urlcolor=blue!60!black,linkcolor=black}
+\titleformat{\section}{\Large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.6em}{}
+\setlength{\parskip}{4pt}\setlength{\parindent}{0pt}
+\pagestyle{fancy}\fancyhf{}
+\rhead{\small Hanzo console / Langfuse fork --- tRPC migration scoping}
+\rfoot{\small \thepage}
+\title{\textbf{console (Langfuse fork): tRPC $\rightarrow$ @zap-proto/web migration decision}}
+\author{Architectural scoping --- read-only survey}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{TL;DR --- Recommendation}
+\textbf{Option B: keep console on tRPC; expose a single tRPC$\leftrightarrow$ZAP gateway at the cluster edge.} The existing \texttt{ui-customization} migration already proves the gateway pattern works in-process. Migrating all 74 routers permanently inherits Langfuse's churn ($\approx$805 router-touching upstream commits in the last 9 months) as merge conflicts on every sync; the engineering cost dwarfs the architectural-purity benefit, and the ``native .zap only'' directive is satisfied for the rest of the stack with one bridge endpoint instead of 74.
+
+\section{Scope of the surface}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \textbf{Routers:} 74 files containing \texttt{createTRPCRouter} under \texttt{web/src}.
+  \item \textbf{Procedures:} $\approx$342 procedures across those routers.
+  \item \textbf{Frontend call-sites:} $\approx$2{,}133 \texttt{api.<router>.<proc>.use*} call-sites across \texttt{web/src}. Every one is a code change.
+  \item \textbf{tRPC deps:} \texttt{@trpc/client}, \texttt{@trpc/next}, \texttt{@trpc/react-query}, \texttt{@trpc/server} pinned to \texttt{\^{}11.13.4}.
+  \item \textbf{Largest single router:} \texttt{features/datasets/server/dataset-router.ts} --- 1{,}933 LOC, 39 procedures, Prisma + ClickHouse + S3 + batch jobs.
+  \item \textbf{Fork posture:} \texttt{git remote -v} shows \texttt{upstream $\rightarrow$ langfuse/langfuse.git}; merge commits like \texttt{34b0323a3 merge: upstream/main} confirm an active sync cadence.
+  \item \textbf{Branch:} already on \texttt{zap-native-ts-stack}.
+\end{itemize}
+
+\section{Upstream churn (the load-bearing number)}
+Measured against \texttt{upstream/main}:
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+Window & Router-touching commits \\
+\midrule
+9 months ending Q2 2026 & 805 \\
+5.5 months ending Q2 2026 & 503 \\
+Q2 2026 alone & 278 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Hot routers in the last 12 months: \texttt{dataset-router.ts} 57 touches, \texttt{traces.ts} 37, \texttt{evals/router.ts} 31, \texttt{scores.ts} 29, \texttt{sessions.ts} 22, \texttt{promptRouter.ts} 22. These are the same routers that drive primary user flows --- migrating them away from tRPC creates the worst-case ongoing merge cost.
+
+\section{The proof point: \texttt{ui-customization}}
+The only router migrated so far (\texttt{a6c285ee5 feat(zap): native ZAP capability-RPC foundation + migrate ui-customization router}) is the easiest possible case: $\approx$70 LoC, two read-only methods, no DB writes. Its migration shipped:
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item A new Go service binary as the backend (no in-process server).
+  \item A hand-written \texttt{web/proto/ui-customization.zap} schema.
+  \item Hand-checked-in \texttt{web/src/server/zap/gen/ui-customization\_zap.ts} (no \texttt{zapgen} in the TS build).
+  \item A bridge at \texttt{web/src/pages/api/zap/[[...path]].ts} (HTTP $\rightarrow$ TCP $\rightarrow$ \texttt{@hanzo/zap}).
+  \item A custom \texttt{web/src/utils/zapClient.ts} that replaces \texttt{api.uiCustomization.get.useQuery()}.
+  \item A dev-only capability minter (the canonical ML-DSA-65 \texttt{Capability} is not yet shipped --- \texttt{@zap-proto/web v0.1.1} marks \texttt{mintCap} as a slot for ``a later version'').
+\end{itemize}
+Extrapolating this template to \texttt{dataset-router.ts} (39 procedures across Prisma, ClickHouse, S3, Stripe, BullMQ) is not a days-of-work exercise --- it is a multi-week effort \emph{per hot router}.
+
+\section{Option A --- Full migration to @zap-proto/web}
+\textbf{Cost.} Three router classes; midpoint estimates:
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Class & Count & Wks each & Total \\
+\midrule
+Trivial CRUD & 25 & 0.5 & 12.5 \\
+Medium & 35 & 1.0 & 35.0 \\
+Heavy & 14 & 2.0 & 28.0 \\
+\midrule
+\textbf{Subtotal} & 74 & --- & \textbf{75.5} \\
+Cross-cutting (zapgen wiring, capability mint, auth, tests, rollout) & --- & --- & 10--20 \\
+\midrule
+\textbf{Total Option A} & & & \textbf{$\approx$85--95 eng-weeks} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Risk hotspots.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item Permanent merge tax: every one of the $\approx$800 router-commits/yr upstream becomes a manual rebase against a fork. Annualized: $\approx$8--12 eng-weeks/yr of ongoing merge labor.
+  \item \texttt{@zap-proto/web} is \texttt{v0.1.1}, pre-1.0; the production-grade \texttt{Capability} mint (ML-DSA-65, BLAKE3) is not shipped. Migrating EE billing/SSO routers before that lands is unsafe.
+  \item EE features (\texttt{verified-domains}, \texttt{multi-tenant-sso}, \texttt{cloudBilling}, \texttt{spend-alerts}, \texttt{sso-config}) span 5 routers with audit-sensitive logic and tight coupling to NextAuth and Stripe.
+  \item No \texttt{zapgen --target=ts} step in console's turbo graph today; CI/regen pipeline is a prerequisite.
+  \item Frontend churn: $\approx$2{,}133 call-sites to rewrite, plus React Query cache-key compatibility decisions.
+\end{itemize}
+
+\textbf{Operational impact.} Can be done router-by-router (the gateway approach makes mixed deployment easy), but full cutover requires removing \texttt{@trpc/*} from \texttt{package.json}, which is a one-shot all-or-nothing landing.
+
+\section{Option B --- Keep tRPC; bridge at the edge}
+\textbf{Shape.} A single Go (or Node) service in front of the cluster terminates ZAP on one side and speaks tRPC HTTP-batch to console on the other. tRPC's wire format is already JSON over HTTP --- the bridge is a few hundred lines of glue: it accepts a ZAP envelope with method ordinal + capability, validates the cap, maps ordinal $\rightarrow$ tRPC procedure path, replays the JSON body to the console URL, and re-envelopes the JSON reply.
+
+\textbf{Cost.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item Gateway implementation: 2--3 eng-weeks (Go service or Node sidecar; reuses \texttt{@hanzo/zap} TCP server).
+  \item Capability $\rightarrow$ NextAuth-session shim: 1 eng-week.
+  \item One \texttt{console.zap} schema enumerating the externally-callable procedures: 1 eng-week.
+  \item \textbf{Total upfront: $\approx$4--5 eng-weeks.}
+  \item Ongoing: $\approx$0.5--1 eng-week/quarter to keep the schema in sync.
+\end{itemize}
+
+\textbf{Risk hotspots.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item ``A bridge counts as sludge.'' The directive says ``no proxy no hacks no sludge native .zap only.'' Mitigation: the bridge is \emph{one} component, owned, with a tested schema --- not a sprinkling of compat shims.
+  \item Capability semantics don't map 1:1 to NextAuth session scopes; the shim enforces permission caveats at the gateway, not in console.
+  \item If upstream Langfuse one day moves off tRPC, the bridge changes shape too. Probability is low in the near term.
+\end{itemize}
+
+\textbf{Operational impact.} Zero console downtime. The bridge is deployed alongside the existing console pod; clients are flipped one feature at a time via the dispatch table.
+
+\section{Option C --- Greenfield Hanzo console on ZAP}
+\textbf{Cost.} Feature parity for ``what Hanzo actually uses'' ($\approx$12 of the 74 routers):
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item Backend services (Go + ZAP): 12--16 eng-weeks.
+  \item Frontend (Next.js, charts, tables, batch tooling): 25--40 eng-weeks.
+  \item Auth, RBAC, audit logging, telemetry: 5--8 eng-weeks.
+  \item \textbf{Total Option C (subset): $\approx$45--60 eng-weeks.}
+  \item Full Langfuse parity: \textbf{$\approx$120+ eng-weeks}.
+\end{itemize}
+
+\textbf{Risk hotspots.} Loses every feature Langfuse upstream ships next, forever. Forfeits a $>$100-eng-yr open-source asset.
+
+\section{Recommendation and justification}
+\textbf{Adopt Option B.} The gateway is $\approx$15--20$\times$ cheaper than Option A upfront, eliminates the permanent fork-merge tax (the dominant lifetime cost), and preserves Langfuse's free upstream velocity. The architectural directive --- ``native .zap only'' --- is satisfied at the boundary that actually matters: every other Hanzo service speaks ZAP to console through the bridge; console is the only consumer of console's tRPC. The directive is not violated by having tRPC live \emph{inside} one fork; it would be violated by having tRPC leak \emph{between} services. The bridge enforces exactly that boundary.
+
+If, in 12--18 months, \texttt{@zap-proto/web} hits 1.0 with shipped \texttt{Capability} mint and \texttt{zapgen --target=ts} is wired into console's build, revisit Option A starting with one cold router (e.g. \texttt{auditLogs} or \texttt{notificationPreferences}) as a fully-native proof-of-concept --- but do not commit to migrating hot routers until upstream Langfuse stabilizes or Hanzo decides to detach from the upstream entirely.
+
+\section{If migration is chosen later --- phased plan}
+\begin{description}[leftmargin=1.4em,itemsep=2pt]
+  \item[Phase 0 (foundation, 3--4 wk).] Wire \texttt{zapgen --target=ts} into turbo; add a \texttt{web/proto/} convention and CI regen check; ship the production capability mint (depends on \texttt{@zap-proto/web} 1.0); add a \texttt{zapProcedure} adapter that gives migrated routers a tRPC-shaped DX from the codegen'd views.
+  \item[Phase 1 (cold-path routers, 6--8 wk).] Migrate \texttt{auditLogs}, \texttt{notificationPreferences}, \texttt{tableViewPresets}, \texttt{dashboardWidgets}, \texttt{surveys}, \texttt{userAccount}, \texttt{utilities}. No upstream churn risk; all low-cardinality reads.
+  \item[Phase 2 (hot reads, 10--14 wk).] \texttt{traces}, \texttt{observations}, \texttt{sessions}, \texttt{scores}, \texttt{public}. Coordinate every merge with a frozen \texttt{.zap} schema.
+  \item[Phase 3 (writes \& EE, 16--20 wk).] \texttt{datasets}, \texttt{prompts}, \texttt{evals}, \texttt{experiments}, plus EE: \texttt{cloudBilling}, \texttt{ssoConfig}, \texttt{verifiedDomain}, \texttt{spendAlert}.
+  \item[Phase 4 (cutover, 3--4 wk).] Remove \texttt{@trpc/*} from \texttt{package.json}; delete \texttt{web/src/server/api/trpc.ts} and \texttt{root.ts}; declare upstream divergence formal.
+\end{description}
+
+\section{Critical files for any chosen path}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \texttt{web/src/server/api/trpc.ts} --- procedure builders, auth context, the single chokepoint.
+  \item \texttt{web/src/server/api/root.ts} --- the canonical router registry; the migration ledger.
+  \item \texttt{web/src/pages/api/zap/[[...path]].ts} --- existing ZAP bridge; template for both Option A and Option B.
+  \item \texttt{web/src/utils/zapClient.ts} --- existing client surface; becomes the gateway client.
+  \item \texttt{web/src/features/datasets/server/dataset-router.ts} --- the canary for ``can we afford Option A?''.
+\end{itemize}
+
+\end{document}

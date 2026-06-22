@@ -530,7 +530,7 @@ SETTINGS
     enable_block_offset_column = 1,
     prewarm_mark_cache = 1,
     prewarm_primary_key_cache = 1;
-    -- cache_populated_by_fetch = 1; -- Not available in OSS ClickHouse
+    -- cache_populated_by_fetch = 1; -- Not available in OSS upstream
 
 -- Materialized view to populate events_core from events_full table
 CREATE MATERIALIZED VIEW IF NOT EXISTS events_core_mv TO events_core AS

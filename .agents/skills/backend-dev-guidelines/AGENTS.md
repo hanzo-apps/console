@@ -20,7 +20,7 @@ Use this guide when working on:
 - Authenticating API requests
 - Accessing resources based on entitlements
 - Implementing middleware (tRPC, NextAuth, public API)
-- Database operations with Prisma (PostgreSQL) or ClickHouse
+- Database operations with Prisma (PostgreSQL) or Datastore
 - Observability with OpenTelemetry, DataDog, logger, and traceException
 - Input validation with Zod v4
 - Environment configuration from env variables
@@ -80,7 +80,7 @@ Use this guide when working on:
 │      ↓                      │   │      ↓                      │
 │  Service (business logic)   │   │  Service (business logic)   │
 │      ↓                      │   │      ↓                      │
-│  Prisma / ClickHouse        │   │  Prisma / ClickHouse        │
+│  Prisma / Datastore        │   │  Prisma / Datastore        │
 │                             │   │                             │
 └─────────────────────────────┘   └─────────────────────────────┘
                  ↓
@@ -94,7 +94,7 @@ Use this guide when working on:
 │      ↓                                                      │
 │  Service (business logic)                                   │
 │      ↓                                                      │
-│  Prisma / ClickHouse                                        │
+│  Prisma / Datastore                                        │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -229,8 +229,8 @@ const trace = await prisma.trace.findUnique({
   where: { id: traceId, projectId }, // Required for multi-tenant data isolation
 });
 
-// ✅ CORRECT: ClickHouse queries also require projectId
-const traces = await queryClickhouse({
+// ✅ CORRECT: Datastore queries also require projectId
+const traces = await queryDatastore({
   query: `
     SELECT * FROM traces
     WHERE project_id = {projectId: String}
@@ -277,7 +277,7 @@ Reference existing Langfuse features for implementation patterns:
   `web/src/pages/api/public/datasets/index.ts`
 - Worker queue processor with typed jobs, logging, and retry behavior:
   `worker/src/queues/evalQueue.ts`
-- Tenant filters for Prisma and ClickHouse:
+- Tenant filters for Prisma and Datastore:
   `references/database-patterns.md`
 
 ---

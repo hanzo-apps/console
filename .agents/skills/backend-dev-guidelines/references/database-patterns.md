@@ -363,7 +363,7 @@ const query = `
 These three tables are declared as
 `ReplacingMergeTree(event_ts, is_deleted)`, but no production
 code writes `is_deleted = 1` for them — all deletes use
-ClickHouse's lightweight `DELETE FROM` mutation (e.g.
+Datastore's lightweight `DELETE FROM` mutation (e.g.
 `deleteObservationsByTraceIds`,
 `deleteObservationsByProjectId`,
 `deleteObservationsOlderThanDays`), which marks rows via the

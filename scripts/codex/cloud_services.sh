@@ -9,8 +9,8 @@ CODEX_SERVICES_ROOT="${CODEX_SERVICES_ROOT:-$PWD/.codex/services}"
 # `initdb` to recreate the cluster with the new settings.
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 REDIS_PORT="${REDIS_PORT:-6379}"
-CLICKHOUSE_HTTP_PORT="${CLICKHOUSE_HTTP_PORT:-8123}"
-CLICKHOUSE_NATIVE_PORT="${CLICKHOUSE_NATIVE_PORT:-9000}"
+DATASTORE_HTTP_PORT="${DATASTORE_HTTP_PORT:-8123}"
+DATASTORE_NATIVE_PORT="${DATASTORE_NATIVE_PORT:-9000}"
 MINIO_API_PORT="${MINIO_API_PORT:-9090}"
 MINIO_CONSOLE_PORT="${MINIO_CONSOLE_PORT:-9091}"
 
@@ -18,8 +18,8 @@ POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-postgres}"
 REDIS_AUTH="${REDIS_AUTH:-myredissecret}"
-CLICKHOUSE_USER="${CLICKHOUSE_USER:-clickhouse}"
-CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:-clickhouse}"
+DATASTORE_USER="${DATASTORE_USER:-hanzo}"
+DATASTORE_PASSWORD="${DATASTORE_PASSWORD:-hanzo}"
 MINIO_ROOT_USER="${MINIO_ROOT_USER:-minio}"
 MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-miniosecret}"
 
@@ -74,7 +74,7 @@ stop_system_postgres_clusters() {
   stop_service_if_running postgresql
 }
 
-ensure_clickhouse_repo() {
+ensure_datastore_repo() {
   ensure_apt_package ca-certificates
   ensure_apt_package curl
   ensure_apt_package gnupg
@@ -106,13 +106,13 @@ ensure_redis_binary() {
   stop_service_if_running redis-server
 }
 
-ensure_clickhouse_binaries() {
+ensure_datastore_binaries() {
   if command -v clickhouse-server >/dev/null 2>&1 && command -v clickhouse-client >/dev/null 2>&1; then
     stop_service_if_running clickhouse-server
     return 0
   fi
 
-  ensure_clickhouse_repo
+  ensure_datastore_repo
   apt-get install -y clickhouse-server clickhouse-client
   stop_service_if_running clickhouse-server
 }
@@ -291,7 +291,7 @@ escape_sql_literal() {
   printf "%s" "${value//\'/\'\'}"
 }
 
-escape_clickhouse_identifier() {
+escape_datastore_identifier() {
   local value="$1"
   printf '`%s`' "${value//\`/\`\`}"
 }
@@ -403,50 +403,54 @@ CONF
   fi
 }
 
-ensure_clickhouse_running() {
-  ensure_clickhouse_binaries
+ensure_datastore_running() {
+  ensure_datastore_binaries
 
-  local clickhouse_root="$CODEX_SERVICES_ROOT/clickhouse"
-  local clickhouse_data="$clickhouse_root/data"
-  local clickhouse_log="$clickhouse_root/clickhouse.log"
-  local clickhouse_err="$clickhouse_root/clickhouse.err.log"
-  local clickhouse_pid="$clickhouse_root/clickhouse.pid"
-  local -a clickhouse_runner
+  # Note: the upstream binary, system user, and /etc/clickhouse-server
+  # config path are literal apt-package contracts and stay as-is. Our
+  # data/log paths under $CODEX_SERVICES_ROOT use the canonical
+  # "datastore" name.
+  local datastore_root="$CODEX_SERVICES_ROOT/datastore"
+  local datastore_data="$datastore_root/data"
+  local datastore_log="$datastore_root/datastore.log"
+  local datastore_err="$datastore_root/datastore.err.log"
+  local datastore_pid="$datastore_root/datastore.pid"
+  local -a datastore_runner
 
-  mkdir -p "$clickhouse_data"
+  mkdir -p "$datastore_data"
   if [ "${EUID:-$(id -u)}" -eq 0 ] && id -u clickhouse >/dev/null 2>&1; then
-    chown -R clickhouse:clickhouse "$clickhouse_root"
-    clickhouse_runner=(runuser -u clickhouse --)
+    chown -R clickhouse:clickhouse "$datastore_root"
+    datastore_runner=(runuser -u clickhouse --)
   else
-    clickhouse_runner=()
+    datastore_runner=()
   fi
 
-  if ! wait_for_http "http://127.0.0.1:$CLICKHOUSE_HTTP_PORT/ping" 1; then
-    "${clickhouse_runner[@]}" clickhouse-server \
+  if ! wait_for_http "http://127.0.0.1:$DATASTORE_HTTP_PORT/ping" 1; then
+    "${datastore_runner[@]}" clickhouse-server \
       --daemon \
       --config-file=/etc/clickhouse-server/config.xml \
-      --pid-file="$clickhouse_pid" \
-      --log-file="$clickhouse_log" \
-      --errorlog-file="$clickhouse_err" \
+      --pid-file="$datastore_pid" \
+      --log-file="$datastore_log" \
+      --errorlog-file="$datastore_err" \
       -- \
-      --path="$clickhouse_data" \
-      --http_port="$CLICKHOUSE_HTTP_PORT" \
-      --tcp_port="$CLICKHOUSE_NATIVE_PORT"
+      --path="$datastore_data" \
+      --http_port="$DATASTORE_HTTP_PORT" \
+      --tcp_port="$DATASTORE_NATIVE_PORT"
   fi
 
-  if ! wait_for_http "http://127.0.0.1:$CLICKHOUSE_HTTP_PORT/ping" 45; then
-    echo "ClickHouse did not start on 127.0.0.1:$CLICKHOUSE_HTTP_PORT"
+  if ! wait_for_http "http://127.0.0.1:$DATASTORE_HTTP_PORT/ping" 45; then
+    echo "Datastore did not start on 127.0.0.1:$DATASTORE_HTTP_PORT"
     exit 1
   fi
 
-  local clickhouse_password_sql
-  local clickhouse_user_identifier
-  clickhouse_password_sql="$(escape_sql_literal "$CLICKHOUSE_PASSWORD")"
-  clickhouse_user_identifier="$(escape_clickhouse_identifier "$CLICKHOUSE_USER")"
+  local datastore_password_sql
+  local datastore_user_identifier
+  datastore_password_sql="$(escape_sql_literal "$DATASTORE_PASSWORD")"
+  datastore_user_identifier="$(escape_datastore_identifier "$DATASTORE_USER")"
 
-  clickhouse-client --host 127.0.0.1 --port "$CLICKHOUSE_NATIVE_PORT" -q "CREATE USER IF NOT EXISTS $clickhouse_user_identifier IDENTIFIED WITH plaintext_password BY '$clickhouse_password_sql'"
-  if ! clickhouse-client --host 127.0.0.1 --port "$CLICKHOUSE_NATIVE_PORT" -q "GRANT CURRENT GRANTS ON *.* TO $clickhouse_user_identifier" >/dev/null 2>&1; then
-    clickhouse-client --host 127.0.0.1 --port "$CLICKHOUSE_NATIVE_PORT" -q "GRANT ALL ON *.* TO $clickhouse_user_identifier WITH GRANT OPTION"
+  clickhouse-client --host 127.0.0.1 --port "$DATASTORE_NATIVE_PORT" -q "CREATE USER IF NOT EXISTS $datastore_user_identifier IDENTIFIED WITH plaintext_password BY '$datastore_password_sql'"
+  if ! clickhouse-client --host 127.0.0.1 --port "$DATASTORE_NATIVE_PORT" -q "GRANT CURRENT GRANTS ON *.* TO $datastore_user_identifier" >/dev/null 2>&1; then
+    clickhouse-client --host 127.0.0.1 --port "$DATASTORE_NATIVE_PORT" -q "GRANT ALL ON *.* TO $datastore_user_identifier WITH GRANT OPTION"
   fi
 }
 
@@ -509,12 +513,12 @@ ensure_cloud_dependencies() {
   ensure_migrate_binary
   ensure_postgres_running
   ensure_redis_running
-  ensure_clickhouse_running
+  ensure_datastore_running
   ensure_minio_running
 
   echo "Cloud dependencies are installed and running:"
   echo "- PostgreSQL on 127.0.0.1:$POSTGRES_PORT"
   echo "- Redis on 127.0.0.1:$REDIS_PORT"
-  echo "- ClickHouse HTTP on 127.0.0.1:$CLICKHOUSE_HTTP_PORT, native on 127.0.0.1:$CLICKHOUSE_NATIVE_PORT"
+  echo "- Datastore HTTP on 127.0.0.1:$DATASTORE_HTTP_PORT, native on 127.0.0.1:$DATASTORE_NATIVE_PORT"
   echo "- MinIO API on 127.0.0.1:$MINIO_API_PORT, console on 127.0.0.1:$MINIO_CONSOLE_PORT"
 }

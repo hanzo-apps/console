@@ -418,7 +418,7 @@ Use these current Langfuse files as repository templates:
 
 - PostgreSQL repository with project-scoped filters:
   `packages/shared/src/server/repositories/comments.ts`
-- ClickHouse repository with project-scoped filters and query helpers:
+- Datastore repository with project-scoped filters and query helpers:
   `packages/shared/src/server/repositories/traces.ts`
 - Repository tests:
   `web/src/__tests__/server/repositories/event-repository.servertest.ts`

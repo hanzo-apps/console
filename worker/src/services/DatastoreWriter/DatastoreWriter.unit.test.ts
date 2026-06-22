@@ -138,7 +138,7 @@ describe("DatastoreWriter", () => {
     expect(mockInsert).toHaveBeenCalledTimes(writer.maxAttempts);
     expect(logger.error.mock.calls.some((call) => call[0].includes("Max attempts reached"))).toBe(true);
     expect(writer["queue"][TableName.Traces]).toHaveLength(0);
-    expect(serverExports.recordIncrement).toHaveBeenCalledWith("langfuse.queue.clickhouse_writer.rows_dropped", 1, {
+    expect(serverExports.recordIncrement).toHaveBeenCalledWith("hanzo.queue.datastore_writer.rows_dropped", 1, {
       entity_type: TableName.Traces,
     });
   });

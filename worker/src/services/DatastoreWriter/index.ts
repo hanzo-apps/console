@@ -271,7 +271,7 @@ export class DatastoreWriter {
       recordId: context.recordId,
       fieldName: context.fieldName,
     });
-    recordIncrement("langfuse.clickhouse_writer.decimal64_clamped");
+    recordIncrement("hanzo.datastore_writer.decimal64_clamped");
     return result;
   }
 
@@ -303,7 +303,7 @@ export class DatastoreWriter {
               recordId: ctx.recordId,
               fieldName: "total_cost",
             });
-            recordIncrement("langfuse.clickhouse_writer.decimal64_clamped");
+            recordIncrement("hanzo.datastore_writer.decimal64_clamped");
           }
         }
         break;

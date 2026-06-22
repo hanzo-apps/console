@@ -7,7 +7,7 @@ Use root [AGENTS.md](../../AGENTS.md) for monorepo-level rules.
 
 - Shared domain, database, queue, and server utilities used by `web` and
   `worker`.
-- Primary owner of Postgres schema, ClickHouse schema, and queue payload
+- Primary owner of Postgres schema, Datastore schema, and queue payload
   contracts.
 
 ## Maintenance Contract
@@ -36,8 +36,8 @@ Use root [AGENTS.md](../../AGENTS.md) for monorepo-level rules.
   exact `EvalTemplate.id`. Latest-version family grouping is derived from
   `(projectId, name)` rather than stored on extra evaluator identity fields.
 - Prisma migrations: `prisma/migrations/*`
-- ClickHouse migrations: `clickhouse/migrations/{clustered,unclustered}/*`
-- Seeder and support scripts: `scripts/seeder/*`, `clickhouse/scripts/*`
+- Datastore migrations: `datastore/migrations/{clustered,unclustered}/*`
+- Seeder and support scripts: `scripts/seeder/*`, `datastore/scripts/*`
 
 ## Export Entry Points
 
@@ -46,7 +46,7 @@ Use root [AGENTS.md](../../AGENTS.md) for monorepo-level rules.
   helpers, eval/model-pricing helpers, and other frontend-safe utilities.
 - `@hanzo/console/src/server` via `src/server/index.ts`: server-only barrel
   for shared backend services, repositories, queue helpers/contracts, Redis and
-  ClickHouse helpers, auth helpers, logger/instrumentation, ingestion helpers,
+  Datastore helpers, auth helpers, logger/instrumentation, ingestion helpers,
   LLM execution helpers, and server test utilities.
 - `@hanzo/console/src/db` via `src/db.ts`: Prisma client singleton plus
   Prisma namespace/types for direct database access. Never route this into
@@ -85,7 +85,7 @@ the same PR.
 - Build: `pnpm --filter @hanzo/console run build`
 - Prisma generate: `pnpm --filter @hanzo/console run db:generate`
 - Prisma migrate (dev): `pnpm --filter @hanzo/console run db:migrate`
-- ClickHouse reset: `pnpm --filter @hanzo/console run ch:reset`
+- Datastore reset: `pnpm --filter @hanzo/console run ch:reset`
 
 ## Playbooks
 
@@ -97,10 +97,10 @@ the same PR.
 4. Update affected repository/query code under `src/server/repositories/*`.
 5. Add/adjust `web` and/or `worker` tests for changed behavior.
 
-### ClickHouse schema change
+### Datastore schema change
 
-1. Add migration under `clickhouse/migrations/*`.
-2. Update ClickHouse query/mapping logic in `src/server/clickhouse/*` and
+1. Add migration under `datastore/migrations/*`.
+2. Update Datastore query/mapping logic in `src/server/datastore/*` and
    related repositories.
 3. Validate ingestion/read path impact in both `web` and `worker`.
 4. If the change affects columns, types, or nullability of tables read by blob
