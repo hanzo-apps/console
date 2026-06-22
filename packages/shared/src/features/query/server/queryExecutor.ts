@@ -1,7 +1,4 @@
-import {
-  queryClickhouse,
-  type ClickhouseQueryOpts,
-} from "../../../server/repositories/clickhouse";
+import { queryClickhouse, type ClickhouseQueryOpts } from "../../../server/repositories/clickhouse";
 import { measureAndReturn } from "../../../server/clickhouse/measureAndReturn";
 import { type PreferredClickhouseService } from "../../../server/clickhouse/client";
 import { QueryBuilder } from "./queryBuilder";
@@ -24,34 +21,22 @@ export async function prepareExecuteQuery(opts: {
   version?: ViewVersion;
   enableSingleLevelOptimization?: boolean;
 }): Promise<PreparedQuery> {
-  const {
-    projectId,
-    query,
-    version = "v1",
-    enableSingleLevelOptimization = false,
-  } = opts;
+  const { projectId, query, version = "v1", enableSingleLevelOptimization = false } = opts;
 
-  const chartConfig =
-    (query as unknown as { config?: QueryType["chartConfig"] }).config ??
-    query.chartConfig;
+  const chartConfig = (query as unknown as { config?: QueryType["chartConfig"] }).config ?? query.chartConfig;
   const queryBuilder = new QueryBuilder(chartConfig, version);
 
   const { query: compiledQuery, parameters } = await queryBuilder.build(
     query,
     projectId,
-    enableSingleLevelOptimization ||
-      env.LANGFUSE_ENABLE_SINGLE_LEVEL_QUERY_OPTIMIZATION === "true",
+    enableSingleLevelOptimization || env.LANGFUSE_ENABLE_SINGLE_LEVEL_QUERY_OPTIMIZATION === "true",
   );
 
   // v2 score views are score-based, but can add events_core joins for
   // trace/observation dimensions. Route based on the compiled query so only
   // generated queries that actually touch events use the events readonly pool.
-  const usesEventsTable =
-    compiledQuery.includes("events_core") ||
-    compiledQuery.includes("events_full");
-  const preferredClickhouseService = usesEventsTable
-    ? ("EventsReadOnly" as const)
-    : undefined;
+  const usesEventsTable = compiledQuery.includes("events_core") || compiledQuery.includes("events_full");
+  const preferredClickhouseService = usesEventsTable ? ("EventsReadOnly" as const) : undefined;
 
   const tags = {
     feature: "custom-queries",
@@ -62,12 +47,8 @@ export async function prepareExecuteQuery(opts: {
 
   const clickhouseSettings: Record<string, string> = {
     date_time_output_format: "iso",
-    ...(env.CLICKHOUSE_USE_QUERY_CONDITION_CACHE === "true"
-      ? { use_query_condition_cache: "true" }
-      : {}),
-    max_bytes_before_external_group_by: String(
-      env.CLICKHOUSE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY,
-    ),
+    ...(env.DATASTORE_USE_QUERY_CONDITION_CACHE === "true" ? { use_query_condition_cache: "true" } : {}),
+    max_bytes_before_external_group_by: String(env.DATASTORE_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY),
   };
 
   return {
@@ -81,9 +62,7 @@ export async function prepareExecuteQuery(opts: {
   };
 }
 
-export function toClickhouseQueryOpts(
-  prepared: PreparedQuery,
-): Omit<ClickhouseQueryOpts, "allowLegacyEventsRead"> {
+export function toClickhouseQueryOpts(prepared: PreparedQuery): Omit<ClickhouseQueryOpts, "allowLegacyEventsRead"> {
   return {
     query: prepared.compiledQuery,
     params: prepared.parameters,

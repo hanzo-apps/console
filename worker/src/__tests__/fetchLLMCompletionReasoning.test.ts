@@ -1,18 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AIMessage,
-  AIMessageChunk,
-} from "../../../packages/shared/node_modules/@langchain/core/messages";
+import { AIMessage, AIMessageChunk } from "../../../packages/shared/node_modules/@langchain/core/messages";
 
 // Real AIMessage(Chunk) instances are required because the production code
 // reads `message.contentBlocks`, which is a class getter that dispatches to
 // `@langchain/core`'s registered translator based on `response_metadata.model_provider`.
 // Plain object mocks bypass the translator and would leave raw
 // `reasoning_content` blocks unstripped.
-function bedrockAIMessage(params: {
-  content: AIMessage["content"];
-  tool_calls?: AIMessage["tool_calls"];
-}): AIMessage {
+function bedrockAIMessage(params: { content: AIMessage["content"]; tool_calls?: AIMessage["tool_calls"] }): AIMessage {
   return new AIMessage({
     content: params.content,
     tool_calls: params.tool_calls,
@@ -20,9 +14,7 @@ function bedrockAIMessage(params: {
   });
 }
 
-function bedrockAIMessageChunk(params: {
-  content: AIMessage["content"];
-}): AIMessageChunk {
+function bedrockAIMessageChunk(params: { content: AIMessage["content"] }): AIMessageChunk {
   return new AIMessageChunk({
     content: params.content,
     response_metadata: { model_provider: "bedrock-converse" },
@@ -39,26 +31,20 @@ const bindToolsInvokeMock = vi.fn();
 const bindToolsMock = vi.fn().mockReturnValue({
   invoke: bindToolsInvokeMock,
 });
-const chatBedrockConverseConstructorMock = vi
-  .fn()
-  .mockImplementation(function () {
-    return {
-      invoke: invokeMock,
-      bindTools: bindToolsMock,
-      pipe: pipeMock,
-    };
-  });
+const chatBedrockConverseConstructorMock = vi.fn().mockImplementation(function () {
+  return {
+    invoke: invokeMock,
+    bindTools: bindToolsMock,
+    pipe: pipeMock,
+  };
+});
 
 class MockLLMCompletionError extends Error {
   responseStatusCode: number;
   isRetryable: boolean;
   blockReason: null;
 
-  constructor(params: {
-    message: string;
-    responseStatusCode?: number;
-    isRetryable?: boolean;
-  }) {
+  constructor(params: { message: string; responseStatusCode?: number; isRetryable?: boolean }) {
     super(params.message);
     this.name = "LLMCompletionError";
     this.responseStatusCode = params.responseStatusCode ?? 500;
@@ -75,12 +61,11 @@ class MockLLMCompletionError extends Error {
   }
 }
 
-process.env.CLICKHOUSE_URL ??= "http://localhost:8123";
-process.env.CLICKHOUSE_USER ??= "default";
-process.env.CLICKHOUSE_PASSWORD ??= "password";
+process.env.DATASTORE_URL ??= "http://localhost:8123";
+process.env.DATASTORE_USER ??= "default";
+process.env.DATASTORE_PASSWORD ??= "password";
 process.env.LANGFUSE_S3_EVENT_UPLOAD_BUCKET ??= "test-bucket";
-process.env.ENCRYPTION_KEY ??=
-  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.ENCRYPTION_KEY ??= "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 describe("fetchLLMCompletion Bedrock reasoning blocks", () => {
   let originalCloudRegion: string | undefined;
@@ -105,8 +90,7 @@ describe("fetchLLMCompletion Bedrock reasoning blocks", () => {
     }));
 
     ({ encrypt } = await import("../../../packages/shared/src/encryption"));
-    ({ fetchLLMCompletion } =
-      await import("../../../packages/shared/src/server/llm/fetchLLMCompletion"));
+    ({ fetchLLMCompletion } = await import("../../../packages/shared/src/server/llm/fetchLLMCompletion"));
   });
 
   afterEach(() => {
