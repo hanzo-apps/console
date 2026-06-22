@@ -6,23 +6,23 @@ ENV CGO_ENABLED=0 \
     GOBIN=/out \
     GOOS=${TARGETOS} \
     GOARCH=${TARGETARCH}
-# Build only the Datastore migrate CLI (Go build tag is the literal upstream name) used in this repo.
-RUN /usr/local/go/bin/go install -trimpath -tags 'clickhouse' -ldflags='-s -w' \
-    github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+# Build the Hanzo Datastore migrate CLI from the hanzoai/migrate fork, which
+# provides the `datastore` build tag + `datastore://` URL scheme.
+RUN git clone --depth 1 --branch v4.19.2 https://github.com/hanzoai/migrate.git /src && \
+    cd /src && \
+    /usr/local/go/bin/go build -trimpath -tags 'datastore file' -ldflags='-s -w' -o /out/migrate ./cmd/migrate
 
 FROM mcr.microsoft.com/devcontainers/universal:2
 
-# Install golang-migrate with Hanzo Datastore driver support
-RUN curl -L https://github.com/hanzoai/migrate/releases/download/v4.19.2/migrate.linux-amd64.tar.gz | tar xvz && \
-    chmod +x migrate && \
-    mv migrate /usr/local/bin/migrate
+# Hanzo Datastore migrate binary (built above with `datastore` driver only).
+COPY --from=migrate-builder /out/migrate /usr/local/bin/migrate
 
 # Activate the repo's pinned pnpm via Corepack
 RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
 
-# Install Datastore (the upstream installer script is at clickhouse.com)
-RUN curl https://clickhouse.com/ | sh && \
-    sudo ./clickhouse install
+# NOTE: the Datastore server itself is NOT installed in the dev container.
+# Use docker-compose.dev.yml to bring up `ghcr.io/hanzoai/datastore` on port 8123.
+# The `migrate` binary above is all the dev container needs to apply schema.
 
 # Install agent CLIs used in this repo
 RUN npm install -g @anthropic-ai/claude-code @openai/codex
