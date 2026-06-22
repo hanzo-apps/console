@@ -12,7 +12,7 @@ FROM golang:1.24-alpine AS migrate-builder
 RUN apk add --no-cache git
 RUN git clone --depth 1 --branch v4.19.2 https://github.com/hanzoai/migrate.git /src
 WORKDIR /src
-RUN CGO_ENABLED=0 go build -tags 'clickhouse datastore file' -ldflags='-s -w' -o /usr/local/bin/migrate ./cmd/migrate
+RUN CGO_ENABLED=0 go build -tags 'clickhouse file' -ldflags='-s -w' -o /usr/local/bin/migrate ./cmd/migrate
 
 FROM alpine AS base
 RUN npm install turbo@^2.8.10 --global
