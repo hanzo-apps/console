@@ -19,6 +19,9 @@ export type ConsoleConfig = {
   iamOrgName: string
   /** IAM OAuth client id for this application. */
   iamClientId: string
+  /** Billing/account portal (hanzoai/billing over the commerce backend). The
+   * console LINKS here — billing is not reimplemented in the console. */
+  billingUrl: string
 }
 
 export const config: ConsoleConfig = {
@@ -27,6 +30,7 @@ export const config: ConsoleConfig = {
   iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? 'hanzo-console',
   iamOrgName: process.env.NEXT_PUBLIC_IAM_ORG_NAME ?? 'hanzo',
   iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? '',
+  billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? 'https://billing.hanzo.ai'),
 }
 
 export const branding = {

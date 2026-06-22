@@ -15,8 +15,10 @@ import {
   Boxes,
   Database,
   MessageSquare,
+  CreditCard,
 } from '@hanzogui/lucide-icons-2'
 
+import { config } from '~/config'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
@@ -109,3 +111,20 @@ export const productModules: ProductModule[] = [
 /** Look up a module by id (base path segment). */
 export const findModule = (id: string): ProductModule | undefined =>
   productModules.find((m) => m.id === id)
+
+/** A nav item that opens an external Hanzo surface (not an in-console route). */
+export type ExternalNavLink = {
+  id: string
+  label: string
+  icon: ProductIcon
+  href: string
+}
+
+/**
+ * External products surfaced in the nav but owned by other services — opened in
+ * a new tab, never reimplemented here. Billing is hanzoai/commerce (backend) +
+ * hanzoai/billing (portal); the console links to it.
+ */
+export const externalLinks: ExternalNavLink[] = [
+  { id: 'billing', label: 'Billing', icon: CreditCard, href: config.billingUrl },
+]

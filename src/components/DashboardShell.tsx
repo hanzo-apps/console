@@ -14,7 +14,7 @@ import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import { LogOut } from '@hanzogui/lucide-icons-2'
 
 import { branding } from '~/config'
-import { productModules } from '~/lib/products/registry'
+import { productModules, externalLinks } from '~/lib/products/registry'
 import { useSession } from '~/lib/auth/session'
 
 export function DashboardShell({ children }: { children: ReactNode }) {
@@ -55,6 +55,26 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   size="$3"
                 >
                   {m.label}
+                </Button>
+              )
+            })}
+
+            {/* External Hanzo surfaces (e.g. Billing → billing.hanzo.ai). Opened
+                in a new tab — owned by other services, not reimplemented here. */}
+            {externalLinks.map((l) => {
+              const Icon = l.icon
+              return (
+                <Button
+                  key={l.id}
+                  onPress={() => {
+                    if (typeof window !== 'undefined') window.open(l.href, '_blank', 'noopener')
+                  }}
+                  bg="transparent"
+                  justify="flex-start"
+                  icon={<Icon size={18} />}
+                  size="$3"
+                >
+                  {l.label}
                 </Button>
               )
             })}
