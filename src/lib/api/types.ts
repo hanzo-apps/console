@@ -150,6 +150,8 @@ export type Message = Owned & {
 export type Account = {
   owner: string
   name: string
+  /** casibase user type; "anonymous-user" means no real sign-in. */
+  type?: string
   displayName?: string
   email?: string
   avatar?: string
