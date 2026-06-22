@@ -13,23 +13,18 @@ const chatAnthropicConstructorMock = vi.fn().mockImplementation(function () {
   };
 });
 
-process.env.CLICKHOUSE_URL ??= "http://localhost:8123";
-process.env.CLICKHOUSE_USER ??= "default";
-process.env.CLICKHOUSE_PASSWORD ??= "password";
+process.env.DATASTORE_URL ??= "http://localhost:8123";
+process.env.DATASTORE_USER ??= "default";
+process.env.DATASTORE_PASSWORD ??= "password";
 process.env.LANGFUSE_S3_EVENT_UPLOAD_BUCKET ??= "test-bucket";
-process.env.ENCRYPTION_KEY ??=
-  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.ENCRYPTION_KEY ??= "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 class MockLLMCompletionError extends Error {
   responseStatusCode: number;
   isRetryable: boolean;
   blockReason: null;
 
-  constructor(params: {
-    message: string;
-    responseStatusCode?: number;
-    isRetryable?: boolean;
-  }) {
+  constructor(params: { message: string; responseStatusCode?: number; isRetryable?: boolean }) {
     super(params.message);
     this.name = "LLMCompletionError";
     this.responseStatusCode = params.responseStatusCode ?? 500;
@@ -55,24 +50,19 @@ describe("fetchLLMCompletion provider error classification", () => {
     chatAnthropicConstructorMock.mockClear();
     vi.resetModules();
 
-    vi.doMock(
-      "../../../packages/shared/node_modules/@langchain/anthropic",
-      () => ({
-        ChatAnthropic: chatAnthropicConstructorMock,
-      }),
-    );
+    vi.doMock("../../../packages/shared/node_modules/@langchain/anthropic", () => ({
+      ChatAnthropic: chatAnthropicConstructorMock,
+    }));
     vi.doMock("../../../packages/shared/src/server/llm/errors", () => ({
       LLMCompletionError: MockLLMCompletionError,
     }));
 
     ({ encrypt } = await import("../../../packages/shared/src/encryption"));
-    ({ fetchLLMCompletion } =
-      await import("../../../packages/shared/src/server/llm/fetchLLMCompletion"));
+    ({ fetchLLMCompletion } = await import("../../../packages/shared/src/server/llm/fetchLLMCompletion"));
   });
 
   it("treats wrapped Anthropic context overflow errors as non-retryable", async () => {
-    const { ContextOverflowError } =
-      await import("../../../packages/shared/node_modules/@langchain/core/errors");
+    const { ContextOverflowError } = await import("../../../packages/shared/node_modules/@langchain/core/errors");
     const cause = new Error(
       '400 {"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long: 202089 tokens > 200000 maximum"},"request_id":"req_123"}',
     );
