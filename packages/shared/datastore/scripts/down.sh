@@ -14,7 +14,7 @@ if ! command -v migrate &> /dev/null
 then
     echo "Error: golang-migrate is not installed or not in PATH."
     echo "Install from https://github.com/hanzoai/migrate/releases (includes Datastore driver)."
-    echo "Or build from source: go install -tags 'clickhouse file' github.com/golang-migrate/migrate/v4/cmd/migrate@latest"
+    echo "Or build from source: go install -tags 'datastore file' github.com/hanzoai/migrate/cmd/migrate@v4.19.2"
     exit 1
 fi
 
