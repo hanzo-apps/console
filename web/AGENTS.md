@@ -51,7 +51,7 @@ Use root [AGENTS.md](../AGENTS.md) for monorepo-level rules.
 - See `../packages/shared/AGENTS.md` for the full shared export map and what
   each entrypoint contains.
 - For the higher-level platform topology across web, worker, Postgres,
-  ClickHouse, Redis, and S3, also read the architecture handbook:
+  Datastore, Redis, and S3, also read the architecture handbook:
   [langfuse.com/handbook/product-engineering/architecture](https://langfuse.com/handbook/product-engineering/architecture)
   with source markdown in
   `../langfuse-docs/content/handbook/product-engineering/architecture.mdx`

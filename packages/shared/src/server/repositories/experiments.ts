@@ -327,7 +327,7 @@ const getExperimentsFromEventsGeneric = async <T>(props: FetchExperimentsFromEve
 // ============================================================================
 
 /**
- * Return type for experiment item rows from ClickHouse.
+ * Return type for experiment item rows from Datastore.
  */
 export type ExperimentItemEventsDataReturnType = {
   item_id: string;
@@ -362,7 +362,7 @@ export type GroupedExperimentItem = {
 };
 
 /**
- * Return type for experiment item metrics from ClickHouse.
+ * Return type for experiment item metrics from Datastore.
  */
 export type ExperimentItemMetricsReturnType = {
   experiment_item_id: string;

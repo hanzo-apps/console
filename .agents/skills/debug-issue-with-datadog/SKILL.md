@@ -115,7 +115,7 @@ do not invent root causes.
   [`datadog-query-recipes`](../datadog-query-recipes/SKILL.md)
 - Backend layout, queue contracts, instrumentation patterns:
   [`backend-dev-guidelines`](../backend-dev-guidelines/SKILL.md)
-- ClickHouse-related findings (memory ceilings, JOIN spills, slow queries):
-  [`clickhouse-best-practices`](../clickhouse-best-practices/SKILL.md)
+- Datastore-related findings (memory ceilings, JOIN spills, slow queries):
+  [`datastore-best-practices`](../datastore-best-practices/SKILL.md)
 - Once a fix is identified and you switch to implementation, hand off to the
   package `AGENTS.md` for the affected directory.

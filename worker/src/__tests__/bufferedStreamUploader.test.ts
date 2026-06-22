@@ -209,11 +209,11 @@ describe("BufferedStreamUploader", () => {
 
       const errorStream = new Readable({
         read() {
-          this.destroy(new Error("ClickHouse connection timeout"));
+          this.destroy(new Error("Datastore connection timeout"));
         },
       });
 
-      await expect(uploader.upload(errorStream)).rejects.toThrow("ClickHouse connection timeout");
+      await expect(uploader.upload(errorStream)).rejects.toThrow("Datastore connection timeout");
 
       const methods = mock.calls.map((c) => c.method);
       expect(methods).toContain("initialize");

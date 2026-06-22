@@ -259,7 +259,7 @@ describe("Fetch datasets for UI presentation", () => {
       return {
         id: run.id,
         name: run.name,
-        // Use ClickHouse metrics if available, otherwise use defaults for runs without dataset_run_items_rmt
+        // Use Datastore metrics if available, otherwise use defaults for runs without dataset_run_items_rmt
         countRunItems: run.countRunItems ?? 0,
         avgTotalCost: run.avgTotalCost ?? null,
         totalCost: run.totalCost ?? null,
@@ -437,7 +437,7 @@ describe("Fetch datasets for UI presentation", () => {
       return {
         id: run.id,
         name: run.name,
-        // Use ClickHouse metrics if available, otherwise use defaults for runs without dataset_run_items_rmt
+        // Use Datastore metrics if available, otherwise use defaults for runs without dataset_run_items_rmt
         countRunItems: run.countRunItems ?? 0,
         avgTotalCost: run.avgTotalCost ?? null,
         totalCost: run.totalCost ?? null,

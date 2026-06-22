@@ -85,9 +85,9 @@ Pick 2–3 metrics that match the subsystem. Common ones:
   `resource_name:"process <queue-name>"`.
 - `trace.http_request.errors` and `trace.http_request.duration` for HTTP
   handlers (`service:web`).
-- ClickHouse: cluster-level `clickhouse.query.duration`,
-  `clickhouse.memory_usage` — the worker doesn't emit these directly, they
-  come from the `clickhouse` integration in the infra repo.
+- Datastore: cluster-level (upstream ClickHouse-emitted, untouched) `clickhouse.query.duration`,
+  `clickhouse.memory_usage` (upstream metric name) — the worker doesn't emit these directly, they
+  come from the `datastore` integration in the infra repo.
 - Postgres: `aurora.databaseconnections`, `aurora.deadlocks` — relevant when
   the symptom is `connection_limit` / `connection pool` errors.
 

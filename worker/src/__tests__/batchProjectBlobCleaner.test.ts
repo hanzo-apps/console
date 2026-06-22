@@ -113,7 +113,7 @@ describe("BatchProjectBlobCleaner", () => {
     expect(getCalledProjectIds()).not.toContain(projectId);
   });
 
-  it("should skip soft-deleted project with no blob refs in ClickHouse at all", async () => {
+  it("should skip soft-deleted project with no blob refs in Datastore at all", async () => {
     const { projectId } = await createOrgProjectAndApiKey();
 
     vi.mocked(getDeletedProjects).mockResolvedValue([{ id: projectId }]);

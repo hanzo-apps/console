@@ -1632,7 +1632,7 @@ describe("/api/public/datasets and /api/public/dataset-items API Endpoints", () 
     }
 
     // Wrapping the GET run response verification inside a waitForExpect block ensures
-    // the test waits for eventual consistency (from asynchronous writes to ClickHouse for dataset run items)
+    // the test waits for eventual consistency (from asynchronous writes to Datastore for dataset run items)
     await waitForExpect(async () => {
       const runItems = await getDatasetRunItemsByDatasetIdCh({
         projectId,

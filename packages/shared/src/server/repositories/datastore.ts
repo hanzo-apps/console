@@ -343,7 +343,7 @@ export async function queryDatastore<T>(opts: DatastoreQueryOpts): Promise<T[]> 
     span.setAttribute("db.query.text", opts.query);
     span.setAttribute("db.operation.name", "SELECT");
 
-    // ClickHouse 26.x DateTime64(3) params reject trailing 'Z' in ISO timestamps.
+    // Datastore 26.x DateTime64(3) params reject trailing 'Z' in ISO timestamps.
     // Strip 'Z' from all ISO timestamp strings globally to prevent BAD_QUERY_PARAMETER errors.
     const sanitizedParams = opts.params
       ? Object.fromEntries(

@@ -19,8 +19,8 @@ feature.
   the repo's canonical review rules.
 - Read root [`AGENTS.md`](../../../AGENTS.md) and the nearest package
   `AGENTS.md` for the files under review.
-- If the review touches ClickHouse, also use the shared
-  `clickhouse-best-practices` skill.
+- If the review touches Datastore, also use the shared
+  `datastore-best-practices` skill.
 - If the review touches backend code, also use the shared
   `backend-dev-guidelines` skill where relevant.
 
@@ -45,7 +45,7 @@ Focus on:
 
 Use `references/review-checklist.md` for Langfuse-specific checks such as:
 
-- ClickHouse and Postgres migration expectations
+- Datastore and Postgres migration expectations
 - project-scoped tenant isolation checks
 - API/Fern consistency
 - banner-offset UI positioning

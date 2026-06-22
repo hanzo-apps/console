@@ -4,7 +4,7 @@ import {
   isProgressRow,
   isRow,
   isException,
-  ClickHouseResourceError,
+  DatastoreResourceError,
   queryDatastoreWithProgress,
 } from "@hanzo/console/src/server";
 import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@hanzo/console";
@@ -154,11 +154,11 @@ export default async function handler(
         res.write(formatSSEEvent({ type: "row", row: event.row }));
       } else if (isException(event)) {
         const isResource =
-          ClickHouseResourceError.wrapIfResourceError(
+          DatastoreResourceError.wrapIfResourceError(
             new Error(event.exception),
-          ) instanceof ClickHouseResourceError;
+          ) instanceof DatastoreResourceError;
         logger.error(
-          `[execute-query-stream] ClickHouse exception: ${event.exception}`,
+          `[execute-query-stream] Datastore exception: ${event.exception}`,
           { projectId },
         );
         const userMessage = isResource
@@ -179,7 +179,7 @@ export default async function handler(
         projectId,
       });
       const message =
-        error instanceof ClickHouseResourceError
+        error instanceof DatastoreResourceError
           ? RESOURCE_LIMIT_ERROR_MESSAGE
           : error instanceof Error
             ? error.message

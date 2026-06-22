@@ -374,8 +374,8 @@ describe("BlobStorageIntegrationProcessingJob", () => {
     });
 
     it("should exclude columns for deselected exportFieldGroups", async () => {
-      // Regression test for two known ClickHouse/enrichment leaks:
-      // 1. ClickHouse always returns {} for unselected Map columns (metadata)
+      // Regression test for two known Datastore/enrichment leaks:
+      // 1. Datastore always returns {} for unselected Map columns (metadata)
       // 2. enrichObservationStream was writing latency:null even when metrics not selected
       const { projectId } = await createOrgProjectAndApiKey();
       s3Prefix = projectId;

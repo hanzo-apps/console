@@ -23,7 +23,7 @@ const TRACE_CONTEXT_FIELDS = [
   "public",
 ] as const;
 
-/** Minimal complete record — all required ClickHouse columns present */
+/** Minimal complete record — all required Datastore columns present */
 function makeRecord(
   overrides: Partial<EventsObservationRecordReadType> = {},
 ): EventsObservationRecordReadType {
@@ -56,7 +56,7 @@ function makeRecord(
 
 describe("convertEventsObservation", () => {
   describe("complete: false (V2 partial path)", () => {
-    it("omits trace_context keys that are absent from the ClickHouse row", () => {
+    it("omits trace_context keys that are absent from the Datastore row", () => {
       const record: Partial<EventsObservationRecordReadType> = {
         id: "obs-1",
         trace_id: "trace-1",
@@ -72,7 +72,7 @@ describe("convertEventsObservation", () => {
       for (const field of TRACE_CONTEXT_FIELDS) {
         expect(
           result,
-          `key "${field}" must be absent when not in the ClickHouse row`,
+          `key "${field}" must be absent when not in the Datastore row`,
         ).not.toHaveProperty(field);
       }
     });

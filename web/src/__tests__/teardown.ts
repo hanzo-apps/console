@@ -6,7 +6,7 @@ export default async function teardown() {
     redis.disconnect();
   }
 
-  await ClickHouseClientManager.getInstance().closeAllConnections();
+  await DatastoreClientManager.getInstance().closeAllConnections();
 
   logger.debug("Teardown complete");
 }

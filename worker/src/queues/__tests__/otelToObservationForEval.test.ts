@@ -693,7 +693,7 @@ describe("OTEL to ObservationForEval Schema Validation", () => {
       });
     });
 
-    it("should create ClickHouse-valid event records for event-based OTel spans with available tools", async () => {
+    it("should create Datastore-valid event records for event-based OTel spans with available tools", async () => {
       const tool = {
         type: "function",
         name: "calculator",

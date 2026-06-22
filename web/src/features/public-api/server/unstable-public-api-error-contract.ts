@@ -10,7 +10,7 @@ import {
   UnauthorizedError,
   type RateLimitResult,
 } from "@hanzo/console";
-import { ClickHouseResourceError } from "@hanzo/console/src/server";
+import { DatastoreResourceError } from "@hanzo/console/src/server";
 import type {
   UnstablePublicApiErrorCodeType,
   UnstablePublicApiErrorDetailsType,
@@ -208,12 +208,12 @@ export function toUnstablePublicApiError(
     });
   }
 
-  if (error instanceof ClickHouseResourceError) {
+  if (error instanceof DatastoreResourceError) {
     return createUnstablePublicApiError({
       httpCode: 422,
       code: "unprocessable_content",
       message: [
-        ClickHouseResourceError.ERROR_ADVICE_MESSAGE,
+        DatastoreResourceError.ERROR_ADVICE_MESSAGE,
         "See https://langfuse.com/docs/api-and-data-platform/features/public-api for more details.",
       ].join("\n"),
     });

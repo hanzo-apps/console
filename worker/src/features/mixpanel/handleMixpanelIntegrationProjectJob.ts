@@ -26,7 +26,7 @@ type MixpanelExecutionConfig = {
   maxTimestamp: Date;
   decryptedMixpanelProjectToken: string;
   mixpanelRegion: string;
-  // First attempt uses ClickHouse `auto` join algorithm. We only fall back to
+  // First attempt uses Datastore `auto` join algorithm. We only fall back to
   // `grace_hash` (slower, but spills to disk) on retries so an OOM on the first
   // attempt recovers without manual intervention while healthy syncs stay fast.
   useGraceHash: boolean;

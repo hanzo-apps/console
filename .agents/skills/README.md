@@ -65,7 +65,7 @@ Open: [skill-creator/SKILL.md](skill-creator/SKILL.md)
 
 Use for:
 - Langfuse Cloud infrastructure cost structure
-- AWS versus ClickHouse cost splits and cost drivers
+- AWS versus Datastore cost splits and cost drivers
 - Metabase infra cost dashboard and cost marts
 - daily cost per tracing event and cost regression analysis
 
@@ -98,7 +98,7 @@ Use for:
 - tRPC routers and procedures
 - public API endpoints
 - worker queue processors
-- Prisma and ClickHouse backed services
+- Prisma and Datastore backed services
 - backend auth, validation, observability, and tests
 
 Open: [backend-dev-guidelines/SKILL.md](backend-dev-guidelines/SKILL.md)
@@ -153,14 +153,14 @@ Use for:
 
 Open: [changelog-writing/SKILL.md](changelog-writing/SKILL.md)
 
-### clickhouse-best-practices
+### datastore-best-practices
 
 Use for:
-- ClickHouse schema, query, or configuration review
-- ClickHouse migrations under `packages/shared/clickhouse/**`
-- applying the repo-specific ClickHouse rules layered on top of upstream best practices
+- Datastore schema, query, or configuration review
+- Datastore migrations under `packages/shared/datastore/**`
+- applying the repo-specific Datastore rules layered on top of upstream best practices
 
-Open: [clickhouse-best-practices/SKILL.md](clickhouse-best-practices/SKILL.md)
+Open: [datastore-best-practices/SKILL.md](datastore-best-practices/SKILL.md)
 
 ### debug-issue-with-datadog
 

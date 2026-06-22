@@ -1,6 +1,6 @@
 # Replay Ingestion Events from S3 (v2)
 
-Replays failed ingestion events by reading S3 keys from a CSV and submitting them to Langfuse via an admin API endpoint. This replaces the [v1 script](../replayIngestionEvents/README.md), which required direct Redis, ClickHouse, and PostgreSQL access plus a full repo clone.
+Replays failed ingestion events by reading S3 keys from a CSV and submitting them to Langfuse via an admin API endpoint. This replaces the [v1 script](../replayIngestionEvents/README.md), which required direct Redis, datastore, and PostgreSQL access plus a full repo clone.
 
 v2 only requires the Langfuse host URL, an admin API key, and a CSV file exported from Athena.
 
@@ -251,7 +251,7 @@ Enqueued to `OtelIngestionQueue`.
 
 | | v1 | v2 |
 |-|----|----|
-| Infrastructure access | Redis, ClickHouse, PostgreSQL, S3 | Langfuse host URL only |
+| Infrastructure access | Redis, datastore, PostgreSQL, S3 | Langfuse host URL only |
 | Setup | Full repo clone, `pnpm install`, `.env` file | `npx tsx` + env vars |
 | Event delivery | Direct BullMQ `addBulk` to Redis | HTTP POST to admin API |
 | Resume support | Manual (split files, rerun) | Built-in checkpoint/resume |

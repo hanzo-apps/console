@@ -85,7 +85,7 @@ import {
   getTraceById,
   logger,
   contextWithHanzoProps,
-  ClickHouseResourceError,
+  DatastoreResourceError,
 } from "@hanzo/console/src/server";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { getHTTPStatusCodeFromError } from "@trpc/server/http";
@@ -155,12 +155,12 @@ const withErrorHandling = t.middleware(async ({ ctx, next }) => {
   const res = await next({ ctx }); // pass the context to the next middleware
 
   if (!res.ok) {
-    if (res.error.cause instanceof ClickHouseResourceError) {
-      // Surface ClickHouse errors using an advice message
+    if (res.error.cause instanceof DatastoreResourceError) {
+      // Surface Datastore errors using an advice message
       // which is supposed to provide a bit of guidance to the user.
       res.error = new TRPCError({
         code: "SERVICE_UNAVAILABLE",
-        message: ClickHouseResourceError.ERROR_ADVICE_MESSAGE,
+        message: DatastoreResourceError.ERROR_ADVICE_MESSAGE,
         // Keep the original error, it will be removed by `errorFormatter`
         cause: res.error.cause,
       });

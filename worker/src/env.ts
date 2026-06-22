@@ -1,4 +1,4 @@
-import { applyDatastoreEnvBackCompat, removeEmptyEnvVariables } from "@hanzo/console";
+import { removeEmptyEnvVariables } from "@hanzo/console";
 import { z } from "zod/v4";
 
 const EnvSchema = z.object({
@@ -218,4 +218,4 @@ const EnvSchema = z.object({
 export const env: z.infer<typeof EnvSchema> =
   process.env.DOCKER_BUILD === "1" // eslint-disable-line turbo/no-undeclared-env-vars
     ? (process.env as any)
-    : EnvSchema.parse(applyDatastoreEnvBackCompat(removeEmptyEnvVariables(process.env)));
+    : EnvSchema.parse(removeEmptyEnvVariables(process.env));

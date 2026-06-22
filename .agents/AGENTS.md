@@ -37,7 +37,7 @@ evaluating, and debugging AI applications.
   `.agents/skills/skill-creator/SKILL.md`, then
   `.agents/skills/agent-setup-maintenance/SKILL.md` for repo sync/check
   requirements.
-- Langfuse Cloud cost structure, infra spend, AWS/ClickHouse cost splits, or
+- Langfuse Cloud cost structure, infra spend, AWS/Datastore cost splits, or
   Metabase cost marts:
   `.agents/skills/analyze-cloud-costs/SKILL.md`
 - Production telemetry research, Datadog query recipes, tenant/public API usage
@@ -62,8 +62,8 @@ evaluating, and debugging AI applications.
   `.agents/skills/weekly-production-review/SKILL.md`
 - Changelog drafting for completed feature branches:
   `.agents/skills/changelog-writing/SKILL.md`
-- ClickHouse schema/query review:
-  `.agents/skills/clickhouse-best-practices/SKILL.md`
+- Datastore schema/query review:
+  `.agents/skills/datastore-best-practices/SKILL.md`
 - Monorepo/Turbo task graph changes:
   `.agents/skills/turborepo/SKILL.md`
 - pnpm dependency upgrades, package-version bumps, or `minimumReleaseAgeExclude`
@@ -106,8 +106,8 @@ langfuse/
 - High-signal shared entry points:
   - Domain models: `packages/shared/src/domain/{observations,traces,scores}.ts`
   - Postgres schema: `packages/shared/prisma/schema.prisma`
-  - ClickHouse migrations:
-    `packages/shared/clickhouse/migrations/{clustered,unclustered}/*.sql`
+  - Datastore migrations:
+    `packages/shared/datastore/migrations/{clustered,unclustered}/*.sql`
 - Architecture handbook:
   [langfuse.com/handbook/product-engineering/architecture](https://langfuse.com/handbook/product-engineering/architecture)
   with source markdown in the sibling docs checkout at
@@ -135,7 +135,7 @@ Minimum verification matrix:
 | `web/**` only | `pnpm --filter web run lint` + targeted web tests |
 | `worker/**` only | `pnpm --filter worker run lint` + targeted worker tests |
 | `packages/shared/**` (non-schema) | `pnpm --filter @hanzo/console run lint` + one targeted web check + one targeted worker check |
-| `packages/shared/prisma/**` or `packages/shared/clickhouse/**` | `pnpm --filter @hanzo/console run lint` + `pnpm run db:generate` + targeted web/worker regressions |
+| `packages/shared/prisma/**` or `packages/shared/datastore/**` | `pnpm --filter @hanzo/console run lint` + `pnpm run db:generate` + targeted web/worker regressions |
 | Public API contract (`web/src/pages/api/public/**`, `web/src/features/public-api/types/**`, `fern/apis/**`) | web lint + targeted server API tests + Fern update/regeneration; never hand-edit `generated/**` |
 | Cross-package refactor (`web` + `worker` + `shared`) | `pnpm run lint` + `pnpm run typecheck` + targeted tests per impacted package |
 

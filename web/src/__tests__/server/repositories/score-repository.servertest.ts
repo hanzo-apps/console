@@ -904,7 +904,7 @@ describe("Datastore Scores Repository Test", () => {
   });
 
   describe("TEXT scores", () => {
-    it("should round-trip a TEXT score through ClickHouse", async () => {
+    it("should round-trip a TEXT score through Datastore", async () => {
       const scoreId = v4();
       const traceId = v4();
 

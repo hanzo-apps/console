@@ -33,7 +33,7 @@ vi.mock("../../../features/evals/server/unstable-public-api/queries", () => ({
 vi.mock("@hanzo/console/src/server", async () => ({
   ...(await vi.importActual("@hanzo/console/src/server")),
   invalidateProjectEvalConfigCaches: vi.fn(),
-  ClickHouseClientManager: {
+  DatastoreClientManager: {
     getInstance: () => ({
       closeAllConnections: vi.fn().mockResolvedValue(undefined),
     }),

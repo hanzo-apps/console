@@ -88,7 +88,7 @@ Create new issues with:
   rely on workspace defaults.
 - Label `bug`.
 - Additional existing labels that match the evidence, such as affected service,
-  environment, API, ingestion, latency, ClickHouse, Postgres, integrations, or
+  environment, API, ingestion, latency, Datastore, Postgres, integrations, or
   observability labels. Query labels first and use the repository/team's exact
   label names.
 - Concise title: `bug: <service or route> <measured symptom> in <envs>`.

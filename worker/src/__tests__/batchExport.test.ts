@@ -4224,7 +4224,7 @@ maybeDescribe("getEventsForBlobStorageExport", () => {
     expect(row.tags).toEqual([]); // createEvent default
     expect(row.metadata).toEqual({ env: "production" });
 
-    // --- Date columns — ClickHouse returns DateTime64 as strings ---
+    // --- Date columns — Datastore returns DateTime64 as strings ---
     expect(typeof row.start_time).toBe("string");
     expect(typeof row.end_time).toBe("string");
     expect(typeof row.completion_start_time).toBe("string");

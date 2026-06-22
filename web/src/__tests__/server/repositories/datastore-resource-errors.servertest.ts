@@ -1,16 +1,16 @@
 import {
   queryDatastore,
   queryDatastoreStream,
-  ClickHouseResourceError,
+  DatastoreResourceError,
 } from "@hanzo/console/src/server";
 import { fail } from "assert";
 
-describe("ClickHouse Resource Error Handling", () => {
+describe("Datastore Resource Error Handling", () => {
   describe("queryDatastore", () => {
     describe("Error transformation with throwIf", () => {
       // It is enough to test different block sizes on one error type only
       [1, 10_000].forEach((blockSize) => {
-        it(`should transform OOM errors to ClickHouseResourceError; block size: ${blockSize}`, async () => {
+        it(`should transform OOM errors to DatastoreResourceError; block size: ${blockSize}`, async () => {
           let res = Array<any>();
           try {
             res = await queryDatastore<any>({
@@ -23,7 +23,7 @@ describe("ClickHouse Resource Error Handling", () => {
                 JSON.stringify(res),
             );
           } catch (error: any) {
-            expect(error).toBeInstanceOf(ClickHouseResourceError);
+            expect(error).toBeInstanceOf(DatastoreResourceError);
             expect(error.errorType).toBe("MEMORY_LIMIT");
             expect(error.tags?.test).toBe("marker");
           }
@@ -37,7 +37,7 @@ describe("ClickHouse Resource Error Handling", () => {
           });
           fail("Should have thrown an error");
         } catch (error: any) {
-          expect(error).toBeInstanceOf(ClickHouseResourceError);
+          expect(error).toBeInstanceOf(DatastoreResourceError);
           expect(error.errorType).toBe("OVERCOMMIT");
         }
       });
@@ -49,7 +49,7 @@ describe("ClickHouse Resource Error Handling", () => {
           });
           fail("Should have thrown an error");
         } catch (error: any) {
-          expect(error).toBeInstanceOf(ClickHouseResourceError);
+          expect(error).toBeInstanceOf(DatastoreResourceError);
           expect(error.errorType).toBe("TIMEOUT");
         }
       });
@@ -66,7 +66,7 @@ describe("ClickHouse Resource Error Handling", () => {
             query: `SELECT * FROM non_existent_table_xyz123`,
           });
         } catch (error: any) {
-          expect(error).not.toBeInstanceOf(ClickHouseResourceError);
+          expect(error).not.toBeInstanceOf(DatastoreResourceError);
         }
       });
 
@@ -105,7 +105,7 @@ describe("ClickHouse Resource Error Handling", () => {
                 JSON.stringify(fullResponse),
             );
           })(),
-        ).rejects.toThrow(ClickHouseResourceError);
+        ).rejects.toThrow(DatastoreResourceError);
       });
 
       it("should stream successful queries", async () => {
@@ -174,9 +174,9 @@ describe("ClickHouse Resource Error Handling", () => {
         it(`should correctly classify "${name}"`, () => {
           const error = new Error(errorMessage);
           const wrappedError =
-            ClickHouseResourceError.wrapIfResourceError(error);
+            DatastoreResourceError.wrapIfResourceError(error);
           const isResourceError = ((err: Error) => {
-            if (err instanceof ClickHouseResourceError) {
+            if (err instanceof DatastoreResourceError) {
               return true;
             } else {
               return false;
@@ -185,7 +185,7 @@ describe("ClickHouse Resource Error Handling", () => {
 
           expect(isResourceError).toBe(shouldBeResourceError);
 
-          const resourceError = wrappedError as ClickHouseResourceError;
+          const resourceError = wrappedError as DatastoreResourceError;
           if (shouldBeResourceError && errorType) {
             expect(resourceError.errorType).toBe(errorType);
           }
