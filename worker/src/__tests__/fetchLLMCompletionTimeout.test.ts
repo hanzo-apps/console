@@ -23,9 +23,9 @@ const chatBedrockConverseConstructorMock = vi.fn().mockImplementation(function (
 });
 const VERTEXAI_USE_DEFAULT_CREDENTIALS = "__VERTEXAI_DEFAULT_CREDENTIALS__";
 
-process.env.CLICKHOUSE_URL ??= "http://localhost:8123";
-process.env.CLICKHOUSE_USER ??= "default";
-process.env.CLICKHOUSE_PASSWORD ??= "password";
+process.env.DATASTORE_URL ??= "http://localhost:8123";
+process.env.DATASTORE_USER ??= "default";
+process.env.DATASTORE_PASSWORD ??= "password";
 process.env.LANGFUSE_S3_EVENT_UPLOAD_BUCKET ??= "test-bucket";
 process.env.ENCRYPTION_KEY ??= "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
@@ -220,7 +220,7 @@ describe("fetchLLMCompletion end of model lifetime", () => {
     vi.resetModules();
     originalCloudRegion = process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
     delete process.env.NEXT_PUBLIC_LANGFUSE_CLOUD_REGION;
-    // @langchain/aws is a dependency of @hanzo/console, not worker — a bare
+    // @langchain/aws is a dependency of @langfuse/shared, not worker — a bare
     // specifier can't resolve from this test file under pnpm strict isolation.
     vi.doMock("../../../packages/shared/node_modules/@langchain/aws", () => ({
       ChatBedrockConverse: chatBedrockConverseConstructorMock,
