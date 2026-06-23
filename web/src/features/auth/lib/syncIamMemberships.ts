@@ -28,10 +28,7 @@
 import { prisma, Role } from "@hanzo/console/src/db";
 import { logger } from "@hanzo/console/src/server";
 import { env } from "@/src/env.mjs";
-import {
-  iamGetUser,
-  iamListAllOrganizations,
-} from "@/src/features/auth/lib/iamServer";
+import { iamGetUser } from "@/src/features/auth/lib/iamServer";
 import {
   orgFromSub,
   isGlobalAdminIdentity,
@@ -51,6 +48,15 @@ function adminIamOrgs(): Set<string> {
 /** Configured admin email domains (mirrors `isInstanceAdminEmail` in iamSession). */
 function adminEmailDomains(): string[] {
   return parseEmailDomains(env.HANZO_ADMIN_EMAIL_DOMAINS);
+}
+
+/**
+ * The canonical tenant org ids — the real tenants a global admin should own,
+ * NOT the per-user personal orgs in IAM. Sourced from INIT_ORG_IDS (the seed:
+ * hanzo,lux,zoo,pars). `env.INIT_ORG_IDS` is already parsed to a string[].
+ */
+function tenantOrgIds(): string[] {
+  return (env.INIT_ORG_IDS as string[] | undefined) ?? [];
 }
 
 /**
@@ -152,14 +158,15 @@ export async function syncIamMembershipsForUser(
     });
 
     if (isGlobalAdmin) {
-      // Grant OWNER on EVERY console org. First materialize a console org for
-      // each IAM org under the super-org owner so brand-new IAM orgs are
-      // reachable too, then OWNER all console orgs that exist.
-      const iamOrgs = await iamListAllOrganizations("admin");
-      for (const o of iamOrgs) {
-        // Skip the super-org itself — it's an admin container, not a tenant.
-        if (adminIamOrgs().has(o.name.toLowerCase())) continue;
-        await ensureConsoleOrgForIamOrg(o);
+      // Grant OWNER on EVERY console org. The console org set is the source of
+      // truth for "what tenants exist" (seeded from INIT_ORG_IDS=hanzo,lux,zoo,
+      // pars and grown only by real console org creation). We do NOT materialize
+      // from IAM's admin-owner org list — that's dominated by per-user *personal*
+      // orgs (one per signup, named by email), which are not tenants. We just
+      // ensure the configured tenant orgs exist (idempotent; they're seeded),
+      // then OWNER all existing console orgs.
+      for (const tenant of tenantOrgIds()) {
+        await ensureConsoleOrgForIamOrg({ name: tenant });
       }
       const allOrgs = await prisma.organization.findMany({
         select: { id: true },
