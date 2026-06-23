@@ -73,7 +73,32 @@ export type ServiceProxyOptions = {
    * the most specific prefixes first. Leave empty for plain pass-through.
    */
   rewritePrefixes?: string[];
+  /**
+   * Exact single-segment upstream paths that MUST keep a trailing slash on the
+   * upstream request. Next.js (`trailingSlash: false`) 308-strips the trailing
+   * slash off the iframe `src` before this handler runs, so a PocketBase-style
+   * admin root that itself 307-redirects `/_` → `/_/` would otherwise ping-pong
+   * forever (Next strips it, the upstream re-adds it). Listing the bare segment
+   * here (e.g. `_`) makes the proxy request `<upstream>/_/` directly so the
+   * upstream answers 200 and no redirect war occurs. The iframe must point at
+   * the slash-less console path (e.g. `/api/base/_`).
+   */
+  forceTrailingSlashFor?: string[];
 };
+
+/**
+ * Build the upstream path from the catch-all segments, re-adding a trailing
+ * slash for configured SPA roots (see `forceTrailingSlashFor`). Pure so it can
+ * be unit-tested without booting the handler.
+ */
+function buildUpstreamPath(
+  segments: string[],
+  forceTrailingSlashFor: ReadonlySet<string>,
+): string {
+  const joined = segments.map(encodeURIComponent).join("/");
+  if (joined && forceTrailingSlashFor.has(joined)) return `${joined}/`;
+  return joined;
+}
 
 /** Internal helpers exported for unit tests only. */
 export const __test__ = {
@@ -82,6 +107,9 @@ export const __test__ = {
   },
   get isRewritableContentType() {
     return isRewritableContentType;
+  },
+  get buildUpstreamPath() {
+    return buildUpstreamPath;
   },
 };
 
@@ -136,6 +164,7 @@ export function createServiceProxy(options: ServiceProxyOptions) {
     options.mountPath ?? `/api/${options.name.toLowerCase()}`
   ).replace(/\/+$/, "");
   const rewritePrefixes = options.rewritePrefixes ?? [];
+  const forceTrailingSlashFor = new Set(options.forceTrailingSlashFor ?? []);
 
   return async function handler(req: NextApiRequest, res: NextApiResponse) {
     const baseUrl = options.upstreamBaseUrl();
@@ -153,7 +182,9 @@ export function createServiceProxy(options: ServiceProxyOptions) {
       : typeof pathSegments === "string"
         ? [pathSegments]
         : [];
-    const upstreamPath = segments.map(encodeURIComponent).join("/");
+    // Re-adds a trailing slash for configured SPA roots (e.g. Base's `/_/`) that
+    // Next.js stripped, so the upstream answers 200 instead of 307-looping.
+    const upstreamPath = buildUpstreamPath(segments, forceTrailingSlashFor);
 
     const query = { ...req.query };
     delete query.path;

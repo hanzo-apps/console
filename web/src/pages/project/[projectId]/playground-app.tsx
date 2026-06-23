@@ -20,7 +20,9 @@ export default function PlaygroundAppPage() {
   return (
     <EmbeddedDashboard
       title="Playground"
-      proxyPath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/playground-app/`}
+      // Slash-less to avoid Next.js (trailingSlash:false) 308-stripping the
+      // trailing slash; the playground SPA serves its root at the bare path.
+      proxyPath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/playground-app`}
     />
   );
 }
