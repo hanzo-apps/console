@@ -1,19 +1,39 @@
 import { cn } from "@/src/utils/tailwind";
 import Link from "next/link";
 import { VersionLabel } from "./VersionLabel";
-import { env } from "@/src/env.mjs";
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
 import { PlusIcon } from "lucide-react";
 
-export const HanzoCloudIcon = ({ size = 32, className }: { size?: number; className?: string }) => (
-  // eslint-disable-next-line @next/next/no-img-element
-  <img
-    src={`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/icon.svg`}
+/**
+ * The real Hanzo monochrome "blocky-H" mark (canonical @hanzo/logo, 67x67,
+ * 7 paths). Rendered inline so `fill="currentColor"` adapts to the surrounding
+ * theme (e.g. white on the dark sidebar, dark on light surfaces). This is the
+ * one true mark — do not reintroduce the made-up red H or any hand-drawn H.
+ */
+export const HanzoCloudIcon = ({
+  size = 32,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) => (
+  <svg
+    viewBox="0 0 67 67"
+    xmlns="http://www.w3.org/2000/svg"
     width={size}
     height={size}
-    alt="Hanzo Cloud Icon"
-    className={className}
-  />
+    className={cn("fill-current", className)}
+    aria-label="Hanzo"
+    role="img"
+  >
+    <path d="M22.21 67V44.6369H0V67H22.21Z" />
+    <path d="M0 44.6369L22.21 46.8285V44.6369H0Z" opacity="0.8" />
+    <path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z" />
+    <path d="M22.21 0H0V22.3184H22.21V0Z" />
+    <path d="M66.7198 0H44.5098V22.3184H66.7198V0Z" />
+    <path d="M66.6753 22.3185L44.5098 20.0822V22.3185H66.6753Z" opacity="0.8" />
+    <path d="M66.7198 67V44.6369H44.5098V67H66.7198Z" />
+  </svg>
 );
 
 // Alias for backwards compatibility with HanzoIcon imports
@@ -44,7 +64,10 @@ const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
             "max-h-4 max-w-14",
           )}
         />
-        <PlusIcon size={size === "sm" ? 8 : 12} className="group-data-[collapsible=icon]:hidden" />
+        <PlusIcon
+          size={size === "sm" ? 8 : 12}
+          className="group-data-[collapsible=icon]:hidden"
+        />
         <HanzoCloudIcon size={size === "sm" ? 16 : 20} />
       </div>
     );
@@ -55,7 +78,7 @@ const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
       <HanzoCloudIcon size={size === "sm" ? 16 : 20} />
       <span
         className={cn(
-          "ml-2 font-mono font-semibold leading-none group-data-[collapsible=icon]:hidden",
+          "ml-2 font-mono leading-none font-semibold group-data-[collapsible=icon]:hidden",
           size === "sm" ? "text-sm" : "text-xl",
         )}
       >
@@ -75,13 +98,20 @@ export const HanzoCloudLogo = ({
   version?: boolean;
 }) => {
   return (
-    <div className={cn("-mt-2 ml-1 flex flex-wrap gap-4 lg:flex-col lg:items-start", className)}>
+    <div
+      className={cn(
+        "-mt-2 ml-1 flex flex-wrap gap-4 lg:flex-col lg:items-start",
+        className,
+      )}
+    >
       {/* Hanzo Cloud Logo */}
       <div className="flex items-center">
         <Link href="/" className="flex items-center">
           <HanzoCloudLogotypeOrCustomized size={size} />
         </Link>
-        {version && <VersionLabel className="ml-2 group-data-[collapsible=icon]:hidden" />}
+        {version && (
+          <VersionLabel className="ml-2 group-data-[collapsible=icon]:hidden" />
+        )}
       </div>
     </div>
   );

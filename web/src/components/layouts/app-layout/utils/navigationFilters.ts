@@ -44,6 +44,25 @@ export const filters = {
   },
 
   /**
+   * Org-gate: hide any route flagged `requiresOrganization` until an
+   * organization is selected. An org is "selected" when the URL carries either
+   * an organization id (org pages) or a project id (a project always belongs to
+   * one org). This makes the multi-tenant gate explicit and composable rather
+   * than an implicit side effect of `[projectId]`/`[organizationId]` patterns —
+   * no app/service surface is visible before an org is chosen.
+   */
+  requiresOrganization: (
+    route: Route,
+    ctx: NavigationFilterContext,
+  ): Route | null => {
+    if (!route.requiresOrganization) return route;
+    const orgSelected = Boolean(
+      ctx.routerOrganizationId || ctx.routerProjectId,
+    );
+    return orgSelected ? route : null;
+  },
+
+  /**
    * Filter routes based on UI customization settings (enterprise feature)
    * Hides routes if their product module is not in visible modules list
    */
@@ -187,6 +206,7 @@ function applyFiltersToRoute(
   const filterChain = [
     filters.projectScope,
     filters.organizationScope,
+    filters.requiresOrganization,
     filters.uiCustomization,
     filters.featureFlags,
     filters.entitlements,
