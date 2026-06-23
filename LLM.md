@@ -216,28 +216,65 @@ sendMessage({ userId: someString, sessionId: someOtherString, projectId: another
 ## Development Tips
 - Before trying to build the package, try running the linter once first
 
-## Multi-tenant org-gated embeds + branding (feat/multi-tenant-embeds-branding)
-- **Org-gate**: app/service nav is hidden until an org/project is selected. The
-  org-less root (`/`) renders only the Organizations page (the `requiresOrganization`
-  nav filter + the `[organizationId]`/`[projectId]` route pattern do the gating).
-- **Embedded org-scoped dashboards**: `EmbeddedDashboard`
-  (`web/src/components/embed/EmbeddedDashboard.tsx`) renders a same-origin `<iframe>`
-  pointed at a Pages-Router catch-all proxy (`createServiceProxy` in
-  `web/src/server/service-proxy.ts`). The proxy mirrors the hardened KMS proxy:
-  strips client tenant headers, injects session-derived `x-org-id/x-project-id/
-  x-actor-id/x-env`, drops hop-by-hop headers, and rewrites root-absolute upstream
-  paths (`rewritePrefixes`) so the embedded SPA loads through console's origin (SSO
-  via the console session cookie — no separate login).
-  - Base: `/project/[projectId]/base` → `/api/base/_` → `BASE_DASHBOARD_URL`
-  - Playground: `/project/[projectId]/playground-app` → `/api/playground-app` →
-    `PLAYGROUND_APP_URL`
-  - Upstreams are server-only env (set on the operator CR `services.hanzo.ai/console`).
+## Multi-tenant console on IAM: org/membership sync + all-service embeds (feat/console-iam-mt-allservices)
+This supersedes the 2-service hardcoded embed (feat/multi-tenant-embeds-branding).
+Two gaps closed: (1) IAM identity → console orgs, (2) embed EVERY service per-org.
+
+- **IAM → console membership sync (the gap that left admins with 0 orgs)**:
+  `syncIamMembershipsForUser` (`web/src/features/auth/lib/syncIamMemberships.ts`),
+  called from `establishIamSession()` (`.../auth/lib/iamSession.ts`) on EVERY login —
+  the single provisioning point; `hydrateSession()` only READS the result. Policy is
+  pure + unit-tested in `.../auth/lib/iamSyncPolicy.ts`:
+  - **Global admin** = IAM user owned by an org in `HANZO_ADMIN_IAM_ORGS` (default
+    `admin` — Casdoor's super-org where a@/z@/woo@ live), OR IAM `isGlobalAdmin`/
+    `isAdmin`, OR email domain in `HANZO_ADMIN_EMAIL_DOMAINS` → becomes **OWNER of
+    EVERY console org** (first materializes a console org per IAM org under owner
+    `admin`, then OWNERs all).
+  - **Normal user** → **MEMBER** of their own IAM org (the `owner` of their IAM user /
+    the org segment of their `sub`).
+  - Console org id **IS** the IAM org name (unifies with the existing
+    `INIT_ORG_IDS=hanzo,lux,zoo,pars` seed; portable single `upsert`, no JSON-path
+    filter → works on SQLite + Postgres). `metadata.iamOrg` kept for discoverability.
+    A default project is seeded on first org creation so the org is navigable.
+  - `roleRank` never downgrades a manually-elevated role on re-sync.
+  - IAM org listing/flags via `iamListAllOrganizations` + `iamGetUser`
+    (`.../auth/lib/iamServer.ts`, confidential-client Basic auth — no user token).
+- **Embed ALL services — ONE registry, ONE proxy, ONE page**:
+  `web/src/features/embedded-services/registry.ts` (`EMBEDDED_SERVICES`) is the single
+  source of truth. A service is one entry → drives the proxy route, the page, AND the
+  nav. Active only when its upstream `*_URL` is set, so the live catalog = what the
+  cluster runs (data-driven, not hardcoded). Base, Playground, Chat, Flow, Bots,
+  Search, Commerce, KMS, Infrastructure are registered.
+  - Dynamic proxy: `/api/svc/[service]/[[...path]].ts` → looks up the registry →
+    `createServiceProxy` (`web/src/server/service-proxy.ts`, unchanged hardened proxy:
+    strips client tenant headers, injects session `x-org-id/x-project-id/x-actor-id/
+    x-env`, drops hop-by-hop, `rewritePrefixes` for SPA root-absolute paths).
+  - Dynamic page: `/project/[projectId]/svc/[service].tsx` → one `EmbeddedDashboard`
+    for any slug. iframe `src` = `/api/svc/<slug><rootPath>?projectId=<id>`.
+  - Nav: `serviceRoutes()` in `routes.tsx` maps the registry → one
+    `/project/[projectId]/svc/<slug>` entry each, grouped by `RouteGroup`,
+    org-gated (`requiresOrganization`). `RouteSection`/`RouteGroup` extracted to
+    `route-groups.ts` (pure) so the server registry imports them without the
+    `routes.tsx` graph. Deleted the 4 hardcoded files (base.tsx, playground-app.tsx,
+    api/base, api/playground-app).
+- **ORG-SCOPING FIX (was silently broken)**: `tenant-headers.ts` previously read
+  `session.orgId`/`session.projectId` which the IAM session NEVER sets → the proxy
+  injected NO `x-org-id`. Now `tenant-scope.ts` (pure, unit-tested) resolves the org
+  from the project the iframe DECLARES (`?projectId=` on the src, which also rides the
+  Referer of the SPA's sub-requests) and AUTHORIZES it against the session's
+  memberships — accepts only a project whose org the user belongs to; never falls back
+  to `organizations[0]` (no cross-tenant header leak).
 - **TRAILING-SLASH GOTCHA** (the embed redirect-loop): Next.js `trailingSlash:false`
   308-strips a trailing slash off the iframe `src`; Base (PocketBase) 307-redirects
-  `/_` → `/_/`. A `/api/base/_/` src therefore ping-pongs forever. Fix: iframe `src`
-  is slash-less (`/api/base/_`) and the proxy re-adds the slash on the UPSTREAM
-  request via `forceTrailingSlashFor: ["_"]` so Base answers 200. See
-  `buildUpstreamPath` + its tests in `service-proxy.clienttest.ts`.
+  `/_` → `/_/`. A `/api/svc/base/_/` src therefore ping-pongs forever. Fix: iframe
+  `src` is slash-less (`/api/svc/base/_`, registry `rootPath:"/_"`) and the proxy
+  re-adds the slash on the UPSTREAM request via `forceTrailingSlashFor:["_"]` so Base
+  answers 200. See `buildUpstreamPath` + tests in `service-proxy.clienttest.ts`.
+- **Tests** (all `*.clienttest.ts`, pure, 41 passing): `tenant-scope` (authorization +
+  no cross-tenant leak), `iamSyncPolicy` (global-admin determination, role precedence),
+  `navigationFilters` (registry → one /svc route each, org-gated), `service-proxy`
+  (path rewriting). Typecheck/lint: 0 NEW errors vs main (the ~862 pre-existing errors
+  are the stale `@hanzo/console` shared-build / Flag/Role/env types, unrelated).
 - **Branding**: the real `@hanzo` monochrome blocky-H is `HanzoCloudIcon`
   (`web/src/components/HanzoLogo.tsx`, 67×67, 7 paths, `fill-current`) and
   `web/public/icon.svg`. Do NOT reintroduce a red/symmetric/hand-drawn H.
