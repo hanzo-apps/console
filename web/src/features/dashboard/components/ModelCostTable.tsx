@@ -13,6 +13,8 @@ import {
   type QueryType,
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
+import { totalCostDashboardFormatted } from "@/src/features/dashboard/lib/dashboard-utils";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
 
 export const ModelCostTable = ({
   className,
@@ -21,6 +23,7 @@ export const ModelCostTable = ({
   fromTimestamp,
   toTimestamp,
   isLoading = false,
+  schedulerId,
 }: {
   className: string;
   projectId: string;
@@ -28,6 +31,7 @@ export const ModelCostTable = ({
   fromTimestamp: Date;
   toTimestamp: Date;
   isLoading?: boolean;
+  schedulerId?: string;
 }) => {
   const modelCostQuery: QueryType = {
     view: "observations",

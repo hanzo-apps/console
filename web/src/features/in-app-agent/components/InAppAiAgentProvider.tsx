@@ -239,7 +239,7 @@ function InAppAiAgentProviderInner({
             agent.abortRun();
 
             const freshAgent = new HttpAgent({
-              url: `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/in-app-agent`,
+              url: `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/in-app-agent`,
               threadId: agent.threadId,
               initialMessages: agent.messages.filter(
                 isAgentConversationMessage,
@@ -292,7 +292,7 @@ function InAppAiAgentProviderInner({
       // Create the agent if none exists
       if (!agentRef.current) {
         agentRef.current = new HttpAgent({
-          url: `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/in-app-agent`,
+          url: `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/in-app-agent`,
           threadId: restoredSession.threadId,
           initialMessages: restoredMessages,
           initialState: restoredSession.state,

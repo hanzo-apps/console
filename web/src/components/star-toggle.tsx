@@ -125,11 +125,13 @@ export function StarTraceToggle({
 export function StarTraceDetailsToggle({
   projectId,
   traceId,
+  timestamp,
   value,
   size = "icon",
 }: {
   projectId: string;
   traceId: string;
+  timestamp?: Date;
   value: boolean;
   size?: "icon" | "icon-xs";
 }) {

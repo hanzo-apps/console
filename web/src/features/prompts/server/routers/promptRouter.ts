@@ -254,7 +254,7 @@ export const promptRouter = createTRPCRouter({
           1, // limit
           0, // page
           pathFilter,
-          searchCondition,
+          searchFilter,
           input.pathPrefix,
         ),
       );
@@ -1132,6 +1132,31 @@ export const promptRouter = createTRPCRouter({
           },
         }),
       ]);
+
+      let commentCounts = new Map<string, number>();
+      if (input.includeCommentCounts) {
+        const promptIds = prompts.map((p) => p.id);
+        if (promptIds.length > 0) {
+          const groupedCommentCounts = await ctx.prisma.comment.groupBy({
+            by: ["objectId"],
+            where: {
+              projectId: input.projectId,
+              objectType: CommentObjectType.PROMPT,
+              objectId: { in: promptIds },
+            },
+            _count: {
+              objectId: true,
+            },
+          });
+
+          commentCounts = new Map(
+            groupedCommentCounts.map(({ objectId, _count }) => [
+              objectId,
+              _count.objectId,
+            ]),
+          );
+        }
+      }
 
       const userIds = prompts
         .map((p) => p.createdBy)

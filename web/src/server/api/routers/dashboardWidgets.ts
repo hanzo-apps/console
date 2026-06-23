@@ -17,7 +17,12 @@ import {
 } from "@hanzo/console/src/server";
 import { views } from "@/src/features/query";
 import { TRPCError } from "@trpc/server";
-import { HanzoConflictError } from "@hanzo/console";
+import { ConsoleConflictError } from "@hanzo/console";
+import {
+  ViewVersion,
+  getValidAggregationsForMeasureType,
+  getViewDeclaration,
+} from "@hanzo/console";
 
 const CreateDashboardWidgetInput = z.object({
   projectId: z.string(),
@@ -277,7 +282,7 @@ export const dashboardWidgetRouter = createTRPCRouter({
         };
       } catch (error) {
         // If the widget is still referenced in dashboards, throw a CONFLICT error
-        if (error instanceof HanzoConflictError) {
+        if (error instanceof ConsoleConflictError) {
           throw new TRPCError({
             code: "CONFLICT",
             message: error.message,

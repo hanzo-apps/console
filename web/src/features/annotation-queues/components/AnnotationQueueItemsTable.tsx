@@ -1,6 +1,6 @@
 import { DataTable } from "@/src/components/table/data-table";
 import TableLink from "@/src/components/table/table-link";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
 import { useQueryParams, withDefault, NumberParam } from "use-query-params";
@@ -178,7 +178,7 @@ export function AnnotationQueueItemsTable({
     limit: paginationState.pageSize,
   });
 
-  const columns: ConsoleColumnDef<QueueItemRowData>[] = [
+  const columns: ColumnDef<QueueItemRowData>[] = [
     {
       id: "select",
       accessorKey: "select",

@@ -1,5 +1,12 @@
 import type { NormalizerContext, ProviderAdapter } from "../types";
-import { parseMetadata, getNestedProperty, stringifyToolResultContent, isRichToolResult } from "../helpers";
+import {
+  parseMetadata,
+  getNestedProperty,
+  stringifyToolResultContent,
+  isRichToolResult,
+  attachToolDefinitionsToMessages,
+  normalizeToolDefinitionsForChatMl,
+} from "../helpers";
 import { z } from "zod/v4";
 
 /**
@@ -212,9 +219,7 @@ function preprocessData(data: unknown, ctx: NormalizerContext): unknown {
   // messages wrapper
   if (typeof data === "object" && "messages" in data) {
     const obj = data as Record<string, unknown>;
-    const messages = Array.isArray(obj.messages)
-      ? normalizeMessages(obj.messages)
-      : obj.messages;
+    const messages = Array.isArray(obj.messages) ? normalizeMessages(obj.messages) : obj.messages;
     const tools = normalizeToolDefinitionsForChatMl(obj.tools);
 
     if (Array.isArray(messages) && tools.length > 0) {
@@ -249,11 +254,7 @@ export const microsoftAgentAdapter: ProviderAdapter = {
 
     const scopeName = getNestedProperty(meta, "scope", "name");
     if (scopeName === "agent_framework") return true;
-    if (
-      typeof scopeName === "string" &&
-      scopeName.includes("Microsoft.Extensions.AI")
-    )
-      return true;
+    if (typeof scopeName === "string" && scopeName.includes("Microsoft.Extensions.AI")) return true;
     if (scopeName === "pydantic-ai") return false;
 
     const providerName = getNestedProperty(meta, "attributes", "gen_ai.provider.name");

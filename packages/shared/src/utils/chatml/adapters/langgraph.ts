@@ -1,5 +1,12 @@
 import type { NormalizerContext, ProviderAdapter } from "../types";
-import { removeNullFields, stringifyToolResultContent, parseMetadata, isRichToolResult } from "../helpers";
+import {
+  removeNullFields,
+  stringifyToolResultContent,
+  parseMetadata,
+  isRichToolResult,
+  attachToolDefinitionsToMessages,
+  normalizeToolDefinitionsForChatMl,
+} from "../helpers";
 import { z } from "zod/v4";
 
 // Detection schemas for LangChain/LangGraph formats
@@ -204,10 +211,7 @@ function preprocessData(data: unknown): unknown {
 
     if (extractedTools.length > 0) {
       // Attach tools to all messages
-      return attachToolDefinitionsToMessages(
-        normalizedMessages,
-        extractedTools,
-      );
+      return attachToolDefinitionsToMessages(normalizedMessages, extractedTools);
     }
 
     return normalizedMessages;
@@ -289,18 +293,12 @@ export const langgraphAdapter: ProviderAdapter = {
       }
 
       const flatOperationName = meta["attributes.operation.name"];
-      if (
-        typeof flatOperationName === "string" &&
-        flatOperationName.startsWith("ai.")
-      ) {
+      if (typeof flatOperationName === "string" && flatOperationName.startsWith("ai.")) {
         return false;
       }
 
       const flatAiOperationId = meta["attributes.ai.operationId"];
-      if (
-        typeof flatAiOperationId === "string" &&
-        flatAiOperationId.startsWith("ai.")
-      ) {
+      if (typeof flatAiOperationId === "string" && flatAiOperationId.startsWith("ai.")) {
         return false;
       }
     }

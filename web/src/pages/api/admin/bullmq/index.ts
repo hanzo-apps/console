@@ -15,6 +15,7 @@ import {
   OtelIngestionQueue,
 } from "@hanzo/console/src/server";
 import { AdminApiAuthService } from "@/src/features/admin-api/server/adminApiAuth";
+import { SecondaryOtelIngestionQueue } from "@hanzo/console/src/server";
 
 /* 
 This API route is used by Hanzo Cloud to retry failed bullmq jobs.

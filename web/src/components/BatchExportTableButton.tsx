@@ -21,6 +21,7 @@ import React from "react";
 import { api } from "@/src/utils/api";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
+import { Loader } from "@/src/features/agents/components/ui/icon-bridge";
 
 export type BatchExportTableButtonProps = {
   projectId: string;

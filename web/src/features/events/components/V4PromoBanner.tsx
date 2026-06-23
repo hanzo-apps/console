@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { ZapIcon, X, ExternalLink } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { Button } from "@/src/components/ui/button";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import {
@@ -15,7 +15,7 @@ import { useInsightsCapture } from "@/src/features/insights-analytics/useInsight
 import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
 
 const CHANGELOG_URL =
-  "https://langfuse.com/changelog/2026-03-10-simplify-for-scale";
+  "https://hanzo.ai/changelog/2026-03-10-simplify-for-scale";
 const DISMISSED_STORAGE_KEY = "v4-beta-promo-banner:v1:dismissed";
 const V4_BETA_PROMO_BANNER_ID = "v4-beta-promo-banner";
 const V4_BETA_PROMO_BANNER_ORDER = 25;

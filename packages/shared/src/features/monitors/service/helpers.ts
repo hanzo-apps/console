@@ -3,14 +3,13 @@
  * but intentionally not re-exported from the service barrel — internal
  * implementation detail of the service. */
 import { createHash } from "node:crypto";
+import { type Monitor as PrismaMonitor, Prisma } from "@prisma/client";
 import {
-  type Monitor as PrismaMonitor,
   MonitorSeverity as PrismaMonitorSeverity,
   MonitorStatus as PrismaMonitorStatus,
   MonitorThresholdOperator as PrismaMonitorThresholdOperator,
   MonitorView as PrismaMonitorView,
-  Prisma,
-} from "@prisma/client";
+} from "../../../db-enums";
 
 import { InvalidRequestError } from "../../../errors";
 
@@ -29,10 +28,7 @@ import {
 import { MonitorNotFoundError, type MonitorListOrderBy } from "./types";
 
 /** nullableOrderColumns is the list of sortable columns that are nullable. */
-export const nullableOrderColumns: ReadonlySet<MonitorListOrderBy> = new Set([
-  "severityChangedAt",
-  "alertedAt",
-]);
+export const nullableOrderColumns: ReadonlySet<MonitorListOrderBy> = new Set(["severityChangedAt", "alertedAt"]);
 
 /**
  * canonicalizeFilter normalizes a single filter for canonical comparison.
@@ -45,14 +41,8 @@ export const nullableOrderColumns: ReadonlySet<MonitorListOrderBy> = new Set([
  * different `schedulerBatchId` values for logically-identical filters,
  * fragmenting the worker batching optimization the helper exists to enable.
  */
-const canonicalizeFilter = (
-  f: MonitorFilters[number],
-): MonitorFilters[number] => {
-  if (
-    f.type === "stringOptions" ||
-    f.type === "categoryOptions" ||
-    f.type === "arrayOptions"
-  ) {
+const canonicalizeFilter = (f: MonitorFilters[number]): MonitorFilters[number] => {
+  if (f.type === "stringOptions" || f.type === "categoryOptions" || f.type === "arrayOptions") {
     return { ...f, value: [...f.value].sort() };
   }
   return f;
@@ -66,9 +56,7 @@ const canonicalizeFilter = (
  * variants) → `JSON.stringify(value)`. Same logical filter set → same
  * canonical sequence, regardless of input order.
  */
-export const sortFiltersCanonically = (
-  filters: MonitorFilters,
-): MonitorFilters =>
+export const sortFiltersCanonically = (filters: MonitorFilters): MonitorFilters =>
   filters.map(canonicalizeFilter).sort((a, b) => {
     if (a.column !== b.column) return a.column < b.column ? -1 : 1;
     if (a.operator !== b.operator) return a.operator < b.operator ? -1 : 1;
@@ -103,12 +91,7 @@ export const calculateSchedulerBatchId = (params: {
   windowMs: bigint;
 }): bigint => {
   const canonical = sortFiltersCanonically(params.filters);
-  const input = [
-    params.projectId,
-    params.view,
-    JSON.stringify(canonical),
-    params.windowMs.toString(),
-  ].join("\x1f");
+  const input = [params.projectId, params.view, JSON.stringify(canonical), params.windowMs.toString()].join("\x1f");
   const digest = createHash("sha256").update(input).digest();
   return digest.readBigUInt64BE(0) & ((1n << 63n) - 1n);
 };
@@ -119,15 +102,10 @@ export const calculateSchedulerBatchId = (params: {
  * `monitor.nextRunAt` on create/update so the scheduler picks the monitor up
  * on its very next tick and advances it onto the deterministic slot.
  */
-export const calculateLastRunAt = (
-  now: Date,
-  cadenceMs: bigint,
-  schedulerBatchId: bigint,
-): Date => {
+export const calculateLastRunAt = (now: Date, cadenceMs: bigint, schedulerBatchId: bigint): Date => {
   const cadence = Number(cadenceMs);
   const offset = Number(schedulerBatchId % 60n) * 1000;
-  const aligned =
-    Math.floor((now.getTime() - offset) / cadence) * cadence + offset;
+  const aligned = Math.floor((now.getTime() - offset) / cadence) * cadence + offset;
   return new Date(aligned);
 };
 
@@ -156,9 +134,7 @@ export const viewFromPrisma = (view: PrismaMonitorView): MonitorView => {
 };
 
 /** severityFromPrisma converts the Prisma MonitorSeverity enum to the MonitorSeverity api enum. */
-export const severityFromPrisma = (
-  s: PrismaMonitorSeverity,
-): MonitorSeverity => {
+export const severityFromPrisma = (s: PrismaMonitorSeverity): MonitorSeverity => {
   switch (s) {
     case PrismaMonitorSeverity.UNKNOWN:
       return "unknown";
@@ -198,9 +174,7 @@ export const statusFromPrisma = (s: PrismaMonitorStatus): MonitorStatus => {
 };
 
 /** thresholdOperatorToPrisma converts the MonitorThresholdOperator api enum to the Prisma MonitorThresholdOperator enum. */
-export const thresholdOperatorToPrisma = (
-  o: MonitorThresholdOperator,
-): PrismaMonitorThresholdOperator => {
+export const thresholdOperatorToPrisma = (o: MonitorThresholdOperator): PrismaMonitorThresholdOperator => {
   switch (o) {
     case "gt":
       return PrismaMonitorThresholdOperator.GT;
@@ -218,9 +192,7 @@ export const thresholdOperatorToPrisma = (
 };
 
 /** thresholdOperatorFromPrisma converts the Prisma MonitorThresholdOperator enum to the MonitorThresholdOperator api enum. */
-export const thresholdOperatorFromPrisma = (
-  o: PrismaMonitorThresholdOperator,
-): MonitorThresholdOperator => {
+export const thresholdOperatorFromPrisma = (o: PrismaMonitorThresholdOperator): MonitorThresholdOperator => {
   switch (o) {
     case PrismaMonitorThresholdOperator.GT:
       return "gt";
@@ -287,9 +259,7 @@ export const windowFromMs = (ms: bigint): MonitorWindow => {
     case 7n * 24n * 60n * 60_000n:
       return "1w";
     default:
-      throw new InvalidRequestError(
-        `windowMs ${ms.toString()} does not correspond to a known MonitorWindow tier`,
-      );
+      throw new InvalidRequestError(`windowMs ${ms.toString()} does not correspond to a known MonitorWindow tier`);
   }
 };
 
@@ -307,15 +277,10 @@ export const monitorFromPrisma = (monitor: PrismaMonitor): Monitor =>
   });
 
 /** decimalToPrisma converts a nullable JS number to a Prisma.Decimal, preserving null. */
-export const decimalToPrisma = (n: number | null): Prisma.Decimal | null =>
-  n == null ? null : new Prisma.Decimal(n);
+export const decimalToPrisma = (n: number | null): Prisma.Decimal | null => (n == null ? null : new Prisma.Decimal(n));
 
 /** errorFromPrisma converts a Prisma row-not-found error to MonitorNotFoundError. */
-export const errorFromPrisma = (
-  id: string,
-  projectId: string,
-  e: unknown,
-): Error => {
+export const errorFromPrisma = (id: string, projectId: string, e: unknown): Error => {
   if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
     return new MonitorNotFoundError(id, projectId);
   }

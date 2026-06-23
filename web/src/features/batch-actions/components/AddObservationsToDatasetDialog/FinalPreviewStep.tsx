@@ -4,6 +4,20 @@ import { Pencil } from "lucide-react";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
 import type { FinalPreviewStepProps, DialogStep } from "./types";
 import { applyFullMapping } from "@hanzo/console";
+import {
+  IssueVariant,
+  issueTextVariants,
+} from "@/src/features/batch-actions/components/AddObservationsToDatasetDialog/components/IssueBanner";
+import { cn } from "@/src/utils/tailwind";
+
+const STEP_FOR_FIELD: Record<string, DialogStep> = {
+  input: "input-mapping",
+  expectedOutput: "output-mapping",
+  metadata: "metadata-mapping",
+};
+
+const fieldLabel = (field: string) =>
+  field === "expectedOutput" ? "expected output" : field;
 
 export function FinalPreviewStep({
   dataset,

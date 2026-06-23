@@ -3,7 +3,7 @@ import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import { AnnotationQueueObjectType } from "@hanzo/console";
 import { prisma } from "@hanzo/console/src/db";
 import { createOrgProjectAndApiKey } from "@hanzo/console/src/server";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { v4 as uuidv4 } from "uuid";
 
 describe("annotationQueueItems trpc", () => {

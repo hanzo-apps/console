@@ -19,15 +19,20 @@ import {
 } from "@/src/features/organizations/hooks";
 import { Card } from "@/src/components/ui/card";
 import { LockIcon, ExternalLink } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 
 export default function AIFeatureSwitch() {
   const { update: updateSession } = useSession();
   const { isConsoleCloud } = useConsoleCloudRegion();
   const capture = useInsightsCapture();
   const organization = useQueryOrganization();
+  const aiFeaturesEnabled = organization?.aiFeaturesEnabled;
+  const aiTelemetryEnabled = organization?.aiTelemetryEnabled;
   const [isAIFeatureSwitchEnabled, setIsAIFeatureSwitchEnabled] = useState(
-    organization?.aiFeaturesEnabled ?? false,
+    aiFeaturesEnabled ?? false,
+  );
+  const [isAITelemetrySwitchEnabled, setIsAITelemetrySwitchEnabled] = useState(
+    aiTelemetryEnabled ?? true,
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const hasAccess = useHasOrganizationAccess({

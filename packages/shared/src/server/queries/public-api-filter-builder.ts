@@ -10,8 +10,8 @@ import {
   type DatastoreOperator,
 } from "./datastore-sql/datastore-filter";
 import { z } from "zod/v4";
-import type { FilterState } from "../../types";
-import type { UiColumnMappings } from "../../tableDefinitions";
+import type { FilterState, EventsTableFilterState } from "../../types";
+import type { UiColumnMappings, ColumnDefinition } from "../../tableDefinitions";
 import { createFilterFromFilterState } from "./datastore-sql/factory";
 
 export type ApiColumnMapping = {

@@ -14,7 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/src/components/ui/sidebar";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/src/components/ui/sidebar";
 
 type Organization = {
   id: string;
@@ -31,19 +36,26 @@ type OrgProjectSwitcherProps = {
 const LAST_ORG_KEY = "hanzo_last_org_id";
 const LAST_PROJECT_KEY = "hanzo_last_project_id";
 
-export function OrgProjectSwitcher({ organizations, currentOrgId, currentProjectId }: OrgProjectSwitcherProps) {
+export function OrgProjectSwitcher({
+  organizations,
+  currentOrgId,
+  currentProjectId,
+}: OrgProjectSwitcherProps) {
   const router = useRouter();
   const { isMobile } = useSidebar();
 
   const currentOrg = organizations.find((o) => o.id === currentOrgId);
-  const currentProject = currentOrg?.projects.find((p) => p.id === currentProjectId);
+  const currentProject = currentOrg?.projects.find(
+    (p) => p.id === currentProjectId,
+  );
 
   const orgInitial = currentOrg?.name?.charAt(0)?.toUpperCase() ?? "?";
 
   // Persist current selection so we can restore it on next visit
   React.useEffect(() => {
     if (currentOrgId) localStorage.setItem(LAST_ORG_KEY, currentOrgId);
-    if (currentProjectId) localStorage.setItem(LAST_PROJECT_KEY, currentProjectId);
+    if (currentProjectId)
+      localStorage.setItem(LAST_PROJECT_KEY, currentProjectId);
   }, [currentOrgId, currentProjectId]);
 
   // Preserve the current page path segment when switching projects
@@ -84,25 +96,29 @@ export function OrgProjectSwitcher({ organizations, currentOrgId, currentProject
               tooltip={currentOrg?.name ?? "Select organization"}
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs">
+                <AvatarFallback className="bg-primary text-primary-foreground rounded-lg text-xs">
                   {orgInitial}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{currentOrg?.name ?? "Select org"}</span>
-                <span className="truncate text-xs text-muted-foreground">{currentProject?.name ?? "No project"}</span>
+                <span className="truncate font-semibold">
+                  {currentOrg?.name ?? "Select org"}
+                </span>
+                <span className="text-muted-foreground truncate text-xs">
+                  {currentProject?.name ?? "No project"}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-56 rounded-lg"
             side={isMobile ? "bottom" : "right"}
             align="start"
             sideOffset={4}
           >
             {/* Organization section */}
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
+            <DropdownMenuLabel className="text-muted-foreground text-xs">
               <div className="flex items-center gap-1.5">
                 <Building2 className="h-3 w-3" />
                 Organizations
@@ -110,14 +126,20 @@ export function OrgProjectSwitcher({ organizations, currentOrgId, currentProject
             </DropdownMenuLabel>
             <DropdownMenuGroup>
               {organizations.map((org) => (
-                <DropdownMenuItem key={org.id} onClick={() => handleOrgChange(org)} className="gap-2">
+                <DropdownMenuItem
+                  key={org.id}
+                  onClick={() => handleOrgChange(org)}
+                  className="gap-2"
+                >
                   <Avatar className="h-5 w-5 rounded-sm">
-                    <AvatarFallback className="rounded-sm bg-primary/10 text-[10px]">
+                    <AvatarFallback className="bg-primary/10 rounded-sm text-[10px]">
                       {org.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <span className="truncate">{org.name}</span>
-                  {org.id === currentOrgId && <Check className="ml-auto h-4 w-4" />}
+                  {org.id === currentOrgId && (
+                    <Check className="ml-auto h-4 w-4" />
+                  )}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
@@ -126,7 +148,7 @@ export function OrgProjectSwitcher({ organizations, currentOrgId, currentProject
             {currentOrg && currentOrg.projects.length > 0 && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                <DropdownMenuLabel className="text-muted-foreground text-xs">
                   <div className="flex items-center gap-1.5">
                     <FolderKanban className="h-3 w-3" />
                     Projects
@@ -134,7 +156,11 @@ export function OrgProjectSwitcher({ organizations, currentOrgId, currentProject
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   {currentOrg.projects
-                    .filter((p) => !("deletedAt" in p) || !(p as Record<string, unknown>).deletedAt)
+                    .filter(
+                      (p) =>
+                        !("deletedAt" in p) ||
+                        !(p as Record<string, unknown>).deletedAt,
+                    )
                     .map((project) => (
                       <DropdownMenuItem
                         key={project.id}
@@ -142,7 +168,9 @@ export function OrgProjectSwitcher({ organizations, currentOrgId, currentProject
                         className="gap-2 pl-4"
                       >
                         <span className="truncate">{project.name}</span>
-                        {project.id === currentProjectId && <Check className="ml-auto h-4 w-4" />}
+                        {project.id === currentProjectId && (
+                          <Check className="ml-auto h-4 w-4" />
+                        )}
                       </DropdownMenuItem>
                     ))}
                 </DropdownMenuGroup>

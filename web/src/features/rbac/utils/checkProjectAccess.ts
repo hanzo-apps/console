@@ -4,8 +4,8 @@ import {
 } from "@/src/features/rbac/constants/projectAccessRights";
 import { type Role } from "@hanzo/console/src/db";
 import { TRPCError } from "@trpc/server";
-import { type Session } from "next-auth";
-import { useSession } from "next-auth/react";
+import { type Session } from "@/src/features/auth/session-types";
+import { useSession } from "@/src/features/auth/session";
 import { hasOwnRole } from "./hasOwnRole";
 
 type HasProjectAccessParams = (

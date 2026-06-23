@@ -1,4 +1,4 @@
-import { signIn, useSession } from "next-auth/react";
+import { signIn, useSession } from "@/src/features/auth/session";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { useEffect, useState } from "react";
@@ -45,7 +45,11 @@ export function RequestResetPasswordEmailButton({
         redirect: false,
       });
       if (res?.error) {
-        setErrorMessage(res.error === "AccessDenied" ? "This email is not associated with any account." : res.error);
+        setErrorMessage(
+          res.error === "AccessDenied"
+            ? "This email is not associated with any account."
+            : res.error,
+        );
       } else if (res?.ok) {
         setIsEmailSent(true);
       }
@@ -64,8 +68,10 @@ export function RequestResetPasswordEmailButton({
     try {
       const formattedEmail = encodeURIComponent(email.toLowerCase().trim());
       const formattedCode = encodeURIComponent(code.trim());
-      const callback = encodeURIComponent(`${env.NEXT_PUBLIC_BASE_PATH ?? ""}/auth/reset-password`);
-      const url = `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/callback/email?email=${formattedEmail}&token=${formattedCode}&callbackUrl=${callback}`;
+      const callback = encodeURIComponent(
+        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/auth/reset-password`,
+      );
+      const url = `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/auth/callback/email?email=${formattedEmail}&token=${formattedCode}&callbackUrl=${callback}`;
       window.location.href = url;
     } catch (error) {
       console.error("Error verifying code:", error);
@@ -110,10 +116,16 @@ export function RequestResetPasswordEmailButton({
           disabled={!isValidEmail}
           variant={variant}
         >
-          {session.status === "authenticated" ? "Verify email to change password" : "Request password reset"}
+          {session.status === "authenticated"
+            ? "Verify email to change password"
+            : "Request password reset"}
         </Button>
       )}
-      {errorMessage && <div className="mt-3 text-center text-sm text-destructive">{errorMessage}</div>}
+      {errorMessage && (
+        <div className="text-destructive mt-3 text-center text-sm">
+          {errorMessage}
+        </div>
+      )}
     </>
   );
 }

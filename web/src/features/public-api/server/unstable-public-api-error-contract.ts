@@ -4,8 +4,8 @@ import {
   BaseError,
   InvalidRequestError,
   InternalServerError,
-  LangfuseConflictError,
-  LangfuseNotFoundError,
+  ConsoleConflictError,
+  ConsoleNotFoundError,
   MethodNotAllowedError,
   UnauthorizedError,
   type RateLimitResult,
@@ -168,7 +168,7 @@ export function toUnstablePublicApiError(
     });
   }
 
-  if (error instanceof LangfuseNotFoundError) {
+  if (error instanceof ConsoleNotFoundError) {
     return createUnstablePublicApiError({
       httpCode: 404,
       code: "resource_not_found",
@@ -192,7 +192,7 @@ export function toUnstablePublicApiError(
     });
   }
 
-  if (error instanceof LangfuseConflictError) {
+  if (error instanceof ConsoleConflictError) {
     return createUnstablePublicApiError({
       httpCode: 409,
       code: "conflict",
@@ -214,7 +214,7 @@ export function toUnstablePublicApiError(
       code: "unprocessable_content",
       message: [
         DatastoreResourceError.ERROR_ADVICE_MESSAGE,
-        "See https://langfuse.com/docs/api-and-data-platform/features/public-api for more details.",
+        "See https://hanzo.ai/docs/api-and-data-platform/features/public-api for more details.",
       ].join("\n"),
     });
   }

@@ -2,7 +2,7 @@ import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
 import { FilteredRunPills } from "@/src/components/table/filtered-run-pills";
 import TableLink from "@/src/components/table/table-link";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { IOTableCell } from "@/src/components/ui/IOTableCell";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { getDatasetRunAggregateColumnProps } from "@/src/features/datasets/components/DatasetRunAggregateColumnHelpers";
@@ -121,7 +121,7 @@ function DatasetCompareRunsTableInternal(props: {
       getFiltersForRun,
     });
 
-  const columns: HanzoColumnDef<DatasetCompareRunRowData>[] = [
+  const columns: ColumnDef<DatasetCompareRunRowData>[] = [
     {
       accessorKey: "id",
       header: "Item id",

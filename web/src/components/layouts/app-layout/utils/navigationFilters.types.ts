@@ -2,7 +2,7 @@
  * Type definitions for navigation filtering system
  */
 
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import type { Route } from "@/src/components/layouts/routes";
 import type { Entitlement } from "@/src/features/entitlements/constants/entitlements";
 
@@ -35,4 +35,7 @@ export type NavigationFilterContext = {
  * Filter function that processes a route and returns it (if visible) or null (if hidden)
  * Filters are composable and should be pure functions
  */
-export type NavigationFilter = (route: Route, context: NavigationFilterContext) => Route | null;
+export type NavigationFilter = (
+  route: Route,
+  context: NavigationFilterContext,
+) => Route | null;

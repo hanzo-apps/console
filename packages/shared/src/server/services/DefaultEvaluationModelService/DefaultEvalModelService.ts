@@ -1,7 +1,7 @@
 import z from "zod";
 import { prisma } from "../../../db";
 import { ForbiddenError, ConsoleNotFoundError } from "../../../errors";
-import { LLMApiKeySchema, ZodModelConfig } from "../../llm/types";
+import { LLMAdapter, LLMApiKeySchema, ZodModelConfig } from "../../llm/types";
 import { testModelCall } from "../../llm/testModelCall";
 
 type ValidConfig = {

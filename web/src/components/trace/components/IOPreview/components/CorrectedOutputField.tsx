@@ -18,6 +18,7 @@ import {
 } from "@/src/components/ui/hover-card";
 import Link from "next/link";
 import Spinner from "@/src/components/design-system/Spinner/Spinner";
+import { Loader2 } from "@/src/features/agents/components/ui/icon-bridge";
 
 interface CorrectedOutputFieldProps {
   projectId: string;

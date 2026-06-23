@@ -19,11 +19,12 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 import { api } from "@/src/utils/api";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { organizationFormSchema } from "@/src/features/organizations/utils/organizationNameSchema";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { SurveyName } from "@hanzo/console";
 import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { FormDescription } from "@/src/components/ui/form";
 
 export const NewOrganizationForm = ({
   onSuccess,

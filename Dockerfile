@@ -70,6 +70,18 @@ ENV NEXT_IGNORE_BUILD_ERRORS=true
 # Inlined at build so server-side telemetry() early-returns (Hanzo Cloud uses separate
 # telemetry) instead of running the cron/insights path that made /api/public/health hang.
 ENV NEXT_PUBLIC_HANZO_CLOUD_REGION=US
+# IAM-native client auth: NEXT_PUBLIC_* are inlined at build time, so the browser
+# IAM SDK (PKCE / social / IamSessionProvider) only activates when these are baked
+# in. Hanzo console talks to IAM at hanzo.id as client `hanzo-console`. White-label
+# console builds override these via Kaniko --build-arg (ARG defaults below).
+ARG NEXT_PUBLIC_IAM_SERVER_URL=https://hanzo.id
+ARG NEXT_PUBLIC_IAM_CLIENT_ID=hanzo-console
+ARG NEXT_PUBLIC_IAM_ORG_NAME=hanzo
+ARG NEXT_PUBLIC_IAM_APP_NAME=hanzo-console
+ENV NEXT_PUBLIC_IAM_SERVER_URL=$NEXT_PUBLIC_IAM_SERVER_URL
+ENV NEXT_PUBLIC_IAM_CLIENT_ID=$NEXT_PUBLIC_IAM_CLIENT_ID
+ENV NEXT_PUBLIC_IAM_ORG_NAME=$NEXT_PUBLIC_IAM_ORG_NAME
+ENV NEXT_PUBLIC_IAM_APP_NAME=$NEXT_PUBLIC_IAM_APP_NAME
 
 # Ensure .next dir is owned by nextjs before cache mount creates subdirectory
 RUN mkdir -p /app/web/.next
@@ -130,7 +142,7 @@ ENV PORT=3000
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "const http = require('http'); \
-    const req = http.request({hostname: 'localhost', port: 3000, path: '/api/health', method: 'GET'}, \
+    const req = http.request({hostname: 'localhost', port: 3000, path: '/v1/ready', method: 'GET'}, \
     (res) => process.exit(res.statusCode === 200 ? 0 : 1)); \
     req.on('error', () => process.exit(1)); \
     req.end();" || exit 1
@@ -170,7 +182,7 @@ ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/web/.prisma/client/libquery_engine-linux-mu
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "const http = require('http'); \
-    const req = http.request({hostname: 'localhost', port: 3000, path: '/api/health', method: 'GET'}, \
+    const req = http.request({hostname: 'localhost', port: 3000, path: '/v1/ready', method: 'GET'}, \
     (res) => process.exit(res.statusCode === 200 ? 0 : 1)); \
     req.on('error', () => process.exit(1)); \
     req.end();" || exit 1

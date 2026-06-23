@@ -6,7 +6,7 @@
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { classifyPath, type LayoutType } from "../utils/pathClassification";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 
 export type LayoutConfiguration = {
   /** The layout variant to render */
@@ -32,11 +32,16 @@ export type LayoutConfiguration = {
  * @param session - Current user session (null if unauthenticated)
  * @returns Layout configuration with variant type and navigation visibility
  */
-export function useLayoutConfiguration(session: Session | null): LayoutConfiguration {
+export function useLayoutConfiguration(
+  session: Session | null,
+): LayoutConfiguration {
   const router = useRouter();
 
   return useMemo(() => {
-    const { isAuthPage, hideNavigation, isPublishable } = classifyPath(router.pathname, router.asPath);
+    const { isAuthPage, hideNavigation, isPublishable } = classifyPath(
+      router.pathname,
+      router.asPath,
+    );
 
     // Determine the layout variant based on path and session
     let variant: LayoutType = "authenticated";

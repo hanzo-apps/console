@@ -26,12 +26,13 @@ import {
   Settings,
   Users,
 } from "lucide-react";
-import { type User } from "next-auth";
-import { useSession } from "next-auth/react";
+import { type User } from "@/src/features/auth/session-types";
+import { useSession } from "@/src/features/auth/session";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Fragment } from "react";
 import { StringParam, useQueryParams } from "use-query-params";
+import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 
 const OrganizationProjectTiles = ({
   org,
@@ -302,9 +303,6 @@ export const OrganizationProjectOverview = () => {
         ),
       }}
     >
-      <div className="mb-4">
-        <AgentToolsBanner />
-      </div>
       {showOnboarding && <Onboarding />}
       {organizations
         .sort((a, b) => {

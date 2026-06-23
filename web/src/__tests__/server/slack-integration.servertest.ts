@@ -1,5 +1,5 @@
 import { prisma } from "@hanzo/console/src/db";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { encrypt } from "@hanzo/console/encryption";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";
 import { appRouter } from "@/src/server/api/root";

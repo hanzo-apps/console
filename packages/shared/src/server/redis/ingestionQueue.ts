@@ -108,12 +108,10 @@ export class SecondaryIngestionQueue {
         })
       : null;
 
-    queueInstance?.on("error", (err) => {
-      logger.error(`SecondaryIngestionQueue shard ${shardIndex} error`, err);
+    SecondaryIngestionQueue.instance?.on("error", (err) => {
+      logger.error("SecondaryIngestionQueue error", err);
     });
 
-    SecondaryIngestionQueue.instances.set(shardIndex, queueInstance);
-
-    return queueInstance;
+    return SecondaryIngestionQueue.instance;
   }
 }

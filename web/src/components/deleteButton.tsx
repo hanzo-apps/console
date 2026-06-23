@@ -15,6 +15,7 @@ import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { useHasEntitlement } from "@/src/features/entitlements/hooks";
+import { ButtonProps } from "@/src/components/ui/button";
 
 export type DeleteButtonProps = {
   itemId: string;

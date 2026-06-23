@@ -14,7 +14,7 @@
 
 import { useRouter } from "next/router";
 import { useMemo } from "react";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { env } from "@/src/env.mjs";
 
 /**
@@ -54,7 +54,9 @@ export function useProjectAccess(session: Session | null) {
 
     // Check if user's organizations contain this project
     const userProjects =
-      session?.user?.organizations?.flatMap((org) => org?.projects?.map((p) => p?.id)).filter(Boolean) ?? [];
+      session?.user?.organizations
+        ?.flatMap((org) => org?.projects?.map((p) => p?.id))
+        .filter(Boolean) ?? [];
 
     const hasAccess = userProjects.includes(routerProjectId);
 

@@ -1,6 +1,6 @@
 import { DatasetItemDomain } from "@hanzo/console";
 import { PromptExperimentConfig } from "./utils";
-import { GenerationDetails, ConsoleInternalTraceEnvironment } from "@hanzo/console/src/server";
+import { ConsoleInternalTraceEnvironment } from "@hanzo/console/src/server";
 import {
   fetchObservationEvalConfigs,
   scheduleObservationEvals,

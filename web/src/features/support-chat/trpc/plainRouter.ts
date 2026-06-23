@@ -42,6 +42,7 @@ import {
   type Organization,
 } from "../plain/plainClient";
 import { PLAIN_MAX_FILE_SIZE_BYTES } from "../plain/plainConstants";
+import { replyToThread } from "@/src/features/support-chat/plain/plainClient";
 
 // =========================
 // Input Schemas

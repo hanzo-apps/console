@@ -1,5 +1,5 @@
 import { env } from "@/src/env.mjs";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useRouter } from "next/router";
 
 /**
@@ -8,7 +8,9 @@ import { useRouter } from "next/router";
 export const useQueryOrganization = () => {
   const router = useRouter();
   const organizationId = router.query.organizationId;
-  return useOrganization(typeof organizationId === "string" ? organizationId : null);
+  return useOrganization(
+    typeof organizationId === "string" ? organizationId : null,
+  );
 };
 
 export const useOrganization = (organizationId: string | null) => {

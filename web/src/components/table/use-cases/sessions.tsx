@@ -7,13 +7,14 @@ import {
 } from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import TableLink from "@/src/components/table/table-link";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { TokenUsageBadge } from "@/src/components/token-usage-badge";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFilterState";
 import {
-  sessionFilterConfig,
+  getSessionFilterConfig,
   SESSION_COLUMN_TO_BACKEND_KEY,
+  type SessionOmittableFilterColumn,
 } from "@/src/features/filters/config/sessions-config";
 import { transformFiltersForBackend } from "@/src/features/filters/lib/filter-transform";
 import {
@@ -54,6 +55,13 @@ import { TableSelectionManager } from "@/src/features/table/components/TableSele
 import { useScoreColumns } from "@/src/features/scores/hooks/useScoreColumns";
 import { scoreFilters } from "@/src/features/scores/lib/scoreColumns";
 import { BatchExportTableButton } from "@/src/components/BatchExportTableButton";
+import { UseSidebarFilterStateOptions } from "@/src/features/filters/hooks/useSidebarFilterState";
+import { DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG } from "@/src/features/filters/constants/internal-environments";
+import {
+  TableBadgeLoadingCell,
+  TableIconButtonLoadingCell,
+  TableTextLoadingCell,
+} from "@/src/components/table/loading-cells";
 
 export type SessionTableRow = {
   id: string;
@@ -76,7 +84,7 @@ export type SessionTableRow = {
 export type SessionTableProps = {
   projectId: string;
   userId?: string;
-  omittedFilter?: string[];
+  omittedFilter?: SessionOmittableFilterColumn[];
 };
 
 export default function SessionsTable({
@@ -84,6 +92,10 @@ export default function SessionsTable({
   userId,
   omittedFilter = [],
 }: SessionTableProps) {
+  const sessionsFilterConfig = useMemo(
+    () => getSessionFilterConfig(omittedFilter),
+    [omittedFilter],
+  );
   const { setDetailPageList } = useDetailPageLists();
   const { timeRange, setTimeRange } = useTableDateRange(projectId);
 
@@ -370,7 +382,7 @@ export default function SessionsTable({
     },
   ];
 
-  const columns: HanzoColumnDef<SessionTableRow>[] = [
+  const columns: ColumnDef<SessionTableRow>[] = [
     selectActionColumn,
     {
       accessorKey: "bookmarked",
@@ -702,6 +714,18 @@ export default function SessionsTable({
     "sessionsColumnOrder",
     columns,
   );
+
+  const selectedSessionIds = useMemo(
+    () =>
+      Object.keys(selectedRows).filter((sessionId) =>
+        sessions.data?.sessions.map((s) => s.id).includes(sessionId),
+      ),
+    [selectedRows, sessions.data?.sessions],
+  );
+
+  const selectedSessionCount = selectAll
+    ? totalCount
+    : selectedSessionIds.length;
 
   const { isLoading: isViewLoading, ...viewControllers } = useTableViewManager({
     tableName: TableViewPresetTableName.Sessions,

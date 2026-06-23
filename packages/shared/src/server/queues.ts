@@ -103,6 +103,8 @@ export const ObservationEvalExecutionEventSchema = z.object({
   observationS3Path: z.string(),
   executionMode: JobConfigExecutionMode.optional(),
 });
+// LLM-as-a-Judge execution reuses the shared observation-eval payload.
+export const LLMAsJudgeExecutionEventSchema = ObservationEvalExecutionEventSchema;
 export const InsightsIntegrationProcessingEventSchema = z.object({
   projectId: z.string(),
 });
@@ -275,6 +277,7 @@ export type DatasetQueueEventType = z.infer<typeof DatasetQueueEventSchema>;
 export type ProjectQueueEventType = z.infer<typeof ProjectQueueEventSchema>;
 export type DatasetRunItemUpsertEventType = z.infer<typeof DatasetRunItemUpsertEventSchema>;
 export type EvalExecutionEventType = z.infer<typeof EvalExecutionEvent>;
+export type ObservationEvalExecutionEventType = z.infer<typeof ObservationEvalExecutionEventSchema>;
 export type LLMAsJudgeExecutionEventType = z.infer<typeof LLMAsJudgeExecutionEventSchema>;
 export type IngestionEventQueueType = z.infer<typeof IngestionEvent>;
 export type OtelIngestionEventQueueType = z.infer<typeof OtelIngestionEvent>;

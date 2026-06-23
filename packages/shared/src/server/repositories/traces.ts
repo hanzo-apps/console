@@ -10,7 +10,8 @@ import { FilterState } from "../../types";
 import { DateTimeFilter, FilterList, StringFilter } from "../queries/datastore-sql/datastore-filter";
 import { TraceRecordReadType } from "./definitions";
 import { tracesTableUiColumnDefinitions } from "../tableMappings/mapTracesTable";
-import { UiColumnMappings } from "../../tableDefinitions";
+import { UiColumnMappings, ColumnDefinition } from "../../tableDefinitions";
+import { tracesTableCols } from "../../tableDefinitions/tracesTable";
 import { convertDateToDatastoreDateTime, PreferredDatastoreService } from "../datastore/client";
 import { convertDatastoreToDomain } from "./traces_converters";
 import { datastoreSearchCondition } from "../queries/datastore-sql/search";
@@ -1360,7 +1361,7 @@ export const getTracesForAnalyticsIntegrations = async function* (
     },
   });
 
-  const baseUrl = env.NEXTAUTH_URL?.replace("/api/auth", "");
+  const baseUrl = env.NEXTAUTH_URL?.replace("/v1/auth", "");
 
   for await (const record of records) {
     yield {

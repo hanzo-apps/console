@@ -11,7 +11,17 @@ import type {
 import {
   applyFieldMappingConfig,
   validateFieldAgainstSchema,
+  testJsonPath,
+  isJsonPath,
 } from "@hanzo/console";
+
+/** A JSONPath syntax error collected while previewing a field mapping. */
+type JsonPathError = {
+  sourceField: SourceField;
+  jsonPath: string;
+  mappingKey: string | null;
+  message: string;
+};
 
 type MappingPreviewPanelProps = {
   fieldLabel: string;
@@ -69,6 +79,54 @@ export function MappingPreviewPanel({
       defaultSourceField,
     });
   }, [observationData, config, defaultSourceField]);
+
+  // Collect JSONPath syntax errors from the configured source fields so they can
+  // be surfaced as validation failures (a malformed JSONPath blocks the mapping).
+  const jsonPathErrors = useMemo<JsonPathError[]>(() => {
+    if (!observationData) return [];
+    if (config.mode !== "custom" || !config.custom) return [];
+
+    const errors: JsonPathError[] = [];
+
+    if (config.custom.type === "root" && config.custom.rootConfig) {
+      const { sourceField, jsonPath } = config.custom.rootConfig;
+      if (jsonPath && isJsonPath(jsonPath)) {
+        const { success, error } = testJsonPath({
+          jsonPath,
+          data: observationData[sourceField],
+        });
+        if (!success) {
+          errors.push({
+            sourceField,
+            jsonPath,
+            mappingKey: null,
+            message: error ?? "Unknown error",
+          });
+        }
+      }
+    } else if (
+      config.custom.type === "keyValueMap" &&
+      config.custom.keyValueMapConfig
+    ) {
+      for (const entry of config.custom.keyValueMapConfig.entries) {
+        if (!entry.value || !isJsonPath(entry.value)) continue;
+        const { success, error } = testJsonPath({
+          jsonPath: entry.value,
+          data: observationData[entry.sourceField],
+        });
+        if (!success) {
+          errors.push({
+            sourceField: entry.sourceField,
+            jsonPath: entry.value,
+            mappingKey: entry.key,
+            message: error ?? "Unknown error",
+          });
+        }
+      }
+    }
+
+    return errors;
+  }, [observationData, config]);
 
   // Validate result against schema, and treat JSONPath syntax errors as validation failures
   const validationResult = useMemo(() => {

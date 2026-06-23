@@ -140,3 +140,11 @@ export type AggregatableScoreDataType = (typeof AGGREGATABLE_SCORE_TYPES)[number
 
 // Type helper for functions that return only aggregatable scores
 export type AggregatableScore = ScoresByDataTypes<typeof AGGREGATABLE_SCORE_TYPES>;
+
+// Listable score types - used in read queries to exclude CORRECTION scores
+export const LISTABLE_SCORE_TYPES = ScoreDataTypeArray.filter(
+  (type) => type !== "CORRECTION",
+) satisfies readonly ScoreDataTypeType[];
+
+export type ListableScoreDataType = (typeof LISTABLE_SCORE_TYPES)[number];
+export type ListableScore = ScoresByDataTypes<typeof LISTABLE_SCORE_TYPES>;

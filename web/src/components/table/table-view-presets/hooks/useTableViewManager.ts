@@ -6,17 +6,19 @@ import {
   type TableViewPresetState,
   type ColumnDefinition,
 } from "@hanzo/console";
-import { useRouter } from "next/router";
+import { useRouter, type NextRouter } from "next/router";
 import { useEffect, useCallback, useState, useRef } from "react";
 import { type VisibilityState } from "@tanstack/react-table";
-import { StringParam } from "use-query-params";
+import { StringParam, withDefault } from "use-query-params";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { useQueryParam } from "use-query-params";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import isEqual from "lodash/isEqual";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { validateOrderBy, validateFilters } from "../validation";
+import { FilterStateMigration } from "@/src/features/filters/lib/filter-config";
+import { isSystemPresetId } from "../components/data-table-view-presets-drawer";
 
 interface TableStateUpdaters {
   setColumnOrder: (columnOrder: string[]) => void;
@@ -32,7 +34,7 @@ interface UseTableStateProps {
   projectId: string;
   stateUpdaters: TableStateUpdaters;
   validationContext?: {
-    columns?: HanzoColumnDef<any, any>[];
+    columns?: ColumnDef<any, any>[];
     filterColumnDefinition?: ColumnDefinition[];
     expandableFilterColumns?: string[];
     migrateFilterState?: FilterStateMigration;
@@ -84,6 +86,7 @@ export function useTableViewManager({
   allowBackendSystemPresets = false,
 }: UseTableStateProps) {
   const router = useRouter();
+  const { viewId } = router.query;
   const isRouterReady = router.isReady;
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,6 +102,13 @@ export function useTableViewManager({
     "viewId",
     withDefault(StringParam, storedViewId),
   );
+
+  // Refs mirror the latest state so async query/effect callbacks read current
+  // values without re-subscribing (avoids stale closures during bootstrap).
+  const selectedViewIdRef = useRef<string | null>(selectedViewId);
+  selectedViewIdRef.current = selectedViewId;
+  const isInitializedRef = useRef(isInitialized);
+  isInitializedRef.current = isInitialized;
 
   // Keep track of the viewId in session storage and in the query params
   const handleSetViewId = useCallback(
@@ -130,6 +140,7 @@ export function useTableViewManager({
     setColumnOrder,
     setColumnVisibility,
     setSearchQuery,
+    setExpandedFilters,
   } = stateUpdaters;
 
   // Use refs to always get latest function references to avoid stale closures in applyViewState

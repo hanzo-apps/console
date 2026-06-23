@@ -4,7 +4,7 @@ imports:
   pagination: ./utils/pagination.yml
 service:
   auth: true
-  base-path: /api/public
+  base-path: /v1
   endpoints:
     create:
       method: POST

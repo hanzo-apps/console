@@ -10,6 +10,7 @@ import {
   type ViewVersion,
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
 
 type UseAllModelsOptions = {
   enabled?: boolean;

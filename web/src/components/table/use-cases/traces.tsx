@@ -7,13 +7,13 @@ import {
 } from "@/src/components/table/data-table-controls";
 import { ResizableFilterLayout } from "@/src/components/table/resizable-filter-layout";
 import { Badge } from "@/src/components/ui/badge";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { TokenUsageBadge } from "@/src/components/token-usage-badge";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { api } from "@/src/utils/api";
 import { formatIntervalSeconds } from "@/src/utils/dates";
 import { type RouterOutput } from "@/src/utils/types";
-import { type RowSelectionState } from "@tanstack/react-table";
+import { type Row, type RowSelectionState } from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import type Decimal from "decimal.js";
@@ -96,6 +96,13 @@ import {
 import { useScoreColumns } from "@/src/features/scores/hooks/useScoreColumns";
 import { scoreFilters } from "@/src/features/scores/lib/scoreColumns";
 import TagList from "@/src/features/tag/components/TagList";
+import { Skeleton } from "@/src/components/ui/skeleton";
+import {
+  TableBadgeLoadingCell,
+  TableTextLoadingCell,
+} from "@/src/components/table/loading-cells";
+import { PeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
+import { usePeekTableState } from "@/src/components/table/peek/contexts/PeekTableStateContext";
 
 export type TracesTableRow = {
   // Shown by default
@@ -389,6 +396,17 @@ export default function TracesTable({
 
   const { searchQuery, searchType, setSearchQuery, setSearchType } =
     useFullTextSearch();
+  const legacyTracingSearchConfig = api.public.tracingSearchConfig.useQuery(
+    { projectId },
+    {
+      enabled: !hideControls,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  );
+  const legacyTracingIoSearchEnabled =
+    legacyTracingSearchConfig.data?.legacyTracingIoSearchEnabled ?? true;
 
   const tracesAllCountFilter = {
     projectId,
@@ -588,7 +606,7 @@ export default function TracesTable({
 
   const enableSorting = !hideControls;
 
-  const columns: HanzoColumnDef<TracesTableRow>[] = [
+  const columns: ColumnDef<TracesTableRow>[] = [
     ...(hideControls
       ? []
       : ([
@@ -616,7 +634,7 @@ export default function TracesTable({
             },
             enableSorting,
           },
-        ] satisfies LangfuseColumnDef<TracesTableRow>[])),
+        ] satisfies ColumnDef<TracesTableRow>[])),
     {
       accessorKey: "timestamp",
       header: "Timestamp",
@@ -1074,7 +1092,7 @@ export default function TracesTable({
           defaultHidden: true,
           enableSorting,
         },
-      ] satisfies LangfuseColumnDef<TracesTableRow>[],
+      ] satisfies ColumnDef<TracesTableRow>[],
     },
     {
       accessorKey: "usage",
@@ -1133,7 +1151,7 @@ export default function TracesTable({
           defaultHidden: true,
           enableSorting,
         },
-      ] satisfies LangfuseColumnDef<TracesTableRow>[],
+      ] satisfies ColumnDef<TracesTableRow>[],
     },
     ...(hideControls
       ? []
@@ -1168,7 +1186,7 @@ export default function TracesTable({
               );
             },
           },
-        ] satisfies LangfuseColumnDef<TracesTableRow>[])),
+        ] satisfies ColumnDef<TracesTableRow>[])),
   ];
 
   const [columnVisibility, setColumnVisibility] =

@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { removeEmptyEnvVariables } from "./utils/environment";
+import { applyDatastoreEnvBackCompat, removeEmptyEnvVariables } from "./utils/environment";
+
+// Present in browser bundles, absent in Node. Declared (rather than pulling the
+// DOM lib into this Node-targeted package) so the `typeof window` client guard
+// below type-checks while staying the exact literal webpack statically strips.
+declare const window: unknown;
 
 const EnvSchema = z.object({
   NEXT_PUBLIC_HANZO_CLOUD_REGION: z.string().optional(),
@@ -51,6 +56,10 @@ const EnvSchema = z.object({
   HANZO_INGESTION_QUEUE_DELAY_MS: z.coerce.number().nonnegative().default(15_000),
   HANZO_INGESTION_QUEUE_SHARD_COUNT: z.coerce.number().positive().default(1),
   HANZO_OTEL_INGESTION_QUEUE_SHARD_COUNT: z.coerce.number().positive().default(1),
+  HANZO_OTEL_INGESTION_SECONDARY_QUEUE_SHARD_COUNT: z.coerce.number().positive().default(1),
+  HANZO_EVAL_EXECUTION_QUEUE_SHARD_COUNT: z.coerce.number().positive().default(1),
+  HANZO_EVAL_EXECUTION_SECONDARY_QUEUE_SHARD_COUNT: z.coerce.number().positive().default(1),
+  HANZO_CODE_EVAL_EXECUTION_QUEUE_SHARD_COUNT: z.coerce.number().positive().default(1),
   HANZO_TRACE_UPSERT_QUEUE_SHARD_COUNT: z.coerce.number().positive().default(1),
   HANZO_TRACE_UPSERT_QUEUE_ATTEMPTS: z.coerce.number().positive().default(2),
   HANZO_TRACE_DELETE_DELAY_MS: z.coerce.number().nonnegative().default(5_000),
@@ -224,10 +233,26 @@ const EnvSchema = z.object({
 export type SharedEnv = z.infer<typeof EnvSchema>;
 
 export const env: SharedEnv =
-  // DOCKER_BUILD is set in the Dockerfile; SKIP_ENV_VALIDATION is used for local
-  // frontend builds/dev. Mirror web/src/env.mjs so both env layers skip on the
-  // same signals (one way to skip validation across the monorepo).
-  process.env.DOCKER_BUILD === "1" || // eslint-disable-line turbo/no-undeclared-env-vars
-  process.env.SKIP_ENV_VALIDATION === "1" // eslint-disable-line turbo/no-undeclared-env-vars
-    ? (process.env as any)
-    : EnvSchema.parse(removeEmptyEnvVariables(process.env));
+  // This barrel re-exports `env`, so any client module importing from
+  // @hanzo/console pulls this module into the browser bundle. In the browser:
+  //   - server-only vars (e.g. S3_EVENT_UPLOAD_BUCKET) are absent, so validating
+  //     them throws and crashes _app; and
+  //   - `process` is NOT a global — Next only statically inlines individual
+  //     `process.env.NEXT_PUBLIC_*` accesses, so a bare `process.env` reference
+  //     is a ReferenceError.
+  // So on the client expose ONLY the inlined NEXT_PUBLIC_* subset and never touch
+  // bare `process` or run the parse. `typeof window !== "undefined"` is statically
+  // `true` in the client bundle, so webpack also dead-code-strips the server parse
+  // (and its schema) from client output. This mirrors web/src/env.mjs, which (via
+  // @t3-oss/env-nextjs) likewise exposes only client vars in the browser.
+  typeof window !== "undefined"
+    ? ({
+        NEXT_PUBLIC_HANZO_CLOUD_REGION: process.env.NEXT_PUBLIC_HANZO_CLOUD_REGION, // eslint-disable-line turbo/no-undeclared-env-vars
+        NEXT_PUBLIC_COOKIE_PREFIX: process.env.NEXT_PUBLIC_COOKIE_PREFIX, // eslint-disable-line turbo/no-undeclared-env-vars
+      } as unknown as SharedEnv)
+    : // Server/SSR: DOCKER_BUILD is set in the Dockerfile; SKIP_ENV_VALIDATION is
+      // used for local frontend builds/dev (mirrors web/src/env.mjs skip signals).
+      process.env.DOCKER_BUILD === "1" || // eslint-disable-line turbo/no-undeclared-env-vars
+        process.env.SKIP_ENV_VALIDATION === "1" // eslint-disable-line turbo/no-undeclared-env-vars
+      ? (process.env as any)
+      : EnvSchema.parse(applyDatastoreEnvBackCompat(removeEmptyEnvVariables(process.env)));

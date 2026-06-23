@@ -24,7 +24,7 @@
  * observations search, the issue's exact end-to-end scenario) and a few unit assertions on the
  * SQL builder. Testing-Trophy weighting: heavy on integration, light on unit.
  */
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { prisma } from "@hanzo/console/src/db";
 import { appRouter } from "@/src/server/api/root";
 import { createInnerTRPCContext } from "@/src/server/api/trpc";

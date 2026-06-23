@@ -1,5 +1,5 @@
 import { prisma } from "@hanzo/console/src/db";
-import { HanzoNotFoundError } from "@hanzo/console";
+import { ConsoleNotFoundError } from "@hanzo/console";
 import {
   GetObservationV1Query,
   GetObservationV1Response,
@@ -44,7 +44,7 @@ export default withMiddlewares({
           });
 
       if (!datastoreObservation) {
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           "Observation not found within authorized project",
         );
       }
@@ -86,7 +86,7 @@ export default withMiddlewares({
       };
 
       if (!observation) {
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           "Observation not found within authorized project",
         );
       }

@@ -1,5 +1,5 @@
 import type { NormalizerContext, ProviderAdapter } from "../types";
-import { parseMetadata, stringifyToolResultContent, isRichToolResult } from "../helpers";
+import { parseMetadata, stringifyToolResultContent, isRichToolResult, getNestedProperty } from "../helpers";
 import { z } from "zod/v4";
 
 /**
@@ -440,11 +440,7 @@ export const geminiAdapter: ProviderAdapter = {
     const scopeName = getNestedProperty(meta, "scope", "name");
     if (scopeName === "pydantic-ai") return false;
     if (scopeName === "agent_framework") return false;
-    if (
-      typeof scopeName === "string" &&
-      scopeName.includes("Microsoft.Extensions.AI")
-    )
-      return false;
+    if (typeof scopeName === "string" && scopeName.includes("Microsoft.Extensions.AI")) return false;
 
     // HINTS: Fast checks for explicit Gemini indicators
     if (ctx.observationName?.toLowerCase().includes("gemini")) return true;

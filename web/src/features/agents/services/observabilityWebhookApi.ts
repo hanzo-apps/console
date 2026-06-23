@@ -3,7 +3,7 @@ import { getGlobalApiKey } from "./api";
 // Must go through the console agents proxy (/api/agents/ui/v1 → backend
 // /api/v1). A raw '/api/v1' base hits the console Next.js app, which has no
 // such route, and 404s.
-const API_BASE = "/api/agents/ui/v1";
+const API_BASE = "/v1/agents/ui/v1";
 
 export class ObservabilityWebhookApiError extends Error {
   public status?: number;

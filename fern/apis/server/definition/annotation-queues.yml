@@ -5,7 +5,7 @@ imports:
 
 service:
   auth: true
-  base-path: /api/public
+  base-path: /v1
   endpoints:
     listQueues:
       docs: Get all annotation queues

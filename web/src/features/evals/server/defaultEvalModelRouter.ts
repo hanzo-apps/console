@@ -6,6 +6,16 @@ import {
 import { z } from "zod/v4";
 import { ZodModelConfig } from "@hanzo/console";
 import { DefaultEvalModelService } from "@hanzo/console/src/server";
+import { findDefaultModelEvalTemplateIds } from "@/src/features/evals/server/defaultModelEvalTemplateRepository";
+import {
+  EvaluatorBlockSource,
+  blockEvaluatorConfigsInTx,
+  finalizeBlockedEvaluatorConfigBlocks,
+} from "@hanzo/console/src/server";
+import {
+  EvaluatorBlockReason,
+  getEvaluatorBlockMetadata,
+} from "@hanzo/console";
 
 export const defaultEvalModelRouter = createTRPCRouter({
   fetchDefaultModel: protectedProjectProcedure

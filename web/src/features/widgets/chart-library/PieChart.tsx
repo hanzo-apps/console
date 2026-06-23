@@ -1,7 +1,17 @@
 import React, { useMemo } from "react";
 import { ChartContainer, ChartTooltip } from "@/src/components/ui/chart";
-import { Label, Pie, PieChart as PieChartComponent } from "recharts";
+import {
+  Label,
+  Pie,
+  PieChart as PieChartComponent,
+  Sector,
+  type PieSectorShapeProps,
+} from "recharts";
 import { type ChartProps } from "@/src/features/widgets/chart-library/chart-props";
+import {
+  formatMetric,
+  toFullMetricString,
+} from "@/src/features/widgets/chart-library/utils";
 
 /**
  * PieChart component
@@ -20,6 +30,8 @@ export const PieChart: React.FC<ChartProps> = ({
     },
   },
   accessibilityLayer = true,
+  metricFormatter = (value, options) => formatMetric(value, options),
+  subtleFill = false,
 }) => {
   const formatValue = (value: number) =>
     toFullMetricString(metricFormatter(value, { style: "compact" }));
@@ -81,11 +93,24 @@ export const PieChart: React.FC<ChartProps> = ({
               content={({ viewBox }) => {
                 if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                   return (
-                    <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                      <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-3xl font-bold">
+                    <text
+                      x={viewBox.cx}
+                      y={viewBox.cy}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                    >
+                      <tspan
+                        x={viewBox.cx}
+                        y={viewBox.cy}
+                        className="fill-foreground text-3xl font-bold"
+                      >
                         {totalValue.toLocaleString()}
                       </tspan>
-                      <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-muted-foreground">
+                      <tspan
+                        x={viewBox.cx}
+                        y={(viewBox.cy || 0) + 24}
+                        className="fill-muted-foreground"
+                      >
                         Total
                       </tspan>
                     </text>

@@ -78,7 +78,7 @@ export interface CasvisorSession {
 // Base URL / fetch helper
 // ---------------------------------------------------------------------------
 
-const PROXY_BASE = "/api/compute";
+const PROXY_BASE = "/v1/compute";
 
 async function casvisorFetch<T>(
   path: string,

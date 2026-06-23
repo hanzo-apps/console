@@ -10,7 +10,7 @@ import {
 import { Input } from "@/src/components/ui/input";
 import { signupSchema } from "@/src/features/auth/lib/signupSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signIn } from "next-auth/react";
+import { signIn } from "@/src/features/auth/session";
 import Head from "next/head";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -111,7 +111,7 @@ export default function SignIn({
 
     try {
       const res = await fetch(
-        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/check-sso`,
+        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/iam/check-sso`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -158,7 +158,7 @@ export default function SignIn({
     try {
       setFormError(null);
       const res = await fetch(
-        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/signup`,
+        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/iam/signup`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -199,7 +199,7 @@ export default function SignIn({
       <div className="flex flex-1 flex-col py-6 sm:min-h-full sm:justify-center sm:px-6 sm:py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <HanzoCloudIcon className="mx-auto" />
-          <h2 className="text-primary mt-4 text-center text-2xl font-bold leading-9 tracking-tight">
+          <h2 className="text-primary mt-4 text-center text-2xl leading-9 font-bold tracking-tight">
             Create new account
           </h2>
         </div>
@@ -306,7 +306,7 @@ export default function SignIn({
             Already have an account?{" "}
             <Link
               href={`/auth/sign-in${router.asPath.includes("?") ? router.asPath.substring(router.asPath.indexOf("?")) : ""}`}
-              className="text-primary-accent hover:text-hover-primary-accent font-semibold leading-6"
+              className="text-primary-accent hover:text-hover-primary-accent leading-6 font-semibold"
             >
               Sign in
             </Link>

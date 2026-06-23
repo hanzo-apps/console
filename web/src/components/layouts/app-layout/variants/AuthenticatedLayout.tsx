@@ -5,7 +5,6 @@
  */
 
 import type { PropsWithChildren } from "react";
-import dynamic from "next/dynamic";
 import Head from "next/head";
 import { SidebarProvider, SidebarInset } from "@/src/components/ui/sidebar";
 import { AppSidebar } from "@/src/components/nav/app-sidebar";
@@ -24,29 +23,9 @@ import {
   getCloudRegionAuthUrl,
 } from "@/src/features/organizations/cloudRegions";
 import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 import type { RouteGroup } from "@/src/components/layouts/routes";
-
-const V4EnabledBanner = dynamic(
-  () =>
-    import("@/src/features/events/components/V4EnabledBanner").then((mod) => ({
-      default: mod.V4EnabledBanner,
-    })),
-  {
-    ssr: false,
-  },
-);
-
-const V4PromoBanner = dynamic(
-  () =>
-    import("@/src/features/events/components/V4PromoBanner").then((mod) => ({
-      default: mod.V4PromoBanner,
-    })),
-  {
-    ssr: false,
-  },
-);
 
 /** Grouped navigation structure returned by processNavigation */
 type GroupedNavigation = {
@@ -160,29 +139,29 @@ export function AuthenticatedLayout({
         <link rel="apple-touch-icon" href={metadata.appleTouchIconPath} />
       </Head>
 
-      <TopBannerProvider>
-        <SidebarProvider>
-          <div className="flex h-dvh w-full flex-col">
-            <PaymentBanner />
-            <V4EnabledBanner />
-            <V4PromoBanner />
-            <div className="pt-banner-offset flex min-h-0 flex-1">
-              <AppSidebar
-                navItems={navigation.mainNavigation}
-                secondaryNavItems={navigation.secondaryNavigation}
-                userNavProps={userNavProps}
-              />
-              <SidebarInset className="h-screen-with-banner max-w-full md:peer-data-[state=collapsed]:w-[calc(100vw-var(--sidebar-width-icon))] md:peer-data-[state=expanded]:w-[calc(100vw-var(--sidebar-width))]">
-                <ResizableContent aiAgentEnabled={assistantEnabled}>
-                  {children}
-                </ResizableContent>
-                <Toaster visibleToasts={1} />
-                <CommandMenu mainNavigation={navigation.navigation} />
-              </SidebarInset>
+      <PaymentBannerProvider>
+        <TopBannerProvider>
+          <SidebarProvider>
+            <div className="flex h-dvh w-full flex-col">
+              <PaymentBanner />
+              <div className="pt-banner-offset flex min-h-0 flex-1">
+                <AppSidebar
+                  navItems={navigation.mainNavigation}
+                  secondaryNavItems={navigation.secondaryNavigation}
+                  userNavProps={userNavProps}
+                />
+                <SidebarInset className="h-screen-with-banner max-w-full md:peer-data-[state=collapsed]:w-[calc(100vw-var(--sidebar-width-icon))] md:peer-data-[state=expanded]:w-[calc(100vw-var(--sidebar-width))]">
+                  <ResizableContent aiAgentEnabled={assistantEnabled}>
+                    {children}
+                  </ResizableContent>
+                  <Toaster visibleToasts={1} />
+                  <CommandMenu mainNavigation={navigation.navigation} />
+                </SidebarInset>
+              </div>
             </div>
-          </div>
-        </SidebarProvider>
-      </TopBannerProvider>
+          </SidebarProvider>
+        </TopBannerProvider>
+      </PaymentBannerProvider>
     </>
   );
 }

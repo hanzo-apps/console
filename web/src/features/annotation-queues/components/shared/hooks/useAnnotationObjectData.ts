@@ -3,6 +3,8 @@ import {
   type AnnotationQueueItem,
   AnnotationQueueObjectType,
 } from "@hanzo/console";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
+import { useEventsTraceData } from "@/src/features/events/hooks/useEventsTraceData";
 
 export interface ObjectDataHook<TData> {
   data: TData | undefined;

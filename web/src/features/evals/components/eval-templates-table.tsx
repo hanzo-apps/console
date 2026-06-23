@@ -1,6 +1,6 @@
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import useColumnVisibility from "@/src/features/column-visibility/hooks/useColumnVisibility";
 import { type RouterOutputs, api } from "@/src/utils/api";
 import { safeExtract } from "@/src/utils/map-utils";
@@ -13,7 +13,7 @@ import {
   useQueryParam,
   StringParam,
 } from "use-query-params";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TableIdOrName from "@/src/components/table/table-id";
 import { TablePeekViewEvaluatorTemplateDetail } from "@/src/components/table/peek/peek-evaluator-template-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
@@ -55,6 +55,8 @@ import {
   shouldShowEvalTemplate,
 } from "@/src/features/evals/utils/code-eval-template-utils";
 import { SiPython, SiTypescript } from "react-icons/si";
+import { CustomHeights } from "@/src/components/table/data-table-row-height-switch";
+import { PeekViewEvaluatorTemplateDetail } from "@/src/components/table/peek/peek-evaluator-template-detail";
 
 export type EvalsTemplateRow = {
   name: string;
@@ -394,7 +396,7 @@ export default function EvalsTemplateTable({
         );
       },
     }),
-  ] as HanzoColumnDef<EvalsTemplateRow>[];
+  ] as ColumnDef<EvalsTemplateRow>[];
 
   const [columnVisibility, setColumnVisibility] =
     useColumnVisibility<EvalsTemplateRow>(
@@ -407,6 +409,21 @@ export default function EvalsTemplateTable({
       basePath: `/project/${projectId}/evals/templates`,
     },
   });
+
+  const peekConfig = useMemo(
+    () => ({
+      itemType: "EVALUATOR" as const,
+      detailNavigationKey: "eval-templates",
+      peekEventOptions: {
+        ignoredSelectors: [
+          "[aria-label='apply'], [aria-label='actions'], [aria-label='edit'], [aria-label='clone']",
+        ],
+      },
+      tableDataUpdatedAt: templates.dataUpdatedAt,
+      ...peekNavigationProps,
+    }),
+    [peekNavigationProps, templates.dataUpdatedAt],
+  );
 
   const convertToTableRow = (
     template: RouterOutputs["evals"]["templateNames"]["templates"][number],

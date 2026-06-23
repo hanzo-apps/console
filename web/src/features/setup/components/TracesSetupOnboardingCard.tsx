@@ -16,7 +16,7 @@ import { toast } from "sonner";
 const SKILLS_INSTALL_COMMAND =
   "Install the Langfuse AI skill from github.com/langfuse/skills and use it to add tracing to this application with Langfuse following best practices.";
 const MANUAL_TRACING_DOCS_URL =
-  "https://langfuse.com/docs/observability/get-started";
+  "https://hanzo.ai/docs/observability/get-started";
 
 function CopyableSnippet({
   value,
@@ -91,7 +91,7 @@ export function TracesSetupOnboardingCard({
       waitingFor="Waiting for first trace"
       title="Time to log your first trace, it only takes a minute"
       description="Get your API keys first, then ask your coding agent to add observability with Langfuse to your application."
-      videoSrc="https://static.langfuse.com/prod-assets/onboarding/traces-overview-v1.mp4"
+      videoSrc="https://static.hanzo.ai/prod-assets/onboarding/traces-overview-v1.mp4"
       videoPosition="bottom"
       steps={[
         {

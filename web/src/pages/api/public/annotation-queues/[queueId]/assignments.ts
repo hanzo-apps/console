@@ -1,7 +1,7 @@
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import { prisma } from "@hanzo/console/src/db";
-import { HanzoNotFoundError, Prisma } from "@hanzo/console";
+import { ConsoleNotFoundError, Prisma } from "@hanzo/console";
 import {
   AnnotationQueueAssignmentQuery,
   CreateAnnotationQueueAssignmentBody,
@@ -29,7 +29,7 @@ export default withMiddlewares({
       });
 
       if (!queue) {
-        throw new HanzoNotFoundError("Annotation queue not found");
+        throw new ConsoleNotFoundError("Annotation queue not found");
       }
 
       // Verify the user exists and has access to the project
@@ -51,7 +51,7 @@ export default withMiddlewares({
       });
 
       if (!user || user.length === 0) {
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           "User not found or not authorized for this project",
         );
       }
@@ -98,7 +98,7 @@ export default withMiddlewares({
       });
 
       if (!queue) {
-        throw new HanzoNotFoundError("Annotation queue not found");
+        throw new ConsoleNotFoundError("Annotation queue not found");
       }
 
       // Delete the assignment if it exists

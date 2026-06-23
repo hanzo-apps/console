@@ -1,11 +1,21 @@
 import { useState } from "react";
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
-import { useKmsSecrets, useKmsEnvironments, useDeleteSecret } from "@/src/features/kms/hooks";
+import { type ColumnDef } from "@/src/components/table/types";
+import {
+  useKmsSecrets,
+  useKmsEnvironments,
+  useDeleteSecret,
+} from "@/src/features/kms/hooks";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { CreateSecretDialog } from "./CreateSecretDialog";
 import { EditSecretDialog } from "./EditSecretDialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
 import { Button } from "@/src/components/ui/button";
 import {
   DropdownMenu,
@@ -23,7 +33,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
-import { Copy, Eye, EyeOff, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Eye,
+  EyeOff,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { type KmsSecret } from "@/src/features/kms/types";
 
 type SecretRow = {
@@ -68,7 +85,7 @@ export function SecretsTable({ projectId }: { projectId: string }) {
       updatedAt: s.updatedAt,
     })) ?? [];
 
-  const columns: ConsoleColumnDef<SecretRow>[] = [
+  const columns: ColumnDef<SecretRow>[] = [
     {
       accessorKey: "secretKey",
       id: "secretKey",
@@ -86,9 +103,20 @@ export function SecretsTable({ projectId }: { projectId: string }) {
         const revealed = revealedKeys.has(key);
         return (
           <div className="flex items-center gap-2">
-            <code className="text-xs">{revealed ? value : "\u2022".repeat(Math.min(value.length, 20))}</code>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => toggleReveal(key)}>
-              {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+            <code className="text-xs">
+              {revealed ? value : "\u2022".repeat(Math.min(value.length, 20))}
+            </code>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => toggleReveal(key)}
+            >
+              {revealed ? (
+                <EyeOff className="h-3 w-3" />
+              ) : (
+                <Eye className="h-3 w-3" />
+              )}
             </Button>
           </div>
         );
@@ -144,7 +172,10 @@ export function SecretsTable({ projectId }: { projectId: string }) {
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(secret.secretKey)}>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => setDeleteTarget(secret.secretKey)}
+                  >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
@@ -157,7 +188,9 @@ export function SecretsTable({ projectId }: { projectId: string }) {
     },
   ];
 
-  const environments = (envQuery.data as { environments?: { slug: string; name: string }[] })?.environments ?? [];
+  const environments =
+    (envQuery.data as { environments?: { slug: string; name: string }[] })
+      ?.environments ?? [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -185,7 +218,13 @@ export function SecretsTable({ projectId }: { projectId: string }) {
             </SelectContent>
           </Select>
         </div>
-        {hasCUD && <CreateSecretDialog projectId={projectId} environment={environment} secretPath={secretPath} />}
+        {hasCUD && (
+          <CreateSecretDialog
+            projectId={projectId}
+            environment={environment}
+            secretPath={secretPath}
+          />
+        )}
       </div>
 
       <DataTable
@@ -227,7 +266,8 @@ export function SecretsTable({ projectId }: { projectId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete secret?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteTarget}</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong>{deleteTarget}</strong>?
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -4,7 +4,7 @@ imports:
   commons: ./commons.yml
 service:
   auth: true
-  base-path: /api/public/v2
+  base-path: /v1
   endpoints:
     get-many:
       docs: Get a list of scores (supports both trace and session scores)

@@ -28,7 +28,7 @@ import {
   useHasOrganizationAccess,
 } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { useQueryProject } from "@/src/features/projects/hooks";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import {
   Select,
   SelectContent,

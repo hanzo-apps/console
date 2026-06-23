@@ -1,7 +1,7 @@
 import {
   EvalTargetObject,
   JobConfigState,
-  LangfuseNotFoundError,
+  ConsoleNotFoundError,
 } from "@hanzo/console";
 import { EvalTemplateType, Prisma, prisma } from "@hanzo/console/src/db";
 import type {
@@ -33,7 +33,7 @@ export async function findPublicEvaluatorTemplateOrThrow(params: {
     !template ||
     (template.projectId !== params.projectId && template.projectId !== null)
   ) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "Evaluator not found within authorized project",
     );
   }
@@ -59,7 +59,7 @@ export async function findLatestPublicEvaluatorTemplateInFamilyOrThrow(params: {
   });
 
   if (!latestTemplate) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "Latest evaluator version not found within authorized project",
     );
   }
@@ -243,7 +243,7 @@ export async function findPublicEvaluationRuleOrThrow(params: {
   });
 
   if (!config) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "Evaluation rule not found within authorized project",
     );
   }

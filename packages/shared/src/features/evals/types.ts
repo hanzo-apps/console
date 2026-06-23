@@ -1,8 +1,5 @@
-import {
-  EvalTemplateSourceCodeLanguage,
-  EvalTemplateType,
-  type EvalTemplate,
-} from "@prisma/client";
+import { type EvalTemplate } from "@prisma/client";
+import { EvalTemplateSourceCodeLanguage, EvalTemplateType } from "../../db-enums";
 import z from "zod";
 
 export type EvalTemplateLlmAsAJudge = EvalTemplate & {
@@ -21,9 +18,7 @@ export type EvalTemplateCodeBased = EvalTemplate & {
   sourceCodeLanguage: EvalTemplateSourceCodeLanguage;
 };
 
-export type EvalTemplateWithType =
-  | EvalTemplateLlmAsAJudge
-  | EvalTemplateCodeBased;
+export type EvalTemplateWithType = EvalTemplateLlmAsAJudge | EvalTemplateCodeBased;
 
 export const EvalTargetObject = {
   TRACE: "trace",
@@ -35,6 +30,30 @@ export const EvalTargetObject = {
 export type EvalTargetObject = (typeof EvalTargetObject)[keyof typeof EvalTargetObject];
 
 export const EvalTargetObjectSchema = z.enum(Object.values(EvalTargetObject));
+
+// Batch action source tables that support evaluation
+export const BatchEvalSourceTable = {
+  EVENTS: "events",
+  EXPERIMENT_ITEMS: "experiment-items",
+  EXPERIMENTS: "experiments",
+} as const;
+
+export type BatchEvalSourceTable = (typeof BatchEvalSourceTable)[keyof typeof BatchEvalSourceTable];
+
+export const BatchEvalSourceTableSchema = z.enum([
+  BatchEvalSourceTable.EVENTS,
+  BatchEvalSourceTable.EXPERIMENT_ITEMS,
+  BatchEvalSourceTable.EXPERIMENTS,
+]);
+
+/**
+ * Maps a batch evaluation source table to its corresponding eval target object.
+ * - "events" → EvalTargetObject.EVENT (observation-scoped evaluators)
+ * - "experiment-items" / "experiments" → EvalTargetObject.EXPERIMENT (experiment-scoped evaluators)
+ */
+export function getEvalTargetObjectFromSourceTable(sourceTable: BatchEvalSourceTable): EvalTargetObject {
+  return sourceTable === BatchEvalSourceTable.EVENTS ? EvalTargetObject.EVENT : EvalTargetObject.EXPERIMENT;
+}
 
 export const consoleObjects = [
   "trace",
@@ -184,6 +203,11 @@ export const availableDatasetEvalVariables = [
   },
   ...availableTraceEvalVariables,
 ];
+
+export const OutputSchema = z.object({
+  reasoning: z.string(),
+  score: z.string(),
+});
 
 export const DEFAULT_TRACE_JOB_DELAY = 10_000;
 

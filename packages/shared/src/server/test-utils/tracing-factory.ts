@@ -189,6 +189,7 @@ export const createEvent = (
   const {
     metadata_values: metadataValuesAlias,
     metadata_names: metadataNamesOverride,
+    metadata_raw_values: metadataRawValuesOverride,
     ...eventOverrides
   } = event;
 

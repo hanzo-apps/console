@@ -30,7 +30,7 @@ import {
   orderByToPrismaSql,
   DefaultEvalModelService,
   testModelCall,
-  clearNoJobConfigsCache,
+  clearNoEvalConfigsCache,
 } from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 import { EvalReferencedEvaluators } from "@/src/features/evals/types";
@@ -732,7 +732,7 @@ export const evalRouter = createTRPCRouter({
       });
 
       // Clear the "no job configs" cache since we just created a new job configuration
-      await clearNoJobConfigsCache(input.projectId);
+      await clearNoEvalConfigsCache(input.projectId);
 
       if (input.timeScope.includes("EXISTING")) {
         logger.info(
@@ -1082,7 +1082,7 @@ export const evalRouter = createTRPCRouter({
 
       // Clear the "no job configs" cache if we're activating a job configuration
       if (config.status === "ACTIVE") {
-        await clearNoJobConfigsCache(projectId);
+        await clearNoEvalConfigsCache(projectId);
       }
 
       if (config.timeScope?.includes("EXISTING")) {

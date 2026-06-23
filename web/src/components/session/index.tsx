@@ -6,7 +6,10 @@ import { IOPreview } from "@/src/components/trace/components/IOPreview/IOPreview
 import { JsonSkeleton } from "@/src/components/ui/CodeJsonViewer";
 import { Badge } from "@/src/components/ui/badge";
 import { DetailPageNav } from "@/src/features/navigate-detail-pages/DetailPageNav";
-import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
+import {
+  type ListEntry,
+  useDetailPageLists,
+} from "@/src/features/navigate-detail-pages/context";
 import { api } from "@/src/utils/api";
 import { usdFormatter } from "@/src/utils/numbers";
 import { getNumberFromMap } from "@/src/utils/map-utils";
@@ -17,7 +20,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { AnnotateDrawer } from "@/src/features/scores/components/AnnotateDrawer";
 import { Button } from "@/src/components/ui/button";
 import { CommentDrawerButton } from "@/src/features/comments/CommentDrawerButton";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { Download, ExternalLinkIcon } from "lucide-react";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import Page from "@/src/components/layouts/page";
@@ -28,7 +31,13 @@ import {
 } from "@/src/components/ui/popover";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { Label } from "@/src/components/ui/label";
-import { AnnotationQueueObjectType, type ScoreDomain } from "@hanzo/console";
+import {
+  AnnotationQueueObjectType,
+  type ColumnDefinition,
+  type FilterState,
+  type ScoreDomain,
+  TableViewPresetTableName,
+} from "@hanzo/console";
 import { CreateNewAnnotationQueueItem } from "@/src/features/annotation-queues/components/CreateNewAnnotationQueueItem";
 import { TablePeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
@@ -37,6 +46,33 @@ import { LazyTraceRow } from "@/src/components/session/TraceRow";
 import { useParsedTrace } from "@/src/hooks/useParsedTrace";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import { Switch } from "@/src/components/ui/switch";
+import { TablePeekView } from "@/src/components/table/peek";
+import { PeekViewTraceDetail } from "@/src/components/table/peek/peek-trace-detail";
+import { LazyTraceEventsRow } from "@/src/components/session/TraceEventsRow";
+import { observationEventsFilterConfig } from "@/src/features/events/config/filter-config";
+import { useEventsFilterOptions } from "@/src/features/events/hooks/useEventsFilterOptions";
+import { normalizeLegacySessionPositionInTraceFilters } from "@/src/components/session/session-position-in-trace";
+import {
+  decodeAndNormalizeFilters,
+  useSidebarFilterState,
+} from "@/src/features/filters/hooks/useSidebarFilterState";
+import {
+  buildSidebarFilterQueryStorageKey,
+  readPersistedSidebarFilterQuery,
+} from "@/src/features/filters/lib/persistedSidebarFilterQuery";
+import { StringParam, useQueryParam } from "use-query-params";
+import { PopoverFilterBuilder } from "@/src/features/filters/components/filter-builder";
+import { useTableViewManager } from "@/src/components/table/table-view-presets/hooks/useTableViewManager";
+import { TableViewPresetsDrawer } from "@/src/components/table/table-view-presets/components/data-table-view-presets-drawer";
+import { Separator } from "@/src/components/ui/separator";
+import {
+  type VisibilityState,
+  type ColumnOrderState,
+} from "@tanstack/react-table";
+import {
+  type SessionDetailSystemPreset,
+  getSessionDetailPresetToApply,
+} from "@/src/components/session/session-detail-presets";
 
 // some projects have thousands of users in a session, paginate to avoid rendering all at once
 const INITIAL_USERS_DISPLAY_COUNT = 10;
@@ -462,6 +498,553 @@ export const SessionPage: React.FC<{
           children: <PeekViewTraceDetail projectId={projectId} />,
           tableDataUpdatedAt: session.dataUpdatedAt,
         }}
+      />
+    </Page>
+  );
+};
+
+const areDetailPageListsEqual = (
+  left: ListEntry[] | undefined,
+  right: ListEntry[] | undefined,
+) => {
+  if (left === right) return true;
+  if (!left || !right || left.length !== right.length) return false;
+  return left.every((entry, index) => {
+    const other = right[index];
+    if (entry.id !== other?.id) return false;
+    if (!entry.params && !other?.params) return true;
+    return JSON.stringify(entry.params) === JSON.stringify(other?.params);
+  });
+};
+
+export const SessionEventsPage: React.FC<{
+  sessionId: string;
+  projectId: string;
+}> = ({ sessionId, projectId }) => {
+  const router = useRouter();
+  const { setDetailPageList, detailPagelists } = useDetailPageLists();
+  const userSession = useSession();
+  const parentRef = useRef<HTMLDivElement>(null);
+  const defaultPresetAppliedRef = useRef(false);
+
+  // Reset default preset flag when session changes (e.g., navigating between sessions)
+  useEffect(() => {
+    defaultPresetAppliedRef.current = false;
+  }, [sessionId]);
+
+  const session = api.sessions.byIdWithScoresFromEvents.useQuery(
+    {
+      sessionId,
+      projectId: projectId,
+    },
+    {
+      retry(failureCount, error) {
+        if (
+          error.data?.code === "UNAUTHORIZED" ||
+          error.data?.code === "NOT_FOUND"
+        )
+          return false;
+        return failureCount < 3;
+      },
+    },
+  );
+
+  const [showCorrections, setShowCorrections] = useLocalStorage(
+    "showCorrections",
+    false,
+  );
+
+  const sessionCommentCounts = api.comments.getCountByObjectId.useQuery(
+    {
+      projectId,
+      objectId: sessionId,
+      objectType: "SESSION",
+    },
+    { enabled: session.isSuccess && userSession.status === "authenticated" },
+  );
+
+  const traceCommentCounts =
+    api.comments.getTraceCommentCountsBySessionId.useQuery(
+      {
+        projectId,
+        sessionId,
+      },
+      { enabled: session.isSuccess && userSession.status === "authenticated" },
+    );
+
+  const tracesQuery = api.sessions.tracesFromEvents.useQuery(
+    { projectId, sessionId },
+    {
+      enabled: !!projectId && !!sessionId,
+      retry(failureCount, error) {
+        if (
+          error.data?.code === "UNAUTHORIZED" ||
+          error.data?.code === "NOT_FOUND"
+        )
+          return false;
+        return failureCount < 3;
+      },
+    },
+  );
+
+  const { openPeek, closePeek, resolveDetailNavigationPath, expandPeek } =
+    usePeekNavigation({
+      expandConfig: {
+        basePath: `/project/${projectId}/traces`,
+      },
+      queryParams: ["observation", "display", "timestamp"],
+      extractParamsValuesFromRow: (row: any) => ({
+        timestamp: row.timestamp.toISOString(),
+      }),
+    });
+
+  useEffect(() => {
+    if (!tracesQuery.isSuccess) return;
+    const nextList = tracesQuery.data.map((t) => ({
+      id: t.id,
+      params: { timestamp: t.timestamp.toISOString() },
+    }));
+    if (areDetailPageListsEqual(detailPagelists.traces, nextList)) return;
+    setDetailPageList("traces", nextList);
+  }, [
+    tracesQuery.isSuccess,
+    tracesQuery.data,
+    setDetailPageList,
+    detailPagelists.traces,
+  ]);
+
+  const sessionEventsTableName = "session-events";
+  const sessionFilterStorageKey = buildSidebarFilterQueryStorageKey({
+    tableName: sessionEventsTableName,
+    contextId: projectId,
+  });
+  const positionInTraceColumn: ColumnDefinition = React.useMemo(
+    () => ({
+      name: "Position in Trace",
+      id: "positionInTrace",
+      type: "positionInTrace",
+      internal: "positionInTrace",
+    }),
+    [],
+  );
+  const sessionEventsFilterConfig = React.useMemo(() => {
+    return {
+      ...observationEventsFilterConfig,
+      tableName: sessionEventsTableName,
+      columnDefinitions: [
+        ...observationEventsFilterConfig.columnDefinitions,
+        positionInTraceColumn,
+      ],
+      migrateFilterState: undefined,
+      facets: observationEventsFilterConfig.facets.filter(
+        (facet) =>
+          facet.column !== "sessionId" &&
+          facet.column !== "isRootObservation" &&
+          facet.column !== "environment",
+      ),
+    };
+  }, [positionInTraceColumn, sessionEventsTableName]);
+  const [urlFiltersQuery] = useQueryParam("filter", StringParam);
+  const filtersQuery = React.useMemo(
+    () =>
+      urlFiltersQuery ??
+      readPersistedSidebarFilterQuery({
+        storageKey: sessionFilterStorageKey,
+        contextId: projectId,
+      }),
+    [urlFiltersQuery, sessionFilterStorageKey, projectId],
+  );
+
+  // Decode time filters from URL/session filter state for scoping filter options
+  const timeFiltersForOptions = React.useMemo(() => {
+    const allFilters = decodeAndNormalizeFilters(
+      filtersQuery,
+      sessionEventsFilterConfig.columnDefinitions,
+    );
+    return allFilters.filter(
+      (f) =>
+        (f.column === "Start Time" || f.column === "startTime") &&
+        f.type === "datetime",
+    );
+  }, [filtersQuery, sessionEventsFilterConfig.columnDefinitions]);
+
+  const { filterOptions, isFilterOptionsPending } = useEventsFilterOptions({
+    projectId,
+    oldFilterState: timeFiltersForOptions,
+  });
+
+  const filterColumns = React.useMemo<ColumnDefinition[]>(() => {
+    const scoreCategoryOptions = filterOptions.score_categories
+      ? Object.entries(filterOptions.score_categories).map(
+          ([label, values]) => ({
+            label,
+            values,
+          }),
+        )
+      : [];
+
+    return sessionEventsFilterConfig.columnDefinitions
+      .filter(
+        (column) =>
+          column.id !== "sessionId" &&
+          column.id !== "hasParentObservation" &&
+          column.id !== "isRootObservation" &&
+          column.id !== "environment" &&
+          column.id !== "traceId" &&
+          column.id !== "traceName" &&
+          column.id !== "traceTags" &&
+          column.id !== "userId",
+      )
+      .map((column) => {
+        if (column.type === "stringOptions" || column.type === "arrayOptions") {
+          const optionMap: Record<string, typeof column.options | undefined> = {
+            type: filterOptions.type,
+            name: filterOptions.name,
+            level: filterOptions.level,
+            providedModelName: filterOptions.providedModelName,
+            modelId: filterOptions.modelId,
+            promptName: filterOptions.promptName,
+            version: filterOptions.version,
+            experimentDatasetId: filterOptions.experimentDatasetId,
+            experimentId: filterOptions.experimentId,
+            experimentName: filterOptions.experimentName,
+          };
+
+          const options = optionMap[column.id];
+          return options ? { ...column, options } : column;
+        }
+
+        if (
+          column.type === "categoryOptions" &&
+          column.id === "score_categories"
+        ) {
+          return { ...column, options: scoreCategoryOptions };
+        }
+
+        if (column.type === "numberObject" && column.id === "scores_avg") {
+          return filterOptions.scores_avg
+            ? { ...column, keyOptions: filterOptions.scores_avg }
+            : column;
+        }
+
+        return column;
+      });
+  }, [filterOptions, sessionEventsFilterConfig.columnDefinitions]);
+
+  const filterColumnsWithCustomSelect = React.useMemo(
+    () =>
+      filterColumns
+        .filter(
+          (column) =>
+            column.type === "stringOptions" || column.type === "arrayOptions",
+        )
+        .map((column) => column.id),
+    [filterColumns],
+  );
+
+  const queryFilter = useSidebarFilterState(
+    sessionEventsFilterConfig,
+    filterOptions,
+    {
+      loading: isFilterOptionsPending,
+      stateLocation: "urlAndSessionStorage",
+      sessionFilterContextId: projectId,
+    },
+  );
+
+  const visibleFilterState = React.useMemo(
+    () =>
+      queryFilter.filterState.filter(
+        (filter) =>
+          filter.column !== "Session ID" &&
+          filter.column !== "sessionId" &&
+          filter.column !== "Has Parent Observation" &&
+          filter.column !== "hasParentObservation" &&
+          filter.column !== "Is Root Observation" &&
+          filter.column !== "isRootObservation" &&
+          filter.column !== "environment" &&
+          filter.column !== "traceId" &&
+          filter.column !== "traceName" &&
+          filter.column !== "traceTags" &&
+          filter.column !== "userId",
+      ),
+    [queryFilter.filterState],
+  );
+
+  // Stub state for Saved Views (no actual table columns in this view)
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+
+  const setFiltersWrapper = useCallback(
+    (filters: FilterState) =>
+      queryFilter.setFilterState(
+        normalizeLegacySessionPositionInTraceFilters(filters),
+      ),
+    [queryFilter],
+  );
+
+  const { isLoading: isViewLoading, ...viewControllers } = useTableViewManager({
+    tableName: TableViewPresetTableName.SessionDetail,
+    projectId,
+    stateUpdaters: {
+      setColumnOrder,
+      setColumnVisibility,
+      setFilters: setFiltersWrapper,
+      setExpandedFilters: queryFilter.onExpandedChange,
+    },
+    validationContext: {
+      columns: [],
+      filterColumnDefinition: sessionEventsFilterConfig.columnDefinitions,
+      expandableFilterColumns: sessionEventsFilterConfig.facets.map(
+        (facet) => facet.column,
+      ),
+    },
+    currentFilterState: queryFilter.explicitFilterState,
+    currentExpandedFilters: queryFilter.expanded,
+  });
+
+  const applySystemPreset = useCallback(
+    (preset: SessionDetailSystemPreset) => {
+      viewControllers.handleSetViewId(preset.id);
+      queryFilter.setFilterState(preset.filters);
+    },
+    [queryFilter, viewControllers],
+  );
+
+  useEffect(() => {
+    if (defaultPresetAppliedRef.current) return;
+    if (isViewLoading) return; // Wait for view manager to initialize
+
+    const presetToApply = getSessionDetailPresetToApply({
+      selectedViewId: viewControllers.selectedViewId,
+      hasFilters: queryFilter.filterState.length > 0,
+    });
+    if (!presetToApply) return;
+
+    defaultPresetAppliedRef.current = true;
+    // Sessions intentionally default to the first generation in each trace
+    // when opened without explicit filters or a saved view.
+    applySystemPreset(presetToApply);
+  }, [
+    applySystemPreset,
+    queryFilter.filterState.length,
+    isViewLoading,
+    viewControllers.selectedViewId,
+  ]);
+
+  const virtualizer = useVirtualizer({
+    count: tracesQuery.data?.length ?? 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 320,
+    overscan: 1,
+    getItemKey: (index) => tracesQuery.data?.[index]?.id ?? index,
+    measureElement:
+      typeof window !== "undefined"
+        ? (element) => element.getBoundingClientRect().height
+        : undefined,
+  });
+
+  if (session.error?.data?.code === "UNAUTHORIZED")
+    return <ErrorPage message="You do not have access to this session." />;
+
+  if (session.error?.data?.code === "NOT_FOUND")
+    return (
+      <ErrorPage
+        title="Session not found"
+        message="The session is either still being processed or has been deleted."
+        additionalButton={{
+          label: "Retry",
+          onClick: () => void window.location.reload(),
+        }}
+      />
+    );
+
+  return (
+    <Page
+      headerProps={{
+        title: sessionId,
+        itemType: "SESSION",
+        breadcrumb: [
+          {
+            name: "Sessions",
+            href: `/project/${projectId}/sessions`,
+          },
+        ],
+        actionButtonsLeft: (
+          <div className="flex items-center gap-0">
+            <StarSessionToggle
+              key="star"
+              projectId={projectId}
+              sessionId={sessionId}
+              value={session.data?.bookmarked ?? false}
+              size="icon-xs"
+            />
+            <PublishSessionSwitch
+              projectId={projectId}
+              sessionId={sessionId}
+              isPublic={session.data?.public ?? false}
+              key="publish"
+              size="icon-xs"
+            />
+          </div>
+        ),
+        actionButtonsRight: (
+          <>
+            {!router.query.peek && (
+              <DetailPageNav
+                key="nav"
+                currentId={encodeURIComponent(sessionId)}
+                path={(entry) =>
+                  `/project/${projectId}/sessions/${encodeURIComponent(entry.id)}`
+                }
+                listKey="sessions"
+              />
+            )}
+            <CommentDrawerButton
+              key="comment"
+              variant="outline"
+              projectId={projectId}
+              objectId={sessionId}
+              objectType="SESSION"
+              count={getNumberFromMap(sessionCommentCounts.data, sessionId)}
+            />
+            <div className="flex items-start">
+              <AnnotateDrawer
+                projectId={projectId}
+                scoreTarget={{
+                  type: "session",
+                  sessionId,
+                }}
+                scores={session.data?.scores ?? []}
+                scoreMetadata={{
+                  projectId: projectId,
+                  environment: session.data?.environment,
+                }}
+                buttonVariant="outline"
+              />
+              <CreateNewAnnotationQueueItem
+                projectId={projectId}
+                objectId={sessionId}
+                objectType={AnnotationQueueObjectType.SESSION}
+                variant="outline"
+              />
+            </div>
+            <div className="flex items-center">
+              <Switch
+                checked={showCorrections}
+                onCheckedChange={setShowCorrections}
+                className="scale-75"
+              />
+              <span className="text-muted-foreground text-xs">
+                Show corrections
+              </span>
+            </div>
+          </>
+        ),
+      }}
+    >
+      <div className="flex h-full flex-col overflow-auto">
+        <div className="bg-background sticky top-0 z-40 flex flex-wrap items-center gap-2 border-b p-4">
+          {/* Saved Views */}
+          <TableViewPresetsDrawer
+            viewConfig={{
+              tableName: TableViewPresetTableName.SessionDetail,
+              projectId,
+              controllers: viewControllers,
+            }}
+            currentState={{
+              orderBy: null,
+              filters: queryFilter.filterState,
+              columnOrder,
+              columnVisibility,
+              searchQuery: "",
+            }}
+          />
+
+          {/* Filter Builder */}
+          <PopoverFilterBuilder
+            columns={filterColumns}
+            filterState={visibleFilterState}
+            onChange={queryFilter.setFilterState}
+            columnsWithCustomSelect={filterColumnsWithCustomSelect}
+          />
+
+          {/* Separator */}
+          <Separator orientation="vertical" className="h-6" />
+
+          {/* Stats */}
+          <Badge variant="outline">
+            Total traces: {session.data?.countTraces ?? 0}
+          </Badge>
+          {session.data && (
+            <Badge variant="outline">
+              Total cost: {usdFormatter(session.data.totalCost ?? 0, 2)}
+            </Badge>
+          )}
+
+          {/* Users */}
+          {session.data?.users?.length ? (
+            <SessionUsers projectId={projectId} users={session.data.users} />
+          ) : null}
+
+          {/* Scores */}
+          <SessionScores scores={session.data?.scores ?? []} />
+        </div>
+        <div ref={parentRef} className="flex-1 overflow-auto p-4">
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const trace = tracesQuery.data?.[virtualItem.index];
+              if (!trace) return null;
+
+              return (
+                <div
+                  key={virtualItem.key}
+                  data-index={virtualItem.index}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <LazyTraceEventsRow
+                    ref={virtualizer.measureElement}
+                    trace={trace}
+                    projectId={projectId}
+                    sessionId={sessionId}
+                    openPeek={openPeek}
+                    traceCommentCounts={traceCommentCounts.data}
+                    index={virtualItem.index}
+                    showCorrections={showCorrections}
+                    filterState={visibleFilterState}
+                    onLoad={() => {
+                      virtualizer.measureElement(
+                        document.querySelector(
+                          `[data-index="${virtualItem.index}"]`,
+                        ) as HTMLElement,
+                      );
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <TablePeekViewTraceDetail
+        itemType="TRACE"
+        detailNavigationKey="traces"
+        closePeek={closePeek}
+        expandPeek={expandPeek}
+        resolveDetailNavigationPath={resolveDetailNavigationPath}
+        projectId={projectId}
       />
     </Page>
   );

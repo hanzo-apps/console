@@ -5,7 +5,7 @@ imports:
   scim: ./scim.yml
 service:
   auth: true
-  base-path: /api/public/v2
+  base-path: /v1
   endpoints:
     get:
       docs: Get a prompt

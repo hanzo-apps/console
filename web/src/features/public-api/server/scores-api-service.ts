@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { z } from "zod/v4";
 
 import {
   _handleGenerateScoresForPublicApi,
@@ -6,8 +7,21 @@ import {
   convertScoreToPublicApi,
   type ScoreQueryType,
 } from "@/src/features/public-api/server/scores";
-import { AGGREGATABLE_SCORE_TYPES, type ScoreSourceType } from "@hanzo/console";
+import {
+  AGGREGATABLE_SCORE_TYPES,
+  LISTABLE_SCORE_TYPES,
+  type ScoreSourceType,
+} from "@hanzo/console";
 import { _handleGetScoreById } from "@hanzo/console/src/server";
+import {
+  AuthHeaderValidVerificationResultIngestion,
+  QueueJobs,
+  ScoreDeleteQueue,
+  eventTypes,
+  processEventBatch,
+} from "@hanzo/console/src/server";
+import { InternalServerError, PostScoresBodyV1 } from "@hanzo/console";
+import { auditLog } from "@/src/features/audit-logs/auditLog";
 
 export class ScoresApiService {
   constructor(private readonly apiVersion: "v1" | "v2") {}

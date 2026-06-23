@@ -349,6 +349,11 @@ export const env = createEnv({
         );
       }, "HANZO_ALLOWED_ORGANIZATION_CREATORS must be a comma separated list of valid email addresses"),
 
+    // Comma-separated email DOMAINS (e.g. "hanzo.ai") whose users are granted
+    // instance-admin access (the admin dashboard), in addition to the per-user
+    // User.admin DB flag. White-label: each brand console sets its own.
+    HANZO_ADMIN_EMAIL_DOMAINS: z.string().optional(),
+
     // Hanzo trial expiry (days)
     HANZO_TRIAL_EXPIRE: z.string().optional(),
 
@@ -874,6 +879,7 @@ export const env = createEnv({
       process.env.HANZO_CACHE_API_KEY_TTL_SECONDS,
     HANZO_ALLOWED_ORGANIZATION_CREATORS:
       process.env.HANZO_ALLOWED_ORGANIZATION_CREATORS,
+    HANZO_ADMIN_EMAIL_DOMAINS: process.env.HANZO_ADMIN_EMAIL_DOMAINS,
     HANZO_TRIAL_EXPIRE: process.env.HANZO_TRIAL_EXPIRE,
     IAM_CLIENT_ID: process.env.IAM_CLIENT_ID,
     IAM_CLIENT_SECRET: process.env.IAM_CLIENT_SECRET,

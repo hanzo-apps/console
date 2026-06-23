@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createMocks } from "node-mocks-http";
-import { LangfuseNotFoundError, UnauthorizedError } from "@hanzo/console";
+import { ConsoleNotFoundError, UnauthorizedError } from "@hanzo/console";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import handler from "../../pages/api/traces/[traceId]/download";
 import { TraceDownloadTooLargeError } from "../../features/traces/server/buildTraceExport";
@@ -132,7 +132,7 @@ describe("GET /api/traces/[traceId]/download", () => {
 
   it("returns 404 when the trace does not exist", async () => {
     mockBuildTraceExport.mockRejectedValue(
-      new LangfuseNotFoundError("Trace not found"),
+      new ConsoleNotFoundError("Trace not found"),
     );
     const { req, res } = createGetMocks({
       traceId: "trace-1",

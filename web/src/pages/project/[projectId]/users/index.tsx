@@ -14,7 +14,7 @@ import {
   TableTextLoadingCell,
 } from "@/src/components/table/loading-cells";
 import TableLink from "@/src/components/table/table-link";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { useQueryFilterState } from "@/src/features/filters/hooks/useFilterState";
 import { useDetailPageLists } from "@/src/features/navigate-detail-pages/context";
@@ -216,7 +216,7 @@ const UsersTable = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users.isSuccess, users.data]);
 
-  const columns: HanzoColumnDef<RowData>[] = [
+  const columns: ColumnDef<RowData>[] = [
     {
       accessorKey: "userId",
       enableColumnFilter: true,

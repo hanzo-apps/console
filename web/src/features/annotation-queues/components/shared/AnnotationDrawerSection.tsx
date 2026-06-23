@@ -7,7 +7,7 @@ import {
   type ScoreConfigDomain,
 } from "@hanzo/console";
 import { TriangleAlertIcon } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { AnnotationForm } from "@/src/features/scores/components/AnnotationForm";
 import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 

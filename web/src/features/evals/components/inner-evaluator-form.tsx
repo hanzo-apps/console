@@ -49,7 +49,7 @@ import {
   type EvalFormType,
   isTraceOrDatasetObject,
   isTraceTarget,
-  type HanzoObject,
+  type ConsoleObject,
   type VariableMapping,
 } from "@/src/features/evals/utils/evaluator-form-utils";
 import { ExecutionCountTooltip } from "@/src/features/evals/components/execution-count-tooltip";
@@ -78,6 +78,25 @@ import {
   TooltipContent,
 } from "@/src/components/ui/tooltip";
 import { InfoIcon } from "lucide-react";
+import {
+  EvalTargetObject,
+  observationVariableMapping,
+  validateEvaluatorFiltersForTarget,
+} from "@hanzo/console";
+import {
+  getCodeEvalVariableMapping,
+  isCodeEvalTemplate,
+  resolveCodeEvalTarget,
+} from "@/src/features/evals/utils/code-eval-template-utils";
+import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
+import { useVariableMappingSync } from "@/src/features/evals/hooks/useVariableMappingSync";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
+import {
+  isEventTarget,
+  isExperimentTarget,
+  isLegacyEvalTarget,
+} from "@/src/features/evals/utils/typeHelpers";
+import { getExperimentEvalPreviewFilters } from "@/src/features/evals/utils/experiment-eval-preview-utils";
 
 // Lazy load TracesTable
 const TracesTable = lazy(
@@ -94,9 +113,9 @@ const OUTPUT_MAPPING = [
 
 const inferDefaultMapping = (
   variable: string,
-): Pick<VariableMapping, "hanzoObject" | "selectedColumnId"> => {
+): Pick<VariableMapping, "consoleObject" | "selectedColumnId"> => {
   return {
-    hanzoObject: "trace" as const,
+    consoleObject: "trace" as const,
     selectedColumnId: OUTPUT_MAPPING.includes(variable.toLowerCase())
       ? "output"
       : "input",
@@ -156,6 +175,8 @@ const TracesPreview = memo(
 
 TracesPreview.displayName = "TracesPreview";
 
+const EMPTY_FILTER_STATE: z.infer<typeof singleFilter>[] = [];
+
 export const InnerEvaluatorForm = (props: {
   projectId: string;
   evalTemplate: EvalTemplate;
@@ -174,6 +195,10 @@ export const InnerEvaluatorForm = (props: {
   const [showPreview, setShowPreview] = useState(false);
   const router = useRouter();
   const traceId = router.query.traceId as string;
+  const { isBetaEnabled } = useV4Beta();
+  const { enabled: isCodeEvalEnabled } = useIsCodeEvalEnabled();
+  const isCodeEvalConfig =
+    isCodeEvalEnabled && isCodeEvalTemplate(props.evalTemplate);
 
   // Check if existing trace evaluator has invalid filters (e.g., score filters added by bug ff4b03c0b)
   const hasInvalidTraceFilters = useMemo(() => {
@@ -249,7 +274,7 @@ export const InnerEvaluatorForm = (props: {
             props.evalTemplate
               ? props.evalTemplate.vars.map((v) => ({
                   templateVariable: v,
-                  hanzoObject: "trace" as const,
+                  consoleObject: "trace" as const,
                   selectedColumnId: "input",
                 }))
               : [],
@@ -266,6 +291,12 @@ export const InnerEvaluatorForm = (props: {
       ),
     },
   }) as UseFormReturn<EvalFormType>;
+
+  const currentMapping = form.watch("mapping") ?? [];
+  const syncStatus = useVariableMappingSync({
+    templateVars: isCodeEvalConfig ? [] : props.evalTemplate?.vars,
+    currentMapping: currentMapping,
+  });
 
   const traceFilterOptionsResponse = api.traces.filterOptions.useQuery(
     { projectId: props.projectId },
@@ -357,7 +388,9 @@ export const InnerEvaluatorForm = (props: {
   }, [form.watch("target"), props.disabled]);
 
   useEffect(() => {
-    if (props.evalTemplate && form.getValues("mapping").length === 0) {
+    const mapping = form.getValues("mapping");
+
+    if (props.evalTemplate && mapping.length === 0) {
       form.setValue(
         "mapping",
         props.evalTemplate.vars.map((v) => ({
@@ -655,14 +688,14 @@ export const InnerEvaluatorForm = (props: {
                       value={field.value}
                       onValueChange={(value) => {
                         const isTrace = isTraceTarget(value);
-                        const hanzoObject: HanzoObject = isTrace
+                        const consoleObject: ConsoleObject = isTrace
                           ? "trace"
                           : "dataset_item";
                         const newMapping = form
                           .getValues("mapping")
                           .map((field) => ({
                             ...field,
-                            hanzoObject,
+                            consoleObject,
                           }));
                         form.setValue("filter", []);
                         form.setValue("mapping", newMapping);
@@ -1009,8 +1042,8 @@ export const InnerEvaluatorForm = (props: {
                         </div>
                         <FormField
                           control={form.control}
-                          key={`${mappingField.id}-hanzoObject`}
-                          name={`mapping.${index}.hanzoObject`}
+                          key={`${mappingField.id}-consoleObject`}
+                          name={`mapping.${index}.consoleObject`}
                           render={({ field }) => (
                             <div className="flex items-center gap-2">
                               <VariableMappingDescription
@@ -1057,7 +1090,7 @@ export const InnerEvaluatorForm = (props: {
                         />
 
                         {!isTraceOrDatasetObject(
-                          form.watch(`mapping.${index}.hanzoObject`),
+                          form.watch(`mapping.${index}.consoleObject`),
                         ) ? (
                           <FormField
                             control={form.control}
@@ -1065,7 +1098,7 @@ export const InnerEvaluatorForm = (props: {
                             name={`mapping.${index}.objectName`}
                             render={({ field }) => {
                               const type = String(
-                                form.watch(`mapping.${index}.hanzoObject`),
+                                form.watch(`mapping.${index}.consoleObject`),
                               ).toUpperCase() as ObservationType;
                               const nameOptions = Array.from(
                                 observationTypeToNames.get(type) ?? [],
@@ -1196,7 +1229,7 @@ export const InnerEvaluatorForm = (props: {
                                           (evalObject) =>
                                             evalObject.id ===
                                             form.watch(
-                                              `mapping.${index}.hanzoObject`,
+                                              `mapping.${index}.consoleObject`,
                                             ),
                                         )?.availableColumns;
 
@@ -1216,7 +1249,7 @@ export const InnerEvaluatorForm = (props: {
                                           (evalObject) =>
                                             evalObject.id ===
                                             form.watch(
-                                              `mapping.${index}.hanzoObject`,
+                                              `mapping.${index}.consoleObject`,
                                             ),
                                         )
                                         ?.availableColumns.map((column) => (

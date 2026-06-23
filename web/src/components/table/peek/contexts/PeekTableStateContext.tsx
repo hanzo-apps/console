@@ -4,6 +4,8 @@ import {
   useState,
   useMemo,
   type ReactNode,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import type { FilterState, OrderByState } from "@hanzo/console";
 

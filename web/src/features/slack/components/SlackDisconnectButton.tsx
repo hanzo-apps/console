@@ -14,6 +14,7 @@ import { showSuccessToast } from "@/src/features/notifications/showSuccessToast"
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { api } from "@/src/utils/api";
 import Spinner from "@/src/components/design-system/Spinner/Spinner";
+import { Loader2 } from "@/src/features/agents/components/ui/icon-bridge";
 
 /**
  * Props for the SlackDisconnectButton component
@@ -24,7 +25,13 @@ interface SlackDisconnectButtonProps {
   /** Whether the button is disabled */
   disabled?: boolean;
   /** Button variant */
-  variant?: "default" | "outline" | "secondary" | "destructive" | "ghost" | "link";
+  variant?:
+    | "default"
+    | "outline"
+    | "secondary"
+    | "destructive"
+    | "ghost"
+    | "link";
   /** Button size */
   size?: "default" | "sm" | "lg" | "icon";
   /** Custom button text */
@@ -128,7 +135,11 @@ export const SlackDisconnectButton: React.FC<SlackDisconnectButtonProps> = ({
   const buttonContent = (
     <>
       {isDisconnecting ? (
-        <Loader2 className={showText ? "mr-2 h-4 w-4 animate-spin" : "h-4 w-4 animate-spin"} />
+        <Loader2
+          className={
+            showText ? "mr-2 h-4 w-4 animate-spin" : "h-4 w-4 animate-spin"
+          }
+        />
       ) : (
         <Unlink className={showText ? "mr-2 h-4 w-4" : "h-4 w-4"} />
       )}
@@ -140,7 +151,12 @@ export const SlackDisconnectButton: React.FC<SlackDisconnectButtonProps> = ({
     return (
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
-          <Button variant={variant} size={size} onClick={handleClick} disabled={disabled || isDisconnecting}>
+          <Button
+            variant={variant}
+            size={size}
+            onClick={handleClick}
+            disabled={disabled || isDisconnecting}
+          >
             {buttonContent}
           </Button>
         </DialogTrigger>
@@ -151,8 +167,11 @@ export const SlackDisconnectButton: React.FC<SlackDisconnectButtonProps> = ({
               Disconnect Slack Integration
             </DialogTitle>
             <DialogDescription className="space-y-2">
-              <p>Are you sure you want to disconnect your Slack workspace from this project?</p>
-              <div className="space-y-2 rounded-md bg-muted p-3">
+              <p>
+                Are you sure you want to disconnect your Slack workspace from
+                this project?
+              </p>
+              <div className="bg-muted space-y-2 rounded-md p-3">
                 <p className="text-sm font-medium">This will:</p>
                 <ul className="ml-4 space-y-1 text-sm">
                   <li>• Remove the bot from your Slack workspace</li>
@@ -161,16 +180,25 @@ export const SlackDisconnectButton: React.FC<SlackDisconnectButtonProps> = ({
                   <li>• Delete stored workspace credentials</li>
                 </ul>
               </div>
-              <p className="text-sm text-muted-foreground">
-                You can reconnect at any time, but you&apos;ll need to reconfigure your automations.
+              <p className="text-muted-foreground text-sm">
+                You can reconnect at any time, but you&apos;ll need to
+                reconfigure your automations.
               </p>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isDisconnecting}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              disabled={isDisconnecting}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDisconnect} disabled={isDisconnecting}>
+            <Button
+              variant="destructive"
+              onClick={handleDisconnect}
+              disabled={isDisconnecting}
+            >
               {isDisconnecting ? (
                 <>
                   <div className="mr-2">
@@ -192,7 +220,12 @@ export const SlackDisconnectButton: React.FC<SlackDisconnectButtonProps> = ({
   }
 
   return (
-    <Button variant={variant} size={size} onClick={handleClick} disabled={disabled || isDisconnecting}>
+    <Button
+      variant={variant}
+      size={size}
+      onClick={handleClick}
+      disabled={disabled || isDisconnecting}
+    >
       {buttonContent}
     </Button>
   );

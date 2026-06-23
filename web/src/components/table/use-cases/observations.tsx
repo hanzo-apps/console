@@ -1,7 +1,7 @@
 import { api } from "@/src/utils/api";
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   DataTableControlsProvider,
   DataTableControls,
@@ -55,11 +55,12 @@ import { InfoIcon, PlusCircle } from "lucide-react";
 import { UpsertModelFormDialog } from "@/src/features/models/components/UpsertModelFormDialog";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { Badge } from "@/src/components/ui/badge";
-import { type RowSelectionState } from "@tanstack/react-table";
+import { type RowSelectionState, type Row } from "@tanstack/react-table";
 import TableIdOrName from "@/src/components/table/table-id";
 import { ItemBadge } from "@/src/components/ItemBadge";
 import { TablePeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
 import { usePeekNavigation } from "@/src/components/table/peek/hooks/usePeekNavigation";
+import { usePeekTableState } from "@/src/components/table/peek/contexts/PeekTableStateContext";
 import {
   detailPageListKeys,
   useDetailPageLists,
@@ -81,6 +82,14 @@ import {
   type RefreshInterval,
   REFRESH_INTERVALS,
 } from "@/src/components/table/data-table-refresh-button";
+import { Skeleton } from "@/src/components/ui/skeleton";
+import {
+  TableBadgeLoadingCell,
+  TableTextLoadingCell,
+} from "@/src/components/table/loading-cells";
+import { PeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
+import { buildTraceDetailPath } from "@/src/utils/navigation";
+import { getSafeRedirectPath } from "@/src/utils/redirect";
 
 export type ObservationsTableRow = {
   // Shown by default
@@ -132,7 +141,9 @@ export type ObservationsTableProps = {
   promptName?: string;
   promptVersion?: number;
   modelId?: string;
-  omittedFilter?: string[];
+  omittedFilter?: ObservationsOmittableFilterColumn[];
+  // External control props for embedded preview tables
+  hideControls?: boolean;
 };
 
 export default function ObservationsTable({
@@ -140,7 +151,16 @@ export default function ObservationsTable({
   promptName,
   promptVersion,
   modelId,
+  omittedFilter = [],
+  hideControls = false,
 }: ObservationsTableProps) {
+  const peekContext = usePeekTableState();
+
+  const observationsFilterConfig = useMemo(
+    () => getObservationsFilterConfig(omittedFilter),
+    [omittedFilter],
+  );
+
   const router = useRouter();
   const { viewId } = router.query;
   const utils = api.useUtils();
@@ -597,7 +617,7 @@ export default function ObservationsTable({
     },
   ];
 
-  const columns: HanzoColumnDef<ObservationsTableRow>[] = [
+  const columns: ColumnDef<ObservationsTableRow>[] = [
     selectActionColumn,
     {
       accessorKey: "startTime",
@@ -1163,7 +1183,7 @@ export default function ObservationsTable({
             return <span>{numberFormatter(value.totalUsage, 0)}</span>;
           },
         },
-      ] satisfies LangfuseColumnDef<ObservationsTableRow>[],
+      ] satisfies ColumnDef<ObservationsTableRow>[],
     },
     {
       accessorKey: "cost",
@@ -1217,7 +1237,7 @@ export default function ObservationsTable({
           defaultHidden: true,
           enableSorting: true,
         },
-      ] satisfies LangfuseColumnDef<ObservationsTableRow>[],
+      ] satisfies ColumnDef<ObservationsTableRow>[],
     },
   ];
 

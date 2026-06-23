@@ -6,6 +6,7 @@ import * as crypto from "crypto";
 import type { RedisClient } from "../redis/redis";
 import { env } from "../../env";
 import { logger } from "../index";
+import { invalidateCachedApiKeys } from "./invalidateApiKeys";
 
 export function getDisplaySecretKey(secretKey: string) {
   return secretKey.slice(0, 6) + "..." + secretKey.slice(-4);

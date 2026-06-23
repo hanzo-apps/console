@@ -11,7 +11,7 @@ import {
   Calendar,
 } from "lucide-react";
 //eslint-disable-next-line no-restricted-imports
-import { SiDiscord } from "react-icons/si";
+import { SiDiscord, SiGithub } from "react-icons/si";
 import { RainbowButton } from "@/src/components/magicui/rainbow-button";
 import { Separator } from "@/src/components/ui/separator";
 import { usePlan } from "@/src/features/entitlements/hooks";

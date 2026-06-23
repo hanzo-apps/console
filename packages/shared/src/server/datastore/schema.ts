@@ -19,3 +19,14 @@ export const DatastoreTableNames = {
 } as const;
 
 export type DatastoreTableName = keyof typeof DatastoreTableNames;
+
+// Identifiers that map to the physical events_core/events_full tables at query
+// time. events_proto is the column-mapping placeholder; events_core and
+// events_full are the physical tables.
+export const EVENTS_TABLE_NAMES = [
+  DatastoreTableNames.events_proto,
+  DatastoreTableNames.events_core,
+  "events_full",
+] as const;
+
+export type EventsTableName = (typeof EVENTS_TABLE_NAMES)[number];

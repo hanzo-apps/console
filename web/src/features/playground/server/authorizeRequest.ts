@@ -1,6 +1,9 @@
-import { getServerSession } from "next-auth";
+import { cookies } from "next/headers";
 
-import { getAuthOptions } from "@/src/server/auth";
+import {
+  getIamSessionFromCookie,
+  SESSION_COOKIE,
+} from "@/src/features/auth/lib/iamSession";
 import { isProjectMemberOrAdmin } from "@/src/server/utils/checkProjectMembershipOrAdmin";
 import { ForbiddenError, UnauthorizedError } from "@hanzo/console";
 
@@ -11,8 +14,9 @@ export type AuthorizeRequestResult = {
 export const authorizeRequestOrThrow = async (
   projectId: string,
 ): Promise<AuthorizeRequestResult> => {
-  const authOptions = await getAuthOptions();
-  const session = await getServerSession(authOptions);
+  const session = await getIamSessionFromCookie(
+    (await cookies()).get(SESSION_COOKIE)?.value,
+  );
   if (!session?.user) throw new UnauthorizedError("Unauthenticated");
 
   if (!isProjectMemberOrAdmin(session.user, projectId))

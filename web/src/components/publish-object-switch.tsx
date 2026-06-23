@@ -13,6 +13,7 @@ import { trpcErrorToast } from "@/src/utils/trpcErrorToast";
 import { type RouterInput } from "@/src/utils/types";
 import { CheckIcon, Globe, Link, Share2 } from "lucide-react";
 import { useState } from "react";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
 
 export const PublishTraceSwitch = (props: {
   traceId: string;

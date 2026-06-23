@@ -4,7 +4,7 @@ imports:
   pagination: ./utils/pagination.yml
 service:
   auth: true
-  base-path: /api/public/v2
+  base-path: /v1
   endpoints:
     update:
       docs: Update labels for a specific prompt version

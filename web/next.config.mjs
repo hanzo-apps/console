@@ -52,6 +52,10 @@ const sharedAlias = {
   "@/src/features/query": path.join(sharedSrc, "features/query"),
 };
 
+// The canonical /v1/* ↔ /api/* surface (segment pass-through, v2-at-/v1, public
+// catch-all) is the ONE source of truth in web/middleware.ts — see the note on
+// `rewrites`/`headers` below for why it lives in middleware (i18n) and not here.
+
 /**
  * CSP headers
  * img-src https to allow loading images from SSO providers
@@ -145,53 +149,17 @@ const nextConfig = {
     turbopackFileSystemCacheForBuild: true,
   },
 
-  /**
-   * If you have `experimental: { appDir: true }` set, then you must comment the below `i18n` config
-   * out.
-   *
-   * @see https://github.com/vercel/next.js/issues/41980
-   */
-  i18n: {
-    locales: ["en"],
-    defaultLocale: "en",
-  },
+  // NOTE: the single-locale `i18n` config was removed. It provided no
+  // translation (only "en", no next-i18next / useTranslation / serverSideTranslations)
+  // but force-prefixed every rewrite/redirect/middleware matcher with the locale
+  // (`/en/...`), which broke the canonical /v1/* surface. Without it, the raw
+  // /v1/* and /api/* paths match the middleware matcher directly.
   output: "standalone",
 
-  // Two purposes:
-  //  1. /v1/* → /api/* — Pages Router forces API files under `pages/api/`, but
-  //     the canonical published URL surface is /v1/*. This rewrite exposes the
-  //     Hanzo-owned (non-upstream) internal routes at /v1/*. Internal callers
-  //     in code (components, hooks, services) must reference /v1/* paths.
-  //     The Langfuse upstream surfaces (/api/public/*, /api/auth/*, /api/trpc/*,
-  //     /api/observe/*) keep their /api/* shapes because external SDKs and
-  //     NextAuth/tRPC libraries hardcode those.
-  //  2. Frontend-only mode proxies API calls to a production console.
-  async rewrites() {
-    const v1ToApi = [
-      "admin",
-      "agents",
-      "billing",
-      "compute",
-      "feedback",
-      "iam",
-      "kms",
-      "start-cron",
-      "zap",
-    ].map((seg) => ({
-      source: `/v1/${seg}/:path*`,
-      destination: `/api/${seg}/:path*`,
-    }));
-    // Top-level feedback / start-cron without /:path*
-    v1ToApi.push({ source: "/v1/feedback", destination: "/api/feedback" });
-    v1ToApi.push({ source: "/v1/start-cron", destination: "/api/start-cron" });
-
-    if (process.env.SKIP_ENV_VALIDATION !== "1") return v1ToApi;
-    const target = process.env.CONSOLE_API_URL || "https://console.hanzo.ai";
-    return [
-      ...v1ToApi,
-      { source: "/api/:path*", destination: `${target}/api/:path*` },
-    ];
-  },
+  // The canonical /v1/* ↔ /api/* surface is handled in web/middleware.ts, NOT
+  // here: this app has `i18n` configured, and Next prefixes config-rewrite
+  // sources/destinations with the locale (`/en/...`), which breaks rewrites onto
+  // locale-agnostic API routes. Middleware runs before i18n on the raw path.
 
   async headers() {
     return [
@@ -241,9 +209,9 @@ const nextConfig = {
           value: host,
         })),
       },
-      // CSP header
+      // CSP header (skip the API surface — both /api/* and the canonical /v1/*)
       {
-        source: "/:path((?!api).*)*",
+        source: "/:path((?!api|v1).*)*",
         headers: [
           {
             key: "Content-Security-Policy",
@@ -260,7 +228,7 @@ const nextConfig = {
       ...(env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== undefined
         ? [
             {
-              source: "/api/auth/session",
+              source: "/v1/iam/session",
               headers: [
                 {
                   key: "Access-Control-Allow-Origin",

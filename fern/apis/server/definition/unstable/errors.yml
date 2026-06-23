@@ -169,7 +169,7 @@ types:
             value: "$["
       - name: NameConflict
         value:
-          message: 'An evaluation rule named "answer-quality-live" already exists in this project. Use PATCH /api/public/unstable/evaluation-rules/erule_123 to update it instead of creating a duplicate.'
+          message: 'An evaluation rule named "answer-quality-live" already exists in this project. Use PATCH /v1/unstable/evaluation-rules/erule_123 to update it instead of creating a duplicate.'
           code: name_conflict
           details:
             field: name
@@ -203,7 +203,7 @@ errors:
       Recovery guidance:
       - read `details.issues` for malformed bodies or queries
       - read `details.column`, `details.invalidValues`, and `details.allowedValues` for filter problems
-      - for `details.column=datasetId`, call `GET /api/public/v2/datasets` and retry with dataset `id` values from that response
+      - for `details.column=datasetId`, call `GET /v1/datasets` and retry with dataset `id` values from that response
       - read `details.variable` or `details.variables` for mapping problems
     status-code: 400
     type: PublicApiError

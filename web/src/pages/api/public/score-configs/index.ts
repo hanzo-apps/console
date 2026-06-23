@@ -1,19 +1,15 @@
 import { createAuthedProjectAPIRoute } from "@/src/features/public-api/server/createAuthedProjectAPIRoute";
 import { withMiddlewares } from "@/src/features/public-api/server/withMiddlewares";
-import { isBooleanDataType } from "@/src/features/scores/lib/helpers";
-import {
-  filterAndValidateDbScoreConfigList,
-  validateDbScoreConfig,
-} from "@hanzo/console";
-import { Prisma, prisma } from "@hanzo/console/src/db";
-import { traceException } from "@hanzo/console/src/server";
-import { auditLog } from "@/src/features/audit-logs/auditLog";
 import {
   GetScoreConfigsQuery,
   GetScoreConfigsResponse,
   PostScoreConfigBody,
   PostScoreConfigResponse,
 } from "@/src/features/public-api/types/score-configs";
+import {
+  createScoreConfig,
+  listScoreConfigs,
+} from "@/src/features/public-api/server/score-configs-api-service";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({
@@ -38,34 +34,6 @@ export default withMiddlewares({
         page,
         limit,
       });
-
-      const configs = filterAndValidateDbScoreConfigList(
-        rawConfigs,
-        traceException,
-      );
-
-      const totalItemsRes = await prisma.$queryRaw<{ count: bigint }[]>(
-        Prisma.sql`
-          SELECT
-            COUNT(*) as count
-          FROM
-            "score_configs" AS sc
-          WHERE sc.project_id = ${auth.scope.projectId}
-        `,
-      );
-
-      const totalItems =
-        totalItemsRes[0] !== undefined ? Number(totalItemsRes[0].count) : 0;
-
-      return {
-        data: configs,
-        meta: {
-          page: page,
-          limit: limit,
-          totalItems,
-          totalPages: Math.ceil(totalItems / limit),
-        },
-      };
     },
   }),
 });

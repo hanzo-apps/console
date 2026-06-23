@@ -19,7 +19,7 @@ import {
   timeFilter,
   UpdateAnnotationScoreData,
   validateDbScore,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   InternalServerError,
   BatchActionQuerySchema,
   BatchActionType,
@@ -329,7 +329,7 @@ export const scoresRouter = createTRPCRouter({
           logger.error(
             `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
           );
-          throw new HanzoNotFoundError(
+          throw new ConsoleNotFoundError(
             `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
           );
         }
@@ -343,7 +343,7 @@ export const scoresRouter = createTRPCRouter({
           logger.error(
             `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
           );
-          throw new HanzoNotFoundError(
+          throw new ConsoleNotFoundError(
             `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
           );
         }
@@ -451,7 +451,7 @@ export const scoresRouter = createTRPCRouter({
           logger.warn(
             `No annotation score with id ${input.id} in project ${input.projectId} in Datastore, and no timestamp provided`,
           );
-          throw new HanzoNotFoundError(
+          throw new ConsoleNotFoundError(
             `No annotation score with id ${input.id} in project ${input.projectId} in Datastore`,
           );
         }
@@ -468,7 +468,7 @@ export const scoresRouter = createTRPCRouter({
           },
         });
         if (!config) {
-          throw new HanzoNotFoundError(
+          throw new ConsoleNotFoundError(
             `No score config with id ${input.configId} in project ${input.projectId}`,
           );
         }
@@ -497,7 +497,7 @@ export const scoresRouter = createTRPCRouter({
             logger.error(
               `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
             );
-            throw new HanzoNotFoundError(
+            throw new ConsoleNotFoundError(
               `No trace with id ${inflatedParams.traceId} in project ${input.projectId} in Datastore`,
             );
           }
@@ -511,7 +511,7 @@ export const scoresRouter = createTRPCRouter({
             logger.error(
               `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
             );
-            throw new HanzoNotFoundError(
+            throw new ConsoleNotFoundError(
               `No trace referencing session with id ${inflatedParams.sessionId} in project ${input.projectId} in Datastore`,
             );
           }
@@ -596,7 +596,7 @@ export const scoresRouter = createTRPCRouter({
             },
           });
           if (!config) {
-            throw new HanzoNotFoundError(
+            throw new ConsoleNotFoundError(
               `No score config with id ${score.configId} in project ${input.projectId}`,
             );
           }
@@ -707,7 +707,7 @@ export const scoresRouter = createTRPCRouter({
         logger.warn(
           `No annotation score with id ${input.id} in project ${input.projectId} in Datastore`,
         );
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           `No annotation score with id ${input.id} in project ${input.projectId} in Datastore`,
         );
       }
@@ -754,7 +754,7 @@ export const scoresRouter = createTRPCRouter({
         logger.error(
           `No trace with id ${input.traceId} in project ${input.projectId} in Datastore`,
         );
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           `No trace with id ${input.traceId} in project ${input.projectId} in Datastore`,
         );
       }

@@ -13,7 +13,7 @@ import {
   type RowHeight,
   getRowHeightTailwindClass,
 } from "@/src/components/table/data-table-row-height-switch";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { type ModelTableRow } from "@/src/components/table/use-cases/models";
 import {
   Table,
@@ -49,7 +49,7 @@ import { useRouter } from "next/router";
 import { useColumnSizing } from "@/src/components/table/hooks/useColumnSizing";
 
 interface DataTableProps<TData, TValue> {
-  columns: HanzoColumnDef<TData, TValue>[];
+  columns: ColumnDef<TData, TValue>[];
   data: AsyncTableData<TData[]>;
   pagination?: {
     totalCount: number | null; // null if loading
@@ -152,6 +152,8 @@ const getPinningClasses = <TData,>(column: Column<TData>): string => {
     isFirstRightPinnedColumn && "border-l border-border",
   );
 };
+
+type DataTableCellPadding = "compact" | "comfortable" | "none";
 
 const getCellPaddingClassName = (padding: DataTableCellPadding) => {
   switch (padding) {
@@ -326,7 +328,7 @@ export function DataTable<TData extends object, TValue>({
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     const columnDef = header.column
-                      .columnDef as HanzoColumnDef<ModelTableRow>;
+                      .columnDef as ColumnDef<ModelTableRow>;
                     const sortingEnabled = columnDef.enableSorting;
                     // if the header id does not translate to a valid css variable name, default to 150px as width
                     // may only happen for dynamic columns, as column names are user defined
@@ -501,7 +503,7 @@ interface TableBodyComponentProps<TData> {
   table: ReturnType<typeof useReactTable<TData>>;
   rowheighttw?: string;
   rowHeight?: RowHeight;
-  columns: HanzoColumnDef<TData, any>[];
+  columns: ColumnDef<TData, any>[];
   data: AsyncTableData<TData[]>;
   help?: { description: string; href: string };
   onRowClick?: (row: TData, event?: React.MouseEvent) => void;
@@ -606,8 +608,7 @@ function TableBodyComponent<TData>({
               const cellValue = cell.getValue();
               const isStringCell = typeof cellValue === "string";
               const isSmallRowHeight = (rowHeight ?? "s") === "s";
-              const columnDef = cell.column
-                .columnDef as LangfuseColumnDef<TData>;
+              const columnDef = cell.column.columnDef as ColumnDef<TData>;
 
               return (
                 <TableCell

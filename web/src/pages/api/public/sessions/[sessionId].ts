@@ -1,5 +1,5 @@
 import { prisma } from "@hanzo/console/src/db";
-import { HanzoNotFoundError } from "@hanzo/console";
+import { ConsoleNotFoundError } from "@hanzo/console";
 import {
   GetSessionV1Query,
   GetSessionV1Response,
@@ -31,7 +31,7 @@ export default withMiddlewares({
       });
 
       if (!session) {
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           "Session not found within authorized project",
         );
       }

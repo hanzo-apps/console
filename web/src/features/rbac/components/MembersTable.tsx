@@ -1,6 +1,6 @@
 import { DataTable } from "@/src/components/table/data-table";
 import { DataTableToolbar } from "@/src/components/table/data-table-toolbar";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   Avatar,
   AvatarFallback,
@@ -21,7 +21,7 @@ import type { RouterOutput } from "@/src/utils/types";
 import { Role } from "@hanzo/console";
 import { type Row } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { useHasEntitlement } from "@/src/features/entitlements/hooks";
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
@@ -147,7 +147,7 @@ export function MembersTable({
 
   const projectRolesEntitlement = useHasEntitlement("rbac-project-roles");
 
-  const columns: HanzoColumnDef<MembersTableRow>[] = [
+  const columns: ColumnDef<MembersTableRow>[] = [
     {
       accessorKey: "user",
       id: "user",
@@ -292,7 +292,7 @@ export function MembersTable({
               );
             },
           },
-        ] satisfies LangfuseColumnDef<MembersTableRow>[])
+        ] satisfies ColumnDef<MembersTableRow>[])
       : []),
     {
       accessorKey: "createdAt",

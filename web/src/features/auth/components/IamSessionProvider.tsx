@@ -13,7 +13,27 @@ import { env } from "@/src/env.mjs";
  * When the client IAM env is not configured this is a transparent pass-through,
  * so the app shell is unaffected on instances that have not enabled IAM-native
  * client auth yet.
+ *
+ * SSR-safety: the IAM SDK reads its storage at construction. We pass an
+ * in-memory Storage during prerender (no `window`) so the provider can render
+ * server-side too — letting `useIam()` consumers (e.g. the callback page) be
+ * statically prerendered without a "must be used within <IamProvider>" throw.
+ * On the client the real `sessionStorage` is used.
  */
+function createMemoryStorage(): Storage {
+  const m = new Map<string, string>();
+  return {
+    get length() {
+      return m.size;
+    },
+    clear: () => m.clear(),
+    getItem: (k) => m.get(k) ?? null,
+    key: (i) => Array.from(m.keys())[i] ?? null,
+    removeItem: (k) => void m.delete(k),
+    setItem: (k, v) => void m.set(k, String(v)),
+  } as Storage;
+}
+
 export function IamSessionProvider({ children }: { children: ReactNode }) {
   const config = useMemo<BrowserIamConfig | null>(() => {
     const serverUrl = env.NEXT_PUBLIC_IAM_SERVER_URL;
@@ -21,7 +41,8 @@ export function IamSessionProvider({ children }: { children: ReactNode }) {
     if (!serverUrl || !clientId) return null;
 
     const basePath = env.NEXT_PUBLIC_BASE_PATH ?? "";
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const isClient = typeof window !== "undefined";
+    const origin = isClient ? window.location.origin : "";
 
     return {
       serverUrl,
@@ -32,9 +53,9 @@ export function IamSessionProvider({ children }: { children: ReactNode }) {
       scope: "openid profile email",
       // Route token/userinfo through console so the browser never hits IAM
       // cross-origin (and so console can bridge the IAM token into a session).
-      // The SDK appends `/auth/token` + `/auth/userinfo`; with the /v1/iam/*
-      // rewrite in next.config.mjs those resolve to pages/api/iam/auth/*.
       proxyBaseUrl: `${origin}${basePath}/v1/iam`,
+      // Real sessionStorage on the client; in-memory during SSR/prerender.
+      storage: isClient ? window.sessionStorage : createMemoryStorage(),
     };
   }, []);
 

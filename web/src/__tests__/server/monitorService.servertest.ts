@@ -5,7 +5,7 @@ import {
   type SessionContext,
 } from "@hanzo/console/src/server";
 import { prisma } from "@hanzo/console/src/db";
-import { LangfuseNotFoundError } from "@hanzo/console";
+import { ConsoleNotFoundError } from "@hanzo/console";
 
 const baseMonitorInput = (projectId: string) => ({
   projectId,
@@ -165,13 +165,13 @@ describe("MonitorService (integration)", () => {
       expect(row!.updatedBy).toBe(editor.userId);
     });
 
-    it("throws LangfuseNotFoundError when the monitor does not exist", async () => {
+    it("throws ConsoleNotFoundError when the monitor does not exist", async () => {
       await expect(
         MonitorService.update(editor, {
           ...baseMonitorInput(projectId),
           id: "mon_missing",
         }),
-      ).rejects.toBeInstanceOf(LangfuseNotFoundError);
+      ).rejects.toBeInstanceOf(ConsoleNotFoundError);
     });
   });
 
@@ -188,7 +188,7 @@ describe("MonitorService (integration)", () => {
       expect(fetched.id).toBe(created.id);
     });
 
-    it("throws LangfuseNotFoundError when fetching from a different project", async () => {
+    it("throws ConsoleNotFoundError when fetching from a different project", async () => {
       const created = await MonitorService.create(
         creator,
         baseMonitorInput(projectId),
@@ -198,7 +198,7 @@ describe("MonitorService (integration)", () => {
           projectId: "other_project",
           id: created.id,
         }),
-      ).rejects.toBeInstanceOf(LangfuseNotFoundError);
+      ).rejects.toBeInstanceOf(ConsoleNotFoundError);
     });
 
     it("paginates list results", async () => {
@@ -218,7 +218,7 @@ describe("MonitorService (integration)", () => {
       expect(page.monitors).toHaveLength(2);
     });
 
-    it("deletes a monitor and getById then throws LangfuseNotFoundError", async () => {
+    it("deletes a monitor and getById then throws ConsoleNotFoundError", async () => {
       const created = await MonitorService.create(
         creator,
         baseMonitorInput(projectId),
@@ -226,7 +226,7 @@ describe("MonitorService (integration)", () => {
       await MonitorService.delete(creator, { projectId, id: created.id });
       await expect(
         MonitorService.getById(creator, { projectId, id: created.id }),
-      ).rejects.toBeInstanceOf(LangfuseNotFoundError);
+      ).rejects.toBeInstanceOf(ConsoleNotFoundError);
     });
 
     it.each(["name", "status", "severity", "createdAt", "updatedAt"] as const)(

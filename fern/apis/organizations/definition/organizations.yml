@@ -4,7 +4,7 @@ imports:
 
 service:
   auth: true
-  base-path: /api/admin
+  base-path: /v1/admin
   endpoints:
     getAll:
       docs: Get all organizations
