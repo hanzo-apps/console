@@ -26,7 +26,7 @@ describe("sendAdminAccessWebhook", () => {
       .mockResolvedValue({ ok: true } as Response);
 
     await sendAdminAccessWebhook({
-      email: "admin@langfuse.com",
+      email: "admin@hanzo.ai",
       projectId: "project-1",
       orgId: "org-1",
     });
@@ -60,7 +60,7 @@ describe("sendAdminAccessWebhook", () => {
       .mockResolvedValue({ ok: true } as Response);
 
     await sendAdminAccessWebhook({
-      email: "admin@langfuse.com",
+      email: "admin@hanzo.ai",
       projectId: "project-1",
       orgId: "org-1",
     });
@@ -69,7 +69,7 @@ describe("sendAdminAccessWebhook", () => {
     expect(fetchSpy).toHaveBeenCalledWith("https://example.com/hook", {
       method: "POST",
       body: JSON.stringify({
-        email: "admin@langfuse.com",
+        email: "admin@hanzo.ai",
         timestamp: "2026-02-19T19:39:37.000Z",
         project: "project-1",
         org: "org-1",
@@ -91,12 +91,12 @@ describe("sendAdminAccessWebhook", () => {
       .mockResolvedValue({ ok: true } as Response);
 
     await sendAdminAccessWebhook({
-      email: "admin@langfuse.com",
+      email: "admin@hanzo.ai",
       projectId: "project-1",
       orgId: "org-1",
     });
     await sendAdminAccessWebhook({
-      email: "admin@langfuse.com",
+      email: "admin@hanzo.ai",
       projectId: "project-1",
       orgId: "org-1",
     });
@@ -114,7 +114,7 @@ describe("sendAdminAccessWebhook", () => {
       .mockResolvedValue({ ok: true } as Response);
 
     await sendAdminAccessWebhook({
-      email: "admin@langfuse.com",
+      email: "admin@hanzo.ai",
       projectId: "project-1",
       orgId: "org-1",
     });
@@ -122,7 +122,7 @@ describe("sendAdminAccessWebhook", () => {
     vi.setSystemTime(new Date("2026-02-20T19:39:38.000Z"));
 
     await sendAdminAccessWebhook({
-      email: "admin@langfuse.com",
+      email: "admin@hanzo.ai",
       projectId: "project-1",
       orgId: "org-1",
     });
@@ -138,12 +138,12 @@ describe("sendAdminAccessWebhook", () => {
       .mockResolvedValue({ ok: true } as Response);
 
     await sendAdminAccessWebhook({
-      email: "admin@langfuse.com",
+      email: "admin@hanzo.ai",
       projectId: "project-1",
       orgId: "org-1",
     });
     await sendAdminAccessWebhook({
-      email: "admin@langfuse.com",
+      email: "admin@hanzo.ai",
       projectId: "project-2",
       orgId: "org-1",
     });
@@ -158,7 +158,7 @@ describe("sendAdminAccessWebhook", () => {
 
     await expect(
       sendAdminAccessWebhook({
-        email: "admin@langfuse.com",
+        email: "admin@hanzo.ai",
         projectId: "project-1",
         orgId: "org-1",
       }),
@@ -176,7 +176,7 @@ describe("sendAdminAccessWebhook", () => {
 
     await expect(
       sendAdminAccessWebhook({
-        email: "admin@langfuse.com",
+        email: "admin@hanzo.ai",
         projectId: "project-1",
         orgId: "org-1",
       }),

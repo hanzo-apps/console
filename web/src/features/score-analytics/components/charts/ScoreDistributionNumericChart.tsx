@@ -1,9 +1,14 @@
 import { useMemo, useState, useCallback } from "react";
 import { Bar, BarChart, XAxis, YAxis, Legend } from "recharts";
-import { ChartContainer, ChartTooltip, type ChartConfig } from "@/src/components/ui/chart";
+import {
+  ChartContainer,
+  ChartTooltip,
+  type ChartConfig,
+} from "@/src/components/ui/chart";
 import { ScoreChartLegendContent } from "./ScoreChartLegendContent";
 import { compactNumberFormatter } from "@/src/utils/numbers";
 import { ScoreChartTooltip } from "../../lib/ScoreChartTooltip";
+import { ChartLegend } from "@/src/components/ui/chart";
 
 interface NumericChartProps {
   distribution1: Array<{ binIndex: number; count: number }>;
@@ -32,7 +37,9 @@ export function ScoreDistributionNumericChart({
 
   // Transform data for Recharts
   const chartData = useMemo(() => {
-    const dist2Map = distribution2 ? new Map(distribution2.map((d) => [d.binIndex, d.count])) : null;
+    const dist2Map = distribution2
+      ? new Map(distribution2.map((d) => [d.binIndex, d.count]))
+      : null;
 
     return [...distribution1]
       .sort((a, b) => a.binIndex - b.binIndex)
@@ -88,20 +95,26 @@ export function ScoreDistributionNumericChart({
   }, [hiddenKeys, isComparisonMode]);
 
   // Toggle handler
-  const handleVisibilityToggle = useCallback((key: string, visible: boolean) => {
-    setHiddenKeys((prev) => {
-      const next = new Set(prev);
-      if (visible) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  }, []);
+  const handleVisibilityToggle = useCallback(
+    (key: string, visible: boolean) => {
+      setHiddenKeys((prev) => {
+        const next = new Set(prev);
+        if (visible) {
+          next.delete(key);
+        } else {
+          next.add(key);
+        }
+        return next;
+      });
+    },
+    [],
+  );
 
   return (
-    <ChartContainer config={config} className="[&_.recharts-rectangle.recharts-tooltip-cursor]:fill-transparent">
+    <ChartContainer
+      config={config}
+      className="[&_.recharts-rectangle.recharts-tooltip-cursor]:fill-transparent"
+    >
       <BarChart accessibilityLayer data={chartData} margin={{ bottom: 20 }}>
         <XAxis
           dataKey="dimension"
@@ -121,14 +134,27 @@ export function ScoreDistributionNumericChart({
         />
         <ChartTooltip
           content={
-            <ScoreChartTooltip valueFormatter={compactNumberFormatter} labelFormatter={(label) => String(label)} />
+            <ScoreChartTooltip
+              valueFormatter={compactNumberFormatter}
+              labelFormatter={(label) => String(label)}
+            />
           }
         />
 
-        <Bar dataKey="pv" fill={colors.score1} fillOpacity={hiddenKeys.has("pv") ? 0 : 1} radius={[4, 4, 0, 0]} />
+        <Bar
+          dataKey="pv"
+          fill={colors.score1}
+          fillOpacity={hiddenKeys.has("pv") ? 0 : 1}
+          radius={[4, 4, 0, 0]}
+        />
 
         {isComparisonMode && (
-          <Bar dataKey="uv" fill={colors.score2} fillOpacity={hiddenKeys.has("uv") ? 0 : 1} radius={[4, 4, 0, 0]} />
+          <Bar
+            dataKey="uv"
+            fill={colors.score2}
+            fillOpacity={hiddenKeys.has("uv") ? 0 : 1}
+            radius={[4, 4, 0, 0]}
+          />
         )}
 
         <ChartLegend

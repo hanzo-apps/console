@@ -182,7 +182,7 @@
     --input: 222 30% 18%;
 
     --primary: 0 0% 95%;
-    --primary-foreground: 222 47% 9%;
+    --primary-foreground: 0 0% 9%;
 
     --secondary: 222 30% 18%;
     --secondary-foreground: 0 0% 95%;
@@ -193,7 +193,7 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --ring: 215 16% 56%;
+    --ring: 0 0% 56%;
 
     /* Sidebar */
     --sidebar-background: 222 47% 5%;
@@ -206,12 +206,12 @@
     --sidebar-ring: 215 16% 56%;
 
     /* Hanzo Brand Monochrome #e4e4e7 */
-    --primary-accent: 240 5% 90%;
-    --hover-primary-accent: 240 4% 83%;
+    --primary-accent: 0 0% 90%;
+    --hover-primary-accent: 0 0% 83%;
 
     --muted-green: 84 81% 44%;
     --muted-magenta: 330 90% 70%;
-    --muted-blue: 239 84% 67%;
+    --muted-blue: 0 0% 67%;
     --muted-gray: 210 50% 91.1%;
 
     --accent-light-green: 138 76.5% 96.7%;
@@ -226,11 +226,11 @@
     --light-green: 141 84.2% 92.5%;
     --dark-green: 176 60.8% 19%;
 
-    --light-blue: 214 94.6% 92.7%;
-    --dark-blue: 217 91.2% 59.8%;
+    --light-blue: 0 0% 92.7%;
+    --dark-blue: 0 0% 59.8%;
 
-    --accent-light-blue: 251 95.2% 91.8%;
-    --accent-dark-blue: 224 76.3% 38%;
+    --accent-light-blue: 0 0% 91.8%;
+    --accent-dark-blue: 0 0% 38%;
     --radius: 0.5rem;
 
     --find-match-background: 60 60% 85%;
@@ -255,7 +255,9 @@
     /* Banner height system for fixed/sticky positioning
        Banner components dynamically update --banner-height via JS */
     --banner-height: 0px;
-    --banner-offset: calc(env(safe-area-inset-top, 0px) + var(--banner-height, 0px));
+    --banner-offset: calc(
+      env(safe-area-inset-top, 0px) + var(--banner-height, 0px)
+    );
   }
 
   .dark {
@@ -295,10 +297,10 @@
     --ring: 0 0% 20%;
 
     /* Hanzo Brand Red (dark mode variant) */
-    --primary-accent: 0 85% 65%;
+    --primary-accent: 0 0% 65%;
     --muted-primary-accent: 0 70% 50%;
 
-    --muted-blue: 215 95% 73.1%;
+    --muted-blue: 0 0% 73.1%;
     --muted-green: 142 76.7% 73.1%;
     --muted-magenta: 330 76.7% 73.1%;
     --muted-gray: 210 50% 25%;
@@ -312,14 +314,14 @@
     --light-green: 144 61.2% 20.2%;
     --dark-green: 142 76.7% 73.1%;
 
-    --light-blue: 224 64.3% 32.9%;
-    --dark-blue: 212 96.4% 78.4%;
+    --light-blue: 0 0% 32.9%;
+    --dark-blue: 0 0% 78.4%;
 
     --accent-light-green: 192 21% 9%;
     --accent-dark-green: 124 21.8% 30.6%;
 
-    --accent-light-blue: 263 60% 50.4%;
-    --accent-dark-blue: 224 50% 90%;
+    --accent-light-blue: 0 0% 50.4%;
+    --accent-dark-blue: 0 0% 90%;
 
     --radius: 0.5rem;
 

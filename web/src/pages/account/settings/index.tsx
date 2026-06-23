@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut } from "@/src/features/auth/session";
 import { SettingsDangerZone } from "@/src/components/SettingsDangerZone";
 import ContainerPage from "@/src/components/layouts/container-page";
 import { useRouter } from "next/router";

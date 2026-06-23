@@ -8,7 +8,7 @@ import type {
   GetCommentsV1Query,
   PostCommentsV1Body,
 } from "@/src/features/public-api/types/comments";
-import { LangfuseNotFoundError } from "@hanzo/console";
+import { ConsoleNotFoundError } from "@hanzo/console";
 import { prisma } from "@hanzo/console/src/db";
 
 type CommentAuditScope = {
@@ -63,7 +63,7 @@ export const getCommentRecordOrThrow = async ({
   });
 
   if (!comment) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "Comment not found within authorized project",
     );
   }
@@ -84,7 +84,7 @@ export const createCommentForApi = async ({
   });
 
   if (result.errorMessage) {
-    throw new LangfuseNotFoundError(result.errorMessage);
+    throw new ConsoleNotFoundError(result.errorMessage);
   }
 
   // Create comment with content as-is (no mention processing, no inline positioning).

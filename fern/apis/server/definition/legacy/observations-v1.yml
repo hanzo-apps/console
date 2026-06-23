@@ -4,7 +4,7 @@ imports:
   pagination: ../utils/pagination.yml
 service:
   auth: true
-  base-path: /api/public
+  base-path: /v1
   endpoints:
     get:
       docs: Get a observation
@@ -19,7 +19,7 @@ service:
       docs: |
         Get a list of observations.
 
-        Consider using the [v2 observations endpoint](/api-reference#tag/observationsv2/GET/api/public/v2/observations) for cursor-based pagination and field selection.
+        Consider using the [v2 observations endpoint](/api-reference#tag/observationsv2/GET/v1/observations) for cursor-based pagination and field selection.
       method: GET
       path: /observations
       request:

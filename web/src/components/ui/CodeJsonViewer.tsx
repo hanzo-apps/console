@@ -238,8 +238,6 @@ export function CodeView(props: {
       (typeof props.content === "string"
         ? props.content
         : (props.content?.join("\n") ?? ""));
-    void copyTextToClipboard(content);
-    setTimeout(() => setIsCopied(false), 1000);
 
     try {
       await copy(content);

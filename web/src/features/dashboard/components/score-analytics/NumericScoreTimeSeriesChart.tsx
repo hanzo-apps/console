@@ -24,6 +24,7 @@ import {
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
 import { type DatabaseRow } from "@/src/server/api/services/sqlInterface";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
 
 export function NumericScoreTimeSeriesChart(props: {
   projectId: string;

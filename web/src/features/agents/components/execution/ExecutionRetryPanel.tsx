@@ -28,10 +28,10 @@ function generateCurlCommand(execution: WorkflowExecution): string {
   // Use the correct API format: nodeid.reasonerid
   const baseUrl = window.location.origin;
   const target = `${execution.agent_node_id}.${execution.reasoner_id}`;
-  const apiUrl = `${baseUrl}/api/agents/v1/execute/${target}`;
+  const apiUrl = `${baseUrl}/v1/agents/v1/execute/${target}`;
 
   const payload = {
-    input: execution.input_data || {}
+    input: execution.input_data || {},
   };
 
   const curlCommand = `curl -X POST "${apiUrl}" \\
@@ -46,10 +46,10 @@ function generateCurlCommand(execution: WorkflowExecution): string {
 function generatePythonCode(execution: WorkflowExecution): string {
   const baseUrl = window.location.origin;
   const target = `${execution.agent_node_id}.${execution.reasoner_id}`;
-  const apiUrl = `${baseUrl}/api/agents/v1/execute/${target}`;
+  const apiUrl = `${baseUrl}/v1/agents/v1/execute/${target}`;
 
   const payload = {
-    input: execution.input_data || {}
+    input: execution.input_data || {},
   };
 
   return `import requests
@@ -74,7 +74,11 @@ else:
 
 export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
   const [isRetrying, setIsRetrying] = useState(false);
-  const [retryResult, setRetryResult] = useState<{ success: boolean; message: string; executionId?: string } | null>(null);
+  const [retryResult, setRetryResult] = useState<{
+    success: boolean;
+    message: string;
+    executionId?: string;
+  } | null>(null);
   const navigate = useNavigate();
 
   const curlCommand = generateCurlCommand(execution);
@@ -91,12 +95,12 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
       {(copied) =>
         copied ? (
           <>
-            <Check className="w-3 h-3 mr-1 text-status-success" />
+            <Check className="text-status-success mr-1 h-3 w-3" />
             {compact ? "✓" : "Copied!"}
           </>
         ) : (
           <>
-            <Copy className="w-3 h-3 mr-1" />
+            <Copy className="mr-1 h-3 w-3" />
             {label}
           </>
         )
@@ -112,18 +116,18 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
       // Use the correct API format: nodeid.reasonerid
       const baseUrl = window.location.origin;
       const target = `${execution.agent_node_id}.${execution.reasoner_id}`;
-      const apiUrl = `${baseUrl}/api/agents/v1/execute/${target}`;
+      const apiUrl = `${baseUrl}/v1/agents/v1/execute/${target}`;
 
       const payload = {
-        input: execution.input_data || {}
+        input: execution.input_data || {},
       };
 
       const response = await fetch(apiUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -131,26 +135,27 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
         setRetryResult({
           success: true,
           message: `New execution started successfully`,
-          executionId: result.execution_id
+          executionId: result.execution_id,
         });
       } else {
         const errorText = await response.text();
         setRetryResult({
           success: false,
-          message: `Failed to start execution: ${response.status} - ${errorText}`
+          message: `Failed to start execution: ${response.status} - ${errorText}`,
         });
       }
     } catch (error) {
       setRetryResult({
         success: false,
-        message: `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
     } finally {
       setIsRetrying(false);
     }
   };
 
-  const hasInputData = execution.input_data && Object.keys(execution.input_data).length > 0;
+  const hasInputData =
+    execution.input_data && Object.keys(execution.input_data).length > 0;
 
   return (
     <Card className="border-border/60">
@@ -162,7 +167,7 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Compact Action Bar */}
-        <div className="flex flex-wrap items-center gap-3 p-4 bg-muted/30 rounded-lg border border-border/40">
+        <div className="bg-muted/30 border-border/40 flex flex-wrap items-center gap-3 rounded-lg border p-4">
           <Button
             onClick={handleRetry}
             disabled={isRetrying}
@@ -176,27 +181,24 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
               </>
             ) : (
               <>
-                <Play className="w-4 h-4" />
+                <Play className="h-4 w-4" />
                 Retry Now
               </>
             )}
           </Button>
 
-          <div className="h-4 w-px bg-border" />
+          <div className="bg-border h-4 w-px" />
 
           {renderCopyAction(curlCommand, "cURL", true)}
           {renderCopyAction(pythonCode, "Python", true)}
 
-          <div className="flex items-center gap-2 text-body-small ml-auto">
+          <div className="text-body-small ml-auto flex items-center gap-2">
             <Badge variant="secondary" className="text-xs">
               {execution.agent_node_id}.{execution.reasoner_id}
             </Badge>
             {!hasInputData && (
               <div
-                className={cn(
-                  "flex items-center gap-1",
-                  statusTone.warning.fg
-                )}
+                className={cn("flex items-center gap-1", statusTone.warning.fg)}
               >
                 <WarningCircle className="h-3 w-3" />
                 <span className="text-xs font-medium">Empty input</span>
@@ -220,16 +222,16 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
                     statusTone.error.bg,
                     statusTone.error.border,
                     statusTone.error.fg,
-                  ]
+                  ],
             )}
           >
             <div className="flex-1">
               <p className="text-sm font-medium">
-                {retryResult.success ? 'Success' : 'Error'}
+                {retryResult.success ? "Success" : "Error"}
               </p>
-              <p className="text-sm mt-1">{retryResult.message}</p>
+              <p className="mt-1 text-sm">{retryResult.message}</p>
               {retryResult.executionId && (
-                <p className="text-xs mt-2 font-mono">
+                <p className="mt-2 font-mono text-xs">
                   Execution ID: {retryResult.executionId}
                 </p>
               )}
@@ -238,7 +240,9 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/executions/${retryResult.executionId}`)}
+                onClick={() =>
+                  navigate(`/executions/${retryResult.executionId}`)
+                }
                 className="ml-3 h-8"
               >
                 <ArrowSquareOut className="mr-1 h-3 w-3" />
@@ -252,11 +256,11 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
         <Tabs defaultValue="curl" className="w-full">
           <TabsList variant="segmented" className="grid w-full grid-cols-2">
             <TabsTrigger value="curl" variant="segmented" className="gap-2">
-              <Terminal className="w-4 h-4" />
+              <Terminal className="h-4 w-4" />
               cURL
             </TabsTrigger>
             <TabsTrigger value="python" variant="segmented" className="gap-2">
-              <Code className="w-4 h-4" />
+              <Code className="h-4 w-4" />
               Python
             </TabsTrigger>
           </TabsList>
@@ -270,7 +274,7 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
                 {renderCopyAction(curlCommand, "Copy")}
               </div>
               <div className="relative">
-                <pre className="bg-muted/50 p-3 rounded-lg text-xs font-mono overflow-x-auto max-h-32">
+                <pre className="bg-muted/50 max-h-32 overflow-x-auto rounded-lg p-3 font-mono text-xs">
                   <code>{curlCommand}</code>
                 </pre>
               </div>
@@ -289,7 +293,7 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
                 {renderCopyAction(pythonCode, "Copy")}
               </div>
               <div className="relative">
-                <pre className="bg-muted/50 p-3 rounded-lg text-xs font-mono overflow-x-auto max-h-32">
+                <pre className="bg-muted/50 max-h-32 overflow-x-auto rounded-lg p-3 font-mono text-xs">
                   <code>{pythonCode}</code>
                 </pre>
               </div>
@@ -301,15 +305,21 @@ export function ExecutionRetryPanel({ execution }: ExecutionRetryPanelProps) {
         </Tabs>
 
         {/* Execution Context */}
-        <div className="pt-4 border-t border-border/40">
+        <div className="border-border/40 border-t pt-4">
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="text-muted-foreground">Context:</span>
-            <Badge variant="outline">Target: {execution.agent_node_id}.{execution.reasoner_id}</Badge>
+            <Badge variant="outline">
+              Target: {execution.agent_node_id}.{execution.reasoner_id}
+            </Badge>
             {execution.session_id && (
-              <Badge variant="outline">Session: {execution.session_id.slice(0, 8)}...</Badge>
+              <Badge variant="outline">
+                Session: {execution.session_id.slice(0, 8)}...
+              </Badge>
             )}
             {execution.actor_id && (
-              <Badge variant="outline">Actor: {execution.actor_id.slice(0, 8)}...</Badge>
+              <Badge variant="outline">
+                Actor: {execution.actor_id.slice(0, 8)}...
+              </Badge>
             )}
             {hasInputData && (
               <Badge variant="secondary">

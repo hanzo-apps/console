@@ -6,10 +6,13 @@ import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/ha
 import { getOrganizationPlanServerSide } from "@/src/features/entitlements/server/getPlan";
 import { shouldAutoEnableV4 } from "@/src/features/events/lib/v4Rollout";
 
-export async function createProjectMembershipsOnSignup(user: {
-  id: string;
-  email: string | null;
-}) {
+export async function createProjectMembershipsOnSignup(
+  user: {
+    id: string;
+    email: string | null;
+  },
+  options?: { userWasJustCreated?: boolean },
+) {
   try {
     const isCloudDeployment = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
 

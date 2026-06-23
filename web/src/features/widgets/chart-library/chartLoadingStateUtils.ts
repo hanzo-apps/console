@@ -1,4 +1,5 @@
 import { RESOURCE_LIMIT_ERROR_MESSAGE } from "@hanzo/console";
+import { QueryProgress } from "@/src/hooks/useSSEDashboardQuery";
 
 type ChartQueryState = {
   isPending: boolean;
@@ -16,6 +17,7 @@ type ChartLoadingProps = {
 export function getChartLoadingStateProps({
   isPending,
   isError,
+  errorMessage,
 }: ChartQueryState): ChartLoadingProps {
   return {
     isLoading: isPending || isError,

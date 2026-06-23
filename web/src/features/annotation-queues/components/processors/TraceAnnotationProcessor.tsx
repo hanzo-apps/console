@@ -11,6 +11,10 @@ import { useEffect, useMemo } from "react";
 import { StringParam, useQueryParam } from "use-query-params";
 import { AnnotationDrawerSection } from "../shared/AnnotationDrawerSection";
 import { AnnotationProcessingLayout } from "../shared/AnnotationProcessingLayout";
+import { castToNumberMap } from "@/src/utils/map-utils";
+import { useIsAuthenticatedAndProjectMember } from "@/src/features/auth/hooks";
+import { api } from "@/src/utils/api";
+import { buildTraceUiData } from "@/src/components/trace2/lib/helpers";
 
 interface TraceAnnotationProcessorProps {
   item: AnnotationQueueItem & {
@@ -18,6 +22,7 @@ interface TraceAnnotationProcessorProps {
     lockedByUser: { name: string | null | undefined } | null;
   };
   data: any; // Trace data with observations and scores
+  view: "showTree" | "hideTree";
   configs: ScoreConfigDomain[];
   projectId: string;
 }
@@ -79,6 +84,13 @@ export const TraceAnnotationProcessor: React.FC<
       setCurrentObservationId(undefined);
     }
   }, [item, setCurrentObservationId]);
+
+  const { tree: traceTree, nodeMap } = useMemo(() => {
+    if (!data || !data.observations) {
+      return { tree: null, nodeMap: new Map() };
+    }
+    return buildTraceUiData(data, data.observations);
+  }, [data]);
 
   if (!data) return <div className="p-3">Loading...</div>;
 

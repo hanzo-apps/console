@@ -1,6 +1,6 @@
 import { deleteAnnotationQueueAssignment } from "@/src/features/annotation-queues/server/publicAnnotationQueueService";
 import { DeleteAnnotationQueueAssignmentResponse } from "@/src/features/public-api/types/annotation-queues";
-import { LangfuseNotFoundError, Prisma } from "@hanzo/console";
+import { ConsoleNotFoundError, Prisma } from "@hanzo/console";
 import { defineTool } from "../../../core/define-tool";
 import { runMcpTool } from "../../../core/run-mcp-tool";
 import { DeleteAnnotationQueueAssignmentToolSchema } from "../schema";
@@ -33,7 +33,7 @@ export const [
             error instanceof Prisma.PrismaClientKnownRequestError &&
             error.code === "P2025"
           ) {
-            throw new LangfuseNotFoundError(
+            throw new ConsoleNotFoundError(
               "Annotation queue assignment not found",
             );
           }

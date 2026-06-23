@@ -9,6 +9,7 @@ import { logger } from "@hanzo/console/src/server";
 import { TRPCError } from "@trpc/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { env } from "@/src/env.mjs";
+import { SlackApiError } from "@hanzo/console/src/server";
 
 export const slackRouter = createTRPCRouter({
   /**
@@ -32,7 +33,7 @@ export const slackRouter = createTRPCRouter({
           isConnected: false,
           teamId: null,
           teamName: null,
-          installUrl: `/api/public/slack/install?projectId=${input.projectId}`,
+          installUrl: `/v1/slack/install?projectId=${input.projectId}`,
         };
       }
 
@@ -53,7 +54,7 @@ export const slackRouter = createTRPCRouter({
             isConnected: false,
             teamId: integration.teamId,
             teamName: integration.teamName,
-            installUrl: `/api/public/slack/install?projectId=${input.projectId}`,
+            installUrl: `/v1/slack/install?projectId=${input.projectId}`,
             error:
               "Integration is invalid. Please reconnect your Slack workspace.",
           };
@@ -77,7 +78,7 @@ export const slackRouter = createTRPCRouter({
           isConnected: false,
           teamId: integration.teamId,
           teamName: integration.teamName,
-          installUrl: `/api/public/slack/install?projectId=${input.projectId}`,
+          installUrl: `/v1/slack/install?projectId=${input.projectId}`,
           error:
             "Failed to validate integration. Please reconnect your Slack workspace.",
         };

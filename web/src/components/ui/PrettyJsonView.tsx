@@ -23,7 +23,7 @@ import {
   type ExpandedState,
   type Row,
 } from "@tanstack/react-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 
 // Custom expanded state type that allows false ("user intentionally collapsed all")
 type HanzoExpandedState = ExpandedState | false;
@@ -37,6 +37,11 @@ import {
 } from "@/src/components/ui/table";
 import { ChatMlArraySchema } from "@/src/components/schemas/ChatMlSchema";
 import { MarkdownView } from "@/src/components/ui/MarkdownViewer";
+import {
+  filterAlreadyRenderedMedia,
+  getRenderedInlineMediaIds,
+  getStandaloneMediaReferenceStrings,
+} from "@/src/components/ui/markdown-media.utils";
 import {
   StringOrMarkdownSchema,
   containsAnyMarkdown,
@@ -52,7 +57,8 @@ import {
   ValueCell,
   getValueStringLength,
 } from "@/src/components/table/ValueCell";
-import { ItemBadge, type HanzoItemType } from "@/src/components/ItemBadge";
+import { ItemBadge, type ConsoleItemType } from "@/src/components/ItemBadge";
+import { decodeUnicodeEscapesOnly } from "@/src/utils/unicode";
 
 // Constants for table layout
 const INDENTATION_PER_LEVEL = 16;
@@ -574,7 +580,7 @@ function JsonPrettyTable({
     }
   }, [stickyTopLevelKey, data, expanded]);
 
-  const columns: HanzoColumnDef<JsonTableRow, unknown>[] = [
+  const columns: ColumnDef<JsonTableRow, unknown>[] = [
     {
       accessorKey: "key",
       header: "Path",
@@ -599,7 +605,7 @@ function JsonPrettyTable({
           "type" in row.original.value &&
           typeof (row.original.value as any).type === "string" &&
           (row.original.value as any).type
-            ? ((row.original.value as any).type as HanzoItemType)
+            ? ((row.original.value as any).type as ConsoleItemType)
             : null;
 
         const content = (
@@ -1284,6 +1290,18 @@ export function PrettyJsonView(props: {
   const emptyValueDisplay = getEmptyValueDisplay(parsedJson);
   const isPrettyView = actualCurrentView === "pretty";
   const isMarkdownMode = isMarkdown && isPrettyView;
+  const standaloneMediaReferenceStrings =
+    typeof markdownContent === "string"
+      ? getStandaloneMediaReferenceStrings(markdownContent)
+      : [];
+  const shouldRenderStandaloneMedia =
+    isMarkdownMode && standaloneMediaReferenceStrings.length > 0;
+  const remainingMarkdownMedia = filterAlreadyRenderedMedia(
+    props.media,
+    getRenderedInlineMediaIds({
+      markdown: markdownContent ?? "",
+    }),
+  );
   const shouldUseTableView =
     isPrettyView && !isChatML && !isMarkdown && !emptyValueDisplay;
 
@@ -1341,7 +1359,7 @@ export function PrettyJsonView(props: {
         <div className="io-message-content">
           {shouldRenderStandaloneMedia ? (
             standaloneMediaReferenceStrings.map((referenceString, index) => (
-              <LangfuseMediaView
+              <HanzoMediaView
                 key={`${referenceString}-${index}`}
                 mediaReferenceString={referenceString}
               />
@@ -1443,7 +1461,7 @@ export function PrettyJsonView(props: {
             </div>
             <div className="flex flex-wrap gap-2 p-4 pt-1">
               {props.media.map((m) => (
-                <LangfuseMediaView
+                <HanzoMediaView
                   mediaAPIReturnValue={m}
                   asFileIcon={true}
                   key={m.mediaId}

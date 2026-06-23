@@ -1,5 +1,5 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useZtConfigs } from "@/src/features/zt/hooks";
 
 type ConfigRow = {
@@ -19,27 +19,34 @@ export function ZtConfigsTable({ projectId }: { projectId: string }) {
     createdAt: item.createdAt,
   }));
 
-  const columns: ConsoleColumnDef<ConfigRow>[] = [
+  const columns: ColumnDef<ConfigRow>[] = [
     {
       accessorKey: "name",
       id: "name",
       header: "Name",
       size: 250,
-      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.name}</span>
+      ),
     },
     {
       accessorKey: "configTypeName",
       id: "configTypeName",
       header: "Config Type",
       size: 200,
-      cell: ({ row }) => <code className="text-xs">{row.original.configTypeName}</code>,
+      cell: ({ row }) => (
+        <code className="text-xs">{row.original.configTypeName}</code>
+      ),
     },
     {
       accessorKey: "createdAt",
       id: "createdAt",
       header: "Created",
       size: 150,
-      cell: ({ row }) => (row.original.createdAt ? new Date(row.original.createdAt).toLocaleString() : "-"),
+      cell: ({ row }) =>
+        row.original.createdAt
+          ? new Date(row.original.createdAt).toLocaleString()
+          : "-",
     },
   ];
 

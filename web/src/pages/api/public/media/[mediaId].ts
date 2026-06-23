@@ -12,7 +12,7 @@ import { withMiddlewares } from "@/src/features/public-api/server/withMiddleware
 import {
   ForbiddenError,
   InternalServerError,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
 } from "@hanzo/console";
 import { Prisma, prisma } from "@hanzo/console/src/db";
 import { recordIncrement, recordHistogram } from "@hanzo/console/src/server";
@@ -37,11 +37,11 @@ export default withMiddlewares({
         },
       });
 
-      if (!media) throw new HanzoNotFoundError("Media asset not found");
+      if (!media) throw new ConsoleNotFoundError("Media asset not found");
       if (!media.uploadHttpStatus)
-        throw new HanzoNotFoundError("Media not yet uploaded");
+        throw new ConsoleNotFoundError("Media not yet uploaded");
       if (!(media.uploadHttpStatus === 200 || media.uploadHttpStatus === 201))
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           `Media upload failed with status ${media.uploadHttpStatus}: \n ${media.uploadHttpError}`,
         );
 
@@ -116,7 +116,7 @@ export default withMiddlewares({
           /* https://www.prisma.io/docs/orm/reference/error-reference#p2025
            * An operation failed because it depends on one or more records that were required but not found.
            */
-          throw new HanzoNotFoundError(
+          throw new ConsoleNotFoundError(
             `Media asset ${mediaId} not found in project ${projectId}`,
           );
         }

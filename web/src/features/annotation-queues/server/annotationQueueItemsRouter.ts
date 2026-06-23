@@ -14,7 +14,7 @@ import {
   BatchActionType,
   BatchExportTableName,
   type BatchTableNames,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   paginationZod,
   Prisma,
 } from "@hanzo/console";
@@ -26,6 +26,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { env } from "@/src/env.mjs";
+import { getObservationByIdFromEventsTable } from "@hanzo/console/src/server";
 
 const isItemLocked = (item: AnnotationQueueItem) => {
   return (
@@ -142,7 +143,7 @@ export const queueItemRouter = createTRPCRouter({
               });
 
         if (!datastoreObservation) {
-          throw new HanzoNotFoundError("Observation not found");
+          throw new ConsoleNotFoundError("Observation not found");
         }
 
         return {

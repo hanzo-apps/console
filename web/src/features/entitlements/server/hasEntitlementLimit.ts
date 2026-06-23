@@ -4,7 +4,7 @@ import {
 } from "@/src/features/entitlements/constants/entitlements";
 import { type Plan } from "@hanzo/console";
 import { TRPCError } from "@trpc/server";
-import { type User } from "next-auth";
+import { type User } from "@/src/features/auth/session-types";
 
 type HasEntitlementLimitParams = {
   entitlementLimit: EntitlementLimit;

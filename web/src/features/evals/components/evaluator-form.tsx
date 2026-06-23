@@ -3,6 +3,12 @@ import { InnerEvaluatorForm } from "@/src/features/evals/components/inner-evalua
 import { type PartialConfig } from "@/src/features/evals/types";
 import { useEvalCapabilities } from "@/src/features/evals/hooks/useEvalCapabilities";
 import { Skeleton } from "@hanzo/ui";
+import { EvalTargetObject } from "@hanzo/console";
+import { useIsCodeEvalEnabled } from "@/src/features/evals/hooks/useIsCodeEvalEnabled";
+import {
+  isCodeEvalTemplate,
+  shouldShowEvalTemplate,
+} from "@/src/features/evals/utils/code-eval-template-utils";
 
 export const EvaluatorForm = (props: {
   projectId: string;

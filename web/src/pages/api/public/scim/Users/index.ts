@@ -7,6 +7,7 @@ import { type NextApiRequest, type NextApiResponse } from "next";
 import { hashPassword } from "@/src/features/auth-credentials/lib/credentialsServerUtils";
 import { z } from "zod";
 import { type Role } from "@hanzo/console";
+import { auditLog } from "@/src/features/audit-logs/auditLog";
 
 export default async function handler(
   req: NextApiRequest,

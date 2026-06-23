@@ -2,81 +2,50 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { cn } from "@/src/utils/tailwind";
 import { type ChartProps } from "@/src/features/widgets/chart-library/chart-props";
 
-// Format large numbers with appropriate units and dynamic decimal places
-const formatBigNumber = (value: number, maxCharacters?: number): { formatted: string; unit: string } => {
-  const absValue = Math.abs(value);
+// This should ideally be read based on the actual font sizes defined in Tailwind
+const baseFontSizeLookup = {
+  "text-8xl": 128,
+  "text-7xl": 96,
+  "text-6xl": 72,
+  "text-5xl": 60,
+  "text-4xl": 48,
+  "text-3xl": 36,
+  "text-2xl": 24,
+  "text-xl": 20,
+  "text-lg": 18,
+  "text-base": 16,
+  "text-sm": 14,
+} as const;
 
-  // Calculate how many decimal places we can afford based on available space
-  const getOptimalDecimalPlaces = (baseNumber: number, unit: string, maxChars?: number): number => {
-    if (!maxChars) return 1; // Default to 1 decimal place
+type FontSizeClass = keyof typeof baseFontSizeLookup;
 
-    const baseStr = Math.floor(Math.abs(baseNumber)).toString();
-    const signLength = value < 0 ? 1 : 0;
-    const availableForDecimals = maxChars - baseStr.length - unit.length - signLength - 1; // -1 for decimal point
+const baseFontSizes = Object.entries(baseFontSizeLookup)
+  .sort(([, leftPx], [, rightPx]) => rightPx - leftPx)
+  .map(([fontClass, px]) => ({ class: fontClass as FontSizeClass, px }));
 
-    return Math.max(0, Math.min(3, availableForDecimals)); // Max 3 decimal places, min 0
-  };
-
-  if (absValue >= 1e12) {
-    const baseValue = value / 1e12;
-    const decimals = getOptimalDecimalPlaces(baseValue, "T", maxCharacters);
-    return {
-      formatted: baseValue.toFixed(decimals).replace(/\.?0+$/, ""),
-      unit: "T",
-    };
-  } else if (absValue >= 1e9) {
-    const baseValue = value / 1e9;
-    const decimals = getOptimalDecimalPlaces(baseValue, "B", maxCharacters);
-    return {
-      formatted: baseValue.toFixed(decimals).replace(/\.?0+$/, ""),
-      unit: "B",
-    };
-  } else if (absValue >= 1e6) {
-    const baseValue = value / 1e6;
-    const decimals = getOptimalDecimalPlaces(baseValue, "M", maxCharacters);
-    return {
-      formatted: baseValue.toFixed(decimals).replace(/\.?0+$/, ""),
-      unit: "M",
-    };
-  } else if (absValue >= 1e3) {
-    const baseValue = value / 1e3;
-    const decimals = getOptimalDecimalPlaces(baseValue, "K", maxCharacters);
-    return {
-      formatted: baseValue.toFixed(decimals).replace(/\.?0+$/, ""),
-      unit: "K",
-    };
-  } else if (absValue >= 1) {
-    // For numbers >= 1, show dynamic decimal places based on space
-    const decimals = maxCharacters
-      ? Math.min(3, Math.max(0, maxCharacters - Math.floor(absValue).toString().length - (value < 0 ? 1 : 0) - 1))
-      : 2;
-    return {
-      formatted: value.toFixed(Math.max(0, Math.min(3, decimals))).replace(/\.?0+$/, ""),
-      unit: "",
-    };
-  } else if (absValue > 0) {
-    // For small numbers, show as many meaningful decimal places as space allows
-    // Find the first significant digit and show a few more places
-    const str = absValue.toString();
-    const firstSignificantIndex = str.search(/[1-9]/);
-
-    if (firstSignificantIndex === -1) return { formatted: "0", unit: "" };
-
-    // Calculate how many decimal places we need to show meaningful digits
-    const neededDecimals = firstSignificantIndex + 2; // Show 2 significant digits
-    const maxAllowedDecimals = maxCharacters ? maxCharacters - 2 : 6; // Account for "0."
-    const decimals = Math.min(neededDecimals, maxAllowedDecimals, 8); // Max 8 decimal places
-
-    return {
-      formatted: value.toFixed(Math.max(0, Math.min(3, decimals))).replace(/\.?0+$/, ""),
-      unit: "",
-    };
-  } else {
-    return { formatted: "0", unit: "" };
-  }
+const affixFontSizeLookup: Record<FontSizeClass, string> = {
+  "text-8xl": "text-4xl",
+  "text-7xl": "text-3xl",
+  "text-6xl": "text-2xl",
+  "text-5xl": "text-xl",
+  "text-4xl": "text-lg",
+  "text-3xl": "text-base",
+  "text-2xl": "text-sm",
+  "text-xl": "text-sm",
+  "text-lg": "text-xs",
+  "text-base": "text-xs",
+  "text-sm": "text-xs",
 };
 
-export const BigNumber: React.FC<ChartProps> = ({ data, className }: ChartProps & { className?: string }) => {
+const getAffixFontSize = (size: FontSizeClass) => {
+  return affixFontSizeLookup[size];
+};
+
+export const BigNumber: React.FC<ChartProps> = ({
+  data,
+  className,
+  metricFormatter,
+}: ChartProps & { className?: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [fontSize, setFontSize] = useState<FontSizeClass>("text-6xl");
@@ -99,7 +68,25 @@ export const BigNumber: React.FC<ChartProps> = ({ data, className }: ChartProps 
     }, 0);
   }, [data, isLoading]);
 
-  const displayValue = !isLoading ? formatBigNumber(calculatedMetric, maxCharacters) : { formatted: "0", unit: "" };
+  const displayValue = useMemo(() => {
+    if (isLoading) {
+      return { main: "0" };
+    }
+
+    return metricFormatter
+      ? metricFormatter(
+          calculatedMetric,
+          maxCharacters
+            ? {
+                style: "compact",
+                maxCharacters,
+              }
+            : { style: "compact" },
+        )
+      : {
+          main: calculatedMetric.toString(),
+        };
+  }, [calculatedMetric, isLoading, maxCharacters, metricFormatter]);
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
@@ -133,11 +120,19 @@ export const BigNumber: React.FC<ChartProps> = ({ data, className }: ChartProps 
             : { main: "0" }
           : { main: "0" };
 
-        const textLength = (testDisplayValue.formatted + testDisplayValue.unit).length;
+        const textLength = (
+          (testDisplayValue.negative ? "-" : "") +
+          (testDisplayValue.prefix ?? "") +
+          testDisplayValue.main +
+          (testDisplayValue.suffix ?? "")
+        ).length;
         const estimatedWidth = textLength * charWidth;
         const estimatedHeight = px * 1.1; // Less conservative line height (was 1.2)
 
-        if (estimatedWidth <= availableWidth && estimatedHeight <= availableHeight) {
+        if (
+          estimatedWidth <= availableWidth &&
+          estimatedHeight <= availableHeight
+        ) {
           selectedFontSize = fontClass;
           calculatedMaxChars = maxChars;
           break;
@@ -160,7 +155,13 @@ export const BigNumber: React.FC<ChartProps> = ({ data, className }: ChartProps 
   }
 
   return (
-    <div ref={containerRef} className={cn("flex h-full w-full flex-col items-center justify-center", className)}>
+    <div
+      ref={containerRef}
+      className={cn(
+        "flex h-full w-full flex-col items-center justify-center",
+        className,
+      )}
+    >
       <div className="flex items-baseline justify-center gap-1">
         {displayValue.prefix && (
           <span

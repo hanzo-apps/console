@@ -17,8 +17,8 @@ type PageProps = {
 };
 
 export const getServerSideProps: GetServerSideProps<PageProps> = async () => {
-  // remove /api/auth from the URL as it needs to be added for custom base url
-  const deploymentDomain = env.NEXTAUTH_URL?.replace("/api/auth", "");
+  // remove /v1/auth from the URL as it needs to be added for custom base url
+  const deploymentDomain = env.NEXTAUTH_URL?.replace("/v1/auth", "");
   return {
     props: {
       deploymentDomain,
@@ -38,9 +38,14 @@ export default function HfSpaces({ deploymentDomain }: PageProps) {
             <HanzoCloudIcon />
             <PlusIcon size={12} className="ml-1" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/huggingface-logo.svg" alt="Hugging Face Logo" width={36} height={36} />
+            <img
+              src="/assets/huggingface-logo.svg"
+              alt="Hugging Face Logo"
+              width={36}
+              height={36}
+            />
           </div>
-          <h2 className="mt-4 text-center text-2xl font-bold leading-9 tracking-tight text-primary">
+          <h2 className="text-primary mt-4 text-center text-2xl leading-9 font-bold tracking-tight">
             Hanzo Cloud on Hugging Face
           </h2>
         </div>
@@ -50,7 +55,11 @@ export default function HfSpaces({ deploymentDomain }: PageProps) {
             <CodeView content={deploymentDomain} title="HF Space Host" />
 
             <Button className="w-full" asChild>
-              <Link href={deploymentDomain} target="_blank" rel="noopener noreferrer">
+              <Link
+                href={deploymentDomain}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Open in new tab
               </Link>
             </Button>

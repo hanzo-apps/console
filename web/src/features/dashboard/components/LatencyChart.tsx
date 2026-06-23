@@ -22,6 +22,8 @@ import {
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
 import type { DatabaseRow } from "@/src/server/api/services/sqlInterface";
+import { latencyFormatter } from "@/src/utils/numbers";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
 
 export const GenerationLatencyChart = ({
   className,
@@ -31,6 +33,7 @@ export const GenerationLatencyChart = ({
   fromTimestamp,
   toTimestamp,
   isLoading = false,
+  schedulerId,
 }: {
   className?: string;
   projectId: string;
@@ -39,6 +42,7 @@ export const GenerationLatencyChart = ({
   fromTimestamp: Date;
   toTimestamp: Date;
   isLoading?: boolean;
+  schedulerId?: string;
 }) => {
   const {
     allModels,
@@ -53,6 +57,9 @@ export const GenerationLatencyChart = ({
     fromTimestamp,
     toTimestamp,
   );
+
+  const hasModelSelection = selectedModels.length > 0 && allModels.length > 0;
+  const isLatencyEnabled = !isLoading && hasModelSelection;
 
   const latenciesQuery: QueryType = {
     view: "observations",

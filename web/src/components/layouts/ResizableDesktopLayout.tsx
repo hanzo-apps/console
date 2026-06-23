@@ -1,10 +1,10 @@
-import { type ReactNode, useId, useLayoutEffect, useRef } from "react";
+import { type ReactNode, useId, useLayoutEffect } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/src/components/ui/resizable";
-import type { ImperativePanelHandle } from "react-resizable-panels";
+import { useDefaultLayout, usePanelRef } from "@/src/components/ui/resizable";
 
 interface ResizableDesktopLayoutProps {
   mainContent: ReactNode;
@@ -67,6 +67,7 @@ export function ResizableDesktopLayout({
   });
 
   const sidebarPanelRef = usePanelRef();
+  const mainPanelRef = usePanelRef();
 
   useLayoutEffect(() => {
     const panel = sidebarPanelRef.current;
@@ -111,7 +112,7 @@ export function ResizableDesktopLayout({
       )}
       {open && <ResizableHandle withHandle />}
       <ResizablePanel
-        ref={mainPanelRef}
+        panelRef={mainPanelRef}
         defaultSize={defaultMainSize}
         minSize={minMainSize}
       >

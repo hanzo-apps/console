@@ -51,19 +51,15 @@ const ResetPasswordTemplate = ({ token }: ResetPasswordTemplateProps) => {
 };
 
 export async function sendResetPasswordVerificationRequest(params: SendVerificationRequestParams) {
-  const { identifier, token, provider } = params as SendVerificationRequestParams & { token: string };
+  const { identifier, token, provider, url } = params as SendVerificationRequestParams & { token: string };
   const transport = createTransport(provider.server);
 
   // Detect if this is a setup-password flow (signup email verification)
   const isSetupMode = url?.includes("/auth/setup-password") ?? false;
 
-  const htmlTemplate = await render(
-    <ResetPasswordTemplate token={token} isSetupMode={isSetupMode} />,
-  );
+  const htmlTemplate = await render(<ResetPasswordTemplate token={token} isSetupMode={isSetupMode} />);
 
-  const subject = isSetupMode
-    ? "Verify your Langfuse email"
-    : "Your Langfuse password reset code";
+  const subject = isSetupMode ? "Verify your Langfuse email" : "Your Langfuse password reset code";
 
   const textBody = isSetupMode
     ? `Welcome to Langfuse! Use the following code to verify your email: ${token}\n\nThis code will expire in 3 minutes. If you did not request this, you can ignore this email.`
@@ -78,9 +74,7 @@ export async function sendResetPasswordVerificationRequest(params: SendVerificat
   });
   // nodemailer's SES transport omits `rejected`/`pending` from SentMessageInfo,
   // so guard against undefined before reading them.
-  const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(
-    Boolean,
-  );
+  const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(Boolean);
   if (failed.length) {
     throw new Error(`Email(s) (${failed.join(", ")}) could not be sent`);
   }

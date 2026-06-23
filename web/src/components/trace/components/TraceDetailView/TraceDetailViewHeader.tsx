@@ -16,6 +16,7 @@ import {
   AnnotationQueueObjectType,
 } from "@hanzo/console";
 import { type SelectionData } from "@/src/features/comments/contexts/InlineCommentSelectionContext";
+import { useViewPreferences } from "@/src/components/trace/contexts/ViewPreferencesContext";
 import { type WithStringifiedMetadata } from "@/src/utils/clientSideDomainTypes";
 import { ItemBadge } from "@/src/components/ItemBadge";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
@@ -58,6 +59,7 @@ export const TraceDetailViewHeader = memo(function TraceDetailViewHeader({
   isCommentDrawerOpen,
   onCommentDrawerOpenChange,
 }: TraceDetailViewHeaderProps) {
+  const { isAnnotationMode } = useViewPreferences();
   return (
     <div className="@container shrink-0 space-y-2 border-b p-2">
       {/* Title row with actions */}

@@ -1,11 +1,13 @@
 import { type VisibilityState } from "@tanstack/react-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import useLocalStorage from "@/src/components/useLocalStorage";
 import { useEffect } from "react";
 import isEqual from "lodash/isEqual";
 
 // returns deep copy of local storage object
-const readStoredVisibilityState = (localStorageKey: string): VisibilityState => {
+const readStoredVisibilityState = (
+  localStorageKey: string,
+): VisibilityState => {
   if (typeof window === "undefined") {
     return {};
   }
@@ -18,19 +20,28 @@ const readStoredVisibilityState = (localStorageKey: string): VisibilityState => 
   }
 };
 
-function setVisibility<TData>(visibilityState: VisibilityState, column: HanzoColumnDef<TData>) {
+function setVisibility<TData>(
+  visibilityState: VisibilityState,
+  column: ColumnDef<TData>,
+) {
   if (column.columns) {
     column.columns.forEach((groupColumn) => {
       setVisibility(visibilityState, groupColumn);
     });
   } else {
-    if (column.enableHiding && !visibilityState.hasOwnProperty(column.accessorKey)) {
+    if (
+      column.enableHiding &&
+      !visibilityState.hasOwnProperty(column.accessorKey)
+    ) {
       visibilityState[column.accessorKey] = !(column.defaultHidden === true);
     }
   }
 }
 
-function useColumnVisibility<TData>(localStorageKey: string, columns: HanzoColumnDef<TData>[]) {
+function useColumnVisibility<TData>(
+  localStorageKey: string,
+  columns: ColumnDef<TData>[],
+) {
   const initialVisibilityState = () => {
     const storedVisibilityState = readStoredVisibilityState(localStorageKey);
     const visibilityState: VisibilityState = storedVisibilityState;
@@ -40,10 +51,8 @@ function useColumnVisibility<TData>(localStorageKey: string, columns: HanzoColum
     return visibilityState;
   };
 
-  const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
-    localStorageKey,
-    initialVisibilityState(),
-  );
+  const [columnVisibility, setColumnVisibility] =
+    useLocalStorage<VisibilityState>(localStorageKey, initialVisibilityState());
 
   useEffect(() => {
     const initialColumnVisibility = initialVisibilityState();

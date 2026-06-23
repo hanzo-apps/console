@@ -8,6 +8,7 @@ import {
 import { showSuccessToast } from "@/src/features/notifications/showSuccessToast";
 import { joinTableCoreAndMetrics } from "@/src/components/table/utils/joinTableCoreAndMetrics";
 import { type EventBatchIOOutput } from "@/src/features/events/server/eventsRouter";
+import { TracingSearchType } from "@hanzo/console";
 
 type UseEventsTableDataParams = {
   projectId: string;

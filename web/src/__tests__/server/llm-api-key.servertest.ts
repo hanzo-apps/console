@@ -6,7 +6,7 @@ vi.mock("@hanzo/console/src/server", async () => {
   };
 });
 
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { BEDROCK_USE_DEFAULT_CREDENTIALS, LLMAdapter } from "@hanzo/console";
 import { env } from "@/src/env.mjs";
 import { prisma } from "@hanzo/console/src/db";

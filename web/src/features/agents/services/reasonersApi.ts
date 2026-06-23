@@ -14,7 +14,7 @@ import type {
 } from "../types/execution";
 import { getGlobalApiKey } from "./api";
 
-const API_BASE_URL = "/api/agents/ui/v1";
+const API_BASE_URL = "/v1/agents/ui/v1";
 const withAuthHeaders = (headers?: HeadersInit) => {
   const merged = new Headers(headers || {});
   const apiKey = getGlobalApiKey();
@@ -212,7 +212,7 @@ export const reasonersApi = {
   ): Promise<ExecutionResponse> => {
     // Must go through the console agents proxy; a raw /api/v1 base hits the
     // console app (no such route) and 404s. /api/agents/v1 → backend /api/v1.
-    const url = `/api/agents/v1/execute/${encodeURIComponent(reasonerId)}`;
+    const url = `/v1/agents/v1/execute/${encodeURIComponent(reasonerId)}`;
 
     try {
       const response = await fetch(url, {
@@ -274,7 +274,7 @@ export const reasonersApi = {
     reasonerId: string,
     request: ExecutionRequest,
   ): Promise<AsyncExecuteResponse> => {
-    const url = `/api/agents/v1/execute/async/${encodeURIComponent(reasonerId)}`;
+    const url = `/v1/agents/v1/execute/async/${encodeURIComponent(reasonerId)}`;
 
     try {
       const response = await fetch(url, {
@@ -329,7 +329,7 @@ export const reasonersApi = {
   getExecutionStatus: async (
     executionId: string,
   ): Promise<ExecutionStatusResponse> => {
-    const url = `/api/agents/v1/executions/${encodeURIComponent(executionId)}`;
+    const url = `/v1/agents/v1/executions/${encodeURIComponent(executionId)}`;
 
     try {
       const response = await fetch(url, { headers: withAuthHeaders() });

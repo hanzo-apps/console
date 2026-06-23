@@ -4,7 +4,7 @@ import { type NextApiRequest, type NextApiResponse } from "next";
 import { type ZodError } from "zod/v4";
 import {
   BaseError,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
   MethodNotAllowedError,
   UnauthorizedError,
 } from "@hanzo/console";
@@ -46,14 +46,14 @@ export const LEGACY_PUBLIC_API_OBSERVATIONS_DATASTORE_RESOURCE_ERROR_MESSAGE = [
   DatastoreResourceError.ERROR_ADVICE_MESSAGE,
   "This legacy endpoint can be slow. Please migrate to the high-performance Observations API v2 at /api/public/v2/observations.",
   "This applies to Langfuse Cloud only until v4 is released in OSS.",
-  "Docs: https://langfuse.com/docs/api-and-data-platform/features/observations-api",
+  "Docs: https://hanzo.ai/docs/api-and-data-platform/features/observations-api",
 ].join("\n");
 
 export const LEGACY_PUBLIC_API_METRICS_DATASTORE_RESOURCE_ERROR_MESSAGE = [
   DatastoreResourceError.ERROR_ADVICE_MESSAGE,
   "This legacy endpoint can be slow. Please migrate to the high-performance Metrics API v2 at /api/public/v2/metrics.",
   "This applies to Langfuse Cloud only until v4 is released in OSS.",
-  "Docs: https://langfuse.com/docs/metrics/features/metrics-api",
+  "Docs: https://hanzo.ai/docs/metrics/features/metrics-api",
 ].join("\n");
 
 type MiddlewareOptions = {
@@ -91,7 +91,7 @@ export function withMiddlewares(
         return await finalHandlers[method](req, res);
       } catch (error) {
         if (
-          error instanceof HanzoNotFoundError ||
+          error instanceof ConsoleNotFoundError ||
           error instanceof UnauthorizedError
         ) {
           logger.info(error);
@@ -151,7 +151,7 @@ export function withMiddlewares(
           });
 
           return res.status(524).json({
-            message: CH_ERROR_ADVICE_FULL,
+            message: errorMessage,
             error: "Request is taking too long to process.",
           });
         }

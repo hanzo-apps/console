@@ -9,7 +9,7 @@ import { auditLog } from "@/src/features/audit-logs/auditLog";
 import {
   EvaluatorBlockReason,
   getEvaluatorBlockMetadata,
-  LangfuseNotFoundError,
+  ConsoleNotFoundError,
 } from "@hanzo/console";
 import {
   blockEvaluatorConfigsInTx,
@@ -35,7 +35,7 @@ export default withMiddlewares({
       });
 
       if (!llmApiKey) {
-        throw new LangfuseNotFoundError("LLM connection not found");
+        throw new ConsoleNotFoundError("LLM connection not found");
       }
 
       const result = await prisma.$transaction(async (tx) => {

@@ -4,7 +4,7 @@ imports:
 
 service:
   auth: true
-  base-path: /api/public/integrations/blob-storage
+  base-path: /v1/integrations/blob-storage
   endpoints:
     getBlobStorageIntegrations:
       docs: Get all blob storage integrations for the organization (requires organization-scoped API key)
@@ -65,7 +65,7 @@ types:
     docs: |
       What data the integration exports.
       - `LEGACY_TRACES_OBSERVATIONS`: traces, observations, and scores tables with a fixed column set. The `exportFieldGroups` field is not applicable.
-      - `OBSERVATIONS_V2`: same data model as the `/api/public/v2/observations` endpoint, plus scores. Columns are controlled by `exportFieldGroups`.
+      - `OBSERVATIONS_V2`: same data model as the `/v1/observations` endpoint, plus scores. Columns are controlled by `exportFieldGroups`.
       - `LEGACY_TRACES_AND_ENRICHED_OBSERVATIONS`: both sets. For the `OBSERVATIONS_V2` portion, columns are controlled by `exportFieldGroups`.
 
       **Note:** `OBSERVATIONS_V2` and the enriched-observations portion of `LEGACY_TRACES_AND_ENRICHED_OBSERVATIONS` rely on the enriched observations table (Langfuse Fast Preview / v4), which is currently available on Langfuse Cloud only. See https://langfuse.com/docs/v4.

@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { api } from "@/src/utils/api";
 import { StatusBadge } from "@/src/components/layouts/status-badge";
 import Header from "@/src/components/layouts/header";
@@ -43,12 +43,12 @@ export function KmsOrgSettings({ orgId }: { orgId: string }) {
           )}
         </div>
         {!firstProjectId && (
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-2 text-sm">
             Create a project first to test KMS connectivity.
           </p>
         )}
         {isError && (
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-2 text-sm">
             Could not connect to KMS. Verify that KMS_SERVICE_TOKEN and
             KMS_API_URL are configured correctly.
           </p>
@@ -61,16 +61,18 @@ export function KmsOrgSettings({ orgId }: { orgId: string }) {
           {typeof orgKmsProjectId === "string" && orgKmsProjectId.length > 0 ? (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Project ID:</span>
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+              <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-xs">
                 {orgKmsProjectId}
               </code>
-              <span className="text-xs text-muted-foreground">(org-specific)</span>
+              <span className="text-muted-foreground text-xs">
+                (org-specific)
+              </span>
             </div>
           ) : (
             <p className="text-muted-foreground">
               Using global KMS workspace (KMS_PROJECT_ID env var). To give this
               organization its own KMS workspace, set{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+              <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                 kmsProjectId
               </code>{" "}
               in the organization metadata.
@@ -88,10 +90,7 @@ export function KmsOrgSettings({ orgId }: { orgId: string }) {
                 environments?: { slug: string; name: string }[];
               }
             )?.environments?.map((e) => (
-              <div
-                key={e.slug}
-                className="flex items-center gap-2 text-sm"
-              >
+              <div key={e.slug} className="flex items-center gap-2 text-sm">
                 <span className="font-medium">{e.name}</span>
                 <span className="text-muted-foreground">({e.slug})</span>
               </div>
@@ -102,7 +101,7 @@ export function KmsOrgSettings({ orgId }: { orgId: string }) {
 
       <div>
         <Header title="Project Access" />
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-2 text-sm">
           KMS secrets and encryption keys are available on each project&apos;s
           sidebar under the &quot;KMS&quot; section. Navigate to a project to
           manage its secrets and keys.

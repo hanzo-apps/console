@@ -1,6 +1,12 @@
 import * as React from "react";
 import { addMinutes } from "date-fns";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
 
 import {
   dashboardDateRangeAggregationSettings,
@@ -14,8 +20,18 @@ import {
 } from "@/src/utils/date-range-utils";
 import { useEntitlementLimit } from "@/src/features/entitlements/hooks";
 import { useMemo } from "react";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/src/components/ui/hover-card";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/src/components/ui/hover-card";
 import { HoverCardPortal } from "@radix-ui/react-hover-card";
+import {
+  TABLE_AGGREGATION_OPTIONS,
+  TableDateRangeOptions,
+  getDateFromOption,
+  isTableDataRangeOptionAvailable,
+} from "@/src/utils/date-range-utils";
 
 type BaseDateRangeDropdownProps<T> = {
   selectedOption: T;
@@ -42,10 +58,19 @@ const BaseDateRangeDropdown = <T extends string>({
           </div>
         </SelectValue>
       </SelectTrigger>
-      <SelectContent position="popper" defaultValue={60} className="[&_[data-checkmark]]:hidden">
+      <SelectContent
+        position="popper"
+        defaultValue={60}
+        className="[&_[data-checkmark]]:hidden"
+      >
         {options.map((item) => {
           const itemObj = (
-            <SelectItem key={item} value={item} disabled={limitedOptions?.includes(item)} className="pl-2">
+            <SelectItem
+              key={item}
+              value={item}
+              disabled={limitedOptions?.includes(item)}
+              className="pl-2"
+            >
               <div className="flex items-center gap-2">
                 <span className="bg-muted w-10 rounded px-1.5 py-0.5 text-center text-xs">
                   {getAbbreviatedTimeRange(item)}
@@ -78,13 +103,15 @@ const BaseDateRangeDropdown = <T extends string>({
 
 type DashboardDateRangeDropdownProps = {
   selectedOption: DashboardDateRangeOptions;
-  setDateRangeAndOption: (option: DashboardDateRangeOptions, date?: DashboardDateRange) => void;
+  setDateRangeAndOption: (
+    option: DashboardDateRangeOptions,
+    date?: DashboardDateRange,
+  ) => void;
 };
 
-export const DashboardDateRangeDropdown: React.FC<DashboardDateRangeDropdownProps> = ({
-  selectedOption,
-  setDateRangeAndOption,
-}) => {
+export const DashboardDateRangeDropdown: React.FC<
+  DashboardDateRangeDropdownProps
+> = ({ selectedOption, setDateRangeAndOption }) => {
   const lookbackLimit = useEntitlementLimit("data-access-days");
   const disabledOptions = useMemo(() => {
     return DASHBOARD_AGGREGATION_OPTIONS.filter(
@@ -101,7 +128,10 @@ export const DashboardDateRangeDropdown: React.FC<DashboardDateRangeDropdownProp
       setDateRangeAndOption(DASHBOARD_AGGREGATION_PLACEHOLDER, undefined);
       return;
     }
-    const setting = dashboardDateRangeAggregationSettings[value as keyof typeof dashboardDateRangeAggregationSettings];
+    const setting =
+      dashboardDateRangeAggregationSettings[
+        value as keyof typeof dashboardDateRangeAggregationSettings
+      ];
     setDateRangeAndOption(value, {
       from: addMinutes(new Date(), -setting!.minutes!),
       to: new Date(),
@@ -124,7 +154,10 @@ export const DashboardDateRangeDropdown: React.FC<DashboardDateRangeDropdownProp
 
 type TableDateRangeDropdownProps = {
   selectedOption: TableDateRangeOptions;
-  setDateRangeAndOption: (option: TableDateRangeOptions, date?: DashboardDateRange) => void;
+  setDateRangeAndOption: (
+    option: TableDateRangeOptions,
+    date?: DashboardDateRange,
+  ) => void;
 };
 
 export const TableDateRangeDropdown: React.FC<TableDateRangeDropdownProps> = ({
@@ -134,7 +167,8 @@ export const TableDateRangeDropdown: React.FC<TableDateRangeDropdownProps> = ({
   const lookbackLimit = useEntitlementLimit("data-access-days");
   const disabledOptions = useMemo(() => {
     return TABLE_AGGREGATION_OPTIONS.filter(
-      (option) => !isTableDataRangeOptionAvailable({ option, limitDays: lookbackLimit }),
+      (option) =>
+        !isTableDataRangeOptionAvailable({ option, limitDays: lookbackLimit }),
     );
   }, [lookbackLimit]);
 
@@ -150,7 +184,9 @@ export const TableDateRangeDropdown: React.FC<TableDateRangeDropdownProps> = ({
       option: value,
     });
 
-    const initialDateRange = !!dateFromOption ? { from: dateFromOption, to: new Date() } : undefined;
+    const initialDateRange = !!dateFromOption
+      ? { from: dateFromOption, to: new Date() }
+      : undefined;
 
     setDateRangeAndOption(value, initialDateRange);
   };

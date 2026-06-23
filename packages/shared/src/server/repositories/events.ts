@@ -20,7 +20,9 @@ import {
   ObservationPriceFields,
 } from "../queries";
 import { createFilterFromFilterState } from "../queries/datastore-sql/factory";
-import type { FilterState } from "../../types";
+import type { FilterCondition, FilterState } from "../../types";
+import type { TracingSearchType } from "../../interfaces/search";
+import { Readable } from "stream";
 import {
   eventsScoresAggregation,
   eventsSessionsAggregation,
@@ -2544,7 +2546,7 @@ export const getEventsForAnalyticsIntegrations = async function* (
     },
   });
 
-  const baseUrl = env.NEXTAUTH_URL?.replace("/api/auth", "");
+  const baseUrl = env.NEXTAUTH_URL?.replace("/v1/auth", "");
   for await (const record of records) {
     yield {
       timestamp: record.start_time,
@@ -2702,4 +2704,128 @@ export const getSessionMetricsFromEvents = async (props: {
     trace_count: Number(row.trace_count),
     total_observations: Number(row.total_observations),
   }));
+};
+
+const EVAL_EVENT_SEARCH_COLUMNS = ["span_id", "name", "trace_name", "user_id", "session_id", "trace_id"];
+
+/**
+ * Streams events for batch evaluation as a Node Readable. Aliases are remapped
+ * to schema field names; per-row schema validation is left to the consumer so
+ * malformed rows can be handled gracefully.
+ */
+export const getEventsStreamForEval = async (props: {
+  projectId: string;
+  cutoffCreatedAt?: Date;
+  filter: FilterCondition[] | null;
+  searchQuery?: string;
+  searchType?: TracingSearchType[];
+  rowLimit: number;
+}): Promise<Readable> => {
+  const { projectId, cutoffCreatedAt, filter = [], searchQuery, searchType, rowLimit } = props;
+
+  const eventOnlyFilters = (filter ?? []).filter((f) => {
+    const columnDef = eventsTableUiColumnDefinitions.find(
+      (col) => col.uiTableName === f.column || col.uiTableId === f.column,
+    );
+
+    return columnDef?.datastoreTableName !== "scores" && columnDef?.datastoreTableName !== "comments";
+  });
+
+  const filterConditions: FilterCondition[] = [...eventOnlyFilters];
+  if (cutoffCreatedAt) {
+    filterConditions.push({
+      column: "startTime",
+      operator: "<",
+      value: cutoffCreatedAt,
+      type: "datetime",
+    });
+  }
+
+  const eventsFilter = new FilterList(createFilterFromFilterState(filterConditions, eventsTableUiColumnDefinitions));
+
+  const appliedEventsFilter = eventsFilter.apply();
+
+  const search = datastoreSearchCondition(searchQuery, searchType, "e", EVAL_EVENT_SEARCH_COLUMNS);
+
+  const eventsQuery = new EventsQueryBuilder({ projectId })
+    .selectFieldSet("eval")
+    .selectIO(false)
+    .selectFieldSet("metadata")
+    .where(appliedEventsFilter)
+    .where(search)
+    .whereRaw("e.is_deleted = 0")
+    .orderByDefault()
+    .limitBy("e.span_id", "e.project_id")
+    .limit(rowLimit);
+
+  const { query, params: queryParams } = eventsQuery.buildWithParams();
+
+  type EvalEventRow = {
+    id: string;
+    trace_id: string;
+    project_id: string;
+    parent_observation_id: string | null;
+    type: string;
+    name: string | null;
+    environment: string | null;
+    version: string | null;
+    level: string;
+    status_message: string | null;
+    trace_name: string | null;
+    user_id: string | null;
+    session_id: string | null;
+    tags: string[];
+    release: string | null;
+    provided_model_name: string | null;
+    model_parameters: unknown;
+    prompt_id: string | null;
+    prompt_name: string | null;
+    prompt_version: number | null;
+    provided_usage_details: Record<string, number>;
+    usage_details: Record<string, number>;
+    provided_cost_details: Record<string, number>;
+    cost_details: Record<string, number>;
+    tool_definitions: Record<string, unknown>;
+    tool_calls: unknown[];
+    tool_call_names: string[];
+    input: unknown;
+    output: unknown;
+    metadata: Record<string, unknown> | null;
+    experiment_id: string | null;
+    experiment_item_root_span_id: string | null;
+    experiment_item_expected_output: string | null;
+    experiment_item_metadata: Record<string, unknown> | null;
+  };
+
+  const asyncGenerator = queryDatastoreStream<EvalEventRow>({
+    query,
+    params: queryParams,
+    datastoreConfig: {
+      request_timeout: 180_000,
+      datastore_settings: {
+        http_send_timeout: 300,
+        http_receive_timeout: 300,
+      },
+    },
+    tags: {
+      feature: "batch-eval",
+      type: "event",
+      kind: "eval",
+      projectId,
+    },
+    preferredService: "EventsReadOnly",
+  });
+
+  // Remap Datastore aliases to schema field names.
+  return Readable.from(
+    (async function* () {
+      for await (const row of asyncGenerator) {
+        yield {
+          ...row,
+          span_id: row.id,
+          parent_span_id: row.parent_observation_id,
+        };
+      }
+    })(),
+  );
 };

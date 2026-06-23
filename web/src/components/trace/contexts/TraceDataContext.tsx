@@ -23,6 +23,7 @@ import {
 } from "../lib/tree-building";
 import { useViewPreferences } from "./ViewPreferencesContext";
 import { useMergedScores } from "@/src/features/scores/lib/useMergedScores";
+import { ObservationLevel } from "@hanzo/console";
 
 type TraceType = Omit<
   WithStringifiedMetadata<TraceDomain>,

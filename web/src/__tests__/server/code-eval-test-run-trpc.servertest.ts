@@ -19,7 +19,7 @@ vi.mock("@hanzo/console/src/env", async (importOriginal) => {
   };
 });
 
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import {
   EvalTemplateSourceCodeLanguage,
   EvalTemplateType,

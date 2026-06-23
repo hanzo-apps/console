@@ -5,7 +5,7 @@ import {
   GetScoreQueryV2,
   GetScoreResponseV2,
   InternalServerError,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
 } from "@hanzo/console";
 import { logger, traceException } from "@hanzo/console/src/server";
 
@@ -22,7 +22,7 @@ export default withMiddlewares({
       });
 
       if (!score) {
-        throw new HanzoNotFoundError("Score not found");
+        throw new ConsoleNotFoundError("Score not found");
       }
 
       const parsedScore = GetScoreResponseV2.safeParse(score);

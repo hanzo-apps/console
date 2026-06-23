@@ -23,6 +23,7 @@ import { evalConfigFilterColumns } from "@/src/server/api/definitions/evalConfig
 import { evalExecutionsFilterCols } from "@/src/server/api/definitions/evalExecutionsTable";
 import { experimentsTableCols } from "@/src/features/experiments/components/table/filter-config";
 import { experimentItemsTableCols } from "@/src/features/experiments/config/experiment-items-filter-config";
+import { normalizeLegacySessionPositionInTraceKey } from "@/src/components/session/session-position-in-trace";
 
 const DEBUG_QUERY_STATE = false;
 

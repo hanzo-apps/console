@@ -46,6 +46,9 @@ import {
   type BlobStorageIntegration,
 } from "@hanzo/console";
 import { useConsoleCloudRegion } from "@/src/features/organizations/hooks";
+import { useQueryProject } from "@/src/features/projects/hooks";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
+import { isLegacyBlobExportAllowed } from "@hanzo/console";
 
 export default function BlobStorageIntegrationSettings() {
   const router = useRouter();
@@ -233,6 +236,8 @@ const BlobStorageIntegrationSettingsForm = ({
 }) => {
   const capture = useInsightsCapture();
   const { isConsoleCloud } = useConsoleCloudRegion();
+  const { isBetaEnabled } = useV4Beta();
+  const { project } = useQueryProject();
   const [integrationType, setIntegrationType] =
     useState<BlobStorageIntegrationType>(BlobStorageIntegrationType.S3);
 

@@ -11,7 +11,7 @@ import {
   getDatasetItems,
   createDatasetItemFilterState,
 } from "@hanzo/console/src/server";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 import { v4 } from "uuid";
 
 const __orgIds: string[] = [];

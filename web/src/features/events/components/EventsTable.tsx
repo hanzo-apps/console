@@ -12,9 +12,10 @@ import { useSidebarFilterState } from "@/src/features/filters/hooks/useSidebarFi
 import {
   getEventsColumnName,
   observationEventsFilterConfig,
+  type ObservationEventsOmittableFilterColumn,
 } from "../config/filter-config";
 import { formatIntervalSeconds } from "@/src/utils/dates";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import {
   type ObservationLevelType,
   type FilterState,
@@ -41,7 +42,7 @@ import { InfoIcon, PlusCircle } from "lucide-react";
 import { UpsertModelFormDialog } from "@/src/features/models/components/UpsertModelFormDialog";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
 import { Badge } from "@/src/components/ui/badge";
-import { type RowSelectionState } from "@tanstack/react-table";
+import { type Row, type RowSelectionState } from "@tanstack/react-table";
 import TableIdOrName from "@/src/components/table/table-id";
 import { ItemBadge } from "@/src/components/ItemBadge";
 import { TablePeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
@@ -76,6 +77,17 @@ import {
 } from "@/src/components/table/data-table-refresh-button";
 import useSessionStorage from "@/src/components/useSessionStorage";
 import { api } from "@/src/utils/api";
+import { PeekViewObservationDetail } from "@/src/components/table/peek/peek-observation-detail";
+import { buildTraceDetailPath } from "@/src/utils/navigation";
+import { getSafeRedirectPath } from "@/src/utils/redirect";
+import { getObservationEventsFilterConfig } from "@/src/features/events/config/filter-config";
+import { UseSidebarFilterStateOptions } from "@/src/features/filters/hooks/useSidebarFilterState";
+import { DEFAULT_SIDEBAR_IMPLICIT_ENVIRONMENT_CONFIG } from "@/src/features/filters/constants/internal-environments";
+import { Skeleton } from "@/src/components/ui/skeleton";
+import {
+  TableBadgeLoadingCell,
+  TableTextLoadingCell,
+} from "@/src/components/table/loading-cells";
 
 export type EventsTableRow = {
   // Identity fields
@@ -145,11 +157,16 @@ export type EventsTableRow = {
 
 export type EventsTableProps = {
   projectId: string;
+  omittedFilter?: ObservationEventsOmittableFilterColumn[];
+  hideControls?: boolean;
 };
 
 export default function ObservationsEventsTable({
   projectId,
+  omittedFilter = [],
+  hideControls = false,
 }: EventsTableProps) {
+  const peekContext = usePeekTableState();
   const router = useRouter();
   const { viewId } = router.query;
   const eventsFilterConfig = useMemo(
@@ -406,6 +423,15 @@ export default function ObservationsEventsTable({
       fromTimestamp: dateRange?.from,
     });
 
+  const { scoreColumns: traceScoreColumns, isLoading: isTraceColumnLoading } =
+    useScoreColumns<EventsTableRow>({
+      scoreColumnKey: "traceScores",
+      projectId,
+      filter: scoreFilters.forTraceLevel(),
+      fromTimestamp: dateRange?.from,
+      prefix: "Trace",
+    });
+
   const { selectActionColumn } = TableSelectionManager<EventsTableRow>({
     projectId,
     tableName: "observations",
@@ -427,7 +453,7 @@ export default function ObservationsEventsTable({
     },
   ];
 
-  const columns: HanzoColumnDef<EventsTableRow>[] = [
+  const columns: ColumnDef<EventsTableRow>[] = [
     selectActionColumn,
     {
       accessorKey: "startTime",
@@ -707,7 +733,7 @@ export default function ObservationsEventsTable({
           defaultHidden: true,
           enableSorting: true,
         },
-      ] satisfies LangfuseColumnDef<EventsTableRow>[],
+      ] satisfies ColumnDef<EventsTableRow>[],
     },
     {
       accessorKey: "timeToFirstToken",
@@ -818,7 +844,7 @@ export default function ObservationsEventsTable({
             return <span>{numberFormatter(value.totalUsage, 0)}</span>;
           },
         },
-      ] satisfies LangfuseColumnDef<EventsTableRow>[],
+      ] satisfies ColumnDef<EventsTableRow>[],
     },
     {
       accessorKey: "providedModelName",

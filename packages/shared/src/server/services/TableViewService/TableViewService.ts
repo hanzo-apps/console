@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../../db";
 import { TableViewPresetTableName, type TableViewPresetDomain } from "../../../domain/table-view-presets";
-import { ConsoleNotFoundError } from "../../../errors";
+import { ConsoleConflictError, ConsoleNotFoundError } from "../../../errors";
 import {
   TableViewPresetsNamesCreatorList,
   TableViewPresetsNamesCreatorListSchema,
@@ -16,41 +16,32 @@ import {
   isSystemTableViewPresetId,
 } from "./systemPresets";
 
-const TABLE_NAME_TO_URL_MAP: Partial<Record<TableViewPresetTableName, string>> =
-  {
-    [TableViewPresetTableName.Traces]: "traces",
-    [TableViewPresetTableName.Observations]: "observations",
-    [TableViewPresetTableName.ObservationsEvents]: "traces",
-    [TableViewPresetTableName.Scores]: "scores",
-    [TableViewPresetTableName.Sessions]: "sessions",
-    [TableViewPresetTableName.Datasets]: "datasets",
-    [TableViewPresetTableName.Experiments]: "experiments",
-    [TableViewPresetTableName.ExperimentItems]: "experiments/results",
-  };
+const TABLE_NAME_TO_URL_MAP: Partial<Record<TableViewPresetTableName, string>> = {
+  [TableViewPresetTableName.Traces]: "traces",
+  [TableViewPresetTableName.Observations]: "observations",
+  [TableViewPresetTableName.ObservationsEvents]: "traces",
+  [TableViewPresetTableName.Scores]: "scores",
+  [TableViewPresetTableName.Sessions]: "sessions",
+  [TableViewPresetTableName.Datasets]: "datasets",
+  [TableViewPresetTableName.Experiments]: "experiments",
+  [TableViewPresetTableName.ExperimentItems]: "experiments/results",
+};
 
 // The v4 table was mistakenly released under the `observations` table name,
 // so we need to read legacy presets that belong to the events table under the `observations` name.
 // To avoid proliferating this compatibility logic, we only apply it when reading presets for the events table,
 // and we never allow it when writing (creating/updating) presets.
-const getReadCompatibleTableNames = (
-  tableName: TableViewPresetTableName,
-): TableViewPresetTableName[] =>
+const getReadCompatibleTableNames = (tableName: TableViewPresetTableName): TableViewPresetTableName[] =>
   tableName === TableViewPresetTableName.ObservationsEvents
-    ? [
-        TableViewPresetTableName.ObservationsEvents,
-        TableViewPresetTableName.Observations,
-      ]
+    ? [TableViewPresetTableName.ObservationsEvents, TableViewPresetTableName.Observations]
     : [tableName];
 
 const TABLE_VIEW_PRESET_NAME_CONFLICT_MESSAGE =
   "Table view preset with this name already exists. Please choose a different name.";
 
 const throwTableViewPresetConflictIfDuplicateName = (error: unknown): never => {
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2002"
-  ) {
-    throw new LangfuseConflictError(TABLE_VIEW_PRESET_NAME_CONFLICT_MESSAGE);
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    throw new ConsoleConflictError(TABLE_VIEW_PRESET_NAME_CONFLICT_MESSAGE);
   }
 
   throw error;
@@ -210,36 +201,28 @@ export class TableViewService {
       },
     });
 
-    const systemPresets = getSystemTableViewPresets(tableName).map(
-      (preset) => ({
-        id: preset.id,
-        name: preset.name,
-        description: preset.description,
-        isSystem: true,
-        tableName: preset.tableName,
-        createdBy: null,
-        createdByUser: null,
-        filters: preset.state.filters,
-        columnOrder: preset.state.columnOrder,
-        columnVisibility: preset.state.columnVisibility,
-        searchQuery: preset.state.searchQuery ?? null,
-        orderBy: preset.state.orderBy,
-      }),
-    );
+    const systemPresets = getSystemTableViewPresets(tableName).map((preset) => ({
+      id: preset.id,
+      name: preset.name,
+      description: preset.description,
+      isSystem: true,
+      tableName: preset.tableName,
+      createdBy: null,
+      createdByUser: null,
+      filters: preset.state.filters,
+      columnOrder: preset.state.columnOrder,
+      columnVisibility: preset.state.columnVisibility,
+      searchQuery: preset.state.searchQuery ?? null,
+      orderBy: preset.state.orderBy,
+    }));
 
-    const presets = TableViewPresetsNamesCreatorListSchema.parse([
-      ...systemPresets,
-      ...records,
-    ]);
+    const presets = TableViewPresetsNamesCreatorListSchema.parse([...systemPresets, ...records]);
 
     if (tableName === TableViewPresetTableName.ObservationsEvents) {
       // Deduplicate presets that have the same name,
       // preferring presets that belong to the canonical events table namespace
       // over presets that belong to the legacy observations namespace.
-      const presetsByName = new Map<
-        string,
-        TableViewPresetsNamesCreatorList[number]
-      >();
+      const presetsByName = new Map<string, TableViewPresetsNamesCreatorList[number]>();
 
       for (const preset of presets) {
         const existingPreset = presetsByName.get(preset.name);
@@ -247,8 +230,7 @@ export class TableViewService {
         if (
           !existingPreset ||
           (preset.tableName === TableViewPresetTableName.ObservationsEvents &&
-            existingPreset.tableName ===
-              TableViewPresetTableName.Observations) ||
+            existingPreset.tableName === TableViewPresetTableName.Observations) ||
           // Non-system presets should take precedence over system presets
           (!preset.isSystem && existingPreset.isSystem)
         ) {
@@ -293,9 +275,7 @@ export class TableViewService {
       isSystemTableViewPresetId(TableViewPresetsId) &&
       !getSystemTableViewPresetByTableAndId(tableName, TableViewPresetsId)
     ) {
-      throw new Error(
-        `Permalinks are not supported for preset ${TableViewPresetsId}`,
-      );
+      throw new Error(`Permalinks are not supported for preset ${TableViewPresetsId}`);
     }
 
     const page = TABLE_NAME_TO_URL_MAP[tableName];

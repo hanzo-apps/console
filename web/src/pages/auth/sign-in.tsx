@@ -16,7 +16,7 @@ import {
   SiOkta,
   SiAuthentik,
   SiAuth0,
-  SiAmazoncognito,
+  SiClickhouse,
   SiKeycloak,
   SiGoogle,
   SiGitlab,
@@ -24,7 +24,7 @@ import {
   SiWordpress,
 } from "react-icons/si";
 import { TbBrandAzure, TbBrandOauth } from "react-icons/tb";
-import { signIn } from "next-auth/react";
+import { signIn } from "@/src/features/auth/session";
 import Head from "next/head";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -63,6 +63,7 @@ export type PageProps = {
     onelogin: boolean;
     azureAd: boolean;
     auth0: boolean;
+    clickhouseCloud: boolean;
     cognito: boolean;
     keycloak:
       | {
@@ -132,6 +133,12 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async () => {
           env.AUTH_AUTH0_CLIENT_ID !== undefined &&
           env.AUTH_AUTH0_CLIENT_SECRET !== undefined &&
           env.AUTH_AUTH0_ISSUER !== undefined,
+        // Langfuse Cloud only — NOT for self-hosted Langfuse
+        clickhouseCloud:
+          env.AUTH_CLICKHOUSE_CLOUD_CLIENT_ID !== undefined &&
+          env.AUTH_CLICKHOUSE_CLOUD_CLIENT_SECRET !== undefined &&
+          env.AUTH_CLICKHOUSE_CLOUD_ISSUER !== undefined &&
+          env.NEXT_PUBLIC_HANZO_CLOUD_REGION !== undefined,
         cognito:
           env.AUTH_COGNITO_CLIENT_ID !== undefined &&
           env.AUTH_COGNITO_CLIENT_SECRET !== undefined &&
@@ -168,10 +175,9 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async () => {
           env.IAM_CLIENT_ID !== undefined && env.IAM_SERVER_URL !== undefined,
       },
       signUpDisabled: env.AUTH_DISABLE_SIGNUP === "true",
-      runningOnHuggingFaceSpaces: env.NEXTAUTH_URL?.replace(
-        "/api/auth",
-        "",
-      ).endsWith(".hf.space"),
+      runningOnHuggingFaceSpaces:
+        env.NEXTAUTH_URL?.replace("/v1/auth", "").endsWith(".hf.space") ??
+        false,
     },
   };
 };
@@ -335,9 +341,20 @@ export function SSOButtons({
               }
             />
           )}
+          {authProviders.clickhouseCloud && (
+            <AuthProviderButton
+              icon={<SiClickhouse className="mr-3" size={18} />}
+              label="ClickHouse Cloud"
+              onClick={() => handleSignIn("clickhouse-cloud")}
+              loading={providerSigningIn === "clickhouse-cloud"}
+              showLastUsedBadge={
+                hasMultipleAuthMethods && lastUsedMethod === "clickhouse-cloud"
+              }
+            />
+          )}
           {authProviders.cognito && (
             <AuthProviderButton
-              icon={<SiAmazoncognito className="mr-3" size={18} />}
+              icon={<TbBrandOauth className="mr-3" size={18} />}
               label="Cognito"
               onClick={() => handleSignIn("cognito")}
               loading={providerSigningIn === "cognito"}
@@ -666,7 +683,7 @@ export default function SignIn({
 
     try {
       const res = await fetch(
-        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/check-sso`,
+        `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/v1/iam/check-sso`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

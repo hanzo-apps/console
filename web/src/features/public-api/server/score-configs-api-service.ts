@@ -5,7 +5,7 @@ import {
   filterAndValidateDbScoreConfigList,
   InternalServerError,
   InvalidRequestError,
-  LangfuseNotFoundError,
+  ConsoleNotFoundError,
   validateDbScoreConfig,
   validateDbScoreConfigSafe,
 } from "@hanzo/console";
@@ -124,7 +124,7 @@ export const getScoreConfig = async ({
   });
 
   if (!config) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "Score config not found within authorized project",
     );
   }
@@ -155,7 +155,7 @@ export const updateScoreConfig = async ({
   });
 
   if (!existingConfig) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       "Score config not found within authorized project",
     );
   }

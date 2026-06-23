@@ -6,7 +6,7 @@
  * cause the session to be unauthenticated even though the user is signed in.
  */
 
-import { useSession, getSession } from "next-auth/react";
+import { useSession, getSession } from "@/src/features/auth/session";
 import { useState, useEffect } from "react";
 
 const MAX_RETRIES = 2;

@@ -1,5 +1,5 @@
 import { DataTable } from "@/src/components/table/data-table";
-import { type LangfuseColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { MemoizedIOTableCell } from "@/src/components/ui/IOTableCell";
 import { Badge } from "@/src/components/ui/badge";
 import {
@@ -49,7 +49,7 @@ type ExperimentGridViewProps = {
   noResultsMessage?: ReactNode;
   peekView?: DataTablePeekViewProps;
   // Selection props
-  selectActionColumn?: LangfuseColumnDef<ExperimentItemsTableRow>;
+  selectActionColumn?: ColumnDef<ExperimentItemsTableRow>;
   rowSelection: RowSelectionState;
   setRowSelection: OnChangeFn<RowSelectionState>;
   highlightAllRows?: boolean;
@@ -162,7 +162,7 @@ export const ExperimentGridView = ({
             />
           );
         },
-      } as LangfuseColumnDef<ExperimentItemsTableRow>;
+      } as ColumnDef<ExperimentItemsTableRow>;
     });
   }, [
     allExperimentIds,
@@ -176,7 +176,7 @@ export const ExperimentGridView = ({
   ]);
 
   // Build all columns: Select, Input, Expected Output, then experiment columns
-  const columns: LangfuseColumnDef<ExperimentItemsTableRow>[] = useMemo(
+  const columns: ColumnDef<ExperimentItemsTableRow>[] = useMemo(
     () => [
       // Include select column if provided
       ...(selectActionColumn ? [selectActionColumn] : []),

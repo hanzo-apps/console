@@ -43,7 +43,7 @@ import {
   EvalTargetObject,
   EvaluatorBlockReason,
 } from "@hanzo/console";
-import type { Session } from "next-auth";
+import type { Session } from "@/src/features/auth/session-types";
 
 beforeEach(() => {
   runCodeEvalTestForJobConfigMock.mockReset();

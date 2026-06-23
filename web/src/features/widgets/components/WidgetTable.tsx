@@ -1,10 +1,11 @@
 import { useEffect } from "react";
+import { z } from "zod/v4";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { useOrderByState } from "@/src/features/orderBy/hooks/useOrderByState";
 import { NumberParam, useQueryParams, withDefault } from "use-query-params";
 import { api } from "@/src/utils/api";
 import { DataTable } from "@/src/components/table/data-table";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { createColumnHelper } from "@tanstack/react-table";
 import TableLink from "@/src/components/table/table-link";
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
@@ -24,6 +25,9 @@ import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { useRouter } from "next/router";
 import { getChartTypeDisplayName } from "@/src/features/widgets/chart-library/utils";
 import { type DashboardWidgetChartType } from "@hanzo/console/src/db";
+import { downloadWidgetJson } from "@/src/features/widgets/utils/import-export-utils";
+import { metricAggregations } from "@hanzo/console";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
 
 type WidgetTableRow = {
   id: string;
@@ -282,7 +286,7 @@ export function DashboardWidgetTable() {
         );
       },
     }),
-  ] as HanzoColumnDef<WidgetTableRow>[];
+  ] as ColumnDef<WidgetTableRow>[];
 
   return (
     <DataTable

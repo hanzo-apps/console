@@ -51,7 +51,7 @@ import {
 } from "lucide-react";
 import { type ReactNode } from "react";
 import { type Entitlement } from "@/src/features/entitlements/constants/entitlements";
-import { type User } from "next-auth";
+import { type User } from "@/src/features/auth/session-types";
 import { type OrganizationScope } from "@/src/features/rbac/constants/organizationAccessRights";
 import { SupportButton } from "@/src/components/nav/support-button";
 import { InAppAiAgentButton } from "@/src/components/nav/in-app-ai-agent-button";
@@ -102,6 +102,15 @@ export type Route = {
     organization: User["organizations"][number] | undefined;
   }) => boolean;
   group?: RouteGroup; // group this route belongs to (within a section)
+  /**
+   * Multi-tenant org-gate: when true, this route is hidden until an
+   * organization is selected (org or project context present in the URL).
+   * All app/service surfaces should set this so nothing is visible before an
+   * org is chosen. Project/org-scoped routes are already gated by their
+   * `[projectId]`/`[organizationId]` patterns; this flag makes the intent
+   * explicit and covers any non-pattern routes too.
+   */
+  requiresOrganization?: boolean;
 };
 
 export const ROUTES: Route[] = [
@@ -600,30 +609,11 @@ export const ROUTES: Route[] = [
     group: RouteGroup.Infrastructure,
     section: RouteSection.Main,
   },
-  // Base — Hanzo data backend
+  // Base — Hanzo data backend (embedded, org-scoped, IAM-SSO; no link-out)
   {
     title: "Base Dashboard",
-    pathname: "https://base.hanzo.ai/_/",
+    pathname: `/project/[projectId]/base`,
     icon: Database,
-    newTab: true,
-    productModule: "base",
-    group: RouteGroup.Base,
-    section: RouteSection.Main,
-  },
-  {
-    title: "Collections",
-    pathname: "https://base.hanzo.ai/_/#/collections",
-    icon: Boxes,
-    newTab: true,
-    productModule: "base",
-    group: RouteGroup.Base,
-    section: RouteSection.Main,
-  },
-  {
-    title: "API Explorer",
-    pathname: "https://base.hanzo.ai/api/",
-    icon: FileJson,
-    newTab: true,
     productModule: "base",
     group: RouteGroup.Base,
     section: RouteSection.Main,
@@ -634,6 +624,15 @@ export const ROUTES: Route[] = [
     icon: ListTodo,
     productModule: "base",
     group: RouteGroup.Base,
+    section: RouteSection.Main,
+  },
+  // Playground — embedded hanzo-playground app (org-scoped, IAM-SSO; no link-out)
+  {
+    title: "Playground App",
+    pathname: `/project/[projectId]/playground-app`,
+    icon: TerminalIcon,
+    productModule: "playground",
+    group: RouteGroup.PromptManagement,
     section: RouteSection.Main,
   },
   {

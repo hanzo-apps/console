@@ -4,6 +4,8 @@ import {
   BedrockConfigSchema,
   VertexAIConfigSchema,
 } from "@hanzo/console";
+import { OpenAIConfigSchema } from "@hanzo/console";
+import { LLMApiKeySchema } from "@hanzo/console/src/server";
 
 export const LlmApiKeySchema = z.object({
   projectId: z.string(),

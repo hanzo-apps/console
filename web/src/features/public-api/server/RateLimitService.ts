@@ -7,7 +7,11 @@ import {
   type RateLimitConfig,
   type Plan,
 } from "@hanzo/console";
-import { recordIncrement, type ApiAccessScope, logger } from "@hanzo/console/src/server";
+import {
+  recordIncrement,
+  type ApiAccessScope,
+  logger,
+} from "@hanzo/console/src/server";
 import { type NextApiResponse } from "next";
 import {
   createUnstablePublicApiRateLimitError,
@@ -177,6 +181,7 @@ export class RateLimitHelper {
 export const sendRateLimitResponse = (
   res: NextApiResponse,
   rateLimitRes: RateLimitResult,
+  errorContract?: PublicApiErrorContract,
 ) => {
   const httpHeader = createHttpHeaderFromRateLimit(rateLimitRes);
 

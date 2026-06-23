@@ -11,6 +11,8 @@ import {
   type QueryType,
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
+import { ObservationType } from "@hanzo/console";
 
 export const LatencyTables = ({
   projectId,
@@ -18,12 +20,14 @@ export const LatencyTables = ({
   fromTimestamp,
   toTimestamp,
   isLoading = false,
+  schedulerId,
 }: {
   projectId: string;
   globalFilterState: FilterState;
   fromTimestamp: Date;
   toTimestamp: Date;
   isLoading?: boolean;
+  schedulerId?: string;
 }) => {
   const generationsLatenciesQuery: QueryType = {
     view: "observations",
@@ -92,7 +96,7 @@ export const LatencyTables = ({
   const observationsLatencies = useScheduledDashboardExecuteQuery(
     {
       projectId,
-      query: spansLatenciesQuery,
+      query: observationsLatenciesQuery,
     },
     {
       trpc: {

@@ -15,8 +15,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
-import { SidePanel, SidePanelContent, SidePanelHeader, SidePanelTitle } from "@/src/components/ui/side-panel";
+import {
+  SidePanel,
+  SidePanelContent,
+  SidePanelHeader,
+  SidePanelTitle,
+} from "@/src/components/ui/side-panel";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { Spinner } from "@/src/components/layouts/spinner";
+import { V4IntroDialog } from "@/src/features/events/components/V4IntroDialog";
+import { useExperimentAccess } from "@/src/features/experiments/hooks/useExperimentAccess";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
+import { singleRunToExperimentsUrl } from "@/src/features/experiments/utils/experimentUrlTranslation";
+import { ExperimentsBetaSwitch } from "@/src/features/experiments/components/ExperimentsBetaSwitch";
 
 export default function Dataset() {
   const router = useRouter();
@@ -157,7 +168,9 @@ export default function Dataset() {
             </Link>
             <DetailPageNav
               currentId={runId}
-              path={(entry) => `/project/${projectId}/datasets/${datasetId}/runs/${entry.id}`}
+              path={(entry) =>
+                `/project/${projectId}/datasets/${datasetId}/runs/${entry.id}`
+              }
               listKey="datasetRuns"
             />
             <DropdownMenu>
@@ -183,9 +196,16 @@ export default function Dataset() {
     >
       <div className="grid flex-1 grid-cols-[1fr_auto] overflow-hidden">
         <div className="flex h-full flex-col overflow-hidden">
-          <DatasetRunItemsByRunTable projectId={projectId} datasetId={datasetId} datasetRunId={runId} />
+          <DatasetRunItemsByRunTable
+            projectId={projectId}
+            datasetId={datasetId}
+            datasetRunId={runId}
+          />
         </div>
-        <SidePanel mobileTitle="Experiment run details" id="experiment-run-details">
+        <SidePanel
+          mobileTitle="Experiment run details"
+          id="experiment-run-details"
+        >
           <SidePanelHeader>
             <SidePanelTitle>Experiment run details</SidePanelTitle>
           </SidePanelHeader>
@@ -195,13 +215,23 @@ export default function Dataset() {
             ) : (
               <>
                 {!!run.data?.description && (
-                  <JSONView json={run.data.description} title="Description" className="w-full overflow-y-auto" />
+                  <JSONView
+                    json={run.data.description}
+                    title="Description"
+                    className="w-full overflow-y-auto"
+                  />
                 )}
                 {!!run.data?.metadata && (
-                  <JSONView json={run.data.metadata} title="Metadata" className="w-full overflow-y-auto" />
+                  <JSONView
+                    json={run.data.metadata}
+                    title="Metadata"
+                    className="w-full overflow-y-auto"
+                  />
                 )}
                 {!run.data?.description && !run.data?.metadata && (
-                  <div className="mt-1 px-1 text-sm text-muted-foreground">No description or metadata for this run</div>
+                  <div className="text-muted-foreground mt-1 px-1 text-sm">
+                    No description or metadata for this run
+                  </div>
                 )}
               </>
             )}

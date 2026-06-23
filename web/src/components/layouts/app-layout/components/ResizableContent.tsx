@@ -16,7 +16,13 @@ import {
   ResizablePanelGroup,
   type ImperativePanelHandle,
 } from "@/src/components/ui/resizable";
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/src/components/ui/drawer";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/src/components/ui/drawer";
 
 /**
  * Resizable content for support drawer on the right side of the screen (desktop).
@@ -40,12 +46,12 @@ export function ResizableContent({ children }: PropsWithChildren) {
 
     if (open) {
       // Open drawer: resize main to 70%, drawer to 30%
-      drawerPanelRef.current?.resize(30);
-      mainPanelRef.current?.resize(70);
+      drawerPanelRef.current?.resize("30%");
+      mainPanelRef.current?.resize("70%");
     } else {
       // Close drawer: resize main to 100%, drawer to 0%
-      drawerPanelRef.current?.resize(0);
-      mainPanelRef.current?.resize(100);
+      drawerPanelRef.current?.resize("0%");
+      mainPanelRef.current?.resize("100%");
     }
   }, [open, isDesktop]);
 
@@ -58,12 +64,12 @@ export function ResizableContent({ children }: PropsWithChildren) {
         <Drawer open={open} onOpenChange={setOpen} forceDirection="bottom">
           <DrawerContent
             id="support-drawer"
-            className="inset-x-0 bottom-0 top-[calc(var(--banner-offset)+10px)] min-h-screen-with-banner"
+            className="min-h-screen-with-banner inset-x-0 top-[calc(var(--banner-offset)+10px)] bottom-0"
             size="full"
           >
             <DrawerHeader className="absolute inset-x-0 top-0 p-0 text-left">
               <div className="flex w-full items-center justify-center pt-3">
-                <div className="h-2 w-20 rounded-full bg-muted" />
+                <div className="bg-muted h-2 w-20 rounded-full" />
               </div>
               {/* sr-only for screen readers and accessibility */}
               <DrawerTitle className="sr-only">Support</DrawerTitle>
@@ -82,18 +88,23 @@ export function ResizableContent({ children }: PropsWithChildren) {
 
   // 👉 DESKTOP: Always render ResizablePanelGroup to prevent remounting children
   return (
-    <ResizablePanelGroup direction="horizontal" className="flex h-full w-full">
-      <ResizablePanel ref={mainPanelRef} defaultSize={100} minSize={30}>
-        <main className="relative h-full w-full overflow-scroll">{children}</main>
+    <ResizablePanelGroup
+      orientation="horizontal"
+      className="flex h-full w-full"
+    >
+      <ResizablePanel panelRef={mainPanelRef} defaultSize="100%" minSize="30%">
+        <main className="relative h-full w-full overflow-scroll">
+          {children}
+        </main>
       </ResizablePanel>
       {open && <ResizableHandle withHandle />}
       <ResizablePanel
-        ref={drawerPanelRef}
-        defaultSize={0}
-        minSize={0}
-        maxSize={60}
+        panelRef={drawerPanelRef}
+        defaultSize="0%"
+        minSize="0%"
+        maxSize="60%"
         collapsible={true}
-        collapsedSize={0}
+        collapsedSize="0%"
       >
         {open && <SupportDrawer />}
       </ResizablePanel>

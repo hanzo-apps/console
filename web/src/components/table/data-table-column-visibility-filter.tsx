@@ -10,7 +10,7 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight, Component, Menu, X } from "lucide-react";
-import { type HanzoColumnDef } from "@/src/components/table/types";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import DocPopup from "@/src/components/layouts/doc-popup";
 import {
@@ -49,7 +49,7 @@ import { Checkbox } from "@/src/components/ui/checkbox";
 import { Separator } from "@/src/components/ui/separator";
 
 interface DataTableColumnVisibilityFilterProps<TData, TValue> {
-  columns: HanzoColumnDef<TData, TValue>[];
+  columns: ColumnDef<TData, TValue>[];
   columnVisibility: VisibilityState;
   setColumnVisibility: Dispatch<SetStateAction<VisibilityState>>;
   columnOrder?: ColumnOrderState;
@@ -57,7 +57,7 @@ interface DataTableColumnVisibilityFilterProps<TData, TValue> {
 }
 
 const calculateColumnCounts = <TData, TValue>(
-  columns: HanzoColumnDef<TData, TValue>[],
+  columns: ColumnDef<TData, TValue>[],
   columnVisibility: VisibilityState,
 ) => {
   return columns.reduce(
@@ -91,7 +91,7 @@ function ColumnVisibilityListItem<TData, TValue>({
   columnVisibility,
   isOrderable = false,
 }: {
-  column: HanzoColumnDef<TData, TValue>;
+  column: ColumnDef<TData, TValue>;
   toggleColumn: (columnId: string) => void;
   columnVisibility: VisibilityState;
   isOrderable?: boolean;
@@ -182,7 +182,7 @@ function GroupVisibilityHeader<TData, TValue>({
   children,
   toggleAll,
 }: {
-  column: HanzoColumnDef<TData, TValue>;
+  column: ColumnDef<TData, TValue>;
   groupTotalCount: number;
   groupVisibleCount: number;
   isOpen: boolean;
@@ -265,7 +265,7 @@ function GroupVisibilityHeader<TData, TValue>({
 }
 
 function setAllColumns<TData, TValue>(
-  columns: HanzoColumnDef<TData, TValue>[],
+  columns: ColumnDef<TData, TValue>[],
   visible: boolean,
   groupName?: string,
 ) {

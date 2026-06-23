@@ -12,6 +12,7 @@ import { JSONView } from "@/src/components/ui/CodeJsonViewer";
 import { type FlatLogItem } from "./log-view-types";
 import { useLogViewAllObservationsIO } from "./useLogViewAllObservationsIO";
 import Spinner from "@/src/components/design-system/Spinner/Spinner";
+import { Loader2 } from "@/src/features/agents/components/ui/icon-bridge";
 
 export interface LogViewJsonModeProps {
   items: FlatLogItem[];
@@ -34,11 +35,12 @@ export const LogViewJsonMode = memo(function LogViewJsonMode({
   isCollapsed,
   onToggleCollapse,
 }: LogViewJsonModeProps) {
-  const { data, isLoading, isError, loadAllData, totalCount } = useLogViewAllObservationsIO({
-    items,
-    traceId,
-    projectId,
-  });
+  const { data, isLoading, isError, loadAllData, totalCount } =
+    useLogViewAllObservationsIO({
+      items,
+      traceId,
+      projectId,
+    });
 
   // Auto-load data when JSON mode is rendered
   useEffect(() => {
@@ -52,8 +54,10 @@ export const LogViewJsonMode = memo(function LogViewJsonMode({
       {/* Loading state */}
       {isLoading && (
         <div className="flex flex-1 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">Loading observations (0/{totalCount})...</span>
+          <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+          <span className="text-muted-foreground ml-2 text-sm">
+            Loading observations (0/{totalCount})...
+          </span>
         </div>
       )}
 
@@ -83,7 +87,9 @@ export const LogViewJsonMode = memo(function LogViewJsonMode({
       {/* Empty state */}
       {!data && !isLoading && !isError && (
         <div className="flex flex-1 items-center justify-center">
-          <div className="text-sm text-muted-foreground">No observation data available</div>
+          <div className="text-muted-foreground text-sm">
+            No observation data available
+          </div>
         </div>
       )}
     </div>

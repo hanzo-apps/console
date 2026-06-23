@@ -18,7 +18,9 @@ export const DetailPageNav = (props: {
   currentId: string;
   path: (entry: ListEntry) => string;
   listKey: string;
+  onNavigate?: (entry: ListEntry) => void;
 }) => {
+  const { currentId, path, listKey, onNavigate } = props;
   const { detailPagelists } = useDetailPageLists();
   const entries = detailPagelists[listKey] ?? [];
 

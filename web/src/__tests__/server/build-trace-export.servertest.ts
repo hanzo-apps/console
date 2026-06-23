@@ -1,4 +1,4 @@
-import { LangfuseNotFoundError, UnauthorizedError } from "@hanzo/console";
+import { ConsoleNotFoundError, UnauthorizedError } from "@hanzo/console";
 import { env } from "@hanzo/console/src/env";
 import { beforeEach, afterAll, describe, expect, it, vi } from "vitest";
 import {
@@ -379,7 +379,7 @@ describe("buildTraceExport", () => {
         projectId,
         session: makeSession(),
       }),
-    ).rejects.toBeInstanceOf(LangfuseNotFoundError);
+    ).rejects.toBeInstanceOf(ConsoleNotFoundError);
   });
 
   it("throws an unauthorized error when the user cannot read the trace", async () => {

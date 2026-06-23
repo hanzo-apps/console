@@ -3,7 +3,7 @@ import {
   type Entitlement,
 } from "@/src/features/entitlements/constants/entitlements";
 import { TRPCError } from "@trpc/server";
-import { type User } from "next-auth";
+import { type User } from "@/src/features/auth/session-types";
 import { type Plan } from "@hanzo/console";
 
 type HasEntitlementParams = {

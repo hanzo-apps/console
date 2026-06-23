@@ -1,42 +1,19 @@
 // ---------------------------------------------------------------------------
-// ZT ZAP Frontend Client
+// ZT ZAP Frontend Client — thin alias over the generic ZAP client.
 //
-// Calls the ZAP tool endpoint at /v1/zap/zt from the browser.
-// Used by React Query hooks in hooks.ts.
+// The generic `zapCall` (features/zap/zapClient) routes "<scope>.<method>" to
+// /v1/zap/<scope>; "zt.*" lands on the dedicated /v1/zap/zt route. Kept as a
+// named export so the zt hooks/call sites stay unchanged while all ZAP traffic
+// flows through one client. New domains import `zapCall` directly.
 // ---------------------------------------------------------------------------
 
-export class ZapError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.name = "ZapError";
-    this.status = status;
-  }
-}
+export { ZapError } from "@/src/features/zap/zapClient";
+import { zapCall } from "@/src/features/zap/zapClient";
 
-/**
- * Call a ZT ZAP tool.
- *
- * POST /v1/zap/zt { name, args } → { content: T }
- */
-export async function zapCallZt<T = unknown>(name: string, args: Record<string, unknown>): Promise<T> {
-  const res = await fetch("/v1/zap/zt", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, args }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    let message: string;
-    try {
-      message = (JSON.parse(body) as { error?: string }).error ?? body;
-    } catch {
-      message = body;
-    }
-    throw new ZapError(res.status, message);
-  }
-
-  const data = (await res.json()) as { content: T };
-  return data.content;
+/** Call a ZT ZAP tool. POST /v1/zap/zt { name, args } → content. */
+export function zapCallZt<T = unknown>(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<T> {
+  return zapCall<T>(name, args);
 }

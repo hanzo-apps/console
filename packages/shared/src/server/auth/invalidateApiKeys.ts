@@ -29,10 +29,10 @@ export async function invalidateCachedApiKeys(apiKeys: ApiKey[], identifier: str
     return;
   }
 
-  if (redisClient) {
+  if (redis) {
     logger.info(`Invalidating API keys in redis for ${identifier}`);
     const keysToDelete = filteredHashKeys.map((hash) => `api-key:${hash}`);
-    await safeMultiDel(redisClient, keysToDelete);
+    await safeMultiDel(redis, keysToDelete);
   }
 }
 
@@ -89,7 +89,10 @@ export async function invalidateCachedOrgApiKeys(
  *
  * @param projectId - The project ID whose API keys should be invalidated from cache
  */
-export async function invalidateCachedProjectApiKeys(projectId: string): Promise<void> {
+export async function invalidateCachedProjectApiKeys(
+  projectId: string,
+  redisClient: RedisClient | null = redis,
+): Promise<void> {
   const apiKeys = await prisma.apiKey.findMany({
     where: {
       projectId: projectId,

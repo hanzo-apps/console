@@ -7,7 +7,7 @@ import type { Route } from "@/src/components/layouts/routes";
 import type { NavigationFilterContext } from "./navigationFilters.types";
 import { hasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { hasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
-import type { User } from "next-auth";
+import type { User } from "@/src/features/auth/session-types";
 
 /** Organization type from user session (can be null when not in project/org context) */
 type Organization = User["organizations"][number] | null | undefined;
@@ -41,6 +41,25 @@ export const filters = {
       return null;
     }
     return route;
+  },
+
+  /**
+   * Org-gate: hide any route flagged `requiresOrganization` until an
+   * organization is selected. An org is "selected" when the URL carries either
+   * an organization id (org pages) or a project id (a project always belongs to
+   * one org). This makes the multi-tenant gate explicit and composable rather
+   * than an implicit side effect of `[projectId]`/`[organizationId]` patterns —
+   * no app/service surface is visible before an org is chosen.
+   */
+  requiresOrganization: (
+    route: Route,
+    ctx: NavigationFilterContext,
+  ): Route | null => {
+    if (!route.requiresOrganization) return route;
+    const orgSelected = Boolean(
+      ctx.routerOrganizationId || ctx.routerProjectId,
+    );
+    return orgSelected ? route : null;
   },
 
   /**
@@ -187,6 +206,7 @@ function applyFiltersToRoute(
   const filterChain = [
     filters.projectScope,
     filters.organizationScope,
+    filters.requiresOrganization,
     filters.uiCustomization,
     filters.featureFlags,
     filters.entitlements,

@@ -10,7 +10,7 @@ import {
   type MediaContentType,
   type PatchMediaBody,
 } from "@/src/features/media/validation";
-import { InternalServerError, LangfuseNotFoundError } from "@hanzo/console";
+import { InternalServerError, ConsoleNotFoundError } from "@hanzo/console";
 import { Prisma, prisma } from "@hanzo/console/src/db";
 import {
   getCurrentSpan,
@@ -124,12 +124,12 @@ export async function getMedia(params: { projectId: string; mediaId: string }) {
     },
   });
 
-  if (!media) throw new LangfuseNotFoundError("Media asset not found");
+  if (!media) throw new ConsoleNotFoundError("Media asset not found");
   if (!media.uploadHttpStatus) {
-    throw new LangfuseNotFoundError("Media not yet uploaded");
+    throw new ConsoleNotFoundError("Media not yet uploaded");
   }
   if (!(media.uploadHttpStatus === 200 || media.uploadHttpStatus === 201)) {
-    throw new LangfuseNotFoundError(
+    throw new ConsoleNotFoundError(
       `Media upload failed with status ${media.uploadHttpStatus}: \n ${media.uploadHttpError}`,
     );
   }
@@ -188,7 +188,7 @@ export async function updateMediaUploadStatus(params: {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2025"
     ) {
-      throw new LangfuseNotFoundError(
+      throw new ConsoleNotFoundError(
         `Media asset ${mediaId} not found in project ${projectId}`,
       );
     }

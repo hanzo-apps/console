@@ -1240,7 +1240,11 @@ export const deleteObservationsOlderThanDays = async (projectId: string, beforeD
   return true;
 };
 
-export const getObservationsWithPromptName = async (projectId: string, promptNames: string[]) => {
+export const getObservationsWithPromptName = async (
+  projectId: string,
+  promptNames: string[],
+  { fromTimestamp, toTimestamp }: { fromTimestamp?: Date; toTimestamp?: Date } = {},
+) => {
   const query = `
   SELECT uniq(id) as count, prompt_name
   FROM observations
@@ -1273,7 +1277,11 @@ export const getObservationsWithPromptName = async (projectId: string, promptNam
   }));
 };
 
-export const getObservationMetricsForPrompts = async (projectId: string, promptIds: string[]) => {
+export const getObservationMetricsForPrompts = async (
+  projectId: string,
+  promptIds: string[],
+  { fromTimestamp, toTimestamp }: { fromTimestamp?: Date; toTimestamp?: Date } = {},
+) => {
   const query = `
       WITH latencies AS
           (
@@ -1744,7 +1752,7 @@ export const getGenerationsForAnalyticsIntegrations = async function* (
     },
   });
 
-  const baseUrl = env.NEXTAUTH_URL?.replace("/api/auth", "");
+  const baseUrl = env.NEXTAUTH_URL?.replace("/v1/auth", "");
   for await (const record of records) {
     yield {
       timestamp: record.start_time,

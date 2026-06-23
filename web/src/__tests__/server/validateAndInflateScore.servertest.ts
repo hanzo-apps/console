@@ -7,13 +7,13 @@ import {
 } from "@hanzo/console/src/server";
 import {
   InvalidRequestError,
-  LangfuseNotFoundError,
+  ConsoleNotFoundError,
   ScoreSourceEnum,
 } from "@hanzo/console";
 
 describe("validateAndInflateScore", () => {
   describe("configId scoping", () => {
-    it("throws LangfuseNotFoundError when configId belongs to another project", async () => {
+    it("throws ConsoleNotFoundError when configId belongs to another project", async () => {
       // Config owned by a different project than the caller.
       const { projectId: ownerProjectId } = await createOrgProjectAndApiKey();
       const { projectId: callerProjectId } = await createOrgProjectAndApiKey();
@@ -43,10 +43,10 @@ describe("validateAndInflateScore", () => {
             environment: "default",
           },
         }),
-      ).rejects.toThrow(LangfuseNotFoundError);
+      ).rejects.toThrow(ConsoleNotFoundError);
     });
 
-    it("throws LangfuseNotFoundError when configId does not exist at all", async () => {
+    it("throws ConsoleNotFoundError when configId does not exist at all", async () => {
       const { projectId } = await createOrgProjectAndApiKey();
 
       await expect(
@@ -64,7 +64,7 @@ describe("validateAndInflateScore", () => {
             environment: "default",
           },
         }),
-      ).rejects.toThrow(LangfuseNotFoundError);
+      ).rejects.toThrow(ConsoleNotFoundError);
     });
 
     it("accepts a configId owned by the caller's project", async () => {

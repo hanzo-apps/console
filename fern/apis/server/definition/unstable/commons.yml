@@ -27,7 +27,7 @@ types:
         It supports mapping from `input`, `output`, and `metadata`.
       - `experiment` evaluates live experiment executions and can additionally map `expected_output` and `experiment_item_metadata`.
         It currently supports filtering by `datasetId`.
-        Discover valid dataset IDs with `GET /api/public/v2/datasets`, then use the returned dataset `id` values in your filter.
+        Discover valid dataset IDs with `GET /v1/datasets`, then use the returned dataset `id` values in your filter.
     enum:
       - observation
       - experiment
@@ -74,7 +74,7 @@ types:
       If omitted, Langfuse uses the project's default evaluation model.
       If provided, the model must be available to the project when the evaluator or evaluation rule is enabled.
 
-      To discover valid configured `provider` values for a project, call `GET /api/public/llm-connections` and read the `provider` field from the returned connections.
+      To discover valid configured `provider` values for a project, call `GET /v1/llm-connections` and read the `provider` field from the returned connections.
       Use a `provider` value that matches one of the connections already configured in the same project.
 
       Recovery guidance:
@@ -85,7 +85,7 @@ types:
         docs: |
           Provider identifier to use for this evaluator, for example `openai` or `anthropic`.
 
-          To discover valid values for the current project, call `GET /api/public/llm-connections` and use one of the returned `provider` values.
+          To discover valid values for the current project, call `GET /v1/llm-connections` and use one of the returned `provider` values.
       model:
         type: string
         docs: Model identifier exposed by the provider, for example `gpt-4.1-mini`.
@@ -502,12 +502,12 @@ types:
         - `toolCalls`: `number`
       - `target=experiment`
         - `datasetId`: `stringOptions`, operators `any of` / `none of`
-          Use dataset `id` values from `GET /api/public/v2/datasets`, not dataset names.
+          Use dataset `id` values from `GET /v1/datasets`, not dataset names.
 
       Recovery guidance:
       - `invalid_filter_value` with `details.column` but no `invalidValues`: the selected `column` is not supported for the chosen `target`
       - `invalid_filter_value` with `details.invalidValues`: the selected values are not allowed for that column. Replace them with one of `details.allowedValues` when provided.
-      - `invalid_filter_value` for `column=datasetId`: call `GET /api/public/v2/datasets`, then retry with dataset `id` values from that response.
+      - `invalid_filter_value` for `column=datasetId`: call `GET /v1/datasets`, then retry with dataset `id` values from that response.
     discriminant: type
     union:
       "datetime":

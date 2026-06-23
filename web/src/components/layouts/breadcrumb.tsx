@@ -24,7 +24,7 @@ import {
   Settings,
   Slash,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import {
   createOrganizationRoute,
@@ -34,6 +34,7 @@ import { isCloudPlan, planLabels } from "@hanzo/console";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Fragment } from "react";
+import { Spinner } from "@/src/components/layouts/spinner";
 
 const LoadingMenuItem = () => (
   <DropdownMenuItem>

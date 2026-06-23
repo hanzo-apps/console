@@ -80,25 +80,15 @@ export function getObservationLevels(
 function prepareObservations(list: ObservationReturnType[]): {
   sortedObservations: ObservationReturnType[];
 } {
-  if (list.length === 0)
-    return { sortedObservations: [], hiddenObservationsCount: 0 };
-
-  // Filter for observations with minimum level
-  const mutableList = list.filter((o) =>
-    getObservationLevels(minLevel).includes(o.level),
-  );
-  const hiddenObservationsCount = list.length - mutableList.length;
+  if (list.length === 0) return { sortedObservations: [] };
 
   // Build a Set of all observation IDs for O(1) lookup
   const observationIds = new Set(list.map((o) => o.id));
 
-  // Remove parentObservationId if parent doesn't exist
-  mutableList.forEach((observation) => {
-    if (
-      observation.parentObservationId &&
-      !observationIds.has(observation.parentObservationId)
-    ) {
-      observation.parentObservationId = null;
+  // Remove parentObservationId if parent doesn't exist in the list
+  const mutableList = list.map((o) => {
+    if (o.parentObservationId && !observationIds.has(o.parentObservationId)) {
+      return { ...o, parentObservationId: null };
     }
     return o;
   });
@@ -338,8 +328,7 @@ function buildTraceTree(
   nodeMap: Map<string, TreeNode>;
 } {
   // Phase 1: Filter and prepare observations
-  const { sortedObservations, hiddenObservationsCount } =
-    filterAndPrepareObservations(observations, minLevel);
+  const { sortedObservations } = prepareObservations(observations);
 
   // Handle empty case
   if (sortedObservations.length === 0) {
@@ -467,11 +456,7 @@ export function buildTraceUiData(
   searchItems: TraceSearchListItem[];
   nodeMap: Map<string, TreeNode>;
 } {
-  const { roots, hiddenObservationsCount, nodeMap } = buildTraceTree(
-    trace,
-    observations,
-    minLevel,
-  );
+  const { roots, nodeMap } = buildTraceTree(trace, observations);
 
   // Handle empty roots case
   if (roots.length === 0) {

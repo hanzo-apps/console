@@ -1,5 +1,13 @@
 import { type DataPoint } from "./chart-props";
 import { type DashboardWidgetChartType } from "@hanzo/console/src/db";
+import {
+  FormatMetricOptions,
+  FormattedMetric,
+} from "@/src/features/widgets/chart-library/chart-props";
+import { compactNumberFormatter, numberFormatter } from "@/src/utils/numbers";
+
+export const toFullMetricString = (metric: FormattedMetric): string =>
+  `${metric.negative ? "-" : ""}${metric.prefix ?? ""}${metric.main}${metric.suffix ?? ""}`;
 
 /**
  * Groups data by dimension to prepare it for time series breakdowns

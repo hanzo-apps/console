@@ -1,6 +1,6 @@
 import {
   InvalidRequestError,
-  LangfuseNotFoundError,
+  ConsoleNotFoundError,
   PublicApiCreateScoreSourceDomain,
   PostScoresBodyV1,
   PostScoresResponseV1,
@@ -30,7 +30,7 @@ const throwCreateScoreBatchError = (error: CreateScoreBatchError): never => {
   }
 
   if (error.status === 404) {
-    throw new LangfuseNotFoundError(message);
+    throw new ConsoleNotFoundError(message);
   }
 
   throw new ApiServerError("Failed to create score");

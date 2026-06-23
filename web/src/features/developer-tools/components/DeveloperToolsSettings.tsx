@@ -40,7 +40,7 @@ export function DeveloperToolsSettings() {
             value={`npx skills add langfuse/skills --skill "langfuse"`}
           />
           <div className="mt-4 flex items-center gap-2">
-            <DocsButton href="https://langfuse.com/docs/api-and-data-platform/features/agent-skill" />
+            <DocsButton href="https://hanzo.ai/docs/api-and-data-platform/features/agent-skill" />
           </div>
         </Card>
 
@@ -59,11 +59,11 @@ export function DeveloperToolsSettings() {
           <CodeBlock
             language="shell"
             value={`claude mcp add --transport http langfuse \\
-  https://cloud.langfuse.com/api/public/mcp \\
+  https://cloud.hanzo.ai/v1/mcp \\
   --header "Authorization: Basic {your-base64-token}"`}
           />
           <div className="mt-4 flex items-center gap-2">
-            <DocsButton href="https://langfuse.com/docs/api-and-data-platform/features/mcp-server" />
+            <DocsButton href="https://hanzo.ai/docs/api-and-data-platform/features/mcp-server" />
           </div>
         </Card>
 
@@ -86,7 +86,7 @@ export LANGFUSE_SECRET_KEY="sk-lf-..."
 npx langfuse-cli api <resource> <action>`}
           />
           <div className="mt-4 flex items-center gap-2">
-            <DocsButton href="https://langfuse.com/docs/api-and-data-platform/features/cli" />
+            <DocsButton href="https://hanzo.ai/docs/api-and-data-platform/features/cli" />
           </div>
         </Card>
       </div>

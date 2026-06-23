@@ -11,6 +11,7 @@ import {
   type QueryType,
   mapLegacyUiTableFilterToView,
 } from "@/src/features/query";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
 
 export const TracesBarListChart = ({
   className,
@@ -19,6 +20,7 @@ export const TracesBarListChart = ({
   fromTimestamp,
   toTimestamp,
   isLoading = false,
+  schedulerId,
 }: {
   className?: string;
   projectId: string;
@@ -26,6 +28,7 @@ export const TracesBarListChart = ({
   fromTimestamp: Date;
   toTimestamp: Date;
   isLoading?: boolean;
+  schedulerId?: string;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 

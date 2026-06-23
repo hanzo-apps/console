@@ -13,7 +13,7 @@ import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAcces
 import { api } from "@/src/utils/api";
 import { type AnnotationQueueObjectType } from "@hanzo/console";
 import { ChevronDown, ExternalLink } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/src/features/auth/session";
 import Link from "next/link";
 import { useState, useCallback } from "react";
 

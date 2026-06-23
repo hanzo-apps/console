@@ -4,7 +4,15 @@ import { ChatAnthropic, ChatAnthropicInput } from "@langchain/anthropic";
 import { ChatGoogle } from "@langchain/google";
 import { ChatBedrockConverse } from "@langchain/aws";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
+import {
+  AIMessage,
+  AIMessageChunk,
+  BaseMessage,
+  ContentBlock,
+  HumanMessage,
+  SystemMessage,
+  ToolMessage,
+} from "@langchain/core/messages";
 import { BytesOutputParser, StringOutputParser } from "@langchain/core/output_parsers";
 import { IterableReadableStream } from "@langchain/core/utils/stream";
 import { ChatOpenAI, AzureChatOpenAI } from "@langchain/openai";
@@ -37,17 +45,10 @@ import type { BaseCallbackHandler } from "@langchain/core/callbacks/base";
 import { ProxyAgent } from "undici";
 import { getInternalTracingHandler } from "./getInternalTracingHandler";
 import { decrypt } from "../../encryption";
-import {
-  decryptAndParseExtraHeaders,
-  executeWithRuntimeTimeout,
-  RUNTIME_TIMEOUT_ADAPTERS,
-} from "./utils";
+import { decryptAndParseExtraHeaders, executeWithRuntimeTimeout, RUNTIME_TIMEOUT_ADAPTERS } from "./utils";
 import { logger } from "../logger";
 import { LLMCompletionError } from "./errors";
-import {
-  createSecureGoogleAIStudioApiClient,
-  createSecureVertexAIApiClient,
-} from "./googleSecureApiClient";
+import { createSecureGoogleAIStudioApiClient, createSecureVertexAIApiClient } from "./googleSecureApiClient";
 import { createSecureLlmFetch } from "./secureLlmFetch";
 
 export type CompletionWithReasoning = { text: string; reasoning?: string };
@@ -79,9 +80,23 @@ const NON_RETRYABLE_LLM_ERROR_PATTERNS = [
   "Circular redirect detected",
 ] as const;
 
-export type CompletionWithReasoning = { text: string; reasoning?: string };
-
 const isConsoleCloud = Boolean(env.NEXT_PUBLIC_HANZO_CLOUD_REGION);
+const AZURE_OPENAI_API_KEY_HEADER = "api-key";
+const ANTHROPIC_API_KEY_HEADER = "x-api-key";
+
+// Adapters whose models can return separate reasoning content. We route their
+// responses through `AIMessage#contentBlocks`, which normalizes provider-specific
+// shapes (Bedrock `reasoning_content`, Gemini `{ thought: true }` text parts, etc.)
+// into the documented `{ type: "reasoning", reasoning: string }` standard block.
+const ADAPTERS_WITH_REASONING_SUPPORT = new Set<LLMAdapter>([
+  LLMAdapter.Bedrock,
+  LLMAdapter.VertexAI,
+  LLMAdapter.GoogleAIStudio,
+]);
+
+function adapterSupportsReasoning(adapter: LLMAdapter): boolean {
+  return ADAPTERS_WITH_REASONING_SUPPORT.has(adapter);
+}
 
 const PROVIDERS_WITH_REQUIRED_USER_MESSAGE = [
   LLMAdapter.VertexAI,
@@ -111,10 +126,7 @@ const createBedrockBearerAuth = (token: string) => ({
   },
 });
 
-export function resolveBedrockAuth(params: {
-  secretKey: string;
-  allowDefaultCredentials: boolean;
-}): {
+export function resolveBedrockAuth(params: { secretKey: string; allowDefaultCredentials: boolean }): {
   credentials?: z.infer<typeof BedrockAccessKeysSchema>;
   clientOptions?: {
     token: { token: string };
@@ -123,17 +135,12 @@ export function resolveBedrockAuth(params: {
 } {
   const { secretKey, allowDefaultCredentials } = params;
 
-  if (
-    secretKey === BEDROCK_USE_DEFAULT_CREDENTIALS &&
-    allowDefaultCredentials
-  ) {
+  if (secretKey === BEDROCK_USE_DEFAULT_CREDENTIALS && allowDefaultCredentials) {
     return {};
   }
 
   try {
-    const parsedCredential = BedrockCredentialSchema.parse(
-      JSON.parse(secretKey),
-    );
+    const parsedCredential = BedrockCredentialSchema.parse(JSON.parse(secretKey));
 
     if ("apiKey" in parsedCredential) {
       return createBedrockBearerAuth(parsedCredential.apiKey);
@@ -143,9 +150,7 @@ export function resolveBedrockAuth(params: {
       credentials: parsedCredential,
     };
   } catch {
-    throw new Error(
-      "Invalid Bedrock credentials. Expected AWS access key JSON or a Bedrock API key.",
-    );
+    throw new Error("Invalid Bedrock credentials. Expected AWS access key JSON or a Bedrock API key.");
   }
 }
 
@@ -284,8 +289,15 @@ export async function fetchLLMCompletion(
   const proxyUrl = env.HTTPS_PROXY;
   const proxyDispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
   const timeoutMs = env.HANZO_FETCH_LLM_COMPLETION_TIMEOUT_MS;
+  const secureLlmFetch = (logContext: string, additionalSensitiveHeaders?: string[]) =>
+    createSecureLlmFetch({
+      logContext,
+      additionalSensitiveHeaders,
+      dispatcher: proxyDispatcher,
+    });
 
-  let chatModel: ChatOpenAI | ChatAnthropic | ChatBedrockConverse | ChatVertexAI | ChatGoogleGenerativeAI;
+  let chatModel: ChatOpenAI | ChatAnthropic | ChatBedrockConverse | ChatGoogle;
+  let usesOpenAIResponsesApi = false;
   if (modelParams.adapter === LLMAdapter.Anthropic) {
     const shouldNormalizeAnthropicSamplingParams =
       modelParams.model?.includes("claude-opus-4-8") ||
@@ -307,9 +319,7 @@ export async function fetchLLMCompletion(
         maxRetries,
         defaultHeaders: extraHeaders,
         timeout: timeoutMs,
-        fetch: secureLlmFetch("Anthropic LLM base URL", [
-          ANTHROPIC_API_KEY_HEADER,
-        ]),
+        fetch: secureLlmFetch("Anthropic LLM base URL", [ANTHROPIC_API_KEY_HEADER]),
       },
       temperature: modelParams.temperature,
       topP: modelParams.top_p,
@@ -377,9 +387,7 @@ export async function fetchLLMCompletion(
       configuration: {
         timeout: timeoutMs,
         defaultHeaders: extraHeaders,
-        fetch: secureLlmFetch("Azure OpenAI LLM base URL", [
-          AZURE_OPENAI_API_KEY_HEADER,
-        ]),
+        fetch: secureLlmFetch("Azure OpenAI LLM base URL", [AZURE_OPENAI_API_KEY_HEADER]),
       },
       modelKwargs: modelParams.providerOptions,
     });
@@ -391,10 +399,10 @@ export async function fetchLLMCompletion(
     // Handle both explicit credentials and default provider chain
     // Only allow default provider chain in self-hosted or internal AI features
     const isSelfHosted = !isConsoleCloud;
-    const credentials =
-      apiKey === BEDROCK_USE_DEFAULT_CREDENTIALS && (isSelfHosted || shouldUseHanzoAPIKey)
-        ? undefined // undefined = use AWS SDK default credential provider chain
-        : BedrockCredentialSchema.parse(JSON.parse(apiKey));
+    const { credentials, clientOptions } = resolveBedrockAuth({
+      secretKey: apiKey,
+      allowDefaultCredentials: isSelfHosted || shouldUseHanzoAPIKey,
+    });
 
     chatModel = new ChatBedrockConverse({
       model: modelParams.model,
@@ -412,9 +420,7 @@ export async function fetchLLMCompletion(
   } else if (modelParams.adapter === LLMAdapter.VertexAI) {
     const { location } = config ? VertexAIConfigSchema.parse(config) : { location: undefined };
 
-    const googleProviderOptions = googleProviderOptionsSchema.parse(
-      modelParams.providerOptions,
-    );
+    const googleProviderOptions = googleProviderOptionsSchema.parse(modelParams.providerOptions);
 
     // Handle both explicit credentials and default provider chain (ADC)
     // Only allow default provider chain in self-hosted or internal AI features
@@ -452,9 +458,7 @@ export async function fetchLLMCompletion(
       ...((googleProviderOptions as any) ?? {}), // Typecast as thinkingLevel is intentionally looser typed
     });
   } else if (modelParams.adapter === LLMAdapter.GoogleAIStudio) {
-    const googleProviderOptions = googleProviderOptionsSchema.parse(
-      modelParams.providerOptions,
-    );
+    const googleProviderOptions = googleProviderOptionsSchema.parse(modelParams.providerOptions);
 
     chatModel = new ChatGoogle({
       model: modelParams.model,
@@ -483,12 +487,8 @@ export async function fetchLLMCompletion(
     metadata: traceSinkParams?.metadata,
   };
 
-  const runtimeTimeoutEnabled = RUNTIME_TIMEOUT_ADAPTERS.has(
-    modelParams.adapter,
-  );
-  const runtimeTimeoutController = runtimeTimeoutEnabled
-    ? new AbortController()
-    : undefined;
+  const runtimeTimeoutEnabled = RUNTIME_TIMEOUT_ADAPTERS.has(modelParams.adapter);
+  const runtimeTimeoutController = runtimeTimeoutEnabled ? new AbortController() : undefined;
   const runConfigWithTimeout = runtimeTimeoutController
     ? {
         ...runConfig,
@@ -497,8 +497,7 @@ export async function fetchLLMCompletion(
     : runConfig;
 
   const supportsReasoning = adapterSupportsReasoning(modelParams.adapter);
-  const shouldNormalizeStreamingContentBlocks =
-    supportsReasoning || usesOpenAIResponsesApi;
+  const shouldNormalizeStreamingContentBlocks = supportsReasoning || usesOpenAIResponsesApi;
 
   try {
     // Important: await all generations in the try block as otherwise `processTracedEvents` will run too early in finally block
@@ -506,9 +505,7 @@ export async function fetchLLMCompletion(
       // Thinking-capable adapters may produce reasoning blocks that corrupt JSON schema
       // parsing. Force function calling so the parser reads from tool_calls instead.
       const structuredOutputSchema = params.structuredOutputSchema;
-      const structuredOutputConfig = supportsReasoning
-        ? { method: "functionCalling" as const }
-        : undefined;
+      const structuredOutputConfig = supportsReasoning ? { method: "functionCalling" as const } : undefined;
 
       const structuredOutput = await executeWithRuntimeTimeout({
         enabled: runtimeTimeoutEnabled,
@@ -516,10 +513,7 @@ export async function fetchLLMCompletion(
         abortController: runtimeTimeoutController,
         operation: () =>
           (chatModel as ChatOpenAI)
-            .withStructuredOutput(
-              structuredOutputSchema,
-              structuredOutputConfig,
-            )
+            .withStructuredOutput(structuredOutputSchema, structuredOutputConfig)
             .invoke(finalMessages, runConfigWithTimeout),
       });
 
@@ -565,8 +559,7 @@ export async function fetchLLMCompletion(
     // so operators see "Blocked hostname detected" / "Redirect validation
     // failed ..." instead of the unhelpful wrapper text.
     const nonRetryableCauseMessage = findNonRetryableCauseMessage(e);
-    const message =
-      nonRetryableCauseMessage ?? extractCleanErrorMessage(rawMessage);
+    const message = nonRetryableCauseMessage ?? extractCleanErrorMessage(rawMessage);
 
     // Check for non-retryable error patterns in message
     const nonRetryablePatterns = [
@@ -611,9 +604,7 @@ export async function fetchLLMCompletion(
   }
 }
 
-function extractCompletionWithReasoning(
-  message: AIMessage,
-): CompletionWithReasoning {
+function extractCompletionWithReasoning(message: AIMessage): CompletionWithReasoning {
   const { text, reasoning } = splitAIMessage(message);
 
   return {
@@ -622,12 +613,8 @@ function extractCompletionWithReasoning(
   };
 }
 
-function createBytesOutputParser(
-  normalizeContentBlocks: boolean,
-): BytesOutputParser {
-  return normalizeContentBlocks
-    ? new ContentBlockBytesOutputParser()
-    : new BytesOutputParser();
+function createBytesOutputParser(normalizeContentBlocks: boolean): BytesOutputParser {
+  return normalizeContentBlocks ? new ContentBlockBytesOutputParser() : new BytesOutputParser();
 }
 
 class ContentBlockBytesOutputParser extends BytesOutputParser {
@@ -640,18 +627,14 @@ class ContentBlockBytesOutputParser extends BytesOutputParser {
     if (AIMessage.isInstance(message) || AIMessageChunk.isInstance(message)) {
       return splitAIMessage(message).text;
     }
-    return typeof message.content === "string"
-      ? message.content
-      : super._baseMessageToString(message);
+    return typeof message.content === "string" ? message.content : super._baseMessageToString(message);
   }
 }
 
 // Reads the standard `contentBlocks` view of an AIMessage(Chunk) and splits it
 // into displayable text, reasoning, and a content array stripped of reasoning
 // and tool_call blocks (tool calls live on `message.tool_calls`).
-function splitAIMessage(
-  message: AIMessage | AIMessageChunk,
-): SplitAIMessageContent {
+function splitAIMessage(message: AIMessage | AIMessageChunk): SplitAIMessageContent {
   if (typeof message.content === "string") {
     return { text: message.content, contentWithoutThinking: message.content };
   }
@@ -662,8 +645,7 @@ function splitAIMessage(
 
   for (const block of message.contentBlocks) {
     if (block.type === "reasoning") {
-      if (typeof block.reasoning === "string")
-        reasoningParts.push(block.reasoning);
+      if (typeof block.reasoning === "string") reasoningParts.push(block.reasoning);
       continue;
     }
     if (block.type === "tool_call") {
@@ -679,9 +661,7 @@ function splitAIMessage(
   return {
     text: textParts.join(""),
     contentWithoutThinking,
-    ...(reasoningParts.length > 0
-      ? { reasoning: reasoningParts.join("") }
-      : {}),
+    ...(reasoningParts.length > 0 ? { reasoning: reasoningParts.join("") } : {}),
   };
 }
 
@@ -707,11 +687,7 @@ function processOpenAIBaseURL(params: {
 // Walks an error and its `.cause` chain (cycle-safe), yielding each link.
 function* walkCauseChain(error: unknown): Generator<unknown> {
   const visited = new Set<unknown>();
-  for (
-    let current: unknown = error;
-    current && !visited.has(current);
-    current = (current as any).cause
-  ) {
+  for (let current: unknown = error; current && !visited.has(current); current = (current as any).cause) {
     visited.add(current);
     yield current;
   }
@@ -747,12 +723,7 @@ function getErrorResponseStatusCode(error: unknown): number | undefined {
 }
 
 function toHttpStatusCode(value: unknown): number | undefined {
-  return typeof value === "number" &&
-    Number.isInteger(value) &&
-    value >= 100 &&
-    value <= 599
-    ? value
-    : undefined;
+  return typeof value === "number" && Number.isInteger(value) && value >= 100 && value <= 599 ? value : undefined;
 }
 
 function extractCleanErrorMessage(rawMessage: string): string {

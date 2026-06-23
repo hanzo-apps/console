@@ -21,6 +21,15 @@ import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAcces
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { DownloadButton } from "@/src/features/widgets/chart-library/DownloadButton";
 import { formatMetricName } from "@/src/features/widgets/utils";
+import {
+  QueryType,
+  validateQuery,
+  requiresV2,
+  type ViewVersion,
+} from "@hanzo/console";
+import { useScheduledDashboardExecuteQuery } from "@/src/hooks/useDashboardQueryScheduler";
+import { getWidgetMetricPresentation } from "@/src/features/widgets/utils";
+import { useV4Beta } from "@/src/features/events/hooks/useV4Beta";
 
 export interface WidgetPlacement {
   id: string;
@@ -30,6 +39,80 @@ export interface WidgetPlacement {
   x_size: number;
   y_size: number;
   type: "widget";
+}
+
+/**
+ * Extracts only query-engine fields from a widget's persisted chartConfig.
+ * Strips rendering-only fields (defaultSort, show_value_labels, etc.)
+ * that are only used by Chart components.
+ *
+ * Accepts any object with at least `type: string` — the discriminated union
+ * from ChartConfigSchema satisfies this via tRPC inference.
+ */
+function toQueryChartConfig<
+  T extends { type: string; bins?: number; row_limit?: number },
+>(
+  widgetChartConfig: T,
+  options?: { defaultRowLimit?: number },
+): NonNullable<QueryType["chartConfig"]> {
+  const rowLimit = widgetChartConfig.row_limit ?? options?.defaultRowLimit;
+  return {
+    type: widgetChartConfig.type,
+    ...(widgetChartConfig.bins !== undefined && {
+      bins: widgetChartConfig.bins,
+    }),
+    ...(rowLimit !== undefined && { row_limit: rowLimit }),
+  };
+}
+
+/**
+ * Checks if a non-timeseries chart with a dimension on v2 needs top-N
+ * enforcement (orderBy desc + row_limit).
+ */
+function isV2BreakdownChart(params: {
+  version: ViewVersion;
+  hasDimension: boolean;
+  isTimeSeries: boolean;
+  chartType: string;
+}): boolean {
+  return (
+    params.version === "v2" &&
+    params.hasDimension &&
+    !params.isTimeSeries &&
+    params.chartType !== "HISTOGRAM" &&
+    params.chartType !== "PIVOT_TABLE"
+  );
+}
+
+/**
+ * Builds the orderBy clause for a widget query.
+ * - PIVOT_TABLE: uses the provided sort state
+ * - v2 breakdown charts: auto-sorts desc on the first metric for top-N
+ * - Otherwise: null
+ */
+function buildWidgetOrderBy(params: {
+  chartType: string;
+  sortState: { column: string; order: string } | null;
+  needsTopN: boolean;
+  firstMetric: { aggregation: string; measure: string } | undefined;
+}): QueryType["orderBy"] {
+  if (params.chartType === "PIVOT_TABLE" && params.sortState) {
+    return [
+      {
+        field: params.sortState.column,
+        direction: params.sortState.order.toLowerCase() as "asc" | "desc",
+      },
+    ];
+  }
+  if (params.needsTopN && params.firstMetric) {
+    return [
+      {
+        field: `${params.firstMetric.aggregation}_${params.firstMetric.measure}`,
+        direction: "desc",
+      },
+    ];
+  }
+  return null;
 }
 
 export function DashboardWidget({
@@ -52,6 +135,7 @@ export function DashboardWidget({
 }) {
   const router = useRouter();
   const utils = api.useUtils();
+  const { isBetaEnabled } = useV4Beta();
   const widget = api.dashboardWidgets.get.useQuery(
     {
       widgetId: placement.widgetId,
@@ -61,6 +145,21 @@ export function DashboardWidget({
       enabled: Boolean(projectId),
     },
   );
+  const widgetRequiresV2 = requiresV2({
+    view: widget.data?.view ?? "traces",
+    dimensions: widget.data?.dimensions ?? [],
+    measures:
+      widget.data?.metrics.map((metric) => ({ measure: metric.measure })) ?? [],
+    filters: widget.data?.filters ?? [],
+  });
+  // If widget requires v2 features (minVersion >= 2), must use v2.
+  // Otherwise follow the beta toggle.
+  const metricsVersion: ViewVersion =
+    widgetRequiresV2 || (widget.data?.minVersion ?? 1) >= 2
+      ? "v2"
+      : isBetaEnabled && (widget.data?.view ?? "traces") !== "traces"
+        ? "v2"
+        : "v1";
   const hasCUDAccess =
     useHasProjectAccess({ projectId, scope: "dashboards:CUD" }) &&
     dashboardOwner !== "HANZO";

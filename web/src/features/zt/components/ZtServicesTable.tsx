@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { DataTable, type AsyncTableData } from "@/src/components/table/data-table";
-import { type ConsoleColumnDef } from "@/src/components/table/types";
+import {
+  DataTable,
+  type AsyncTableData,
+} from "@/src/components/table/data-table";
+import { type ColumnDef } from "@/src/components/table/types";
 import { useZtServices, useDeleteZtService } from "@/src/features/zt/hooks";
 import { useHasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { Button } from "@/src/components/ui/button";
@@ -38,7 +41,9 @@ export function ZtServicesTable({ projectId }: { projectId: string }) {
 
   const [deleteTarget, setDeleteTarget] = useState<ServiceRow | null>(null);
 
-  const services: ServiceRow[] = ((query.data?.data ?? []) as Record<string, unknown>[]).map((s) => ({
+  const services: ServiceRow[] = (
+    (query.data?.data ?? []) as Record<string, unknown>[]
+  ).map((s) => ({
     id: s.id as string,
     name: s.name as string,
     encryptionRequired: (s.encryptionRequired as boolean) ?? true,
@@ -46,7 +51,7 @@ export function ZtServicesTable({ projectId }: { projectId: string }) {
     createdAt: s.createdAt as string,
   }));
 
-  const columns: ConsoleColumnDef<ServiceRow>[] = [
+  const columns: ColumnDef<ServiceRow>[] = [
     {
       accessorKey: "name",
       id: "name",
@@ -61,7 +66,7 @@ export function ZtServicesTable({ projectId }: { projectId: string }) {
         return encrypted ? (
           <Lock className="h-4 w-4 text-green-600" />
         ) : (
-          <Unlock className="h-4 w-4 text-muted-foreground" />
+          <Unlock className="text-muted-foreground h-4 w-4" />
         );
       },
     },
@@ -71,11 +76,15 @@ export function ZtServicesTable({ projectId }: { projectId: string }) {
       header: "Role Attributes",
       cell: ({ row }) => {
         const attrs = row.getValue("roleAttributes") as string[];
-        if (attrs.length === 0) return <span className="text-muted-foreground">-</span>;
+        if (attrs.length === 0)
+          return <span className="text-muted-foreground">-</span>;
         return (
           <div className="flex flex-wrap gap-1">
             {attrs.map((attr) => (
-              <span key={attr} className="rounded bg-muted px-1.5 py-0.5 text-xs">
+              <span
+                key={attr}
+                className="bg-muted rounded px-1.5 py-0.5 text-xs"
+              >
                 {attr}
               </span>
             ))}
@@ -108,7 +117,10 @@ export function ZtServicesTable({ projectId }: { projectId: string }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(service)}>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => setDeleteTarget(service)}
+              >
                 <Trash className="mr-2 h-4 w-4" />
                 Delete
               </DropdownMenuItem>
@@ -145,8 +157,8 @@ export function ZtServicesTable({ projectId }: { projectId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Service</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the service &quot;{deleteTarget?.name}&quot;? This action cannot be
-              undone.
+              Are you sure you want to delete the service &quot;
+              {deleteTarget?.name}&quot;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

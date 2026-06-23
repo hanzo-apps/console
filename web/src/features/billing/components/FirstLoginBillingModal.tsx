@@ -10,12 +10,19 @@
  * Opens billing in a new tab instead of iframe (billing.hanzo.ai blocks framing).
  */
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/src/components/ui/dialog";
+import { useSession } from "@/src/features/auth/session";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { ExternalLink, CreditCard } from "lucide-react";
 
-const BILLING_URL = process.env.NEXT_PUBLIC_BILLING_URL ?? "https://billing.hanzo.ai";
+const BILLING_URL =
+  process.env.NEXT_PUBLIC_BILLING_URL ?? "https://billing.hanzo.ai";
 const STORAGE_KEY_PREFIX = "hanzo:billing:card-captured:";
 const SKIP_KEY_PREFIX = "hanzo:billing:card-skipped:";
 
@@ -27,7 +34,9 @@ function skipKey(userId: string) {
 }
 
 function hasCapture(userId: string) {
-  return typeof window !== "undefined" && !!localStorage.getItem(storageKey(userId));
+  return (
+    typeof window !== "undefined" && !!localStorage.getItem(storageKey(userId))
+  );
 }
 
 function markCapture(userId: string) {
@@ -35,12 +44,17 @@ function markCapture(userId: string) {
 }
 
 function hasSkipped(userId: string) {
-  return typeof window !== "undefined" && !!localStorage.getItem(skipKey(userId));
+  return (
+    typeof window !== "undefined" && !!localStorage.getItem(skipKey(userId))
+  );
 }
 
 function markSkipped(userId: string) {
   // Skip reminder for 7 days
-  localStorage.setItem(skipKey(userId), String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  localStorage.setItem(
+    skipKey(userId),
+    String(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  );
 }
 
 function isSkipExpired(userId: string) {
@@ -73,7 +87,10 @@ export function FirstLoginBillingModal() {
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.origin !== BILLING_URL.replace(/\/$/, "")) return;
-      if (event.data?.type === "payment-method-saved" || event.data?.type === "topup-complete") {
+      if (
+        event.data?.type === "payment-method-saved" ||
+        event.data?.type === "topup-complete"
+      ) {
         markCapture(userId);
         setOpen(false);
       }
@@ -110,25 +127,37 @@ export function FirstLoginBillingModal() {
     >
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">Claim your $5 trial credit</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground mt-1">
-            Add a payment method to activate your free $5 credit and unlock full access to Hanzo Cloud.
+          <DialogTitle className="text-lg font-semibold">
+            Claim your $5 trial credit
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground mt-1 text-sm">
+            Add a payment method to activate your free $5 credit and unlock full
+            access to Hanzo Cloud.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-4">
-          <div className="flex items-start gap-3 rounded-lg border p-4 bg-muted/30">
-            <CreditCard className="h-5 w-5 mt-0.5 text-muted-foreground shrink-0" />
+          <div className="bg-muted/30 flex items-start gap-3 rounded-lg border p-4">
+            <CreditCard className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
             <div className="text-sm">
-              <p>Save a payment method to activate your free $5 credit. No charge required.</p>
+              <p>
+                Save a payment method to activate your free $5 credit. No charge
+                required.
+              </p>
               <p className="text-muted-foreground mt-1">
-                Your card details are securely stored. You won&apos;t be charged until you exceed your trial credit.
+                Your card details are securely stored. You won&apos;t be charged
+                until you exceed your trial credit.
               </p>
             </div>
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <Button variant="ghost" size="sm" onClick={handleSkip} className="text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSkip}
+              className="text-muted-foreground"
+            >
               Skip for now
             </Button>
             <Button onClick={handleOpenBilling} className="gap-2">

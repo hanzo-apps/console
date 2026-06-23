@@ -14,7 +14,8 @@ import {
   type MediaContentType,
   type MediaReturnType,
 } from "@/src/features/media/validation";
-import { File, Image as ImageIcon, Volume2 } from "lucide-react";
+import { File, Image as ImageIcon, Video, Volume2 } from "lucide-react";
+import { ExternalLink } from "@/src/features/agents/components/ui/icon-bridge";
 
 export const HanzoMediaView = ({
   mediaReferenceString,
@@ -107,6 +108,8 @@ function FileViewer({
   src?: string;
   contentType: MediaContentType;
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   if (!src) return null;
 
   const mimeType = String(contentType);

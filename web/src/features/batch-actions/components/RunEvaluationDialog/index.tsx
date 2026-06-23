@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
-import { EvalTargetObject, type BatchActionQuery } from "@hanzo/console";
+import {
+  EvalTargetObject,
+  type BatchActionQuery,
+  type BatchEvalSourceTable,
+  BatchEvalSourceTable as SourceTable,
+  getEvalTargetObjectFromSourceTable,
+} from "@hanzo/console";
 import { api } from "@/src/utils/api";
 import {
   Dialog,
@@ -39,8 +45,15 @@ type RunEvaluationDialogProps = {
 type DialogStep = "select-evaluator" | "confirm";
 
 export function RunEvaluationDialog(props: RunEvaluationDialogProps) {
-  const { projectId, selectedObservationIds, query, selectAll, totalCount } =
-    props;
+  const { isBetaEnabled } = useV4Beta();
+  const {
+    projectId,
+    selectedObservationIds,
+    query,
+    selectAll,
+    totalCount,
+    sourceTable = SourceTable.EVENTS,
+  } = props;
 
   const [step, setStep] = useState<DialogStep>("select-evaluator");
   const [selectedEvaluatorIds, setSelectedEvaluatorIds] = useState<string[]>(
@@ -87,6 +100,30 @@ export function RunEvaluationDialog(props: RunEvaluationDialogProps) {
       enabled: Boolean(
         props.exampleObservation.id && props.exampleObservation.traceId,
       ),
+    },
+  );
+
+  const previewEventQuery = api.events.batchIO.useQuery(
+    {
+      projectId,
+      observations: [
+        {
+          id: props.exampleObservation?.id as string,
+          traceId: props.exampleObservation?.traceId as string,
+        },
+      ],
+      minStartTime: props.exampleObservation?.startTime as Date,
+      maxStartTime: props.exampleObservation?.startTime as Date,
+      truncated: false,
+    },
+    {
+      enabled:
+        isBetaEnabled &&
+        Boolean(
+          props.exampleObservation?.id &&
+          props.exampleObservation?.traceId &&
+          props.exampleObservation?.startTime,
+        ),
     },
   );
 

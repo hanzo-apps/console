@@ -309,3 +309,46 @@ export const eventsTableCols: ColumnDefinition[] = [
     nullable: true,
   },
 ];
+
+type EventsTableColumnId = (typeof eventsTableCols)[number]["id"];
+
+// Subset of columns that are allowed to be used as filters in the MCP observations API
+const OBSERVATION_MCP_ALLOWED_EVENTS_TABLE_FILTER_COLUMN_IDS = [
+  "id",
+  "traceId",
+  "startTime",
+  "endTime",
+  "name",
+  "type",
+  "environment",
+  "version",
+  "userId",
+  "sessionId",
+  "traceName",
+  "level",
+  "statusMessage",
+  "promptName",
+  "promptVersion",
+  "modelId",
+  "providedModelName",
+  "totalCost",
+  "inputTokens",
+  "outputTokens",
+  "totalTokens",
+  "inputCost",
+  "outputCost",
+  "latency",
+  "timeToFirstToken",
+  "input",
+  "output",
+  "metadata",
+  "traceTags",
+  "hasParentObservation",
+] as const satisfies readonly EventsTableColumnId[];
+
+export type ObservationMcpAllowedEventsTableFilterColumn =
+  (typeof OBSERVATION_MCP_ALLOWED_EVENTS_TABLE_FILTER_COLUMN_IDS)[number];
+
+export const OBSERVATION_MCP_ALLOWED_EVENTS_TABLE_FILTER_COLUMNS: ReadonlySet<EventsTableColumnId> = new Set(
+  OBSERVATION_MCP_ALLOWED_EVENTS_TABLE_FILTER_COLUMN_IDS,
+);

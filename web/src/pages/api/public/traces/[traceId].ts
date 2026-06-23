@@ -9,7 +9,7 @@ import {
 } from "@/src/features/public-api/types/traces";
 import {
   filterAndValidateDbTraceScoreList,
-  HanzoNotFoundError,
+  ConsoleNotFoundError,
 } from "@hanzo/console";
 import { prisma } from "@hanzo/console/src/db";
 import {
@@ -37,7 +37,7 @@ export default withMiddlewares({
       });
 
       if (!trace) {
-        throw new HanzoNotFoundError(
+        throw new ConsoleNotFoundError(
           `Trace ${traceId} not found within authorized project`,
         );
       }
