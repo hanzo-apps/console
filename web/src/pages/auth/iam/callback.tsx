@@ -9,9 +9,17 @@ import { getSafeRedirectPath } from "@/src/utils/redirect";
 /**
  * OAuth callback for the IAM-native PKCE flow (social login + any redirect-based
  * IAM sign-in). `handleCallback()` exchanges the code through console's
- * same-origin `/v1/iam/oauth/token` proxy, which validates the access token
- * against IAM's JWKS and sets the signed `hi_session` cookie. So once the
- * exchange returns, the console session is live — we just redirect.
+ * same-origin `/v1/iam/auth/token` proxy, which establishes the signed
+ * `hi_session` cookie (from the IAM-verified identity). So once the exchange
+ * returns, the console session is live — we just navigate to the target.
+ *
+ * The navigation MUST be a full load (`window.location.assign`), not a soft
+ * `router.replace`: the app-shell `SessionProvider` only fetches `/v1/iam/session`
+ * on mount, and at that point (the callback page) the cookie did not yet exist,
+ * so its status is "unauthenticated". A client-side nav keeps that stale status
+ * and the dashboard auth-guard bounces straight back to `/auth/sign-in` (the user
+ * then has to refresh). A full load re-initialises the provider, which reads the
+ * freshly-set cookie and resolves to "authenticated".
  *
  * IAM is the identity authority; console holds only the signed session cookie.
  */
@@ -32,9 +40,11 @@ export default function IamCallback() {
 
     void (async () => {
       try {
-        // Exchanges the code via /v1/iam/oauth/token (sets the hi_session cookie).
+        // Exchanges the code via /v1/iam/auth/token (establishes the hi_session cookie).
         await handleCallback();
-        await router.replace(targetPath ?? `${basePath}/`);
+        // Full load (not router.replace) so the SessionProvider re-initialises and
+        // reads the freshly-set cookie — otherwise the guard bounces to /auth/sign-in.
+        window.location.assign(targetPath ?? `${basePath}/`);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Sign-in failed.");
       }
