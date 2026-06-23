@@ -1,4 +1,10 @@
-import { __test__ } from "./service-proxy";
+// Import the PURE rewriting module directly (not service-proxy.ts, which pulls
+// in the server session/env chain and cannot load in the client test env).
+import {
+  rewriteBody,
+  isRewritableContentType,
+  buildUpstreamPath,
+} from "./service-proxy-rewrite";
 
 /**
  * Tests for the embed proxy's root-absolute path rewriting. Embedded SPAs
@@ -7,8 +13,6 @@ import { __test__ } from "./service-proxy";
  * mount so they resolve through the same-origin SSO proxy instead of 404ing
  * against the console origin.
  */
-
-const { rewriteBody, isRewritableContentType, buildUpstreamPath } = __test__;
 
 describe("rewriteBody", () => {
   it("re-points Base /_/ assets at the proxy mount", () => {
