@@ -215,3 +215,34 @@ sendMessage({ userId: someString, sessionId: someOtherString, projectId: another
 
 ## Development Tips
 - Before trying to build the package, try running the linter once first
+
+## Multi-tenant org-gated embeds + branding (feat/multi-tenant-embeds-branding)
+- **Org-gate**: app/service nav is hidden until an org/project is selected. The
+  org-less root (`/`) renders only the Organizations page (the `requiresOrganization`
+  nav filter + the `[organizationId]`/`[projectId]` route pattern do the gating).
+- **Embedded org-scoped dashboards**: `EmbeddedDashboard`
+  (`web/src/components/embed/EmbeddedDashboard.tsx`) renders a same-origin `<iframe>`
+  pointed at a Pages-Router catch-all proxy (`createServiceProxy` in
+  `web/src/server/service-proxy.ts`). The proxy mirrors the hardened KMS proxy:
+  strips client tenant headers, injects session-derived `x-org-id/x-project-id/
+  x-actor-id/x-env`, drops hop-by-hop headers, and rewrites root-absolute upstream
+  paths (`rewritePrefixes`) so the embedded SPA loads through console's origin (SSO
+  via the console session cookie — no separate login).
+  - Base: `/project/[projectId]/base` → `/api/base/_` → `BASE_DASHBOARD_URL`
+  - Playground: `/project/[projectId]/playground-app` → `/api/playground-app` →
+    `PLAYGROUND_APP_URL`
+  - Upstreams are server-only env (set on the operator CR `services.hanzo.ai/console`).
+- **TRAILING-SLASH GOTCHA** (the embed redirect-loop): Next.js `trailingSlash:false`
+  308-strips a trailing slash off the iframe `src`; Base (PocketBase) 307-redirects
+  `/_` → `/_/`. A `/api/base/_/` src therefore ping-pongs forever. Fix: iframe `src`
+  is slash-less (`/api/base/_`) and the proxy re-adds the slash on the UPSTREAM
+  request via `forceTrailingSlashFor: ["_"]` so Base answers 200. See
+  `buildUpstreamPath` + its tests in `service-proxy.clienttest.ts`.
+- **Branding**: the real `@hanzo` monochrome blocky-H is `HanzoCloudIcon`
+  (`web/src/components/HanzoLogo.tsx`, 67×67, 7 paths, `fill-current`) and
+  `web/public/icon.svg`. Do NOT reintroduce a red/symmetric/hand-drawn H.
+- **KNOWN PRE-EXISTING CRASH (not from this feature)**: the project overview page
+  (`pages/project/[projectId]/index.tsx`) throws `mapLegacyUiTableFilterToView is
+  not a function` at hydration on BOTH the prior prod tag and this branch (identical
+  compiled chunk hash) — owned by the concurrent ProjectOverview rebuild. The embed
+  pages are separate routes and render independently of this crash.
