@@ -71,7 +71,74 @@ export type ServiceProxyOptions = {
    * Base admin UI lives under `/_/`). Leading/trailing slashes are normalized.
    */
   upstreamPrefix?: string;
+  /**
+   * Console-origin path this proxy is mounted at (e.g. `/api/base`). Required
+   * when `rewritePrefixes` is set so root-absolute upstream URLs in HTML/JS/CSS
+   * can be re-pointed at the proxy. Defaults to `/api/<name lowercased>`.
+   */
+  mountPath?: string;
+  /**
+   * Root-absolute upstream URL prefixes to rewrite into `<mountPath><prefix>` in
+   * text responses (HTML/JS/CSS). Embedded SPAs (e.g. Base/PocketBase) emit
+   * absolute paths like `/_/assets/...` and `/api/...` that would otherwise
+   * resolve against the console origin and 404. Listing them here makes the
+   * embed render fully through the same-origin SSO proxy. Order matters: list
+   * the most specific prefixes first. Leave empty for plain pass-through.
+   */
+  rewritePrefixes?: string[];
 };
+
+/** Internal helpers exported for unit tests only. */
+export const __test__ = {
+  get rewriteBody() {
+    return rewriteBody;
+  },
+  get isRewritableContentType() {
+    return isRewritableContentType;
+  },
+};
+
+/** Content types whose bodies we buffer + rewrite (text assets only). */
+function isRewritableContentType(ct: string | null): boolean {
+  if (!ct) return false;
+  const c = ct.toLowerCase();
+  return (
+    c.includes("text/html") ||
+    c.includes("javascript") ||
+    c.includes("text/css") ||
+    c.includes("application/json")
+  );
+}
+
+/**
+ * Rewrite root-absolute upstream paths to be proxy-relative so an embedded SPA
+ * loads its assets/API through the same-origin proxy mount. Rewrites quoted and
+ * url()-wrapped occurrences of each prefix; idempotent (won't double-prefix).
+ */
+function rewriteBody(
+  text: string,
+  mountPath: string,
+  prefixes: string[],
+): string {
+  if (prefixes.length === 0) return text;
+  // Single combined pass: match a leading delimiter (quote / `(` / `=`)
+  // followed by ANY of the prefixes, in ONE sweep, so freshly-inserted
+  // `${mountPath}` text is never re-scanned (prevents cascading double-prefix
+  // when mountPath itself begins with one of the prefixes, e.g. `/api/`).
+  // Longest prefixes first so the alternation is greedy-correct.
+  const ordered = [...prefixes].sort((a, b) => b.length - a.length);
+  const alt = ordered
+    .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const escapedMount = mountPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Negative lookahead on the mount path makes the rewrite idempotent: an
+  // already-mounted occurrence (`="/api/base/_/..."`) is skipped because the
+  // text after the delimiter starts with the mount path.
+  const re = new RegExp(`(["'(=])(?!${escapedMount})(${alt})`, "g");
+  return text.replace(re, (_m, lead: string, prefix: string) => {
+    return `${lead}${mountPath}${prefix}`;
+  });
+}
 
 /**
  * Build a Next.js Pages-Router API handler that proxies `/api/<svc>/*` to the
@@ -81,6 +148,10 @@ export function createServiceProxy(options: ServiceProxyOptions) {
   const prefix = options.upstreamPrefix
     ? `/${options.upstreamPrefix.replace(/^\/+|\/+$/g, "")}`
     : "";
+  const mountPath = (
+    options.mountPath ?? `/api/${options.name.toLowerCase()}`
+  ).replace(/\/+$/, "");
+  const rewritePrefixes = options.rewritePrefixes ?? [];
 
   return async function handler(req: NextApiRequest, res: NextApiResponse) {
     const baseUrl = options.upstreamBaseUrl();
@@ -139,21 +210,54 @@ export function createServiceProxy(options: ServiceProxyOptions) {
       clearTimeout(timer);
       res.status(upstream.status);
 
+      const contentType = upstream.headers.get("content-type");
+      const shouldRewrite =
+        rewritePrefixes.length > 0 && isRewritableContentType(contentType);
+
+      // Rewrite Location on redirects so the SPA stays inside the proxy mount.
+      const rewriteHeaderValue = (key: string, value: string): string => {
+        if (rewritePrefixes.length > 0 && key.toLowerCase() === "location") {
+          for (const p of rewritePrefixes) {
+            if (value.startsWith(p)) return `${mountPath}${value}`;
+          }
+        }
+        return value;
+      };
+
       upstream.headers.forEach((value, key) => {
-        if (HOP_BY_HOP.has(key.toLowerCase())) return;
-        res.setHeader(key, value);
+        const lower = key.toLowerCase();
+        if (HOP_BY_HOP.has(lower)) return;
+        // When rewriting the body, content-length changes — let Node set it.
+        if (shouldRewrite && lower === "content-length") return;
+        res.setHeader(key, rewriteHeaderValue(key, value));
       });
 
       if (upstream.body) {
-        const reader = upstream.body.getReader();
-        try {
-          for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            res.write(value);
+        if (shouldRewrite) {
+          // Buffer text assets, rewrite root-absolute upstream paths to the
+          // proxy mount, then send. Binary/large assets keep streaming below.
+          const buf = Buffer.from(await upstream.arrayBuffer());
+          const rewritten = rewriteBody(
+            buf.toString("utf8"),
+            mountPath,
+            rewritePrefixes,
+          );
+          res.setHeader(
+            "content-length",
+            Buffer.byteLength(rewritten).toString(),
+          );
+          res.write(rewritten);
+        } else {
+          const reader = upstream.body.getReader();
+          try {
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              res.write(value);
+            }
+          } finally {
+            reader.releaseLock();
           }
-        } finally {
-          reader.releaseLock();
         }
       }
 

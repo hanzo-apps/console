@@ -16,5 +16,10 @@ export default createServiceProxy({
   upstreamBaseUrl: () =>
     process.env.PLAYGROUND_APP_URL ??
     process.env.NEXT_PUBLIC_PLAYGROUND_URL ??
-    "http://hanzo-playground.hanzo.svc.cluster.local",
+    "http://hanzo-playground.hanzo.svc.cluster.local:8080",
+  mountPath: "/api/playground-app",
+  // The playground is a Vite SPA emitting root-absolute paths: /assets/*,
+  // /favicon.svg, and runtime API calls to /api/*. Re-point them at the proxy
+  // mount so the embedded SPA loads fully through the same-origin SSO proxy.
+  rewritePrefixes: ["/assets/", "/favicon", "/api/"],
 });

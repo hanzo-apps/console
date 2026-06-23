@@ -19,4 +19,9 @@ export default createServiceProxy({
     "https://base.hanzo.ai",
   // Base's superuser admin UI is served under /_/.
   upstreamPrefix: "_",
+  mountPath: "/api/base",
+  // Base (PocketBase) emits root-absolute paths: /_/assets/*, /_/favicon.svg,
+  // and runtime API calls to /api/*. Re-point them at the proxy mount so the
+  // embedded SPA loads fully through the same-origin SSO proxy.
+  rewritePrefixes: ["/_/", "/api/"],
 });
