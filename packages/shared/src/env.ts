@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { applyDatastoreEnvBackCompat, removeEmptyEnvVariables } from "./utils/environment";
+import { removeEmptyEnvVariables } from "./utils/environment";
 
 // Present in browser bundles, absent in Node. Declared (rather than pulling the
 // DOM lib into this Node-targeted package) so the `typeof window` client guard
@@ -255,4 +255,4 @@ export const env: SharedEnv =
       process.env.DOCKER_BUILD === "1" || // eslint-disable-line turbo/no-undeclared-env-vars
         process.env.SKIP_ENV_VALIDATION === "1" // eslint-disable-line turbo/no-undeclared-env-vars
       ? (process.env as any)
-      : EnvSchema.parse(applyDatastoreEnvBackCompat(removeEmptyEnvVariables(process.env)));
+      : EnvSchema.parse(removeEmptyEnvVariables(process.env));

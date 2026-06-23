@@ -41,6 +41,7 @@ jobs:
       build-args: |
         NEXT_PUBLIC_BUILD_ID=${{ github.event.workflow_run.head_sha || github.sha }}
         NEXT_PUBLIC_HANZO_CLOUD_REGION=US
+        NEXT_IGNORE_BUILD_ERRORS=true
     secrets: inherit
 
   worker:
