@@ -10,7 +10,16 @@ RUN apk update && apk upgrade --no-cache libcrypto3 libssl3 libc6-compat busybox
 # Build golang-migrate with Hanzo Datastore driver support
 FROM golang:1.24-alpine AS migrate-builder
 RUN apk add --no-cache git
-RUN git clone --depth 1 --branch v4.19.2 https://github.com/hanzoai/migrate.git /src
+# hanzoai/migrate is private. Authenticate the clone with GH_PAT when provided
+# (CI passes the org PAT as a build-arg); fall back to an unauthenticated clone
+# so public-repo / local builds still work. The token lives ONLY in this
+# discarded builder stage — the final image copies just the migrate binary, so
+# the credential never reaches a published layer.
+ARG GH_PAT=""
+RUN if [ -n "$GH_PAT" ]; then \
+      git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"; \
+    fi; \
+    git clone --depth 1 --branch v4.19.2 https://github.com/hanzoai/migrate.git /src
 WORKDIR /src
 RUN CGO_ENABLED=0 go build -tags 'datastore file' -ldflags='-s -w' -o /usr/local/bin/migrate ./cmd/migrate
 
