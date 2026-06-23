@@ -220,6 +220,42 @@ sendMessage({ userId: someString, sessionId: someOtherString, projectId: another
 This supersedes the 2-service hardcoded embed (feat/multi-tenant-embeds-branding).
 Two gaps closed: (1) IAM identity → console orgs, (2) embed EVERY service per-org.
 
+### Deploy + verify (operational)
+- **Image**: `ghcr.io/hanzoai/console:3.159.23-mt` (tag `v3.159.23-mt` on main →
+  `build-and-push.yml` "Docker Release" on self-hosted `hanzo-build-linux-amd64`).
+- **Deploy target is the OPERATOR CR**, not a raw Deployment: live console is a
+  `hanzo.ai/v1 Service` CR named `console` (`managed-by: hanzo-operator`, owned by
+  the Service CR), running the SQLite app.db + replicate sidecar. Bump
+  `universe/infra/k8s/operator/crs/console-v1.yaml` `spec.image.tag` + env, then
+  the operator reconciles the Deployment. (The committed CR was badly drifted from
+  live — this change re-syncs it: SQLite persistence, INIT_ORG_*, IAM_SERVER_URL=
+  iam.hanzo.ai, KMS secretKeyRefs, embed URLs.)
+- **IAM API prefix GOTCHA**: Hanzo IAM serves the Casdoor data API under
+  `/v1/iam/*`; the bare `/api/*` paths return the IAM SPA HTML. The `@hanzo/iam`
+  SDK's `getUser`/`getOrganizations` target `/api/*` → would parse HTML. Our
+  `iamGetUser`/`iamListAllOrganizations` call `/v1/iam/*` explicitly.
+- **The 45-org trap**: `/v1/iam/get-organizations?owner=admin` returns ~45 orgs,
+  mostly per-user *personal* orgs (named by email), NOT tenants. A global admin
+  OWNERs the canonical tenant set (`INIT_ORG_IDS`=hanzo,lux,zoo,pars) + existing
+  console orgs — never the personal-org list.
+- **Sync runs on the real login path**: all login paths funnel through
+  `establishIamSession` (signin / token-session / OAuth-callback `auth/token`),
+  where the sync is hooked. The live SSO is the OAuth-callback path; the JWT `sub`
+  (`<org>/<user>`, e.g. `admin/z`) drives `iamGetUser` → admin flags.
+- **Playwright verify**: `web/scripts/verify-mt-console.mjs` (run FROM `web/` so
+  `@playwright/test` resolves). Drives console.hanzo.ai: SSO "Hanzo IAM" button →
+  hanzo.id form (email + password, submit via `button[type=submit]`, NOT the
+  "Continue with GitHub/Google" social buttons) → org list → `/project/<id>/svc/
+  <slug>` embed iframe. `CONSOLE_USER=z@hanzo.ai CONSOLE_PASS=IloveHanzo2026!!!`
+  (3 bangs — the e2e default; NOT 2). BEFORE (3.159.22-mt): admin saw 1 cuid org,
+  `/svc/*` 404. AFTER (3.159.23-mt): all tenant orgs + embeds render.
+- **Build-infra fix shipped alongside**: `hanzoai/migrate` (golang-migrate fork
+  the web Dockerfile clones for the datastore-driver migrate binary) was PRIVATE
+  + archived → unauth `git clone` exit 128 broke every console image build. Made
+  it public+unarchived; Dockerfile keeps a `GH_PAT` build-arg fallback for
+  private/local builds. (secrets.* is NOT allowed in a reusable-workflow call's
+  with.build-args — that earlier broke the whole workflow parse.)
+
 - **IAM → console membership sync (the gap that left admins with 0 orgs)**:
   `syncIamMembershipsForUser` (`web/src/features/auth/lib/syncIamMemberships.ts`),
   called from `establishIamSession()` (`.../auth/lib/iamSession.ts`) on EVERY login —
