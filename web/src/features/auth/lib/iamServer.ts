@@ -135,6 +135,47 @@ export async function iamValidateToken(token: string): Promise<IamLoginResult> {
   };
 }
 
+/**
+ * List ALL organizations under an IAM owner (default Casdoor super-org `admin`).
+ * Uses the SDK's confidential-client Basic auth, so no user token is needed.
+ * This is the set a global admin is granted membership to. Returns `[]` on any
+ * error so login degrades gracefully (admin can still be synced to nothing
+ * rather than failing the whole sign-in).
+ */
+export async function iamListAllOrganizations(
+  owner = "admin",
+): Promise<Array<{ name: string; displayName?: string }>> {
+  const client = getIamClient();
+  if (!client) return [];
+  try {
+    const res = await client.apiRequest<
+      IamResponse<Array<{ name: string; displayName?: string }>>
+    >("/api/get-organizations", { params: { owner } });
+    if (res.status !== "ok" || !Array.isArray(res.data)) return [];
+    return res.data;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch the IAM user record for a `sub` ("org/username") to read authoritative
+ * flags (`owner`, `isAdmin`, `isGlobalAdmin`). Returns null on error.
+ */
+export async function iamGetUser(sub: string): Promise<{
+  owner?: string;
+  isAdmin?: boolean;
+  isGlobalAdmin?: boolean;
+} | null> {
+  const client = getIamClient();
+  if (!client) return null;
+  try {
+    return await client.getUser(sub);
+  } catch {
+    return null;
+  }
+}
+
 export type IamSignupResult =
   | { ok: true; sub?: string }
   | { ok: false; error: string };

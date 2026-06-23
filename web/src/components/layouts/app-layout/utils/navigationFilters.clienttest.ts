@@ -1,6 +1,7 @@
 import { filters, applyNavigationFilters } from "./navigationFilters";
 import type { NavigationFilterContext } from "./navigationFilters.types";
 import { ROUTES, type Route } from "@/src/components/layouts/routes";
+import { EMBEDDED_SERVICE_NAV } from "@/src/features/embedded-services/registry";
 
 /**
  * Org-gate (multi-tenant) tests.
@@ -88,20 +89,27 @@ describe("org-gate end-to-end over real ROUTES", () => {
   });
 });
 
-describe("Base + Playground are embedded (not link-outs)", () => {
-  it("Base Dashboard is an org-scoped embedded page, not a newTab external link", () => {
-    const base = ROUTES.find((r) => r.title === "Base Dashboard");
-    expect(base).toBeDefined();
-    expect(base?.pathname).toBe("/project/[projectId]/base");
-    expect(base?.newTab).not.toBe(true);
-    expect(base?.pathname.startsWith("http")).toBe(false);
+describe("Embedded services are registry-driven org-scoped pages (not link-outs)", () => {
+  it("every registry service has exactly one org-scoped /svc/<slug> route", () => {
+    for (const svc of EMBEDDED_SERVICE_NAV) {
+      const matches = ROUTES.filter(
+        (r) => r.pathname === `/project/[projectId]/svc/${svc.slug}`,
+      );
+      expect(matches).toHaveLength(1);
+      const route = matches[0]!;
+      expect(route.title).toBe(svc.title);
+      expect(route.newTab).not.toBe(true);
+      expect(route.pathname.startsWith("http")).toBe(false);
+      // Org-gated: the dynamic embed pages must not render before an org/project
+      // is selected.
+      expect(route.requiresOrganization).toBe(true);
+    }
   });
 
-  it("Playground App is an org-scoped embedded page", () => {
-    const pg = ROUTES.find((r) => r.title === "Playground App");
-    expect(pg).toBeDefined();
-    expect(pg?.pathname).toBe("/project/[projectId]/playground-app");
-    expect(pg?.newTab).not.toBe(true);
+  it("Base and Playground are present as embedded services", () => {
+    const slugs = EMBEDDED_SERVICE_NAV.map((s) => s.slug);
+    expect(slugs).toContain("base");
+    expect(slugs).toContain("playground");
   });
 
   it("no route is a base.hanzo.ai link-out anymore", () => {

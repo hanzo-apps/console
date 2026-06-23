@@ -62,27 +62,15 @@ import { useCommandMenu } from "@/src/features/command-k-menu/CommandMenuProvide
 import { useInsightsCapture as useInsightsCapture } from "@/src/features/insights-analytics/useInsightsCapture";
 import { CloudStatusMenu } from "@/src/features/cloud-status-notification/components/CloudStatusMenu";
 import { type ProductModule } from "@/src/features/ui-customization/productModuleSchema";
+import {
+  RouteSection,
+  RouteGroup,
+} from "@/src/components/layouts/route-groups";
+import { EMBEDDED_SERVICE_NAV } from "@/src/features/embedded-services/registry";
 
-export enum RouteSection {
-  Main = "main",
-  Secondary = "secondary",
-}
-
-export enum RouteGroup {
-  Observability = "Observability",
-  PromptManagement = "Prompt Management",
-  Evaluation = "Evaluation",
-  SearchAI = "Search & AI",
-  Agents = "Agents",
-  Bots = "Bots",
-  Base = "Base",
-  Tasks = "Tasks",
-  Functions = "Functions",
-  KMS = "KMS",
-  ZT = "Zero Trust",
-  Infrastructure = "Infrastructure",
-  Referrals = "Referrals",
-}
+// Re-export so existing `import { RouteSection, RouteGroup } from ".../routes"`
+// call sites keep working; the canonical definitions live in `route-groups.ts`.
+export { RouteSection, RouteGroup };
 
 export type Route = {
   title: string;
@@ -113,7 +101,26 @@ export type Route = {
   requiresOrganization?: boolean;
 };
 
-export const ROUTES: Route[] = [
+/**
+ * Nav entries for every embedded service, generated from the ONE registry
+ * (`EMBEDDED_SERVICE_NAV`). Each points at the dynamic embed page
+ * `/project/[projectId]/svc/<slug>`; the standard `[projectId]` nav filter
+ * org-gates them and `productModule` lets a brand hide a service via UI
+ * customization. Adding a service is a single registry entry — no nav edit.
+ */
+function serviceRoutes(): Route[] {
+  return EMBEDDED_SERVICE_NAV.map((svc) => ({
+    title: svc.title,
+    pathname: `/project/[projectId]/svc/${svc.slug}`,
+    icon: svc.icon,
+    productModule: svc.productModule,
+    group: svc.group,
+    section: RouteSection.Main,
+    requiresOrganization: true,
+  }));
+}
+
+const STATIC_ROUTES: Route[] = [
   {
     title: "Go to...",
     pathname: "", // Empty pathname since this is a dropdown
@@ -609,30 +616,12 @@ export const ROUTES: Route[] = [
     group: RouteGroup.Infrastructure,
     section: RouteSection.Main,
   },
-  // Base — Hanzo data backend (embedded, org-scoped, IAM-SSO; no link-out)
-  {
-    title: "Base Dashboard",
-    pathname: `/project/[projectId]/base`,
-    icon: Database,
-    productModule: "base",
-    group: RouteGroup.Base,
-    section: RouteSection.Main,
-  },
   {
     title: "Base Tasks",
     pathname: `/project/[projectId]/tasks`,
     icon: ListTodo,
     productModule: "base",
     group: RouteGroup.Base,
-    section: RouteSection.Main,
-  },
-  // Playground — embedded hanzo-playground app (org-scoped, IAM-SSO; no link-out)
-  {
-    title: "Playground App",
-    pathname: `/project/[projectId]/playground-app`,
-    icon: TerminalIcon,
-    productModule: "playground",
-    group: RouteGroup.PromptManagement,
     section: RouteSection.Main,
   },
   {
@@ -703,6 +692,15 @@ export const ROUTES: Route[] = [
     menuNode: <SupportButton />,
   },
 ];
+
+/**
+ * The full route table = static routes + one generated entry per embedded
+ * service (from the registry). Concatenated in a separate statement (not spread
+ * into the literal) so each side keeps its own clean `Route[]` contextual type.
+ * Nav groups by `RouteGroup`, so appended service entries land in their proper
+ * sidebar groups regardless of position here.
+ */
+export const ROUTES: Route[] = [...STATIC_ROUTES, ...serviceRoutes()];
 
 function CommandMenuTrigger() {
   const { setOpen } = useCommandMenu();
