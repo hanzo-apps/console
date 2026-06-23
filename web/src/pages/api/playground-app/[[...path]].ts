@@ -1,4 +1,4 @@
-import { createServiceProxy, proxyApiConfig } from "@/src/server/service-proxy";
+import { createServiceProxy } from "@/src/server/service-proxy";
 
 /**
  * Same-origin SSO proxy for the Hanzo Playground app dashboard.
@@ -9,7 +9,14 @@ import { createServiceProxy, proxyApiConfig } from "@/src/server/service-proxy";
  *
  * PLAYGROUND_APP_URL is server-only and never exposed to the client.
  */
-export const config = proxyApiConfig;
+// Next.js requires the page `config` export to be a statically analyzable
+// object literal (an imported reference trips "Invalid segment configuration").
+export const config = {
+  api: {
+    bodyParser: false,
+    responseLimit: false,
+  },
+};
 
 export default createServiceProxy({
   name: "Playground",

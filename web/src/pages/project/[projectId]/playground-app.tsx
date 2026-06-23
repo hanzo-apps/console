@@ -20,7 +20,7 @@ export default function PlaygroundAppPage() {
   return (
     <EmbeddedDashboard
       title="Playground"
-      proxyPath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/playground-app`}
+      proxyPath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/playground-app/`}
     />
   );
 }

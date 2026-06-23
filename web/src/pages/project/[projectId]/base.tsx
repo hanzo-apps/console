@@ -17,7 +17,7 @@ export default function BaseDashboardPage() {
   return (
     <EmbeddedDashboard
       title="Base"
-      proxyPath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/base`}
+      proxyPath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/base/_/`}
     />
   );
 }
