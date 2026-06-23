@@ -137,10 +137,13 @@ export async function iamValidateToken(token: string): Promise<IamLoginResult> {
 
 /**
  * List ALL organizations under an IAM owner (default Casdoor super-org `admin`).
- * Uses the SDK's confidential-client Basic auth, so no user token is needed.
- * This is the set a global admin is granted membership to. Returns `[]` on any
- * error so login degrades gracefully (admin can still be synced to nothing
- * rather than failing the whole sign-in).
+ * Uses the confidential-client Basic auth (IamClient.apiRequest), so no user
+ * token is needed. Returns `[]` on any error so login degrades gracefully.
+ *
+ * NOTE: Hanzo IAM serves the Casdoor data API under the `/v1/iam/*` prefix (the
+ * bare `/api/*` paths return the IAM SPA HTML), so we call `/v1/iam/...`
+ * explicitly — the SDK's built-in `getOrganizations()` targets `/api/...` and
+ * would silently parse HTML. This mirrors `iamPasswordLogin` (`/v1/iam/login`).
  */
 export async function iamListAllOrganizations(
   owner = "admin",
@@ -150,7 +153,7 @@ export async function iamListAllOrganizations(
   try {
     const res = await client.apiRequest<
       IamResponse<Array<{ name: string; displayName?: string }>>
-    >("/api/get-organizations", { params: { owner } });
+    >("/v1/iam/get-organizations", { params: { owner } });
     if (res.status !== "ok" || !Array.isArray(res.data)) return [];
     return res.data;
   } catch {
@@ -160,7 +163,8 @@ export async function iamListAllOrganizations(
 
 /**
  * Fetch the IAM user record for a `sub` ("org/username") to read authoritative
- * flags (`owner`, `isAdmin`, `isGlobalAdmin`). Returns null on error.
+ * flags (`owner`, `isAdmin`, `isGlobalAdmin`). Uses the `/v1/iam/*` API prefix
+ * (see {@link iamListAllOrganizations}). Returns null on error.
  */
 export async function iamGetUser(sub: string): Promise<{
   owner?: string;
@@ -170,7 +174,15 @@ export async function iamGetUser(sub: string): Promise<{
   const client = getIamClient();
   if (!client) return null;
   try {
-    return await client.getUser(sub);
+    const res = await client.apiRequest<
+      IamResponse<{
+        owner?: string;
+        isAdmin?: boolean;
+        isGlobalAdmin?: boolean;
+      }>
+    >("/v1/iam/get-user", { params: { id: sub } });
+    if (res.status !== "ok" || !res.data) return null;
+    return res.data;
   } catch {
     return null;
   }
