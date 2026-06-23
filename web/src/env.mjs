@@ -354,6 +354,12 @@ export const env = createEnv({
     // User.admin DB flag. White-label: each brand console sets its own.
     HANZO_ADMIN_EMAIL_DOMAINS: z.string().optional(),
 
+    // Comma-separated IAM ORG NAMES whose members are global admins (owners of
+    // ALL console orgs). Casdoor's super-org is `admin` (a@/z@/woo@ live there);
+    // default to that. A user IAM-owned by one of these orgs is synced as OWNER
+    // of every console org on login. White-label: each brand sets its own.
+    HANZO_ADMIN_IAM_ORGS: z.string().optional().default("admin"),
+
     // Hanzo trial expiry (days)
     HANZO_TRIAL_EXPIRE: z.string().optional(),
 
@@ -880,6 +886,7 @@ export const env = createEnv({
     HANZO_ALLOWED_ORGANIZATION_CREATORS:
       process.env.HANZO_ALLOWED_ORGANIZATION_CREATORS,
     HANZO_ADMIN_EMAIL_DOMAINS: process.env.HANZO_ADMIN_EMAIL_DOMAINS,
+    HANZO_ADMIN_IAM_ORGS: process.env.HANZO_ADMIN_IAM_ORGS,
     HANZO_TRIAL_EXPIRE: process.env.HANZO_TRIAL_EXPIRE,
     IAM_CLIENT_ID: process.env.IAM_CLIENT_ID,
     IAM_CLIENT_SECRET: process.env.IAM_CLIENT_SECRET,

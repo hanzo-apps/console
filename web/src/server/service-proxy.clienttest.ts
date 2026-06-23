@@ -13,48 +13,48 @@ const { rewriteBody, isRewritableContentType, buildUpstreamPath } = __test__;
 describe("rewriteBody", () => {
   it("re-points Base /_/ assets at the proxy mount", () => {
     const html = `<script src="/_/assets/index-Clat2-wM.js"></script>`;
-    expect(rewriteBody(html, "/api/base", ["/_/", "/api/"])).toBe(
-      `<script src="/api/base/_/assets/index-Clat2-wM.js"></script>`,
+    expect(rewriteBody(html, "/api/svc/base", ["/_/", "/api/"])).toBe(
+      `<script src="/api/svc/base/_/assets/index-Clat2-wM.js"></script>`,
     );
   });
 
   it("re-points Base /api/ runtime calls at the proxy mount", () => {
     const js = `fetch("/api/collections/users/records")`;
-    expect(rewriteBody(js, "/api/base", ["/_/", "/api/"])).toBe(
-      `fetch("/api/base/api/collections/users/records")`,
+    expect(rewriteBody(js, "/api/svc/base", ["/_/", "/api/"])).toBe(
+      `fetch("/api/svc/base/api/collections/users/records")`,
     );
   });
 
   it("re-points Vite /assets/ and /favicon at the proxy mount", () => {
     const html = `<link href="/favicon.svg"><script src="/assets/index-BHI4WWWd.js">`;
     expect(
-      rewriteBody(html, "/api/playground-app", [
+      rewriteBody(html, "/api/svc/playground", [
         "/assets/",
         "/favicon",
         "/api/",
       ]),
     ).toBe(
-      `<link href="/api/playground-app/favicon.svg"><script src="/api/playground-app/assets/index-BHI4WWWd.js">`,
+      `<link href="/api/svc/playground/favicon.svg"><script src="/api/svc/playground/assets/index-BHI4WWWd.js">`,
     );
   });
 
   it("rewrites url() references in CSS", () => {
     const css = `background:url(/_/assets/bg.png)`;
-    expect(rewriteBody(css, "/api/base", ["/_/"])).toBe(
-      `background:url(/api/base/_/assets/bg.png)`,
+    expect(rewriteBody(css, "/api/svc/base", ["/_/"])).toBe(
+      `background:url(/api/svc/base/_/assets/bg.png)`,
     );
   });
 
   it("is idempotent — does not double-prefix already-mounted paths", () => {
-    const once = rewriteBody(`src="/_/x.js"`, "/api/base", ["/_/"]);
-    const twice = rewriteBody(once, "/api/base", ["/_/"]);
+    const once = rewriteBody(`src="/_/x.js"`, "/api/svc/base", ["/_/"]);
+    const twice = rewriteBody(once, "/api/svc/base", ["/_/"]);
     expect(twice).toBe(once);
-    expect(twice).toBe(`src="/api/base/_/x.js"`);
+    expect(twice).toBe(`src="/api/svc/base/_/x.js"`);
   });
 
   it("leaves cross-origin and unrelated paths untouched", () => {
     const html = `<a href="https://fonts.googleapis.com/x"><a href="/other/y">`;
-    expect(rewriteBody(html, "/api/base", ["/_/"])).toBe(html);
+    expect(rewriteBody(html, "/api/svc/base", ["/_/"])).toBe(html);
   });
 });
 

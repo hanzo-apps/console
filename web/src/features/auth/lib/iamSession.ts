@@ -29,6 +29,7 @@ import { projectRoleAccessRights } from "@/src/features/rbac/constants/projectAc
 import { createSupportEmailHash } from "@/src/features/support-chat/createSupportEmailHash";
 import { parseFlags } from "@/src/features/feature-flags/utils";
 import { iamValidateToken } from "@/src/features/auth/lib/iamServer";
+import { syncIamMembershipsForUser } from "@/src/features/auth/lib/syncIamMemberships";
 import { type Session } from "@/src/features/auth/session-types";
 
 export const SESSION_COOKIE = "hi_session";
@@ -333,6 +334,13 @@ export async function establishIamSession(identity: {
       image: identity.image ?? undefined,
     },
   });
+  // Reconcile IAM org memberships into console's org model on every login, so a
+  // global admin sees ALL orgs and a normal user sees their IAM org(s). This is
+  // the single provisioning point; hydrateSession() then just reads the result.
+  await syncIamMembershipsForUser(
+    { sub: identity.sub || dbUser.id, email },
+    dbUser.id,
+  );
   return signSession({ sub: identity.sub || dbUser.id, email });
 }
 

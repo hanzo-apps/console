@@ -8,8 +8,8 @@ import { Button } from "@/src/components/ui/button";
  * org-scoped and authenticated by the existing IAM session (SSO, no link-out,
  * no separate login).
  *
- * The iframe is pointed at a SAME-ORIGIN proxy path (e.g. `/api/base`,
- * `/api/playground-app`) served by a Next.js Pages-Router catch-all that
+ * The iframe is pointed at a SAME-ORIGIN proxy path (`/api/svc/<slug>`, the ONE
+ * registry-driven proxy) served by a Next.js Pages-Router catch-all that
  * forwards to the upstream service and injects the session-derived tenant
  * headers (x-org-id / x-project-id / x-actor-id / x-env) — see
  * `@/src/server/tenant-headers`. Loading through console's own origin means the
@@ -17,7 +17,8 @@ import { Button } from "@/src/components/ui/button";
  * without prompting for credentials.
  *
  * This generalizes the per-service embed pattern (KMS proxy + observe iframe)
- * into a single composable component. Mirror it for any new app dashboard.
+ * into a single composable component, driven by the embedded-service registry
+ * (`@/src/features/embedded-services/registry`). Add a service there — not here.
  */
 export function EmbeddedDashboard({
   /** Same-origin proxy path the iframe loads (e.g. `/api/base`). */
