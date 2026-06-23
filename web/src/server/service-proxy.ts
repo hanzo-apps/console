@@ -3,6 +3,11 @@ import {
   applyProxyTenantHeaders,
   buildProxyTenantHeaders,
 } from "@/src/server/tenant-headers";
+import {
+  rewriteBody,
+  isRewritableContentType,
+  buildUpstreamPath,
+} from "@/src/server/service-proxy-rewrite";
 
 /**
  * Shared catch-all reverse proxy for embedding a Hanzo app/service dashboard
@@ -87,73 +92,15 @@ export type ServiceProxyOptions = {
 };
 
 /**
- * Build the upstream path from the catch-all segments, re-adding a trailing
- * slash for configured SPA roots (see `forceTrailingSlashFor`). Pure so it can
- * be unit-tested without booting the handler.
+ * Internal helpers exported for unit tests only. The pure rewriting logic now
+ * lives in `service-proxy-rewrite.ts` (no server imports); re-exported here for
+ * the existing `__test__` surface.
  */
-function buildUpstreamPath(
-  segments: string[],
-  forceTrailingSlashFor: ReadonlySet<string>,
-): string {
-  const joined = segments.map(encodeURIComponent).join("/");
-  if (joined && forceTrailingSlashFor.has(joined)) return `${joined}/`;
-  return joined;
-}
-
-/** Internal helpers exported for unit tests only. */
 export const __test__ = {
-  get rewriteBody() {
-    return rewriteBody;
-  },
-  get isRewritableContentType() {
-    return isRewritableContentType;
-  },
-  get buildUpstreamPath() {
-    return buildUpstreamPath;
-  },
+  rewriteBody,
+  isRewritableContentType,
+  buildUpstreamPath,
 };
-
-/** Content types whose bodies we buffer + rewrite (text assets only). */
-function isRewritableContentType(ct: string | null): boolean {
-  if (!ct) return false;
-  const c = ct.toLowerCase();
-  return (
-    c.includes("text/html") ||
-    c.includes("javascript") ||
-    c.includes("text/css") ||
-    c.includes("application/json")
-  );
-}
-
-/**
- * Rewrite root-absolute upstream paths to be proxy-relative so an embedded SPA
- * loads its assets/API through the same-origin proxy mount. Rewrites quoted and
- * url()-wrapped occurrences of each prefix; idempotent (won't double-prefix).
- */
-function rewriteBody(
-  text: string,
-  mountPath: string,
-  prefixes: string[],
-): string {
-  if (prefixes.length === 0) return text;
-  // Single combined pass: match a leading delimiter (quote / `(` / `=`)
-  // followed by ANY of the prefixes, in ONE sweep, so freshly-inserted
-  // `${mountPath}` text is never re-scanned (prevents cascading double-prefix
-  // when mountPath itself begins with one of the prefixes, e.g. `/api/`).
-  // Longest prefixes first so the alternation is greedy-correct.
-  const ordered = [...prefixes].sort((a, b) => b.length - a.length);
-  const alt = ordered
-    .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .join("|");
-  const escapedMount = mountPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // Negative lookahead on the mount path makes the rewrite idempotent: an
-  // already-mounted occurrence (`="/api/base/_/..."`) is skipped because the
-  // text after the delimiter starts with the mount path.
-  const re = new RegExp(`(["'(=])(?!${escapedMount})(${alt})`, "g");
-  return text.replace(re, (_m, lead: string, prefix: string) => {
-    return `${lead}${mountPath}${prefix}`;
-  });
-}
 
 /**
  * Build a Next.js Pages-Router API handler that proxies `/api/<svc>/*` to the
@@ -187,7 +134,13 @@ export function createServiceProxy(options: ServiceProxyOptions) {
     const upstreamPath = buildUpstreamPath(segments, forceTrailingSlashFor);
 
     const query = { ...req.query };
+    // Drop console-routing params so they don't leak into the upstream query:
+    //  - `path`    : the Next.js catch-all segments (consumed above)
+    //  - `service` : the `[service]` dynamic-route slug (registry lookup only)
+    //  - `projectId`: the embed's tenant hint (conveyed via x-* headers, not URL)
     delete query.path;
+    delete query.service;
+    delete query.projectId;
     const qs = new URLSearchParams(query as Record<string, string>).toString();
 
     const targetUrl =
