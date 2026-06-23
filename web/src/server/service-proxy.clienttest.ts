@@ -8,7 +8,7 @@ import { __test__ } from "./service-proxy";
  * against the console origin.
  */
 
-const { rewriteBody, isRewritableContentType } = __test__;
+const { rewriteBody, isRewritableContentType, buildUpstreamPath } = __test__;
 
 describe("rewriteBody", () => {
   it("re-points Base /_/ assets at the proxy mount", () => {
@@ -55,6 +55,30 @@ describe("rewriteBody", () => {
   it("leaves cross-origin and unrelated paths untouched", () => {
     const html = `<a href="https://fonts.googleapis.com/x"><a href="/other/y">`;
     expect(rewriteBody(html, "/api/base", ["/_/"])).toBe(html);
+  });
+});
+
+describe("buildUpstreamPath", () => {
+  const baseRoots = new Set(["_"]);
+
+  it("re-adds a trailing slash for a configured SPA root (Base /_/)", () => {
+    // Next.js strips the slash off the iframe src, leaving segments ["_"].
+    expect(buildUpstreamPath(["_"], baseRoots)).toBe("_/");
+  });
+
+  it("does NOT add a slash to deeper paths under the configured root", () => {
+    expect(buildUpstreamPath(["_", "assets", "x.js"], baseRoots)).toBe(
+      "_/assets/x.js",
+    );
+  });
+
+  it("leaves non-configured roots untouched (playground bare path)", () => {
+    expect(buildUpstreamPath([], baseRoots)).toBe("");
+    expect(buildUpstreamPath(["api", "health"], baseRoots)).toBe("api/health");
+  });
+
+  it("url-encodes segments", () => {
+    expect(buildUpstreamPath(["a b", "c/d"], new Set())).toBe("a%20b/c%2Fd");
   });
 });
 

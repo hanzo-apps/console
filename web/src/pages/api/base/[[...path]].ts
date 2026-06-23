@@ -31,4 +31,10 @@ export default createServiceProxy({
   // and runtime API calls to /api/*. Re-point them at the proxy mount so the
   // embedded SPA loads fully through the same-origin SSO proxy.
   rewritePrefixes: ["/_/", "/api/"],
+  // The Base admin root is `/_/`; Base 307-redirects `/_` → `/_/`. Next.js
+  // (trailingSlash: false) strips the slash off the iframe `src` first, so
+  // without this the two redirects ping-pong forever. Forcing `_` → `_/` on the
+  // upstream request makes Base answer 200 directly. The iframe points at the
+  // slash-less `/api/base/_`.
+  forceTrailingSlashFor: ["_"],
 });

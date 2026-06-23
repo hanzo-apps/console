@@ -17,7 +17,11 @@ export default function BaseDashboardPage() {
   return (
     <EmbeddedDashboard
       title="Base"
-      proxyPath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/base/_/`}
+      // Slash-less on purpose: Next.js (trailingSlash:false) would 308-strip a
+      // trailing slash, and Base 307-redirects `/_` → `/_/`, so a `/api/base/_/`
+      // src would redirect-loop. The proxy re-adds the slash on the upstream
+      // request (forceTrailingSlashFor: ["_"]) so Base answers 200.
+      proxyPath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/base/_`}
     />
   );
 }
