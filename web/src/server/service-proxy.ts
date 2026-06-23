@@ -21,14 +21,6 @@ import {
  * via SSO with no separate login.
  */
 
-/** Standard Next.js API config required for streaming a proxy. */
-export const proxyApiConfig = {
-  api: {
-    bodyParser: false,
-    responseLimit: false,
-  },
-} as const;
-
 const TIMEOUT_MS = 30_000;
 
 /** Headers that must not be forwarded between hops (RFC 7230). */
@@ -66,11 +58,6 @@ export type ServiceProxyOptions = {
   name: string;
   /** Resolve the upstream base URL (server-only). Return undefined if unset. */
   upstreamBaseUrl: () => string | undefined;
-  /**
-   * Optional static upstream prefix prepended to the proxied path (e.g. the
-   * Base admin UI lives under `/_/`). Leading/trailing slashes are normalized.
-   */
-  upstreamPrefix?: string;
   /**
    * Console-origin path this proxy is mounted at (e.g. `/api/base`). Required
    * when `rewritePrefixes` is set so root-absolute upstream URLs in HTML/JS/CSS
@@ -145,9 +132,6 @@ function rewriteBody(
  * configured upstream with SSO tenant headers injected.
  */
 export function createServiceProxy(options: ServiceProxyOptions) {
-  const prefix = options.upstreamPrefix
-    ? `/${options.upstreamPrefix.replace(/^\/+|\/+$/g, "")}`
-    : "";
   const mountPath = (
     options.mountPath ?? `/api/${options.name.toLowerCase()}`
   ).replace(/\/+$/, "");
@@ -176,7 +160,7 @@ export function createServiceProxy(options: ServiceProxyOptions) {
     const qs = new URLSearchParams(query as Record<string, string>).toString();
 
     const targetUrl =
-      `${baseUrl.replace(/\/+$/, "")}${prefix}` +
+      `${baseUrl.replace(/\/+$/, "")}` +
       `${upstreamPath ? `/${upstreamPath}` : "/"}${qs ? `?${qs}` : ""}`;
 
     const headers: Record<string, string> = {};
