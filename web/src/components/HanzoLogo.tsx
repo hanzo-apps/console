@@ -3,6 +3,7 @@ import Link from "next/link";
 import { VersionLabel } from "./VersionLabel";
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
 import { PlusIcon } from "lucide-react";
+import { useBrand, BrandMark } from "@/src/features/branding/useBrand";
 
 /**
  * The real Hanzo monochrome "blocky-H" mark (canonical @hanzo/logo, 67x67,
@@ -41,6 +42,10 @@ export const HanzoIcon = HanzoCloudIcon;
 
 const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
   const uiCustomization = useUiCustomization();
+  // Host-driven white-label brand (default Hanzo). The per-org image override
+  // below sits ON TOP of this brand default — two orthogonal layers.
+  const brand = useBrand();
+  const markSize = size === "sm" ? 16 : 20;
 
   if (uiCustomization?.logoLightModeHref && uiCustomization?.logoDarkModeHref) {
     // logo is a url, maximum aspect ratio of 1:3 needs to be supported according to docs
@@ -49,7 +54,7 @@ const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={uiCustomization.logoLightModeHref}
-          alt="Hanzo Cloud Logo"
+          alt={`${brand.brandName} Logo`}
           className={cn(
             "group-data-[collapsible=icon]:hidden dark:hidden",
             "max-h-4 max-w-14",
@@ -58,7 +63,7 @@ const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={uiCustomization.logoDarkModeHref}
-          alt="Hanzo Cloud Logo"
+          alt={`${brand.brandName} Logo`}
           className={cn(
             "hidden group-data-[collapsible=icon]:hidden dark:block",
             "max-h-4 max-w-14",
@@ -68,21 +73,21 @@ const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
           size={size === "sm" ? 8 : 12}
           className="group-data-[collapsible=icon]:hidden"
         />
-        <HanzoCloudIcon size={size === "sm" ? 16 : 20} />
+        <BrandMark brand={brand} size={markSize} className="fill-current" />
       </div>
     );
   }
 
   return (
     <div className="flex items-center">
-      <HanzoCloudIcon size={size === "sm" ? 16 : 20} />
+      <BrandMark brand={brand} size={markSize} className="fill-current" />
       <span
         className={cn(
           "ml-2 font-mono leading-none font-semibold group-data-[collapsible=icon]:hidden",
           size === "sm" ? "text-sm" : "text-xl",
         )}
       >
-        Hanzo
+        {brand.brandName}
       </span>
     </div>
   );

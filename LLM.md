@@ -319,3 +319,68 @@ Two gaps closed: (1) IAM identity → console orgs, (2) embed EVERY service per-
   not a function` at hydration on BOTH the prior prod tag and this branch (identical
   compiled chunk hash) — owned by the concurrent ProjectOverview rebuild. The embed
   pages are separate routes and render independently of this crash.
+
+## Stage-3: easy invite + commerce credits + white-label-by-host (console 3.159.25)
+
+Three customer/admin-pane deliverables. All grounded in live-cluster facts.
+
+### 1. Easy invite end-to-end (IAM-provision + SMTP)
+- **Gap found:** every IAM login path (`signin.ts`, `auth/token.ts`, `token-session.ts`)
+  funnels through `establishIamSession` (iamSession.ts) which upserts the console
+  `User` and calls `syncIamMembershipsForUser` — but NEVER consumes a pending
+  `MembershipInvitation`. So a brand-new invited email signs in, gets a user row,
+  but does not land in the inviting org (unless it is their own IAM org / they are a
+  global admin).
+- **Fix (DRY, one hook):** `establishIamSession` now calls
+  `createProjectMembershipsOnSignup({id,email},{userWasJustCreated})` right after the
+  upsert. That is the exact upstream acceptance path used by credentials/signup-verify;
+  it internally runs `processMembershipInvitations` (finds invites by email → creates
+  OrganizationMembership[+ProjectMembership] → deletes the invites) and is
+  try/catch-wrapped + idempotent (no-op when there are no pending invites). `userWasJustCreated`
+  is derived by checking user existence before the upsert.
+- **SMTP:** `sendMembershipInvitationEmail` needs `SMTP_CONNECTION_URL` + `EMAIL_FROM_ADDRESS`
+  (silently no-ops without them; failures swallowed). Neither was in `console-secrets`
+  or the operator CR. Wired both into the operator CR `env[]` via `secretKeyRef`
+  (`console-secrets` keys `SMTP_CONNECTION_URL`, `EMAIL_FROM_ADDRESS`) — values live
+  only in the secret/KMS, never in the CR. The invite still works without email (admin
+  invites → user signs in via SSO → invite consumed); email is the notification layer.
+
+### 2. Commerce credits as a first-class admin action
+- Commerce contract (verified live, v1.42.5, ground-truth from `api/billing/handlers.go`
+  + `credit_grants.go`, NOT the stale `/api/v1` in CLAUDE.md):
+  - `POST /v1/billing/credit-grants` body `{userId,name,amountCents>0,currency,expiresIn,priority,tags,eligibility}` → 201
+  - `GET /v1/billing/credit-balance?userId=<key>` → `{userId,balances:[{currency,available}]}`
+  - whole `billing` group gated by `middleware.TokenRequired(permission.Admin)`.
+  - Service-token auth: `Authorization: Bearer $COMMERCE_SERVICE_TOKEN` grants Admin|Live;
+    org resolved from `X-Hanzo-Org` header → `COMMERCE_SERVICE_ORG` env → `"hanzo"` (auto-created).
+- **`COMMERCE_SERVICE_TOKEN` was set on commerce but NOT on console** → added it to
+  `console-secrets` (copied commerce's value) so console can authenticate.
+- **Code:** added `grantCredits` mutation + `getOrgCreditBalance` query to
+  `cloudBillingRouter.ts`, reusing `commercePost`/`commerceGet` from `commerceClient.ts`.
+  Both send `X-Hanzo-Org: <org.name>` + `userId=<org.name>` → each org is its own commerce
+  namespace (true multi-tenant). `grantCredits` gated by `hanzoCloudBilling:CRUD`
+  (owner/admin/admin-billing). UI: a "Credits" card in `BillingSettings.tsx` showing
+  balance + a grant form (amount in dollars → cents).
+
+### 3. White-label by hostname
+- Console had NONE. Mirrored the PROVEN explorer pattern (`luxfi/explore`
+  `configs/app/chainRegistry.ts`): new `web/src/features/branding/brandRegistry.ts`
+  with a `Brand` interface (brandName, productName, logoViewBox, logoContent SVG,
+  faviconContent), brand objects (Hanzo reuses the existing `HanzoCloudIcon` paths;
+  Lux/Zoo/Pars lifted from the explorer), a `hostnames[]`→brand table, and
+  `getBrandFromHost(host)` (env `NEXT_PUBLIC_BRAND` wins → hostname suffix match →
+  default Hanzo) + `applyBrandEnvOverrides`.
+- Consumed: `HanzoLogo.tsx` renders the resolved brand's `logoContent`+`brandName`
+  (per-org `useUiCustomization` image override stays on top, orthogonal); `sign-in.tsx`
+  `getServerSideProps(ctx)` reads `x-forwarded-host`/`host` → passes brand prop → logo
+  renders correct before hydration (no flash). Test host: `console.pars.network` is
+  already a live console ingress host → resolves to Pars; default Hanzo otherwise.
+
+### Build/deploy (proven arcd kaniko Job pattern from console-build-315924nc)
+- kaniko `--context=git://github.com/hanzoai/console.git#refs/heads/main`
+  `--dockerfile=Dockerfile --destination=ghcr.io/hanzoai/console:3.159.25 --cache=false`,
+  `console-git-token` (key `token`) + `kaniko-ghcr`, toleration `dedicated=ci-runner`,
+  14Gi mem, `automountServiceAccountToken:false`.
+- Deploy via operator CR `services.hanzo.ai/console` tag→3.159.25; verify pod boots
+  clean (/v1/ready 200, no unhandledRejection) before declaring done; rollback to
+  3.159.24 on crash. Pin universe to 3.159.25.

@@ -15,16 +15,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { BillingOverview } from "./overview/BillingOverview";
 import { InvoiceHistory } from "./overview/InvoiceHistory";
 import { PaymentManagement } from "./overview/PaymentManagement";
+import { CreditsManagement } from "./CreditsManagement";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { useState } from "react";
-import { Receipt, CreditCard } from "lucide-react";
+import { Receipt, CreditCard, Coins } from "lucide-react";
 
 export const BillingSettings = () => {
   const router = useRouter();
   const orgId = router.query.organizationId as string | undefined;
-  const [activeView, setActiveView] = useState<"history" | "payment">(
-    "history",
-  );
+  const [activeView, setActiveView] = useState<
+    "history" | "payment" | "credits"
+  >("history");
 
   const hasAccess = useHasOrganizationAccess({
     organizationId: orgId,
@@ -68,6 +69,15 @@ export const BillingSettings = () => {
             <CreditCard className="h-4 w-4" />
             Manage Payment Methods
           </Button>
+          <Button
+            variant={activeView === "credits" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveView("credits")}
+            className="gap-2"
+          >
+            <Coins className="h-4 w-4" />
+            Cloud Credits
+          </Button>
         </div>
       </div>
 
@@ -76,8 +86,10 @@ export const BillingSettings = () => {
           <BillingOverview />
           <InvoiceHistory />
         </div>
-      ) : (
+      ) : activeView === "payment" ? (
         <PaymentManagement />
+      ) : (
+        <CreditsManagement />
       )}
     </div>
   );
