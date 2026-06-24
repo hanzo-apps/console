@@ -77,6 +77,34 @@ function loadSquareSdk(): Promise<SquareGlobal> {
   });
 }
 
+// The Square Web Payments SDK only accepts 6-digit hex colors (no hsl(), and
+// no backgroundColor property — the field is transparent). Convert a CSS
+// custom-property HSL triplet (e.g. "222 47% 5%") to #rrggbb.
+function hslTripletToHex(raw: string, fallback: string): string {
+  const m = raw.trim().match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/);
+  if (!m) return fallback;
+  const h = parseFloat(m[1]);
+  const s = parseFloat(m[2]) / 100;
+  const l = parseFloat(m[3]) / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const mBase = l - c / 2;
+  let r = 0,
+    g = 0,
+    b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  const toHex = (v: number) =>
+    Math.round((v + mBase) * 255)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
 type Mode = "add-card" | "buy-credits";
 
 export function SquarePaymentDialog({
@@ -116,27 +144,25 @@ export function SquarePaymentDialog({
         const sq = await loadSquareSdk();
         if (cancelled) return;
         const payments = sq.payments(appId as string, locationId as string);
-        // Match the Square card field to the app theme by resolving the same
-        // CSS variables the <Input> component uses (HSL triplets → hsl()).
+        // Match the Square card field to the app theme: resolve the same CSS
+        // variables the <Input> uses and convert to hex (Square rejects hsl()).
+        // The field is transparent (no backgroundColor support), so the dark
+        // bg-background container behind it provides the surface.
         const cs = getComputedStyle(document.documentElement);
-        const themeColor = (name: string, fallback: string) => {
-          const v = cs.getPropertyValue(name).trim();
-          return v ? `hsl(${v.replace(/\s+/g, ", ")})` : fallback;
-        };
-        const bg = themeColor("--background", "#0a0a0a");
-        const fg = themeColor("--foreground", "#fafafa");
-        const muted = themeColor("--muted-foreground", "#a1a1aa");
-        const inputBorder = themeColor("--input", "#3f3f46");
-        const ring = themeColor("--ring", "#71717a");
-        const destructive = themeColor("--destructive", "#ef4444");
+        const hex = (name: string, fallback: string) =>
+          hslTripletToHex(cs.getPropertyValue(name), fallback);
+        const fg = hex("--foreground", "#fafafa");
+        const muted = hex("--muted-foreground", "#a1a1aa");
+        const inputBorder = hex("--input", "#3f3f46");
+        const ring = hex("--ring", "#71717a");
+        const destructive = hex("--destructive", "#ef4444");
         const card = await payments.card({
           style: {
-            input: { fontSize: "16px", color: fg, backgroundColor: bg },
+            input: { fontSize: "16px", color: fg },
             "input::placeholder": { color: muted },
             ".input-container": {
               borderColor: inputBorder,
               borderRadius: "6px",
-              backgroundColor: bg,
             },
             ".input-container.is-focus": { borderColor: ring },
             ".input-container.is-error": { borderColor: destructive },
