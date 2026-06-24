@@ -449,11 +449,10 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
-      if (!stripeClient)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Stripe client not initialized",
-        });
+      // Commerce-native billing has no Stripe client. Return null so the UI
+      // hides the "manage in Stripe" portal button instead of 500-ing the
+      // whole billing page (PaymentManagement queries this on render).
+      if (!stripeClient) return null;
 
       const parsedOrg = parseDbOrg(org);
       let stripeCustomerId = parsedOrg.cloudConfig?.stripe?.customerId;
