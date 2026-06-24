@@ -4,18 +4,18 @@ import { Card } from "@/src/components/ui/card";
 import { CreditCard, Plus, Trash2 } from "lucide-react";
 import { api } from "@/src/utils/api";
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
-import { useRouter } from "next/router";
 import { planLabels, type Plan } from "@hanzo/console";
 import { SquarePaymentDialog } from "@/src/features/billing/components/SquarePaymentDialog";
+import { BillingPlansDialog } from "@/src/features/billing/components/BillingPlansDialog";
 
 export const PaymentManagement = () => {
-  const router = useRouter();
   const organization = useQueryOrganization();
   const orgId = organization?.id ?? "";
 
   const [payDialog, setPayDialog] = useState<null | "add-card" | "buy-credits">(
     null,
   );
+  const [plansOpen, setPlansOpen] = useState(false);
 
   // Subscription summary (commerce-backed).
   const subscriptionQuery = api.cloudBilling.getSubscriptionInfo.useQuery(
@@ -85,7 +85,7 @@ export const PaymentManagement = () => {
                 : "No active subscription"}
             </p>
           </div>
-          <Button variant="outline" onClick={() => router.push("/pricing")}>
+          <Button variant="outline" onClick={() => setPlansOpen(true)}>
             Upgrade Plan
           </Button>
         </div>
@@ -235,6 +235,15 @@ export const PaymentManagement = () => {
           onOpenChange={(o) => !o && setPayDialog(null)}
           orgId={orgId}
           mode={payDialog}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
+
+      {organization && (
+        <BillingPlansDialog
+          open={plansOpen}
+          onOpenChange={setPlansOpen}
+          orgId={orgId}
           onSuccess={handlePaymentSuccess}
         />
       )}

@@ -16,6 +16,7 @@ import { getObservationCountOfProjectsSinceCreationDate } from "@hanzo/console/s
 import {
   commerceGet,
   commercePost,
+  commercePatch,
   commerceDelete,
 } from "@/src/features/billing/server/commerceClient";
 import type Stripe from "stripe";
@@ -148,6 +149,46 @@ export type CommerceTopupResult = {
   balanceCents?: number;
   status?: string;
 };
+
+/** Shape returned by Commerce GET /v1/billing/plans (prices in cents). */
+export type CommercePlan = {
+  slug: string;
+  name: string;
+  description?: string;
+  category?: string;
+  price: number; // cents, monthly
+  priceAnnual?: number; // cents, annual
+  currency?: string;
+  interval?: string;
+  intervalCount?: number;
+  trialPeriodDays?: number;
+  features?: string[];
+  limits?: Record<string, number>;
+};
+
+/** Shape returned by Commerce subscription endpoints. */
+export type CommerceSubscription = {
+  id: string;
+  userId: string;
+  planId: string;
+  status: string;
+  quantity?: number;
+  currentPeriodStart?: string | number;
+  currentPeriodEnd?: string | number;
+  cancelAtPeriodEnd?: boolean;
+  providerType?: string;
+  defaultPaymentMethod?: string;
+  plan?: {
+    id?: string;
+    name?: string;
+    price?: number;
+    currency?: string;
+    interval?: string;
+  };
+  canceledAt?: string | number;
+};
+
+const ACTIVE_SUB_STATUSES = ["active", "trialing", "past_due"];
 
 export const cloudBillingRouter = createTRPCRouter({
   createStripeCheckoutSession: protectedOrganizationProcedure
@@ -1793,5 +1834,172 @@ export const cloudBillingRouter = createTRPCRouter({
       });
 
       return result;
+    }),
+
+  // ── Commerce plans + subscriptions ─────────────────────────────────────────
+  // The real Hanzo plan catalog lives in commerce (GET /v1/billing/plans:
+  // developer / pro / team …), priced in cents. Subscribing maps the org slug
+  // to a commerce subscription via POST/PATCH /v1/billing/subscriptions.
+  listPlans: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommercePlan[]> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const plans = await commerceGet<CommercePlan[]>(
+        "/v1/billing/plans",
+        organization.name,
+      );
+      return Array.isArray(plans) ? plans : [];
+    }),
+
+  getActiveSubscription: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommerceSubscription | null> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const res = await commerceGet<{
+        subscriptions: CommerceSubscription[];
+        count: number;
+      }>("/v1/billing/subscriptions", organization.name, {
+        userId: organization.name,
+      });
+      const subs = res.subscriptions ?? [];
+      return (
+        subs.find((s) => ACTIVE_SUB_STATUSES.includes(s.status)) ??
+        subs[0] ??
+        null
+      );
+    }),
+
+  subscribeToPlan: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string(), planSlug: z.string().min(1) }))
+    .mutation(async ({ input, ctx }): Promise<CommerceSubscription> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const list = await commerceGet<{
+        subscriptions: CommerceSubscription[];
+      }>("/v1/billing/subscriptions", organization.name, {
+        userId: organization.name,
+      });
+      const existing = (list.subscriptions ?? []).find((s) =>
+        ACTIVE_SUB_STATUSES.includes(s.status),
+      );
+
+      const sub = existing
+        ? await commercePatch<CommerceSubscription>(
+            `/v1/billing/subscriptions/${encodeURIComponent(existing.id)}`,
+            organization.name,
+            { planId: input.planSlug, prorate: true },
+          )
+        : await commercePost<CommerceSubscription>(
+            "/v1/billing/subscriptions",
+            organization.name,
+            { userId: organization.name, planId: input.planSlug },
+          );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: sub.id,
+        action: existing ? "changePlan" : "subscribe",
+        after: { planId: input.planSlug, subscriptionId: sub.id },
+      });
+
+      return sub;
+    }),
+
+  cancelSubscription: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        atPeriodEnd: z.boolean().optional().default(true),
+      }),
+    )
+    .mutation(async ({ input, ctx }): Promise<CommerceSubscription | null> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const list = await commerceGet<{
+        subscriptions: CommerceSubscription[];
+      }>("/v1/billing/subscriptions", organization.name, {
+        userId: organization.name,
+      });
+      const active = (list.subscriptions ?? []).find((s) =>
+        ACTIVE_SUB_STATUSES.includes(s.status),
+      );
+      if (!active) return null;
+
+      const sub = await commercePost<CommerceSubscription>(
+        `/v1/billing/subscriptions/${encodeURIComponent(active.id)}/cancel`,
+        organization.name,
+        { atPeriodEnd: input.atPeriodEnd },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: active.id,
+        action: "cancelSubscription",
+        after: { atPeriodEnd: input.atPeriodEnd },
+      });
+
+      return sub;
     }),
 });

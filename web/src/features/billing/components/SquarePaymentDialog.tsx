@@ -26,7 +26,7 @@ type SquareCard = {
   tokenize: () => Promise<SquareTokenResult>;
   destroy?: () => Promise<void> | void;
 };
-type SquarePayments = { card: () => Promise<SquareCard> };
+type SquarePayments = { card: (options?: unknown) => Promise<SquareCard> };
 type SquareGlobal = {
   payments: (appId: string, locationId: string) => SquarePayments;
 };
@@ -115,7 +115,20 @@ export function SquarePaymentDialog({
         const sq = await loadSquareSdk();
         if (cancelled) return;
         const payments = sq.payments(appId as string, locationId as string);
-        const card = await payments.card();
+        const card = await payments.card({
+          style: {
+            input: { fontSize: "16px", color: "#0f172a" },
+            "input::placeholder": { color: "#94a3b8" },
+            ".input-container": {
+              borderColor: "transparent",
+              borderRadius: "8px",
+            },
+            ".input-container.is-focus": { borderColor: "#6366f1" },
+            ".input-container.is-error": { borderColor: "#ef4444" },
+            ".message-text": { color: "#ef4444" },
+            ".message-icon": { color: "#ef4444" },
+          },
+        });
         if (cancelled) {
           await card.destroy?.();
           return;
@@ -222,10 +235,9 @@ export function SquarePaymentDialog({
             )}
             <div className="space-y-2">
               <Label>Card details</Label>
-              <div
-                id="sq-card-container"
-                className="min-h-[44px] rounded-md border p-2"
-              />
+              <div className="rounded-lg border bg-white p-4 shadow-sm">
+                <div id="sq-card-container" className="min-h-[44px]" />
+              </div>
               {!ready && !error && (
                 <p className="text-muted-foreground text-xs">
                   Loading secure card form…
