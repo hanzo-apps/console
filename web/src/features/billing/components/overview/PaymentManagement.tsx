@@ -1,95 +1,75 @@
+import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
-import { CreditCard, Plus } from "lucide-react";
+import { CreditCard, Plus, Trash2 } from "lucide-react";
 import { api } from "@/src/utils/api";
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
-import { stripeProducts } from "@/src/features/billing/utils/stripeProducts";
 import { useRouter } from "next/router";
 import { planLabels, type Plan } from "@hanzo/console";
+import { SquarePaymentDialog } from "@/src/features/billing/components/SquarePaymentDialog";
 
 export const PaymentManagement = () => {
   const router = useRouter();
   const organization = useQueryOrganization();
+  const orgId = organization?.id ?? "";
 
-  // Fetch subscription data
-  const { data: subscription } = api.cloudBilling.getSubscriptionInfo.useQuery(
-    {
-      orgId: organization?.id ?? "",
-    },
-    {
-      enabled: organization !== undefined,
-    },
+  const [payDialog, setPayDialog] = useState<null | "add-card" | "buy-credits">(
+    null,
   );
 
-  // Fetch organization details for credits
-  const { data: orgDetails } = api.organizations.getDetails.useQuery(
-    { orgId: organization?.id ?? "" },
+  // Subscription summary (commerce-backed).
+  const subscriptionQuery = api.cloudBilling.getSubscriptionInfo.useQuery(
+    { orgId },
+    { enabled: organization !== undefined },
+  );
+  const subscription = subscriptionQuery.data;
+
+  // Org details for the available credit figure.
+  const orgDetailsQuery = api.organizations.getDetails.useQuery(
+    { orgId },
     { enabled: !!organization },
   );
 
-  // Fetch recent invoices
+  // Real payment methods from commerce (Square cards, wires, etc.).
+  const paymentMethodsQuery = api.cloudBilling.listPaymentMethods.useQuery(
+    { orgId },
+    { enabled: !!organization },
+  );
+  const paymentMethods = paymentMethodsQuery.data ?? [];
+
+  const removePaymentMethod = api.cloudBilling.removePaymentMethod.useMutation({
+    onSuccess: () => {
+      void paymentMethodsQuery.refetch();
+      void subscriptionQuery.refetch();
+    },
+  });
+
+  // Recent invoices (commerce-backed).
   const { data: invoiceData } = api.cloudBilling.getInvoices.useQuery(
-    {
-      orgId: organization?.id ?? "",
-      limit: 2, // Only fetch 2 recent invoices for the display
-    },
-    {
-      enabled: organization !== undefined,
-    },
+    { orgId, limit: 2 },
+    { enabled: organization !== undefined },
   );
 
-  // Mutation for creating checkout session
-  const createCheckoutSession =
-    api.cloudBilling.createStripeCheckoutSession.useMutation();
-
-  // Update this to use useQuery
-  const { data: customerPortalUrl } =
-    api.cloudBilling.getStripeCustomerPortalUrl.useQuery(
-      { orgId: organization?.id ?? "" },
-      { enabled: !!organization },
-    );
-
-  // Add this near your other hooks
-  const cancelSubscription =
-    api.cloudBilling.cancelStripeSubscription.useMutation();
-
-  const handleAddCredits = async () => {
-    const creditsProduct = stripeProducts.find((p) => p.id === "credits-plan");
-    if (!creditsProduct) {
-      console.error("Credits product not found");
-      return;
-    }
-
-    const url = await createCheckoutSession.mutateAsync({
-      orgId: organization?.id ?? "",
-      stripeProductId: creditsProduct.stripeProductId,
-    });
-
-    if (url) window.location.href = url;
+  const handlePaymentSuccess = () => {
+    void paymentMethodsQuery.refetch();
+    void subscriptionQuery.refetch();
+    void orgDetailsQuery.refetch();
   };
 
-  // Update the handler to use the query result
-  const handleCustomerPortal = () => {
-    if (customerPortalUrl) window.location.href = customerPortalUrl;
-  };
-
-  // Get plan from organization
   const currentPlanKey = organization?.plan as Plan | undefined;
   const currentPlan = currentPlanKey ? planLabels[currentPlanKey] : "Free Plan";
-  const availableCredits = orgDetails?.credits || 0;
+  const availableCredits = orgDetailsQuery.data?.credits || 0;
 
-  // Check for active subscription
   const hasActiveSubscription = Boolean(
     organization?.cloudConfig?.stripe?.activeSubscriptionId,
   );
 
-  // Format billing period end date
   const billingPeriodEnd = subscription?.billingPeriod?.end;
   const nextBillingDate = billingPeriodEnd
     ? new Date(billingPeriodEnd).toLocaleDateString()
     : "N/A";
 
-  const invoices = invoiceData?.invoices || [];
+  const invoices = invoiceData?.invoices ?? [];
 
   return (
     <div className="space-y-6">
@@ -113,19 +93,6 @@ export const PaymentManagement = () => {
           <p className="text-muted-foreground text-sm">
             Next billing date: {nextBillingDate}
           </p>
-          {hasActiveSubscription && (
-            <Button
-              variant="ghost"
-              className="text-red-500 hover:bg-red-50 hover:text-red-600"
-              onClick={() => {
-                cancelSubscription.mutate({
-                  orgId: organization?.id ?? "",
-                });
-              }}
-            >
-              Cancel Subscription
-            </Button>
-          )}
         </div>
       </Card>
 
@@ -133,7 +100,7 @@ export const PaymentManagement = () => {
       <Card className="p-6">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium">Credit Balance</h3>
-          <Button onClick={handleAddCredits}>
+          <Button onClick={() => setPayDialog("buy-credits")}>
             <Plus className="mr-2 h-4 w-4" />
             Add Credits
           </Button>
@@ -152,23 +119,59 @@ export const PaymentManagement = () => {
       {/* Payment Method Section */}
       <Card className="p-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Payment Method</h3>
-          <Button variant="outline" onClick={handleCustomerPortal}>
-            Manage
+          <h3 className="text-lg font-medium">Payment Methods</h3>
+          <Button variant="outline" onClick={() => setPayDialog("add-card")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add card
           </Button>
         </div>
-        <div className="mt-4 flex items-center gap-3">
-          <CreditCard className="h-6 w-6" />
-          <div>
-            <p className="font-medium">
-              {subscription?.hasValidPaymentMethod
-                ? "Payment method on file"
-                : "No payment method"}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              Manage your payment method in Stripe Portal
-            </p>
-          </div>
+        <div className="mt-4 space-y-3">
+          {paymentMethods.length === 0 ? (
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-6 w-6" />
+              <div>
+                <p className="font-medium">No payment method</p>
+                <p className="text-muted-foreground text-sm">
+                  Add a card to enable paid usage and top-ups.
+                </p>
+              </div>
+            </div>
+          ) : (
+            paymentMethods.map((pm) => (
+              <div
+                key={pm.id}
+                className="flex items-center justify-between border-b pb-3 last:border-0"
+              >
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-6 w-6" />
+                  <div>
+                    <p className="font-medium capitalize">
+                      {pm.card?.brand
+                        ? `${pm.card.brand} ending in ${pm.card.last4 ?? "••••"}`
+                        : pm.type}
+                      {pm.isDefault ? " · Default" : ""}
+                    </p>
+                    <p className="text-muted-foreground text-xs capitalize">
+                      {pm.type}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={removePaymentMethod.isLoading}
+                  onClick={() =>
+                    removePaymentMethod.mutate({
+                      orgId,
+                      paymentMethodId: pm.id,
+                    })
+                  }
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))
+          )}
         </div>
       </Card>
 
@@ -176,9 +179,6 @@ export const PaymentManagement = () => {
       <Card className="p-6">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium">Recent Invoices</h3>
-          <Button variant="link" onClick={handleCustomerPortal}>
-            View All
-          </Button>
         </div>
         <div className="mt-4 space-y-4">
           {invoices.length === 0 ? (
@@ -196,7 +196,7 @@ export const PaymentManagement = () => {
                     </p>
                     <p className="text-muted-foreground">
                       {invoice.created
-                        ? new Date(invoice.created * 1000).toLocaleDateString()
+                        ? new Date(invoice.created).toLocaleDateString()
                         : "N/A"}
                     </p>
                     <p className="text-muted-foreground text-xs capitalize">
@@ -205,27 +205,39 @@ export const PaymentManagement = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">
-                    {invoice.currency?.toUpperCase()}{" "}
-                    {(invoice.breakdown.totalCents / 100).toFixed(2)}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (invoice.invoicePdfUrl) {
-                        window.open(invoice.invoicePdfUrl, "_blank");
+                  {invoice.breakdown ? (
+                    <p className="font-medium">
+                      {invoice.currency?.toUpperCase()}{" "}
+                      {(invoice.breakdown.totalCents / 100).toFixed(2)}
+                    </p>
+                  ) : null}
+                  {invoice.invoicePdfUrl ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        window.open(invoice.invoicePdfUrl as string, "_blank")
                       }
-                    }}
-                  >
-                    Download
-                  </Button>
+                    >
+                      Download
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             ))
           )}
         </div>
       </Card>
+
+      {organization && payDialog && (
+        <SquarePaymentDialog
+          open={payDialog !== null}
+          onOpenChange={(o) => !o && setPayDialog(null)}
+          orgId={orgId}
+          mode={payDialog}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 };

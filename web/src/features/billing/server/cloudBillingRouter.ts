@@ -16,6 +16,7 @@ import { getObservationCountOfProjectsSinceCreationDate } from "@hanzo/console/s
 import {
   commerceGet,
   commercePost,
+  commerceDelete,
 } from "@/src/features/billing/server/commerceClient";
 import type Stripe from "stripe";
 
@@ -121,6 +122,31 @@ export type CommerceCreditGrant = {
   tags?: string;
   createdAt?: string;
   expiresAt?: string;
+};
+
+/** Shape returned by Commerce GET/POST /v1/billing/payment-methods. */
+export type CommercePaymentMethod = {
+  id: string;
+  customerId?: string;
+  type: string; // "card" | "wire" | "crypto" | "bank_account"
+  isDefault?: boolean;
+  card?: {
+    brand?: string;
+    last4?: string;
+    expMonth?: number;
+    expYear?: number;
+  } | null;
+  providerRef?: string;
+  providerType?: string;
+  metadata?: Record<string, unknown>;
+  created?: string;
+};
+
+/** Shape returned by Commerce POST /v1/billing/topup/token. */
+export type CommerceTopupResult = {
+  transactionId?: string;
+  balanceCents?: number;
+  status?: string;
 };
 
 export const cloudBillingRouter = createTRPCRouter({
@@ -1584,5 +1610,188 @@ export const cloudBillingRouter = createTRPCRouter({
       });
 
       return { ok: true } as const;
+    }),
+
+  // ── Commerce payment methods (Square) ──────────────────────────────────────
+  // Hanzo bills through commerce (Square underneath). The console collects the
+  // card client-side with the Square Web Payments SDK, which returns a single-
+  // use nonce ("cnon:..."); we hand that nonce to commerce, which runs a $1
+  // pre-auth and stores the card. The org slug (organization.name) is the
+  // commerce customer id.
+  listPaymentMethods: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommercePaymentMethod[]> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const methods = await commerceGet<CommercePaymentMethod[]>(
+        "/v1/billing/payment-methods",
+        organization.name,
+        { user: organization.name },
+      );
+      return Array.isArray(methods) ? methods : [];
+    }),
+
+  addPaymentMethod: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        sourceId: z.string().min(1), // Square Web Payments SDK nonce
+        cardBrand: z.string().optional(),
+        last4: z.string().optional(),
+        postalCode: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }): Promise<CommercePaymentMethod> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const pm = await commercePost<CommercePaymentMethod>(
+        "/v1/billing/payment-methods",
+        organization.name,
+        {
+          customerId: organization.name,
+          type: "card",
+          providerType: "square",
+          providerRef: input.sourceId,
+          ...(input.cardBrand || input.last4
+            ? { card: { brand: input.cardBrand, last4: input.last4 } }
+            : {}),
+          ...(input.postalCode
+            ? { billingAddress: { postalCode: input.postalCode } }
+            : {}),
+        },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: pm.id,
+        action: "addPaymentMethod",
+        after: { paymentMethodId: pm.id, type: pm.type },
+      });
+
+      return pm;
+    }),
+
+  removePaymentMethod: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string(), paymentMethodId: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      await commerceDelete(
+        `/v1/billing/payment-methods/${encodeURIComponent(input.paymentMethodId)}`,
+        organization.name,
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: input.paymentMethodId,
+        action: "removePaymentMethod",
+      });
+
+      return { ok: true } as const;
+    }),
+
+  // ── Buy credits (one-time Square top-up) ───────────────────────────────────
+  // Charges a Square nonce and credits the org's prepaid balance. No saved card
+  // required — the Web Payments SDK tokenizes the card for this single charge.
+  buyCredits: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        sourceId: z.string().min(1), // Square Web Payments SDK nonce
+        amountUsd: z.number().positive().max(100_000),
+      }),
+    )
+    .mutation(async ({ input, ctx }): Promise<CommerceTopupResult> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const amountCents = Math.round(input.amountUsd * 100);
+      if (amountCents <= 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Top-up amount must be greater than zero.",
+        });
+      }
+
+      const result = await commercePost<CommerceTopupResult>(
+        "/v1/billing/topup/token",
+        organization.name,
+        {
+          sourceId: input.sourceId,
+          amountCents,
+          userId: organization.name,
+          currency: "usd",
+        },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: result.transactionId ?? input.orgId,
+        action: "buyCredits",
+        after: { amountCents, currency: "usd" },
+      });
+
+      return result;
     }),
 });
