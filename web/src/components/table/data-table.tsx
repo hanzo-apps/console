@@ -252,7 +252,14 @@ export function DataTable<TData extends object, TValue>({
       columnOrder: columnOrder
         ? insertArrayAfterKey(columnOrder, flattedColumnsByGroup)
         : undefined,
-      rowSelection,
+      // Default to an empty selection map. Passing an explicit `state` overrides
+      // TanStack's getInitialState default of `{}`, so when a table is used
+      // without row-selection (no `rowSelection` prop) this would otherwise be
+      // `undefined` and `row.getIsSelected()` -> `isRowSelected(row, undefined)`
+      // -> `undefined[row.id]` throws, crashing the whole table (e.g. the
+      // org/project Members settings page, which made the invite dialog
+      // unreachable).
+      rowSelection: rowSelection ?? {},
       columnSizing,
       columnPinning,
     },
