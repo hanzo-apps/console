@@ -31,11 +31,11 @@ export function BillingPlansDialog({
 }) {
   const plansQuery = api.cloudBilling.listPlans.useQuery(
     { orgId },
-    { enabled: open && !!orgId },
+    { enabled: open && !!orgId, staleTime: 10 * 60 * 1000 },
   );
   const subQuery = api.cloudBilling.getActiveSubscription.useQuery(
     { orgId },
-    { enabled: open && !!orgId },
+    { enabled: open && !!orgId, staleTime: 60 * 1000 },
   );
 
   const subscribe = api.cloudBilling.subscribeToPlan.useMutation({
@@ -60,7 +60,7 @@ export function BillingPlansDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>Choose a plan</DialogTitle>
           <DialogDescription>
@@ -69,64 +69,85 @@ export function BillingPlansDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {plansQuery.isLoading ? (
-          <p className="text-muted-foreground text-sm">Loading plans…</p>
-        ) : plans.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No plans available right now.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {plans.map((plan) => {
-              const isCurrent = plan.slug === currentSlug;
-              return (
-                <Card key={plan.slug} className="flex flex-col p-5">
-                  <h3 className="text-lg font-semibold">{plan.name}</h3>
-                  <div className="mt-1">
-                    <span className="text-2xl font-bold">
-                      {formatPrice(plan.price)}
-                    </span>
-                    {plan.price > 0 && (
-                      <span className="text-muted-foreground text-sm">
-                        {" "}
-                        /mo
-                      </span>
-                    )}
+        <div className="max-h-[70vh] overflow-y-auto px-1 pb-1">
+          {plansQuery.isLoading ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <Card key={i} className="flex flex-col gap-3 p-5">
+                  <div className="bg-muted h-5 w-24 animate-pulse rounded" />
+                  <div className="bg-muted h-8 w-20 animate-pulse rounded" />
+                  <div className="mt-2 space-y-2">
+                    {[0, 1, 2].map((j) => (
+                      <div
+                        key={j}
+                        className="bg-muted h-3 w-full animate-pulse rounded"
+                      />
+                    ))}
                   </div>
-                  {plan.description && (
-                    <p className="text-muted-foreground mt-2 text-sm">
-                      {plan.description}
-                    </p>
-                  )}
-                  {plan.features && plan.features.length > 0 && (
-                    <ul className="mt-4 flex-1 space-y-2">
-                      {plan.features.map((f, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <Button
-                    className="mt-4 w-full"
-                    variant={isCurrent ? "outline" : "default"}
-                    disabled={isCurrent || subscribe.isLoading}
-                    onClick={() =>
-                      subscribe.mutate({ orgId, planSlug: plan.slug })
-                    }
-                  >
-                    {isCurrent
-                      ? "Current plan"
-                      : !plan.price || plan.price <= 0
-                        ? "Switch to Free"
-                        : `Choose ${plan.name}`}
-                  </Button>
+                  <div className="bg-muted mt-4 h-9 w-full animate-pulse rounded" />
                 </Card>
-              );
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : plans.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No plans available right now.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {plans.map((plan) => {
+                const isCurrent = plan.slug === currentSlug;
+                return (
+                  <Card key={plan.slug} className="flex flex-col p-5">
+                    <h3 className="text-lg font-semibold">{plan.name}</h3>
+                    <div className="mt-1">
+                      <span className="text-2xl font-bold">
+                        {formatPrice(plan.price)}
+                      </span>
+                      {plan.price > 0 && (
+                        <span className="text-muted-foreground text-sm">
+                          {" "}
+                          /mo
+                        </span>
+                      )}
+                    </div>
+                    {plan.description && (
+                      <p className="text-muted-foreground mt-2 text-sm">
+                        {plan.description}
+                      </p>
+                    )}
+                    {plan.features && plan.features.length > 0 && (
+                      <ul className="mt-4 flex-1 space-y-2">
+                        {plan.features.map((f, i) => (
+                          <li
+                            key={i}
+                            className="flex items-start gap-2 text-sm"
+                          >
+                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Button
+                      className="mt-4 w-full"
+                      variant={isCurrent ? "outline" : "default"}
+                      disabled={isCurrent || subscribe.isLoading}
+                      onClick={() =>
+                        subscribe.mutate({ orgId, planSlug: plan.slug })
+                      }
+                    >
+                      {isCurrent
+                        ? "Current plan"
+                        : !plan.price || plan.price <= 0
+                          ? "Switch to Free"
+                          : `Choose ${plan.name}`}
+                    </Button>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -190,6 +190,81 @@ export type CommerceSubscription = {
 
 const ACTIVE_SUB_STATUSES = ["active", "trialing", "past_due"];
 
+// Commerce /plans and /subscriptions are intermittently slow (sub-second → 30s
+// hangs). Bound every call with a timeout, and cache the plan catalog in-process
+// so the plans dialog never blocks on a cold/slow upstream.
+const COMMERCE_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${label} timed out`)),
+        COMMERCE_TIMEOUT_MS,
+      ),
+    ),
+  ]);
+}
+
+let plansCache: { at: number; plans: CommercePlan[] } | null = null;
+const PLANS_CACHE_TTL_MS = 10 * 60 * 1_000;
+
+// Only the core personal plans belong in the org plan picker — commerce /plans
+// also returns the World and DNS catalogs.
+function isCorePlan(p: CommercePlan): boolean {
+  return (p.category ?? "personal") === "personal" && p.slug !== "custom";
+}
+
+// Last-resort catalog if commerce is unreachable AND the cache is cold.
+const FALLBACK_PLANS: CommercePlan[] = [
+  {
+    slug: "developer",
+    name: "Developer",
+    price: 0,
+    currency: "usd",
+    interval: "monthly",
+    description: "Get started for free. Explore the API with included credits.",
+    features: [
+      "$5 free credit",
+      "60 requests/min",
+      "100K tokens/min",
+      "Community support",
+      "API access",
+    ],
+  },
+  {
+    slug: "pro",
+    name: "Pro",
+    price: 4900,
+    priceAnnual: 3900,
+    currency: "usd",
+    interval: "monthly",
+    description: "For developers shipping real products.",
+    features: ["Higher rate limits", "Priority support", "Hanzo World Pro"],
+  },
+  {
+    slug: "team",
+    name: "Team",
+    price: 19900,
+    priceAnnual: 15900,
+    currency: "usd",
+    interval: "monthly",
+    description: "For teams that need controls and scale.",
+    features: ["Everything in Pro", "Org controls", "SSO"],
+  },
+  {
+    slug: "enterprise",
+    name: "Enterprise",
+    price: 999900,
+    priceAnnual: 799900,
+    currency: "usd",
+    interval: "monthly",
+    description: "Enterprise-grade security and support.",
+    features: ["Custom rate limits", "Uptime SLA", "Dedicated support"],
+  },
+];
+
 export const cloudBillingRouter = createTRPCRouter({
   createStripeCheckoutSession: protectedOrganizationProcedure
     .input(
@@ -1859,11 +1934,25 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
-      const plans = await commerceGet<CommercePlan[]>(
-        "/v1/billing/plans",
-        organization.name,
-      );
-      return Array.isArray(plans) ? plans : [];
+      if (plansCache && Date.now() - plansCache.at < PLANS_CACHE_TTL_MS) {
+        return plansCache.plans;
+      }
+      try {
+        const raw = await withTimeout(
+          commerceGet<CommercePlan[]>("/v1/billing/plans", organization.name),
+          "commerce /plans",
+        );
+        const plans = (Array.isArray(raw) ? raw : []).filter(isCorePlan);
+        if (plans.length) {
+          plansCache = { at: Date.now(), plans };
+          return plans;
+        }
+        return plansCache?.plans ?? FALLBACK_PLANS;
+      } catch {
+        // Slow/unreachable commerce → serve stale cache or a static catalog
+        // rather than hanging the dialog.
+        return plansCache?.plans ?? FALLBACK_PLANS;
+      }
     }),
 
   getActiveSubscription: protectedOrganizationProcedure
@@ -1885,18 +1974,26 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
-      const res = await commerceGet<{
-        subscriptions: CommerceSubscription[];
-        count: number;
-      }>("/v1/billing/subscriptions", organization.name, {
-        userId: organization.name,
-      });
-      const subs = res.subscriptions ?? [];
-      return (
-        subs.find((s) => ACTIVE_SUB_STATUSES.includes(s.status)) ??
-        subs[0] ??
-        null
-      );
+      try {
+        const res = await withTimeout(
+          commerceGet<{
+            subscriptions: CommerceSubscription[];
+            count: number;
+          }>("/v1/billing/subscriptions", organization.name, {
+            userId: organization.name,
+          }),
+          "commerce /subscriptions",
+        );
+        const subs = res.subscriptions ?? [];
+        return (
+          subs.find((s) => ACTIVE_SUB_STATUSES.includes(s.status)) ??
+          subs[0] ??
+          null
+        );
+      } catch {
+        // Slow/unreachable → no current-plan marking; the dialog still works.
+        return null;
+      }
     }),
 
   subscribeToPlan: protectedOrganizationProcedure
@@ -1918,14 +2015,22 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
-      const list = await commerceGet<{
-        subscriptions: CommerceSubscription[];
-      }>("/v1/billing/subscriptions", organization.name, {
-        userId: organization.name,
-      });
-      const existing = (list.subscriptions ?? []).find((s) =>
-        ACTIVE_SUB_STATUSES.includes(s.status),
-      );
+      let existing: CommerceSubscription | undefined;
+      try {
+        const list = await withTimeout(
+          commerceGet<{ subscriptions: CommerceSubscription[] }>(
+            "/v1/billing/subscriptions",
+            organization.name,
+            { userId: organization.name },
+          ),
+          "commerce /subscriptions",
+        );
+        existing = (list.subscriptions ?? []).find((s) =>
+          ACTIVE_SUB_STATUSES.includes(s.status),
+        );
+      } catch {
+        existing = undefined; // couldn't determine → create a new subscription
+      }
 
       const sub = existing
         ? await commercePatch<CommerceSubscription>(
@@ -1975,14 +2080,22 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
-      const list = await commerceGet<{
-        subscriptions: CommerceSubscription[];
-      }>("/v1/billing/subscriptions", organization.name, {
-        userId: organization.name,
-      });
-      const active = (list.subscriptions ?? []).find((s) =>
-        ACTIVE_SUB_STATUSES.includes(s.status),
-      );
+      let active: CommerceSubscription | undefined;
+      try {
+        const list = await withTimeout(
+          commerceGet<{ subscriptions: CommerceSubscription[] }>(
+            "/v1/billing/subscriptions",
+            organization.name,
+            { userId: organization.name },
+          ),
+          "commerce /subscriptions",
+        );
+        active = (list.subscriptions ?? []).find((s) =>
+          ACTIVE_SUB_STATUSES.includes(s.status),
+        );
+      } catch {
+        active = undefined;
+      }
       if (!active) return null;
 
       const sub = await commercePost<CommerceSubscription>(
