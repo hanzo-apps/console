@@ -30,6 +30,7 @@ import { createSupportEmailHash } from "@/src/features/support-chat/createSuppor
 import { parseFlags } from "@/src/features/feature-flags/utils";
 import { iamValidateToken } from "@/src/features/auth/lib/iamServer";
 import { syncIamMembershipsForUser } from "@/src/features/auth/lib/syncIamMemberships";
+import { createProjectMembershipsOnSignup } from "@/src/features/auth/lib/createProjectMembershipsOnSignup";
 import { type Session } from "@/src/features/auth/session-types";
 
 export const SESSION_COOKIE = "hi_session";
@@ -326,6 +327,14 @@ export async function establishIamSession(identity: {
   image?: string | null;
 }): Promise<string> {
   const email = identity.email.toLowerCase();
+  // Detect first-login provisioning before the upsert so downstream signup hooks
+  // (v4 rollout init, analytics) get the correct `userWasJustCreated` signal —
+  // Prisma's upsert can't report which branch it took.
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  const userWasJustCreated = existingUser === null;
   const dbUser = await prisma.user.upsert({
     where: { email },
     create: { email, name: identity.name, image: identity.image },
@@ -334,6 +343,15 @@ export async function establishIamSession(identity: {
       image: identity.image ?? undefined,
     },
   });
+  // Consume any pending org-membership invitation for this email so an invited
+  // brand-new user lands IN the inviting org on first SSO login. This is the
+  // same upstream acceptance path used by the credentials/signup-verify flows
+  // (DRY); it is idempotent and a no-op when there are no pending invites, and
+  // wraps its own body in try/catch so a failure never blocks login.
+  await createProjectMembershipsOnSignup(
+    { id: dbUser.id, email },
+    { userWasJustCreated },
+  );
   // Reconcile IAM org memberships into console's org model on every login, so a
   // global admin sees ALL orgs and a normal user sees their IAM org(s). This is
   // the single provisioning point; hydrateSession() then just reads the result.

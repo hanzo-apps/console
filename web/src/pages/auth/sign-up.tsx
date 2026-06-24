@@ -17,7 +17,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod/v4";
 import { env } from "@/src/env.mjs";
 import { useState } from "react";
-import { HanzoCloudIcon } from "@/src/components/HanzoLogo";
+import { BrandMark } from "@/src/features/branding/useBrand";
 import { CloudPrivacyNotice } from "@/src/features/auth/components/AuthCloudPrivacyNotice";
 import { CloudRegionSwitch } from "@/src/features/auth/components/AuthCloudRegionSwitch";
 import {
@@ -40,6 +40,7 @@ type NextAuthProvider = NonNullable<Parameters<typeof signIn>[0]>;
 export default function SignIn({
   authProviders,
   runningOnHuggingFaceSpaces,
+  brand,
 }: PageProps) {
   useHuggingFaceRedirect(runningOnHuggingFaceSpaces);
   const { isConsoleCloud, region } = useConsoleCloudRegion();
@@ -198,7 +199,7 @@ export default function SignIn({
       </Head>
       <div className="flex flex-1 flex-col py-6 sm:min-h-full sm:justify-center sm:px-6 sm:py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <HanzoCloudIcon className="mx-auto" />
+          <BrandMark brand={brand} size={32} className="mx-auto fill-current" />
           <h2 className="text-primary mt-4 text-center text-2xl leading-9 font-bold tracking-tight">
             Create new account
           </h2>

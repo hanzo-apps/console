@@ -13,7 +13,10 @@ import * as z from "zod";
 import { throwIfNoOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { getObservationCountOfProjectsSinceCreationDate } from "@hanzo/console/src/server";
-import { commerceGet } from "@/src/features/billing/server/commerceClient";
+import {
+  commerceGet,
+  commercePost,
+} from "@/src/features/billing/server/commerceClient";
 import type Stripe from "stripe";
 
 /**
@@ -40,6 +43,26 @@ export type CommerceUsageRollup = {
     holdsCents: number;
     availableCents: number; // the value the gateway gate reads (available > 0)
   };
+};
+
+/** Shape returned by Commerce GET /v1/billing/credit-balance. */
+export type CommerceCreditBalance = {
+  userId: string;
+  balances: Array<{ currency: string; available: number }>; // available in cents
+};
+
+/** Shape returned by Commerce POST /v1/billing/credit-grants. */
+export type CommerceCreditGrant = {
+  id: string;
+  userId: string;
+  name: string;
+  amountCents: number;
+  remainingCents: number;
+  currency: string;
+  priority: number;
+  tags?: string;
+  createdAt?: string;
+  expiresAt?: string;
 };
 
 export const cloudBillingRouter = createTRPCRouter({
@@ -1115,5 +1138,105 @@ export const cloudBillingRouter = createTRPCRouter({
         user,
         plan: input.plan,
       });
+    }),
+
+  // Commerce credit balance for an organization (sum of active credit grants).
+  // Commerce namespaces each org by slug (X-Hanzo-Org header) and keys the credit
+  // ledger by the same slug, so the org gets its own balance — true multi-tenant.
+  getOrgCreditBalance: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommerceCreditBalance> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      return commerceGet<CommerceCreditBalance>(
+        "/v1/billing/credit-balance",
+        { userId: organization.name },
+        { "X-Hanzo-Org": organization.name },
+      );
+    }),
+
+  // Grant N cloud credits to an organization via Commerce — a first-class admin
+  // action. Amount arrives in whole dollars from the UI and is converted to the
+  // cents Commerce expects. Gated by hanzoCloudBilling:CRUD (owner/admin/
+  // admin-billing); the grant is namespaced to the org via X-Hanzo-Org + userId.
+  grantCredits: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        // Whole-dollar amount to grant (UI-friendly). Converted to cents below.
+        amountUsd: z.number().positive().max(1_000_000),
+        name: z.string().trim().min(1).max(120).optional(),
+        // Optional Go-duration expiry (e.g. "720h"); omitted = never expires.
+        expiresIn: z.string().trim().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }): Promise<CommerceCreditGrant> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const amountCents = Math.round(input.amountUsd * 100);
+      if (amountCents <= 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Credit amount must be greater than zero.",
+        });
+      }
+
+      const grant = await commercePost<CommerceCreditGrant>(
+        "/v1/billing/credit-grants",
+        {
+          userId: organization.name,
+          name: input.name ?? "Console credit grant",
+          amountCents,
+          currency: "usd",
+          ...(input.expiresIn ? { expiresIn: input.expiresIn } : {}),
+          tags: "console",
+        },
+        undefined,
+        { "X-Hanzo-Org": organization.name },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: grant.id,
+        action: "grantCredits",
+        after: {
+          amountCents,
+          currency: "usd",
+          grantId: grant.id,
+          name: input.name ?? "Console credit grant",
+        },
+      });
+
+      return grant;
     }),
 });

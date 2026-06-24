@@ -1,5 +1,9 @@
 import { type GetServerSideProps } from "next";
-import { HanzoCloudIcon } from "@/src/components/HanzoLogo";
+import {
+  type Brand,
+  getBrandFromHost,
+} from "@/src/features/branding/brandRegistry";
+import { BrandMark } from "@/src/features/branding/useBrand";
 import { Button } from "@/src/components/ui/button";
 import {
   Form,
@@ -90,14 +94,24 @@ export type PageProps = {
   runningOnHuggingFaceSpaces: boolean;
   signUpDisabled: boolean;
   emailVerificationRequired: boolean;
+  brand: Brand;
 };
 
 // Also used in src/pages/auth/sign-up.tsx
 
-export const getServerSideProps: GetServerSideProps<PageProps> = async () => {
+export const getServerSideProps: GetServerSideProps<PageProps> = async (
+  ctx,
+) => {
   const sso: boolean = await isAnySsoConfigured();
+  // Resolve the white-label brand server-side from the request host so the right
+  // logo/wordmark render on first paint (no flash). Honors the proxy host.
+  const host =
+    (ctx.req.headers["x-forwarded-host"] as string | undefined) ??
+    ctx.req.headers.host;
+  const brand = getBrandFromHost(host);
   return {
     props: {
+      brand,
       authProviders: {
         google:
           env.AUTH_GOOGLE_CLIENT_ID !== undefined &&
@@ -543,6 +557,7 @@ export default function SignIn({
   authProviders,
   signUpDisabled,
   runningOnHuggingFaceSpaces,
+  brand,
 }: PageProps) {
   const router = useRouter();
   useHuggingFaceRedirect(runningOnHuggingFaceSpaces);
@@ -739,7 +754,7 @@ export default function SignIn({
       </Head>
       <div className="flex flex-1 flex-col py-6 sm:min-h-full sm:justify-center sm:px-6 sm:py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <HanzoCloudIcon className="mx-auto" />
+          <BrandMark brand={brand} size={32} className="mx-auto fill-current" />
           <h2 className="text-primary mt-4 text-center text-2xl leading-9 font-bold tracking-tight">
             Sign in to your account
           </h2>
