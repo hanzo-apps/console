@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -115,18 +116,32 @@ export function SquarePaymentDialog({
         const sq = await loadSquareSdk();
         if (cancelled) return;
         const payments = sq.payments(appId as string, locationId as string);
+        // Match the Square card field to the app theme by resolving the same
+        // CSS variables the <Input> component uses (HSL triplets → hsl()).
+        const cs = getComputedStyle(document.documentElement);
+        const themeColor = (name: string, fallback: string) => {
+          const v = cs.getPropertyValue(name).trim();
+          return v ? `hsl(${v.replace(/\s+/g, ", ")})` : fallback;
+        };
+        const bg = themeColor("--background", "#0a0a0a");
+        const fg = themeColor("--foreground", "#fafafa");
+        const muted = themeColor("--muted-foreground", "#a1a1aa");
+        const inputBorder = themeColor("--input", "#3f3f46");
+        const ring = themeColor("--ring", "#71717a");
+        const destructive = themeColor("--destructive", "#ef4444");
         const card = await payments.card({
           style: {
-            input: { fontSize: "16px", color: "#0f172a" },
-            "input::placeholder": { color: "#94a3b8" },
+            input: { fontSize: "16px", color: fg, backgroundColor: bg },
+            "input::placeholder": { color: muted },
             ".input-container": {
-              borderColor: "transparent",
-              borderRadius: "8px",
+              borderColor: inputBorder,
+              borderRadius: "6px",
+              backgroundColor: bg,
             },
-            ".input-container.is-focus": { borderColor: "#6366f1" },
-            ".input-container.is-error": { borderColor: "#ef4444" },
-            ".message-text": { color: "#ef4444" },
-            ".message-icon": { color: "#ef4444" },
+            ".input-container.is-focus": { borderColor: ring },
+            ".input-container.is-error": { borderColor: destructive },
+            ".message-text": { color: destructive },
+            ".message-icon": { color: destructive },
           },
         });
         if (cancelled) {
@@ -214,39 +229,41 @@ export function SquarePaymentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {!configured ? (
-          <p className="text-destructive text-sm">
-            Card payments are not configured for this deployment.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {mode === "buy-credits" && (
-              <div className="space-y-2">
-                <Label htmlFor="sq-amount">Amount (USD)</Label>
-                <Input
-                  id="sq-amount"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>Card details</Label>
-              <div className="rounded-lg border bg-white p-4 shadow-sm">
-                <div id="sq-card-container" className="min-h-[44px]" />
-              </div>
-              {!ready && !error && (
-                <p className="text-muted-foreground text-xs">
-                  Loading secure card form…
-                </p>
+        <DialogBody>
+          {!configured ? (
+            <p className="text-destructive text-sm">
+              Card payments are not configured for this deployment.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {mode === "buy-credits" && (
+                <div className="space-y-2">
+                  <Label htmlFor="sq-amount">Amount (USD)</Label>
+                  <Input
+                    id="sq-amount"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </div>
               )}
+              <div className="space-y-2">
+                <Label>Card details</Label>
+                <div className="border-input bg-background rounded-md border p-3">
+                  <div id="sq-card-container" className="min-h-[44px]" />
+                </div>
+                {!ready && !error && (
+                  <p className="text-muted-foreground text-xs">
+                    Loading secure card form…
+                  </p>
+                )}
+              </div>
+              {error && <p className="text-destructive text-sm">{error}</p>}
             </div>
-            {error && <p className="text-destructive text-sm">{error}</p>}
-          </div>
-        )}
+          )}
+        </DialogBody>
 
         <DialogFooter>
           <Button
