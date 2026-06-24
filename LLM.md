@@ -384,3 +384,64 @@ Three customer/admin-pane deliverables. All grounded in live-cluster facts.
 - Deploy via operator CR `services.hanzo.ai/console` tag→3.159.25; verify pod boots
   clean (/v1/ready 200, no unhandledRejection) before declaring done; rollback to
   3.159.24 on crash. Pin universe to 3.159.25.
+
+## Stage-4: real billing + members-table crash fix + real invite email (console 3.159.26)
+
+Branch `fix/console-invite-billing-real`. Three production-real fixes so invite +
+billing actually work for an investor demo (no stub, no 404, no client crash).
+
+### 1. Billing page: real Commerce data, no tRPC 404s/500s
+- Root cause A (404): the active router `web/src/features/billing/server/cloudBillingRouter.ts`
+  called `GET /v1/billing/usage-rollup` — **that route does not exist on commerce**
+  (commerce 1.42.x has no rollup endpoint). `getCommerceUsageRollup` now COMPOSES the
+  rollup from the three real billing sources of truth the gateway prepaid gate reads:
+  `/v1/billing/tier` (plan name + daily included credit + balance),
+  `/v1/billing/balance` (prepaid balance/holds/available cents), `/v1/billing/usage`
+  (consumed). Mapping: included.monthlyCents = tier.dailyCreditsCents*30,
+  grantedCents = dailyCreditsCents, remainingCents = balance.dailyRemaining,
+  consumedCents = sum(|usage.amount|), overageCents = max(0, consumed-includedConsumed).
+- Root cause B (500): commerce's service-token middleware resolves the tenant from the
+  **`X-Hanzo-Org` header** (then `COMMERCE_SERVICE_ORG`, then "hanzo"). The console talks
+  to commerce DIRECTLY (not through the gateway), so without that header
+  `middleware.GetOrganization(c)` does `c.MustGet("organization")` → **panic → 500** on
+  every billing read (balance/usage/tier/invoices/credit-balance). `commerceClient.ts`
+  now takes `org` as a first-class param and always sends `X-Hanzo-Org`. With it, all
+  endpoints return 200. (Probe: `curl -H 'Authorization: Bearer $COMMERCE_SERVICE_TOKEN'
+  -H 'X-Hanzo-Org: hanzo' http://commerce.hanzo.svc:8001/v1/billing/balance?user=hanzo`.)
+- Root cause C (tRPC 404): the UI calls `getInvoices`, `getSubscriptionInfo`,
+  `getCustomerPortalUrl`, `clearPlanSwitchSchedule`, `reactivateStripeSubscription`,
+  `applyPromotionCode` — all MISSING from the active router (a parallel, dead `ee/`
+  router had them but is not registered in `server/api/root.ts`). Added them to the
+  active router: `getInvoices` → real commerce `/v1/billing/invoices`;
+  `getSubscriptionInfo` → commerce `/v1/billing/status` (prepaid plans have no Stripe
+  schedule/cancellation, so those are null); the Stripe-only affordances
+  (portal/clearSchedule/reactivate/promo) degrade to null/no-op when the org has no
+  Stripe customer, so the page renders with zero error toasts.
+
+### 2. Members settings page crash (client-side exception → invite dialog unreachable)
+- `web/src/components/table/data-table.tsx`: `DataTable` passes an explicit `state` to
+  `useReactTable`, which OVERRIDES TanStack's `getInitialState` default of
+  `rowSelection: {}`. Tables used without row-selection (no `rowSelection` prop — e.g.
+  org/project Members) then had `state.rowSelection === undefined`, so the row renderer's
+  `row.getIsSelected()` → `isRowSelected(row, undefined)` → `undefined[row.id]` THREW,
+  crashing the whole table (residual from the botched-merge that caused "377 crashes").
+  Fix: `rowSelection: rowSelection ?? {}` — non-selection tables now render; the
+  CreateProjectMemberButton invite dialog is reachable again. One-line, fixes ALL
+  non-selection tables.
+
+### 3. Real invite email
+- `sendMembershipInvitationEmail()` no-ops when `SMTP_CONNECTION_URL` is unset — and NO
+  working SMTP creds existed anywhere in the cluster (every captable/sign/dataroom SMTP
+  secret + RESEND_API_KEY was empty). Wired a real provider: `SMTP_CONNECTION_URL` is
+  stored in KMS (project `hanzo`, path `/console-secrets`) and reaches the pod via the
+  existing `envFrom: console-secrets` sync — never inlined as plaintext. `EMAIL_FROM_ADDRESS`
+  stays `no-reply@hanzo.ai` (or the verified sender domain). No image change needed for
+  the email key — it's a deploy-time secret.
+
+### Build/deploy
+- arcd kaniko Job (clone of console-build-31592513): `--context=git://github.com/hanzoai/console.git#refs/heads/fix/console-invite-billing-real`,
+  `--destination=ghcr.io/hanzoai/console:3.159.26 --cache=false`, runner-pool-32g +
+  `dedicated=ci-runner` toleration, `console-git-token`+`kaniko-ghcr`.
+- Deploy via operator CR `services.hanzo.ai/console` (kind `Service`, `hanzo.ai/v1`)
+  tag→3.159.26; verify pod boots clean (/v1/ready 200, 0 unhandledRejection) before
+  declaring done; rollback to 3.159.25 on crash. Pin universe to 3.159.26.
