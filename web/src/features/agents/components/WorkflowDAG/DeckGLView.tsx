@@ -443,7 +443,7 @@ export const WorkflowDeckGLView = ({
   );
 };
 
-const BACKGROUND_RGB: [number, number, number] = [11, 18, 32];
+const BACKGROUND_RGB: [number, number, number] = [11, 11, 14];
 
 // Status color mapping matching React Flow's status system
 const STATUS_COLORS: Record<string, [number, number, number]> = {
@@ -791,7 +791,7 @@ export function buildDeckGraph(
     const background = mixColor(value.rgb, BACKGROUND_RGB, 0.85);
     const luminance =
       value.rgb[0] * 0.2126 + value.rgb[1] * 0.7152 + value.rgb[2] * 0.0722;
-    const textColor = luminance > 140 ? "#0f172a" : "#f8fafc";
+    const textColor = luminance > 140 ? "#18181b" : "#fafafa";
     agentPalette.push({
       agentId: key,
       label: key,

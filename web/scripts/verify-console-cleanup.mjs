@@ -203,7 +203,17 @@ async function main() {
     await page.waitForTimeout(3000);
     await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
     const url = page.url();
-    R.signedIn = url.includes(HOST) && !/\/auth\//.test(url);
+    // Signed in only when the browser is actually ON the console origin (not
+    // hanzo.id — whose OAuth URL embeds console.hanzo.ai in redirect_uri) and
+    // off the /auth/* sign-in routes.
+    const onConsole = (() => {
+      try {
+        return new URL(url).host === HOST;
+      } catch {
+        return false;
+      }
+    })();
+    R.signedIn = onConsole && !/\/auth\//.test(new URL(url).pathname);
     log(`  · landed ${url} signedIn=${R.signedIn}`);
 
     const orgId = await firstOrgId(page);
