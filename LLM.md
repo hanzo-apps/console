@@ -445,3 +445,64 @@ billing actually work for an investor demo (no stub, no 404, no client crash).
 - Deploy via operator CR `services.hanzo.ai/console` (kind `Service`, `hanzo.ai/v1`)
   tag→3.159.26; verify pod boots clean (/v1/ready 200, 0 unhandledRejection) before
   declaring done; rollback to 3.159.25 on crash. Pin universe to 3.159.26.
+
+## Pay-as-you-go self-serve LIVE (console 3.159.35-payg, 2026-06-25)
+
+Branch `feat/payg-self-serve` (off the live `feat/billing-commerce-on-invite-branch`).
+Closes the self-serve loop: a fresh signup gets their OWN isolated org + a working
+hk- Cloud API key from the UI, then add funds → AI, billed to their org.
+
+### Model: ONE tenant = ONE IAM org = ONE console org = ONE commerce ns = ONE slug
+DECISIVE (probed live): the `hanzo-console` Casdoor app is NOT org-locked — a login
+with `organization=hanzo` + email resolves CROSS-ORG and returns the user's own
+`<slug>/<email>` sub. So per-tenant IAM orgs Just Work with the UNCHANGED login flow.
+
+### (B) Own org per tenant
+- `signupApiHandler.ts` IAM path now calls `iamProvisionTenant` (was `iamSignup`):
+  creates a per-tenant IAM org (`useEmailAsUsername=true`) + the user INSIDE it
+  (owner=slug) + mints the hk- key. Idempotent.
+- `tenantSlug.ts` — `tenantSlugForEmail` = sanitized email stem + 8-hex sha256 suffix
+  (satisfies IAM ReUserName regex + forbidden-char filter; collision-safe).
+- `syncIamMemberships.ts` — a user in their OWN dedicated org (NOT a shared seeded
+  tenant in INIT_ORG_IDS=hanzo,lux,zoo,pars) becomes OWNER (was always MEMBER), with
+  the IAM org displayName. Result: console org id == IAM org slug, billing/usage all
+  key on that one slug. Pre-existing: 54 EMPTY per-tenant IAM orgs (half-done by a
+  prior path that created the org but left the user in shared `hanzo`).
+
+### (A) hk- Cloud API keys [keystone]
+- `iamServer.ts`: `iamMintUserKeys`/`iamRevokeUserKeys` → IAM `/v1/iam/mint-user-keys`
+  (bypasses the +/@ name-char filter); `iamGetUser` returns accessKey.
+- `cloudApiKeyRouter.ts` (NEW tRPC `get`/`mint`/`revoke`, `protectedOrganizationProcedure`,
+  gated `organization:CRUD_apiKeys`): reconstructs the session user's IAM sub as
+  `<orgId>/<email>` (console org id IS the IAM slug) — caller can only act on their own
+  sub. Registered as `cloudApiKey` in root.ts.
+- `CloudApiKeys.tsx` (NEW) on the org API-keys settings page: shows hk- once, with
+  Regenerate/Revoke + a ready-to-run curl. Distinct from observability pk-lf/sk-lf.
+- Signup AUTO-mints a key; `establishIamSession` back-fills one for SSO/pre-existing
+  users (best-effort, idempotent).
+
+### (D) Add-funds
+Already wired on this branch (Square topup `/v1/billing/topup/token` + `grantCredits`,
+per-org via `X-Hanzo-Org`). Billing page reachable post-signup (Purchase Credits).
+Tested via SANDBOX `X-Hanzo-Test:true` deposit (no real charge).
+
+### E2E PROVEN (genuinely new tenant, real Playwright UI)
+payg-ui-…@hanzopaygo.dev → signup → /onboarding (auth'd) → landed in OWN org
+("PAYG UI Tenant's Organization") → UI "Cloud API Key" Regenerate → hk-239c9056…
+shown once → `curl -H "Bearer hk-…" api.hanzo.ai/v1/chat/completions` (deepseek-chat)
+→ 200 "PAYG-OK" → live credit $10 → 5 completions debited 1000→995c on THIS tenant's
+org; shared `hanzo` UNCHANGED 925c. **pay-as-you-go self-serve LIVE: yes.**
+
+NOTE: gpt-4o-mini specifically 403s "this model is not available for your account"
+for ALL accounts (incl funded maxpower) — it routes to provider do-ai
+(upstream openai-gpt-4o-mini) which DigitalOcean GenAI doesn't serve; pure provider/
+account gap, NOT pay-go. DO-AI-backed premium models (deepseek-chat, llama-3.3-70b,
+zen-*) all 200.
+
+INFRA FIX: commerce had a postgres connection-pool LEAK (4 conns stuck idle/ClientRead
+~7h after the 1.42.28-keyfix deploy) → every balance/add-funds call hung 20s+ (blocked
+premium-gating + add-funds cluster-wide). Fixed by `kubectl rollout restart deploy/commerce`.
+
+Build (kaniko, console deps are public npm): clone `console-build-billing*` Job,
+`--context=git://…#refs/heads/feat/payg-self-serve`, dest `3.159.35-payg`. Deploy:
+patch operator CR `services.hanzo.ai/console` `spec.image.tag`→3.159.35-payg.
