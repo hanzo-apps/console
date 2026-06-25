@@ -12,6 +12,7 @@ import { userRouter } from "@/src/server/api/routers/users";
 import { userAccountRouter } from "@/src/server/api/routers/userAccount";
 import { datasetRouter } from "@/src/features/datasets/server/dataset-router";
 import { cloudBillingRouter } from "@/src/features/billing/server/cloudBillingRouter";
+import { cloudApiKeyRouter } from "@/src/features/cloud-api-keys/server/cloudApiKeyRouter";
 import { observationsRouter } from "@/src/server/api/routers/observations";
 import { sessionRouter } from "@/src/server/api/routers/sessions";
 import { promptRouter } from "@/src/features/prompts/server/routers/promptRouter";
@@ -94,6 +95,7 @@ export const appRouter = createTRPCRouter({
   members: membersRouter,
   datasets: datasetRouter,
   cloudBilling: cloudBillingRouter,
+  cloudApiKey: cloudApiKeyRouter,
   observations: observationsRouter,
   prompts: promptRouter,
   models: modelRouter,

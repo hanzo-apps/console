@@ -168,8 +168,10 @@ export async function iamListAllOrganizations(
  */
 export async function iamGetUser(sub: string): Promise<{
   owner?: string;
+  name?: string;
   isAdmin?: boolean;
   isGlobalAdmin?: boolean;
+  accessKey?: string;
 } | null> {
   const client = getIamClient();
   if (!client) return null;
@@ -177,8 +179,10 @@ export async function iamGetUser(sub: string): Promise<{
     const res = await client.apiRequest<
       IamResponse<{
         owner?: string;
+        name?: string;
         isAdmin?: boolean;
         isGlobalAdmin?: boolean;
+        accessKey?: string;
       }>
     >("/v1/iam/get-user", { params: { id: sub } });
     if (res.status !== "ok" || !res.data) return null;
@@ -281,6 +285,216 @@ export async function iamSendVerificationCode(params: {
       ok: false,
       error:
         error instanceof Error ? error.message : "Failed to send code via IAM.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Self-serve tenant provisioning + per-user hk- Cloud API keys
+//
+// One tenant = one IAM org = one console org = one commerce namespace = one
+// slug. These confidential-client (Basic-auth) calls are the server-side
+// primitives the console uses to give each self-serve signup its OWN isolated
+// IAM org (so hk-key billing, console org, and commerce usage all key on the
+// same per-tenant slug), and to mint/clear that tenant's hk- Cloud API key.
+//
+// Cross-org login is unaffected: IAM resolves a login by email globally and
+// returns the user's own `<slug>/<email>` sub even though the console posts
+// `organization=hanzo` (verified live), so the existing login flow needs no
+// change for a tenant that lives in its own org.
+// ---------------------------------------------------------------------------
+
+export type IamProvisionTenantResult =
+  | { ok: true; sub: string; org: string; orgDisplayName: string }
+  | { ok: false; error: string };
+
+/** Read a single IAM org (admin-owned) record, or null. */
+export async function iamGetOrganization(name: string): Promise<{
+  name: string;
+  displayName?: string;
+  useEmailAsUsername?: boolean;
+} | null> {
+  const client = getIamClient();
+  if (!client) return null;
+  try {
+    const res = await client.apiRequest<
+      IamResponse<{
+        name: string;
+        displayName?: string;
+        useEmailAsUsername?: boolean;
+      }>
+    >("/v1/iam/get-organization", { params: { id: `admin/${name}` } });
+    if (res.status !== "ok" || !res.data) return null;
+    return res.data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Provision a self-serve tenant in IAM: ensure a per-tenant organization
+ * (`useEmailAsUsername=true`) exists and the user lives IN it, then mint the
+ * tenant's hk- Cloud API key. Idempotent — safe to re-run for an existing
+ * tenant (reuses the org/user; only mints a key if the user has none).
+ *
+ * Returns the tenant's own `sub` (`<slug>/<email>`) so the caller can carry it
+ * in the session and so downstream org/billing keying uses the per-tenant slug.
+ */
+export async function iamProvisionTenant(params: {
+  email: string;
+  password: string;
+  name: string;
+  slug: string;
+  emailCode?: string;
+}): Promise<IamProvisionTenantResult> {
+  const client = getIamClient();
+  if (!client) return { ok: false, error: "IAM is not configured." };
+
+  const email = params.email.trim().toLowerCase();
+  const slug = params.slug;
+  const displayName = params.name?.trim() || email;
+  const orgDisplayName = `${displayName}'s Organization`;
+  const sub = `${slug}/${email}`;
+
+  try {
+    // 1. Ensure the per-tenant org exists with email-as-username (so the
+    //    email-named user passes IAM's ReUserName regex). add-organization may
+    //    not persist the flag on creation in every IAM build, so we verify and
+    //    patch it explicitly — the flag is load-bearing for add-user below.
+    const existingOrg = await iamGetOrganization(slug);
+    if (!existingOrg) {
+      const addOrg = await client.apiRequest<IamResponse>(
+        "/v1/iam/add-organization",
+        {
+          method: "POST",
+          body: {
+            owner: "admin",
+            name: slug,
+            displayName: orgDisplayName,
+            useEmailAsUsername: true,
+            passwordType: "bcrypt",
+            // A self-serve tenant org should not be a public signup target of
+            // its own; users join via the console (hanzo-console) app.
+          },
+        },
+      );
+      if (addOrg.status !== "ok") {
+        return {
+          ok: false,
+          error: addOrg.msg || "Failed to create tenant organization.",
+        };
+      }
+    }
+    // Confirm the flag is on (patch if a stale/created org lacks it).
+    const org = await iamGetOrganization(slug);
+    if (org && org.useEmailAsUsername !== true) {
+      await client.apiRequest<IamResponse>("/v1/iam/update-organization", {
+        method: "POST",
+        params: { id: `admin/${slug}` },
+        body: { ...org, owner: "admin", name: slug, useEmailAsUsername: true },
+      });
+    }
+
+    // 2. Ensure the user exists IN the tenant org (owner = slug). If a user
+    //    with this sub already exists, reuse it (idempotent re-signup).
+    const existingUser = await iamGetUser(sub);
+    if (!existingUser) {
+      const addUser = await client.apiRequest<IamResponse>("/v1/iam/add-user", {
+        method: "POST",
+        body: {
+          owner: slug,
+          name: email,
+          email,
+          password: params.password,
+          displayName,
+          type: "normal-user",
+          signupApplication: env.IAM_APP_NAME,
+          ...(params.emailCode ? { emailCode: params.emailCode } : {}),
+        },
+      });
+      if (addUser.status !== "ok") {
+        return {
+          ok: false,
+          error: addUser.msg || "Failed to create tenant user.",
+        };
+      }
+    }
+
+    // 3. Mint the tenant's hk- Cloud API key so every tenant has a working key
+    //    from the moment they sign up. Only mint when absent (idempotent).
+    const userAfter = await iamGetUser(sub);
+    if (!userAfter?.accessKey) {
+      await iamMintUserKeys(sub);
+    }
+
+    return { ok: true, sub, org: slug, orgDisplayName };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "IAM tenant provisioning failed.",
+    };
+  }
+}
+
+export type IamMintKeyResult =
+  | { ok: true; accessKey: string }
+  | { ok: false; error: string };
+
+/**
+ * (Re)generate the per-user hk- Cloud API key for an IAM sub and return the
+ * new `hk-` accessKey. Server-side confidential-client call to the dedicated
+ * IAM minting endpoint (NOT under the add-/update- prefixes, so it is not blocked by the
+ * name-character filter for email-named users). The caller MUST pass the
+ * authenticated session user's own sub — never client-supplied input.
+ */
+export async function iamMintUserKeys(sub: string): Promise<IamMintKeyResult> {
+  const client = getIamClient();
+  if (!client) return { ok: false, error: "IAM is not configured." };
+  try {
+    const res = await client.apiRequest<IamResponse<{ accessKey?: string }>>(
+      "/v1/iam/mint-user-keys",
+      { method: "POST", params: { id: sub }, body: {} },
+    );
+    if (res.status !== "ok" || !res.data?.accessKey) {
+      return { ok: false, error: res.msg || "Failed to mint Cloud API key." };
+    }
+    return { ok: true, accessKey: res.data.accessKey };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to mint Cloud API key.",
+    };
+  }
+}
+
+/** Clear (revoke) the per-user hk- Cloud API key for an IAM sub. */
+export async function iamRevokeUserKeys(
+  sub: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const client = getIamClient();
+  if (!client) return { ok: false, error: "IAM is not configured." };
+  try {
+    const res = await client.apiRequest<IamResponse>(
+      "/v1/iam/revoke-user-keys",
+      { method: "POST", params: { id: sub }, body: {} },
+    );
+    if (res.status !== "ok") {
+      return { ok: false, error: res.msg || "Failed to revoke Cloud API key." };
+    }
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to revoke Cloud API key.",
     };
   }
 }
