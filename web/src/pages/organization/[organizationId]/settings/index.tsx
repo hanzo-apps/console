@@ -2,6 +2,7 @@ import { PagedSettingsContainer } from "@/src/components/PagedSettingsContainer"
 import Header from "@/src/components/layouts/header";
 import { MembershipInvitesPage } from "@/src/features/rbac/components/MembershipInvitesPage";
 import { MembersTable } from "@/src/features/rbac/components/MembersTable";
+import { IdentityAndAccessSettings } from "@/src/features/rbac/components/IdentityAndAccessSettings";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
 import RenameOrganization from "@/src/features/organizations/components/RenameOrganization";
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
@@ -72,6 +73,26 @@ export const getOrganizationSettingsPages = ({
         />
       </div>
     ),
+  },
+  {
+    title: "Identity & Access",
+    slug: "iam",
+    cmdKKeywords: [
+      "iam",
+      "identity",
+      "access",
+      "members",
+      "invite",
+      "user",
+      "rbac",
+      "roles",
+      "permissions",
+      "api key",
+      "hk",
+      "cloud",
+      "token",
+    ],
+    content: <IdentityAndAccessSettings orgId={organization.id} />,
   },
   {
     title: "API Keys",

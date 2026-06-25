@@ -14,7 +14,10 @@ import {
   projectNoneRoleComment,
   projectRoleAccessRights,
 } from "@/src/features/rbac/constants/projectAccessRights";
-import { orderedRoles } from "@/src/features/rbac/constants/orderedRoles";
+import {
+  orderedRoles,
+  formatRole,
+} from "@/src/features/rbac/constants/orderedRoles";
 
 export const RoleSelectItem = ({
   role,
@@ -113,13 +116,4 @@ const reduceScopesToListItems = (
   ) : (
     <li>None</li>
   );
-};
-
-const formatRole = (role: Role) => {
-  const roleValue = role
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-
-  return roleValue;
 };
