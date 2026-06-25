@@ -181,6 +181,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/web/package.json .
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
+# Next.js 16 output-tracing does NOT copy Prisma's generated client + native query
+# engine (libquery_engine-linux-musl-openssl-3.0.x.so.node) into the standalone bundle,
+# so the runtime Prisma client crashes at boot (PrismaClientInitializationError ->
+# unhandledRejection -> clean exit). Copy the generated .prisma next to @prisma/client.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.pnpm/@prisma+client@6.19.3_prisma@6.19.3_magicast@0.5.3_typescript@5.9.3__typescript@5.9.3/node_modules/.prisma ./node_modules/.pnpm/@prisma+client@6.19.3_prisma@6.19.3_magicast@0.5.3_typescript@5.9.3__typescript@5.9.3/node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.pnpm/@prisma+client@6.19.3_prisma@6.19.3_magicast@0.5.3_typescript@5.9.3__typescript@5.9.3/node_modules/.prisma/client ./web/.prisma/client
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
 
