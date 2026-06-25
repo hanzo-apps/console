@@ -17,6 +17,7 @@ import {
   commerceGet,
   commercePost,
   commercePatch,
+  commercePut,
   commerceDelete,
 } from "@/src/features/billing/server/commerceClient";
 import type Stripe from "stripe";
@@ -109,6 +110,16 @@ type CommerceInvoiceList = {
     hostedInvoiceUrl?: string | null;
     invoicePdfUrl?: string | null;
   }>;
+};
+
+/** Shape returned by Commerce GET/PUT /v1/billing/auto-recharge. */
+export type CommerceAutoRecharge = {
+  userId: string;
+  enabled: boolean;
+  thresholdCents: number;
+  amountCents: number;
+  currency: string;
+  lastRechargedAt?: string;
 };
 
 /** Shape returned by Commerce POST /v1/billing/credit-grants. */
@@ -1589,15 +1600,17 @@ export const cloudBillingRouter = createTRPCRouter({
           : new Date(),
         hostedInvoiceUrl: i.hostedInvoiceUrl ?? null,
         invoicePdfUrl: i.invoicePdfUrl ?? null,
-        breakdown: undefined as
-          | {
-              subscriptionCents: number;
-              usageCents: number;
-              discountCents: number;
-              taxCents: number;
-              totalCents: number;
-            }
-          | undefined,
+        // Commerce returns a single total (cents); it doesn't split subscription
+        // vs usage vs tax. Populate totalCents so the invoice tables render, and
+        // zero the unsplit components rather than leaving breakdown undefined
+        // (which crashed InvoiceHistory).
+        breakdown: {
+          subscriptionCents: 0,
+          usageCents: 0,
+          discountCents: 0,
+          taxCents: 0,
+          totalCents: i.total ?? i.amountDue ?? 0,
+        },
       }));
 
       return { invoices, hasMore: false, cursors: {} };
@@ -1850,6 +1863,123 @@ export const cloudBillingRouter = createTRPCRouter({
       });
 
       return { ok: true } as const;
+    }),
+
+  // Set which saved card is charged for top-ups, auto-recharge, and renewals.
+  // Commerce keys the default on the customer id (= org slug); it unsets any
+  // prior default and marks this one IsDefault.
+  setDefaultPaymentMethod: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string(), paymentMethodId: z.string().min(1) }))
+    .mutation(async ({ input, ctx }): Promise<CommercePaymentMethod> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const pm = await commercePost<CommercePaymentMethod>(
+        `/v1/billing/customers/${encodeURIComponent(organization.name)}/default-payment-method`,
+        organization.name,
+        { paymentMethodId: input.paymentMethodId },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: input.paymentMethodId,
+        action: "setDefaultPaymentMethod",
+        after: { paymentMethodId: input.paymentMethodId },
+      });
+
+      return pm;
+    }),
+
+  // ── Auto-recharge (prepaid credits auto-reload) ────────────────────────────
+  // When the org's balance drops below the threshold, commerce charges the
+  // default saved card by the configured amount (off-session, via a cron).
+  getAutoRecharge: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommerceAutoRecharge> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      return commerceGet<CommerceAutoRecharge>(
+        "/v1/billing/auto-recharge",
+        organization.name,
+      );
+    }),
+
+  setAutoRecharge: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        enabled: z.boolean(),
+        thresholdUsd: z.number().min(0),
+        amountUsd: z.number().min(0),
+      }),
+    )
+    .mutation(async ({ input, ctx }): Promise<CommerceAutoRecharge> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const cfg = await commercePut<CommerceAutoRecharge>(
+        "/v1/billing/auto-recharge",
+        organization.name,
+        {
+          enabled: input.enabled,
+          thresholdCents: Math.round(input.thresholdUsd * 100),
+          amountCents: Math.round(input.amountUsd * 100),
+          currency: "usd",
+        },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: input.orgId,
+        action: "setAutoRecharge",
+        after: { enabled: input.enabled, amountCents: cfg.amountCents },
+      });
+
+      return cfg;
     }),
 
   // ── Buy credits (one-time Square top-up) ───────────────────────────────────
