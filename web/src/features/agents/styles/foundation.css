@@ -21,7 +21,7 @@
   /* Status Colors - Exact hex values */
   --status-success: #10b981;          /* green-500 */
   --status-failed: #ef4444;           /* red-500 */
-  --status-running: #3b82f6;          /* blue-500 */
+  --status-running: #52525b;          /* zinc-600 (monochrome, no blue) */
   --status-pending: #f59e0b;          /* yellow-500 */
 
   /* Status dot size */

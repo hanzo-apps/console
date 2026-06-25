@@ -179,11 +179,11 @@ export function WorkflowDeckGLTestPage() {
         </CardContent>
       </Card>
 
-      <div className="relative flex-1 min-h-[540px] rounded-3xl overflow-hidden border border-white/5 bg-[#0b1220]">
+      <div className="relative flex-1 min-h-[540px] rounded-3xl overflow-hidden border border-white/5 bg-[#0b0b0e]">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),transparent_55%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(147,51,234,0.14),transparent_55%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,23,42,0.6),rgba(2,6,23,0.8))]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(115,115,115,0.18),transparent_55%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(80,80,80,0.14),transparent_55%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(20,20,20,0.6),rgba(8,8,8,0.8))]" />
         </div>
         {loading && (
           <div className="relative z-10 w-full h-full flex items-center justify-center">
