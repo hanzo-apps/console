@@ -122,6 +122,15 @@ export type CommerceAutoRecharge = {
   lastRechargedAt?: string;
 };
 
+/** Shape returned by Commerce GET /v1/billing/payment-config. */
+export type CommercePaymentConfig = {
+  provider: string;
+  applicationId: string;
+  locationId: string;
+  environment: string; // "sandbox" | "production"
+  live: boolean;
+};
+
 /** Shape returned by Commerce POST /v1/billing/credit-grants. */
 export type CommerceCreditGrant = {
   id: string;
@@ -1980,6 +1989,35 @@ export const cloudBillingRouter = createTRPCRouter({
       });
 
       return cfg;
+    }),
+
+  // Public Square config for the Web Payments SDK — sandbox for test orgs,
+  // production for live orgs (resolved by commerce from org.Live). The card
+  // dialog uses this at runtime so the browser tokenizes against the same
+  // Square account commerce vaults/charges with.
+  getPaymentConfig: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommercePaymentConfig> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      return commerceGet<CommercePaymentConfig>(
+        "/v1/billing/payment-config",
+        organization.name,
+      );
     }),
 
   // ── Buy credits (one-time Square top-up) ───────────────────────────────────

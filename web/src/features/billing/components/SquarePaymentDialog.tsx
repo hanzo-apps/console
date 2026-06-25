@@ -38,12 +38,15 @@ declare global {
   }
 }
 
-const SQUARE_SDK_SRC =
-  env.NEXT_PUBLIC_SQUARE_ENVIRONMENT === "sandbox"
+function squareSdkSrc(environment: string): string {
+  return environment === "sandbox"
     ? "https://sandbox.web.squarecdn.com/v1/square.js"
     : "https://web.squarecdn.com/v1/square.js";
+}
 
-function loadSquareSdk(): Promise<SquareGlobal> {
+// Load the Square Web Payments SDK for the given environment. The script id is
+// environment-scoped so a sandbox (test org) and production SDK never collide.
+function loadSquareSdk(environment: string): Promise<SquareGlobal> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
       reject(new Error("Square SDK can only load in the browser"));
@@ -57,8 +60,9 @@ function loadSquareSdk(): Promise<SquareGlobal> {
       window.Square
         ? resolve(window.Square)
         : reject(new Error("Square SDK failed to load"));
+    const scriptId = `square-web-payments-sdk-${environment}`;
     const existing = document.getElementById(
-      "square-web-payments-sdk",
+      scriptId,
     ) as HTMLScriptElement | null;
     if (existing) {
       existing.addEventListener("load", done);
@@ -68,8 +72,8 @@ function loadSquareSdk(): Promise<SquareGlobal> {
       return;
     }
     const script = document.createElement("script");
-    script.id = "square-web-payments-sdk";
-    script.src = SQUARE_SDK_SRC;
+    script.id = scriptId;
+    script.src = squareSdkSrc(environment);
     script.async = true;
     script.onload = done;
     script.onerror = () => reject(new Error("Square SDK failed to load"));
@@ -126,22 +130,35 @@ export function SquarePaymentDialog({
   const [error, setError] = useState<string | null>(null);
   const [amount, setAmount] = useState("25");
 
-  const appId = env.NEXT_PUBLIC_SQUARE_APPLICATION_ID;
-  const locationId = env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
+  // Resolve the Square config for THIS org at runtime: a test org gets the
+  // sandbox app id/location, a live org gets production. Falls back to the
+  // build-time NEXT_PUBLIC_* values if the endpoint is unavailable. We gate the
+  // card-field mount on the config being fetched so the SDK loads exactly one
+  // environment (no prod-then-sandbox double load).
+  const paymentConfigQuery = api.cloudBilling.getPaymentConfig.useQuery(
+    { orgId },
+    { enabled: open && !!orgId },
+  );
+  const cfg = paymentConfigQuery.data;
+  const appId = cfg?.applicationId || env.NEXT_PUBLIC_SQUARE_APPLICATION_ID;
+  const locationId = cfg?.locationId || env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
+  const environment =
+    cfg?.environment || env.NEXT_PUBLIC_SQUARE_ENVIRONMENT || "production";
   const configured = Boolean(appId && locationId);
+  const configResolved = !orgId || paymentConfigQuery.isFetched;
 
   const addPaymentMethod = api.cloudBilling.addPaymentMethod.useMutation();
   const buyCredits = api.cloudBilling.buyCredits.useMutation();
 
   // Mount the Square-hosted card field (a cross-origin iframe) when opened.
   useEffect(() => {
-    if (!open || !configured) return;
+    if (!open || !configured || !configResolved) return;
     let cancelled = false;
     setReady(false);
     setError(null);
     void (async () => {
       try {
-        const sq = await loadSquareSdk();
+        const sq = await loadSquareSdk(environment);
         if (cancelled) return;
         const payments = sq.payments(appId as string, locationId as string);
         // Match the Square card field to the app theme: resolve the same CSS
@@ -189,7 +206,7 @@ export function SquarePaymentDialog({
       void cardRef.current?.destroy?.();
       cardRef.current = null;
     };
-  }, [open, configured, appId, locationId]);
+  }, [open, configured, configResolved, environment, appId, locationId]);
 
   const handleSubmit = useCallback(async () => {
     setError(null);
