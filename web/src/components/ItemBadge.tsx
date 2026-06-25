@@ -70,7 +70,7 @@ const iconVariants = cva(cn("h-4 w-4"), {
       TRACE: "text-dark-green",
       GENERATION: "text-muted-magenta",
       EVENT: "text-muted-green",
-      SPAN: "text-muted-blue",
+      SPAN: "text-muted-foreground",
       AGENT: "text-purple-600",
       TOOL: "text-orange-600",
       CHAIN: "text-pink-600",
@@ -85,7 +85,7 @@ const iconVariants = cva(cn("h-4 w-4"), {
       DATASET_ITEM: "text-primary-accent",
       ANNOTATION_QUEUE: "text-primary-accent",
       PROMPT: "text-primary-accent",
-      EVALUATOR: "text-primary-accent", // usually text-indigo-600
+      EVALUATOR: "text-primary-accent",
       RUNNING_EVALUATOR: "text-primary-accent",
       EXPERIMENT: "text-primary-accent",
     },

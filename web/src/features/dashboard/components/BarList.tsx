@@ -13,7 +13,8 @@ export function BarList(props: {
 }) {
   const maxValue = Math.max(...props.data.map((d) => d.value), 1);
   const formatter = props.valueFormatter ?? ((v: number) => String(v));
-  const barColor = props.color ?? "#6366f1";
+  // Default bar color tracks the neutral (non-blue) chart token.
+  const barColor = props.color ?? "hsl(var(--chart-1))";
 
   return (
     <div className={cn("space-y-2", props.className)}>
@@ -27,11 +28,11 @@ export function BarList(props: {
                 backgroundColor: barColor,
               }}
             />
-            <p className="relative truncate py-0.5 pl-2 text-sm text-muted-foreground">
+            <p className="text-muted-foreground relative truncate py-0.5 pl-2 text-sm">
               {item.name}
             </p>
           </div>
-          <span className="flex-shrink-0 text-sm font-medium text-muted-foreground">
+          <span className="text-muted-foreground flex-shrink-0 text-sm font-medium">
             {formatter(item.value)}
           </span>
         </div>
