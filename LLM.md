@@ -506,3 +506,39 @@ premium-gating + add-funds cluster-wide). Fixed by `kubectl rollout restart depl
 Build (kaniko, console deps are public npm): clone `console-build-billing*` Job,
 `--context=git://…#refs/heads/feat/payg-self-serve`, dest `3.159.35-payg`. Deploy:
 patch operator CR `services.hanzo.ai/console` `spec.image.tag`→3.159.35-payg.
+
+## Cloud API Key mint FAIL#1 + IAM v1.25.2 (console 3.159.48-keymint)
+
+**FAIL#1**: "Generate Cloud API Key" → "No IAM identity for this account in this
+organization". Root: `cloudApiKeyRouter.ts` resolved the IAM sub as
+`<orgId>/<email>` (and the session `iamSub` carried the email form / a DB UUID),
+so `get-user?id=maxpower/davelorenzini@gmail.com` → null even though the user
+exists as `maxpower/davelorenzini` (Casdoor `name` != email even in an
+`useEmailAsUsername` org). **Fix** (web/src/features): new
+`iamGetUserByOrgEmail(owner,email)` does `get-user?owner=<org>&email=<email>`
+(exact in-org email lookup → authoritative `owner/name`); `resolveIamUser`
+uses the session sub only when it actually resolves, else falls back to the
+org+email lookup. get/mint/revoke share it (dropped the duplicate get-user in
+mint). Verified live: id-by-email→null, owner+email→the record.
+
+**Second blocker (IAM-side, the real cause of the post-console-fix 500)**: the
+`POST /v1/iam/mint-user-keys` route was ADDED after tag v1.25.1 (on the divergent
+`hk-fix-build` branch) — the deployed `iam:v1.25.1` returned beego 404 HTML for
+it (get-user GET worked; mint POST 404'd). `hk-fix-build` was 27 commits BEHIND
+main → could NOT be tagged as the next semver (would regress OIDC org claim,
+multi-brand providers, 7-chain web3 login). **Fix**: cherry-picked the 3 hk CODE
+commits (4ca7edaa route + 061e45e8/cf8d8f68 caller→target security binding)
+cleanly onto `origin/main`, tagged **v1.25.2**, built (CGO=1, sqlite_fts5),
+bumped operator CR `services.hanzo.ai/iam` tag → v1.25.2 (Recreate, ~30s
+downtime, 1 replica). Mint auth is fail-secure via `IAM_KEY_MINT_ALLOWED_APPS`
+(already set: hanzo-console,lux-console,zoo-console,pars-console); confidential
+client → `app/hanzo-console` (getUsernameByClientIdSecret) → passes allowlist.
+
+**E2E PROVEN (Playwright, Dave davelorenzini@gmail.com → maxpower)**:
+"Generate Cloud API Key" → `hk-a851706d…` shown once in UI; Regenerate →
+`hk-2612a139…`; Revoke → cleared. Billing/usage page renders (HTTP 200, real
+Plan&Usage, no 500); observability dashboard "No data" honest-empty (executeQuery
+degrade, no unhandledRejection). console 3.159.48-keymint = the usagefix2 commits
+(55aa1f9f2 + 348570140) + the FAIL#1 fix in ONE image. Build: kaniko Job
+`console-build-keymint`, `--context=git://…#refs/heads/fix/payg-usage-visibility`,
+dest 3.159.48-keymint. IAM build: BuildKit Job `iam-build-v1252`.
