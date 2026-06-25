@@ -542,3 +542,65 @@ degrade, no unhandledRejection). console 3.159.48-keymint = the usagefix2 commit
 (55aa1f9f2 + 348570140) + the FAIL#1 fix in ONE image. Build: kaniko Job
 `console-build-keymint`, `--context=git://…#refs/heads/fix/payg-usage-visibility`,
 dest 3.159.48-keymint. IAM build: BuildKit Job `iam-build-v1252`.
+
+## Console chrome cleanup + IA rework (→ console 3.159.50-mono)
+
+Owner review flagged 7 issues; all fixed on `fix/payg-usage-visibility`, built +
+deployed via the operator's declared state (NOT imperative `kubectl set image`).
+
+1. **Full monochrome.** Hunted EVERY blue: down from **276** blue occurrences to
+   **0** (verified: 0 `(blue|indigo|sky|cyan)-N` classes, 0 blue hex literals, 0
+   blue oklch/hsl hues). De-blued the *chrome* uses of `--chart-*` and the
+   RainbowButton `--color-1..5` ramp in `globals.css` (charts → neutral warm/gray
+   hues, rainbow → grayscale). Components: trace nav pulse/resize bars →
+   `bg-primary`; number cells / score-link → `text-foreground`/`text-primary`;
+   billing info banners → `bg-muted`/`border-border`; ItemBadge SPAN →
+   `text-muted-foreground`; dashboard BarList default → `hsl(var(--chart-1))`
+   (was `#6366f1`); score-analytics `HEATMAP_BASE_COLORS` + extractHslToHex
+   fallbacks → neutral (was `#3b82f6`). Two parallel agents swept the
+   enabled-product + hidden-module feature dirs (agents/bots/mpc/dns/explorer,
+   evals, prompts, public-api, comments) preserving semantic green/red/amber.
+2. **v4.0.0 label dropped** from the top-left chrome. `app-sidebar` no longer
+   passes `version`; `HanzoLogo` is mark-only (the dead `version`/`VersionLabel`
+   path removed). `constants/VERSION.ts` set to `v3.159.50` (internal
+   health/telemetry only, never rendered).
+3. **"Star HanzoCloud" GitHub widget removed** — deleted the `github-star`
+   notification entry (broken shields.io stars img) from `sidebar-notifications`.
+4. **Top-left chrome = H mark only, app-selector moved RIGHT.** `HanzoLogo`
+   wordmark `<span>{brand.brandName}</span>` removed (mark-only). In
+   `app-sidebar` the `AppSwitcher` grid is now `ml-auto` (right corner of the
+   sidebar header), logo on the left.
+5. **KMS removed from Organization Settings** (`pages/organization/[…]/settings`
+   `getOrganizationSettingsPages`): dropped the `KMS` page + `KmsOrgSettings`
+   import. KMS is a separate service, not an org setting. (The project-level KMS
+   *product* pages `/project/[…]/kms/{secrets,keys}` are untouched.)
+6. **IA rework — flat wall → grouped products, ad-hoc enableable.** Root cause:
+   the `uiCustomization` nav filter was a NO-OP on cloud (`ctx.uiCustomization`
+   is `null` without the `self-host-ui-customization` entitlement), so every
+   `productModule` showed at once. Fix (decomplected, ONE knob):
+   `DEFAULT_ENABLED_MODULES` in `productModuleSchema.ts` = the curated default
+   surface `[dashboards, tracing, evaluation, prompt-management, playground,
+   datasets, search]`; the filter now gates by
+   `ctx.uiCustomization?.visibleModules ?? DEFAULT_ENABLED_MODULES`. Result: 4
+   coherent groups (Observability / Prompt Management / Evaluation / Search & AI)
+   + slim ungrouped (Home, Dashboards). Agents, Bots, Tasks, Functions, KMS, ZT,
+   Infrastructure, Base, Referrals hidden by default — light up by adding to the
+   constant or per-org. Also: gated "Observe" under `infrastructure`; deduped the
+   redundant embedded "Playground" service (native page is the one way); fixed
+   `groupNavigationItems` flattened list to include ALL groups (was hardcoded to
+   3 → Cmd+K missed Search & AI).
+7. **Spacing per @hanzo/ui (gui).** Tightened the sidebar header row
+   (`pr-2 pl-2`, mark-left/app-switcher-right) and simplified the `HanzoLogo`
+   wrapper (dropped the old `-mt-2 ml-1 gap-4 lg:flex-col` multi-element offset).
+
+**Build + deploy.** Runner fleet was down → built **in-cluster with Kaniko**
+(NOT GitHub builders, NOT local Mac): Job `console-build-mono`,
+`--context=git://github.com/hanzoai/console.git#refs/heads/fix/payg-usage-visibility`,
+`--destination=ghcr.io/hanzoai/console:3.159.50-mono` (digest
+`sha256:87d73fe2…`). **Deploy gotcha:** the `console` Deployment is reconciled by
+`hanzo-operator` from `services.hanzo.ai/console` (`spec.image.tag`) — imperative
+`kubectl set image` is reverted. Correct path: `kubectl patch
+services.hanzo.ai/console -p '{"spec":{"image":{"tag":"3.159.50-mono"}}}'` →
+operator rolls the deployment. **Verify creds:** `z@hanzo.ai` /
+`IloveHanzo2026!!!` (THREE `!`, not two — Casdoor rate-limits to a 15-min
+lockout after a few wrong tries; a `!!` typo cost a cooldown).
