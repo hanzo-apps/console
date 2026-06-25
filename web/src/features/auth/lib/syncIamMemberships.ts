@@ -28,7 +28,10 @@
 import { prisma, Role } from "@hanzo/console/src/db";
 import { logger } from "@hanzo/console/src/server";
 import { env } from "@/src/env.mjs";
-import { iamGetUser } from "@/src/features/auth/lib/iamServer";
+import {
+  iamGetUser,
+  iamGetOrganization,
+} from "@/src/features/auth/lib/iamServer";
 import {
   orgFromSub,
   isGlobalAdminIdentity,
@@ -180,15 +183,36 @@ export async function syncIamMembershipsForUser(
       return;
     }
 
-    // Normal user: ensure + join their own IAM org as MEMBER.
+    // Normal user: ensure + join their own IAM org.
     if (!ownerOrg) {
       logger.warn(
         `[iam-sync] no IAM org resolvable for ${email} (sub=${identity.sub}); skipping`,
       );
       return;
     }
-    const orgId = await ensureConsoleOrgForIamOrg({ name: ownerOrg });
-    await upsertMembershipAtLeast(consoleUserId, orgId, Role.MEMBER);
+
+    // A self-serve tenant lives in its OWN dedicated IAM org (org name = the
+    // per-tenant slug, NOT one of the shared seeded tenants hanzo/lux/zoo/pars),
+    // so they OWN that org — full self-service over billing, keys, members. A
+    // user attached to a SHARED tenant org joins as MEMBER. This is what makes
+    // a fresh signup land authenticated in their own workspace, isolated from
+    // the shared `hanzo` org.
+    const isOwnDedicatedOrg = !tenantOrgIds()
+      .map((t) => t.toLowerCase())
+      .includes(ownerOrg);
+    const role = isOwnDedicatedOrg ? Role.OWNER : Role.MEMBER;
+
+    // Use IAM's org displayName so the console org shows a friendly name
+    // ("Alice's Organization") rather than the raw slug.
+    const iamOrg = await iamGetOrganization(ownerOrg);
+    const orgId = await ensureConsoleOrgForIamOrg({
+      name: ownerOrg,
+      displayName: iamOrg?.displayName,
+    });
+    await upsertMembershipAtLeast(consoleUserId, orgId, role);
+    logger.info(
+      `[iam-sync] ${email}: ${role} on own org ${orgId} (dedicated=${isOwnDedicatedOrg})`,
+    );
   } catch (error) {
     logger.error(
       "[iam-sync] membership sync failed: " +

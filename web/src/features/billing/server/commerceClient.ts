@@ -45,6 +45,11 @@ async function commerceRequest<T>(
     body?: unknown;
     params?: Record<string, string | undefined>;
     headers?: Record<string, string>;
+    // Org slug. Commerce's service-token middleware resolves the tenant from
+    // the `X-Hanzo-Org` header (falling back to COMMERCE_SERVICE_ORG, then
+    // "hanzo"). Every billing read/write is org-scoped, so we always send it.
+    // Without it the handler's `middleware.GetOrganization` panics -> 500.
+    org?: string;
   },
 ): Promise<T> {
   const token = getToken();
@@ -60,6 +65,7 @@ async function commerceRequest<T>(
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      ...(opts?.org ? { "X-Hanzo-Org": opts.org } : {}),
       ...(opts?.headers ?? {}),
     },
     ...(opts?.body ? { body: JSON.stringify(opts.body) } : {}),
@@ -73,34 +79,38 @@ async function commerceRequest<T>(
 
 export function commerceGet<T>(
   path: string,
+  org: string,
   params?: Record<string, string | undefined>,
   headers?: Record<string, string>,
 ): Promise<T> {
-  return commerceRequest<T>("GET", path, { params, headers });
+  return commerceRequest<T>("GET", path, { org, params, headers });
 }
 
 export function commercePost<T>(
   path: string,
+  org: string,
   body: unknown,
   params?: Record<string, string | undefined>,
   headers?: Record<string, string>,
 ): Promise<T> {
-  return commerceRequest<T>("POST", path, { body, params, headers });
+  return commerceRequest<T>("POST", path, { org, body, params, headers });
 }
 
 export function commercePatch<T>(
   path: string,
+  org: string,
   body: unknown,
   params?: Record<string, string | undefined>,
   headers?: Record<string, string>,
 ): Promise<T> {
-  return commerceRequest<T>("PATCH", path, { body, params, headers });
+  return commerceRequest<T>("PATCH", path, { org, body, params, headers });
 }
 
 export function commerceDelete<T>(
   path: string,
+  org: string,
   params?: Record<string, string | undefined>,
   headers?: Record<string, string>,
 ): Promise<T> {
-  return commerceRequest<T>("DELETE", path, { params, headers });
+  return commerceRequest<T>("DELETE", path, { org, params, headers });
 }

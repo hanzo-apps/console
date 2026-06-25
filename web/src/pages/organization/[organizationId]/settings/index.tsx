@@ -11,6 +11,7 @@ import { DeleteOrganizationButton } from "@/src/features/organizations/component
 import ContainerPage from "@/src/components/layouts/container-page";
 import { useQueryProjectOrOrganization } from "@/src/features/projects/hooks";
 import { ApiKeyList } from "@/src/features/public-api/components/ApiKeyList";
+import { CloudApiKeys } from "@/src/features/cloud-api-keys/components/CloudApiKeys";
 import AIFeatureSwitch from "@/src/features/organizations/components/AIFeatureSwitch";
 import { OrgAuditLogsSettingsPage } from "@/src/features/audit-log-viewer/OrgAuditLogsSettingsPage";
 import { KmsOrgSettings } from "@/src/features/kms/components/KmsOrgSettings";
@@ -63,7 +64,8 @@ export const getOrganizationSettingsPages = ({
           items={[
             {
               title: "Delete this organization",
-              description: "Once you delete an organization, there is no going back. Please be certain.",
+              description:
+                "Once you delete an organization, there is no going back. Please be certain.",
               button: <DeleteOrganizationButton />,
             },
           ]}
@@ -74,8 +76,10 @@ export const getOrganizationSettingsPages = ({
   {
     title: "API Keys",
     slug: "api-keys",
+    cmdKKeywords: ["cloud", "hk", "api key", "token", "completions"],
     content: (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-8">
+        <CloudApiKeys orgId={organization.id} />
         <ApiKeyList entityId={organization.id} scope="organization" />
       </div>
     ),
@@ -135,7 +139,10 @@ const OrgSettingsPage = () => {
         title: "Organization Settings",
       }}
     >
-      <PagedSettingsContainer activeSlug={page as string | undefined} pages={pages} />
+      <PagedSettingsContainer
+        activeSlug={page as string | undefined}
+        pages={pages}
+      />
     </ContainerPage>
   );
 };

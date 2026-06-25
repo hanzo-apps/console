@@ -2,6 +2,7 @@ import { type ReactNode, useMemo } from "react";
 import { IamProvider as HanzoIamReactProvider } from "@hanzo/iam/react";
 import { type BrowserIamConfig } from "@hanzo/iam/browser";
 import { env } from "@/src/env.mjs";
+import { getBrandFromHost } from "@/src/features/branding/brandRegistry";
 
 /**
  * App-shell provider that mounts the canonical `@hanzo/iam/react` IamProvider so
@@ -36,12 +37,20 @@ function createMemoryStorage(): Storage {
 
 export function IamSessionProvider({ children }: { children: ReactNode }) {
   const config = useMemo<BrowserIamConfig | null>(() => {
-    const serverUrl = env.NEXT_PUBLIC_IAM_SERVER_URL;
-    const clientId = env.NEXT_PUBLIC_IAM_CLIENT_ID;
+    const isClient = typeof window !== "undefined";
+    // White-label by host: resolve the brand's public IAM OIDC config at runtime
+    // from the brand registry (one image serves every brand), mirroring
+    // session.tsx. Without this fallback the provider silently no-ops whenever
+    // the build did not bake NEXT_PUBLIC_IAM_* — which is the intended setup —
+    // and every useIam() consumer (notably the /auth/iam/callback page) throws
+    // "must be used within an <IamProvider>". A deploy-set NEXT_PUBLIC_IAM_*
+    // still wins (getBrandFromHost layers it on top).
+    const brand = getBrandFromHost(isClient ? window.location.hostname : "");
+    const serverUrl = env.NEXT_PUBLIC_IAM_SERVER_URL || brand.iamServerUrl;
+    const clientId = env.NEXT_PUBLIC_IAM_CLIENT_ID || brand.iamClientId;
     if (!serverUrl || !clientId) return null;
 
     const basePath = env.NEXT_PUBLIC_BASE_PATH ?? "";
-    const isClient = typeof window !== "undefined";
     const origin = isClient ? window.location.origin : "";
 
     return {

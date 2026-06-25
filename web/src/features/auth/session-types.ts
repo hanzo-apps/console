@@ -20,6 +20,11 @@ export interface User {
   id: PrismaUser["id"];
   name?: PrismaUser["name"];
   email?: PrismaUser["email"];
+  // The IAM `sub` ("<org>/<username>") carried from the verified login. This is
+  // the authoritative IAM identity ref (NOT positionally reconstructed) used by
+  // server-side IAM provisioning (e.g. hk- Cloud API key mint/revoke). Optional:
+  // absent for sessions established without an IAM sub (legacy/local).
+  iamSub?: string;
   emailSupportHash?: string | null;
   image?: PrismaUser["image"];
   admin?: PrismaUser["admin"];
