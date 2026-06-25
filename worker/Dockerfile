@@ -50,6 +50,27 @@ COPY --from=pruner /app/out/full/ .
 
 RUN turbo run build --filter=worker...
 
+FROM builder AS prod-deps
+
+# Prune the worker to a production-only payload at /prod/worker (pnpm deploy),
+# then carry Prisma's generated client + native engine over (pnpm deploy drops
+# the generated .prisma), and strip Next/next-auth that @hanzo/shared pulls but
+# the worker never runs. (Lost in an upstream merge; the runner COPY --from=prod-deps
+# referenced a missing stage -> buildkit tried to pull it -> "pull access denied".)
+RUN rm -rf /prod && \
+    pnpm --filter worker deploy --prod /prod/worker && \
+    builder_prisma_client_dir="$(find /app/node_modules/.pnpm -path '*/node_modules/@prisma/client' -type d | head -n 1)" && \
+    deployed_prisma_client_dir="$(find /prod/worker/node_modules/.pnpm -path '*/node_modules/@prisma/client' -type d | head -n 1)" && \
+    builder_prisma_runtime_dir="$(dirname "$(dirname "$builder_prisma_client_dir")")/.prisma" && \
+    deployed_prisma_runtime_dir="$(dirname "$(dirname "$deployed_prisma_client_dir")")/.prisma" && \
+    rm -rf "$deployed_prisma_client_dir" "$deployed_prisma_runtime_dir" && \
+    mkdir -p "$(dirname "$deployed_prisma_client_dir")" && \
+    cp -R "$builder_prisma_client_dir" "$deployed_prisma_client_dir" && \
+    cp -R "$builder_prisma_runtime_dir" "$deployed_prisma_runtime_dir" && \
+    find /prod/worker/node_modules \
+      \( -path '*/node_modules/next' -o -path '*/node_modules/next-auth' -o -path '*/.bin/next' \) \
+      -exec rm -rf {} +
+
 FROM base AS runner
 
 ARG TARGETPLATFORM
