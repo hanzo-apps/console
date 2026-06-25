@@ -106,6 +106,16 @@ export function commercePatch<T>(
   return commerceRequest<T>("PATCH", path, { org, body, params, headers });
 }
 
+export function commercePut<T>(
+  path: string,
+  org: string,
+  body: unknown,
+  params?: Record<string, string | undefined>,
+  headers?: Record<string, string>,
+): Promise<T> {
+  return commerceRequest<T>("PUT", path, { org, body, params, headers });
+}
+
 export function commerceDelete<T>(
   path: string,
   org: string,
