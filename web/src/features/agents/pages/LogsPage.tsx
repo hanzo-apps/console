@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "../adapters";
 import { PageHeader, TIME_FILTER_OPTIONS } from "../components/PageHeader";
-import { getEnhancedExecutions, streamExecutionEvents } from "../services/executionsApi";
-import type { EnhancedExecution, ExecutionViewFilters } from "../types/workflows";
+import {
+  getEnhancedExecutions,
+  streamExecutionEvents,
+} from "../services/executionsApi";
+import type {
+  EnhancedExecution,
+  ExecutionViewFilters,
+} from "../types/workflows";
 import { getNextTimeRange } from "../lib/timeRanges";
 import { Badge } from "../components/ui/badge";
 import { cn } from "../lib/utils";
@@ -21,8 +27,10 @@ const PAGE_SIZE = 50;
 
 function statusToLevel(status: string): LogLevel {
   const lower = status.toLowerCase();
-  if (lower === "failed" || lower === "error" || lower === "cancelled") return "error";
-  if (lower === "running" || lower === "pending" || lower === "queued") return "warn";
+  if (lower === "failed" || lower === "error" || lower === "cancelled")
+    return "error";
+  if (lower === "running" || lower === "pending" || lower === "queued")
+    return "warn";
   return "info";
 }
 
@@ -31,10 +39,11 @@ function LevelBadge({ level }: { level: LogLevel }) {
     <Badge
       variant="outline"
       className={cn(
-        "text-[10px] font-mono uppercase px-1.5 py-0",
-        level === "error" && "border-red-500/30 text-red-500 bg-red-500/5",
-        level === "warn" && "border-amber-500/30 text-amber-500 bg-amber-500/5",
-        level === "info" && "border-blue-500/30 text-blue-500 bg-blue-500/5",
+        "px-1.5 py-0 font-mono text-[10px] uppercase",
+        level === "error" && "border-red-500/30 bg-red-500/5 text-red-500",
+        level === "warn" && "border-amber-500/30 bg-amber-500/5 text-amber-500",
+        level === "info" &&
+          "border-muted-foreground/30 text-muted-foreground bg-muted-foreground/5",
       )}
     >
       {level}
@@ -73,7 +82,14 @@ export function LogsPage() {
       if (timeRange !== "all") {
         filters.timeRange = timeRange;
       }
-      const response = await getEnhancedExecutions(filters, "started_at", "desc", 1, PAGE_SIZE, controller.signal);
+      const response = await getEnhancedExecutions(
+        filters,
+        "started_at",
+        "desc",
+        1,
+        PAGE_SIZE,
+        controller.signal,
+      );
 
       const results = response.executions ?? [];
 
@@ -139,7 +155,11 @@ export function LogsPage() {
   const filteredLogs = useMemo(() => {
     return executions.filter((exec) => {
       if (level !== "all" && statusToLevel(exec.status) !== level) return false;
-      if (botFilter && !exec.agent_name?.toLowerCase().includes(botFilter.toLowerCase())) return false;
+      if (
+        botFilter &&
+        !exec.agent_name?.toLowerCase().includes(botFilter.toLowerCase())
+      )
+        return false;
       return true;
     });
   }, [executions, level, botFilter]);
@@ -180,19 +200,25 @@ export function LogsPage() {
           placeholder="Filter by bot name..."
           value={botFilter}
           onChange={(e) => setBotFilter(e.target.value)}
-          className="h-8 w-64 rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring h-8 w-64 rounded-md border px-3 text-sm focus-visible:ring-1 focus-visible:outline-none"
         />
         {botFilter && (
-          <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setBotFilter("")}>
+          <button
+            className="text-muted-foreground hover:text-foreground text-xs"
+            onClick={() => setBotFilter("")}
+          >
             Clear
           </button>
         )}
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg p-4">
-          <p className="text-red-800 dark:text-red-400 text-sm">{error}</p>
-          <button onClick={fetchLogs} className="mt-2 text-xs text-red-600 dark:text-red-400 hover:underline">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-500/20 dark:bg-red-500/10">
+          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+          <button
+            onClick={fetchLogs}
+            className="mt-2 text-xs text-red-600 hover:underline dark:text-red-400"
+          >
             Retry
           </button>
         </div>
@@ -201,7 +227,10 @@ export function LogsPage() {
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-12 rounded-md bg-muted/30 animate-pulse" />
+            <div
+              key={i}
+              className="bg-muted/30 h-12 animate-pulse rounded-md"
+            />
           ))}
         </div>
       ) : filteredLogs.length === 0 ? (
@@ -213,26 +242,32 @@ export function LogsPage() {
           tip="Run `hanzo bot run` locally to connect"
         />
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <div className="divide-y divide-border">
+        <div className="border-border overflow-hidden rounded-lg border">
+          <div className="divide-border divide-y">
             {filteredLogs.map((exec) => {
               const logLevel = statusToLevel(exec.status);
               return (
                 <button
                   key={exec.execution_id}
                   onClick={() => handleRowClick(exec)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/50 transition-colors text-sm"
+                  className="hover:bg-muted/50 flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors"
                 >
-                  <span className="text-xs text-muted-foreground font-mono w-24 shrink-0">{exec.relative_time}</span>
+                  <span className="text-muted-foreground w-24 shrink-0 font-mono text-xs">
+                    {exec.relative_time}
+                  </span>
                   <LevelBadge level={logLevel} />
-                  <span className="font-medium truncate min-w-0">
+                  <span className="min-w-0 truncate font-medium">
                     {exec.task_name || exec.workflow_name || "Execution"}
                   </span>
                   {exec.agent_name && (
-                    <span className="text-xs text-muted-foreground font-mono truncate">{exec.agent_name}</span>
+                    <span className="text-muted-foreground truncate font-mono text-xs">
+                      {exec.agent_name}
+                    </span>
                   )}
-                  <span className="ml-auto text-xs text-muted-foreground shrink-0">{exec.duration_display}</span>
-                  <Badge variant="outline" className="text-[10px] shrink-0">
+                  <span className="text-muted-foreground ml-auto shrink-0 text-xs">
+                    {exec.duration_display}
+                  </span>
+                  <Badge variant="outline" className="shrink-0 text-[10px]">
                     {exec.status}
                   </Badge>
                 </button>

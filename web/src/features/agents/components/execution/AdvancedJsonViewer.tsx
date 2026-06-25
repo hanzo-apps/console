@@ -32,7 +32,7 @@ interface JsonNodeProps {
 }
 
 function detectContentType(
-  value: any
+  value: any,
 ):
   | "markdown"
   | "json"
@@ -90,7 +90,7 @@ function detectContentType(
       if (
         keys.some(
           (key) =>
-            key.startsWith("_") || key.includes("arg") || key.includes("param")
+            key.startsWith("_") || key.includes("arg") || key.includes("param"),
         )
       ) {
         return "kwargs";
@@ -105,19 +105,19 @@ function detectContentType(
 function getTypeIcon(type: string) {
   switch (type) {
     case "markdown":
-      return <FileText className="w-3 h-3 text-blue-500" />;
+      return <FileText className="text-foreground h-3 w-3" />;
     case "json":
-      return <Braces className="w-3 h-3 text-purple-500" />;
+      return <Braces className="h-3 w-3 text-purple-500" />;
     case "args":
-      return <List className="w-3 h-3 text-green-500" />;
+      return <List className="h-3 w-3 text-green-500" />;
     case "kwargs":
-      return <Hash className="w-3 h-3 text-orange-500" />;
+      return <Hash className="h-3 w-3 text-orange-500" />;
     case "string":
-      return <Quote className="w-3 h-3 text-green-600" />;
+      return <Quote className="h-3 w-3 text-green-600" />;
     case "number":
-      return <Type className="w-3 h-3 text-blue-600" />;
+      return <Type className="text-foreground h-3 w-3" />;
     case "code":
-      return <FileText className="w-3 h-3 text-red-500" />;
+      return <FileText className="h-3 w-3 text-red-500" />;
     default:
       return null;
   }
@@ -130,19 +130,19 @@ function MarkdownPreview({ content }: { content: string }) {
       .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
       .replace(
         /`(.*?)`/g,
-        '<code class="bg-muted px-1 rounded text-sm font-mono text-foreground">$1</code>'
+        '<code class="bg-muted px-1 rounded text-sm font-mono text-foreground">$1</code>',
       )
       .replace(/\n\n/g, '</p><p class="mt-2">')
       .replace(/\n/g, "<br>")
       .replace(
         /\[(.*?)\]\((.*?)\)/g,
-        '<a href="$2" class="text-blue-500 hover:underline" target="_blank" rel="noopener">$1</a>'
+        '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener">$1</a>',
       );
   }, [content]);
 
   return (
     <div
-      className="prose prose-sm max-w-none text-foreground bg-blue-50/30 dark:bg-blue-950/20 p-2 rounded border border-blue-200/50 dark:border-blue-800/50"
+      className="prose prose-sm text-foreground bg-muted/30 border-border/50 max-w-none rounded border p-2"
       dangerouslySetInnerHTML={{ __html: `<p>${formattedContent}</p>` }}
     />
   );
@@ -182,15 +182,13 @@ function JsonNode({
 
     if (typeof data === "boolean") {
       return (
-        <span className="text-blue-600 dark:text-blue-400 font-medium">
-          {String(data)}
-        </span>
+        <span className="text-foreground font-medium">{String(data)}</span>
       );
     }
 
     if (typeof data === "number") {
       return (
-        <span className="text-purple-600 dark:text-purple-400 font-medium">
+        <span className="font-medium text-purple-600 dark:text-purple-400">
           {data}
         </span>
       );
@@ -227,7 +225,7 @@ function JsonNode({
           )}
 
           {showPreview && contentType === "code" && (
-            <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-sm font-mono overflow-x-auto">
+            <pre className="overflow-x-auto rounded bg-gray-100 p-2 font-mono text-sm dark:bg-gray-800">
               <code>{data}</code>
             </pre>
           )}
@@ -256,16 +254,16 @@ function JsonNode({
   if (!isExpandable) {
     return (
       <div
-        className="flex items-start gap-2 group py-0.5"
+        className="group flex items-start gap-2 py-0.5"
         style={{ paddingLeft: `${level * 16}px` }}
       >
         <div className="w-4" /> {/* Spacer for alignment */}
         {keyName && (
-          <span className="text-blue-700 dark:text-blue-300 font-medium shrink-0">
+          <span className="text-muted-foreground shrink-0 font-medium">
             "{keyName}":
           </span>
         )}
-        <div className="flex-1 min-w-0">{renderValue()}</div>
+        <div className="min-w-0 flex-1">{renderValue()}</div>
         <CopyButton
           value={String(data)}
           variant="ghost"
@@ -285,20 +283,20 @@ function JsonNode({
   return (
     <div className="space-y-1">
       <div
-        className="flex items-center gap-2 group py-0.5 cursor-pointer hover:bg-muted/30 rounded px-1"
+        className="group hover:bg-muted/30 flex cursor-pointer items-center gap-2 rounded px-1 py-0.5"
         style={{ paddingLeft: `${level * 16}px` }}
         onClick={toggleExpanded}
       >
-        <button className="flex items-center justify-center w-4 h-4 hover:bg-muted rounded">
+        <button className="hover:bg-muted flex h-4 w-4 items-center justify-center rounded">
           {isExpanded ? (
-            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+            <ChevronDown className="text-muted-foreground h-3 w-3" />
           ) : (
-            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+            <ChevronRight className="text-muted-foreground h-3 w-3" />
           )}
         </button>
 
         {keyName && (
-          <span className="text-blue-700 dark:text-blue-300 font-medium">
+          <span className="text-muted-foreground font-medium">
             "{keyName}":
           </span>
         )}
@@ -374,12 +372,12 @@ export function AdvancedJsonViewer({
 
   return (
     <div
-      className={`border border-border rounded-lg bg-background ${className}`}
+      className={`border-border bg-background rounded-lg border ${className}`}
     >
       {searchable && (
-        <div className="border-b border-border p-3">
+        <div className="border-border border-b p-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
             <Input
               placeholder="Search keys and values..."
               value={searchTerm}
@@ -391,7 +389,7 @@ export function AdvancedJsonViewer({
       )}
 
       <div
-        className="overflow-auto p-4 font-mono text-sm scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground"
+        className="scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground scrollbar-thin scrollbar-track-transparent overflow-auto p-4 font-mono text-sm"
         style={{ maxHeight }}
       >
         <JsonNode

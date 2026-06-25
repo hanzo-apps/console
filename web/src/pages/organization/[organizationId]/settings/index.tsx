@@ -15,7 +15,6 @@ import { ApiKeyList } from "@/src/features/public-api/components/ApiKeyList";
 import { CloudApiKeys } from "@/src/features/cloud-api-keys/components/CloudApiKeys";
 import AIFeatureSwitch from "@/src/features/organizations/components/AIFeatureSwitch";
 import { OrgAuditLogsSettingsPage } from "@/src/features/audit-log-viewer/OrgAuditLogsSettingsPage";
-import { KmsOrgSettings } from "@/src/features/kms/components/KmsOrgSettings";
 import { BillingSettings } from "@/src/features/billing/components/BillingSettings";
 import { env } from "@/src/env.mjs";
 
@@ -133,12 +132,7 @@ export const getOrganizationSettingsPages = ({
     cmdKKeywords: ["payment", "subscription", "plan", "invoice", "usage"],
     content: <BillingSettings />,
   },
-  {
-    title: "KMS",
-    slug: "kms",
-    cmdKKeywords: ["secrets", "encryption", "keys", "kms", "vault"],
-    content: <KmsOrgSettings orgId={organization.id} />,
-  },
+  // KMS removed: it is a separate service, not an organization setting.
   {
     title: "Projects",
     slug: "projects",

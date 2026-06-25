@@ -7,7 +7,7 @@ import {
   Clock,
   Play,
   Cog,
-  XCircle
+  XCircle,
 } from "@/src/features/agents/components/ui/icon-bridge";
 import { useNavigate } from "../../adapters";
 import type { WorkflowExecution } from "../../types/executions";
@@ -38,25 +38,25 @@ function ExecutionTimeline({ execution }: { execution: WorkflowExecution }) {
 
   const getTimelineSteps = () => {
     const steps = [
-      { name: 'queued', label: 'Queued', icon: Clock },
-      { name: 'started', label: 'Started', icon: Play },
-      { name: 'processing', label: 'Processing', icon: Cog },
-      { name: 'completed', label: 'Completed', icon: CheckCircle }
+      { name: "queued", label: "Queued", icon: Clock },
+      { name: "started", label: "Started", icon: Play },
+      { name: "processing", label: "Processing", icon: Cog },
+      { name: "completed", label: "Completed", icon: CheckCircle },
     ];
     const status = normalizeExecutionStatus(execution.status);
 
     let completedSteps = 0;
     switch (status) {
-      case 'succeeded':
+      case "succeeded":
         completedSteps = 4;
         break;
-      case 'failed':
+      case "failed":
         completedSteps = 3; // Failed during processing
         break;
-      case 'running':
+      case "running":
         completedSteps = 3; // Show processing as current
         break;
-      case 'queued':
+      case "queued":
         completedSteps = 1;
         break;
       default:
@@ -66,8 +66,10 @@ function ExecutionTimeline({ execution }: { execution: WorkflowExecution }) {
     return steps.map((step, index) => ({
       ...step,
       completed: index < completedSteps,
-      current: index === completedSteps - 1 && (status === 'running' || status === 'queued'),
-      failed: status === 'failed' && index === completedSteps - 1
+      current:
+        index === completedSteps - 1 &&
+        (status === "running" || status === "queued"),
+      failed: status === "failed" && index === completedSteps - 1,
     }));
   };
 
@@ -75,13 +77,13 @@ function ExecutionTimeline({ execution }: { execution: WorkflowExecution }) {
     try {
       const timestamp = new Date(date);
       return timestamp.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
       });
     } catch {
-      return '';
+      return "";
     }
   };
 
@@ -109,53 +111,75 @@ function ExecutionTimeline({ execution }: { execution: WorkflowExecution }) {
             <div key={step.name} className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
                 {/* Status dot */}
-                <div className={cn(
-                  "h-1.5 w-1.5 rounded-full flex-shrink-0",
-                  step.completed ? "bg-success" :
-                  step.current ? "bg-primary" :
-                  step.failed ? "bg-destructive" :
-                  "bg-muted-foreground/30"
-                )} />
+                <div
+                  className={cn(
+                    "h-1.5 w-1.5 flex-shrink-0 rounded-full",
+                    step.completed
+                      ? "bg-success"
+                      : step.current
+                        ? "bg-primary"
+                        : step.failed
+                          ? "bg-destructive"
+                          : "bg-muted-foreground/30",
+                  )}
+                />
 
                 {/* Icon */}
-                <Icon className={cn(
-                  "h-4 w-4 flex-shrink-0",
-                  step.completed ? "text-success" :
-                  step.current ? "text-primary" :
-                  step.failed ? "text-destructive" :
-                  "text-muted-foreground",
-                  step.current && step.name === 'processing' && "animate-spin"
-                )} />
+                <Icon
+                  className={cn(
+                    "h-4 w-4 flex-shrink-0",
+                    step.completed
+                      ? "text-success"
+                      : step.current
+                        ? "text-primary"
+                        : step.failed
+                          ? "text-destructive"
+                          : "text-muted-foreground",
+                    step.current &&
+                      step.name === "processing" &&
+                      "animate-spin",
+                  )}
+                />
 
                 {/* Step label */}
-                <span className={cn(
-                  "text-xs font-medium",
-                  isActive ? "text-foreground" : "text-muted-foreground"
-                )}>
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    isActive ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
                   {step.label}
                 </span>
               </div>
 
               {/* Timestamp and duration */}
               {isActive && (
-                <div className="flex items-center gap-1 text-body-small font-mono">
-                  {step.name === 'queued' && execution.created_at && (
-                    <span title={`Queued at ${new Date(execution.created_at).toLocaleString()}`}>
+                <div className="text-body-small flex items-center gap-1 font-mono">
+                  {step.name === "queued" && execution.created_at && (
+                    <span
+                      title={`Queued at ${new Date(execution.created_at).toLocaleString()}`}
+                    >
                       {formatTimestamp(execution.created_at)}
                     </span>
                   )}
-                  {step.name === 'started' && execution.started_at && (
-                    <span title={`Started at ${new Date(execution.started_at).toLocaleString()}`}>
+                  {step.name === "started" && execution.started_at && (
+                    <span
+                      title={`Started at ${new Date(execution.started_at).toLocaleString()}`}
+                    >
                       {formatTimestamp(execution.started_at)}
                     </span>
                   )}
-                  {step.name === 'processing' && execution.started_at && (
-                    <span title={`Processing since ${new Date(execution.started_at).toLocaleString()}`}>
+                  {step.name === "processing" && execution.started_at && (
+                    <span
+                      title={`Processing since ${new Date(execution.started_at).toLocaleString()}`}
+                    >
                       {formatTimestamp(execution.started_at)}
                     </span>
                   )}
-                  {step.name === 'completed' && execution.completed_at && (
-                    <span title={`Completed at ${new Date(execution.completed_at).toLocaleString()}`}>
+                  {step.name === "completed" && execution.completed_at && (
+                    <span
+                      title={`Completed at ${new Date(execution.completed_at).toLocaleString()}`}
+                    >
                       {formatTimestamp(execution.completed_at)}
                     </span>
                   )}
@@ -174,7 +198,7 @@ function ExecutionTimeline({ execution }: { execution: WorkflowExecution }) {
 
               {/* Connector line */}
               {index < timelineSteps.length - 1 && (
-                <div className="h-px w-3 bg-border flex-shrink-0" />
+                <div className="bg-border h-px w-3 flex-shrink-0" />
               )}
             </div>
           );
@@ -185,9 +209,9 @@ function ExecutionTimeline({ execution }: { execution: WorkflowExecution }) {
         variant="ghost"
         size="sm"
         onClick={() => navigate(`/workflows/${execution.workflow_id}/enhanced`)}
-        className="h-6 px-2 text-body-small hover:text-foreground ml-2"
+        className="text-body-small hover:text-foreground ml-2 h-6 px-2"
       >
-        <ExternalLink className="w-3 h-3 mr-1" />
+        <ExternalLink className="mr-1 h-3 w-3" />
         View Workflow
       </Button>
     </div>
@@ -201,23 +225,40 @@ function HealthIndicator({ execution }: { execution: WorkflowExecution }) {
 
   // Simple health logic
   const getHealthStatus = () => {
-    if (status === 'failed') return { type: 'failed', label: 'Failed', color: 'text-red-500' };
-    if (retryCount > 0) return { type: 'warning', label: 'Retried', color: 'text-yellow-500' };
-    if (duration > 30000) return { type: 'slow', label: 'Slow', color: 'text-yellow-500' }; // > 30s
-    if (status === 'succeeded') return { type: 'healthy', label: 'Healthy', color: 'text-green-500' };
-    if (status === 'running') return { type: 'running', label: 'Running', color: 'text-blue-500' };
-    return { type: 'unknown', label: 'Unknown', color: 'text-muted-foreground' };
+    if (status === "failed")
+      return { type: "failed", label: "Failed", color: "text-red-500" };
+    if (retryCount > 0)
+      return { type: "warning", label: "Retried", color: "text-yellow-500" };
+    if (duration > 30000)
+      return { type: "slow", label: "Slow", color: "text-yellow-500" }; // > 30s
+    if (status === "succeeded")
+      return { type: "healthy", label: "Healthy", color: "text-green-500" };
+    if (status === "running")
+      return {
+        type: "running",
+        label: "Running",
+        color: "text-muted-foreground",
+      };
+    return {
+      type: "unknown",
+      label: "Unknown",
+      color: "text-muted-foreground",
+    };
   };
 
   const health = getHealthStatus();
-  const HealthIcon = health.type === 'failed' ? AlertCircle :
-                    health.type === 'healthy' ? CheckCircle :
-                    health.type === 'running' ? Activity :
-                    Clock;
+  const HealthIcon =
+    health.type === "failed"
+      ? AlertCircle
+      : health.type === "healthy"
+        ? CheckCircle
+        : health.type === "running"
+          ? Activity
+          : Clock;
 
   return (
     <div className="flex items-center gap-1">
-      <HealthIcon className={cn("w-3 h-3", health.color)} />
+      <HealthIcon className={cn("h-3 w-3", health.color)} />
       <span className={cn("text-xs font-medium", health.color)}>
         {health.label}
       </span>
@@ -233,11 +274,12 @@ export function EnhancedExecutionHeader({
   execution,
   vcStatus,
   vcLoading,
-  onClose
+  onClose,
 }: EnhancedExecutionHeaderProps) {
   const navigate = useNavigate();
   const normalizedStatus = normalizeExecutionStatus(execution.status);
-  const statusLabel = normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
+  const statusLabel =
+    normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
   const workflowTags = execution.workflow_tags ?? [];
 
   const handleClose = () => {
@@ -248,20 +290,21 @@ export function EnhancedExecutionHeader({
     }
   };
 
-  const handleNavigateWorkflow = () => navigate(`/workflows/${execution.workflow_id}/enhanced`);
+  const handleNavigateWorkflow = () =>
+    navigate(`/workflows/${execution.workflow_id}/enhanced`);
 
   return (
-    <div className="border-b border-border bg-card/50">
-      <div className="px-6 py-4 space-y-3">
+    <div className="border-border bg-card/50 border-b">
+      <div className="space-y-3 px-6 py-4">
         {/* Back Navigation */}
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleClose}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground -ml-2"
+            className="text-muted-foreground hover:text-foreground -ml-2 flex items-center gap-2"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" />
             Back to Executions
           </Button>
 
@@ -274,17 +317,17 @@ export function EnhancedExecutionHeader({
             <h1 className="text-heading-2">{execution.reasoner_id}</h1>
             <StatusIndicator
               status={normalizedStatus}
-              animated={normalizedStatus === 'running'}
+              animated={normalizedStatus === "running"}
               className="text-sm"
             />
             <span className="text-body">{statusLabel}</span>
           </div>
 
           {/* Key Information Row */}
-          <div className="flex flex-wrap items-center gap-4 text-body">
-            <div className="flex items-center gap-2 group">
+          <div className="text-body flex flex-wrap items-center gap-4">
+            <div className="group flex items-center gap-2">
               <span>Agent:</span>
-              <code className="font-mono text-body-small text-foreground bg-muted/30 px-1.5 py-0.5 rounded">
+              <code className="text-body-small text-foreground bg-muted/30 rounded px-1.5 py-0.5 font-mono">
                 {execution.agent_node_id}
               </code>
               <CopyButton
@@ -298,12 +341,16 @@ export function EnhancedExecutionHeader({
 
             <div className="flex items-center gap-2">
               <span>DID:</span>
-              <DIDDisplay nodeId={execution.agent_node_id} variant="inline" className="text-body-small" />
+              <DIDDisplay
+                nodeId={execution.agent_node_id}
+                variant="inline"
+                className="text-body-small"
+              />
             </div>
 
-            <div className="flex items-center gap-2 group">
+            <div className="group flex items-center gap-2">
               <span>ID:</span>
-              <code className="font-mono text-body-small text-foreground bg-muted/30 px-1.5 py-0.5 rounded">
+              <code className="text-body-small text-foreground bg-muted/30 rounded px-1.5 py-0.5 font-mono">
                 {truncateId(execution.execution_id)}
               </code>
               <CopyButton
@@ -336,16 +383,16 @@ export function EnhancedExecutionHeader({
           </div>
 
           {/* Workflow Context Row */}
-          <div className="flex flex-wrap items-center gap-4 text-body-small">
-            <div className="flex items-center gap-2 group">
+          <div className="text-body-small flex flex-wrap items-center gap-4">
+            <div className="group flex items-center gap-2">
               <span>Workflow:</span>
               <button
                 type="button"
                 onClick={handleNavigateWorkflow}
-                className="font-medium text-foreground hover:underline flex items-center gap-1"
+                className="text-foreground flex items-center gap-1 font-medium hover:underline"
               >
                 {execution.workflow_name ?? truncateId(execution.workflow_id)}
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="h-3 w-3" />
               </button>
               <CopyButton
                 value={execution.workflow_id}
@@ -357,9 +404,9 @@ export function EnhancedExecutionHeader({
             </div>
 
             {execution.session_id && (
-              <div className="flex items-center gap-2 group">
+              <div className="group flex items-center gap-2">
                 <span>Session:</span>
-                <code className="font-mono text-xs text-foreground bg-muted/30 px-1.5 py-0.5 rounded">
+                <code className="text-foreground bg-muted/30 rounded px-1.5 py-0.5 font-mono text-xs">
                   {truncateId(execution.session_id)}
                 </code>
                 <CopyButton
@@ -372,10 +419,12 @@ export function EnhancedExecutionHeader({
               </div>
             )}
 
-            <div className="flex items-center gap-2 group">
+            <div className="group flex items-center gap-2">
               <span>Request:</span>
-              <code className="font-mono text-xs text-foreground bg-muted/30 px-1.5 py-0.5 rounded">
-                {execution.agents_request_id ? truncateId(execution.agents_request_id) : 'n/a'}
+              <code className="text-foreground bg-muted/30 rounded px-1.5 py-0.5 font-mono text-xs">
+                {execution.agents_request_id
+                  ? truncateId(execution.agents_request_id)
+                  : "n/a"}
               </code>
               {execution.agents_request_id && (
                 <CopyButton
@@ -398,7 +447,11 @@ export function EnhancedExecutionHeader({
                 <span className="text-body-small">Tags:</span>
                 <div className="flex flex-wrap gap-1">
                   {workflowTags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs font-normal">
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="text-xs font-normal"
+                    >
                       {tag}
                     </Badge>
                   ))}

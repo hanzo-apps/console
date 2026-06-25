@@ -26,7 +26,9 @@ import {
  * Organization.metadata.kmsProjectId.  Falls back to the global
  * KMS_PROJECT_ID env var (used in dev / single-tenant deploys).
  */
-function resolveKmsProjectId(ctx: { session: ProjectAuthedContext["session"] }): string {
+function resolveKmsProjectId(ctx: {
+  session: ProjectAuthedContext["session"];
+}): string {
   // 1. Try org-specific KMS project from session metadata
   const org = ctx.session.user.organizations.find(
     (o) => o.id === ctx.session.orgId,
@@ -71,11 +73,16 @@ export const kmsRouter = createTRPCRouter({
         scope: "kmsSecrets:read",
       });
 
-      return kmsGet<{ secrets: unknown[] }>("/api/v3/secrets/raw", {
-        workspaceId: resolveKmsProjectId(ctx),
-        environment: input.environment,
-        secretPath: input.secretPath,
-      });
+      try {
+        return await kmsGet<{ secrets: unknown[] }>("/api/v3/secrets/raw", {
+          workspaceId: resolveKmsProjectId(ctx),
+          environment: input.environment,
+          secretPath: input.secretPath,
+        });
+      } catch {
+        // KMS not configured for this org / unreachable → honest empty state.
+        return { secrets: [] as unknown[] };
+      }
     }),
 
   createSecret: protectedProjectProcedure
@@ -149,9 +156,13 @@ export const kmsRouter = createTRPCRouter({
         scope: "kmsSecrets:read",
       });
 
-      return kmsGet<{ environments: unknown[] }>(
-        `/api/v1/workspace/${resolveKmsProjectId(ctx)}/environments`,
-      );
+      try {
+        return await kmsGet<{ environments: unknown[] }>(
+          `/api/v1/workspace/${resolveKmsProjectId(ctx)}/environments`,
+        );
+      } catch {
+        return { environments: [] as unknown[] };
+      }
     }),
 
   // ── Encryption Keys (CMEK) ──────────────────────────────────────
@@ -165,9 +176,13 @@ export const kmsRouter = createTRPCRouter({
         scope: "kmsKeys:read",
       });
 
-      return kmsGet<{ keys: unknown[] }>("/api/v1/kms/keys", {
-        projectId: resolveKmsProjectId(ctx),
-      });
+      try {
+        return await kmsGet<{ keys: unknown[] }>("/api/v1/kms/keys", {
+          projectId: resolveKmsProjectId(ctx),
+        });
+      } catch {
+        return { keys: [] as unknown[] };
+      }
     }),
 
   createKey: protectedProjectProcedure
@@ -213,9 +228,7 @@ export const kmsRouter = createTRPCRouter({
         scope: "kmsKeys:CUD",
       });
 
-      return kmsDelete(
-        `/api/v1/kms/keys/${encodeURIComponent(input.keyId)}`,
-      );
+      return kmsDelete(`/api/v1/kms/keys/${encodeURIComponent(input.keyId)}`);
     }),
 
   encrypt: protectedProjectProcedure

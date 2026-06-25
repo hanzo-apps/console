@@ -10,7 +10,7 @@ import {
   Download,
   Link,
   InProgress,
-  WarningFilled
+  WarningFilled,
 } from "@/src/features/agents/components/ui/icon-bridge";
 
 interface VCStatusIndicatorProps {
@@ -27,7 +27,7 @@ export function VCStatusIndicator({
   className = "",
 }: VCStatusIndicatorProps) {
   const getStatusConfig = (
-    verificationStatus: VCStatusSummary["verification_status"]
+    verificationStatus: VCStatusSummary["verification_status"],
   ) => {
     switch (verificationStatus) {
       case "verified":
@@ -35,21 +35,24 @@ export function VCStatusIndicator({
           variant: "default" as const,
           label: "Verified",
           icon: CheckmarkFilled,
-          className: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
+          className:
+            "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
         };
       case "pending":
         return {
           variant: "secondary" as const,
           label: "Pending",
           icon: Time,
-          className: "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800",
+          className:
+            "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800",
         };
       case "failed":
         return {
           variant: "destructive" as const,
           label: "Failed",
           icon: ErrorFilled,
-          className: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800",
+          className:
+            "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800",
         };
       case "none":
       default:
@@ -57,7 +60,8 @@ export function VCStatusIndicator({
           variant: "outline" as const,
           label: "No VCs",
           icon: Document,
-          className: "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-700",
+          className:
+            "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-700",
         };
     }
   };
@@ -123,7 +127,7 @@ export function VCStatusIndicator({
         <>
           <Badge
             variant="outline"
-            className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+            className="bg-muted text-muted-foreground border-border text-xs"
           >
             {status.vc_count} VCs
           </Badge>
@@ -132,7 +136,7 @@ export function VCStatusIndicator({
             status.verified_count !== status.vc_count && (
               <Badge
                 variant="outline"
-                className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200"
+                className="border-yellow-200 bg-yellow-50 text-xs text-yellow-700"
               >
                 {status.verified_count}/{status.vc_count} verified
               </Badge>
@@ -169,7 +173,7 @@ export function ExecutionVCStatus({
     return (
       <Badge
         variant="outline"
-        className={`text-xs bg-gray-50 text-gray-600 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-700 ${className}`}
+        className={`bg-gray-50 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-950/20 dark:text-gray-400 ${className}`}
       >
         <Document size={12} className="mr-1" />
         No VC
@@ -185,7 +189,8 @@ export function ExecutionVCStatus({
           variant: "default" as const,
           label: "Verified",
           icon: CheckmarkFilled,
-          className: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
+          className:
+            "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
         };
       case "running":
       case "queued":
@@ -194,35 +199,40 @@ export function ExecutionVCStatus({
           variant: "secondary" as const,
           label: "Pending",
           icon: Time,
-          className: "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800",
+          className:
+            "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800",
         };
       case "failed":
         return {
           variant: "destructive" as const,
           label: "Failed",
           icon: ErrorFilled,
-          className: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800",
+          className:
+            "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800",
         };
       case "cancelled":
         return {
           variant: "outline" as const,
           label: "Cancelled",
           icon: Document,
-          className: "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-700",
+          className:
+            "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-700",
         };
       case "timeout":
         return {
           variant: "outline" as const,
           label: "Timed Out",
           icon: Time,
-          className: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-800",
+          className:
+            "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-800",
         };
       default:
         return {
           variant: "outline" as const,
           label: normalized,
           icon: Document,
-          className: "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-700",
+          className:
+            "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-700",
         };
     }
   };
@@ -245,7 +255,7 @@ export function ExecutionVCStatus({
           {onViewVC && (
             <button
               onClick={onViewVC}
-              className="p-1 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+              className="hover:text-foreground dark:hover:text-foreground p-1 text-gray-500 transition-colors dark:text-gray-400"
               title="View VC details"
               aria-label="View VC details"
             >
@@ -256,7 +266,7 @@ export function ExecutionVCStatus({
           {onDownloadVC && (
             <button
               onClick={onDownloadVC}
-              className="p-1 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors"
+              className="p-1 text-gray-500 transition-colors hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400"
               title="Download VC"
               aria-label="Download VC"
             >
@@ -293,7 +303,8 @@ export function VCChainStatus({
         variant: "default" as const,
         label: "Complete",
         icon: CheckmarkFilled,
-        className: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
+        className:
+          "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
       };
     }
 
@@ -304,7 +315,7 @@ export function VCChainStatus({
           variant: "secondary" as const,
           label: "In Progress",
           icon: InProgress,
-          className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800",
+          className: "bg-muted text-muted-foreground border-border",
         };
       case "failed":
       case "error":
@@ -312,14 +323,16 @@ export function VCChainStatus({
           variant: "destructive" as const,
           label: "Failed",
           icon: WarningFilled,
-          className: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800",
+          className:
+            "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800",
         };
       default:
         return {
           variant: "outline" as const,
           label: status,
           icon: Link,
-          className: "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-700",
+          className:
+            "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-700",
         };
     }
   };
@@ -344,14 +357,14 @@ export function VCChainStatus({
       </Badge>
 
       <div className="flex items-center gap-1">
-        <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div className="h-2 w-16 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div
             className={`h-full transition-all duration-300 ${
               isComplete
                 ? "bg-green-500 dark:bg-green-400"
                 : progress > 0
-                ? "bg-blue-500 dark:bg-blue-400"
-                : "bg-gray-300 dark:bg-gray-600"
+                  ? "bg-primary"
+                  : "bg-gray-300 dark:bg-gray-600"
             }`}
             style={{ width: `${Math.max(progress, 5)}%` }}
           />

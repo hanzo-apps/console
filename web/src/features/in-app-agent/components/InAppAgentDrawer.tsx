@@ -117,9 +117,7 @@ export function InAppAgentDrawer(props: InAppAgentDrawerProps) {
           <div className="flex w-full flex-col gap-4 px-3 py-4">
             {messages.length === 0 ? (
               <div className="border-border rounded-2xl border border-dashed px-4 py-3">
-                <p className="text-muted-foreground text-sm">
-                  Ask about Langfuse
-                </p>
+                <p className="text-muted-foreground text-sm">Ask about Hanzo</p>
               </div>
             ) : null}
 
@@ -186,8 +184,8 @@ export function InAppAgentDrawer(props: InAppAgentDrawerProps) {
                 }
               }}
               disabled={isRunning}
-              aria-label="Ask about Langfuse"
-              placeholder="Ask about Langfuse..."
+              aria-label="Ask about Hanzo"
+              placeholder="Ask about Hanzo..."
               rows={1}
               className="bg-background placeholder:text-muted-foreground border-input max-h-40 min-h-10 flex-1 resize-none overflow-y-auto rounded-md px-3 py-2 text-sm leading-5 disabled:cursor-not-allowed disabled:opacity-60"
             />

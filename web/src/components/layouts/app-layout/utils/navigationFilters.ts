@@ -7,6 +7,7 @@ import type { Route } from "@/src/components/layouts/routes";
 import type { NavigationFilterContext } from "./navigationFilters.types";
 import { hasProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
 import { hasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
+import { DEFAULT_ENABLED_MODULES } from "@/src/features/ui-customization/productModuleSchema";
 import type { User } from "@/src/features/auth/session-types";
 
 /** Organization type from user session (can be null when not in project/org context) */
@@ -63,21 +64,25 @@ export const filters = {
   },
 
   /**
-   * Filter routes based on UI customization settings (enterprise feature)
-   * Hides routes if their product module is not in visible modules list
+   * Gate routes by their product module.
+   *
+   * The effective set of enabled modules is, in priority order:
+   *   1. per-org UI customization `visibleModules` (enterprise), when present;
+   *   2. otherwise the curated `DEFAULT_ENABLED_MODULES` default surface.
+   *
+   * This applies everywhere (including Hanzo Cloud, where there is no per-org
+   * customization object) so the nav shows a tight set of coherent products
+   * rather than every module at once. Routes without a `productModule` (Home,
+   * Settings, etc.) are always allowed.
    */
   uiCustomization: (
     route: Route,
     ctx: NavigationFilterContext,
   ): Route | null => {
-    if (
-      route.productModule &&
-      ctx.uiCustomization &&
-      !ctx.uiCustomization.visibleModules.includes(route.productModule)
-    ) {
-      return null;
-    }
-    return route;
+    if (!route.productModule) return route;
+    const enabledModules: readonly string[] =
+      ctx.uiCustomization?.visibleModules ?? DEFAULT_ENABLED_MODULES;
+    return enabledModules.includes(route.productModule) ? route : null;
   },
 
   /**

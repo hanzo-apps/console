@@ -104,7 +104,7 @@ export function DeleteFolder({ folderPath }: { folderPath: string }) {
                     className="text-muted-foreground flex items-center gap-2"
                   >
                     {p.row_type === "folder" ? (
-                      <Folder className="h-3 w-3 text-blue-500" />
+                      <Folder className="text-primary h-3 w-3" />
                     ) : (
                       <FileText className="h-3 w-3" />
                     )}

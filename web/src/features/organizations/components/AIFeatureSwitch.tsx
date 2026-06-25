@@ -157,7 +157,7 @@ export default function AIFeatureSwitch() {
                 AI Data Use for Product/Service Improvement
               </h4>
               <p className="text-sm">
-                Share data about your use of AI with Langfuse for product and
+                Share data about your use of AI with Hanzo for product and
                 service improvement.
               </p>
             </div>

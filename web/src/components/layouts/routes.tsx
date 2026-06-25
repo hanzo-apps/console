@@ -583,12 +583,14 @@ const STATIC_ROUTES: Route[] = [
     productModule: "zt",
     section: RouteSection.Main,
   },
-  // Observability — embedded O11y view
+  // Observe — embedded O11y view. Gated under the infrastructure module so the
+  // core Observability group stays focused on Tracing / Sessions / Users.
   {
     title: "Observe",
     pathname: `/project/[projectId]/observe`,
     icon: Eye,
-    group: RouteGroup.Observability,
+    productModule: "infrastructure",
+    group: RouteGroup.Infrastructure,
     section: RouteSection.Main,
   },
   // Infrastructure
@@ -616,14 +618,9 @@ const STATIC_ROUTES: Route[] = [
     group: RouteGroup.Infrastructure,
     section: RouteSection.Main,
   },
-  {
-    title: "Base Tasks",
-    pathname: `/project/[projectId]/tasks`,
-    icon: ListTodo,
-    productModule: "base",
-    group: RouteGroup.Base,
-    section: RouteSection.Main,
-  },
+  // NOTE: removed the "Base Tasks" entry — it pointed at the same
+  // /project/[projectId]/tasks path as the Tasks-group "Workflows" entry,
+  // producing a duplicate nav item. One path, one entry.
   {
     title: "Experiments",
     pathname: `/project/[projectId]/experiments`,

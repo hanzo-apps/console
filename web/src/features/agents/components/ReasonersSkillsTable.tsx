@@ -2,7 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "../adapters";
 import { Badge } from "@/src/features/agents/components/ui/badge";
 import { Button } from "@/src/features/agents/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/features/agents/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/features/agents/components/ui/card";
 import { SearchBar } from "@/src/features/agents/components/ui/SearchBar";
 import {
   Table,
@@ -19,8 +24,14 @@ import {
   Identification,
 } from "@/src/features/agents/components/ui/icon-bridge";
 import { cn } from "@/src/features/agents/lib/utils";
-import type { ReasonerDefinition, SkillDefinition } from "@/src/features/agents/types/agents";
-import type { ReasonerDIDInfo, SkillDIDInfo } from "@/src/features/agents/types/did";
+import type {
+  ReasonerDefinition,
+  SkillDefinition,
+} from "@/src/features/agents/types/agents";
+import type {
+  ReasonerDIDInfo,
+  SkillDIDInfo,
+} from "@/src/features/agents/types/did";
 
 interface ReasonersSkillsTableProps {
   reasoners: ReasonerDefinition[];
@@ -65,41 +76,52 @@ export function ReasonersSkillsTable({
   // Determine if agent is active based on health and lifecycle status
   const isAgentActive = agentStatus
     ? agentStatus.health_status === "active" &&
-      (agentStatus.lifecycle_status === "ready" || agentStatus.lifecycle_status === "degraded")
+      (agentStatus.lifecycle_status === "ready" ||
+        agentStatus.lifecycle_status === "degraded")
     : false;
 
-  const componentStatus: "active" | "inactive" = isAgentActive ? "active" : "inactive";
+  const componentStatus: "active" | "inactive" = isAgentActive
+    ? "active"
+    : "inactive";
 
   // Combine agent DID, reasoners and skills into a unified table format
   const tableItems: TableItem[] = [
     // Add agent DID as first row if available
-    ...(agentDID ? [{
-      id: "agent",
-      name: "Agent Identity",
-      type: "agent" as const,
-      did: agentDID,
-      status: componentStatus,
-    }] : []),
-    ...reasoners.map((reasoner): TableItem => ({
-      id: reasoner.id,
-      name: reasoner.id,
-      type: "reasoner",
-      did: reasonerDIDs[reasoner.id]?.did,
-      status: componentStatus,
-      exposure_level: reasonerDIDs[reasoner.id]?.exposure_level,
-      capabilities: reasonerDIDs[reasoner.id]?.capabilities,
-      memory_retention: reasoner.memory_config?.memory_retention,
-      tags: reasoner.tags,
-    })),
-    ...skills.map((skill): TableItem => ({
-      id: skill.id,
-      name: skill.id,
-      type: "skill",
-      did: skillDIDs[skill.id]?.did,
-      status: componentStatus,
-      exposure_level: skillDIDs[skill.id]?.exposure_level,
-      tags: skillDIDs[skill.id]?.tags,
-    })),
+    ...(agentDID
+      ? [
+          {
+            id: "agent",
+            name: "Agent Identity",
+            type: "agent" as const,
+            did: agentDID,
+            status: componentStatus,
+          },
+        ]
+      : []),
+    ...reasoners.map(
+      (reasoner): TableItem => ({
+        id: reasoner.id,
+        name: reasoner.id,
+        type: "reasoner",
+        did: reasonerDIDs[reasoner.id]?.did,
+        status: componentStatus,
+        exposure_level: reasonerDIDs[reasoner.id]?.exposure_level,
+        capabilities: reasonerDIDs[reasoner.id]?.capabilities,
+        memory_retention: reasoner.memory_config?.memory_retention,
+        tags: reasoner.tags,
+      }),
+    ),
+    ...skills.map(
+      (skill): TableItem => ({
+        id: skill.id,
+        name: skill.id,
+        type: "skill",
+        did: skillDIDs[skill.id]?.did,
+        status: componentStatus,
+        exposure_level: skillDIDs[skill.id]?.exposure_level,
+        tags: skillDIDs[skill.id]?.tags,
+      }),
+    ),
   ];
 
   const handleCopyDID = async (did: string, name: string) => {
@@ -121,7 +143,7 @@ export function ReasonersSkillsTable({
 
   const handleRowClick = (item: TableItem, event: React.MouseEvent) => {
     // Prevent navigation if clicking on interactive elements like buttons
-    if ((event.target as HTMLElement).closest('button')) {
+    if ((event.target as HTMLElement).closest("button")) {
       return;
     }
 
@@ -133,26 +155,26 @@ export function ReasonersSkillsTable({
   const getStatusDot = (status: string) => {
     switch (status) {
       case "active":
-        return <div className="w-2 h-2 rounded-full bg-green-500" />;
+        return <div className="h-2 w-2 rounded-full bg-green-500" />;
       case "inactive":
-        return <div className="w-2 h-2 rounded-full bg-gray-400" />;
+        return <div className="h-2 w-2 rounded-full bg-gray-400" />;
       case "error":
-        return <div className="w-2 h-2 rounded-full bg-red-500" />;
+        return <div className="h-2 w-2 rounded-full bg-red-500" />;
       default:
-        return <div className="w-2 h-2 rounded-full bg-gray-400" />;
+        return <div className="h-2 w-2 rounded-full bg-gray-400" />;
     }
   };
 
   const getTypeIcon = (type: "reasoner" | "skill" | "agent") => {
     switch (type) {
       case "reasoner":
-        return <Function className="w-4 h-4 text-accent-primary" />;
+        return <Function className="text-accent-primary h-4 w-4" />;
       case "skill":
-        return <Tools className="w-4 h-4 text-accent-secondary" />;
+        return <Tools className="text-accent-secondary h-4 w-4" />;
       case "agent":
-        return <Identification className="w-4 h-4 text-blue-500" />;
+        return <Identification className="text-foreground h-4 w-4" />;
       default:
-        return <Function className="w-4 h-4 text-accent-primary" />;
+        return <Function className="text-accent-primary h-4 w-4" />;
     }
   };
 
@@ -165,9 +187,10 @@ export function ReasonersSkillsTable({
     return `${start}...${end}`;
   };
 
-  const filteredItems = tableItems.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.id.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredItems = tableItems.filter(
+    (item) =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.id.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (filteredItems.length === 0 && searchTerm === "") {
@@ -175,15 +198,15 @@ export function ReasonersSkillsTable({
       <Card className={cn("w-full", className)}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Function className="w-5 h-5 text-muted-foreground" />
+            <Function className="text-muted-foreground h-5 w-5" />
             Reasoners & Skills
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Function className="w-8 h-8 opacity-50" />
-              <Tools className="w-8 h-8 opacity-50" />
+          <div className="text-muted-foreground py-8 text-center">
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <Function className="h-8 w-8 opacity-50" />
+              <Tools className="h-8 w-8 opacity-50" />
             </div>
             <p className="text-sm">No reasoners or skills available</p>
           </div>
@@ -197,7 +220,7 @@ export function ReasonersSkillsTable({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Function className="w-5 h-5 text-muted-foreground" />
+            <Function className="text-muted-foreground h-5 w-5" />
             Reasoners & Skills
             <Badge variant="outline" className="ml-2 text-xs">
               {filteredItems.length}
@@ -214,7 +237,7 @@ export function ReasonersSkillsTable({
               clearButtonAriaLabel="Clear reasoner and skill search"
             />
             {copyFeedback && (
-              <div className="text-sm text-status-success bg-status-success-bg border border-status-success-border rounded-md px-3 py-1">
+              <div className="text-status-success bg-status-success-bg border-status-success-border rounded-md border px-3 py-1 text-sm">
                 {copyFeedback}
               </div>
             )}
@@ -238,10 +261,14 @@ export function ReasonersSkillsTable({
                 key={`${item.type}-${item.id}`}
                 className={cn(
                   "border-border-secondary hover:bg-bg-hover transition-colors duration-150",
-                  item.type === "reasoner" && nodeId && "cursor-pointer"
+                  item.type === "reasoner" && nodeId && "cursor-pointer",
                 )}
                 onClick={(event) => handleRowClick(item, event)}
-                title={item.type === "reasoner" && nodeId ? `Click to view ${item.name} details` : undefined}
+                title={
+                  item.type === "reasoner" && nodeId
+                    ? `Click to view ${item.name} details`
+                    : undefined
+                }
               >
                 <TableCell>
                   <div className="flex items-center justify-center">
@@ -251,7 +278,7 @@ export function ReasonersSkillsTable({
 
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-text-primary">
+                    <span className="text-text-primary font-medium">
                       {item.name}
                     </span>
                     <Badge
@@ -261,8 +288,8 @@ export function ReasonersSkillsTable({
                         item.type === "reasoner"
                           ? "bg-accent-primary/10 text-accent-primary border-accent-primary/20"
                           : item.type === "skill"
-                          ? "bg-accent-secondary/10 text-accent-secondary border-accent-secondary/20"
-                          : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                            ? "bg-accent-secondary/10 text-accent-secondary border-accent-secondary/20"
+                            : "bg-muted text-foreground border-border",
                       )}
                     >
                       {item.type}
@@ -272,19 +299,19 @@ export function ReasonersSkillsTable({
 
                 <TableCell>
                   {item.did ? (
-                    <div className="flex items-center gap-2 group">
-                      <div className="flex items-center gap-1.5 bg-muted text-muted-foreground border border-border font-mono text-xs px-2 py-1 rounded-md">
-                        <Identification className="w-3 h-3 text-accent-primary" />
+                    <div className="group flex items-center gap-2">
+                      <div className="bg-muted text-muted-foreground border-border flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-xs">
+                        <Identification className="text-accent-primary h-3 w-3" />
                         <span title={item.did}>{formatDID(item.did, 16)}</span>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleCopyDID(item.did!, item.name)}
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                        className="h-6 w-6 p-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
                         title="Copy DID"
                       >
-                        <Copy className="w-3 h-3" />
+                        <Copy className="h-3 w-3" />
                       </Button>
                     </div>
                   ) : (
@@ -295,9 +322,7 @@ export function ReasonersSkillsTable({
                 <TableCell>
                   <div className="flex items-center gap-1.5">
                     {getStatusDot(item.status)}
-                    <span className="text-body capitalize">
-                      {item.status}
-                    </span>
+                    <span className="text-body capitalize">{item.status}</span>
                   </div>
                 </TableCell>
 
@@ -306,33 +331,35 @@ export function ReasonersSkillsTable({
                     {item.exposure_level && (
                       <Badge
                         variant="outline"
-                        className="text-xs bg-card text-text-tertiary border-border-secondary"
+                        className="bg-card text-text-tertiary border-border-secondary text-xs"
                       >
                         {item.exposure_level}
                       </Badge>
                     )}
 
                     {item.memory_retention && (
-                      <div className="text-xs text-text-tertiary">
+                      <div className="text-text-tertiary text-xs">
                         Memory: {item.memory_retention}
                       </div>
                     )}
 
                     {item.capabilities && item.capabilities.length > 0 && (
                       <div className="flex flex-wrap gap-1">
-                        {item.capabilities.slice(0, 2).map((capability, index) => (
-                          <Badge
-                            key={index}
-                            variant="outline"
-                            className="text-xs bg-card text-text-tertiary border-border-secondary"
-                          >
-                            {capability}
-                          </Badge>
-                        ))}
+                        {item.capabilities
+                          .slice(0, 2)
+                          .map((capability, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="bg-card text-text-tertiary border-border-secondary text-xs"
+                            >
+                              {capability}
+                            </Badge>
+                          ))}
                         {item.capabilities.length > 2 && (
                           <Badge
                             variant="outline"
-                            className="text-xs bg-card text-text-quaternary border-border-secondary"
+                            className="bg-card text-text-quaternary border-border-secondary text-xs"
                           >
                             +{item.capabilities.length - 2}
                           </Badge>
@@ -346,7 +373,7 @@ export function ReasonersSkillsTable({
                           <Badge
                             key={index}
                             variant="outline"
-                            className="text-xs bg-card text-text-tertiary border-border-secondary"
+                            className="bg-card text-text-tertiary border-border-secondary text-xs"
                           >
                             #{tag}
                           </Badge>
@@ -354,7 +381,7 @@ export function ReasonersSkillsTable({
                         {item.tags.length > 2 && (
                           <Badge
                             variant="outline"
-                            className="text-xs bg-card text-text-quaternary border-border-secondary"
+                            className="bg-card text-text-quaternary border-border-secondary text-xs"
                           >
                             +{item.tags.length - 2}
                           </Badge>

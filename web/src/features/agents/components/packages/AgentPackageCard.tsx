@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import React, { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import {
   Settings,
   Play,
@@ -13,10 +19,13 @@ import {
   InProgress,
   CheckmarkFilled,
   WarningFilled,
-  CircleFilled
-} from '@/src/features/agents/components/ui/icon-bridge';
-import { getConfigurationStatusBadge, getAgentStatusBadge } from '../../services/configurationApi';
-import type { AgentPackage, AgentLifecycleInfo } from '../../types/agents';
+  CircleFilled,
+} from "@/src/features/agents/components/ui/icon-bridge";
+import {
+  getConfigurationStatusBadge,
+  getAgentStatusBadge,
+} from "../../services/configurationApi";
+import type { AgentPackage, AgentLifecycleInfo } from "../../types/agents";
 
 interface AgentPackageCardProps {
   package: AgentPackage;
@@ -33,12 +42,16 @@ export const AgentPackageCard: React.FC<AgentPackageCardProps> = ({
   onConfigure,
   onStart,
   onStop,
-  isLoading = false
+  isLoading = false,
 }) => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const configStatusBadge = getConfigurationStatusBadge(pkg.configuration_status);
-  const agentStatusBadge = agentStatus ? getAgentStatusBadge(agentStatus.status) : null;
+  const configStatusBadge = getConfigurationStatusBadge(
+    pkg.configuration_status,
+  );
+  const agentStatusBadge = agentStatus
+    ? getAgentStatusBadge(agentStatus.status)
+    : null;
 
   const handleAction = async (action: string, callback: () => void) => {
     setActionLoading(action);
@@ -52,13 +65,15 @@ export const AgentPackageCard: React.FC<AgentPackageCardProps> = ({
   const getStatusIcon = () => {
     if (agentStatus) {
       switch (agentStatus.status) {
-        case 'running':
+        case "running":
           return <CheckmarkFilled className="h-4 w-4 text-green-500" />;
-        case 'error':
+        case "error":
           return <WarningFilled className="h-4 w-4 text-red-500" />;
-        case 'starting':
-        case 'stopping':
-          return <InProgress className="h-4 w-4 text-blue-500 animate-spin" />;
+        case "starting":
+        case "stopping":
+          return (
+            <InProgress className="text-muted-foreground h-4 w-4 animate-spin" />
+          );
         default:
           return <CircleFilled className="h-4 w-4 text-gray-400" />;
       }
@@ -67,16 +82,18 @@ export const AgentPackageCard: React.FC<AgentPackageCardProps> = ({
   };
 
   return (
-    <Card className="w-full hover:shadow-md transition-shadow duration-200">
+    <Card className="w-full transition-shadow duration-200 hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <Package className="h-5 w-5 text-blue-600" />
+            <div className="bg-muted rounded-lg p-2">
+              <Package className="text-foreground h-5 w-5" />
             </div>
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-heading-3 truncate">{pkg.name}</CardTitle>
-              <CardDescription className="text-sm text-gray-600 mt-1 line-clamp-2">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-heading-3 truncate">
+                {pkg.name}
+              </CardTitle>
+              <CardDescription className="mt-1 line-clamp-2 text-sm text-gray-600">
                 {pkg.description}
               </CardDescription>
             </div>
@@ -109,10 +126,11 @@ export const AgentPackageCard: React.FC<AgentPackageCardProps> = ({
               {pkg.installed_at
                 ? (() => {
                     const date = new Date(pkg.installed_at);
-                    return isNaN(date.getTime()) ? 'Invalid date' : date.toLocaleDateString();
+                    return isNaN(date.getTime())
+                      ? "Invalid date"
+                      : date.toLocaleDateString();
                   })()
-                : 'N/A'
-              }
+                : "N/A"}
             </span>
           </div>
         </div>
@@ -145,12 +163,14 @@ export const AgentPackageCard: React.FC<AgentPackageCardProps> = ({
 
         {/* Error Message */}
         {agentStatus?.error_message && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
             <div className="flex items-start gap-2">
-              <WarningFilled className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <WarningFilled className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
               <div>
                 <p className="text-sm font-medium text-red-800">Error</p>
-                <p className="text-xs text-red-600 mt-1">{agentStatus.error_message}</p>
+                <p className="mt-1 text-xs text-red-600">
+                  {agentStatus.error_message}
+                </p>
               </div>
             </div>
           </div>
@@ -161,14 +181,14 @@ export const AgentPackageCard: React.FC<AgentPackageCardProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleAction('configure', () => onConfigure(pkg))}
-            disabled={isLoading || actionLoading === 'configure'}
-            className="flex-1 transition-all duration-200 hover:bg-bg-hover focus-ring"
+            onClick={() => handleAction("configure", () => onConfigure(pkg))}
+            disabled={isLoading || actionLoading === "configure"}
+            className="hover:bg-bg-hover focus-ring flex-1 transition-all duration-200"
           >
-            {actionLoading === 'configure' ? (
-              <InProgress className="h-4 w-4 animate-spin mr-2" />
+            {actionLoading === "configure" ? (
+              <InProgress className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Settings className="h-4 w-4 mr-2" />
+              <Settings className="mr-2 h-4 w-4" />
             )}
             Configure
           </Button>
@@ -176,14 +196,14 @@ export const AgentPackageCard: React.FC<AgentPackageCardProps> = ({
           <Button
             variant="default"
             size="sm"
-            onClick={() => handleAction('start', () => onStart(pkg))}
-            disabled={isLoading || actionLoading === 'start'}
-            className="flex-1 bg-status-success hover:bg-status-success/90 text-white border-status-success-border transition-all duration-200 focus-ring"
+            onClick={() => handleAction("start", () => onStart(pkg))}
+            disabled={isLoading || actionLoading === "start"}
+            className="bg-status-success hover:bg-status-success/90 border-status-success-border focus-ring flex-1 text-white transition-all duration-200"
           >
-            {actionLoading === 'start' ? (
-              <InProgress className="h-4 w-4 animate-spin mr-2" />
+            {actionLoading === "start" ? (
+              <InProgress className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Play className="h-4 w-4 mr-2" />
+              <Play className="mr-2 h-4 w-4" />
             )}
             Start
           </Button>
@@ -191,14 +211,14 @@ export const AgentPackageCard: React.FC<AgentPackageCardProps> = ({
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => handleAction('stop', () => onStop(pkg))}
-            disabled={isLoading || actionLoading === 'stop'}
-            className="flex-1 bg-status-error hover:bg-status-error/90 text-white border-status-error-border transition-all duration-200 focus-ring"
+            onClick={() => handleAction("stop", () => onStop(pkg))}
+            disabled={isLoading || actionLoading === "stop"}
+            className="bg-status-error hover:bg-status-error/90 border-status-error-border focus-ring flex-1 text-white transition-all duration-200"
           >
-            {actionLoading === 'stop' ? (
-              <InProgress className="h-4 w-4 animate-spin mr-2" />
+            {actionLoading === "stop" ? (
+              <InProgress className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Stop className="h-4 w-4 mr-2" />
+              <Stop className="mr-2 h-4 w-4" />
             )}
             Stop
           </Button>

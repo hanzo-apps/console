@@ -1,7 +1,10 @@
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
 import { env } from "@/src/env.mjs";
 
-export function useHanzoEnvCode(keys?: { secretKey: string; publicKey: string }): string {
+export function useHanzoEnvCode(keys?: {
+  secretKey: string;
+  publicKey: string;
+}): string {
   const uiCustomization = useUiCustomization();
   const baseUrl = `${uiCustomization?.hostname ?? window.origin}${env.NEXT_PUBLIC_BASE_PATH ?? ""}`;
 
@@ -11,7 +14,7 @@ HANZO_PUBLIC_KEY = "${keys.publicKey}"
 HANZO_BASE_URL = "${baseUrl}"`;
   }
 
-  return `HANZO_SECRET_KEY = "sk-lf-..."
-HANZO_PUBLIC_KEY = "pk-lf-..."
+  return `HANZO_SECRET_KEY = "sk-hz-..."
+HANZO_PUBLIC_KEY = "pk-hz-..."
 HANZO_BASE_URL = "${baseUrl}"`;
 }
