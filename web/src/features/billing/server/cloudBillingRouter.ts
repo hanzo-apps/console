@@ -12,7 +12,10 @@ import { TRPCError } from "@trpc/server";
 import * as z from "zod";
 import { throwIfNoOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
-import { getObservationCountOfProjectsSinceCreationDate } from "@hanzo/console/src/server";
+import {
+  getObservationCountOfProjectsSinceCreationDate,
+  logger,
+} from "@hanzo/console/src/server";
 import {
   commerceGet,
   commercePost,
@@ -226,6 +229,24 @@ function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
     ),
   ]);
 }
+
+// Honest zero rollup used when commerce is unavailable. Tenant spend is a
+// display concern: an empty state is correct here, a 500 is not.
+const EMPTY_USAGE_ROLLUP = (user: string): CommerceUsageRollup => ({
+  user,
+  plan: "free",
+  currency: "usd",
+  period: new Date().toISOString().slice(0, 7),
+  included: {
+    monthlyCents: 0,
+    grantedCents: 0,
+    consumedCents: 0,
+    remainingCents: 0,
+  },
+  consumedCents: 0,
+  overageCents: 0,
+  balance: { balanceCents: 0, holdsCents: 0, availableCents: 0 },
+});
 
 let plansCache: { at: number; plans: CommercePlan[] } | null = null;
 const PLANS_CACHE_TTL_MS = 10 * 60 * 1_000;
@@ -1359,23 +1380,51 @@ export const cloudBillingRouter = createTRPCRouter({
       // included credit), balance (prepaid balance/holds/available), and usage
       // (consumed) — exactly the data the gateway prepaid gate reads. All three
       // are org-scoped via X-Hanzo-Org.
-      const [tier, balance, usage] = await Promise.all([
-        commerceGet<CommerceTier>("/v1/billing/tier", org, {
-          user,
-          tier: input.plan,
-        }),
-        commerceGet<CommerceBalance>("/v1/billing/balance", org, { user }),
-        commerceGet<CommerceUsage>("/v1/billing/usage", org, { user }),
-      ]);
+      //
+      // Tenant spend visibility is a read-only display concern that must never
+      // hard-fail the billing page: if commerce is slow/unreachable or returns
+      // an unexpected shape, degrade to an honest zero rollup (same pattern as
+      // listPlans / getActiveSubscription) rather than surfacing a 500. When
+      // commerce responds, the tenant sees their real spend.
+      let tier: CommerceTier;
+      let balance: CommerceBalance;
+      let usage: CommerceUsage;
+      try {
+        [tier, balance, usage] = await Promise.all([
+          withTimeout(
+            commerceGet<CommerceTier>("/v1/billing/tier", org, {
+              user,
+              tier: input.plan,
+            }),
+            "commerce /tier",
+          ),
+          withTimeout(
+            commerceGet<CommerceBalance>("/v1/billing/balance", org, { user }),
+            "commerce /balance",
+          ),
+          withTimeout(
+            commerceGet<CommerceUsage>("/v1/billing/usage", org, { user }),
+            "commerce /usage",
+          ),
+        ]);
+      } catch (e) {
+        logger.warn(
+          `getCommerceUsageRollup: commerce unavailable for org "${org}", returning empty rollup`,
+          e,
+        );
+        return EMPTY_USAGE_ROLLUP(user);
+      }
 
       // Included credit: tiers grant a per-day allotment that resets at midnight
       // UTC and does not accumulate. Present it as the period's included usage.
-      const dailyGranted = tier.tier.dailyCreditsCents;
-      const includedRemaining = Math.max(0, tier.balance.dailyRemaining);
+      // Guard every field access: a 200 with an unexpected shape must still
+      // degrade to zeros, not throw.
+      const dailyGranted = tier?.tier?.dailyCreditsCents ?? 0;
+      const includedRemaining = Math.max(0, tier?.balance?.dailyRemaining ?? 0);
       const includedConsumed = Math.max(0, dailyGranted - includedRemaining);
 
       // Total usage this period = sum of recorded api-usage withdrawals (cents).
-      const consumed = usage.usage.reduce(
+      const consumed = (usage?.usage ?? []).reduce(
         (acc, u) => acc + Math.abs(u.amount ?? 0),
         0,
       );
@@ -1384,8 +1433,8 @@ export const cloudBillingRouter = createTRPCRouter({
 
       return {
         user,
-        plan: tier.tier.name,
-        currency: balance.currency || tier.balance.currency || "usd",
+        plan: tier?.tier?.name ?? "free",
+        currency: balance?.currency || tier?.balance?.currency || "usd",
         period: new Date().toISOString().slice(0, 7), // YYYY-MM
         included: {
           // Monthly view of the daily allotment for display purposes.
@@ -1397,9 +1446,9 @@ export const cloudBillingRouter = createTRPCRouter({
         consumedCents: consumed,
         overageCents: overage,
         balance: {
-          balanceCents: balance.balance,
-          holdsCents: balance.holds,
-          availableCents: balance.available,
+          balanceCents: balance?.balance ?? 0,
+          holdsCents: balance?.holds ?? 0,
+          availableCents: balance?.available ?? 0,
         },
       };
     }),
@@ -1426,11 +1475,25 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
-      return commerceGet<CommerceCreditBalance>(
-        "/v1/billing/credit-balance",
-        organization.name,
-        { userId: organization.name },
-      );
+      // Credit balance is a read-only display value; degrade to an empty
+      // balance rather than 500ing the billing page when commerce is slow or
+      // unreachable.
+      try {
+        return await withTimeout(
+          commerceGet<CommerceCreditBalance>(
+            "/v1/billing/credit-balance",
+            organization.name,
+            { userId: organization.name },
+          ),
+          "commerce /credit-balance",
+        );
+      } catch (e) {
+        logger.warn(
+          `getOrgCreditBalance: commerce unavailable for org "${organization.name}", returning empty balance`,
+          e,
+        );
+        return { userId: organization.name, balances: [] };
+      }
     }),
 
   // Grant N cloud credits to an organization via Commerce — a first-class admin
