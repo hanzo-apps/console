@@ -25,6 +25,7 @@ import {
 } from "react";
 import { env } from "@/src/env.mjs";
 import { type Session } from "@/src/features/auth/session-types";
+import { getBrandFromHost } from "@/src/features/branding/brandRegistry";
 
 export { type Session } from "@/src/features/auth/session-types";
 
@@ -140,9 +141,15 @@ type IamBrowser = {
 let cachedSdk: IamBrowser | null = null;
 async function browserIam(): Promise<IamBrowser | null> {
   if (cachedSdk) return cachedSdk;
-  const serverUrl = env.NEXT_PUBLIC_IAM_SERVER_URL;
-  const clientId = env.NEXT_PUBLIC_IAM_CLIENT_ID;
-  if (!serverUrl || !clientId || typeof window === "undefined") return null;
+  if (typeof window === "undefined") return null;
+  // White-label by host: resolve the brand's public IAM OIDC config at runtime
+  // from the brand registry, so client SSO works without build-time
+  // NEXT_PUBLIC_IAM_* inlining (one image serves every brand). A deploy-set
+  // NEXT_PUBLIC_IAM_* still wins if present.
+  const brand = getBrandFromHost(window.location.hostname);
+  const serverUrl = env.NEXT_PUBLIC_IAM_SERVER_URL || brand.iamServerUrl;
+  const clientId = env.NEXT_PUBLIC_IAM_CLIENT_ID || brand.iamClientId;
+  if (!serverUrl || !clientId) return null;
   const { BrowserIamSdk } = await import("@hanzo/iam/browser");
   cachedSdk = new BrowserIamSdk({
     serverUrl,
