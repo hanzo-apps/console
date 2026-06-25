@@ -5,23 +5,33 @@ import {
   Copy,
   WarningFilled,
   Launch,
-  InProgress
-} from '@/src/features/agents/components/ui/icon-bridge';
-import type { ReactNode } from 'react';
+  InProgress,
+} from "@/src/features/agents/components/ui/icon-bridge";
+import type { ReactNode } from "react";
 import { useNavigate } from "../../adapters";
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import type { ExecutionHistory } from '../../types/execution';
-import type { CanonicalStatus } from '../../utils/status';
-import { getStatusLabel, normalizeExecutionStatus } from '../../utils/status';
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import type { ExecutionHistory } from "../../types/execution";
+import type { CanonicalStatus } from "../../utils/status";
+import { getStatusLabel, normalizeExecutionStatus } from "../../utils/status";
 
 interface ExecutionHistoryListProps {
   history?: ExecutionHistory | null;
   onLoadMore?: () => void;
 }
 
-export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryListProps) {
+export function ExecutionHistoryList({
+  history,
+  onLoadMore,
+}: ExecutionHistoryListProps) {
   const navigate = useNavigate();
 
   const handleCopyExecution = (executionId: string) => {
@@ -34,7 +44,7 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
 
   const handleRowClick = (executionId: string, event: React.MouseEvent) => {
     // Prevent navigation if clicking on action buttons
-    if ((event.target as HTMLElement).closest('button')) {
+    if ((event.target as HTMLElement).closest("button")) {
       return;
     }
     handleNavigateToExecution(executionId);
@@ -45,7 +55,10 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
     handleCopyExecution(executionId);
   };
 
-  const handleViewDetailsClick = (event: React.MouseEvent, executionId: string) => {
+  const handleViewDetailsClick = (
+    event: React.MouseEvent,
+    executionId: string,
+  ) => {
     event.stopPropagation();
     handleNavigateToExecution(executionId);
   };
@@ -64,7 +77,7 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
+    if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
@@ -72,41 +85,46 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
     return date.toLocaleDateString();
   };
 
-  type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+  type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
-  const STATUS_META: Record<CanonicalStatus, { icon: ReactNode; variant: BadgeVariant }> = {
+  const STATUS_META: Record<
+    CanonicalStatus,
+    { icon: ReactNode; variant: BadgeVariant }
+  > = {
     succeeded: {
       icon: <CheckmarkFilled className="h-4 w-4 text-green-500" />,
-      variant: 'default'
+      variant: "default",
     },
     failed: {
       icon: <ErrorFilled className="h-4 w-4 text-red-500" />,
-      variant: 'destructive'
+      variant: "destructive",
     },
     running: {
-      icon: <InProgress className="h-4 w-4 text-blue-500 animate-spin" />,
-      variant: 'secondary'
+      icon: (
+        <InProgress className="text-muted-foreground h-4 w-4 animate-spin" />
+      ),
+      variant: "secondary",
     },
     queued: {
       icon: <Time className="h-4 w-4 text-yellow-500" />,
-      variant: 'secondary'
+      variant: "secondary",
     },
     pending: {
       icon: <Time className="h-4 w-4 text-yellow-500" />,
-      variant: 'secondary'
+      variant: "secondary",
     },
     cancelled: {
-      icon: <WarningFilled className="h-4 w-4 text-muted-foreground" />,
-      variant: 'outline'
+      icon: <WarningFilled className="text-muted-foreground h-4 w-4" />,
+      variant: "outline",
     },
     timeout: {
       icon: <WarningFilled className="h-4 w-4 text-orange-500" />,
-      variant: 'outline'
+      variant: "outline",
     },
     unknown: {
-      icon: <WarningFilled className="h-4 w-4 text-muted-foreground" />,
-      variant: 'outline'
-    }
+      icon: <WarningFilled className="text-muted-foreground h-4 w-4" />,
+      variant: "outline",
+    },
   };
 
   const getStatusMeta = (status: string | null | undefined) => {
@@ -115,13 +133,13 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
     return {
       ...meta,
       label: getStatusLabel(normalized),
-      normalized
+      normalized,
     };
   };
 
   if (!history) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-muted-foreground py-8 text-center">
         <p>Loading execution history...</p>
       </div>
     );
@@ -132,7 +150,7 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
 
   if (executions.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-muted-foreground py-8 text-center">
         <p>No executions found for this reasoner.</p>
       </div>
     );
@@ -167,13 +185,13 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
               return (
                 <TableRow
                   key={execution.execution_id}
-                  className="hover:bg-accent/50 transition-colors cursor-pointer"
+                  className="hover:bg-accent/50 cursor-pointer transition-colors"
                   onClick={(e) => handleRowClick(execution.execution_id, e)}
                   role="button"
                   tabIndex={0}
                   aria-label={`View execution ${execution.execution_id}`}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       handleNavigateToExecution(execution.execution_id);
                     }
@@ -194,16 +212,22 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Time className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-sm">{formatDuration(execution.duration_ms)}</span>
+                      <Time className="text-muted-foreground h-3 w-3" />
+                      <span className="text-sm">
+                        {formatDuration(execution.duration_ms)}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm">{formatTimestamp(execution.timestamp)}</span>
+                    <span className="text-sm">
+                      {formatTimestamp(execution.timestamp)}
+                    </span>
                   </TableCell>
                   <TableCell>
                     {execution.cost ? (
-                      <span className="text-sm">${execution.cost.toFixed(4)}</span>
+                      <span className="text-sm">
+                        ${execution.cost.toFixed(4)}
+                      </span>
                     ) : (
                       <span className="text-body-small">-</span>
                     )}
@@ -213,7 +237,9 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => handleViewDetailsClick(e, execution.execution_id)}
+                        onClick={(e) =>
+                          handleViewDetailsClick(e, execution.execution_id)
+                        }
                         className="h-8 w-8 p-0"
                         aria-label="View execution details"
                       >
@@ -222,7 +248,9 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => handleCopyClick(e, execution.execution_id)}
+                        onClick={(e) =>
+                          handleCopyClick(e, execution.execution_id)
+                        }
                         className="h-8 w-8 p-0"
                         aria-label="Copy execution ID"
                       >
@@ -238,20 +266,20 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
       </div>
 
       {/* Mobile Card View */}
-      <div className="md:hidden space-y-3">
+      <div className="space-y-3 md:hidden">
         {executions.map((execution) => {
           const statusMeta = getStatusMeta(execution.status);
 
           return (
             <div
               key={execution.execution_id}
-              className="border rounded-lg p-4 space-y-3 hover:bg-accent/50 transition-colors cursor-pointer"
+              className="hover:bg-accent/50 cursor-pointer space-y-3 rounded-lg border p-4 transition-colors"
               onClick={(e) => handleRowClick(execution.execution_id, e)}
               role="button"
               tabIndex={0}
               aria-label={`View execution ${execution.execution_id}`}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   handleNavigateToExecution(execution.execution_id);
                 }
@@ -260,15 +288,15 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {statusMeta.icon}
-                  <Badge variant={statusMeta.variant}>
-                    {statusMeta.label}
-                  </Badge>
+                  <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={(e) => handleViewDetailsClick(e, execution.execution_id)}
+                    onClick={(e) =>
+                      handleViewDetailsClick(e, execution.execution_id)
+                    }
                     className="h-8 w-8 p-0"
                     aria-label="View execution details"
                   >
@@ -289,7 +317,9 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ID:</span>
-                  <span className="font-mono">{execution.execution_id.slice(0, 12)}...</span>
+                  <span className="font-mono">
+                    {execution.execution_id.slice(0, 12)}...
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Duration:</span>
@@ -308,9 +338,11 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
               </div>
 
               {execution.error_message && (
-                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm">
-                  <p className="text-red-800 font-medium">Error:</p>
-                  <p className="text-red-700 font-mono text-xs mt-1">{execution.error_message}</p>
+                <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-sm">
+                  <p className="font-medium text-red-800">Error:</p>
+                  <p className="mt-1 font-mono text-xs text-red-700">
+                    {execution.error_message}
+                  </p>
                 </div>
               )}
             </div>
@@ -320,7 +352,7 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
 
       {/* Load More Button */}
       {executions.length < history.total && onLoadMore && (
-        <div className="text-center pt-4">
+        <div className="pt-4 text-center">
           <Button variant="outline" onClick={onLoadMore}>
             Load More Executions
           </Button>
@@ -328,7 +360,7 @@ export function ExecutionHistoryList({ history, onLoadMore }: ExecutionHistoryLi
       )}
 
       {/* Pagination Info */}
-      <div className="text-center text-body-small">
+      <div className="text-body-small text-center">
         Page {history.page} • {executions.length} of {history.total} executions
       </div>
     </div>

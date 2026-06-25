@@ -2,7 +2,14 @@ import { Activity, Clock } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@hanzo/ui";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@hanzo/ui";
 import { Skeleton } from "@hanzo/ui";
 
 import { useMpcSessions } from "../hooks";
@@ -22,14 +29,17 @@ function formatDate(dateStr: string): string {
   });
 }
 
-const sessionStatusConfig: Record<MpcSigningSession["status"], { label: string; className: string }> = {
+const sessionStatusConfig: Record<
+  MpcSigningSession["status"],
+  { label: string; className: string }
+> = {
   pending: {
     label: "Pending",
     className: "bg-muted text-muted-foreground",
   },
   signing: {
     label: "Signing",
-    className: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
+    className: "bg-secondary text-secondary-foreground",
   },
   completed: {
     label: "Completed",
@@ -52,8 +62,8 @@ export function MpcSessionsTable({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Activity className="h-5 w-5 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">
+        <Activity className="text-muted-foreground h-5 w-5" />
+        <span className="text-muted-foreground text-sm">
           {sessions.length} session{sessions.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -85,13 +95,19 @@ export function MpcSessionsTable({ projectId }: { projectId: string }) {
                 ))
               ) : sessionsQuery.isError ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-destructive">
+                  <TableCell
+                    colSpan={7}
+                    className="text-destructive h-24 text-center"
+                  >
                     Failed to load sessions: {sessionsQuery.error.message}
                   </TableCell>
                 </TableRow>
               ) : sessions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="text-muted-foreground h-24 text-center"
+                  >
                     No signing sessions yet.
                   </TableCell>
                 </TableRow>
@@ -100,8 +116,12 @@ export function MpcSessionsTable({ projectId }: { projectId: string }) {
                   const cfg = sessionStatusConfig[s.status];
                   return (
                     <TableRow key={s.id}>
-                      <TableCell className="font-mono text-xs">{s.id.slice(0, 12)}...</TableCell>
-                      <TableCell className="font-mono text-xs">{s.walletId.slice(0, 12)}...</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {s.id.slice(0, 12)}...
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {s.walletId.slice(0, 12)}...
+                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={cfg.className}>
                           {cfg.label}
@@ -113,15 +133,17 @@ export function MpcSessionsTable({ projectId }: { projectId: string }) {
                       <TableCell>
                         {s.latencyMs != null ? (
                           <div className="flex items-center gap-1 text-sm">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            <Clock className="text-muted-foreground h-3 w-3" />
                             {s.latencyMs}ms
                           </div>
                         ) : (
                           <span className="text-muted-foreground">--</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm">{formatDate(s.createdAt)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm">
+                        {formatDate(s.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
                         {s.completedAt ? formatDate(s.completedAt) : "--"}
                       </TableCell>
                     </TableRow>

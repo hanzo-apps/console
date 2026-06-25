@@ -212,7 +212,7 @@ export const ValueCell = memo(
         case "number":
           return {
             content: (
-              <span className="text-blue-600 dark:text-blue-400">
+              <span className="text-foreground font-medium">
                 {String(value)}
               </span>
             ),

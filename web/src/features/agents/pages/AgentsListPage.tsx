@@ -1,9 +1,22 @@
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Link, useNavigate } from "../adapters";
 import { Badge } from "@/src/features/agents/components/ui/badge";
 import { Button } from "@/src/features/agents/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/features/agents/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/features/agents/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -42,14 +55,18 @@ import { Skeleton } from "@/src/features/agents/components/ui/skeleton";
 import { PageHeader } from "../components/PageHeader";
 import { cn } from "../lib/utils";
 import { useAgentsList } from "../hooks/useAgentsList";
-import { type AgentListItem, SESSION_STATUSES, type SessionStatus } from "../types/agents-list";
+import {
+  type AgentListItem,
+  SESSION_STATUSES,
+  type SessionStatus,
+} from "../types/agents-list";
 
 type SortField = "name" | "model" | "ownerName" | "sessions" | "lastUsed";
 type SortDir = "asc" | "desc";
 
 const STATUS_COLORS: Record<SessionStatus, string> = {
   completed: "#10b981",
-  active: "#3b82f6",
+  active: "#a1a1aa",
   error: "#ef4444",
   cancelled: "#f97316",
   idle: "#6b7280",
@@ -136,7 +153,9 @@ export function AgentsListPage() {
   const [sortField, setSortField] = useState<SortField>("sessions");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [showInferenceMetrics, setShowInferenceMetrics] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnId>>(new Set(ALL_COLUMNS.map((col) => col.id)));
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnId>>(
+    new Set(ALL_COLUMNS.map((col) => col.id)),
+  );
 
   const { summary, loading, error, refresh, isRefreshing } = useAgentsList({
     preset,
@@ -176,7 +195,10 @@ export function AgentsListPage() {
     return sorted;
   }, [filteredAgents, sortField, sortDir]);
 
-  const visibleAgents = useMemo(() => sortedAgents.slice(0, pageSize), [sortedAgents, pageSize]);
+  const visibleAgents = useMemo(
+    () => sortedAgents.slice(0, pageSize),
+    [sortedAgents, pageSize],
+  );
 
   const chartData = useMemo(
     () =>
@@ -187,7 +209,10 @@ export function AgentsListPage() {
     [sortedAgents],
   );
 
-  const totalSessions = useMemo(() => sortedAgents.reduce((sum, agent) => sum + agent.sessions, 0), [sortedAgents]);
+  const totalSessions = useMemo(
+    () => sortedAgents.reduce((sum, agent) => sum + agent.sessions, 0),
+    [sortedAgents],
+  );
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -202,7 +227,11 @@ export function AgentsListPage() {
     if (sortField !== field) {
       return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
     }
-    return sortDir === "asc" ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="ml-1 h-3 w-3" />
+    ) : (
+      <ArrowDown className="ml-1 h-3 w-3" />
+    );
   };
 
   return (
@@ -220,9 +249,11 @@ export function AgentsListPage() {
 
       <Card>
         <CardHeader className="flex flex-col gap-3 space-y-0 pb-4 lg:flex-row lg:items-center lg:justify-between">
-          <CardTitle className="text-base font-semibold">Sessions by Agent</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            Sessions by Agent
+          </CardTitle>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <label className="text-muted-foreground flex items-center gap-2 text-xs">
               <Switch
                 checked={showInferenceMetrics}
                 onCheckedChange={setShowInferenceMetrics}
@@ -253,7 +284,12 @@ export function AgentsListPage() {
                 </SelectItem>
               </SelectContent>
             </Select>
-            <Select value={preset} onValueChange={(value) => setPreset(value as "1h" | "24h" | "7d" | "30d")}>
+            <Select
+              value={preset}
+              onValueChange={(value) =>
+                setPreset(value as "1h" | "24h" | "7d" | "30d")
+              }
+            >
               <SelectTrigger className="h-9 w-[160px]">
                 <SelectValue />
               </SelectTrigger>
@@ -280,13 +316,20 @@ export function AgentsListPage() {
           ) : loading ? (
             <Skeleton className="h-[280px] w-full rounded-lg" />
           ) : chartData.length === 0 ? (
-            <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex h-[280px] items-center justify-center text-sm">
               No agent activity in this range.
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <BarChart
+                data={chartData}
+                margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="agent"
                   tickLine={false}
@@ -294,9 +337,16 @@ export function AgentsListPage() {
                   fontSize={11}
                   interval={0}
                   height={40}
-                  tickFormatter={(value: string) => (value.length > 10 ? `${value.slice(0, 10)}…` : value)}
+                  tickFormatter={(value: string) =>
+                    value.length > 10 ? `${value.slice(0, 10)}…` : value
+                  }
                 />
-                <YAxis tickLine={false} axisLine={false} fontSize={11} width={32} />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  fontSize={11}
+                  width={32}
+                />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
                   contentStyle={{
@@ -312,20 +362,29 @@ export function AgentsListPage() {
                     dataKey={status}
                     stackId="status"
                     fill={STATUS_COLORS[status]}
-                    radius={index === SESSION_STATUSES.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                    radius={
+                      index === SESSION_STATUSES.length - 1
+                        ? [4, 4, 0, 0]
+                        : [0, 0, 0, 0]
+                    }
                   />
                 ))}
               </BarChart>
             </ResponsiveContainer>
           )}
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
             {SESSION_STATUSES.map((status) => (
               <div key={status} className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: STATUS_COLORS[status] }} />
+                <span
+                  className="h-2.5 w-2.5 rounded-sm"
+                  style={{ backgroundColor: STATUS_COLORS[status] }}
+                />
                 <span>{STATUS_LABELS[status]}</span>
               </div>
             ))}
-            <span className="ml-auto font-mono">{numberFormatter.format(totalSessions)} sessions</span>
+            <span className="ml-auto font-mono">
+              {numberFormatter.format(totalSessions)} sessions
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -334,7 +393,7 @@ export function AgentsListPage() {
         <CardContent className="p-4 sm:p-6">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative max-w-md flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -343,7 +402,12 @@ export function AgentsListPage() {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Select value={filter} onValueChange={(value) => setFilter(value as "all" | "default" | "custom")}>
+              <Select
+                value={filter}
+                onValueChange={(value) =>
+                  setFilter(value as "all" | "default" | "custom")
+                }
+              >
                 <SelectTrigger className="h-9 w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -353,7 +417,10 @@ export function AgentsListPage() {
                   <SelectItem value="custom">Custom only</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => setPageSize(Number(value))}
+              >
                 <SelectTrigger className="h-9 w-[100px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -396,20 +463,28 @@ export function AgentsListPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-md border border-border/60">
+          <div className="border-border/60 overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   {visibleColumns.has("name") && (
                     <TableHead>
-                      <button type="button" onClick={() => toggleSort("name")} className="inline-flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("name")}
+                        className="inline-flex items-center"
+                      >
                         Name {sortIcon("name")}
                       </button>
                     </TableHead>
                   )}
                   {visibleColumns.has("model") && (
                     <TableHead>
-                      <button type="button" onClick={() => toggleSort("model")} className="inline-flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("model")}
+                        className="inline-flex items-center"
+                      >
                         Model {sortIcon("model")}
                       </button>
                     </TableHead>
@@ -427,14 +502,22 @@ export function AgentsListPage() {
                   )}
                   {visibleColumns.has("sessions") && (
                     <TableHead className="text-right">
-                      <button type="button" onClick={() => toggleSort("sessions")} className="inline-flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("sessions")}
+                        className="inline-flex items-center"
+                      >
                         Sessions {sortIcon("sessions")}
                       </button>
                     </TableHead>
                   )}
                   {visibleColumns.has("lastUsed") && (
                     <TableHead className="text-right">
-                      <button type="button" onClick={() => toggleSort("lastUsed")} className="inline-flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("lastUsed")}
+                        className="inline-flex items-center"
+                      >
                         Last Used {sortIcon("lastUsed")}
                       </button>
                     </TableHead>
@@ -458,11 +541,14 @@ export function AgentsListPage() {
                           <TableCell>
                             <Link
                               to={`/nodes/${encodeURIComponent(agent.id)}`}
-                              className="inline-flex items-center gap-2 font-medium text-foreground hover:underline"
+                              className="text-foreground inline-flex items-center gap-2 font-medium hover:underline"
                             >
                               <span>{agent.name}</span>
                               {agent.isDefault && (
-                                <Badge variant="outline" className="text-[10px] uppercase">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] uppercase"
+                                >
                                   Default
                                 </Badge>
                               )}
@@ -470,10 +556,14 @@ export function AgentsListPage() {
                           </TableCell>
                         )}
                         {visibleColumns.has("model") && (
-                          <TableCell className="font-mono text-xs text-muted-foreground">{agent.model}</TableCell>
+                          <TableCell className="text-muted-foreground font-mono text-xs">
+                            {agent.model}
+                          </TableCell>
                         )}
                         {visibleColumns.has("ownerName") && (
-                          <TableCell className="text-sm text-muted-foreground">{agent.ownerName}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {agent.ownerName}
+                          </TableCell>
                         )}
                         {visibleColumns.has("sessions") && (
                           <TableCell className="text-right font-mono text-sm">
@@ -481,7 +571,7 @@ export function AgentsListPage() {
                           </TableCell>
                         )}
                         {visibleColumns.has("lastUsed") && (
-                          <TableCell className="text-right text-sm text-muted-foreground">
+                          <TableCell className="text-muted-foreground text-right text-sm">
                             {formatLastUsed(agent.lastUsedIso)}
                           </TableCell>
                         )}
@@ -489,7 +579,10 @@ export function AgentsListPage() {
                     ))}
                 {!loading && visibleAgents.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={visibleColumns.size} className="h-32 text-center text-sm text-muted-foreground">
+                    <TableCell
+                      colSpan={visibleColumns.size}
+                      className="text-muted-foreground h-32 text-center text-sm"
+                    >
                       No agents match the current filter.
                     </TableCell>
                   </TableRow>
@@ -500,7 +593,7 @@ export function AgentsListPage() {
 
           <div
             className={cn(
-              "mt-3 flex items-center justify-between text-xs text-muted-foreground",
+              "text-muted-foreground mt-3 flex items-center justify-between text-xs",
               loading && "opacity-60",
             )}
           >

@@ -473,6 +473,7 @@ export const env = createEnv({
 
     // Hanzo Search / Vector API
     HANZO_SEARCH_API_KEY: z.string().optional(),
+    HANZO_VECTOR_API_KEY: z.string().optional(),
 
     // ZT (Zero Trust Network - OpenZiti controller)
     ZT_API_URL: z.string().url().optional().default("https://zt-api.hanzo.ai"),
@@ -962,6 +963,7 @@ export const env = createEnv({
     KMS_PROJECT_ID: process.env.KMS_PROJECT_ID,
     // Hanzo Search / Vector
     HANZO_SEARCH_API_KEY: process.env.HANZO_SEARCH_API_KEY,
+    HANZO_VECTOR_API_KEY: process.env.HANZO_VECTOR_API_KEY,
     // ZT
     ZT_API_URL: process.env.ZT_API_URL,
     ZT_ADMIN_USERNAME: process.env.ZT_ADMIN_USERNAME,

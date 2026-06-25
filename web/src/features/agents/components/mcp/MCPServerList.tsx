@@ -1,12 +1,20 @@
 import { Badge } from "@/src/features/agents/components/ui/badge";
 import { Button } from "@/src/features/agents/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/features/agents/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/features/agents/components/ui/card";
 import { Input } from "@/src/features/agents/components/ui/input";
 import { useMemo, useState } from "react";
 
 import { useMode } from "@/src/features/agents/contexts/ModeContext";
 import { cn } from "@/src/features/agents/lib/utils";
-import type { MCPServerAction, MCPServerHealthForUI } from "@/src/features/agents/types/agents";
+import type {
+  MCPServerAction,
+  MCPServerHealthForUI,
+} from "@/src/features/agents/types/agents";
 import {
   CheckmarkFilled,
   CircleDash,
@@ -25,11 +33,11 @@ interface MCPServerListProps {
   nodeId: string;
   onServerAction?: (
     action: MCPServerAction,
-    serverAlias: string
+    serverAlias: string,
   ) => Promise<void>;
   onBulkAction?: (
     action: MCPServerAction,
-    serverAliases: string[]
+    serverAliases: string[],
   ) => Promise<void>;
   isLoading?: boolean;
   className?: string;
@@ -53,7 +61,7 @@ export function MCPServerList({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ServerStatusFilter>("all");
   const [selectedServers, setSelectedServers] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [bulkActionLoading, setBulkActionLoading] =
     useState<MCPServerAction | null>(null);
@@ -105,10 +113,13 @@ export function MCPServerList({
 
   // Status counts for filter badges
   const statusCounts = useMemo(() => {
-    return servers.reduce((counts, server) => {
-      counts[server.status] = (counts[server.status] || 0) + 1;
-      return counts;
-    }, {} as Record<string, number>);
+    return servers.reduce(
+      (counts, server) => {
+        counts[server.status] = (counts[server.status] || 0) + 1;
+        return counts;
+      },
+      {} as Record<string, number>,
+    );
   }, [servers]);
 
   const handleBulkAction = async (action: MCPServerAction) => {
@@ -165,7 +176,7 @@ export function MCPServerList({
       case "running":
         return "text-green-600";
       case "starting":
-        return "text-blue-600";
+        return "text-muted-foreground";
       case "error":
         return "text-red-600";
       case "stopped":
@@ -177,7 +188,7 @@ export function MCPServerList({
 
   const renderServerGroup = (
     status: string,
-    servers: MCPServerHealthForUI[]
+    servers: MCPServerHealthForUI[],
   ) => {
     if (servers.length === 0) return null;
 
@@ -190,7 +201,7 @@ export function MCPServerList({
       <div key={status} className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <StatusIcon className={cn("w-4 h-4", statusColor)} />
+            <StatusIcon className={cn("h-4 w-4", statusColor)} />
             <h3 className="font-medium capitalize">{status}</h3>
             <Badge variant="secondary" className="text-xs">
               {servers.length}
@@ -207,8 +218,8 @@ export function MCPServerList({
               {groupSelected
                 ? "Deselect All"
                 : someSelected
-                ? "Select All"
-                : "Select All"}
+                  ? "Select All"
+                  : "Select All"}
             </Button>
           )}
         </div>
@@ -230,7 +241,7 @@ export function MCPServerList({
                       }
                       setSelectedServers(newSelected);
                     }}
-                    className="w-4 h-4 rounded border-gray-300"
+                    className="h-4 w-4 rounded border-gray-300"
                   />
                 </div>
               )}
@@ -241,7 +252,7 @@ export function MCPServerList({
                 isLoading={isLoading}
                 className={cn(
                   isDeveloperMode && "pl-10",
-                  selectedServers.has(server.alias) && "ring-2 ring-blue-500"
+                  selectedServers.has(server.alias) && "ring-ring ring-2",
                 )}
               />
             </div>
@@ -256,7 +267,7 @@ export function MCPServerList({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ServerProxy className="w-5 h-5 text-muted-foreground" />
+            <ServerProxy className="text-muted-foreground h-5 w-5" />
             <CardTitle>MCP Servers</CardTitle>
             <Badge variant="secondary">{servers.length} total</Badge>
           </div>
@@ -275,9 +286,9 @@ export function MCPServerList({
                   className="text-green-600 hover:text-green-700"
                 >
                   {bulkActionLoading === "start" ? (
-                    <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : (
-                    <Play className="w-4 h-4" />
+                    <Play className="h-4 w-4" />
                   )}
                   Start
                 </Button>
@@ -289,9 +300,9 @@ export function MCPServerList({
                   className="text-red-600 hover:text-red-700"
                 >
                   {bulkActionLoading === "stop" ? (
-                    <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : (
-                    <Stop className="w-4 h-4" />
+                    <Stop className="h-4 w-4" />
                   )}
                   Stop
                 </Button>
@@ -302,9 +313,9 @@ export function MCPServerList({
                   disabled={bulkActionLoading !== null}
                 >
                   {bulkActionLoading === "restart" ? (
-                    <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : (
-                    <Restart className="w-4 h-4" />
+                    <Restart className="h-4 w-4" />
                   )}
                   Restart
                 </Button>
@@ -314,9 +325,9 @@ export function MCPServerList({
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
             <Input
               placeholder="Search servers..."
               value={searchQuery}
@@ -325,7 +336,7 @@ export function MCPServerList({
             />
           </div>
 
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant={statusFilter === "all" ? "default" : "outline"}
               size="sm"
@@ -350,7 +361,7 @@ export function MCPServerList({
 
       <CardContent>
         {filteredServers.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-muted-foreground py-8 text-center">
             {searchQuery || statusFilter !== "all"
               ? "No servers match your filters"
               : "No MCP servers found"}
@@ -358,7 +369,7 @@ export function MCPServerList({
         ) : (
           <div className="space-y-6">
             {Object.entries(serversByStatus).map(([status, servers]) =>
-              renderServerGroup(status, servers)
+              renderServerGroup(status, servers),
             )}
           </div>
         )}

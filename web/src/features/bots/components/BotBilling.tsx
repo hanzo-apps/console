@@ -1,8 +1,21 @@
 import { api } from "@/src/utils/api";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@hanzo/ui";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/src/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@hanzo/ui";
 import { Skeleton } from "@hanzo/ui";
 import { CreditCard, Coins, Landmark, Plus, Star } from "lucide-react";
 import type { BotTier, PaymentMethodType } from "../types";
@@ -15,7 +28,7 @@ const tierLabel: Record<BotTier, string> = {
 
 const tierBadgeColor: Record<BotTier, string> = {
   free: "bg-muted text-muted-foreground",
-  cloud: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
+  cloud: "bg-muted text-muted-foreground",
   "cloud-pro": "bg-purple-500/15 text-purple-700 dark:text-purple-400",
 };
 
@@ -50,9 +63,15 @@ export function BotBilling({ projectId, botId }: Props) {
     { enabled: !!projectId && !!botId },
   );
 
-  const { data: paymentMethods = [] } = api.bots.listPaymentMethods.useQuery({ projectId }, { enabled: !!projectId });
+  const { data: paymentMethods = [] } = api.bots.listPaymentMethods.useQuery(
+    { projectId },
+    { enabled: !!projectId },
+  );
 
-  const { data: credits } = api.bots.getCredits.useQuery({ projectId }, { enabled: !!projectId });
+  const { data: credits } = api.bots.getCredits.useQuery(
+    { projectId },
+    { enabled: !!projectId },
+  );
 
   const upgradeMut = api.bots.upgradePlan.useMutation({
     onSuccess: () => {
@@ -90,10 +109,15 @@ export function BotBilling({ projectId, botId }: Props) {
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Badge variant="secondary" className={tierBadgeColor[currentTier]}>
+              <Badge
+                variant="secondary"
+                className={tierBadgeColor[currentTier]}
+              >
                 {tierLabel[currentTier]}
               </Badge>
-              <span className="text-sm text-muted-foreground">Base: ${billing.monthlyBase}/mo</span>
+              <span className="text-muted-foreground text-sm">
+                Base: ${billing.monthlyBase}/mo
+              </span>
             </div>
             <div className="flex gap-2">
               {currentTier !== "cloud" && (
@@ -101,9 +125,12 @@ export function BotBilling({ projectId, botId }: Props) {
                   variant="outline"
                   size="sm"
                   disabled={upgradeMut.isPending}
-                  onClick={() => upgradeMut.mutate({ projectId, botId, tier: "cloud" })}
+                  onClick={() =>
+                    upgradeMut.mutate({ projectId, botId, tier: "cloud" })
+                  }
                 >
-                  {currentTier === "cloud-pro" ? "Downgrade to" : "Upgrade to"} Cloud
+                  {currentTier === "cloud-pro" ? "Downgrade to" : "Upgrade to"}{" "}
+                  Cloud
                 </Button>
               )}
               {currentTier !== "cloud-pro" && (
@@ -130,22 +157,31 @@ export function BotBilling({ projectId, botId }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Payment Methods</CardTitle>
-          <CardDescription>Powered by Hanzo Commerce. Cards processed via Square.</CardDescription>
+          <CardDescription>
+            Powered by Hanzo Commerce. Cards processed via Square.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {paymentMethods.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No payment method on file. Add one to enable cloud plans.</p>
+              <p className="text-muted-foreground text-sm">
+                No payment method on file. Add one to enable cloud plans.
+              </p>
             ) : (
               paymentMethods.map((pm) => {
                 const Icon = paymentMethodIcon[pm.type];
                 return (
-                  <div key={pm.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div
+                    key={pm.id}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
                     <div className="flex items-center gap-3">
-                      <Icon className="h-5 w-5 text-muted-foreground" />
+                      <Icon className="text-muted-foreground h-5 w-5" />
                       <div>
                         <p className="text-sm font-medium">{pm.label}</p>
-                        <p className="text-xs text-muted-foreground">{paymentMethodLabel[pm.type]}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {paymentMethodLabel[pm.type]}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -166,7 +202,9 @@ export function BotBilling({ projectId, botId }: Props) {
                 variant="outline"
                 size="sm"
                 disabled={addPaymentMethodMut.isPending}
-                onClick={() => addPaymentMethodMut.mutate({ projectId, type: "card" })}
+                onClick={() =>
+                  addPaymentMethodMut.mutate({ projectId, type: "card" })
+                }
               >
                 <CreditCard className="mr-2 h-4 w-4" />
                 Add Card
@@ -175,7 +213,9 @@ export function BotBilling({ projectId, botId }: Props) {
                 variant="outline"
                 size="sm"
                 disabled={addPaymentMethodMut.isPending}
-                onClick={() => addPaymentMethodMut.mutate({ projectId, type: "crypto" })}
+                onClick={() =>
+                  addPaymentMethodMut.mutate({ projectId, type: "crypto" })
+                }
               >
                 <Coins className="mr-2 h-4 w-4" />
                 Pay with Crypto
@@ -184,16 +224,19 @@ export function BotBilling({ projectId, botId }: Props) {
                 variant="outline"
                 size="sm"
                 disabled={addPaymentMethodMut.isPending}
-                onClick={() => addPaymentMethodMut.mutate({ projectId, type: "wire" })}
+                onClick={() =>
+                  addPaymentMethodMut.mutate({ projectId, type: "wire" })
+                }
               >
                 <Landmark className="mr-2 h-4 w-4" />
                 Wire Transfer
               </Button>
             </div>
 
-            <p className="text-xs text-muted-foreground pt-1">
-              We accept Visa, Mastercard, Amex, and Discover via Square. Crypto payments (BTC, ETH, SOL, USDC) are
-              credited instantly. Wire transfers are processed manually within 1-2 business days.
+            <p className="text-muted-foreground pt-1 text-xs">
+              We accept Visa, Mastercard, Amex, and Discover via Square. Crypto
+              payments (BTC, ETH, SOL, USDC) are credited instantly. Wire
+              transfers are processed manually within 1-2 business days.
             </p>
           </div>
         </CardContent>
@@ -207,16 +250,22 @@ export function BotBilling({ projectId, botId }: Props) {
         <CardContent>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold">{billing.usage.messages.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Messages</p>
+              <p className="text-2xl font-bold">
+                {billing.usage.messages.toLocaleString()}
+              </p>
+              <p className="text-muted-foreground text-xs">Messages</p>
             </div>
             <div>
-              <p className="text-2xl font-bold">{billing.usage.tokens.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Tokens</p>
+              <p className="text-2xl font-bold">
+                {billing.usage.tokens.toLocaleString()}
+              </p>
+              <p className="text-muted-foreground text-xs">Tokens</p>
             </div>
             <div>
-              <p className="text-2xl font-bold">${billing.usage.cost.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">Usage Cost</p>
+              <p className="text-2xl font-bold">
+                ${billing.usage.cost.toFixed(2)}
+              </p>
+              <p className="text-muted-foreground text-xs">Usage Cost</p>
             </div>
           </div>
         </CardContent>
@@ -241,30 +290,47 @@ export function BotBilling({ projectId, botId }: Props) {
             <TableBody>
               {billing.invoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={5}
+                    className="text-muted-foreground h-24 text-center"
+                  >
                     No invoices yet.
                   </TableCell>
                 </TableRow>
               ) : (
                 billing.invoices.map((inv) => {
-                  const methodType = (inv as { paymentMethod?: string }).paymentMethod ?? "card";
-                  const MethodIcon = paymentMethodIcon[methodType as PaymentMethodType] ?? CreditCard;
+                  const methodType =
+                    (inv as { paymentMethod?: string }).paymentMethod ?? "card";
+                  const MethodIcon =
+                    paymentMethodIcon[methodType as PaymentMethodType] ??
+                    CreditCard;
                   return (
                     <TableRow key={inv.id}>
-                      <TableCell className="font-mono text-xs">{new Date(inv.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-sm">{inv.description}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {new Date(inv.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {inv.description}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <MethodIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-xs capitalize text-muted-foreground">{methodType}</span>
+                          <MethodIcon className="text-muted-foreground h-3.5 w-3.5" />
+                          <span className="text-muted-foreground text-xs capitalize">
+                            {methodType}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className={invoiceStatusColor[inv.status] ?? ""}>
+                        <Badge
+                          variant="secondary"
+                          className={invoiceStatusColor[inv.status] ?? ""}
+                        >
                           {inv.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">${inv.amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        ${inv.amount.toFixed(2)}
+                      </TableCell>
                     </TableRow>
                   );
                 })
@@ -278,19 +344,25 @@ export function BotBilling({ projectId, botId }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Credits & Balance</CardTitle>
-          <CardDescription>Credits from crypto payments, promotions, or referrals.</CardDescription>
+          <CardDescription>
+            Credits from crypto payments, promotions, or referrals.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold">${creditBalance.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">Available credit balance</p>
+              <p className="text-muted-foreground text-xs">
+                Available credit balance
+              </p>
             </div>
             <Button
               variant="outline"
               size="sm"
               disabled={addPaymentMethodMut.isPending}
-              onClick={() => addPaymentMethodMut.mutate({ projectId, type: "crypto" })}
+              onClick={() =>
+                addPaymentMethodMut.mutate({ projectId, type: "crypto" })
+              }
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Credits

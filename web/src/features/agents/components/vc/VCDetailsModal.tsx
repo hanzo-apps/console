@@ -96,7 +96,7 @@ export function VCDetailsModal({
   if (chainLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>VC Details</DialogTitle>
             <DialogDescription>
@@ -124,8 +124,8 @@ export function VCDetailsModal({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="text-center py-8">
-              <p className="text-red-600 mb-4">
+            <div className="py-8 text-center">
+              <p className="mb-4 text-red-600">
                 {chainError || "No verification credentials found"}
               </p>
               <Button onClick={onClose} variant="outline">
@@ -140,7 +140,7 @@ export function VCDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <span>🔒</span>
@@ -174,7 +174,7 @@ export function VCDetailsModal({
 
         {/* Feedback Messages */}
         {(copyFeedback || downloadFeedback) && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
             ✅ {copyFeedback || downloadFeedback}
           </div>
         )}
@@ -196,7 +196,7 @@ export function VCDetailsModal({
           />
         )}
 
-        <div className="flex justify-end pt-4 border-t">
+        <div className="flex justify-end border-t pt-4">
           <Button onClick={onClose}>Close</Button>
         </div>
       </DialogContent>
@@ -212,11 +212,11 @@ interface VCChainViewProps {
 
 function VCChainView({ vcChain, onCopyVC, onDownloadVC }: VCChainViewProps) {
   const [selectedVC, setSelectedVC] = useState<ExecutionVC | null>(
-    vcChain.component_vcs[0] || null
+    vcChain.component_vcs[0] || null,
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {/* VC List */}
       <div className="lg:col-span-1">
         <Card>
@@ -225,18 +225,18 @@ function VCChainView({ vcChain, onCopyVC, onDownloadVC }: VCChainViewProps) {
               Execution VCs ({vcChain.component_vcs.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 max-h-96 overflow-y-auto">
+          <CardContent className="max-h-96 space-y-2 overflow-y-auto">
             {vcChain.component_vcs.map((vc) => (
               <div
                 key={vc.vc_id}
-                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                className={`cursor-pointer rounded-lg border p-3 transition-colors ${
                   selectedVC?.vc_id === vc.vc_id
-                    ? "border-blue-500 bg-blue-50"
+                    ? "border-primary bg-muted"
                     : "border-gray-200 hover:border-gray-300"
                 }`}
                 onClick={() => setSelectedVC(vc)}
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 flex items-center justify-between">
                   <span className="text-sm font-medium">
                     {vc.execution_id.substring(0, 8)}...
                   </span>
@@ -272,8 +272,10 @@ function VCChainView({ vcChain, onCopyVC, onDownloadVC }: VCChainViewProps) {
         ) : (
           <Card>
             <CardContent className="py-12 text-center">
-              <div className="mb-4 text-4xl text-muted-foreground/70">🔒</div>
-              <p className="text-muted-foreground">Select a VC to view details</p>
+              <div className="text-muted-foreground/70 mb-4 text-4xl">🔒</div>
+              <p className="text-muted-foreground">
+                Select a VC to view details
+              </p>
             </CardContent>
           </Card>
         )}
@@ -308,15 +310,23 @@ function SingleVCView({
   return (
     <Tabs defaultValue="overview" className="w-full">
       <TabsList variant="underline" className="grid w-full grid-cols-4">
-        <TabsTrigger value="overview" variant="underline">Overview</TabsTrigger>
-        <TabsTrigger value="credential" variant="underline">Credential</TabsTrigger>
-        <TabsTrigger value="verification" variant="underline">Verification</TabsTrigger>
-        <TabsTrigger value="raw" variant="underline">Raw Data</TabsTrigger>
+        <TabsTrigger value="overview" variant="underline">
+          Overview
+        </TabsTrigger>
+        <TabsTrigger value="credential" variant="underline">
+          Credential
+        </TabsTrigger>
+        <TabsTrigger value="verification" variant="underline">
+          Verification
+        </TabsTrigger>
+        <TabsTrigger value="raw" variant="underline">
+          Raw Data
+        </TabsTrigger>
       </TabsList>
 
       {/* Overview Tab */}
       <TabsContent value="overview" className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">VC Information</CardTitle>
@@ -324,11 +334,13 @@ function SingleVCView({
             <CardContent className="space-y-3">
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="font-medium text-muted-foreground">VC ID:</span>
+                  <span className="text-muted-foreground font-medium">
+                    VC ID:
+                  </span>
                   <span className="ml-2 font-mono text-xs">{vc.vc_id}</span>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">
+                  <span className="text-muted-foreground font-medium">
                     Execution ID:
                   </span>
                   <span className="ml-2 font-mono text-xs">
@@ -336,7 +348,7 @@ function SingleVCView({
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">
+                  <span className="text-muted-foreground font-medium">
                     Workflow ID:
                   </span>
                   <span className="ml-2 font-mono text-xs">
@@ -344,7 +356,9 @@ function SingleVCView({
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Status:</span>
+                  <span className="text-muted-foreground font-medium">
+                    Status:
+                  </span>
                   <Badge
                     variant={
                       normalizeExecutionStatus(vc.status) === "succeeded"
@@ -357,7 +371,9 @@ function SingleVCView({
                   </Badge>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Created:</span>
+                  <span className="text-muted-foreground font-medium">
+                    Created:
+                  </span>
                   <span className="ml-2">
                     {new Date(vc.created_at).toLocaleString()}
                   </span>
@@ -373,20 +389,26 @@ function SingleVCView({
             <CardContent className="space-y-3">
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="font-medium text-muted-foreground">Issuer DID:</span>
-                  <div className="mt-1 font-mono text-xs bg-gray-50 p-2 rounded break-all">
+                  <span className="text-muted-foreground font-medium">
+                    Issuer DID:
+                  </span>
+                  <div className="mt-1 rounded bg-gray-50 p-2 font-mono text-xs break-all">
                     {vc.issuer_did}
                   </div>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Target DID:</span>
-                  <div className="mt-1 font-mono text-xs bg-gray-50 p-2 rounded break-all">
+                  <span className="text-muted-foreground font-medium">
+                    Target DID:
+                  </span>
+                  <div className="mt-1 rounded bg-gray-50 p-2 font-mono text-xs break-all">
                     {vc.target_did}
                   </div>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Caller DID:</span>
-                  <div className="mt-1 font-mono text-xs bg-gray-50 p-2 rounded break-all">
+                  <span className="text-muted-foreground font-medium">
+                    Caller DID:
+                  </span>
+                  <div className="mt-1 rounded bg-gray-50 p-2 font-mono text-xs break-all">
                     {vc.caller_did}
                   </div>
                 </div>
@@ -422,39 +444,47 @@ function SingleVCView({
             <CardTitle className="text-base">Credential Subject</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <h4 className="font-medium mb-2">Execution Details</h4>
+                <h4 className="mb-2 font-medium">Execution Details</h4>
                 <dl className="space-y-1 text-sm">
                   <div>
-                    <dt className="font-medium text-muted-foreground">Input Hash:</dt>
+                    <dt className="text-muted-foreground font-medium">
+                      Input Hash:
+                    </dt>
                     <dd className="font-mono text-xs">
                       {vcDocument.credentialSubject.execution.inputHash}
                     </dd>
                   </div>
                   <div>
-                    <dt className="font-medium text-muted-foreground">Output Hash:</dt>
+                    <dt className="text-muted-foreground font-medium">
+                      Output Hash:
+                    </dt>
                     <dd className="font-mono text-xs">
                       {vcDocument.credentialSubject.execution.outputHash}
                     </dd>
                   </div>
                   <div>
-                    <dt className="font-medium text-muted-foreground">Duration:</dt>
+                    <dt className="text-muted-foreground font-medium">
+                      Duration:
+                    </dt>
                     <dd>
                       {vcDocument.credentialSubject.execution.durationMs}ms
                     </dd>
                   </div>
                   <div>
-                    <dt className="font-medium text-muted-foreground">Status:</dt>
+                    <dt className="text-muted-foreground font-medium">
+                      Status:
+                    </dt>
                     <dd>{vcDocument.credentialSubject.execution.status}</dd>
                   </div>
                 </dl>
               </div>
               <div>
-                <h4 className="font-medium mb-2">Audit Information</h4>
+                <h4 className="mb-2 font-medium">Audit Information</h4>
                 <dl className="space-y-1 text-sm">
                   <div>
-                    <dt className="font-medium text-muted-foreground">
+                    <dt className="text-muted-foreground font-medium">
                       Input Data Hash:
                     </dt>
                     <dd className="font-mono text-xs">
@@ -462,7 +492,7 @@ function SingleVCView({
                     </dd>
                   </div>
                   <div>
-                    <dt className="font-medium text-muted-foreground">
+                    <dt className="text-muted-foreground font-medium">
                       Output Data Hash:
                     </dt>
                     <dd className="font-mono text-xs">
@@ -483,26 +513,30 @@ function SingleVCView({
             <CardTitle className="text-base">Cryptographic Proof</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <h4 className="font-medium mb-2">Proof Details</h4>
+                <h4 className="mb-2 font-medium">Proof Details</h4>
                 <dl className="space-y-2 text-sm">
                   <div>
-                    <dt className="font-medium text-muted-foreground">Type:</dt>
+                    <dt className="text-muted-foreground font-medium">Type:</dt>
                     <dd>{vcDocument.proof.type}</dd>
                   </div>
                   <div>
-                    <dt className="font-medium text-muted-foreground">Created:</dt>
+                    <dt className="text-muted-foreground font-medium">
+                      Created:
+                    </dt>
                     <dd>
                       {new Date(vcDocument.proof.created).toLocaleString()}
                     </dd>
                   </div>
                   <div>
-                    <dt className="font-medium text-muted-foreground">Purpose:</dt>
+                    <dt className="text-muted-foreground font-medium">
+                      Purpose:
+                    </dt>
                     <dd>{vcDocument.proof.proofPurpose}</dd>
                   </div>
                   <div>
-                    <dt className="font-medium text-muted-foreground">
+                    <dt className="text-muted-foreground font-medium">
                       Verification Method:
                     </dt>
                     <dd className="font-mono text-xs break-all">
@@ -512,8 +546,8 @@ function SingleVCView({
                 </dl>
               </div>
               <div>
-                <h4 className="font-medium mb-2">Signature</h4>
-                <div className="bg-gray-50 p-3 rounded text-xs font-mono break-all max-h-32 overflow-y-auto">
+                <h4 className="mb-2 font-medium">Signature</h4>
+                <div className="max-h-32 overflow-y-auto rounded bg-gray-50 p-3 font-mono text-xs break-all">
                   {vcDocument.proof.proofValue}
                 </div>
               </div>
@@ -521,13 +555,13 @@ function SingleVCView({
 
             {verificationResult && (
               <div
-                className={`p-3 rounded-lg ${
+                className={`rounded-lg p-3 ${
                   verificationResult.valid
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-red-50 border border-red-200"
+                    ? "border border-green-200 bg-green-50"
+                    : "border border-red-200 bg-red-50"
                 }`}
               >
-                <div className="flex items-center gap-2 mb-2">
+                <div className="mb-2 flex items-center gap-2">
                   <span
                     className={
                       verificationResult.valid
@@ -567,7 +601,7 @@ function SingleVCView({
             <CardTitle className="text-base">Raw VC Document</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="text-xs bg-gray-50 p-4 rounded border overflow-auto max-h-96">
+            <pre className="max-h-96 overflow-auto rounded border bg-gray-50 p-4 text-xs">
               {JSON.stringify(vcDocument, null, 2)}
             </pre>
           </CardContent>

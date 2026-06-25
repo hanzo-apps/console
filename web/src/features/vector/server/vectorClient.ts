@@ -19,12 +19,16 @@ function toTRPCError(status: number, body: string): TRPCError {
 }
 
 export function resolveApiKey(): string {
-  const globalKey = env.HANZO_SEARCH_API_KEY;
+  // Vector and Search are served by the same cloud gateway; a dedicated
+  // HANZO_VECTOR_API_KEY is honored first, otherwise the shared search key.
+  const globalKey = env.HANZO_VECTOR_API_KEY ?? env.HANZO_SEARCH_API_KEY;
   if (globalKey) return globalKey;
 
   throw new TRPCError({
     code: "PRECONDITION_FAILED",
-    message: "Vector API key is not configured. " + "Set HANZO_SEARCH_API_KEY env var.",
+    message:
+      "Vector API key is not configured. " +
+      "Set HANZO_VECTOR_API_KEY or HANZO_SEARCH_API_KEY env var.",
   });
 }
 
@@ -56,7 +60,11 @@ async function vectorRequest<T>(
   return text ? (JSON.parse(text) as T) : ({} as T);
 }
 
-export function vectorGet<T>(path: string, apiKey: string, params?: Record<string, string | undefined>): Promise<T> {
+export function vectorGet<T>(
+  path: string,
+  apiKey: string,
+  params?: Record<string, string | undefined>,
+): Promise<T> {
   return vectorRequest<T>("GET", path, apiKey, { params });
 }
 
@@ -69,6 +77,10 @@ export function vectorPost<T>(
   return vectorRequest<T>("POST", path, apiKey, { body, params });
 }
 
-export function vectorDelete<T>(path: string, apiKey: string, params?: Record<string, string | undefined>): Promise<T> {
+export function vectorDelete<T>(
+  path: string,
+  apiKey: string,
+  params?: Record<string, string | undefined>,
+): Promise<T> {
   return vectorRequest<T>("DELETE", path, apiKey, { params });
 }

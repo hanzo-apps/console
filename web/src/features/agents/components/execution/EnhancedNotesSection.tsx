@@ -73,12 +73,12 @@ function ExpandableNote({ note }: ExpandableNoteProps) {
       : note.message;
 
   return (
-    <div className="group relative pl-6 pb-4 last:pb-0">
+    <div className="group relative pb-4 pl-6 last:pb-0">
       {/* Timeline dot */}
-      <div className="absolute left-0 top-1 w-2 h-2 bg-blue-500 rounded-full ring-2 ring-background border border-border"></div>
+      <div className="bg-primary ring-background border-border absolute top-1 left-0 h-2 w-2 rounded-full border ring-2"></div>
 
       {/* Timeline line */}
-      <div className="absolute left-0.5 top-3 w-0.5 h-full bg-border group-last:hidden"></div>
+      <div className="bg-border absolute top-3 left-0.5 h-full w-0.5 group-last:hidden"></div>
 
       {/* Event content */}
       <div className="space-y-2">
@@ -86,8 +86,8 @@ function ExpandableNote({ note }: ExpandableNoteProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-sm">
-              <Clock className="w-3 h-3 text-muted-foreground" />
-              <span className="font-medium text-foreground">{time}</span>
+              <Clock className="text-muted-foreground h-3 w-3" />
+              <span className="text-foreground font-medium">{time}</span>
               <span className="text-muted-foreground">·</span>
               <span className="text-body-small">{relative}</span>
             </div>
@@ -98,9 +98,9 @@ function ExpandableNote({ note }: ExpandableNoteProps) {
               {note.tags.map((tag, tagIndex) => (
                 <span
                   key={tagIndex}
-                  className="inline-flex items-center gap-1 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full"
+                  className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
                 >
-                  <Tag className="w-2 h-2" />
+                  <Tag className="h-2 w-2" />
                   {tag}
                 </span>
               ))}
@@ -109,24 +109,24 @@ function ExpandableNote({ note }: ExpandableNoteProps) {
         </div>
 
         {/* Message content */}
-        <div className="text-sm text-foreground leading-relaxed">
-          <div className="whitespace-pre-wrap break-words">
+        <div className="text-foreground text-sm leading-relaxed">
+          <div className="break-words whitespace-pre-wrap">
             {displayMessage}
           </div>
 
           {isLongNote && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="inline-flex items-center gap-1 mt-2 text-body-small hover:text-foreground transition-colors"
+              className="text-body-small hover:text-foreground mt-2 inline-flex items-center gap-1 transition-colors"
             >
               {isExpanded ? (
                 <>
-                  <ChevronUp className="w-3 h-3" />
+                  <ChevronUp className="h-3 w-3" />
                   Show less
                 </>
               ) : (
                 <>
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="h-3 w-3" />
                   Show more
                 </>
               )}
@@ -162,17 +162,17 @@ export function EnhancedNotesSection({
       case "newest":
         return notesCopy.sort(
           (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         );
       case "oldest":
         return notesCopy.sort(
           (a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
         );
       case "chronological":
         return notesCopy.sort(
           (a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
         );
       default:
         return notesCopy;
@@ -194,13 +194,13 @@ export function EnhancedNotesSection({
   const getSortIcon = () => {
     switch (sortOrder) {
       case "newest":
-        return <ArrowDown className="w-3 h-3" />;
+        return <ArrowDown className="h-3 w-3" />;
       case "oldest":
-        return <ArrowUp className="w-3 h-3" />;
+        return <ArrowUp className="h-3 w-3" />;
       case "chronological":
-        return <ArrowUpDown className="w-3 h-3" />;
+        return <ArrowUpDown className="h-3 w-3" />;
       default:
-        return <ArrowUpDown className="w-3 h-3" />;
+        return <ArrowUpDown className="h-3 w-3" />;
     }
   };
 
@@ -227,7 +227,7 @@ export function EnhancedNotesSection({
 
   const badge = (
     <div className="flex items-center gap-2">
-      <span className="text-body-small bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded">
+      <span className="text-body-small bg-muted text-muted-foreground rounded px-2 py-0.5">
         {execution.notes?.length || 0}{" "}
         {execution.notes?.length === 1 ? "Event" : "Events"}
       </span>
@@ -237,7 +237,7 @@ export function EnhancedNotesSection({
           variant="ghost"
           size="sm"
           onClick={cycleSortOrder}
-          className="h-6 text-xs px-2 text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground h-6 px-2 text-xs"
           title={getSortLabel()}
         >
           {getSortIcon()}
@@ -249,11 +249,11 @@ export function EnhancedNotesSection({
             size="sm"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground h-6 w-6 p-0"
             title="Refresh notes"
           >
             <RefreshCw
-              className={`w-3 h-3 ${isRefreshing ? "animate-spin" : ""}`}
+              className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`}
             />
           </Button>
         )}
@@ -266,10 +266,8 @@ export function EnhancedNotesSection({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FileText className="w-5 h-5" />
-          <h3 className="text-heading-3 text-foreground">
-            Execution Events
-          </h3>
+          <FileText className="h-5 w-5" />
+          <h3 className="text-heading-3 text-foreground">Execution Events</h3>
           {badge}
         </div>
       </div>
@@ -287,7 +285,7 @@ export function EnhancedNotesSection({
 
       {/* Summary footer */}
       {sortedNotes.length > 3 && (
-        <div className="mt-4 pt-3 border-t border-border">
+        <div className="border-border mt-4 border-t pt-3">
           <div className="text-body-small text-center">
             {sortedNotes.length} events • Sorted by{" "}
             {getSortLabel().toLowerCase()}

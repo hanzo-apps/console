@@ -1,6 +1,11 @@
 import { Badge } from "@/src/features/agents/components/ui/badge";
 import { Button } from "@/src/features/agents/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/features/agents/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/features/agents/components/ui/card";
 import { Checkbox } from "@/src/features/agents/components/ui/checkbox";
 import { Input } from "@/src/features/agents/components/ui/input";
 import { Label } from "@/src/features/agents/components/ui/label";
@@ -62,7 +67,7 @@ export function MCPToolTester({
   const [isExecuting, setIsExecuting] = useState(false);
   const [testHistory, setTestHistory] = useState<TestHistory[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(
-    null
+    null,
   );
   const [timeoutMs, setTimeoutMs] = useState(30000);
 
@@ -221,7 +226,7 @@ export function MCPToolTester({
             />
             <Label htmlFor={param.name} className="text-sm font-medium">
               {param.name}
-              {param.required && <span className="text-red-500 ml-1">*</span>}
+              {param.required && <span className="ml-1 text-red-500">*</span>}
             </Label>
           </div>
         );
@@ -232,7 +237,7 @@ export function MCPToolTester({
           <div className="space-y-2">
             <Label htmlFor={param.name} className="text-sm font-medium">
               {param.name}
-              {param.required && <span className="text-red-500 ml-1">*</span>}
+              {param.required && <span className="ml-1 text-red-500">*</span>}
             </Label>
             <Input
               id={param.name}
@@ -255,7 +260,7 @@ export function MCPToolTester({
             <div className="space-y-2">
               <Label htmlFor={param.name} className="text-sm font-medium">
                 {param.name}
-                {param.required && <span className="text-red-500 ml-1">*</span>}
+                {param.required && <span className="ml-1 text-red-500">*</span>}
               </Label>
               <Select
                 value={value || ""}
@@ -282,7 +287,7 @@ export function MCPToolTester({
           <div className="space-y-2">
             <Label htmlFor={param.name} className="text-sm font-medium">
               {param.name}
-              {param.required && <span className="text-red-500 ml-1">*</span>}
+              {param.required && <span className="ml-1 text-red-500">*</span>}
             </Label>
             <Input
               id={param.name}
@@ -304,7 +309,7 @@ export function MCPToolTester({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Play className="w-5 h-5 text-muted-foreground" />
+            <Play className="text-muted-foreground h-5 w-5" />
             <CardTitle>Test Tool: {tool.name}</CardTitle>
           </div>
 
@@ -317,8 +322,8 @@ export function MCPToolTester({
       <CardContent className="space-y-6">
         {/* Tool Description */}
         {tool.description && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">{tool.description}</p>
+          <div className="bg-muted border-border rounded-md border p-3">
+            <p className="text-foreground text-sm">{tool.description}</p>
           </div>
         )}
 
@@ -331,9 +336,7 @@ export function MCPToolTester({
                 <div key={param.name} className="space-y-1">
                   {renderParameterInput(param)}
                   {param.description && (
-                    <p className="text-body-small">
-                      {param.description}
-                    </p>
+                    <p className="text-body-small">{param.description}</p>
                   )}
                 </div>
               ))}
@@ -371,12 +374,12 @@ export function MCPToolTester({
           >
             {isExecuting ? (
               <>
-                <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 Executing...
               </>
             ) : (
               <>
-                <Play className="w-4 h-4 mr-2" />
+                <Play className="mr-2 h-4 w-4" />
                 Execute Tool
               </>
             )}
@@ -388,7 +391,7 @@ export function MCPToolTester({
               onClick={() => setIsExecuting(false)}
               disabled
             >
-              <Stop className="w-4 h-4" />
+              <Stop className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -407,14 +410,14 @@ export function MCPToolTester({
                   className="flex items-center gap-1"
                 >
                   {selectedHistory.response.success ? (
-                    <CheckmarkFilled className="w-3 h-3" />
+                    <CheckmarkFilled className="h-3 w-3" />
                   ) : (
-                    <ErrorFilled className="w-3 h-3" />
+                    <ErrorFilled className="h-3 w-3" />
                   )}
                   {selectedHistory.response.success ? "Success" : "Error"}
                 </Badge>
                 <Badge variant="secondary" className="flex items-center gap-1">
-                  <Time className="w-3 h-3" />
+                  <Time className="h-3 w-3" />
                   {selectedHistory.response.execution_time_ms}ms
                 </Badge>
               </div>
@@ -423,7 +426,7 @@ export function MCPToolTester({
             <div className="space-y-3">
               {selectedHistory.response.success ? (
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="mb-2 flex items-center justify-between">
                     <Label className="text-sm font-medium">Result</Label>
                     <Button
                       variant="ghost"
@@ -433,15 +436,15 @@ export function MCPToolTester({
                           JSON.stringify(
                             selectedHistory.response.result,
                             null,
-                            2
-                          )
+                            2,
+                          ),
                         )
                       }
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded-md overflow-x-auto max-h-64">
+                  <pre className="max-h-64 overflow-x-auto rounded-md bg-gray-900 p-3 text-xs text-gray-100">
                     {JSON.stringify(selectedHistory.response.result, null, 2)}
                   </pre>
                 </div>
@@ -450,7 +453,7 @@ export function MCPToolTester({
                   <Label className="text-sm font-medium text-red-600">
                     Error
                   </Label>
-                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-3">
                     <p className="text-sm text-red-800">
                       {selectedHistory.response.error}
                     </p>
@@ -467,33 +470,33 @@ export function MCPToolTester({
             <Separator />
             <div className="flex items-center justify-between">
               <h3 className="text-heading-3 flex items-center gap-2">
-                <RecentlyViewed className="w-5 h-5" />
+                <RecentlyViewed className="h-5 w-5" />
                 Test History
               </h3>
               <Button variant="ghost" size="sm" onClick={clearHistory}>
-                <TrashCan className="w-4 h-4" />
+                <TrashCan className="h-4 w-4" />
                 Clear
               </Button>
             </div>
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="max-h-64 space-y-2 overflow-y-auto">
               {testHistory.map((entry) => (
                 <div
                   key={entry.id}
                   className={cn(
-                    "p-3 border rounded-md cursor-pointer transition-colors",
+                    "cursor-pointer rounded-md border p-3 transition-colors",
                     selectedHistoryId === entry.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
+                      ? "border-primary bg-muted"
+                      : "border-gray-200 hover:border-gray-300",
                   )}
                   onClick={() => loadFromHistory(entry)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {entry.response.success ? (
-                        <CheckmarkFilled className="w-4 h-4 text-green-600" />
+                        <CheckmarkFilled className="h-4 w-4 text-green-600" />
                       ) : (
-                        <ErrorFilled className="w-4 h-4 text-red-600" />
+                        <ErrorFilled className="h-4 w-4 text-red-600" />
                       )}
                       <span className="text-sm font-medium">
                         {new Date(entry.timestamp).toLocaleTimeString()}
