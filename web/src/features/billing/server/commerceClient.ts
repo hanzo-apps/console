@@ -12,6 +12,22 @@ function baseUrl(): string {
   return env.COMMERCE_API_URL;
 }
 
+// Orgs whose billing routes through Square SANDBOX (test mode). For these the
+// console sends `X-Hanzo-Test: true`, which commerce's service-token middleware
+// reads to treat the call as test (org.Live=false → sandbox vault/charge and a
+// sandbox payment-config). Comma-separated org slugs in BILLING_TEST_ORG_SLUGS;
+// every other org stays on production Square. Server-only (process.env).
+const TEST_ORG_SLUGS = new Set(
+  (process.env.BILLING_TEST_ORG_SLUGS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+
+function isTestOrg(org?: string): boolean {
+  return !!org && TEST_ORG_SLUGS.has(org);
+}
+
 function getToken(): string {
   if (!env.COMMERCE_SERVICE_TOKEN) {
     throw new TRPCError({
@@ -66,6 +82,7 @@ async function commerceRequest<T>(
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
       ...(opts?.org ? { "X-Hanzo-Org": opts.org } : {}),
+      ...(isTestOrg(opts?.org) ? { "X-Hanzo-Test": "true" } : {}),
       ...(opts?.headers ?? {}),
     },
     ...(opts?.body ? { body: JSON.stringify(opts.body) } : {}),
