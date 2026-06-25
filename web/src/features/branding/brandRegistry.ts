@@ -30,6 +30,10 @@ export interface Brand {
   readonly logoViewBox: string;
   /** Inner SVG markup for the logo mark (multi-path, uses currentColor). */
   readonly logoContent: string;
+  /** IAM OIDC server URL for this brand's console SSO (public; HIP-0111). */
+  readonly iamServerUrl: string;
+  /** IAM OAuth client id for this brand's console (<org>-console; public). */
+  readonly iamClientId: string;
 }
 
 // Hanzo — the canonical monochrome "blocky-H" mark (7 paths incl. the two
@@ -49,6 +53,8 @@ const HANZO_BRAND: Brand = {
     '<path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/>' +
     '<path d="M66.6753 22.3185L44.5098 20.0822V22.3185H66.6753Z" opacity="0.8"/>' +
     '<path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/>',
+  iamServerUrl: "https://iam.hanzo.ai",
+  iamClientId: "hanzo-console",
 };
 
 // Lux — downward triangle (lifted from the explorer registry).
@@ -59,6 +65,8 @@ const LUX_BRAND: Brand = {
   websiteUrl: "https://lux.network",
   logoViewBox: "0 0 100 100",
   logoContent: '<path d="M50 85 L15 25 L85 25 Z"/>',
+  iamServerUrl: "https://lux.id",
+  iamClientId: "lux-console",
 };
 
 // Zoo — colorful interlocking circles (lifted from the explorer registry;
@@ -90,6 +98,8 @@ const ZOO_BRAND: Brand = {
     '<g clip-path="url(#zooRClip)">' +
     '<circle cx="643" cy="595" r="234" fill="#FFFFFF"/>' +
     "</g></g></g>",
+  iamServerUrl: "https://zoo.id",
+  iamClientId: "zoo-console",
 };
 
 // Pars — Persian 8-pointed star (lifted from the explorer registry).
@@ -107,6 +117,8 @@ const PARS_BRAND: Brand = {
     '<circle r="55" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>' +
     '<circle r="35" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>' +
     '<circle r="8" fill="currentColor"/>',
+  iamServerUrl: "https://pars.id",
+  iamClientId: "pars-console",
 };
 
 export const BRANDS: Record<BrandId, Brand> = {
@@ -155,6 +167,8 @@ function applyBrandEnvOverrides(brand: Brand): Brand {
     websiteUrl: e.NEXT_PUBLIC_BRAND_WEBSITE_URL?.trim() || brand.websiteUrl,
     logoViewBox: e.NEXT_PUBLIC_BRAND_LOGO_VIEWBOX?.trim() || brand.logoViewBox,
     logoContent: e.NEXT_PUBLIC_BRAND_LOGO_CONTENT?.trim() || brand.logoContent,
+    iamServerUrl: e.NEXT_PUBLIC_IAM_SERVER_URL?.trim() || brand.iamServerUrl,
+    iamClientId: e.NEXT_PUBLIC_IAM_CLIENT_ID?.trim() || brand.iamClientId,
   };
   return next;
 }
