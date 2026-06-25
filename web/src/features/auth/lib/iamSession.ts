@@ -166,7 +166,10 @@ function isInstanceAdminEmail(email: string | null): boolean {
  * entitlements, admin flag) so the ~495 protected procedures + 277 `session.user`
  * reads are unchanged.
  */
-export async function hydrateSession(email: string): Promise<Session> {
+export async function hydrateSession(
+  email: string,
+  iamSub?: string,
+): Promise<Session> {
   return instrumentAsync({ name: "iam-session-hydrate" }, async (span) => {
     const dbUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -208,6 +211,7 @@ export async function hydrateSession(email: string): Promise<Session> {
               id: dbUser.id,
               name: dbUser.name,
               email: dbUser.email,
+              iamSub: iamSub,
               emailSupportHash: dbUser.email
                 ? createSupportEmailHash(dbUser.email)
                 : undefined,
@@ -294,7 +298,7 @@ export async function getIamSessionFromCookie(
   const ref = verifySession(value);
   if (!ref) return null;
   try {
-    return await hydrateSession(ref.email);
+    return await hydrateSession(ref.email, ref.sub);
   } catch (error) {
     logger.warn(
       "iam-session hydrate failed: " +

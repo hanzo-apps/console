@@ -20,9 +20,15 @@ import { createHash } from "crypto";
 /** Max length for the human-readable stem (keeps the full slug well under IAM's 255). */
 const STEM_MAX = 32;
 
-/** 8 hex chars (32 bits) — collision-safe for per-tenant disambiguation. */
+/**
+ * 16 hex chars (64 bits) of SHA-256 — matches IAM's own `orgSlug` suffix width.
+ * 64 bits keeps the birthday-collision probability negligible across any
+ * realistic tenant count (a collision would merge two humans into one org =
+ * one commerce billing namespace, so this MUST be collision-safe, not just
+ * "usually distinct").
+ */
 function shortHash(input: string): string {
-  return createHash("sha256").update(input).digest("hex").slice(0, 8);
+  return createHash("sha256").update(input).digest("hex").slice(0, 16);
 }
 
 /**

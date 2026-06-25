@@ -413,10 +413,23 @@ export async function iamProvisionTenant(params: {
         },
       });
       if (addUser.status !== "ok") {
-        return {
-          ok: false,
-          error: addUser.msg || "Failed to create tenant user.",
-        };
+        // Idempotency under concurrent / retried signups of the same email: two
+        // requests can both observe `existingUser == null` and both POST
+        // add-user; the loser hits a duplicate-insert. Treat "already exists" as
+        // success (the row we wanted is there) instead of failing a legitimate
+        // re-signup. Re-confirm the user resolves before continuing.
+        const msg = (addUser.msg || "").toLowerCase();
+        const isDuplicate =
+          msg.includes("already exist") ||
+          msg.includes("duplicate") ||
+          msg.includes("exists");
+        const confirmed = isDuplicate ? await iamGetUser(sub) : null;
+        if (!confirmed) {
+          return {
+            ok: false,
+            error: addUser.msg || "Failed to create tenant user.",
+          };
+        }
       }
     }
 

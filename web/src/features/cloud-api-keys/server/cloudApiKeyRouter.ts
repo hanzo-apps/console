@@ -38,12 +38,36 @@ function maskKey(key: string): string {
 }
 
 /**
- * The session user's IAM sub for this org. The console org id is the IAM org
- * slug (ensureConsoleOrgForIamOrg keys them equal) and the IAM username is the
- * email (email-as-username), so the sub is `<orgId>/<email>`.
+ * Resolve the IAM `sub` whose hk- key this org-scoped request operates on.
+ *
+ * Authoritative path: the session carries the verified IAM `sub` from login
+ * (`session.user.iamSub`), which is correct for EVERY user — self-serve tenants
+ * (`<slug>/<email>`), shared-org users (`hanzo/z`, where username != email), and
+ * global admins (their own home-org sub). We use it whenever it belongs to THIS
+ * org (the org-scoped procedure already proved membership), so a member of
+ * multiple orgs always resolves to their own identity in the active org.
+ *
+ * Fallback (no `iamSub` in the session — legacy cookie): positionally
+ * reconstruct `<orgId>/<email>`. This only holds for the dedicated-org
+ * self-serve case (console org id == IAM slug, email-as-username); for other
+ * users it may not resolve, which the callers surface as a clear NOT_FOUND
+ * rather than acting on the wrong identity.
  */
-function subFor(orgId: string, email: string | undefined | null): string {
-  return `${orgId}/${(email ?? "").toLowerCase()}`;
+async function resolveIamSub(
+  orgId: string,
+  ctx: { session: { user: { iamSub?: string; email?: string | null } } },
+): Promise<string | null> {
+  const iamSub = ctx.session.user.iamSub;
+  if (iamSub) {
+    // The sub's org segment must match the active org so a multi-org user can't
+    // mint a key in an org their session sub doesn't belong to. If it doesn't
+    // match (e.g. an admin viewing another org), fall through to positional.
+    const owner = iamSub.split("/")[0];
+    if (owner && owner.toLowerCase() === orgId.toLowerCase()) return iamSub;
+  }
+  const email = (ctx.session.user.email ?? "").toLowerCase();
+  if (!email) return null;
+  return `${orgId}/${email}`;
 }
 
 export const cloudApiKeyRouter = createTRPCRouter({
@@ -51,8 +75,15 @@ export const cloudApiKeyRouter = createTRPCRouter({
   get: protectedOrganizationProcedure
     .input(z.object({ orgId: z.string() }))
     .query(async ({ input, ctx }) => {
-      const sub = subFor(input.orgId, ctx.session.user.email);
-      const user = await iamGetUser(sub);
+      // Same scope gate as mint/revoke — reading even the masked key is a
+      // key-management action, not a plain membership read.
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "organization:CRUD_apiKeys",
+        session: ctx.session,
+      });
+      const sub = await resolveIamSub(input.orgId, ctx);
+      const user = sub ? await iamGetUser(sub) : null;
       const accessKey = user?.accessKey ?? "";
       return {
         hasKey: Boolean(accessKey),
@@ -72,12 +103,12 @@ export const cloudApiKeyRouter = createTRPCRouter({
         scope: "organization:CRUD_apiKeys",
         session: ctx.session,
       });
-      const sub = subFor(input.orgId, ctx.session.user.email);
+      const sub = await resolveIamSub(input.orgId, ctx);
 
       // Confirm the IAM user exists for this sub before minting so we fail
       // clearly rather than minting onto a non-existent record.
-      const user = await iamGetUser(sub);
-      if (!user) {
+      const user = sub ? await iamGetUser(sub) : null;
+      if (!sub || !user) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message:
@@ -113,7 +144,13 @@ export const cloudApiKeyRouter = createTRPCRouter({
         scope: "organization:CRUD_apiKeys",
         session: ctx.session,
       });
-      const sub = subFor(input.orgId, ctx.session.user.email);
+      const sub = await resolveIamSub(input.orgId, ctx);
+      if (!sub) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No IAM identity for this account in this organization.",
+        });
+      }
 
       const result = await iamRevokeUserKeys(sub);
       if (!result.ok) {
