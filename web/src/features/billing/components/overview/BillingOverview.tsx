@@ -1,80 +1,55 @@
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { PlanUsageRollup } from "@/src/features/billing/components/overview/PlanUsageRollup";
-import { PlanSelectionModal } from "@/src/features/billing/components/PlanSectionModal";
-import { stripeProducts } from "@/src/features/billing/utils/stripeProducts";
+import { BillingPlansDialog } from "@/src/features/billing/components/BillingPlansDialog";
+import { SquarePaymentDialog } from "@/src/features/billing/components/SquarePaymentDialog";
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
 import { api } from "@/src/utils/api";
-import { useRouter } from "next/router";
 import { useState } from "react";
 import { planLabels, type Plan } from "@hanzo/console";
 
 export const BillingOverview = () => {
-  const router = useRouter();
   const organization = useQueryOrganization();
-  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const orgId = organization?.id ?? "";
+  const [plansOpen, setPlansOpen] = useState(false);
+  const [creditsOpen, setCreditsOpen] = useState(false);
 
-  const { data: usage } = api.cloudBilling.getUsage.useQuery(
-    {
-      orgId: organization?.id ?? "",
-    },
-    {
-      enabled: organization !== undefined,
-    },
+  const usageQuery = api.cloudBilling.getUsage.useQuery(
+    { orgId },
+    { enabled: organization !== undefined },
   );
-  const { data: subscription } = api.cloudBilling.getSubscriptionInfo.useQuery(
-    {
-      orgId: organization?.id ?? "",
-    },
-    {
-      enabled: organization !== undefined,
-    },
+  const subscriptionQuery = api.cloudBilling.getSubscriptionInfo.useQuery(
+    { orgId },
+    { enabled: organization !== undefined },
   );
-
-  // Fetch organization details to get credits
-  const { data: orgDetails } = api.organizations.getDetails.useQuery(
-    { orgId: organization?.id ?? "" },
+  const orgDetailsQuery = api.organizations.getDetails.useQuery(
+    { orgId },
     { enabled: !!organization },
   );
 
-  const createCheckoutSession =
-    api.cloudBilling.createStripeCheckoutSession.useMutation();
+  const usage = usageQuery.data;
+  const subscription = subscriptionQuery.data;
 
-  const handlePurchaseCredits = async () => {
-    const creditsProduct = stripeProducts.find((p) => p.id === "credits-plan");
-    if (!creditsProduct) {
-      console.error("Credits product not found");
-      return;
-    }
-
-    const url = await createCheckoutSession.mutateAsync({
-      orgId: organization?.id ?? "",
-      stripeProductId: creditsProduct.stripeProductId,
-    });
-    if (url) window.location.href = url;
+  const refetchAll = () => {
+    void usageQuery.refetch();
+    void subscriptionQuery.refetch();
+    void orgDetailsQuery.refetch();
   };
 
-  const handleUpgradePlan = () => {
-    setIsPlanModalOpen(true);
-  };
-
-  // Get plan from organization
   const currentPlanKey = organization?.plan as Plan | undefined;
   const currentPlan = currentPlanKey ? planLabels[currentPlanKey] : "Free Plan";
   const currentUsage = usage?.usageCount || 0;
-  const availableCredits = orgDetails?.credits || 0;
+  const availableCredits = orgDetailsQuery.data?.credits || 0;
 
   const hasActiveSubscription = Boolean(
     organization?.cloudConfig?.stripe?.activeSubscriptionId,
   );
 
-  // Format billing period end date
   const billingPeriodEnd = subscription?.billingPeriod?.end;
   const nextBillingDate = billingPeriodEnd
     ? new Date(billingPeriodEnd).toLocaleDateString()
     : null;
 
-  // Check for cancellation
   const isCanceled = Boolean(subscription?.cancellation);
   const cancelAt = subscription?.cancellation?.cancelAt
     ? new Date(subscription.cancellation.cancelAt * 1000)
@@ -114,7 +89,7 @@ export const BillingOverview = () => {
         <Button
           variant="secondary"
           className="mt-4 w-full"
-          onClick={handleUpgradePlan}
+          onClick={() => setPlansOpen(true)}
         >
           {hasActiveSubscription ? "Change Plan" : "Upgrade Plan"}
         </Button>
@@ -135,7 +110,7 @@ export const BillingOverview = () => {
             <span className="font-medium">${availableCredits.toFixed(2)}</span>
           </div>
         </div>
-        <Button className="mt-4 w-full" onClick={handlePurchaseCredits}>
+        <Button className="mt-4 w-full" onClick={() => setCreditsOpen(true)}>
           Purchase Credits
         </Button>
       </Card>
@@ -155,18 +130,31 @@ export const BillingOverview = () => {
         <Button
           variant="outline"
           className="mt-4 w-full"
-          onClick={() => router.push("/pricing")}
+          onClick={() => setPlansOpen(true)}
         >
           View Pricing
         </Button>
       </Card>
 
-      <PlanSelectionModal
-        isOpen={isPlanModalOpen}
-        onClose={() => setIsPlanModalOpen(false)}
-        orgId={organization?.id ?? ""}
-        currentSubscription={subscription}
-      />
+      {organization && (
+        <>
+          <BillingPlansDialog
+            open={plansOpen}
+            onOpenChange={setPlansOpen}
+            orgId={orgId}
+            onSuccess={refetchAll}
+          />
+          {creditsOpen && (
+            <SquarePaymentDialog
+              open={creditsOpen}
+              onOpenChange={(o) => !o && setCreditsOpen(false)}
+              orgId={orgId}
+              mode="buy-credits"
+              onSuccess={refetchAll}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 };

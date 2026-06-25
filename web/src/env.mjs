@@ -602,6 +602,14 @@ export const env = createEnv({
     NEXT_PUBLIC_IAM_CLIENT_ID: z.string().optional(),
     NEXT_PUBLIC_IAM_ORG_NAME: z.string().optional(),
     NEXT_PUBLIC_IAM_APP_NAME: z.string().optional(),
+    // Square Web Payments SDK (client-side card tokenization for commerce
+    // billing). Application + location ids are public values, safe to inline.
+    // WARNING: Also add these to web/Dockerfile (NEXT_PUBLIC_* are compile-time).
+    NEXT_PUBLIC_SQUARE_APPLICATION_ID: z.string().optional(),
+    NEXT_PUBLIC_SQUARE_LOCATION_ID: z.string().optional(),
+    NEXT_PUBLIC_SQUARE_ENVIRONMENT: z
+      .enum(["production", "sandbox"])
+      .optional(),
   },
 
   /**
@@ -898,6 +906,10 @@ export const env = createEnv({
     NEXT_PUBLIC_IAM_CLIENT_ID: process.env.NEXT_PUBLIC_IAM_CLIENT_ID,
     NEXT_PUBLIC_IAM_ORG_NAME: process.env.NEXT_PUBLIC_IAM_ORG_NAME,
     NEXT_PUBLIC_IAM_APP_NAME: process.env.NEXT_PUBLIC_IAM_APP_NAME,
+    NEXT_PUBLIC_SQUARE_APPLICATION_ID:
+      process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID,
+    NEXT_PUBLIC_SQUARE_LOCATION_ID: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+    NEXT_PUBLIC_SQUARE_ENVIRONMENT: process.env.NEXT_PUBLIC_SQUARE_ENVIRONMENT,
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
     SENTRY_CSP_REPORT_URI: process.env.SENTRY_CSP_REPORT_URI,
     HANZO_RATE_LIMITS_ENABLED: process.env.HANZO_RATE_LIMITS_ENABLED,

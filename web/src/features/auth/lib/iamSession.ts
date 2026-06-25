@@ -28,7 +28,11 @@ import { hasEntitlementBasedOnPlan } from "@/src/features/entitlements/server/ha
 import { projectRoleAccessRights } from "@/src/features/rbac/constants/projectAccessRights";
 import { createSupportEmailHash } from "@/src/features/support-chat/createSupportEmailHash";
 import { parseFlags } from "@/src/features/feature-flags/utils";
-import { iamValidateToken } from "@/src/features/auth/lib/iamServer";
+import {
+  iamValidateToken,
+  iamGetUser,
+  iamMintUserKeys,
+} from "@/src/features/auth/lib/iamServer";
 import { syncIamMembershipsForUser } from "@/src/features/auth/lib/syncIamMemberships";
 import { createProjectMembershipsOnSignup } from "@/src/features/auth/lib/createProjectMembershipsOnSignup";
 import { type Session } from "@/src/features/auth/session-types";
@@ -162,7 +166,10 @@ function isInstanceAdminEmail(email: string | null): boolean {
  * entitlements, admin flag) so the ~495 protected procedures + 277 `session.user`
  * reads are unchanged.
  */
-export async function hydrateSession(email: string): Promise<Session> {
+export async function hydrateSession(
+  email: string,
+  iamSub?: string,
+): Promise<Session> {
   return instrumentAsync({ name: "iam-session-hydrate" }, async (span) => {
     const dbUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -204,6 +211,7 @@ export async function hydrateSession(email: string): Promise<Session> {
               id: dbUser.id,
               name: dbUser.name,
               email: dbUser.email,
+              iamSub: iamSub,
               emailSupportHash: dbUser.email
                 ? createSupportEmailHash(dbUser.email)
                 : undefined,
@@ -290,7 +298,7 @@ export async function getIamSessionFromCookie(
   const ref = verifySession(value);
   if (!ref) return null;
   try {
-    return await hydrateSession(ref.email);
+    return await hydrateSession(ref.email, ref.sub);
   } catch (error) {
     logger.warn(
       "iam-session hydrate failed: " +
@@ -359,6 +367,23 @@ export async function establishIamSession(identity: {
     { sub: identity.sub || dbUser.id, email },
     dbUser.id,
   );
+  // Safety net: ensure every IAM-backed user has a per-user hk- Cloud API key
+  // (signup mints one up front; this covers SSO / pre-existing users so the
+  // pay-as-you-go loop works for everyone). Best-effort + idempotent — only
+  // mints when absent, and never blocks login.
+  if (identity.sub) {
+    try {
+      const iamUser = await iamGetUser(identity.sub);
+      if (iamUser && !iamUser.accessKey) {
+        await iamMintUserKeys(identity.sub);
+      }
+    } catch (error) {
+      logger.warn(
+        "iam-session: hk- key auto-provision skipped: " +
+          (error instanceof Error ? error.message : String(error)),
+      );
+    }
+  }
   return signSession({ sub: identity.sub || dbUser.id, email });
 }
 

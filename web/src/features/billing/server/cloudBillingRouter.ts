@@ -16,6 +16,8 @@ import { getObservationCountOfProjectsSinceCreationDate } from "@hanzo/console/s
 import {
   commerceGet,
   commercePost,
+  commercePatch,
+  commerceDelete,
 } from "@/src/features/billing/server/commerceClient";
 import type Stripe from "stripe";
 
@@ -51,6 +53,64 @@ export type CommerceCreditBalance = {
   balances: Array<{ currency: string; available: number }>; // available in cents
 };
 
+/** Raw shape from Commerce GET /v1/billing/balance (cents). */
+type CommerceBalance = {
+  user: string;
+  currency: string;
+  balance: number;
+  holds: number;
+  available: number;
+};
+
+/** Raw shape from Commerce GET /v1/billing/tier. */
+type CommerceTier = {
+  user: string;
+  tier: {
+    name: string;
+    displayName: string;
+    dailyCreditsCents: number;
+    maxAgents: number;
+    unlimitedAgents: boolean;
+    allowedModels: string[];
+  };
+  balance: {
+    currency: string;
+    prepaidAvailable: number; // cents
+    dailyRemaining: number; // cents
+    effectiveAvailable: number; // cents
+  };
+};
+
+/** Raw shape from Commerce GET /v1/billing/usage. */
+type CommerceUsage = {
+  user: string;
+  count: number;
+  usage: Array<{
+    transactionId: string;
+    amount: number; // cents (usage is recorded as withdrawals)
+    currency: string;
+    notes?: string;
+    metadata?: unknown;
+    createdAt?: string;
+  }>;
+};
+
+/** Raw shape from Commerce GET /v1/billing/invoices. */
+type CommerceInvoiceList = {
+  count: number;
+  invoices: Array<{
+    id: string;
+    number?: string | null;
+    status?: string | null;
+    currency?: string;
+    total?: number; // cents
+    amountDue?: number; // cents
+    createdAt?: string | number;
+    hostedInvoiceUrl?: string | null;
+    invoicePdfUrl?: string | null;
+  }>;
+};
+
 /** Shape returned by Commerce POST /v1/billing/credit-grants. */
 export type CommerceCreditGrant = {
   id: string;
@@ -64,6 +124,146 @@ export type CommerceCreditGrant = {
   createdAt?: string;
   expiresAt?: string;
 };
+
+/** Shape returned by Commerce GET/POST /v1/billing/payment-methods. */
+export type CommercePaymentMethod = {
+  id: string;
+  customerId?: string;
+  type: string; // "card" | "wire" | "crypto" | "bank_account"
+  isDefault?: boolean;
+  card?: {
+    brand?: string;
+    last4?: string;
+    expMonth?: number;
+    expYear?: number;
+  } | null;
+  providerRef?: string;
+  providerType?: string;
+  metadata?: Record<string, unknown>;
+  created?: string;
+};
+
+/** Shape returned by Commerce POST /v1/billing/topup/token. */
+export type CommerceTopupResult = {
+  transactionId?: string;
+  balanceCents?: number;
+  status?: string;
+};
+
+/** Shape returned by Commerce GET /v1/billing/plans (prices in cents). */
+export type CommercePlan = {
+  slug: string;
+  name: string;
+  description?: string;
+  category?: string;
+  price: number; // cents, monthly
+  priceAnnual?: number; // cents, annual
+  currency?: string;
+  interval?: string;
+  intervalCount?: number;
+  trialPeriodDays?: number;
+  features?: string[];
+  limits?: Record<string, number>;
+};
+
+/** Shape returned by Commerce subscription endpoints. */
+export type CommerceSubscription = {
+  id: string;
+  userId: string;
+  planId: string;
+  status: string;
+  quantity?: number;
+  currentPeriodStart?: string | number;
+  currentPeriodEnd?: string | number;
+  cancelAtPeriodEnd?: boolean;
+  providerType?: string;
+  defaultPaymentMethod?: string;
+  plan?: {
+    id?: string;
+    name?: string;
+    price?: number;
+    currency?: string;
+    interval?: string;
+  };
+  canceledAt?: string | number;
+};
+
+const ACTIVE_SUB_STATUSES = ["active", "trialing", "past_due"];
+
+// Commerce /plans and /subscriptions are intermittently slow (sub-second → 30s
+// hangs). Bound every call with a timeout, and cache the plan catalog in-process
+// so the plans dialog never blocks on a cold/slow upstream.
+const COMMERCE_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${label} timed out`)),
+        COMMERCE_TIMEOUT_MS,
+      ),
+    ),
+  ]);
+}
+
+let plansCache: { at: number; plans: CommercePlan[] } | null = null;
+const PLANS_CACHE_TTL_MS = 10 * 60 * 1_000;
+
+// Only the core personal plans belong in the org plan picker — commerce /plans
+// also returns the World and DNS catalogs.
+function isCorePlan(p: CommercePlan): boolean {
+  return (p.category ?? "personal") === "personal" && p.slug !== "custom";
+}
+
+// Last-resort catalog if commerce is unreachable AND the cache is cold.
+const FALLBACK_PLANS: CommercePlan[] = [
+  {
+    slug: "developer",
+    name: "Developer",
+    price: 0,
+    currency: "usd",
+    interval: "monthly",
+    description: "Get started for free. Explore the API with included credits.",
+    features: [
+      "$5 free credit",
+      "60 requests/min",
+      "100K tokens/min",
+      "Community support",
+      "API access",
+    ],
+  },
+  {
+    slug: "pro",
+    name: "Pro",
+    price: 4900,
+    priceAnnual: 3900,
+    currency: "usd",
+    interval: "monthly",
+    description: "For developers shipping real products.",
+    features: ["Higher rate limits", "Priority support", "Hanzo World Pro"],
+  },
+  {
+    slug: "team",
+    name: "Team",
+    price: 19900,
+    priceAnnual: 15900,
+    currency: "usd",
+    interval: "monthly",
+    description: "For teams that need controls and scale.",
+    features: ["Everything in Pro", "Org controls", "SSO"],
+  },
+  {
+    slug: "enterprise",
+    name: "Enterprise",
+    price: 999900,
+    priceAnnual: 799900,
+    currency: "usd",
+    interval: "monthly",
+    description: "Enterprise-grade security and support.",
+    features: ["Custom rate limits", "Uptime SLA", "Dedicated support"],
+  },
+];
 
 export const cloudBillingRouter = createTRPCRouter({
   createStripeCheckoutSession: protectedOrganizationProcedure
@@ -391,11 +591,10 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
-      if (!stripeClient)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Stripe client not initialized",
-        });
+      // Commerce-native billing has no Stripe client. Return null so the UI
+      // hides the "manage in Stripe" portal button instead of 500-ing the
+      // whole billing page (PaymentManagement queries this on render).
+      if (!stripeClient) return null;
 
       const parsedOrg = parseDbOrg(org);
       let stripeCustomerId = parsedOrg.cloudConfig?.stripe?.customerId;
@@ -1129,15 +1328,60 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
-      // Commerce namespaces tenants by org slug; the rollup `user` key follows
-      // the gateway convention (<org>/<userId>) but also accepts the org slug
-      // alone for an org-level view.
-      const user = input.user ?? organization.name;
+      // Commerce namespaces tenants by org slug (the X-Hanzo-Org header). The
+      // rollup `user` key follows the gateway convention (<org>/<userId>) but
+      // also accepts the org slug alone for an org-level view.
+      const org = organization.name;
+      const user = input.user ?? org;
 
-      return commerceGet<CommerceUsageRollup>("/v1/billing/usage-rollup", {
+      // Commerce has no single "usage-rollup" route; we compose the rollup from
+      // the three sources that ARE the billing source of truth — tier (plan +
+      // included credit), balance (prepaid balance/holds/available), and usage
+      // (consumed) — exactly the data the gateway prepaid gate reads. All three
+      // are org-scoped via X-Hanzo-Org.
+      const [tier, balance, usage] = await Promise.all([
+        commerceGet<CommerceTier>("/v1/billing/tier", org, {
+          user,
+          tier: input.plan,
+        }),
+        commerceGet<CommerceBalance>("/v1/billing/balance", org, { user }),
+        commerceGet<CommerceUsage>("/v1/billing/usage", org, { user }),
+      ]);
+
+      // Included credit: tiers grant a per-day allotment that resets at midnight
+      // UTC and does not accumulate. Present it as the period's included usage.
+      const dailyGranted = tier.tier.dailyCreditsCents;
+      const includedRemaining = Math.max(0, tier.balance.dailyRemaining);
+      const includedConsumed = Math.max(0, dailyGranted - includedRemaining);
+
+      // Total usage this period = sum of recorded api-usage withdrawals (cents).
+      const consumed = usage.usage.reduce(
+        (acc, u) => acc + Math.abs(u.amount ?? 0),
+        0,
+      );
+      // Overage = usage drawn beyond the included credit, paid from prepaid.
+      const overage = Math.max(0, consumed - includedConsumed);
+
+      return {
         user,
-        plan: input.plan,
-      });
+        plan: tier.tier.name,
+        currency: balance.currency || tier.balance.currency || "usd",
+        period: new Date().toISOString().slice(0, 7), // YYYY-MM
+        included: {
+          // Monthly view of the daily allotment for display purposes.
+          monthlyCents: dailyGranted * 30,
+          grantedCents: dailyGranted,
+          consumedCents: includedConsumed,
+          remainingCents: includedRemaining,
+        },
+        consumedCents: consumed,
+        overageCents: overage,
+        balance: {
+          balanceCents: balance.balance,
+          holdsCents: balance.holds,
+          availableCents: balance.available,
+        },
+      };
     }),
 
   // Commerce credit balance for an organization (sum of active credit grants).
@@ -1164,8 +1408,8 @@ export const cloudBillingRouter = createTRPCRouter({
 
       return commerceGet<CommerceCreditBalance>(
         "/v1/billing/credit-balance",
+        organization.name,
         { userId: organization.name },
-        { "X-Hanzo-Org": organization.name },
       );
     }),
 
@@ -1211,6 +1455,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       const grant = await commercePost<CommerceCreditGrant>(
         "/v1/billing/credit-grants",
+        organization.name,
         {
           userId: organization.name,
           name: input.name ?? "Console credit grant",
@@ -1219,8 +1464,6 @@ export const cloudBillingRouter = createTRPCRouter({
           ...(input.expiresIn ? { expiresIn: input.expiresIn } : {}),
           tags: "console",
         },
-        undefined,
-        { "X-Hanzo-Org": organization.name },
       );
 
       await auditLog({
@@ -1238,5 +1481,638 @@ export const cloudBillingRouter = createTRPCRouter({
       });
 
       return grant;
+    }),
+
+  // ── Subscription / invoice surface read by the billing page UI ───────────
+  // The console is commerce-native: plan + balance + invoices come from
+  // Hanzo Commerce, not Stripe. These procedures return the shapes the UI
+  // expects from real commerce data. Stripe-only affordances (customer portal,
+  // promo codes, scheduled plan switches) degrade gracefully to null/no-op when
+  // the org has no Stripe customer, so the page renders without error toasts.
+
+  // Subscription summary for useBillingInformation / BillingOverview. Commerce
+  // plans are prepaid and do not carry Stripe-style scheduled changes or
+  // period-end cancellations, so those are null; hasValidPaymentMethod reflects
+  // the commerce billing status.
+  getSubscriptionInfo: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      let hasValidPaymentMethod = false;
+      try {
+        const status = await commerceGet<{
+          hasPaymentMethod?: boolean;
+          creditBalance?: number;
+        }>("/v1/billing/status", organization.name, {
+          user: organization.name,
+        });
+        hasValidPaymentMethod = Boolean(status.hasPaymentMethod);
+      } catch {
+        // Status is best-effort; a commerce hiccup must not crash the page.
+        hasValidPaymentMethod = false;
+      }
+
+      return {
+        cancellation: null as { cancelAt: number | null } | null,
+        scheduledChange: null as {
+          switchAt: number | null;
+          newProductId?: string;
+          scheduleId?: string;
+          message?: string | null;
+        } | null,
+        billingPeriod: null as { start: Date; end: Date } | null,
+        hasValidPaymentMethod,
+      };
+    }),
+
+  // Real invoice history from Commerce (GET /v1/billing/invoices). Mapped to the
+  // shape the invoice tables render. Cursor pagination is not used by commerce;
+  // we return the full list with hasMore=false.
+  getInvoices: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        limit: z.number().int().min(1).max(100).optional().default(10),
+        startingAfter: z.string().optional(),
+        endingBefore: z.string().optional(),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const res = await commerceGet<CommerceInvoiceList>(
+        "/v1/billing/invoices",
+        organization.name,
+        { user: organization.name },
+      );
+
+      const invoices = res.invoices.map((i) => ({
+        id: i.id,
+        number: i.number ?? null,
+        status: i.status ?? null,
+        currency: i.currency ?? "usd",
+        created: i.createdAt
+          ? new Date(
+              typeof i.createdAt === "number"
+                ? i.createdAt * 1000
+                : i.createdAt,
+            )
+          : new Date(),
+        hostedInvoiceUrl: i.hostedInvoiceUrl ?? null,
+        invoicePdfUrl: i.invoicePdfUrl ?? null,
+        breakdown: undefined as
+          | {
+              subscriptionCents: number;
+              usageCents: number;
+              discountCents: number;
+              taxCents: number;
+              totalCents: number;
+            }
+          | undefined,
+      }));
+
+      return { invoices, hasMore: false, cursors: {} };
+    }),
+
+  // Stripe-only customer portal. Commerce-native orgs have no Stripe customer,
+  // so this returns null and the UI hides the "manage in Stripe" button rather
+  // than erroring. When a Stripe customer DOES exist we proxy to the existing
+  // getStripeCustomerPortalUrl implementation.
+  getCustomerPortalUrl: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const org = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!org) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const parsedOrg = parseDbOrg(org);
+      const stripeCustomerId = parsedOrg.cloudConfig?.stripe?.customerId;
+      if (!stripeClient || !stripeCustomerId) {
+        return null;
+      }
+
+      const portal = await stripeClient.billingPortal.sessions.create({
+        customer: stripeCustomerId,
+        return_url: `${env.NEXTAUTH_URL}/organization/${input.orgId}/settings/billing`,
+      });
+      return portal.url;
+    }),
+
+  // Stripe-only: clearing a scheduled plan switch. Commerce plans have no
+  // schedules, so this is a no-op success rather than a 404.
+  clearPlanSwitchSchedule: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+      return { ok: true } as const;
+    }),
+
+  // Stripe-only: reactivating a cancelled subscription. Commerce plans are not
+  // cancelled at period end, so this is a no-op success.
+  reactivateStripeSubscription: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+      return { ok: true } as const;
+    }),
+
+  // Stripe-only: applying a promotion code to a subscription. Without a Stripe
+  // subscription there is nothing to discount; surface a clear, non-crashing
+  // message instead of a 404.
+  applyPromotionCode: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string(), code: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const org = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!org) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const parsedOrg = parseDbOrg(org);
+      if (
+        !stripeClient ||
+        !parsedOrg.cloudConfig?.stripe?.activeSubscriptionId
+      ) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "Promotion codes require an active subscription. This organization is on a prepaid plan.",
+        });
+      }
+
+      const promotionCodes = await stripeClient.promotionCodes.list({
+        code: input.code,
+        active: true,
+        limit: 1,
+      });
+      const promo = promotionCodes.data[0];
+      if (!promo) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid or inactive promotion code.",
+        });
+      }
+
+      await stripeClient.subscriptions.update(
+        parsedOrg.cloudConfig.stripe.activeSubscriptionId,
+        { discounts: [{ promotion_code: promo.id }] },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: input.orgId,
+        action: "applyPromotionCode",
+      });
+
+      return { ok: true } as const;
+    }),
+
+  // ── Commerce payment methods (Square) ──────────────────────────────────────
+  // Hanzo bills through commerce (Square underneath). The console collects the
+  // card client-side with the Square Web Payments SDK, which returns a single-
+  // use nonce ("cnon:..."); we hand that nonce to commerce, which runs a $1
+  // pre-auth and stores the card. The org slug (organization.name) is the
+  // commerce customer id.
+  listPaymentMethods: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommercePaymentMethod[]> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const methods = await commerceGet<CommercePaymentMethod[]>(
+        "/v1/billing/payment-methods",
+        organization.name,
+        { user: organization.name },
+      );
+      return Array.isArray(methods) ? methods : [];
+    }),
+
+  addPaymentMethod: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        sourceId: z.string().min(1), // Square Web Payments SDK nonce
+        cardBrand: z.string().optional(),
+        last4: z.string().optional(),
+        postalCode: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }): Promise<CommercePaymentMethod> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const pm = await commercePost<CommercePaymentMethod>(
+        "/v1/billing/payment-methods",
+        organization.name,
+        {
+          customerId: organization.name,
+          type: "card",
+          providerType: "square",
+          providerRef: input.sourceId,
+          ...(input.cardBrand || input.last4
+            ? { card: { brand: input.cardBrand, last4: input.last4 } }
+            : {}),
+          ...(input.postalCode
+            ? { billingAddress: { postalCode: input.postalCode } }
+            : {}),
+        },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: pm.id,
+        action: "addPaymentMethod",
+        after: { paymentMethodId: pm.id, type: pm.type },
+      });
+
+      return pm;
+    }),
+
+  removePaymentMethod: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string(), paymentMethodId: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      await commerceDelete(
+        `/v1/billing/payment-methods/${encodeURIComponent(input.paymentMethodId)}`,
+        organization.name,
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: input.paymentMethodId,
+        action: "removePaymentMethod",
+      });
+
+      return { ok: true } as const;
+    }),
+
+  // ── Buy credits (one-time Square top-up) ───────────────────────────────────
+  // Charges a Square nonce and credits the org's prepaid balance. No saved card
+  // required — the Web Payments SDK tokenizes the card for this single charge.
+  buyCredits: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        sourceId: z.string().min(1), // Square Web Payments SDK nonce
+        amountUsd: z.number().positive().max(100_000),
+      }),
+    )
+    .mutation(async ({ input, ctx }): Promise<CommerceTopupResult> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const amountCents = Math.round(input.amountUsd * 100);
+      if (amountCents <= 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Top-up amount must be greater than zero.",
+        });
+      }
+
+      const result = await commercePost<CommerceTopupResult>(
+        "/v1/billing/topup/token",
+        organization.name,
+        {
+          sourceId: input.sourceId,
+          amountCents,
+          userId: organization.name,
+          currency: "usd",
+        },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: result.transactionId ?? input.orgId,
+        action: "buyCredits",
+        after: { amountCents, currency: "usd" },
+      });
+
+      return result;
+    }),
+
+  // ── Commerce plans + subscriptions ─────────────────────────────────────────
+  // The real Hanzo plan catalog lives in commerce (GET /v1/billing/plans:
+  // developer / pro / team …), priced in cents. Subscribing maps the org slug
+  // to a commerce subscription via POST/PATCH /v1/billing/subscriptions.
+  listPlans: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommercePlan[]> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      if (plansCache && Date.now() - plansCache.at < PLANS_CACHE_TTL_MS) {
+        return plansCache.plans;
+      }
+      try {
+        const raw = await withTimeout(
+          commerceGet<CommercePlan[]>("/v1/billing/plans", organization.name),
+          "commerce /plans",
+        );
+        const plans = (Array.isArray(raw) ? raw : []).filter(isCorePlan);
+        if (plans.length) {
+          plansCache = { at: Date.now(), plans };
+          return plans;
+        }
+        return plansCache?.plans ?? FALLBACK_PLANS;
+      } catch {
+        // Slow/unreachable commerce → serve stale cache or a static catalog
+        // rather than hanging the dialog.
+        return plansCache?.plans ?? FALLBACK_PLANS;
+      }
+    }),
+
+  getActiveSubscription: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommerceSubscription | null> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      try {
+        const res = await withTimeout(
+          commerceGet<{
+            subscriptions: CommerceSubscription[];
+            count: number;
+          }>("/v1/billing/subscriptions", organization.name, {
+            userId: organization.name,
+          }),
+          "commerce /subscriptions",
+        );
+        const subs = res.subscriptions ?? [];
+        return (
+          subs.find((s) => ACTIVE_SUB_STATUSES.includes(s.status)) ??
+          subs[0] ??
+          null
+        );
+      } catch {
+        // Slow/unreachable → no current-plan marking; the dialog still works.
+        return null;
+      }
+    }),
+
+  subscribeToPlan: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string(), planSlug: z.string().min(1) }))
+    .mutation(async ({ input, ctx }): Promise<CommerceSubscription> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      let existing: CommerceSubscription | undefined;
+      try {
+        const list = await withTimeout(
+          commerceGet<{ subscriptions: CommerceSubscription[] }>(
+            "/v1/billing/subscriptions",
+            organization.name,
+            { userId: organization.name },
+          ),
+          "commerce /subscriptions",
+        );
+        existing = (list.subscriptions ?? []).find((s) =>
+          ACTIVE_SUB_STATUSES.includes(s.status),
+        );
+      } catch {
+        existing = undefined; // couldn't determine → create a new subscription
+      }
+
+      const sub = existing
+        ? await commercePatch<CommerceSubscription>(
+            `/v1/billing/subscriptions/${encodeURIComponent(existing.id)}`,
+            organization.name,
+            { planId: input.planSlug, prorate: true },
+          )
+        : await commercePost<CommerceSubscription>(
+            "/v1/billing/subscriptions",
+            organization.name,
+            { userId: organization.name, planId: input.planSlug },
+          );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: sub.id,
+        action: existing ? "changePlan" : "subscribe",
+        after: { planId: input.planSlug, subscriptionId: sub.id },
+      });
+
+      return sub;
+    }),
+
+  cancelSubscription: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        atPeriodEnd: z.boolean().optional().default(true),
+      }),
+    )
+    .mutation(async ({ input, ctx }): Promise<CommerceSubscription | null> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      let active: CommerceSubscription | undefined;
+      try {
+        const list = await withTimeout(
+          commerceGet<{ subscriptions: CommerceSubscription[] }>(
+            "/v1/billing/subscriptions",
+            organization.name,
+            { userId: organization.name },
+          ),
+          "commerce /subscriptions",
+        );
+        active = (list.subscriptions ?? []).find((s) =>
+          ACTIVE_SUB_STATUSES.includes(s.status),
+        );
+      } catch {
+        active = undefined;
+      }
+      if (!active) return null;
+
+      const sub = await commercePost<CommerceSubscription>(
+        `/v1/billing/subscriptions/${encodeURIComponent(active.id)}/cancel`,
+        organization.name,
+        { atPeriodEnd: input.atPeriodEnd },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: active.id,
+        action: "cancelSubscription",
+        after: { atPeriodEnd: input.atPeriodEnd },
+      });
+
+      return sub;
     }),
 });

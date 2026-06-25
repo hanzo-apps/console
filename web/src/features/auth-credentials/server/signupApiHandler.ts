@@ -1,7 +1,11 @@
 import { env } from "@/src/env.mjs";
 import { createUserEmailPassword } from "@/src/features/auth-credentials/lib/credentialsServerUtils";
 import { signupSchema } from "@/src/features/auth/lib/signupSchema";
-import { iamSignup, isIamConfigured } from "@/src/features/auth/lib/iamServer";
+import {
+  iamProvisionTenant,
+  isIamConfigured,
+} from "@/src/features/auth/lib/iamServer";
+import { tenantSlugForEmail } from "@/src/features/auth/lib/tenantSlug";
 import { createProjectMembershipsOnSignup } from "@/src/features/auth/lib/createProjectMembershipsOnSignup";
 import { prisma } from "@hanzo/console/src/db";
 // Hanzo uses IAM — multi-tenant SSO not applicable
@@ -114,19 +118,24 @@ export async function signupApiHandler(
   // create the user
   let userId: string;
   if (isIamConfigured()) {
-    // IAM-native signup: register the identity (and password) in IAM, which is
-    // the credential authority. The local console user row is created
-    // passwordless — IAM owns the password; credentials login verifies against
-    // IAM. This keeps the identity source in IAM while console retains the
-    // user/RBAC/project model keyed on email.
-    const iamResult = await iamSignup({
+    // IAM-native self-serve signup: provision the tenant in IAM — its OWN
+    // organization (one tenant = one IAM org = one console org = one commerce
+    // namespace = one slug) with the user created INSIDE it, plus the tenant's
+    // hk- Cloud API key minted up front. IAM is the credential authority; the
+    // local console user row is created passwordless. Cross-org login still
+    // works because IAM resolves a login by email globally and returns the
+    // tenant's own `<slug>/<email>` sub even though the console posts
+    // organization=hanzo. The per-tenant org is what makes hk-key billing,
+    // console org isolation, and commerce usage all key on the same slug.
+    const iamResult = await iamProvisionTenant({
       email: body.email,
       password: body.password,
       name: body.name,
+      slug: tenantSlugForEmail(body.email),
     });
     if (!iamResult.ok) {
       logger.warn(
-        "Signup: IAM registration failed: " + iamResult.error,
+        "Signup: IAM tenant provisioning failed: " + iamResult.error,
         body.email.toLowerCase(),
         body.name,
       );

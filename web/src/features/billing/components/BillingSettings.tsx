@@ -2,7 +2,7 @@
 
 // Hanzo Cloud only
 import { Button } from "@/src/components/ui/button";
-// import { api } from "@/src/utils/api";
+import { api } from "@/src/utils/api";
 // import { Flex, MarkerBar, Metric, Text } from "@tremor/react";
 import Header from "@/src/components/layouts/header";
 // import { useQueryOrganization } from "@/src/features/organizations/hooks";
@@ -33,6 +33,18 @@ export const BillingSettings = () => {
   });
 
   const entitled = useHasEntitlement("cloud-billing");
+
+  // Warm the commerce plan catalog on page load so the plan dialog opens
+  // instantly. Commerce /plans is intermittently slow; this prefetch (shared
+  // query key with the dialog) + the server-side cache hide that latency.
+  api.cloudBilling.listPlans.useQuery(
+    { orgId: orgId ?? "" },
+    {
+      enabled: !!orgId && hasAccess && entitled,
+      staleTime: 10 * 60 * 1000,
+    },
+  );
+
   if (!entitled) return null;
 
   if (!hasAccess)
