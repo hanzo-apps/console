@@ -113,8 +113,10 @@ ENV SENTRY_RELEASE=$NEXT_PUBLIC_BUILD_ID
 # Copy source code of isolated subworkspace
 COPY --from=pruner /app/out/full/ .
 
-# remove middleware.ts if it exists - not needed in self-hosted environments
-RUN rm -f ./web/src/middleware.ts
+# Do NOT remove web/src/middleware.ts. Hanzo console REQUIRES it for the canonical
+# /v1/* -> /api/* surface (IAM-native SSO: /v1/iam/* -> /api/public/iam/*). The
+# upstream Langfuse "remove middleware for self-hosted" line breaks /v1/iam login;
+# keep ours. (Re-introduced by upstream merges — guard against it.)
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
