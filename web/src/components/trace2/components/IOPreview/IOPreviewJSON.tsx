@@ -107,9 +107,9 @@ function IOPreviewJSONInner({
   // Background colors that adapt to theme (memoized to prevent tree rebuilds)
   const { inputBgColor, outputBgColor, metadataBgColor } = useMemo(
     () => ({
-      inputBgColor: isDark ? "rgb(15, 23, 42)" : "rgb(249, 252, 255)", // Dark slate vs light blue
-      outputBgColor: isDark ? "rgb(20, 30, 41)" : "rgb(248, 253, 250)", // Dark blue-gray vs light green
-      metadataBgColor: isDark ? "rgb(30, 20, 40)" : "rgb(253, 251, 254)", // Dark purple vs light purple
+      inputBgColor: isDark ? "rgb(24, 24, 27)" : "rgb(250, 250, 250)", // neutral (was slate/blue)
+      outputBgColor: isDark ? "rgb(20, 30, 25)" : "rgb(248, 253, 250)", // faint green tint
+      metadataBgColor: isDark ? "rgb(30, 24, 32)" : "rgb(253, 251, 254)", // faint purple tint
     }),
     [isDark],
   );

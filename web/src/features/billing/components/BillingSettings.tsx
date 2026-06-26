@@ -15,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { BillingOverview } from "./overview/BillingOverview";
 import { InvoiceHistory } from "./overview/InvoiceHistory";
 import { PaymentManagement } from "./overview/PaymentManagement";
+import { AutoRechargeSettings } from "./overview/AutoRechargeSettings";
 import { CreditsManagement } from "./CreditsManagement";
 import { useHasOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { useState } from "react";
@@ -99,7 +100,10 @@ export const BillingSettings = () => {
           <InvoiceHistory />
         </div>
       ) : activeView === "payment" ? (
-        <PaymentManagement />
+        <div className="space-y-6">
+          <PaymentManagement />
+          <AutoRechargeSettings />
+        </div>
       ) : (
         <CreditsManagement />
       )}

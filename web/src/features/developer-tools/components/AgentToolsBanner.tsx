@@ -29,10 +29,10 @@ export function AgentToolsBanner() {
         <Bot className="h-4 w-4 shrink-0" />
         <span>
           <span className="font-semibold">
-            Langfuse works great with your AI coding agents.
+            Hanzo works great with your AI coding agents.
           </span>{" "}
           Connect Claude Code, Codex, and other agents to your data with the
-          Langfuse Agent Skill, MCP server, and CLI.
+          Hanzo Agent Skill, MCP server, and CLI.
         </span>
       </div>
     </Callout>

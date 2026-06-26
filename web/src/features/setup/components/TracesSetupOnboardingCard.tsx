@@ -14,7 +14,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 const SKILLS_INSTALL_COMMAND =
-  "Install the Langfuse AI skill from github.com/langfuse/skills and use it to add tracing to this application with Langfuse following best practices.";
+  "Install the Hanzo AI skill from github.com/langfuse/skills and use it to add tracing to this application with Hanzo following best practices.";
 const MANUAL_TRACING_DOCS_URL =
   "https://hanzo.ai/docs/observability/get-started";
 
@@ -90,14 +90,14 @@ export function TracesSetupOnboardingCard({
     <SplashScreen
       waitingFor="Waiting for first trace"
       title="Time to log your first trace, it only takes a minute"
-      description="Get your API keys first, then ask your coding agent to add observability with Langfuse to your application."
+      description="Get your API keys first, then ask your coding agent to add observability with Hanzo to your application."
       videoSrc="https://static.hanzo.ai/prod-assets/onboarding/traces-overview-v1.mp4"
       videoPosition="bottom"
       steps={[
         {
           title: "Create API keys",
           description:
-            "Your application needs API keys to send traces to Langfuse.",
+            "Your application needs API keys to send traces to Hanzo.",
           content: apiKeys ? (
             <ApiKeyRender
               generatedKeys={apiKeys}

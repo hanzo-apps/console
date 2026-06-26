@@ -2,13 +2,14 @@ import { cn } from "@/src/features/agents/lib/utils";
 import React from "react";
 import type { HealthStatus, LifecycleStatus } from "../../types/agents";
 import type { CanonicalStatus } from "../../utils/status";
-import { getStatusLabel, getStatusTheme, normalizeExecutionStatus } from "../../utils/status";
+import {
+  getStatusLabel,
+  getStatusTheme,
+  normalizeExecutionStatus,
+} from "../../utils/status";
 
 interface StatusIndicatorProps {
-  status:
-    | LifecycleStatus
-    | CanonicalStatus
-    | string;
+  status: LifecycleStatus | CanonicalStatus | string;
   healthStatus?: HealthStatus;
   showLabel?: boolean;
   animated?: boolean;
@@ -30,8 +31,8 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   className,
 }) => {
   const getStatusConfig = (
-    status: StatusIndicatorProps['status'],
-    healthStatus?: HealthStatus
+    status: StatusIndicatorProps["status"],
+    healthStatus?: HealthStatus,
   ): StatusConfig => {
     // If health status indicates issues, override lifecycle status display
     if (healthStatus === "inactive") {
@@ -43,7 +44,9 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
     }
 
     // Check if status is a LifecycleStatus
-    const isLifecycle = ['starting', 'ready', 'degraded', 'offline'].includes(status as string);
+    const isLifecycle = ["starting", "ready", "degraded", "offline"].includes(
+      status as string,
+    );
     if (isLifecycle) {
       switch (status) {
         case "starting":
@@ -87,7 +90,7 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
       dotClass: theme.dotClass,
       textColor: theme.textClass,
       label: getStatusLabel(normalized),
-      shouldPulse: normalized === 'running',
+      shouldPulse: normalized === "running",
     };
   };
 
@@ -95,24 +98,21 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   const shouldPulse = animated && config.shouldPulse;
 
   return (
-    <div
-      className={cn(
-        "inline-flex items-center gap-2",
-        className
-      )}
-    >
+    <div className={cn("inline-flex items-center gap-2", className)}>
       {/* Status Dot - Foundation 6px */}
-      <div className="relative flex items-center justify-center w-3 h-3">
+      <div className="relative flex h-3 w-3 items-center justify-center">
         <div className={cn(config.dotClass)} />
 
         {/* Pulse Ring Animation - Extends beyond the dot */}
         {shouldPulse && (
           <div
             className={cn(
-              "absolute w-3 h-3 rounded-full animate-ping opacity-40",
-              normalizeExecutionStatus(status) === 'running' ? "bg-blue-500" :
-              status === 'starting' ? "bg-orange-500" :
-              "bg-yellow-500"
+              "absolute h-3 w-3 animate-ping rounded-full opacity-40",
+              normalizeExecutionStatus(status) === "running"
+                ? "bg-muted-foreground"
+                : status === "starting"
+                  ? "bg-orange-500"
+                  : "bg-yellow-500",
             )}
           />
         )}
@@ -131,7 +131,7 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
 // Utility function to get status priority for sorting
 export const getStatusPriority = (
   status: LifecycleStatus,
-  healthStatus?: HealthStatus
+  healthStatus?: HealthStatus,
 ): number => {
   if (healthStatus === "inactive") return 0; // Highest priority for offline
 
@@ -152,7 +152,7 @@ export const getStatusPriority = (
 // Utility function to determine if status needs attention
 export const statusNeedsAttention = (
   status: LifecycleStatus,
-  healthStatus?: HealthStatus
+  healthStatus?: HealthStatus,
 ): boolean => {
   return (
     healthStatus === "inactive" || status === "offline" || status === "degraded"

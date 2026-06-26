@@ -9,12 +9,13 @@
  * time; afterwards only its masked prefix is returned (the secret is never
  * re-read from IAM into the client).
  *
- * Identity: the IAM `sub` is reconstructed as `<orgId>/<email>` — the console
- * org id IS the user's IAM org slug (one tenant = one slug), and email is the
- * IAM username under email-as-username. The session user's own email + the
+ * Identity: the caller's IAM user is resolved against IAM itself (the authority)
+ * by org + email, yielding the canonical `owner/name` sub — NOT reconstructed as
+ * `<orgId>/<email>`, because a Casdoor user's `name` is not necessarily their
+ * email even in an email-as-username org. The session user's own email + the
  * org-scoped procedure (membership-checked) are the only inputs; the caller can
- * never mint for someone else. The minted value is read back from IAM (which is
- * the authority) so the UI shows the real key.
+ * never operate on anyone else's key. The minted value is read back from IAM so
+ * the UI shows the real key. See {@link resolveIamUser}.
  */
 import * as z from "zod";
 import {
@@ -25,10 +26,17 @@ import { throwIfNoOrganizationAccess } from "@/src/features/rbac/utils/checkOrga
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import {
   iamGetUser,
+  iamGetUserByOrgEmail,
   iamMintUserKeys,
   iamRevokeUserKeys,
 } from "@/src/features/auth/lib/iamServer";
 import { TRPCError } from "@trpc/server";
+
+/** A resolved IAM identity: the canonical `owner/name` sub + its user record. */
+type ResolvedIamUser = {
+  sub: string;
+  accessKey: string;
+};
 
 /** Mask a hk- key to a display-safe prefix (e.g. "hk-3310a1a1…"). */
 function maskKey(key: string): string {
@@ -38,36 +46,51 @@ function maskKey(key: string): string {
 }
 
 /**
- * Resolve the IAM `sub` whose hk- key this org-scoped request operates on.
+ * Resolve the IAM user whose hk- key this org-scoped request operates on, as the
+ * authoritative `owner/name` sub plus the user's current accessKey. The
+ * org-scoped procedure already proved the caller is a member of `orgId`, so we
+ * always resolve THE CALLER's own identity in the active org — never anyone
+ * else's.
  *
- * Authoritative path: the session carries the verified IAM `sub` from login
- * (`session.user.iamSub`), which is correct for EVERY user — self-serve tenants
- * (`<slug>/<email>`), shared-org users (`hanzo/z`, where username != email), and
- * global admins (their own home-org sub). We use it whenever it belongs to THIS
- * org (the org-scoped procedure already proved membership), so a member of
- * multiple orgs always resolves to their own identity in the active org.
+ * Resolution is by IAM record, not by string reconstruction, because a Casdoor
+ * user's `name` is NOT necessarily their email — even in an `useEmailAsUsername`
+ * org a user can pre-exist with a non-email username (e.g. `maxpower/davelorenzini`
+ * for `davelorenzini@gmail.com`). The old positional `${orgId}/${email}` (and the
+ * email-form session sub) therefore hit `get-user?id=…@gmail.com` → null → the
+ * "No IAM identity for this account in this organization" error, even though the
+ * record exists and `mint-user-keys` works against the real sub.
  *
- * Fallback (no `iamSub` in the session — legacy cookie): positionally
- * reconstruct `<orgId>/<email>`. This only holds for the dedicated-org
- * self-serve case (console org id == IAM slug, email-as-username); for other
- * users it may not resolve, which the callers surface as a clear NOT_FOUND
- * rather than acting on the wrong identity.
+ *   1. Session sub fast-path: if `session.user.iamSub` belongs to THIS org AND
+ *      resolves to a real IAM user, use it (covers shared-org users where
+ *      username != email, and avoids an extra lookup).
+ *   2. Authoritative fallback: look the user up by `owner=<orgId>&email=<email>`
+ *      (exact email lookup within the org) and use the record's real
+ *      `owner/name` sub.
+ *
+ * Returns null only when neither path finds a user — surfaced as a clear
+ * NOT_FOUND rather than acting on a non-existent / wrong identity.
  */
-async function resolveIamSub(
+async function resolveIamUser(
   orgId: string,
   ctx: { session: { user: { iamSub?: string; email?: string | null } } },
-): Promise<string | null> {
+): Promise<ResolvedIamUser | null> {
   const iamSub = ctx.session.user.iamSub;
   if (iamSub) {
-    // The sub's org segment must match the active org so a multi-org user can't
-    // mint a key in an org their session sub doesn't belong to. If it doesn't
-    // match (e.g. an admin viewing another org), fall through to positional.
     const owner = iamSub.split("/")[0];
-    if (owner && owner.toLowerCase() === orgId.toLowerCase()) return iamSub;
+    // The sub's org segment must match the active org so a multi-org user can't
+    // operate on a key in an org their session sub doesn't belong to.
+    if (owner && owner.toLowerCase() === orgId.toLowerCase()) {
+      const sessionUser = await iamGetUser(iamSub);
+      if (sessionUser) {
+        return { sub: iamSub, accessKey: sessionUser.accessKey ?? "" };
+      }
+    }
   }
   const email = (ctx.session.user.email ?? "").toLowerCase();
   if (!email) return null;
-  return `${orgId}/${email}`;
+  const user = await iamGetUserByOrgEmail(orgId, email);
+  if (!user?.owner || !user?.name) return null;
+  return { sub: `${user.owner}/${user.name}`, accessKey: user.accessKey ?? "" };
 }
 
 export const cloudApiKeyRouter = createTRPCRouter({
@@ -82,9 +105,8 @@ export const cloudApiKeyRouter = createTRPCRouter({
         scope: "organization:CRUD_apiKeys",
         session: ctx.session,
       });
-      const sub = await resolveIamSub(input.orgId, ctx);
-      const user = sub ? await iamGetUser(sub) : null;
-      const accessKey = user?.accessKey ?? "";
+      const resolved = await resolveIamUser(input.orgId, ctx);
+      const accessKey = resolved?.accessKey ?? "";
       return {
         hasKey: Boolean(accessKey),
         maskedKey: accessKey ? maskKey(accessKey) : null,
@@ -103,12 +125,11 @@ export const cloudApiKeyRouter = createTRPCRouter({
         scope: "organization:CRUD_apiKeys",
         session: ctx.session,
       });
-      const sub = await resolveIamSub(input.orgId, ctx);
-
-      // Confirm the IAM user exists for this sub before minting so we fail
-      // clearly rather than minting onto a non-existent record.
-      const user = sub ? await iamGetUser(sub) : null;
-      if (!sub || !user) {
+      // Resolve the caller's real IAM identity (by `owner/name`, not email) —
+      // this both confirms the user exists and gives the canonical sub to mint
+      // against, so we fail clearly rather than minting onto a non-existent id.
+      const resolved = await resolveIamUser(input.orgId, ctx);
+      if (!resolved) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message:
@@ -116,7 +137,7 @@ export const cloudApiKeyRouter = createTRPCRouter({
         });
       }
 
-      const result = await iamMintUserKeys(sub);
+      const result = await iamMintUserKeys(resolved.sub);
       if (!result.ok) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -144,15 +165,15 @@ export const cloudApiKeyRouter = createTRPCRouter({
         scope: "organization:CRUD_apiKeys",
         session: ctx.session,
       });
-      const sub = await resolveIamSub(input.orgId, ctx);
-      if (!sub) {
+      const resolved = await resolveIamUser(input.orgId, ctx);
+      if (!resolved) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "No IAM identity for this account in this organization.",
         });
       }
 
-      const result = await iamRevokeUserKeys(sub);
+      const result = await iamRevokeUserKeys(resolved.sub);
       if (!result.ok) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",

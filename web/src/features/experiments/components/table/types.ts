@@ -11,10 +11,10 @@ export const EXPERIMENT_COLOR_STYLES = [
       "border-slate-400/80 bg-slate-100/70 text-slate-700 dark:border-slate-500/70 dark:bg-slate-900/60 dark:text-slate-300",
   }, // Baseline - index 0
   {
-    textClass: "text-blue-700 dark:text-blue-300",
-    markerClass: "bg-blue-500/80 dark:bg-blue-400/80",
+    textClass: "text-zinc-700 dark:text-zinc-300",
+    markerClass: "bg-zinc-500/80 dark:bg-zinc-400/80",
     badgeClass:
-      "border-blue-500/45 bg-blue-500/12 text-blue-700 dark:border-blue-400/45 dark:bg-blue-400/15 dark:text-blue-300",
+      "border-zinc-500/45 bg-zinc-500/12 text-zinc-700 dark:border-zinc-400/45 dark:bg-zinc-400/15 dark:text-zinc-300",
   }, // Comparison 1
   {
     textClass: "text-violet-700 dark:text-violet-300",

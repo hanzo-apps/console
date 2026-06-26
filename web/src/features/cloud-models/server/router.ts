@@ -1,18 +1,67 @@
 import { z } from "zod/v4";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
 import { cloudGet, cloudPost } from "./cloudModelClient";
 import {
   CloudModelsResponseSchema,
   UpdateModelConfigInput,
+  type CloudModel,
   type CloudModelsResponse,
   type ModelConfig,
   type ModelPricing,
 } from "../types";
-const PRICING_API_URL = process.env.PRICING_API_URL ?? "http://pricing.hanzo.svc:8080";
+import { env } from "@/src/env.mjs";
 
-/** Fetch pricing map from Hanzo pricing API (best-effort, returns empty on failure) */
-async function fetchPricingMap(): Promise<Map<string, ModelPricing>> {
-  const map = new Map<string, ModelPricing>();
+// The pricing service is the canonical, in-cluster model catalog: it lists
+// every routable model with its per-token cost. It is the source of truth for
+// the Models page (reachable with no auth), enriched by the Cloud API when that
+// is configured. `/v1` surface, never `/api/*`.
+const PRICING_API_URL =
+  process.env.PRICING_API_URL ?? "http://pricing.hanzo.svc:8080";
+
+// Shape of one entry in the pricing service's `/v1/pricing/models` response.
+// Costs are USD per 1M tokens.
+type PricingModel = {
+  name: string;
+  provider?: string;
+  category?: string;
+  tier?: string;
+  pricing?: {
+    input?: number;
+    output?: number;
+    cacheRead?: number;
+    cacheWrite?: number;
+  };
+};
+
+function mapPricing(p: PricingModel["pricing"]): ModelPricing | null {
+  if (!p) return null;
+  return {
+    inputCostPerMTok: p.input,
+    outputCostPerMTok: p.output,
+    inputCostPerToken: p.input != null ? p.input / 1_000_000 : undefined,
+    outputCostPerToken: p.output != null ? p.output / 1_000_000 : undefined,
+  };
+}
+
+/** Best-effort owner: the explicit `provider`, else the `owner/model` prefix,
+ * else a heuristic from the model family. Grouping falls back to the raw value. */
+function deriveOwner(m: PricingModel): string {
+  if (m.provider) return m.provider;
+  const id = m.name.toLowerCase();
+  if (id.includes("/")) return id.split("/")[0]!;
+  if (/(^|[^a-z])(gpt|o1|o3|davinci|text-embedding)/.test(id))
+    return "openai-direct";
+  if (id.includes("claude")) return "anthropic";
+  if (id.includes("gemini")) return "google";
+  if (id.includes("llama")) return "fireworks";
+  return "hanzo";
+}
+
+/** Fetch the priced model catalog (best-effort: empty list on any failure). */
+async function fetchPricingModels(): Promise<PricingModel[]> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
@@ -21,97 +70,111 @@ async function fetchPricingMap(): Promise<Map<string, ModelPricing>> {
       headers: { Accept: "application/json" },
     });
     clearTimeout(timeout);
-    if (!res.ok) return map;
-    const data = (await res.json()) as {
-      models?: Array<{
-        id: string;
-        pricing?: {
-          input_cost_per_token?: number;
-          output_cost_per_token?: number;
-          input_cost_per_mtok?: number;
-          output_cost_per_mtok?: number;
-        };
-      }>;
-    };
-    for (const m of data.models ?? []) {
-      if (m.pricing) {
-        map.set(m.id, {
-          inputCostPerToken: m.pricing.input_cost_per_token,
-          outputCostPerToken: m.pricing.output_cost_per_token,
-          inputCostPerMTok: m.pricing.input_cost_per_mtok,
-          outputCostPerMTok: m.pricing.output_cost_per_mtok,
-        });
-      }
-    }
+    if (!res.ok) return [];
+    const data = (await res.json()) as { models?: PricingModel[] };
+    return data.models ?? [];
   } catch {
-    // Pricing API unreachable — return empty map, models still shown without pricing
+    return [];
   }
-  return map;
+}
+
+/** Optional enrichment from the Cloud API's own model list, when configured. */
+async function fetchCloudModels(): Promise<CloudModel[]> {
+  if (!env.CLOUD_API_URL) return [];
+  try {
+    const raw = await cloudGet<CloudModelsResponse>({ path: "/v1/models" });
+    const parsed = CloudModelsResponseSchema.safeParse(raw);
+    return parsed.success ? parsed.data.data : [];
+  } catch {
+    return [];
+  }
 }
 
 export const cloudModelsRouter = createTRPCRouter({
-  // ── List available models from Cloud API + pricing ────────────────
+  // ── List available models (pricing catalog + cloud enrichment) ────────
 
-  list: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async () => {
-    try {
-      const [raw, pricingMap] = await Promise.all([
-        cloudGet<CloudModelsResponse>({ path: "/api/models" }),
-        fetchPricingMap(),
+  list: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async () => {
+      const [pricingModels, cloudModels] = await Promise.all([
+        fetchPricingModels(),
+        fetchCloudModels(),
       ]);
-      const parsed = CloudModelsResponseSchema.safeParse(raw);
-      if (parsed.success) {
-        return {
-          ...parsed.data,
-          data: parsed.data.data.map((m) => ({
-            ...m,
-            pricing: pricingMap.get(m.id) ?? null,
-          })),
-        };
+
+      // Pricing is the catalog source of truth; index cloud models by id to lift
+      // their `premium`/`owned_by` over the heuristic when both are present.
+      const cloudById = new Map(cloudModels.map((m) => [m.id, m]));
+      const data: Array<CloudModel & { pricing: ModelPricing | null }> = [];
+      const seen = new Set<string>();
+
+      for (const pm of pricingModels) {
+        if (!pm.name || seen.has(pm.name)) continue;
+        seen.add(pm.name);
+        const cloud = cloudById.get(pm.name);
+        // "Premium" simply means the model costs money (any positive rate).
+        const paid =
+          (pm.pricing?.input ?? 0) > 0 || (pm.pricing?.output ?? 0) > 0;
+        data.push({
+          id: pm.name,
+          object: "model",
+          created: 0,
+          owned_by: cloud?.owned_by ?? deriveOwner(pm),
+          premium: cloud?.premium ?? paid,
+          pricing: mapPricing(pm.pricing),
+        });
       }
-      return { object: "list" as const, data: [] };
-    } catch {
-      return { object: "list" as const, data: [] };
-    }
-  }),
+      // Include any cloud-only models the pricing catalog doesn't carry.
+      for (const cm of cloudModels) {
+        if (seen.has(cm.id)) continue;
+        seen.add(cm.id);
+        data.push({ ...cm, pricing: null });
+      }
+
+      return { object: "list" as const, data };
+    }),
 
   // ── Get project model configuration ─────────────────────────────────
 
-  getConfig: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async ({ input }) => {
-    try {
-      return await cloudGet<ModelConfig>({
-        path: "/api/model-config",
-        queryParams: { projectId: input.projectId },
-      });
-    } catch {
-      return {
-        projectId: input.projectId,
-        defaultModel: "zen4",
-        temperature: 0.7,
-        maxTokens: 4096,
-      } satisfies ModelConfig;
-    }
-  }),
+  getConfig: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ input }) => {
+      try {
+        return await cloudGet<ModelConfig>({
+          path: "/v1/model-config",
+          queryParams: { projectId: input.projectId },
+        });
+      } catch {
+        return {
+          projectId: input.projectId,
+          defaultModel: "zen4",
+          temperature: 0.7,
+          maxTokens: 4096,
+        } satisfies ModelConfig;
+      }
+    }),
 
   // ── Update project model configuration ──────────────────────────────
 
-  updateConfig: protectedProjectProcedure.input(UpdateModelConfigInput).mutation(async ({ input }) => {
-    try {
-      return await cloudPost<ModelConfig>({
-        path: "/api/model-config",
-        body: {
+  updateConfig: protectedProjectProcedure
+    .input(UpdateModelConfigInput)
+    .mutation(async ({ input }) => {
+      try {
+        return await cloudPost<ModelConfig>({
+          path: "/v1/model-config",
+          body: {
+            projectId: input.projectId,
+            defaultModel: input.defaultModel,
+            temperature: input.temperature,
+            maxTokens: input.maxTokens,
+          },
+        });
+      } catch {
+        return {
           projectId: input.projectId,
           defaultModel: input.defaultModel,
           temperature: input.temperature,
           maxTokens: input.maxTokens,
-        },
-      });
-    } catch {
-      return {
-        projectId: input.projectId,
-        defaultModel: input.defaultModel,
-        temperature: input.temperature,
-        maxTokens: input.maxTokens,
-      } satisfies ModelConfig;
-    }
-  }),
+        } satisfies ModelConfig;
+      }
+    }),
 });

@@ -2,6 +2,10 @@ import { useRouter } from "next/router";
 import Page from "@/src/components/layouts/page";
 import { VectorStatsCards } from "@/src/features/vector/components/VectorStatsCards";
 import { CollectionsTable } from "@/src/features/vector/components/CollectionsTable";
+import {
+  getVectorTabs,
+  VECTOR_TABS,
+} from "@/src/features/navigation/utils/vector-tabs";
 
 export default function VectorOverviewPage() {
   const router = useRouter();
@@ -16,8 +20,13 @@ export default function VectorOverviewPage() {
       headerProps={{
         title: "Vector",
         help: {
-          description: "Manage vector collections and search for similar embeddings.",
+          description:
+            "Manage vector collections and search for similar embeddings.",
           href: "https://hanzo.ai/docs/vector",
+        },
+        tabsProps: {
+          tabs: getVectorTabs(projectId),
+          activeTab: VECTOR_TABS.OVERVIEW,
         },
       }}
     >

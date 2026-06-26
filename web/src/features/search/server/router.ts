@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
-import { searchGet, searchPost, searchDelete, resolveApiKey } from "./searchClient";
+import { TRPCError } from "@trpc/server";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
+import { searchStore, preview, SearchStoreError } from "./searchStore";
 import {
   CreateIndexInput,
   DeleteIndexInput,
@@ -9,120 +13,110 @@ import {
   ChatQueryInput,
   ScrapePreviewInput,
   RegenerateKeyInput,
-  type SearchStats,
-  type SearchIndex,
-  type SearchResult,
-  type SearchApiKey,
 } from "../types";
+
+/** Map the store's domain errors onto tRPC codes (mirrors the Vector router). */
+function toTRPC(e: unknown): never {
+  if (e instanceof SearchStoreError) {
+    throw new TRPCError({ code: e.code, message: e.message });
+  }
+  throw e;
+}
 
 export const searchRouter = createTRPCRouter({
   // ── Stats ─────────────────────────────────────────────────────────
 
-  stats: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    try {
-      return await searchGet<SearchStats>("/api/search-docs/stats", apiKey, { projectId: input.projectId });
-    } catch {
-      return {
-        totalDocuments: 0,
-        totalSearches: 0,
-        totalSessions: 0,
-        searchesPerDay: [],
-      } satisfies SearchStats;
-    }
-  }),
+  stats: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(({ input }) => searchStore.stats(input.projectId)),
 
   // ── Indexes ───────────────────────────────────────────────────────
 
-  listIndexes: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    try {
-      return await searchGet<{ indexes: SearchIndex[] }>("/api/search-docs/indexes", apiKey, {
-        projectId: input.projectId,
-      });
-    } catch {
-      return { indexes: [] as SearchIndex[] };
-    }
-  }),
+  listIndexes: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(({ input }) => ({
+      indexes: searchStore.listIndexes(input.projectId),
+    })),
 
-  createIndex: protectedProjectProcedure.input(CreateIndexInput).mutation(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    return searchPost<{ index: SearchIndex }>("/api/scrape-docs", apiKey, {
-      storeName: input.storeName,
-      url: input.url,
-      projectId: input.projectId,
-    });
-  }),
+  createIndex: protectedProjectProcedure
+    .input(CreateIndexInput)
+    .mutation(async ({ input }) => {
+      try {
+        return await searchStore.createIndex(input);
+      } catch (e) {
+        return toTRPC(e);
+      }
+    }),
 
-  deleteIndex: protectedProjectProcedure.input(DeleteIndexInput).mutation(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    return searchDelete<{ success: boolean }>(
-      `/api/search-docs/indexes/${encodeURIComponent(input.storeName)}`,
-      apiKey,
-      { projectId: input.projectId },
-    );
-  }),
+  deleteIndex: protectedProjectProcedure
+    .input(DeleteIndexInput)
+    .mutation(({ input }) => {
+      try {
+        return searchStore.deleteIndex(input.projectId, input.storeName);
+      } catch (e) {
+        return toTRPC(e);
+      }
+    }),
 
-  reindex: protectedProjectProcedure.input(ReindexInput).mutation(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    return searchPost<{ success: boolean }>(
-      `/api/search-docs/indexes/${encodeURIComponent(input.storeName)}/reindex`,
-      apiKey,
-      { projectId: input.projectId },
-    );
-  }),
+  reindex: protectedProjectProcedure
+    .input(ReindexInput)
+    .mutation(async ({ input }) => {
+      try {
+        return await searchStore.reindex(input);
+      } catch (e) {
+        return toTRPC(e);
+      }
+    }),
 
   // ── Search ────────────────────────────────────────────────────────
 
-  query: protectedProjectProcedure.input(SearchQueryInput).query(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    return searchPost<{ results: SearchResult[] }>("/api/search-docs", apiKey, {
-      query: input.query,
-      mode: input.mode,
-      limit: input.limit,
-      projectId: input.projectId,
-    });
-  }),
+  query: protectedProjectProcedure
+    .input(SearchQueryInput)
+    .query(({ input }) => {
+      try {
+        return searchStore.query(input);
+      } catch (e) {
+        return toTRPC(e);
+      }
+    }),
 
   // ── Chat (RAG) ────────────────────────────────────────────────────
 
-  chat: protectedProjectProcedure.input(ChatQueryInput).mutation(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    return searchPost<{ response: string; sources: Array<{ url: string; title: string }> }>("/api/chat-docs", apiKey, {
-      query: input.query,
-      projectId: input.projectId,
-    });
-  }),
+  chat: protectedProjectProcedure
+    .input(ChatQueryInput)
+    .mutation(({ input }) => {
+      try {
+        return searchStore.chat(input);
+      } catch (e) {
+        return toTRPC(e);
+      }
+    }),
 
   // ── API Keys ──────────────────────────────────────────────────────
 
-  getKeys: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    try {
-      return await searchGet<SearchApiKey>("/api/search-docs/keys", apiKey, { projectId: input.projectId });
-    } catch {
-      return {
-        publishableKey: "",
-        adminKey: "",
-      } satisfies SearchApiKey;
-    }
-  }),
+  getKeys: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(({ input }) => searchStore.getKeys(input.projectId)),
 
-  regenerateKey: protectedProjectProcedure.input(RegenerateKeyInput).mutation(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    return searchPost<SearchApiKey>("/api/search-docs/keys/regenerate", apiKey, {
-      keyType: input.keyType,
-      projectId: input.projectId,
-    });
-  }),
+  regenerateKey: protectedProjectProcedure
+    .input(RegenerateKeyInput)
+    .mutation(({ input }) => {
+      try {
+        return searchStore.regenerateKey(input);
+      } catch (e) {
+        return toTRPC(e);
+      }
+    }),
 
   // ── Scrape Preview ────────────────────────────────────────────────
 
-  scrapePreview: protectedProjectProcedure.input(ScrapePreviewInput).mutation(async ({ input }) => {
-    const apiKey = resolveApiKey(undefined);
-    return searchPost<{ pages: Array<{ url: string; title: string }> }>("/api/scrape-docs/preview", apiKey, {
-      url: input.url,
-      projectId: input.projectId,
-    });
-  }),
+  scrapePreview: protectedProjectProcedure
+    .input(ScrapePreviewInput)
+    .mutation(async ({ input }) => {
+      try {
+        return await preview(input.url);
+      } catch (e) {
+        return toTRPC(e);
+      }
+    }),
 });

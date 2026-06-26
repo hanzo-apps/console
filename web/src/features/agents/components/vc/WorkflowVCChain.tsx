@@ -52,7 +52,7 @@ export function WorkflowVCChain({
               <CardTitle className="text-heading-3 text-primary-foundation">
                 Workflow Verification Chain
               </CardTitle>
-              <p className="text-sm text-tertiary-foundation mt-1">
+              <p className="text-tertiary-foundation mt-1 text-sm">
                 Loading verification chain...
               </p>
             </div>
@@ -74,14 +74,14 @@ export function WorkflowVCChain({
       <Card className={cn("card-foundation", className)}>
         <CardHeader className="foundation-spacing-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-950/20">
+            <div className="rounded-lg bg-gray-50 p-2 dark:bg-gray-950/20">
               <Security size={20} className="text-gray-400" />
             </div>
             <div>
               <CardTitle className="text-heading-3 text-primary-foundation">
                 Workflow Verification Chain
               </CardTitle>
-              <p className="text-sm text-tertiary-foundation mt-1">
+              <p className="text-tertiary-foundation mt-1 text-sm">
                 No verification chain available for this workflow.
               </p>
             </div>
@@ -92,13 +92,15 @@ export function WorkflowVCChain({
   }
 
   const getChainStatusConfig = () => {
-    const completedVCs = vcChain.component_vcs?.filter(
-      (vc) => normalizeExecutionStatus(vc.status) === "succeeded"
-    ).length || 0;
+    const completedVCs =
+      vcChain.component_vcs?.filter(
+        (vc) => normalizeExecutionStatus(vc.status) === "succeeded",
+      ).length || 0;
     const totalVCs = vcChain.component_vcs?.length || 0;
-    const hasFailures = vcChain.component_vcs?.some(
-      (vc) => normalizeExecutionStatus(vc.status) === "failed"
-    ) || false;
+    const hasFailures =
+      vcChain.component_vcs?.some(
+        (vc) => normalizeExecutionStatus(vc.status) === "failed",
+      ) || false;
 
     if (hasFailures) {
       return {
@@ -127,8 +129,7 @@ export function WorkflowVCChain({
         variant: "secondary" as const,
         label: "Chain In Progress",
         icon: InProgress,
-        className:
-          "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800",
+        className: "bg-muted text-muted-foreground border-border",
         description: "Workflow verification is in progress.",
       };
     }
@@ -144,9 +145,10 @@ export function WorkflowVCChain({
   };
 
   const config = getChainStatusConfig();
-  const completedVCs = vcChain.component_vcs?.filter(
-    (vc) => normalizeExecutionStatus(vc.status) === "succeeded"
-  ).length || 0;
+  const completedVCs =
+    vcChain.component_vcs?.filter(
+      (vc) => normalizeExecutionStatus(vc.status) === "succeeded",
+    ).length || 0;
   const totalVCs = vcChain.component_vcs?.length || 0;
   const progress = totalVCs > 0 ? (completedVCs / totalVCs) * 100 : 0;
 
@@ -166,17 +168,14 @@ export function WorkflowVCChain({
       <CardHeader className="foundation-spacing-card pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-              <Security
-                size={20}
-                className="text-blue-600 dark:text-blue-400"
-              />
+            <div className="bg-muted rounded-lg p-2">
+              <Security size={20} className="text-foreground" />
             </div>
             <div>
               <CardTitle className="text-heading-3 text-primary-foundation">
                 Workflow Verification Chain
               </CardTitle>
-              <p className="text-sm text-tertiary-foundation mt-1">
+              <p className="text-tertiary-foundation mt-1 text-sm">
                 {config.description}
               </p>
             </div>
@@ -184,7 +183,7 @@ export function WorkflowVCChain({
 
           <Badge
             variant={config.variant}
-            className={cn("text-sm px-3 py-1", config.className)}
+            className={cn("px-3 py-1 text-sm", config.className)}
           >
             <config.icon size={14} className="mr-2" />
             {config.label}
@@ -194,7 +193,7 @@ export function WorkflowVCChain({
 
       <CardContent className="foundation-spacing-card pt-0">
         {/* Progress Overview */}
-        <div className="space-y-4 mb-6">
+        <div className="mb-6 space-y-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-tertiary-foundation">
               Verification Progress
@@ -204,9 +203,9 @@ export function WorkflowVCChain({
             </span>
           </div>
 
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+          <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${Math.max(progress, 2)}%` }}
             />
           </div>
@@ -216,28 +215,26 @@ export function WorkflowVCChain({
               <div className="text-heading-3 text-primary-foundation">
                 {totalVCs}
               </div>
-              <div className="text-xs text-tertiary-foundation">Total VCs</div>
+              <div className="text-tertiary-foundation text-xs">Total VCs</div>
             </div>
             <div>
               <div className="text-heading-3 text-green-600">
                 {completedVCs}
               </div>
-              <div className="text-xs text-tertiary-foundation">Verified</div>
+              <div className="text-tertiary-foundation text-xs">Verified</div>
             </div>
             <div>
               <div className="text-heading-3 text-red-600">
-                {
-                  vcChain.component_vcs?.filter((vc) => vc.status === "failed")
-                    .length || 0
-                }
+                {vcChain.component_vcs?.filter((vc) => vc.status === "failed")
+                  .length || 0}
               </div>
-              <div className="text-xs text-tertiary-foundation">Failed</div>
+              <div className="text-tertiary-foundation text-xs">Failed</div>
             </div>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="flex items-center gap-2 mb-6">
+        <div className="mb-6 flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -283,7 +280,7 @@ export function WorkflowVCChain({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full justify-between foundation-focus mb-4"
+                className="foundation-focus mb-4 w-full justify-between"
               >
                 <span className="text-sm font-medium">
                   Component Verifications ({totalVCs})
@@ -304,13 +301,13 @@ export function WorkflowVCChain({
                   <div key={vc.vc_id} className="relative">
                     {/* Connection line */}
                     {index < (vcChain.component_vcs?.length || 0) - 1 && (
-                      <div className="absolute left-6 top-12 w-0.5 h-8 bg-border"></div>
+                      <div className="bg-border absolute top-12 left-6 h-8 w-0.5"></div>
                     )}
 
                     <div className="flex items-start gap-4">
                       {/* Step indicator */}
-                      <div className="flex-shrink-0 w-12 h-12 rounded-full border-2 border-border bg-background flex items-center justify-center">
-                        <span className="text-sm font-medium text-secondary-foundation">
+                      <div className="border-border bg-background flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border-2">
+                        <span className="text-secondary-foundation text-sm font-medium">
                           {index + 1}
                         </span>
                       </div>
@@ -325,7 +322,7 @@ export function WorkflowVCChain({
                           vcId={vc.vc_id}
                           createdAt={vc.created_at}
                           showDetails={false}
-                          className="border-l-4 border-l-blue-200"
+                          className="border-l-border border-l-4"
                         />
                       </div>
                     </div>
@@ -337,12 +334,12 @@ export function WorkflowVCChain({
         )}
 
         {totalVCs === 0 && (
-          <div className="text-center py-6">
-            <Link size={32} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-sm text-tertiary-foundation">
+          <div className="py-6 text-center">
+            <Link size={32} className="mx-auto mb-3 text-gray-400" />
+            <p className="text-tertiary-foundation text-sm">
               No component verifications found for this workflow.
             </p>
-            <p className="text-xs text-tertiary-foundation mt-1">
+            <p className="text-tertiary-foundation mt-1 text-xs">
               VCs will appear here as executions complete.
             </p>
           </div>

@@ -2,6 +2,7 @@ import { PagedSettingsContainer } from "@/src/components/PagedSettingsContainer"
 import Header from "@/src/components/layouts/header";
 import { MembershipInvitesPage } from "@/src/features/rbac/components/MembershipInvitesPage";
 import { MembersTable } from "@/src/features/rbac/components/MembersTable";
+import { IdentityAndAccessSettings } from "@/src/features/rbac/components/IdentityAndAccessSettings";
 import { JSONView } from "@/src/components/ui/CodeJsonViewer";
 import RenameOrganization from "@/src/features/organizations/components/RenameOrganization";
 import { useQueryOrganization } from "@/src/features/organizations/hooks";
@@ -14,7 +15,6 @@ import { ApiKeyList } from "@/src/features/public-api/components/ApiKeyList";
 import { CloudApiKeys } from "@/src/features/cloud-api-keys/components/CloudApiKeys";
 import AIFeatureSwitch from "@/src/features/organizations/components/AIFeatureSwitch";
 import { OrgAuditLogsSettingsPage } from "@/src/features/audit-log-viewer/OrgAuditLogsSettingsPage";
-import { KmsOrgSettings } from "@/src/features/kms/components/KmsOrgSettings";
 import { BillingSettings } from "@/src/features/billing/components/BillingSettings";
 import { env } from "@/src/env.mjs";
 
@@ -74,6 +74,26 @@ export const getOrganizationSettingsPages = ({
     ),
   },
   {
+    title: "Identity & Access",
+    slug: "iam",
+    cmdKKeywords: [
+      "iam",
+      "identity",
+      "access",
+      "members",
+      "invite",
+      "user",
+      "rbac",
+      "roles",
+      "permissions",
+      "api key",
+      "hk",
+      "cloud",
+      "token",
+    ],
+    content: <IdentityAndAccessSettings orgId={organization.id} />,
+  },
+  {
     title: "API Keys",
     slug: "api-keys",
     cmdKKeywords: ["cloud", "hk", "api key", "token", "completions"],
@@ -112,12 +132,7 @@ export const getOrganizationSettingsPages = ({
     cmdKKeywords: ["payment", "subscription", "plan", "invoice", "usage"],
     content: <BillingSettings />,
   },
-  {
-    title: "KMS",
-    slug: "kms",
-    cmdKKeywords: ["secrets", "encryption", "keys", "kms", "vault"],
-    content: <KmsOrgSettings orgId={organization.id} />,
-  },
+  // KMS removed: it is a separate service, not an organization setting.
   {
     title: "Projects",
     slug: "projects",

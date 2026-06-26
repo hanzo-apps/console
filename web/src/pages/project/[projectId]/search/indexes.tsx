@@ -1,6 +1,10 @@
 import { useRouter } from "next/router";
 import ContainerPage from "@/src/components/layouts/container-page";
 import { IndexesTable } from "@/src/features/search/components/IndexesTable";
+import {
+  getSearchTabs,
+  SEARCH_TABS,
+} from "@/src/features/navigation/utils/search-tabs";
 
 export default function SearchIndexesPage() {
   const router = useRouter();
@@ -11,8 +15,11 @@ export default function SearchIndexesPage() {
   return (
     <ContainerPage
       headerProps={{
-        title: "Search Indexes",
-        breadcrumb: [{ name: "Search", href: `/project/${projectId}/search` }],
+        title: "Search",
+        tabsProps: {
+          tabs: getSearchTabs(projectId),
+          activeTab: SEARCH_TABS.INDEXES,
+        },
       }}
     >
       <IndexesTable projectId={projectId} />

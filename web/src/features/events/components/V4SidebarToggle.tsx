@@ -12,7 +12,7 @@ import { useInsightsCapture } from "@/src/features/insights-analytics/useInsight
 import { ZapIcon } from "lucide-react";
 
 const PREVIEW_FAST_DESCRIPTION =
-  "Get a more performant Langfuse experience. Upgrade SDKs to the latest major for real-time data. This is a personal setting.";
+  "Get a more performant Hanzo experience. Upgrade SDKs to the latest major for real-time data. This is a personal setting.";
 const PREVIEW_FAST_DESCRIPTION_ID = "preview-fast-toggle-description";
 
 export function V4SidebarToggle() {

@@ -54,9 +54,9 @@ import { useTheme } from "next-themes";
 
 // IO field background colors - same as IOPreviewJSON.tsx
 const IO_FIELD_COLORS = {
-  input: { light: "rgb(249, 252, 255)", dark: "rgb(15, 23, 42)" },
-  output: { light: "rgb(248, 253, 250)", dark: "rgb(20, 30, 41)" },
-  metadata: { light: "rgb(253, 251, 254)", dark: "rgb(30, 20, 40)" },
+  input: { light: "rgb(250, 250, 250)", dark: "rgb(24, 24, 27)" }, // neutral (was slate/blue)
+  output: { light: "rgb(248, 253, 250)", dark: "rgb(20, 30, 25)" }, // faint green tint
+  metadata: { light: "rgb(253, 251, 254)", dark: "rgb(30, 24, 32)" }, // faint purple tint
 } as const;
 
 /**

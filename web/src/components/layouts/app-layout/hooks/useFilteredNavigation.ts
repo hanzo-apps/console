@@ -18,7 +18,7 @@ import {
 import type { NavigationItem } from "@/src/components/layouts/utilities/routes";
 import { applyNavigationFilters } from "../utils/navigationFilters";
 import type { NavigationFilterContext } from "../utils/navigationFilters.types";
-import { isPathActive } from "../utils/pathClassification";
+import { isMostSpecificActive } from "../utils/pathClassification";
 
 /** Organization type from user session (can be null when not in project/org context) */
 type Organization = User["organizations"][number] | null | undefined;
@@ -47,13 +47,11 @@ function groupNavigationItems(items: NavigationItem[]): GroupedNavigation {
   });
 
   const groupedResult = Object.keys(grouped).length > 0 ? grouped : null;
-  const groupedItems = groupedResult
-    ? [
-        ...(grouped[RouteGroup.Observability] || []),
-        ...(grouped[RouteGroup.PromptManagement] || []),
-        ...(grouped[RouteGroup.Evaluation] || []),
-      ]
-    : [];
+  // Flatten EVERY visible group (in insertion = route-declaration order) so the
+  // command menu and any flat consumer stay in sync with the grouped sidebar.
+  // (Previously only 3 groups were hardcoded here, hiding Search & AI etc. from
+  // Cmd+K even though they rendered in the nav.)
+  const groupedItems = groupedResult ? Object.values(grouped).flat() : [];
 
   return {
     ungrouped,
@@ -125,6 +123,17 @@ export function useFilteredNavigation(
   // Map filtered routes to NavigationItems with url and isActive
   // This is O(n) - we map directly over filteredRoutes instead of re-iterating ROUTES
   return useMemo(() => {
+    // Flat set of every nav pathname (incl. nested items) so active-state can
+    // pick the single most-specific match — no parent+child double-highlight.
+    const candidatePaths: string[] = [];
+    const collectPaths = (routes: Route[]): void => {
+      for (const r of routes) {
+        candidatePaths.push(r.pathname);
+        if (r.items) collectPaths(r.items);
+      }
+    };
+    collectPaths(filteredRoutes);
+
     const mapRouteToNavigationItem = (route: Route): NavigationItem => {
       const url = route.pathname
         .replace("[projectId]", routerProjectId ?? "")
@@ -138,7 +147,11 @@ export function useFilteredNavigation(
       return {
         ...route,
         url,
-        isActive: isPathActive(route.pathname, router.pathname),
+        isActive: isMostSpecificActive(
+          route.pathname,
+          router.pathname,
+          candidatePaths,
+        ),
         items: items && items.length > 0 ? items : undefined,
       };
     };

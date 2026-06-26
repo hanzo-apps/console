@@ -40,8 +40,7 @@ const OS_OPTIONS: OSOption[] = [
     id: "windows",
     label: "Windows",
     icon: "🪟",
-    description:
-      "Windows Server — runs on AWS, Azure, GCP, or DigitalOcean",
+    description: "Windows Server — runs on AWS, Azure, GCP, or DigitalOcean",
     allowedProviders: ["AWS", "Azure", "GCP", "DigitalOcean"],
   },
   {
@@ -208,9 +207,9 @@ export function CreateMachinePage() {
   );
 
   const availableProviders = os
-    ? OS_OPTIONS.find((o) => o.id === os)?.allowedProviders.filter((p) =>
+    ? (OS_OPTIONS.find((o) => o.id === os)?.allowedProviders.filter((p) =>
         configuredProviderTypes.has(p),
-      ) ?? []
+      ) ?? [])
     : [];
 
   const handleCreate = async () => {
@@ -231,10 +230,7 @@ export function CreateMachinePage() {
         cpuSize: sizePreset?.cpu,
         memSize: sizePreset?.memory,
         size: size,
-        tag: [
-          installBot ? "hanzo-bot" : "",
-          registerK8s ? "k8s-node" : "",
-        ]
+        tag: [installBot ? "hanzo-bot" : "", registerK8s ? "k8s-node" : ""]
           .filter(Boolean)
           .join(","),
       });
@@ -247,7 +243,7 @@ export function CreateMachinePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl space-y-6">
       <PageHeader
         title="Launch Hanzo VM"
         description="Select an operating system, provider, and size to launch a new virtual machine."
@@ -282,7 +278,7 @@ export function CreateMachinePage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400 text-sm">
+        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -303,10 +299,9 @@ export function CreateMachinePage() {
                   setSize(null);
                   setImage(IMAGES[option.id][0]?.id ?? "");
                   // Auto-select provider if only one option
-                  const available =
-                    option.allowedProviders.filter((p) =>
-                      configuredProviderTypes.has(p),
-                    );
+                  const available = option.allowedProviders.filter((p) =>
+                    configuredProviderTypes.has(p),
+                  );
                   if (available.length === 1) {
                     setProvider(available[0]);
                   }
@@ -314,14 +309,14 @@ export function CreateMachinePage() {
                 }}
                 className={`flex items-center gap-4 rounded-lg border p-4 text-left transition-colors ${
                   os === option.id
-                    ? "border-blue-500/50 bg-blue-500/10"
+                    ? "border-white/30 bg-white/10"
                     : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-600"
                 }`}
               >
                 <span className="text-3xl">{option.icon}</span>
                 <div>
                   <div className="font-medium text-white">{option.label}</div>
-                  <div className="text-xs text-zinc-400 mt-0.5">
+                  <div className="mt-0.5 text-xs text-zinc-400">
                     {option.description}
                   </div>
                 </div>
@@ -338,7 +333,7 @@ export function CreateMachinePage() {
             Select Cloud Provider
           </h3>
           {availableProviders.length === 0 ? (
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 text-amber-400 text-sm">
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-400">
               No providers configured for {os}. Go to{" "}
               <button
                 className="underline"
@@ -360,7 +355,7 @@ export function CreateMachinePage() {
                   }}
                   className={`flex items-center justify-between rounded-lg border p-3 text-left transition-colors ${
                     provider === p
-                      ? "border-blue-500/50 bg-blue-500/10"
+                      ? "border-white/30 bg-white/10"
                       : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-600"
                   }`}
                 >
@@ -374,11 +369,7 @@ export function CreateMachinePage() {
               ))}
             </div>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setStep(1)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setStep(1)}>
             Back
           </Button>
         </div>
@@ -398,13 +389,13 @@ export function CreateMachinePage() {
                 }}
                 className={`flex items-center justify-between rounded-lg border p-3 text-left transition-colors ${
                   size === preset.id
-                    ? "border-blue-500/50 bg-blue-500/10"
+                    ? "border-white/30 bg-white/10"
                     : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-600"
                 }`}
               >
                 <div>
                   <div className="font-medium text-white">{preset.label}</div>
-                  <div className="text-xs text-zinc-400 mt-0.5">
+                  <div className="mt-0.5 text-xs text-zinc-400">
                     {preset.description}
                   </div>
                 </div>
@@ -415,11 +406,7 @@ export function CreateMachinePage() {
               </button>
             ))}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setStep(2)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setStep(2)}>
             Back
           </Button>
         </div>
@@ -440,7 +427,7 @@ export function CreateMachinePage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="my-agent-vm"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-white/40 focus:outline-none"
             />
           </div>
 
@@ -450,7 +437,7 @@ export function CreateMachinePage() {
             <select
               value={image}
               onChange={(e) => setImage(e.target.value)}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
             >
               {IMAGES[os].map((img) => (
                 <option key={img.id} value={img.id}>
@@ -466,7 +453,7 @@ export function CreateMachinePage() {
             <select
               value={region}
               onChange={(e) => setRegion(e.target.value)}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
             >
               {(REGIONS[provider] ?? []).map((r) => (
                 <option key={r.id} value={r.id}>
@@ -499,7 +486,7 @@ export function CreateMachinePage() {
           </div>
 
           {/* Summary */}
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-xs text-zinc-400 space-y-1">
+          <div className="space-y-1 rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-xs text-zinc-400">
             <div>
               <span className="text-zinc-500">OS:</span>{" "}
               {OS_OPTIONS.find((o) => o.id === os)?.label}
@@ -525,11 +512,7 @@ export function CreateMachinePage() {
 
           {/* Actions */}
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setStep(3)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setStep(3)}>
               Back
             </Button>
             <Button

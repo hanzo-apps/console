@@ -1,7 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { env } from "@/src/env.mjs";
 
-const CLOUD_API_BASE = env.CLOUD_API_URL ?? "http://cloud.hanzo.svc.cluster.local:8080";
+// The unified Hanzo Cloud API (model config / routing). In-cluster service DNS
+// by default; override with CLOUD_API_URL. Uses the canonical `/v1` surface
+// (never `/api/*`).
+const CLOUD_API_BASE = env.CLOUD_API_URL ?? "http://cloud-api.hanzo.svc:8000";
 
 function toTRPCError(status: number, body: string): TRPCError {
   const map: Record<number, TRPCError["code"]> = {
@@ -39,16 +42,24 @@ async function cloudRequest<T>(params: {
     headers["Authorization"] = `Bearer ${params.sessionToken}`;
   }
 
-  const res = await fetch(url.toString(), {
-    method: params.method,
-    headers,
-    ...(params.body ? { body: JSON.stringify(params.body) } : {}),
-  });
+  // Bound the wait so an unreachable backend degrades fast instead of hanging.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(url.toString(), {
+      method: params.method,
+      headers,
+      signal: controller.signal,
+      ...(params.body ? { body: JSON.stringify(params.body) } : {}),
+    });
 
-  const text = await res.text();
-  if (!res.ok) throw toTRPCError(res.status, text);
+    const text = await res.text();
+    if (!res.ok) throw toTRPCError(res.status, text);
 
-  return text ? (JSON.parse(text) as T) : ({} as T);
+    return text ? (JSON.parse(text) as T) : ({} as T);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function cloudGet<T>(params: {

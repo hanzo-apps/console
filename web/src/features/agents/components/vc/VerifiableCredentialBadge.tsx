@@ -19,7 +19,7 @@ import {
 import type {
   ExecutionVC,
   WorkflowVC,
-  ComprehensiveVCVerificationResult
+  ComprehensiveVCVerificationResult,
 } from "../../types/did";
 
 interface VerifiableCredentialBadgeProps {
@@ -30,7 +30,7 @@ interface VerifiableCredentialBadgeProps {
   executionId?: string; // For execution-level VCs
   showCopyButton?: boolean; // Show copy button for detail pages
   showVerifyButton?: boolean; // Show verify button for detail pages
-  variant?: 'table' | 'detail'; // New prop to control styling
+  variant?: "table" | "detail"; // New prop to control styling
   className?: string;
 }
 
@@ -47,7 +47,7 @@ function VerificationModal({
   onClose,
   verificationResult,
   isLoading,
-  error
+  error,
 }: VerificationModalProps) {
   if (!isOpen) return null;
 
@@ -57,42 +57,42 @@ function VerificationModal({
     return "text-red-600";
   };
 
-  const getSeverityIcon = (severity: 'critical' | 'warning' | 'info') => {
+  const getSeverityIcon = (severity: "critical" | "warning" | "info") => {
     switch (severity) {
-      case 'critical':
+      case "critical":
         return <CloseFilled size={16} className="text-red-500" />;
-      case 'warning':
+      case "warning":
         return <WarningFilled size={16} className="text-yellow-500" />;
-      case 'info':
-        return <Security size={16} className="text-blue-500" />;
+      case "info":
+        return <Security size={16} className="text-muted-foreground" />;
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-      <div className="bg-card border border-border rounded-lg shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-border bg-muted">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+      <div className="bg-card border-border mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg border shadow-2xl">
+        <div className="border-border bg-muted flex items-center justify-between border-b p-6">
           <h2 className="text-heading-2">VC Verification Results</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-muted-foreground/10 rounded-lg transition-colors text-muted-foreground"
+            className="hover:bg-muted-foreground/10 text-muted-foreground rounded-lg p-2 transition-colors"
           >
             <CloseFilled size={20} />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)] bg-card">
+        <div className="bg-card max-h-[calc(90vh-120px)] overflow-y-auto p-6">
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <span className="ml-3 text-foreground">Verifying VC...</span>
+              <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+              <span className="text-foreground ml-3">Verifying VC...</span>
             </div>
           )}
 
           {error && (
             <div className="status-error rounded-lg p-4">
               <div className="flex items-center">
-                <CloseFilled size={20} className="text-red-500 mr-2" />
+                <CloseFilled size={20} className="mr-2 text-red-500" />
                 <span className="font-medium">Verification Failed</span>
               </div>
               <p className="mt-2 text-sm">{error}</p>
@@ -106,21 +106,32 @@ function VerificationModal({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     {verificationResult.valid ? (
-                      <CheckmarkFilled size={24} className="text-green-500 mr-3" />
+                      <CheckmarkFilled
+                        size={24}
+                        className="mr-3 text-green-500"
+                      />
                     ) : (
-                      <CloseFilled size={24} className="text-red-500 mr-3" />
+                      <CloseFilled size={24} className="mr-3 text-red-500" />
                     )}
                     <div>
                       <h3 className="text-heading-3">
                         {verificationResult.valid ? "Valid VC" : "Invalid VC"}
                       </h3>
                       <p className="text-body-small">
-                        Verified at {new Date(verificationResult.verification_timestamp).toLocaleString()}
+                        Verified at{" "}
+                        {new Date(
+                          verificationResult.verification_timestamp,
+                        ).toLocaleString()}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={cn("text-heading-1", getScoreColor(verificationResult.overall_score))}>
+                    <div
+                      className={cn(
+                        "text-heading-1",
+                        getScoreColor(verificationResult.overall_score),
+                      )}
+                    >
                       {verificationResult.overall_score}/100
                     </div>
                     <p className="text-body-small">Overall Score</p>
@@ -131,18 +142,23 @@ function VerificationModal({
               {/* Critical Issues */}
               {verificationResult.critical_issues.length > 0 && (
                 <div className="status-error rounded-lg p-4">
-                  <h4 className="font-medium mb-3">
-                    Critical Issues ({verificationResult.critical_issues.length})
+                  <h4 className="mb-3 font-medium">
+                    Critical Issues ({verificationResult.critical_issues.length}
+                    )
                   </h4>
                   <div className="space-y-2">
                     {verificationResult.critical_issues.map((issue, index) => (
                       <div key={index} className="flex items-start">
                         {getSeverityIcon(issue.severity)}
                         <div className="ml-2">
-                          <p className="text-body font-medium text-text-primary">{issue.type}</p>
+                          <p className="text-body text-text-primary font-medium">
+                            {issue.type}
+                          </p>
                           <p className="text-body-small">{issue.description}</p>
                           {issue.component && (
-                            <p className="text-body-small">Component: {issue.component}</p>
+                            <p className="text-body-small">
+                              Component: {issue.component}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -162,7 +178,9 @@ function VerificationModal({
                       <div key={index} className="flex items-start">
                         {getSeverityIcon(issue.severity)}
                         <div className="ml-2">
-                          <p className="text-body font-medium text-text-primary">{issue.type}</p>
+                          <p className="text-body text-text-primary font-medium">
+                            {issue.type}
+                          </p>
                           <p className="text-body-small">{issue.description}</p>
                         </div>
                       </div>
@@ -172,14 +190,17 @@ function VerificationModal({
               )}
 
               {/* Detailed Results */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {/* Integrity Checks */}
-                <div className="bg-card border border-border rounded-lg p-4">
-                  <h4 className="text-heading-3 mb-3 text-foreground">Integrity Checks</h4>
-                  <div className="space-y-2 text-body">
+                <div className="bg-card border-border rounded-lg border p-4">
+                  <h4 className="text-heading-3 text-foreground mb-3">
+                    Integrity Checks
+                  </h4>
+                  <div className="text-body space-y-2">
                     <div className="flex justify-between">
                       <span>Metadata Consistency</span>
-                      {verificationResult.integrity_checks.metadata_consistency ? (
+                      {verificationResult.integrity_checks
+                        .metadata_consistency ? (
                         <CheckmarkFilled size={16} className="text-green-500" />
                       ) : (
                         <CloseFilled size={16} className="text-red-500" />
@@ -195,7 +216,8 @@ function VerificationModal({
                     </div>
                     <div className="flex justify-between">
                       <span>Timestamp Validation</span>
-                      {verificationResult.integrity_checks.timestamp_validation ? (
+                      {verificationResult.integrity_checks
+                        .timestamp_validation ? (
                         <CheckmarkFilled size={16} className="text-green-500" />
                       ) : (
                         <CloseFilled size={16} className="text-red-500" />
@@ -211,7 +233,8 @@ function VerificationModal({
                     </div>
                     <div className="flex justify-between">
                       <span>Structural Integrity</span>
-                      {verificationResult.integrity_checks.structural_integrity ? (
+                      {verificationResult.integrity_checks
+                        .structural_integrity ? (
                         <CheckmarkFilled size={16} className="text-green-500" />
                       ) : (
                         <CloseFilled size={16} className="text-red-500" />
@@ -221,13 +244,18 @@ function VerificationModal({
                 </div>
 
                 {/* Security Analysis */}
-                <div className="bg-card border border-border rounded-lg p-4">
-                  <h4 className="text-heading-3 mb-3 text-foreground">Security Analysis</h4>
-                  <div className="space-y-2 text-body">
+                <div className="bg-card border-border rounded-lg border p-4">
+                  <h4 className="text-heading-3 text-foreground mb-3">
+                    Security Analysis
+                  </h4>
+                  <div className="text-body space-y-2">
                     <div className="flex justify-between">
                       <span>Signature Strength</span>
-                      <span className="text-body-small bg-muted px-2 py-1 rounded">
-                        {verificationResult.security_analysis.signature_strength}
+                      <span className="text-body-small bg-muted rounded px-2 py-1">
+                        {
+                          verificationResult.security_analysis
+                            .signature_strength
+                        }
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -248,7 +276,8 @@ function VerificationModal({
                     </div>
                     <div className="flex justify-between">
                       <span>Replay Protection</span>
-                      {verificationResult.security_analysis.replay_protection ? (
+                      {verificationResult.security_analysis
+                        .replay_protection ? (
                         <CheckmarkFilled size={16} className="text-green-500" />
                       ) : (
                         <CloseFilled size={16} className="text-red-500" />
@@ -256,17 +285,27 @@ function VerificationModal({
                     </div>
                     <div className="flex justify-between">
                       <span>Security Score</span>
-                      <span className={cn("font-medium", getScoreColor(verificationResult.security_analysis.security_score))}>
-                        {verificationResult.security_analysis.security_score}/100
+                      <span
+                        className={cn(
+                          "font-medium",
+                          getScoreColor(
+                            verificationResult.security_analysis.security_score,
+                          ),
+                        )}
+                      >
+                        {verificationResult.security_analysis.security_score}
+                        /100
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Compliance Checks */}
-                <div className="bg-card border border-border rounded-lg p-4">
-                  <h4 className="font-medium mb-3 text-foreground">Compliance Checks</h4>
-                  <div className="space-y-2 text-body-small">
+                <div className="bg-card border-border rounded-lg border p-4">
+                  <h4 className="text-foreground mb-3 font-medium">
+                    Compliance Checks
+                  </h4>
+                  <div className="text-body-small space-y-2">
                     <div className="flex justify-between">
                       <span>W3C Compliance</span>
                       {verificationResult.compliance_checks.w3c_compliance ? (
@@ -277,7 +316,8 @@ function VerificationModal({
                     </div>
                     <div className="flex justify-between">
                       <span>Hanzo Agents Standard</span>
-                      {verificationResult.compliance_checks.agents_standard_compliance ? (
+                      {verificationResult.compliance_checks
+                        .agents_standard_compliance ? (
                         <CheckmarkFilled size={16} className="text-green-500" />
                       ) : (
                         <CloseFilled size={16} className="text-red-500" />
@@ -285,7 +325,8 @@ function VerificationModal({
                     </div>
                     <div className="flex justify-between">
                       <span>Audit Trail</span>
-                      {verificationResult.compliance_checks.audit_trail_integrity ? (
+                      {verificationResult.compliance_checks
+                        .audit_trail_integrity ? (
                         <CheckmarkFilled size={16} className="text-green-500" />
                       ) : (
                         <CloseFilled size={16} className="text-red-500" />
@@ -293,7 +334,8 @@ function VerificationModal({
                     </div>
                     <div className="flex justify-between">
                       <span>Data Integrity</span>
-                      {verificationResult.compliance_checks.data_integrity_checks ? (
+                      {verificationResult.compliance_checks
+                        .data_integrity_checks ? (
                         <CheckmarkFilled size={16} className="text-green-500" />
                       ) : (
                         <CloseFilled size={16} className="text-red-500" />
@@ -304,15 +346,16 @@ function VerificationModal({
               </div>
 
               {/* Tamper Evidence */}
-              {verificationResult.security_analysis.tamper_evidence.length > 0 && (
+              {verificationResult.security_analysis.tamper_evidence.length >
+                0 && (
                 <div className="status-error rounded-lg p-4">
-                  <h4 className="font-medium mb-3">
-                    Tamper Evidence Detected
-                  </h4>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    {verificationResult.security_analysis.tamper_evidence.map((evidence, index) => (
-                      <li key={index}>{evidence}</li>
-                    ))}
+                  <h4 className="mb-3 font-medium">Tamper Evidence Detected</h4>
+                  <ul className="list-inside list-disc space-y-1 text-sm">
+                    {verificationResult.security_analysis.tamper_evidence.map(
+                      (evidence, index) => (
+                        <li key={index}>{evidence}</li>
+                      ),
+                    )}
                   </ul>
                 </div>
               )}
@@ -332,7 +375,7 @@ export function VerifiableCredentialBadge({
   executionId,
   showCopyButton = false,
   showVerifyButton = false,
-  variant = 'table',
+  variant = "table",
   className = "",
 }: VerifiableCredentialBadgeProps) {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -340,8 +383,11 @@ export function VerifiableCredentialBadge({
   const [copySuccess, setCopySuccess] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<ComprehensiveVCVerificationResult | null>(null);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationResult, setVerificationResult] =
+    useState<ComprehensiveVCVerificationResult | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(
+    null,
+  );
 
   const handleVerify = async () => {
     if (!executionId && !workflowId) return;
@@ -361,7 +407,9 @@ export function VerifiableCredentialBadge({
       }
     } catch (error) {
       console.error("Failed to verify VC:", error);
-      setVerificationError(error instanceof Error ? error.message : "Verification failed");
+      setVerificationError(
+        error instanceof Error ? error.message : "Verification failed",
+      );
     } finally {
       setIsVerifying(false);
     }
@@ -375,9 +423,8 @@ export function VerifiableCredentialBadge({
       if (workflowId) {
         await exportWorkflowComplianceReport(workflowId, "json");
       } else if (executionId) {
-        const { getExecutionVCDocumentEnhanced } = await import(
-          "../../services/vcApi"
-        );
+        const { getExecutionVCDocumentEnhanced } =
+          await import("../../services/vcApi");
         const enhancedChain = await getExecutionVCDocumentEnhanced(executionId);
 
         const blob = new Blob([JSON.stringify(enhancedChain, null, 2)], {
@@ -421,7 +468,9 @@ export function VerifiableCredentialBadge({
       }
     } catch (error) {
       console.error("Failed to download:", error);
-      alert(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      alert(
+        `Download failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setIsDownloading(false);
     }
@@ -445,18 +494,27 @@ export function VerifiableCredentialBadge({
   };
 
   // Table variant - minimal, just icon
-  if (variant === 'table') {
+  if (variant === "table") {
     if (!hasVC || !status || status === "none") {
       return (
-        <div className={cn("flex items-center justify-center", className)} title="No VC available">
+        <div
+          className={cn("flex items-center justify-center", className)}
+          title="No VC available"
+        >
           <CloseFilled size={14} className="text-red-400/70" />
         </div>
       );
     }
 
     return (
-      <div className={cn("flex items-center justify-center", className)} title="VC available">
-        <CheckmarkFilled size={14} className="text-gray-600 dark:text-gray-400" />
+      <div
+        className={cn("flex items-center justify-center", className)}
+        title="VC available"
+      >
+        <CheckmarkFilled
+          size={14}
+          className="text-gray-600 dark:text-gray-400"
+        />
       </div>
     );
   }
@@ -472,12 +530,16 @@ export function VerifiableCredentialBadge({
           {!hasVC || !status || status === "none" ? (
             <>
               <CloseFilled size={16} className="text-gray-400" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">No VC</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                No VC
+              </span>
             </>
           ) : (
             <>
               <CheckmarkFilled size={16} className="text-green-600" />
-              <span className="text-sm text-gray-900 dark:text-gray-100">VC Available</span>
+              <span className="text-sm text-gray-900 dark:text-gray-100">
+                VC Available
+              </span>
             </>
           )}
         </div>
@@ -491,10 +553,9 @@ export function VerifiableCredentialBadge({
                 onClick={handleVerify}
                 disabled={isVerifying}
                 className={cn(
-                  "inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                  "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100",
-                  "dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/30",
-                  isVerifying && "opacity-50 cursor-not-allowed"
+                  "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  "bg-muted text-muted-foreground border-border hover:bg-muted-foreground/10 border",
+                  isVerifying && "cursor-not-allowed opacity-50",
                 )}
                 title="Verify VC"
               >
@@ -511,10 +572,13 @@ export function VerifiableCredentialBadge({
             <button
               onClick={handleDownload}
               disabled={isDownloading}
-              className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="rounded-md p-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
               title="Download VC"
             >
-              <Download size={14} className={isDownloading ? "animate-pulse" : ""} />
+              <Download
+                size={14}
+                className={isDownloading ? "animate-pulse" : ""}
+              />
             </button>
 
             {/* Copy Button - only show in detail pages */}
@@ -522,10 +586,13 @@ export function VerifiableCredentialBadge({
               <button
                 onClick={handleCopy}
                 disabled={isCopying}
-                className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="rounded-md p-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                 title={copySuccess ? "Copied!" : "Copy to Clipboard"}
               >
-                <Copy size={14} className={copySuccess ? "text-green-600" : ""} />
+                <Copy
+                  size={14}
+                  className={copySuccess ? "text-green-600" : ""}
+                />
               </button>
             )}
           </div>

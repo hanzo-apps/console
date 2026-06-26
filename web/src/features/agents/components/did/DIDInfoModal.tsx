@@ -82,10 +82,10 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
   if (loading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-popover border-border">
+        <DialogContent className="bg-popover border-border max-h-[80vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-foreground">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-primary/10 border border-accent-primary/20">
+            <DialogTitle className="text-foreground flex items-center gap-3">
+              <div className="bg-accent-primary/10 border-accent-primary/20 flex h-8 w-8 items-center justify-center rounded-lg border">
                 <Security size={16} className="text-accent-primary" />
               </div>
               DID Information
@@ -98,7 +98,7 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-10 w-10 rounded-lg" />
-                <div className="space-y-2 flex-1">
+                <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-1/3" />
                   <Skeleton className="h-3 w-1/2" />
                 </div>
@@ -118,10 +118,10 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
   if (error || !didInfo) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md bg-popover border-border">
+        <DialogContent className="bg-popover border-border max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-foreground">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-status-error/10 border border-status-error/20">
+            <DialogTitle className="text-foreground flex items-center gap-3">
+              <div className="bg-status-error/10 border-status-error/20 flex h-8 w-8 items-center justify-center rounded-lg border">
                 <Security size={16} className="text-status-error" />
               </div>
               DID Information
@@ -131,8 +131,8 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-6">
-            <div className="text-center py-8">
-              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-lg bg-status-error/10 border border-status-error/20">
+            <div className="py-8 text-center">
+              <div className="bg-status-error/10 border-status-error/20 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg border">
                 <Security size={24} className="text-status-error" />
               </div>
               <p className="text-status-error mb-4 font-medium">
@@ -153,19 +153,25 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
     );
   }
 
-  const reasoners = didInfo.reasoners && typeof didInfo.reasoners === 'object' && didInfo.reasoners !== null
-    ? Object.entries(didInfo.reasoners)
-    : [];
-  const skills = didInfo.skills && typeof didInfo.skills === 'object' && didInfo.skills !== null
-    ? Object.entries(didInfo.skills)
-    : [];
+  const reasoners =
+    didInfo.reasoners &&
+    typeof didInfo.reasoners === "object" &&
+    didInfo.reasoners !== null
+      ? Object.entries(didInfo.reasoners)
+      : [];
+  const skills =
+    didInfo.skills &&
+    typeof didInfo.skills === "object" &&
+    didInfo.skills !== null
+      ? Object.entries(didInfo.skills)
+      : [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-popover border-border shadow-2xl">
+      <DialogContent className="bg-popover border-border max-h-[90vh] max-w-6xl overflow-y-auto shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-foreground">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-primary/10 border border-accent-primary/20">
+          <DialogTitle className="text-foreground flex items-center gap-3">
+            <div className="bg-accent-primary/10 border-accent-primary/20 flex h-8 w-8 items-center justify-center rounded-lg border">
               <Security size={16} className="text-accent-primary" />
             </div>
             <span>DID Identity Information</span>
@@ -178,9 +184,9 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
 
         {/* Enhanced Copy Feedback */}
         {copyFeedback && (
-          <div className="mb-6 p-4 bg-status-success-bg border border-status-success-border rounded-xl text-sm text-status-success shadow-sm animate-fade-in">
+          <div className="bg-status-success-bg border-status-success-border text-status-success animate-fade-in mb-6 rounded-xl border p-4 text-sm shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-status-success/10">
+              <div className="bg-status-success/10 flex h-6 w-6 items-center justify-center rounded-full">
                 <CheckmarkFilled size={14} className="text-status-success" />
               </div>
               <span className="font-medium">{copyFeedback}</span>
@@ -190,22 +196,28 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
 
         <Tabs defaultValue="overview" className="w-full">
           <TabsList variant="underline" className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview" variant="underline">Overview</TabsTrigger>
+            <TabsTrigger value="overview" variant="underline">
+              Overview
+            </TabsTrigger>
             <TabsTrigger value="reasoners" variant="underline">
               Reasoners ({reasoners.length})
             </TabsTrigger>
-            <TabsTrigger value="skills" variant="underline">Skills ({skills.length})</TabsTrigger>
-            <TabsTrigger value="technical" variant="underline">Technical</TabsTrigger>
+            <TabsTrigger value="skills" variant="underline">
+              Skills ({skills.length})
+            </TabsTrigger>
+            <TabsTrigger value="technical" variant="underline">
+              Technical
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* Agent DID Card */}
-              <Card className="bg-card border-card-border shadow-sm hover:shadow-md transition-shadow duration-200">
+              <Card className="bg-card border-card-border shadow-sm transition-shadow duration-200 hover:shadow-md">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-foreground">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted border border-border">
+                  <CardTitle className="text-foreground flex items-center gap-3">
+                    <div className="bg-muted border-border flex h-8 w-8 items-center justify-center rounded-lg border">
                       <Bot size={16} className="text-muted-foreground" />
                     </div>
                     Agent DID
@@ -219,7 +231,7 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
                   />
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-muted-foreground">
+                      <span className="text-muted-foreground font-medium">
                         Registered:
                       </span>
                       <span className="text-foreground">
@@ -227,7 +239,7 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-muted-foreground">
+                      <span className="text-muted-foreground font-medium">
                         Hanzo Agents Server:
                       </span>
                       <span className="text-foreground font-mono text-xs">
@@ -235,10 +247,10 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
                       </span>
                     </div>
                     <div className="flex items-start justify-between">
-                      <span className="font-medium text-muted-foreground">
+                      <span className="text-muted-foreground font-medium">
                         Derivation Path:
                       </span>
-                      <span className="text-foreground font-mono text-xs text-right max-w-[60%] break-all">
+                      <span className="text-foreground max-w-[60%] text-right font-mono text-xs break-all">
                         {didInfo.derivation_path}
                       </span>
                     </div>
@@ -261,10 +273,10 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
               </Card>
 
               {/* Summary Stats */}
-              <Card className="bg-card border-card-border shadow-sm hover:shadow-md transition-shadow duration-200">
+              <Card className="bg-card border-card-border shadow-sm transition-shadow duration-200 hover:shadow-md">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-foreground">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-primary/10 border border-accent-primary/20">
+                  <CardTitle className="text-foreground flex items-center gap-3">
+                    <div className="bg-accent-primary/10 border-accent-primary/20 flex h-8 w-8 items-center justify-center rounded-lg border">
                       <Analytics size={16} className="text-accent-primary" />
                     </div>
                     Identity Summary
@@ -272,30 +284,22 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-muted border border-border rounded-xl">
-                      <div className="text-heading-1">
-                        {reasoners.length}
-                      </div>
+                    <div className="bg-muted border-border rounded-xl border p-4 text-center">
+                      <div className="text-heading-1">{reasoners.length}</div>
                       <div className="text-body-small font-medium">
                         Reasoners
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-muted border border-border rounded-xl">
-                      <div className="text-heading-1">
-                        {skills.length}
-                      </div>
-                      <div className="text-body-small font-medium">
-                        Skills
-                      </div>
+                    <div className="bg-muted border-border rounded-xl border p-4 text-center">
+                      <div className="text-heading-1">{skills.length}</div>
+                      <div className="text-body-small font-medium">Skills</div>
                     </div>
                   </div>
-                  <div className="text-center p-4 bg-muted border border-border rounded-xl">
+                  <div className="bg-muted border-border rounded-xl border p-4 text-center">
                     <div className="text-heading-3">
                       Total Components: {reasoners.length + skills.length + 1}
                     </div>
-                    <div className="text-body-small">
-                      Including agent DID
-                    </div>
+                    <div className="text-body-small">Including agent DID</div>
                   </div>
                 </CardContent>
               </Card>
@@ -305,7 +309,7 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
           {/* Reasoners Tab */}
           <TabsContent value="reasoners" className="space-y-4">
             {reasoners.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {reasoners.map(([functionName, reasoner]) => (
                   <ReasonerDIDCard
                     key={functionName}
@@ -318,9 +322,9 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
-                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <Function size={32} className="text-blue-500" />
+              <div className="py-16 text-center">
+                <div className="bg-muted border-border mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg border">
+                  <Function size={32} className="text-muted-foreground" />
                 </div>
                 <h3 className="text-heading-3 text-foreground mb-2">
                   No Reasoners
@@ -335,7 +339,7 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
           {/* Skills Tab */}
           <TabsContent value="skills" className="space-y-4">
             {skills.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {skills.map(([functionName, skill]) => (
                   <SkillDIDCard
                     key={functionName}
@@ -348,8 +352,8 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
-                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+              <div className="py-16 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/10">
                   <Tools size={32} className="text-purple-500" />
                 </div>
                 <h3 className="text-heading-3 text-foreground mb-2">
@@ -364,48 +368,48 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
 
           {/* Technical Tab */}
           <TabsContent value="technical" className="space-y-6">
-            <Card className="bg-card border-card-border shadow-sm hover:shadow-md transition-shadow duration-200">
+            <Card className="bg-card border-card-border shadow-sm transition-shadow duration-200 hover:shadow-md">
               <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-foreground">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-primary/10 border border-accent-primary/20">
+                <CardTitle className="text-foreground flex items-center gap-3">
+                  <div className="bg-accent-primary/10 border-accent-primary/20 flex h-8 w-8 items-center justify-center rounded-lg border">
                     <Security size={16} className="text-accent-primary" />
                   </div>
                   Technical Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
-                    <h4 className="font-semibold mb-3 text-foreground">
+                    <h4 className="text-foreground mb-3 font-semibold">
                       Agent Public Key (JWK)
                     </h4>
-                    <pre className="text-xs bg-muted p-4 rounded-lg border border-border overflow-auto max-h-40 font-mono text-foreground">
+                    <pre className="bg-muted border-border text-foreground max-h-40 overflow-auto rounded-lg border p-4 font-mono text-xs">
                       {JSON.stringify(didInfo.public_key_jwk, null, 2)}
                     </pre>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-3 text-foreground">
+                    <h4 className="text-foreground mb-3 font-semibold">
                       System Information
                     </h4>
                     <dl className="space-y-3 text-sm">
                       <div className="flex items-center justify-between">
-                        <dt className="font-medium text-muted-foreground">
+                        <dt className="text-muted-foreground font-medium">
                           Node ID:
                         </dt>
-                        <dd className="font-mono text-foreground text-right max-w-[60%] break-all">
+                        <dd className="text-foreground max-w-[60%] text-right font-mono break-all">
                           {didInfo.agent_node_id}
                         </dd>
                       </div>
                       <div className="flex items-center justify-between">
-                        <dt className="font-medium text-muted-foreground">
+                        <dt className="text-muted-foreground font-medium">
                           Hanzo Agents Server:
                         </dt>
-                        <dd className="font-mono text-foreground text-right max-w-[60%] break-all">
+                        <dd className="text-foreground max-w-[60%] text-right font-mono break-all">
                           {didInfo.agents_server_id}
                         </dd>
                       </div>
                       <div className="flex items-center justify-between">
-                        <dt className="font-medium text-muted-foreground">
+                        <dt className="text-muted-foreground font-medium">
                           Status:
                         </dt>
                         <dd>
@@ -420,7 +424,7 @@ export function DIDInfoModal({ nodeId, isOpen, onClose }: DIDInfoModalProps) {
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-between items-center pt-4 border-t">
+        <div className="flex items-center justify-between border-t pt-4">
           <Button variant="outline" onClick={refetch}>
             Refresh Data
           </Button>
@@ -447,11 +451,11 @@ function ReasonerDIDCard({
   loadingDocument,
 }: ReasonerDIDCardProps) {
   return (
-    <Card className="bg-card border-card-border shadow-sm hover:shadow-md transition-shadow duration-200">
+    <Card className="bg-card border-card-border shadow-sm transition-shadow duration-200 hover:shadow-md">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center justify-between text-foreground">
+        <CardTitle className="text-foreground flex items-center justify-between text-base">
           <span className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-muted border border-border">
+            <div className="bg-muted border-border flex h-6 w-6 items-center justify-center rounded-md border">
               <Function size={14} className="text-muted-foreground" />
             </div>
             {functionName}
@@ -473,7 +477,7 @@ function ReasonerDIDCard({
 
         {reasoner.capabilities.length > 0 && (
           <div>
-            <div className="text-sm font-medium text-muted-foreground mb-2">
+            <div className="text-muted-foreground mb-2 text-sm font-medium">
               Capabilities:
             </div>
             <div className="flex flex-wrap gap-2">
@@ -481,7 +485,7 @@ function ReasonerDIDCard({
                 <Badge
                   key={index}
                   variant="secondary"
-                  className="text-xs bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                  className="bg-muted text-muted-foreground border-border border text-xs"
                 >
                   {capability}
                 </Badge>
@@ -527,18 +531,18 @@ function SkillDIDCard({
   loadingDocument,
 }: SkillDIDCardProps) {
   return (
-    <Card className="bg-card border-card-border shadow-sm hover:shadow-md transition-shadow duration-200">
+    <Card className="bg-card border-card-border shadow-sm transition-shadow duration-200 hover:shadow-md">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center justify-between text-foreground">
+        <CardTitle className="text-foreground flex items-center justify-between text-base">
           <span className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-purple-500/10 border border-purple-500/20">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md border border-purple-500/20 bg-purple-500/10">
               <Tools size={14} className="text-purple-500" />
             </div>
             {functionName}
           </span>
           <Badge
             variant="outline"
-            className="bg-purple-500/10 text-purple-500 border-purple-500/20 font-medium"
+            className="border-purple-500/20 bg-purple-500/10 font-medium text-purple-500"
           >
             {skill.exposure_level}
           </Badge>
@@ -549,7 +553,7 @@ function SkillDIDCard({
 
         {skill.tags.length > 0 && (
           <div>
-            <div className="text-sm font-medium text-muted-foreground mb-2">
+            <div className="text-muted-foreground mb-2 text-sm font-medium">
               Tags:
             </div>
             <div className="flex flex-wrap gap-2">
@@ -557,7 +561,7 @@ function SkillDIDCard({
                 <Badge
                   key={index}
                   variant="secondary"
-                  className="text-xs bg-purple-500/10 text-purple-500 border border-purple-500/20"
+                  className="border border-purple-500/20 bg-purple-500/10 text-xs text-purple-500"
                 >
                   #{tag}
                 </Badge>

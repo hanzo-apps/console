@@ -3,6 +3,11 @@
 
 @source "../../node_modules/@ferrucc-io/emoji-picker/dist";
 @source "../../node_modules/streamdown/dist/*.js";
+/* @hanzo/ui ships compiled components whose Tailwind utilities (e.g. the Alert
+   icon slot `[&>svg~*]:pl-7`) live only in its bundle. Tailwind v4 ignores
+   node_modules by default, so scan the root barrel or those classes are never
+   generated and icons overlap headings (Sessions/Users/etc. empty states). */
+@source "../../node_modules/@hanzo/ui/dist/*.mjs";
 
 @plugin "@tailwindcss/forms";
 @plugin "tailwindcss-animate";
@@ -150,44 +155,44 @@
 
 @layer base {
   :root {
-    /* Hanzo dark palette */
-    --background: 222 47% 5%;
+    /* Hanzo dark palette — pure monochrome (0% saturation, no blue tint) */
+    --background: 0 0% 5%;
     --foreground: 0 0% 95%;
 
     /* Gray scale (Hanzo neutrals) */
     --gray-100: 0 0% 95%;
-    --gray-200: 215 16% 80%;
-    --gray-300: 215 16% 70%;
-    --gray-400: 215 16% 56%;
-    --gray-500: 222 30% 30%;
-    --gray-600: 222 30% 18%;
-    --gray-700: 222 47% 12%;
-    --gray-800: 222 47% 7%;
-    --gray-900: 222 47% 5%;
+    --gray-200: 0 0% 80%;
+    --gray-300: 0 0% 70%;
+    --gray-400: 0 0% 56%;
+    --gray-500: 0 0% 30%;
+    --gray-600: 0 0% 18%;
+    --gray-700: 0 0% 12%;
+    --gray-800: 0 0% 7%;
+    --gray-900: 0 0% 5%;
 
     /* UI Elements */
-    --muted: 222 30% 12%;
-    --muted-foreground: 215 16% 56%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 56%;
 
-    --popover: 222 47% 7%;
+    --popover: 0 0% 7%;
     --popover-foreground: 0 0% 95%;
 
-    --card: 222 47% 7%;
+    --card: 0 0% 7%;
     --card-foreground: 0 0% 95%;
 
-    --header: 222 47% 7%;
+    --header: 0 0% 7%;
     --header-foreground: 0 0% 95%;
 
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
 
     --primary: 0 0% 95%;
     --primary-foreground: 0 0% 9%;
 
-    --secondary: 222 30% 18%;
+    --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 95%;
 
-    --accent: 222 30% 18%;
+    --accent: 0 0% 18%;
     --accent-foreground: 0 0% 95%;
 
     --destructive: 0 72% 51%;
@@ -196,14 +201,14 @@
     --ring: 0 0% 56%;
 
     /* Sidebar */
-    --sidebar-background: 222 47% 5%;
+    --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 222 47% 9%;
+    --sidebar-primary: 0 0% 9%;
     --sidebar-primary-foreground: 0 0% 95%;
-    --sidebar-accent: 222 30% 18%;
+    --sidebar-accent: 0 0% 18%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 222 30% 18%;
-    --sidebar-ring: 215 16% 56%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 0 0% 56%;
 
     /* Hanzo Brand Monochrome #e4e4e7 */
     --primary-accent: 0 0% 90%;
@@ -212,7 +217,7 @@
     --muted-green: 84 81% 44%;
     --muted-magenta: 330 90% 70%;
     --muted-blue: 0 0% 67%;
-    --muted-gray: 210 50% 91.1%;
+    --muted-gray: 0 0% 91.1%;
 
     --accent-light-green: 138 76.5% 96.7%;
     --accent-dark-green: 112 100% 32%;
@@ -237,20 +242,23 @@
     --find-match-selected-background: 60 100% 50%;
     --find-match-selected-foreground: 0 0% 0%;
 
-    --chart-1: 239 84% 58%;
-    --chart-2: 188 94% 43%;
-    --chart-3: 240 4% 46%;
-    --chart-4: 271 91% 65%;
-    --chart-5: 48 96% 47%;
-    --chart-6: 0 84% 60%;
-    --chart-7: 84 81% 44%;
-    --chart-8: 330 81% 60%;
+    /* Charts: distinguishable, neutral-leaning hues (warm + neutral grays).
+       No blue/cyan — nothing reads "blue" anywhere in the product. */
+    --chart-1: 0 0% 80%;
+    --chart-2: 30 35% 62%;
+    --chart-3: 0 0% 50%;
+    --chart-4: 45 30% 55%;
+    --chart-5: 0 0% 35%;
+    --chart-6: 20 40% 48%;
+    --chart-7: 0 0% 65%;
+    --chart-8: 60 25% 58%;
     --chart-grid: var(--muted-gray);
-    --color-1: oklch(66.2% 0.225 25.9);
-    --color-2: oklch(60.4% 0.26 302);
-    --color-3: oklch(69.6% 0.165 251);
-    --color-4: oklch(80.2% 0.134 225);
-    --color-5: oklch(90.7% 0.231 133);
+    /* RainbowButton gradient (chrome) — monochrome grayscale ramp, no hue. */
+    --color-1: oklch(96% 0 0);
+    --color-2: oklch(74% 0 0);
+    --color-3: oklch(85% 0 0);
+    --color-4: oklch(63% 0 0);
+    --color-5: oklch(52% 0 0);
 
     /* Banner height system for fixed/sticky positioning
        Banner components dynamically update --banner-height via JS */
@@ -303,7 +311,7 @@
     --muted-blue: 0 0% 73.1%;
     --muted-green: 142 76.7% 73.1%;
     --muted-magenta: 330 76.7% 73.1%;
-    --muted-gray: 210 50% 25%;
+    --muted-gray: 0 0% 25%;
 
     --light-red: 0 62.8% 30.6%;
     --dark-red: 0 90.6% 70.8%;
@@ -338,20 +346,23 @@
     --find-match-selected-background: 60 100% 50%;
     --find-match-selected-foreground: 0 0% 0%;
 
-    --chart-1: 239 84% 58%;
-    --chart-2: 188 94% 43%;
-    --chart-3: 240 4% 46%;
-    --chart-4: 271 91% 65%;
-    --chart-5: 48 96% 47%;
-    --chart-6: 0 84% 60%;
-    --chart-7: 84 81% 44%;
-    --chart-8: 330 81% 60%;
+    /* Charts: distinguishable, neutral-leaning hues (warm + neutral grays).
+       No blue/cyan — nothing reads "blue" anywhere in the product. */
+    --chart-1: 0 0% 85%;
+    --chart-2: 30 35% 68%;
+    --chart-3: 0 0% 55%;
+    --chart-4: 45 30% 62%;
+    --chart-5: 0 0% 40%;
+    --chart-6: 20 40% 55%;
+    --chart-7: 0 0% 72%;
+    --chart-8: 60 25% 64%;
     --chart-grid: var(--muted-gray);
-    --color-1: oklch(66.2% 0.225 25.9);
-    --color-2: oklch(60.4% 0.26 302);
-    --color-3: oklch(69.6% 0.165 251);
-    --color-4: oklch(80.2% 0.134 225);
-    --color-5: oklch(90.7% 0.231 133);
+    /* RainbowButton gradient (chrome) — monochrome grayscale ramp, no hue. */
+    --color-1: oklch(96% 0 0);
+    --color-2: oklch(74% 0 0);
+    --color-3: oklch(85% 0 0);
+    --color-4: oklch(63% 0 0);
+    --color-5: oklch(52% 0 0);
   }
 }
 
@@ -440,4 +451,25 @@
   -webkit-user-select: text !important;
   -moz-user-select: text !important;
   -ms-user-select: text !important;
+}
+
+/*
+ * Monochrome JSON viewer (react18-json-view).
+ * The vendor "github"/base themes color keys, numbers, booleans and strings
+ * blue/navy (#005cc5 light, #79b8ff dark, #032f62 strings) — this leaks blue
+ * onto Organization Settings -> General (Debug metadata) and every trace I/O
+ * panel. Force every viewer to the neutral theme tokens so JSON renders in
+ * grayscale (keys/primitives = foreground, structure/strings = muted) in both
+ * light and dark. One override for all instances; !important matches the
+ * vendor-override pattern already used in this file and beats the library CSS,
+ * which is imported after globals.css.
+ */
+.json-view {
+  color: hsl(var(--muted-foreground)) !important;
+  --json-property: hsl(var(--foreground)) !important;
+  --json-index: hsl(var(--muted-foreground)) !important;
+  --json-number: hsl(var(--foreground)) !important;
+  --json-string: hsl(var(--muted-foreground)) !important;
+  --json-boolean: hsl(var(--foreground)) !important;
+  --json-null: hsl(var(--muted-foreground)) !important;
 }

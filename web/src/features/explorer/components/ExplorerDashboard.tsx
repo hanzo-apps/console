@@ -14,7 +14,12 @@ import {
 import { api } from "@/src/utils/api";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import { Skeleton } from "@hanzo/ui";
 
 import type { ChainNetwork, ChainStats, IndexerHealth } from "../types";
@@ -38,7 +43,7 @@ const networkLabel: Record<ChainNetwork, string> = {
 const networkBadgeColor: Record<ChainNetwork, string> = {
   mainnet: "bg-green-500/15 text-green-700 dark:text-green-400",
   testnet: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400",
-  devnet: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
+  devnet: "bg-muted text-muted-foreground",
 };
 
 // ---------------------------------------------------------------------------
@@ -58,7 +63,15 @@ function formatNumber(n: string | number): string {
 // NetworkCard
 // ---------------------------------------------------------------------------
 
-function NetworkCard({ stats, health, isLoading }: { stats?: ChainStats; health?: IndexerHealth; isLoading: boolean }) {
+function NetworkCard({
+  stats,
+  health,
+  isLoading,
+}: {
+  stats?: ChainStats;
+  health?: IndexerHealth;
+  isLoading: boolean;
+}) {
   const network = stats?.network ?? health?.network ?? "mainnet";
 
   return (
@@ -77,12 +90,18 @@ function NetworkCard({ stats, health, isLoading }: { stats?: ChainStats; health?
                 {health.healthy ? (
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 ) : (
-                  <XCircle className="h-4 w-4 text-destructive" />
+                  <XCircle className="text-destructive h-4 w-4" />
                 )}
-                <span className="text-xs text-muted-foreground">{health.healthy ? "Synced" : "Offline"}</span>
+                <span className="text-muted-foreground text-xs">
+                  {health.healthy ? "Synced" : "Offline"}
+                </span>
               </div>
             )}
-            <a href={EXPLORER_URLS[network]} target="_blank" rel="noopener noreferrer">
+            <a
+              href={EXPLORER_URLS[network]}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <Button variant="ghost" size="sm" className="h-7 gap-1 px-2">
                 <ExternalLink className="h-3 w-3" />
                 <span className="text-xs">Explore</span>
@@ -95,46 +114,54 @@ function NetworkCard({ stats, health, isLoading }: { stats?: ChainStats; health?
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {/* Block Height */}
           <div className="space-y-1">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-1 text-xs">
               <Blocks className="h-3 w-3" />
               Blocks
             </div>
             {isLoading ? (
               <Skeleton className="h-6 w-20" />
             ) : (
-              <p className="text-xl font-bold">{stats ? formatNumber(stats.totalBlocks) : "-"}</p>
+              <p className="text-xl font-bold">
+                {stats ? formatNumber(stats.totalBlocks) : "-"}
+              </p>
             )}
           </div>
 
           {/* Transactions */}
           <div className="space-y-1">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-1 text-xs">
               <ArrowUpRight className="h-3 w-3" />
               Transactions
             </div>
             {isLoading ? (
               <Skeleton className="h-6 w-20" />
             ) : (
-              <p className="text-xl font-bold">{stats ? formatNumber(stats.totalTransactions) : "-"}</p>
+              <p className="text-xl font-bold">
+                {stats ? formatNumber(stats.totalTransactions) : "-"}
+              </p>
             )}
           </div>
 
           {/* Addresses */}
           <div className="space-y-1">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-1 text-xs">
               <Users className="h-3 w-3" />
               Addresses
             </div>
             {isLoading ? (
               <Skeleton className="h-6 w-20" />
             ) : (
-              <p className="text-xl font-bold">{stats?.totalAddresses ? formatNumber(stats.totalAddresses) : "-"}</p>
+              <p className="text-xl font-bold">
+                {stats?.totalAddresses
+                  ? formatNumber(stats.totalAddresses)
+                  : "-"}
+              </p>
             )}
           </div>
 
           {/* Block Time / Utilization */}
           <div className="space-y-1">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-1 text-xs">
               <Clock className="h-3 w-3" />
               Block Time
             </div>
@@ -142,7 +169,9 @@ function NetworkCard({ stats, health, isLoading }: { stats?: ChainStats; health?
               <Skeleton className="h-6 w-20" />
             ) : (
               <p className="text-xl font-bold">
-                {stats?.averageBlockTime ? `${stats.averageBlockTime.toFixed(1)}s` : "-"}
+                {stats?.averageBlockTime
+                  ? `${stats.averageBlockTime.toFixed(1)}s`
+                  : "-"}
               </p>
             )}
           </div>
@@ -152,15 +181,19 @@ function NetworkCard({ stats, health, isLoading }: { stats?: ChainStats; health?
         {health && (
           <div className="mt-4 flex items-center gap-3 rounded-md border p-2 text-xs">
             <div className="flex items-center gap-1">
-              <Activity className="h-3 w-3 text-muted-foreground" />
+              <Activity className="text-muted-foreground h-3 w-3" />
               <span className="text-muted-foreground">Indexer</span>
             </div>
             <div className="flex items-center gap-1">
-              <Hash className="h-3 w-3 text-muted-foreground" />
-              <span>{health.latestBlockNumber ? `Block #${formatNumber(health.latestBlockNumber)}` : "N/A"}</span>
+              <Hash className="text-muted-foreground h-3 w-3" />
+              <span>
+                {health.latestBlockNumber
+                  ? `Block #${formatNumber(health.latestBlockNumber)}`
+                  : "N/A"}
+              </span>
             </div>
             <div className="flex items-center gap-1">
-              <Gauge className="h-3 w-3 text-muted-foreground" />
+              <Gauge className="text-muted-foreground h-3 w-3" />
               <span>{health.responseTimeMs}ms</span>
             </div>
             {health.networkUtilization !== undefined && (
@@ -181,64 +214,80 @@ function NetworkCard({ stats, health, isLoading }: { stats?: ChainStats; health?
 // ---------------------------------------------------------------------------
 
 export function ExplorerDashboard({ projectId }: { projectId: string }) {
-  const { data: allStats, isLoading: statsLoading } = api.explorer.getAllStats.useQuery(
-    { projectId },
-    {
-      enabled: !!projectId,
-      refetchInterval: 60000, // refresh every 60s
-    },
-  );
+  const { data: allStats, isLoading: statsLoading } =
+    api.explorer.getAllStats.useQuery(
+      { projectId },
+      {
+        enabled: !!projectId,
+        refetchInterval: 60000, // refresh every 60s
+      },
+    );
 
-  const { data: healthData, isLoading: healthLoading } = api.explorer.getHealth.useQuery(
-    { projectId },
-    {
-      enabled: !!projectId,
-      refetchInterval: 30000, // refresh every 30s
-    },
-  );
+  const { data: healthData, isLoading: healthLoading } =
+    api.explorer.getHealth.useQuery(
+      { projectId },
+      {
+        enabled: !!projectId,
+        refetchInterval: 30000, // refresh every 30s
+      },
+    );
 
   const isLoading = statsLoading || healthLoading;
   const networks: ChainNetwork[] = ["mainnet", "testnet", "devnet"];
 
   // Aggregate stats
-  const totalBlocks = allStats?.reduce((sum, s) => sum + parseInt(s.totalBlocks, 10), 0) ?? 0;
-  const totalTxns = allStats?.reduce((sum, s) => sum + parseInt(s.totalTransactions, 10), 0) ?? 0;
+  const totalBlocks =
+    allStats?.reduce((sum, s) => sum + parseInt(s.totalBlocks, 10), 0) ?? 0;
+  const totalTxns =
+    allStats?.reduce((sum, s) => sum + parseInt(s.totalTransactions, 10), 0) ??
+    0;
   const healthyCount = healthData?.filter((h) => h.healthy).length ?? 0;
 
   return (
     <div className="space-y-6">
       {/* Summary stats */}
-      <div className="grid gap-4 md:grid-cols-3" data-testid="explorer-stats-grid">
+      <div
+        className="grid gap-4 md:grid-cols-3"
+        data-testid="explorer-stats-grid"
+      >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Blocks</CardTitle>
-            <Blocks className="h-4 w-4 text-muted-foreground" />
+            <Blocks className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-7 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{formatNumber(totalBlocks)}</div>
+              <div className="text-2xl font-bold">
+                {formatNumber(totalBlocks)}
+              </div>
             )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">
+              Total Transactions
+            </CardTitle>
+            <ArrowUpRight className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-7 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{formatNumber(totalTxns)}</div>
+              <div className="text-2xl font-bold">
+                {formatNumber(totalTxns)}
+              </div>
             )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Networks Online</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">
+              Networks Online
+            </CardTitle>
+            <Activity className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -257,7 +306,14 @@ export function ExplorerDashboard({ projectId }: { projectId: string }) {
         {networks.map((network) => {
           const stats = allStats?.find((s) => s.network === network);
           const health = healthData?.find((h) => h.network === network);
-          return <NetworkCard key={network} stats={stats} health={health} isLoading={isLoading} />;
+          return (
+            <NetworkCard
+              key={network}
+              stats={stats}
+              health={health}
+              isLoading={isLoading}
+            />
+          );
         })}
       </div>
     </div>

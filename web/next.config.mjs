@@ -113,7 +113,21 @@ const nextConfig = {
   // Agent/browser tooling often targets 127.0.0.1 instead of localhost in dev.
   allowedDevOrigins: ["127.0.0.1"],
   staticPageGenerationTimeout: 500, // default is 60. Required for build process for amd
-  transpilePackages: ["@hanzo/console", "@hanzo/iam", "@hanzo/ui", "vis-network/standalone"],
+  transpilePackages: [
+    "@hanzo/console",
+    "@hanzo/iam",
+    "@hanzo/ui",
+    "vis-network/standalone",
+    // LangChain v1 is ESM-first ("type":"module"). Next auto-externalizes
+    // node_modules for server/route bundles and loads ESM externals via async
+    // import(), which returns a Promise — so synchronous use (e.g.
+    // `class InsightsCallbackHandler extends BaseCallbackHandler`, `new ChatOpenAI`)
+    // sees `undefined` and throws "X is not a constructor". Transpiling bundles
+    // them synchronously so /api/chatCompletion can construct chat models.
+    "@langchain/core",
+    "@langchain/openai",
+    "@langchain/anthropic",
+  ],
   reactStrictMode: true,
   serverExternalPackages: [
     "dd-trace",
