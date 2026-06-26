@@ -704,3 +704,68 @@ Indexes / Keys / Playground; Vector tabs = Overview / Collections. No dead links
 Docker); deployed via the operator's declared image on
 `services.hanzo.ai/console` (reconcile, not `kubectl set image`). Internal
 `VERSION.ts` → `v3.159.58`.
+
+## Search / Models / Prompts / Evals real backends — kill the rest of `api.cloud.hanzo.ai` (→ console 3.159.59-playground)
+
+Same dead-backend pattern as Vector, finished across the remaining products.
+
+**Search (was: all 500 — Search/Indexes/Keys/Playground).** `searchClient.ts`
+hard-coded `SEARCH_API_BASE="https://api.cloud.hanzo.ai"` (a host that 502s) and
+hit `/api/search-docs/*`, `/api/scrape-docs`, `/api/chat-docs` — never deployed.
+Deleted it; the router now calls a new
+`web/src/features/search/server/searchStore.ts` — the **exact Vector pattern**:
+`node:sqlite` lazy singleton, `projectId`-scoped, `resolveDbPath()` co-locates
+`search.db` on the same durable PVC (override `HANZO_SEARCH_DB_PATH`). It is
+self-contained and dependency-free: **crawl** (global `fetch` + a regex
+HTML→text/links extractor, BFS same-origin, bounded by `maxPages`/timeout),
+**rank** (a real lexical IR engine — BM25 for full-text/hybrid, a TF-IDF
+vector-space cosine for "vector" mode, scores normalized to (0,1] for the UI),
+**chat** = extractive RAG (grounded answer stitched from the best-matching
+passages in the project's own docs + sources), lazily-minted per-project
+`pk_`/`sk_` keys, daily-aggregated stats. Tables: `search_indexes`,
+`search_documents` (FK CASCADE), `search_keys`, `search_events`. Surface:
+`stats/listIndexes/createIndex/deleteIndex/reindex/query/chat/getKeys/
+regenerateKey/scrapePreview`; `SearchStoreError` → tRPC codes (mirrors Vector).
+Tests: `web/src/__tests__/server/unit/searchStore.servertest.ts` — 15 passing
+(put/list/replace, BM25 + vector-space ranking, highlights, honest-empty, RAG
+chat + sources, key mint/rotate, stats, project isolation, cascade delete).
+
+**Models (was: empty/masked).** `cloudModelClient.ts` pointed `/api/models` at an
+unreachable cloud host, so the list silently degraded to `[]`. The Models list now
+derives from the **reachable in-cluster pricing catalog**
+(`pricing.hanzo.svc:8080/v1/pricing/models` — the canonical priced model list the
+router already fetched), enriched by the Cloud API only when `CLOUD_API_URL` is
+set. `owned_by` is derived (explicit field → `owner/model` prefix → family
+heuristic), `premium`/pricing carried through. `/v1` not `/api`; bounded 5s fetch
+timeouts so an unreachable backend degrades fast.
+
+**Prompts.create + Evals.createJob(EXISTING) (was: 500).** Event sourcing and the
+historical-traces eval backfill are best-effort side-channels — the prompt/job is
+already persisted in the DB before the enqueue. They re-threw on a queue-backend
+failure (`promptChangeEventSourcing.ts` `throw error`; evals `throw "queue not
+found"` + un-caught `queue.add`), so a Temporal/queue hiccup 500-ed the user's
+create. Now both **swallow+log** (fire-and-forget) — one fix in the shared
+`promptChangeEventSourcing` (DRY, covers all prompt call-sites) + a try/catch
+around the evals `BatchActionQueue.add`. The web pod already runs the in-process
+`packages/mq` MemoryDriver (no `TEMPORAL_ADDRESS`), so the backfill also actually
+runs; the swallow is the durable guard for if Temporal is ever (re)configured.
+
+**Verification.** searchStore unit tests green (15/15); `tsc` clean on all
+new/rewritten files (the residual evals/prompts `tsc` errors are the pre-existing
+`@prisma/client`-not-generated artifact — identical with or without this change;
+CI runs `prisma generate`). **Live headless-Playwright matrix
+(`web/scripts/verify-job1.mjs`, superuser `z@hanzo.ai`) is BLOCKED by a
+fleet-wide IAM CF-edge outage**: the console pod's server-side OIDC token
+exchange (`iamServer.ts` → `IAM_SERVER_URL=https://hanzo.id`, a Cloudflare edge)
+gets **CF Error 1006 (egress IP banned)** — "Token exchange failed (502)". The
+laptop reaches the IAM edge fine (200); only the cluster egress is banned, so
+**all console logins fail server-side** until IAM is reached in-cluster
+(`iam.hanzo.svc`, no CF) or the egress IP is un-banned. Not a Job-1 regression —
+the front door + the new backends are deployed; the matrix flips green the moment
+login is restored (`verify-job1.mjs` is ready: Vector/Search/Models/Prompts over
+live `/v1/trpc`).
+
+**Deploy.** Tag `v3.159.59-playground` (matches `pipeline.yml`/`build-and-push.yml`
+`v*` → arcd build + `repository-dispatch` to universe; does NOT match
+`release.yml`'s `v3.X.Y`, so no formal release — the established side-build
+pattern). Image `ghcr.io/hanzoai/console:3.159.59-playground`.
