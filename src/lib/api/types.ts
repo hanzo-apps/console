@@ -158,6 +158,9 @@ export type Account = {
   organization?: string
   isAdmin?: boolean
   accessToken?: string
+  /** Arbitrary per-user key/value store on the IAM account. Cross-product,
+   * cross-device user customizations live here under `hanzo.preferences`. */
+  properties?: Record<string, string>
   [key: string]: unknown
 }
 
