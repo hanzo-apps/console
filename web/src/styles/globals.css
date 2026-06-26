@@ -447,3 +447,24 @@
   -moz-user-select: text !important;
   -ms-user-select: text !important;
 }
+
+/*
+ * Monochrome JSON viewer (react18-json-view).
+ * The vendor "github"/base themes color keys, numbers, booleans and strings
+ * blue/navy (#005cc5 light, #79b8ff dark, #032f62 strings) — this leaks blue
+ * onto Organization Settings -> General (Debug metadata) and every trace I/O
+ * panel. Force every viewer to the neutral theme tokens so JSON renders in
+ * grayscale (keys/primitives = foreground, structure/strings = muted) in both
+ * light and dark. One override for all instances; !important matches the
+ * vendor-override pattern already used in this file and beats the library CSS,
+ * which is imported after globals.css.
+ */
+.json-view {
+  color: hsl(var(--muted-foreground)) !important;
+  --json-property: hsl(var(--foreground)) !important;
+  --json-index: hsl(var(--muted-foreground)) !important;
+  --json-number: hsl(var(--foreground)) !important;
+  --json-string: hsl(var(--muted-foreground)) !important;
+  --json-boolean: hsl(var(--foreground)) !important;
+  --json-null: hsl(var(--muted-foreground)) !important;
+}

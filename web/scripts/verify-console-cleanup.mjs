@@ -24,6 +24,10 @@ const BASE = process.env.CONSOLE_URL ?? "https://console.hanzo.ai";
 const USER = process.env.CONSOLE_USER ?? "z@hanzo.ai";
 const PASS = process.env.CONSOLE_PASS ?? "";
 const TAG = process.env.TAG ?? "run";
+// Optional explicit targets — skip auto-discovery when the admin account's
+// landing page has no org links (e.g. a freshly-seeded deployment). Deterministic.
+const ORG_ID = process.env.ORG_ID || "";
+const PROJECT_ID = process.env.PROJECT_ID || "";
 const HOST = new URL(BASE).host;
 const OUT = process.env.OUT_DIR ?? `/tmp/console-verify/${TAG}`;
 mkdirSync(OUT, { recursive: true });
@@ -216,8 +220,8 @@ async function main() {
     R.signedIn = onConsole && !/\/auth\//.test(new URL(url).pathname);
     log(`  · landed ${url} signedIn=${R.signedIn}`);
 
-    const orgId = await firstOrgId(page);
-    log(`[3] first org: ${orgId}`);
+    const orgId = ORG_ID || (await firstOrgId(page));
+    log(`[3] first org: ${orgId}${ORG_ID ? " (from ORG_ID)" : ""}`);
     if (!orgId) {
       log("  ! no org found — cannot continue deep checks");
     }
@@ -247,10 +251,35 @@ async function main() {
 
       // blue scan on billing
       R.blue.billing = await page.evaluate(() => window.__scanBlue()).catch(() => []);
+
+      // Ask #1 scope is EVERY authenticated Settings page, not just Billing.
+      // Scan General/Members/API Keys/Audit Logs too (Billing already done).
+      R.blue.settingsPages = { billing: (R.blue.billing || []).length };
+      for (const [name, slug] of [
+        ["general", "index"],
+        ["members", "members"],
+        ["apiKeys", "api-keys"],
+        ["auditLogs", "audit-logs"],
+      ]) {
+        try {
+          await page.goto(`${BASE}/organization/${orgId}/settings/${slug}`, {
+            waitUntil: "domcontentloaded",
+            timeout: 60000,
+          });
+          await page.waitForTimeout(3500);
+          await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+          const hits = await page.evaluate(() => window.__scanBlue()).catch(() => []);
+          R.blue.settingsPages[name] = hits.length;
+          if (hits.length) R.blue[`settings_${name}`] = hits;
+          if (name === "members") await shot(page, "members");
+        } catch (e) {
+          R.blue.settingsPages[name] = `err:${e.message}`;
+        }
+      }
     }
 
     // --- A product page (traces) to scan chrome + sidebar ---
-    const projId = await firstProjectId(page).catch(() => null);
+    const projId = PROJECT_ID || (await firstProjectId(page).catch(() => null));
     let pid = projId;
     if (!pid && orgId) {
       // open the org to reveal a project
@@ -358,6 +387,7 @@ async function main() {
   log(`signedIn:            ${R.signedIn}`);
   log(`blue chrome (product): ${blueProduct}`);
   log(`blue chrome (billing): ${blueBilling}`);
+  log(`blue chrome (settings pages): ${JSON.stringify(R.blue.settingsPages)}`);
   log(`v4.0.0 present:      ${R.checks.versionV4}`);
   log(`star widget present: ${R.checks.starWidget}`);
   log(`wordmark present:    ${R.checks.wordmark}`);
