@@ -738,33 +738,45 @@ export const evalRouter = createTRPCRouter({
         logger.info(
           `Applying to historical traces for job ${job.id} and project ${input.projectId}`,
         );
-        const batchJobQueue = getQueue(QueueName.BatchActionQueue);
-        if (!batchJobQueue) {
-          throw new Error("Batch job queue not found");
-        }
-        await batchJobQueue.add(
-          QueueJobs.BatchActionProcessingJob,
-          {
-            name: QueueJobs.BatchActionProcessingJob,
-            timestamp: new Date(),
-            id: uuidv4(),
-            payload: {
-              projectId: input.projectId,
-              actionId: "eval-create",
-              configId: job.id,
-              cutoffCreatedAt: new Date(),
-              targetObject: input.target,
-              query: {
-                filter: input.filter ?? [],
-                orderBy: {
-                  column: "timestamp",
-                  order: "DESC",
+        // The job configuration is already persisted above; enqueuing the
+        // historical backfill is a best-effort side-effect. If the queue backend
+        // is unavailable (e.g. Temporal configured but unreachable), log and
+        // continue rather than 500-ing the whole createJob — the evaluator still
+        // exists and applies to NEW traces; the historical backfill can be
+        // retried by re-saving. Fire-and-forget, not re-throw.
+        try {
+          const batchJobQueue = getQueue(QueueName.BatchActionQueue);
+          if (!batchJobQueue) {
+            throw new Error("Batch job queue not available");
+          }
+          await batchJobQueue.add(
+            QueueJobs.BatchActionProcessingJob,
+            {
+              name: QueueJobs.BatchActionProcessingJob,
+              timestamp: new Date(),
+              id: uuidv4(),
+              payload: {
+                projectId: input.projectId,
+                actionId: "eval-create",
+                configId: job.id,
+                cutoffCreatedAt: new Date(),
+                targetObject: input.target,
+                query: {
+                  filter: input.filter ?? [],
+                  orderBy: {
+                    column: "timestamp",
+                    order: "DESC",
+                  },
                 },
               },
             },
-          },
-          { delay: input.delay },
-        );
+            { delay: input.delay },
+          );
+        } catch (err) {
+          logger.error(
+            `Failed to enqueue historical eval backfill for job ${job.id} in project ${input.projectId}: ${err}`,
+          );
+        }
       }
     }),
   createTemplate: protectedProjectProcedure

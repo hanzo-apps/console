@@ -478,6 +478,10 @@ export const env = createEnv({
     // vector.db co-located with the console DB (DATABASE_URL=file:…) on the same
     // durable PVC, else <cwd>/data/vector.db. Set to override.
     HANZO_VECTOR_DB_PATH: z.string().optional(),
+    // SQLite file backing the in-process Search store. Optional: defaults to a
+    // search.db co-located with the console DB (DATABASE_URL=file:…) on the same
+    // durable PVC, else <cwd>/data/search.db. Set to override.
+    HANZO_SEARCH_DB_PATH: z.string().optional(),
 
     // ZT (Zero Trust Network - OpenZiti controller)
     ZT_API_URL: z.string().url().optional().default("https://zt-api.hanzo.ai"),
@@ -969,6 +973,7 @@ export const env = createEnv({
     HANZO_SEARCH_API_KEY: process.env.HANZO_SEARCH_API_KEY,
     HANZO_VECTOR_API_KEY: process.env.HANZO_VECTOR_API_KEY,
     HANZO_VECTOR_DB_PATH: process.env.HANZO_VECTOR_DB_PATH,
+    HANZO_SEARCH_DB_PATH: process.env.HANZO_SEARCH_DB_PATH,
     // ZT
     ZT_API_URL: process.env.ZT_API_URL,
     ZT_ADMIN_USERNAME: process.env.ZT_ADMIN_USERNAME,

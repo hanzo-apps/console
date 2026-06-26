@@ -48,9 +48,13 @@ export const promptChangeEventSourcing = async (
       `Queued entity change event for prompt ${promptData.id} in project ${promptData.projectId} with action ${action}`,
     );
   } catch (error) {
+    // Event sourcing is a best-effort side-channel: the prompt has already been
+    // persisted by the caller. If the queue backend is unavailable (e.g. the
+    // in-process MemoryDriver is swapped for Temporal and it's unreachable) we
+    // log and move on — a downstream eventing hiccup must never fail the user's
+    // create/update. Fire-and-forget, not re-throw.
     logger.error(
       `Failed to queue entity change event for prompt ${promptData.id} for project ${promptData.projectId}: ${error}`,
     );
-    throw error;
   }
 };
