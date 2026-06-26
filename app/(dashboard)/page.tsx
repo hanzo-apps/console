@@ -32,6 +32,18 @@ export default function DashboardHome() {
                 <Text fontSize="$5" fontWeight="700">
                   {m.label}
                 </Text>
+                {m.status && m.status !== 'enabled' && (
+                  <YStack
+                    px="$2"
+                    py={1}
+                    rounded="$10"
+                    bg={m.status === 'waitlist' ? '$yellow5' : '$blue5'}
+                  >
+                    <Text fontSize={9} fontWeight="800" letterSpacing={0.5}>
+                      {m.status === 'waitlist' ? 'WAITLIST' : 'SOON'}
+                    </Text>
+                  </YStack>
+                )}
               </XStack>
               <Text fontSize="$3" color="$color11">
                 {m.description}

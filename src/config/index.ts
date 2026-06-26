@@ -11,6 +11,8 @@ const trimSlash = (s: string) => s.replace(/\/+$/, '')
 export type ConsoleConfig = {
   /** Unified cloud backend base URL (casibase /v1 API). */
   cloudUrl: string
+  /** Hanzo PaaS base URL (platform.hanzo.ai) — DOKS cluster control plane. */
+  platformUrl: string
   /** Hanzo IAM OIDC authority. */
   iamUrl: string
   /** IAM application name: `<org>-<app>` => `hanzo-console`. */
@@ -26,6 +28,7 @@ export type ConsoleConfig = {
 
 export const config: ConsoleConfig = {
   cloudUrl: trimSlash(process.env.NEXT_PUBLIC_CLOUD_URL ?? 'https://cloud.hanzo.ai'),
+  platformUrl: trimSlash(process.env.NEXT_PUBLIC_PLATFORM_URL ?? 'https://platform.hanzo.ai'),
   iamUrl: trimSlash(process.env.NEXT_PUBLIC_IAM_URL ?? 'https://iam.hanzo.ai'),
   iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? 'hanzo-console',
   iamOrgName: process.env.NEXT_PUBLIC_IAM_ORG_NAME ?? 'hanzo',
