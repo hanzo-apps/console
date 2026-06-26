@@ -106,3 +106,74 @@ export async function post<T = string>(path: string, body?: unknown, query?: Que
 
 /** Owner/name -> the `id` query param the backend expects (`owner/name`). */
 export const idOf = (owner: string, name: string): string => `${owner}/${encodeURIComponent(name)}`
+
+// ── Plain-REST layer ────────────────────────────────────────────────────────
+// Some sub-services mounted on the same backend speak plain REST (raw JSON,
+// 2xx / 201 / 204, DELETE) instead of the casibase `{status,msg,data}` envelope
+// — the provisioning service (POST/GET/DELETE /v1/<kind>) and the platform DOKS
+// control plane. Same cookie credentials and `ApiError` as the envelope path;
+// only the body shape and verbs differ, so the transport stays in this one file.
+//
+// Tenancy is server-side: the gateway validates the session cookie and injects
+// `X-Org-Id` from the JWT (and strips any client-supplied identity header), so
+// the browser sends credentials only — never an org header.
+
+/** Build a `/v1/<path>` URL on an arbitrary base (cloud backend by default). */
+export const v1Url = (path: string, base: string = config.cloudUrl): string =>
+  `${base.replace(/\/+$/, '')}/v1/${path.replace(/^\/+/, '')}`
+
+async function restRequest<T>(
+  method: 'GET' | 'POST' | 'DELETE',
+  url: string,
+  body?: unknown,
+): Promise<T | undefined> {
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method,
+      credentials: 'include',
+      headers: {
+        'Accept-Language': acceptLanguage(),
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+  } catch (e) {
+    throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
+  }
+
+  if (res.status === 401 || res.status === 403) throw new ApiError('Not authorized', res.status)
+  if (res.status === 204) return undefined
+
+  const text = await res.text()
+  let json: unknown
+  if (text) {
+    try {
+      json = JSON.parse(text)
+    } catch {
+      if (!res.ok) throw new ApiError(`Request failed (HTTP ${res.status})`, res.status)
+      throw new ApiError(`Invalid response from server (HTTP ${res.status})`, res.status)
+    }
+  }
+
+  if (!res.ok) {
+    const m =
+      json && typeof json === 'object'
+        ? (json as { msg?: unknown; error?: unknown }).msg ??
+          (json as { msg?: unknown; error?: unknown }).error
+        : undefined
+    throw new ApiError(m ? String(m) : `Request failed (HTTP ${res.status})`, res.status)
+  }
+  return json as T
+}
+
+/** REST GET on a full URL (build it with `v1Url`). */
+export const restGet = <T>(url: string): Promise<T> => restRequest<T>('GET', url) as Promise<T>
+
+/** REST POST a JSON body on a full URL. */
+export const restPost = <T>(url: string, body?: unknown): Promise<T> =>
+  restRequest<T>('POST', url, body) as Promise<T>
+
+/** REST DELETE on a full URL; resolves on 204. */
+export const restDelete = (url: string): Promise<void> =>
+  restRequest<void>('DELETE', url).then(() => undefined)
