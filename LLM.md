@@ -705,7 +705,7 @@ Docker); deployed via the operator's declared image on
 `services.hanzo.ai/console` (reconcile, not `kubectl set image`). Internal
 `VERSION.ts` → `v3.159.58`.
 
-## Search / Models / Prompts / Evals real backends — kill the rest of `api.cloud.hanzo.ai` (→ console 3.159.59-playground)
+## Search / Models / Prompts / Evals real backends — kill the rest of `api.cloud.hanzo.ai` (→ console 3.159.60-playground)
 
 Same dead-backend pattern as Vector, finished across the remaining products.
 
@@ -759,13 +759,31 @@ fleet-wide IAM CF-edge outage**: the console pod's server-side OIDC token
 exchange (`iamServer.ts` → `IAM_SERVER_URL=https://hanzo.id`, a Cloudflare edge)
 gets **CF Error 1006 (egress IP banned)** — "Token exchange failed (502)". The
 laptop reaches the IAM edge fine (200); only the cluster egress is banned, so
-**all console logins fail server-side** until IAM is reached in-cluster
-(`iam.hanzo.svc`, no CF) or the egress IP is un-banned. Not a Job-1 regression —
-the front door + the new backends are deployed; the matrix flips green the moment
-login is restored (`verify-job1.mjs` is ready: Vector/Search/Models/Prompts over
-live `/v1/trpc`).
+**all console logins fail server-side** until the egress IP is un-banned at
+Cloudflare. NOTE: there is **no in-cluster IAM service in `do-sfo3-hanzo-k8s`**
+(checked every namespace), so the [[kms-architecture]] "use `iam.hanzo.svc`" fix
+is NOT available here — the only remediations are (1) un-ban the cluster egress at
+the CF IAM zone, or (2) run/route an in-cluster IAM to point `IAM_SERVER_URL` at.
+Both are infra, not a console-product change. Not a Job-1 regression — the front
+door + new backends are deployed; the matrix flips green the moment login is
+restored (`verify-job1.mjs` is ready: Vector/Search/Models/Prompts over `/v1/trpc`).
 
-**Deploy.** Tag `v3.159.59-playground` (matches `pipeline.yml`/`build-and-push.yml`
-`v*` → arcd build + `repository-dispatch` to universe; does NOT match
-`release.yml`'s `v3.X.Y`, so no formal release — the established side-build
-pattern). Image `ghcr.io/hanzoai/console:3.159.59-playground`.
+**Models pricing shape (correction).** `pricing.hanzo.svc /v1/pricing/models`
+actually returns `{models:[{name, provider, pricing:{input,output,cacheRead,
+cacheWrite}}]}` — costs USD **per 1M tokens**, `hanzoModels` have **no `id`** (key
+by `name`). The router maps that real shape (id=name, owned_by=provider,
+premium=paid, input/output→per-MTok+per-token); `ModelsTable` renders `created:0`
+as "—". Plus nav `isMostSpecificActive` (no parent+child double-highlight on the
+new Search/Vector sub-pages).
+
+**Deploy.** Tag `v3.159.60-playground` (supersedes 3.159.59 with the correct
+Models shape). Matches `pipeline.yml`/`build-and-push.yml` `v*` → arcd build +
+`repository-dispatch` to universe; does NOT match `release.yml`'s `v3.X.Y`
+(no formal release — the established side-build pattern). Image
+`ghcr.io/hanzoai/console:3.159.60-playground`. The running `console` deploy is
+**platform-managed** (`managed-by: hanzo-operator`, `part-of: platform`; the
+committed operator CR `console-v1.yaml` tag lags at `3.159.55-icons` while live is
+`3.159.58-playground`, so `-playground` cutovers go through platform.hanzo.ai, not
+that file). Cutover + live verify are gated on the IAM login restore (so the
+result is verifiable) and on arcd-runner availability (the fleet has been down —
+`console-build-*` Kaniko pods are the in-cluster fallback).
