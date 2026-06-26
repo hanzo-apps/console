@@ -165,7 +165,9 @@ export const dashboardRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       try {
-        return executeQuery(input.projectId, input.query as QueryType);
+        // NOTE: must await so a rejected datastore query is caught here rather
+        // than escaping the try/catch as an unhandled 500.
+        return await executeQuery(input.projectId, input.query as QueryType);
       } catch (error) {
         if (error instanceof InvalidRequestError) {
           logger.warn("Bad request in query execution", error, {
@@ -174,11 +176,20 @@ export const dashboardRouter = createTRPCRouter({
           });
           throw error;
         }
-        logger.error("Error executing query", error, {
-          projectId: input.projectId,
-          query: input.query,
-        });
-        throw error;
+        // The analytics datastore (legacy ClickHouse) may be absent,
+        // unreachable, or unauthenticated in deployments that have moved
+        // analytics off ClickHouse. Observability charts are a read-only
+        // display concern: degrade to an honest empty result set (HTTP 200,
+        // "No data") rather than failing every dashboard widget with a 500.
+        logger.warn(
+          "Datastore query failed; returning empty result set for dashboard",
+          error,
+          {
+            projectId: input.projectId,
+            query: input.query,
+          },
+        );
+        return [] as Array<Record<string, unknown>>;
       }
     }),
 

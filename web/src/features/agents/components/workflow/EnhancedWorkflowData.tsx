@@ -16,7 +16,10 @@ import {
   RadioTower,
 } from "@/src/features/agents/components/ui/icon-bridge";
 import { DataModal } from "../execution/EnhancedModal";
-import { DownloadSimple, UploadSimple } from "@/src/features/agents/components/ui/icon-bridge";
+import {
+  DownloadSimple,
+  UploadSimple,
+} from "@/src/features/agents/components/ui/icon-bridge";
 import { cn } from "../../lib/utils";
 import { getStatusLabel, normalizeExecutionStatus } from "../../utils/status";
 import type {
@@ -67,7 +70,7 @@ export function EnhancedWorkflowData({
     Record<string, WorkflowExecution | null>
   >({});
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
   const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
   const [leftPanelSize, setLeftPanelSize] = useState(30);
@@ -79,14 +82,14 @@ export function EnhancedWorkflowData({
 
   const timeline = useMemo<WorkflowTimelineNode[]>(
     () => dagData?.timeline ?? [],
-    [dagData?.timeline]
+    [dagData?.timeline],
   );
 
   const searchableQuery = searchQuery.trim().toLowerCase();
 
   const getDetailsFor = useCallback(
     (executionId: string) => detailsCache[executionId] ?? undefined,
-    [detailsCache]
+    [detailsCache],
   );
 
   const ensureDetails = useCallback(
@@ -126,7 +129,7 @@ export function EnhancedWorkflowData({
         });
       }
     },
-    [detailsCache, loadingDetails]
+    [detailsCache, loadingDetails],
   );
 
   const hasData = useCallback((value: unknown): boolean => {
@@ -145,7 +148,7 @@ export function EnhancedWorkflowData({
       if (details === null) return null;
       return node.input_data ?? null;
     },
-    [getDetailsFor]
+    [getDetailsFor],
   );
 
   const getNodeOutput = useCallback(
@@ -155,7 +158,7 @@ export function EnhancedWorkflowData({
       if (details === null) return null;
       return node.output_data ?? null;
     },
-    [getDetailsFor]
+    [getDetailsFor],
   );
 
   const filteredNodes = useMemo(() => {
@@ -275,7 +278,7 @@ export function EnhancedWorkflowData({
       setActiveNodeId(nodeId);
       onNodeSelection([nodeId], true);
     },
-    [onNodeSelection]
+    [onNodeSelection],
   );
 
   const handleOpenExecutionPage = useCallback(() => {
@@ -328,7 +331,7 @@ export function EnhancedWorkflowData({
     const palette: Record<string, string> = {
       succeeded:
         "bg-emerald-500/10 text-emerald-500 border border-emerald-500/40",
-      running: "bg-sky-500/10 text-sky-500 border border-sky-500/40",
+      running: "bg-zinc-500/10 text-zinc-400 border border-zinc-500/40",
       failed: "bg-rose-500/10 text-rose-500 border border-rose-500/40",
       cancelled: "bg-slate-500/10 text-slate-400 border border-slate-500/30",
       timeout: "bg-amber-500/10 text-amber-500 border border-amber-500/40",
@@ -340,8 +343,8 @@ export function EnhancedWorkflowData({
     return (
       <span
         className={cn(
-          "text-body-small px-2 py-0.5 rounded-full uppercase tracking-wide",
-          classes
+          "text-body-small rounded-full px-2 py-0.5 tracking-wide uppercase",
+          classes,
         )}
       >
         {label}
@@ -366,7 +369,7 @@ export function EnhancedWorkflowData({
     const detailWebhookEvents = Array.isArray(details?.webhook_events)
       ? [...details!.webhook_events].sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
       : [];
     const detailWebhookFailure = detailWebhookEvents.some((event) => {
@@ -382,24 +385,24 @@ export function EnhancedWorkflowData({
     const detailLatestWebhookStatus = detailWebhookEvents[0]?.status;
     const nodeHasWebhookMetadata = Boolean(
       node.webhook_registered ||
-        (node.webhook_event_count ?? 0) > 0 ||
-        (node.webhook_success_count ?? 0) > 0 ||
-        (node.webhook_failure_count ?? 0) > 0
+      (node.webhook_event_count ?? 0) > 0 ||
+      (node.webhook_success_count ?? 0) > 0 ||
+      (node.webhook_failure_count ?? 0) > 0,
     );
     const hasWebhook = Boolean(
       nodeHasWebhookMetadata ||
-        (details &&
-          details !== null &&
-          (details.webhook_registered ||
-            (Array.isArray(details.webhook_events) &&
-              details.webhook_events.length > 0)))
+      (details &&
+        details !== null &&
+        (details.webhook_registered ||
+          (Array.isArray(details.webhook_events) &&
+            details.webhook_events.length > 0))),
     );
     const webhookHasFailure =
       detailWebhookFailure || (node.webhook_failure_count ?? 0) > 0;
     const webhookHasSuccess =
       detailWebhookSuccess || (node.webhook_success_count ?? 0) > 0;
     const webhookStatusLabel = formatWebhookStatusLabel(
-      detailLatestWebhookStatus ?? node.webhook_last_status
+      detailLatestWebhookStatus ?? node.webhook_last_status,
     );
     const hasInput = hasData(inputData);
     const hasOutput = hasData(outputData);
@@ -411,14 +414,14 @@ export function EnhancedWorkflowData({
         key={node.execution_id}
         onClick={() => handleSelectNode(node.execution_id)}
         className={cn(
-          "w-full text-left rounded-lg border border-transparent px-3 py-3 transition-colors duration-150",
-          "hover:border-border hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-          isActive && "border-primary/40 bg-primary/5"
+          "w-full rounded-lg border border-transparent px-3 py-3 text-left transition-colors duration-150",
+          "hover:border-border hover:bg-muted/20 focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+          isActive && "border-primary/40 bg-primary/5",
         )}
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-foreground truncate">
+            <span className="text-foreground truncate text-sm font-medium">
               {node.agent_name || node.reasoner_id || "Unnamed node"}
             </span>
             <span className="text-body-small truncate">
@@ -434,19 +437,19 @@ export function EnhancedWorkflowData({
             {statusBadge(node.status)}
           </div>
         </div>
-        <div className="mt-2 flex items-center gap-3 text-body-small">
+        <div className="text-body-small mt-2 flex items-center gap-3">
           <span>{formatTimestamp(node.started_at)}</span>
           <span>•</span>
           <span>{formatDuration(node.duration_ms)}</span>
         </div>
         <div className="mt-2 flex items-center gap-1">
           {isLoading && (
-            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+            <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px] tracking-wide uppercase">
               <InProgress className="h-3 w-3 animate-spin" /> Loading
             </span>
           )}
           {!isLoading && nodeError && (
-            <span className="text-[10px] uppercase tracking-wide text-destructive">
+            <span className="text-destructive text-[10px] tracking-wide uppercase">
               {nodeError}
             </span>
           )}
@@ -456,12 +459,12 @@ export function EnhancedWorkflowData({
               <Badge
                 variant="outline"
                 className={cn(
-                  "text-[10px] uppercase tracking-wide flex items-center gap-1",
+                  "flex items-center gap-1 text-[10px] tracking-wide uppercase",
                   webhookHasFailure
                     ? "border-destructive/40 text-destructive"
                     : webhookHasSuccess
                       ? "border-emerald-500/40 text-emerald-500"
-                      : "border-border text-muted-foreground"
+                      : "border-border text-muted-foreground",
                 )}
               >
                 <RadioTower className="h-3 w-3" />
@@ -470,7 +473,7 @@ export function EnhancedWorkflowData({
             )}
         </div>
         {(inputPreview || outputPreview) && (
-          <div className="mt-2 space-y-1 text-body-small font-mono text-muted-foreground/80">
+          <div className="text-body-small text-muted-foreground/80 mt-2 space-y-1 font-mono">
             {inputPreview && (
               <div className="line-clamp-2">in: {inputPreview}</div>
             )}
@@ -540,7 +543,7 @@ export function EnhancedWorkflowData({
           event.preventDefault();
           if (visibleNodes.length > 0) {
             handleSelectNode(
-              visibleNodes[visibleNodes.length - 1].execution_id
+              visibleNodes[visibleNodes.length - 1].execution_id,
             );
           }
           break;
@@ -559,7 +562,7 @@ export function EnhancedWorkflowData({
           event.preventDefault();
           // Focus search input
           const searchInput = document.querySelector(
-            'input[placeholder*="Search"]'
+            'input[placeholder*="Search"]',
           ) as HTMLInputElement;
           if (searchInput) {
             searchInput.focus();
@@ -574,7 +577,7 @@ export function EnhancedWorkflowData({
   }, [visibleNodes, activeNodeId, handleSelectNode, onNodeSelection]);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       {/* Responsive Split Pane Layout */}
       <ResizableSplitPane
         defaultSizePercent={isSmallScreen ? 100 : leftPanelSize}
@@ -589,21 +592,21 @@ export function EnhancedWorkflowData({
       >
         {[
           // Left Panel - Search + Node List
-          <div key="node-list" className="h-full flex flex-col space-y-4 p-4">
+          <div key="node-list" className="flex h-full flex-col space-y-4 p-4">
             <Input
               placeholder="Search by agent, reasoner, execution, or JSON content"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full"
             />
-            <div className="flex-1 overflow-y-auto space-y-2">
+            <div className="flex-1 space-y-2 overflow-y-auto">
               {visibleNodes.length > 0 ? (
                 <>{visibleNodes.map(renderListItem)}</>
               ) : (
-                <div className="px-2 py-16 text-center text-body-small">
+                <div className="text-body-small px-2 py-16 text-center">
                   {nodesWithData.length === 0 && (
                     <div className="flex flex-col items-center gap-3">
-                      <Database className="h-10 w-10 text-muted-foreground" />
+                      <Database className="text-muted-foreground h-10 w-10" />
                       <span>No workflow steps emitted input/output yet.</span>
                     </div>
                   )}
@@ -623,7 +626,7 @@ export function EnhancedWorkflowData({
           // Right Panel - Metadata + Controls + Data
           <div
             key="node-details"
-            className="h-full flex flex-col space-y-6 p-6"
+            className="flex h-full flex-col space-y-6 p-6"
           >
             {activeNode ? (
               <>
@@ -634,7 +637,7 @@ export function EnhancedWorkflowData({
                       activeNode.reasoner_id ||
                       "Selected node"}
                   </h3>
-                  <div className="flex flex-wrap items-center gap-2 text-body-small">
+                  <div className="text-body-small flex flex-wrap items-center gap-2">
                     <span className="font-mono">{activeNode.execution_id}</span>
                     <span>•</span>
                     {statusBadge(activeNode.status)}
@@ -677,28 +680,28 @@ export function EnhancedWorkflowData({
                     size="sm"
                     onClick={handleDownloadNode}
                   >
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="mr-2 h-4 w-4" />
                     Download JSON
                   </Button>
                 </div>
 
                 {/* Loading and Error States */}
                 {activeIsLoading && (
-                  <div className="flex items-center gap-2 text-body-small">
+                  <div className="text-body-small flex items-center gap-2">
                     <InProgress className="h-4 w-4 animate-spin" /> Loading
                     execution details…
                   </div>
                 )}
 
                 {activeError && (
-                  <div className="text-xs text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20">
+                  <div className="text-destructive bg-destructive/10 border-destructive/20 rounded-lg border p-3 text-xs">
                     {activeError}
                   </div>
                 )}
 
                 {/* Data Panels with Responsive Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="h-[420px] border border-border rounded-lg overflow-hidden">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div className="border-border h-[420px] overflow-hidden rounded-lg border">
                     <UnifiedDataPanel
                       data={activeInput}
                       title="Input Data"
@@ -710,7 +713,7 @@ export function EnhancedWorkflowData({
                       className="h-full"
                     />
                   </div>
-                  <div className="h-[420px] border border-border rounded-lg overflow-hidden">
+                  <div className="border-border h-[420px] overflow-hidden rounded-lg border">
                     <UnifiedDataPanel
                       data={activeOutput}
                       title="Output Data"
@@ -745,8 +748,8 @@ export function EnhancedWorkflowData({
                 {(webhookRegistered || activeWebhookEvents.length > 0) && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <RadioTower className="w-4 h-4" />
+                      <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                        <RadioTower className="h-4 w-4" />
                         Webhook Activity
                       </div>
                       {webhookRegistered &&
@@ -766,7 +769,7 @@ export function EnhancedWorkflowData({
                           return (
                             <div
                               key={event.id}
-                              className="border border-border rounded-lg bg-muted/10 p-4 space-y-3"
+                              className="border-border bg-muted/10 space-y-3 rounded-lg border p-4"
                             >
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
@@ -789,7 +792,7 @@ export function EnhancedWorkflowData({
                                     </Badge>
                                   )}
                                   {event.event_type && (
-                                    <span className="text-body-small uppercase tracking-wide">
+                                    <span className="text-body-small tracking-wide uppercase">
                                       {event.event_type}
                                     </span>
                                   )}
@@ -800,18 +803,18 @@ export function EnhancedWorkflowData({
                               </div>
 
                               {event.error_message && (
-                                <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2">
+                                <div className="text-destructive bg-destructive/10 border-destructive/20 rounded border px-3 py-2 text-xs">
                                   {event.error_message}
                                 </div>
                               )}
 
                               {payloadIsRenderable && (
                                 <div className="space-y-2">
-                                  <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                                  <span className="text-foreground text-xs font-semibold tracking-wide uppercase">
                                     Payload
                                   </span>
                                   {typeof payloadData === "string" ? (
-                                    <pre className="text-xs whitespace-pre-wrap bg-background border border-border/50 rounded px-3 py-2">
+                                    <pre className="bg-background border-border/50 rounded border px-3 py-2 text-xs whitespace-pre-wrap">
                                       {payloadData}
                                     </pre>
                                   ) : (
@@ -820,7 +823,7 @@ export function EnhancedWorkflowData({
                                       maxHeight="220px"
                                       showHeader={false}
                                       collapsible={false}
-                                      className="border border-border/40 bg-background"
+                                      className="border-border/40 bg-background border"
                                     />
                                   )}
                                 </div>
@@ -828,10 +831,10 @@ export function EnhancedWorkflowData({
 
                               {event.response_body && (
                                 <div className="space-y-1 text-xs">
-                                  <span className="font-semibold text-foreground uppercase tracking-wide">
+                                  <span className="text-foreground font-semibold tracking-wide uppercase">
                                     Response
                                   </span>
-                                  <pre className="whitespace-pre-wrap break-words bg-background border border-border/50 rounded px-3 py-2 text-muted-foreground">
+                                  <pre className="bg-background border-border/50 text-muted-foreground rounded border px-3 py-2 break-words whitespace-pre-wrap">
                                     {event.response_body}
                                   </pre>
                                 </div>
@@ -850,14 +853,14 @@ export function EnhancedWorkflowData({
                 )}
               </>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground">
-                <Database className="h-12 w-12 mb-4" />
+              <div className="text-muted-foreground flex h-full flex-col items-center justify-center text-center">
+                <Database className="mb-4 h-12 w-12" />
                 <p className="text-sm">
                   Select a workflow step from the list to inspect its inputs and
                   outputs.
                 </p>
                 {visibleNodes.length > 0 && (
-                  <p className="text-xs mt-2 opacity-70">
+                  <p className="mt-2 text-xs opacity-70">
                     {visibleNodes.length} node
                     {visibleNodes.length === 1 ? "" : "s"} available
                   </p>

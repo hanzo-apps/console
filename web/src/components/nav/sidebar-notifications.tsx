@@ -30,7 +30,7 @@ export const notifications: SidebarNotification[] = [
     id: "lw5-1",
     title: "Launch Week: Day 1",
     description:
-      "Run experiments inside GitHub Actions to test every PR against a Langfuse dataset.",
+      "Run experiments inside GitHub Actions to test every PR against a Hanzo dataset.",
     link: "https://hanzo.ai/changelog/2026-05-25-experiment-ci-cd-gates",
     linkTitle: "Learn more",
     createdAt: "2026-05-25",
@@ -39,7 +39,7 @@ export const notifications: SidebarNotification[] = [
     id: "lw5-2",
     title: "Launch Week: Day 2",
     description:
-      "Langfuse agent skill turns Langfuse into a headless platform to evaluate, query and instrument your application.",
+      "Hanzo agent skill turns Hanzo into a headless platform to evaluate, query and instrument your application.",
     link: "https://hanzo.ai/changelog/2026-05-26-langfuse-agent-skill",
     linkTitle: "Learn more",
     createdAt: "2026-05-26",
@@ -65,24 +65,10 @@ export const notifications: SidebarNotification[] = [
     id: "lw5-5",
     title: "Launch Week: Day 5",
     description:
-      "Langfuse MCP now covers observations, metrics, scores, datasets, comments, and more.",
+      "Hanzo MCP now covers observations, metrics, scores, datasets, comments, and more.",
     link: "https://hanzo.ai/changelog/2026-05-29-mcp-update",
     linkTitle: "Learn more",
     createdAt: "2026-05-29",
-  },
-  {
-    id: "github-star",
-    title: "Star HanzoCloud",
-    description:
-      "See the latest releases and help grow the community on GitHub",
-    link: "https://github.com/hanzoai/cloud",
-    linkContent: (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        alt="Hanzo Console GitHub stars"
-        src="https://img.shields.io/github/stars/hanzoai/console?label=hanzo&amp;style=social"
-      />
-    ),
   },
 ];
 

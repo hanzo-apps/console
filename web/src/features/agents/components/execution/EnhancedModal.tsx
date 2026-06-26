@@ -1,5 +1,9 @@
 import React from "react";
-import { ArrowsOutSimple, CornersIn, X } from "@/src/features/agents/components/ui/icon-bridge";
+import {
+  ArrowsOutSimple,
+  CornersIn,
+  X,
+} from "@/src/features/agents/components/ui/icon-bridge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -32,7 +36,7 @@ function EnhancedModal({
   children,
   maxWidth = "90vw",
   maxHeight = "90vh",
-  resizable = true
+  resizable = true,
 }: EnhancedModalProps) {
   const [isMaximized, setIsMaximized] = React.useState(false);
 
@@ -42,19 +46,19 @@ function EnhancedModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="p-0 overflow-hidden flex flex-col"
+        className="flex flex-col overflow-hidden p-0"
         style={{
           maxWidth: modalWidth,
           maxHeight: modalHeight,
           width: modalWidth,
-          height: modalHeight
+          height: modalHeight,
         }}
       >
         {/* Header - Fixed */}
-        <DialogHeader className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur-sm">
+        <DialogHeader className="border-border bg-background/95 flex-shrink-0 border-b backdrop-blur-sm">
           <div className="flex items-center justify-between p-4">
-            <DialogTitle className="flex items-center gap-3 text-heading-3">
-              {Icon && <Icon className="w-5 h-5" />}
+            <DialogTitle className="text-heading-3 flex items-center gap-3">
+              {Icon && <Icon className="h-5 w-5" />}
               {title}
             </DialogTitle>
 
@@ -89,7 +93,7 @@ function EnhancedModal({
         </DialogHeader>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
+        <div className="scrollbar-thumb-border flex-1 scrollbar-thin scrollbar-track-transparent overflow-auto">
           {children}
         </div>
       </DialogContent>
@@ -97,8 +101,16 @@ function EnhancedModal({
   );
 }
 
-export function DataModal({ isOpen, onClose, title, icon, data }: DataModalProps) {
-  const [viewMode, setViewMode] = React.useState<"formatted" | "raw" | "markdown">("formatted");
+export function DataModal({
+  isOpen,
+  onClose,
+  title,
+  icon,
+  data,
+}: DataModalProps) {
+  const [viewMode, setViewMode] = React.useState<
+    "formatted" | "raw" | "markdown"
+  >("formatted");
 
   const jsonString = React.useMemo(() => {
     try {
@@ -111,7 +123,12 @@ export function DataModal({ isOpen, onClose, title, icon, data }: DataModalProps
   // Detect if data might contain markdown
   const hasMarkdownLikeContent = React.useMemo(() => {
     if (typeof data === "string") {
-      return data.includes("**") || data.includes("*") || data.includes("`") || data.includes("#");
+      return (
+        data.includes("**") ||
+        data.includes("*") ||
+        data.includes("`") ||
+        data.includes("#")
+      );
     }
     return false;
   }, [data]);
@@ -121,15 +138,21 @@ export function DataModal({ isOpen, onClose, title, icon, data }: DataModalProps
       return content
         .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
         .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-        .replace(/`(.*?)`/g, '<code class="bg-muted px-1 rounded text-sm font-mono">$1</code>')
+        .replace(
+          /`(.*?)`/g,
+          '<code class="bg-muted px-1 rounded text-sm font-mono">$1</code>',
+        )
         .replace(/\n\n/g, '</p><p class="mt-2">')
-        .replace(/\n/g, '<br>')
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-blue-500 hover:underline" target="_blank" rel="noopener">$1</a>');
+        .replace(/\n/g, "<br>")
+        .replace(
+          /\[(.*?)\]\((.*?)\)/g,
+          '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener">$1</a>',
+        );
     }, [content]);
 
     return (
       <div
-        className="prose prose-sm max-w-none text-foreground"
+        className="prose prose-sm text-foreground max-w-none"
         dangerouslySetInnerHTML={{ __html: `<p>${formattedContent}</p>` }}
       />
     );
@@ -144,15 +167,18 @@ export function DataModal({ isOpen, onClose, title, icon, data }: DataModalProps
       maxWidth="90vw"
       maxHeight="90vh"
     >
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         {/* Tab Navigation - Fixed */}
-        <div className="flex-shrink-0 border-b border-border bg-background/95">
+        <div className="border-border bg-background/95 flex-shrink-0 border-b">
           <Tabs
             value={viewMode}
             onValueChange={(value) => setViewMode(value as any)}
             className="w-full"
           >
-            <TabsList variant="underline" className="grid w-full grid-cols-3 h-12">
+            <TabsList
+              variant="underline"
+              className="grid h-12 w-full grid-cols-3"
+            >
               <TabsTrigger
                 value="formatted"
                 variant="underline"
@@ -181,10 +207,13 @@ export function DataModal({ isOpen, onClose, title, icon, data }: DataModalProps
         </div>
 
         {/* Tab Content - Scrollable */}
-        <div className="flex-1 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
+        <div className="scrollbar-thumb-border flex-1 scrollbar-thin scrollbar-track-transparent overflow-auto">
           <Tabs value={viewMode} className="h-full">
-            <TabsContent value="formatted" className="h-full m-0 p-4 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
-              <div className="h-full overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
+            <TabsContent
+              value="formatted"
+              className="scrollbar-thumb-border m-0 h-full scrollbar-thin scrollbar-track-transparent overflow-auto p-4"
+            >
+              <div className="scrollbar-thumb-border h-full scrollbar-thin scrollbar-track-transparent overflow-auto">
                 <AdvancedJsonViewer
                   data={data}
                   maxHeight="100%"
@@ -194,10 +223,13 @@ export function DataModal({ isOpen, onClose, title, icon, data }: DataModalProps
               </div>
             </TabsContent>
 
-            <TabsContent value="raw" className="h-full m-0 p-4 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
-              <div className="border border-border rounded-lg h-full overflow-auto bg-background scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
-                <div className="p-4 h-full overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground">
-                  <pre className="text-sm font-mono whitespace-pre-wrap text-foreground leading-relaxed">
+            <TabsContent
+              value="raw"
+              className="scrollbar-thumb-border m-0 h-full scrollbar-thin scrollbar-track-transparent overflow-auto p-4"
+            >
+              <div className="border-border bg-background scrollbar-thumb-border h-full scrollbar-thin scrollbar-track-transparent overflow-auto rounded-lg border">
+                <div className="scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground h-full scrollbar-thin scrollbar-track-transparent overflow-auto p-4">
+                  <pre className="text-foreground font-mono text-sm leading-relaxed whitespace-pre-wrap">
                     {jsonString}
                   </pre>
                 </div>
@@ -205,10 +237,15 @@ export function DataModal({ isOpen, onClose, title, icon, data }: DataModalProps
             </TabsContent>
 
             {hasMarkdownLikeContent && (
-              <TabsContent value="markdown" className="h-full m-0 p-4 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
-                <div className="border border-border rounded-lg h-full overflow-auto bg-background scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
-                  <div className="p-4 h-full overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground">
-                    <MarkdownRenderer content={typeof data === "string" ? data : jsonString} />
+              <TabsContent
+                value="markdown"
+                className="scrollbar-thumb-border m-0 h-full scrollbar-thin scrollbar-track-transparent overflow-auto p-4"
+              >
+                <div className="border-border bg-background scrollbar-thumb-border h-full scrollbar-thin scrollbar-track-transparent overflow-auto rounded-lg border">
+                  <div className="scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground h-full scrollbar-thin scrollbar-track-transparent overflow-auto p-4">
+                    <MarkdownRenderer
+                      content={typeof data === "string" ? data : jsonString}
+                    />
                   </div>
                 </div>
               </TabsContent>

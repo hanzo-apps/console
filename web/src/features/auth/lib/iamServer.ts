@@ -192,6 +192,51 @@ export async function iamGetUser(sub: string): Promise<{
   }
 }
 
+/**
+ * Resolve the IAM user record by ORG + EMAIL, returning the authoritative
+ * `owner`/`name` (and thus the canonical `owner/name` sub).
+ *
+ * This is the correct identity resolver when all we hold is the org slug and the
+ * user's email: a Casdoor user's `name` is NOT necessarily their email, even in
+ * an `useEmailAsUsername` org (a user can pre-exist with a non-email username),
+ * so `get-user?id=<owner>/<email>` returns null for them. Casdoor's
+ * `get-user?owner=<org>&email=<email>` does an exact email lookup within the org
+ * and returns the real record — from which the true sub is `${owner}/${name}`.
+ * (Verified live: id-by-email → null, owner+email → the record.)
+ *
+ * Returns null on miss/error so callers can degrade to a clear NOT_FOUND.
+ */
+export async function iamGetUserByOrgEmail(
+  owner: string,
+  email: string,
+): Promise<{
+  owner?: string;
+  name?: string;
+  isAdmin?: boolean;
+  isGlobalAdmin?: boolean;
+  accessKey?: string;
+} | null> {
+  const client = getIamClient();
+  if (!client) return null;
+  try {
+    const res = await client.apiRequest<
+      IamResponse<{
+        owner?: string;
+        name?: string;
+        isAdmin?: boolean;
+        isGlobalAdmin?: boolean;
+        accessKey?: string;
+      }>
+    >("/v1/iam/get-user", {
+      params: { owner, email: email.toLowerCase() },
+    });
+    if (res.status !== "ok" || !res.data) return null;
+    return res.data;
+  } catch {
+    return null;
+  }
+}
+
 export type IamSignupResult =
   | { ok: true; sub?: string }
   | { ok: false; error: string };

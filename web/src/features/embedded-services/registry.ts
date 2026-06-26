@@ -23,14 +23,11 @@
  */
 import {
   Database,
-  TerminalSquare,
   MessageSquare,
   Workflow,
-  Search as SearchIcon,
   ShoppingCart,
   KeyRound,
   Boxes,
-  Bot,
   type LucideIcon,
 } from "lucide-react";
 import { RouteGroup } from "@/src/components/layouts/route-groups";
@@ -111,18 +108,11 @@ export const EMBEDDED_SERVICES: readonly EmbeddedServiceDef[] = [
     // Admin UI lives at /_ (slash-less so Next.js trailingSlash:false is happy).
     rootPath: "/_",
   },
-  {
-    slug: "playground",
-    title: "Playground",
-    icon: TerminalSquare,
-    group: RouteGroup.PromptManagement,
-    productModule: "playground",
-    upstreamBaseUrl: () =>
-      firstEnv("PLAYGROUND_APP_URL", "NEXT_PUBLIC_PLAYGROUND_URL") ??
-      "http://hanzo-playground.hanzo.svc.cluster.local:8080",
-    // Vite SPA: /assets/*, /favicon, runtime /api/*.
-    rewritePrefixes: ["/assets/", "/favicon", "/api/"],
-  },
+  // NOTE: no embedded "playground" service here — the native Playground page
+  // (/project/[projectId]/playground, productModule "playground") is the one
+  // way to do Playground. A second embedded entry produced a duplicate
+  // "Playground" in the Prompt Management group; removed to keep one product,
+  // one nav entry.
   {
     slug: "chat",
     title: "Chat",
@@ -141,24 +131,15 @@ export const EMBEDDED_SERVICES: readonly EmbeddedServiceDef[] = [
     upstreamBaseUrl: () => firstEnv("FLOW_APP_URL"),
     rewritePrefixes: ["/assets/", "/static/", "/favicon", "/api/"],
   },
-  {
-    slug: "bot",
-    title: "Bots",
-    icon: Bot,
-    group: RouteGroup.Bots,
-    productModule: "bots",
-    upstreamBaseUrl: () => firstEnv("BOT_APP_URL"),
-    rewritePrefixes: ["/assets/", "/static/", "/favicon", "/api/"],
-  },
-  {
-    slug: "search",
-    title: "Search",
-    icon: SearchIcon,
-    group: RouteGroup.SearchAI,
-    productModule: "search",
-    upstreamBaseUrl: () => firstEnv("SEARCH_APP_URL"),
-    rewritePrefixes: ["/assets/", "/_next/", "/favicon", "/api/"],
-  },
+  // NOTE: no embedded "bot" service here — the native Bots dashboard
+  // (/project/[projectId]/bots, productModule "bots") is the one way to do
+  // Bots. A second embedded entry produced a duplicate ("Bot Dashboard" +
+  // "Bots") in the Bots group; removed to keep one product, one nav entry.
+  //
+  // NOTE: no embedded "search" service here either — the native Search panel
+  // (/project/[projectId]/search and its Indexes/Keys/Playground/Vector
+  // sub-pages, productModule "search") is canonical. A second embedded entry
+  // produced a duplicate "Search" in the Search & AI group; removed.
   {
     slug: "commerce",
     title: "Commerce",

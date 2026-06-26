@@ -5,7 +5,13 @@
 
 export const PATH_CONSTANTS = {
   withoutNavigation: ["/onboarding", "/auth/reset-password"] as const,
-  unauthenticated: ["/auth/sign-in", "/auth/sign-up", "/auth/sso-initiate", "/auth/error", "/auth/hf-spaces"] as const,
+  unauthenticated: [
+    "/auth/sign-in",
+    "/auth/sign-up",
+    "/auth/sso-initiate",
+    "/auth/error",
+    "/auth/hf-spaces",
+  ] as const,
   publishable: [
     "/project/[projectId]/sessions/[sessionId]",
     "/project/[projectId]/traces/[traceId]",
@@ -14,7 +20,11 @@ export const PATH_CONSTANTS = {
   ] as const,
 };
 
-export type LayoutType = "loading" | "unauthenticated" | "minimal" | "authenticated";
+export type LayoutType =
+  | "loading"
+  | "unauthenticated"
+  | "minimal"
+  | "authenticated";
 
 /**
  * Result of path classification
@@ -34,10 +44,17 @@ export type PathClassification = {
  * The final layout decision is made in useLayoutConfiguration based on
  * both path classification AND session state.
  */
-export function classifyPath(pathname: string, _asPath: string): PathClassification {
+export function classifyPath(
+  pathname: string,
+  _asPath: string,
+): PathClassification {
   const isPublicPath = pathname.startsWith("/public/");
-  const isWithoutNavigation = PATH_CONSTANTS.withoutNavigation.some((path) => pathname.startsWith(path));
-  const isAuthPage = PATH_CONSTANTS.unauthenticated.some((path) => pathname.startsWith(path));
+  const isWithoutNavigation = PATH_CONSTANTS.withoutNavigation.some((path) =>
+    pathname.startsWith(path),
+  );
+  const isAuthPage = PATH_CONSTANTS.unauthenticated.some((path) =>
+    pathname.startsWith(path),
+  );
   // Check if path is publishable (can be accessed without authentication)
   const isPublishable = PATH_CONSTANTS.publishable.some((path) => {
     // Case 1: Exact match (e.g., pathname === "/auth/reset-password")
@@ -85,4 +102,29 @@ export function isPathActive(routePath: string, currentPath: string): boolean {
   if (isRoot) return false;
 
   return currentPath.startsWith(routePath + "/");
+}
+
+/**
+ * Among a known set of navigation `candidatePaths`, decide whether `routePath`
+ * is the *most specific* one that matches `currentPath`.
+ *
+ * `isPathActive` alone prefix-matches, so a parent nav item (".../agents") also
+ * lights up when a deeper sibling is the current page (".../agents/metrics") —
+ * the double-highlight bug. Requiring that no longer candidate also matches
+ * keeps a single highlight, while still activating the closest section item for
+ * a sub-page that is NOT itself a nav item (e.g. the ".../vector/collections"
+ * tab, or a ".../traces/[traceId]" detail page).
+ */
+export function isMostSpecificActive(
+  routePath: string,
+  currentPath: string,
+  candidatePaths: readonly string[],
+): boolean {
+  if (!isPathActive(routePath, currentPath)) return false;
+  // A longer candidate that also matches is strictly more specific, so this one
+  // is not the active item. (Equal-length distinct paths can't both match.)
+  return !candidatePaths.some(
+    (other) =>
+      other.length > routePath.length && isPathActive(other, currentPath),
+  );
 }

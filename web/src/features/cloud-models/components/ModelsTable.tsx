@@ -123,7 +123,9 @@ export function ModelsTable({ projectId }: { projectId: string }) {
       header: "Available Since",
       size: 140,
       cell: ({ row }) =>
-        new Date(row.original.created * 1000).toLocaleDateString(),
+        row.original.created
+          ? new Date(row.original.created * 1000).toLocaleDateString()
+          : "—",
     },
   ];
 

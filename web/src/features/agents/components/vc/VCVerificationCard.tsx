@@ -104,8 +104,7 @@ export function VCVerificationCard({
           variant: "outline" as const,
           label: normalized,
           icon: InProgress,
-          className:
-            "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800",
+          className: "bg-muted text-muted-foreground border-border",
           description: "Verification status unknown.",
         };
     }
@@ -157,17 +156,14 @@ export function VCVerificationCard({
       <CardHeader className="foundation-spacing-card pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-              <Security
-                size={20}
-                className="text-blue-600 dark:text-blue-400"
-              />
+            <div className="bg-muted rounded-lg p-2">
+              <Security size={20} className="text-foreground" />
             </div>
             <div>
               <CardTitle className="text-heading-3 text-primary-foundation">
                 {title}
               </CardTitle>
-              <p className="text-sm text-tertiary-foundation mt-1">
+              <p className="text-tertiary-foundation mt-1 text-sm">
                 {config.description}
               </p>
             </div>
@@ -175,7 +171,7 @@ export function VCVerificationCard({
 
           <Badge
             variant={config.variant}
-            className={cn("text-sm px-3 py-1", config.className)}
+            className={cn("px-3 py-1 text-sm", config.className)}
           >
             <config.icon size={14} className="mr-2" />
             {config.label}
@@ -187,7 +183,7 @@ export function VCVerificationCard({
         {hasVC && vcData && (
           <>
             {/* Quick Actions */}
-            <div className="flex items-center gap-2 mb-4">
+            <div className="mb-4 flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -224,21 +220,21 @@ export function VCVerificationCard({
             </div>
 
             {/* Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                   VC ID
                 </label>
-                <p className="text-sm font-mono text-secondary-foundation mt-1 break-all">
+                <p className="text-secondary-foundation mt-1 font-mono text-sm break-all">
                   {vcId || "Unknown"}
                 </p>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                   Created
                 </label>
-                <p className="text-sm text-secondary-foundation mt-1">
+                <p className="text-secondary-foundation mt-1 text-sm">
                   {formatDate(createdAt)}
                 </p>
               </div>
@@ -250,7 +246,7 @@ export function VCVerificationCard({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full justify-between foundation-focus"
+                    className="foundation-focus w-full justify-between"
                   >
                     <span className="text-sm font-medium">
                       Technical Details
@@ -270,10 +266,10 @@ export function VCVerificationCard({
                     {/* Execution-specific details */}
                     {"execution_id" in vcData && (
                       <div>
-                        <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                        <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                           Execution ID
                         </label>
-                        <p className="text-sm font-mono text-secondary-foundation mt-1 break-all">
+                        <p className="text-secondary-foundation mt-1 font-mono text-sm break-all">
                           {vcData.execution_id}
                         </p>
                       </div>
@@ -282,55 +278,55 @@ export function VCVerificationCard({
                     {/* Workflow-specific details */}
                     {"workflow_id" in vcData && (
                       <div>
-                        <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                        <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                           Workflow ID
                         </label>
-                        <p className="text-sm font-mono text-secondary-foundation mt-1 break-all">
+                        <p className="text-secondary-foundation mt-1 font-mono text-sm break-all">
                           {vcData.workflow_id}
                         </p>
                       </div>
                     )}
 
                     {/* Execution VC specific details */}
-                    {'caller_did' in vcData && (
+                    {"caller_did" in vcData && (
                       <>
                         {/* DID Information */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div>
-                            <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                            <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                               Caller DID
                             </label>
-                            <p className="text-sm font-mono text-secondary-foundation mt-1 break-all">
+                            <p className="text-secondary-foundation mt-1 font-mono text-sm break-all">
                               {vcData.caller_did}
                             </p>
                           </div>
 
                           <div>
-                            <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                            <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                               Target DID
                             </label>
-                            <p className="text-sm font-mono text-secondary-foundation mt-1 break-all">
+                            <p className="text-secondary-foundation mt-1 font-mono text-sm break-all">
                               {vcData.target_did}
                             </p>
                           </div>
                         </div>
 
                         {/* Hash Information */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div>
-                            <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                            <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                               Input Hash
                             </label>
-                            <p className="text-sm font-mono text-secondary-foundation mt-1 break-all">
+                            <p className="text-secondary-foundation mt-1 font-mono text-sm break-all">
                               {vcData.input_hash}
                             </p>
                           </div>
 
                           <div>
-                            <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                            <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                               Output Hash
                             </label>
-                            <p className="text-sm font-mono text-secondary-foundation mt-1 break-all">
+                            <p className="text-secondary-foundation mt-1 font-mono text-sm break-all">
                               {vcData.output_hash}
                             </p>
                           </div>
@@ -338,10 +334,10 @@ export function VCVerificationCard({
 
                         {/* Signature */}
                         <div>
-                          <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                          <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                             Digital Signature
                           </label>
-                          <p className="text-sm font-mono text-secondary-foundation mt-1 break-all bg-gray-50 dark:bg-gray-900 p-2 rounded border">
+                          <p className="text-secondary-foundation mt-1 rounded border bg-gray-50 p-2 font-mono text-sm break-all dark:bg-gray-900">
                             {vcData.signature}
                           </p>
                         </div>
@@ -349,45 +345,46 @@ export function VCVerificationCard({
                     )}
 
                     {/* Workflow VC specific details */}
-                    {'component_vcs' in vcData && (
+                    {"component_vcs" in vcData && (
                       <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div>
-                            <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                            <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                               Component VCs
                             </label>
-                            <p className="text-sm text-secondary-foundation mt-1">
+                            <p className="text-secondary-foundation mt-1 text-sm">
                               {vcData.component_vcs.length} execution VCs
                             </p>
                           </div>
 
                           <div>
-                            <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                            <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                               Progress
                             </label>
-                            <p className="text-sm text-secondary-foundation mt-1">
-                              {vcData.completed_steps}/{vcData.total_steps} steps
+                            <p className="text-secondary-foundation mt-1 text-sm">
+                              {vcData.completed_steps}/{vcData.total_steps}{" "}
+                              steps
                             </p>
                           </div>
                         </div>
 
                         {vcData.start_time && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                              <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                              <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                                 Start Time
                               </label>
-                              <p className="text-sm text-secondary-foundation mt-1">
+                              <p className="text-secondary-foundation mt-1 text-sm">
                                 {formatDate(vcData.start_time)}
                               </p>
                             </div>
 
                             {vcData.end_time && (
                               <div>
-                                <label className="text-xs font-medium text-tertiary-foundation uppercase tracking-wide">
+                                <label className="text-tertiary-foundation text-xs font-medium tracking-wide uppercase">
                                   End Time
                                 </label>
-                                <p className="text-sm text-secondary-foundation mt-1">
+                                <p className="text-secondary-foundation mt-1 text-sm">
                                   {formatDate(vcData.end_time)}
                                 </p>
                               </div>
@@ -404,12 +401,12 @@ export function VCVerificationCard({
         )}
 
         {!hasVC && (
-          <div className="text-center py-6">
-            <Document size={32} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-sm text-tertiary-foundation">
+          <div className="py-6 text-center">
+            <Document size={32} className="mx-auto mb-3 text-gray-400" />
+            <p className="text-tertiary-foundation text-sm">
               No verifiable credential available for this item.
             </p>
-            <p className="text-xs text-tertiary-foundation mt-1">
+            <p className="text-tertiary-foundation mt-1 text-xs">
               VCs are generated automatically when executions complete
               successfully.
             </p>

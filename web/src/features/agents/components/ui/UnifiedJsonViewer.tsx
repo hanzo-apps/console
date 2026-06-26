@@ -40,7 +40,7 @@ interface JsonNodeProps {
 }
 
 function detectContentType(
-  value: any
+  value: any,
 ):
   | "markdown"
   | "json"
@@ -98,7 +98,7 @@ function detectContentType(
       if (
         keys.some(
           (key) =>
-            key.startsWith("_") || key.includes("arg") || key.includes("param")
+            key.startsWith("_") || key.includes("arg") || key.includes("param"),
         )
       ) {
         return "kwargs";
@@ -114,7 +114,7 @@ function getTypeIcon(type: string) {
   const iconClass = "w-3 h-3";
   switch (type) {
     case "markdown":
-      return <FileText className={cn(iconClass, "text-blue-500")} />;
+      return <FileText className={cn(iconClass, "text-muted-foreground")} />;
     case "json":
       return <Braces className={cn(iconClass, "text-purple-500")} />;
     case "args":
@@ -124,11 +124,11 @@ function getTypeIcon(type: string) {
     case "string":
       return <Quote className={cn(iconClass, "text-green-600")} />;
     case "number":
-      return <Type className={cn(iconClass, "text-blue-600")} />;
+      return <Type className={cn(iconClass, "text-muted-foreground")} />;
     case "code":
       return <FileText className={cn(iconClass, "text-red-500")} />;
     case "url":
-      return <FileText className={cn(iconClass, "text-blue-500")} />;
+      return <FileText className={cn(iconClass, "text-muted-foreground")} />;
     case "email":
       return <Type className={cn(iconClass, "text-purple-500")} />;
     default:
@@ -143,19 +143,19 @@ function MarkdownPreview({ content }: { content: string }) {
       .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
       .replace(
         /`(.*?)`/g,
-        '<code class="bg-muted px-1 rounded text-sm font-mono text-foreground">$1</code>'
+        '<code class="bg-muted px-1 rounded text-sm font-mono text-foreground">$1</code>',
       )
       .replace(/\n\n/g, '</p><p class="mt-2">')
       .replace(/\n/g, "<br>")
       .replace(
         /\[(.*?)\]\((.*?)\)/g,
-        '<a href="$2" class="text-blue-500 hover:underline" target="_blank" rel="noopener">$1</a>'
+        '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener">$1</a>',
       );
   }, [content]);
 
   return (
     <div
-      className="prose prose-sm max-w-none text-foreground bg-blue-50/30 dark:bg-blue-950/20 p-3 rounded-md border border-blue-200/50 dark:border-blue-800/50 mt-2"
+      className="prose prose-sm text-foreground bg-muted/30 border-border mt-2 max-w-none rounded-md border p-3"
       dangerouslySetInnerHTML={{ __html: `<p>${formattedContent}</p>` }}
     />
   );
@@ -191,21 +191,19 @@ function JsonNode({
   const renderValue = () => {
     if (data === null) {
       return (
-        <span className="text-slate-500 dark:text-slate-400 italic">null</span>
+        <span className="text-slate-500 italic dark:text-slate-400">null</span>
       );
     }
 
     if (typeof data === "boolean") {
       return (
-        <span className="text-blue-600 dark:text-blue-400 font-medium">
-          {String(data)}
-        </span>
+        <span className="text-foreground font-medium">{String(data)}</span>
       );
     }
 
     if (typeof data === "number") {
       return (
-        <span className="text-purple-600 dark:text-purple-400 font-medium">
+        <span className="font-medium text-purple-600 dark:text-purple-400">
           {data}
         </span>
       );
@@ -219,9 +217,9 @@ function JsonNode({
 
       return (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
             {typeIcon}
-            <span className="text-green-600 dark:text-green-400 break-all">
+            <span className="break-all text-green-600 dark:text-green-400">
               "{displayValue}"
             </span>
             {isLongString && (
@@ -232,7 +230,7 @@ function JsonNode({
                   e.stopPropagation();
                   setShowPreview(!showPreview);
                 }}
-                className="h-5 w-5 p-0 ml-1"
+                className="ml-1 h-5 w-5 p-0"
                 title={showPreview ? "Hide preview" : "Show preview"}
               >
                 {showPreview ? (
@@ -250,7 +248,7 @@ function JsonNode({
                   e.stopPropagation();
                   window.open(data, "_blank", "noopener,noreferrer");
                 }}
-                className="h-5 w-5 p-0 ml-1"
+                className="ml-1 h-5 w-5 p-0"
                 title="Open URL"
               >
                 <FileText className="h-3 w-3" />
@@ -263,7 +261,7 @@ function JsonNode({
           )}
 
           {showPreview && contentType === "code" && (
-            <pre className="bg-muted p-3 rounded-md text-sm font-mono overflow-x-auto mt-2 border">
+            <pre className="bg-muted mt-2 overflow-x-auto rounded-md border p-3 font-mono text-sm">
               <code>{data}</code>
             </pre>
           )}
@@ -271,7 +269,7 @@ function JsonNode({
           {showPreview &&
             isLongString &&
             !["markdown", "code"].includes(contentType) && (
-              <div className="bg-muted p-3 rounded-md text-sm mt-2 border break-all">
+              <div className="bg-muted mt-2 rounded-md border p-3 text-sm break-all">
                 {data}
               </div>
             )}
@@ -300,16 +298,16 @@ function JsonNode({
   if (!isExpandable) {
     return (
       <div
-        className="flex items-start gap-2 group py-1 hover:bg-muted/20 rounded px-1"
+        className="group hover:bg-muted/20 flex items-start gap-2 rounded px-1 py-1"
         style={{ paddingLeft: `${level * 16}px` }}
       >
         <div className="w-4" /> {/* Spacer for alignment */}
         {keyName && (
-          <span className="text-blue-700 dark:text-blue-300 font-medium shrink-0">
+          <span className="text-foreground shrink-0 font-medium">
             "{keyName}":
           </span>
         )}
-        <div className="flex-1 min-w-0">{renderValue()}</div>
+        <div className="min-w-0 flex-1">{renderValue()}</div>
         <CopyButton
           value={String(data)}
           variant="ghost"
@@ -329,22 +327,20 @@ function JsonNode({
   return (
     <div className="space-y-1">
       <div
-        className="flex items-center gap-2 group py-1 cursor-pointer hover:bg-muted/30 rounded px-1"
+        className="group hover:bg-muted/30 flex cursor-pointer items-center gap-2 rounded px-1 py-1"
         style={{ paddingLeft: `${level * 16}px` }}
         onClick={toggleExpanded}
       >
-        <button className="flex items-center justify-center w-4 h-4 hover:bg-muted rounded transition-colors">
+        <button className="hover:bg-muted flex h-4 w-4 items-center justify-center rounded transition-colors">
           {isExpanded ? (
-            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+            <ChevronDown className="text-muted-foreground h-3 w-3" />
           ) : (
-            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+            <ChevronRight className="text-muted-foreground h-3 w-3" />
           )}
         </button>
 
         {keyName && (
-          <span className="text-blue-700 dark:text-blue-300 font-medium">
-            "{keyName}":
-          </span>
+          <span className="text-foreground font-medium">"{keyName}":</span>
         )}
 
         <div className="flex items-center gap-2">
@@ -430,18 +426,18 @@ export function UnifiedJsonViewer({
   return (
     <div
       className={cn(
-        "border border-border rounded-lg overflow-hidden bg-background flex flex-col",
+        "border-border bg-background flex flex-col overflow-hidden rounded-lg border",
         isFlexibleHeight && "h-full",
-        className
+        className,
       )}
     >
       {/* Header */}
       {showHeader && (title || showCopyButton || (searchable && !isEmpty)) && (
-        <div className="flex-shrink-0 border-b border-border bg-muted/20">
+        <div className="border-border bg-muted/20 flex-shrink-0 border-b">
           {(title || showCopyButton) && (
             <div className="flex items-center justify-between p-3">
               {title && (
-                <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <h4 className="text-foreground flex items-center gap-2 text-sm font-medium">
                   {getTypeIcon(detectContentType(data))}
                   {title}
                 </h4>
@@ -466,9 +462,9 @@ export function UnifiedJsonViewer({
                     title={isExpanded ? "Collapse" : "Expand"}
                   >
                     {isExpanded ? (
-                      <Minimize2 className="h-3 w-3 text-muted-foreground" />
+                      <Minimize2 className="text-muted-foreground h-3 w-3" />
                     ) : (
-                      <Maximize2 className="h-3 w-3 text-muted-foreground" />
+                      <Maximize2 className="text-muted-foreground h-3 w-3" />
                     )}
                   </Button>
                 )}
@@ -479,12 +475,12 @@ export function UnifiedJsonViewer({
           {searchable && !isEmpty && (
             <div className="px-3 pb-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
                 <Input
                   placeholder="Search keys and values..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-8"
+                  className="h-8 pl-10"
                 />
               </div>
             </div>
@@ -495,16 +491,16 @@ export function UnifiedJsonViewer({
       {/* Content */}
       <div
         className={cn(
-          "bg-background scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground",
+          "bg-background scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground scrollbar-thin scrollbar-track-transparent",
           isEmpty ? "p-6" : "p-4",
-          isFlexibleHeight ? "flex-1 min-h-0 overflow-auto" : "overflow-auto"
+          isFlexibleHeight ? "min-h-0 flex-1 overflow-auto" : "overflow-auto",
         )}
         style={!isExpanded && !isFlexibleHeight ? { maxHeight } : undefined}
       >
         {isEmpty ? (
-          <div className="text-center text-muted-foreground">
+          <div className="text-muted-foreground text-center">
             <div className="flex flex-col items-center gap-3">
-              <Braces className="h-8 w-8 text-muted-foreground/50" />
+              <Braces className="text-muted-foreground/50 h-8 w-8" />
               <p className="text-sm">No data available</p>
             </div>
           </div>

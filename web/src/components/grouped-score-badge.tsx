@@ -92,7 +92,7 @@ const ScoreGroupBadge = <
                     projectId && (
                       <Link
                         href={`/project/${projectId}/traces/${encodeURIComponent(s.executionTraceId)}`}
-                        className="mt-2 flex items-center gap-1 text-blue-600 hover:underline"
+                        className="text-primary mt-2 flex items-center gap-1 hover:underline"
                         target="_blank"
                       >
                         <ExternalLinkIcon className="h-3 w-3" />

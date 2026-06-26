@@ -24,14 +24,14 @@ interface NotificationContextType {
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function useNotifications() {
   const context = useContext(NotificationContext);
   if (!context) {
     throw new Error(
-      "useNotifications must be used within a NotificationProvider"
+      "useNotifications must be used within a NotificationProvider",
     );
   }
   return context;
@@ -93,7 +93,7 @@ function NotificationContainer() {
   if (notifications.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+    <div className="fixed top-4 right-4 z-50 max-w-sm space-y-2">
       {notifications.map((notification) => (
         <NotificationItem
           key={notification.id}
@@ -153,10 +153,10 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
       case "info":
         return {
           icon: "ℹ️",
-          bgColor: "bg-blue-50",
-          borderColor: "border-blue-200",
-          textColor: "text-blue-800",
-          badgeColor: "bg-blue-100 text-blue-700",
+          bgColor: "bg-muted",
+          borderColor: "border-border",
+          textColor: "text-foreground",
+          badgeColor: "bg-muted text-muted-foreground",
         };
     }
   };
@@ -165,32 +165,31 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
 
   return (
     <Card
-      className={`
-        ${styles.bgColor} ${styles.borderColor} shadow-lg
-        transform transition-all duration-200 ease-in-out
-        ${
-          isVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
-        }
-      `}
+      className={` ${styles.bgColor} ${styles.borderColor} transform shadow-lg transition-all duration-200 ease-in-out ${
+        isVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+      } `}
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <span className="text-heading-3 flex-shrink-0 mt-0.5" aria-hidden="true">
+          <span
+            className="text-heading-3 mt-0.5 flex-shrink-0"
+            aria-hidden="true"
+          >
             {styles.icon}
           </span>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <h4 className={`font-medium text-sm ${styles.textColor}`}>
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <h4 className={`text-sm font-medium ${styles.textColor}`}>
                 {notification.title}
               </h4>
               <button
                 onClick={handleClose}
-                className={`${styles.textColor} hover:opacity-70 transition-opacity`}
+                className={`${styles.textColor} transition-opacity hover:opacity-70`}
                 aria-label="Close notification"
               >
                 <svg
-                  className="w-4 h-4"
+                  className="h-4 w-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -206,7 +205,7 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
             </div>
 
             {notification.message && (
-              <p className={`text-xs ${styles.textColor} opacity-90 mb-2`}>
+              <p className={`text-xs ${styles.textColor} mb-2 opacity-90`}>
                 {notification.message}
               </p>
             )}
@@ -317,7 +316,7 @@ export function useVCNotifications() {
     vcDownloaded: (filename?: string) =>
       success(
         "VC Downloaded",
-        filename ? `Downloaded as ${filename}` : "VC document downloaded"
+        filename ? `Downloaded as ${filename}` : "VC document downloaded",
       ),
 
     vcVerified: (valid: boolean) =>
@@ -325,7 +324,7 @@ export function useVCNotifications() {
         ? success("VC Verified", "Verifiable Credential is valid and verified")
         : error(
             "VC Verification Failed",
-            "Verifiable Credential verification failed"
+            "Verifiable Credential verification failed",
           ),
 
     vcError: (message: string) => error("VC Operation Failed", message),

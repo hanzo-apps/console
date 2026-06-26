@@ -78,16 +78,18 @@ export async function handleCreateApiKey(
       });
     }
 
-    // Validate key format
-    if (!publicKey.startsWith("pk-lf-")) {
+    // Validate key format. Hanzo keys use the `pk-hz-`/`sk-hz-` prefixes
+    // (see generateKeySet in packages/shared); legacy `pk-lf-`/`sk-lf-` keys
+    // are still accepted for backwards-compatible imports.
+    if (!publicKey.startsWith("pk-hz-") && !publicKey.startsWith("pk-lf-")) {
       return res.status(400).json({
-        message: "publicKey must start with 'pk-lf-'",
+        message: "publicKey must start with 'pk-hz-'",
       });
     }
 
-    if (!secretKey.startsWith("sk-lf-")) {
+    if (!secretKey.startsWith("sk-hz-") && !secretKey.startsWith("sk-lf-")) {
       return res.status(400).json({
-        message: "secretKey must start with 'sk-lf-'",
+        message: "secretKey must start with 'sk-hz-'",
       });
     }
   }

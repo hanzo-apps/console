@@ -12,11 +12,15 @@ import { TRPCError } from "@trpc/server";
 import * as z from "zod";
 import { throwIfNoOrganizationAccess } from "@/src/features/rbac/utils/checkOrganizationAccess";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
-import { getObservationCountOfProjectsSinceCreationDate } from "@hanzo/console/src/server";
+import {
+  getObservationCountOfProjectsSinceCreationDate,
+  logger,
+} from "@hanzo/console/src/server";
 import {
   commerceGet,
   commercePost,
   commercePatch,
+  commercePut,
   commerceDelete,
 } from "@/src/features/billing/server/commerceClient";
 import type Stripe from "stripe";
@@ -109,6 +113,25 @@ type CommerceInvoiceList = {
     hostedInvoiceUrl?: string | null;
     invoicePdfUrl?: string | null;
   }>;
+};
+
+/** Shape returned by Commerce GET/PUT /v1/billing/auto-recharge. */
+export type CommerceAutoRecharge = {
+  userId: string;
+  enabled: boolean;
+  thresholdCents: number;
+  amountCents: number;
+  currency: string;
+  lastRechargedAt?: string;
+};
+
+/** Shape returned by Commerce GET /v1/billing/payment-config. */
+export type CommercePaymentConfig = {
+  provider: string;
+  applicationId: string;
+  locationId: string;
+  environment: string; // "sandbox" | "production"
+  live: boolean;
 };
 
 /** Shape returned by Commerce POST /v1/billing/credit-grants. */
@@ -206,6 +229,24 @@ function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
     ),
   ]);
 }
+
+// Honest zero rollup used when commerce is unavailable. Tenant spend is a
+// display concern: an empty state is correct here, a 500 is not.
+const EMPTY_USAGE_ROLLUP = (user: string): CommerceUsageRollup => ({
+  user,
+  plan: "free",
+  currency: "usd",
+  period: new Date().toISOString().slice(0, 7),
+  included: {
+    monthlyCents: 0,
+    grantedCents: 0,
+    consumedCents: 0,
+    remainingCents: 0,
+  },
+  consumedCents: 0,
+  overageCents: 0,
+  balance: { balanceCents: 0, holdsCents: 0, availableCents: 0 },
+});
 
 let plansCache: { at: number; plans: CommercePlan[] } | null = null;
 const PLANS_CACHE_TTL_MS = 10 * 60 * 1_000;
@@ -1339,23 +1380,51 @@ export const cloudBillingRouter = createTRPCRouter({
       // included credit), balance (prepaid balance/holds/available), and usage
       // (consumed) — exactly the data the gateway prepaid gate reads. All three
       // are org-scoped via X-Hanzo-Org.
-      const [tier, balance, usage] = await Promise.all([
-        commerceGet<CommerceTier>("/v1/billing/tier", org, {
-          user,
-          tier: input.plan,
-        }),
-        commerceGet<CommerceBalance>("/v1/billing/balance", org, { user }),
-        commerceGet<CommerceUsage>("/v1/billing/usage", org, { user }),
-      ]);
+      //
+      // Tenant spend visibility is a read-only display concern that must never
+      // hard-fail the billing page: if commerce is slow/unreachable or returns
+      // an unexpected shape, degrade to an honest zero rollup (same pattern as
+      // listPlans / getActiveSubscription) rather than surfacing a 500. When
+      // commerce responds, the tenant sees their real spend.
+      let tier: CommerceTier;
+      let balance: CommerceBalance;
+      let usage: CommerceUsage;
+      try {
+        [tier, balance, usage] = await Promise.all([
+          withTimeout(
+            commerceGet<CommerceTier>("/v1/billing/tier", org, {
+              user,
+              tier: input.plan,
+            }),
+            "commerce /tier",
+          ),
+          withTimeout(
+            commerceGet<CommerceBalance>("/v1/billing/balance", org, { user }),
+            "commerce /balance",
+          ),
+          withTimeout(
+            commerceGet<CommerceUsage>("/v1/billing/usage", org, { user }),
+            "commerce /usage",
+          ),
+        ]);
+      } catch (e) {
+        logger.warn(
+          `getCommerceUsageRollup: commerce unavailable for org "${org}", returning empty rollup`,
+          e,
+        );
+        return EMPTY_USAGE_ROLLUP(user);
+      }
 
       // Included credit: tiers grant a per-day allotment that resets at midnight
       // UTC and does not accumulate. Present it as the period's included usage.
-      const dailyGranted = tier.tier.dailyCreditsCents;
-      const includedRemaining = Math.max(0, tier.balance.dailyRemaining);
+      // Guard every field access: a 200 with an unexpected shape must still
+      // degrade to zeros, not throw.
+      const dailyGranted = tier?.tier?.dailyCreditsCents ?? 0;
+      const includedRemaining = Math.max(0, tier?.balance?.dailyRemaining ?? 0);
       const includedConsumed = Math.max(0, dailyGranted - includedRemaining);
 
       // Total usage this period = sum of recorded api-usage withdrawals (cents).
-      const consumed = usage.usage.reduce(
+      const consumed = (usage?.usage ?? []).reduce(
         (acc, u) => acc + Math.abs(u.amount ?? 0),
         0,
       );
@@ -1364,8 +1433,8 @@ export const cloudBillingRouter = createTRPCRouter({
 
       return {
         user,
-        plan: tier.tier.name,
-        currency: balance.currency || tier.balance.currency || "usd",
+        plan: tier?.tier?.name ?? "free",
+        currency: balance?.currency || tier?.balance?.currency || "usd",
         period: new Date().toISOString().slice(0, 7), // YYYY-MM
         included: {
           // Monthly view of the daily allotment for display purposes.
@@ -1377,9 +1446,9 @@ export const cloudBillingRouter = createTRPCRouter({
         consumedCents: consumed,
         overageCents: overage,
         balance: {
-          balanceCents: balance.balance,
-          holdsCents: balance.holds,
-          availableCents: balance.available,
+          balanceCents: balance?.balance ?? 0,
+          holdsCents: balance?.holds ?? 0,
+          availableCents: balance?.available ?? 0,
         },
       };
     }),
@@ -1406,11 +1475,25 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
-      return commerceGet<CommerceCreditBalance>(
-        "/v1/billing/credit-balance",
-        organization.name,
-        { userId: organization.name },
-      );
+      // Credit balance is a read-only display value; degrade to an empty
+      // balance rather than 500ing the billing page when commerce is slow or
+      // unreachable.
+      try {
+        return await withTimeout(
+          commerceGet<CommerceCreditBalance>(
+            "/v1/billing/credit-balance",
+            organization.name,
+            { userId: organization.name },
+          ),
+          "commerce /credit-balance",
+        );
+      } catch (e) {
+        logger.warn(
+          `getOrgCreditBalance: commerce unavailable for org "${organization.name}", returning empty balance`,
+          e,
+        );
+        return { userId: organization.name, balances: [] };
+      }
     }),
 
   // Grant N cloud credits to an organization via Commerce — a first-class admin
@@ -1589,15 +1672,17 @@ export const cloudBillingRouter = createTRPCRouter({
           : new Date(),
         hostedInvoiceUrl: i.hostedInvoiceUrl ?? null,
         invoicePdfUrl: i.invoicePdfUrl ?? null,
-        breakdown: undefined as
-          | {
-              subscriptionCents: number;
-              usageCents: number;
-              discountCents: number;
-              taxCents: number;
-              totalCents: number;
-            }
-          | undefined,
+        // Commerce returns a single total (cents); it doesn't split subscription
+        // vs usage vs tax. Populate totalCents so the invoice tables render, and
+        // zero the unsplit components rather than leaving breakdown undefined
+        // (which crashed InvoiceHistory).
+        breakdown: {
+          subscriptionCents: 0,
+          usageCents: 0,
+          discountCents: 0,
+          taxCents: 0,
+          totalCents: i.total ?? i.amountDue ?? 0,
+        },
       }));
 
       return { invoices, hasMore: false, cursors: {} };
@@ -1850,6 +1935,152 @@ export const cloudBillingRouter = createTRPCRouter({
       });
 
       return { ok: true } as const;
+    }),
+
+  // Set which saved card is charged for top-ups, auto-recharge, and renewals.
+  // Commerce keys the default on the customer id (= org slug); it unsets any
+  // prior default and marks this one IsDefault.
+  setDefaultPaymentMethod: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string(), paymentMethodId: z.string().min(1) }))
+    .mutation(async ({ input, ctx }): Promise<CommercePaymentMethod> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const pm = await commercePost<CommercePaymentMethod>(
+        `/v1/billing/customers/${encodeURIComponent(organization.name)}/default-payment-method`,
+        organization.name,
+        { paymentMethodId: input.paymentMethodId },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: input.paymentMethodId,
+        action: "setDefaultPaymentMethod",
+        after: { paymentMethodId: input.paymentMethodId },
+      });
+
+      return pm;
+    }),
+
+  // ── Auto-recharge (prepaid credits auto-reload) ────────────────────────────
+  // When the org's balance drops below the threshold, commerce charges the
+  // default saved card by the configured amount (off-session, via a cron).
+  getAutoRecharge: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommerceAutoRecharge> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      return commerceGet<CommerceAutoRecharge>(
+        "/v1/billing/auto-recharge",
+        organization.name,
+      );
+    }),
+
+  setAutoRecharge: protectedOrganizationProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        enabled: z.boolean(),
+        thresholdUsd: z.number().min(0),
+        amountUsd: z.number().min(0),
+      }),
+    )
+    .mutation(async ({ input, ctx }): Promise<CommerceAutoRecharge> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      const cfg = await commercePut<CommerceAutoRecharge>(
+        "/v1/billing/auto-recharge",
+        organization.name,
+        {
+          enabled: input.enabled,
+          thresholdCents: Math.round(input.thresholdUsd * 100),
+          amountCents: Math.round(input.amountUsd * 100),
+          currency: "usd",
+        },
+      );
+
+      await auditLog({
+        session: ctx.session,
+        orgId: input.orgId,
+        resourceType: "organization",
+        resourceId: input.orgId,
+        action: "setAutoRecharge",
+        after: { enabled: input.enabled, amountCents: cfg.amountCents },
+      });
+
+      return cfg;
+    }),
+
+  // Public Square config for the Web Payments SDK — sandbox for test orgs,
+  // production for live orgs (resolved by commerce from org.Live). The card
+  // dialog uses this at runtime so the browser tokenizes against the same
+  // Square account commerce vaults/charges with.
+  getPaymentConfig: protectedOrganizationProcedure
+    .input(z.object({ orgId: z.string() }))
+    .query(async ({ input, ctx }): Promise<CommercePaymentConfig> => {
+      throwIfNoOrganizationAccess({
+        organizationId: input.orgId,
+        scope: "hanzoCloudBilling:CRUD",
+        session: ctx.session,
+      });
+
+      const organization = await ctx.prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      if (!organization) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
+      }
+
+      return commerceGet<CommercePaymentConfig>(
+        "/v1/billing/payment-config",
+        organization.name,
+      );
     }),
 
   // ── Buy credits (one-time Square top-up) ───────────────────────────────────

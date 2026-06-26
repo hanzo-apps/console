@@ -29,25 +29,26 @@ export function SmartNotesSection({ execution }: SmartNotesSectionProps) {
       icon={FileText}
       defaultOpen={false}
       badge={
-        <span className="text-body-small bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded">
-          {execution.notes?.length || 0} {execution.notes?.length === 1 ? 'Note' : 'Notes'}
+        <span className="text-body-small bg-primary/10 text-foreground rounded px-2 py-0.5">
+          {execution.notes?.length || 0}{" "}
+          {execution.notes?.length === 1 ? "Note" : "Notes"}
         </span>
       }
     >
-      <div className="p-4 space-y-3">
+      <div className="space-y-3 p-4">
         {execution.notes?.map((note, index) => (
           <div
             key={index}
-            className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 rounded-lg"
+            className="bg-muted/50 border-border/50 rounded-lg border p-3"
           >
-            <div className="flex items-start justify-between mb-2">
+            <div className="mb-2 flex items-start justify-between">
               <div className="flex items-center gap-2">
                 {note.tags && note.tags.length > 0 && (
                   <div className="flex gap-1">
                     {note.tags.map((tag, tagIndex) => (
                       <span
                         key={tagIndex}
-                        className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded"
+                        className="bg-muted text-foreground rounded px-1.5 py-0.5 text-xs"
                       >
                         {tag}
                       </span>
@@ -59,7 +60,7 @@ export function SmartNotesSection({ execution }: SmartNotesSectionProps) {
                 {formatTimestamp(note.timestamp)}
               </span>
             </div>
-            <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+            <div className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
               {note.message}
             </div>
           </div>

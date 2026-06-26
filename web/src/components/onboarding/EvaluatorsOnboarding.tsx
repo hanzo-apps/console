@@ -63,7 +63,7 @@ export function EvaluatorsOnboarding({ projectId }: EvaluatorsOnboardingProps) {
     return (
       <SplashScreen
         title="Get started with evaluations"
-        description="Use evaluators to score traces and observations automatically. Langfuse supports two evaluator types:"
+        description="Use evaluators to score traces and observations automatically. Hanzo supports two evaluator types:"
         valuePropositions={evaluatorTypes}
         primaryAction={{
           label: "Create Evaluator",

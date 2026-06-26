@@ -44,6 +44,13 @@ export const PaymentManagement = () => {
     },
   });
 
+  const setDefaultPaymentMethod =
+    api.cloudBilling.setDefaultPaymentMethod.useMutation({
+      onSuccess: () => {
+        void paymentMethodsQuery.refetch();
+      },
+    });
+
   // Recent invoices (commerce-backed).
   const { data: invoiceData } = api.cloudBilling.getInvoices.useQuery(
     { orgId, limit: 2 },
@@ -156,19 +163,36 @@ export const PaymentManagement = () => {
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={removePaymentMethod.isLoading}
-                  onClick={() =>
-                    removePaymentMethod.mutate({
-                      orgId,
-                      paymentMethodId: pm.id,
-                    })
-                  }
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  {!pm.isDefault && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={setDefaultPaymentMethod.isLoading}
+                      onClick={() =>
+                        setDefaultPaymentMethod.mutate({
+                          orgId,
+                          paymentMethodId: pm.id,
+                        })
+                      }
+                    >
+                      Make default
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={removePaymentMethod.isLoading}
+                    onClick={() =>
+                      removePaymentMethod.mutate({
+                        orgId,
+                        paymentMethodId: pm.id,
+                      })
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))
           )}

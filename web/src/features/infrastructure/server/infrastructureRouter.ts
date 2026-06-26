@@ -1,9 +1,16 @@
 import { z } from "zod/v4";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProjectProcedure } from "@/src/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProjectProcedure,
+} from "@/src/server/api/trpc";
 import { env } from "@/src/env.mjs";
 import { paasGet } from "@/src/features/platform/server/paasClient";
-import type { ServiceHealth, ServiceHealthStatus, DeploymentEvent } from "../types";
+import type {
+  ServiceHealth,
+  ServiceHealthStatus,
+  DeploymentEvent,
+} from "../types";
 
 // ---------------------------------------------------------------------------
 // Infrastructure Router
@@ -54,81 +61,118 @@ function buildContainerPath(suffix?: string): string {
 }
 
 export const infrastructureRouter = createTRPCRouter({
-  getServiceHealth: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async () => {
-    const raw = await paasGet<unknown>(buildContainerPath());
-    const containers = Array.isArray(raw) ? raw : [];
-
-    return containers.map((c: Record<string, unknown>): ServiceHealth => {
-      const status = deriveHealthStatus(c);
-      const memVal = typeof c.memory === "number" ? c.memory : undefined;
-      const memLimit =
-        typeof c.memoryLimit === "number"
-          ? c.memoryLimit
-          : typeof c.memory_limit === "number"
-            ? c.memory_limit
-            : undefined;
-
-      return {
-        id: String(c.id ?? c._id ?? ""),
-        name: String(c.name ?? c.serviceName ?? "unknown"),
-        status,
-        cpu: typeof c.cpu === "number" ? c.cpu : undefined,
-        memory: memVal,
-        memoryLimit: memLimit,
-        replicas: typeof c.replicas === "number" ? c.replicas : undefined,
-        readyReplicas:
-          typeof c.readyReplicas === "number"
-            ? c.readyReplicas
-            : typeof c.ready_replicas === "number"
-              ? c.ready_replicas
-              : undefined,
-        image: typeof c.image === "string" ? c.image : typeof c.dockerImage === "string" ? c.dockerImage : undefined,
-        region: typeof c.region === "string" ? c.region : undefined,
-        updatedAt: String(c.updatedAt ?? c.updated_at ?? new Date().toISOString()),
-        domain:
-          typeof c.domain === "string" ? c.domain : typeof c.customDomain === "string" ? c.customDomain : undefined,
-      };
-    });
-  }),
-
-  getDeploymentEvents: protectedProjectProcedure.input(z.object({ projectId: z.string() })).query(async () => {
-    const raw = await paasGet<unknown>(buildContainerPath());
-    const containers = Array.isArray(raw) ? raw : [];
-
-    // Collect pipeline events from all containers
-    const events: DeploymentEvent[] = [];
-    for (const c of containers) {
-      const containerId = String(c.id ?? c._id ?? "");
-      const containerName = String(c.name ?? c.serviceName ?? "unknown");
-
+  getServiceHealth: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async () => {
+      // Read-only panel: degrade to an empty grid when PaaS is not configured
+      // (or unreachable) rather than surfacing an error toast.
+      let raw: unknown;
       try {
-        const pipelines = await paasGet<unknown>(buildContainerPath(`${containerId}/pipelines`));
-        const runs = Array.isArray(pipelines) ? pipelines : [];
-        for (const r of runs.slice(0, 5) as Record<string, unknown>[]) {
-          events.push({
-            id: String(r.id ?? r._id ?? `${containerId}-${events.length}`),
-            serviceName: containerName,
-            event: String(r.trigger ?? "deploy"),
-            status: String(r.status ?? r.state ?? "unknown"),
-            timestamp: String(r.startedAt ?? r.started_at ?? r.createdAt ?? new Date().toISOString()),
-            image: typeof r.image === "string" ? r.image : undefined,
-            commitSha:
-              typeof r.commitSha === "string"
-                ? r.commitSha
-                : typeof r.commit_sha === "string"
-                  ? r.commit_sha
-                  : undefined,
-          });
-        }
+        raw = await paasGet<unknown>(buildContainerPath());
       } catch {
-        // Pipeline endpoint may not exist for all containers — skip gracefully
+        return [] as ServiceHealth[];
       }
-    }
+      const containers = Array.isArray(raw) ? raw : [];
 
-    // Sort by timestamp descending, return latest 20
-    events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    return events.slice(0, 20);
-  }),
+      return containers.map((c: Record<string, unknown>): ServiceHealth => {
+        const status = deriveHealthStatus(c);
+        const memVal = typeof c.memory === "number" ? c.memory : undefined;
+        const memLimit =
+          typeof c.memoryLimit === "number"
+            ? c.memoryLimit
+            : typeof c.memory_limit === "number"
+              ? c.memory_limit
+              : undefined;
+
+        return {
+          id: String(c.id ?? c._id ?? ""),
+          name: String(c.name ?? c.serviceName ?? "unknown"),
+          status,
+          cpu: typeof c.cpu === "number" ? c.cpu : undefined,
+          memory: memVal,
+          memoryLimit: memLimit,
+          replicas: typeof c.replicas === "number" ? c.replicas : undefined,
+          readyReplicas:
+            typeof c.readyReplicas === "number"
+              ? c.readyReplicas
+              : typeof c.ready_replicas === "number"
+                ? c.ready_replicas
+                : undefined,
+          image:
+            typeof c.image === "string"
+              ? c.image
+              : typeof c.dockerImage === "string"
+                ? c.dockerImage
+                : undefined,
+          region: typeof c.region === "string" ? c.region : undefined,
+          updatedAt: String(
+            c.updatedAt ?? c.updated_at ?? new Date().toISOString(),
+          ),
+          domain:
+            typeof c.domain === "string"
+              ? c.domain
+              : typeof c.customDomain === "string"
+                ? c.customDomain
+                : undefined,
+        };
+      });
+    }),
+
+  getDeploymentEvents: protectedProjectProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async () => {
+      let raw: unknown;
+      try {
+        raw = await paasGet<unknown>(buildContainerPath());
+      } catch {
+        return [] as DeploymentEvent[];
+      }
+      const containers = Array.isArray(raw) ? raw : [];
+
+      // Collect pipeline events from all containers
+      const events: DeploymentEvent[] = [];
+      for (const c of containers) {
+        const containerId = String(c.id ?? c._id ?? "");
+        const containerName = String(c.name ?? c.serviceName ?? "unknown");
+
+        try {
+          const pipelines = await paasGet<unknown>(
+            buildContainerPath(`${containerId}/pipelines`),
+          );
+          const runs = Array.isArray(pipelines) ? pipelines : [];
+          for (const r of runs.slice(0, 5) as Record<string, unknown>[]) {
+            events.push({
+              id: String(r.id ?? r._id ?? `${containerId}-${events.length}`),
+              serviceName: containerName,
+              event: String(r.trigger ?? "deploy"),
+              status: String(r.status ?? r.state ?? "unknown"),
+              timestamp: String(
+                r.startedAt ??
+                  r.started_at ??
+                  r.createdAt ??
+                  new Date().toISOString(),
+              ),
+              image: typeof r.image === "string" ? r.image : undefined,
+              commitSha:
+                typeof r.commitSha === "string"
+                  ? r.commitSha
+                  : typeof r.commit_sha === "string"
+                    ? r.commit_sha
+                    : undefined,
+            });
+          }
+        } catch {
+          // Pipeline endpoint may not exist for all containers — skip gracefully
+        }
+      }
+
+      // Sort by timestamp descending, return latest 20
+      events.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+      return events.slice(0, 20);
+    }),
 });
 
 // ---------------------------------------------------------------------------
@@ -147,12 +191,14 @@ function deriveHealthStatus(c: Record<string, unknown>): ServiceHealthStatus {
         ? c.ready_replicas
         : undefined;
 
-  if (raw.includes("fail") || raw.includes("error") || raw.includes("crash")) return "down";
+  if (raw.includes("fail") || raw.includes("error") || raw.includes("crash"))
+    return "down";
   if (raw.includes("stop") || raw === "inactive") return "down";
 
   if (raw.includes("run") || raw === "active") {
     // If ready replicas info is available, check if degraded
-    if (ready !== undefined && replicas > 0 && ready < replicas) return "degraded";
+    if (ready !== undefined && replicas > 0 && ready < replicas)
+      return "degraded";
 
     // Check memory pressure (> 90% usage)
     const mem = typeof c.memory === "number" ? c.memory : undefined;
@@ -162,12 +208,19 @@ function deriveHealthStatus(c: Record<string, unknown>): ServiceHealthStatus {
         : typeof c.memory_limit === "number"
           ? c.memory_limit
           : undefined;
-    if (mem !== undefined && memLimit !== undefined && memLimit > 0 && mem / memLimit > 0.9) return "degraded";
+    if (
+      mem !== undefined &&
+      memLimit !== undefined &&
+      memLimit > 0 &&
+      mem / memLimit > 0.9
+    )
+      return "degraded";
 
     return "healthy";
   }
 
-  if (raw.includes("deploy") || raw.includes("pend") || raw.includes("build")) return "degraded";
+  if (raw.includes("deploy") || raw.includes("pend") || raw.includes("build"))
+    return "degraded";
 
   return "unknown";
 }

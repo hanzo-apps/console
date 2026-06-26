@@ -18,9 +18,9 @@ export function DeveloperToolsSettings() {
     <div>
       <Header title="MCP & CLI" />
       <p className="text-muted-foreground mb-6 text-sm">
-        Bring Langfuse into your terminal and AI coding agents. These tools let
-        you and your agents read and write Langfuse data—traces, prompts,
-        datasets, scores, and more—without leaving your development environment.
+        Bring Hanzo into your terminal and AI coding agents. These tools let you
+        and your agents read and write Hanzo data—traces, prompts, datasets,
+        scores, and more—without leaving your development environment.
       </p>
       <div className="space-y-6">
         <Card className="p-4">
@@ -29,11 +29,11 @@ export function DeveloperToolsSettings() {
             <span className="font-semibold">Agent Skill</span>
           </div>
           <p className="text-primary mb-4 text-sm">
-            The Langfuse Agent Skill is an open-source skill following
+            The Hanzo Agent Skill is an open-source skill following
             Anthropic&apos;s Agent Skills standard. It equips AI coding agents
-            (Claude Code, Cursor, Windsurf) with native Langfuse capabilities
-            and conditions them to follow best practices, so agents produce
-            better results when it is installed.
+            (Claude Code, Cursor, Windsurf) with native Hanzo capabilities and
+            conditions them to follow best practices, so agents produce better
+            results when it is installed.
           </p>
           <CodeBlock
             language="shell"
@@ -50,10 +50,10 @@ export function DeveloperToolsSettings() {
             <span className="font-semibold">MCP Server</span>
           </div>
           <p className="text-primary mb-4 text-sm">
-            The Langfuse MCP server lets AI assistants and agents interact with
-            your Langfuse data programmatically via the Model Context Protocol.
-            It supports both read and write operations, and you can restrict it
-            to read-only access with an allowlist. Authenticate with a
+            The Hanzo MCP server lets AI assistants and agents interact with
+            your Hanzo data programmatically via the Model Context Protocol. It
+            supports both read and write operations, and you can restrict it to
+            read-only access with an allowlist. Authenticate with a
             project-scoped API key pair.
           </p>
           <CodeBlock
@@ -73,15 +73,15 @@ export function DeveloperToolsSettings() {
             <span className="font-semibold">CLI</span>
           </div>
           <p className="text-primary mb-4 text-sm">
-            The Langfuse CLI provides terminal access to the full Langfuse API.
-            It wraps every API endpoint, so you can manage traces, prompts,
+            The Hanzo CLI provides terminal access to the full Hanzo API. It
+            wraps every API endpoint, so you can manage traces, prompts,
             datasets, scores, and sessions directly from your shell or scripts.
-            It uses the same API key pair as the Langfuse SDKs.
+            It uses the same API key pair as the Hanzo SDKs.
           </p>
           <CodeBlock
             language="shell"
-            value={`export LANGFUSE_PUBLIC_KEY="pk-lf-..."
-export LANGFUSE_SECRET_KEY="sk-lf-..."
+            value={`export LANGFUSE_PUBLIC_KEY="pk-hz-..."
+export LANGFUSE_SECRET_KEY="sk-hz-..."
 
 npx langfuse-cli api <resource> <action>`}
           />

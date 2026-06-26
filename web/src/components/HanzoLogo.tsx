@@ -1,6 +1,5 @@
 import { cn } from "@/src/utils/tailwind";
 import Link from "next/link";
-import { VersionLabel } from "./VersionLabel";
 import { useUiCustomization } from "@/src/features/ui-customization/useUiCustomization";
 import { PlusIcon } from "lucide-react";
 import { useBrand, BrandMark } from "@/src/features/branding/useBrand";
@@ -80,15 +79,9 @@ const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
 
   return (
     <div className="flex items-center">
+      {/* H mark only — the brand wordmark is intentionally hidden in the
+          top-left chrome; the mark alone carries the brand. */}
       <BrandMark brand={brand} size={markSize} className="fill-current" />
-      <span
-        className={cn(
-          "ml-2 font-mono leading-none font-semibold group-data-[collapsible=icon]:hidden",
-          size === "sm" ? "text-sm" : "text-xl",
-        )}
-      >
-        {brand.brandName}
-      </span>
     </div>
   );
 };
@@ -96,28 +89,16 @@ const HanzoCloudLogotypeOrCustomized = ({ size }: { size: "sm" | "xl" }) => {
 export const HanzoCloudLogo = ({
   className,
   size = "sm",
-  version = false,
 }: {
   size?: "sm" | "xl";
   className?: string;
-  version?: boolean;
 }) => {
   return (
-    <div
-      className={cn(
-        "-mt-2 ml-1 flex flex-wrap gap-4 lg:flex-col lg:items-start",
-        className,
-      )}
-    >
-      {/* Hanzo Cloud Logo */}
-      <div className="flex items-center">
-        <Link href="/" className="flex items-center">
-          <HanzoCloudLogotypeOrCustomized size={size} />
-        </Link>
-        {version && (
-          <VersionLabel className="ml-2 group-data-[collapsible=icon]:hidden" />
-        )}
-      </div>
+    <div className={cn("flex items-center", className)}>
+      {/* Hanzo Cloud Logo (H mark only) */}
+      <Link href="/" className="flex items-center">
+        <HanzoCloudLogotypeOrCustomized size={size} />
+      </Link>
     </div>
   );
 };

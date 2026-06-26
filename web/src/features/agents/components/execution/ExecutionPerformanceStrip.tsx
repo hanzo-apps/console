@@ -1,4 +1,9 @@
-import { Clock, ArrowDown, ArrowUp, RotateCcw } from "@/src/features/agents/components/ui/icon-bridge";
+import {
+  Clock,
+  ArrowDown,
+  ArrowUp,
+  RotateCcw,
+} from "@/src/features/agents/components/ui/icon-bridge";
 import type { WorkflowExecution } from "../../types/executions";
 import { normalizeExecutionStatus } from "../../utils/status";
 
@@ -28,7 +33,9 @@ function formatBytes(bytes?: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
 }
 
-export function ExecutionPerformanceStrip({ execution }: ExecutionPerformanceStripProps) {
+export function ExecutionPerformanceStrip({
+  execution,
+}: ExecutionPerformanceStripProps) {
   const status = normalizeExecutionStatus(execution.status);
   const duration = execution.duration_ms || 0;
   const retryCount = execution.retry_count || 0;
@@ -37,28 +44,30 @@ export function ExecutionPerformanceStrip({ execution }: ExecutionPerformanceStr
 
   // Simple performance assessment
   const getPerformanceIndicator = () => {
-    if (status === 'failed') return { color: 'text-red-500', label: 'Failed' };
-    if (retryCount > 0) return { color: 'text-yellow-500', label: 'Retried' };
-    if (duration > 30000) return { color: 'text-yellow-500', label: 'Slow' }; // > 30s
-    if (status === 'succeeded') return { color: 'text-green-500', label: 'Fast' };
-    if (status === 'running') return { color: 'text-blue-500', label: 'Running' };
-    return { color: 'text-muted-foreground', label: 'Normal' };
+    if (status === "failed") return { color: "text-red-500", label: "Failed" };
+    if (retryCount > 0) return { color: "text-yellow-500", label: "Retried" };
+    if (duration > 30000) return { color: "text-yellow-500", label: "Slow" }; // > 30s
+    if (status === "succeeded")
+      return { color: "text-green-500", label: "Fast" };
+    if (status === "running")
+      return { color: "text-muted-foreground", label: "Running" };
+    return { color: "text-muted-foreground", label: "Normal" };
   };
 
   const performance = getPerformanceIndicator();
 
   return (
-    <div className="border-b border-border bg-muted/20">
+    <div className="border-border bg-muted/20 border-b">
       <div className="px-6 py-3">
         <div className="flex flex-wrap items-center gap-6 text-sm">
           {/* Duration */}
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-muted-foreground" />
+            <Clock className="text-muted-foreground h-4 w-4" />
             <span className="text-muted-foreground">Duration:</span>
             <span className={`font-medium ${performance.color}`}>
               {formatDuration(duration)}
             </span>
-            {performance.label !== 'Normal' && (
+            {performance.label !== "Normal" && (
               <span className={`text-xs ${performance.color}`}>
                 ({performance.label})
               </span>
@@ -67,43 +76,53 @@ export function ExecutionPerformanceStrip({ execution }: ExecutionPerformanceStr
 
           {/* Input Size */}
           <div className="flex items-center gap-2">
-            <ArrowDown className="w-4 h-4 text-muted-foreground" />
+            <ArrowDown className="text-muted-foreground h-4 w-4" />
             <span className="text-muted-foreground">Input:</span>
-            <span className="font-medium text-foreground">
+            <span className="text-foreground font-medium">
               {formatBytes(inputSize)}
             </span>
           </div>
 
           {/* Output Size */}
           <div className="flex items-center gap-2">
-            <ArrowUp className="w-4 h-4 text-muted-foreground" />
+            <ArrowUp className="text-muted-foreground h-4 w-4" />
             <span className="text-muted-foreground">Output:</span>
-            <span className="font-medium text-foreground">
+            <span className="text-foreground font-medium">
               {formatBytes(outputSize)}
             </span>
           </div>
 
           {/* Retry Count */}
           <div className="flex items-center gap-2">
-            <RotateCcw className="w-4 h-4 text-muted-foreground" />
+            <RotateCcw className="text-muted-foreground h-4 w-4" />
             <span className="text-muted-foreground">Retries:</span>
-            <span className={`font-medium ${retryCount > 0 ? 'text-yellow-500' : 'text-foreground'}`}>
+            <span
+              className={`font-medium ${retryCount > 0 ? "text-yellow-500" : "text-foreground"}`}
+            >
               {retryCount}
             </span>
           </div>
 
           {/* Data Flow Indicator */}
-          <div className="flex items-center gap-2 text-body-small">
+          <div className="text-body-small flex items-center gap-2">
             <span>Data Flow:</span>
             <div className="flex items-center gap-1">
-              <div className={`w-2 h-2 rounded-full ${inputSize > 0 ? 'bg-blue-500' : 'bg-muted'}`} />
-              <div className="w-4 h-px bg-muted" />
-              <div className={`w-2 h-2 rounded-full ${outputSize > 0 ? 'bg-green-500' : 'bg-muted'}`} />
+              <div
+                className={`h-2 w-2 rounded-full ${inputSize > 0 ? "bg-primary" : "bg-muted"}`}
+              />
+              <div className="bg-muted h-px w-4" />
+              <div
+                className={`h-2 w-2 rounded-full ${outputSize > 0 ? "bg-green-500" : "bg-muted"}`}
+              />
             </div>
             <span>
-              {inputSize > 0 && outputSize > 0 ? 'Complete' :
-               inputSize > 0 ? 'Input only' :
-               outputSize > 0 ? 'Output only' : 'No data'}
+              {inputSize > 0 && outputSize > 0
+                ? "Complete"
+                : inputSize > 0
+                  ? "Input only"
+                  : outputSize > 0
+                    ? "Output only"
+                    : "No data"}
             </span>
           </div>
         </div>

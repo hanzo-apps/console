@@ -1,6 +1,11 @@
 import { Badge } from "@/src/features/agents/components/ui/badge";
 import { Button } from "@/src/features/agents/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/features/agents/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/features/agents/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +17,10 @@ import {
 import { Separator } from "@/src/features/agents/components/ui/separator";
 import { useMode } from "@/src/features/agents/contexts/ModeContext";
 import { cn } from "@/src/features/agents/lib/utils";
-import type { MCPServerAction, MCPServerHealthForUI } from "@/src/features/agents/types/agents";
+import type {
+  MCPServerAction,
+  MCPServerHealthForUI,
+} from "@/src/features/agents/types/agents";
 import {
   CheckmarkFilled,
   ErrorFilled,
@@ -30,11 +38,11 @@ interface MCPServerControlsProps {
   nodeId: string;
   onServerAction?: (
     action: MCPServerAction,
-    serverAlias: string
+    serverAlias: string,
   ) => Promise<void>;
   onBulkAction?: (
     action: MCPServerAction,
-    serverAliases: string[]
+    serverAliases: string[],
   ) => Promise<void>;
   isLoading?: boolean;
   className?: string;
@@ -79,7 +87,7 @@ export function MCPServerControls({
 
   const handleSingleAction = async (
     action: MCPServerAction,
-    serverAlias: string
+    serverAlias: string,
   ) => {
     if (!onServerAction || actionLoading) return;
 
@@ -98,7 +106,7 @@ export function MCPServerControls({
 
   const handleBulkAction = async (
     action: MCPServerAction,
-    serverList: MCPServerHealthForUI[]
+    serverList: MCPServerHealthForUI[],
   ) => {
     if (!onBulkAction || actionLoading || serverList.length === 0) return;
 
@@ -114,7 +122,7 @@ export function MCPServerControls({
 
   const executeAction = async (
     action: MCPServerAction,
-    serverAliases: string[]
+    serverAliases: string[],
   ) => {
     try {
       setActionLoading(`${action}-${serverAliases.join(",")}`);
@@ -165,7 +173,7 @@ export function MCPServerControls({
       case "stop":
         return "text-red-600 hover:text-red-700";
       case "restart":
-        return "text-blue-600 hover:text-blue-700";
+        return "text-foreground hover:text-foreground/80";
       default:
         return "";
     }
@@ -178,14 +186,14 @@ export function MCPServerControls({
   const renderActionButton = (
     action: MCPServerAction,
     serverList: MCPServerHealthForUI[],
-    label: string
+    label: string,
   ) => {
     if (serverList.length === 0) return null;
 
     const ActionIcon = getActionIcon(action);
     const loading = isActionLoading(
       action,
-      serverList.map((s) => s.alias)
+      serverList.map((s) => s.alias),
     );
 
     return (
@@ -197,9 +205,9 @@ export function MCPServerControls({
         className={getActionColor(action)}
       >
         {loading ? (
-          <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
         ) : (
-          <ActionIcon className="w-4 h-4 mr-2" />
+          <ActionIcon className="mr-2 h-4 w-4" />
         )}
         {label} ({serverList.length})
       </Button>
@@ -212,7 +220,7 @@ export function MCPServerControls({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-muted-foreground" />
+              <Settings className="text-muted-foreground h-5 w-5" />
               <CardTitle>Server Controls</CardTitle>
               <Badge variant="secondary">{servers.length} servers</Badge>
             </div>
@@ -222,9 +230,9 @@ export function MCPServerControls({
         <CardContent className="space-y-6">
           {/* Status Summary */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="flex items-center justify-center mb-1">
-                <CheckmarkFilled className="w-5 h-5 text-green-600" />
+            <div className="rounded-lg bg-green-50 p-3 text-center">
+              <div className="mb-1 flex items-center justify-center">
+                <CheckmarkFilled className="h-5 w-5 text-green-600" />
               </div>
               <div className="text-heading-3 text-green-700">
                 {runningServers.length}
@@ -232,9 +240,9 @@ export function MCPServerControls({
               <div className="text-body-small">Running</div>
             </div>
 
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-center mb-1">
-                <Stop className="w-5 h-5 text-gray-600" />
+            <div className="rounded-lg bg-gray-50 p-3 text-center">
+              <div className="mb-1 flex items-center justify-center">
+                <Stop className="h-5 w-5 text-gray-600" />
               </div>
               <div className="text-heading-3 text-gray-700">
                 {stoppedServers.length}
@@ -242,9 +250,9 @@ export function MCPServerControls({
               <div className="text-body-small">Stopped</div>
             </div>
 
-            <div className="text-center p-3 bg-red-50 rounded-lg">
-              <div className="flex items-center justify-center mb-1">
-                <ErrorFilled className="w-5 h-5 text-red-600" />
+            <div className="rounded-lg bg-red-50 p-3 text-center">
+              <div className="mb-1 flex items-center justify-center">
+                <ErrorFilled className="h-5 w-5 text-red-600" />
               </div>
               <div className="text-heading-3 text-red-700">
                 {errorServers.length}
@@ -261,13 +269,13 @@ export function MCPServerControls({
               {renderActionButton(
                 "start",
                 stoppedServers.concat(errorServers),
-                "Start All Stopped"
+                "Start All Stopped",
               )}
               {renderActionButton("stop", runningServers, "Stop All Running")}
               {renderActionButton(
                 "restart",
                 runningServers,
-                "Restart All Running"
+                "Restart All Running",
               )}
             </div>
 
@@ -278,7 +286,7 @@ export function MCPServerControls({
                   {renderActionButton(
                     "restart",
                     servers,
-                    "Restart All Servers"
+                    "Restart All Servers",
                   )}
                   {renderActionButton("stop", servers, "Stop All Servers")}
                 </div>
@@ -291,21 +299,21 @@ export function MCPServerControls({
             <div className="space-y-4">
               <h3 className="text-sm font-medium">Individual Controls</h3>
 
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="max-h-64 space-y-2 overflow-y-auto">
                 {servers.map((server) => (
                   <div
                     key={server.alias}
-                    className="flex items-center justify-between p-3 border rounded-md bg-gray-50"
+                    className="flex items-center justify-between rounded-md border bg-gray-50 p-3"
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className={cn(
-                          "w-2 h-2 rounded-full",
+                          "h-2 w-2 rounded-full",
                           server.status === "running"
                             ? "bg-green-500"
                             : server.status === "error"
-                            ? "bg-red-500"
-                            : "bg-gray-400"
+                              ? "bg-red-500"
+                              : "bg-gray-400",
                         )}
                       />
                       <span className="font-medium">{server.alias}</span>
@@ -323,12 +331,12 @@ export function MCPServerControls({
                             handleSingleAction("start", server.alias)
                           }
                           disabled={isLoading || !!actionLoading}
-                          className="text-green-600 hover:text-green-700 p-1"
+                          className="p-1 text-green-600 hover:text-green-700"
                         >
                           {isActionLoading("start", [server.alias]) ? (
-                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                           ) : (
-                            <Play className="w-4 h-4" />
+                            <Play className="h-4 w-4" />
                           )}
                         </Button>
                       )}
@@ -342,12 +350,12 @@ export function MCPServerControls({
                               handleSingleAction("restart", server.alias)
                             }
                             disabled={isLoading || !!actionLoading}
-                            className="text-blue-600 hover:text-blue-700 p-1"
+                            className="text-foreground hover:text-foreground/80 p-1"
                           >
                             {isActionLoading("restart", [server.alias]) ? (
-                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                             ) : (
-                              <Restart className="w-4 h-4" />
+                              <Restart className="h-4 w-4" />
                             )}
                           </Button>
 
@@ -358,12 +366,12 @@ export function MCPServerControls({
                               handleSingleAction("stop", server.alias)
                             }
                             disabled={isLoading || !!actionLoading}
-                            className="text-red-600 hover:text-red-700 p-1"
+                            className="p-1 text-red-600 hover:text-red-700"
                           >
                             {isActionLoading("stop", [server.alias]) ? (
-                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                             ) : (
-                              <Stop className="w-4 h-4" />
+                              <Stop className="h-4 w-4" />
                             )}
                           </Button>
                         </>
@@ -377,8 +385,8 @@ export function MCPServerControls({
 
           {/* No Servers Message */}
           {servers.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Settings className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <div className="text-muted-foreground py-8 text-center">
+              <Settings className="mx-auto mb-3 h-12 w-12 opacity-50" />
               <p className="text-sm">No MCP servers to control</p>
             </div>
           )}
@@ -395,7 +403,7 @@ export function MCPServerControls({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Warning className="w-5 h-5 text-yellow-600" />
+              <Warning className="h-5 w-5 text-yellow-600" />
               Confirm Action
             </DialogTitle>
             <DialogDescription>
@@ -410,9 +418,9 @@ export function MCPServerControls({
               {confirmation.servers.map((serverAlias) => (
                 <div
                   key={serverAlias}
-                  className="flex items-center gap-2 p-2 bg-gray-50 rounded"
+                  className="flex items-center gap-2 rounded bg-gray-50 p-2"
                 >
-                  <Settings className="w-4 h-4 text-muted-foreground" />
+                  <Settings className="text-muted-foreground h-4 w-4" />
                   <span className="font-medium">{serverAlias}</span>
                 </div>
               ))}
@@ -437,11 +445,11 @@ export function MCPServerControls({
               className={cn(
                 confirmation.action === "stop" && "bg-red-600 hover:bg-red-700",
                 confirmation.action === "restart" &&
-                  "bg-blue-600 hover:bg-blue-700"
+                  "bg-primary hover:bg-primary/90",
               )}
             >
               {actionLoading ? (
-                <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
               ) : (
                 React.createElement(getActionIcon(confirmation.action), {
                   className: "w-4 h-4 mr-2",

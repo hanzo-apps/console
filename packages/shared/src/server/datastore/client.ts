@@ -93,10 +93,18 @@ export class DatastoreClient {
   private readonly requestTimeout: number;
   private readonly httpHeaders: Record<string, string>;
   private readonly settings: DatastoreSettings;
+  // Whether an explicit datastore URL was configured (DATASTORE_URL set). When
+  // false, the datastore (legacy ClickHouse analytics backend) is not deployed
+  // — reads degrade to empty result sets and writes become no-ops instead of
+  // failing against a nonexistent localhost:8123. This keeps the Langfuse-style
+  // observability dashboard returning an honest empty state (HTTP 200) rather
+  // than a 500 when analytics storage is intentionally absent.
+  private readonly configured: boolean;
   // Logger kept for API surface compatibility
   private readonly _logger = new DatastoreLogger();
 
   constructor(config: DatastoreClientConfig = {}) {
+    this.configured = config.url != null && config.url !== "";
     this.url = (config.url ?? "http://localhost:8123").replace(/\/$/, "");
     this.username = config.username ?? "default";
     this.password = config.password ?? "";
@@ -104,6 +112,11 @@ export class DatastoreClient {
     this.requestTimeout = config.request_timeout ?? 30_000;
     this.httpHeaders = config.http_headers ?? {};
     this.settings = config.datastore_settings ?? {};
+  }
+
+  /** True iff an explicit datastore URL (DATASTORE_URL) was configured. */
+  isConfigured(): boolean {
+    return this.configured;
   }
 
   private authHeaders(): Record<string, string> {
@@ -149,6 +162,19 @@ export class DatastoreClient {
     text: () => Promise<string>;
     stream: <R = T>() => AsyncIterable<{ json: () => R }[]>;
   }> {
+    // Datastore not deployed → no rows. Dashboards render an honest empty state.
+    if (!this.configured) {
+      return {
+        query_id: crypto.randomUUID(),
+        response_headers: {},
+        json: async <R = T>() => ({ data: [] as R[] }),
+        text: async () => "",
+        stream: async function* <R = T>() {
+          yield [] as { json: () => R }[];
+        },
+      };
+    }
+
     const mergedSettings: DatastoreSettings = { ...this.settings, ...opts.datastore_settings };
     const qs = buildQueryParams(opts.query_params, mergedSettings, this.database);
     // Set default_format as URL param — ensures JSONEachRow even for complex CTEs
@@ -211,6 +237,9 @@ export class DatastoreClient {
     query_params?: Record<string, unknown>;
     datastore_settings?: DatastoreSettings;
   }): AsyncGenerator<T> {
+    // Datastore not deployed → empty stream.
+    if (!this.configured) return;
+
     const mergedSettings: DatastoreSettings = { ...this.settings, ...opts.datastore_settings };
     const qs = buildQueryParams(opts.query_params, mergedSettings, this.database);
     qs.set("default_format", "JSONEachRow");
@@ -259,6 +288,12 @@ export class DatastoreClient {
     datastore_settings?: DatastoreSettings;
     format?: string; // accepted for compat, always uses JSONEachRow
   }): Promise<InsertResult & { response_headers: Record<string, string> }> {
+    // Datastore not deployed → drop the write. Ingestion still succeeds; the
+    // analytics backend is simply absent (SQLite-only deployment).
+    if (!this.configured) {
+      return { query_id: crypto.randomUUID(), executed: false, response_headers: {} };
+    }
+
     const mergedSettings: DatastoreSettings = {
       async_insert: 1,
       wait_for_async_insert: 1,
@@ -308,6 +343,11 @@ export class DatastoreClient {
     datastore_settings?: DatastoreSettings;
     session_id?: string;
   }): Promise<CommandResult> {
+    // Datastore not deployed → no-op (DDL/migrations target an absent backend).
+    if (!this.configured) {
+      return { query_id: crypto.randomUUID(), response_headers: {} };
+    }
+
     const mergedSettings: DatastoreSettings = { ...this.settings, ...opts.datastore_settings };
     const qs = buildQueryParams(opts.query_params, mergedSettings, this.database);
     if (opts.session_id) qs.set("session_id", opts.session_id);
@@ -344,6 +384,7 @@ export class DatastoreClient {
 
   /** Health-check the datastore. */
   async ping(): Promise<boolean> {
+    if (!this.configured) return false;
     try {
       const res = await fetch(`${this.url}/ping`, {
         method: "GET",

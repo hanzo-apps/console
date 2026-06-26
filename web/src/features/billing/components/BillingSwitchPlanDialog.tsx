@@ -100,7 +100,7 @@ export const BillingSwitchPlanDialog = ({
                   >
                     <div className="mb-4">
                       {/* Labels above plan title */}
-                      <div className="mb-1 h-5 text-xs font-medium text-blue-700">
+                      <div className="text-muted-foreground mb-1 h-5 text-xs font-medium">
                         {isCurrentPlan && <span>Current Plan</span>}
                         {scheduledPlanSwitch &&
                           scheduledPlanSwitch.newPlanId ===

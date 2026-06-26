@@ -734,7 +734,7 @@ export function CreateLLMApiKeyForm({
                 )}
               />
               {!isHanzoCloud && (
-                <div className="text-muted-foreground space-y-2 border-l-2 border-blue-200 pl-4 text-sm">
+                <div className="text-muted-foreground border-border space-y-2 border-l-2 pl-4 text-sm">
                   <p>
                     <strong>Default credential provider chain:</strong> When AWS
                     credentials are omitted, the system will automatically check
@@ -754,7 +754,7 @@ export function CreateLLMApiKeyForm({
                       href="https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-credentials-node.html"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 underline hover:text-blue-800"
+                      className="text-primary hover:text-primary/80 underline"
                     >
                       Learn more about AWS credential providers →
                     </a>
@@ -857,7 +857,7 @@ export function CreateLLMApiKeyForm({
               {!isHanzoCloud &&
                 form.watch("secretKey") ===
                   VERTEXAI_USE_DEFAULT_CREDENTIALS && (
-                  <div className="text-muted-foreground space-y-2 border-l-2 border-blue-200 pl-4 text-sm">
+                  <div className="text-muted-foreground border-border space-y-2 border-l-2 pl-4 text-sm">
                     <p>
                       <strong>Application Default Credentials (ADC):</strong>{" "}
                       When enabled, the system will automatically check for
@@ -880,7 +880,7 @@ export function CreateLLMApiKeyForm({
                         href="https://cloud.google.com/docs/authentication/application-default-credentials"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 underline hover:text-blue-800"
+                        className="text-primary hover:text-primary/80 underline"
                       >
                         Learn more about GCP Application Default Credentials →
                       </a>

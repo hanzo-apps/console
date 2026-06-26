@@ -530,3 +530,284 @@ premium-gating + add-funds cluster-wide). Fixed by `kubectl rollout restart depl
 Build (kaniko, console deps are public npm): clone `console-build-billing*` Job,
 `--context=git://…#refs/heads/feat/payg-self-serve`, dest `3.159.35-payg`. Deploy:
 patch operator CR `services.hanzo.ai/console` `spec.image.tag`→3.159.35-payg.
+
+## Cloud API Key mint FAIL#1 + IAM v1.25.2 (console 3.159.48-keymint)
+
+**FAIL#1**: "Generate Cloud API Key" → "No IAM identity for this account in this
+organization". Root: `cloudApiKeyRouter.ts` resolved the IAM sub as
+`<orgId>/<email>` (and the session `iamSub` carried the email form / a DB UUID),
+so `get-user?id=maxpower/davelorenzini@gmail.com` → null even though the user
+exists as `maxpower/davelorenzini` (Casdoor `name` != email even in an
+`useEmailAsUsername` org). **Fix** (web/src/features): new
+`iamGetUserByOrgEmail(owner,email)` does `get-user?owner=<org>&email=<email>`
+(exact in-org email lookup → authoritative `owner/name`); `resolveIamUser`
+uses the session sub only when it actually resolves, else falls back to the
+org+email lookup. get/mint/revoke share it (dropped the duplicate get-user in
+mint). Verified live: id-by-email→null, owner+email→the record.
+
+**Second blocker (IAM-side, the real cause of the post-console-fix 500)**: the
+`POST /v1/iam/mint-user-keys` route was ADDED after tag v1.25.1 (on the divergent
+`hk-fix-build` branch) — the deployed `iam:v1.25.1` returned beego 404 HTML for
+it (get-user GET worked; mint POST 404'd). `hk-fix-build` was 27 commits BEHIND
+main → could NOT be tagged as the next semver (would regress OIDC org claim,
+multi-brand providers, 7-chain web3 login). **Fix**: cherry-picked the 3 hk CODE
+commits (4ca7edaa route + 061e45e8/cf8d8f68 caller→target security binding)
+cleanly onto `origin/main`, tagged **v1.25.2**, built (CGO=1, sqlite_fts5),
+bumped operator CR `services.hanzo.ai/iam` tag → v1.25.2 (Recreate, ~30s
+downtime, 1 replica). Mint auth is fail-secure via `IAM_KEY_MINT_ALLOWED_APPS`
+(already set: hanzo-console,lux-console,zoo-console,pars-console); confidential
+client → `app/hanzo-console` (getUsernameByClientIdSecret) → passes allowlist.
+
+**E2E PROVEN (Playwright, Dave davelorenzini@gmail.com → maxpower)**:
+"Generate Cloud API Key" → `hk-a851706d…` shown once in UI; Regenerate →
+`hk-2612a139…`; Revoke → cleared. Billing/usage page renders (HTTP 200, real
+Plan&Usage, no 500); observability dashboard "No data" honest-empty (executeQuery
+degrade, no unhandledRejection). console 3.159.48-keymint = the usagefix2 commits
+(55aa1f9f2 + 348570140) + the FAIL#1 fix in ONE image. Build: kaniko Job
+`console-build-keymint`, `--context=git://…#refs/heads/fix/payg-usage-visibility`,
+dest 3.159.48-keymint. IAM build: BuildKit Job `iam-build-v1252`.
+
+## Console chrome cleanup + IA rework (→ console 3.159.50-mono)
+
+Owner review flagged 7 issues; all fixed on `fix/payg-usage-visibility`, built +
+deployed via the operator's declared state (NOT imperative `kubectl set image`).
+
+1. **Full monochrome.** Hunted EVERY blue: down from **276** blue occurrences to
+   **0** (verified: 0 `(blue|indigo|sky|cyan)-N` classes, 0 blue hex literals, 0
+   blue oklch/hsl hues). De-blued the *chrome* uses of `--chart-*` and the
+   RainbowButton `--color-1..5` ramp in `globals.css` (charts → neutral warm/gray
+   hues, rainbow → grayscale). Components: trace nav pulse/resize bars →
+   `bg-primary`; number cells / score-link → `text-foreground`/`text-primary`;
+   billing info banners → `bg-muted`/`border-border`; ItemBadge SPAN →
+   `text-muted-foreground`; dashboard BarList default → `hsl(var(--chart-1))`
+   (was `#6366f1`); score-analytics `HEATMAP_BASE_COLORS` + extractHslToHex
+   fallbacks → neutral (was `#3b82f6`). Two parallel agents swept the
+   enabled-product + hidden-module feature dirs (agents/bots/mpc/dns/explorer,
+   evals, prompts, public-api, comments) preserving semantic green/red/amber.
+2. **v4.0.0 label dropped** from the top-left chrome. `app-sidebar` no longer
+   passes `version`; `HanzoLogo` is mark-only (the dead `version`/`VersionLabel`
+   path removed). `constants/VERSION.ts` set to `v3.159.50` (internal
+   health/telemetry only, never rendered).
+3. **"Star HanzoCloud" GitHub widget removed** — deleted the `github-star`
+   notification entry (broken shields.io stars img) from `sidebar-notifications`.
+4. **Top-left chrome = H mark only, app-selector moved RIGHT.** `HanzoLogo`
+   wordmark `<span>{brand.brandName}</span>` removed (mark-only). In
+   `app-sidebar` the `AppSwitcher` grid is now `ml-auto` (right corner of the
+   sidebar header), logo on the left.
+5. **KMS removed from Organization Settings** (`pages/organization/[…]/settings`
+   `getOrganizationSettingsPages`): dropped the `KMS` page + `KmsOrgSettings`
+   import. KMS is a separate service, not an org setting. (The project-level KMS
+   *product* pages `/project/[…]/kms/{secrets,keys}` are untouched.)
+6. **IA rework — flat wall → grouped products, ad-hoc enableable.** Root cause:
+   the `uiCustomization` nav filter was a NO-OP on cloud (`ctx.uiCustomization`
+   is `null` without the `self-host-ui-customization` entitlement), so every
+   `productModule` showed at once. Fix (decomplected, ONE knob):
+   `DEFAULT_ENABLED_MODULES` in `productModuleSchema.ts` = the curated default
+   surface `[dashboards, tracing, evaluation, prompt-management, playground,
+   datasets, search]`; the filter now gates by
+   `ctx.uiCustomization?.visibleModules ?? DEFAULT_ENABLED_MODULES`. Result: 4
+   coherent groups (Observability / Prompt Management / Evaluation / Search & AI)
+   + slim ungrouped (Home, Dashboards). Agents, Bots, Tasks, Functions, KMS, ZT,
+   Infrastructure, Base, Referrals hidden by default — light up by adding to the
+   constant or per-org. Also: gated "Observe" under `infrastructure`; deduped the
+   redundant embedded "Playground" service (native page is the one way); fixed
+   `groupNavigationItems` flattened list to include ALL groups (was hardcoded to
+   3 → Cmd+K missed Search & AI).
+7. **Spacing per @hanzo/ui (gui).** Tightened the sidebar header row
+   (`pr-2 pl-2`, mark-left/app-switcher-right) and simplified the `HanzoLogo`
+   wrapper (dropped the old `-mt-2 ml-1 gap-4 lg:flex-col` multi-element offset).
+
+**Build + deploy.** Runner fleet was down → built **in-cluster with Kaniko**
+(NOT GitHub builders, NOT local Mac): Job `console-build-mono`,
+`--context=git://github.com/hanzoai/console.git#refs/heads/fix/payg-usage-visibility`,
+`--destination=ghcr.io/hanzoai/console:3.159.50-mono` (digest
+`sha256:87d73fe2…`). **Deploy gotcha:** the `console` Deployment is reconciled by
+`hanzo-operator` from `services.hanzo.ai/console` (`spec.image.tag`) — imperative
+`kubectl set image` is reverted. Correct path: `kubectl patch
+services.hanzo.ai/console -p '{"spec":{"image":{"tag":"3.159.50-mono"}}}'` →
+operator rolls the deployment. **Verify creds:** `z@hanzo.ai` /
+`IloveHanzo2026!!!` (THREE `!`, not two — Casdoor rate-limits to a 15-min
+lockout after a few wrong tries; a `!!` typo cost a cooldown).
+
+## Finish + authenticated verification of the 7-ask rework (→ console 3.159.54-mono4)
+
+Prior session built `3.159.52-mono2` (HEAD `397d075ee`) but died before deploying
+it — the live tag was still `3.159.51-fix`, one commit behind (missing the final
+navy/slate/rgb de-blue). This session **finished + verified live**.
+
+**Found the one real incomplete item (ask #1).** The earlier cleanup scan only
+checked the *Billing* settings page (0 blue) — it missed **Organization Settings →
+General**, whose "Debug Information" JSONView (and every trace I/O panel) renders
+the `react18-json-view` **github/base theme**: keys/numbers/booleans `#005cc5`
+(light) / `#79b8ff` (dark), strings `#032f62` navy. That is vendor CSS — not a
+Tailwind class or source hex — so the source grep (still 0 blue classes/hex) and
+the billing-only browser scan both passed while **General had 19 blue elements
+live**. Fix (`694f83663`, one DRY override in `globals.css`):
+```
+.json-view { color/--json-* → hsl(var(--foreground|--muted-foreground)) !important; }
+```
+catches every JSON viewer in one place, monochrome in light+dark, keeps the
+semantic green/red. `!important` matches the file's existing vendor-override
+pattern (vaul, react-resizable) and beats the lib CSS, which `_app.tsx` imports
+*after* `globals.css`. **Proven before building:** injected the exact CSS into the
+live General page → blue **29 → 0** (A/B). The other 5 settings pages
+(Identity & Access, Members, API Keys, Audit Logs, Billing) were already 0.
+
+**Verify harness** (`web/scripts/verify-console-cleanup.mjs`, now canonical):
+accepts `ORG_ID`/`PROJECT_ID` (a freshly-seeded pod has no org links on the
+landing page — the admin account `z@hanzo.ai` shows as console user `z@ad.nexus`
+with **zero orgs**, so create one via `/setup`: org+default-project wizard) and
+blue-scans **all six** settings pages, not just Billing. Verification org/project:
+`cmqud6t53000on607zzi7zcps` / `cmqud6xco000tn607drmm60q7` (named `mono-verify`,
+kept for re-runs).
+
+**Build + deploy.** Built on **evo** (`ssh evo`, amd64, NOT local Docker) from
+git HEAD `694f83663`, `docker buildx build --platform linux/amd64 --push -t
+ghcr.io/hanzoai/console:3.159.54-mono4` (digest `sha256:df7fe896…`; GHCR push hit
+a transient `tls: bad record MAC` once — a retry loop handled it; auth = `zooqueen`
+gh token, which *does* carry `write:packages`). Deployed via the operator CR:
+`kubectl patch services.hanzo.ai/console -p '{"spec":{"image":{"tag":"3.159.54-mono4"}}}'`
+→ operator reconciled instantly, pod `console-77ddc488c-*` 2/2, `/` 200. PVC DB
+persisted ("existing SQLite db kept").
+
+**Authenticated result on the live `3.159.54-mono4`** (headless login via hanzo.id
+OIDC, all 7 asks PASS):
+| # | ask | proof |
+|---|-----|-------|
+| 1 | full monochrome | computed-style blue scan = **0** on product + **all 6** settings pages (billing/general/identityAccess/members/apiKeys/auditLogs); General fixed 19→0 |
+| 2 | no `v4.0.0` | `versionV4=false` |
+| 3 | no Star-HanzoCloud widget | `starWidget=false` |
+| 4 | H-mark only + app-selector right | `wordmark=false`, `appSelectorSide=right` |
+| 5 | no KMS in org settings nav | `kmsInSettings=false`; nav = General/Identity&Access/API Keys/Members/Audit Logs/Billing/Projects |
+| 6 | nav regrouped | groups = Observability / Prompt Management / Evaluation / Search & AI (+ ungrouped Home, Dashboards) |
+| 7 | @hanzo/gui spacing | tightened sidebar header (H-left / grid-right), mark-only logo |
+
+Screenshots: `/tmp/console-verify/after/{billing,general,members,product-traces,sidebar}.png`.
+
+## Vector → real product on SQLite + Search & AI sub-pages (→ console 3.159.58-vector)
+
+**Root cause of the `vector.createCollection` 404.** The tRPC `vector` router was
+mounted fine (`root.ts` → `vector: vectorRouter`) but every procedure proxied an
+HTTP call via `vectorClient.ts` to `https://api.cloud.hanzo.ai/api/vector/*` — a
+route that was never deployed (404), and which also violated the `/v1`-not-`/api`
+rule. The frontend (stat cards, CreateCollectionDialog, CollectionsTable) was wired
+to a backend that did not exist.
+
+**Fix — back Vector with the canonical Hanzo store: SQLite, in-process, no external
+vector DB.** Deleted `vectorClient.ts`; the router now calls a new
+`web/src/features/vector/server/vectorStore.ts` directly (the dead HTTP hop is
+gone, so no more 404). The store uses Node 24's built-in `node:sqlite`
+(`DatabaseSync`) — zero native deps, nothing extra in the image — with two tables
+(`collections`, `vectors`; `ON DELETE CASCADE`), Float32→BLOB codec, and exact
+brute-force KNN (cosine / euclidean / dotProduct, normalized so higher = nearer).
+Everything is `projectId`-scoped. `resolveDbPath()` co-locates `vector.db` next to
+the console's own SQLite DB (`DATABASE_URL=file:/var/lib/hanzo/console/app.db`) so
+it lands on the **same durable PVC `console-app-db`** with zero infra change
+(override via `HANZO_VECTOR_DB_PATH`). Server-only: client imports `AppRouter`
+type-only, so `node:sqlite` never enters the browser bundle.
+
+Surface (all `protectedProjectProcedure`): `stats`, `listCollections`,
+`createCollection`, `deleteCollection`, `upsert`, `search`. Domain errors
+(`VectorStoreError` CONFLICT/NOT_FOUND/BAD_REQUEST) map to tRPC codes. Tests:
+`web/src/__tests__/server/unit/vectorStore.servertest.ts` — 11 passing (create/
+list/dup-conflict/dim-mismatch/upsert/idempotent/cosine+euclidean KNN/project
+isolation/cascade-delete + path resolution).
+
+**Part 2 — "Search & AI" flat overload → products + sub-pages.** The group had 7
+flat sidebar items (Search, Indexes, Search Keys, Search Playground, Vector,
+Collections, Models). Reorganized to **3 product entries** (Search, Vector, Models);
+sub-pages now render as in-page tabs via the existing `PageHeader.tabsProps`
+(monochrome `border-primary-accent`, the same pattern as Tracing). New tab defs:
+`features/navigation/utils/{search-tabs,vector-tabs}.ts`. Search tabs = Overview /
+Indexes / Keys / Playground; Vector tabs = Overview / Collections. No dead links
+(sub-pages reachable via tabs), no duplication, one way. Removed now-unused
+`FileText`/`Key` icon imports from `routes.tsx`.
+
+**Deploy.** SSH remote (`git@github.com:hanzoai/console.git`), branch
+`feat/vector-sqlite-store`. Image built by arcd self-hosted CI (NOT evo, NOT local
+Docker); deployed via the operator's declared image on
+`services.hanzo.ai/console` (reconcile, not `kubectl set image`). Internal
+`VERSION.ts` → `v3.159.58`.
+
+## Search / Models / Prompts / Evals real backends — kill the rest of `api.cloud.hanzo.ai` (→ console 3.159.60-playground)
+
+Same dead-backend pattern as Vector, finished across the remaining products.
+
+**Search (was: all 500 — Search/Indexes/Keys/Playground).** `searchClient.ts`
+hard-coded `SEARCH_API_BASE="https://api.cloud.hanzo.ai"` (a host that 502s) and
+hit `/api/search-docs/*`, `/api/scrape-docs`, `/api/chat-docs` — never deployed.
+Deleted it; the router now calls a new
+`web/src/features/search/server/searchStore.ts` — the **exact Vector pattern**:
+`node:sqlite` lazy singleton, `projectId`-scoped, `resolveDbPath()` co-locates
+`search.db` on the same durable PVC (override `HANZO_SEARCH_DB_PATH`). It is
+self-contained and dependency-free: **crawl** (global `fetch` + a regex
+HTML→text/links extractor, BFS same-origin, bounded by `maxPages`/timeout),
+**rank** (a real lexical IR engine — BM25 for full-text/hybrid, a TF-IDF
+vector-space cosine for "vector" mode, scores normalized to (0,1] for the UI),
+**chat** = extractive RAG (grounded answer stitched from the best-matching
+passages in the project's own docs + sources), lazily-minted per-project
+`pk_`/`sk_` keys, daily-aggregated stats. Tables: `search_indexes`,
+`search_documents` (FK CASCADE), `search_keys`, `search_events`. Surface:
+`stats/listIndexes/createIndex/deleteIndex/reindex/query/chat/getKeys/
+regenerateKey/scrapePreview`; `SearchStoreError` → tRPC codes (mirrors Vector).
+Tests: `web/src/__tests__/server/unit/searchStore.servertest.ts` — 15 passing
+(put/list/replace, BM25 + vector-space ranking, highlights, honest-empty, RAG
+chat + sources, key mint/rotate, stats, project isolation, cascade delete).
+
+**Models (was: empty/masked).** `cloudModelClient.ts` pointed `/api/models` at an
+unreachable cloud host, so the list silently degraded to `[]`. The Models list now
+derives from the **reachable in-cluster pricing catalog**
+(`pricing.hanzo.svc:8080/v1/pricing/models` — the canonical priced model list the
+router already fetched), enriched by the Cloud API only when `CLOUD_API_URL` is
+set. `owned_by` is derived (explicit field → `owner/model` prefix → family
+heuristic), `premium`/pricing carried through. `/v1` not `/api`; bounded 5s fetch
+timeouts so an unreachable backend degrades fast.
+
+**Prompts.create + Evals.createJob(EXISTING) (was: 500).** Event sourcing and the
+historical-traces eval backfill are best-effort side-channels — the prompt/job is
+already persisted in the DB before the enqueue. They re-threw on a queue-backend
+failure (`promptChangeEventSourcing.ts` `throw error`; evals `throw "queue not
+found"` + un-caught `queue.add`), so a Temporal/queue hiccup 500-ed the user's
+create. Now both **swallow+log** (fire-and-forget) — one fix in the shared
+`promptChangeEventSourcing` (DRY, covers all prompt call-sites) + a try/catch
+around the evals `BatchActionQueue.add`. The web pod already runs the in-process
+`packages/mq` MemoryDriver (no `TEMPORAL_ADDRESS`), so the backfill also actually
+runs; the swallow is the durable guard for if Temporal is ever (re)configured.
+
+**Verification.** searchStore unit tests green (15/15); `tsc` clean on all
+new/rewritten files (the residual evals/prompts `tsc` errors are the pre-existing
+`@prisma/client`-not-generated artifact — identical with or without this change;
+CI runs `prisma generate`). **Live headless-Playwright matrix
+(`web/scripts/verify-job1.mjs`, superuser `z@hanzo.ai`) is BLOCKED by a
+fleet-wide IAM CF-edge outage**: the console pod's server-side OIDC token
+exchange (`iamServer.ts` → `IAM_SERVER_URL=https://hanzo.id`, a Cloudflare edge)
+gets **CF Error 1006 (egress IP banned)** — "Token exchange failed (502)". The
+laptop reaches the IAM edge fine (200); only the cluster egress is banned, so
+**all console logins fail server-side** until the egress IP is un-banned at
+Cloudflare. NOTE: there is **no in-cluster IAM service in `do-sfo3-hanzo-k8s`**
+(checked every namespace), so the [[kms-architecture]] "use `iam.hanzo.svc`" fix
+is NOT available here — the only remediations are (1) un-ban the cluster egress at
+the CF IAM zone, or (2) run/route an in-cluster IAM to point `IAM_SERVER_URL` at.
+Both are infra, not a console-product change. Not a Job-1 regression — the front
+door + new backends are deployed; the matrix flips green the moment login is
+restored (`verify-job1.mjs` is ready: Vector/Search/Models/Prompts over `/v1/trpc`).
+
+**Models pricing shape (correction).** `pricing.hanzo.svc /v1/pricing/models`
+actually returns `{models:[{name, provider, pricing:{input,output,cacheRead,
+cacheWrite}}]}` — costs USD **per 1M tokens**, `hanzoModels` have **no `id`** (key
+by `name`). The router maps that real shape (id=name, owned_by=provider,
+premium=paid, input/output→per-MTok+per-token); `ModelsTable` renders `created:0`
+as "—". Plus nav `isMostSpecificActive` (no parent+child double-highlight on the
+new Search/Vector sub-pages).
+
+**Deploy.** Tag `v3.159.60-playground` (supersedes 3.159.59 with the correct
+Models shape). Matches `pipeline.yml`/`build-and-push.yml` `v*` → arcd build +
+`repository-dispatch` to universe; does NOT match `release.yml`'s `v3.X.Y`
+(no formal release — the established side-build pattern). Image
+`ghcr.io/hanzoai/console:3.159.60-playground`. The running `console` deploy is
+**platform-managed** (`managed-by: hanzo-operator`, `part-of: platform`; the
+committed operator CR `console-v1.yaml` tag lags at `3.159.55-icons` while live is
+`3.159.58-playground`, so `-playground` cutovers go through platform.hanzo.ai, not
+that file). Cutover + live verify are gated on the IAM login restore (so the
+result is verifiable) and on arcd-runner availability (the fleet has been down —
+`console-build-*` Kaniko pods are the in-cluster fallback).
