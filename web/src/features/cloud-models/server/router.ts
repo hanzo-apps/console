@@ -21,42 +21,42 @@ import { env } from "@/src/env.mjs";
 const PRICING_API_URL =
   process.env.PRICING_API_URL ?? "http://pricing.hanzo.svc:8080";
 
+// Shape of one entry in the pricing service's `/v1/pricing/models` response.
+// Costs are USD per 1M tokens.
 type PricingModel = {
-  id: string;
-  owned_by?: string;
+  name: string;
   provider?: string;
-  premium?: boolean;
+  category?: string;
+  tier?: string;
   pricing?: {
-    input_cost_per_token?: number;
-    output_cost_per_token?: number;
-    input_cost_per_mtok?: number;
-    output_cost_per_mtok?: number;
+    input?: number;
+    output?: number;
+    cacheRead?: number;
+    cacheWrite?: number;
   };
 };
 
 function mapPricing(p: PricingModel["pricing"]): ModelPricing | null {
   if (!p) return null;
   return {
-    inputCostPerToken: p.input_cost_per_token,
-    outputCostPerToken: p.output_cost_per_token,
-    inputCostPerMTok: p.input_cost_per_mtok,
-    outputCostPerMTok: p.output_cost_per_mtok,
+    inputCostPerMTok: p.input,
+    outputCostPerMTok: p.output,
+    inputCostPerToken: p.input != null ? p.input / 1_000_000 : undefined,
+    outputCostPerToken: p.output != null ? p.output / 1_000_000 : undefined,
   };
 }
 
-/** Best-effort owner: explicit field, else the `owner/model` prefix, else a
- * heuristic from the model family. Grouping falls back to the raw string. */
+/** Best-effort owner: the explicit `provider`, else the `owner/model` prefix,
+ * else a heuristic from the model family. Grouping falls back to the raw value. */
 function deriveOwner(m: PricingModel): string {
-  if (m.owned_by) return m.owned_by;
   if (m.provider) return m.provider;
-  if (m.id.includes("/")) return m.id.split("/")[0]!;
-  const id = m.id.toLowerCase();
+  const id = m.name.toLowerCase();
+  if (id.includes("/")) return id.split("/")[0]!;
   if (/(^|[^a-z])(gpt|o1|o3|davinci|text-embedding)/.test(id))
     return "openai-direct";
   if (id.includes("claude")) return "anthropic";
   if (id.includes("gemini")) return "google";
   if (id.includes("llama")) return "fireworks";
-  if (id.includes("zen") || id.includes("hanzo")) return "hanzo";
   return "hanzo";
 }
 
@@ -108,15 +108,18 @@ export const cloudModelsRouter = createTRPCRouter({
       const seen = new Set<string>();
 
       for (const pm of pricingModels) {
-        if (seen.has(pm.id)) continue;
-        seen.add(pm.id);
-        const cloud = cloudById.get(pm.id);
+        if (!pm.name || seen.has(pm.name)) continue;
+        seen.add(pm.name);
+        const cloud = cloudById.get(pm.name);
+        // "Premium" simply means the model costs money (any positive rate).
+        const paid =
+          (pm.pricing?.input ?? 0) > 0 || (pm.pricing?.output ?? 0) > 0;
         data.push({
-          id: pm.id,
+          id: pm.name,
           object: "model",
           created: 0,
           owned_by: cloud?.owned_by ?? deriveOwner(pm),
-          premium: cloud?.premium ?? pm.premium ?? false,
+          premium: cloud?.premium ?? paid,
           pricing: mapPricing(pm.pricing),
         });
       }

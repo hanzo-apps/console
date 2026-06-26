@@ -61,15 +61,11 @@ export const BookACallButton = () => {
         capture("sidebar:book_a_call_clicked");
         if (window.Cal) {
           window.Cal("modal", {
-            calLink: "hanzo/welcome-to-hanzo",
+            calLink: "hanzo",
             config: { layout: "month_view", theme: "dark" },
           });
         } else {
-          window.open(
-            "https://cal.com/hanzo/welcome-to-hanzo",
-            "_blank",
-            "noopener,noreferrer",
-          );
+          window.open("https://cal.com/hanzo", "_blank", "noopener,noreferrer");
         }
       }}
     >
