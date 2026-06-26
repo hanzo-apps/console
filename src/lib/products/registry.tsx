@@ -1,12 +1,15 @@
 /**
- * Product-module registry — the extensibility backbone of the console.
+ * Product catalog — the single source of truth for the unified console.
  *
- * "All cloud products" are admin modules. Each module declares its nav label,
- * icon, and routes once, here. The nav shell and router render from this list,
- * so adding a product = adding one `ProductModule` entry — no shell edits.
+ * ONE list (`catalog`) describes every Hanzo product, whether it is an
+ * in-console admin module (owns routes, rendered here) or an external surface
+ * (owned by another service, opened in a tab). The nav shell, the catalog
+ * overview, the favorites system, and the router all render from this list, so
+ * surfacing a product = adding ONE `CatalogEntry` — no shell/route/page edits.
  *
- * A module is orthogonal: it owns its routes and components, knows nothing about
- * siblings. The registry only composes them.
+ * Orthogonal: an entry owns its identity + how it opens and knows nothing about
+ * siblings. The catalog only composes them. `productModules` (the in-console
+ * subset) is derived, so the router/match layer is unchanged.
  */
 import type { ComponentType } from 'react'
 import {
@@ -16,8 +19,14 @@ import {
   Database,
   MessageSquare,
   CreditCard,
-  Key,
   Search,
+  Bot,
+  BarChart3,
+  Workflow,
+  FileSignature,
+  Shield,
+  Key,
+  Cloud,
   HardDrive,
   FileText,
   Layers,
@@ -31,12 +40,12 @@ import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { StoresModule } from '~/components/products/StoresModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { resourceModule } from '~/components/products/ResourceModule'
-import { comingSoon, type ProductStatus } from '~/components/products/ComingSoonModule'
+import { comingSoon } from '~/components/products/ComingSoonModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
 
-/** One screen inside a product module. */
+/** One screen inside an in-console product module. */
 export type ProductRoute = {
   /** Path segment under the product, '' for the index. */
   path: string
@@ -44,39 +53,89 @@ export type ProductRoute = {
   component: ComponentType<{ params: Record<string, string> }>
 }
 
-/** A cloud product, surfaced as an admin module in the console. */
-export type ProductModule = {
+/** Category grouping for the nav + catalog. Order here is display order. */
+export type ProductCategory =
+  | 'AI'
+  | 'Data'
+  | 'Apps'
+  | 'Identity'
+  | 'Infrastructure'
+  | 'Commerce'
+
+export const categoryOrder: ProductCategory[] = [
+  'AI',
+  'Data',
+  'Apps',
+  'Identity',
+  'Infrastructure',
+  'Commerce',
+]
+
+/**
+ * Enablement state — drives the nav badge + Open vs Get started.
+ * `enabled` opens straight into its surface; `available` is offered with a
+ * "Get started" onboarding affordance; `soon` = the product exists (its repo
+ * ships) but its console module isn't wired here yet; `waitlist` = gauging
+ * demand before building it.
+ */
+export type ProductStatus = 'enabled' | 'available' | 'soon' | 'waitlist'
+
+type CatalogBase = {
   /** Stable id and base path segment, e.g. 'providers'. */
   id: string
-  /** Nav label. */
+  /** Display label. */
   label: string
-  /** Nav icon. */
+  /** Display icon. */
   icon: ProductIcon
-  /** One-line description for the dashboard. */
+  /** One-line description for the catalog + nav. */
   description: string
-  /**
-   * Enablement state — drives the nav badge + landing. Omitted means 'enabled'.
-   * 'soon' = the product exists (its repo ships) but its console module isn't
-   * wired here yet; 'waitlist' = gauging demand before building it.
-   */
-  status?: ProductStatus
+  /** Category grouping. */
+  category: ProductCategory
+  /** Enablement state — drives the nav badge + Open vs Get started. */
+  status: ProductStatus
   /** Source repo for the product, e.g. 'hanzoai/vector'. */
   repo?: string
-  /** Screens. The first route ('') is the module landing. */
-  routes: ProductRoute[]
+  /** Admin-gated surface (shown with a lock hint; access enforced server-side). */
+  admin?: boolean
 }
 
 /**
- * The registered cloud products. Order here is nav order.
- *
- * To add a product: implement its module component(s) and append an entry.
+ * A catalog entry is EITHER an in-console module (owns routes) OR an external
+ * surface (owned by another service, opened in a new tab). Discriminated on
+ * `kind` so consumers branch exhaustively.
  */
-export const productModules: ProductModule[] = [
+export type CatalogEntry =
+  | (CatalogBase & { kind: 'module'; routes: ProductRoute[] })
+  | (CatalogBase & { kind: 'external'; href: string })
+
+/** Canonical external product surfaces (public product domains, not secrets). */
+const ext = {
+  search: 'https://search.hanzo.ai',
+  bot: 'https://hanzo.bot',
+  analytics: 'https://analytics.hanzo.ai',
+  flow: 'https://flow.hanzo.ai',
+  sign: 'https://sign.hanzo.ai',
+  iam: config.iamUrl,
+  kms: 'https://kms.hanzo.ai',
+  platform: 'https://platform.hanzo.ai',
+  billing: config.billingUrl,
+} as const
+
+/**
+ * The Hanzo product catalog. In-console modules render here; external surfaces
+ * open in a tab. Billing is the ONE money surface for every product
+ * (hanzoai/billing over the commerce backend) — never reimplemented here.
+ */
+export const catalog: CatalogEntry[] = [
+  // ── AI ───────────────────────────────────────────────────────────────
   {
     id: 'providers',
     label: 'Providers',
     icon: Server,
     description: 'Model, storage, and embedding providers.',
+    category: 'AI',
+    status: 'enabled',
+    kind: 'module',
     routes: [
       { path: '', component: ProvidersModule },
       { path: ':name', component: ProvidersModule },
@@ -87,29 +146,12 @@ export const productModules: ProductModule[] = [
     label: 'Models',
     icon: RouteIcon,
     description: 'Model routes and routing policy.',
+    category: 'AI',
+    status: 'enabled',
+    kind: 'module',
     routes: [
       { path: '', component: ModelsModule },
       { path: ':name', component: ModelsModule },
-    ],
-  },
-  {
-    id: 'applications',
-    label: 'Applications',
-    icon: Boxes,
-    description: 'Deployed applications.',
-    routes: [
-      { path: '', component: ApplicationsModule },
-      { path: ':name', component: ApplicationsModule },
-    ],
-  },
-  {
-    id: 'stores',
-    label: 'Stores',
-    icon: Database,
-    description: 'Knowledge stores and vectors.',
-    routes: [
-      { path: '', component: StoresModule },
-      { path: ':name', component: StoresModule },
     ],
   },
   {
@@ -117,10 +159,60 @@ export const productModules: ProductModule[] = [
     label: 'Chat',
     icon: MessageSquare,
     description: 'Chat sessions and history.',
+    category: 'AI',
+    status: 'enabled',
+    kind: 'module',
     routes: [
       { path: '', component: ChatModule },
       { path: ':name', component: ChatModule },
     ],
+  },
+  {
+    // External AI search surface (search.hanzo.ai). Distinct from the managed
+    // Search data product below (id 'search'), which provisions search infra.
+    id: 'ai-search',
+    label: 'AI Search',
+    icon: Search,
+    description: 'AI-powered search with generative answers.',
+    category: 'AI',
+    status: 'available',
+    kind: 'external',
+    href: ext.search,
+  },
+  {
+    id: 'bot',
+    label: 'Bot',
+    icon: Bot,
+    description: 'Bot framework, skills, and plugins.',
+    category: 'AI',
+    status: 'available',
+    kind: 'external',
+    href: ext.bot,
+  },
+
+  // ── Data ─────────────────────────────────────────────────────────────
+  {
+    id: 'stores',
+    label: 'Stores',
+    icon: Database,
+    description: 'Knowledge stores and vector indexes.',
+    category: 'Data',
+    status: 'enabled',
+    kind: 'module',
+    routes: [
+      { path: '', component: StoresModule },
+      { path: ':name', component: StoresModule },
+    ],
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: BarChart3,
+    description: 'Product analytics, events, and sessions.',
+    category: 'Data',
+    status: 'available',
+    kind: 'external',
+    href: ext.analytics,
   },
 
   // ── Data & storage — Hanzo Cloud as an OSS Google Cloud. Each is a ZAP-native
@@ -129,75 +221,217 @@ export const productModules: ProductModule[] = [
   //    per-product `kind` is the only thing that varies. Base has no single
   //    logical-resource concept yet, so it stays a 'soon' placeholder.
   {
-    id: 'vector', label: 'Vector', icon: Boxes, repo: 'hanzoai/vector',
+    id: 'vector',
+    label: 'Vector',
+    icon: Boxes,
     description: 'Managed vector database — embeddings & semantic search.',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/vector',
+    kind: 'module',
     routes: [{ path: '', component: resourceModule({ kind: 'vector', productLabel: 'Hanzo Vector', connectionHint: 'Point a Vector client at host:port using the connection string.' }) }],
   },
   {
-    id: 'sql', label: 'SQL', icon: Database, repo: 'hanzoai/sql',
+    id: 'sql',
+    label: 'SQL',
+    icon: Database,
     description: 'Managed SQL — databases, branches, replicas.',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/sql',
+    kind: 'module',
     routes: [{ path: '', component: resourceModule({ kind: 'sql', productLabel: 'Hanzo SQL', connectionHint: 'Connect any SQL client with the connection string.' }) }],
   },
   {
-    id: 'datastore', label: 'Datastore', icon: Server, repo: 'hanzoai/datastore',
+    id: 'datastore',
+    label: 'Datastore',
+    icon: Server,
     description: 'Managed columnar analytics (OLAP).',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/datastore',
+    kind: 'module',
     routes: [{ path: '', component: resourceModule({ kind: 'datastore', productLabel: 'Hanzo Datastore', connectionHint: 'Connect over the Datastore HTTP/native protocol using the connection string.' }) }],
   },
   {
-    id: 'kv', label: 'KV', icon: Key, repo: 'hanzoai/kv',
+    id: 'kv',
+    label: 'KV',
+    icon: Key,
     description: 'Managed key-value store — cache & queues.',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/kv',
+    kind: 'module',
     routes: [{ path: '', component: resourceModule({ kind: 'kv', productLabel: 'Hanzo KV', connectionHint: 'Connect with any KV client using the connection string.' }) }],
   },
   {
-    id: 'search', label: 'Search', icon: Search, repo: 'hanzoai/search',
+    id: 'search',
+    label: 'Search',
+    icon: Search,
     description: 'Managed search — full-text & hybrid indexes.',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/search',
+    kind: 'module',
     routes: [{ path: '', component: resourceModule({ kind: 'search', productLabel: 'Hanzo Search', connectionHint: 'Use the Search host + key from the connection string.' }) }],
   },
   {
-    id: 's3', label: 'S3', icon: HardDrive, repo: 'hanzoai/s3',
+    id: 's3',
+    label: 'S3',
+    icon: HardDrive,
     description: 'Managed object storage — S3 buckets.',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/s3',
+    kind: 'module',
     routes: [{ path: '', component: resourceModule({ kind: 's3', productLabel: 'Hanzo S3', connectionHint: 'Use as an S3 endpoint with the access key/secret in the connection string.' }) }],
   },
   {
-    id: 'base', label: 'Base', icon: Layers, status: 'soon', repo: 'hanzoai/base',
-    description: 'Managed app backend — embedded DB + auth + realtime.',
-    routes: [{ path: '', component: comingSoon({ label: 'Hanzo Base', repo: 'hanzoai/base', status: 'soon', blurb: 'Managed application backend — Hanzo Base. Embedded SQL + auth + realtime + file storage in one deploy, IAM-native.' }) }],
-  },
-  {
-    id: 'docdb', label: 'DocDB', icon: FileText, repo: 'hanzoai/docdb',
+    id: 'docdb',
+    label: 'DocDB',
+    icon: FileText,
     description: 'Managed document database.',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/docdb',
+    kind: 'module',
     routes: [{ path: '', component: resourceModule({ kind: 'docdb', productLabel: 'Hanzo DocDB', connectionHint: 'Connect with any DocDB driver using the connection string.' }) }],
   },
-
-  // ── Infrastructure — where workloads run. Deploying any repo is the role of
-  //    the Applications module above (connect → build → deploy). Clusters is the
-  //    one new control-plane surface: pick *where* — shared Hanzo Cloud (zero-ops,
-  //    multi-tenant) or your own / Hanzo-provisioned DOKS cluster, reconciled by
-  //    the same operator. One control plane, many targets.
   {
-    id: 'clusters', label: 'Clusters', icon: Network, status: 'soon', repo: 'hanzoai/operator',
+    id: 'base',
+    label: 'Base',
+    icon: Layers,
+    description: 'Managed app backend — embedded DB + auth + realtime.',
+    category: 'Data',
+    status: 'soon',
+    repo: 'hanzoai/base',
+    kind: 'module',
+    routes: [{ path: '', component: comingSoon({ label: 'Hanzo Base', repo: 'hanzoai/base', status: 'soon', blurb: 'Managed application backend — Hanzo Base. Embedded SQL + auth + realtime + file storage in one deploy, IAM-native.' }) }],
+  },
+
+  // ── Apps ─────────────────────────────────────────────────────────────
+  {
+    id: 'applications',
+    label: 'Applications',
+    icon: Boxes,
+    description: 'Deployed applications.',
+    category: 'Apps',
+    status: 'enabled',
+    kind: 'module',
+    routes: [
+      { path: '', component: ApplicationsModule },
+      { path: ':name', component: ApplicationsModule },
+    ],
+  },
+  {
+    id: 'flow',
+    label: 'Flow',
+    icon: Workflow,
+    description: 'Visual workflow and automation builder.',
+    category: 'Apps',
+    status: 'available',
+    kind: 'external',
+    href: ext.flow,
+  },
+  {
+    id: 'sign',
+    label: 'Sign',
+    icon: FileSignature,
+    description: 'eSignatures and document workflows.',
+    category: 'Apps',
+    status: 'available',
+    kind: 'external',
+    href: ext.sign,
+  },
+
+  // ── Identity ─────────────────────────────────────────────────────────
+  {
+    id: 'iam',
+    label: 'Identity',
+    icon: Shield,
+    description: 'Identity, access, OAuth, and SSO.',
+    category: 'Identity',
+    status: 'available',
+    admin: true,
+    kind: 'external',
+    href: ext.iam,
+  },
+  {
+    id: 'kms',
+    label: 'Secrets',
+    icon: Key,
+    description: 'Secrets management and encryption (KMS).',
+    category: 'Identity',
+    status: 'available',
+    admin: true,
+    kind: 'external',
+    href: ext.kms,
+  },
+
+  // ── Infrastructure ───────────────────────────────────────────────────
+  {
+    id: 'platform',
+    label: 'Platform',
+    icon: Cloud,
+    description: 'PaaS deployments, domains, and builds.',
+    category: 'Infrastructure',
+    status: 'available',
+    admin: true,
+    kind: 'external',
+    href: ext.platform,
+  },
+  {
+    // Clusters — the one new control-plane surface: pick *where* workloads run —
+    // shared Hanzo Cloud (zero-ops, multi-tenant) or your own / Hanzo-provisioned
+    // DOKS cluster, reconciled by the same operator. One control plane, many targets.
+    id: 'clusters',
+    label: 'Clusters',
+    icon: Network,
     description: 'Your Kubernetes — shared Hanzo Cloud or your own DOKS.',
+    category: 'Infrastructure',
+    status: 'soon',
+    repo: 'hanzoai/operator',
+    kind: 'module',
     routes: [{ path: '', component: comingSoon({ label: 'Hanzo Clusters', repo: 'hanzoai/operator', status: 'soon', blurb: 'One control plane for where your workloads run — choose zero-ops shared Hanzo Cloud or bring your own DOKS cluster, both reconciled by the Hanzo operator.' }) }],
+  },
+
+  // ── Commerce ─────────────────────────────────────────────────────────
+  {
+    id: 'billing',
+    label: 'Billing',
+    icon: CreditCard,
+    description: 'Balance, usage, and invoices for every product.',
+    category: 'Commerce',
+    status: 'enabled',
+    kind: 'external',
+    href: ext.billing,
   },
 ]
 
-/** Look up a module by id (base path segment). */
-export const findModule = (id: string): ProductModule | undefined =>
-  productModules.find((m) => m.id === id)
-
-/** A nav item that opens an external Hanzo surface (not an in-console route). */
-export type ExternalNavLink = {
+/** In-console module (router/match) shape — derived from the catalog. */
+export type ProductModule = {
   id: string
   label: string
   icon: ProductIcon
-  href: string
+  description: string
+  routes: ProductRoute[]
 }
 
-/**
- * External products surfaced in the nav but owned by other services — opened in
- * a new tab, never reimplemented here. Billing is hanzoai/commerce (backend) +
- * hanzoai/billing (portal); the console links to it.
- */
-export const externalLinks: ExternalNavLink[] = [
-  { id: 'billing', label: 'Billing', icon: CreditCard, href: config.billingUrl },
-]
+/** The in-console subset, in catalog order. The router/match layer reads this. */
+export const productModules: ProductModule[] = catalog
+  .filter((e): e is Extract<CatalogEntry, { kind: 'module' }> => e.kind === 'module')
+  .map(({ id, label, icon, description, routes }) => ({ id, label, icon, description, routes }))
+
+/** Look up an in-console module by id (base path segment). */
+export const findModule = (id: string): ProductModule | undefined =>
+  productModules.find((m) => m.id === id)
+
+/** Look up any catalog entry by id. */
+export const findEntry = (id: string): CatalogEntry | undefined =>
+  catalog.find((e) => e.id === id)
+
+/** The catalog grouped by category, in display order, skipping empty groups. */
+export const catalogByCategory = (): { category: ProductCategory; entries: CatalogEntry[] }[] =>
+  categoryOrder
+    .map((category) => ({ category, entries: catalog.filter((e) => e.category === category) }))
+    .filter((g) => g.entries.length > 0)

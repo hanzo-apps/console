@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
-import { ApiError, ProviderApi, type Provider } from '~/lib/api'
+import { ApiError, ProviderApi, type Provider } from '~/lib/zap'
 import {
   FieldRow,
   FieldText,
