@@ -123,6 +123,18 @@ const nextConfig = {
     "@hanzo/insights-node",
     "@opentelemetry/sdk-node",
     "@opentelemetry/instrumentation-winston",
+    // LangChain ships dual CJS/ESM; letting Next bundle it into App Router
+    // route handlers (e.g. /api/chatCompletion -> fetchLLMCompletion) breaks
+    // class interop at runtime ("X is not a constructor"). Keep them external
+    // so they load via Node's native module resolution.
+    "@langchain/core",
+    "@langchain/openai",
+    "@langchain/anthropic",
+    "@langchain/aws",
+    "@langchain/google",
+    "@langchain/google-genai",
+    "@langchain/google-vertexai",
+    "langchain",
   ],
   poweredByHeader: false,
   basePath: env.NEXT_PUBLIC_BASE_PATH,
