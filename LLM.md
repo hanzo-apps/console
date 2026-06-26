@@ -137,3 +137,61 @@ npm run dev                  # http://localhost:4000
 
 Data layer is the unified `/v1` backend — this repo is frontend only. Do NOT
 add Postgres/Mongo/etc. Do NOT build Docker images locally (CI/CD does that).
+
+## Cloud console — 10-category CLOUD AXIS + embedded PaaS (feat/cloud-taxonomy-10cat)
+
+The catalog (`src/lib/products/registry.tsx`) is reorganized from 6 ad-hoc
+categories to the canonical **10-category cloud axis** (the same taxonomy as the
+hanzo.ai product surface, `/tmp/hanzo-cloud-taxonomy.md`), so console2 reads like
+a cloud console (GCP/AWS) — resources grouped by cloud primitive, two rows of
+five:
+
+```
+AI        Compute     Data        Network     Security
+Dev       Deploy      Observe     Chain       Apps
+```
+
+**Three entry kinds, zero dead links, zero fakes** (`CatalogEntry.kind` +
+`status`):
+- `module`  — in-console admin surface (Providers/Models/Chat/Stores=Vector/
+  Applications, + the embedded PaaS).
+- `external`— a REAL Hanzo product on its own domain (Inference→api.hanzo.ai,
+  Search→search.hanzo.ai, Bot→hanzo.bot, IAM→iam, KMS→kms, Observe/Traces/
+  Dashboards→console.hanzo.ai, Analytics, Cost→billing, Object Storage→s3,
+  Edge, Flow, Sign, Crawl, Studio).
+- `soon`    — a real cloud primitive without a UI yet (GPUs, VPC, HSM, Settlement,
+  …). Renders an HONEST in-console "coming soon" overview (`ComingSoon.tsx`,
+  resolved by id from the path) that points at the API/CLI — **never a 404 and
+  never a fabricated product card**. A `soon` entry is a `module` under the hood
+  (single route → `ComingSoon`), so routing is unchanged.
+
+The nav shell, catalog home, favorites, and router still render from the one
+`catalog` list. `status: 'soon'` shows a "Coming soon" badge + affordance.
+
+### Job 3 — PaaS embedded natively under Deploy (NOT an iframe)
+
+`PlatformModule.tsx` is the embedded PaaS, wired to the REAL platform.hanzo.ai
+control plane. The browser calls console2's OWN origin under `/paas/*`; the
+server route `app/paas/[...path]/route.ts` forwards to `platform.hanzo.ai/v1/*`
+with the service token from **server-only** env `PAAS_SERVICE_TOKEN` (sourced via
+KMS — never `NEXT_PUBLIC_`, never in the browser bundle, no CORS). It lists real
+apps across clusters with **declared vs running tag + drift** and a real
+health-gated **redeploy** (`POST /v1/apps/<id>/redeploy`). The six Deploy
+sub-pages (Projects/Environments/Builds/Registry/Releases/Pipelines) are tabs
+over the same real inventory. States are honest: loading, **not-configured (501
+when `PAAS_SERVICE_TOKEN` is unset)**, error, empty — it never invents rows.
+To light up real data in prod: add `PAAS_SERVICE_TOKEN` (+ optional
+`PLATFORM_URL`) to the console2 deployment env via a KMSSecret.
+
+### Job 4 — no fake/placeholder/stub data
+
+The catalog is honest by construction (every leaf → real module, real product
+domain, or honest `soon` overview). The PaaS embed shows only real control-plane
+data with honest empty/not-configured states. No lorem stats, no demo projects,
+no placeholder cards.
+
+Build/deploy: arcd self-hosted CI (`.github/workflows/build-image.yml`, push to
+`main` → `ghcr.io/hanzoai/console2:sha-<sha>`). When the runner fleet is down,
+fall back to an in-cluster Kaniko build, then deploy via the operator's declared
+image. Verify live with headless Playwright on console2.hanzo.ai (superuser
+`z@hanzo.ai`).
