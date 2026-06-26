@@ -3,6 +3,11 @@
 
 @source "../../node_modules/@ferrucc-io/emoji-picker/dist";
 @source "../../node_modules/streamdown/dist/*.js";
+/* @hanzo/ui ships compiled components whose Tailwind utilities (e.g. the Alert
+   icon slot `[&>svg~*]:pl-7`) live only in its bundle. Tailwind v4 ignores
+   node_modules by default, so scan the root barrel or those classes are never
+   generated and icons overlap headings (Sessions/Users/etc. empty states). */
+@source "../../node_modules/@hanzo/ui/dist/*.mjs";
 
 @plugin "@tailwindcss/forms";
 @plugin "tailwindcss-animate";
