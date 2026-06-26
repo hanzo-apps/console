@@ -604,3 +604,58 @@ services.hanzo.ai/console -p '{"spec":{"image":{"tag":"3.159.50-mono"}}}'` →
 operator rolls the deployment. **Verify creds:** `z@hanzo.ai` /
 `IloveHanzo2026!!!` (THREE `!`, not two — Casdoor rate-limits to a 15-min
 lockout after a few wrong tries; a `!!` typo cost a cooldown).
+
+## Finish + authenticated verification of the 7-ask rework (→ console 3.159.54-mono4)
+
+Prior session built `3.159.52-mono2` (HEAD `397d075ee`) but died before deploying
+it — the live tag was still `3.159.51-fix`, one commit behind (missing the final
+navy/slate/rgb de-blue). This session **finished + verified live**.
+
+**Found the one real incomplete item (ask #1).** The earlier cleanup scan only
+checked the *Billing* settings page (0 blue) — it missed **Organization Settings →
+General**, whose "Debug Information" JSONView (and every trace I/O panel) renders
+the `react18-json-view` **github/base theme**: keys/numbers/booleans `#005cc5`
+(light) / `#79b8ff` (dark), strings `#032f62` navy. That is vendor CSS — not a
+Tailwind class or source hex — so the source grep (still 0 blue classes/hex) and
+the billing-only browser scan both passed while **General had 19 blue elements
+live**. Fix (`694f83663`, one DRY override in `globals.css`):
+```
+.json-view { color/--json-* → hsl(var(--foreground|--muted-foreground)) !important; }
+```
+catches every JSON viewer in one place, monochrome in light+dark, keeps the
+semantic green/red. `!important` matches the file's existing vendor-override
+pattern (vaul, react-resizable) and beats the lib CSS, which `_app.tsx` imports
+*after* `globals.css`. **Proven before building:** injected the exact CSS into the
+live General page → blue **29 → 0** (A/B). The other 5 settings pages
+(Identity & Access, Members, API Keys, Audit Logs, Billing) were already 0.
+
+**Verify harness** (`web/scripts/verify-console-cleanup.mjs`, now canonical):
+accepts `ORG_ID`/`PROJECT_ID` (a freshly-seeded pod has no org links on the
+landing page — the admin account `z@hanzo.ai` shows as console user `z@ad.nexus`
+with **zero orgs**, so create one via `/setup`: org+default-project wizard) and
+blue-scans **all six** settings pages, not just Billing. Verification org/project:
+`cmqud6t53000on607zzi7zcps` / `cmqud6xco000tn607drmm60q7` (named `mono-verify`,
+kept for re-runs).
+
+**Build + deploy.** Built on **evo** (`ssh evo`, amd64, NOT local Docker) from
+git HEAD `694f83663`, `docker buildx build --platform linux/amd64 --push -t
+ghcr.io/hanzoai/console:3.159.54-mono4` (digest `sha256:df7fe896…`; GHCR push hit
+a transient `tls: bad record MAC` once — a retry loop handled it; auth = `zooqueen`
+gh token, which *does* carry `write:packages`). Deployed via the operator CR:
+`kubectl patch services.hanzo.ai/console -p '{"spec":{"image":{"tag":"3.159.54-mono4"}}}'`
+→ operator reconciled instantly, pod `console-77ddc488c-*` 2/2, `/` 200. PVC DB
+persisted ("existing SQLite db kept").
+
+**Authenticated result on the live `3.159.54-mono4`** (headless login via hanzo.id
+OIDC, all 7 asks PASS):
+| # | ask | proof |
+|---|-----|-------|
+| 1 | full monochrome | computed-style blue scan = **0** on product + **all 6** settings pages (billing/general/identityAccess/members/apiKeys/auditLogs); General fixed 19→0 |
+| 2 | no `v4.0.0` | `versionV4=false` |
+| 3 | no Star-HanzoCloud widget | `starWidget=false` |
+| 4 | H-mark only + app-selector right | `wordmark=false`, `appSelectorSide=right` |
+| 5 | no KMS in org settings nav | `kmsInSettings=false`; nav = General/Identity&Access/API Keys/Members/Audit Logs/Billing/Projects |
+| 6 | nav regrouped | groups = Observability / Prompt Management / Evaluation / Search & AI (+ ungrouped Home, Dashboards) |
+| 7 | @hanzo/gui spacing | tightened sidebar header (H-left / grid-right), mark-only logo |
+
+Screenshots: `/tmp/console-verify/after/{billing,general,members,product-traces,sidebar}.png`.

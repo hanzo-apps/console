@@ -257,6 +257,7 @@ async function main() {
       R.blue.settingsPages = { billing: (R.blue.billing || []).length };
       for (const [name, slug] of [
         ["general", "index"],
+        ["identityAccess", "iam"],
         ["members", "members"],
         ["apiKeys", "api-keys"],
         ["auditLogs", "audit-logs"],
