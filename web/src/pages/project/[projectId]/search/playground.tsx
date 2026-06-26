@@ -1,6 +1,10 @@
 import { useRouter } from "next/router";
 import ContainerPage from "@/src/components/layouts/container-page";
 import { SearchPlayground } from "@/src/features/search/components/SearchPlayground";
+import {
+  getSearchTabs,
+  SEARCH_TABS,
+} from "@/src/features/navigation/utils/search-tabs";
 
 export default function SearchPlaygroundPage() {
   const router = useRouter();
@@ -11,8 +15,11 @@ export default function SearchPlaygroundPage() {
   return (
     <ContainerPage
       headerProps={{
-        title: "Search Playground",
-        breadcrumb: [{ name: "Search", href: `/project/${projectId}/search` }],
+        title: "Search",
+        tabsProps: {
+          tabs: getSearchTabs(projectId),
+          activeTab: SEARCH_TABS.PLAYGROUND,
+        },
       }}
     >
       <SearchPlayground projectId={projectId} />
