@@ -5,6 +5,10 @@ import { Button } from "@/src/components/ui/button";
 import { SearchStatsCards } from "@/src/features/search/components/SearchStatsCards";
 import { SearchUsageChart } from "@/src/features/search/components/SearchUsageChart";
 import { FileText, Search, Key } from "lucide-react";
+import {
+  getSearchTabs,
+  SEARCH_TABS,
+} from "@/src/features/navigation/utils/search-tabs";
 
 export default function SearchOverviewPage() {
   const router = useRouter();
@@ -19,8 +23,13 @@ export default function SearchOverviewPage() {
       headerProps={{
         title: "Search",
         help: {
-          description: "Manage search indexes, test queries, and view API keys for Hanzo Search.",
+          description:
+            "Manage search indexes, test queries, and view API keys for Hanzo Search.",
           href: "https://hanzo.ai/docs/search",
+        },
+        tabsProps: {
+          tabs: getSearchTabs(projectId),
+          activeTab: SEARCH_TABS.OVERVIEW,
         },
       }}
     >
@@ -30,29 +39,38 @@ export default function SearchOverviewPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Link href={`/project/${projectId}/search/indexes`} className="group">
-            <div className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-              <FileText className="h-8 w-8 text-muted-foreground group-hover:text-primary" />
+            <div className="hover:bg-muted/50 flex items-center gap-3 rounded-lg border p-4 transition-colors">
+              <FileText className="text-muted-foreground group-hover:text-primary h-8 w-8" />
               <div>
                 <p className="font-medium">Index New Site</p>
-                <p className="text-sm text-muted-foreground">Scrape and index web pages for search</p>
+                <p className="text-muted-foreground text-sm">
+                  Scrape and index web pages for search
+                </p>
               </div>
             </div>
           </Link>
-          <Link href={`/project/${projectId}/search/playground`} className="group">
-            <div className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-              <Search className="h-8 w-8 text-muted-foreground group-hover:text-primary" />
+          <Link
+            href={`/project/${projectId}/search/playground`}
+            className="group"
+          >
+            <div className="hover:bg-muted/50 flex items-center gap-3 rounded-lg border p-4 transition-colors">
+              <Search className="text-muted-foreground group-hover:text-primary h-8 w-8" />
               <div>
                 <p className="font-medium">Test Search</p>
-                <p className="text-sm text-muted-foreground">Try search queries in the playground</p>
+                <p className="text-muted-foreground text-sm">
+                  Try search queries in the playground
+                </p>
               </div>
             </div>
           </Link>
           <Link href={`/project/${projectId}/search/keys`} className="group">
-            <div className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-              <Key className="h-8 w-8 text-muted-foreground group-hover:text-primary" />
+            <div className="hover:bg-muted/50 flex items-center gap-3 rounded-lg border p-4 transition-colors">
+              <Key className="text-muted-foreground group-hover:text-primary h-8 w-8" />
               <div>
                 <p className="font-medium">View API Keys</p>
-                <p className="text-sm text-muted-foreground">Get keys and code snippets</p>
+                <p className="text-muted-foreground text-sm">
+                  Get keys and code snippets
+                </p>
               </div>
             </div>
           </Link>

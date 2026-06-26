@@ -1,6 +1,10 @@
 import { useRouter } from "next/router";
 import ContainerPage from "@/src/components/layouts/container-page";
 import { SearchApiKeys } from "@/src/features/search/components/SearchApiKeys";
+import {
+  getSearchTabs,
+  SEARCH_TABS,
+} from "@/src/features/navigation/utils/search-tabs";
 
 export default function SearchKeysPage() {
   const router = useRouter();
@@ -11,8 +15,11 @@ export default function SearchKeysPage() {
   return (
     <ContainerPage
       headerProps={{
-        title: "Search API Keys",
-        breadcrumb: [{ name: "Search", href: `/project/${projectId}/search` }],
+        title: "Search",
+        tabsProps: {
+          tabs: getSearchTabs(projectId),
+          activeTab: SEARCH_TABS.KEYS,
+        },
       }}
     >
       <SearchApiKeys projectId={projectId} />

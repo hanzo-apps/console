@@ -659,3 +659,48 @@ OIDC, all 7 asks PASS):
 | 7 | @hanzo/gui spacing | tightened sidebar header (H-left / grid-right), mark-only logo |
 
 Screenshots: `/tmp/console-verify/after/{billing,general,members,product-traces,sidebar}.png`.
+
+## Vector → real product on SQLite + Search & AI sub-pages (→ console 3.159.58-vector)
+
+**Root cause of the `vector.createCollection` 404.** The tRPC `vector` router was
+mounted fine (`root.ts` → `vector: vectorRouter`) but every procedure proxied an
+HTTP call via `vectorClient.ts` to `https://api.cloud.hanzo.ai/api/vector/*` — a
+route that was never deployed (404), and which also violated the `/v1`-not-`/api`
+rule. The frontend (stat cards, CreateCollectionDialog, CollectionsTable) was wired
+to a backend that did not exist.
+
+**Fix — back Vector with the canonical Hanzo store: SQLite, in-process, no external
+vector DB.** Deleted `vectorClient.ts`; the router now calls a new
+`web/src/features/vector/server/vectorStore.ts` directly (the dead HTTP hop is
+gone, so no more 404). The store uses Node 24's built-in `node:sqlite`
+(`DatabaseSync`) — zero native deps, nothing extra in the image — with two tables
+(`collections`, `vectors`; `ON DELETE CASCADE`), Float32→BLOB codec, and exact
+brute-force KNN (cosine / euclidean / dotProduct, normalized so higher = nearer).
+Everything is `projectId`-scoped. `resolveDbPath()` co-locates `vector.db` next to
+the console's own SQLite DB (`DATABASE_URL=file:/var/lib/hanzo/console/app.db`) so
+it lands on the **same durable PVC `console-app-db`** with zero infra change
+(override via `HANZO_VECTOR_DB_PATH`). Server-only: client imports `AppRouter`
+type-only, so `node:sqlite` never enters the browser bundle.
+
+Surface (all `protectedProjectProcedure`): `stats`, `listCollections`,
+`createCollection`, `deleteCollection`, `upsert`, `search`. Domain errors
+(`VectorStoreError` CONFLICT/NOT_FOUND/BAD_REQUEST) map to tRPC codes. Tests:
+`web/src/__tests__/server/unit/vectorStore.servertest.ts` — 11 passing (create/
+list/dup-conflict/dim-mismatch/upsert/idempotent/cosine+euclidean KNN/project
+isolation/cascade-delete + path resolution).
+
+**Part 2 — "Search & AI" flat overload → products + sub-pages.** The group had 7
+flat sidebar items (Search, Indexes, Search Keys, Search Playground, Vector,
+Collections, Models). Reorganized to **3 product entries** (Search, Vector, Models);
+sub-pages now render as in-page tabs via the existing `PageHeader.tabsProps`
+(monochrome `border-primary-accent`, the same pattern as Tracing). New tab defs:
+`features/navigation/utils/{search-tabs,vector-tabs}.ts`. Search tabs = Overview /
+Indexes / Keys / Playground; Vector tabs = Overview / Collections. No dead links
+(sub-pages reachable via tabs), no duplication, one way. Removed now-unused
+`FileText`/`Key` icon imports from `routes.tsx`.
+
+**Deploy.** SSH remote (`git@github.com:hanzoai/console.git`), branch
+`feat/vector-sqlite-store`. Image built by arcd self-hosted CI (NOT evo, NOT local
+Docker); deployed via the operator's declared image on
+`services.hanzo.ai/console` (reconcile, not `kubectl set image`). Internal
+`VERSION.ts` → `v3.159.58`.

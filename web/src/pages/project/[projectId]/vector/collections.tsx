@@ -1,6 +1,10 @@
 import { useRouter } from "next/router";
 import ContainerPage from "@/src/components/layouts/container-page";
 import { CollectionsTable } from "@/src/features/vector/components/CollectionsTable";
+import {
+  getVectorTabs,
+  VECTOR_TABS,
+} from "@/src/features/navigation/utils/vector-tabs";
 
 export default function VectorCollectionsPage() {
   const router = useRouter();
@@ -11,8 +15,11 @@ export default function VectorCollectionsPage() {
   return (
     <ContainerPage
       headerProps={{
-        title: "Vector Collections",
-        breadcrumb: [{ name: "Vector", href: `/project/${projectId}/vector` }],
+        title: "Vector",
+        tabsProps: {
+          tabs: getVectorTabs(projectId),
+          activeTab: VECTOR_TABS.COLLECTIONS,
+        },
       }}
     >
       <CollectionsTable projectId={projectId} />

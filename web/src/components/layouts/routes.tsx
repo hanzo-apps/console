@@ -40,8 +40,6 @@ import {
   Boxes,
   Cpu,
   HardDrive,
-  FileText,
-  Key,
   Layers,
   Eye,
   Zap,
@@ -229,7 +227,9 @@ const STATIC_ROUTES: Route[] = [
     group: RouteGroup.Evaluation,
     section: RouteSection.Main,
   },
-  // Search & AI
+  // Search & AI — top-level products only. Their sub-pages (Search:
+  // Indexes/Keys/Playground, Vector: Collections) render as in-page tabs via
+  // `searchTabs`/`vectorTabs`, keeping this group clean and non-overwhelming.
   {
     title: "Search",
     pathname: `/project/[projectId]/search`,
@@ -239,41 +239,9 @@ const STATIC_ROUTES: Route[] = [
     section: RouteSection.Main,
   },
   {
-    title: "Indexes",
-    pathname: `/project/[projectId]/search/indexes`,
-    icon: FileText,
-    productModule: "search",
-    group: RouteGroup.SearchAI,
-    section: RouteSection.Main,
-  },
-  {
-    title: "Search Keys",
-    pathname: `/project/[projectId]/search/keys`,
-    icon: Key,
-    productModule: "search",
-    group: RouteGroup.SearchAI,
-    section: RouteSection.Main,
-  },
-  {
-    title: "Search Playground",
-    pathname: `/project/[projectId]/search/playground`,
-    icon: TerminalIcon,
-    productModule: "search",
-    group: RouteGroup.SearchAI,
-    section: RouteSection.Main,
-  },
-  {
     title: "Vector",
     pathname: `/project/[projectId]/vector`,
     icon: Layers,
-    productModule: "search",
-    group: RouteGroup.SearchAI,
-    section: RouteSection.Main,
-  },
-  {
-    title: "Collections",
-    pathname: `/project/[projectId]/vector/collections`,
-    icon: Database,
     productModule: "search",
     group: RouteGroup.SearchAI,
     section: RouteSection.Main,

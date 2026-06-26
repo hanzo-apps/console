@@ -1,106 +1,79 @@
 import { z } from "zod/v4";
+import { TRPCError } from "@trpc/server";
 import {
   createTRPCRouter,
   protectedProjectProcedure,
 } from "@/src/server/api/trpc";
-import {
-  vectorGet,
-  vectorPost,
-  vectorDelete,
-  resolveApiKey,
-} from "./vectorClient";
+import { vectorStore, VectorStoreError } from "./vectorStore";
 import {
   CreateCollectionInput,
   DeleteCollectionInput,
+  UpsertVectorsInput,
   VectorSearchInput,
-  type VectorCollection,
-  type VectorResult,
-  type VectorStats,
 } from "../types";
+
+/** Map the store's domain errors onto tRPC codes. */
+function toTRPC(e: unknown): never {
+  if (e instanceof VectorStoreError) {
+    throw new TRPCError({ code: e.code, message: e.message });
+  }
+  throw e;
+}
 
 export const vectorRouter = createTRPCRouter({
   // ── Stats ─────────────────────────────────────────────────────────
 
   stats: protectedProjectProcedure
     .input(z.object({ projectId: z.string() }))
-    .query(async ({ input }) => {
-      try {
-        const apiKey = resolveApiKey();
-        return await vectorGet<VectorStats>("/api/vector/stats", apiKey, {
-          projectId: input.projectId,
-        });
-      } catch {
-        // Degrade to an honest empty state when Vector is not configured.
-        return {
-          totalCollections: 0,
-          totalVectors: 0,
-          totalStorageBytes: 0,
-        } satisfies VectorStats;
-      }
-    }),
+    .query(({ input }) => vectorStore.stats(input.projectId)),
 
   // ── Collections ───────────────────────────────────────────────────
 
   listCollections: protectedProjectProcedure
     .input(z.object({ projectId: z.string() }))
-    .query(async ({ input }) => {
-      try {
-        const apiKey = resolveApiKey();
-        return await vectorGet<{ collections: VectorCollection[] }>(
-          "/api/vector/collections",
-          apiKey,
-          {
-            projectId: input.projectId,
-          },
-        );
-      } catch {
-        return { collections: [] as VectorCollection[] };
-      }
-    }),
+    .query(({ input }) => ({
+      collections: vectorStore.listCollections(input.projectId),
+    })),
 
   createCollection: protectedProjectProcedure
     .input(CreateCollectionInput)
-    .mutation(async ({ input }) => {
-      const apiKey = resolveApiKey();
-      return vectorPost<{ collection: VectorCollection }>(
-        "/api/vector/collections",
-        apiKey,
-        {
-          name: input.name,
-          dimension: input.dimension,
-          distanceMetric: input.distanceMetric,
-          projectId: input.projectId,
-        },
-      );
+    .mutation(({ input }) => {
+      try {
+        return { collection: vectorStore.createCollection(input) };
+      } catch (e) {
+        return toTRPC(e);
+      }
     }),
 
   deleteCollection: protectedProjectProcedure
     .input(DeleteCollectionInput)
-    .mutation(async ({ input }) => {
-      const apiKey = resolveApiKey();
-      return vectorDelete<{ success: boolean }>(
-        `/api/vector/collections/${encodeURIComponent(input.name)}`,
-        apiKey,
-        {
-          projectId: input.projectId,
-        },
-      );
+    .mutation(({ input }) => {
+      try {
+        return vectorStore.deleteCollection(input.projectId, input.name);
+      } catch (e) {
+        return toTRPC(e);
+      }
     }),
 
-  // ── Vector Search ─────────────────────────────────────────────────
+  // ── Vectors ───────────────────────────────────────────────────────
+
+  upsert: protectedProjectProcedure
+    .input(UpsertVectorsInput)
+    .mutation(({ input }) => {
+      try {
+        return vectorStore.upsert(input);
+      } catch (e) {
+        return toTRPC(e);
+      }
+    }),
 
   search: protectedProjectProcedure
     .input(VectorSearchInput)
-    .query(async ({ input }) => {
-      const apiKey = resolveApiKey();
-      return vectorPost<{ results: VectorResult[] }>(
-        `/api/vector/collections/${encodeURIComponent(input.collectionName)}/search`,
-        apiKey,
-        {
-          queryVector: input.queryVector,
-          limit: input.limit,
-          projectId: input.projectId,
-        },
-      );
+    .query(({ input }) => {
+      try {
+        return { results: vectorStore.search(input) };
+      } catch (e) {
+        return toTRPC(e);
+      }
     }),
 });
