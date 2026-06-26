@@ -16,3 +16,19 @@ export { ApplicationApi } from './applications'
 export { StoreApi } from './stores'
 export { ChatApi } from './chats'
 export { MessageApi } from './messages'
+export {
+  ProvisioningApi,
+  type ResourceKind,
+  type Resource,
+  type ResourceCreated,
+} from './provisioning'
+export {
+  PlatformApi,
+  CLUSTER_ROUTES,
+  DOKS_REGIONS,
+  DOKS_NODE_SIZES,
+  type Cluster,
+  type ClusterKind,
+  type ProvisionClusterInput,
+  type AttachClusterInput,
+} from './platform'

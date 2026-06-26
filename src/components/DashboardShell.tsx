@@ -54,7 +54,21 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   icon={<Icon size={18} />}
                   size="$3"
                 >
-                  {m.label}
+                  <XStack flex={1} items="center" justify="space-between" gap="$2">
+                    <Text fontSize="$3">{m.label}</Text>
+                    {m.status && m.status !== 'enabled' && (
+                      <YStack
+                        px="$1.5"
+                        py={1}
+                        rounded="$10"
+                        bg={m.status === 'waitlist' ? '$yellow5' : '$blue5'}
+                      >
+                        <Text fontSize={9} fontWeight="800" letterSpacing={0.5}>
+                          {m.status === 'waitlist' ? 'WAITLIST' : 'SOON'}
+                        </Text>
+                      </YStack>
+                    )}
+                  </XStack>
                 </Button>
               )
             })}
