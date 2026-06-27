@@ -17,28 +17,15 @@ import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { PageHeader } from '~/components/ui/PageHeader'
 
+const STATUS_LABEL = { enabled: 'Enabled', external: 'External', soon: 'Soon' } as const
+const STATUS_BG = { enabled: '$color5', external: '$color3', soon: '$color4' } as const
+
 function StatusBadge({ entry }: { entry: CatalogEntry }) {
-  const label =
-    entry.status === 'enabled'
-      ? 'Enabled'
-      : entry.status === 'soon'
-        ? 'Soon'
-        : entry.status === 'waitlist'
-          ? 'Waitlist'
-          : 'Available'
-  const bg =
-    entry.status === 'enabled'
-      ? '$color5'
-      : entry.status === 'waitlist'
-        ? '$color4'
-        : entry.status === 'soon'
-          ? '$color4'
-          : '$color3'
   return (
-    <XStack bg={bg} px="$2" py="$1" rounded="$10" items="center" gap="$1">
+    <XStack bg={STATUS_BG[entry.status]} px="$2" py="$1" rounded="$10" items="center" gap="$1">
       {entry.admin ? <Lock size={11} opacity={0.6} /> : null}
       <Text fontSize="$1" color={entry.status === 'enabled' ? '$color12' : '$color11'} fontWeight="600">
-        {label}
+        {STATUS_LABEL[entry.status]}
       </Text>
     </XStack>
   )
@@ -58,15 +45,22 @@ function ProductCard({
   onLearnMore: () => void
 }) {
   const Icon = entry.icon
-  const enabled = entry.status === 'enabled'
+  const openable = entry.status === 'enabled' || entry.status === 'external'
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" width={272}>
       <XStack justify="space-between" items="flex-start">
         <XStack gap="$2" items="center" flex={1}>
           <Icon size={20} />
-          <Text fontSize="$5" fontWeight="700">
-            {entry.label}
-          </Text>
+          <YStack flex={1}>
+            <Text fontSize="$5" fontWeight="700">
+              {entry.label}
+            </Text>
+            {entry.gcp ? (
+              <Text fontSize="$1" color="$color10">
+                {entry.gcp}
+              </Text>
+            ) : null}
+          </YStack>
         </XStack>
         <XStack gap="$1" items="center">
           <Button
@@ -96,15 +90,13 @@ function ProductCard({
         <StatusBadge entry={entry} />
         <Button
           size="$2"
-          bg={enabled ? '$color5' : 'transparent'}
+          bg={openable ? '$color5' : 'transparent'}
           borderWidth={1}
           borderColor="$borderColor"
-          onPress={enabled ? onOpen : onLearnMore}
-          iconAfter={
-            enabled && entry.kind === 'external' ? <ExternalLink size={14} /> : <ArrowRight size={14} />
-          }
+          onPress={openable ? onOpen : onLearnMore}
+          iconAfter={entry.kind === 'external' ? <ExternalLink size={14} /> : <ArrowRight size={14} />}
         >
-          {enabled ? 'Open' : 'Get started'}
+          {openable ? 'Open' : 'Learn more'}
         </Button>
       </XStack>
     </Card>
