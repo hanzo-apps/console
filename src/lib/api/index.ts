@@ -10,6 +10,7 @@ export { ApiError, type ApiResponse } from './client'
 export * from './types'
 
 export { AccountApi } from './account'
+export { BotApi, type BotHealth } from './bot'
 export { ProviderApi } from './providers'
 export { ModelRouteApi } from './model-routes'
 export { ApplicationApi } from './applications'
