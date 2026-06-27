@@ -80,9 +80,8 @@ export function ProductInterstitial({ id }: { id: string }) {
   }
 
   const Icon = entry.icon
-  const enabled = entry.status === 'enabled'
   const external = entry.kind === 'external'
-  const primaryLabel = enabled ? 'Open' : external ? `Open ${entry.label}` : 'Get started'
+  const primaryLabel = external ? `Open ${entry.label}` : 'Open'
 
   return (
     <>
@@ -106,6 +105,7 @@ export function ProductInterstitial({ id }: { id: string }) {
             </Text>
             <Text fontSize="$2" color="$color10">
               {entry.category}
+              {entry.gcp ? ` · ${entry.gcp}` : ''}
               {entry.admin ? ' · admin' : ''}
             </Text>
           </YStack>
@@ -134,7 +134,7 @@ export function ProductInterstitial({ id }: { id: string }) {
           title="Docs & guides"
           body={`Quickstarts, how-tos, and API reference for ${entry.label}.`}
           cta="Read the docs"
-          onPress={() => open(DOCS_URL)}
+          onPress={() => open(entry.docs ?? DOCS_URL)}
         />
         {entry.repo ? (
           <LinkCard
