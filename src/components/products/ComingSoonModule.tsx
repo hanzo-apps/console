@@ -38,7 +38,7 @@ export function comingSoon(opts: {
             px="$2.5"
             py="$1"
             rounded="$10"
-            bg={isWaitlist ? '$yellow5' : '$blue5'}
+            bg={isWaitlist ? '$color4' : '$color4'}
           >
             <Text fontSize="$1" fontWeight="800" letterSpacing={1}>
               {isWaitlist ? 'WAITLIST' : 'COMING SOON'}
@@ -56,7 +56,7 @@ export function comingSoon(opts: {
 
         <XStack gap="$3" pt="$2">
           <Button
-            theme="blue"
+            theme="light"
             onPress={() => {
               if (typeof window !== 'undefined') window.open(repoUrl, '_blank', 'noopener')
             }}

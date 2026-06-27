@@ -10,12 +10,13 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 import { AccountApi, type Account } from '~/lib/api'
-import { getSigninUrl } from './iam'
+import { getProviderSigninUrl, getSigninUrl } from './iam'
 
 type SessionState = {
   account: Account | null
   loading: boolean
   signIn: () => void
+  signInWith: (provider: string) => void
   completeSignIn: (code: string, state: string) => Promise<void>
   signOut: () => Promise<void>
   reload: () => Promise<void>
@@ -44,6 +45,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     window.location.assign(getSigninUrl())
   }, [])
 
+  const signInWith = useCallback((provider: string) => {
+    window.location.assign(getProviderSigninUrl(provider))
+  }, [])
+
   const completeSignIn = useCallback(
     async (code: string, state: string) => {
       const res = await AccountApi.signin(code, state)
@@ -58,7 +63,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <SessionContext.Provider value={{ account, loading, signIn, completeSignIn, signOut, reload }}>
+    <SessionContext.Provider value={{ account, loading, signIn, signInWith, completeSignIn, signOut, reload }}>
       {children}
     </SessionContext.Provider>
   )

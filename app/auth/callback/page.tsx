@@ -7,9 +7,10 @@
  */
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Button, Spinner, Text, YStack } from '@hanzo/gui'
+import { Button, Text, YStack } from '@hanzo/gui'
 
 import { ApiError } from '~/lib/api'
+import { Loader } from '~/components/ui/Loader'
 import { useSession } from '~/lib/auth/session'
 
 function Callback() {
@@ -30,21 +31,17 @@ function Callback() {
       .catch((e: unknown) => setError(e instanceof ApiError ? e.message : 'Sign-in failed.'))
   }, [params, completeSignIn, router])
 
-  return (
-    <YStack flex={1} minH="100vh" items="center" justify="center" gap="$3">
-      {error ? (
-        <>
-          <Text color="$red10">{error}</Text>
-          <Button onPress={() => router.replace('/signin')}>Back to sign in</Button>
-        </>
-      ) : (
-        <>
-          <Spinner size="large" color="$color11" />
-          <Text color="$color11">Completing sign-in…</Text>
-        </>
-      )}
-    </YStack>
-  )
+  if (error) {
+    return (
+      <YStack flex={1} minH="100vh" items="center" justify="center" gap="$3">
+        <Text color="$color12" fontWeight="600">
+          {error}
+        </Text>
+        <Button onPress={() => router.replace('/signin')}>Back to sign in</Button>
+      </YStack>
+    )
+  }
+  return <Loader label="Completing sign-in…" />
 }
 
 export default function CallbackPage() {

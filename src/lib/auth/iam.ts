@@ -35,5 +35,19 @@ function iam(): Sdk {
 /** Full IAM authorize URL to begin sign-in. */
 export const getSigninUrl = (): string => iam().getSigninUrl()
 
+/**
+ * Authorize URL that hints a specific social provider (IAM provider names, e.g.
+ * `provider-github`, `provider-google`).
+ *
+ * The hint rides on the standard authorize redirect as `provider_hint`: IAM
+ * (hanzo.id) owns each provider's OAuth — client id, scope, callback — so the
+ * console never reconstructs github.com/accounts.google.com URLs. IAM advances
+ * straight to the provider when it recognises the hint, and otherwise renders
+ * its login page with the same providers; either way the console stays one
+ * authorize call with no duplicated IdP config.
+ */
+export const getProviderSigninUrl = (provider: string): string =>
+  `${getSigninUrl()}&provider_hint=${encodeURIComponent(provider)}`
+
 /** Full IAM signup URL. */
 export const getSignupUrl = (): string => iam().getSignupUrl()

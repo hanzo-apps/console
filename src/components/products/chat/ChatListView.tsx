@@ -49,7 +49,7 @@ export function ChatListView({ onOpen }: { onOpen: (c: Chat) => void }) {
       key: 'name',
       header: 'Name',
       render: (c) => (
-        <Text fontSize="$3" color="$blue11" onPress={() => onOpen(c)} cursor="pointer">
+        <Text fontSize="$3" color="$color12" onPress={() => onOpen(c)} cursor="pointer">
           {c.displayName || c.name}
         </Text>
       ),
@@ -67,7 +67,7 @@ export function ChatListView({ onOpen }: { onOpen: (c: Chat) => void }) {
           <Button size="$2" onPress={() => onOpen(c)}>
             View
           </Button>
-          <Button size="$2" theme="red" icon={<Trash size={14} />} onPress={() => void onDelete(c)} />
+          <Button size="$2" icon={<Trash size={14} />} onPress={() => void onDelete(c)} />
         </XStack>
       ),
     },
@@ -76,7 +76,7 @@ export function ChatListView({ onOpen }: { onOpen: (c: Chat) => void }) {
   return (
     <>
       <PageHeader title="Chat" subtitle="Chat sessions and history." />
-      {error ? <Text color="$red10">{error}</Text> : null}
+      {error ? <Text color="$color12">{error}</Text> : null}
       <DataTable
         columns={columns}
         rows={rows}

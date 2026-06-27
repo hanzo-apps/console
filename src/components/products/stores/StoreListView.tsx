@@ -16,8 +16,8 @@ const Badge = ({ on }: { on?: boolean }) => (
     px="$2"
     py="$1"
     rounded="$2"
-    bg={on ? '$green5' : '$color3'}
-    color={on ? '$green11' : '$color11'}
+    bg={on ? '$color5' : '$color3'}
+    color={on ? '$color12' : '$color11'}
   >
     {on ? 'ON' : 'OFF'}
   </Text>
@@ -81,7 +81,7 @@ export function StoreListView({ onOpen }: { onOpen: (s: Store) => void }) {
       key: 'name',
       header: 'Name',
       render: (s) => (
-        <Text fontSize="$3" color="$blue11" onPress={() => onOpen(s)} cursor="pointer">
+        <Text fontSize="$3" color="$color12" onPress={() => onOpen(s)} cursor="pointer">
           {s.name}
         </Text>
       ),
@@ -101,7 +101,7 @@ export function StoreListView({ onOpen }: { onOpen: (s: Store) => void }) {
             Edit
           </Button>
           <Button size="$2" icon={<RefreshCw size={14} />} onPress={() => void onRefresh(s)} />
-          <Button size="$2" theme="red" icon={<Trash size={14} />} onPress={() => void onDelete(s)} />
+          <Button size="$2" icon={<Trash size={14} />} onPress={() => void onDelete(s)} />
         </XStack>
       ),
     },
@@ -118,7 +118,7 @@ export function StoreListView({ onOpen }: { onOpen: (s: Store) => void }) {
           </Button>
         }
       />
-      {error ? <Text color="$red10">{error}</Text> : null}
+      {error ? <Text color="$color12">{error}</Text> : null}
       <DataTable
         columns={columns}
         rows={rows}

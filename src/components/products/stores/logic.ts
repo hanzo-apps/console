@@ -36,7 +36,7 @@ export function newStore(owner: string): Store {
     welcomeTitle: "Hello, I'm Hanzo AI Assistant",
     welcomeText: "I'm here to help answer your questions",
     prompt: '',
-    themeColor: '#5734d3',
+    themeColor: '#000000',
     state: 'Active',
     isDefault: false,
   }
