@@ -35,6 +35,7 @@ import {
   Users,
   Wallet,
   ScrollText,
+  Activity,
 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
@@ -50,6 +51,7 @@ import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
+import { ObservabilityModule } from '~/components/products/ObservabilityModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { comingSoon } from '~/components/products/ComingSoonModule'
 
@@ -135,6 +137,7 @@ export type CatalogEntry =
 const ext = {
   search: 'https://search.hanzo.ai',
   analytics: 'https://analytics.hanzo.ai',
+  insights: 'https://insights.hanzo.ai',
   flow: 'https://flow.hanzo.ai',
   sign: 'https://sign.hanzo.ai',
   team: 'https://team.hanzo.ai',
@@ -228,16 +231,6 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: StoresModule },
       { path: ':name', component: StoresModule },
     ],
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: BarChart3,
-    description: 'Product analytics, events, and sessions.',
-    category: 'Observability',
-    status: 'available',
-    kind: 'external',
-    href: ext.analytics,
   },
 
   // ── Data & storage — Hanzo Cloud as an OSS Google Cloud. Each is a ZAP-native
@@ -515,6 +508,42 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     kind: 'external',
     href: ext.billing,
+  },
+
+  // ── Observability ────────────────────────────────────────────────────
+  {
+    // Console-native observability — probes the real /v1/o11y runtime, links to
+    // the full surface for traces/evals/prompts; native browser staged (HIP-0106).
+    id: 'o11y',
+    label: 'Observability',
+    icon: Activity,
+    description: 'Traces, evals, and prompts for your AI workloads.',
+    category: 'Observability',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    kind: 'module',
+    routes: [{ path: '', component: ObservabilityModule }],
+  },
+  {
+    id: 'insights',
+    label: 'Insights',
+    icon: BarChart3,
+    description: 'Product insights and observability dashboards.',
+    category: 'Observability',
+    status: 'available',
+    repo: 'hanzoai/insights',
+    kind: 'external',
+    href: ext.insights,
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: BarChart3,
+    description: 'Product analytics, events, and sessions.',
+    category: 'Observability',
+    status: 'available',
+    kind: 'external',
+    href: ext.analytics,
   },
 ]
 
