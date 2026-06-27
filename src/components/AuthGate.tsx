@@ -8,8 +8,8 @@
  */
 import { useEffect, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { Spinner, XStack } from '@hanzo/gui'
 
+import { Loader } from '~/components/ui/Loader'
 import { useSession } from '~/lib/auth/session'
 
 export function AuthGate({ children }: { children: ReactNode }) {
@@ -21,11 +21,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }, [loading, account, router])
 
   if (loading || !account) {
-    return (
-      <XStack flex={1} minH="100vh" items="center" justify="center">
-        <Spinner size="large" color="$color11" />
-      </XStack>
-    )
+    return <Loader />
   }
   return <>{children}</>
 }

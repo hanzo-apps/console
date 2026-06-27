@@ -16,8 +16,8 @@ const Badge = ({ on }: { on?: boolean }) => (
     px="$2"
     py="$1"
     rounded="$2"
-    bg={on ? '$green5' : '$color3'}
-    color={on ? '$green11' : '$color11'}
+    bg={on ? '$color5' : '$color3'}
+    color={on ? '$color12' : '$color11'}
   >
     {on ? 'ON' : 'OFF'}
   </Text>
@@ -73,7 +73,7 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
       key: 'name',
       header: 'Name',
       render: (p) => (
-        <Text fontSize="$3" color="$blue11" onPress={() => onOpen(p)} cursor="pointer">
+        <Text fontSize="$3" color="$color12" onPress={() => onOpen(p)} cursor="pointer">
           {p.name}
         </Text>
       ),
@@ -94,7 +94,7 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
             {p.isRemote ? 'View' : 'Edit'}
           </Button>
           {!p.isRemote ? (
-            <Button size="$2" theme="red" icon={<Trash size={14} />} onPress={() => void onDelete(p)} />
+            <Button size="$2" icon={<Trash size={14} />} onPress={() => void onDelete(p)} />
           ) : null}
         </XStack>
       ),
@@ -112,7 +112,7 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
           </Button>
         }
       />
-      {error ? <Text color="$red10">{error}</Text> : null}
+      {error ? <Text color="$color12">{error}</Text> : null}
       <DataTable
         columns={columns}
         rows={rows}

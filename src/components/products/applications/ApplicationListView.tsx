@@ -18,8 +18,8 @@ const StatusTag = ({ status }: { status?: string }) => {
       px="$2"
       py="$1"
       rounded="$2"
-      bg={running ? '$green5' : status === 'Failed' ? '$red5' : '$color3'}
-      color={running ? '$green11' : status === 'Failed' ? '$red11' : '$color11'}
+      bg={running ? '$color5' : status === 'Failed' ? '$color4' : '$color3'}
+      color={running ? '$color12' : status === 'Failed' ? '$color12' : '$color11'}
     >
       {status ?? 'Not Deployed'}
     </Text>
@@ -76,7 +76,7 @@ export function ApplicationListView({ onOpen }: { onOpen: (a: Application) => vo
       key: 'name',
       header: 'Name',
       render: (a) => (
-        <Text fontSize="$3" color="$blue11" onPress={() => onOpen(a)} cursor="pointer">
+        <Text fontSize="$3" color="$color12" onPress={() => onOpen(a)} cursor="pointer">
           {a.name}
         </Text>
       ),
@@ -94,7 +94,7 @@ export function ApplicationListView({ onOpen }: { onOpen: (a: Application) => vo
           <Button size="$2" onPress={() => onOpen(a)}>
             Edit
           </Button>
-          <Button size="$2" theme="red" icon={<Trash size={14} />} onPress={() => void onDelete(a)} />
+          <Button size="$2" icon={<Trash size={14} />} onPress={() => void onDelete(a)} />
         </XStack>
       ),
     },
@@ -111,7 +111,7 @@ export function ApplicationListView({ onOpen }: { onOpen: (a: Application) => vo
           </Button>
         }
       />
-      {error ? <Text color="$red10">{error}</Text> : null}
+      {error ? <Text color="$color12">{error}</Text> : null}
       <DataTable
         columns={columns}
         rows={rows}

@@ -52,7 +52,7 @@ export function StoreEditView({ name, onDone }: { name: string; onDone: () => vo
   if (error && !store) {
     return (
       <YStack gap="$3">
-        <Text color="$red10">{error}</Text>
+        <Text color="$color12">{error}</Text>
         <Button self="flex-start" onPress={onDone}>
           Back
         </Button>
@@ -89,13 +89,13 @@ export function StoreEditView({ name, onDone }: { name: string; onDone: () => vo
             <Button disabled={saving} onPress={() => void save(false)}>
               Save
             </Button>
-            <Button theme="blue" disabled={saving} onPress={() => void save(true)}>
+            <Button theme="light" disabled={saving} onPress={() => void save(true)}>
               Save & Exit
             </Button>
           </XStack>
         }
       />
-      {error ? <Text color="$red10">{error}</Text> : null}
+      {error ? <Text color="$color12">{error}</Text> : null}
 
       <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor">
         <FieldRow label="Name">

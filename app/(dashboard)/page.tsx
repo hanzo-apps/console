@@ -30,9 +30,9 @@ function StatusBadge({ entry }: { entry: CatalogEntry }) {
     entry.status === 'enabled'
       ? '$color5'
       : entry.status === 'waitlist'
-        ? '$yellow5'
+        ? '$color4'
         : entry.status === 'soon'
-          ? '$blue5'
+          ? '$color4'
           : '$color3'
   return (
     <XStack bg={bg} px="$2" py="$1" rounded="$10" items="center" gap="$1">
