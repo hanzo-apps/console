@@ -17,7 +17,7 @@ COPY . .
 # public/ may be empty (git doesn't track empty dirs) — ensure it exists for the runner COPY.
 RUN mkdir -p public
 ARG NEXT_PUBLIC_CLOUD_URL=https://console2.hanzo.ai
-ARG NEXT_PUBLIC_IAM_URL=https://iam.hanzo.ai
+ARG NEXT_PUBLIC_IAM_URL=https://hanzo.id
 ARG NEXT_PUBLIC_IAM_APP_NAME=hanzo-cloud
 ARG NEXT_PUBLIC_IAM_ORG_NAME=hanzo
 ARG NEXT_PUBLIC_IAM_CLIENT_ID=hanzo-cloud

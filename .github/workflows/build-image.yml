@@ -45,7 +45,11 @@ jobs:
               echo "tags=ghcr.io/hanzoai/console2:test"        >> "$GITHUB_OUTPUT" ;;
             *)
               echo "console_url=https://console2.hanzo.ai"     >> "$GITHUB_OUTPUT"
-              echo "iam_url=https://iam.hanzo.ai"              >> "$GITHUB_OUTPUT"
+              # Canonical issuer is hanzo.id (iss=https://hanzo.id, which the cloud
+              # /v1 backend validates). NEXT_PUBLIC_IAM_URL is inlined at build time,
+              # so this is what the browser uses for the authorize redirect — it must
+              # be hanzo.id, NOT iam.hanzo.ai (legacy zone, iss mismatch → drops sign-in).
+              echo "iam_url=https://hanzo.id"                  >> "$GITHUB_OUTPUT"
               echo "billing_url=https://billing.hanzo.ai"      >> "$GITHUB_OUTPUT"
               echo "tags=ghcr.io/hanzoai/console2:sha-${GITHUB_SHA::7}"$'\n'"ghcr.io/hanzoai/console2:latest" >> "$GITHUB_OUTPUT" ;;
           esac
