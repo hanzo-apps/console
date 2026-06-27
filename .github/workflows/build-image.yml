@@ -51,7 +51,14 @@ jobs:
               # be hanzo.id, NOT iam.hanzo.ai (legacy zone, iss mismatch → drops sign-in).
               echo "iam_url=https://hanzo.id"                  >> "$GITHUB_OUTPUT"
               echo "billing_url=https://billing.hanzo.ai"      >> "$GITHUB_OUTPUT"
-              echo "tags=ghcr.io/hanzoai/console2:sha-${GITHUB_SHA::7}"$'\n'"ghcr.io/hanzoai/console2:latest" >> "$GITHUB_OUTPUT" ;;
+              # Two tags (sha + latest). GITHUB_OUTPUT needs the multi-line
+              # heredoc form — a bare `key=v1\nv2` is rejected ("Invalid format").
+              {
+                echo "tags<<TAGS"
+                echo "ghcr.io/hanzoai/console2:sha-${GITHUB_SHA::7}"
+                echo "ghcr.io/hanzoai/console2:latest"
+                echo "TAGS"
+              } >> "$GITHUB_OUTPUT" ;;
           esac
       - uses: docker/setup-buildx-action@v3
       - name: Log in to ghcr.io
