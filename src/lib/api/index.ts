@@ -17,6 +17,12 @@ export {
   type CloudPricing,
   type BlockStoragePricing,
 } from './plans'
+export {
+  WalletApi,
+  type CloudBalance,
+  type WalletTopupRequest,
+  type WalletTopupResult,
+} from './wallet'
 export { ProviderApi } from './providers'
 export { ModelRouteApi } from './model-routes'
 export { ApplicationApi } from './applications'

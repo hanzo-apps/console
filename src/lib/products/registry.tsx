@@ -33,6 +33,7 @@ import {
   Network,
   Tag,
   Users,
+  Wallet,
 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
@@ -43,6 +44,7 @@ import { StoresModule } from '~/components/products/StoresModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { PlansModule } from '~/components/products/PlansModule'
+import { WalletModule } from '~/components/products/WalletModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { comingSoon } from '~/components/products/ComingSoonModule'
 
@@ -428,6 +430,22 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     kind: 'module',
     routes: [{ path: '', component: PlansModule }],
+  },
+  {
+    // Wallet & HUSD top-up — connect a wallet on Hanzo Mainnet, view HUSD + cloud
+    // credit balances, and fund credit with HUSD. The send→verify→credit seam is
+    // a same-origin server route (`/billing/topup/wallet`); the credit lands in
+    // the same balance Billing shows. In-console because billing.hanzo.ai is a
+    // static export and can't host the verify-and-record endpoint.
+    id: 'wallet',
+    label: 'Wallet',
+    icon: Wallet,
+    description: 'Connect a wallet and top up cloud credit with HUSD.',
+    category: 'Commerce',
+    status: 'enabled',
+    repo: 'hanzoai/billing',
+    kind: 'module',
+    routes: [{ path: '', component: WalletModule }],
   },
   {
     id: 'billing',
