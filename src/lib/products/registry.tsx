@@ -59,22 +59,34 @@ export type ProductRoute = {
   component: ComponentType<{ params: Record<string, string> }>
 }
 
-/** Category grouping for the nav + catalog. Order here is display order. */
+/**
+ * Category grouping for the nav + catalog. These are the SAME nine categories,
+ * exact labels and order, as the hanzo.ai marketing site product dropdown
+ * (lib/constants/navigation-data.ts → productsNav) — one taxonomy across every
+ * surface. `catalogByCategory` skips empty groups, so a category with no console
+ * module yet (e.g. Developer, Compute, Web3) simply doesn't render.
+ */
 export type ProductCategory =
-  | 'AI'
-  | 'Data'
+  | 'AI & Agents'
+  | 'Developer'
   | 'Apps'
-  | 'Identity'
-  | 'Infrastructure'
-  | 'Commerce'
+  | 'Compute'
+  | 'Data'
+  | 'Async'
+  | 'Platform'
+  | 'Observability'
+  | 'Web3'
 
 export const categoryOrder: ProductCategory[] = [
-  'AI',
-  'Data',
+  'AI & Agents',
+  'Developer',
   'Apps',
-  'Identity',
-  'Infrastructure',
-  'Commerce',
+  'Compute',
+  'Data',
+  'Async',
+  'Platform',
+  'Observability',
+  'Web3',
 ]
 
 /**
@@ -133,13 +145,13 @@ const ext = {
  * (hanzoai/billing over the commerce backend) — never reimplemented here.
  */
 export const catalog: CatalogEntry[] = [
-  // ── AI ───────────────────────────────────────────────────────────────
+  // ── AI & Agents ──────────────────────────────────────────────────────
   {
     id: 'providers',
     label: 'Providers',
     icon: Server,
     description: 'Model, storage, and embedding providers.',
-    category: 'AI',
+    category: 'AI & Agents',
     status: 'enabled',
     kind: 'module',
     routes: [
@@ -152,7 +164,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Models',
     icon: RouteIcon,
     description: 'Model routes and routing policy.',
-    category: 'AI',
+    category: 'AI & Agents',
     status: 'enabled',
     kind: 'module',
     routes: [
@@ -165,7 +177,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Chat',
     icon: MessageSquare,
     description: 'Chat sessions and history.',
-    category: 'AI',
+    category: 'AI & Agents',
     status: 'enabled',
     kind: 'module',
     routes: [
@@ -180,7 +192,7 @@ export const catalog: CatalogEntry[] = [
     label: 'AI Search',
     icon: Search,
     description: 'AI-powered search with generative answers.',
-    category: 'AI',
+    category: 'AI & Agents',
     status: 'available',
     kind: 'external',
     href: ext.search,
@@ -193,7 +205,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Bot',
     icon: Bot,
     description: 'Bot framework, skills, and plugins.',
-    category: 'AI',
+    category: 'AI & Agents',
     status: 'enabled',
     repo: 'hanzoai/bot',
     kind: 'module',
@@ -219,7 +231,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Analytics',
     icon: BarChart3,
     description: 'Product analytics, events, and sessions.',
-    category: 'Data',
+    category: 'Observability',
     status: 'available',
     kind: 'external',
     href: ext.analytics,
@@ -312,7 +324,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Base',
     icon: Layers,
     description: 'Managed app backend — embedded DB + auth + realtime.',
-    category: 'Data',
+    category: 'Apps',
     status: 'soon',
     repo: 'hanzoai/base',
     kind: 'module',
@@ -338,7 +350,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Flow',
     icon: Workflow,
     description: 'Visual workflow and automation builder.',
-    category: 'Apps',
+    category: 'Async',
     status: 'available',
     kind: 'external',
     href: ext.flow,
@@ -367,13 +379,15 @@ export const catalog: CatalogEntry[] = [
     href: ext.team,
   },
 
-  // ── Identity ─────────────────────────────────────────────────────────
+  // ── Platform — identity, secrets, infra, and billing all live under the
+  //    single "Platform" category (mirrors the marketing-site taxonomy, which
+  //    has no Identity/Infrastructure/Commerce split).
   {
     id: 'iam',
     label: 'Identity',
     icon: Shield,
     description: 'Identity, access, OAuth, and SSO.',
-    category: 'Identity',
+    category: 'Platform',
     status: 'available',
     admin: true,
     kind: 'external',
@@ -384,20 +398,20 @@ export const catalog: CatalogEntry[] = [
     label: 'Secrets',
     icon: Key,
     description: 'Secrets management and encryption (KMS).',
-    category: 'Identity',
+    category: 'Platform',
     status: 'available',
     admin: true,
     kind: 'external',
     href: ext.kms,
   },
 
-  // ── Infrastructure ───────────────────────────────────────────────────
+  // Platform — clusters & PaaS
   {
     id: 'platform',
     label: 'Platform',
     icon: Cloud,
     description: 'PaaS deployments, domains, and builds.',
-    category: 'Infrastructure',
+    category: 'Platform',
     status: 'available',
     admin: true,
     kind: 'external',
@@ -411,14 +425,14 @@ export const catalog: CatalogEntry[] = [
     label: 'Clusters',
     icon: Network,
     description: 'Your Kubernetes — shared Hanzo Cloud or your own DOKS.',
-    category: 'Infrastructure',
+    category: 'Platform',
     status: 'soon',
     repo: 'hanzoai/operator',
     kind: 'module',
     routes: [{ path: '', component: comingSoon({ label: 'Hanzo Clusters', repo: 'hanzoai/operator', status: 'soon', blurb: 'One control plane for where your workloads run — choose zero-ops shared Hanzo Cloud or bring your own DOKS cluster, both reconciled by the Hanzo operator.' }) }],
   },
 
-  // ── Commerce ─────────────────────────────────────────────────────────
+  // Platform — billing, wallet & plans (the money surfaces)
   {
     // Discovery: compare what every tier offers and costs (live /v1/pricing).
     // Paying happens in Billing (the one money surface) — this never charges.
@@ -426,7 +440,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Plans & Pricing',
     icon: Tag,
     description: 'Compare plans and pricing for every cloud service.',
-    category: 'Commerce',
+    category: 'Platform',
     status: 'enabled',
     kind: 'module',
     routes: [{ path: '', component: PlansModule }],
@@ -441,7 +455,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Wallet',
     icon: Wallet,
     description: 'Connect a wallet and top up cloud credit with HUSD.',
-    category: 'Commerce',
+    category: 'Platform',
     status: 'enabled',
     repo: 'hanzoai/billing',
     kind: 'module',
@@ -452,7 +466,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Billing',
     icon: CreditCard,
     description: 'Balance, usage, and invoices for every product.',
-    category: 'Commerce',
+    category: 'Platform',
     status: 'enabled',
     kind: 'external',
     href: ext.billing,
