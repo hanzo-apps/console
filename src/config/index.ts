@@ -57,7 +57,12 @@ function cloudUrl(): string {
   const env = process.env.NEXT_PUBLIC_CLOUD_URL
   if (env) return trimSlash(env)
   if (typeof window !== 'undefined') return trimSlash(window.location.origin)
-  return 'https://cloud.hanzo.ai'
+  // SSR/build fallback only (real calls are browser same-origin → each console
+  // host's ingress proxies /v1 to the gateway). Canonical entry is the unified
+  // gated/priced gateway api.hanzo.ai (hanzoai/ingress → hanzoai/gateway →
+  // cloud / separate services / per-org k8s) — NOT cloud.hanzo.ai (SPA host) and
+  // NOT api.cloud.hanzo.ai direct (bypasses rate-limit/gating/pricing).
+  return 'https://api.hanzo.ai'
 }
 
 /** Per-brand IAM (each org's own issuer/app) + wordmark. Cloud backend is shared. */
