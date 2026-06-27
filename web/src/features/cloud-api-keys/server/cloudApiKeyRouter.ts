@@ -46,29 +46,32 @@ function maskKey(key: string): string {
 }
 
 /**
- * Resolve the IAM user whose hk- key this org-scoped request operates on, as the
- * authoritative `owner/name` sub plus the user's current accessKey. The
- * org-scoped procedure already proved the caller is a member of `orgId`, so we
- * always resolve THE CALLER's own identity in the active org — never anyone
- * else's.
+ * Resolve THE CALLER's own IAM user — the authoritative `owner/name` sub plus
+ * their current accessKey — so this request can mint/read/revoke their single
+ * per-user hk- key.
  *
- * Resolution is by IAM record, not by string reconstruction, because a Casdoor
- * user's `name` is NOT necessarily their email — even in an `useEmailAsUsername`
- * org a user can pre-exist with a non-email username (e.g. `maxpower/davelorenzini`
- * for `davelorenzini@gmail.com`). The old positional `${orgId}/${email}` (and the
- * email-form session sub) therefore hit `get-user?id=…@gmail.com` → null → the
- * "No IAM identity for this account in this organization" error, even though the
- * record exists and `mint-user-keys` works against the real sub.
+ * The hk- key is PER-USER (stored on the caller's own IAM user record), NOT
+ * per-org: a user has exactly one regardless of how many orgs they belong to.
+ * The org-scoped procedure has already proved the caller is a member of `orgId`
+ * with the `organization:CRUD_apiKeys` scope, and we ONLY ever read the caller's
+ * own server-set session identity — so the caller can never operate on anyone
+ * else's key, in any org. `orgId` therefore does NOT gate identity; it is only
+ * the UI/billing context the action is performed from.
  *
- *   1. Session sub fast-path: if `session.user.iamSub` belongs to THIS org AND
- *      resolves to a real IAM user, use it (covers shared-org users where
- *      username != email, and avoids an extra lookup).
- *   2. Authoritative fallback: look the user up by `owner=<orgId>&email=<email>`
- *      (exact email lookup within the org) and use the record's real
- *      `owner/name` sub.
+ *   1. Session sub (primary): the IAM-verified `owner/name` from login, resolved
+ *      against IAM for the authoritative record + accessKey. This works in EVERY
+ *      org the caller can see — including a global admin viewing an org that is
+ *      not their IAM home org. (The former `owner === orgId` gate wrongly 404'd
+ *      exactly that case — a cross-org / global-admin user — even though their
+ *      identity and `mint-user-keys` were perfectly valid.)
+ *   2. Email-in-org fallback: only when the session carries no IAM-resolvable
+ *      sub (e.g. a legacy session whose sub is a console user id). Looks the user
+ *      up by `owner=<orgId>&email=<email>` — correct for a self-serve tenant
+ *      whose IAM org == the console org.
  *
- * Returns null only when neither path finds a user — surfaced as a clear
- * NOT_FOUND rather than acting on a non-existent / wrong identity.
+ * Resolution is by IAM record, never by string reconstruction, because a Casdoor
+ * user's `name` is NOT necessarily their email. Returns null only when neither
+ * path finds a user — surfaced as a clear NOT_FOUND.
  */
 async function resolveIamUser(
   orgId: string,
@@ -76,14 +79,12 @@ async function resolveIamUser(
 ): Promise<ResolvedIamUser | null> {
   const iamSub = ctx.session.user.iamSub;
   if (iamSub) {
-    const owner = iamSub.split("/")[0];
-    // The sub's org segment must match the active org so a multi-org user can't
-    // operate on a key in an org their session sub doesn't belong to.
-    if (owner && owner.toLowerCase() === orgId.toLowerCase()) {
-      const sessionUser = await iamGetUser(iamSub);
-      if (sessionUser) {
-        return { sub: iamSub, accessKey: sessionUser.accessKey ?? "" };
-      }
+    const sessionUser = await iamGetUser(iamSub);
+    if (sessionUser?.owner && sessionUser?.name) {
+      return {
+        sub: `${sessionUser.owner}/${sessionUser.name}`,
+        accessKey: sessionUser.accessKey ?? "",
+      };
     }
   }
   const email = (ctx.session.user.email ?? "").toLowerCase();

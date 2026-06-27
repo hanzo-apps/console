@@ -14,14 +14,21 @@ export const removeLabelsFromPreviousPromptVersions = async ({
   promptName: string;
   labelsToRemove: string[];
 }) => {
-  const previouslyLabeledPrompts = await prisma.prompt.findMany({
-    where: {
-      projectId,
-      name: promptName,
-      labels: { hasSome: labelsToRemove },
-    },
-    orderBy: [{ version: "desc" }],
-  });
+  // `labels` is a JSON-TEXT column on SQLite (the codec round-trips it as a
+  // string[]); Prisma scalar-list operators like `hasSome` are not supported on
+  // it, so we fetch this prompt's versions by name and intersect labels in JS.
+  // See packages/shared/src/db-json-arrays.ts.
+  const previouslyLabeledPrompts = (
+    await prisma.prompt.findMany({
+      where: {
+        projectId,
+        name: promptName,
+      },
+      orderBy: [{ version: "desc" }],
+    })
+  ).filter((prompt) =>
+    labelsToRemove.some((label) => prompt.labels.includes(label)),
+  );
 
   const touchedPromptIds = previouslyLabeledPrompts.map(
     (prevPrompt) => prevPrompt.id,

@@ -112,6 +112,31 @@ export async function iamPasswordLogin(params: {
 }
 
 /**
+ * The canonical `owner/name` IAM subject for a validated token. Casdoor sets the
+ * JWT `sub` to the user's UUID id, and a bare UUID is NOT a resolvable identity —
+ * `get-user?id=<uuid>` errors ("wrong token count") and `?userId=<uuid>` misses —
+ * so it breaks every downstream resolver that keys on `owner/name` (the IAM→
+ * console org sync and the per-user Cloud API key mint). When the subject has no
+ * org segment we rebuild `owner/name` from the token's `owner`+`name` claims
+ * (Casdoor includes both); otherwise we keep the subject as-is. Falls back to the
+ * raw subject when the claims are absent — never worse than the bare sub.
+ */
+function canonicalIamSub(result: {
+  userId: string;
+  name?: string;
+  claims: Record<string, unknown>;
+}): string {
+  if (result.userId.includes("/")) return result.userId;
+  const owner =
+    typeof result.claims.owner === "string" ? result.claims.owner : "";
+  const name =
+    typeof result.claims.name === "string"
+      ? result.claims.name
+      : (result.name ?? "");
+  return owner && name ? `${owner}/${name}` : result.userId;
+}
+
+/**
  * Validate an IAM-issued access token against IAM's JWKS (OIDC discovery +
  * `jose`). Returns the verified identity or an error. Used when an IAM token is
  * presented (e.g. the embedded BrowserIamSdk handed console a token to bridge
@@ -127,7 +152,7 @@ export async function iamValidateToken(token: string): Promise<IamLoginResult> {
   return {
     ok: true,
     identity: {
-      sub: result.userId,
+      sub: canonicalIamSub(result),
       email: (result.email ?? "").toLowerCase(),
       name: result.name ?? null,
       image: result.avatar ?? null,
