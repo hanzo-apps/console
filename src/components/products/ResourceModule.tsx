@@ -81,7 +81,6 @@ function CopyField({ label, value, secret }: { label: string; value: string; sec
         ) : null}
         <Button
           size="$2"
-          theme={copied ? 'green' : undefined}
           icon={copied ? <Check size={14} /> : <Copy size={14} />}
           onPress={() => void copy()}
         >
@@ -202,7 +201,7 @@ export function resourceModule(opts: ResourceModuleOpts) {
         width: 110,
         render: (r) => (
           <XStack gap="$2" justify="flex-end" flex={1}>
-            <Button size="$2" theme="red" icon={<Trash size={14} />} onPress={() => void onDelete(r)} />
+            <Button size="$2" icon={<Trash size={14} />} onPress={() => void onDelete(r)} />
           </XStack>
         ),
       },
@@ -220,15 +219,15 @@ export function resourceModule(opts: ResourceModuleOpts) {
           }
         />
 
-        {error ? <Text color="$red10">{error}</Text> : null}
+        {error ? <Text color="$color12">{error}</Text> : null}
 
         {created ? (
-          <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$yellow7" bg="$yellow2">
+          <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$color7" bg="$color2">
             <YStack gap="$1">
               <Text fontSize="$5" fontWeight="800">
                 {created.name} created — save your credentials now
               </Text>
-              <Text fontSize="$3" color="$yellow11">
+              <Text fontSize="$3" color="$color12">
                 The password is shown ONCE and cannot be retrieved later. Copy it somewhere safe
                 before you dismiss this panel.
               </Text>
@@ -260,14 +259,14 @@ export function resourceModule(opts: ResourceModuleOpts) {
           <FieldRow label="Name">
             <YStack gap="$1.5" flex={1}>
               <FieldText value={name} onChange={setName} placeholder="my-resource" />
-              <Text fontSize="$2" color={nameErr ? '$red10' : '$color10'}>
+              <Text fontSize="$2" color={nameErr ? '$color12' : '$color10'}>
                 {nameErr ?? 'Lowercase letters, numbers and hyphens. 2–40 chars.'}
               </Text>
             </YStack>
           </FieldRow>
           <XStack>
             <Button
-              theme="blue"
+              theme="light"
               icon={<Plus size={16} />}
               disabled={creating || !name || !!nameErr}
               onPress={() => void onCreate()}

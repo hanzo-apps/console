@@ -54,7 +54,7 @@ export function ApplicationEditView({ name, onDone }: { name: string; onDone: ()
   if (error && !app) {
     return (
       <YStack gap="$3">
-        <Text color="$red10">{error}</Text>
+        <Text color="$color12">{error}</Text>
         <Button self="flex-start" onPress={onDone}>
           Back
         </Button>
@@ -117,13 +117,13 @@ export function ApplicationEditView({ name, onDone }: { name: string; onDone: ()
             <Button disabled={saving} onPress={() => void save(false)}>
               Save
             </Button>
-            <Button theme="blue" disabled={saving} onPress={() => void save(true)}>
+            <Button theme="light" disabled={saving} onPress={() => void save(true)}>
               Save & Exit
             </Button>
           </XStack>
         }
       />
-      {error ? <Text color="$red10">{error}</Text> : null}
+      {error ? <Text color="$color12">{error}</Text> : null}
 
       <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor">
         <FieldRow label="Name">
@@ -150,11 +150,11 @@ export function ApplicationEditView({ name, onDone }: { name: string; onDone: ()
               {a.status ?? 'Not Deployed'}
             </Text>
             {isUndeployed(a) ? (
-              <Button size="$2" theme="green" disabled={saving} onPress={() => void deploy()}>
+              <Button size="$2" theme="light" disabled={saving} onPress={() => void deploy()}>
                 Deploy
               </Button>
             ) : (
-              <Button size="$2" theme="red" disabled={saving} onPress={() => void undeploy()}>
+              <Button size="$2" disabled={saving} onPress={() => void undeploy()}>
                 Undeploy
               </Button>
             )}

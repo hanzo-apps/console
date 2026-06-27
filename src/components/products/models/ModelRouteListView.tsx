@@ -15,8 +15,8 @@ const Tag = ({ on, on_label, off_label }: { on?: boolean; on_label: string; off_
     px="$2"
     py="$1"
     rounded="$2"
-    bg={on ? '$green5' : '$color3'}
-    color={on ? '$green11' : '$color11'}
+    bg={on ? '$color5' : '$color3'}
+    color={on ? '$color12' : '$color11'}
   >
     {on ? on_label : off_label}
   </Text>
@@ -70,7 +70,7 @@ export function ModelRouteListView({
       key: 'modelName',
       header: 'Model name',
       render: (r) => (
-        <Text fontSize="$3" color="$blue11" onPress={() => onOpen(r)} cursor="pointer">
+        <Text fontSize="$3" color="$color12" onPress={() => onOpen(r)} cursor="pointer">
           {r.modelName}
         </Text>
       ),
@@ -100,7 +100,7 @@ export function ModelRouteListView({
           <Button size="$2" onPress={() => onOpen(r)}>
             Edit
           </Button>
-          <Button size="$2" theme="red" icon={<Trash size={14} />} onPress={() => void onDelete(r)} />
+          <Button size="$2" icon={<Trash size={14} />} onPress={() => void onDelete(r)} />
         </XStack>
       ),
     },
@@ -117,7 +117,7 @@ export function ModelRouteListView({
           </Button>
         }
       />
-      {error ? <Text color="$red10">{error}</Text> : null}
+      {error ? <Text color="$color12">{error}</Text> : null}
       <DataTable
         columns={columns}
         rows={rows}

@@ -22,15 +22,15 @@ const toneOf = (status: string): Tone => {
 // `as const` keeps the literal token types (not widened to `string`) so they
 // satisfy the GUI `bg`/`color` token unions.
 const TONE_BG = {
-  green: '$green5',
-  yellow: '$yellow5',
-  red: '$red5',
+  green: '$color5',
+  yellow: '$color4',
+  red: '$color4',
   neutral: '$color3',
 } as const
 const TONE_FG = {
-  green: '$green11',
-  yellow: '$yellow11',
-  red: '$red11',
+  green: '$color12',
+  yellow: '$color12',
+  red: '$color12',
   neutral: '$color11',
 } as const
 

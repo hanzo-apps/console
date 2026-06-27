@@ -161,7 +161,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
       width: 90,
       render: (c) => (
         <XStack gap="$2" justify="flex-end" flex={1}>
-          <Button size="$2" theme="red" icon={<Trash size={14} />} onPress={() => void onDelete(c)} />
+          <Button size="$2" icon={<Trash size={14} />} onPress={() => void onDelete(c)} />
         </XStack>
       ),
     },
@@ -179,7 +179,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
         }
       />
 
-      {error ? <Text color="$red10">{error}</Text> : null}
+      {error ? <Text color="$color12">{error}</Text> : null}
 
       <DataTable
         columns={columns}
@@ -197,7 +197,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
           <FieldRow label="Name">
             <YStack gap="$1.5" flex={1}>
               <FieldText value={pName} onChange={setPName} placeholder="prod-cluster" />
-              <Text fontSize="$2" color={pNameErr ? '$red10' : '$color10'}>
+              <Text fontSize="$2" color={pNameErr ? '$color12' : '$color10'}>
                 {pNameErr ?? 'Lowercase letters, numbers and hyphens. 2–40 chars.'}
               </Text>
             </YStack>
@@ -217,7 +217,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
           </FieldRow>
           <XStack>
             <Button
-              theme="blue"
+              theme="light"
               icon={<Plus size={16} />}
               disabled={provisioning || !pName || !!pNameErr}
               onPress={() => void onProvision()}
@@ -234,7 +234,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
           <FieldRow label="Name">
             <YStack gap="$1.5" flex={1}>
               <FieldText value={aName} onChange={setAName} placeholder="my-cluster" />
-              <Text fontSize="$2" color={aNameErr ? '$red10' : '$color10'}>
+              <Text fontSize="$2" color={aNameErr ? '$color12' : '$color10'}>
                 {aNameErr ?? 'A label for this cluster in the console.'}
               </Text>
             </YStack>
@@ -244,7 +244,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
           </FieldRow>
           <XStack>
             <Button
-              theme="blue"
+              theme="light"
               icon={<Link2 size={16} />}
               disabled={attaching || !aName || !!aNameErr || !aKubeconfig.trim()}
               onPress={() => void onAttach()}

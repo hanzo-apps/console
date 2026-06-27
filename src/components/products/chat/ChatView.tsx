@@ -13,7 +13,7 @@ const Bubble = ({ m }: { m: Message }) => {
       <Card
         p="$3"
         maxW="80%"
-        bg={isAI ? '$color2' : '$blue5'}
+        bg={isAI ? '$color2' : '$color4'}
         borderWidth={1}
         borderColor="$borderColor"
         rounded="$4"
@@ -75,7 +75,7 @@ export function ChatView({ name, onDone }: { name: string; onDone: () => void })
   if (error && !chat) {
     return (
       <YStack gap="$3">
-        <Text color="$red10">{error}</Text>
+        <Text color="$color12">{error}</Text>
         <Button self="flex-start" onPress={onDone}>
           Back
         </Button>
@@ -91,7 +91,7 @@ export function ChatView({ name, onDone }: { name: string; onDone: () => void })
         subtitle={`${chat.user ?? ''}${chat.store ? ` · ${chat.store}` : ''}`}
         actions={<Button onPress={onDone}>Back</Button>}
       />
-      {error ? <Text color="$red10">{error}</Text> : null}
+      {error ? <Text color="$color12">{error}</Text> : null}
       {messages.length === 0 ? (
         <YStack p="$6" items="center" borderWidth={1} borderColor="$borderColor" rounded="$4">
           <Text color="$color11">No messages in this chat.</Text>
