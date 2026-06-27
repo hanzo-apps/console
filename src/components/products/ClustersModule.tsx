@@ -28,6 +28,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { FieldRow, FieldText, FieldTextArea, FieldSelect } from '~/components/ui/Field'
 import { slugError } from '~/lib/slug'
+import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
 const KindTag = ({ kind }: { kind?: string }) => (
   <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color3" color="$color11">
@@ -45,6 +46,9 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
   const [rows, setRows] = useState<Cluster[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // List-load failure (separate from action errors) — drives the honest
+  // not-configured / backend-unavailable card.
+  const [loadError, setLoadError] = useState<PlatformError | null>(null)
 
   // Provision form.
   const [pName, setPName] = useState('')
@@ -63,9 +67,9 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
     try {
       const data = await PlatformApi.listClusters()
       setRows(data ?? [])
-      setError(null)
+      setLoadError(null)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to load clusters')
+      setLoadError(interpretPlatformError(e))
     } finally {
       setLoading(false)
     }
@@ -179,17 +183,22 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
         }
       />
 
-      {error ? <Text color="$color12">{error}</Text> : null}
+      {loadError && loadError.kind !== 'error' ? (
+        <PlatformStateCard error={loadError} onRetry={() => void load()} />
+      ) : (
+        <>
+          {loadError ? <Text color="$color12">{loadError.message}</Text> : null}
+          {error ? <Text color="$color12">{error}</Text> : null}
 
-      <DataTable
-        columns={columns}
-        rows={rows}
-        loading={loading}
-        rowKey={(c) => c.id || c.name}
-        empty="No clusters yet. Provision a DOKS cluster or attach an existing one below."
-      />
+          <DataTable
+            columns={columns}
+            rows={rows}
+            loading={loading}
+            rowKey={(c) => c.id || c.name}
+            empty="No clusters yet. Provision a DOKS cluster or attach an existing one below."
+          />
 
-      <XStack gap="$4" flexWrap="wrap">
+          <XStack gap="$4" flexWrap="wrap">
         <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={320}>
           <Text fontSize="$5" fontWeight="700">
             Provision DOKS cluster
@@ -253,7 +262,9 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
             </Button>
           </XStack>
         </Card>
-      </XStack>
+          </XStack>
+        </>
+      )}
     </>
   )
 }
