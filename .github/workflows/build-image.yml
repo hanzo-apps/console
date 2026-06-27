@@ -1,22 +1,17 @@
 name: Build Docker Image
 # Builds + pushes ghcr.io/hanzoai/console2 on main / dispatch, on the self-hosted
-# ARC runner. NEXT_PUBLIC_* are baked at build time, so each env gets its own
-# image: push to main / dispatch(mainnet) -> :sha-+:latest; dispatch(devnet) ->
-# :dev; dispatch(testnet) -> :test. Hosts follow svc.env.hanzo.ai (mainnet =
-# console2.hanzo.ai, the current console host).
+# ARC runner. ONE brand-agnostic image serves every brand: console2 resolves the
+# brand at RUNTIME from the request hostname (console.hanzo.ai → hanzo,
+# console.lux.cloud → lux, console.zoo.cloud → zoo; src/config/index.ts), and /v1
+# is same-origin per host. So NO NEXT_PUBLIC_* are baked — baking them would pin the
+# image to one brand. Tags: :sha-<sha7> + :latest.
 on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      env:
-        description: "Target env"
-        type: choice
-        options: [mainnet, testnet, devnet]
-        default: mainnet
 
 concurrency:
-  group: docker-image-${{ github.ref }}-${{ github.event.inputs.env || 'mainnet' }}
+  group: docker-image-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -28,38 +23,9 @@ jobs:
     runs-on: [hanzo-build-linux-amd64]
     steps:
       - uses: actions/checkout@v4
-      - name: Compute per-env config
-        id: cfg
-        run: |
-          ENV="${{ github.event.inputs.env || 'mainnet' }}"
-          case "$ENV" in
-            devnet)
-              echo "console_url=https://console.dev.hanzo.ai" >> "$GITHUB_OUTPUT"
-              echo "iam_url=https://iam.dev.hanzo.ai"          >> "$GITHUB_OUTPUT"
-              echo "billing_url=https://billing.dev.hanzo.ai"  >> "$GITHUB_OUTPUT"
-              echo "tags=ghcr.io/hanzoai/console2:dev"         >> "$GITHUB_OUTPUT" ;;
-            testnet)
-              echo "console_url=https://console.test.hanzo.ai" >> "$GITHUB_OUTPUT"
-              echo "iam_url=https://iam.test.hanzo.ai"         >> "$GITHUB_OUTPUT"
-              echo "billing_url=https://billing.test.hanzo.ai" >> "$GITHUB_OUTPUT"
-              echo "tags=ghcr.io/hanzoai/console2:test"        >> "$GITHUB_OUTPUT" ;;
-            *)
-              echo "console_url=https://console2.hanzo.ai"     >> "$GITHUB_OUTPUT"
-              # Canonical issuer is hanzo.id (iss=https://hanzo.id, which the cloud
-              # /v1 backend validates). NEXT_PUBLIC_IAM_URL is inlined at build time,
-              # so this is what the browser uses for the authorize redirect — it must
-              # be hanzo.id, NOT iam.hanzo.ai (legacy zone, iss mismatch → drops sign-in).
-              echo "iam_url=https://hanzo.id"                  >> "$GITHUB_OUTPUT"
-              echo "billing_url=https://billing.hanzo.ai"      >> "$GITHUB_OUTPUT"
-              # Two tags (sha + latest). GITHUB_OUTPUT needs the multi-line
-              # heredoc form — a bare `key=v1\nv2` is rejected ("Invalid format").
-              {
-                echo "tags<<TAGS"
-                echo "ghcr.io/hanzoai/console2:sha-${GITHUB_SHA::7}"
-                echo "ghcr.io/hanzoai/console2:latest"
-                echo "TAGS"
-              } >> "$GITHUB_OUTPUT" ;;
-          esac
+      - name: short sha
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
       - name: Log in to ghcr.io
         uses: docker/login-action@v3
@@ -74,11 +40,6 @@ jobs:
           push: true
           provenance: false
           sbom: false
-          tags: ${{ steps.cfg.outputs.tags }}
-          build-args: |
-            NEXT_PUBLIC_CLOUD_URL=${{ steps.cfg.outputs.console_url }}
-            NEXT_PUBLIC_IAM_URL=${{ steps.cfg.outputs.iam_url }}
-            NEXT_PUBLIC_IAM_APP_NAME=hanzo-cloud
-            NEXT_PUBLIC_IAM_ORG_NAME=hanzo
-            NEXT_PUBLIC_IAM_CLIENT_ID=hanzo-cloud
-            NEXT_PUBLIC_BILLING_URL=${{ steps.cfg.outputs.billing_url }}
+          tags: |
+            ghcr.io/hanzoai/console2:sha-${{ steps.sha.outputs.short }}
+            ghcr.io/hanzoai/console2:latest

@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Star, Lock, ExternalLink, ArrowRight } from '@hanzogui/lucide-icons-2'
 
-import { branding } from '~/config'
+import { branding, config } from '~/config'
 import { catalogByCategory, type CatalogEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
@@ -107,7 +107,7 @@ export default function DashboardHome() {
     <>
       <PageHeader
         title={branding.name}
-        subtitle="See, enable, and manage every Hanzo product from one place."
+        subtitle={`See, enable, and manage every ${config.brandName} product from one place.`}
       />
       {groups.map((group) => (
         <YStack key={group.category} gap="$3">
