@@ -2,10 +2,11 @@
 
 /**
  * Product catalog — the unified console home. Every Hanzo product, grouped by
- * category, with its enablement state. `enabled` products open straight in;
- * `available` products offer a "Get started" onboarding affordance. Each card
- * can be pinned to the sidebar (persisted to the account). Rendered entirely
- * from the catalog registry.
+ * the ten canonical categories, with its enablement state and Google Cloud
+ * equivalent. `enabled` and `external` products open straight in (in-console or
+ * a new tab); `soon` products link to their discover screen. Each card can be
+ * pinned to the sidebar (persisted to the account). Rendered entirely from the
+ * catalog registry.
  */
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
