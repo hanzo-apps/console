@@ -34,6 +34,7 @@ import {
   Tag,
   Users,
   Wallet,
+  ScrollText,
 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
@@ -45,6 +46,8 @@ import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { PlansModule } from '~/components/products/PlansModule'
 import { WalletModule } from '~/components/products/WalletModule'
+import { IamModule, AuditModule } from '~/components/products/AdminModule'
+import { KmsModule } from '~/components/products/KmsModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { comingSoon } from '~/components/products/ComingSoonModule'
 
@@ -133,8 +136,6 @@ const ext = {
   flow: 'https://flow.hanzo.ai',
   sign: 'https://sign.hanzo.ai',
   team: 'https://team.hanzo.ai',
-  iam: config.iamUrl,
-  kms: 'https://kms.hanzo.ai',
   platform: 'https://platform.hanzo.ai',
   billing: config.billingUrl,
 } as const
@@ -383,26 +384,49 @@ export const catalog: CatalogEntry[] = [
   //    single "Platform" category (mirrors the marketing-site taxonomy, which
   //    has no Identity/Infrastructure/Commerce split).
   {
+    // Identity & access admin — Organizations / Users / Roles (RBAC) over Hanzo
+    // IAM (/v1/iam/*). In-console module (tabs via the route param), with a
+    // deep-link to the full IAM app for OAuth/SSO/app config.
     id: 'iam',
     label: 'Identity',
     icon: Shield,
-    description: 'Identity, access, OAuth, and SSO.',
+    description: 'Organizations, users, and roles (RBAC) — Hanzo IAM.',
     category: 'Platform',
-    status: 'available',
+    status: 'enabled',
     admin: true,
-    kind: 'external',
-    href: ext.iam,
+    repo: 'hanzoai/iam',
+    kind: 'module',
+    routes: [
+      { path: '', component: IamModule },
+      { path: ':tab', component: IamModule },
+    ],
   },
   {
+    // Secrets (KMS) — zero-knowledge, so the console states the model + probes
+    // the real /v1/kms surface and deep-links out; it never lists secret values.
     id: 'kms',
     label: 'Secrets',
     icon: Key,
-    description: 'Secrets management and encryption (KMS).',
+    description: 'Secrets and encryption — Hanzo KMS.',
     category: 'Platform',
-    status: 'available',
+    status: 'enabled',
     admin: true,
-    kind: 'external',
-    href: ext.kms,
+    repo: 'hanzoai/kms',
+    kind: 'module',
+    routes: [{ path: '', component: KmsModule }],
+  },
+  {
+    // Audit — identity & access event log (/v1/iam/get-records).
+    id: 'audit',
+    label: 'Audit',
+    icon: ScrollText,
+    description: 'Audit log of identity and access events.',
+    category: 'Platform',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/iam',
+    kind: 'module',
+    routes: [{ path: '', component: AuditModule }],
   },
 
   // Platform — clusters & PaaS
