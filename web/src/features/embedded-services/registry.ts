@@ -50,6 +50,18 @@ export type EmbeddedServiceDef = {
   /** Product module used to show/hide the entry via UI customization. */
   productModule: ProductModule;
   /**
+   * When set, the service is NOT embedded via the same-origin proxy/iframe; the
+   * embed page redirects the browser straight to this URL on the service's OWN
+   * origin. Required for apps that run their own cross-origin OIDC flow (e.g.
+   * Chat/LibreChat): embedding them behind console's origin breaks the OIDC
+   * redirect + host-scoped session cookie, so the user is never signed in and
+   * lands on the app's sign-in landing instead. For an OIDC app this is the
+   * login-initiation deep-link, so a user already signed into hanzo.id lands in
+   * the app already authenticated. Public + client-safe; takes precedence over
+   * `upstreamBaseUrl`.
+   */
+  externalUrl?: string;
+  /**
    * Resolve the upstream base URL (server-only). Return undefined when the
    * service is not configured for this deployment — such services are inactive
    * (hidden from nav, 503 from the proxy) rather than hardcoded-on.
@@ -119,6 +131,13 @@ export const EMBEDDED_SERVICES: readonly EmbeddedServiceDef[] = [
     icon: MessageSquare,
     group: RouteGroup.Agents,
     productModule: "agents",
+    // Chat (LibreChat) authenticates with its own @hanzo/iam OIDC and cannot be
+    // embedded behind console's origin (the OIDC redirect + hanzo.chat-scoped
+    // cookie break, dropping the session). Link out to its OIDC login-initiation
+    // deep-link on its own origin: a user already signed into hanzo.id is
+    // silently signed in and lands in the chat app. `upstreamBaseUrl` stays so
+    // the operator's CHAT_APP_URL still documents the deployed host.
+    externalUrl: "https://hanzo.chat/oauth/openid",
     upstreamBaseUrl: () => firstEnv("CHAT_APP_URL"),
     rewritePrefixes: ["/assets/", "/static/", "/favicon", "/api/"],
   },

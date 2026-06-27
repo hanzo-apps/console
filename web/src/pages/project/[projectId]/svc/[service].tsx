@@ -1,3 +1,4 @@
+import { type GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import { EmbeddedDashboard } from "@/src/components/embed/EmbeddedDashboard";
 import {
@@ -34,3 +35,22 @@ export default function EmbeddedServicePage() {
 
   return <EmbeddedDashboard title={def.title} proxyPath={proxyPath} />;
 }
+
+/**
+ * A service that declares an `externalUrl` runs its own cross-origin OIDC on its
+ * own origin and cannot be embedded behind console's origin (the OIDC redirect +
+ * host-scoped session cookie break, so the user lands on the app's sign-in page
+ * instead of signed in). Redirect straight to it — for an OIDC app this is the
+ * login-initiation deep-link, so an already hanzo.id-authenticated user lands in
+ * the app already signed in. Embeddable services fall through and render the
+ * same-origin proxy iframe above. This page is the single choke point, so every
+ * link to `/svc/<slug>` (nav, command menu, cards) is handled in one place.
+ */
+export const getServerSideProps: GetServerSideProps = async ({ params }) => {
+  const slug = typeof params?.service === "string" ? params.service : undefined;
+  const def = getEmbeddedService(slug);
+  if (def?.externalUrl) {
+    return { redirect: { destination: def.externalUrl, permanent: false } };
+  }
+  return { props: {} };
+};

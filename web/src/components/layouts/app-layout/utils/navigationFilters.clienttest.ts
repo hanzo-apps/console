@@ -106,10 +106,14 @@ describe("Embedded services are registry-driven org-scoped pages (not link-outs)
     }
   });
 
-  it("Base and Playground are present as embedded services", () => {
+  it("core services are registered; Playground is native, not embedded", () => {
     const slugs = EMBEDDED_SERVICE_NAV.map((s) => s.slug);
     expect(slugs).toContain("base");
-    expect(slugs).toContain("playground");
+    expect(slugs).toContain("chat");
+    // Playground is the native /project/[projectId]/playground page, deliberately
+    // NOT an embedded service — a second embedded entry produced a duplicate nav
+    // item (see the NOTE in the embedded-services registry).
+    expect(slugs).not.toContain("playground");
   });
 
   it("no route is a base.hanzo.ai link-out anymore", () => {
