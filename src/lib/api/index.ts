@@ -11,6 +11,12 @@ export * from './types'
 
 export { AccountApi } from './account'
 export { BotApi, type BotHealth } from './bot'
+export {
+  PlansApi,
+  type CloudPlan,
+  type CloudPricing,
+  type BlockStoragePricing,
+} from './plans'
 export { ProviderApi } from './providers'
 export { ModelRouteApi } from './model-routes'
 export { ApplicationApi } from './applications'
