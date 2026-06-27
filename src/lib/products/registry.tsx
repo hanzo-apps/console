@@ -31,6 +31,8 @@ import {
   FileText,
   Layers,
   Network,
+  Tag,
+  Users,
 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
@@ -40,7 +42,8 @@ import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { StoresModule } from '~/components/products/StoresModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
-import { resourceModule } from '~/components/products/ResourceModule'
+import { PlansModule } from '~/components/products/PlansModule'
+import { resourceRoutes } from '~/components/products/ResourceModule'
 import { comingSoon } from '~/components/products/ComingSoonModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
@@ -115,6 +118,7 @@ const ext = {
   analytics: 'https://analytics.hanzo.ai',
   flow: 'https://flow.hanzo.ai',
   sign: 'https://sign.hanzo.ai',
+  team: 'https://team.hanzo.ai',
   iam: config.iamUrl,
   kms: 'https://kms.hanzo.ai',
   platform: 'https://platform.hanzo.ai',
@@ -233,7 +237,7 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/vector',
     kind: 'module',
-    routes: [{ path: '', component: resourceModule({ kind: 'vector', productLabel: 'Hanzo Vector', connectionHint: 'Point a Vector client at host:port using the connection string.' }) }],
+    routes: resourceRoutes({ kind: 'vector', productLabel: 'Hanzo Vector', connectionHint: 'Point a Vector client at host:port using the connection string.' }),
   },
   {
     id: 'sql',
@@ -244,7 +248,7 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/sql',
     kind: 'module',
-    routes: [{ path: '', component: resourceModule({ kind: 'sql', productLabel: 'Hanzo SQL', connectionHint: 'Connect any SQL client with the connection string.' }) }],
+    routes: resourceRoutes({ kind: 'sql', productLabel: 'Hanzo SQL', connectionHint: 'Connect any SQL client with the connection string.' }),
   },
   {
     id: 'datastore',
@@ -255,7 +259,7 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/datastore',
     kind: 'module',
-    routes: [{ path: '', component: resourceModule({ kind: 'datastore', productLabel: 'Hanzo Datastore', connectionHint: 'Connect over the Datastore HTTP/native protocol using the connection string.' }) }],
+    routes: resourceRoutes({ kind: 'datastore', productLabel: 'Hanzo Datastore', connectionHint: 'Connect over the Datastore HTTP/native protocol using the connection string.' }),
   },
   {
     id: 'kv',
@@ -266,7 +270,7 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/kv',
     kind: 'module',
-    routes: [{ path: '', component: resourceModule({ kind: 'kv', productLabel: 'Hanzo KV', connectionHint: 'Connect with any KV client using the connection string.' }) }],
+    routes: resourceRoutes({ kind: 'kv', productLabel: 'Hanzo KV', connectionHint: 'Connect with any KV client using the connection string.' }),
   },
   {
     id: 'search',
@@ -277,7 +281,7 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/search',
     kind: 'module',
-    routes: [{ path: '', component: resourceModule({ kind: 'search', productLabel: 'Hanzo Search', connectionHint: 'Use the Search host + key from the connection string.' }) }],
+    routes: resourceRoutes({ kind: 'search', productLabel: 'Hanzo Search', connectionHint: 'Use the Search host + key from the connection string.' }),
   },
   {
     id: 's3',
@@ -288,7 +292,7 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/s3',
     kind: 'module',
-    routes: [{ path: '', component: resourceModule({ kind: 's3', productLabel: 'Hanzo S3', connectionHint: 'Use as an S3 endpoint with the access key/secret in the connection string.' }) }],
+    routes: resourceRoutes({ kind: 's3', productLabel: 'Hanzo S3', connectionHint: 'Use as an S3 endpoint with the access key/secret in the connection string.' }),
   },
   {
     id: 'docdb',
@@ -299,7 +303,7 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/docdb',
     kind: 'module',
-    routes: [{ path: '', component: resourceModule({ kind: 'docdb', productLabel: 'Hanzo DocDB', connectionHint: 'Connect with any DocDB driver using the connection string.' }) }],
+    routes: resourceRoutes({ kind: 'docdb', productLabel: 'Hanzo DocDB', connectionHint: 'Connect with any DocDB driver using the connection string.' }),
   },
   {
     id: 'base',
@@ -346,6 +350,19 @@ export const catalog: CatalogEntry[] = [
     status: 'available',
     kind: 'external',
     href: ext.sign,
+  },
+  {
+    // hanzo.team — Slack/Jira/agentic-human playground. Runs standalone
+    // (team.hanzo.ai, its own deploy + IAM app hanzo-team); the console launches it.
+    id: 'team',
+    label: 'Team',
+    icon: Users,
+    description: 'Team workspace — chat, issues, and agentic playground.',
+    category: 'Apps',
+    status: 'available',
+    repo: 'hanzoai/team',
+    kind: 'external',
+    href: ext.team,
   },
 
   // ── Identity ─────────────────────────────────────────────────────────
@@ -400,6 +417,18 @@ export const catalog: CatalogEntry[] = [
   },
 
   // ── Commerce ─────────────────────────────────────────────────────────
+  {
+    // Discovery: compare what every tier offers and costs (live /v1/pricing).
+    // Paying happens in Billing (the one money surface) — this never charges.
+    id: 'plans',
+    label: 'Plans & Pricing',
+    icon: Tag,
+    description: 'Compare plans and pricing for every cloud service.',
+    category: 'Commerce',
+    status: 'enabled',
+    kind: 'module',
+    routes: [{ path: '', component: PlansModule }],
+  },
   {
     id: 'billing',
     label: 'Billing',
