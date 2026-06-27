@@ -110,11 +110,26 @@ Endpoint surface ported from `hanzoai/ai` `web/src/backend/*.js`
 
 ## Auth (Hanzo IAM)
 
-`@hanzo/iam-js-sdk` against `iam.hanzo.ai`. `getSigninUrl()` builds the OIDC
-authorize URL (`/login/oauth/authorize?...redirect_uri=<origin>/auth/callback`).
-IAM returns `?code&state`; the callback posts them to `/v1/signin`, which mints
-the backend session cookie; `useSession` then loads `/v1/get-account`. App is
-`hanzo-console`, org `hanzo` (the `<org>-<app>` IAM convention).
+`@hanzo/iam-js-sdk` against **`hanzo.id`** — the canonical OIDC issuer
+(`iss=https://hanzo.id`), the one the cloud `/v1` backend validates. `getSigninUrl()`
+builds the authorize URL (`https://hanzo.id/login/oauth/authorize?...redirect_uri=
+<origin>/auth/callback`). IAM returns `?code&state`; the callback posts them to
+`/v1/signin`, which the cloud backend exchanges and mints the session cookie;
+`useSession` then loads `/v1/get-account`.
+
+App/client is **`hanzo-cloud`**, org `hanzo` — NOT a console-specific app. console2
+is a front-end OF the shared cloud `/v1` backend, which exchanges the code and
+validates the token as app `hanzo-cloud` (`aud=hanzo-cloud`), so the browser MUST
+present the same `client_id`. (The `hanzo-cloud` IAM app already whitelists
+`https://console2.hanzo.ai/auth/callback`.)
+
+**Build-time gotcha (the 2026-06 sign-in bug):** every `NEXT_PUBLIC_IAM_*` is
+inlined at BUILD time (browser config), so the *image* — not runtime env — decides
+the issuer. The mainnet image MUST bake `NEXT_PUBLIC_IAM_URL=https://hanzo.id`.
+Baking `iam.hanzo.ai` (the legacy zone, `iss=https://iam.hanzo.ai`) dropped the user
+on iam.hanzo.ai with an issuer mismatch. Fixed in `src/config/index.ts` (default),
+`.env.example`, the `Dockerfile` ARG default, and the mainnet `iam_url` build-arg in
+`.github/workflows/build-image.yml`.
 
 ## Product-module registry (extensibility)
 
@@ -190,8 +205,18 @@ domain, or honest `soon` overview). The PaaS embed shows only real control-plane
 data with honest empty/not-configured states. No lorem stats, no demo projects,
 no placeholder cards.
 
-Build/deploy: arcd self-hosted CI (`.github/workflows/build-image.yml`, push to
-`main` → `ghcr.io/hanzoai/console2:sha-<sha>`). When the runner fleet is down,
-fall back to an in-cluster Kaniko build, then deploy via the operator's declared
-image. Verify live with headless Playwright on console2.hanzo.ai (superuser
-`z@hanzo.ai`).
+Build: arcd self-hosted CI (`.github/workflows/build-image.yml`, push to `main` →
+`ghcr.io/hanzoai/console2:sha-<sha>` + `:latest`). NOTE the per-env `tags` output
+uses the GITHUB_OUTPUT **heredoc** form — a bare two-line `key=v1\nv2` is rejected
+as "Invalid format" and fails the job at `Compute per-env config` (this silently
+broke every build until 2026-06).
+
+Deploy reality: console2 is an **undeclared raw Deployment** (ns `hanzo`, no
+operator CR / no universe manifest / no `.platform.yml`) and the hanzo-k8s operator
+is scaled `0/0`, so platform.hanzo.ai has no drive surface for its image (its
+`/v1/apps` is observe-only; `redeploy` only restarts the *declared* image). Per the
+internal deploy runbook the interim roll is:
+`kubectl --context do-sfo3-hanzo-k8s -n hanzo set image deploy/console2 console2=ghcr.io/hanzoai/console2:sha-<sha>`
+then `rollout status`. **Debt:** declare console2 as an operator `Service` CR +
+`.platform.yml` so deploys go push→arcd→CR→reconcile (kills the kubectl step).
+Verify live with headless Playwright on console2.hanzo.ai (superuser `z@hanzo.ai`).
