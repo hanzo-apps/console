@@ -39,6 +39,7 @@ import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { StoresModule } from '~/components/products/StoresModule'
 import { ChatModule } from '~/components/products/ChatModule'
+import { BotModule } from '~/components/products/BotModule'
 import { resourceModule } from '~/components/products/ResourceModule'
 import { comingSoon } from '~/components/products/ComingSoonModule'
 
@@ -111,7 +112,6 @@ export type CatalogEntry =
 /** Canonical external product surfaces (public product domains, not secrets). */
 const ext = {
   search: 'https://search.hanzo.ai',
-  bot: 'https://hanzo.bot',
   analytics: 'https://analytics.hanzo.ai',
   flow: 'https://flow.hanzo.ai',
   sign: 'https://sign.hanzo.ai',
@@ -180,14 +180,18 @@ export const catalog: CatalogEntry[] = [
     href: ext.search,
   },
   {
+    // In-console Bot surface — live status from /v1/bot/health (bot-gateway) plus
+    // operator deep-links. The bot backend (hanzoai/bot) is a routed service at
+    // /v1/bot/*; its own UI is IAM-gated to its origins, so we link, not iframe.
     id: 'bot',
     label: 'Bot',
     icon: Bot,
     description: 'Bot framework, skills, and plugins.',
     category: 'AI',
-    status: 'available',
-    kind: 'external',
-    href: ext.bot,
+    status: 'enabled',
+    repo: 'hanzoai/bot',
+    kind: 'module',
+    routes: [{ path: '', component: BotModule }],
   },
 
   // ── Data ─────────────────────────────────────────────────────────────
