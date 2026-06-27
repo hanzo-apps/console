@@ -53,10 +53,10 @@ function NavRow({
       >
         {entry.label}
       </Button>
-      {(entry.status === 'soon' || entry.status === 'waitlist') && (
-        <YStack px="$1.5" py={1} rounded="$10" bg={entry.status === 'waitlist' ? '$color4' : '$color4'}>
+      {entry.status === 'soon' && (
+        <YStack px="$1.5" py={1} rounded="$10" bg="$color4">
           <Text fontSize={9} fontWeight="800" letterSpacing={0.5}>
-            {entry.status === 'waitlist' ? 'WAITLIST' : 'SOON'}
+            SOON
           </Text>
         </YStack>
       )}
