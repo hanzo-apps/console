@@ -45,8 +45,6 @@ export const usePlan = (): Plan | undefined => {
  * Hook to get the entitlements of the current organization or self-hosted instance.
  */
 export const useEntitlements = (): Entitlement[] => {
-  const plan = usePlan();
-  console.log("plan=======================", plan);
   return entitlementAccess["cloud:free"].entitlements;
 };
 

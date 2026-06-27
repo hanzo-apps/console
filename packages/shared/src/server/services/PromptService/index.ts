@@ -320,13 +320,20 @@ export class PromptService {
           let resolvedPrompt = JSON.stringify(currentPrompt.prompt);
 
           for (const dep of promptDependencies) {
-            const depPrompt = await this.prisma.prompt.findFirst({
-              where: {
-                projectId,
-                name: dep.name,
-                ...(dep.type === "version" ? { version: dep.version } : { labels: { has: dep.label } }),
-              },
-            });
+            // `labels` is a JSON-TEXT column on SQLite (the codec round-trips it
+            // as a string[]); the `has` scalar-list operator is unsupported on
+            // it, so for a label dependency we fetch the prompt's versions and
+            // pick the one carrying the label in JS. See db-json-arrays.ts.
+            const depPrompt =
+              dep.type === "version"
+                ? await this.prisma.prompt.findFirst({
+                    where: { projectId, name: dep.name, version: dep.version },
+                  })
+                : ((
+                    await this.prisma.prompt.findMany({
+                      where: { projectId, name: dep.name },
+                    })
+                  ).find((prompt) => prompt.labels.includes(dep.label)) ?? null);
 
             const logName = `${dep.name} - ${dep.type} ${dep.type === "version" ? dep.version : dep.label}`;
 

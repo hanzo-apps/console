@@ -841,15 +841,19 @@ export const promptRouter = createTRPCRouter({
           ctx.prisma,
         );
 
-        const previousLabeledPrompts = await ctx.prisma.prompt.findMany({
-          where: {
-            projectId,
-            name: promptName,
-            labels: { hasSome: newLabels },
-            id: { not: input.promptId },
-          },
-          orderBy: [{ version: "desc" }],
-        });
+        // `labels` is a JSON-TEXT column on SQLite (the codec round-trips it as
+        // a string[]); the `hasSome` scalar-list operator is unsupported on it,
+        // so fetch the other versions of this prompt and intersect labels in JS.
+        const previousLabeledPrompts = (
+          await ctx.prisma.prompt.findMany({
+            where: {
+              projectId,
+              name: promptName,
+              id: { not: input.promptId },
+            },
+            orderBy: [{ version: "desc" }],
+          })
+        ).filter((p) => newLabels.some((label) => p.labels.includes(label)));
 
         touchedPromptIds.push(...previousLabeledPrompts.map((p) => p.id));
 

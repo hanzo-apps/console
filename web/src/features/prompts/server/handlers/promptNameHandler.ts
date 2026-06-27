@@ -75,15 +75,19 @@ const deletePromptNameHandler = async (
 
   const { promptName, version, label } = GetPromptByNameSchema.parse(req.query);
 
-  // Fetch prompts for audit logging
-  const where = {
-    projectId: authCheck.scope.projectId,
-    name: promptName,
-    ...(version ? { version } : {}),
-    ...(label ? { labels: { has: label } } : {}),
-  };
-
-  const prompts = await prisma.prompt.findMany({ where });
+  // Fetch prompts for audit logging. `labels` is a JSON-TEXT column on SQLite
+  // (the codec round-trips it as a string[]); the `has` scalar-list operator is
+  // unsupported on it, so filter by the requested label in JS.
+  const allVersions = await prisma.prompt.findMany({
+    where: {
+      projectId: authCheck.scope.projectId,
+      name: promptName,
+      ...(version ? { version } : {}),
+    },
+  });
+  const prompts = label
+    ? allVersions.filter((prompt) => prompt.labels.includes(label))
+    : allVersions;
 
   // Audit log before deletion
   for (const prompt of prompts) {
