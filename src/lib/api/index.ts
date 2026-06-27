@@ -45,3 +45,11 @@ export {
   type ProvisionClusterInput,
   type AttachClusterInput,
 } from './platform'
+export {
+  IamAdminApi,
+  type Paged,
+  type Organization,
+  type IamUser,
+  type Role,
+  type AuditRecord,
+} from './admin'
