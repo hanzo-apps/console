@@ -112,3 +112,4 @@ console-standalone.tar.gz
 
 CLAUDE.md
 .claude/
+web/scripts/verify-vector*.mjs
