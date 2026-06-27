@@ -9,7 +9,7 @@
  */
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Star, Lock, ExternalLink, ArrowRight } from '@hanzogui/lucide-icons-2'
+import { Star, Lock, ExternalLink, ArrowRight, Info } from '@hanzogui/lucide-icons-2'
 
 import { branding, config } from '~/config'
 import { catalogByCategory, type CatalogEntry } from '~/lib/products/registry'
@@ -49,11 +49,13 @@ function ProductCard({
   pinned,
   onOpen,
   onToggle,
+  onLearnMore,
 }: {
   entry: CatalogEntry
   pinned: boolean
   onOpen: () => void
   onToggle: () => void
+  onLearnMore: () => void
 }) {
   const Icon = entry.icon
   const enabled = entry.status === 'enabled'
@@ -66,14 +68,24 @@ function ProductCard({
             {entry.label}
           </Text>
         </XStack>
-        <Button
-          size="$2"
-          chromeless
-          opacity={pinned ? 1 : 0.3}
-          icon={<Star size={15} />}
-          onPress={onToggle}
-          aria-label={pinned ? `Unpin ${entry.label}` : `Pin ${entry.label}`}
-        />
+        <XStack gap="$1" items="center">
+          <Button
+            size="$2"
+            chromeless
+            opacity={0.4}
+            icon={<Info size={15} />}
+            onPress={onLearnMore}
+            aria-label={`Learn about ${entry.label}`}
+          />
+          <Button
+            size="$2"
+            chromeless
+            opacity={pinned ? 1 : 0.3}
+            icon={<Star size={15} />}
+            onPress={onToggle}
+            aria-label={pinned ? `Unpin ${entry.label}` : `Pin ${entry.label}`}
+          />
+        </XStack>
       </XStack>
 
       <Text fontSize="$3" color="$color11" minH={40}>
@@ -87,8 +99,10 @@ function ProductCard({
           bg={enabled ? '$color5' : 'transparent'}
           borderWidth={1}
           borderColor="$borderColor"
-          onPress={onOpen}
-          iconAfter={entry.kind === 'external' ? <ExternalLink size={14} /> : <ArrowRight size={14} />}
+          onPress={enabled ? onOpen : onLearnMore}
+          iconAfter={
+            enabled && entry.kind === 'external' ? <ExternalLink size={14} /> : <ArrowRight size={14} />
+          }
         >
           {enabled ? 'Open' : 'Get started'}
         </Button>
@@ -122,6 +136,7 @@ export default function DashboardHome() {
                 pinned={isPinned(entry.id)}
                 onOpen={() => openProduct(entry, push)}
                 onToggle={() => toggle(entry.id)}
+                onLearnMore={() => push(`/discover/${entry.id}`)}
               />
             ))}
           </XStack>
