@@ -16,19 +16,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # public/ may be empty (git doesn't track empty dirs) — ensure it exists for the runner COPY.
 RUN mkdir -p public
-ARG NEXT_PUBLIC_CLOUD_URL=https://console2.hanzo.ai
-ARG NEXT_PUBLIC_IAM_URL=https://hanzo.id
-ARG NEXT_PUBLIC_IAM_APP_NAME=hanzo-cloud
-ARG NEXT_PUBLIC_IAM_ORG_NAME=hanzo
-ARG NEXT_PUBLIC_IAM_CLIENT_ID=hanzo-cloud
-ARG NEXT_PUBLIC_BILLING_URL=https://billing.hanzo.ai
-ENV NEXT_PUBLIC_CLOUD_URL=$NEXT_PUBLIC_CLOUD_URL \
-    NEXT_PUBLIC_IAM_URL=$NEXT_PUBLIC_IAM_URL \
-    NEXT_PUBLIC_IAM_APP_NAME=$NEXT_PUBLIC_IAM_APP_NAME \
-    NEXT_PUBLIC_IAM_ORG_NAME=$NEXT_PUBLIC_IAM_ORG_NAME \
-    NEXT_PUBLIC_IAM_CLIENT_ID=$NEXT_PUBLIC_IAM_CLIENT_ID \
-    NEXT_PUBLIC_BILLING_URL=$NEXT_PUBLIC_BILLING_URL \
-    NEXT_TELEMETRY_DISABLED=1
+# ONE brand-agnostic image: brand (IAM org/issuer/app + wordmark) is resolved at
+# RUNTIME from the request hostname (src/config/index.ts), and /v1 is same-origin
+# per host. Baking NEXT_PUBLIC_* here would inline a single brand and break that —
+# so nothing brand-specific is baked.
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM node:22-alpine AS runner
