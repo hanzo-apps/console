@@ -1,17 +1,20 @@
 /**
- * Platform API — DOKS cluster control plane (the Hanzo PaaS, platform.hanzo.ai).
+ * Platform API — the Hanzo PaaS control plane (platform.hanzo.ai), covering both
+ * the cluster fleet and in-cluster Kubernetes workloads.
  *
- * The console reaches the platform on `config.platformUrl` with the same cookie
- * credentials + REST transport as the cloud backend (see client.ts). Tenancy is
- * server-side (X-Org-Id from the validated session).
+ * ONE transport: every call goes through console2's own same-origin `/paas/*`
+ * proxy (app/paas/[...path]/route.ts), which injects the service token from
+ * server-only env (sourced via KMS) and forwards to `platform.hanzo.ai/v1/*`. So
+ * the token never reaches the browser, there is no CORS, and when the token is
+ * unset the proxy returns an honest 501 the UI renders as "not configured" — it
+ * never fabricates data.
  *
- * NOTE ON PATHS: the platform's DOKS endpoints are not yet pinned in a shared
+ * PATHS: the platform's DOKS/k8s endpoints are not yet pinned in a shared
  * contract doc, so every path the console depends on is centralized in
- * `CLUSTER_ROUTES` below — the SINGLE place to re-point when the platform team
- * confirms the surface. Override the base URL with NEXT_PUBLIC_PLATFORM_URL.
+ * `CLUSTER_ROUTES` / `k8sPath` below — the SINGLE place to re-point when the
+ * platform team confirms the surface.
  */
-import { restGet, restPost, restDelete, v1Url } from './client'
-import { config } from '~/config'
+import { restGet, restPost, restDelete } from './client'
 
 /** Where a cluster lives: shared multi-tenant Hanzo Cloud, or a BYO/managed DOKS. */
 export type ClusterKind = 'shared' | 'byo' | (string & {})
@@ -45,9 +48,9 @@ export type AttachClusterInput = {
 }
 
 /**
- * Platform DOKS routes, relative to `${config.platformUrl}/v1/`. Centralized so
- * a single edit re-points the console if the platform surface differs from this
- * assumed shape. Each is a `/v1` REST path the platform serves.
+ * Platform routes, relative to the `/paas/` proxy (→ `platform.hanzo.ai/v1/`).
+ * Centralized so a single edit re-points the console if the platform surface
+ * differs from this assumed shape.
  */
 export const CLUSTER_ROUTES = {
   list: 'clusters',
@@ -56,7 +59,8 @@ export const CLUSTER_ROUTES = {
   remove: (name: string) => `clusters/${encodeURIComponent(name)}`,
 } as const
 
-const url = (path: string) => v1Url(path, config.platformUrl)
+/** Same-origin PaaS proxy path. The proxy prefixes `/v1/` and attaches the token. */
+const url = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
 
 export const PlatformApi = {
   listClusters: () => restGet<Cluster[]>(url(CLUSTER_ROUTES.list)),
@@ -68,6 +72,67 @@ export const PlatformApi = {
     restPost<Cluster>(url(CLUSTER_ROUTES.attach), input),
 
   removeCluster: (name: string) => restDelete(url(CLUSTER_ROUTES.remove(name))),
+}
+
+// ── In-cluster Kubernetes ─────────────────────────────────────────────────────
+// Browse workloads and operator-managed custom resources for ONE cluster, scoped
+// by org in the path (`/v1/org/{org}/cluster/{id}/k8s/*`). The platform backend
+// ships separately; until it serves these, the calls 404 and the module shows an
+// honest "backend not yet available" state.
+
+/** The workload/CR kinds the console browses, in display order. */
+export type K8sResource = 'deployments' | 'pods' | 'services' | 'ingresses' | 'events' | 'crs'
+
+export const K8S_RESOURCES: { id: K8sResource; label: string }[] = [
+  { id: 'deployments', label: 'Deployments' },
+  { id: 'pods', label: 'Pods' },
+  { id: 'services', label: 'Services' },
+  { id: 'ingresses', label: 'Ingresses' },
+  { id: 'events', label: 'Events' },
+  { id: 'crs', label: 'Custom Resources' },
+]
+
+/**
+ * One Kubernetes object as the platform reports it. Fields are optional because
+ * each kind differs and the upstream shape evolves — the UI renders what is
+ * present and never fabricates the rest.
+ */
+export type K8sObject = {
+  name?: string
+  namespace?: string
+  kind?: string
+  status?: string
+  phase?: string
+  ready?: string
+  type?: string
+  age?: string
+  createdAt?: string
+  reason?: string
+  message?: string
+  object?: string
+  host?: string
+  hosts?: string[]
+  [key: string]: unknown
+}
+
+const k8sPath = (org: string, cluster: string, kind: K8sResource): string =>
+  `org/${encodeURIComponent(org)}/cluster/${encodeURIComponent(cluster)}/k8s/${kind}`
+
+/** Normalize a k8s list payload (array, or `{items|data|<kind>: [...]}`). */
+function asItems(raw: unknown): K8sObject[] {
+  if (Array.isArray(raw)) return raw as K8sObject[]
+  if (raw && typeof raw === 'object') {
+    const o = raw as Record<string, unknown>
+    for (const key of ['items', 'data', 'deployments', 'pods', 'services', 'ingresses', 'events', 'resources']) {
+      if (Array.isArray(o[key])) return o[key] as K8sObject[]
+    }
+  }
+  return []
+}
+
+export const KubernetesApi = {
+  listResource: async (org: string, cluster: string, kind: K8sResource): Promise<K8sObject[]> =>
+    asItems(await restGet<unknown>(url(k8sPath(org, cluster, kind)))),
 }
 
 /** DOKS regions offered for provisioning (DigitalOcean Kubernetes). */

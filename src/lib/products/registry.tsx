@@ -48,6 +48,8 @@ import { PlansModule } from '~/components/products/PlansModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
+import { ClustersModule } from '~/components/products/ClustersModule'
+import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { comingSoon } from '~/components/products/ComingSoonModule'
 
@@ -450,10 +452,29 @@ export const catalog: CatalogEntry[] = [
     icon: Network,
     description: 'Your Kubernetes — shared Hanzo Cloud or your own DOKS.',
     category: 'Platform',
-    status: 'soon',
+    status: 'enabled',
+    admin: true,
     repo: 'hanzoai/operator',
     kind: 'module',
-    routes: [{ path: '', component: comingSoon({ label: 'Hanzo Clusters', repo: 'hanzoai/operator', status: 'soon', blurb: 'One control plane for where your workloads run — choose zero-ops shared Hanzo Cloud or bring your own DOKS cluster, both reconciled by the Hanzo operator.' }) }],
+    routes: [{ path: '', component: ClustersModule }],
+  },
+  {
+    // Kubernetes — browse workloads + operator custom resources for a cluster,
+    // via the PaaS control plane (/paas → platform). Honest states if the
+    // platform k8s endpoints aren't live yet.
+    id: 'kubernetes',
+    label: 'Kubernetes',
+    icon: Boxes,
+    description: 'Workloads and operator custom resources, per cluster.',
+    category: 'Platform',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/operator',
+    kind: 'module',
+    routes: [
+      { path: '', component: KubernetesModule },
+      { path: ':tab', component: KubernetesModule },
+    ],
   },
 
   // Platform — billing, wallet & plans (the money surfaces)
