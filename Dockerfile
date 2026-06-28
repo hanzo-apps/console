@@ -20,7 +20,10 @@ RUN mkdir -p public
 # RUNTIME from the request hostname (src/config/index.ts), and /v1 is same-origin
 # per host. Baking NEXT_PUBLIC_* here would inline a single brand and break that —
 # so nothing brand-specific is baked.
-ENV NEXT_TELEMETRY_DISABLED=1
+# Next 15 + @hanzo/gui (large RN dep tree) overflows Node's default heap on the
+# build node → OOMKill (exit 137). Cap the heap generously, as every other Hanzo
+# Next build does (chat uses 4096).
+ENV NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=6144
 RUN npm run build
 
 FROM node:22-alpine AS runner
