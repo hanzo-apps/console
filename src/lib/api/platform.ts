@@ -1,6 +1,5 @@
 /**
- * Platform API — the Hanzo PaaS control plane (platform.hanzo.ai), covering both
- * the cluster fleet and in-cluster Kubernetes workloads.
+ * Platform API — the Hanzo PaaS control plane (platform.hanzo.ai).
  *
  * ONE transport: every call goes through console2's own same-origin `/paas/*`
  * proxy (app/paas/[...path]/route.ts), which injects the service token from
@@ -9,21 +8,28 @@
  * unset the proxy returns an honest 501 the UI renders as "not configured" — it
  * never fabricates data.
  *
- * PATHS: the platform's DOKS/k8s endpoints are not yet pinned in a shared
- * contract doc, so every path the console depends on is centralized in
- * `CLUSTER_ROUTES` / `k8sPath` below — the SINGLE place to re-point when the
- * platform team confirms the surface.
+ * Two REAL surfaces the platform serves (verified against the live control
+ * plane, both service-token gated):
+ *   - GET /v1/apps                 → the apps inventory: every (org, app, env)
+ *     with declared/running/latest tag, drift, health, cluster, namespace. This
+ *     is the canonical "what is running" board (docs/APPS_LIFECYCLE.md). It is
+ *     the single source the Status and Kubernetes (workloads) modules read.
+ *   - GET|POST /v1/org/{org}/cluster → the org's DEDICATED Hanzo K8S (DOKS)
+ *     clusters: list, and provision a new one. Honest empty when the org has no
+ *     dedicated cluster (the shared Hanzo Cloud is the default target, not a row).
  */
-import { restGet, restPost, restDelete } from './client'
+import { restGet, restPost } from './client'
 
 /** Where a cluster lives: shared multi-tenant Hanzo Cloud, or a BYO/managed DOKS. */
 export type ClusterKind = 'shared' | 'byo' | (string & {})
 
-/** A Kubernetes cluster surfaced in the console. */
+/** A dedicated Kubernetes cluster as the platform lists it. */
 export type Cluster = {
   id?: string
   name: string
   status: string
+  /** Platform lifecycle phase (requested→provisioning→installing→ready/error). */
+  phase?: string
   kind?: ClusterKind
   region?: string
   nodeSize?: string
@@ -33,106 +39,85 @@ export type Cluster = {
   createdAt?: string
 }
 
-/** Provision a fresh DOKS cluster. */
+/** Provision a fresh dedicated DOKS cluster (the DO token is read from KMS server-side). */
 export type ProvisionClusterInput = {
-  name: string
   region: string
   nodeSize: string
   nodeCount: number
+  ha?: boolean
 }
 
-/** Attach an existing cluster the operator should reconcile into. */
-export type AttachClusterInput = {
-  name: string
-  kubeconfig: string
-}
+/** Health of an app/workload as the inventory reports it. */
+export type AppHealth = 'green' | 'yellow' | 'red' | (string & {})
+
+/** One drift flag on an app (declared/running/release mismatch). */
+export type AppDriftFlag = { kind: string; severity: string; message: string }
 
 /**
- * Platform routes, relative to the `/paas/` proxy (→ `platform.hanzo.ai/v1/`).
- * Centralized so a single edit re-points the console if the platform surface
- * differs from this assumed shape.
+ * One row of the apps inventory (`GET /v1/apps`) — an operator-managed service
+ * (a `Service` CR + its Deployment) observed on a cluster. Fields the platform
+ * may omit are optional; the UI renders what is present and never invents the rest.
  */
-export const CLUSTER_ROUTES = {
-  list: 'clusters',
-  provision: 'clusters',
-  attach: 'clusters/attach',
-  remove: (name: string) => `clusters/${encodeURIComponent(name)}`,
-} as const
+export type PlatformApp = {
+  id: string
+  org: string
+  app: string
+  env: string
+  repo?: string
+  registry?: string
+  declaredTag?: string | null
+  runningTag?: string | null
+  latestTag?: string | null
+  releaseUrl?: string | null
+  health: AppHealth
+  cluster: string
+  namespace?: string
+  lastObserved?: string
+  updatedAt?: string
+  drift?: { severity?: string; flags?: AppDriftFlag[] }
+}
+
+/** Optional filters for the apps inventory (mirrors the platform's query params). */
+export type AppsQuery = {
+  org?: string
+  env?: 'dev' | 'test' | 'main'
+  health?: 'green' | 'yellow' | 'red'
+  /** Only rows the reconciler considers drifting. */
+  drift?: boolean
+}
 
 /** Same-origin PaaS proxy path. The proxy prefixes `/v1/` and attaches the token. */
 const url = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
+const enc = encodeURIComponent
+
+const qs = (q: AppsQuery): string => {
+  const p = new URLSearchParams()
+  if (q.org) p.set('org', q.org)
+  if (q.env) p.set('env', q.env)
+  if (q.health) p.set('health', q.health)
+  if (q.drift) p.set('drift', 'true')
+  const s = p.toString()
+  return s ? `?${s}` : ''
+}
 
 export const PlatformApi = {
-  listClusters: () => restGet<Cluster[]>(url(CLUSTER_ROUTES.list)),
+  /** The apps inventory — the real "what is running" board across all clusters. */
+  apps: async (query: AppsQuery = {}): Promise<PlatformApp[]> => {
+    const r = await restGet<{ apps?: PlatformApp[] }>(url(`apps${qs(query)}`))
+    return r?.apps ?? []
+  },
 
-  provisionCluster: (input: ProvisionClusterInput) =>
-    restPost<Cluster>(url(CLUSTER_ROUTES.provision), input),
+  /** The org's dedicated DOKS clusters (honest empty when none provisioned). */
+  listClusters: async (org: string): Promise<Cluster[]> => {
+    const r = await restGet<{ clusters?: Cluster[] }>(url(`org/${enc(org)}/cluster`))
+    return r?.clusters ?? []
+  },
 
-  attachCluster: (input: AttachClusterInput) =>
-    restPost<Cluster>(url(CLUSTER_ROUTES.attach), input),
-
-  removeCluster: (name: string) => restDelete(url(CLUSTER_ROUTES.remove(name))),
-}
-
-// ── In-cluster Kubernetes ─────────────────────────────────────────────────────
-// Browse workloads and operator-managed custom resources for ONE cluster, scoped
-// by org in the path (`/v1/org/{org}/cluster/{id}/k8s/*`). The platform backend
-// ships separately; until it serves these, the calls 404 and the module shows an
-// honest "backend not yet available" state.
-
-/** The workload/CR kinds the console browses, in display order. */
-export type K8sResource = 'deployments' | 'pods' | 'services' | 'ingresses' | 'events' | 'crs'
-
-export const K8S_RESOURCES: { id: K8sResource; label: string }[] = [
-  { id: 'deployments', label: 'Deployments' },
-  { id: 'pods', label: 'Pods' },
-  { id: 'services', label: 'Services' },
-  { id: 'ingresses', label: 'Ingresses' },
-  { id: 'events', label: 'Events' },
-  { id: 'crs', label: 'Custom Resources' },
-]
-
-/**
- * One Kubernetes object as the platform reports it. Fields are optional because
- * each kind differs and the upstream shape evolves — the UI renders what is
- * present and never fabricates the rest.
- */
-export type K8sObject = {
-  name?: string
-  namespace?: string
-  kind?: string
-  status?: string
-  phase?: string
-  ready?: string
-  type?: string
-  age?: string
-  createdAt?: string
-  reason?: string
-  message?: string
-  object?: string
-  host?: string
-  hosts?: string[]
-  [key: string]: unknown
-}
-
-const k8sPath = (org: string, cluster: string, kind: K8sResource): string =>
-  `org/${encodeURIComponent(org)}/cluster/${encodeURIComponent(cluster)}/k8s/${kind}`
-
-/** Normalize a k8s list payload (array, or `{items|data|<kind>: [...]}`). */
-function asItems(raw: unknown): K8sObject[] {
-  if (Array.isArray(raw)) return raw as K8sObject[]
-  if (raw && typeof raw === 'object') {
-    const o = raw as Record<string, unknown>
-    for (const key of ['items', 'data', 'deployments', 'pods', 'services', 'ingresses', 'events', 'resources']) {
-      if (Array.isArray(o[key])) return o[key] as K8sObject[]
-    }
-  }
-  return []
-}
-
-export const KubernetesApi = {
-  listResource: async (org: string, cluster: string, kind: K8sResource): Promise<K8sObject[]> =>
-    asItems(await restGet<unknown>(url(k8sPath(org, cluster, kind)))),
+  /** Provision a fresh dedicated DOKS cluster for the org. */
+  provisionCluster: async (org: string, input: ProvisionClusterInput): Promise<Cluster> => {
+    const r = await restPost<{ cluster: Cluster }>(url(`org/${enc(org)}/cluster`), input)
+    return r.cluster
+  },
 }
 
 /** DOKS regions offered for provisioning (DigitalOcean Kubernetes). */
@@ -158,3 +143,7 @@ export const DOKS_NODE_SIZES = [
   'c-2-4gb',
   'c-4-8gb',
 ] as const
+
+/** Clusters that actually appear in the apps inventory, in stable order. */
+export const clustersFromApps = (apps: PlatformApp[]): string[] =>
+  Array.from(new Set(apps.map((a) => a.cluster).filter(Boolean))).sort()

@@ -1,38 +1,34 @@
 'use client'
 
 /**
- * Clusters admin — the one control-plane surface for *where* workloads run.
+ * Clusters admin — the control-plane surface for your DEDICATED Hanzo K8S.
  *
- * Two targets, one list:
- *   - Provision a fresh DOKS cluster (region / node size / count) — the platform
- *     creates node pools and reconciles your apps + managed products into it.
- *   - Attach an existing cluster (name + kubeconfig) the operator should adopt.
+ * The platform can provision an org its OWN DigitalOcean Kubernetes cluster,
+ * install the hanzo-operator + per-tenant baseline, and make it the org's deploy
+ * target (the DO token is read from KMS server-side; the kubeconfig is never
+ * stored or returned). Workloads otherwise run on the shared Hanzo Cloud — which
+ * is the default target, not a row here, so an org with no dedicated cluster sees
+ * an honest empty list.
  *
- * Talks to the Hanzo PaaS (config.platformUrl) via PlatformApi. Tenancy is
- * server-side (X-Org-Id from the session). Built on the shared GUI primitives +
- * DataTable/PageHeader/Field, matching every other module.
+ * Talks to the Hanzo PaaS via the same-origin `/paas` proxy (`GET|POST
+ * /v1/org/{org}/cluster`). Tenancy is the brand org (`config.iamOrgName`). Built
+ * on the shared GUI primitives, matching every other module.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Plus, Trash, RefreshCw, Link2 } from '@hanzogui/lucide-icons-2'
+import { Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import {
-  ApiError,
-  PlatformApi,
-  DOKS_REGIONS,
-  DOKS_NODE_SIZES,
-  type Cluster,
-} from '~/lib/api'
+import { ApiError, PlatformApi, DOKS_REGIONS, DOKS_NODE_SIZES, type Cluster } from '~/lib/api'
+import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
-import { FieldRow, FieldText, FieldTextArea, FieldSelect } from '~/components/ui/Field'
-import { slugError } from '~/lib/slug'
+import { FieldRow, FieldSelect } from '~/components/ui/Field'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
 const KindTag = ({ kind }: { kind?: string }) => (
   <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color3" color="$color11">
-    {kind === 'shared' ? 'Shared' : kind === 'byo' ? 'BYO' : kind || '—'}
+    {kind === 'shared' ? 'Shared' : kind === 'byo' ? 'BYO' : kind || 'Dedicated'}
   </Text>
 )
 
@@ -43,29 +39,24 @@ const clampCount = (v: string): number => {
 }
 
 export function ClustersModule(_props: { params: Record<string, string> }) {
+  const org = config.iamOrgName
   const [rows, setRows] = useState<Cluster[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   // List-load failure (separate from action errors) — drives the honest
   // not-configured / backend-unavailable card.
   const [loadError, setLoadError] = useState<PlatformError | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // Provision form.
-  const [pName, setPName] = useState('')
-  const [pRegion, setPRegion] = useState<string>(DOKS_REGIONS[0])
+  // Provision form (the platform generates the cluster name).
+  const [pRegion, setPRegion] = useState<string>(DOKS_REGIONS[2]) // sfo3
   const [pNodeSize, setPNodeSize] = useState<string>(DOKS_NODE_SIZES[1])
   const [pCount, setPCount] = useState(3)
   const [provisioning, setProvisioning] = useState(false)
 
-  // Attach form.
-  const [aName, setAName] = useState('')
-  const [aKubeconfig, setAKubeconfig] = useState('')
-  const [attaching, setAttaching] = useState(false)
-
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await PlatformApi.listClusters()
+      const data = await PlatformApi.listClusters(org)
       setRows(data ?? [])
       setLoadError(null)
     } catch (e) {
@@ -73,31 +64,21 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [org])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const pNameErr = pName ? slugError(pName) : null
-  const aNameErr = aName ? slugError(aName) : null
-
   const onProvision = async () => {
-    const err = slugError(pName)
-    if (err) {
-      setError(err)
-      return
-    }
     setProvisioning(true)
     setError(null)
     try {
-      await PlatformApi.provisionCluster({
-        name: pName,
+      await PlatformApi.provisionCluster(org, {
         region: pRegion,
         nodeSize: pNodeSize,
         nodeCount: pCount,
       })
-      setPName('')
       await load()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Failed to provision cluster')
@@ -106,49 +87,11 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
     }
   }
 
-  const onAttach = async () => {
-    const err = slugError(aName)
-    if (err) {
-      setError(err)
-      return
-    }
-    if (!aKubeconfig.trim()) {
-      setError('Paste the cluster kubeconfig to attach.')
-      return
-    }
-    setAttaching(true)
-    setError(null)
-    try {
-      await PlatformApi.attachCluster({ name: aName, kubeconfig: aKubeconfig })
-      setAName('')
-      setAKubeconfig('')
-      await load()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to attach cluster')
-    } finally {
-      setAttaching(false)
-    }
-  }
-
-  const onDelete = async (c: Cluster) => {
-    if (
-      typeof window !== 'undefined' &&
-      !window.confirm(`Remove cluster "${c.name}"? Workloads on it will be detached.`)
-    )
-      return
-    try {
-      await PlatformApi.removeCluster(c.name)
-      setRows((rs) => rs.filter((x) => x.name !== c.name))
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : `Failed to remove "${c.name}"`)
-    }
-  }
-
   const columns: Column<Cluster>[] = [
-    { key: 'name', header: 'Name', render: (c) => <Text fontSize="$3">{c.name}</Text> },
-    { key: 'status', header: 'Status', width: 130, render: (c) => <StatusTag status={c.status} /> },
-    { key: 'kind', header: 'Kind', width: 90, render: (c) => <KindTag kind={c.kind} /> },
-    { key: 'region', header: 'Region', width: 90 },
+    { key: 'name', header: 'Name', render: (c) => <Text fontSize="$3" fontWeight="600">{c.name}</Text> },
+    { key: 'status', header: 'Status', width: 130, render: (c) => <StatusTag status={c.phase || c.status} /> },
+    { key: 'kind', header: 'Kind', width: 110, render: (c) => <KindTag kind={c.kind} /> },
+    { key: 'region', header: 'Region', width: 100, render: (c) => <Text fontSize="$3" color="$color11">{c.region ?? '—'}</Text> },
     {
       key: 'nodes',
       header: 'Nodes',
@@ -159,23 +102,13 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
         </Text>
       ),
     },
-    {
-      key: 'action',
-      header: '',
-      width: 90,
-      render: (c) => (
-        <XStack gap="$2" justify="flex-end" flex={1}>
-          <Button size="$2" icon={<Trash size={14} />} onPress={() => void onDelete(c)} />
-        </XStack>
-      ),
-    },
   ]
 
   return (
     <>
       <PageHeader
         title="Clusters"
-        subtitle="Shared Hanzo Cloud or your own DigitalOcean Kubernetes."
+        subtitle="Your dedicated Hanzo K8S (DigitalOcean Kubernetes). Workloads otherwise run on shared Hanzo Cloud."
         actions={
           <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
             Refresh
@@ -195,74 +128,41 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
             rows={rows}
             loading={loading}
             rowKey={(c) => c.id || c.name}
-            empty="No clusters yet. Provision a DOKS cluster or attach an existing one below."
+            empty="No dedicated clusters yet. Provision one below, or keep running on shared Hanzo Cloud."
           />
 
-          <XStack gap="$4" flexWrap="wrap">
-        <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={320}>
-          <Text fontSize="$5" fontWeight="700">
-            Provision DOKS cluster
-          </Text>
-          <FieldRow label="Name">
-            <YStack gap="$1.5" flex={1}>
-              <FieldText value={pName} onChange={setPName} placeholder="prod-cluster" />
-              <Text fontSize="$2" color={pNameErr ? '$color12' : '$color10'}>
-                {pNameErr ?? 'Lowercase letters, numbers and hyphens. 2–40 chars.'}
-              </Text>
-            </YStack>
-          </FieldRow>
-          <FieldRow label="Region">
-            <FieldSelect value={pRegion} options={[...DOKS_REGIONS]} onChange={setPRegion} />
-          </FieldRow>
-          <FieldRow label="Node size">
-            <FieldSelect value={pNodeSize} options={[...DOKS_NODE_SIZES]} onChange={setPNodeSize} />
-          </FieldRow>
-          <FieldRow label="Node count">
-            <FieldText
-              value={String(pCount)}
-              onChange={(v) => setPCount(clampCount(v))}
-              placeholder="3"
-            />
-          </FieldRow>
-          <XStack>
-            <Button
-              theme="light"
-              icon={<Plus size={16} />}
-              disabled={provisioning || !pName || !!pNameErr}
-              onPress={() => void onProvision()}
-            >
-              {provisioning ? 'Provisioning…' : 'Provision'}
-            </Button>
-          </XStack>
-        </Card>
-
-        <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={320}>
-          <Text fontSize="$5" fontWeight="700">
-            Attach existing cluster
-          </Text>
-          <FieldRow label="Name">
-            <YStack gap="$1.5" flex={1}>
-              <FieldText value={aName} onChange={setAName} placeholder="my-cluster" />
-              <Text fontSize="$2" color={aNameErr ? '$color12' : '$color10'}>
-                {aNameErr ?? 'A label for this cluster in the console.'}
-              </Text>
-            </YStack>
-          </FieldRow>
-          <FieldRow label="Kubeconfig">
-            <FieldTextArea value={aKubeconfig} onChange={setAKubeconfig} rows={8} />
-          </FieldRow>
-          <XStack>
-            <Button
-              theme="light"
-              icon={<Link2 size={16} />}
-              disabled={attaching || !aName || !!aNameErr || !aKubeconfig.trim()}
-              onPress={() => void onAttach()}
-            >
-              {attaching ? 'Attaching…' : 'Attach'}
-            </Button>
-          </XStack>
-        </Card>
-          </XStack>
+          <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxWidth={460}>
+            <Text fontSize="$5" fontWeight="700">
+              Provision dedicated cluster
+            </Text>
+            <FieldRow label="Region">
+              <FieldSelect value={pRegion} options={[...DOKS_REGIONS]} onChange={setPRegion} />
+            </FieldRow>
+            <FieldRow label="Node size">
+              <FieldSelect value={pNodeSize} options={[...DOKS_NODE_SIZES]} onChange={setPNodeSize} />
+            </FieldRow>
+            <FieldRow label="Node count">
+              <FieldSelect
+                value={String(pCount)}
+                options={['1', '2', '3', '4', '5', '6', '8', '10']}
+                onChange={(v) => setPCount(clampCount(v))}
+              />
+            </FieldRow>
+            <XStack>
+              <Button
+                theme="light"
+                icon={<Plus size={16} />}
+                disabled={provisioning}
+                onPress={() => void onProvision()}
+              >
+                {provisioning ? 'Provisioning…' : 'Provision'}
+              </Button>
+            </XStack>
+            <Text fontSize="$2" color="$color10">
+              Spins up a DigitalOcean Kubernetes cluster, installs the Hanzo operator, and makes it
+              your deploy target. Billed by DigitalOcean.
+            </Text>
+          </Card>
         </>
       )}
     </>

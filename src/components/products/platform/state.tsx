@@ -20,7 +20,10 @@ export type PlatformError = { kind: PlatformErrorKind; message: string }
 export function interpretPlatformError(e: unknown): PlatformError {
   const status = e instanceof ApiError ? e.status : 0
   const message = e instanceof Error ? e.message : String(e)
-  if (status === 501) return { kind: 'not-configured', message }
+  // 501 = proxy has no service token; 401/403 = the proxy HAS a token but the
+  // platform rejected it (mis-wired/expired token) — both mean "this console's
+  // PaaS credential is not configured correctly", never a user-auth problem.
+  if (status === 501 || status === 401 || status === 403) return { kind: 'not-configured', message }
   if (status === 404) return { kind: 'unavailable', message }
   return { kind: 'error', message }
 }

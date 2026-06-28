@@ -41,8 +41,16 @@ export function BotModule() {
       const h = await BotApi.health()
       setStatus(h.status || (h.ok ? 'ok' : 'unknown'))
     } catch (e) {
-      setStatus('error')
-      setErr(e instanceof ApiError ? e.message : 'Failed to reach the bot gateway')
+      // 404 = the bot gateway is not routed on this console's /v1 host (it runs
+      // behind the unified gateway at hanzo.bot / api.hanzo.ai). That is an
+      // honest "not routed here" state, not a failure — the deep-links still work.
+      if (e instanceof ApiError && e.status === 404) {
+        setStatus('not routed')
+        setErr('The bot gateway is not routed on this host. It runs at hanzo.bot — open it below.')
+      } else {
+        setStatus('error')
+        setErr(e instanceof ApiError ? e.message : 'Failed to reach the bot gateway')
+      }
     } finally {
       setLoading(false)
     }

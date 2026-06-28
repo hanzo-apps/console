@@ -206,17 +206,54 @@ data with honest empty/not-configured states. No lorem stats, no demo projects,
 no placeholder cards.
 
 Build: arcd self-hosted CI (`.github/workflows/build-image.yml`, push to `main` →
-`ghcr.io/hanzoai/console2:sha-<sha>` + `:latest`). NOTE the per-env `tags` output
-uses the GITHUB_OUTPUT **heredoc** form — a bare two-line `key=v1\nv2` is rejected
-as "Invalid format" and fails the job at `Compute per-env config` (this silently
-broke every build until 2026-06).
+`ghcr.io/hanzoai/console2:v<package.json version>`, SEMVER only). The
+`hanzo-build-linux-amd64` ARC runner pool is the builder (online; not GHA-hosted).
 
-Deploy reality: console2 is an **undeclared raw Deployment** (ns `hanzo`, no
-operator CR / no universe manifest / no `.platform.yml`) and the hanzo-k8s operator
-is scaled `0/0`, so platform.hanzo.ai has no drive surface for its image (its
-`/v1/apps` is observe-only; `redeploy` only restarts the *declared* image). Per the
-internal deploy runbook the interim roll is:
-`kubectl --context do-sfo3-hanzo-k8s -n hanzo set image deploy/console2 console2=ghcr.io/hanzoai/console2:sha-<sha>`
-then `rollout status`. **Debt:** declare console2 as an operator `Service` CR +
-`.platform.yml` so deploys go push→arcd→CR→reconcile (kills the kubectl step).
-Verify live with headless Playwright on console2.hanzo.ai (superuser `z@hanzo.ai`).
+Deploy: console2 IS an operator `Service` CR now (`hanzo.ai/v1`, `hsvc console2`,
+ns `hanzo`) — declared in `universe/infra/k8s/operator/crs/console2-v1.yaml`.
+Bump `spec.image.tag`, `kubectl apply`, the operator reconciles. Verify live with
+headless Playwright on console2.hanzo.ai.
+
+## Live verification + backend wiring (v0.1.7)
+
+Every embedded module was Playwright-verified live against the real `/v1` backend
+(authenticated hanzo-org admin). The backend topology console2 actually talks to:
+the same-origin `/v1` ingress routes to **cloud-api** directly (NOT the full
+api.hanzo.ai gateway), and `/paas/*` is console2's own server route → platform.
+
+Findings + fixes (all in console2; honest states everywhere, no fakes):
+- **X-Org-Id (the big one).** The provisioning sub-service (vector/sql/kv/s3/
+  datastore/docdb/search) requires an `X-Org-Id` header and 403s `"X-Org-Id
+  required"` without it — cloud-api on the direct path does NOT inject it from the
+  session. Fix: `lib/api/client.ts` now stamps `X-Org-Id: config.iamOrgName`
+  (brand org, the user's own) on every cloud call (`baseHeaders`). All 7 data
+  modules now return real data / honest empty `[]`.
+- **PaaS token was wrong.** The CR wired `PAAS_SERVICE_TOKEN` to
+  `hanzo-paas/MASTERTOKEN` (`hanzo-master-token`), which platform.hanzo.ai
+  **rejects (401)**. The correct token is in secret **`paas-console-token`** key
+  `PAAS_SERVICE_TOKEN` (== `platform-service-token`). CR repointed there.
+- **Platform contract was wrong.** The real platform serves `GET /v1/apps` (the
+  apps inventory: declared/running/latest tag + drift + health + cluster +
+  namespace, ~100 services) and `GET|POST /v1/org/{org}/cluster` — NOT
+  `/v1/clusters` and NOT any `/k8s/{kind}` passthrough (those 401/404). `lib/api/
+  platform.ts` reworked to `PlatformApi.apps()` + org-scoped `listClusters`/
+  `provisionCluster`; dead `KubernetesApi`/`CLUSTER_ROUTES` removed.
+  - **Status** now reads `/v1/apps` → REAL health board (Services/Healthy/Clusters).
+  - **Kubernetes** now reads `/v1/apps` → REAL workloads per cluster (picker from
+    the clusters that actually appear).
+  - **Clusters** lists real dedicated DOKS via `/v1/org/{org}/cluster` (honest
+    empty; provision form wired to the real endpoint). Attach-by-kubeconfig dropped
+    (no backend).
+  - `interpretPlatformError` maps upstream 401/403 → honest "not configured".
+- **Bot** `/v1/bot/health` 404s on cloud-api (bot-gateway runs behind
+  api.hanzo.ai/hanzo.bot, not this host) → honest "not routed on this host" state
+  (was a red error).
+- **Wallet** cloud-credit `/v1/billing/balance` 404s here (billing ships
+  separately) → honest "not available on this deployment" (was a scary error).
+  HUSD balance/top-up already honest "coming" (token unconfigured).
+- Already-correct honest states (unchanged): IAM/Audit + KMS/Secrets (`/v1/iam`,
+  `/v1/kms` 404 → "not available on this deployment"); Observability (`/v1/o11y`
+  503 → "runtime not initialized"). Plans/Embeddings show real data; Models/
+  Providers/Applications/Chat honest-empty.
+
+`StatusTag` now also understands platform health verdicts (green/yellow/red).

@@ -37,17 +37,16 @@ export {
 } from './provisioning'
 export {
   PlatformApi,
-  KubernetesApi,
-  CLUSTER_ROUTES,
-  K8S_RESOURCES,
+  clustersFromApps,
   DOKS_REGIONS,
   DOKS_NODE_SIZES,
   type Cluster,
   type ClusterKind,
   type ProvisionClusterInput,
-  type AttachClusterInput,
-  type K8sResource,
-  type K8sObject,
+  type PlatformApp,
+  type AppHealth,
+  type AppDriftFlag,
+  type AppsQuery,
 } from './platform'
 export {
   IamAdminApi,
