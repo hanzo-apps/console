@@ -42,6 +42,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { FieldRow, FieldText } from '~/components/ui/Field'
 import { StatusTag } from '~/components/ui/StatusTag'
+import { useToast } from '~/components/ui/Toast'
 import { slugError } from '~/lib/slug'
 
 const fmtDate = (v?: string): string => {
@@ -141,6 +142,7 @@ function ResourceDetailScreen({
   onBack: () => void
 }) {
   const { kind, productLabel, connectionHint } = opts
+  const toast = useToast()
   const [resource, setResource] = useState<Resource | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -167,9 +169,12 @@ function ResourceDetailScreen({
       return
     try {
       await ProvisioningApi.remove(kind, name)
+      toast.success(`Deleted ${name}`)
       onBack()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : `Failed to delete "${name}"`)
+      const msg = e instanceof ApiError ? e.message : `Failed to delete "${name}"`
+      setError(msg)
+      toast.error(`Could not delete ${name}`, msg)
     }
   }
 
@@ -253,6 +258,7 @@ function ResourceListScreen({
   onOpen: (r: Resource) => void
 }) {
   const { kind, productLabel, connectionHint } = opts
+  const toast = useToast()
   const [rows, setRows] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -291,10 +297,13 @@ function ResourceListScreen({
     try {
       const res = await ProvisioningApi.create(kind, name)
       setCreated(res)
+      toast.success(`Created ${res.name}`, 'Save the credentials shown — they appear only once.')
       setName('')
       await load()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : `Failed to create ${productLabel}`)
+      const msg = e instanceof ApiError ? e.message : `Failed to create ${productLabel}`
+      setError(msg)
+      toast.error(`Could not create ${productLabel}`, msg)
     } finally {
       setCreating(false)
     }
@@ -306,8 +315,11 @@ function ResourceListScreen({
     try {
       await ProvisioningApi.remove(kind, r.name)
       setRows((rs) => rs.filter((x) => x.name !== r.name))
+      toast.success(`Deleted ${r.name}`)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : `Failed to delete "${r.name}"`)
+      const msg = e instanceof ApiError ? e.message : `Failed to delete "${r.name}"`
+      setError(msg)
+      toast.error(`Could not delete ${r.name}`, msg)
     }
   }
 
