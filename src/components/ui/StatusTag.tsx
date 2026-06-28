@@ -13,9 +13,9 @@ type Tone = 'green' | 'yellow' | 'red' | 'neutral'
 
 const toneOf = (status: string): Tone => {
   const s = status.toLowerCase()
-  if (['ready', 'active', 'running', 'available', 'ok'].includes(s)) return 'green'
-  if (['creating', 'provisioning', 'pending', 'updating', 'attaching'].includes(s)) return 'yellow'
-  if (['error', 'failed', 'degraded'].includes(s)) return 'red'
+  if (['ready', 'active', 'running', 'available', 'ok', 'healthy', 'green'].includes(s)) return 'green'
+  if (['creating', 'provisioning', 'pending', 'updating', 'attaching', 'warning', 'yellow'].includes(s)) return 'yellow'
+  if (['error', 'failed', 'degraded', 'down', 'unhealthy', 'red'].includes(s)) return 'red'
   return 'neutral'
 }
 
