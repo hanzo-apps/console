@@ -83,6 +83,26 @@ export {
   type CreateDatasetItemBody,
 } from './evals'
 export {
+  MemoryApi,
+  MEMORY_KINDS,
+  type Memory,
+  type MemoryKind,
+  type MemoryFact,
+  type RememberInput,
+  type UpdateInput,
+} from './memory'
+export {
+  TasksApi,
+  type ClusterHealth,
+  type ClusterStatus,
+  type Namespace,
+  type NamespaceInfo,
+  type WorkflowExecution,
+  type WorkflowDetail,
+  type HistoryEvent,
+  type Schedule,
+} from './tasks'
+export {
   O11yApi,
   type O11yList,
   type O11yPageMeta,
