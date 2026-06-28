@@ -12,8 +12,10 @@
  *
  * NOTE: hanzo's issuer is `hanzo.id` (NOT iam.hanzo.ai — legacy zone, iss mismatch
  * drops sign-in). zoo's IAM is `zoolabs.id` (NOT zoo.id). client_id is `<org>-cloud`
- * (HIP-0111). The cloud backend must accept all brand issuers/auds (multi-brand);
- * cloudUrl/platformUrl/billingUrl are shared today (hanzo hosts). No secrets.
+ * (HIP-0111). The cloud backend must accept all brand issuers/auds (multi-brand).
+ * cloudUrl/platformUrl are shared; billingUrl is PER BRAND (each brand's own
+ * billing host, resolved like iamUrl) so a brand's console links to ITS billing
+ * portal, scoped to ITS org by the brand JWT. No secrets.
  */
 
 const trimSlash = (s: string) => s.replace(/\/+$/, '')
@@ -37,14 +39,13 @@ export type ConsoleConfig = {
   iamOrgName: string
   /** IAM OAuth client id (= app) — shared. */
   iamClientId: string
-  /** Billing/account portal — the console LINKS here, never reimplements it. */
+  /** Billing/account portal — PER BRAND. The console LINKS here, never reimplements it. */
   billingUrl: string
 }
 
 /** Fields shared by every brand. Env-overridable per-deploy. */
 const SHARED = {
   platformUrl: trimSlash(process.env.NEXT_PUBLIC_PLATFORM_URL ?? 'https://platform.hanzo.ai'),
-  billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? 'https://billing.hanzo.ai'),
 }
 
 /**
@@ -65,12 +66,17 @@ function cloudUrl(): string {
   return 'https://api.hanzo.ai'
 }
 
-/** Per-brand IAM (each org's own issuer/app) + wordmark. Cloud backend is shared. */
-const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string }> = {
-  hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud' },
-  lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud' },
-  zoo: { brandName: 'Zoo Cloud', iamUrl: 'https://zoolabs.id', iamOrgName: 'zoo', iamApp: 'zoo-cloud' },
-  pars: { brandName: 'Pars Cloud', iamUrl: 'https://pars.id', iamOrgName: 'pars', iamApp: 'pars-cloud' },
+/**
+ * Per-brand IAM (each org's own issuer/app) + wordmark + billing host. Cloud
+ * backend is shared (one multi-tenant /v1, scoped by the brand JWT's org); IAM
+ * and billingUrl are the per-brand surfaces. Each brand's billing host runs the
+ * same multi-brand billing SPA, scoped to the brand's org via the brand JWT.
+ */
+const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string; billingUrl: string }> = {
+  hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud', billingUrl: 'https://billing.hanzo.ai' },
+  lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud', billingUrl: 'https://billing.lux.cloud' },
+  zoo: { brandName: 'Zoo Cloud', iamUrl: 'https://zoolabs.id', iamOrgName: 'zoo', iamApp: 'zoo-cloud', billingUrl: 'https://billing.zoo.cloud' },
+  pars: { brandName: 'Pars Cloud', iamUrl: 'https://pars.id', iamOrgName: 'pars', iamApp: 'pars-cloud', billingUrl: 'https://billing.pars.cloud' },
 }
 
 /** Hostname suffix → brand. First match wins. */
@@ -121,6 +127,7 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     iamOrgName: process.env.NEXT_PUBLIC_IAM_ORG_NAME ?? b.iamOrgName,
     iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? b.iamApp,
     iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? b.iamApp,
+    billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? b.billingUrl),
     ...SHARED,
   }
   cache.set(brand, resolved)
