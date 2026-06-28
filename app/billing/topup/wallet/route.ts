@@ -9,34 +9,31 @@
  * and config comes from server-only env (sourced via KMS, never `NEXT_PUBLIC`).
  *
  * Flow: the client sends an HUSD ERC-20 transfer to the treasury and posts the
- * tx hash here. We read the receipt from the Hanzo EVM, confirm it is a mined,
- * successful HUSD `Transfer(from → treasury, value)`, derive USD cents from the
- * (18-decimal, USD-pegged) value, then record it to commerce as a `husd` crypto
- * payment and return the credited amount + the new balance. The on-chain amount
- * — never a client-supplied number — is what gets credited.
+ * tx hash here. We require a valid IAM session and derive the credited USER from
+ * it (NEVER the request body — that would be an IDOR). We read the receipt from
+ * the Hanzo EVM, confirm a mined, successful HUSD `Transfer(from → treasury,
+ * value)`, derive USD cents from the (18-decimal, USD-pegged) value, then record
+ * it to commerce as a `husd` crypto payment keyed by the tx hash as an
+ * idempotency key (replay-safe — the same tx never credits twice). The on-chain
+ * amount — never a client-supplied number — is what gets credited.
  *
- * Honest failure: if HUSD/treasury are unconfigured (greenfield — HUSD not yet
- * deployed) we return 501 so the UI shows a truthful "coming" state; if the tx
- * is missing/failed/not an HUSD-to-treasury transfer we return 400; if the chain
- * or commerce is unreachable we return 502. Never a fabricated credit.
+ * Honest failure: if HUSD/treasury are unconfigured (greenfield) we return 501;
+ * if there is no session we return 401; if the tx is missing/failed/not an
+ * HUSD-to-treasury transfer we return 400; chain/commerce unreachable → 502.
  */
 import { type NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 
-export const runtime = 'nodejs'
+import { getServerAccount } from '~/lib/auth/server'
 
-const RPC_URL = (process.env.HANZO_RPC_URL ?? 'https://rpc.hanzo.network').replace(/\/+$/, '')
-const HUSD_ADDRESS = (process.env.HANZO_HUSD_ADDRESS ?? '').trim()
-const TREASURY = (process.env.HANZO_HUSD_TREASURY ?? '').trim()
-const COMMERCE_URL = (process.env.COMMERCE_URL ?? 'https://api.hanzo.ai').replace(/\/+$/, '')
-const CHAIN_ID = Number(process.env.HANZO_CHAIN_ID ?? '36900')
+export const runtime = 'nodejs'
 
 const ERC20_TRANSFER_ABI = ['event Transfer(address indexed from, address indexed to, uint256 value)']
 const isAddr = (a: string): boolean => /^0x[0-9a-fA-F]{40}$/.test(a)
 
 /** Forward the caller's identity (session cookie / bearer) to commerce. */
-function authHeaders(req: NextRequest): Record<string, string> {
-  const h: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json' }
+function authHeaders(req: NextRequest, extra: Record<string, string> = {}): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json', ...extra }
   const cookie = req.headers.get('cookie')
   if (cookie) h.Cookie = cookie
   const auth = req.headers.get('authorization')
@@ -45,6 +42,12 @@ function authHeaders(req: NextRequest): Record<string, string> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const HUSD_ADDRESS = (process.env.HANZO_HUSD_ADDRESS ?? '').trim()
+  const TREASURY = (process.env.HANZO_HUSD_TREASURY ?? '').trim()
+  const RPC_URL = (process.env.HANZO_RPC_URL ?? 'https://rpc.hanzo.network').replace(/\/+$/, '')
+  const COMMERCE_URL = (process.env.COMMERCE_URL ?? 'https://api.hanzo.ai').replace(/\/+$/, '')
+  const CHAIN_ID = Number(process.env.HANZO_CHAIN_ID ?? '36900')
+
   // Greenfield gate: no HUSD contract / treasury ⇒ honest "not configured".
   if (!isAddr(HUSD_ADDRESS) || !isAddr(TREASURY)) {
     return NextResponse.json(
@@ -53,7 +56,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
-  let body: { txHash?: string; fromAddress?: string; userId?: string }
+  // Authn: the credited user is the SESSION user — never the request body (IDOR).
+  const account = await getServerAccount(req.headers.get('cookie'), req.nextUrl.origin)
+  if (!account) {
+    return NextResponse.json({ error: 'Sign in to top up your balance.' }, { status: 401 })
+  }
+  const userId = account.name
+
+  let body: { txHash?: string; fromAddress?: string }
   try {
     body = await req.json()
   } catch {
@@ -119,10 +129,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // ── 2. Record to commerce as an HUSD crypto payment ─────────────────────────
+  // The tx hash is the idempotency key: a replay of the same hash MUST NOT credit
+  // twice. The hash is globally unique on-chain, so the ledger (commerce) dedupes
+  // on it — `Idempotency-Key` is the standard request for that guarantee.
   try {
     const recordRes = await fetch(`${COMMERCE_URL}/v1/billing/payment`, {
       method: 'POST',
-      headers: authHeaders(req),
+      headers: authHeaders(req, { 'Idempotency-Key': txHash }),
       cache: 'no-store',
       body: JSON.stringify({
         method: 'crypto',
@@ -133,7 +146,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         txHash,
         fromAddress: verifiedFrom!,
         toAddress: TREASURY,
-        userId: body.userId,
+        userId,
       }),
     })
     if (!recordRes.ok) {
@@ -145,11 +158,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
     const payment = (await recordRes.json().catch(() => ({}))) as { status?: string }
 
-    // New balance (USD ledger) — best-effort; the credit already landed.
+    // New balance (USD ledger) — best-effort; the credit already landed. The user
+    // is the SESSION user, never a client-supplied id.
     let balance = 0
     try {
       const balRes = await fetch(
-        `${COMMERCE_URL}/v1/billing/balance?user=${encodeURIComponent(body.userId ?? '')}&currency=usd`,
+        `${COMMERCE_URL}/v1/billing/balance?user=${encodeURIComponent(userId)}&currency=usd`,
         { headers: authHeaders(req), cache: 'no-store' },
       )
       if (balRes.ok) balance = ((await balRes.json()) as { balance?: number }).balance ?? 0

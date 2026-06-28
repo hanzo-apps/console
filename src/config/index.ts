@@ -37,6 +37,12 @@ export type ConsoleConfig = {
   iamOrgName: string
   /** IAM OAuth client id (= app) — shared. */
   iamClientId: string
+  /**
+   * Emit PKCE (S256) on the authorize URL. Gated OFF until the cloud `/v1/signin`
+   * forwards the `code_verifier` to IAM (the deployed casibase exchanges the code
+   * without one); enable per-deploy with `NEXT_PUBLIC_IAM_PKCE=1`.
+   */
+  iamPkce: boolean
   /** Billing/account portal — the console LINKS here, never reimplements it. */
   billingUrl: string
 }
@@ -122,6 +128,7 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     iamOrgName: process.env.NEXT_PUBLIC_IAM_ORG_NAME ?? b.iamOrgName,
     iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? b.iamApp,
     iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? b.iamApp,
+    iamPkce: process.env.NEXT_PUBLIC_IAM_PKCE === '1',
     ...SHARED,
   }
   cache.set(brand, resolved)

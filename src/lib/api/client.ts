@@ -34,19 +34,17 @@ const acceptLanguage = (): string => {
 }
 
 /**
- * Headers sent on every cloud call. Besides locale, we stamp `X-Org-Id` with the
- * brand org (`config.iamOrgName`, hostname-derived — the user's OWN org, never a
- * spoofable input). The casibase endpoints scope by the session's org claim, but
- * the sub-services mounted on the same backend that speak plain REST (the
- * provisioning service) require an explicit tenant header and reject the request
- * with 403 "X-Org-Id required" without it — this is what lets the data-product
- * modules resolve their tenant on the direct cloud-api path. When a gateway sits
- * in front and re-injects the header from the JWT, the stamped value is simply
- * overwritten, so sending it is correct in both topologies.
+ * Headers sent on every cloud call: locale + JSON content type for bodies.
+ *
+ * Tenancy is NOT a client concern. The org is derived server-side from the
+ * validated session (the cloud backend reads the JWT `owner` claim and strips any
+ * client-supplied identity header), so the browser sends credentials only and
+ * NEVER an `X-Org-Id`. A client-set org header is spoofable by definition, so it
+ * is not a trust boundary and is not sent — the server is the sole authority for
+ * which org a request scopes to.
  */
 const baseHeaders = (hasBody: boolean): Record<string, string> => ({
   'Accept-Language': acceptLanguage(),
-  'X-Org-Id': config.iamOrgName,
   ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
 })
 
@@ -128,9 +126,9 @@ export const idOf = (owner: string, name: string): string => `${owner}/${encodeU
 // control plane. Same cookie credentials and `ApiError` as the envelope path;
 // only the body shape and verbs differ, so the transport stays in this one file.
 //
-// Tenancy is server-side: the gateway validates the session cookie and injects
-// `X-Org-Id` from the JWT (and strips any client-supplied identity header), so
-// the browser sends credentials only — never an org header.
+// Tenancy is server-side: the cloud backend validates the session cookie and
+// derives `X-Org-Id` from the JWT (stripping any client-supplied value), so the
+// browser sends credentials only — never an org header.
 
 /** Build a `/v1/<path>` URL on an arbitrary base (cloud backend by default). */
 export const v1Url = (path: string, base: string = config.cloudUrl): string =>

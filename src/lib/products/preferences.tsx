@@ -7,7 +7,8 @@
  * Source of truth is the signed-in user's IAM account (`properties` →
  * `hanzo.preferences`), so customizations follow the user across every product
  * and every device/login. localStorage is used ONLY as a fast-paint cache to
- * avoid a flash before the account loads — it is never authoritative.
+ * avoid a flash before the account loads — it is never authoritative, and it is
+ * wiped on sign-out (see `preferences-cache`).
  *
  * Writes are optimistic + write-through: the local view updates immediately and
  * `update-preferences` persists to the account (self-scoped, shallow-merged
@@ -25,6 +26,7 @@ import {
 
 import { AccountApi } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
+import { prefsCacheKey } from './preferences-cache'
 
 /** Must match the backend `preferencesKey` (controllers/account.go). */
 const PREFS_PROPERTY = 'hanzo.preferences'
@@ -42,8 +44,6 @@ type PreferencesState = {
 }
 
 const PreferencesContext = createContext<PreferencesState | null>(null)
-
-const cacheKey = (name: string | undefined) => `hanzo.console2.prefs.${name ?? 'anon'}`
 
 function parsePrefs(raw: string | undefined | null): Preferences {
   if (!raw) return {}
@@ -64,14 +64,14 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Fast-paint from the local cache so pins don't flash on a cold load…
     if (typeof window !== 'undefined' && !account) {
-      setPrefs(parsePrefs(window.localStorage.getItem(cacheKey(name))))
+      setPrefs(parsePrefs(window.localStorage.getItem(prefsCacheKey(name))))
       return
     }
     // …then the account becomes the source of truth once it arrives.
     const fromAccount = parsePrefs(account?.properties?.[PREFS_PROPERTY])
     setPrefs(fromAccount)
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(cacheKey(name), JSON.stringify(fromAccount))
+      window.localStorage.setItem(prefsCacheKey(name), JSON.stringify(fromAccount))
     }
     setReady(Boolean(account))
   }, [account, name])
@@ -81,7 +81,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       setPrefs((prev) => {
         const next = { ...prev, [key]: value }
         if (typeof window !== 'undefined') {
-          window.localStorage.setItem(cacheKey(name), JSON.stringify(next))
+          window.localStorage.setItem(prefsCacheKey(name), JSON.stringify(next))
         }
         // Write-through to the account (self-scoped server-side). Optimistic:
         // a failure leaves the local + cache view; the next load reconciles.

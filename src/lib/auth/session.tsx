@@ -3,14 +3,18 @@
 /**
  * Session context — the one source of auth truth for the console.
  *
- * On mount it asks the backend `/v1/get-account`. `signIn()` redirects to IAM;
- * `completeSignIn(code, state)` (used by the callback route) posts to
- * `/v1/signin` to mint the session cookie, then reloads the account.
+ * On mount it asks the backend `/v1/get-account`. `signIn()` redirects to IAM
+ * (with CSRF state + optional PKCE — see `./iam`); `completeSignIn(code, state)`
+ * (used by the callback route, AFTER it validates state) posts to `/v1/signin` to
+ * mint the session cookie, then reloads the account. `signOut()` revokes the
+ * session AND wipes the local preferences cache so a shared browser never leaks
+ * the previous user's pins/layout.
  */
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 import { AccountApi, type Account } from '~/lib/api'
-import { getProviderSigninUrl, getSigninUrl } from './iam'
+import { clearPreferencesCache } from '~/lib/products/preferences-cache'
+import { consumeCodeVerifier, startSignIn } from './iam'
 
 type SessionState = {
   account: Account | null
@@ -42,24 +46,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [reload])
 
   const signIn = useCallback(() => {
-    window.location.assign(getSigninUrl())
+    void startSignIn()
   }, [])
 
   const signInWith = useCallback((provider: string) => {
-    window.location.assign(getProviderSigninUrl(provider))
+    void startSignIn(provider)
   }, [])
 
-  const completeSignIn = useCallback(
-    async (code: string, state: string) => {
-      const res = await AccountApi.signin(code, state)
-      setAccount(res.data ?? (await AccountApi.current()))
-    },
-    [],
-  )
+  const completeSignIn = useCallback(async (code: string, state: string) => {
+    // The callback validated `state` before calling us; pair the code with its
+    // one-time PKCE verifier (null when PKCE is off) for the backend exchange.
+    const codeVerifier = consumeCodeVerifier()
+    const res = await AccountApi.signin(code, state, codeVerifier ?? undefined)
+    setAccount(res.data ?? (await AccountApi.current()))
+  }, [])
 
   const signOut = useCallback(async () => {
-    await AccountApi.signout()
-    setAccount(null)
+    try {
+      await AccountApi.signout()
+    } finally {
+      // Always clear local state, even if the revoke call failed.
+      clearPreferencesCache()
+      setAccount(null)
+    }
   }, [])
 
   return (

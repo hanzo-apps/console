@@ -36,7 +36,7 @@ const okEnvelope = <T>(data: T, data2?: unknown) => ({ status: 'ok', msg: '', da
 describe('client.request (casibase envelope)', () => {
   beforeEach(() => vi.restoreAllMocks())
 
-  it('GET unwraps `data` and sends credentials + X-Org-Id + Accept-Language', async () => {
+  it('GET unwraps `data`, sends credentials + Accept-Language, and NO client X-Org-Id', async () => {
     const fetchMock = vi.fn(async () => res({ json: okEnvelope({ name: 'z' }) }))
     vi.stubGlobal('fetch', fetchMock)
 
@@ -46,8 +46,18 @@ describe('client.request (casibase envelope)', () => {
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('https://console.hanzo.ai/v1/get-account')
     expect(init.credentials).toBe('include')
-    expect(init.headers['X-Org-Id']).toBe('hanzo')
     expect(init.headers['Accept-Language']).toBeDefined()
+    // Tenancy is derived server-side from the session; a client-set tenant header
+    // is spoofable and is NOT a trust boundary, so it must not be sent.
+    expect(init.headers['X-Org-Id']).toBeUndefined()
+  })
+
+  it('does not send X-Org-Id on the plain-REST path either', async () => {
+    const fetchMock = vi.fn(async () => res({ status: 200, text: JSON.stringify({ ok: true }) }))
+    vi.stubGlobal('fetch', fetchMock)
+    await restGet(v1Url('vector'))
+    const init = fetchMock.mock.calls[0][1]
+    expect(init.headers['X-Org-Id']).toBeUndefined()
   })
 
   it('GET appends query params, skipping null/undefined', async () => {
@@ -88,7 +98,9 @@ describe('client.request (casibase envelope)', () => {
   })
 
   it('wraps a network failure as ApiError(0)', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch') }))
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    }))
     await expect(get('x')).rejects.toMatchObject({ name: 'ApiError', status: 0 })
   })
 

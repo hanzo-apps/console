@@ -20,8 +20,19 @@ export const AccountApi = {
     }
   },
 
-  /** Exchange the IAM OAuth code+state for a backend session cookie. */
-  signin: (code: string, state: string) => post<Account>('signin', undefined, { code, state }),
+  /**
+   * Exchange the IAM OAuth code+state for a backend session cookie.
+   *
+   * `codeVerifier` is the PKCE verifier (sent only when PKCE is enabled); the
+   * cloud `/v1/signin` forwards it to IAM to complete the S256 exchange. State is
+   * validated on the client BEFORE this call (see `app/auth/callback`).
+   */
+  signin: (code: string, state: string, codeVerifier?: string) =>
+    post<Account>('signin', undefined, {
+      code,
+      state,
+      ...(codeVerifier ? { code_verifier: codeVerifier } : {}),
+    }),
 
   signout: () => post('signout'),
 
