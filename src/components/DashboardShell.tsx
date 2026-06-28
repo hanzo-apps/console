@@ -16,7 +16,7 @@ import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import { LogOut, Star, Lock, ExternalLink, LayoutGrid, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
 
 import { branding } from '~/config'
-import { catalogByCategory, findEntry, type CatalogEntry } from '~/lib/products/registry'
+import { catalogByCategory, findEntry, visibleCatalog, type CatalogEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { useSession } from '~/lib/auth/session'
@@ -81,15 +81,20 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const push = (path: string) => router.push(path)
   const isActive = (id: string) => pathname === `/${id}` || pathname.startsWith(`/${id}/`)
 
+  // Least privilege: a non-admin never sees admin-only surfaces in the nav.
+  const isAdmin = Boolean(account?.isAdmin)
+  const visible = visibleCatalog(isAdmin)
+
   const pinnedEntries = pinned
     .map((id) => findEntry(id))
-    .filter((e): e is CatalogEntry => Boolean(e))
+    .filter((e): e is CatalogEntry => Boolean(e) && (isAdmin || !e!.admin))
 
-  const groups = catalogByCategory()
+  const groups = catalogByCategory(visible)
 
   return (
     <XStack flex={1} minH="100vh" bg="$background">
       <YStack
+        testID="nav-sidebar"
         width={264}
         p="$3"
         gap="$2"
@@ -113,7 +118,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <ScrollView flex={1}>
           <YStack gap="$3">
             {pinnedEntries.length > 0 ? (
-              <YStack gap="$1">
+              <YStack testID="pinned-section" gap="$1">
                 <Text px="$2" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
                   Pinned
                 </Text>
@@ -177,7 +182,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </XStack>
 
         <ScrollView flex={1}>
-          <YStack flex={1} p="$4" gap="$4">
+          <YStack testID="page-content" flex={1} p="$4" gap="$4">
             {children}
           </YStack>
         </ScrollView>

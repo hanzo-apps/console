@@ -13,9 +13,10 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Star, Lock, ExternalLink, ArrowRight, Info } from '@hanzogui/lucide-icons-2'
 
 import { branding, config } from '~/config'
-import { catalogByCategory, type CatalogEntry } from '~/lib/products/registry'
+import { catalogByCategory, visibleCatalog, type CatalogEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
+import { useSession } from '~/lib/auth/session'
 import { PageHeader } from '~/components/ui/PageHeader'
 
 const STATUS_LABEL = { enabled: 'Enabled', external: 'External', soon: 'Soon' } as const
@@ -106,9 +107,11 @@ function ProductCard({
 
 export default function DashboardHome() {
   const router = useRouter()
+  const { account } = useSession()
   const { toggle, isPinned } = useFavorites()
   const push = (path: string) => router.push(path)
-  const groups = catalogByCategory()
+  // Least privilege: non-admins don't see admin-only product cards on the home.
+  const groups = catalogByCategory(visibleCatalog(Boolean(account?.isAdmin)))
 
   return (
     <>

@@ -21,3 +21,15 @@ agents working here:
 - **Boundaries:** frontend only. No DB. No Docker builds locally (CI/CD builds
   images). No secrets in the repo — config is `NEXT_PUBLIC_*` only.
 - **Verify:** `npm run typecheck` and `npm run build` must pass. Show output.
+- **Tests (real, committed under `test/`):**
+  - `npm run test:unit` — vitest, pure client logic + catalog/data-integrity
+    (routing, registry, config, the `/v1` client envelope, domain `logic.ts`).
+    Heavy GUI deps are aliased to hermetic stubs (`test/stubs/`) so the registry
+    graph imports without rendering Tamagui in Node.
+  - `npm run test:e2e` — Playwright against the real Next server (builds + serves
+    via `webServer`). HERMETIC: the `/v1` + `/paas` backend is mocked with route
+    interception (`test/e2e/fixtures.ts`) — tests NEVER touch real prod data.
+    Fixtures: `ACCOUNTS.admin/member/anonymous`, `backend.account()/envelope()/
+    rest()/error()/paas()`, `baseline()`, `landAs()`, `trackConsoleErrors()`.
+  - `npm run test:all` — both. E2E scopes assertions with the `nav-sidebar`,
+    `page-content`, and `pinned-section` testIDs on the shell.

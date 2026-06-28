@@ -86,6 +86,7 @@ const HOST_BRANDS: ReadonlyArray<{ suffix: string; brand: BrandId }> = [
   { suffix: 'hanzo.id', brand: 'hanzo' },
   { suffix: 'pars.cloud', brand: 'pars' },
   { suffix: 'pars.network', brand: 'pars' },
+  { suffix: 'pars.id', brand: 'pars' },
 ]
 
 /** Resolve the brand id from a hostname (port/case-insensitive). Defaults to hanzo. */

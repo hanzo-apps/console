@@ -29,5 +29,14 @@
     "**/*.tsx",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next", "out"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "out",
+    "test",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "playwright-report",
+    "test-results"
+  ]
 }

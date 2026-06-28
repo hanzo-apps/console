@@ -1174,8 +1174,25 @@ export const findModule = (id: string): ProductModule | undefined =>
 export const findEntry = (id: string): CatalogEntry | undefined =>
   catalog.find((e) => e.id === id)
 
-/** The catalog grouped by category, in display order, skipping empty groups. */
-export const catalogByCategory = (): { category: ProductCategory; entries: CatalogEntry[] }[] =>
+/**
+ * The catalog entries a viewer may SEE in nav/home. Admin-only entries (IAM,
+ * KMS, Secrets, Audit, Clusters, Kubernetes) are hidden from non-admins — least
+ * privilege, applied as a defense-in-depth UX layer. The AUTHORITATIVE gate
+ * remains server-side: each admin `/v1` endpoint 403s an unauthorized session
+ * and the module renders an honest "Access required". This just stops a
+ * non-admin from seeing the door (or reaching it from the nav).
+ */
+export const visibleCatalog = (isAdmin: boolean): CatalogEntry[] =>
+  isAdmin ? catalog : catalog.filter((e) => !e.admin)
+
+/**
+ * The catalog grouped by category, in display order, skipping empty groups.
+ * Pass a filtered list (e.g. `visibleCatalog(isAdmin)`) to scope what renders;
+ * defaults to the full catalog.
+ */
+export const catalogByCategory = (
+  entries: CatalogEntry[] = catalog,
+): { category: ProductCategory; entries: CatalogEntry[] }[] =>
   categoryOrder
-    .map((category) => ({ category, entries: catalog.filter((e) => e.category === category) }))
+    .map((category) => ({ category, entries: entries.filter((e) => e.category === category) }))
     .filter((g) => g.entries.length > 0)

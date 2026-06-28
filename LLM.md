@@ -153,6 +153,50 @@ npm run dev                  # http://localhost:4000
 Data layer is the unified `/v1` backend — this repo is frontend only. Do NOT
 add Postgres/Mongo/etc. Do NOT build Docker images locally (CI/CD does that).
 
+## Testing (committed under `test/`)
+
+Two layers, orthogonal: vitest for pure logic + data-integrity, Playwright for
+real rendered UI + interaction. Run:
+
+```bash
+npm run test:unit   # vitest (jsdom)   — fast, hermetic, no server
+npm run test:e2e    # playwright        — builds + serves the real app, mocks /v1
+npm run test:all    # both
+```
+
+- **Unit (`test/unit/`, vitest 3, `vitest.config.ts`)** — 102 tests over the pure
+  surface: `matchRoute`, the catalog/registry invariants (unique ids, no dead
+  routes, no empty category, admin-visibility), `brandFromHost`/`resolveConfig`,
+  the `/v1` client (envelope unwrap, `ApiError`, REST layer), `AccountApi`
+  (anonymous == logged-out), honest-state mapping, and the provider/model/store/
+  app domain `logic.ts`. The heavy GUI deps (`@hanzo/gui`, `@hanzogui/*`, icons,
+  `ethers`, `@zap-proto/*`, the IAM SDK) are aliased to hermetic stubs in
+  `test/stubs/` so the registry module graph imports without rendering Tamagui in
+  Node. Real rendering is the E2E layer's job.
+- **E2E (`test/e2e/`, `@playwright/test`, `playwright.config.ts`)** — 98 tests
+  exercising real clicks/forms/navigation across auth, the catalog home, the
+  sidebar, every enabled module (+ honest empty/403/404/503 states), all admin
+  flows (IAM tabs, Audit, Secrets/KMS, Clusters, Kubernetes, Settings, API Keys),
+  negative authz, forms, mobile+desktop viewports, and clean-console checks.
+  HERMETIC + SAFE: the `/v1` envelope API, the plain-REST provisioning kinds, and
+  the `/paas` proxy are all mocked with route interception in
+  `test/e2e/fixtures.ts` (`backend.account()/envelope()/rest()/error()/paas()`,
+  `baseline()`, `landAs()`, `trackConsoleErrors()`) — the suite NEVER touches
+  real prod data. The shell exposes `nav-sidebar` / `page-content` /
+  `pinned-section` testIDs purely to scope E2E assertions.
+
+Bugs found + fixed via TDD while writing the suite:
+- **Dead default pin** — `favorites.tsx` `DEFAULT_PINNED` named `billing`, which
+  is not a catalog id (the billing surface id is `cost`); the shell silently
+  drops unknown pins, so new users lost a pin. Fixed to `['chat','cost']`.
+- **Admin nav leak (least privilege)** — the sidebar and catalog home rendered
+  admin-only entries (IAM/KMS/Secrets/Audit/Clusters/Kubernetes) to every user.
+  Added `visibleCatalog(isAdmin)` (registry), wired into the shell + home, so
+  non-admins never see admin surfaces. Server-side 403 remains the authority
+  (defense in depth).
+- **Host→brand gap** — `brandFromHost` mapped every brand's `.id` host except
+  `pars.id` (asymmetric). Added it.
+
 ## Cloud console — 10-category CLOUD AXIS + embedded PaaS (feat/cloud-taxonomy-10cat)
 
 The catalog (`src/lib/products/registry.tsx`) is reorganized from 6 ad-hoc
