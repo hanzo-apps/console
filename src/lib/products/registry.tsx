@@ -12,9 +12,12 @@
  * siblings. The catalog only composes them. `productModules` (the in-console
  * subset) is derived, so the router/match layer is unchanged.
  *
- * Taxonomy: the SAME ten categories — exact labels and order — as the canonical
- * "Open AI Cloud" menu, presented as the open-source equivalent of Google Cloud.
- * Each entry names the Google Cloud product it stands in for (`gcp`), and carries
+ * Taxonomy: the ten canonical "Open AI Cloud" categories — exact labels and
+ * order — as the open-source equivalent of Google Cloud, plus an appended
+ * `Async` category for durable orchestration (Tasks/Temporal; GCP Cloud
+ * Tasks/Workflows). The first ten keep their exact order; `Async` is appended so
+ * nothing is reordered. Each entry names the Google Cloud product it stands in
+ * for (`gcp`), and carries
  * an honest enablement `status`: an in-console module that works (`enabled`), a
  * live external Hanzo surface (`external`), or a primitive that ships but has no
  * console surface yet (`soon`). No fabricated states.
@@ -77,6 +80,8 @@ import {
   SlidersHorizontal,
   Ruler,
   ClipboardList,
+  Workflow,
+  NotebookPen,
 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
@@ -107,6 +112,8 @@ import { ApiKeysModule } from '~/components/products/ApiKeysModule'
 import { SettingsModule } from '~/components/products/SettingsModule'
 import { ScoreConfigsModule } from '~/components/products/ScoreConfigsModule'
 import { AnnotationQueuesModule } from '~/components/products/AnnotationQueuesModule'
+import { MemoryModule } from '~/components/products/MemoryModule'
+import { TasksModule } from '~/components/products/TasksModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -120,9 +127,11 @@ export type ProductRoute = {
 }
 
 /**
- * The ten canonical "Open AI Cloud" categories — exact labels and order. The
- * marketing site, the console nav, the catalog overview, and the discover
- * screens all read this one taxonomy. `catalogByCategory` skips empty groups.
+ * The canonical "Open AI Cloud" categories — the ten GCP-equivalent groups in
+ * exact label + order, plus an appended `Async` group for durable orchestration
+ * (Tasks/Temporal). The marketing site, the console nav, the catalog overview,
+ * and the discover screens all read this one taxonomy. `catalogByCategory` skips
+ * empty groups.
  */
 export type ProductCategory =
   | 'AI'
@@ -135,6 +144,7 @@ export type ProductCategory =
   | 'Observe'
   | 'Web3'
   | 'Apps'
+  | 'Async'
 
 export const categoryOrder: ProductCategory[] = [
   'AI',
@@ -147,6 +157,7 @@ export const categoryOrder: ProductCategory[] = [
   'Observe',
   'Web3',
   'Apps',
+  'Async',
 ]
 
 /**
@@ -1181,6 +1192,48 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/annotation-queues`,
     kind: 'module',
     routes: [{ path: '', component: AnnotationQueuesModule }],
+  },
+  // ── Appended modules (grouped by `category`, not array position — no entry
+  //    above is reordered). Memory + Tasks unify the user's memory and durable
+  //    work into the one console, on real /v1 backends with honest states.
+  {
+    // The user's personal memory — what they've asked the assistant to remember.
+    // Per-user, on the /v1/memory backend (hanzoai/ai). `enabled`: the module
+    // renders now and shows an honest "initializing" card until the backend is
+    // deployed — never fabricated memories.
+    id: 'memory',
+    label: 'Memory',
+    icon: NotebookPen,
+    description: 'Your personal memory — searchable, editable, in one place.',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/ai',
+    docs: `${DOCS}/memory`,
+    kind: 'module',
+    routes: [
+      { path: '', component: MemoryModule },
+      { path: ':id', component: MemoryModule },
+    ],
+  },
+  {
+    // Durable workflows + schedules — the user's tasks across all their work.
+    // REAL /v1/tasks engine (hanzoai/tasks), org-scoped server-side. The
+    // canonical home is the Async category (Tasks/Temporal); maps to GCP Cloud
+    // Tasks/Workflows.
+    id: 'tasks',
+    label: 'Tasks',
+    icon: Workflow,
+    description: 'Durable workflows and schedules — every running and finished task.',
+    gcp: 'Cloud Tasks',
+    category: 'Async',
+    status: 'enabled',
+    repo: 'hanzoai/tasks',
+    docs: `${DOCS}/tasks`,
+    kind: 'module',
+    routes: [
+      { path: '', component: TasksModule },
+      { path: ':ns/:wid', component: TasksModule },
+    ],
   },
 ]
 
