@@ -63,3 +63,21 @@ export {
   type Role,
   type AuditRecord,
 } from './admin'
+export {
+  PlaygroundApi,
+  type ChatMessage,
+  type ChatUsage,
+  type ChatCompletion,
+  type ChatRequest,
+} from './playground'
+export {
+  EvalsApi,
+  type EvalScore,
+  type EvalScoresPage,
+  type EvalDataset,
+  type EvalItemResult,
+  type EvalRunSummary,
+  type EvalRunRequest,
+  type CreateDatasetBody,
+  type CreateDatasetItemBody,
+} from './evals'
