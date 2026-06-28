@@ -12,9 +12,12 @@
  * siblings. The catalog only composes them. `productModules` (the in-console
  * subset) is derived, so the router/match layer is unchanged.
  *
- * Taxonomy: the SAME ten categories — exact labels and order — as the canonical
- * "Open AI Cloud" menu, presented as the open-source equivalent of Google Cloud.
- * Each entry names the Google Cloud product it stands in for (`gcp`), and carries
+ * Taxonomy: the ten canonical "Open AI Cloud" categories — exact labels and
+ * order — as the open-source equivalent of Google Cloud, plus an appended
+ * `Async` category for durable orchestration (Tasks/Temporal; GCP Cloud
+ * Tasks/Workflows). The first ten keep their exact order; `Async` is appended so
+ * nothing is reordered. Each entry names the Google Cloud product it stands in
+ * for (`gcp`), and carries
  * an honest enablement `status`: an in-console module that works (`enabled`), a
  * live external Hanzo surface (`external`), or a primitive that ships but has no
  * console surface yet (`soon`). No fabricated states.
@@ -124,9 +127,11 @@ export type ProductRoute = {
 }
 
 /**
- * The ten canonical "Open AI Cloud" categories — exact labels and order. The
- * marketing site, the console nav, the catalog overview, and the discover
- * screens all read this one taxonomy. `catalogByCategory` skips empty groups.
+ * The canonical "Open AI Cloud" categories — the ten GCP-equivalent groups in
+ * exact label + order, plus an appended `Async` group for durable orchestration
+ * (Tasks/Temporal). The marketing site, the console nav, the catalog overview,
+ * and the discover screens all read this one taxonomy. `catalogByCategory` skips
+ * empty groups.
  */
 export type ProductCategory =
   | 'AI'
@@ -139,6 +144,7 @@ export type ProductCategory =
   | 'Observe'
   | 'Web3'
   | 'Apps'
+  | 'Async'
 
 export const categoryOrder: ProductCategory[] = [
   'AI',
@@ -151,6 +157,7 @@ export const categoryOrder: ProductCategory[] = [
   'Observe',
   'Web3',
   'Apps',
+  'Async',
 ]
 
 /**
@@ -1210,15 +1217,15 @@ export const catalog: CatalogEntry[] = [
   },
   {
     // Durable workflows + schedules — the user's tasks across all their work.
-    // REAL /v1/tasks engine (hanzoai/tasks), org-scoped server-side. Mapped to
-    // GCP Cloud Tasks; grouped under Compute (the serverless/orchestration
-    // family with Functions and Jobs).
+    // REAL /v1/tasks engine (hanzoai/tasks), org-scoped server-side. The
+    // canonical home is the Async category (Tasks/Temporal); maps to GCP Cloud
+    // Tasks/Workflows.
     id: 'tasks',
     label: 'Tasks',
     icon: Workflow,
     description: 'Durable workflows and schedules — every running and finished task.',
     gcp: 'Cloud Tasks',
-    category: 'Compute',
+    category: 'Async',
     status: 'enabled',
     repo: 'hanzoai/tasks',
     docs: `${DOCS}/tasks`,
