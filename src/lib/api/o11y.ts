@@ -105,6 +105,45 @@ export type Session = {
   environment: string
 }
 
+/** A category option on a categorical/boolean score config. */
+export type ScoreConfigCategory = { label: string; value: number }
+
+/**
+ * A score config — the definition of a score: its data type and valid range or
+ * categories. Numeric configs carry min/max; categorical/boolean carry the
+ * allowed categories. Mirrors `/v1/o11y/score-configs`.
+ */
+export type ScoreConfig = {
+  id: string
+  projectId: string
+  name: string
+  description?: string | null
+  /** NUMERIC | CATEGORICAL | BOOLEAN | TEXT */
+  dataType: string
+  /** Numeric/boolean configs only. */
+  minValue?: number | null
+  maxValue?: number | null
+  /** Categorical/boolean configs only. */
+  categories?: ScoreConfigCategory[] | null
+  isArchived: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * An annotation queue — a named work queue of traces/observations to review and
+ * score against a set of score configs. Mirrors `/v1/o11y/annotation-queues`.
+ */
+export type AnnotationQueue = {
+  id: string
+  name: string
+  description?: string | null
+  /** Score config ids the queue scores against. */
+  scoreConfigIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
 /** Full trace detail — the trace plus its observations and scores. */
 export type TraceDetail = Trace & { observations: Observation[]; scores: Score[] }
 
@@ -128,4 +167,10 @@ export const O11yApi = {
   session: (id: string) => restGet<SessionDetail>(v1Url(`o11y/sessions/${encodeURIComponent(id)}`)),
 
   scores: (q: O11yListQuery = {}) => restGet<O11yList<Score>>(listUrl('o11y/scores', q)),
+
+  scoreConfigs: (q: O11yListQuery = {}) =>
+    restGet<O11yList<ScoreConfig>>(listUrl('o11y/score-configs', q)),
+
+  annotationQueues: (q: O11yListQuery = {}) =>
+    restGet<O11yList<AnnotationQueue>>(listUrl('o11y/annotation-queues', q)),
 }

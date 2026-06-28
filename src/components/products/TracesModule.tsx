@@ -27,6 +27,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { Pager } from './observability/Pager'
 import { Badge, DetailRow, JsonCard, Tags } from './observability/parts'
+import { SpanTree } from './observability/SpanTree'
 import { elapsed, fmtCost, fmtDate, fmtLatency, scoreValue } from './observability/format'
 
 const PAGE_LIMIT = 50
@@ -126,6 +127,7 @@ function TraceDetailView({ id, onBack }: { id: string; onBack: () => void }) {
   const [trace, setTrace] = useState<TraceDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<unknown>(null)
+  const [obsView, setObsView] = useState<'tree' | 'table'>('tree')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -203,15 +205,35 @@ function TraceDetailView({ id, onBack }: { id: string; onBack: () => void }) {
           <JsonCard title="Metadata" value={trace.metadata} />
 
           <YStack gap="$2">
-            <Text fontSize="$5" fontWeight="700">
-              Observations
-            </Text>
-            <DataTable
-              columns={obsColumns}
-              rows={trace.observations ?? []}
-              rowKey={(o) => o.id}
-              empty="No observations on this trace."
-            />
+            <XStack items="center" justify="space-between" gap="$3">
+              <Text fontSize="$5" fontWeight="700">
+                Observations
+              </Text>
+              <XStack gap="$1">
+                {(['tree', 'table'] as const).map((v) => (
+                  <Button
+                    key={v}
+                    size="$2"
+                    bg={v === obsView ? '$color5' : 'transparent'}
+                    borderWidth={1}
+                    borderColor="$borderColor"
+                    onPress={() => setObsView(v)}
+                  >
+                    {v === 'tree' ? 'Tree' : 'Table'}
+                  </Button>
+                ))}
+              </XStack>
+            </XStack>
+            {obsView === 'tree' ? (
+              <SpanTree observations={trace.observations ?? []} />
+            ) : (
+              <DataTable
+                columns={obsColumns}
+                rows={trace.observations ?? []}
+                rowKey={(o) => o.id}
+                empty="No observations on this trace."
+              />
+            )}
           </YStack>
 
           <YStack gap="$2">
