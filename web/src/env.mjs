@@ -447,6 +447,12 @@ export const env = createEnv({
 
     // AWS Bedrock for hanzo native AI feature such as natural language filters
     HANZO_AWS_BEDROCK_MODEL: z.string().optional(),
+    // Model used by natural-language filters. The completion is routed through
+    // the Hanzo meter (api.hanzo.ai/v1) on the signed-in user's hk- key — so it
+    // is metered + billed to THEIR org instead of a shared Bedrock key — and the
+    // model string is whatever the meter serves. Defaults (in code) to
+    // HANZO_AWS_BEDROCK_MODEL for continuity; override to a meter model id.
+    HANZO_NL_FILTER_MODEL: z.string().optional(),
 
     // Tracing for Hanzo AI Features
     HANZO_AI_FEATURES_HOST: z.string().optional(),
@@ -504,6 +510,13 @@ export const env = createEnv({
     // Commerce (Hanzo Commerce Service - billing, subscriptions, payments)
     COMMERCE_API_URL: z.string().url().optional().default("http://commerce.hanzo.svc.cluster.local:8001"),
     COMMERCE_SERVICE_TOKEN: z.string().optional(),
+    // Audience for the per-user IAM JWT console forwards to commerce. Commerce's
+    // EdgeAuth validates the token and derives the org from its `owner` claim;
+    // the audience must be one commerce accepts (IAM_ACCEPTED_AUDIENCES) — for
+    // the Hanzo console that is `hanzo-console`. White-label consoles set their
+    // own commerce-accepted value. This is the multi-tenant replacement for the
+    // shared COMMERCE_SERVICE_TOKEN: identity is per-user, org is server-derived.
+    COMMERCE_API_AUDIENCE: z.string().optional().default("hanzo-console"),
 
     // Analytics (Umami) - auto-provisioned per org
     ANALYTICS_API_URL: z.string().url().optional(),
@@ -953,6 +966,7 @@ export const env = createEnv({
 
     // AWS Bedrock for hanzo native AI feature such as natural language filters
     HANZO_AWS_BEDROCK_MODEL: process.env.HANZO_AWS_BEDROCK_MODEL,
+    HANZO_NL_FILTER_MODEL: process.env.HANZO_NL_FILTER_MODEL,
 
     // Hanzo Tracing AI Features
     HANZO_AI_FEATURES_HOST: process.env.HANZO_AI_FEATURES_HOST,
@@ -992,6 +1006,7 @@ export const env = createEnv({
     // Commerce
     COMMERCE_API_URL: process.env.COMMERCE_API_URL,
     COMMERCE_SERVICE_TOKEN: process.env.COMMERCE_SERVICE_TOKEN,
+    COMMERCE_API_AUDIENCE: process.env.COMMERCE_API_AUDIENCE,
     // Analytics (Umami)
     ANALYTICS_API_URL: process.env.ANALYTICS_API_URL,
     ANALYTICS_SERVICE_TOKEN: process.env.ANALYTICS_SERVICE_TOKEN,

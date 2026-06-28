@@ -1,31 +1,32 @@
 import { TRPCError } from "@trpc/server";
 import { env } from "@/src/env.mjs";
+import {
+  commerceUserAuthorization,
+  type CommerceCaller,
+} from "@/src/server/commerceUserAuth";
 
 // ---------------------------------------------------------------------------
-// Commerce API Client — calls Hanzo Commerce directly (not via bot gateway)
+// Commerce API Client (bots surface) — multi-tenant by IAM identity.
+//
+// Every call authenticates AS the signed-in user via a short-lived per-user IAM
+// JWT (see commerceUserAuth); commerce's EdgeAuth derives the org SERVER-SIDE
+// from the verified `owner` claim. There is NO shared COMMERCE_SERVICE_TOKEN and
+// NO default "hanzo" org — bot billing/credits now scope to the caller's own
+// org instead of collapsing every tenant into one.
 //
 // Endpoints:
-//   GET  /v1/users/:userId/payment-methods
-//   POST /v1/users/:userId/payment-methods
-//   GET  /v1/users/:userId/subscriptions
-//   GET  /v1/users/:userId/orders
-//   GET  /v1/users/:userId/credits
-//   POST /v1/billing/invoices
+//   GET  /v1/users/:projectId/payment-methods
+//   POST /v1/users/:projectId/payment-methods
+//   GET  /v1/users/:projectId/subscriptions
+//   GET  /v1/users/:projectId/orders
+//   GET  /v1/users/:projectId/credits
+//   GET  /v1/billing/balance
 // ---------------------------------------------------------------------------
+
+export type { CommerceCaller };
 
 function commerceUrl(): string {
   return env.COMMERCE_API_URL ?? "http://commerce.hanzo.svc.cluster.local:8001";
-}
-
-function commerceToken(): string {
-  const token = env.COMMERCE_SERVICE_TOKEN;
-  if (!token) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Commerce API auth not configured. Set COMMERCE_SERVICE_TOKEN.",
-    });
-  }
-  return token;
 }
 
 function toTRPCError(status: number, body: string): TRPCError {
@@ -46,8 +47,12 @@ function toTRPCError(status: number, body: string): TRPCError {
 async function commerceRequest<T>(
   method: string,
   path: string,
+  caller: CommerceCaller,
   opts?: { body?: unknown; params?: Record<string, string | undefined> },
 ): Promise<T> {
+  // Per-user IAM JWT — throws (fail-closed) if no identity / mint failure.
+  const authorization = await commerceUserAuthorization(caller.iamSub);
+
   const base = commerceUrl();
   const url = new URL(path, base);
   if (opts?.params) {
@@ -55,6 +60,9 @@ async function commerceRequest<T>(
       if (v !== undefined) url.searchParams.set(k, v);
     }
   }
+  // Forward the viewed org as the admin-gated `?org` view override (commerce
+  // EdgeAuth honors it only for a global admin and strips it otherwise).
+  if (caller.org) url.searchParams.set("org", caller.org);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30_000);
@@ -63,7 +71,7 @@ async function commerceRequest<T>(
     const res = await fetch(url.toString(), {
       method,
       headers: {
-        Authorization: `Bearer ${commerceToken()}`,
+        Authorization: authorization,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
@@ -92,13 +100,21 @@ async function commerceRequest<T>(
 }
 
 /** GET helper */
-export function commerceGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
-  return commerceRequest<T>("GET", path, { params });
+export function commerceGet<T>(
+  path: string,
+  caller: CommerceCaller,
+  params?: Record<string, string | undefined>,
+): Promise<T> {
+  return commerceRequest<T>("GET", path, caller, { params });
 }
 
 /** POST helper */
-export function commercePost<T>(path: string, body: unknown): Promise<T> {
-  return commerceRequest<T>("POST", path, { body });
+export function commercePost<T>(
+  path: string,
+  caller: CommerceCaller,
+  body: unknown,
+): Promise<T> {
+  return commerceRequest<T>("POST", path, caller, { body });
 }
 
 // ---------------------------------------------------------------------------
@@ -141,16 +157,21 @@ export interface CommerceSubscription {
 }
 
 /**
- * List payment methods for a project (scoped by projectId as userId).
+ * List payment methods for a project (scoped by projectId within the caller's
+ * own org, which commerce derives from the forwarded user token).
  */
-export function listPaymentMethods(projectId: string) {
-  return commerceGet<CommercePaymentMethod[]>(`/v1/users/${projectId}/payment-methods`);
+export function listPaymentMethods(caller: CommerceCaller, projectId: string) {
+  return commerceGet<CommercePaymentMethod[]>(
+    `/v1/users/${projectId}/payment-methods`,
+    caller,
+  );
 }
 
 /**
  * Add a payment method for a project.
  */
 export function addPaymentMethod(
+  caller: CommerceCaller,
   projectId: string,
   data: {
     type: "card" | "crypto" | "wire";
@@ -159,23 +180,38 @@ export function addPaymentMethod(
     network?: string;
   },
 ) {
-  return commercePost<{ id: string }>(`/v1/users/${projectId}/payment-methods`, data);
+  return commercePost<{ id: string }>(
+    `/v1/users/${projectId}/payment-methods`,
+    caller,
+    data,
+  );
 }
 
 /**
  * Get credits balance for a project.
  */
-export function getCredits(projectId: string) {
-  return commerceGet<CommerceCredits>(`/v1/users/${projectId}/credits`);
+export function getCredits(caller: CommerceCaller, projectId: string) {
+  return commerceGet<CommerceCredits>(`/v1/users/${projectId}/credits`, caller);
 }
 
 /**
  * Get billing info (subscription + invoices) for a bot.
  */
-export async function getBotBilling(projectId: string, botId: string) {
+export async function getBotBilling(
+  caller: CommerceCaller,
+  projectId: string,
+  botId: string,
+) {
   const [subscription, invoices] = await Promise.all([
-    commerceGet<CommerceSubscription | null>(`/v1/users/${projectId}/subscriptions`, { botId }).catch(() => null),
-    commerceGet<CommerceInvoice[]>(`/v1/users/${projectId}/orders`, { botId, type: "invoice" }).catch(() => []),
+    commerceGet<CommerceSubscription | null>(
+      `/v1/users/${projectId}/subscriptions`,
+      caller,
+      { botId },
+    ).catch(() => null),
+    commerceGet<CommerceInvoice[]>(`/v1/users/${projectId}/orders`, caller, {
+      botId,
+      type: "invoice",
+    }).catch(() => []),
   ]);
 
   return {
@@ -186,22 +222,33 @@ export async function getBotBilling(projectId: string, botId: string) {
 }
 
 /**
- * Get the prepaid balance for a user (via Commerce billing API).
- * Returns available balance in cents.
+ * Get the prepaid balance for the caller's org (via Commerce billing API).
+ * Commerce's EdgeAuth locks the `/billing/` subject to the caller's verified
+ * org, so this is the ORG's prepaid balance — the right gate for "can this org
+ * afford to run a bot". Returns available balance in cents.
  */
-export function getBillingBalance(userId: string, currency = "usd") {
+export function getBillingBalance(caller: CommerceCaller, currency = "usd") {
   return commerceGet<{
     user: string;
     currency: string;
     balance: number;
     holds: number;
     available: number;
-  }>("/v1/billing/balance", { user: userId, currency });
+  }>("/v1/billing/balance", caller, { currency });
 }
 
 /**
  * Upgrade a bot's subscription tier.
  */
-export function upgradeBotPlan(projectId: string, botId: string, tier: string) {
-  return commercePost<{ ok: boolean }>(`/v1/users/${projectId}/subscriptions`, { botId, plan: tier });
+export function upgradeBotPlan(
+  caller: CommerceCaller,
+  projectId: string,
+  botId: string,
+  tier: string,
+) {
+  return commercePost<{ ok: boolean }>(
+    `/v1/users/${projectId}/subscriptions`,
+    caller,
+    { botId, plan: tier },
+  );
 }

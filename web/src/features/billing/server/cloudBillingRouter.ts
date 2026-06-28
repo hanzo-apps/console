@@ -22,6 +22,7 @@ import {
   commercePatch,
   commercePut,
   commerceDelete,
+  type CommerceCaller,
 } from "@/src/features/billing/server/commerceClient";
 import type Stripe from "stripe";
 
@@ -1374,6 +1375,10 @@ export const cloudBillingRouter = createTRPCRouter({
       // also accepts the org slug alone for an org-level view.
       const org = organization.name;
       const user = input.user ?? org;
+      // Authenticate AS the signed-in user; commerce derives + locks the billed
+      // org from the verified token owner (the `user`/`org` params below are
+      // advisory — EdgeAuth pins the subject to that org for non-admins).
+      const caller: CommerceCaller = { iamSub: ctx.session.user.iamSub, org };
 
       // Commerce has no single "usage-rollup" route; we compose the rollup from
       // the three sources that ARE the billing source of truth — tier (plan +
@@ -1392,18 +1397,20 @@ export const cloudBillingRouter = createTRPCRouter({
       try {
         [tier, balance, usage] = await Promise.all([
           withTimeout(
-            commerceGet<CommerceTier>("/v1/billing/tier", org, {
+            commerceGet<CommerceTier>("/v1/billing/tier", caller, {
               user,
               tier: input.plan,
             }),
             "commerce /tier",
           ),
           withTimeout(
-            commerceGet<CommerceBalance>("/v1/billing/balance", org, { user }),
+            commerceGet<CommerceBalance>("/v1/billing/balance", caller, {
+              user,
+            }),
             "commerce /balance",
           ),
           withTimeout(
-            commerceGet<CommerceUsage>("/v1/billing/usage", org, { user }),
+            commerceGet<CommerceUsage>("/v1/billing/usage", caller, { user }),
             "commerce /usage",
           ),
         ]);
@@ -1482,7 +1489,7 @@ export const cloudBillingRouter = createTRPCRouter({
         return await withTimeout(
           commerceGet<CommerceCreditBalance>(
             "/v1/billing/credit-balance",
-            organization.name,
+            { iamSub: ctx.session.user.iamSub, org: organization.name },
             { userId: organization.name },
           ),
           "commerce /credit-balance",
@@ -1538,7 +1545,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       const grant = await commercePost<CommerceCreditGrant>(
         "/v1/billing/credit-grants",
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
         {
           userId: organization.name,
           name: input.name ?? "Console credit grant",
@@ -1601,9 +1608,11 @@ export const cloudBillingRouter = createTRPCRouter({
         const status = await commerceGet<{
           hasPaymentMethod?: boolean;
           creditBalance?: number;
-        }>("/v1/billing/status", organization.name, {
-          user: organization.name,
-        });
+        }>(
+          "/v1/billing/status",
+          { iamSub: ctx.session.user.iamSub, org: organization.name },
+          { user: organization.name },
+        );
         hasValidPaymentMethod = Boolean(status.hasPaymentMethod);
       } catch {
         // Status is best-effort; a commerce hiccup must not crash the page.
@@ -1654,7 +1663,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       const res = await commerceGet<CommerceInvoiceList>(
         "/v1/billing/invoices",
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
         { user: organization.name },
       );
 
@@ -1840,7 +1849,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       const methods = await commerceGet<CommercePaymentMethod[]>(
         "/v1/billing/payment-methods",
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
         { user: organization.name },
       );
       return Array.isArray(methods) ? methods : [];
@@ -1875,7 +1884,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       const pm = await commercePost<CommercePaymentMethod>(
         "/v1/billing/payment-methods",
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
         {
           customerId: organization.name,
           type: "card",
@@ -1923,7 +1932,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       await commerceDelete(
         `/v1/billing/payment-methods/${encodeURIComponent(input.paymentMethodId)}`,
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
       );
 
       await auditLog({
@@ -1961,7 +1970,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       const pm = await commercePost<CommercePaymentMethod>(
         `/v1/billing/customers/${encodeURIComponent(organization.name)}/default-payment-method`,
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
         { paymentMethodId: input.paymentMethodId },
       );
 
@@ -2001,7 +2010,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       return commerceGet<CommerceAutoRecharge>(
         "/v1/billing/auto-recharge",
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
       );
     }),
 
@@ -2033,7 +2042,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       const cfg = await commercePut<CommerceAutoRecharge>(
         "/v1/billing/auto-recharge",
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
         {
           enabled: input.enabled,
           thresholdCents: Math.round(input.thresholdUsd * 100),
@@ -2079,7 +2088,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       return commerceGet<CommercePaymentConfig>(
         "/v1/billing/payment-config",
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
       );
     }),
 
@@ -2121,7 +2130,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       const result = await commercePost<CommerceTopupResult>(
         "/v1/billing/topup/token",
-        organization.name,
+        { iamSub: ctx.session.user.iamSub, org: organization.name },
         {
           sourceId: input.sourceId,
           amountCents,
@@ -2170,7 +2179,10 @@ export const cloudBillingRouter = createTRPCRouter({
       }
       try {
         const raw = await withTimeout(
-          commerceGet<CommercePlan[]>("/v1/billing/plans", organization.name),
+          commerceGet<CommercePlan[]>("/v1/billing/plans", {
+            iamSub: ctx.session.user.iamSub,
+            org: organization.name,
+          }),
           "commerce /plans",
         );
         const plans = (Array.isArray(raw) ? raw : []).filter(isCorePlan);
@@ -2210,9 +2222,11 @@ export const cloudBillingRouter = createTRPCRouter({
           commerceGet<{
             subscriptions: CommerceSubscription[];
             count: number;
-          }>("/v1/billing/subscriptions", organization.name, {
-            userId: organization.name,
-          }),
+          }>(
+            "/v1/billing/subscriptions",
+            { iamSub: ctx.session.user.iamSub, org: organization.name },
+            { userId: organization.name },
+          ),
           "commerce /subscriptions",
         );
         const subs = res.subscriptions ?? [];
@@ -2246,12 +2260,17 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
+      const caller: CommerceCaller = {
+        iamSub: ctx.session.user.iamSub,
+        org: organization.name,
+      };
+
       let existing: CommerceSubscription | undefined;
       try {
         const list = await withTimeout(
           commerceGet<{ subscriptions: CommerceSubscription[] }>(
             "/v1/billing/subscriptions",
-            organization.name,
+            caller,
             { userId: organization.name },
           ),
           "commerce /subscriptions",
@@ -2266,12 +2285,12 @@ export const cloudBillingRouter = createTRPCRouter({
       const sub = existing
         ? await commercePatch<CommerceSubscription>(
             `/v1/billing/subscriptions/${encodeURIComponent(existing.id)}`,
-            organization.name,
+            caller,
             { planId: input.planSlug, prorate: true },
           )
         : await commercePost<CommerceSubscription>(
             "/v1/billing/subscriptions",
-            organization.name,
+            caller,
             { userId: organization.name, planId: input.planSlug },
           );
 
@@ -2311,12 +2330,17 @@ export const cloudBillingRouter = createTRPCRouter({
         });
       }
 
+      const caller: CommerceCaller = {
+        iamSub: ctx.session.user.iamSub,
+        org: organization.name,
+      };
+
       let active: CommerceSubscription | undefined;
       try {
         const list = await withTimeout(
           commerceGet<{ subscriptions: CommerceSubscription[] }>(
             "/v1/billing/subscriptions",
-            organization.name,
+            caller,
             { userId: organization.name },
           ),
           "commerce /subscriptions",
@@ -2331,7 +2355,7 @@ export const cloudBillingRouter = createTRPCRouter({
 
       const sub = await commercePost<CommerceSubscription>(
         `/v1/billing/subscriptions/${encodeURIComponent(active.id)}/cancel`,
-        organization.name,
+        caller,
         { atPeriodEnd: input.atPeriodEnd },
       );
 

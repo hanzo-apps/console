@@ -18,8 +18,10 @@ import {
 } from "./utils";
 import { randomBytes } from "crypto";
 import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAccess";
-import { BEDROCK_USE_DEFAULT_CREDENTIALS } from "@hanzo/console";
-import { encrypt } from "@hanzo/console/encryption";
+import {
+  resolveUserHkKey,
+  buildMeterConnection,
+} from "@/src/features/cloud-meter/server/meterConnection";
 
 export const naturalLanguageFilterRouter = createTRPCRouter({
   createCompletion: protectedProjectProcedure
@@ -40,11 +42,11 @@ export const naturalLanguageFilterRouter = createTRPCRouter({
           });
         }
 
-        if (!env.HANZO_AWS_BEDROCK_MODEL) {
+        if (!env.HANZO_NL_FILTER_MODEL && !env.HANZO_AWS_BEDROCK_MODEL) {
           throw new TRPCError({
             code: "PRECONDITION_FAILED",
             message:
-              "Bedrock environment variables not configured. Please set HANZO_AWS_BEDROCK_* variables.",
+              "Natural-language filter model not configured. Set HANZO_NL_FILTER_MODEL (a model served by the Hanzo meter).",
           });
         }
 
@@ -115,6 +117,17 @@ export const naturalLanguageFilterRouter = createTRPCRouter({
         });
         const modelParams = getDefaultModelParams();
 
+        // Route the completion through the Hanzo meter on the SIGNED-IN USER's
+        // per-user hk- key so it is metered + billed to THEIR org — never a
+        // shared Bedrock key. FAIL-CLOSED: resolveUserHkKey throws if the user's
+        // key can neither be resolved nor minted (no unmetered fallback).
+        const hkKey = await resolveUserHkKey(ctx.session.user.iamSub);
+        const llmConnection = buildMeterConnection({
+          hkKey,
+          provider: modelParams.provider,
+          projectId: input.projectId,
+        });
+
         const llmCompletion = await fetchLLMCompletion({
           messages: messages.map((m) => ({
             role: m.role,
@@ -122,12 +135,9 @@ export const naturalLanguageFilterRouter = createTRPCRouter({
             type: ChatMessageType.PublicAPICreated,
           })),
           modelParams,
-          llmConnection: {
-            secretKey: encrypt(BEDROCK_USE_DEFAULT_CREDENTIALS),
-          },
+          llmConnection,
           streaming: false,
           traceSinkParams,
-          shouldUseHanzoAPIKey: true,
         });
 
         logger.info(

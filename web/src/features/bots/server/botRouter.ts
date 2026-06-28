@@ -13,9 +13,25 @@ import {
   getBotBilling,
   getBillingBalance,
   upgradeBotPlan,
+  type CommerceCaller,
 } from "./commerceClient";
 import { kmsGet } from "@/src/features/kms/server/kmsClient";
+import { type Session } from "@/src/features/auth/session-types";
 import type { Bot, BotLogEntry, BotInvoice, TeamPreset, BotDID, BotWallet } from "../types";
+
+// Build the per-user commerce caller for a project: authenticate AS the
+// signed-in user (commerce derives + locks the billed org from the verified
+// token owner), and carry the project's own org slug — resolved from the
+// VERIFIED session, never client input — as the advisory view/test-mode org.
+function commerceCallerForProject(
+  session: Session,
+  projectId: string,
+): CommerceCaller {
+  const org = session.user?.organizations.find((o) =>
+    o.projects.some((p) => p.id === projectId),
+  )?.name;
+  return { iamSub: session.user?.iamSub, org: org ?? "" };
+}
 
 // ---------------------------------------------------------------------------
 // Bot Router
@@ -114,9 +130,11 @@ export const botRouter = createTRPCRouter({
 
   start: protectedProjectProcedure
     .input(z.object({ projectId: z.string(), botId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       // Billing gate — must have prepaid credit to start a bot
-      const balance = await getBillingBalance(input.projectId);
+      const balance = await getBillingBalance(
+        commerceCallerForProject(ctx.session, input.projectId),
+      );
       if ((balance.available ?? 0) <= 0) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
@@ -141,9 +159,11 @@ export const botRouter = createTRPCRouter({
 
   restart: protectedProjectProcedure
     .input(z.object({ projectId: z.string(), botId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       // Billing gate — must have prepaid credit to restart a bot
-      const balance = await getBillingBalance(input.projectId);
+      const balance = await getBillingBalance(
+        commerceCallerForProject(ctx.session, input.projectId),
+      );
       if ((balance.available ?? 0) <= 0) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
@@ -186,9 +206,13 @@ export const botRouter = createTRPCRouter({
 
   getBilling: protectedProjectProcedure
     .input(z.object({ projectId: z.string(), botId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const [billing, usage] = await Promise.all([
-        getBotBilling(input.projectId, input.botId),
+        getBotBilling(
+          commerceCallerForProject(ctx.session, input.projectId),
+          input.projectId,
+          input.botId,
+        ),
         zapCallTool<Bot["monthlyUsage"]>("bots.usage", {
           projectId: input.projectId,
           botId: input.botId,
@@ -211,8 +235,13 @@ export const botRouter = createTRPCRouter({
         tier: z.enum(["free", "cloud", "cloud-pro"]),
       }),
     )
-    .mutation(async ({ input }) => {
-      await upgradeBotPlan(input.projectId, input.botId, input.tier);
+    .mutation(async ({ input, ctx }) => {
+      await upgradeBotPlan(
+        commerceCallerForProject(ctx.session, input.projectId),
+        input.projectId,
+        input.botId,
+        input.tier,
+      );
       // Return updated bot
       return zapCallTool<Bot>("bots.get", {
         projectId: input.projectId,
@@ -224,8 +253,11 @@ export const botRouter = createTRPCRouter({
 
   listPaymentMethods: protectedProjectProcedure
     .input(z.object({ projectId: z.string() }))
-    .query(async ({ input }) => {
-      return listPaymentMethods(input.projectId);
+    .query(async ({ input, ctx }) => {
+      return listPaymentMethods(
+        commerceCallerForProject(ctx.session, input.projectId),
+        input.projectId,
+      );
     }),
 
   addPaymentMethod: protectedProjectProcedure
@@ -238,29 +270,38 @@ export const botRouter = createTRPCRouter({
         network: z.string().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
-      return addPaymentMethod(input.projectId, {
-        type: input.type,
-        nonce: input.nonce,
-        walletAddress: input.walletAddress,
-        network: input.network,
-      });
+    .mutation(async ({ input, ctx }) => {
+      return addPaymentMethod(
+        commerceCallerForProject(ctx.session, input.projectId),
+        input.projectId,
+        {
+          type: input.type,
+          nonce: input.nonce,
+          walletAddress: input.walletAddress,
+          network: input.network,
+        },
+      );
     }),
 
   // ── Credits (via Hanzo Commerce API — direct) ───────────────────────
 
   getCredits: protectedProjectProcedure
     .input(z.object({ projectId: z.string() }))
-    .query(async ({ input }) => {
-      return getCredits(input.projectId);
+    .query(async ({ input, ctx }) => {
+      return getCredits(
+        commerceCallerForProject(ctx.session, input.projectId),
+        input.projectId,
+      );
     }),
 
   // ── Prepaid Balance (via Commerce billing API) ──────────────────────
 
   getBalance: protectedProjectProcedure
     .input(z.object({ projectId: z.string() }))
-    .query(async ({ input }) => {
-      const result = await getBillingBalance(input.projectId);
+    .query(async ({ input, ctx }) => {
+      const result = await getBillingBalance(
+        commerceCallerForProject(ctx.session, input.projectId),
+      );
       return {
         balance: result.balance ?? 0,
         holds: result.holds ?? 0,

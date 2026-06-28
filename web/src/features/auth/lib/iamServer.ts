@@ -556,6 +556,90 @@ export async function iamMintUserKeys(sub: string): Promise<IamMintKeyResult> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Per-user IAM access tokens for server-side identity forwarding
+//
+// console (SSR/tRPC) holds only a session identity REFERENCE (the IAM `sub`),
+// not a forwardable IAM token. To call a resource server (commerce) AS the
+// signed-in user — so the resource server derives the org server-side from the
+// verified `owner` claim instead of trusting a shared, all-org service token —
+// console mints a short-lived per-user IAM JWT via the confidential
+// `issue-user-token` endpoint (same trust boundary as hk- key minting) and
+// forwards it. Tokens are cached per (sub, audience) until shortly before
+// expiry so a page that makes several commerce calls mints at most once.
+// ---------------------------------------------------------------------------
+
+type CachedUserToken = { token: string; expiresAtMs: number };
+
+// Process-local cache. Each console replica mints its own short-lived tokens;
+// there is no shared state to coordinate. Keyed by `${sub} ${audience}`.
+const userTokenCache = new Map<string, CachedUserToken>();
+
+// Re-mint this long before the IAM-stated expiry to absorb clock skew + the
+// commerce round-trip — never forward a token that could expire mid-flight.
+const TOKEN_SKEW_MS = 60_000;
+
+function pruneExpiredUserTokens(nowMs: number): void {
+  for (const [k, v] of userTokenCache) {
+    if (v.expiresAtMs <= nowMs) userTokenCache.delete(k);
+  }
+}
+
+/**
+ * Issue (or reuse a cached) short-lived IAM access token bound to `sub`, with an
+ * explicit `audience` the resource server accepts. Returns the raw JWT, or null
+ * when IAM is not configured or the mint fails — callers MUST fail closed
+ * (refuse the request) rather than fall back to a shared service token.
+ *
+ * `sub` MUST be the authenticated session user's own IAM sub — never
+ * client-supplied input. The minted token carries the user's real `owner` (org)
+ * claim, so the resource server scopes strictly to THAT org.
+ */
+export async function iamIssueUserToken(
+  sub: string | undefined,
+  audience: string,
+): Promise<string | null> {
+  if (!sub) return null;
+
+  const key = `${sub} ${audience}`;
+  const nowMs = Date.now();
+
+  const cached = userTokenCache.get(key);
+  if (cached && cached.expiresAtMs > nowMs + TOKEN_SKEW_MS) {
+    return cached.token;
+  }
+
+  const client = getIamClient();
+  if (!client) return null;
+
+  try {
+    const res = await client.apiRequest<
+      IamResponse<{ accessToken?: string; expiresIn?: number }>
+    >("/v1/iam/issue-user-token", {
+      method: "POST",
+      params: { id: sub, aud: audience },
+      body: {},
+    });
+    if (res.status !== "ok" || !res.data?.accessToken) return null;
+
+    const token = res.data.accessToken;
+    const expiresInSec =
+      typeof res.data.expiresIn === "number" && res.data.expiresIn > 0
+        ? res.data.expiresIn
+        : 3600;
+
+    // Bound memory: prune lazily once the cache grows past a small threshold.
+    if (userTokenCache.size > 1024) pruneExpiredUserTokens(nowMs);
+    userTokenCache.set(key, {
+      token,
+      expiresAtMs: nowMs + expiresInSec * 1000,
+    });
+    return token;
+  } catch {
+    return null;
+  }
+}
+
 /** Clear (revoke) the per-user hk- Cloud API key for an IAM sub. */
 export async function iamRevokeUserKeys(
   sub: string,

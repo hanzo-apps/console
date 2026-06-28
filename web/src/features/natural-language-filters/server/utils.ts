@@ -6,11 +6,19 @@ import { z } from "zod/v4";
 
 let hanzoClient: Hanzo | null = null;
 
+/**
+ * The model used to extract filters from a natural-language query. The
+ * completion is routed through the Hanzo meter (OpenAI-compatible surface), so
+ * `adapter` is OpenAI — `fetchLLMCompletion` selects its transport from
+ * `modelParams.adapter`, and the meter then proxies to the real provider while
+ * metering the call to the user's org. The model id is whatever the meter
+ * serves; defaults to the legacy Bedrock model for continuity.
+ */
 export function getDefaultModelParams() {
   return {
-    provider: "bedrock",
-    adapter: LLMAdapter.Bedrock,
-    model: env.HANZO_AWS_BEDROCK_MODEL ?? "",
+    provider: "openai",
+    adapter: LLMAdapter.OpenAI,
+    model: env.HANZO_NL_FILTER_MODEL ?? env.HANZO_AWS_BEDROCK_MODEL ?? "",
     temperature: 0.1,
     maxTokens: 1000,
     topP: 0.9,
