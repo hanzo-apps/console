@@ -13,13 +13,17 @@
 import type { ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
-import { LogOut, Star, Lock, ExternalLink, LayoutGrid, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
+import { LogOut, Star, Lock, ExternalLink, LayoutGrid, SlidersHorizontal, CircleHelp } from '@hanzogui/lucide-icons-2'
 
 import { branding } from '~/config'
 import { catalogByCategory, findEntry, type CatalogEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { useSession } from '~/lib/auth/session'
+import { CommandSearchBox, useCommandPalette } from '~/components/CommandPalette'
+import { ThemeToggle } from '~/components/ui/ThemeToggle'
+import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
+import { OrgSwitcher } from '~/components/OrgSwitcher'
 
 function NavRow({
   entry,
@@ -77,6 +81,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const { account, signOut } = useSession()
   const { pinned, toggle, isPinned } = useFavorites()
+  const { openMode } = useCommandPalette()
 
   const push = (path: string) => router.push(path)
   const isActive = (id: string) => pathname === `/${id}` || pathname.startsWith(`/${id}/`)
@@ -156,25 +161,43 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           height={56}
           px="$4"
           items="center"
-          justify="flex-end"
           gap="$3"
           borderBottomWidth={1}
           borderColor="$borderColor"
         >
-          {account ? (
+          <CommandSearchBox />
+          <XStack flex={1} />
+          <XStack items="center" gap="$2">
+            <ThemeToggle />
             <Button
               size="$2"
               chromeless
-              icon={<SlidersHorizontal size={15} />}
-              onPress={() => push('/settings')}
-            >
-              {account.displayName || account.name}
+              icon={<CircleHelp size={16} />}
+              onPress={() => openMode('help')}
+              aria-label="Help"
+            />
+            <OrgSwitcher />
+            {account ? (
+              <Button
+                size="$2"
+                chromeless
+                icon={<SlidersHorizontal size={15} />}
+                onPress={() => push('/settings')}
+              >
+                {account.displayName || account.name}
+              </Button>
+            ) : null}
+            <Button size="$2" chromeless icon={<LogOut size={16} />} onPress={() => void signOut()}>
+              Sign out
             </Button>
-          ) : null}
-          <Button size="$2" chromeless icon={<LogOut size={16} />} onPress={() => void signOut()}>
-            Sign out
-          </Button>
+          </XStack>
         </XStack>
+
+        {pathname !== '/' ? (
+          <XStack px="$4" py="$2.5" borderBottomWidth={1} borderColor="$borderColor">
+            <Breadcrumbs />
+          </XStack>
+        ) : null}
 
         <ScrollView flex={1}>
           <YStack flex={1} p="$4" gap="$4">

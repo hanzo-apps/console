@@ -59,7 +59,11 @@ export const PlaygroundApi = {
     return Array.from(new Set(ids)).sort((a, b) => a.localeCompare(b))
   },
 
-  /** Run a non-streaming chat completion against the gateway. */
-  chat: (req: ChatRequest): Promise<ChatCompletion> =>
-    restPost<ChatCompletion>(v1Url('chat/completions'), { ...req, stream: false }),
+  /**
+   * Run a non-streaming chat completion against the gateway. Optional `headers`
+   * ride the same request — the retrieval/RAG switch (`X-Retrieval-Store`) is the
+   * only caller of this today, so RAG and plain chat share ONE gateway binding.
+   */
+  chat: (req: ChatRequest, headers?: Record<string, string>): Promise<ChatCompletion> =>
+    restPost<ChatCompletion>(v1Url('chat/completions'), { ...req, stream: false }, headers),
 }
