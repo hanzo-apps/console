@@ -13,7 +13,7 @@
 import type { ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
-import { LogOut, Star, Lock, ExternalLink, LayoutGrid } from '@hanzogui/lucide-icons-2'
+import { LogOut, Star, Lock, ExternalLink, LayoutGrid, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
 
 import { branding } from '~/config'
 import { catalogByCategory, findEntry, type CatalogEntry } from '~/lib/products/registry'
@@ -162,9 +162,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           borderColor="$borderColor"
         >
           {account ? (
-            <Text color="$color11" fontSize="$3">
+            <Button
+              size="$2"
+              chromeless
+              icon={<SlidersHorizontal size={15} />}
+              onPress={() => push('/settings')}
+            >
               {account.displayName || account.name}
-            </Text>
+            </Button>
           ) : null}
           <Button size="$2" chromeless icon={<LogOut size={16} />} onPress={() => void signOut()}>
             Sign out
