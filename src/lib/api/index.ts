@@ -70,6 +70,7 @@ export {
   type ChatCompletion,
   type ChatRequest,
 } from './playground'
+export { AiApi, type AiChatInput } from './ai'
 export {
   EvalsApi,
   type EvalScore,

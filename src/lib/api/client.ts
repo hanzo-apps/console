@@ -140,13 +140,14 @@ async function restRequest<T>(
   method: 'GET' | 'POST' | 'DELETE',
   url: string,
   body?: unknown,
+  headers?: Record<string, string>,
 ): Promise<T | undefined> {
   let res: Response
   try {
     res = await fetch(url, {
       method,
       credentials: 'include',
-      headers: baseHeaders(body !== undefined),
+      headers: { ...baseHeaders(body !== undefined), ...headers },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch (e) {
@@ -181,9 +182,9 @@ async function restRequest<T>(
 /** REST GET on a full URL (build it with `v1Url`). */
 export const restGet = <T>(url: string): Promise<T> => restRequest<T>('GET', url) as Promise<T>
 
-/** REST POST a JSON body on a full URL. */
-export const restPost = <T>(url: string, body?: unknown): Promise<T> =>
-  restRequest<T>('POST', url, body) as Promise<T>
+/** REST POST a JSON body on a full URL, with optional extra request headers. */
+export const restPost = <T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<T> =>
+  restRequest<T>('POST', url, body, headers) as Promise<T>
 
 /** REST DELETE on a full URL; resolves on 204. */
 export const restDelete = (url: string): Promise<void> =>
