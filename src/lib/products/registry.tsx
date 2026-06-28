@@ -75,6 +75,8 @@ import {
   Library,
   KeySquare,
   SlidersHorizontal,
+  Ruler,
+  ClipboardList,
 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
@@ -103,6 +105,8 @@ import { ComingSoon } from '~/components/products/ComingSoon'
 import { ModelCatalogModule } from '~/components/products/ModelCatalogModule'
 import { ApiKeysModule } from '~/components/products/ApiKeysModule'
 import { SettingsModule } from '~/components/products/SettingsModule'
+import { ScoreConfigsModule } from '~/components/products/ScoreConfigsModule'
+import { AnnotationQueuesModule } from '~/components/products/AnnotationQueuesModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -1149,6 +1153,34 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/scores`,
     kind: 'module',
     routes: [{ path: '', component: ScoresModule }],
+  },
+  {
+    // Native — score DEFINITIONS (data type + valid range/categories) on the REAL
+    // /v1/o11y/score-configs surface. Read-only list; honest RuntimeNotice on 503.
+    id: 'score-configs',
+    label: 'Score Configs',
+    icon: Ruler,
+    description: 'Score definitions — data types, ranges, and categories.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/score-configs`,
+    kind: 'module',
+    routes: [{ path: '', component: ScoreConfigsModule }],
+  },
+  {
+    // Native — human-review queues on the REAL /v1/o11y/annotation-queues surface.
+    // Read-only list; honest RuntimeNotice when the runtime is not initialized.
+    id: 'annotation-queues',
+    label: 'Annotation Queues',
+    icon: ClipboardList,
+    description: 'Review queues for scoring traces and observations.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/annotation-queues`,
+    kind: 'module',
+    routes: [{ path: '', component: AnnotationQueuesModule }],
   },
 ]
 
