@@ -23,6 +23,8 @@ test.describe('security headers', () => {
     expect(h['referrer-policy']).toBe('no-referrer')
     expect(h['strict-transport-security']).toContain('max-age=')
     expect(h['permissions-policy']).toContain('geolocation=()')
+    // No framework fingerprinting (poweredByHeader: false).
+    expect(h['x-powered-by']).toBeUndefined()
   })
 
   test('the app renders under CSP with no CSP violations', async ({ page }) => {

@@ -78,6 +78,8 @@ const SECURITY_HEADERS = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Drop the `X-Powered-By: Next.js` fingerprint (no framework disclosure).
+  poweredByHeader: false,
   transpilePackages: guiPackages(),
   experimental: {
     esmExternals: true,

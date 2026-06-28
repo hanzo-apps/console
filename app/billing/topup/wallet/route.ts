@@ -57,7 +57,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // Authn: the credited user is the SESSION user — never the request body (IDOR).
-  const account = await getServerAccount(req.headers.get('cookie'), req.nextUrl.origin)
+  const account = await getServerAccount(req.headers.get('cookie'))
   if (!account) {
     return NextResponse.json({ error: 'Sign in to top up your balance.' }, { status: 401 })
   }

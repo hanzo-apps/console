@@ -63,6 +63,7 @@ const configured = () => {
   vi.stubEnv('HANZO_HUSD_ADDRESS', HUSD)
   vi.stubEnv('HANZO_HUSD_TREASURY', TREASURY)
   vi.stubEnv('COMMERCE_URL', 'https://commerce.test')
+  vi.stubEnv('CLOUD_URL', 'https://cloud-api.test') // pinned session authority
 }
 
 describe('wallet top-up — IDOR + idempotency', () => {
