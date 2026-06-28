@@ -10,6 +10,13 @@
  * proxy resolved from `window.location.hostname`, so the /v1 client + IAM SDK are
  * per-host with no other wiring. `NEXT_PUBLIC_*` still OVERRIDES per field.
  *
+ * The env TIER is ALSO resolved from the host's env label, so the SAME image
+ * serves mainnet/testnet/devnet without baking a prod issuer into a non-prod
+ * console: `console.hanzo.ai` → mainnet → issuer `hanzo.id`;
+ * `console.devnet.hanzo.ai` → devnet → issuer `id.devnet.hanzo.ai`;
+ * `console.testnet.hanzo.ai` → testnet → issuer `id.testnet.hanzo.ai`. /v1 stays
+ * same-origin per host, so the cloud base is inherently env-correct already.
+ *
  * NOTE: hanzo's issuer is `hanzo.id` (NOT iam.hanzo.ai — legacy zone, iss mismatch
  * drops sign-in). zoo's IAM is `zoolabs.id` (NOT zoo.id). client_id is `<org>-cloud`
  * (HIP-0111). The cloud backend must accept all brand issuers/auds (multi-brand);
@@ -20,9 +27,14 @@ const trimSlash = (s: string) => s.replace(/\/+$/, '')
 
 export type BrandId = 'hanzo' | 'lux' | 'zoo' | 'pars'
 
+/** Deployment env tier, derived from the env label in the request host. */
+export type EnvTier = 'mainnet' | 'testnet' | 'devnet'
+
 export type ConsoleConfig = {
   /** Resolved brand id (from hostname). */
   brand: BrandId
+  /** Resolved env tier (from the host's env label; mainnet has no label). */
+  env: EnvTier
   /** Wordmark shown in the shell, e.g. "Lux Cloud". */
   brandName: string
   /** Unified cloud backend base URL (hanzoai/cloud /v1) — shared across brands. */
@@ -71,9 +83,18 @@ function cloudUrl(): string {
   return 'https://api.hanzo.ai'
 }
 
-/** Per-brand IAM (each org's own issuer/app) + wordmark. Cloud backend is shared. */
-const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string }> = {
-  hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud' },
+/**
+ * Per-brand IAM (each org's own issuer/app) + wordmark. Cloud backend is shared.
+ * `envApex` is the apex the env label attaches to for NON-prod IAM
+ * (`id.<env>.<apex>`). Only hanzo runs non-prod envs today (devnet/testnet under
+ * hanzo.ai); the other brands are mainnet-only here, so their non-prod issuer is
+ * intentionally left undefined (a deliberate, separate addition when needed).
+ */
+const BRANDS: Record<
+  BrandId,
+  { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string; envApex?: string }
+> = {
+  hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud', envApex: 'hanzo.ai' },
   lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud' },
   zoo: { brandName: 'Zoo Cloud', iamUrl: 'https://zoolabs.id', iamOrgName: 'zoo', iamApp: 'zoo-cloud' },
   pars: { brandName: 'Pars Cloud', iamUrl: 'https://pars.id', iamOrgName: 'pars', iamApp: 'pars-cloud' },
@@ -106,32 +127,60 @@ export function brandFromHost(host?: string | null): BrandId {
   return 'hanzo'
 }
 
+/**
+ * Resolve the env tier from a hostname. The env label sits left of the brand
+ * apex as its own DNS label: `console.devnet.hanzo.ai` → devnet,
+ * `id.testnet.hanzo.ai` → testnet, `console.hanzo.ai` → mainnet (no label).
+ * Port/case-insensitive. `devnet`/`testnet` only ever appear as the env label,
+ * so a label-membership test is unambiguous.
+ */
+export function envFromHost(host?: string | null): EnvTier {
+  const labels = (host ?? '').toLowerCase().replace(/:\d+$/, '').trim().split('.')
+  if (labels.includes('devnet')) return 'devnet'
+  if (labels.includes('testnet')) return 'testnet'
+  return 'mainnet'
+}
+
+/**
+ * IAM issuer for a brand at an env tier. mainnet uses the brand's vanity apex
+ * (`hanzo.id`); non-prod uses the env-scoped subdomain `id.<env>.<apex>`
+ * (`id.devnet.hanzo.ai`). Brands without a non-prod env keep the mainnet issuer.
+ */
+function iamUrlFor(brand: BrandId, env: EnvTier): string {
+  const b = BRANDS[brand]
+  if (env !== 'mainnet' && b.envApex) return `https://id.${env}.${b.envApex}`
+  return b.iamUrl
+}
+
 /** Current hostname: window in the browser, NEXT_PUBLIC_DEFAULT_HOST for SSR/build. */
 function currentHost(): string {
   if (typeof window !== 'undefined') return window.location.hostname
   return process.env.NEXT_PUBLIC_DEFAULT_HOST ?? 'console.hanzo.ai'
 }
 
-const cache = new Map<BrandId, ConsoleConfig>()
+const cache = new Map<string, ConsoleConfig>()
 
 /** Resolve the full config for the current host. iamOrgName overridable via env. */
 export function resolveConfig(host: string = currentHost()): ConsoleConfig {
   const brand = brandFromHost(host)
-  const cached = cache.get(brand)
+  const env = envFromHost(host)
+  const key = `${brand}:${env}`
+  const cached = cache.get(key)
   if (cached) return cached
   const b = BRANDS[brand]
   const resolved: ConsoleConfig = {
     brand,
+    env,
     brandName: b.brandName,
     cloudUrl: cloudUrl(),
-    iamUrl: trimSlash(process.env.NEXT_PUBLIC_IAM_URL ?? b.iamUrl),
+    iamUrl: trimSlash(process.env.NEXT_PUBLIC_IAM_URL ?? iamUrlFor(brand, env)),
     iamOrgName: process.env.NEXT_PUBLIC_IAM_ORG_NAME ?? b.iamOrgName,
     iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? b.iamApp,
     iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? b.iamApp,
     iamPkce: process.env.NEXT_PUBLIC_IAM_PKCE === '1',
     ...SHARED,
   }
-  cache.set(brand, resolved)
+  cache.set(key, resolved)
   return resolved
 }
 
