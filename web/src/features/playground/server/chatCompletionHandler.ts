@@ -1,20 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  BaseError,
-  ForbiddenError,
-  InternalServerError,
-  InvalidRequestError,
-} from "@hanzo/console";
+import { BaseError, ForbiddenError } from "@hanzo/console";
 
 import { InsightsCallbackHandler } from "./analytics/insightsCallback";
 import { authorizeRequestOrThrow } from "./authorizeRequest";
+import { resolvePlaygroundLlmConnection } from "./meterConnection";
 import { validateChatCompletionBody } from "./validateChatCompletionBody";
 
 import { env } from "@/src/env.mjs";
-import { prisma } from "@hanzo/console/src/db";
 import {
-  LLMApiKeySchema,
   logger,
   fetchLLMCompletion,
   contextWithHanzoProps,
@@ -24,7 +18,7 @@ import * as opentelemetry from "@opentelemetry/api";
 export default async function chatCompletionHandler(req: NextRequest) {
   try {
     const body = validateChatCompletionBody(await req.json());
-    const { userId } = await authorizeRequestOrThrow(body.projectId);
+    const { userId, iamSub } = await authorizeRequestOrThrow(body.projectId);
 
     const blockedUsers = env.HANZO_BLOCKED_USERIDS_CHATCOMPLETION;
     if (blockedUsers.has(userId)) {
@@ -47,27 +41,19 @@ export default async function chatCompletionHandler(req: NextRequest) {
         streaming,
       } = body;
 
-      const LLMApiKey = await prisma.llmApiKeys.findFirst({
-        where: {
-          projectId: body.projectId,
-          provider: modelParams.provider,
-        },
+      // Resolve the connection: the project's BYO key when present (tenant's own
+      // key / own cost, used unchanged), otherwise route through the Hanzo meter
+      // on the signed-in user's per-user hk- key so usage meters + bills to their
+      // org. Fail-closed: throws rather than routing unmetered if the user's key
+      // can neither be resolved nor minted.
+      const llmConnection = await resolvePlaygroundLlmConnection({
+        projectId: body.projectId,
+        provider: modelParams.provider,
+        iamSub,
       });
 
-      if (!LLMApiKey)
-        throw new InvalidRequestError(
-          `No ${modelParams.provider} API key found in project. Please add one in the project settings.`,
-        );
-
-      const parsedKey = LLMApiKeySchema.safeParse(LLMApiKey);
-      if (!parsedKey.success) {
-        throw new InternalServerError(
-          `Could not parse API key for provider ${body.modelParams.provider}: ${parsedKey.error.message}`,
-        );
-      }
-
       const fetchLLMCompletionParams = {
-        llmConnection: parsedKey.data,
+        llmConnection,
         messages,
         modelParams,
         structuredOutputSchema,
