@@ -81,6 +81,7 @@ export {
   type CreateDatasetBody,
   type CreateDatasetItemBody,
 } from './evals'
+export {
   O11yApi,
   type O11yList,
   type O11yPageMeta,
