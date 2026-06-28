@@ -90,6 +90,9 @@ export {
   type Observation,
   type Score,
   type Session,
+  type ScoreConfig,
+  type ScoreConfigCategory,
+  type AnnotationQueue,
   type TraceDetail,
   type SessionDetail,
 } from './o11y'
