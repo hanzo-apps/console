@@ -214,7 +214,12 @@ ns `hanzo`) — declared in `universe/infra/k8s/operator/crs/console2-v1.yaml`.
 Bump `spec.image.tag`, `kubectl apply`, the operator reconciles. Verify live with
 headless Playwright on console2.hanzo.ai.
 
-## Live verification + backend wiring (v0.1.7)
+## Live verification + backend wiring (v0.1.8)
+
+> v0.1.7 was a parallel CTO branch (`fix/paas-live-data`) that wired only
+> Clusters/Kubernetes/Status to the platform `/v1` surface; it is integrated here
+> (`-s ours`) and superseded — v0.1.8 is the cumulative release with the full set
+> below.
 
 Every embedded module was Playwright-verified live against the real `/v1` backend
 (authenticated hanzo-org admin). The backend topology console2 actually talks to:
