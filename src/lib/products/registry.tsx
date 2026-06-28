@@ -90,7 +90,9 @@ import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
-import { ObservabilityModule } from '~/components/products/ObservabilityModule'
+import { TracesModule } from '~/components/products/TracesModule'
+import { SessionsModule } from '~/components/products/SessionsModule'
+import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
 import { PlaygroundModule } from '~/components/products/PlaygroundModule'
 import { PromptsModule } from '~/components/products/PromptsModule'
@@ -831,18 +833,22 @@ export const catalog: CatalogEntry[] = [
     href: ext.metrics,
   },
   {
-    // Console-native observability — probes the real /v1/o11y runtime and links
-    // to the full surface for traces/evals/prompts. Honest 503 if uninitialized.
+    // Console-native traces — list + detail (observations, scores, I/O) on the
+    // REAL /v1/o11y/traces surface. Honest RuntimeNotice when the runtime is not
+    // initialized (503) or unrouted (404); never fabricated spans or costs.
     id: 'o11y',
     label: 'Traces',
     icon: Activity,
-    description: 'Traces, evals, and prompts for your AI workloads.',
+    description: 'End-to-end LLM and agent traces.',
     category: 'Observe',
     status: 'enabled',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/traces`,
     kind: 'module',
-    routes: [{ path: '', component: ObservabilityModule }],
+    routes: [
+      { path: '', component: TracesModule },
+      { path: ':id', component: TracesModule },
+    ],
   },
   {
     id: 'dashboards',
@@ -1112,6 +1118,36 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/datasets`,
     kind: 'module',
     routes: [{ path: '', component: DatasetsModule }],
+  // ── Observe (appended — grouped by `category`, not array position, so these
+  //    render under Observe without reordering existing entries). Native trace
+  //    siblings on the REAL /v1/o11y surface: sessions group traces; scores are
+  //    evaluation results. Both render honest states when the runtime is 503.
+  {
+    id: 'sessions',
+    label: 'Sessions',
+    icon: MessageSquare,
+    description: 'Traces grouped into multi-turn sessions.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/sessions`,
+    kind: 'module',
+    routes: [
+      { path: '', component: SessionsModule },
+      { path: ':id', component: SessionsModule },
+    ],
+  },
+  {
+    id: 'scores',
+    label: 'Scores',
+    icon: ListChecks,
+    description: 'Evaluation scores from feedback, graders, and review.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/scores`,
+    kind: 'module',
+    routes: [{ path: '', component: ScoresModule }],
   },
 ]
 
