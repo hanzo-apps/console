@@ -1118,6 +1118,7 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/datasets`,
     kind: 'module',
     routes: [{ path: '', component: DatasetsModule }],
+  },
   // ── Observe (appended — grouped by `category`, not array position, so these
   //    render under Observe without reordering existing entries). Native trace
   //    siblings on the REAL /v1/o11y surface: sessions group traces; scores are
