@@ -73,11 +73,12 @@ export function WalletModule(_props: { params: Record<string, string> }) {
       const value = await WalletApi.cloudBalance(uid)
       setCloud({ state: 'ok', value })
     } catch (e) {
-      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-        setCloud({ state: 'noauth' })
-      } else {
-        setCloud({ state: 'error', error: e instanceof Error ? e.message : 'Failed to load balance' })
-      }
+      const code = e instanceof ApiError ? e.status : 0
+      // 404 = the credit-balance endpoint is not routed on this host yet (billing
+      // ships separately) — honest "not available", not a scary error.
+      if (code === 401 || code === 403) setCloud({ state: 'noauth' })
+      else if (code === 404) setCloud({ state: 'unconfigured' })
+      else setCloud({ state: 'error', error: e instanceof Error ? e.message : 'Failed to load balance' })
     }
   }, [])
 
@@ -199,6 +200,11 @@ export function WalletModule(_props: { params: Record<string, string> }) {
           ) : cloud.state === 'noauth' ? (
             <Text fontSize="$3" color="$color11">
               Sign in to view your cloud credit balance.
+            </Text>
+          ) : cloud.state === 'unconfigured' ? (
+            <Text fontSize="$3" color="$color11">
+              Cloud credit balance isn&apos;t available on this deployment yet. Manage billing in
+              Hanzo Billing.
             </Text>
           ) : cloud.state === 'error' ? (
             <Text fontSize="$3" color="$color11">
