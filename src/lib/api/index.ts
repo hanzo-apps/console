@@ -25,6 +25,13 @@ export {
 } from './wallet'
 export { ProviderApi } from './providers'
 export { ModelRouteApi } from './model-routes'
+export {
+  CloudModelApi,
+  providerLabels,
+  type CloudModel,
+  type CatalogModel,
+  type ModelPricing,
+} from './models-catalog'
 export { ApplicationApi } from './applications'
 export { StoreApi } from './stores'
 export { ChatApi } from './chats'
