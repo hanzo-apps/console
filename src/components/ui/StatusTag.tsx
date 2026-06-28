@@ -13,9 +13,14 @@ type Tone = 'green' | 'yellow' | 'red' | 'neutral'
 
 const toneOf = (status: string): Tone => {
   const s = status.toLowerCase()
+  // Platform health verdicts map straight to a tone (the apps inventory reports
+  // green/yellow/red directly).
+  if (s === 'green') return 'green'
+  if (s === 'yellow') return 'yellow'
+  if (s === 'red') return 'red'
   if (['ready', 'active', 'running', 'available', 'ok'].includes(s)) return 'green'
   if (['creating', 'provisioning', 'pending', 'updating', 'attaching'].includes(s)) return 'yellow'
-  if (['error', 'failed', 'degraded'].includes(s)) return 'red'
+  if (['error', 'failed', 'degraded', 'down'].includes(s)) return 'red'
   return 'neutral'
 }
 

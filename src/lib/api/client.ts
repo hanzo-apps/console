@@ -33,6 +33,23 @@ const acceptLanguage = (): string => {
   return 'en'
 }
 
+/**
+ * Headers sent on every cloud call. Besides locale, we stamp `X-Org-Id` with the
+ * brand org (`config.iamOrgName`, hostname-derived — the user's OWN org, never a
+ * spoofable input). The casibase endpoints scope by the session's org claim, but
+ * the sub-services mounted on the same backend that speak plain REST (the
+ * provisioning service) require an explicit tenant header and reject the request
+ * with 403 "X-Org-Id required" without it — this is what lets the data-product
+ * modules resolve their tenant on the direct cloud-api path. When a gateway sits
+ * in front and re-injects the header from the JWT, the stamped value is simply
+ * overwritten, so sending it is correct in both topologies.
+ */
+const baseHeaders = (hasBody: boolean): Record<string, string> => ({
+  'Accept-Language': acceptLanguage(),
+  'X-Org-Id': config.iamOrgName,
+  ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+})
+
 type Query = Record<string, string | number | boolean | undefined | null>
 
 const buildUrl = (path: string, query?: Query): string => {
@@ -55,10 +72,7 @@ async function request<T>(
     res = await fetch(buildUrl(path, opts.query), {
       method,
       credentials: 'include',
-      headers: {
-        'Accept-Language': acceptLanguage(),
-        ...(opts.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-      },
+      headers: baseHeaders(opts.body !== undefined),
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     })
   } catch (e) {
@@ -132,10 +146,7 @@ async function restRequest<T>(
     res = await fetch(url, {
       method,
       credentials: 'include',
-      headers: {
-        'Accept-Language': acceptLanguage(),
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-      },
+      headers: baseHeaders(body !== undefined),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch (e) {
