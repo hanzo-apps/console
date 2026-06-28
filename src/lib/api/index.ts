@@ -57,3 +57,15 @@ export {
   type Role,
   type AuditRecord,
 } from './admin'
+export {
+  O11yApi,
+  type O11yList,
+  type O11yPageMeta,
+  type O11yListQuery,
+  type Trace,
+  type Observation,
+  type Score,
+  type Session,
+  type TraceDetail,
+  type SessionDetail,
+} from './o11y'
