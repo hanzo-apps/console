@@ -256,6 +256,12 @@ Findings + fixes (all in console2; honest states everywhere, no fakes):
 - **Wallet** cloud-credit `/v1/billing/balance` 404s here (billing ships
   separately) → honest "not available on this deployment" (was a scary error).
   HUSD balance/top-up already honest "coming" (token unconfigured).
+- **Providers was broken** — `ProviderListView`/`ProviderEditView` imported the
+  ZAP twin (`~/lib/zap`), but the cloud `/zap` WS face is NOT served (the edge
+  returns SPA HTML, 200 not a WS upgrade — documented in `lib/zap/client.ts`), so
+  the module showed "Failed to load providers". Switched both back to the working
+  REST `~/lib/api` (identical surface). The ZAP twin stays as the proof-of-pattern
+  until `/zap` is bound. Providers now shows real/empty over REST like every module.
 - Already-correct honest states (unchanged): IAM/Audit + KMS/Secrets (`/v1/iam`,
   `/v1/kms` 404 → "not available on this deployment"); Observability (`/v1/o11y`
   503 → "runtime not initialized"). Plans/Embeddings show real data; Models/
