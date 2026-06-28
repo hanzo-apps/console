@@ -11,7 +11,7 @@
  * organizations are owned by the built-in `admin`). If a deployment doesn't proxy
  * `/v1/iam` yet, the list 404s and the module shows an honest empty state.
  */
-import { getList } from './client'
+import { get, getList, idOf } from './client'
 import { listQuery, type ListParams } from './types'
 
 /** A casdoor organization (`/v1/iam/get-organizations`). */
@@ -78,6 +78,10 @@ export const IamAdminApi = {
   /** Organizations are owned by the built-in `admin` account in casdoor. */
   organizations: (params: ListParams = {}): Promise<Paged<Organization>> =>
     getList<Organization[]>('iam/get-organizations', listQuery({ owner: 'admin', pageSize: DEFAULT_PAGE_SIZE, ...params })),
+
+  /** A single organization by name (casdoor orgs are owned by `admin`). */
+  organization: (name: string): Promise<Organization> =>
+    get<Organization>('iam/get-organization', { id: idOf('admin', name) }),
 
   users: (owner: string, params: ListParams = {}): Promise<Paged<IamUser>> =>
     getList<IamUser[]>('iam/get-users', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),

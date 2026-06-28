@@ -10,8 +10,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, ExternalLink, TriangleAlert } from '@hanzogui/lucide-icons-2'
+import { Button, Text, XStack } from '@hanzo/gui'
+import { RefreshCw, ExternalLink } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import {
@@ -25,6 +25,15 @@ import {
 import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
+
+/** IAM-specific guidance for the honest 404 / unauthorized states. */
+const IAM_COPY: HonestCopy = {
+  notFound:
+    'The IAM admin API (/v1/iam) is not routed on this host yet. It appears automatically once the deployment proxies /v1/iam to Hanzo IAM.',
+  unauthorized:
+    'This view requires an admin session. Access is enforced server-side by IAM — sign in with an account that has the right role.',
+}
 
 const fmtDate = (v?: string): string => {
   if (!v) return '—'
@@ -42,41 +51,6 @@ const dim = (v?: string | number | null) =>
       {String(v)}
     </Text>
   )
-
-/** Map an ApiError to an honest, specific explanation — never a generic crash. */
-function honestError(err: ApiError): { title: string; body: string } {
-  if (err.status === 404)
-    return {
-      title: 'Not available on this deployment',
-      body: 'The IAM admin API (/v1/iam) is not routed on this host yet. It appears automatically once the deployment proxies /v1/iam to Hanzo IAM.',
-    }
-  if (err.status === 401 || err.status === 403 || /sign ?in|login|unauthorized/i.test(err.message))
-    return {
-      title: 'Admin access required',
-      body: 'This view requires an admin session. Access is enforced server-side by IAM — sign in with an account that has the right role.',
-    }
-  return { title: 'Could not load', body: err.message }
-}
-
-function ErrorCard({ err, onRetry }: { err: ApiError; onRetry: () => void }) {
-  const { title, body } = honestError(err)
-  return (
-    <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={620}>
-      <XStack gap="$2" items="center">
-        <TriangleAlert size={16} />
-        <Text fontSize="$4" fontWeight="700">
-          {title}
-        </Text>
-      </XStack>
-      <Text fontSize="$3" color="$color11">
-        {body}
-      </Text>
-      <Button size="$2" self="flex-start" onPress={onRetry}>
-        Retry
-      </Button>
-    </Card>
-  )
-}
 
 type LoadState<T> = { phase: 'loading' } | { phase: 'error'; err: ApiError } | { phase: 'ready'; rows: T[] }
 
@@ -98,12 +72,7 @@ function AdminListView<T>({
     setState({ phase: 'loading' })
     fetcher()
       .then((p) => setState({ phase: 'ready', rows: p.rows ?? [] }))
-      .catch((e) =>
-        setState({
-          phase: 'error',
-          err: e instanceof ApiError ? e : new ApiError(e instanceof Error ? e.message : String(e)),
-        }),
-      )
+      .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
   }, [fetcher])
 
   useEffect(() => {
@@ -118,7 +87,7 @@ function AdminListView<T>({
         </Button>
       </XStack>
       {state.phase === 'error' ? (
-        <ErrorCard err={state.err} onRetry={run} />
+        <ErrorState err={state.err} onRetry={run} copy={IAM_COPY} />
       ) : (
         <DataTable
           columns={columns}

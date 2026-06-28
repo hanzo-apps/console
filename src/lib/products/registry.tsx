@@ -72,6 +72,9 @@ import {
   Coins,
   MessageSquare,
   Search,
+  Library,
+  KeySquare,
+  SlidersHorizontal,
 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
@@ -91,6 +94,9 @@ import { ObservabilityModule } from '~/components/products/ObservabilityModule'
 import { StatusModule } from '~/components/products/StatusModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { ComingSoon } from '~/components/products/ComingSoon'
+import { ModelCatalogModule } from '~/components/products/ModelCatalogModule'
+import { ApiKeysModule } from '~/components/products/ApiKeysModule'
+import { SettingsModule } from '~/components/products/SettingsModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -1026,6 +1032,49 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/console`,
     kind: 'external',
     href: ext.console,
+  },
+
+  // ── Appended modules — ported from hanzoai/console settings + models pages.
+  //    Categorized by `category` (not array position), so each renders last in
+  //    its existing group without reordering any entry above.
+  {
+    id: 'model-catalog',
+    label: 'Model Catalog',
+    icon: Library,
+    description: 'Browse available models, providers, and pricing.',
+    gcp: 'Vertex Model Registry',
+    category: 'AI',
+    status: 'enabled',
+    repo: 'hanzoai/ai',
+    docs: `${DOCS}/models`,
+    kind: 'module',
+    routes: [{ path: '', component: ModelCatalogModule }],
+  },
+  {
+    id: 'api-keys',
+    label: 'API Keys',
+    icon: KeySquare,
+    description: 'The cloud API credential for your account — SDKs, CLI, gateway.',
+    category: 'Dev',
+    status: 'enabled',
+    repo: 'hanzoai/iam',
+    docs: `${DOCS}/api`,
+    kind: 'module',
+    routes: [{ path: '', component: ApiKeysModule }],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: SlidersHorizontal,
+    description: 'Account, organization, API keys, and branding.',
+    category: 'Security',
+    status: 'enabled',
+    repo: 'hanzoai/iam',
+    kind: 'module',
+    routes: [
+      { path: '', component: SettingsModule },
+      { path: ':tab', component: SettingsModule },
+    ],
   },
 ]
 
