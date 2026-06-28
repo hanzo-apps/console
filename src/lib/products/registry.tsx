@@ -89,6 +89,10 @@ import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { ObservabilityModule } from '~/components/products/ObservabilityModule'
 import { StatusModule } from '~/components/products/StatusModule'
+import { PlaygroundModule } from '~/components/products/PlaygroundModule'
+import { PromptsModule } from '~/components/products/PromptsModule'
+import { EvalsModule } from '~/components/products/EvalsModule'
+import { DatasetsModule } from '~/components/products/DatasetsModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { ComingSoon } from '~/components/products/ComingSoon'
 
@@ -289,15 +293,21 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
+    // Native console evals — REAL run (POST /v1/evals/runs) + scores
+    // (GET /v1/evals/scores) over the cloud evals facade. Grouped under Observe
+    // per the taxonomy; the entry stays in array position (no reorder).
     id: 'evals',
     label: 'Evals',
     icon: ListChecks,
     description: 'Evaluate model and agent outputs with scored runs.',
-    category: 'AI',
-    status: 'soon',
+    category: 'Observe',
+    status: 'enabled',
     repo: 'hanzoai/o11y',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [
+      { path: '', component: EvalsModule },
+      { path: ':tab', component: EvalsModule },
+    ],
   },
 
   // ── Compute ──────────────────────────────────────────────────────────
@@ -650,14 +660,18 @@ export const catalog: CatalogEntry[] = [
     href: ext.api,
   },
   {
+    // Native console playground — REAL model run over the OpenAI-compatible
+    // gateway (GET /v1/models + POST /v1/chat/completions). Grouped under AI per
+    // the taxonomy; the entry stays in array position (no reorder).
     id: 'playground',
     label: 'Playground',
     icon: Play,
     description: 'Try models and prompts interactively.',
-    category: 'Dev',
-    status: 'soon',
+    category: 'AI',
+    status: 'enabled',
+    repo: 'hanzoai/ai',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: PlaygroundModule }],
   },
   {
     id: 'ide',
@@ -1026,6 +1040,34 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/console`,
     kind: 'external',
     href: ext.console,
+  },
+
+  // ── Ported from the old console (Langfuse-fork) eval engine. Appended (not
+  //    reordered); grouped by `category` like every other entry. Prompts has no
+  //    /v1 read route yet (honest probe + deep-link); Datasets writes are real.
+  {
+    id: 'prompts',
+    label: 'Prompts',
+    icon: FileText,
+    description: 'Versioned prompts with labels and history.',
+    category: 'AI',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/prompts`,
+    kind: 'module',
+    routes: [{ path: '', component: PromptsModule }],
+  },
+  {
+    id: 'datasets',
+    label: 'Datasets',
+    icon: Database,
+    description: 'Curate evaluation datasets and items.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/datasets`,
+    kind: 'module',
+    routes: [{ path: '', component: DatasetsModule }],
   },
 ]
 

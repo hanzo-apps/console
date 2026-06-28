@@ -1,0 +1,215 @@
+'use client'
+
+/**
+ * Datasets — curate evaluation datasets (ported from the old console's datasets
+ * feature). Wired to the REAL cloud `/v1/evals/*` facade, which proxies the
+ * console's public dataset API:
+ *   - POST /v1/evals/datasets       create a dataset
+ *   - POST /v1/evals/dataset-items  add an item (input + expected output)
+ *
+ * The gateway does not mount a dataset LIST route yet, so the list area attempts
+ * the forward-compatible GET and renders an honest "not available here yet" card
+ * on 404/405 — it lights up automatically once the read route lands. Create and
+ * add always work; nothing is fabricated.
+ */
+import { useCallback, useEffect, useState } from 'react'
+import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { Plus, RefreshCw, Database } from '@hanzogui/lucide-icons-2'
+
+import { EvalsApi, type EvalDataset } from '~/lib/api'
+import { PageHeader } from '~/components/ui/PageHeader'
+import { DataTable, type Column } from '~/components/ui/DataTable'
+import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
+import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+
+type ListState =
+  | { phase: 'loading' }
+  | { phase: 'error'; error: BackendState }
+  | { phase: 'ready'; rows: EvalDataset[] }
+
+const fmtTime = (s?: string) => {
+  if (!s) return '—'
+  const d = new Date(s)
+  return Number.isNaN(d.getTime()) ? s : d.toLocaleString()
+}
+
+/** Plain text stays a string; valid JSON is sent as JSON; empty is omitted. */
+const parseMaybeJson = (s: string): unknown => {
+  const t = s.trim()
+  if (!t) return undefined
+  try {
+    return JSON.parse(t)
+  } catch {
+    return t
+  }
+}
+
+const columns: Column<EvalDataset>[] = [
+  { key: 'name', header: 'Name', render: (d) => (
+    <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{d.name}</Text>
+  ) },
+  { key: 'description', header: 'Description', render: (d) => (
+    <Text fontSize="$3" color={d.description ? '$color11' : '$color10'} numberOfLines={1}>
+      {d.description || '—'}
+    </Text>
+  ) },
+  { key: 'createdAt', header: 'Created', width: 190, render: (d) => (
+    <Text fontSize="$3" color="$color10">{fmtTime(d.createdAt)}</Text>
+  ) },
+]
+
+export function DatasetsModule(_props: { params: Record<string, string> }) {
+  const [list, setList] = useState<ListState>({ phase: 'loading' })
+
+  // Create dataset
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createMsg, setCreateMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+
+  // Add item
+  const [itemDataset, setItemDataset] = useState('')
+  const [input, setInput] = useState('')
+  const [expected, setExpected] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [addMsg, setAddMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+
+  const loadList = useCallback(() => {
+    setList({ phase: 'loading' })
+    EvalsApi.listDatasets()
+      .then((res) => {
+        const rows = Array.isArray(res) ? res : (res?.data ?? [])
+        setList({ phase: 'ready', rows })
+      })
+      .catch((e) => setList({ phase: 'error', error: classifyBackend(e) }))
+  }, [])
+
+  useEffect(() => {
+    loadList()
+  }, [loadList])
+
+  const createDataset = async () => {
+    if (!name.trim()) {
+      setCreateMsg({ tone: 'err', text: 'Name is required.' })
+      return
+    }
+    setCreating(true)
+    setCreateMsg(null)
+    try {
+      const d = await EvalsApi.createDataset({ name: name.trim(), description: description.trim() || undefined })
+      setCreateMsg({ tone: 'ok', text: `Created dataset "${d?.name ?? name.trim()}".` })
+      setItemDataset((cur) => cur || name.trim())
+      setName('')
+      setDescription('')
+      loadList()
+    } catch (e) {
+      setCreateMsg({ tone: 'err', text: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const addItem = async () => {
+    if (!itemDataset.trim()) {
+      setAddMsg({ tone: 'err', text: 'Dataset name is required.' })
+      return
+    }
+    setAdding(true)
+    setAddMsg(null)
+    try {
+      await EvalsApi.createDatasetItem({
+        datasetName: itemDataset.trim(),
+        input: parseMaybeJson(input),
+        expectedOutput: parseMaybeJson(expected),
+      })
+      setAddMsg({ tone: 'ok', text: `Added item to "${itemDataset.trim()}".` })
+      setInput('')
+      setExpected('')
+    } catch (e) {
+      setAddMsg({ tone: 'err', text: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const Status = ({ m }: { m: { tone: 'ok' | 'err'; text: string } | null }) =>
+    m ? (
+      <Text fontSize="$2" color={m.tone === 'ok' ? '$color11' : '$color12'}>
+        {m.text}
+      </Text>
+    ) : null
+
+  return (
+    <>
+      <PageHeader
+        title="Datasets"
+        subtitle="Curate evaluation datasets and items."
+        actions={
+          <Button size="$2" icon={<RefreshCw size={15} />} onPress={loadList}>
+            Refresh
+          </Button>
+        }
+      />
+
+      {/* ── List (forward-compatible; honest when the read route is absent) ── */}
+      {list.phase === 'error' ? (
+        <BackendStateCard state={list.error} onRetry={loadList} hint="endpoint · GET /v1/evals/datasets" />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={list.phase === 'ready' ? list.rows : []}
+          loading={list.phase === 'loading'}
+          rowKey={(d) => d.id ?? d.name}
+          empty="No datasets returned. Create one below, then add items."
+        />
+      )}
+
+      {/* ── Create + add ───────────────────────────────────────────────── */}
+      <XStack gap="$4" flexWrap="wrap" items="flex-start">
+        <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={340}>
+          <XStack gap="$2" items="center">
+            <Database size={16} />
+            <Text fontSize="$4" fontWeight="700">New dataset</Text>
+          </XStack>
+          <FieldRow label="Name">
+            <FieldText value={name} onChange={setName} placeholder="my-eval-set" />
+          </FieldRow>
+          <FieldRow label="Description">
+            <FieldText value={description} onChange={setDescription} />
+          </FieldRow>
+          <XStack gap="$3" items="center">
+            <Button self="flex-start" icon={<Plus size={15} />} disabled={creating} onPress={() => void createDataset()}>
+              {creating ? 'Creating…' : 'Create'}
+            </Button>
+            <Status m={createMsg} />
+          </XStack>
+        </Card>
+
+        <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={340}>
+          <XStack gap="$2" items="center">
+            <Plus size={16} />
+            <Text fontSize="$4" fontWeight="700">Add item</Text>
+          </XStack>
+          <FieldRow label="Dataset">
+            <FieldText value={itemDataset} onChange={setItemDataset} placeholder="dataset name" />
+          </FieldRow>
+          <FieldRow label="Input">
+            <FieldTextArea value={input} onChange={setInput} rows={3} />
+          </FieldRow>
+          <FieldRow label="Expected output">
+            <FieldTextArea value={expected} onChange={setExpected} rows={3} />
+          </FieldRow>
+          <XStack gap="$3" items="center">
+            <Button self="flex-start" icon={<Plus size={15} />} disabled={adding} onPress={() => void addItem()}>
+              {adding ? 'Adding…' : 'Add item'}
+            </Button>
+            <Status m={addMsg} />
+          </XStack>
+          <Text fontSize="$2" color="$color10">
+            Input and expected output accept plain text or JSON.
+          </Text>
+        </Card>
+      </XStack>
+    </>
+  )
+}
