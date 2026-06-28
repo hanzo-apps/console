@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text, XStack } from '@hanzo/gui'
 import { Plus, Trash } from '@hanzogui/lucide-icons-2'
 
-import { ApiError, ProviderApi, type Provider } from '~/lib/zap'
+import { ApiError, ProviderApi, type Provider } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
