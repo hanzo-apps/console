@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console2",
-  "version": "0.7.10",
+  "version": "0.7.11",
   "private": true,
   "license": "BSD-3-Clause",
   "author": "Hanzo AI <dev@hanzo.ai>",
@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start -p 4000",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@hanzo/gui": "7.3.0",
@@ -32,6 +34,7 @@
     "superjson": "2.2.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "22.20.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
