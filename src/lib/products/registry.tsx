@@ -222,6 +222,7 @@ const ext = {
   console: 'https://console.hanzo.ai',
   projects: config.platformUrl,
   cost: config.billingUrl,
+  mpc: 'https://mpc.hanzo.ai',
 } as const
 
 /**
@@ -632,6 +633,18 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/kms`,
     kind: 'module',
     routes: [{ path: '', component: KmsModule }],
+  },
+  {
+    id: 'mpc',
+    label: 'MPC',
+    icon: Network,
+    description: 'Threshold signing & multi-party computation — Hanzo MPC.',
+    category: 'Security',
+    status: 'external',
+    repo: 'hanzoai/mpc',
+    docs: `${DOCS}/mpc`,
+    kind: 'external',
+    href: ext.mpc,
   },
   {
     id: 'audit',
