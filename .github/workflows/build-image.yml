@@ -14,6 +14,8 @@ name: Build Docker Image
 # Docker Hub every run and tripped the unauthenticated 429 pull-rate limit (and
 # its build-summary artifact upload hit the Actions storage quota). The host
 # builder reuses the cached base layer instead — no re-pull, no artifact upload.
+# The Dockerfile uses the ECR Public Docker-library mirror for the Node base image
+# so a cold runner does not depend on Docker Hub's unauthenticated pull budget.
 on:
   push:
     branches: [main]
@@ -51,14 +53,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-      - name: Ensure base image (reuse host cache; retry Docker Hub on 429)
+      - name: Ensure base image (reuse host cache)
         # No-op on a warm runner (the host builder reuses the cached base). Only a
-        # cold runner pulls — and an unauthenticated Docker Hub pull can 429 under
-        # shared-IP load, so retry with linear backoff instead of hard-failing the
-        # whole build on a transient limit.
+        # cold runner pulls. Use the same ECR Public Docker-library mirror as the
+        # Dockerfile to avoid Docker Hub's unauthenticated pull-rate limits.
         run: |
           set -u
-          base=node:22-alpine
+          base=public.ecr.aws/docker/library/node:22-alpine
           if docker image inspect "$base" >/dev/null 2>&1; then
             echo "base $base already cached on runner"; exit 0
           fi
