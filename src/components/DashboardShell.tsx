@@ -43,6 +43,7 @@ import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
 import { BrandLogo } from '~/components/ui/BrandLogo'
 import { OrgSwitcher } from '~/components/OrgSwitcher'
+import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 
 const EXPANDED_W = 264
 const COLLAPSED_W = 64
@@ -355,6 +356,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               aria-label="Documentation"
             />
             <OrgSwitcher />
+            <ScopeSwitcher />
             {account ? (
               <Button
                 size="$2"
