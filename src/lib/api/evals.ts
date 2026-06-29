@@ -53,6 +53,28 @@ export type EvalDataset = {
   updatedAt?: string
 }
 
+/** A dataset item (input/expected-output pair) used by eval runs. */
+export type EvalDatasetItem = {
+  id?: string
+  datasetName?: string
+  input?: unknown
+  expectedOutput?: unknown
+  metadata?: unknown
+  createdAt?: string
+}
+
+/** A dataset run / experiment row returned by the forward-compatible read API. */
+export type EvalDatasetRun = {
+  id?: string
+  name?: string
+  datasetName?: string
+  model?: string
+  status?: string
+  score?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
 /** One per-item result from a run (mirrors evalsvc `itemResult`). */
 export type EvalItemResult = {
   itemId: string
@@ -127,4 +149,12 @@ export const EvalsApi = {
    */
   listDatasets: (): Promise<{ data?: EvalDataset[] } | EvalDataset[]> =>
     restGet<{ data?: EvalDataset[] } | EvalDataset[]>(v1Url('evals/datasets')),
+
+  /** Forward-compatible dataset item list. */
+  listDatasetItems: (): Promise<{ data?: EvalDatasetItem[] } | EvalDatasetItem[]> =>
+    restGet<{ data?: EvalDatasetItem[] } | EvalDatasetItem[]>(v1Url('evals/dataset-items')),
+
+  /** Forward-compatible dataset run / experiment list. */
+  listDatasetRuns: (): Promise<{ data?: EvalDatasetRun[] } | EvalDatasetRun[]> =>
+    restGet<{ data?: EvalDatasetRun[] } | EvalDatasetRun[]>(v1Url('evals/dataset-runs')),
 }
