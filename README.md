@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="console" width="880"></p>
+
 <img width="2400" height="600" alt="hero-b (1)" src="https://github.com/user-attachments/assets/5810ae13-15d6-4b60-afd2-927adc501861" />
 
 <div align="center">
