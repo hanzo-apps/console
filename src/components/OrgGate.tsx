@@ -1,26 +1,23 @@
 'use client'
 
 /**
- * Org gate — the console operates inside the user's CUSTOMER organization.
+ * Org gate — the console operates inside the user's organization.
  *
- * Orthogonal to {@link AuthGate} (which only answers "is there a session?"): this
- * answers "is the session's org usable on this customer console?". Two rules:
+ * Behaviours:
+ *   1. isAdmin on a non-admin host → show a dismissible amber banner linking to
+ *      admin.hanzo.ai (IAM/KMS ops), but render the full console. Admins use the
+ *      console for all normal cloud work (models, API keys, AI, etc.).
+ *   2. Any non-admin user in any org → render console normally.
+ *   3. No org yet → first-run org onboarding.
  *
- *  1. The brand's OWN org (`config.iamOrgName` — e.g. `hanzo`) is the internal,
- *     admin-protected tenant. A user who resolves to it is staff, not a customer,
- *     so on a CUSTOMER host we never run the console as that org — we send them to
- *     the brand's admin host (`admin.<adminDomain>`). The SAME image serves the
- *     admin host, where the internal org belongs; so the block is scoped to
- *     non-admin hosts (otherwise the redirect would loop). (HIP: console2 is for
- *     customers in their OWN orgs; staff live on the admin host.)
- *  2. A session with no org can't scope anything — we surface an honest "no
- *     organization" state rather than render an unscoped console.
+ * Switching orgs at runtime is the OrgSwitcher's job; this gate only covers
+ * the "no org" degenerate case and the admin hint.
  *
- * Switching BETWEEN customer orgs (multi-membership) is the shell's `OrgSwitcher`
- * job; this gate only refuses the two unusable cases.
+ * Last org: restored from localStorage on sign-in so the scope remembers where
+ * the user left off.
  */
-import { useEffect, type ReactNode } from 'react'
-import { Button, Card, Text, YStack } from '@hanzo/gui'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Button, Text, XStack, YStack } from '@hanzo/gui'
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
@@ -28,80 +25,94 @@ import { useSession } from '~/lib/auth/session'
 import { currentOrg, setCurrentOrg } from '~/lib/org-scope'
 import { OrgOnboarding } from '~/components/OrgOnboarding'
 
-/** The admin host (`admin.<domain>`) is the staff surface — the internal org is
- * welcome there, so the block (rule 1) applies only OFF this host. */
+const LS_LAST_ORG = 'hz_last_org'
+const LS_BANNER_DISMISSED = 'hz_admin_banner_dismissed'
+
 function onAdminHost(): boolean {
   return typeof window !== 'undefined' && window.location.hostname.startsWith('admin.')
 }
 
-function GateCard({ title, body, children }: { title: string; body: string; children?: ReactNode }) {
+function AdminBanner({ onDismiss }: { onDismiss: () => void }) {
+  const brand = getBrand()
+  const adminUrl = `https://admin.${brand.adminDomain}`
   return (
-    <YStack flex={1} minH="100vh" items="center" justify="center" p="$4">
-      <Card p="$5" gap="$4" width={420} borderWidth={1} borderColor="$borderColor" bg="$color1">
-        <YStack gap="$2">
-          <Text fontSize="$7" fontWeight="800">
-            {title}
-          </Text>
-          <Text fontSize="$3" color="$color11">
-            {body}
-          </Text>
-        </YStack>
-        {children}
-      </Card>
-    </YStack>
+    <XStack
+      bg="$yellow2"
+      borderBottomWidth={1}
+      borderColor="$yellow7"
+      px="$4"
+      py="$2"
+      items="center"
+      justify="space-between"
+      gap="$3"
+      flexWrap="wrap"
+    >
+      <Text fontSize="$2" color="$yellow11" flex={1}>
+        {'Admin ops (IAM · KMS · orgs) → '}
+        <Text fontSize="$2" color="$yellow12" fontWeight="700">
+          {`admin.${brand.adminDomain}`}
+        </Text>
+      </Text>
+      <XStack gap="$2" items="center">
+        <Button
+          size="$2"
+          bg="$yellow4"
+          borderColor="$yellow7"
+          onPress={() => window.location.assign(adminUrl)}
+        >
+          {`Open admin`}
+        </Button>
+        <Button size="$2" chromeless color="$yellow10" onPress={onDismiss}>
+          ✕
+        </Button>
+      </XStack>
+    </XStack>
   )
 }
 
 export function OrgGate({ children }: { children: ReactNode }) {
-  const { account, signOut } = useSession()
-
-  // AuthGate guarantees an account by the time this renders; guard anyway.
+  const { account } = useSession()
   const owner = account?.owner ?? ''
+  const isAdmin = Boolean(account?.isAdmin)
+  const [bannerDismissed, setBannerDismissed] = useState(true) // start hidden to avoid flash
 
-  // A customer's console acts in THEIR org. The org-scope module defaults to the
-  // brand org (designed for the cross-org admin), so on a customer host seed the
-  // signed-in user's own org as the active scope the FIRST time — i.e. only when
-  // no explicit switch is in effect yet (current scope is still the brand org).
-  // This makes the OrgSwitcher chip + the `X-Org-Id` client stamp reflect the
-  // real tenant, and never clobbers an admin's deliberate org switch.
+  // Restore banner dismissed state and last org on mount
   useEffect(() => {
-    if (owner && owner !== config.iamOrgName && !onAdminHost() && currentOrg() === config.iamOrgName) {
-      setCurrentOrg(owner)
+    if (typeof window === 'undefined') return
+    const dismissed = localStorage.getItem(LS_BANNER_DISMISSED) === '1'
+    setBannerDismissed(dismissed)
+  }, [])
+
+  // Seed org scope from localStorage on sign-in (restores last selected org)
+  useEffect(() => {
+    if (!owner || typeof window === 'undefined') return
+    const lastOrg = localStorage.getItem(LS_LAST_ORG)
+    if (currentOrg() === config.iamOrgName) {
+      const target = (lastOrg && lastOrg !== config.iamOrgName) ? lastOrg : owner
+      if (target !== config.iamOrgName) setCurrentOrg(target)
     }
+    // Persist current org whenever it updates
+    const cur = currentOrg()
+    if (cur && cur !== config.iamOrgName) localStorage.setItem(LS_LAST_ORG, cur)
   }, [owner])
 
-  // Rule 1 — internal brand org → brand admin console (customer hosts only; the
-  // admin host serves this same image and is where the internal org belongs, so
-  // blocking there would bounce the operator back into a redirect loop).
-  if (owner && owner === config.iamOrgName && !onAdminHost()) {
-    const brand = getBrand()
-    const adminUrl = `https://admin.${brand.adminDomain}`
-    return (
-      <GateCard
-        title={`${brand.brandName} Admin`}
-        body={`The ${brand.brandName} Cloud console is for customer organizations. Staff administration for the ${brand.brandName} organization lives in the admin console.`}
-      >
-        <YStack gap="$2.5">
-          {/* Single string child — a "Go to admin." text node + the {domain}
-              expression would be laid out as two children with the Button's flex
-              gap between them, rendering a stray space (admin. hanzo.ai). */}
-          <Button size="$4" onPress={() => window.location.assign(adminUrl)}>
-            {`Go to admin.${brand.adminDomain}`}
-          </Button>
-          <Button size="$3" chromeless onPress={() => void signOut()}>
-            Sign out
-          </Button>
-        </YStack>
-      </GateCard>
-    )
+  const dismissBanner = () => {
+    setBannerDismissed(true)
+    if (typeof window !== 'undefined') localStorage.setItem(LS_BANNER_DISMISSED, '1')
   }
 
-  // Rule 2 — a session with no organization can't scope the console: run the
-  // first-run onboarding (create an org, or one-click a personal org) so EVERY
-  // user always ends up in exactly one customer org.
+  // No org yet → first-run onboarding
   if (!owner) {
     return <OrgOnboarding />
   }
 
-  return <>{children}</>
+  // Admin on non-admin host: show dismissible banner, render console normally
+  const showBanner = isAdmin && !onAdminHost() && !bannerDismissed
+
+  return (
+    <YStack flex={1}>
+      {showBanner && <AdminBanner onDismiss={dismissBanner} />}
+      {children}
+    </YStack>
+  )
 }
