@@ -1,20 +1,21 @@
 /**
- * Admin API — identity & access, served by Hanzo IAM (casdoor) under `/v1/iam/*`.
+ * Admin API — identity & access (IAM) and secrets (KMS), via the console's OWN
+ * server-gated proxies, NOT the cloud `/v1` backend.
  *
- * IAM is the canonical authority for organizations, users, roles, and the audit
- * trail (HIP-0111). The gateway routes `/v1/iam/*` to it, and it speaks the same
- * `{status,msg,data,data2}` envelope as the cloud backend, so these go through
- * the SAME cookie `/v1` client (`getList`) as every other module — one transport.
+ * The browser holds no IAM/KMS credential. Every call here is SAME-ORIGIN to
+ * `/admin/iam/*` or `/admin/kms/*`, sending only the first-party session cookie;
+ * the server route (`app/admin/{iam,kms}/[...path]/route.ts`) enforces the brand
+ * admin gate and forwards to IAM / KMS as the user. IAM speaks the casdoor
+ * `{status,msg,data,data2}` envelope (unwrapped here); KMS speaks plain JSON.
  *
- * Tenancy is server-side: the gateway injects the org from the validated session.
- * We still pass `owner` where casdoor requires it (users/roles are org-scoped;
- * organizations are owned by the built-in `admin`). If a deployment doesn't proxy
- * `/v1/iam` yet, the list 404s and the module shows an honest empty state.
+ * Honest errors: a 403 from the gate becomes `ApiError('forbidden', 403)` so the
+ * modules can render the operator-access-required panel; 404 (not routed / no
+ * endpoint yet), 501, and network failures map to typed `ApiError`s as well.
  */
-import { get, getList, idOf } from './client'
+import { ApiError } from './client'
 import { listQuery, type ListParams } from './types'
 
-/** A casdoor organization (`/v1/iam/get-organizations`). */
+/** A casdoor organization (`get-organizations`). */
 export type Organization = {
   owner: string
   name: string
@@ -28,7 +29,7 @@ export type Organization = {
   [key: string]: unknown
 }
 
-/** A casdoor user (`/v1/iam/get-users`). */
+/** A casdoor user (`get-users`), including the MFA surface (`get-user`). */
 export type IamUser = {
   owner: string
   name: string
@@ -40,10 +41,37 @@ export type IamUser = {
   isForbidden?: boolean
   isDeleted?: boolean
   type?: string
+  /** Preferred 2FA channel ("", "app", "sms", "email"). */
+  preferredMfaType?: string
+  mfaPhoneEnabled?: boolean
+  mfaEmailEnabled?: boolean
   [key: string]: unknown
 }
 
-/** A casdoor role — the RBAC grant (`/v1/iam/get-roles`). */
+/** A casdoor application (`get-applications`). */
+export type IamApplication = {
+  owner: string
+  name: string
+  displayName?: string
+  organization?: string
+  createdTime?: string
+  clientId?: string
+  description?: string
+  [key: string]: unknown
+}
+
+/** A casdoor identity provider (`get-providers`). */
+export type IamProvider = {
+  owner: string
+  name: string
+  displayName?: string
+  category?: string
+  type?: string
+  createdTime?: string
+  [key: string]: unknown
+}
+
+/** A casdoor role — the RBAC grant (`get-roles`). */
 export type Role = {
   owner: string
   name: string
@@ -57,7 +85,7 @@ export type Role = {
   [key: string]: unknown
 }
 
-/** A casdoor audit record (`/v1/iam/get-records`). */
+/** A casdoor audit record (`get-records`). */
 export type AuditRecord = {
   id?: string | number
   owner?: string
@@ -77,21 +105,209 @@ export type Paged<T> = { rows: T[]; total: number }
 
 const DEFAULT_PAGE_SIZE = 50
 
+type Query = Record<string, string | number | boolean | undefined | null>
+
+/** `?a=b&c=d` for a query map, skipping undefined/null. '' when empty. */
+function qs(query?: Query): string {
+  if (!query) return ''
+  const sp = new URLSearchParams()
+  for (const [k, v] of Object.entries(query)) {
+    if (v !== undefined && v !== null) sp.set(k, String(v))
+  }
+  const s = sp.toString()
+  return s ? `?${s}` : ''
+}
+
+// ── IAM admin (casdoor envelope over /admin/iam/*) ───────────────────────────
+
+type Envelope<T> = { status?: string; msg?: string; data?: T; data2?: unknown }
+
+async function iamReq<T>(
+  method: 'GET' | 'POST',
+  segment: string,
+  opts: { query?: Query; body?: unknown } = {},
+): Promise<Envelope<T>> {
+  let res: Response
+  try {
+    res = await fetch(`/admin/iam/${segment}${qs(opts.query)}`, {
+      method,
+      credentials: 'include',
+      headers: opts.body !== undefined
+        ? { 'Content-Type': 'application/json', Accept: 'application/json' }
+        : { Accept: 'application/json' },
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    })
+  } catch (e) {
+    throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
+  }
+  if (res.status === 403) throw new ApiError('forbidden', 403)
+  const json = (await res.json().catch(() => null)) as Envelope<T> | null
+  if (!res.ok || !json || json.status !== 'ok') {
+    throw new ApiError(json?.msg || `Request failed (HTTP ${res.status})`, res.status)
+  }
+  return json
+}
+
+async function iamList<T>(segment: string, query: Query): Promise<Paged<T>> {
+  const r = await iamReq<T[]>('GET', segment, { query })
+  const rows = Array.isArray(r.data) ? r.data : []
+  const total = typeof r.data2 === 'number' ? r.data2 : rows.length
+  return { rows, total }
+}
+
+async function iamOne<T>(segment: string, query: Query): Promise<T> {
+  const r = await iamReq<T>('GET', segment, { query })
+  if (r.data === undefined || r.data === null) throw new ApiError('Not found', 404)
+  return r.data
+}
+
+const iamMutate = (segment: string, body: unknown, query?: Query): Promise<void> =>
+  iamReq<unknown>('POST', segment, { body, query }).then(() => undefined)
+
 export const IamAdminApi = {
-  /** Organizations are owned by the built-in `admin` account in casdoor. */
+  /** Organizations are owned by the built-in `admin`; casdoor scopes to the caller. */
   organizations: (params: ListParams = {}): Promise<Paged<Organization>> =>
-    getList<Organization[]>('iam/get-organizations', listQuery({ owner: 'admin', pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    iamList<Organization>('get-organizations', listQuery({ owner: 'admin', pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   /** A single organization by name (casdoor orgs are owned by `admin`). */
   organization: (name: string): Promise<Organization> =>
-    get<Organization>('iam/get-organization', { id: idOf('admin', name) }),
+    iamOne<Organization>('get-organization', { id: `admin/${name}` }),
 
   users: (owner: string, params: ListParams = {}): Promise<Paged<IamUser>> =>
-    getList<IamUser[]>('iam/get-users', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    iamList<IamUser>('get-users', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+
+  /** A single user by id (`owner/name`) — includes the MFA fields. */
+  getUser: (id: string): Promise<IamUser> => iamOne<IamUser>('get-user', { id }),
+
+  applications: (owner: string, params: ListParams = {}): Promise<Paged<IamApplication>> =>
+    iamList<IamApplication>('get-applications', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+
+  application: (id: string): Promise<IamApplication> =>
+    iamOne<IamApplication>('get-application', { id }),
+
+  providers: (owner: string, params: ListParams = {}): Promise<Paged<IamProvider>> =>
+    iamList<IamProvider>('get-providers', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   roles: (owner: string, params: ListParams = {}): Promise<Paged<Role>> =>
-    getList<Role[]>('iam/get-roles', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    iamList<Role>('get-roles', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   records: (owner: string, params: ListParams = {}): Promise<Paged<AuditRecord>> =>
-    getList<AuditRecord[]>('iam/get-records', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    iamList<AuditRecord>('get-records', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+
+  // Mutations — casdoor takes the object as the JSON body; updates take `?id`.
+  addUser: (user: IamUser): Promise<void> => iamMutate('add-user', user),
+  updateUser: (id: string, user: IamUser): Promise<void> => iamMutate('update-user', user, { id }),
+  deleteUser: (user: IamUser): Promise<void> => iamMutate('delete-user', user),
+
+  addApplication: (app: IamApplication): Promise<void> => iamMutate('add-application', app),
+  updateApplication: (id: string, app: IamApplication): Promise<void> => iamMutate('update-application', app, { id }),
+  deleteApplication: (app: IamApplication): Promise<void> => iamMutate('delete-application', app),
+
+  addProvider: (p: IamProvider): Promise<void> => iamMutate('add-provider', p),
+  updateProvider: (id: string, p: IamProvider): Promise<void> => iamMutate('update-provider', p, { id }),
+  deleteProvider: (p: IamProvider): Promise<void> => iamMutate('delete-provider', p),
+}
+
+// ── KMS admin (plain JSON over /admin/kms/secrets) ───────────────────────────
+
+/** Secret metadata row (no value) — what a future kmsd list endpoint returns. */
+export type KmsSecretMeta = {
+  path: string
+  name: string
+  env: string
+  version: number
+  updatedTime?: string
+}
+
+/** A revealed secret — value shown once, never stored. */
+export type KmsSecretValue = { value: string; version: number }
+
+export type KmsScope = { org?: string }
+export type KmsRef = KmsScope & { path: string; name: string; env?: string }
+
+const KMS_SECRETS = '/admin/kms/secrets'
+
+async function kmsReq<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', query?: Query, body?: unknown): Promise<T | undefined> {
+  let res: Response
+  try {
+    res = await fetch(`${KMS_SECRETS}${qs(query)}`, {
+      method,
+      credentials: 'include',
+      headers: body !== undefined
+        ? { 'Content-Type': 'application/json', Accept: 'application/json' }
+        : { Accept: 'application/json' },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+  } catch (e) {
+    throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
+  }
+  if (res.status === 403) throw new ApiError('forbidden', 403)
+  const text = await res.text()
+  let json: unknown
+  if (text) {
+    try {
+      json = JSON.parse(text)
+    } catch {
+      if (!res.ok) throw new ApiError(`Request failed (HTTP ${res.status})`, res.status)
+    }
+  }
+  if (!res.ok) {
+    const m = json && typeof json === 'object' && typeof (json as { message?: unknown }).message === 'string'
+      ? (json as { message: string }).message
+      : `Request failed (HTTP ${res.status})`
+    throw new ApiError(m, res.status)
+  }
+  return json as T
+}
+
+type ListShape = KmsSecretMeta[] | { secrets?: KmsSecretMeta[] }
+
+function normalizeMeta(raw: ListShape | undefined): KmsSecretMeta[] {
+  const arr = Array.isArray(raw) ? raw : Array.isArray(raw?.secrets) ? raw.secrets : []
+  return arr.map((x) => ({
+    path: String(x.path ?? ''),
+    name: String(x.name ?? ''),
+    env: String(x.env ?? 'default'),
+    version: Number(x.version ?? 0),
+    updatedTime: x.updatedTime ? String(x.updatedTime) : undefined,
+  }))
+}
+
+export const KmsAdminApi = {
+  /**
+   * List secret metadata under a prefix. kmsd has no list endpoint yet → 404,
+   * surfaced honestly by the module (never a fabricated table).
+   */
+  list: (opts: KmsScope & { prefix?: string; env?: string } = {}): Promise<KmsSecretMeta[]> =>
+    kmsReq<ListShape>('GET', { org: opts.org, prefix: opts.prefix, env: opts.env }).then(normalizeMeta),
+
+  /** Reveal ONE value (shown once, never stored). */
+  reveal: (ref: KmsRef): Promise<KmsSecretValue> =>
+    kmsReq<{ secret?: { value?: string }; value?: string; version?: number }>('GET', {
+      org: ref.org,
+      path: ref.path,
+      name: ref.name,
+      env: ref.env,
+    }).then((r) => ({ value: r?.secret?.value ?? r?.value ?? '', version: Number(r?.version ?? 0) })),
+
+  /** Create/upsert a secret (value write-only; the version is bumped). */
+  create: (ref: KmsRef & { value: string }): Promise<{ version: number }> =>
+    kmsReq<{ version?: number }>('POST', { org: ref.org }, {
+      path: ref.path,
+      name: ref.name,
+      env: ref.env ?? '',
+      value: ref.value,
+    }).then((r) => ({ version: Number(r?.version ?? 0) })),
+
+  /** Rotate a secret with compare-and-set on the current version. */
+  rotate: (ref: KmsRef & { value: string; version: number }): Promise<{ version: number }> =>
+    kmsReq<{ version?: number }>('PATCH', { org: ref.org, path: ref.path, name: ref.name }, {
+      value: ref.value,
+      version: ref.version,
+      env: ref.env ?? '',
+    }).then((r) => ({ version: Number(r?.version ?? 0) })),
+
+  /** Delete a secret. */
+  remove: (ref: KmsRef): Promise<void> =>
+    kmsReq<unknown>('DELETE', { org: ref.org, path: ref.path, name: ref.name, env: ref.env }).then(() => undefined),
 }
