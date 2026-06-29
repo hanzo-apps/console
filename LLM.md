@@ -379,3 +379,12 @@ not add a duplicate Apps/Projects entry.
 Server-only env added by this wave: `WAITLIST_URL` for waitlist forwarding. Org
 onboarding uses the existing `IAM_URL`, `CLOUD_API_URL`, and
 `IAM_MINT_CLIENT_ID`/`IAM_MINT_CLIENT_SECRET` confidential-client wiring.
+
+## CI base image mirror (v0.7.9)
+
+The ARC runner was still blocked by Docker Hub's unauthenticated pull limit while
+pre-pulling `node:22-alpine`. `Dockerfile` now uses
+`public.ecr.aws/docker/library/node:22-alpine` for all stages, and
+`.github/workflows/build-image.yml` pre-pulls the same ECR Public Docker-library
+mirror image. This keeps the host-builder cache behavior but removes Docker Hub
+from the cold-runner path.
