@@ -71,6 +71,7 @@ export type SessionUser = {
 }
 
 type UserClaims = {
+  id?: string
   owner?: string
   name?: string
   type?: string
@@ -90,6 +91,22 @@ type AccountClaims = UserClaims & { User?: UserClaims }
  * casibase session, or a backend error) so callers fail CLOSED with 401.
  */
 export async function resolveUser(req: NextRequest): Promise<SessionUser | null> {
+  return resolveSessionUser(req, { requireOwner: true })
+}
+
+/**
+ * Resolve an authenticated session even when IAM has not assigned the user to an
+ * org yet. This is intentionally only for first-run org onboarding; normal
+ * privileged routes must keep using resolveUser() so they never act unscoped.
+ */
+export async function resolveAuthenticatedUser(req: NextRequest): Promise<SessionUser | null> {
+  return resolveSessionUser(req, { requireOwner: false })
+}
+
+async function resolveSessionUser(
+  req: NextRequest,
+  opts: { requireOwner: boolean },
+): Promise<SessionUser | null> {
   const cookie = req.headers.get('cookie')
   if (!cookie) return null
 
@@ -112,11 +129,14 @@ export async function resolveUser(req: NextRequest): Promise<SessionUser | null>
   const name = d.name ?? d.User?.name ?? ''
   const type = d.type ?? d.User?.type ?? ''
   const accessKey = d.accessKey ?? d.User?.accessKey ?? ''
+  const explicitId = d.id ?? d.User?.id ?? ''
 
   // An auto-created casibase "anonymous-user" is NOT authenticated.
-  if (!owner || !name || type === 'anonymous-user') return null
+  if (!name || type === 'anonymous-user') return null
+  if (opts.requireOwner && !owner) return null
 
-  const id = `${owner}/${name}`
+  const id = explicitId || (owner ? `${owner}/${name}` : name)
+  if (!id) return null
   let email = d.email ?? d.User?.email ?? ''
   let emailVerified = Boolean(d.emailVerified ?? d.User?.emailVerified)
   let isAdmin = Boolean(d.isAdmin ?? d.User?.isAdmin)
@@ -206,6 +226,140 @@ export async function issueUserToken(user: SessionUser): Promise<{ accessToken: 
   })
   if (!data.accessToken) throw new Error('IAM did not return a token')
   return { accessToken: data.accessToken, expiresIn: data.expiresIn ?? 0 }
+}
+
+// ── Org onboarding (create org + move the caller into it) ─────────────────────
+// The confidential `hanzo-console` client is allowlisted for BOTH the org-admin
+// (IAM_ORG_ADMIN_APPS) and user-admin (IAM_USER_ADMIN_APPS) capabilities, so it
+// may create an organization and make the signed-in user that org's admin. The
+// cloud backend scopes all data by the user's IAM `owner` (GetEffectiveOrg →
+// session user.Owner), and a casdoor user belongs to exactly ONE org, so giving
+// a zero-org user their own org means MOVING them into it (owner=slug,
+// isAdmin=true). The user's password travels with the user row (verification
+// uses user.PasswordType first — object/check.go), so the move never locks them
+// out; we still clone the source org's password/locale settings so the new org
+// is well-formed (and covers a user whose PasswordType is empty).
+
+/** A casdoor organization as IAM returns it (only the fields we read/clone). */
+type IamOrganization = {
+  owner?: string
+  name?: string
+  displayName?: string
+  passwordType?: string
+  passwordSalt?: string
+  passwordObfuscatorType?: string
+  passwordObfuscatorKey?: string
+  passwordOptions?: string[]
+  countryCodes?: string[]
+  languages?: string[]
+  defaultAvatar?: string
+  accountItems?: unknown[]
+  [k: string]: unknown
+}
+
+/** GET an IAM resource as the confidential client; null when absent/unreadable. */
+async function iamGetData<T>(path: string, query: Record<string, string>): Promise<T | null> {
+  if (!mintConfigured()) return null
+  const qs = new URLSearchParams(query).toString()
+  let res: Response
+  try {
+    res = await fetch(`${IAM_URL}${path}?${qs}`, {
+      headers: { Authorization: basicAuth(), Accept: 'application/json' },
+      cache: 'no-store',
+    })
+  } catch {
+    return null
+  }
+  const json = (await res.json().catch(() => null)) as { status?: string; data?: T } | null
+  if (!res.ok || !json || json.status !== 'ok' || json.data == null) return null
+  return json.data
+}
+
+/** POST a JSON body to an IAM primitive as the confidential client. */
+async function iamPostBody<T = unknown>(
+  path: string,
+  query: Record<string, string>,
+  body: unknown,
+): Promise<T> {
+  const qs = new URLSearchParams(query).toString()
+  const res = await fetch(`${IAM_URL}${path}${qs ? `?${qs}` : ''}`, {
+    method: 'POST',
+    headers: { Authorization: basicAuth(), Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  })
+  const json = (await res.json().catch(() => null)) as { status?: string; msg?: string; data?: T } | null
+  if (!res.ok || !json || json.status !== 'ok') {
+    throw new Error(json?.msg || `IAM ${path} failed (HTTP ${res.status})`)
+  }
+  return (json.data ?? ({} as T))
+}
+
+/** Read an organization (owned by casdoor's `admin`) by name; null when absent. */
+export async function getOrganization(name: string): Promise<IamOrganization | null> {
+  return iamGetData<IamOrganization>('/v1/iam/get-organization', { id: `admin/${name}` })
+}
+
+/**
+ * Create a customer organization. Clones password + locale settings from the
+ * caller's current org (so the org is well-formed and the moved user's login is
+ * unaffected) and clears all instance-specific material (apps, logos, master
+ * secrets, MFA). The org is owned by casdoor's `admin`; `isPersonal` marks a
+ * personal org (the "skip" path).
+ */
+export async function createOrganization(opts: {
+  name: string
+  displayName: string
+  personal: boolean
+  /** The caller's current org, cloned for password/locale compatibility. */
+  sourceOwner: string
+}): Promise<void> {
+  const src = await getOrganization(opts.sourceOwner)
+  const org: IamOrganization = {
+    owner: 'admin',
+    name: opts.name,
+    displayName: opts.displayName,
+    createdTime: new Date().toISOString(),
+    isPersonal: opts.personal,
+    // Cloned for compatibility (best-effort; sane casdoor defaults otherwise).
+    passwordType: src?.passwordType || 'bcrypt',
+    passwordSalt: src?.passwordSalt || '',
+    passwordObfuscatorType: src?.passwordObfuscatorType || 'Plain',
+    passwordObfuscatorKey: src?.passwordObfuscatorKey || '',
+    passwordOptions: src?.passwordOptions ?? ['AtLeast6'],
+    countryCodes: src?.countryCodes ?? ['US'],
+    languages: src?.languages ?? ['en'],
+    defaultAvatar: src?.defaultAvatar || 'https://cdn.hanzo.ai/img/hanzo-cloud-user.png',
+    accountItems: src?.accountItems ?? [],
+    // Never inherited — each org gets its own (or none) of these.
+    defaultApplication: '',
+    logo: '',
+    logoDark: '',
+    favicon: '',
+    masterPassword: '',
+    defaultPassword: '',
+    masterVerificationCode: '',
+    mfaItems: [],
+    tags: [],
+    websiteUrl: '',
+    enableSoftDeletion: false,
+    isProfilePublic: false,
+  }
+  await iamPostBody('/v1/iam/add-organization', {}, org)
+}
+
+/**
+ * Move a user into `org` as that org's admin. Sends the FULL current user object
+ * (casdoor's update-user overwrites the default column set from the body, so a
+ * partial object would blank fields) with owner + isAdmin changed. The caller is
+ * always the signed-in user (the route binds the id to the session), so this can
+ * only ever move oneself.
+ */
+export async function moveUserToOrg(user: SessionUser, org: string): Promise<void> {
+  const current = await iamGetData<Record<string, unknown>>('/v1/iam/get-user', { id: user.id })
+  if (!current) throw new Error('Could not read the current user from IAM')
+  const moved = { ...current, owner: org, isAdmin: true }
+  await iamPostBody('/v1/iam/update-user', { id: user.id }, moved)
 }
 
 // ── Admin gate ───────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ export { ApiError, type ApiResponse } from './client'
 export * from './types'
 
 export { AccountApi } from './account'
+export { ProjectApi, projectEnvironments, type Project } from './projects'
 export { BotApi, type BotHealth } from './bot'
 export {
   PlansApi,
