@@ -268,3 +268,41 @@ Findings + fixes (all in console2; honest states everywhere, no fakes):
   Providers/Applications/Chat honest-empty.
 
 `StatusTag` now also understands platform health verdicts (green/yellow/red).
+
+## Working AI + API keys + chrome polish (v0.6.0)
+
+The investor-demo wave. ROOT CAUSE of "chats/playground don't work": the gateway
+chat endpoints REQUIRE `Authorization: Bearer` — a session cookie alone is
+rejected ("Invalid API key format"). The browser sent cookie-only, so every AI
+call (chat, playground, cmd+K `>`/`?`) failed. Fixed with two server routes that
+keep all credentials server-side (the browser only ever sends its session cookie):
+
+- **`app/ai/[...path]/route.ts`** — keyless AI proxy. Resolves the user from the
+  session cookie (cloud `/v1/get-account`), mints a SHORT-LIVED user-bound IAM
+  token (`/v1/iam/issue-user-token`, cached per-user until ~60s pre-expiry) as the
+  confidential `hanzo-console` client, and forwards to `AI_GATEWAY_URL/v1/<path>`
+  with `Bearer <token>`. Allow-listed to `v1/models|chat|chat/completions|
+  embeddings|rerank` (not a general tunnel). `playground.ts` now points at this
+  proxy (`<origin>/ai`), so Models/Playground/Chat/cmd+K all work with no key in
+  the browser and no rotation on a chat turn.
+- **`app/keys/route.ts`** — per-user `hk-` Cloud API key. POST mint/rotate, DELETE
+  revoke, GET status (no secret). Same app-on-behalf pattern via
+  `/v1/iam/mint-user-keys` + `/v1/iam/revoke-user-keys`. The `hk-` secret is shown
+  ONCE (POST). `ApiKeysModule` is now create/copy/rotate/revoke.
+- Shared trust boundary: `src/lib/server/identity.ts` (server-only) — `resolveUser`
+  + `mintUserKey`/`revokeUserKey`/`issueUserToken`. The `hanzo-console` client is
+  allow-listed in IAM `IAM_KEY_MINT_ALLOWED_APPS`; verified end-to-end that a
+  minted `hk-` key and an issued user JWT both 200 on `api.hanzo.ai/v1/chat/
+  completions`.
+- **Chat is interactive** (`chat/ChatConversation.tsx`): a real multi-turn
+  conversation over `AiApi.chat` (→ the `/ai` proxy), with a Zen default model,
+  honest 402 "add credits" state, and a "History" toggle to the old session list.
+- **Chrome**: the sidebar/header show the Hanzo **H mark + "Console"**
+  (`ui/HanzoMark.tsx` + `ui/BrandLogo.tsx`; `BrandLogo` shows the org's IAM logo
+  when set, else the H). A fullscreen **app launcher** (`components/AppLauncher.tsx`,
+  Launchpad-style grid + filter) opens from the header "Apps" button, the sidebar
+  grid icon, and the command palette's "Browse all apps". cmd+K stays the palette.
+
+Server-only env the routes need (added to `console2-v1.yaml`, never `NEXT_PUBLIC_`):
+`IAM_URL`, `CLOUD_API_URL` (in-cluster cloud-api), `AI_GATEWAY_URL` (api.hanzo.ai),
+and `IAM_MINT_CLIENT_ID`/`IAM_MINT_CLIENT_SECRET` from secret `hanzo-console-iam-creds`.

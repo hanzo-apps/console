@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text, XStack } from '@hanzo/gui'
-import { Trash } from '@hanzogui/lucide-icons-2'
+import { Trash, ArrowLeft } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ChatApi, type Chat } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 
-export function ChatListView({ onOpen }: { onOpen: (c: Chat) => void }) {
+export function ChatListView({ onOpen, onBack }: { onOpen: (c: Chat) => void; onBack?: () => void }) {
   const { account } = useSession()
   const user = account?.name ?? 'admin'
 
@@ -75,7 +75,17 @@ export function ChatListView({ onOpen }: { onOpen: (c: Chat) => void }) {
 
   return (
     <>
-      <PageHeader title="Chat" subtitle="Chat sessions and history." />
+      <PageHeader
+        title="Chat history"
+        subtitle="Your saved chat sessions."
+        actions={
+          onBack ? (
+            <Button size="$2" icon={<ArrowLeft size={15} />} onPress={onBack}>
+              Back to chat
+            </Button>
+          ) : undefined
+        }
+      />
       {error ? <Text color="$color12">{error}</Text> : null}
       <DataTable
         columns={columns}

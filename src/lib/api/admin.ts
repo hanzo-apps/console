@@ -22,6 +22,9 @@ export type Organization = {
   createdTime?: string
   websiteUrl?: string
   passwordType?: string
+  /** Org logo URL (casdoor `logo`); shown in the console chrome when set. */
+  logo?: string
+  favicon?: string
   [key: string]: unknown
 }
 
