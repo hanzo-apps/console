@@ -351,3 +351,31 @@ the admin gate), and make org scope a first-class, switchable value.
 - The console2 CR already carries the env the proxies need (`IAM_URL`,
   `CLOUD_API_URL`, `AI_GATEWAY_URL`, `IAM_MINT_CLIENT_*`); `KMS_URL` defaults to
   `http://kms.hanzo.svc`. `admin.hanzo.ai` added to the CR ingress hosts.
+
+## First-run org onboarding + waitlists (v0.7.8)
+
+This release is based on the live GitHub `main` at `88d4c68` (v0.7.7), including
+the org → project → environment scope model. `Projects` remains a single Deploy
+module backed by the IAM project endpoints and the top-bar `ScopeSwitcher`; do
+not add a duplicate Apps/Projects entry.
+
+- **One instruction source.** `AGENTS.md` and `CLAUDE.md` are symlinks to
+  `LLM.md`; keep agent guidance here only so Codex and Claude stay in sync.
+- **First-run org onboarding.** `OrgGate` now sends signed-in users with no org
+  to `OrgOnboarding` instead of a dead "no organization" state. The same-origin
+  `/onboard` route acts as the confidential `hanzo-console` IAM client, creates
+  a customer org (or personal org), moves the caller into it as admin, then the
+  client re-authenticates so the new session carries the org. Normal privileged
+  routes still use `resolveUser()` (org required); onboarding alone uses
+  `resolveAuthenticatedUser()` so it can handle the zero-org session safely.
+- **Coming-soon waitlists.** `ComingSoon` renders `WaitlistForm`, which posts to
+  `/waitlist`. The server route requires a session and forwards to
+  `WAITLIST_URL/v1/waitlist/join`; when `WAITLIST_URL` is unset it returns an
+  honest 501 and never fabricates a confirmation.
+- **Motion primitive.** `FadeIn` plus the single `.hz-fade-up` keyframe in
+  `globals.css` is the shared entrance animation. It honors
+  `prefers-reduced-motion`.
+
+Server-only env added by this wave: `WAITLIST_URL` for waitlist forwarding. Org
+onboarding uses the existing `IAM_URL`, `CLOUD_API_URL`, and
+`IAM_MINT_CLIENT_ID`/`IAM_MINT_CLIENT_SECRET` confidential-client wiring.
