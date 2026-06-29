@@ -150,6 +150,19 @@ export type TraceDetail = Trace & { observations: Observation[]; scores: Score[]
 /** Full session detail — the session plus its traces. */
 export type SessionDetail = Session & { traces: Trace[] }
 
+/**
+ * A user — the per-user analytics rollup the backend aggregates from traces
+ * carrying a `userId`. Mirrors `/v1/o11y/users`.
+ */
+export type O11yUser = {
+  userId: string
+  traceCount?: number
+  totalCost?: number
+  totalTokens?: number
+  lastSeen?: string | null
+  firstSeen?: string | null
+}
+
 /** Build a `/v1/o11y/<path>` URL with optional pagination query. */
 const listUrl = (path: string, q: O11yListQuery): string => {
   const params = new URLSearchParams()
@@ -173,4 +186,9 @@ export const O11yApi = {
 
   annotationQueues: (q: O11yListQuery = {}) =>
     restGet<O11yList<AnnotationQueue>>(listUrl('o11y/annotation-queues', q)),
+
+  observations: (q: O11yListQuery = {}) =>
+    restGet<O11yList<Observation>>(listUrl('o11y/observations', q)),
+
+  users: (q: O11yListQuery = {}) => restGet<O11yList<O11yUser>>(listUrl('o11y/users', q)),
 }
