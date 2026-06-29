@@ -1,5 +1,27 @@
 /**
- * Product catalog — the single source of truth for the unified console.
+ *   {
+      id: 'observations',
+      label: 'Observations',
+      icon: Activity,
+      description: 'Spans, generations, and events inside traces.',
+      category: 'Observe',
+      status: 'enabled',
+      repo: 'hanzoai/o11y',
+      kind: 'module',
+      routes: [{ path: '', component: ObservationsModule }],
+    },
+  {
+      id: 'users',
+      label: 'Users',
+      icon: Users,
+      description: 'Per-user analytics — trace volume, tokens, and cost.',
+      category: 'Observe',
+      status: 'enabled',
+      repo: 'hanzoai/o11y',
+      kind: 'module',
+      routes: [{ path: '', component: UsersModule }],
+    },
+Product catalog — the single source of truth for the unified console.
  *
  * ONE list (`catalog`) describes every Hanzo product, whether it is an
  * in-console admin module (owns routes, rendered here) or an external surface
@@ -23,7 +45,7 @@
  * console surface yet (`soon`). No fabricated states.
  */
 import type { ComponentType } from 'react'
-import {
+import { Users,
   Brain,
   Server,
   Bot,
@@ -98,6 +120,8 @@ import { KmsModule } from '~/components/products/KmsModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { TracesModule } from '~/components/products/TracesModule'
+import { ObservationsModule } from '~/components/products/ObservationsModule'
+import { UsersModule } from '~/components/products/UsersModule'
 import { SessionsModule } from '~/components/products/SessionsModule'
 import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
