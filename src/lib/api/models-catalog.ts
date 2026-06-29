@@ -11,7 +11,7 @@
  * ({ models:[{ id, pricing }] }). If that endpoint is unrouted or down, models
  * still list (prices read "—") — pricing is never fabricated.
  */
-import { restGet, v1Url } from './client'
+import { restGet, v1Url, aiV1Url } from './client'
 
 /** One model as published by the OpenAI-compatible `/v1/models` list. */
 export type CloudModel = {
@@ -86,7 +86,9 @@ export const CloudModelApi = {
    */
   list: async (): Promise<CatalogModel[]> => {
     const [res, pricing] = await Promise.all([
-      restGet<CloudModelsResponse>(v1Url('models')),
+      // Through the `/ai` proxy: it adds the user bearer the gateway requires.
+      // (Cookie-only `/v1/models` 401s → empty catalog — the "models missing" bug.)
+      restGet<CloudModelsResponse>(aiV1Url('models')),
       fetchPricing(),
     ])
     return (res.data ?? []).map((m) => ({ ...m, pricing: pricing.get(m.id) ?? null }))

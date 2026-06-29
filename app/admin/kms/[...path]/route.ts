@@ -23,6 +23,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { getAdminGate, adminBearer, kmsBaseUrl, type AdminGate } from '~/lib/server/identity'
+import { orgFor as policyOrgFor } from '~/lib/server/admin-policy'
 
 export const runtime = 'nodejs'
 
@@ -34,10 +35,13 @@ function secretRest(path: string, name: string): string {
   return [...path.split('/').filter(Boolean), name].map(encodeURIComponent).join('/')
 }
 
-/** Org the operator acts on — the brand org, unless a global admin passes ?org=. */
+/** Org the operator acts on — the brand org, unless a global admin passes ?org=
+ *  (the pure `admin-policy` predicate, tested in admin-policy.test.ts). */
 function orgFor(gate: AdminGate, req: NextRequest): string {
-  const q = req.nextUrl.searchParams.get('org')
-  return gate.user.isGlobalAdmin && q ? q : gate.orgScope
+  return policyOrgFor(
+    { isGlobalAdmin: gate.user.isGlobalAdmin, orgScope: gate.orgScope },
+    req.nextUrl.searchParams.get('org'),
+  )
 }
 
 async function handle(req: NextRequest, segments: string[]): Promise<NextResponse> {

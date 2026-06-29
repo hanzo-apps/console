@@ -12,10 +12,7 @@
  * user and forwards with a short-lived user token. `aiBase()` is that proxy
  * origin — the ONE place the AI runtime is addressed.
  */
-import { restGet, restPost, v1Url } from './client'
-
-/** The same-origin keyless AI proxy base (`<origin>/ai`); see app/ai/[...path]. */
-const aiBase = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/ai` : '/ai')
+import { restGet, restPost, v1Url, aiBase } from './client'
 
 /** One OpenAI chat message. */
 export type ChatMessage = {

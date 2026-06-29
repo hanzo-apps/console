@@ -1,40 +1,32 @@
 'use client'
 
 /**
- * Org switcher — shows the organization you're acting in, and (only when you
- * actually belong to more than one) lets you switch.
+ * Org switcher — shows the organization the console is scoped to, and lets an
+ * operator who can see more than one switch + filter between them.
  *
- * Honest by construction: the current org comes from your account; the list comes
- * from IAM (`get-organizations`). Most users belong to one org, so this is just a
- * labelled chip. When several are visible (a multi-brand admin), each brand org
- * routes to that brand's own console host — where it re-authenticates against that
- * brand's IAM — because tenancy is server-side (a brand JWT per host), not a
- * client toggle. We never fabricate orgs: if IAM can't list them, you see your
- * one org.
+ * The org LIST comes from IAM (`get-organizations`, via the gated `/admin/iam`
+ * proxy): a global admin (z@hanzo.ai) sees every org; a brand admin sees their
+ * own. Selecting one re-scopes the console IN PLACE — `setCurrentOrg` persists
+ * the choice and a reload refetches every module under the new `X-Org-Id`
+ * (`currentOrg()`); the IAM/KMS proxies authorize a global admin for any org and
+ * pin a brand admin to their own, so the re-scope is always safe. Brand identity
+ * (the host's wordmark/logo) is unchanged — only the data scope moves. We never
+ * fabricate orgs: if IAM lists one, this is just a labelled chip.
  */
-import { useEffect, useState } from 'react'
-import { Button, Popover, Text, XStack, YStack } from '@hanzo/gui'
-import { Building2, Check, ChevronsUpDown } from '@hanzogui/lucide-icons-2'
+import { useEffect, useMemo, useState } from 'react'
+import { Button, Input, Popover, Text, XStack, YStack } from '@hanzo/gui'
+import { Building2, Check, ChevronsUpDown, Search } from '@hanzogui/lucide-icons-2'
 
-import { config } from '~/config'
-import { useSession } from '~/lib/auth/session'
+import { currentOrg, setCurrentOrg, filterOrgs } from '~/lib/org-scope'
 import { IamAdminApi, type Organization } from '~/lib/api'
-
-/** Brand orgs that have their own console host (where switching re-auths). */
-const BRAND_CONSOLE_HOST: Record<string, string> = {
-  hanzo: 'console.hanzo.ai',
-  lux: 'console.lux.cloud',
-  zoo: 'console.zoo.cloud',
-  pars: 'console.pars.cloud',
-}
 
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 export function OrgSwitcher() {
-  const { account } = useSession()
-  const currentId = account?.organization || account?.owner || config.iamOrgName
+  const currentId = currentOrg()
   const [orgs, setOrgs] = useState<Organization[]>([])
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     let live = true
@@ -51,12 +43,11 @@ export function OrgSwitcher() {
     }
   }, [])
 
-  const currentName =
-    orgs.find((o) => o.name === currentId)?.displayName || titleCase(currentId)
+  const currentName = orgs.find((o) => o.name === currentId)?.displayName || titleCase(currentId)
+  const filtered = useMemo(() => filterOrgs(orgs, query), [orgs, query])
 
-  // Only a real multi-membership turns this into a switcher.
-  const others = orgs.filter((o) => o.name !== currentId)
-  if (others.length === 0) {
+  // A single visible org is just a label — there is nothing to switch to.
+  if (orgs.length <= 1) {
     return (
       <XStack items="center" gap="$2" px="$2.5" height={32} rounded="$3" borderWidth={1} borderColor="$borderColor">
         <Building2 size={14} opacity={0.7} />
@@ -69,10 +60,9 @@ export function OrgSwitcher() {
 
   const select = (org: Organization) => {
     setOpen(false)
-    const host = BRAND_CONSOLE_HOST[org.name]
-    if (host && org.name !== currentId && typeof window !== 'undefined') {
-      window.location.assign(`https://${host}`)
-    }
+    if (org.name === currentId) return
+    setCurrentOrg(org.name)
+    if (typeof window !== 'undefined') window.location.reload()
   }
 
   return (
@@ -82,35 +72,55 @@ export function OrgSwitcher() {
           {currentName}
         </Button>
       </Popover.Trigger>
-      <Popover.Content bordered elevate p="$2" width={240} bg="$color2" borderColor="$borderColor">
-        <YStack gap="$0.5">
+      <Popover.Content bordered elevate p="$2" width={288} bg="$color2" borderColor="$borderColor">
+        <YStack gap="$1">
+          <XStack items="center" gap="$2" px="$2" py="$1" rounded="$3" borderWidth={1} borderColor="$borderColor">
+            <Search size={13} opacity={0.6} />
+            <Input
+              flex={1}
+              size="$2"
+              borderWidth={0}
+              bg="transparent"
+              placeholder="Filter organizations…"
+              value={query}
+              onChangeText={setQuery}
+              autoCapitalize="none"
+            />
+          </XStack>
           <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
-            Organizations
+            Organizations · {orgs.length}
           </Text>
-          {orgs.map((org) => {
-            const isCurrent = org.name === currentId
-            const switchable = !isCurrent && Boolean(BRAND_CONSOLE_HOST[org.name])
-            return (
-              <XStack
-                key={org.name}
-                onPress={switchable ? () => select(org) : undefined}
-                cursor={switchable ? 'pointer' : 'default'}
-                items="center"
-                gap="$2"
-                px="$2"
-                py="$2"
-                rounded="$3"
-                opacity={isCurrent || switchable ? 1 : 0.5}
-                hoverStyle={switchable ? { bg: '$color4' } : undefined}
-              >
-                <Building2 size={14} opacity={0.7} />
-                <Text flex={1} fontSize="$2" color="$color12" numberOfLines={1}>
-                  {org.displayName || titleCase(org.name)}
-                </Text>
-                {isCurrent ? <Check size={14} /> : null}
-              </XStack>
-            )
-          })}
+          <YStack gap="$0.5" maxH={320} overflow="scroll">
+            {filtered.length === 0 ? (
+              <Text px="$2" py="$2" fontSize="$2" color="$color10">
+                No organizations match “{query}”.
+              </Text>
+            ) : (
+              filtered.map((org) => {
+                const isCurrent = org.name === currentId
+                return (
+                  <XStack
+                    key={`${org.owner}/${org.name}`}
+                    onPress={() => select(org)}
+                    cursor="pointer"
+                    items="center"
+                    gap="$2"
+                    px="$2"
+                    py="$2"
+                    rounded="$3"
+                    bg={isCurrent ? '$color4' : 'transparent'}
+                    hoverStyle={{ bg: '$color5' }}
+                  >
+                    <Building2 size={14} opacity={0.7} />
+                    <Text flex={1} fontSize="$2" color="$color12" numberOfLines={1}>
+                      {org.displayName || titleCase(org.name)}
+                    </Text>
+                    {isCurrent ? <Check size={14} /> : null}
+                  </XStack>
+                )
+              })
+            )}
+          </YStack>
         </YStack>
       </Popover.Content>
     </Popover>
