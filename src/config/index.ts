@@ -41,6 +41,8 @@ export type ConsoleConfig = {
   iamClientId: string
   /** Billing/account portal — PER BRAND. The console LINKS here, never reimplements it. */
   billingUrl: string
+  /** Documentation site — PER BRAND. The console LINKS here (new tab), never embeds it. */
+  docsUrl: string
 }
 
 /** Fields shared by every brand. Env-overridable per-deploy. */
@@ -72,11 +74,11 @@ function cloudUrl(): string {
  * and billingUrl are the per-brand surfaces. Each brand's billing host runs the
  * same multi-brand billing SPA, scoped to the brand's org via the brand JWT.
  */
-const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string; billingUrl: string }> = {
-  hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud', billingUrl: 'https://billing.hanzo.ai' },
-  lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud', billingUrl: 'https://billing.lux.cloud' },
-  zoo: { brandName: 'Zoo Cloud', iamUrl: 'https://zoolabs.id', iamOrgName: 'zoo', iamApp: 'zoo-cloud', billingUrl: 'https://billing.zoo.cloud' },
-  pars: { brandName: 'Pars Cloud', iamUrl: 'https://pars.id', iamOrgName: 'pars', iamApp: 'pars-cloud', billingUrl: 'https://billing.pars.cloud' },
+const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string; billingUrl: string; docsUrl: string }> = {
+  hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud', billingUrl: 'https://billing.hanzo.ai', docsUrl: 'https://docs.hanzo.ai' },
+  lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud', billingUrl: 'https://billing.lux.cloud', docsUrl: 'https://docs.lux.network' },
+  zoo: { brandName: 'Zoo Cloud', iamUrl: 'https://zoolabs.id', iamOrgName: 'zoo', iamApp: 'zoo-cloud', billingUrl: 'https://billing.zoo.cloud', docsUrl: 'https://docs.zoo.ngo' },
+  pars: { brandName: 'Pars Cloud', iamUrl: 'https://pars.id', iamOrgName: 'pars', iamApp: 'pars-cloud', billingUrl: 'https://billing.pars.cloud', docsUrl: 'https://docs.pars.network' },
 }
 
 /** Hostname suffix → brand. First match wins. */
@@ -128,6 +130,7 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? b.iamApp,
     iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? b.iamApp,
     billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? b.billingUrl),
+    docsUrl: trimSlash(process.env.NEXT_PUBLIC_DOCS_URL ?? b.docsUrl),
     ...SHARED,
   }
   cache.set(brand, resolved)

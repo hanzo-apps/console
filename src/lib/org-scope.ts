@@ -47,6 +47,17 @@ export function isScopedAway(): boolean {
   return currentOrg() !== config.iamOrgName
 }
 
+/**
+ * Switch the active org scope and hard-reload so every module refetches under the
+ * new `X-Org-Id`. The ONE way the console changes org (used by the OrgSwitcher and
+ * the command palette) — switching to the current org is a no-op.
+ */
+export function switchOrg(org: string): void {
+  if (!org || org === currentOrg()) return
+  setCurrentOrg(org)
+  if (typeof window !== 'undefined') window.location.reload()
+}
+
 /** Case-insensitive filter over org name + display name (the switcher search). */
 export function filterOrgs<T extends { name: string; displayName?: string }>(orgs: T[], query: string): T[] {
   const q = query.trim().toLowerCase()
