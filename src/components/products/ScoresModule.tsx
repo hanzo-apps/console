@@ -81,9 +81,14 @@ export function ScoresModule(_props: { params: Record<string, string> }) {
         title="Scores"
         subtitle="Evaluation scores from feedback, model graders, and manual review."
         actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void load(page)}>
-            Refresh
-          </Button>
+          <XStack gap="$2">
+            <Button size="$2" onPress={() => router.push('/scores/analytics')}>
+              Analytics
+            </Button>
+            <Button icon={<RefreshCw size={16} />} onPress={() => void load(page)}>
+              Refresh
+            </Button>
+          </XStack>
         }
       />
 

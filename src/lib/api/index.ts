@@ -85,6 +85,8 @@ export {
   type EvalScore,
   type EvalScoresPage,
   type EvalDataset,
+  type EvalDatasetItem,
+  type EvalDatasetRun,
   type EvalItemResult,
   type EvalRunSummary,
   type EvalRunRequest,
@@ -124,6 +126,8 @@ export {
   type ScoreConfig,
   type ScoreConfigCategory,
   type AnnotationQueue,
+  type AnnotationQueueDetail,
+  type AnnotationQueueItem,
   type TraceDetail,
   type SessionDetail,
 } from './o11y'
