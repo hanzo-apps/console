@@ -144,11 +144,26 @@ export type AnnotationQueue = {
   updatedAt: string
 }
 
+/** One item assigned to an annotation queue. */
+export type AnnotationQueueItem = {
+  id: string
+  queueId?: string
+  traceId?: string | null
+  observationId?: string | null
+  status?: string | null
+  assignee?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
 /** Full trace detail — the trace plus its observations and scores. */
 export type TraceDetail = Trace & { observations: Observation[]; scores: Score[] }
 
 /** Full session detail — the session plus its traces. */
 export type SessionDetail = Session & { traces: Trace[] }
+
+/** Full annotation queue detail. */
+export type AnnotationQueueDetail = AnnotationQueue & { items?: AnnotationQueueItem[] }
 
 /**
  * A user — the per-user analytics rollup the backend aggregates from traces
@@ -186,6 +201,12 @@ export const O11yApi = {
 
   annotationQueues: (q: O11yListQuery = {}) =>
     restGet<O11yList<AnnotationQueue>>(listUrl('o11y/annotation-queues', q)),
+
+  annotationQueue: (id: string) =>
+    restGet<AnnotationQueueDetail>(v1Url(`o11y/annotation-queues/${encodeURIComponent(id)}`)),
+
+  annotationQueueItems: (id: string, q: O11yListQuery = {}) =>
+    restGet<O11yList<AnnotationQueueItem>>(listUrl(`o11y/annotation-queues/${encodeURIComponent(id)}/items`, q)),
 
   observations: (q: O11yListQuery = {}) =>
     restGet<O11yList<Observation>>(listUrl('o11y/observations', q)),
