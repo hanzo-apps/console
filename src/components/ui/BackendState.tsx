@@ -16,7 +16,7 @@ import { TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 
-export type BackendStateKind = 'not-initialized' | 'unavailable' | 'access' | 'error'
+export type BackendStateKind = 'not-initialized' | 'unavailable' | 'access' | 'billing' | 'error'
 
 export type BackendState = { kind: BackendStateKind; message: string }
 
@@ -26,6 +26,7 @@ export function classifyBackend(e: unknown): BackendState {
   const message = e instanceof Error ? e.message : String(e)
   if (status === 503) return { kind: 'not-initialized', message }
   if (status === 404 || status === 405) return { kind: 'unavailable', message }
+  if (status === 402) return { kind: 'billing', message }
   if (status === 401 || status === 403) return { kind: 'access', message }
   return { kind: 'error', message }
 }
@@ -34,6 +35,7 @@ const TITLES: Record<BackendStateKind, string> = {
   'not-initialized': 'Backend not initialized',
   unavailable: 'Not available on this deployment yet',
   access: 'Access required',
+  billing: 'Add credits to continue',
   error: 'Could not reach the backend',
 }
 
@@ -43,6 +45,9 @@ const BODIES: Record<BackendStateKind, string> = {
   unavailable:
     'This endpoint is not mounted at the gateway on this host yet. The view lights up automatically once the route is live.',
   access: 'Sign in with an account that can read this data.',
+  // Empty → the card shows the backend's own message (the honest "Insufficient
+  // balance. Please add credits…" from the gateway billing gate).
+  billing: '',
   error: '',
 }
 

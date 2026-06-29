@@ -1,15 +1,21 @@
 /**
- * Playground API — the OpenAI-compatible model gateway on the cloud `/v1`.
+ * Playground API — the OpenAI-compatible model gateway, via the keyless AI proxy.
  *
  * Two REAL endpoints, both raw OpenAI JSON (NOT the casibase envelope), so they
  * go through the REST layer (`restGet`/`restPost`), like the o11y probe:
  *   - GET  /v1/models            → the model catalog (ids the gateway accepts)
  *   - POST /v1/chat/completions  → run a non-streaming chat completion
  *
- * No prompt/playground logic is reimplemented server-side — the gateway IS the
- * runtime. The module composes messages and reads the real completion back.
+ * These endpoints REQUIRE an `Authorization: Bearer` token (a session cookie is
+ * rejected), so the browser does NOT call the gateway directly. It calls the
+ * console's same-origin `/ai/v1/*` proxy (cookie only); the server resolves the
+ * user and forwards with a short-lived user token. `aiBase()` is that proxy
+ * origin — the ONE place the AI runtime is addressed.
  */
 import { restGet, restPost, v1Url } from './client'
+
+/** The same-origin keyless AI proxy base (`<origin>/ai`); see app/ai/[...path]. */
+const aiBase = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/ai` : '/ai')
 
 /** One OpenAI chat message. */
 export type ChatMessage = {
@@ -52,7 +58,7 @@ export const PlaygroundApi = {
    * module can render an honest state.
    */
   listModels: async (): Promise<string[]> => {
-    const r = await restGet<ModelsResponse>(v1Url('models'))
+    const r = await restGet<ModelsResponse>(v1Url('models', aiBase()))
     const ids = (r?.data ?? [])
       .map((m) => m?.id)
       .filter((id): id is string => typeof id === 'string' && id.length > 0)
@@ -65,5 +71,5 @@ export const PlaygroundApi = {
    * only caller of this today, so RAG and plain chat share ONE gateway binding.
    */
   chat: (req: ChatRequest, headers?: Record<string, string>): Promise<ChatCompletion> =>
-    restPost<ChatCompletion>(v1Url('chat/completions'), { ...req, stream: false }, headers),
+    restPost<ChatCompletion>(v1Url('chat/completions', aiBase()), { ...req, stream: false }, headers),
 }

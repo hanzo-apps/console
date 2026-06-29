@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Star, Lock, ExternalLink, ArrowRight, Info } from '@hanzogui/lucide-icons-2'
 
-import { branding, config } from '~/config'
+import { config } from '~/config'
 import { catalogByCategory, type CatalogEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
@@ -113,7 +113,7 @@ export default function DashboardHome() {
   return (
     <>
       <PageHeader
-        title={branding.name}
+        title={config.brandName}
         subtitle={`See, enable, and manage every ${config.brandName} product from one place.`}
       />
       {groups.map((group) => (

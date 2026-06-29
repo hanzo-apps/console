@@ -15,14 +15,15 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import { LogOut, Star, Lock, ExternalLink, LayoutGrid, SlidersHorizontal, CircleHelp } from '@hanzogui/lucide-icons-2'
 
-import { branding } from '~/config'
 import { catalogByCategory, findEntry, type CatalogEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { useSession } from '~/lib/auth/session'
 import { CommandSearchBox, useCommandPalette } from '~/components/CommandPalette'
+import { useAppLauncher } from '~/components/AppLauncher'
 import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
+import { BrandLogo } from '~/components/ui/BrandLogo'
 import { OrgSwitcher } from '~/components/OrgSwitcher'
 
 function NavRow({
@@ -82,6 +83,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const { account, signOut } = useSession()
   const { pinned, toggle, isPinned } = useFavorites()
   const { openMode } = useCommandPalette()
+  const launcher = useAppLauncher()
 
   const push = (path: string) => router.push(path)
   const isActive = (id: string) => pathname === `/${id}` || pathname.startsWith(`/${id}/`)
@@ -102,18 +104,24 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         borderColor="$borderColor"
         bg="$color1"
       >
-        <Button
-          onPress={() => push('/')}
-          bg={pathname === '/' ? '$color5' : 'transparent'}
-          justify="flex-start"
-          icon={<LayoutGrid size={18} />}
-          size="$3"
-          mb="$1"
-        >
-          <Text fontWeight="800" fontSize="$5">
-            {branding.name}
-          </Text>
-        </Button>
+        <XStack items="center" gap="$1" mb="$1">
+          <Button
+            flex={1}
+            onPress={() => push('/')}
+            bg={pathname === '/' ? '$color5' : 'transparent'}
+            justify="flex-start"
+            size="$3"
+          >
+            <BrandLogo size={22} />
+          </Button>
+          <Button
+            size="$3"
+            chromeless
+            icon={<LayoutGrid size={18} />}
+            onPress={launcher.open}
+            aria-label="All apps"
+          />
+        </XStack>
 
         <ScrollView flex={1}>
           <YStack gap="$3">
@@ -166,6 +174,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           borderColor="$borderColor"
         >
           <CommandSearchBox />
+          <Button
+            size="$3"
+            icon={<LayoutGrid size={18} />}
+            onPress={launcher.open}
+            borderWidth={1}
+            borderColor="$borderColor"
+          >
+            Apps
+          </Button>
           <XStack flex={1} />
           <XStack items="center" gap="$2">
             <ThemeToggle />
