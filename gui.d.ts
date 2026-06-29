@@ -1,11 +1,14 @@
 /**
- * Registers our Gui config with the type system so component style props
- * (tokens, themes, shorthands) are typed. `GuiCustomConfig` is declared in
- * `@hanzogui/web` and re-exported across the Gui packages; augmenting it there
- * flows the types through every `@hanzo/gui` component.
+ * Registers our Gui config with the type system so shorthand style props
+ * (tokens, themes, bg/px/py/items/justify etc.) are typed correctly.
+ * GuiCustomConfig is declared in @hanzogui/web and flows through @hanzo/gui.
  */
 import type { Conf } from './gui.config'
 
 declare module '@hanzogui/web' {
+  interface GuiCustomConfig extends Conf {}
+}
+
+declare module '@hanzogui/core' {
   interface GuiCustomConfig extends Conf {}
 }
