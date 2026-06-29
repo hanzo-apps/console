@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="console2" width="880"></p>
+
 # Hanzo Cloud Console
 
 Unified admin console for **Hanzo Cloud** and all Hanzo cloud products. Built on
