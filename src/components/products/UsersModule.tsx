@@ -122,7 +122,7 @@ export function UsersModule(_props: { params: Record<string, string> }) {
             rowKey={(u) => u.userId}
             empty="No users yet. Tag traces with a userId to see per-user analytics here."
           />
-          <Pager page={page} meta={meta} loading={loading} onPage={setPage} />
+          <Pager meta={meta} onPage={setPage} />
         </>
       )}
     </>

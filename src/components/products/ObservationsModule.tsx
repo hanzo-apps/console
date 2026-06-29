@@ -128,7 +128,7 @@ export function ObservationsModule(_props: { params: Record<string, string> }) {
             rowKey={(o) => o.id}
             empty="No observations yet. Instrument your app to emit traces and their observations appear here."
           />
-          <Pager page={page} meta={meta} loading={loading} onPage={setPage} />
+          <Pager meta={meta} onPage={setPage} />
         </>
       )}
     </>
