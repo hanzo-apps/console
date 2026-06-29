@@ -10,6 +10,7 @@
  * directly or a typed failure — never a half-checked envelope.
  */
 import { config } from '~/config'
+import { currentOrg } from '~/lib/org-scope'
 
 export type ApiResponse<T> = {
   status: 'ok' | 'error'
@@ -35,18 +36,19 @@ const acceptLanguage = (): string => {
 
 /**
  * Headers sent on every cloud call. Besides locale, we stamp `X-Org-Id` with the
- * brand org (`config.iamOrgName`, hostname-derived — the user's OWN org, never a
- * spoofable input). The casibase endpoints scope by the session's org claim, but
- * the sub-services mounted on the same backend that speak plain REST (the
- * provisioning service) require an explicit tenant header and reject the request
- * with 403 "X-Org-Id required" without it — this is what lets the data-product
- * modules resolve their tenant on the direct cloud-api path. When a gateway sits
- * in front and re-injects the header from the JWT, the stamped value is simply
- * overwritten, so sending it is correct in both topologies.
+ * ACTIVE org scope (`currentOrg()` — the brand org by default, or the org a global
+ * admin switched to in the OrgSwitcher). The casibase endpoints scope by the
+ * session's org claim, but the sub-services mounted on the same backend that
+ * speak plain REST (the provisioning service) require an explicit tenant header
+ * and reject the request with 403 "X-Org-Id required" without it — this is what
+ * lets the data-product modules resolve their tenant on the direct cloud-api
+ * path, and re-scope when the operator switches org. When a gateway sits in front
+ * and re-injects the header from the JWT, the stamped value is simply overwritten,
+ * so sending it is correct in both topologies.
  */
 const baseHeaders = (hasBody: boolean): Record<string, string> => ({
   'Accept-Language': acceptLanguage(),
-  'X-Org-Id': config.iamOrgName,
+  'X-Org-Id': currentOrg(),
   ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
 })
 
@@ -135,6 +137,19 @@ export const idOf = (owner: string, name: string): string => `${owner}/${encodeU
 /** Build a `/v1/<path>` URL on an arbitrary base (cloud backend by default). */
 export const v1Url = (path: string, base: string = config.cloudUrl): string =>
   `${base.replace(/\/+$/, '')}/v1/${path.replace(/^\/+/, '')}`
+
+/**
+ * The console's OWN same-origin keyless AI proxy base (`<origin>/ai`). The gateway
+ * model/inference endpoints REQUIRE an `Authorization: Bearer` token (a session
+ * cookie is rejected — the "models missing" bug), so the browser never calls the
+ * gateway directly: it calls this proxy with just the cookie and the server route
+ * (`app/ai/[...path]`) resolves the user + forwards with a short-lived user token.
+ * ONE place defines this origin — the model catalog and the playground both use it.
+ */
+export const aiBase = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/ai` : '/ai')
+
+/** Build a `/v1/<path>` URL on the AI proxy (`<origin>/ai/v1/<path>`). */
+export const aiV1Url = (path: string): string => v1Url(path, aiBase())
 
 async function restRequest<T>(
   method: 'GET' | 'POST' | 'DELETE',

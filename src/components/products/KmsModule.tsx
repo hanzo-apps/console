@@ -1,72 +1,66 @@
 'use client'
 
 /**
- * Secrets (KMS) — Hanzo KMS is zero-knowledge: secret names AND values are
- * encrypted on the MPC nodes, and the HTTP surface is get-one / put / rotate /
- * delete under token (ZAP) auth — there is deliberately NO "list every secret
- * value" endpoint, and a browser session cookie is not KMS credentials. So this
- * module does NOT fabricate a secret table. It states the model plainly, probes
- * the real `/v1/kms` surface to report whether it's reachable from this console,
- * and deep-links to the KMS console for actual secret management.
+ * Secrets (KMS) — a names-only inventory over the server-gated `/admin/kms` proxy.
+ *
+ * Hanzo KMS is zero-knowledge: there is deliberately NO "list every secret value"
+ * endpoint, and a browser session cookie is not KMS authorization. So this module
+ * lists secret METADATA only (path / name / env / version) via `KmsAdminApi.list`
+ * — the proxy enforces the brand-admin gate and forwards as the user, scoped to
+ * the active org. Values are NEVER fetched or rendered here. States are honest:
+ * loading, operator-access-required (403), listing-unavailable (404 — kmsd without
+ * the metadata-list endpoint), error, and empty.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { ExternalLink, RefreshCw, ShieldCheck, TriangleAlert, Check } from '@hanzogui/lucide-icons-2'
+import { Button, Card, Text, XStack } from '@hanzo/gui'
+import { ExternalLink, RefreshCw, ShieldCheck } from '@hanzogui/lucide-icons-2'
 
-import { ApiError } from '~/lib/api'
-import { restGet, v1Url } from '~/lib/api/client'
+import { ApiError, KmsAdminApi, type KmsSecretMeta } from '~/lib/api'
+import { currentOrg, isScopedAway } from '~/lib/org-scope'
 import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { DataTable, type Column } from '~/components/ui/DataTable'
+import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
 
 const KMS_CONSOLE = 'https://kms.hanzo.ai'
 
-type Probe =
-  | { phase: 'checking' }
-  | { phase: 'reachable' }
-  | { phase: 'elevated' }
-  | { phase: 'unavailable' }
-  | { phase: 'error'; message: string }
-
-function describe(p: Probe): { tone: 'ok' | 'warn'; title: string; body: string } {
-  switch (p.phase) {
-    case 'checking':
-      return { tone: 'warn', title: 'Checking…', body: `Probing ${config.brandName} KMS.` }
-    case 'reachable':
-      return { tone: 'ok', title: 'KMS reachable', body: 'The KMS surface responded to this console session.' }
-    case 'elevated':
-      return {
-        tone: 'warn',
-        title: 'Elevated credentials required',
-        body: 'KMS responded but a console session cookie is not KMS authorization. Secret access uses token / ZAP (mnemonic-derived) credentials — manage secrets in the KMS console.',
-      }
-    case 'unavailable':
-      return {
-        tone: 'warn',
-        title: 'Not routed on this host',
-        body: 'The /v1/kms surface is not proxied on this host yet. It appears once the deployment routes /v1/kms to Hanzo KMS.',
-      }
-    case 'error':
-      return { tone: 'warn', title: 'Could not reach KMS', body: p.message }
-  }
+/** KMS-specific guidance for the honest 404 / unauthorized states. */
+const KMS_COPY: HonestCopy = {
+  notFound:
+    'Secret listing requires Hanzo KMS with the metadata-list endpoint (v0.159.4+). The inventory appears automatically once kmsd is upgraded — only names are listed, never values.',
+  unauthorized:
+    'This view requires an operator session. Access is enforced server-side by the admin gate — sign in with an @hanzo.ai admin account.',
 }
 
+const fmtDate = (v?: string): string => {
+  if (!v) return '—'
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleString()
+}
+
+const columns: Column<KmsSecretMeta>[] = [
+  { key: 'name', header: 'Name', render: (s) => <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{s.name}</Text> },
+  { key: 'path', header: 'Path', render: (s) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{s.path || '—'}</Text> },
+  { key: 'env', header: 'Env', width: 130, render: (s) => <Text fontSize="$3" color="$color11">{s.env || 'default'}</Text> },
+  { key: 'version', header: 'Version', width: 100, render: (s) => <Text fontSize="$3" color="$color11">{s.version || '—'}</Text> },
+  { key: 'updatedTime', header: 'Updated', width: 200, render: (s) => <Text fontSize="$3" color="$color10">{fmtDate(s.updatedTime)}</Text> },
+]
+
+type LoadState =
+  | { phase: 'loading' }
+  | { phase: 'error'; err: ApiError }
+  | { phase: 'ready'; rows: KmsSecretMeta[] }
+
 export function KmsModule(_props: { params: Record<string, string> }) {
-  const [probe, setProbe] = useState<Probe>({ phase: 'checking' })
+  const [state, setState] = useState<LoadState>({ phase: 'loading' })
+  const org = currentOrg()
 
   const run = useCallback(() => {
-    setProbe({ phase: 'checking' })
-    // Hit the canonical org-scoped secrets path. There is no list endpoint, so
-    // any 2xx is unexpected-but-fine; 401/403 means "reachable, needs token";
-    // 404 means "not routed here". Either way we never render secret values.
-    restGet(v1Url(`kms/orgs/${encodeURIComponent(config.iamOrgName)}/secrets/`))
-      .then(() => setProbe({ phase: 'reachable' }))
-      .catch((e) => {
-        const status = e instanceof ApiError ? e.status : 0
-        if (status === 401 || status === 403) setProbe({ phase: 'elevated' })
-        else if (status === 404) setProbe({ phase: 'unavailable' })
-        else setProbe({ phase: 'error', message: e instanceof Error ? e.message : String(e) })
-      })
-  }, [])
+    setState({ phase: 'loading' })
+    KmsAdminApi.list({ org })
+      .then((rows) => setState({ phase: 'ready', rows }))
+      .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
+  }, [org])
 
   useEffect(() => {
     run()
@@ -76,17 +70,15 @@ export function KmsModule(_props: { params: Record<string, string> }) {
     if (typeof window !== 'undefined') window.open(KMS_CONSOLE, '_blank', 'noopener')
   }
 
-  const d = describe(probe)
-
   return (
     <>
       <PageHeader
         title="Secrets"
-        subtitle="Encryption keys and secrets, managed by Hanzo KMS."
+        subtitle={`Secret inventory (names only) for ${org}${isScopedAway() ? '' : ' — your organization'}. Values are never listed; manage them in the KMS console.`}
         actions={
           <XStack gap="$2">
             <Button size="$2" icon={<RefreshCw size={15} />} onPress={run}>
-              Recheck
+              Refresh
             </Button>
             <Button icon={<ExternalLink size={15} />} onPress={open}>
               KMS console
@@ -95,40 +87,39 @@ export function KmsModule(_props: { params: Record<string, string> }) {
         }
       />
 
-      <Card p="$4" gap="$2.5" borderWidth={1} borderColor="$borderColor" maxWidth={680}>
+      <Card p="$3.5" gap="$2" borderWidth={1} borderColor="$borderColor" maxWidth={820}>
         <XStack gap="$2" items="center">
-          <ShieldCheck size={20} />
-          <Text fontSize="$5" fontWeight="700">
+          <ShieldCheck size={18} />
+          <Text fontSize="$4" fontWeight="700">
             Zero-knowledge by design
           </Text>
         </XStack>
         <Text fontSize="$3" color="$color11">
-          KMS encrypts both secret names and values on the MPC nodes; nothing is stored or returned
-          in plaintext, and there is no endpoint that lists secret values. The console therefore does
-          not display a secret table — create, read, rotate, and delete secrets in the KMS console,
-          where each value is revealed only on explicit, audited access.
+          KMS encrypts secret names and values on the MPC nodes. This inventory lists names and
+          versions only — each value is revealed solely on explicit, audited access in the KMS
+          console. The console never fetches or stores a secret value.
         </Text>
-        <XStack>
-          <Button self="flex-start" theme="light" iconAfter={<ExternalLink size={15} />} onPress={open}>
-            Open KMS console
-          </Button>
-        </XStack>
       </Card>
 
-      <Card p="$4" gap="$2" borderWidth={1} borderColor={d.tone === 'ok' ? '$color7' : '$borderColor'} maxWidth={680}>
-        <XStack gap="$2" items="center">
-          {d.tone === 'ok' ? <Check size={16} /> : <TriangleAlert size={16} />}
-          <Text fontSize="$4" fontWeight="700">
-            {d.title}
-          </Text>
-        </XStack>
-        <Text fontSize="$3" color="$color11">
-          {d.body}
-        </Text>
-        <Text fontSize="$2" color="$color10">
-          endpoint · /v1/kms/orgs/{config.iamOrgName}/secrets
-        </Text>
-      </Card>
+      {state.phase === 'error' ? (
+        isForbidden(state.err) ? (
+          <OperatorAccessRequired />
+        ) : (
+          <ErrorState err={state.err} onRetry={run} copy={KMS_COPY} />
+        )
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={state.phase === 'ready' ? state.rows : []}
+          loading={state.phase === 'loading'}
+          rowKey={(s) => `${s.path}/${s.name}/${s.env}`}
+          empty={`No secrets in ${org}.`}
+        />
+      )}
+
+      <Text fontSize="$2" color="$color10">
+        endpoint · /v1/kms/orgs/{org}/secrets · {config.brandName}
+      </Text>
     </>
   )
 }

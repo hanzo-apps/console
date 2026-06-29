@@ -22,6 +22,7 @@ import { type NextRequest } from 'next/server'
 
 import { brandFromHost } from '~/config'
 import { BRANDS, type Brand } from '~/lib/branding/brands'
+import { gateAllows } from './admin-policy'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
 
@@ -231,9 +232,9 @@ export async function getAdminGate(req: NextRequest): Promise<AdminGate | null> 
   if (!user) return null
 
   const brand = BRANDS[brandFromHost(req.headers.get('host'))]
-  const emailOnBrand = !!user.email && user.email.toLowerCase().endsWith('@' + brand.adminDomain)
-  const isIamAdmin = user.isAdmin || user.isGlobalAdmin
-  if (!emailOnBrand || !isIamAdmin) return null
+  // ONE policy, tested in admin-policy.test.ts: verified @<adminDomain> email AND
+  // an IAM admin flag. Fail-closed (→ caller 403s) on any miss.
+  if (!gateAllows(user, brand.adminDomain)) return null
 
   return { user, brand, orgScope: brand.id }
 }

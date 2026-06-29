@@ -306,3 +306,48 @@ keep all credentials server-side (the browser only ever sends its session cookie
 Server-only env the routes need (added to `console2-v1.yaml`, never `NEXT_PUBLIC_`):
 `IAM_URL`, `CLOUD_API_URL` (in-cluster cloud-api), `AI_GATEWAY_URL` (api.hanzo.ai),
 and `IAM_MINT_CLIENT_ID`/`IAM_MINT_CLIENT_SECRET` from secret `hanzo-console-iam-creds`.
+
+## Admin console live data + org switching (v0.7.0)
+
+The "models empty" + "org switcher broken" wave. ONE root cause: `/v1/iam`,
+`/v1/kms`, `/v1/models` 404 (or 401 cookie-only) on the console host, so the
+catalog, switcher, IAM, and KMS modules rendered honest-empty. Fix = route every
+privileged call through console2's OWN server proxies (which add the user bearer +
+the admin gate), and make org scope a first-class, switchable value.
+
+- **Model catalog (the "models missing" bug).** `CloudModelApi.list()` hit cloud
+  `/v1/models` with a cookie only → 401 → empty. Repointed at the `/ai` proxy via
+  the shared `aiV1Url('models')` (`lib/api/client.ts` now owns `aiBase`/`aiV1Url` —
+  ONE place defines the proxy origin; `playground.ts` uses it too). The proxy mints
+  a short-lived user token, so the catalog populates with the live Zen models.
+  Pricing stays best-effort on the cloud origin (degrades to "—", never fabricated).
+- **Org scope is a value, not a place** (`lib/org-scope.ts`). `currentOrg()` /
+  `setCurrentOrg()` / `isScopedAway()` / `filterOrgs()`. Default = the brand org;
+  a global admin (z@hanzo.ai) can switch to ANY org. Brand identity (host wordmark/
+  logo) is orthogonal and unchanged — only the DATA scope moves. `client.ts`
+  `baseHeaders` now stamps `X-Org-Id: currentOrg()` (was the fixed brand org), so
+  every cloud-data module re-scopes on switch.
+- **OrgSwitcher** lists ALL visible orgs (`IamAdminApi.organizations()` via the
+  `/admin/iam` proxy → global admin sees every org), adds a **filter** box
+  (`filterOrgs`), and **switches in place**: `setCurrentOrg` + reload refetches
+  every module under the new `X-Org-Id`. The IAM/KMS proxies authorize a global
+  admin for any org and pin a brand admin to their own, so the re-scope is safe.
+- **IAM module** (`AdminModule.tsx` `IamModule`/`AuditModule`) reads users/roles/
+  records for `currentOrg()` (the org list itself is unscoped — what powers the
+  switcher). **KMS module** (`KmsModule.tsx`) was a dead cloud-path probe; now a
+  names-only inventory over `KmsAdminApi.list({ org })` (the `/admin/kms` proxy +
+  kmsd's metadata-list endpoint, v0.159.4+). Values are NEVER fetched/rendered;
+  honest states: loading, operator-access-required (403), listing-unavailable (404),
+  empty.
+- **Decomplected gate** (`lib/server/admin-policy.ts`, pure, tested). `gateAllows`
+  (`@<adminDomain>` email AND IAM admin), `ownerAllowed`, `orgFor` — extracted from
+  `getAdminGate` + the IAM/KMS routes so the SAME predicate that ships is the one
+  unit-tested. A brand admin can never `orgFor` to another org's KMS (no secret
+  leak across orgs).
+- **Tests** (vitest, `npm test`): `admin-policy.test.ts` (gate allow/deny + tenant
+  scoping), `org-scope.test.ts` (default→switch→reset + filter), `models-catalog.
+  test.ts` (catalog fetches `<origin>/ai/v1/models`, never the cookie-only cloud
+  path). RED→GREEN, 22 tests. `tsc --noEmit` + `next build` clean.
+- The console2 CR already carries the env the proxies need (`IAM_URL`,
+  `CLOUD_API_URL`, `AI_GATEWAY_URL`, `IAM_MINT_CLIENT_*`); `KMS_URL` defaults to
+  `http://kms.hanzo.svc`. `admin.hanzo.ai` added to the CR ingress hosts.
