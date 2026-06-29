@@ -14,10 +14,20 @@
  *
  * When `PAAS_SERVICE_TOKEN` is unset the proxy returns an honest 501 so the UI
  * can show a truthful "not configured" state — it never fabricates apps/deploys.
+ *
+ * SCOPE: the browser stamps the active tenant path (X-Org-Id / X-Project-Id /
+ * X-Environment) on every call. We forward it to the control plane so PaaS
+ * resources scope by org → project → environment like the rest of the console —
+ * but the ORG is re-resolved server-side through the admin policy (`orgFor`): a
+ * global admin's switched org is honored, a brand admin is PINNED to their own,
+ * so the forwarded X-Org-Id is authoritative and never the spoofable claim.
+ * Project + environment are sub-scopes the admin picks WITHIN that org, passed
+ * through verbatim.
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { getAdminGate } from '~/lib/server/identity'
+import { orgFor as policyOrgFor } from '~/lib/server/admin-policy'
 
 export const runtime = 'nodejs'
 
@@ -26,7 +36,8 @@ const TOKEN = process.env.PAAS_SERVICE_TOKEN ?? ''
 
 async function forward(req: NextRequest, path: string[]): Promise<NextResponse> {
   // Brand-admin gate FIRST — the service token below is control-plane god-mode.
-  if (!(await getAdminGate(req))) {
+  const gate = await getAdminGate(req)
+  if (!gate) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
   if (!TOKEN) {
@@ -35,6 +46,17 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
       { status: 501 },
     )
   }
+  // Resolve the authoritative tenant path. Org: the admin policy honors a global
+  // admin's switched org (the X-Org-Id the browser sends = currentOrg()) and pins
+  // a brand admin to their own — so we forward the resolved org, never the raw
+  // claim. Project + environment are sub-scopes within that org, forwarded as-is.
+  const org = policyOrgFor(
+    { isGlobalAdmin: gate.user.isGlobalAdmin, orgScope: gate.orgScope },
+    req.headers.get('X-Org-Id'),
+  )
+  const projectId = req.headers.get('X-Project-Id')
+  const environment = req.headers.get('X-Environment')
+
   const search = req.nextUrl.search
   const url = `${PLATFORM_URL}/v1/${path.join('/')}${search}`
   const init: RequestInit = {
@@ -43,6 +65,9 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
       Authorization: `Bearer ${TOKEN}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      'X-Org-Id': org,
+      ...(projectId ? { 'X-Project-Id': projectId } : {}),
+      ...(environment ? { 'X-Environment': environment } : {}),
     },
     // Never cache control-plane reads.
     cache: 'no-store',
