@@ -109,6 +109,7 @@ export {
   type O11yListQuery,
   type Trace,
   type Observation,
+  type O11yUser,
   type Score,
   type Session,
   type ScoreConfig,
