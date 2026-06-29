@@ -77,12 +77,15 @@ export function OrgGate({ children }: { children: ReactNode }) {
     const adminUrl = `https://admin.${brand.adminDomain}`
     return (
       <GateCard
-        title={`${brand.brandName} staff`}
+        title={`${brand.brandName} Admin`}
         body={`The ${brand.brandName} Cloud console is for customer organizations. Staff administration for the ${brand.brandName} organization lives in the admin console.`}
       >
         <YStack gap="$2.5">
+          {/* Single string child — a "Go to admin." text node + the {domain}
+              expression would be laid out as two children with the Button's flex
+              gap between them, rendering a stray space (admin. hanzo.ai). */}
           <Button size="$4" onPress={() => window.location.assign(adminUrl)}>
-            Go to admin.{brand.adminDomain}
+            {`Go to admin.${brand.adminDomain}`}
           </Button>
           <Button size="$3" chromeless onPress={() => void signOut()}>
             Sign out
