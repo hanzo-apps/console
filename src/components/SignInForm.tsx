@@ -1,24 +1,33 @@
 'use client'
 
 /**
- * Sign-in card — adapted from the @hanzo/gui `sign-in-form` recipe.
+ * Sign-in card — multi-tenant credential entry (HIP-0111).
  *
- * Authentication is delegated to Hanzo IAM (OIDC, hanzo.id). The console never
- * collects credentials or reconstructs provider OAuth URLs: every button starts
- * the IAM authorize redirect — the social buttons hint a provider, the primary
- * button opens IAM's email / passkey flow — and IAM owns the rest (provider
- * client ids, callbacks), returning to `/auth/callback`.
+ * The console resolves a user's ORG from their email (not the brand's own org),
+ * so a customer in any org signs in here with email + password: we POST the
+ * canonical IAM login with `organization: ""` (see `lib/auth/iam-login`), get an
+ * OAuth code, and complete the SAME `/v1/signin` exchange the redirect flow uses.
+ *
+ * Social buttons start IAM's hosted provider flow (IAM owns each provider's
+ * OAuth — client id, scope, callback). Accounts that require two-factor finish
+ * on IAM's same-site hosted page (the IAM session cookie is `SameSite=Lax`, so a
+ * cross-site fetch can't carry the MFA challenge) — we hand off with a redirect
+ * rather than fake an inline step.
  */
-import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Anchor, Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Github } from '@hanzogui/lucide-icons-2'
 
 import { branding } from '~/config'
 import { HanzoMark } from '~/components/ui/Loader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { useSession } from '~/lib/auth/session'
+import { getSigninUrl } from '~/lib/auth/iam'
+import { loginState, loginWithPassword } from '~/lib/auth/iam-login'
 
-/** Monochrome Google "G" — the canonical mark, filled with the current text
- * color so it stays black/white with the rest of the console chrome. */
+/** Monochrome Google "G" — filled with the current text color so it tracks the
+ * console's black/white chrome. */
 function GoogleMark({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Google">
@@ -30,8 +39,7 @@ function GoogleMark({ size = 18 }: { size?: number }) {
   )
 }
 
-export function SignInForm() {
-  const { signIn, signInWith } = useSession()
+function CardShell({ children }: { children: React.ReactNode }) {
   return (
     <YStack flex={1} minH="100vh" items="center" justify="center" p="$4">
       <Card p="$5" gap="$4" width={380} borderWidth={1} borderColor="$borderColor" bg="$color1">
@@ -46,28 +54,131 @@ export function SignInForm() {
             </Text>
           </YStack>
         </YStack>
-
-        <YStack gap="$2.5">
-          <Button size="$4" icon={<Github size={18} />} onPress={() => signInWith('provider-github')}>
-            Continue with GitHub
-          </Button>
-          <Button size="$4" icon={<GoogleMark />} onPress={() => signInWith('provider-google')}>
-            Continue with Google
-          </Button>
-
-          <XStack items="center" gap="$3" my="$1">
-            <YStack flex={1} height={1} bg="$borderColor" />
-            <Text fontSize="$2" color="$color10">
-              or
-            </Text>
-            <YStack flex={1} height={1} bg="$borderColor" />
-          </XStack>
-
-          <PrimaryButton size="$4" onPress={signIn}>
-            Continue with Hanzo ID
-          </PrimaryButton>
-        </YStack>
+        {children}
       </Card>
     </YStack>
+  )
+}
+
+export function SignInForm() {
+  const { completeSignIn, signInWith } = useSession()
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [mfa, setMfa] = useState(false)
+
+  async function submit() {
+    if (busy || !email || !password) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await loginWithPassword(email.trim(), password)
+      if (res.kind === 'code') {
+        await completeSignIn(res.code, loginState())
+        router.replace('/')
+      } else if (res.kind === 'mfa') {
+        setMfa(true)
+      } else {
+        setError(res.message)
+        setBusy(false)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Sign-in failed.')
+      setBusy(false)
+    }
+  }
+
+  // Two-factor accounts finish on IAM's same-site hosted page (cross-site cookie
+  // limitation). Honest hand-off — not a faked inline step.
+  if (mfa) {
+    return (
+      <CardShell>
+        <YStack gap="$3" items="center">
+          <Text fontSize="$5" fontWeight="700">
+            Two-factor required
+          </Text>
+          <Text fontSize="$3" color="$color11" text="center">
+            Your account uses two-factor authentication. Continue on the secure Hanzo ID page to
+            enter your code.
+          </Text>
+          <PrimaryButton size="$4" width="100%" onPress={() => window.location.assign(getSigninUrl())}>
+            Continue on Hanzo ID
+          </PrimaryButton>
+          <Button size="$3" chromeless onPress={() => { setMfa(false); setBusy(false) }}>
+            Back
+          </Button>
+        </YStack>
+      </CardShell>
+    )
+  }
+
+  return (
+    <CardShell>
+      <YStack gap="$2.5">
+        <Button size="$4" icon={<Github size={18} />} onPress={() => signInWith('provider-github')}>
+          Continue with GitHub
+        </Button>
+        <Button size="$4" icon={<GoogleMark />} onPress={() => signInWith('provider-google')}>
+          Continue with Google
+        </Button>
+
+        <XStack items="center" gap="$3" my="$1">
+          <YStack flex={1} height={1} bg="$borderColor" />
+          <Text fontSize="$2" color="$color10">
+            or
+          </Text>
+          <YStack flex={1} height={1} bg="$borderColor" />
+        </XStack>
+
+        <Input
+          size="$4"
+          placeholder="Email"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          value={email}
+          onChangeText={setEmail}
+          disabled={busy}
+        />
+        <Input
+          size="$4"
+          placeholder="Password"
+          secureTextEntry
+          autoComplete="password"
+          value={password}
+          onChangeText={setPassword}
+          disabled={busy}
+          onSubmitEditing={submit}
+        />
+
+        {error ? (
+          <Text fontSize="$2" color="$red10" role="alert">
+            {error}
+          </Text>
+        ) : null}
+
+        <PrimaryButton
+          size="$4"
+          disabled={busy || !email || !password}
+          icon={busy ? <Spinner size="small" /> : undefined}
+          onPress={submit}
+        >
+          {busy ? 'Signing in…' : 'Sign in'}
+        </PrimaryButton>
+
+        <Text fontSize="$2" color="$color10" text="center">
+          Trouble signing in?{' '}
+          <Anchor
+            fontSize="$2"
+            color="$color11"
+            onPress={() => window.location.assign(getSigninUrl())}
+          >
+            Use a passkey or recovery
+          </Anchor>
+        </Text>
+      </YStack>
+    </CardShell>
   )
 }
