@@ -1,0 +1,128 @@
+'use client'
+
+/**
+ * Releases — versioned deploys recorded per environment.
+ *
+ * Reads the release history from the PaaS via the same-origin `/paas` proxy
+ * (`GET /v1/releases`), which injects the service token server-side. When the
+ * releases service isn't provisioned the load fails and the honest
+ * not-configured / unavailable card renders instead of an empty grid.
+ */
+import { useCallback, useEffect, useState } from 'react'
+import { Button, Text } from '@hanzo/gui'
+import { RefreshCw } from '@hanzogui/lucide-icons-2'
+
+import { restGet } from '~/lib/api/client'
+import { PageHeader } from '~/components/ui/PageHeader'
+import { DataTable, type Column } from '~/components/ui/DataTable'
+import { StatusTag } from '~/components/ui/StatusTag'
+import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+
+const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
+
+type Release = {
+  id: string
+  name?: string
+  version?: string
+  environment?: string
+  status?: string
+  releasedAt?: string
+}
+
+export function ReleasesModule(_props: { params: Record<string, string> }) {
+  const [rows, setRows] = useState<Release[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<PlatformError | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const r = await restGet<{ releases?: Release[] }>(paas('releases'))
+      setRows(r.releases ?? [])
+      setLoadError(null)
+    } catch (e) {
+      setLoadError(interpretPlatformError(e))
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const columns: Column<Release>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (r) => (
+        <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
+          {r.name || r.id}
+        </Text>
+      ),
+    },
+    {
+      key: 'version',
+      header: 'Version',
+      width: 120,
+      render: (r) => (
+        <Text fontSize="$3" color="$color11">
+          {r.version || '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'environment',
+      header: 'Environment',
+      width: 150,
+      render: (r) => (
+        <Text fontSize="$3" color="$color11">
+          {r.environment || '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: 120,
+      render: (r) => <StatusTag status={r.status ?? 'unknown'} />,
+    },
+    {
+      key: 'releasedAt',
+      header: 'Released',
+      width: 190,
+      render: (r) => (
+        <Text fontSize="$3" color="$color11">
+          {r.releasedAt ? new Date(r.releasedAt).toLocaleString() : '—'}
+        </Text>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <PageHeader
+        title="Releases"
+        subtitle="Versioned deploys per environment."
+        actions={
+          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
+            Refresh
+          </Button>
+        }
+      />
+
+      {loadError ? (
+        <PlatformStateCard error={loadError} onRetry={() => void load()} />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={rows}
+          loading={loading}
+          rowKey={(r) => r.id}
+          empty="No releases yet."
+        />
+      )}
+    </>
+  )
+}
