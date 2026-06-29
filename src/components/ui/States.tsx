@@ -11,9 +11,11 @@
  * IAM admin API) without duplicating the structure.
  */
 import { Button, Card, Text, XStack } from '@hanzo/gui'
-import { TriangleAlert } from '@hanzogui/lucide-icons-2'
+import { TriangleAlert, Lock } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
+import { useSession } from '~/lib/auth/session'
+import { getBrand } from '~/lib/branding/brands'
 
 /** Surface-specific overrides for the 404/unauthorized explanations. */
 export type HonestCopy = { notFound?: string; unauthorized?: string }
@@ -45,6 +47,34 @@ export function honestError(err: ApiError, copy: HonestCopy = {}): { title: stri
 /** Coerce an unknown thrown value into an ApiError for honest rendering. */
 export const asApiError = (e: unknown): ApiError =>
   e instanceof ApiError ? e : new ApiError(e instanceof Error ? e.message : String(e))
+
+/** True for the gate's `ApiError('forbidden', 403)` — the operator-access panel. */
+export const isForbidden = (err: ApiError): boolean => err.status === 403
+
+/**
+ * The operator-access-required panel — the honest UX on top of the authoritative
+ * server-side admin gate. Shown when the IAM/KMS gated proxies return 403: the
+ * caller is signed in but not authorized for THIS brand's admin console.
+ */
+export function OperatorAccessRequired() {
+  const { account } = useSession()
+  const brand = getBrand()
+  const who = account?.email || account?.name || 'This account'
+  return (
+    <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={620}>
+      <XStack gap="$2" items="center">
+        <Lock size={16} />
+        <Text fontSize="$4" fontWeight="700">
+          Operator access required
+        </Text>
+      </XStack>
+      <Text fontSize="$3" color="$color11">
+        {who} is not authorized for the {brand.brandName} admin console. This console requires an
+        @{brand.adminDomain} account with an admin role.
+      </Text>
+    </Card>
+  )
+}
 
 /** The honest error card — title, explanation, and an optional retry. */
 export function ErrorState({
