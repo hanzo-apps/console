@@ -43,14 +43,21 @@ test.describe('sidebar navigation', () => {
   test('an external product opens in a new tab (no in-app navigation)', async ({ page, context, backend }) => {
     await landAs(page, backend, ACCOUNTS.admin)
     // Keep it hermetic: stub the external origin so no real request leaves.
-    await context.route(/api\.hanzo\.ai/, (route) =>
-      route.fulfill({ contentType: 'text/html', body: '<html><body>gateway</body></html>' }),
+    await context.route(/docs\.hanzo\.ai/, (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<html><body>dns docs</body></html>' }),
     )
     const popupPromise = context.waitForEvent('page')
-    await page.getByTestId('nav-sidebar').getByText('Gateway', { exact: true }).click()
+    await page.getByTestId('nav-sidebar').getByText('DNS', { exact: true }).click()
     const popup = await popupPromise
     await popup.waitForLoadState('domcontentloaded').catch(() => {})
-    expect(popup.url()).toContain('api.hanzo.ai')
+    expect(popup.url()).toContain('docs.hanzo.ai')
     await expect(page).toHaveURL(/\/$/) // the main page did not navigate
+  })
+
+  test('gateway opens an in-console management view, not the raw API origin', async ({ page, backend }) => {
+    await landAs(page, backend, ACCOUNTS.admin)
+    await page.getByTestId('nav-sidebar').getByText('Gateway', { exact: true }).click()
+    await expect(page).toHaveURL(/\/gateway$/)
+    await expect(page.getByTestId('page-content').getByText('Base URL', { exact: true })).toBeVisible()
   })
 })

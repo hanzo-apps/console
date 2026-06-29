@@ -312,3 +312,42 @@ Findings + fixes (all in console2; honest states everywhere, no fakes):
   Providers/Applications/Chat honest-empty.
 
 `StatusTag` now also understands platform health verdicts (green/yellow/red).
+
+## v0.4.3 — CTO frontend bug fixes (backend reconnected)
+
+Four CTO-reported bugs fixed after cloud-api was restored (every `/v1` is 200
+again). All fixes are frontend-only; no backend or billing rebuild.
+
+- **API docs → 404 (bug 1).** `ComingSoon.tsx`'s "API docs" button opened
+  `${config.cloudUrl}/docs`. In the browser `config.cloudUrl` resolves to the
+  current origin (same-origin `/v1`), so it became `https://console2.hanzo.ai/docs`
+  — an in-app SPA path the catch-all router 404s (server returns 200, the SPA
+  renders not-found). Fixed: opens the real docs (`entry.docs ?? https://docs.hanzo.ai`),
+  relabeled "Documentation". (`ApiKeysModule`'s "API docs" already opened
+  `docs.hanzo.ai/api` — correct, left as-is.)
+- **Gateway → bare API root (bug 2).** The `gateway` catalog entry was
+  `kind:'external' href:https://api.hanzo.ai` — opening the raw API origin (JSON,
+  not a UI). Replaced with an in-console `GatewayModule` (`status:'enabled'`,
+  `kind:'module'`): a real management landing showing the OpenAI-compatible base
+  URL and routing to the surfaces that manage the gateway (Models, Providers, API
+  Keys, Playground) + the API reference. `ext.gateway` removed (now unused).
+- **Playground "model list unavailable" (bug 3).** Not a console2 code bug.
+  `/v1/models` (`ai` `ApiController.ListModels`) accepts **either** a Bearer token
+  **or** a casibase session (`GetSessionUsername()`), and console2 already sends
+  the session cookie (`credentials:'include'`), same as `/v1/get-account`. The
+  401 was the logged-out symptom; once authenticated the dropdown populates. No
+  change — verified under login.
+- **Billing not taking card (bug 4).** The canonical Square Web Payments card
+  form lives in the billing portal at `billing.hanzo.ai/topup` (production Square,
+  app `sq0idp-…`, location `LYKCG8PRGQK8S`; iframe mounts, no auth gate — verified
+  live). It sets `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'`, so it
+  **cannot be embedded**; it supports a `returnUrl` redirect for handoff. Per the
+  "billing IS commerce, never rebuild it — link to it" rule, `PlansModule` now
+  deep-links the money actions to the working card form: selecting a paid plan
+  opens `${billingUrl}/topup?amount=<priceMonthly cents>&userId=<acct>&returnUrl=
+  <console>/plans`, and a header "Add credit with card" opens it with no preset
+  amount. No Square SDK or PCI surface is duplicated in console2.
+
+Build: `console2:v0.4.3` via arcd. Deploy: bump `console2` Service CR
+`spec.image.tag`. The C1 global-admin `/paas` gate and CLOUD_URL pinning from
+v0.4.1 are untouched.

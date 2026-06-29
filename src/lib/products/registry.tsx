@@ -103,6 +103,7 @@ import { ComingSoon } from '~/components/products/ComingSoon'
 import { ModelCatalogModule } from '~/components/products/ModelCatalogModule'
 import { ApiKeysModule } from '~/components/products/ApiKeysModule'
 import { SettingsModule } from '~/components/products/SettingsModule'
+import { GatewayModule } from '~/components/products/GatewayModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -191,7 +192,6 @@ const DOCS = 'https://docs.hanzo.ai'
 
 /** Canonical external product surfaces (public product domains, not secrets). */
 const ext = {
-  gateway: 'https://api.hanzo.ai',
   dns: `${DOCS}/dns`,
   cdn: `${DOCS}/cdn`,
   cli: `${DOCS}/cli`,
@@ -490,10 +490,10 @@ export const catalog: CatalogEntry[] = [
     description: 'The unified, gated, priced API gateway — api.hanzo.ai.',
     gcp: 'API Gateway',
     category: 'Network',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/gateway',
-    kind: 'external',
-    href: ext.gateway,
+    kind: 'module',
+    routes: [{ path: '', component: GatewayModule }],
   },
   {
     id: 'vpc',

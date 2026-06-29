@@ -13,6 +13,7 @@ import { Check, Star, CreditCard, RefreshCw, ArrowUpRight } from '@hanzogui/luci
 
 import { ApiError, PlansApi, type CloudPlan, type BlockStoragePricing } from '~/lib/api'
 import { config } from '~/config'
+import { useSession } from '~/lib/auth/session'
 import { PageHeader } from '~/components/ui/PageHeader'
 
 const money = (n: number): string => (Number.isInteger(n) ? `$${n}` : `$${n.toFixed(n < 1 ? 4 : 2)}`)
@@ -34,7 +35,24 @@ function openBilling() {
   if (typeof window !== 'undefined') window.open(config.billingUrl, '_blank', 'noopener')
 }
 
-function PlanCard({ plan }: { plan: CloudPlan }) {
+/**
+ * Open the canonical card-payment surface — the billing portal's top-up page,
+ * which hosts the Square Web Payments card form. PCI tokenization + the charge
+ * happen THERE (the one money service), never in this console. `amount` is in USD
+ * cents; `userId` credits the right account; `returnUrl` returns the user here on
+ * success. Opened top-level on purpose: billing sets `frame-ancestors 'none'`, so
+ * it cannot be iframed — this links to it, it does not reimplement it.
+ */
+function openCardTopup(amountCents?: number, userId?: string) {
+  if (typeof window === 'undefined') return
+  const u = new URL(`${config.billingUrl.replace(/\/+$/, '')}/topup`)
+  if (amountCents && amountCents > 0) u.searchParams.set('amount', String(Math.round(amountCents)))
+  if (userId) u.searchParams.set('userId', userId)
+  u.searchParams.set('returnUrl', `${window.location.origin}/plans`)
+  window.open(u.toString(), '_blank', 'noopener')
+}
+
+function PlanCard({ plan, onChoose }: { plan: CloudPlan; onChoose: () => void }) {
   const highlight = plan.popular
   return (
     <Card
@@ -96,7 +114,7 @@ function PlanCard({ plan }: { plan: CloudPlan }) {
       <Button
         theme={highlight ? 'light' : undefined}
         iconAfter={<ArrowUpRight size={15} />}
-        onPress={openBilling}
+        onPress={onChoose}
         mt="$1"
       >
         {plan.freeTier ? 'Start free' : `Choose ${plan.name}`}
@@ -106,10 +124,21 @@ function PlanCard({ plan }: { plan: CloudPlan }) {
 }
 
 export function PlansModule(_props: { params: Record<string, string> }) {
+  const { account } = useSession()
   const [plans, setPlans] = useState<CloudPlan[]>([])
   const [blockStorage, setBlockStorage] = useState<BlockStoragePricing | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // The account the charge credits (billing keys on the org/user slug).
+  const billingUserId = account?.email ?? account?.name ?? undefined
+
+  // Selecting a paid plan opens the card form pre-filled with its monthly price;
+  // the free tier just opens the account portal (no card needed).
+  const choose = (plan: CloudPlan) => {
+    if (plan.freeTier) openBilling()
+    else openCardTopup(plan.priceMonthly * 100, billingUserId)
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -139,8 +168,8 @@ export function PlansModule(_props: { params: Record<string, string> }) {
             <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
               Refresh
             </Button>
-            <Button theme="light" icon={<CreditCard size={16} />} onPress={openBilling}>
-              Open Billing
+            <Button theme="light" icon={<CreditCard size={16} />} onPress={() => openCardTopup(undefined, billingUserId)}>
+              Add credit with card
             </Button>
           </XStack>
         }
@@ -151,7 +180,7 @@ export function PlansModule(_props: { params: Record<string, string> }) {
 
       <XStack flexWrap="wrap" gap="$3">
         {plans.map((p) => (
-          <PlanCard key={p.id} plan={p} />
+          <PlanCard key={p.id} plan={p} onChoose={() => choose(p)} />
         ))}
       </XStack>
 

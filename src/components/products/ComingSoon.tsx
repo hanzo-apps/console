@@ -12,9 +12,11 @@ import { usePathname } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowUpRight } from '@hanzogui/lucide-icons-2'
 
-import { config } from '~/config'
 import { findEntry } from '~/lib/products/registry'
 import { PageHeader } from '~/components/ui/PageHeader'
+
+/** Canonical product documentation site. */
+const DOCS = 'https://docs.hanzo.ai'
 
 export function ComingSoon() {
   const pathname = usePathname()
@@ -48,9 +50,9 @@ export function ComingSoon() {
             borderWidth={1}
             borderColor="$borderColor"
             iconAfter={<ArrowUpRight size={15} />}
-            onPress={() => window.open(`${config.cloudUrl}/docs`, '_blank', 'noopener')}
+            onPress={() => window.open(entry?.docs ?? DOCS, '_blank', 'noopener')}
           >
-            API docs
+            Documentation
           </Button>
           <Button
             size="$3"

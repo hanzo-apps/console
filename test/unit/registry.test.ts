@@ -74,13 +74,14 @@ describe('catalog integrity', () => {
 
   it('findModule resolves every module and rejects external ids', () => {
     for (const m of productModules) expect(findModule(m.id)?.id).toBe(m.id)
-    expect(findModule('gateway')).toBeUndefined() // external
+    expect(findModule('dns')).toBeUndefined() // external
     expect(findModule('nope')).toBeUndefined()
   })
 
   it('findEntry resolves any catalog id', () => {
     expect(findEntry('models')?.kind).toBe('module')
-    expect(findEntry('gateway')?.kind).toBe('external')
+    expect(findEntry('gateway')?.kind).toBe('module') // in-console gateway view
+    expect(findEntry('dns')?.kind).toBe('external')
     expect(findEntry('nope')).toBeUndefined()
   })
 })

@@ -21,10 +21,10 @@ describe('openProduct', () => {
   it('opens an external entry in a new noopener tab (no router push)', () => {
     const push = vi.fn()
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
-    const gateway = findEntry('gateway')!
-    expect(gateway.kind).toBe('external')
-    openProduct(gateway, push)
-    expect(openSpy).toHaveBeenCalledWith((gateway as { href: string }).href, '_blank', 'noopener')
+    const external = findEntry('dns')!
+    expect(external.kind).toBe('external')
+    openProduct(external, push)
+    expect(openSpy).toHaveBeenCalledWith((external as { href: string }).href, '_blank', 'noopener')
     expect(push).not.toHaveBeenCalled()
   })
 })

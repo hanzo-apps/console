@@ -51,10 +51,10 @@ describe('matchRoute', () => {
   })
 
   it('does not resolve external (non-module) catalog ids as routes', () => {
-    // `cost`/`gateway` are external surfaces, not in-console modules.
+    // `cost`/`dns` are external surfaces, not in-console modules.
     expect(findModule('cost')).toBeUndefined()
     expect(matchRoute(['cost'])).toBeNull()
-    expect(matchRoute(['gateway'])).toBeNull()
+    expect(matchRoute(['dns'])).toBeNull()
   })
 
   it('resolves every enabled in-console module index route', () => {
