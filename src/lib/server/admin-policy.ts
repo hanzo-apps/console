@@ -13,7 +13,7 @@
  */
 
 /** The identity claims a gate decision is made from. */
-export type AdminPrincipal = { email: string; isAdmin: boolean; isGlobalAdmin: boolean }
+export type AdminPrincipal = { email: string; emailVerified: boolean; isAdmin: boolean; isGlobalAdmin: boolean }
 
 /** Org-metadata owners casdoor reports — acceptable only on org-list endpoints. */
 const ORG_METADATA_OWNERS = new Set(['admin', 'built-in'])
@@ -28,9 +28,13 @@ export function isAdminGranted(p: { isAdmin: boolean; isGlobalAdmin: boolean }):
   return p.isAdmin || p.isGlobalAdmin
 }
 
-/** The admin gate: verified brand-domain email AND an IAM admin flag. */
+/**
+ * The admin gate: a VERIFIED email on the brand's admin domain AND an IAM admin
+ * flag. The verified-email requirement stops an unverified address (which a user
+ * can set without proving control) from reaching a privileged admin surface.
+ */
 export function gateAllows(p: AdminPrincipal, adminDomain: string): boolean {
-  return emailOnBrand(p.email, adminDomain) && isAdminGranted(p)
+  return emailOnBrand(p.email, adminDomain) && p.emailVerified && isAdminGranted(p)
 }
 
 /**

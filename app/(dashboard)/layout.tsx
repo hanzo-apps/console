@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { AuthGate } from '~/components/AuthGate'
+import { OrgGate } from '~/components/OrgGate'
 import { DashboardShell } from '~/components/DashboardShell'
 import { PreferencesProvider } from '~/lib/products/preferences'
 import { ToastProvider } from '~/components/ui/Toast'
@@ -10,7 +11,8 @@ import { AppLauncherProvider } from '~/components/AppLauncher'
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <AuthGate>
-      <PreferencesProvider>
+      <OrgGate>
+        <PreferencesProvider>
         <ToastProvider>
           {/* AppLauncher wraps the palette so the palette can open the launcher. */}
           <AppLauncherProvider>
@@ -19,7 +21,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </CommandPaletteProvider>
           </AppLauncherProvider>
         </ToastProvider>
-      </PreferencesProvider>
+        </PreferencesProvider>
+      </OrgGate>
     </AuthGate>
   )
 }

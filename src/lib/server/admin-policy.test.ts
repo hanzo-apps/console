@@ -23,16 +23,19 @@ describe('admin gate — IAM admin flag', () => {
   })
 })
 
-describe('admin gate — combined (allow @hanzo.ai+admin, deny others)', () => {
-  const admin = { email: 'z@hanzo.ai', isAdmin: true, isGlobalAdmin: true }
+describe('admin gate — combined (allow verified @hanzo.ai+admin, deny others)', () => {
+  const admin = { email: 'z@hanzo.ai', emailVerified: true, isAdmin: true, isGlobalAdmin: true }
   it('allows the verified brand admin', () => {
     expect(gateAllows(admin, 'hanzo.ai')).toBe(true)
   })
   it('denies a non-brand email even when an IAM admin', () => {
-    expect(gateAllows({ email: 'davelorenzini@gmail.com', isAdmin: true, isGlobalAdmin: false }, 'hanzo.ai')).toBe(false)
+    expect(gateAllows({ email: 'davelorenzini@gmail.com', emailVerified: true, isAdmin: true, isGlobalAdmin: false }, 'hanzo.ai')).toBe(false)
   })
   it('denies a brand email that is NOT an IAM admin', () => {
-    expect(gateAllows({ email: 'member@hanzo.ai', isAdmin: false, isGlobalAdmin: false }, 'hanzo.ai')).toBe(false)
+    expect(gateAllows({ email: 'member@hanzo.ai', emailVerified: true, isAdmin: false, isGlobalAdmin: false }, 'hanzo.ai')).toBe(false)
+  })
+  it('denies a brand admin whose email is NOT verified', () => {
+    expect(gateAllows({ email: 'z@hanzo.ai', emailVerified: false, isAdmin: true, isGlobalAdmin: true }, 'hanzo.ai')).toBe(false)
   })
 })
 

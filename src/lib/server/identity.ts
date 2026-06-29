@@ -22,7 +22,7 @@ import { type NextRequest } from 'next/server'
 
 import { brandFromHost } from '~/config'
 import { BRANDS, type Brand } from '~/lib/branding/brands'
-import { gateAllows } from './admin-policy'
+import { emailOnBrand, gateAllows } from './admin-policy'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
 
@@ -60,8 +60,10 @@ export type SessionUser = {
   id: string
   /** The user's current `hk-` Cloud API key, if one exists (else ''). */
   accessKey: string
-  /** Verified email (get-account claim, else IAM get-user). '' when unknown. */
+  /** Email (get-account claim, else IAM get-user). '' when unknown. */
   email: string
+  /** IAM-authoritative email-verified flag. The admin gate requires it. */
+  emailVerified: boolean
   /** IAM-authoritative org-admin flag. */
   isAdmin: boolean
   /** True for built-in-org admins — may act across any tenant org. */
@@ -74,6 +76,7 @@ type UserClaims = {
   type?: string
   accessKey?: string
   email?: string
+  emailVerified?: boolean
   isAdmin?: boolean
   isGlobalAdmin?: boolean
 }
@@ -115,6 +118,7 @@ export async function resolveUser(req: NextRequest): Promise<SessionUser | null>
 
   const id = `${owner}/${name}`
   let email = d.email ?? d.User?.email ?? ''
+  let emailVerified = Boolean(d.emailVerified ?? d.User?.emailVerified)
   let isAdmin = Boolean(d.isAdmin ?? d.User?.isAdmin)
   let isGlobalAdmin = Boolean(d.isGlobalAdmin ?? d.User?.isGlobalAdmin) || (owner === ADMIN_ORG && isAdmin)
 
@@ -126,12 +130,13 @@ export async function resolveUser(req: NextRequest): Promise<SessionUser | null>
     const u = await iamGetUser(id)
     if (u) {
       email = u.email ?? ''
+      emailVerified = Boolean(u.emailVerified)
       isAdmin = Boolean(u.isAdmin)
       isGlobalAdmin = Boolean(u.isGlobalAdmin) || (owner === ADMIN_ORG && isAdmin)
     }
   }
 
-  return { owner, name, id, accessKey, email, isAdmin, isGlobalAdmin }
+  return { owner, name, id, accessKey, email, emailVerified, isAdmin, isGlobalAdmin }
 }
 
 /**
@@ -214,29 +219,41 @@ export type AdminGate = {
   user: SessionUser
   /** Brand resolved from the request Host header (DRY: `brandFromHost`). */
   brand: Brand
-  /** Org the operator acts on by default — the brand org (== brand id). */
+  /** Org the operator acts on by default — their OWN org (`user.owner`), never a
+   * blanket brand org. A global admin may override per-request (`?org=`). */
   orgScope: string
 }
 
 /**
  * Resolve + authorize the caller for the admin console of the request's brand.
  *
- * Requires BOTH: (1) the caller's verified email ends with `@<brand.adminDomain>`
- * (a hanzo.ai operator can't administer a lux host, and vice-versa), and (2) IAM
- * marks them an admin (`isAdmin`, or a built-in-org global admin). A global admin
- * may target any org; a brand admin is pinned to their own `orgScope`. Returns
- * null (→ caller 403s) on any miss — fail-closed.
+ * Requires ALL of: (1) a VERIFIED email ending `@<brand.adminDomain>` (a hanzo.ai
+ * operator can't administer a lux host, and vice-versa), and (2) IAM marks them an
+ * admin (`isAdmin`, or a built-in-org global admin). The operator's default
+ * `orgScope` is THEIR OWN org (`user.owner`) — the IAM/KMS proxies pin a non-global
+ * admin to it so one tenant's admin can never read/write another's. Returns null
+ * (→ caller 403s) on any miss — fail-closed.
  */
 export async function getAdminGate(req: NextRequest): Promise<AdminGate | null> {
-  const user = await resolveUser(req)
+  let user = await resolveUser(req)
   if (!user) return null
 
   const brand = BRANDS[brandFromHost(req.headers.get('host'))]
-  // ONE policy, tested in admin-policy.test.ts: verified @<adminDomain> email AND
+
+  // get-account claims can be thin (email present, emailVerified absent). For a
+  // brand-domain candidate that isn't already verified, confirm authoritatively
+  // via IAM so a genuinely-verified admin isn't denied on a thin claim — and an
+  // unverified one stays denied (fail-closed).
+  if (!user.emailVerified && emailOnBrand(user.email, brand.adminDomain)) {
+    const u = await iamGetUser(user.id)
+    if (u?.emailVerified) user = { ...user, emailVerified: true }
+  }
+
+  // ONE policy, tested in admin-policy.test.ts: VERIFIED @<adminDomain> email AND
   // an IAM admin flag. Fail-closed (→ caller 403s) on any miss.
   if (!gateAllows(user, brand.adminDomain)) return null
 
-  return { user, brand, orgScope: brand.id }
+  return { user, brand, orgScope: user.owner }
 }
 
 // ── Admin bearer-token cache ─────────────────────────────────────────────────
