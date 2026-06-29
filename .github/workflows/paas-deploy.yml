@@ -1,0 +1,109 @@
+# Deploy console to platform.hanzo.ai PaaS.
+#
+# CI builds + tests + publishes immutable images to ghcr (pipeline.yml ->
+# build-and-push.yml). This workflow makes platform.hanzo.ai pull the just-
+# published immutable tag and roll it out — the ONE way console is deployed
+# once cut over to the PaaS.
+#
+# GATED so it cannot disturb the live deploy path during the build-out.
+# It runs only when repo variable DEPLOY_TARGET == 'paas'. Until the CTO
+# flips that variable (the coordinated cutover), this workflow no-ops and the
+# existing ghcr -> universe -> hanzo-k8s path remains the sole deployer.
+# `workflow_dispatch` is always available for a manual, on-demand deploy.
+#
+# Secrets: NONE are hardcoded. The PaaS API key + ghcr pull creds live in KMS
+# and are read at runtime by scripts/platform-register.mjs. The only GitHub
+# secret used is the KMS machine-identity token to authenticate to KMS.
+
+name: PaaS Deploy
+
+on:
+  workflow_run:
+    workflows: ["Docker Release"] # build-and-push.yml — fires after ghcr publish
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Immutable ghcr tag to deploy (e.g. sha-abc1234 or vX.Y.Z). Defaults to the triggering commit's sha-<sha7>."
+        required: false
+        type: string
+
+concurrency:
+  group: paas-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: hanzo-deploy-linux-amd64
+    # Build-out gate: only deploy via PaaS when explicitly cut over, OR on a
+    # manual dispatch. Also require the upstream build to have succeeded.
+    if: >-
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       vars.DEPLOY_TARGET == 'paas')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Resolve immutable image tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ github.event.inputs.image_tag }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_TAG}" ]; then
+            TAG="${INPUT_TAG}"
+          else
+            TAG="sha-$(echo "${RUN_SHA}" | cut -c1-7)"
+          fi
+          case "$TAG" in
+            latest|main|master|dev|edge|nightly)
+              echo "::error::refusing floating tag '$TAG' — immutable tags only"; exit 1;;
+          esac
+          echo "image_tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Deploying console @ $TAG"
+
+      - name: Mint KMS machine token
+        id: kms
+        env:
+          KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
+          KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          # Universal-auth login to KMS; export the token for the next step only.
+          TOKEN=$(curl -fsS -X POST https://kms.hanzo.ai/v1/auth/universal-auth/login \
+            -H 'content-type: application/json' \
+            -d "{\"clientId\":\"${KMS_CLIENT_ID}\",\"clientSecret\":\"${KMS_CLIENT_SECRET}\"}" \
+            | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);process.stdout.write(j.accessToken||j.token||"")})')
+          if [ -z "$TOKEN" ]; then echo "::error::KMS login returned no token"; exit 1; fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Reconcile + deploy via platform.hanzo.ai
+        env:
+          KMS_TOKEN: ${{ steps.kms.outputs.token }}
+        run: |
+          set -euo pipefail
+          node scripts/platform-register.mjs \
+            --image-tag "${{ steps.tag.outputs.image_tag }}" \
+            --deploy
+
+      - name: Summary
+        run: |
+          {
+            echo "### Deployed console via platform.hanzo.ai PaaS"
+            echo "- **Web:** ghcr.io/hanzoai/console:${{ steps.tag.outputs.image_tag }}"
+            echo "- **Worker:** ghcr.io/hanzoai/console-worker:${{ steps.tag.outputs.image_tag }}"
+            echo "- **Trigger:** ${{ github.event_name }}"
+          } >> "$GITHUB_STEP_SUMMARY"

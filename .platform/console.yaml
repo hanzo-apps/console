@@ -1,0 +1,94 @@
+# platform.hanzo.ai PaaS — console deployment, as code.
+#
+# This is the ONE way console is deployed: CI (ARC pool) builds + tests +
+# publishes immutable images to ghcr.io; platform.hanzo.ai (Dokploy fork)
+# PULLS those images and runs them. Nothing here is built by the PaaS — the
+# `source.type: docker` apps are pure runtime consumers of the ghcr images
+# produced by `.github/workflows/build-and-push.yml`.
+#
+# Two applications, one project/environment:
+#   - console        -> web (Next.js standalone server, port 3000)
+#   - console-worker -> background worker (port 3030)
+#
+# NO SECRETS LIVE IN THIS FILE. Every `kms:` value is resolved at registration
+# time from kms.hanzo.ai by `scripts/platform-register.mjs`, and every runtime
+# secret is delivered to the app from KMS. Plaintext credentials here would be
+# a policy violation (secrets belong in KMS, only ever in KMS).
+#
+# Apply with:  node scripts/platform-register.mjs        (idempotent)
+# Deploy with: .github/workflows/paas-deploy.yml          (CI, gated)
+
+apiVersion: platform.hanzo.ai/v1
+kind: ApplicationSet
+
+# tRPC API root of the PaaS control plane. Calls authenticate with an
+# `x-api-key` (Better Auth API key) resolved from KMS — see `api.keyRef`.
+platform:
+  serverUrl: https://platform.hanzo.ai
+  # Project + environment the apps live under. Created on first register if
+  # absent; reused thereafter (matched by name within the org).
+  organization: hanzo
+  project: console
+  environment: production
+  api:
+    # KMS secret holding the Better Auth API key for a hanzo-org OWNER.
+    # Presented as the `x-api-key` request header. Never inline the key.
+    keyRef: { kms: platform/PLATFORM_API_KEY }
+
+# Shared ghcr pull credentials for the private hanzoai/* packages. Applied to
+# every app below as source.registry. A read:packages-scoped GHCR PAT.
+registry:
+  url: ghcr.io
+  usernameRef: { kms: platform/GHCR_PULL_USERNAME }
+  passwordRef: { kms: platform/GHCR_PULL_TOKEN }
+
+applications:
+  - name: console
+    appName: console
+    description: Hanzo Console — web (Next.js)
+    source:
+      type: docker
+      # Tag is set per-deploy to the immutable ghcr tag by paas-deploy.yml
+      # (sha-<sha7> for branch builds, vX.Y.Z for releases). The placeholder
+      # below is only the initial pin used at first registration.
+      image: ghcr.io/hanzoai/console:INITIAL
+      registry: shared        # -> top-level `registry` block
+    autoDeploy: true          # honour the deploy trigger
+    port: 3000
+    domains:
+      - host: console.hanzo.ai
+        path: /
+        port: 3000
+        https: true
+        certificateType: letsencrypt
+    # Runtime env. NEXT_PUBLIC_* are BUILD-time (baked by build-and-push.yml),
+    # so they are NOT set here. Only server-side runtime config + secrets.
+    env:
+      NODE_ENV: production
+      PORT: "3000"
+      # Secrets resolved from KMS at register time and stored on the app.
+      DATABASE_URL:    { kms: console/DATABASE_URL }
+      DATASTORE_URL:   { kms: console/DATASTORE_URL }
+      REDIS_URL:       { kms: console/REDIS_URL }
+      NEXTAUTH_SECRET: { kms: console/NEXTAUTH_SECRET }
+      SALT:            { kms: console/SALT }
+      ENCRYPTION_KEY:  { kms: console/ENCRYPTION_KEY }
+
+  - name: console-worker
+    appName: console-worker
+    description: Hanzo Console — background worker
+    source:
+      type: docker
+      image: ghcr.io/hanzoai/console-worker:INITIAL
+      registry: shared
+    autoDeploy: true
+    port: 3030
+    # Worker has no public domain — internal service only.
+    env:
+      NODE_ENV: production
+      PORT: "3030"
+      DATABASE_URL:  { kms: console/DATABASE_URL }
+      DATASTORE_URL: { kms: console/DATASTORE_URL }
+      REDIS_URL:     { kms: console/REDIS_URL }
+      SALT:          { kms: console/SALT }
+      ENCRYPTION_KEY: { kms: console/ENCRYPTION_KEY }
