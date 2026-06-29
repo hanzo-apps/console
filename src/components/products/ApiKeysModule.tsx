@@ -80,7 +80,7 @@ function NewKeyCard({ accessKey, onDone }: { accessKey: string; onDone: () => vo
 
 /** The credential surface — embeddable (no page header). */
 export function ApiKeysView() {
-  const { account, loading: sessionLoading, reload } = useSession()
+  const { account, loading: sessionLoading } = useSession()
   const [status, setStatus] = useState<KeyStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState<null | 'create' | 'rotate' | 'revoke'>(null)
@@ -112,14 +112,13 @@ export function ApiKeysView() {
         const { accessKey } = await KeysApi.create()
         setNewKey(accessKey)
         setStatus({ hasKey: true, keyPrefix: accessKey.slice(0, 11) })
-        void reload()
       } catch (e) {
         setError(e instanceof ApiError ? e.message : 'Failed to create the API key')
       } finally {
         setWorking(null)
       }
     },
-    [reload],
+    [],
   )
 
   const revoke = useCallback(async () => {
@@ -130,13 +129,12 @@ export function ApiKeysView() {
       await KeysApi.revoke()
       setNewKey('')
       setStatus({ hasKey: false, keyPrefix: '' })
-      void reload()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Failed to revoke the API key')
     } finally {
       setWorking(null)
     }
-  }, [reload])
+  }, [])
 
   if (sessionLoading || loading) {
     return (
