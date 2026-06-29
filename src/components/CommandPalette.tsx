@@ -45,6 +45,7 @@ import {
   Command,
   CornerDownLeft,
   ExternalLink,
+  LayoutGrid,
   Lock,
   Search,
   Sparkles,
@@ -54,6 +55,7 @@ import { AiApi } from '~/lib/api'
 import { catalog, findEntry, type CatalogEntry } from '~/lib/products/registry'
 import { searchCatalog } from '~/lib/products/search'
 import { openProduct } from '~/lib/products/open'
+import { useAppLauncher } from '~/components/AppLauncher'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
 type Mode = 'catalog' | 'ai' | 'help'
@@ -170,6 +172,7 @@ function PaletteDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const router = useRouter()
+  const launcher = useAppLauncher()
   const [query, setQuery] = useState(seed)
   const [sel, setSel] = useState(0)
   const [run, setRun] = useState<RunState>({ status: 'idle' })
@@ -361,6 +364,23 @@ function PaletteDialog({
             <Legend keys="↵" label="open" />
             <Legend keys=">" label="AI" />
             <Legend keys="?" label="docs" />
+            <XStack flex={1} />
+            <XStack
+              onPress={() => {
+                onOpenChange(false)
+                launcher.open()
+              }}
+              cursor="pointer"
+              items="center"
+              gap="$1.5"
+              opacity={0.8}
+              hoverStyle={{ opacity: 1 }}
+            >
+              <LayoutGrid size={13} />
+              <Text fontSize="$1" color="$color11" fontWeight="600">
+                Browse all apps
+              </Text>
+            </XStack>
           </XStack>
         </Dialog.Content>
       </Dialog.Portal>

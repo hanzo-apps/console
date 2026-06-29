@@ -169,12 +169,20 @@ async function restRequest<T>(
   }
 
   if (!res.ok) {
-    const m =
-      json && typeof json === 'object'
-        ? (json as { msg?: unknown; error?: unknown }).msg ??
-          (json as { msg?: unknown; error?: unknown }).error
-        : undefined
-    throw new ApiError(m ? String(m) : `Request failed (HTTP ${res.status})`, res.status)
+    // The OpenAI-compatible endpoints return `{ error: { message } }` (e.g. the
+    // 402 billing gate); plain REST returns `{ msg }` or `{ error: "…" }`. Pull
+    // the human message from whichever shape so callers never see "[object Object]".
+    let m: string | undefined
+    if (json && typeof json === 'object') {
+      const j = json as { msg?: unknown; error?: unknown }
+      if (typeof j.msg === 'string' && j.msg) m = j.msg
+      else if (typeof j.error === 'string') m = j.error
+      else if (j.error && typeof j.error === 'object') {
+        const em = (j.error as { message?: unknown }).message
+        if (typeof em === 'string') m = em
+      }
+    }
+    throw new ApiError(m || `Request failed (HTTP ${res.status})`, res.status)
   }
   return json as T
 }

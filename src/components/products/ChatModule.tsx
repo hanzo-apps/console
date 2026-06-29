@@ -1,26 +1,35 @@
 'use client'
 
 /**
- * Chat admin — session list + read-only chat view, native on @hanzo/gui.
+ * Chat — an interactive assistant by default, with session history alongside.
  *
- * Logic ported from ChatListPage.js + ChatPage.js + backend/ChatBackend.js (and
- * MessageBackend.js for the thread): list chats (`get-chats`), open one to read
- * its message thread (`get-messages?owner&chat`), delete (`delete-chat`). UI
- * rebuilt clean on GUI primitives (no antd).
- *
- * Routing: `/chat` lists; `/chat/<name>` views one session.
+ * `/chat` opens the live conversation (`ChatConversation` → real completions via
+ * the keyless `/ai` proxy). The "History" toggle lists prior saved sessions
+ * (`ChatListView`), and `/chat/<name>` deep-links a read-only thread
+ * (`ChatView`). One module, three composable views; nothing fabricated.
  */
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { ChatConversation } from './chat/ChatConversation'
 import { ChatListView } from './chat/ChatListView'
 import { ChatView } from './chat/ChatView'
 
 export function ChatModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const name = params.name
+  const [view, setView] = useState<'chat' | 'history'>('chat')
 
   if (name) {
     return <ChatView name={decodeURIComponent(name)} onDone={() => router.push('/chat')} />
   }
-  return <ChatListView onOpen={(c) => router.push(`/chat/${encodeURIComponent(c.name)}`)} />
+  if (view === 'history') {
+    return (
+      <ChatListView
+        onOpen={(c) => router.push(`/chat/${encodeURIComponent(c.name)}`)}
+        onBack={() => setView('chat')}
+      />
+    )
+  }
+  return <ChatConversation onShowHistory={() => setView('history')} />
 }

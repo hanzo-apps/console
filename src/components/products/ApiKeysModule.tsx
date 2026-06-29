@@ -1,90 +1,144 @@
 'use client'
 
 /**
- * API Keys — the cloud/gateway API credential for the signed-in account.
+ * API Keys — create, copy, rotate, and revoke the per-user `hk-` Cloud API key.
  *
- * Replaces hanzoai/console's project/org "API Keys" settings (Prisma-backed in
- * the Langfuse fork) with the REAL credential the casibase backend issues on the
- * account: `accessKey` / `accessSecret`, read from the session `get-account`.
- * Secrets are masked by default and only revealed on explicit click (never
- * printed otherwise); if the backend doesn't expose key material to the browser
- * on this deployment, an honest state explains where keys are managed — nothing
- * is ever fabricated.
+ * The key is minted server-side (`/keys` route → IAM, app-on-behalf as the
+ * confidential console client); the browser only sends its session cookie and
+ * never holds a long-lived secret beyond the one-time reveal at creation. This
+ * is the real credential the user presents as `Authorization: Bearer hk-…` to
+ * the SDKs, CLI, and the api.hanzo.ai gateway.
  *
- * `ApiKeysView` is the bare surface so the Settings module can embed it as a tab;
+ * `ApiKeysView` is the bare surface so Settings can embed it as a tab;
  * `ApiKeysModule` wraps it with the page header for the standalone Dev route.
  */
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Eye, EyeOff, Copy, Check, ExternalLink } from '@hanzogui/lucide-icons-2'
+import { Copy, Check, KeyRound, RefreshCw, Trash2, TriangleAlert, Plus } from '@hanzogui/lucide-icons-2'
 
-import { ApiError } from '~/lib/api'
+import { ApiError, KeysApi, type KeyStatus } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { FieldRow } from '~/components/ui/Field'
 import { ErrorState } from '~/components/ui/States'
 
 const DOCS_API = 'https://docs.hanzo.ai/api'
 
-/** Mask a secret, keeping a short prefix/suffix for recognizability. */
-function mask(v: string): string {
-  if (v.length <= 12) return '•'.repeat(Math.max(v.length, 8))
-  return `${v.slice(0, 6)}${'•'.repeat(8)}${v.slice(-4)}`
-}
-
-/** A masked credential row with reveal + copy. The value is the secret material. */
-function SecretRow({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  const [shown, setShown] = useState(false)
+/** Copy-to-clipboard button with a transient confirmed state. */
+function CopyButton({ value, label = 'Copy' }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false)
-
   const copy = async () => {
     try {
       await navigator.clipboard?.writeText(value)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
-      // Clipboard blocked (no permission / insecure context) — reveal instead.
-      setShown(true)
+      /* clipboard blocked (insecure context) — the value is already visible */
     }
   }
-
   return (
-    <FieldRow label={label}>
-      <YStack gap="$1.5">
-        <XStack gap="$2" items="center" flexWrap="wrap">
-          <Text fontSize="$3" color="$color12" flex={1}>
-            {shown ? value : mask(value)}
-          </Text>
-          <Button
-            size="$2"
-            icon={shown ? <EyeOff size={14} /> : <Eye size={14} />}
-            onPress={() => setShown((s) => !s)}
-          >
-            {shown ? 'Hide' : 'Reveal'}
-          </Button>
-          <Button
-            size="$2"
-            icon={copied ? <Check size={14} /> : <Copy size={14} />}
-            onPress={() => void copy()}
-          >
-            {copied ? 'Copied' : 'Copy'}
-          </Button>
-        </XStack>
-        {hint ? (
-          <Text fontSize="$2" color="$color10">
-            {hint}
-          </Text>
-        ) : null}
-      </YStack>
-    </FieldRow>
+    <Button size="$2" icon={copied ? <Check size={14} /> : <Copy size={14} />} onPress={() => void copy()}>
+      {copied ? 'Copied' : label}
+    </Button>
+  )
+}
+
+/** The full secret, shown ONCE right after creation. */
+function NewKeyCard({ accessKey, onDone }: { accessKey: string; onDone: () => void }) {
+  return (
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="$green8" bg="$green2" maxWidth={720}>
+      <XStack gap="$2" items="center">
+        <KeyRound size={16} />
+        <Text fontSize="$4" fontWeight="700">
+          Your new API key
+        </Text>
+      </XStack>
+      <XStack gap="$2" items="center" flexWrap="wrap">
+        <Text
+          fontSize="$3"
+          color="$color12"
+          flex={1}
+          minW={260}
+          selectable
+          style={{ fontFamily: 'monospace' }}
+        >
+          {accessKey}
+        </Text>
+        <CopyButton value={accessKey} />
+      </XStack>
+      <XStack gap="$2" items="center">
+        <TriangleAlert size={14} color="$yellow10" />
+        <Text fontSize="$2" color="$color11">
+          Copy it now — for your security the full key is shown only once and cannot be retrieved again.
+        </Text>
+      </XStack>
+      <Button size="$2" self="flex-start" onPress={onDone}>
+        Done
+      </Button>
+    </Card>
   )
 }
 
 /** The credential surface — embeddable (no page header). */
 export function ApiKeysView() {
-  const { account, loading } = useSession()
+  const { account, loading: sessionLoading, reload } = useSession()
+  const [status, setStatus] = useState<KeyStatus | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [working, setWorking] = useState<null | 'create' | 'rotate' | 'revoke'>(null)
+  const [newKey, setNewKey] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
 
-  if (loading) {
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      setStatus(await KeysApi.status())
+      setError(null)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to load API key status')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!sessionLoading && account) void load()
+    else if (!sessionLoading) setLoading(false)
+  }, [sessionLoading, account, load])
+
+  const mint = useCallback(
+    async (mode: 'create' | 'rotate') => {
+      setWorking(mode)
+      setError(null)
+      try {
+        const { accessKey } = await KeysApi.create()
+        setNewKey(accessKey)
+        setStatus({ hasKey: true, keyPrefix: accessKey.slice(0, 11) })
+        void reload()
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : 'Failed to create the API key')
+      } finally {
+        setWorking(null)
+      }
+    },
+    [reload],
+  )
+
+  const revoke = useCallback(async () => {
+    if (typeof window !== 'undefined' && !window.confirm('Revoke your API key? Any app using it will stop working immediately.')) return
+    setWorking('revoke')
+    setError(null)
+    try {
+      await KeysApi.revoke()
+      setNewKey('')
+      setStatus({ hasKey: false, keyPrefix: '' })
+      void reload()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to revoke the API key')
+    } finally {
+      setWorking(null)
+    }
+  }, [reload])
+
+  if (sessionLoading || loading) {
     return (
       <XStack p="$6" justify="center">
         <Spinner size="large" color="$color11" />
@@ -95,52 +149,99 @@ export function ApiKeysView() {
     return <ErrorState err={new ApiError('Not authorized', 401)} />
   }
 
-  const rec = account as unknown as Record<string, unknown>
-  const accessKey = typeof rec.accessKey === 'string' ? rec.accessKey : ''
-  const accessSecret = typeof rec.accessSecret === 'string' ? rec.accessSecret : ''
-
-  if (!accessKey && !accessSecret) {
-    return (
-      <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={620}>
-        <Text fontSize="$4" fontWeight="700">
-          No API key on this account
-        </Text>
-        <Text fontSize="$3" color="$color11">
-          This deployment does not expose API key material to the browser. Cloud
-          and gateway keys are issued, scoped, and rotated through the API
-          gateway — generate one there, then use it with the SDKs and CLI.
-        </Text>
-        <Button
-          size="$2"
-          self="flex-start"
-          icon={<ExternalLink size={15} />}
-          onPress={() => {
-            if (typeof window !== 'undefined') window.open(DOCS_API, '_blank', 'noopener')
-          }}
-        >
-          API docs
-        </Button>
-      </Card>
-    )
-  }
+  const hasKey = status?.hasKey ?? false
 
   return (
-    <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
-      {accessKey ? (
-        <SecretRow
-          label="Access key"
-          value={accessKey}
-          hint="Public identifier for your cloud API requests."
-        />
+    <YStack gap="$3" maxW={720}>
+      {error ? (
+        <Card p="$3" gap="$2" borderWidth={1} borderColor="$red8" bg="$red2">
+          <XStack gap="$2" items="center">
+            <TriangleAlert size={15} color="$red10" />
+            <Text fontSize="$3" color="$color12">
+              {error}
+            </Text>
+          </XStack>
+        </Card>
       ) : null}
-      {accessSecret ? (
-        <SecretRow
-          label="Access secret"
-          value={accessSecret}
-          hint="Treat this like a password. Anyone with it can call the API as you — rotate it in IAM if exposed."
-        />
-      ) : null}
-    </Card>
+
+      {newKey ? <NewKeyCard accessKey={newKey} onDone={() => setNewKey('')} /> : null}
+
+      <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
+        {hasKey ? (
+          <>
+            <XStack gap="$2" items="center">
+              <KeyRound size={16} />
+              <YStack flex={1}>
+                <Text fontSize="$4" fontWeight="700">
+                  Cloud API key
+                </Text>
+                <Text fontSize="$2" color="$color10" style={{ fontFamily: 'monospace' }}>
+                  {status?.keyPrefix ? `${status.keyPrefix}…` : 'hk-…'}
+                </Text>
+              </YStack>
+            </XStack>
+            <Text fontSize="$3" color="$color11">
+              Your account has an active key. The full secret is shown only at creation; rotate to
+              replace it (the old key stops working), or revoke it entirely.
+            </Text>
+            <XStack gap="$2" flexWrap="wrap">
+              <Button
+                size="$2"
+                icon={<RefreshCw size={14} />}
+                disabled={working !== null}
+                onPress={() => void mint('rotate')}
+              >
+                {working === 'rotate' ? 'Rotating…' : 'Rotate'}
+              </Button>
+              <Button
+                size="$2"
+                icon={<Trash2 size={14} />}
+                theme="red"
+                disabled={working !== null}
+                onPress={() => void revoke()}
+              >
+                {working === 'revoke' ? 'Revoking…' : 'Revoke'}
+              </Button>
+            </XStack>
+          </>
+        ) : (
+          <>
+            <XStack gap="$2" items="center">
+              <KeyRound size={16} />
+              <Text fontSize="$4" fontWeight="700">
+                Create your Cloud API key
+              </Text>
+            </XStack>
+            <Text fontSize="$3" color="$color11">
+              One key for your account, scoped to your organization. Use it as{' '}
+              <Text fontSize="$2" style={{ fontFamily: 'monospace' }}>Authorization: Bearer hk-…</Text> with the SDKs,
+              CLI, and the api.hanzo.ai gateway.
+            </Text>
+            <Button
+              size="$3"
+              self="flex-start"
+              bg="$color5"
+              icon={<Plus size={16} />}
+              disabled={working !== null}
+              onPress={() => void mint('create')}
+            >
+              {working === 'create' ? 'Creating…' : 'Create API key'}
+            </Button>
+          </>
+        )}
+      </Card>
+
+      <Button
+        size="$2"
+        chromeless
+        self="flex-start"
+        onPress={() => {
+          if (typeof window !== 'undefined') window.open(DOCS_API, '_blank', 'noopener')
+        }}
+      >
+        API documentation
+      </Button>
+    </YStack>
   )
 }
 
