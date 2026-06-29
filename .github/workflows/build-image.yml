@@ -6,6 +6,14 @@ name: Build Docker Image
 # So NO NEXT_PUBLIC_* are baked — baking them would pin the image to one brand.
 # Tags: SEMVER ONLY (no sha, no :latest) — a `v*` git tag publishes that exact
 # version; a main push publishes `v<package.json version>` (bump to release).
+#
+# Build muscle: RAW `docker buildx build` on the host builder — the canonical
+# hanzoai/ci pattern. We deliberately do NOT use docker/setup-buildx-action +
+# docker/build-push-action: that pair spins up an EPHEMERAL buildkit container
+# that cannot see the host's image cache, so it re-pulled `node:22-alpine` from
+# Docker Hub every run and tripped the unauthenticated 429 pull-rate limit (and
+# its build-summary artifact upload hit the Actions storage quota). The host
+# builder reuses the cached base layer instead — no re-pull, no artifact upload.
 on:
   push:
     branches: [main]
@@ -37,19 +45,33 @@ jobs:
             [ -n "$ver" ] || { echo "could not resolve version from package.json"; exit 1; }
             echo "tag=v${ver}" >> "$GITHUB_OUTPUT"
           fi
-      - uses: docker/setup-buildx-action@v3
       - name: Log in to ghcr.io
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          provenance: false
-          sbom: false
-          tags: |
-            ghcr.io/hanzoai/console2:${{ steps.ver.outputs.tag }}
+      - name: Ensure base image (reuse host cache; retry Docker Hub on 429)
+        # No-op on a warm runner (the host builder reuses the cached base). Only a
+        # cold runner pulls — and an unauthenticated Docker Hub pull can 429 under
+        # shared-IP load, so retry with linear backoff instead of hard-failing the
+        # whole build on a transient limit.
+        run: |
+          set -u
+          base=node:22-alpine
+          if docker image inspect "$base" >/dev/null 2>&1; then
+            echo "base $base already cached on runner"; exit 0
+          fi
+          for i in 1 2 3 4 5; do
+            if docker pull "$base"; then exit 0; fi
+            echo "pull failed (attempt $i/5) — backing off"; sleep $((i * 30))
+          done
+          echo "could not pull $base after retries"; exit 1
+      - name: Build & push (host builder — reuses base cache, no artifact upload)
+        run: |
+          set -euo pipefail
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            -t ghcr.io/hanzoai/console2:${{ steps.ver.outputs.tag }} \
+            -f Dockerfile .
