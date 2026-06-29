@@ -145,8 +145,11 @@ export function SignInForm() {
         <Input
           size="$4"
           placeholder="Password"
+          // secureTextEntry alone did not mask in this @hanzo/gui build; set the
+          // web input type explicitly so the password is masked (RNW passthrough).
           secureTextEntry
-          autoComplete="password"
+          {...{ type: 'password' }}
+          autoComplete="current-password"
           value={password}
           onChangeText={setPassword}
           disabled={busy}
