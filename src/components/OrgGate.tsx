@@ -19,12 +19,13 @@
  * Switching BETWEEN customer orgs (multi-membership) is the shell's `OrgSwitcher`
  * job; this gate only refuses the two unusable cases.
  */
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Button, Card, Text, YStack } from '@hanzo/gui'
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
 import { useSession } from '~/lib/auth/session'
+import { currentOrg, setCurrentOrg } from '~/lib/org-scope'
 
 /** The admin host (`admin.<domain>`) is the staff surface — the internal org is
  * welcome there, so the block (rule 1) applies only OFF this host. */
@@ -55,6 +56,18 @@ export function OrgGate({ children }: { children: ReactNode }) {
 
   // AuthGate guarantees an account by the time this renders; guard anyway.
   const owner = account?.owner ?? ''
+
+  // A customer's console acts in THEIR org. The org-scope module defaults to the
+  // brand org (designed for the cross-org admin), so on a customer host seed the
+  // signed-in user's own org as the active scope the FIRST time — i.e. only when
+  // no explicit switch is in effect yet (current scope is still the brand org).
+  // This makes the OrgSwitcher chip + the `X-Org-Id` client stamp reflect the
+  // real tenant, and never clobbers an admin's deliberate org switch.
+  useEffect(() => {
+    if (owner && owner !== config.iamOrgName && !onAdminHost() && currentOrg() === config.iamOrgName) {
+      setCurrentOrg(owner)
+    }
+  }, [owner])
 
   // Rule 1 — internal brand org → brand admin console (customer hosts only; the
   // admin host serves this same image and is where the internal org belongs, so
