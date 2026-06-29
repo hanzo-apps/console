@@ -388,3 +388,27 @@ pre-pulling `node:22-alpine`. `Dockerfile` now uses
 `.github/workflows/build-image.yml` pre-pulls the same ECR Public Docker-library
 mirror image. This keeps the host-builder cache behavior but removes Docker Hub
 from the cold-runner path.
+
+## Console parity audit + remaining feature ports (2026-06-29)
+
+Old `console/web/src/pages/project/[projectId]` still had routes with no
+console2 destination: experiments, dashboard/widgets, integrations
+(blob-storage, Slack, Mixpanel, Insights), referrals, zero-trust, prompt
+detail/create/metrics, dataset items/runs, annotation queue detail/items, and
+score analytics. These are now represented in console2 without copying the old
+Langfuse internals.
+
+- `ConsoleFeatureModule.tsx` is the shared forward-compatible shell: each moved
+  surface declares its exact `/v1` endpoint, renders real rows when the endpoint
+  exists, and uses `BackendStateCard` for 404/405/503/access/billing. It never
+  fabricates rows.
+- New catalog entries: `experiments`, `integrations`, `referrals`, and
+  `zero-trust`. `dashboards` is now a native module with an external handoff to
+  analytics.hanzo.ai instead of external-only. `scores/analytics` is routed as a
+  score subpage.
+- Expanded existing modules: Prompts now has list/detail/create/metrics routes;
+  Datasets has datasets/items/runs; Annotation Queues has queue detail + work
+  items. `EvalsApi` and `O11yApi` carry the corresponding typed
+  forward-compatible methods.
+- Verification for this wave: `npm run typecheck` and `npm test` both pass
+  locally (48 Vitest tests).

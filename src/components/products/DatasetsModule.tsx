@@ -13,10 +13,11 @@
  * add always work; nothing is fabricated.
  */
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Plus, RefreshCw, Database } from '@hanzogui/lucide-icons-2'
 
-import { EvalsApi, type EvalDataset } from '~/lib/api'
+import { EvalsApi, type EvalDataset, type EvalDatasetItem, type EvalDatasetRun } from '~/lib/api'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
@@ -58,7 +59,16 @@ const columns: Column<EvalDataset>[] = [
   ) },
 ]
 
+const rowsOf = <T,>(res: { data?: T[] } | T[]): T[] => (Array.isArray(res) ? res : (res.data ?? []))
+
+const preview = (value: unknown): string => {
+  if (value === undefined || value === null || value === '') return '—'
+  if (typeof value === 'string') return value
+  return JSON.stringify(value)
+}
+
 export function DatasetsModule(_props: { params: Record<string, string> }) {
+  const router = useRouter()
   const [list, setList] = useState<ListState>({ phase: 'loading' })
 
   // Create dataset
@@ -145,9 +155,17 @@ export function DatasetsModule(_props: { params: Record<string, string> }) {
         title="Datasets"
         subtitle="Curate evaluation datasets and items."
         actions={
-          <Button size="$2" icon={<RefreshCw size={15} />} onPress={loadList}>
-            Refresh
-          </Button>
+          <XStack gap="$2">
+            <Button size="$2" onPress={() => router.push('/datasets/items')}>
+              Items
+            </Button>
+            <Button size="$2" onPress={() => router.push('/datasets/runs')}>
+              Runs
+            </Button>
+            <Button size="$2" icon={<RefreshCw size={15} />} onPress={loadList}>
+              Refresh
+            </Button>
+          </XStack>
         }
       />
 
@@ -210,6 +228,129 @@ export function DatasetsModule(_props: { params: Record<string, string> }) {
           </Text>
         </Card>
       </XStack>
+    </>
+  )
+}
+
+export function DatasetItemsModule(_props: { params: Record<string, string> }) {
+  const router = useRouter()
+  const [list, setList] = useState<
+    | { phase: 'loading' }
+    | { phase: 'error'; error: BackendState }
+    | { phase: 'ready'; rows: EvalDatasetItem[] }
+  >({ phase: 'loading' })
+
+  const load = useCallback(() => {
+    setList({ phase: 'loading' })
+    EvalsApi.listDatasetItems()
+      .then((res) => setList({ phase: 'ready', rows: rowsOf(res) }))
+      .catch((e) => setList({ phase: 'error', error: classifyBackend(e) }))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const itemColumns: Column<EvalDatasetItem>[] = [
+    { key: 'id', header: 'Item', render: (i) => <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{i.id || '—'}</Text> },
+    { key: 'datasetName', header: 'Dataset', width: 180, render: (i) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{i.datasetName || '—'}</Text> },
+    { key: 'input', header: 'Input', render: (i) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{preview(i.input)}</Text> },
+    { key: 'expectedOutput', header: 'Expected', render: (i) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{preview(i.expectedOutput)}</Text> },
+    { key: 'createdAt', header: 'Created', width: 190, render: (i) => <Text fontSize="$3" color="$color10">{fmtTime(i.createdAt)}</Text> },
+  ]
+
+  return (
+    <>
+      <PageHeader
+        title="Dataset Items"
+        subtitle="Evaluation inputs and expected outputs."
+        actions={
+          <XStack gap="$2">
+            <Button size="$2" onPress={() => router.push('/datasets')}>
+              Datasets
+            </Button>
+            <Button size="$2" onPress={() => router.push('/datasets/runs')}>
+              Runs
+            </Button>
+            <Button size="$2" icon={<RefreshCw size={15} />} onPress={load}>
+              Refresh
+            </Button>
+          </XStack>
+        }
+      />
+      {list.phase === 'error' ? (
+        <BackendStateCard state={list.error} onRetry={load} hint="endpoint · GET /v1/evals/dataset-items" />
+      ) : (
+        <DataTable
+          columns={itemColumns}
+          rows={list.phase === 'ready' ? list.rows : []}
+          loading={list.phase === 'loading'}
+          rowKey={(i) => i.id ?? `${i.datasetName ?? 'dataset'}-${preview(i.input)}`}
+          empty="No dataset items returned."
+        />
+      )}
+    </>
+  )
+}
+
+export function DatasetRunsModule(_props: { params: Record<string, string> }) {
+  const router = useRouter()
+  const [list, setList] = useState<
+    | { phase: 'loading' }
+    | { phase: 'error'; error: BackendState }
+    | { phase: 'ready'; rows: EvalDatasetRun[] }
+  >({ phase: 'loading' })
+
+  const load = useCallback(() => {
+    setList({ phase: 'loading' })
+    EvalsApi.listDatasetRuns()
+      .then((res) => setList({ phase: 'ready', rows: rowsOf(res) }))
+      .catch((e) => setList({ phase: 'error', error: classifyBackend(e) }))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const runColumns: Column<EvalDatasetRun>[] = [
+    { key: 'name', header: 'Run', render: (r) => <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{r.name || r.id || '—'}</Text> },
+    { key: 'datasetName', header: 'Dataset', width: 180, render: (r) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{r.datasetName || '—'}</Text> },
+    { key: 'model', header: 'Model', width: 180, render: (r) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{r.model || '—'}</Text> },
+    { key: 'status', header: 'Status', width: 120, render: (r) => <Text fontSize="$3" color="$color11">{r.status || '—'}</Text> },
+    { key: 'score', header: 'Score', width: 100, render: (r) => <Text fontSize="$3" color="$color11">{r.score ?? '—'}</Text> },
+    { key: 'createdAt', header: 'Created', width: 190, render: (r) => <Text fontSize="$3" color="$color10">{fmtTime(r.createdAt)}</Text> },
+  ]
+
+  return (
+    <>
+      <PageHeader
+        title="Dataset Runs"
+        subtitle="Experiment runs created from datasets."
+        actions={
+          <XStack gap="$2">
+            <Button size="$2" onPress={() => router.push('/datasets')}>
+              Datasets
+            </Button>
+            <Button size="$2" onPress={() => router.push('/datasets/items')}>
+              Items
+            </Button>
+            <Button size="$2" icon={<RefreshCw size={15} />} onPress={load}>
+              Refresh
+            </Button>
+          </XStack>
+        }
+      />
+      {list.phase === 'error' ? (
+        <BackendStateCard state={list.error} onRetry={load} hint="endpoint · GET /v1/evals/dataset-runs" />
+      ) : (
+        <DataTable
+          columns={runColumns}
+          rows={list.phase === 'ready' ? list.rows : []}
+          loading={list.phase === 'loading'}
+          rowKey={(r) => r.id ?? r.name ?? `${r.datasetName ?? 'dataset'}-${r.model ?? 'model'}`}
+          empty="No dataset runs returned."
+        />
+      )}
     </>
   )
 }

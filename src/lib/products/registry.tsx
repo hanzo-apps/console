@@ -125,9 +125,9 @@ import { SessionsModule } from '~/components/products/SessionsModule'
 import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
 import { PlaygroundModule } from '~/components/products/PlaygroundModule'
-import { PromptsModule } from '~/components/products/PromptsModule'
+import { PromptCreateModule, PromptMetricsModule, PromptsModule } from '~/components/products/PromptsModule'
 import { EvalsModule } from '~/components/products/EvalsModule'
-import { DatasetsModule } from '~/components/products/DatasetsModule'
+import { DatasetItemsModule, DatasetRunsModule, DatasetsModule } from '~/components/products/DatasetsModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { ComingSoon } from '~/components/products/ComingSoon'
 import { ApiKeysModule } from '~/components/products/ApiKeysModule'
@@ -162,6 +162,14 @@ import { GpusModule } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
+import {
+  DashboardsModule,
+  ExperimentsModule,
+  IntegrationsModule,
+  ReferralsModule,
+  ScoreAnalyticsModule,
+  ZeroTrustModule,
+} from '~/components/products/ConsoleFeatureModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -710,6 +718,21 @@ export const catalog: CatalogEntry[] = [
     kind: 'module',
     routes: [{ path: '', component: AuditModule }],
   },
+  {
+    id: 'zero-trust',
+    label: 'Zero Trust',
+    icon: ShieldCheck,
+    description: 'Private service access: routers, identities, policies, and sessions.',
+    category: 'Security',
+    status: 'enabled',
+    repo: 'hanzoai/zt',
+    docs: `${DOCS}/zero-trust`,
+    kind: 'module',
+    routes: [
+      { path: '', component: ZeroTrustModule },
+      { path: ':tab', component: ZeroTrustModule },
+    ],
+  },
 
   // ── Dev ──────────────────────────────────────────────────────────────
   {
@@ -746,6 +769,21 @@ export const catalog: CatalogEntry[] = [
     docs: ext.api,
     kind: 'external',
     href: ext.api,
+  },
+  {
+    id: 'integrations',
+    label: 'Integrations',
+    icon: Cable,
+    description: 'Blob storage, Slack, Mixpanel, and Insights connections.',
+    category: 'Dev',
+    status: 'enabled',
+    repo: 'hanzoai/console',
+    docs: `${DOCS}/integrations`,
+    kind: 'module',
+    routes: [
+      { path: '', component: IntegrationsModule },
+      { path: ':tab', component: IntegrationsModule },
+    ],
   },
   {
     // Native console playground — REAL model run over the OpenAI-compatible
@@ -936,11 +974,14 @@ export const catalog: CatalogEntry[] = [
     icon: LineChart,
     description: 'Product analytics and observability dashboards.',
     category: 'Observe',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/analytics',
     docs: `${DOCS}/dashboards`,
-    kind: 'external',
-    href: ext.dashboards,
+    kind: 'module',
+    routes: [
+      { path: '', component: DashboardsModule },
+      { path: ':tab', component: DashboardsModule },
+    ],
   },
   {
     id: 'alerts',
@@ -1017,6 +1058,21 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/billing',
     kind: 'module',
     routes: [{ path: '', component: WalletModule }],
+  },
+  {
+    id: 'referrals',
+    label: 'Referrals',
+    icon: Coins,
+    description: 'Referral link, invite history, and cloud-credit earnings.',
+    category: 'Web3',
+    status: 'enabled',
+    repo: 'hanzoai/billing',
+    docs: `${DOCS}/referrals`,
+    kind: 'module',
+    routes: [
+      { path: '', component: ReferralsModule },
+      { path: ':tab', component: ReferralsModule },
+    ],
   },
   {
     id: 'tokens',
@@ -1172,7 +1228,12 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/prompts`,
     kind: 'module',
-    routes: [{ path: '', component: PromptsModule }],
+    routes: [
+      { path: '', component: PromptsModule },
+      { path: 'new', component: PromptCreateModule },
+      { path: 'metrics', component: PromptMetricsModule },
+      { path: ':name', component: PromptsModule },
+    ],
   },
   {
     id: 'datasets',
@@ -1184,7 +1245,26 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/datasets`,
     kind: 'module',
-    routes: [{ path: '', component: DatasetsModule }],
+    routes: [
+      { path: '', component: DatasetsModule },
+      { path: 'items', component: DatasetItemsModule },
+      { path: 'runs', component: DatasetRunsModule },
+    ],
+  },
+  {
+    id: 'experiments',
+    label: 'Experiments',
+    icon: Workflow,
+    description: 'Dataset runs, comparisons, and experiment analytics.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/experiments`,
+    kind: 'module',
+    routes: [
+      { path: '', component: ExperimentsModule },
+      { path: ':tab', component: ExperimentsModule },
+    ],
   },
   // ── Observe (appended — grouped by `category`, not array position, so these
   //    render under Observe without reordering existing entries). Native trace
@@ -1215,7 +1295,10 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/scores`,
     kind: 'module',
-    routes: [{ path: '', component: ScoresModule }],
+    routes: [
+      { path: '', component: ScoresModule },
+      { path: 'analytics', component: ScoreAnalyticsModule },
+    ],
   },
   {
     // Native — score DEFINITIONS (data type + valid range/categories) on the REAL
@@ -1243,7 +1326,10 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/annotation-queues`,
     kind: 'module',
-    routes: [{ path: '', component: AnnotationQueuesModule }],
+    routes: [
+      { path: '', component: AnnotationQueuesModule },
+      { path: ':id', component: AnnotationQueuesModule },
+    ],
   },
   // ── Appended modules (grouped by `category`, not array position — no entry
   //    above is reordered). Memory + Tasks unify the user's memory and durable
