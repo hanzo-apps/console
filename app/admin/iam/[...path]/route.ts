@@ -17,6 +17,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { getAdminGate, adminBearer, iamBaseUrl, type AdminGate } from '~/lib/server/identity'
+import { ownerAllowed as policyOwnerAllowed } from '~/lib/server/admin-policy'
 
 export const runtime = 'nodejs'
 
@@ -67,15 +68,16 @@ function idOwner(id: string | null): string | null {
 
 /**
  * A non-global admin may reference ONLY their own org. casdoor's read endpoints
- * (GetUsers/GetUser) do not enforce this, so the proxy must — global admin → any
- * org; org admin → `orgScope`; the `admin`/`built-in` metadata owner is allowed
- * only on the org list/get endpoints (which scope to the caller themselves).
+ * (GetUsers/GetUser) do not enforce this, so the proxy must. The decision is the
+ * pure `admin-policy` predicate (tested in admin-policy.test.ts); this wrapper
+ * just supplies the per-segment org-metadata exception (`ORG_ENDPOINTS`).
  */
 function ownerAllowed(segment: string, owner: string | null, gate: AdminGate): boolean {
-  if (!owner) return true
-  if (gate.user.isGlobalAdmin) return true
-  if (ORG_ENDPOINTS.has(segment) && (owner === 'admin' || owner === 'built-in')) return true
-  return owner === gate.orgScope
+  return policyOwnerAllowed(owner, {
+    isGlobalAdmin: gate.user.isGlobalAdmin,
+    orgScope: gate.orgScope,
+    orgMetadataOk: ORG_ENDPOINTS.has(segment),
+  })
 }
 
 async function forward(req: NextRequest, segment: string, allowed: Set<string>): Promise<NextResponse> {

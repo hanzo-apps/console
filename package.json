@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console2",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "private": true,
   "license": "BSD-3-Clause",
   "author": "Hanzo AI <dev@hanzo.ai>",
@@ -9,7 +9,8 @@
     "dev": "next dev -p 4000",
     "build": "next build",
     "start": "next start -p 4000",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hanzo/gui": "7.3.0",
@@ -30,6 +31,7 @@
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "react-native": "0.83.9",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
   }
 }

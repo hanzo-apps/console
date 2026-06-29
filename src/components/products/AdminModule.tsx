@@ -23,6 +23,7 @@ import {
   type AuditRecord,
 } from '~/lib/api/admin'
 import { config } from '~/config'
+import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
@@ -182,7 +183,10 @@ const IAM_TABS = [
 export function IamModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const tab = params.tab ?? ''
-  const org = config.iamOrgName
+  // The ACTIVE org scope (the brand org, or the org a global admin switched to);
+  // users/roles below are read for it. The org LIST itself is unscoped — a global
+  // admin sees every org (what powers the switcher).
+  const org = currentOrg()
 
   const orgFetcher = useCallback(() => IamAdminApi.organizations(), [])
   const userFetcher = useCallback(() => IamAdminApi.users(org), [org])
@@ -224,7 +228,7 @@ export function IamModule({ params }: { params: Record<string, string> }) {
 
 /** Audit — the identity & access event log (`/v1/iam/get-records`). */
 export function AuditModule(_props: { params: Record<string, string> }) {
-  const org = config.iamOrgName
+  const org = currentOrg()
   const fetcher = useCallback(() => IamAdminApi.records(org), [org])
   return (
     <>
