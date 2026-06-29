@@ -97,7 +97,6 @@ import { Users,
   Coins,
   MessageSquare,
   Search,
-  Library,
   KeySquare,
   SlidersHorizontal,
   Ruler,
@@ -131,7 +130,6 @@ import { EvalsModule } from '~/components/products/EvalsModule'
 import { DatasetsModule } from '~/components/products/DatasetsModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { ComingSoon } from '~/components/products/ComingSoon'
-import { ModelCatalogModule } from '~/components/products/ModelCatalogModule'
 import { ApiKeysModule } from '~/components/products/ApiKeysModule'
 import { SettingsModule } from '~/components/products/SettingsModule'
 import { ScoreConfigsModule } from '~/components/products/ScoreConfigsModule'
@@ -289,10 +287,13 @@ const soonRoutes: ProductRoute[] = [{ path: '', component: ComingSoon }]
 export const catalog: CatalogEntry[] = [
   // ── AI ───────────────────────────────────────────────────────────────
   {
+    // Catalog-first: the default tab is the LIVE model list (the ~49 Zen models),
+    // routing policy is the secondary "Routing" tab. Retires the old empty-by-default
+    // trap (the separate "Model Catalog" entry is gone — this IS it).
     id: 'models',
     label: 'Models',
     icon: Brain,
-    description: 'Model catalog and routing policy across providers.',
+    description: 'Browse the live model catalog and configure routing policy.',
     gcp: 'Model Garden',
     category: 'AI',
     status: 'enabled',
@@ -300,7 +301,8 @@ export const catalog: CatalogEntry[] = [
     kind: 'module',
     routes: [
       { path: '', component: ModelsModule },
-      { path: ':name', component: ModelsModule },
+      { path: ':tab', component: ModelsModule },
+      { path: 'routing/:name', component: ModelsModule },
     ],
   },
   {
@@ -1133,19 +1135,6 @@ export const catalog: CatalogEntry[] = [
 
   // ── Appended modules — ported from hanzoai/console (settings/models + eval engine).
   //    Grouped by `category` (not array position); no entry above is reordered.
-  {
-    id: 'model-catalog',
-    label: 'Model Catalog',
-    icon: Library,
-    description: 'Browse available models, providers, and pricing.',
-    gcp: 'Vertex Model Registry',
-    category: 'AI',
-    status: 'enabled',
-    repo: 'hanzoai/ai',
-    docs: `${DOCS}/models`,
-    kind: 'module',
-    routes: [{ path: '', component: ModelCatalogModule }],
-  },
   {
     id: 'api-keys',
     label: 'API Keys',

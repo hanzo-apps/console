@@ -11,13 +11,18 @@
  *   - `?` prefix  asks the docs knowledge store (RAG, store=`docs`) and shows the
  *                 grounded answer with any links it cites.
  *
+ * Beyond navigation it also runs ACTIONS — toggle theme, browse all apps, open
+ * settings, switch organization, ask AI / search docs, sign out — ranked by the
+ * same query, so ⌘K is ONE surface for "go somewhere" and "do something".
+ *
  * Everything composes existing pieces: the catalog registry (`searchCatalog` +
- * `openProduct`), the AI client (`AiApi`), and the honest backend-state mapper.
- * Nothing is fabricated — AI/RAG failures degrade to a truthful state card.
+ * `openProduct`), the AI client (`AiApi`), the chrome hooks (theme/launcher/
+ * session/org-scope), and the honest backend-state mapper. Nothing is fabricated —
+ * AI/RAG failures degrade to a truthful state card.
  *
  * Keyboard is handled on `window`: ⌘K toggles from anywhere; while open, ↑/↓ move
- * the selection, ↵ activates, Esc closes. The header search box opens it; the
- * shell's "?" opens it straight in docs-help mode.
+ * the selection (over actions then products), ↵ activates, Esc closes. The header
+ * search box opens it; type `>` for AI, `?` for docs.
  */
 import {
   createContext,
@@ -26,9 +31,11 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ComponentType,
   type ReactNode,
 } from 'react'
 import { useRouter } from 'next/navigation'
+import { useThemeSetting } from '@hanzogui/next-theme'
 import {
   Anchor,
   Dialog,
@@ -42,28 +49,60 @@ import {
 } from '@hanzo/gui'
 import {
   ArrowRight,
+  Building2,
   Command,
   CornerDownLeft,
   ExternalLink,
+  House,
   LayoutGrid,
   Lock,
+  LogOut,
+  Moon,
   Search,
+  SlidersHorizontal,
   Sparkles,
+  Sun,
+  Zap,
 } from '@hanzogui/lucide-icons-2'
 
-import { AiApi } from '~/lib/api'
+import { AiApi, IamAdminApi, type Organization } from '~/lib/api'
 import { catalog, findEntry, type CatalogEntry } from '~/lib/products/registry'
 import { searchCatalog } from '~/lib/products/search'
 import { openProduct } from '~/lib/products/open'
+import { currentOrg, switchOrg } from '~/lib/org-scope'
+import { useSession } from '~/lib/auth/session'
 import { useAppLauncher } from '~/components/AppLauncher'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+
+const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
+
+/**
+ * A non-navigation command: a verb the palette can run (toggle theme, browse all
+ * apps, switch org, sign out, …). Orthogonal to catalog entries — both are ranked
+ * by the same query so ⌘K is ONE surface for "go somewhere" AND "do something".
+ */
+type PaletteAction = {
+  id: string
+  label: string
+  hint: string
+  /** Extra text the query matches against (synonyms). */
+  keywords: string
+  icon: ComponentType<{ size?: number }>
+  /** Runs on activate. Closing the palette (if wanted) is the action's own job. */
+  run: () => void
+}
+
+/** Substring match over an action's label + synonyms (lowercased query). */
+function actionMatches(a: PaletteAction, q: string): boolean {
+  if (!q) return false
+  return `${a.label} ${a.keywords}`.toLowerCase().includes(q)
+}
 
 type Mode = 'catalog' | 'ai' | 'help'
 
 type PaletteApi = {
   isOpen: boolean
   open: () => void
-  openMode: (mode: 'ai' | 'help') => void
   close: () => void
 }
 
@@ -162,6 +201,51 @@ function CatalogRow({
   )
 }
 
+function ActionRow({
+  action,
+  active,
+  onPress,
+}: {
+  action: PaletteAction
+  active: boolean
+  onPress: () => void
+}) {
+  const Icon = action.icon
+  return (
+    <XStack
+      onPress={onPress}
+      cursor="pointer"
+      items="center"
+      gap="$3"
+      px="$3"
+      py="$2.5"
+      rounded="$3"
+      bg={active ? '$color5' : 'transparent'}
+      hoverStyle={{ bg: active ? '$color5' : '$color3' }}
+    >
+      <Icon size={17} />
+      <YStack flex={1}>
+        <Text fontSize="$3" fontWeight="600" color="$color12">
+          {action.label}
+        </Text>
+        <Text fontSize="$1" color="$color10">
+          {action.hint}
+        </Text>
+      </YStack>
+      <CornerDownLeft size={13} opacity={active ? 0.8 : 0.3} />
+    </XStack>
+  )
+}
+
+/** A small uppercase section label inside the palette result list. */
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <Text px="$3" pt="$2" pb="$1" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+      {children}
+    </Text>
+  )
+}
+
 function PaletteDialog({
   open,
   seed,
@@ -173,16 +257,79 @@ function PaletteDialog({
 }) {
   const router = useRouter()
   const launcher = useAppLauncher()
+  const { signOut } = useSession()
+  const { current, resolvedTheme, set: setTheme } = useThemeSetting()
+  const isDark = (resolvedTheme ?? current ?? 'dark') !== 'light'
   const [query, setQuery] = useState(seed)
   const [sel, setSel] = useState(0)
   const [run, setRun] = useState<RunState>({ status: 'idle' })
+  const [orgs, setOrgs] = useState<Organization[]>([])
 
   const mode: Mode = query.startsWith('>') ? 'ai' : query.startsWith('?') ? 'help' : 'catalog'
   const sub = (mode === 'catalog' ? query : query.slice(1)).trim()
 
-  const results = useMemo(
+  // The org list powers the "Switch to <org>" actions. Only an admin who can see
+  // more than one org gets switch actions; everyone else just gets the verbs.
+  useEffect(() => {
+    if (!open) return
+    let live = true
+    IamAdminApi.organizations()
+      .then((p) => {
+        if (live) setOrgs(p.rows ?? [])
+      })
+      .catch(() => {
+        if (live) setOrgs([])
+      })
+    return () => {
+      live = false
+    }
+  }, [open])
+
+  // Every command the palette can RUN (verbs + per-org switches). Composed from the
+  // same pieces the chrome uses (router, launcher, theme, session, org scope) — no
+  // dead entries: each `run` is wired.
+  const actions = useMemo<PaletteAction[]>(() => {
+    const cur = currentOrg()
+    const verbs: PaletteAction[] = [
+      { id: 'home', label: 'Go to Overview', hint: 'Dashboard home', keywords: 'home start dashboard root overview', icon: House, run: () => { onOpenChange(false); router.push('/') } },
+      { id: 'apps', label: 'Browse all apps', hint: 'Open the app launcher', keywords: 'launcher grid all products everything apps', icon: LayoutGrid, run: () => { onOpenChange(false); launcher.open() } },
+      { id: 'settings', label: 'Open Settings', hint: 'Account, organization, branding', keywords: 'preferences account profile settings', icon: SlidersHorizontal, run: () => { onOpenChange(false); router.push('/settings') } },
+      { id: 'theme', label: isDark ? 'Switch to light theme' : 'Switch to dark theme', hint: 'Toggle appearance', keywords: 'dark light appearance theme mode color', icon: isDark ? Sun : Moon, run: () => setTheme(isDark ? 'light' : 'dark') },
+      { id: 'ai', label: 'Ask AI', hint: 'Find or do something with AI', keywords: 'assistant zen gpt ask question ai', icon: Sparkles, run: () => setQuery('> ') },
+      { id: 'docs', label: 'Search the docs', hint: 'Ask the documentation', keywords: 'help docs documentation manual guide', icon: Zap, run: () => setQuery('? ') },
+      { id: 'signout', label: 'Sign out', hint: 'End your session', keywords: 'logout sign out exit leave', icon: LogOut, run: () => { onOpenChange(false); void signOut() } },
+    ]
+    const orgVerbs: PaletteAction[] = orgs
+      .filter((o) => o.name !== cur)
+      .map((o) => ({
+        id: `org:${o.name}`,
+        label: `Switch to ${o.displayName || titleCase(o.name)}`,
+        hint: 'Switch organization',
+        keywords: `org organization tenant switch ${o.name}`,
+        icon: Building2,
+        run: () => switchOrg(o.name),
+      }))
+    return [...verbs, ...orgVerbs]
+  }, [isDark, orgs, router, launcher, signOut, setTheme, onOpenChange])
+
+  const entryResults = useMemo(
     () => (mode === 'catalog' ? searchCatalog(query).slice(0, 50) : []),
     [mode, query],
+  )
+
+  const matchedActions = useMemo(
+    () => (mode === 'catalog' && sub ? actions.filter((a) => actionMatches(a, sub.toLowerCase())) : []),
+    [mode, sub, actions],
+  )
+
+  // One ordered list (actions first, then products) so ↑/↓/↵ traverse both.
+  type Item = { kind: 'action'; action: PaletteAction } | { kind: 'entry'; entry: CatalogEntry }
+  const items = useMemo<Item[]>(
+    () => [
+      ...matchedActions.map((action) => ({ kind: 'action' as const, action })),
+      ...entryResults.map((entry) => ({ kind: 'entry' as const, entry })),
+    ],
+    [matchedActions, entryResults],
   )
 
   // Seed the query each time the palette opens.
@@ -234,14 +381,17 @@ function PaletteDialog({
       if (mode === 'catalog') {
         if (e.key === 'ArrowDown') {
           e.preventDefault()
-          setSel((s) => Math.min(s + 1, Math.max(results.length - 1, 0)))
+          setSel((s) => Math.min(s + 1, Math.max(items.length - 1, 0)))
         } else if (e.key === 'ArrowUp') {
           e.preventDefault()
           setSel((s) => Math.max(s - 1, 0))
         } else if (e.key === 'Enter') {
           e.preventDefault()
-          const r = results[sel]
-          if (r) activate(r)
+          const it = items[sel]
+          if (it) {
+            if (it.kind === 'action') it.action.run()
+            else activate(it.entry)
+          }
         }
       } else if (e.key === 'Enter') {
         e.preventDefault()
@@ -252,7 +402,7 @@ function PaletteDialog({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, mode, results, sel, run, submit, activate, onOpenChange])
+  }, [open, mode, items, sel, run, submit, activate, onOpenChange])
 
   const placeholder =
     mode === 'ai'
@@ -308,16 +458,22 @@ function PaletteDialog({
           {/* Body */}
           <YStack minH={120} maxH={420}>
             {mode === 'catalog' ? (
-              results.length === 0 ? (
+              items.length === 0 ? (
                 <YStack p="$5" items="center">
-                  <Text color="$color10">No products match “{sub}”.</Text>
+                  <Text color="$color10">No commands or products match “{sub}”.</Text>
                 </YStack>
               ) : (
                 <ScrollView p="$2">
                   <YStack gap="$0.5">
-                    {results.map((entry, i) => (
-                      <CatalogRow key={entry.id} entry={entry} active={i === sel} onPress={() => activate(entry)} />
+                    {matchedActions.length > 0 ? <SectionLabel>Actions</SectionLabel> : null}
+                    {matchedActions.map((action, i) => (
+                      <ActionRow key={`action-${action.id}`} action={action} active={i === sel} onPress={action.run} />
                     ))}
+                    {entryResults.length > 0 && matchedActions.length > 0 ? <SectionLabel>Products</SectionLabel> : null}
+                    {entryResults.map((entry, j) => {
+                      const i = matchedActions.length + j
+                      return <CatalogRow key={entry.id} entry={entry} active={i === sel} onPress={() => activate(entry)} />
+                    })}
                   </YStack>
                 </ScrollView>
               )
@@ -410,11 +566,6 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     setIsOpen(true)
   }, [])
 
-  const openMode = useCallback((mode: 'ai' | 'help') => {
-    setSeed(mode === 'ai' ? '> ' : '? ')
-    setIsOpen(true)
-  }, [])
-
   const close = useCallback(() => setIsOpen(false), [])
 
   // ⌘K / Ctrl+K toggles the palette from anywhere.
@@ -431,7 +582,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <Ctx.Provider value={{ isOpen, open, openMode, close }}>
+    <Ctx.Provider value={{ isOpen, open, close }}>
       {children}
       <PaletteDialog open={isOpen} seed={seed} onOpenChange={setIsOpen} />
     </Ctx.Provider>
