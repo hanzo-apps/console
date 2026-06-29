@@ -1,0 +1,128 @@
+'use client'
+
+/**
+ * Environments — deploy targets (production, staging, development).
+ *
+ * Reads the environment list from the PaaS via the same-origin `/paas` proxy
+ * (`GET /v1/environments`), which injects the service token server-side. When the
+ * environments service isn't provisioned the load fails and the honest
+ * not-configured / unavailable card renders instead of an empty grid.
+ */
+import { useCallback, useEffect, useState } from 'react'
+import { Button, Text } from '@hanzo/gui'
+import { RefreshCw } from '@hanzogui/lucide-icons-2'
+
+import { restGet } from '~/lib/api/client'
+import { PageHeader } from '~/components/ui/PageHeader'
+import { DataTable, type Column } from '~/components/ui/DataTable'
+import { StatusTag } from '~/components/ui/StatusTag'
+import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+
+const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
+
+type Environment = {
+  id: string
+  name?: string
+  type?: string
+  status?: string
+  services?: string[]
+  updatedAt?: string
+}
+
+export function EnvironmentsModule(_props: { params: Record<string, string> }) {
+  const [rows, setRows] = useState<Environment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<PlatformError | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const r = await restGet<{ environments?: Environment[] }>(paas('environments'))
+      setRows(r.environments ?? [])
+      setLoadError(null)
+    } catch (e) {
+      setLoadError(interpretPlatformError(e))
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const columns: Column<Environment>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (e) => (
+        <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
+          {e.name || e.id}
+        </Text>
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      width: 130,
+      render: (e) => (
+        <Text fontSize="$3" color="$color11">
+          {e.type || '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: 120,
+      render: (e) => <StatusTag status={e.status ?? 'unknown'} />,
+    },
+    {
+      key: 'services',
+      header: 'Services',
+      width: 110,
+      render: (e) => (
+        <Text fontSize="$3" color="$color11">
+          {e.services?.length ?? 0}
+        </Text>
+      ),
+    },
+    {
+      key: 'updatedAt',
+      header: 'Updated',
+      width: 190,
+      render: (e) => (
+        <Text fontSize="$3" color="$color11">
+          {e.updatedAt ? new Date(e.updatedAt).toLocaleString() : '—'}
+        </Text>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <PageHeader
+        title="Environments"
+        subtitle="Deploy targets — production, staging, and development."
+        actions={
+          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
+            Refresh
+          </Button>
+        }
+      />
+
+      {loadError ? (
+        <PlatformStateCard error={loadError} onRetry={() => void load()} />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={rows}
+          loading={loading}
+          rowKey={(e) => e.id}
+          empty="No environments yet."
+        />
+      )}
+    </>
+  )
+}

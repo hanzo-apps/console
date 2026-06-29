@@ -1,5 +1,27 @@
 /**
- * Product catalog — the single source of truth for the unified console.
+ *   {
+      id: 'observations',
+      label: 'Observations',
+      icon: Activity,
+      description: 'Spans, generations, and events inside traces.',
+      category: 'Observe',
+      status: 'enabled',
+      repo: 'hanzoai/o11y',
+      kind: 'module',
+      routes: [{ path: '', component: ObservationsModule }],
+    },
+  {
+      id: 'users',
+      label: 'Users',
+      icon: Users,
+      description: 'Per-user analytics — trace volume, tokens, and cost.',
+      category: 'Observe',
+      status: 'enabled',
+      repo: 'hanzoai/o11y',
+      kind: 'module',
+      routes: [{ path: '', component: UsersModule }],
+    },
+Product catalog — the single source of truth for the unified console.
  *
  * ONE list (`catalog`) describes every Hanzo product, whether it is an
  * in-console admin module (owns routes, rendered here) or an external surface
@@ -23,7 +45,7 @@
  * console surface yet (`soon`). No fabricated states.
  */
 import type { ComponentType } from 'react'
-import {
+import { Users,
   Brain,
   Server,
   Bot,
@@ -98,6 +120,8 @@ import { KmsModule } from '~/components/products/KmsModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { TracesModule } from '~/components/products/TracesModule'
+import { ObservationsModule } from '~/components/products/ObservationsModule'
+import { UsersModule } from '~/components/products/UsersModule'
 import { SessionsModule } from '~/components/products/SessionsModule'
 import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
@@ -114,6 +138,31 @@ import { ScoreConfigsModule } from '~/components/products/ScoreConfigsModule'
 import { AnnotationQueuesModule } from '~/components/products/AnnotationQueuesModule'
 import { MemoryModule } from '~/components/products/MemoryModule'
 import { TasksModule } from '~/components/products/TasksModule'
+import { AttestationsModule } from '~/components/products/AttestationsModule'
+import { OraclesModule } from '~/components/products/OraclesModule'
+import { IndexerModule } from '~/components/products/IndexerModule'
+import { TokensModule } from '~/components/products/TokensModule'
+import { SettlementModule } from '~/components/products/SettlementModule'
+import { AlertsModule } from '~/components/products/AlertsModule'
+import { LogsModule } from '~/components/products/LogsModule'
+import { PipelinesModule } from '~/components/products/PipelinesModule'
+import { ReleasesModule } from '~/components/products/ReleasesModule'
+import { BuildsModule } from '~/components/products/BuildsModule'
+import { EnvironmentsModule } from '~/components/products/EnvironmentsModule'
+import { HsmModule } from '~/components/products/HsmModule'
+import { AuthzModule } from '~/components/products/AuthzModule'
+import { ServiceMeshModule } from '~/components/products/ServiceMeshModule'
+import { LoadBalancerModule } from '~/components/products/LoadBalancerModule'
+import { VpcModule } from '~/components/products/VpcModule'
+import { JobsModule } from '~/components/products/JobsModule'
+import { EdgeModule } from '~/components/products/EdgeModule'
+import { FunctionsModule } from '~/components/products/FunctionsModule'
+import { ContainersModule } from '~/components/products/ContainersModule'
+import { MachinesModule } from '~/components/products/MachinesModule'
+import { GpusModule } from '~/components/products/GpusModule'
+import { FinetuningModule } from '~/components/products/FinetuningModule'
+import { InferenceModule } from '~/components/products/InferenceModule'
+import { AgentsModule } from '~/components/products/AgentsModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -275,11 +324,11 @@ export const catalog: CatalogEntry[] = [
     description: 'Build, deploy, and run autonomous agents.',
     gcp: 'Agent Builder',
     category: 'AI',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/agent',
     docs: `${DOCS}/agents`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: AgentsModule }],
   },
   {
     id: 'inference',
@@ -288,9 +337,9 @@ export const catalog: CatalogEntry[] = [
     description: 'Online and batch inference for deployed models.',
     gcp: 'Vertex AI Prediction',
     category: 'AI',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: InferenceModule }],
   },
   {
     id: 'finetuning',
@@ -299,9 +348,9 @@ export const catalog: CatalogEntry[] = [
     description: 'Fine-tune and train models on your own data.',
     gcp: 'Vertex AI Training',
     category: 'AI',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: FinetuningModule }],
   },
   {
     id: 'embeddings',
@@ -341,9 +390,9 @@ export const catalog: CatalogEntry[] = [
     icon: Cpu,
     description: 'On-demand GPU compute for training and inference.',
     category: 'Compute',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: GpusModule }],
   },
   {
     id: 'machines',
@@ -351,10 +400,10 @@ export const catalog: CatalogEntry[] = [
     icon: Server,
     description: 'Virtual machines and bare-metal compute.',
     category: 'Compute',
-    status: 'soon',
+    status: 'enabled',
     docs: `${DOCS}/machines`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: MachinesModule }],
   },
   {
     id: 'containers',
@@ -363,9 +412,9 @@ export const catalog: CatalogEntry[] = [
     description: 'Run containers as managed, autoscaling services.',
     gcp: 'Cloud Run',
     category: 'Compute',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: ContainersModule }],
   },
   {
     id: 'functions',
@@ -373,11 +422,11 @@ export const catalog: CatalogEntry[] = [
     icon: FunctionSquare,
     description: 'Event-driven serverless functions.',
     category: 'Compute',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/functions',
     docs: `${DOCS}/functions`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: FunctionsModule }],
   },
   {
     id: 'edge',
@@ -385,11 +434,11 @@ export const catalog: CatalogEntry[] = [
     icon: Radio,
     description: 'Compute at the edge, close to your users.',
     category: 'Compute',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/edge',
     docs: `${DOCS}/edge`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: EdgeModule }],
   },
   {
     id: 'jobs',
@@ -397,9 +446,9 @@ export const catalog: CatalogEntry[] = [
     icon: Repeat,
     description: 'Scheduled and batch jobs that run to completion.',
     category: 'Compute',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: JobsModule }],
   },
   {
     // Real, enabled deploy surface — kept under Compute as the running-app
@@ -517,9 +566,9 @@ export const catalog: CatalogEntry[] = [
     icon: Waypoints,
     description: 'Private networks, subnets, and peering.',
     category: 'Network',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: VpcModule }],
   },
   {
     id: 'dns',
@@ -551,9 +600,9 @@ export const catalog: CatalogEntry[] = [
     icon: Spline,
     description: 'Layer 4/7 load balancing across services.',
     category: 'Network',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: LoadBalancerModule }],
   },
   {
     id: 'service-mesh',
@@ -561,9 +610,9 @@ export const catalog: CatalogEntry[] = [
     icon: Waypoints,
     description: 'Service-to-service routing, mTLS, and policy.',
     category: 'Network',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: ServiceMeshModule }],
   },
 
   // ── Security ─────────────────────────────────────────────────────────
@@ -589,11 +638,11 @@ export const catalog: CatalogEntry[] = [
     icon: ShieldCheck,
     description: 'Fine-grained authorization policies and checks.',
     category: 'Security',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/authz',
     docs: `${DOCS}/authz`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: AuthzModule }],
   },
   {
     id: 'kms',
@@ -614,10 +663,10 @@ export const catalog: CatalogEntry[] = [
     icon: Fingerprint,
     description: 'Hardware-backed key protection.',
     category: 'Security',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/hsm',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: HsmModule }],
   },
   {
     // Secret Manager facet of the same zero-knowledge KMS backend.
@@ -755,9 +804,9 @@ export const catalog: CatalogEntry[] = [
     icon: Layers,
     description: 'Promote builds across dev, staging, and prod.',
     category: 'Deploy',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: EnvironmentsModule }],
   },
   {
     id: 'builds',
@@ -765,9 +814,9 @@ export const catalog: CatalogEntry[] = [
     icon: Hammer,
     description: 'Build images and artifacts from source.',
     category: 'Deploy',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: BuildsModule }],
   },
   {
     id: 'registry',
@@ -788,9 +837,9 @@ export const catalog: CatalogEntry[] = [
     icon: Rocket,
     description: 'Versioned releases and rollbacks.',
     category: 'Deploy',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: ReleasesModule }],
   },
   {
     id: 'pipelines',
@@ -798,10 +847,10 @@ export const catalog: CatalogEntry[] = [
     icon: GitBranch,
     description: 'CI/CD pipelines from commit to deploy.',
     category: 'Deploy',
-    status: 'soon',
+    status: 'enabled',
     docs: `${DOCS}/pipelines`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: PipelinesModule }],
   },
   {
     // Real, enabled — pick WHERE workloads run: shared Hanzo Cloud or your own
@@ -842,11 +891,11 @@ export const catalog: CatalogEntry[] = [
     icon: ScrollText,
     description: 'Structured logs across all services.',
     category: 'Observe',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/logs`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: LogsModule }],
   },
   {
     id: 'metrics',
@@ -896,10 +945,10 @@ export const catalog: CatalogEntry[] = [
     icon: Bell,
     description: 'Alerting rules and notification policies.',
     category: 'Observe',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/o11y',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: AlertsModule }],
   },
   {
     id: 'cost',
@@ -947,11 +996,11 @@ export const catalog: CatalogEntry[] = [
     icon: ArrowLeftRight,
     description: 'On-chain settlement for compute and payouts.',
     category: 'Web3',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/ledger',
     docs: `${DOCS}/blockchain`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: SettlementModule }],
   },
   {
     // Real, enabled — connect a wallet on Hanzo Mainnet, view HUSD + cloud
@@ -972,10 +1021,10 @@ export const catalog: CatalogEntry[] = [
     icon: Coins,
     description: 'Issue and manage tokens and balances.',
     category: 'Web3',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/treasury',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: TokensModule }],
   },
   {
     id: 'indexer',
@@ -983,9 +1032,9 @@ export const catalog: CatalogEntry[] = [
     icon: Database,
     description: 'Index and query on-chain data.',
     category: 'Web3',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: IndexerModule }],
   },
   {
     id: 'oracles',
@@ -993,9 +1042,9 @@ export const catalog: CatalogEntry[] = [
     icon: Radio,
     description: 'Bring off-chain data on-chain.',
     category: 'Web3',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: OraclesModule }],
   },
   {
     id: 'attestations',
@@ -1003,9 +1052,9 @@ export const catalog: CatalogEntry[] = [
     icon: ShieldCheck,
     description: 'Verifiable attestations and proofs.',
     category: 'Web3',
-    status: 'soon',
+    status: 'enabled',
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: AttestationsModule }],
   },
 
   // ── Apps ─────────────────────────────────────────────────────────────
