@@ -26,6 +26,7 @@ import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
 import { useSession } from '~/lib/auth/session'
 import { currentOrg, setCurrentOrg } from '~/lib/org-scope'
+import { OrgOnboarding } from '~/components/OrgOnboarding'
 
 /** The admin host (`admin.<domain>`) is the staff surface — the internal org is
  * welcome there, so the block (rule 1) applies only OFF this host. */
@@ -95,18 +96,11 @@ export function OrgGate({ children }: { children: ReactNode }) {
     )
   }
 
-  // Rule 2 — a session with no organization can't scope the console.
+  // Rule 2 — a session with no organization can't scope the console: run the
+  // first-run onboarding (create an org, or one-click a personal org) so EVERY
+  // user always ends up in exactly one customer org.
   if (!owner) {
-    return (
-      <GateCard
-        title="No organization"
-        body="Your account isn't part of an organization yet. An organization owner needs to invite you, or you can create one to get started."
-      >
-        <Button size="$3" chromeless onPress={() => void signOut()}>
-          Sign out
-        </Button>
-      </GateCard>
-    )
+    return <OrgOnboarding />
   }
 
   return <>{children}</>
