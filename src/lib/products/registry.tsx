@@ -137,6 +137,7 @@ import { AnnotationQueuesModule } from '~/components/products/AnnotationQueuesMo
 import { MemoryModule } from '~/components/products/MemoryModule'
 import { TasksModule } from '~/components/products/TasksModule'
 import { AttestationsModule } from '~/components/products/AttestationsModule'
+import { ProjectsModule } from '~/components/products/ProjectsModule'
 import { OraclesModule } from '~/components/products/OraclesModule'
 import { IndexerModule } from '~/components/products/IndexerModule'
 import { TokensModule } from '~/components/products/TokensModule'
@@ -792,13 +793,13 @@ export const catalog: CatalogEntry[] = [
     id: 'projects',
     label: 'Projects',
     icon: FolderGit2,
-    description: 'Projects and resource organization — Hanzo PaaS.',
+    description: 'Projects organize resources under your org — the scope for o11y, API keys, datasets, and deploys.',
     gcp: 'Resource Manager',
     category: 'Deploy',
-    status: 'external',
-    repo: 'hanzoai/platform',
-    kind: 'external',
-    href: ext.projects,
+    status: 'enabled',
+    repo: 'hanzoai/console2',
+    kind: 'module',
+    routes: [{ path: '', component: ProjectsModule }],
   },
   {
     id: 'environments',

@@ -11,6 +11,7 @@
  */
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
+import { getScope } from '~/lib/scope'
 
 export type ApiResponse<T> = {
   status: 'ok' | 'error'
@@ -46,11 +47,23 @@ const acceptLanguage = (): string => {
  * and re-injects the header from the JWT, the stamped value is simply overwritten,
  * so sending it is correct in both topologies.
  */
-const baseHeaders = (hasBody: boolean): Record<string, string> => ({
-  'Accept-Language': acceptLanguage(),
-  'X-Org-Id': currentOrg(),
-  ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-})
+const baseHeaders = (hasBody: boolean): Record<string, string> => {
+  // The full tenant path on every cloud call: X-Org-Id is the ACTIVE org
+  // (`currentOrg()` — brand org by default, or the org a global admin switched
+  // to); X-Project-Id is sent only when a project is selected (absent =
+  // org-level); X-Environment defaults to mainnet. Org scope lives in
+  // lib/org-scope.ts, project + environment in lib/scope.ts — orthogonal layers
+  // that compose here, so this ONE stamp makes EVERY module (o11y, api-keys,
+  // deploys, …) org + project + environment scoped with no per-module change.
+  const s = getScope()
+  return {
+    'Accept-Language': acceptLanguage(),
+    'X-Org-Id': currentOrg(),
+    ...(s.project ? { 'X-Project-Id': s.project } : {}),
+    'X-Environment': s.environment,
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+  }
+}
 
 type Query = Record<string, string | number | boolean | undefined | null>
 
