@@ -62,7 +62,7 @@ function AdminBanner({ onDismiss }: { onDismiss: () => void }) {
         >
           {`Open admin`}
         </Button>
-        <Button size="$2" chromeless color="$yellow10" onPress={onDismiss}>
+        <Button size="$2" chromeless theme="yellow" onPress={onDismiss}>
           ✕
         </Button>
       </XStack>
