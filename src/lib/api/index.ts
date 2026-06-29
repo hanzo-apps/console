@@ -57,11 +57,18 @@ export {
 } from './platform'
 export {
   IamAdminApi,
+  KmsAdminApi,
   type Paged,
   type Organization,
   type IamUser,
+  type IamApplication,
+  type IamProvider,
   type Role,
   type AuditRecord,
+  type KmsSecretMeta,
+  type KmsSecretValue,
+  type KmsScope,
+  type KmsRef,
 } from './admin'
 export {
   PlaygroundApi,
