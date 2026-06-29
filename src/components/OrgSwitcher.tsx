@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button, Input, Popover, Text, XStack, YStack } from '@hanzo/gui'
 import { Building2, Check, ChevronsUpDown, Search } from '@hanzogui/lucide-icons-2'
 
-import { currentOrg, setCurrentOrg, filterOrgs } from '~/lib/org-scope'
+import { currentOrg, switchOrg, filterOrgs } from '~/lib/org-scope'
 import { IamAdminApi, type Organization } from '~/lib/api'
 
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -60,9 +60,7 @@ export function OrgSwitcher() {
 
   const select = (org: Organization) => {
     setOpen(false)
-    if (org.name === currentId) return
-    setCurrentOrg(org.name)
-    if (typeof window !== 'undefined') window.location.reload()
+    switchOrg(org.name)
   }
 
   return (

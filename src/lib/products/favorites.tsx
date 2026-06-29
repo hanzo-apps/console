@@ -11,8 +11,13 @@ import { useCallback } from 'react'
 
 import { usePreferences } from './preferences'
 
-/** Sensible first-run pins so the Pinned section isn't empty for new users. */
-const DEFAULT_PINNED = ['chat', 'billing']
+/**
+ * Sensible first-run pins so the Pinned section isn't empty for new users. Every
+ * id MUST be a real catalog id (a dead id silently drops from the Pinned list):
+ * `models` puts the model catalog one click away (the most-asked-for surface),
+ * `chat` the assistant.
+ */
+const DEFAULT_PINNED = ['models', 'chat']
 
 export type Favorites = {
   /** Pinned product ids, in pin order. */

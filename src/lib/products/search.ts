@@ -7,6 +7,10 @@
  */
 import { catalog, type CatalogEntry } from './registry'
 
+// The sidebar's per-entry filter predicate lives in the pure core (so it's
+// unit-testable without the GUI tree); re-exported here as the catalog filter API.
+export { entryMatches } from './match-core'
+
 /** Score one field; 0 = no match, higher = better. */
 function fuzzy(q: string, text: string): number {
   if (!q) return 1

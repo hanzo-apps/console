@@ -48,7 +48,7 @@ export function ComingSoon() {
             borderWidth={1}
             borderColor="$borderColor"
             iconAfter={<ArrowUpRight size={15} />}
-            onPress={() => window.open(`${config.cloudUrl}/docs`, '_blank', 'noopener')}
+            onPress={() => window.open(config.docsUrl, '_blank', 'noopener')}
           >
             API docs
           </Button>
