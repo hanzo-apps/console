@@ -81,7 +81,7 @@ export function OrgGate({ children }: { children: ReactNode }) {
   // built-in metadata org. (Account's index signature exposes isGlobalAdmin when present.)
   const isGlobalAdmin =
     Boolean((account as { isGlobalAdmin?: boolean } | null)?.isGlobalAdmin) ||
-    ((owner === 'admin' || owner === 'built-in') && isAdmin)
+    ((owner === 'admin') && isAdmin)
   const [bannerDismissed, setBannerDismissed] = useState(true) // start hidden to avoid flash
 
   // Restore banner dismissed state and last org on mount
