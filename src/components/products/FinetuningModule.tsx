@@ -12,11 +12,12 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
-import { RefreshCw } from '@hanzogui/lucide-icons-2'
+import { RefreshCw, Sparkles } from '@hanzogui/lucide-icons-2'
 
 import { restGet } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { EmptyState } from '~/components/ui/EmptyState'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
@@ -116,6 +117,19 @@ export function FinetuningModule(_props: { params: Record<string, string> }) {
 
       {loadError ? (
         <PlatformStateCard error={loadError} onRetry={() => void load()} />
+      ) : !loading && rows.length === 0 ? (
+        <EmptyState
+          icon={Sparkles}
+          title="Fine-tune a model"
+          description="Train a base model on your own data to specialize it for your domain — then serve the result as a private model behind your gateway."
+          bullets={[
+            'Upload a dataset (JSONL) to Object Storage or a Store',
+            'Start a fine-tune from a Zen base model with the CLI or SDK',
+            'Track progress here and deploy the result to Inference',
+          ]}
+          primary={{ label: 'Start a fine-tune', href: 'https://docs.hanzo.ai/fine-tuning' }}
+          secondary={{ label: 'Prepare a dataset', onPress: () => { if (typeof window !== 'undefined') window.location.assign('/datasets') } }}
+        />
       ) : (
         <DataTable
           columns={columns}
