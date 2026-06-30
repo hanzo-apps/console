@@ -283,7 +283,7 @@ export function ExperimentsModule({ params }: { params: Record<string, string> }
       basePath="experiments"
       active={params.tab}
       surfaces={experimentsSurfaces}
-      externalHref="https://console.hanzo.ai"
+      externalHref="https://cloud.hanzo.ai"
     />
   )
 }
