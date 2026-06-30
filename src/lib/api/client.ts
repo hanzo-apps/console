@@ -58,7 +58,14 @@ const baseHeaders = (hasBody: boolean): Record<string, string> => {
   const s = getScope()
   return {
     'Accept-Language': acceptLanguage(),
+    // Two backend org conventions, one active scope. The provisioning sub-service
+    // reads `X-Org-Id`; the casibase header-scoped filters (GetEffectiveOrg —
+    // usage, vectors, activities) read `X-IAM-Org-Id`. Stamp both with the active
+    // org so an OrgSwitcher change re-scopes every endpoint. The casibase backend
+    // only honors the header for the principal's own org or a global admin, so a
+    // brand admin's stamp is a safe no-op and a global admin's switch is honored.
     'X-Org-Id': currentOrg(),
+    'X-IAM-Org-Id': currentOrg(),
     ...(s.project ? { 'X-Project-Id': s.project } : {}),
     'X-Environment': s.environment,
     ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
