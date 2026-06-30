@@ -21,6 +21,27 @@ function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 }
 
+/**
+ * An SSE `Response` whose stream is NOT closed (so it stays readable) and reports
+ * when its `cancel()` runs — to prove the runner releases the connection rather
+ * than leaving the stream locked/held on an early exit.
+ */
+function observableSSE(chunks: string[]): { res: Response; wasCancelled: () => boolean } {
+  let cancelled = false
+  const stream = new ReadableStream<Uint8Array>({
+    start(c) {
+      for (const ch of chunks) c.enqueue(enc.encode(ch))
+    },
+    cancel() {
+      cancelled = true
+    },
+  })
+  return {
+    res: new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } }),
+    wasCancelled: () => cancelled,
+  }
+}
+
 const MSGS: RunMessage[] = [{ role: 'user', content: 'hi' }]
 const fresh = (): AbortSignal => new AbortController().signal
 
@@ -80,6 +101,17 @@ describe('runColumn — parallel-safe streaming with real metrics', () => {
     expect(r.error).not.toBeNull()
     expect(r.error?.message).toBe('upstream exploded')
     expect(r.content).toBe('partial')
+  })
+
+  it('cancels the reader (releases the connection) on a mid-stream error chunk', async () => {
+    const { res, wasCancelled } = observableSSE([
+      'data: {"choices":[{"delta":{"content":"partial"}}]}\n\n',
+      'data: {"error":{"message":"upstream exploded"}}\n\n',
+    ])
+    vi.spyOn(PlaygroundApi, 'streamChat').mockResolvedValue(res)
+    const r = await runColumn({ model: 'zen', messages: MSGS }, {}, fresh())
+    expect(r.error?.message).toBe('upstream exploded')
+    expect(wasCancelled()).toBe(true)
   })
 
   it('treats a user stop as aborted (no error card)', async () => {
