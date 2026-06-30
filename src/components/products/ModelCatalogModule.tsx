@@ -12,8 +12,9 @@
  * nothing fabricated. Filter by provider; "Zen" surfaces our first-party models.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw } from '@hanzogui/lucide-icons-2'
+import { RefreshCw, ArrowLeft, Play, Settings2, Copy } from '@hanzogui/lucide-icons-2'
 
 import {
   fetchCatalog,
@@ -115,6 +116,106 @@ const Stat = ({ label, value }: { label: string; value: string }) => (
   </YStack>
 )
 
+/** A labelled fact cell for the detail grid. */
+const Fact = ({ label, value }: { label: string; value: string }) => (
+  <YStack gap={2} minW={130}>
+    <Text fontSize="$1" color="$color10">
+      {label}
+    </Text>
+    <Text fontSize="$3" color="$color12">
+      {value}
+    </Text>
+  </YStack>
+)
+
+/** Click-through model detail — full specs, pricing, features, and config actions. */
+function ModelDetailPanel({ m, onBack }: { m: CatalogEntry; onBack: () => void }) {
+  const router = useRouter()
+  const copyId = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) void navigator.clipboard.writeText(m.name)
+  }
+  return (
+    <YStack gap="$4">
+      <XStack items="center" gap="$2">
+        <Button size="$2" chromeless icon={<ArrowLeft size={16} />} onPress={onBack}>
+          Catalog
+        </Button>
+      </XStack>
+
+      <YStack gap="$2">
+        <XStack items="center" gap="$3" flexWrap="wrap">
+          <Text fontSize="$8" fontWeight="800" color="$color12">
+            {m.name}
+          </Text>
+          {m.specs?.params ? <Pill label={m.specs.params} /> : null}
+          {m.available ? <Pill label="● Available" tone="live" /> : <Pill label="Catalog" />}
+        </XStack>
+        {m.fullName ? (
+          <Text fontSize="$4" color="$color11">
+            {m.fullName}
+          </Text>
+        ) : null}
+        {m.description ? (
+          <Text fontSize="$3" color="$color10">
+            {m.description}
+          </Text>
+        ) : null}
+      </YStack>
+
+      <XStack gap="$2" flexWrap="wrap">
+        <Button size="$3" icon={<Play size={15} />} onPress={() => router.push('/playground')}>
+          Open in Playground
+        </Button>
+        <Button
+          size="$3"
+          icon={<Settings2 size={15} />}
+          onPress={() => router.push(`/models/routing/${encodeURIComponent(m.name)}`)}
+        >
+          Configure routing
+        </Button>
+        <Button size="$3" chromeless icon={<Copy size={15} />} onPress={copyId}>
+          Copy ID
+        </Button>
+      </XStack>
+
+      <XStack
+        gap="$5"
+        flexWrap="wrap"
+        rounded="$4"
+        borderWidth={1}
+        borderColor="$borderColor"
+        bg="$color1"
+        p="$4"
+      >
+        <Fact label="Type" value={modelType(m)} />
+        <Fact label="Provider" value={displayProvider(m.provider)} />
+        <Fact label="Context" value={fmtContext(m.context)} />
+        <Fact label="Tier" value={m.tier ? m.tier : '—'} />
+        <Fact label="Input / Mtok" value={fmtPrice(m.pricing?.input)} />
+        <Fact label="Output / Mtok" value={fmtPrice(m.pricing?.output)} />
+        <Fact label="Cache read / Mtok" value={fmtPrice(m.pricing?.cacheRead)} />
+        <Fact label="Cache write / Mtok" value={fmtPrice(m.pricing?.cacheWrite)} />
+        {m.specs?.arch ? <Fact label="Architecture" value={m.specs.arch} /> : null}
+      </XStack>
+
+      {m.features && m.features.length > 0 ? (
+        <YStack gap="$2">
+          <Text fontSize="$2" color="$color11" fontWeight="600">
+            Features
+          </Text>
+          <XStack gap="$1.5" flexWrap="wrap">
+            {m.features.map((f) => (
+              <Text key={f} fontSize="$2" px="$2.5" py="$1" rounded="$3" bg="$color3" color="$color11">
+                {f}
+              </Text>
+            ))}
+          </XStack>
+        </YStack>
+      ) : null}
+    </YStack>
+  )
+}
+
 type LoadState =
   | { phase: 'loading' }
   | { phase: 'error'; err: ApiError }
@@ -123,6 +224,7 @@ type LoadState =
 export function ModelCatalogModule(_props: { params: Record<string, string> }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const [provider, setProvider] = useState<string | null>(null)
+  const [selected, setSelected] = useState<CatalogEntry | null>(null)
 
   const run = useCallback(() => {
     setState({ phase: 'loading' })
@@ -163,6 +265,11 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
       providers: String(provCount),
     }
   }, [rows])
+
+  // Click-through detail — full specs/pricing/features + config actions.
+  if (selected) {
+    return <ModelDetailPanel m={selected} onBack={() => setSelected(null)} />
+  }
 
   return (
     <>
@@ -218,6 +325,7 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
             rows={rows}
             loading={state.phase === 'loading'}
             rowKey={(m) => m.name}
+            onRowPress={(m) => setSelected(m)}
             empty="No models available on this deployment yet."
           />
 
