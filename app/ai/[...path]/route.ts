@@ -27,6 +27,7 @@ const AI_GATEWAY_URL = trim(process.env.AI_GATEWAY_URL ?? 'https://api.hanzo.ai'
 const ALLOWED = new Set([
   'v1/models',
   'v1/pricing/models', // the rich model+provider catalog (context, pricing, specs, tier) for Models/Providers pages
+  'v1/plans', // the subscription tiers + entitlements (rpm/tpm/quota) for the catalog plan badges
   'v1/chat',
   'v1/chat/completions',
   'v1/embeddings',
