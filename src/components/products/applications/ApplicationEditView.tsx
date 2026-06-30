@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { ApiError, ApplicationApi, type Application } from '~/lib/api'
+import { currentOrg } from '~/lib/org-scope'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { isUndeployed } from './logic'
@@ -15,8 +16,10 @@ export function ApplicationEditView({ name, onDone }: { name: string; onDone: ()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Scope the edit-load to the SAME org as the list/create path (currentOrg()),
+  // not a hardcoded 'admin' — the application record lives under the active org.
   const reload = (n: string) =>
-    ApplicationApi.get('admin', n)
+    ApplicationApi.get(currentOrg(), n)
       .then((a) => {
         setApp(a)
         setError(null)
@@ -26,7 +29,7 @@ export function ApplicationEditView({ name, onDone }: { name: string; onDone: ()
   useEffect(() => {
     let live = true
     setLoading(true)
-    ApplicationApi.get('admin', name)
+    ApplicationApi.get(currentOrg(), name)
       .then((a) => {
         if (live) {
           setApp(a)
