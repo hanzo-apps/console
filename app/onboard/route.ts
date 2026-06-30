@@ -5,7 +5,7 @@
  * cookie; this handler resolves the user from that cookie and acts as the
  * confidential `hanzo-console` client (allowlisted for IAM_ORG_ADMIN_APPS +
  * IAM_USER_ADMIN_APPS). It creates a customer organization and makes the user
- * that org's admin (casdoor membership = the user's `owner`, so the cloud's
+ * that org's admin (IAM membership = the user's `owner`, so the cloud's
  * GetEffectiveOrg scopes everything to the new org once the user re-authenticates).
  *
  * Fail-closed + safe:

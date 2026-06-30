@@ -331,7 +331,7 @@ export async function createOrganization(opts: {
     displayName: opts.displayName,
     createdTime: new Date().toISOString(),
     isPersonal: opts.personal,
-    // Cloned for compatibility (best-effort; sane casdoor defaults otherwise).
+    // Cloned for compatibility (best-effort; sane IAM defaults otherwise).
     passwordType: src?.passwordType || 'bcrypt',
     passwordSalt: src?.passwordSalt || '',
     passwordObfuscatorType: src?.passwordObfuscatorType || 'Plain',
@@ -360,7 +360,7 @@ export async function createOrganization(opts: {
 
 /**
  * Move a user into `org` as that org's admin. Sends the FULL current user object
- * (casdoor's update-user overwrites the default column set from the body, so a
+ * (IAM's update-user overwrites the default column set from the body, so a
  * partial object would blank fields) with owner + isAdmin changed. The caller is
  * always the signed-in user (the route binds the id to the session), so this can
  * only ever move oneself.

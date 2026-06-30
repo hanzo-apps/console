@@ -10,7 +10,7 @@
  *     so EVERYONE always has an org and lands straight in the console.
  *
  * The mutation is the server route `/onboard` (it acts as the confidential
- * console client; the browser only sends its cookie). Because a casdoor user's
+ * console client; the browser only sends its cookie). Because an IAM user's
  * org IS their identity, creating the org moves the user into it — so on success
  * we re-authenticate (sign out → sign in) to mint a session for the new org, and
  * the user arrives in their console. Honest inline errors; never a fake success.

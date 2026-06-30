@@ -4,17 +4,17 @@
  * Decomplected from the `/onboard` route (which does the IAM calls) so the
  * naming + reserved-name policy is one testable thing (mirrors admin-policy.ts).
  * Two concerns:
- *   - NAMING: turn a human org name (or a username) into a valid casdoor org
+ *   - NAMING: turn a human org name (or a username) into a valid IAM org
  *     slug — lowercase, `[a-z0-9-]`, collapsed, trimmed, bounded.
  *   - RESERVED: refuse the names that must never become a customer org — the
- *     brand/staff orgs (hanzo/lux/zoo/pars) and casdoor's system owners
+ *     brand/staff orgs (hanzo/lux/zoo/pars) and IAM's system owners
  *     (admin/built-in/app). Creating one of these would either collide with the
  *     staff tenant (the OrgGate block) or a system principal.
  */
 
-/** Brand/staff orgs + casdoor system owners — never a customer org. */
+/** Brand/staff orgs + IAM system owners — never a customer org. */
 export const RESERVED_ORGS: ReadonlySet<string> = new Set([
-  // casdoor system owners
+  // IAM system owners
   'admin',
   'built-in',
   'app',
@@ -25,13 +25,13 @@ export const RESERVED_ORGS: ReadonlySet<string> = new Set([
   'pars',
 ])
 
-/** Max slug length (casdoor org name is varchar(100); keep it short + readable). */
+/** Max slug length (IAM org name is varchar(100); keep it short + readable). */
 export const MAX_ORG_SLUG = 60
 /** Min slug length after normalization. */
 export const MIN_ORG_SLUG = 2
 
 /**
- * Normalize a human name to a casdoor org slug: lowercase ASCII, non-alnum → `-`,
+ * Normalize a human name to an IAM org slug: lowercase ASCII, non-alnum → `-`,
  * collapse repeats, trim leading/trailing `-`, cap at MAX_ORG_SLUG. Returns '' for
  * input that has no usable characters.
  */
