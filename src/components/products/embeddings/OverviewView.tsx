@@ -14,7 +14,7 @@ import { Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { EmbeddingsApi } from '~/lib/api/embeddings'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { EmptyState } from '~/components/ui/EmptyState'
-import { Sparkline, Donut, BarChart } from '~/components/ui/Charts'
+import { Sparkline, Donut, BarRows } from '~/components/ui/Charts'
 import { emptyUsages, modelShares, type Collection, type CloudUsages, type UsageMetric } from './logic'
 
 const fmtInt = (n: number) => n.toLocaleString()
@@ -181,14 +181,22 @@ export function OverviewView({
           <Text fontSize="$5" fontWeight="800" color="$color12">
             {usingRealModelVectors ? 'Vectors by model' : 'Collections by model'}
           </Text>
-          <Donut slices={modelData} centerLabel={centerLabel} />
+          <Donut
+            slices={modelData}
+            center={
+              <Text fontSize="$7" fontWeight="900" color="$color12">
+                {centerLabel}
+              </Text>
+            }
+            legend
+          />
         </Card>
 
         <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={320}>
           <Text fontSize="$5" fontWeight="800" color="$color12">
             Vector dimensions
           </Text>
-          <BarChart bars={usage.dimensions} />
+          <BarRows bars={usage.dimensions} />
           {usage.dimensions.length === 0 ? (
             <Text fontSize="$2" color="$color10">
               Per-dimension counts appear once metering reports them.
