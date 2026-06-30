@@ -34,20 +34,26 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
 
   const load = useCallback(async () => {
     setLoading(true)
-    try {
-      const [globalRes, customRes] = await Promise.all([
-        ProviderApi.listGlobal().catch(() => [] as Provider[]),
-        ProviderApi.list({ owner }).then(r => r.rows ?? []).catch(() => [] as Provider[]),
-      ])
-      const globals: ProviderRow[] = (globalRes ?? []).map(p => ({ ...p, _builtin: true }))
-      const custom: ProviderRow[] = customRes
-      setRows([...globals, ...custom])
-      setError(null)
-    } catch (e) {
+    // Load global (platform-key) + custom (per-org BYOK) providers independently so
+    // one failing doesn't hide the other. But if BOTH fail, that's a real backend
+    // error — surface it honestly instead of silently degrading to "No providers".
+    const [globalOut, customOut] = await Promise.allSettled([
+      ProviderApi.listGlobal(),
+      ProviderApi.list({ owner }).then((r) => r.rows ?? []),
+    ])
+    if (globalOut.status === 'rejected' && customOut.status === 'rejected') {
+      const e = globalOut.reason
       setError(e instanceof ApiError ? e.message : 'Failed to load providers')
-    } finally {
+      setRows([])
       setLoading(false)
+      return
     }
+    const globals: ProviderRow[] =
+      globalOut.status === 'fulfilled' ? (globalOut.value ?? []).map((p) => ({ ...p, _builtin: true })) : []
+    const custom: ProviderRow[] = customOut.status === 'fulfilled' ? customOut.value : []
+    setRows([...globals, ...custom])
+    setError(null)
+    setLoading(false)
   }, [owner])
 
   useEffect(() => { void load() }, [load])

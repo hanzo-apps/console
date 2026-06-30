@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { ApiError, ProviderApi, type Provider } from '~/lib/api'
+import { currentOrg } from '~/lib/org-scope'
 import {
   FieldRow,
   FieldText,
@@ -35,7 +36,10 @@ export function ProviderEditView({ name, onDone }: { name: string; onDone: () =>
   useEffect(() => {
     let live = true
     setLoading(true)
-    ProviderApi.get('admin', name)
+    // Scope the edit-load to the SAME org as the list/create path (currentOrg()),
+    // not a hardcoded 'admin' — otherwise create-under-brand-org → edit-GET breaks
+    // for every non-admin org (the record lives under the active org, not 'admin').
+    ProviderApi.get(currentOrg(), name)
       .then((p) => {
         if (live) {
           setProvider(p)

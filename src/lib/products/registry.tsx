@@ -113,6 +113,7 @@ import { StoresModule } from '~/components/products/StoresModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { PlansModule } from '~/components/products/PlansModule'
+import { CostModule } from '~/components/products/CostModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
@@ -995,17 +996,20 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AlertsModule }],
   },
   {
+    // Native — the tenant's balance, metered usage by product/model, and invoice
+    // history over the per-tenant `/billing/*` commerce proxy. Read-only; paying +
+    // payment methods stay in the brand billing portal (the "Add credits" CTA).
     id: 'cost',
     label: 'Cost',
     icon: CreditCard,
     description: 'Balance, usage, and invoices for every product.',
     gcp: 'Cloud Billing',
     category: 'Observe',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/billing',
     docs: `${DOCS}/billing`,
-    kind: 'external',
-    href: ext.cost,
+    kind: 'module',
+    routes: [{ path: '', component: CostModule }],
   },
   {
     // Real, enabled — the all-services health view, from real cluster data.
