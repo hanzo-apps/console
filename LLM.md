@@ -412,3 +412,57 @@ Langfuse internals.
   forward-compatible methods.
 - Verification for this wave: `npm run typecheck` and `npm test` both pass
   locally (48 Vitest tests).
+
+## Embeddings — full product surface (feat/embeddings-page)
+
+The `embeddings` catalog entry is upgraded from the old single Stores admin
+(`StoresModule`, now deleted along with `StoreListView` — superseded, not
+duplicated) into a six-tab product over the REAL `hanzoai/ai` `/v1` backend.
+`StoreEditView` + `stores/logic.ts` (`newStore`) are reused for the collection
+editor + create; nothing is forked.
+
+- **EmbeddingsModule** routes `''`→Overview, `:tab`→Overview/Explore/Collections/
+  Jobs/Models/Settings, `collections/:name`→the store editor (unambiguous by
+  segment count — same pattern as Models' `:tab`). The ONE create path
+  (`add-store` + `newStore`) backs both the header "Create collection" and the
+  Collections "New".
+- **Collections = stores.** `EmbeddingsApi.collections` = `get-stores` → a
+  `Collection` view-model; each maps to the Qdrant/Search index
+  `{owner}-{store}-docs` (the backend's `GetSearchIndexName`). The store object
+  carries NO vector count / dimension / index-size / `updatedTime`, and the metric
+  is fixed to cosine at index-create — so those columns render an honest "—"
+  (CREATED shows `createdTime`, the only timestamp; the metric is the real cosine).
+- **Explore** → real `POST /v1/search?store=` (`{query,limit,mode}` → `{hits}`).
+  Hits carry no per-hit score (backend RRF-drops it) so score reads "—";
+  url/breadcrumbs are the locator. Model+Dimension are read-only collection
+  metadata (search uses the store's own embedding config, not query-time).
+  Vector-inspect is honest-empty (no point-lookup endpoint).
+- **Models** = `/v1/models` filtered by id (no category field exists; many
+  embedding routes are `hidden` and absent — honest); generate = real
+  `POST /v1/embeddings` via the keyless `/ai` proxy (already allow-listed).
+- **Jobs** = per-file index status (`get-files`: Pending/Processing/Finished/
+  Error — there is no async job entity) + a real upload ingest
+  (`POST /v1/docs/ingest`, source=upload).
+- **Overview** metric cards (vectors/storage/queries/latency/cost) read
+  `GET /v1/get-cloud-usages` — a forward-compatible client coded to the documented
+  shape that degrades EVERY field to "—" with no sparkline today (the read API
+  has no unique commits yet on `feat/cloud-usage-read-api`). The model donut is
+  the real collection-by-model mix; dimension bars light up when metering reports
+  per-dimension counts; index-health is per-collection state enriched best-effort
+  with live `/v1/search/stats`.
+- New: `src/lib/api/embeddings.ts` (`EmbeddingsApi`), the pure
+  `components/products/embeddings/logic.ts` (+15 Vitest), and the dependency-free
+  `components/ui/Charts.tsx` (Sparkline/Donut/BarChart — monochrome SVG, render
+  nothing/"—" rather than a fabricated trend).
+- Shared-infra touched: registry (`embeddings` row upgraded, not duplicated),
+  `lib/api/index.ts` (barrel export). Reuses the unified `EmptyState`,
+  `BackendStateCard`, `DataTable`, `PageHeader`, `PrimaryButton`, `Field*`.
+- Drive-by: corrected a STALE assertion in `admin-policy.test.ts` — the
+  `built-in` org-metadata owner was deliberately dropped in v0.7.15 (9b59dec,
+  "standardize the global-admin org on 'admin'") but the test still expected the
+  old wider allow-set; the gate code is unchanged (the tighter shipped policy is
+  the correct one).
+- Verification: `tsc --noEmit` clean, `vitest` 67/67 (8 files), `next build`
+  green (14/14 pages). Authenticated visual e2e is gated behind a deploy + IAM
+  session — left for live verification (the catch-all `/[...slug]` route that
+  renders this compiled and type-checked).
