@@ -35,6 +35,17 @@ export {
 } from './models-catalog'
 export { ApplicationApi } from './applications'
 export { StoreApi } from './stores'
+export {
+  EmbeddingsApi,
+  type EmbeddingHit,
+  type SearchMode,
+  type SearchInput,
+  type IndexStats,
+  type FileRow,
+  type EmbeddingResult,
+  type IngestSource,
+  type IngestStats,
+} from './embeddings'
 export { ChatApi } from './chats'
 export { MessageApi } from './messages'
 export {
