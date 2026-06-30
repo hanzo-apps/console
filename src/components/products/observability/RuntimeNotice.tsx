@@ -9,8 +9,8 @@
  * real reason and names the endpoint, so an empty observability area always reads
  * truthfully.
  */
-import { Card, Text, XStack } from '@hanzo/gui'
-import { TriangleAlert } from '@hanzogui/lucide-icons-2'
+import { Button, Card, Text, XStack } from '@hanzo/gui'
+import { BarChart3, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import { config } from '~/config'
@@ -37,10 +37,16 @@ export function RuntimeNotice({ surface, error }: { surface: string; error: unkn
   const status = classifyRuntime(error)
   const message = error instanceof Error ? error.message : String(error)
   const body: Record<RuntimeStatus, string> = {
-    'not-initialized': `The /v1/o11y routes are mounted, but the observability runtime (telemetry stores, query service) is not initialized on this deployment yet, so ${surface} cannot be read. This page shows live ${surface} the moment the runtime is online — it never shows placeholder data.`,
+    'not-initialized': `Observability runtime initializing — your ${surface} will appear here once it's enabled. The /v1/o11y routes are mounted, but the runtime (telemetry stores, query service) is not initialized on this deployment yet. This page shows live ${surface} the moment the runtime is online — it never shows placeholder data.`,
     unavailable: `The /v1/o11y/${surface} surface is not proxied on this host yet.`,
     access: `Sign in with an account that can read observability ${surface}.`,
     error: message,
+  }
+  // While the trace runtime is initializing, AI Metrics already has real,
+  // per-org usage data (from the commerce billing ledger) — so we point there.
+  const showMetricsLink = status === 'not-initialized' || status === 'unavailable'
+  const goToMetrics = () => {
+    if (typeof window !== 'undefined') window.location.assign('/ai-metrics')
   }
   return (
     <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor" maxWidth={680}>
@@ -53,6 +59,11 @@ export function RuntimeNotice({ surface, error }: { surface: string; error: unkn
       <Text fontSize="$3" color="$color11">
         {body[status]}
       </Text>
+      {showMetricsLink ? (
+        <Button size="$2" self="flex-start" icon={<BarChart3 size={15} />} onPress={goToMetrics}>
+          View AI Metrics
+        </Button>
+      ) : null}
       <Text fontSize="$2" color="$color10">
         endpoint · /v1/o11y/{surface} · {config.brandName}
       </Text>
