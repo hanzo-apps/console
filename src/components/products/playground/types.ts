@@ -1,28 +1,45 @@
 /**
- * Playground feature types — the shape of a compare run.
+ * Playground feature types — the shape of a single-model run.
  *
- * A "compare" is just N model columns sharing ONE prompt; a single-model run is
- * N = 1, the same engine with one column. Each column carries its own model,
- * optional per-column settings, and its own live result (streamed text + REAL
- * token usage + latency + an honest error), so one column erroring or being
- * stopped never disturbs the others.
+ * A run is one model over an ordered list of chat messages (a system prompt plus
+ * one or more user/assistant turns). Each run streams text and reports REAL token
+ * usage + latency (time-to-first-token and total) + an honest error, so the
+ * Response panel never fabricates a number.
  */
 import type { ChatUsage, ModelPricing } from '~/lib/api'
-import type { BackendState } from '~/components/ui/BackendState'
 
-/** Sampling settings shared across columns (or overridden per column). */
+/**
+ * Sampling settings for a run. `maxTokens`/`seed` are free text so the field can
+ * be empty (= gateway default); the request builder (`paramsOf`) turns them into
+ * real numbers or omits them — it never sends a fabricated value.
+ */
 export type Settings = {
   temperature: number
   topP: number
-  /** Free-text so the field can be empty (= gateway default). */
+  /** Free text so the field can be empty (= gateway default). */
   maxTokens: string
   /** Comma-separated stop sequences; '' = none. */
   stop: string
+  /** Advanced: penalize token frequency (-2…2). 0 = off (omitted). */
+  frequencyPenalty: number
+  /** Advanced: penalize token presence (-2…2). 0 = off (omitted). */
+  presencePenalty: number
+  /** Advanced: deterministic sampling seed; free text, '' = none. */
+  seed: string
 }
 
-export const DEFAULT_SETTINGS: Settings = { temperature: 0.7, topP: 1, maxTokens: '1024', stop: '' }
+/** The composer's initial settings — mirrors the mockup (temp 0.7, top-p 0.9). */
+export const DEFAULT_SETTINGS: Settings = {
+  temperature: 0.7,
+  topP: 0.9,
+  maxTokens: '1024',
+  stop: '',
+  frequencyPenalty: 0,
+  presencePenalty: 0,
+  seed: '',
+}
 
-/** A multimodal content part (Vision tab) — text or an image URL. */
+/** A multimodal content part (an uploaded image) — text or an image URL. */
 export type ContentPart =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string } }
@@ -30,28 +47,8 @@ export type ContentPart =
 /** One message in a run; content is plain text OR multimodal parts. */
 export type RunMessage = { role: 'system' | 'user' | 'assistant'; content: string | ContentPart[] }
 
-/** Lifecycle of a single column's run. `stopped` = user-aborted (partial kept). */
+/** Lifecycle of a run. `stopped` = user-aborted (partial text kept). */
 export type RunPhase = 'idle' | 'streaming' | 'done' | 'error' | 'stopped'
-
-/** The live state of one model column. */
-export type Column = {
-  /** Stable id (so React keys + in-flight aborts survive model edits). */
-  id: string
-  model: string
-  /** Per-column settings override; null = use the shared settings. */
-  settings: Settings | null
-  phase: RunPhase
-  /** Streamed text so far. */
-  content: string
-  /** Real token usage from the gateway (null until the usage chunk arrives). */
-  usage: ChatUsage | null
-  /** Time-to-first-token, ms (null until the first content chunk). */
-  ttftMs: number | null
-  /** Total wall time, ms (null until the run settles). */
-  totalMs: number | null
-  /** Honest error for THIS column only. */
-  error: BackendState | null
-}
 
 /**
  * A raw transport error from the runner — status + message only, no UI semantics.
@@ -60,7 +57,7 @@ export type Column = {
  */
 export type RunError = { status: number; message: string }
 
-/** The outcome the runner resolves with for one column. */
+/** The outcome the runner resolves with for one run. */
 export type RunResult = {
   content: string
   usage: ChatUsage | null
