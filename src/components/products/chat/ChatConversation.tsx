@@ -45,7 +45,15 @@ function Bubble({ role, content }: ChatMessage) {
   )
 }
 
-export function ChatConversation({ onShowHistory }: { onShowHistory: () => void }) {
+export function ChatConversation({
+  onShowHistory,
+  compact = false,
+}: {
+  onShowHistory: () => void
+  /** Embedded mode (the floating bubble): drop the page header + fixed min-height
+   * so the conversation fills its container instead of a full page. */
+  compact?: boolean
+}) {
   const [model, setModel] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -97,31 +105,50 @@ export function ChatConversation({ onShowHistory }: { onShowHistory: () => void 
   }
 
   return (
-    <YStack flex={1} gap="$3" minH={480}>
-      <PageHeader
-        title="Chat"
-        subtitle={`Talk to ${model || 'Zen'} and other models — real completions through the gateway.`}
-        actions={
-          <XStack gap="$2">
-            <Button size="$2" icon={<History size={15} />} onPress={onShowHistory}>
-              History
-            </Button>
-            <Button
-              size="$2"
-              icon={<Plus size={15} />}
-              disabled={messages.length === 0 && !error}
-              onPress={() => {
-                setMessages([])
-                setError(null)
-              }}
-            >
-              New chat
-            </Button>
-          </XStack>
-        }
-      />
+    <YStack flex={1} gap="$3" minH={compact ? 0 : 480}>
+      {compact ? (
+        <XStack items="center" justify="flex-end" gap="$2">
+          <Button size="$2" icon={<History size={15} />} onPress={onShowHistory}>
+            Open full chat
+          </Button>
+          <Button
+            size="$2"
+            icon={<Plus size={15} />}
+            disabled={messages.length === 0 && !error}
+            onPress={() => {
+              setMessages([])
+              setError(null)
+            }}
+          >
+            New
+          </Button>
+        </XStack>
+      ) : (
+        <PageHeader
+          title="Chat"
+          subtitle={`Talk to ${model || 'Zen'} and other models — real completions through the gateway.`}
+          actions={
+            <XStack gap="$2">
+              <Button size="$2" icon={<History size={15} />} onPress={onShowHistory}>
+                History
+              </Button>
+              <Button
+                size="$2"
+                icon={<Plus size={15} />}
+                disabled={messages.length === 0 && !error}
+                onPress={() => {
+                  setMessages([])
+                  setError(null)
+                }}
+              >
+                New chat
+              </Button>
+            </XStack>
+          }
+        />
+      )}
 
-      <Card flex={1} borderWidth={1} borderColor="$borderColor" p="$3" gap="$3" minH={320}>
+      <Card flex={1} borderWidth={1} borderColor="$borderColor" p="$3" gap="$3" minH={compact ? 0 : 320}>
         <ScrollView flex={1}>
           {messages.length === 0 && !error ? (
             <YStack flex={1} items="center" justify="center" p="$6" gap="$2">
