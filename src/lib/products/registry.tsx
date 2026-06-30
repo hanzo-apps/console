@@ -120,6 +120,7 @@ import { KmsModule } from '~/components/products/KmsModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { TracesModule } from '~/components/products/TracesModule'
+import { AiMetricsModule } from '~/components/products/AiMetricsModule'
 import { ObservationsModule } from '~/components/products/ObservationsModule'
 import { UsersModule } from '~/components/products/UsersModule'
 import { SessionsModule } from '~/components/products/SessionsModule'
@@ -991,6 +992,24 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: TracesModule },
       { path: ':id', component: TracesModule },
     ],
+  },
+  {
+    // Native — the org's AI usage at a glance: requests, tokens, spend, and
+    // balance over a 24h/7d/30d window, a per-day chart, a per-model breakdown,
+    // and recent activity. REAL per-org data from the commerce usage ledger
+    // (GET /v1/billing/usage via the per-tenant /billing proxy), joined to the
+    // model catalog for display names + pricing. The o11y RuntimeNotice links
+    // here when traces aren't initialized, since THIS page has data today.
+    id: 'ai-metrics',
+    label: 'AI Metrics',
+    icon: BarChart3,
+    description: 'Requests, tokens, spend, and per-model usage for your org.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/commerce',
+    docs: `${DOCS}/billing`,
+    kind: 'module',
+    routes: [{ path: '', component: AiMetricsModule }],
   },
   {
     id: 'dashboards',
