@@ -68,17 +68,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // Zero-org only. A user who already belongs to an org would have to be MOVED
-  // (orphaning their current org's data), so onboarding is refused for them.
-  if (user.owner) {
+  const body = (await req.json().catch(() => ({}))) as { name?: string; personal?: boolean }
+  const personal = body.personal === true
+
+  // Two flows, keyed on whether the user already has a home org:
+  //   - FIRST-RUN (no owner): create + MOVE the user in as admin, so their JWT
+  //     carries the new owner and the cloud scopes everything to it.
+  //   - ADDITIONAL (owner set): create the org but do NOT move the user — a move
+  //     changes their IAM `owner` (stripping a global admin's status and orphaning
+  //     their current org). They reach the new org via the OrgSwitcher, which
+  //     re-scopes X-Org-Id without touching IAM membership. A personal-org request
+  //     from someone who already has an org is meaningless, so refuse it.
+  const additional = Boolean(user.owner)
+  if (additional && personal) {
     return NextResponse.json(
-      { error: 'You already belong to an organization. Use the organization switcher to change scope.' },
+      { error: 'You already have an organization. Name the new one explicitly.' },
       { status: 409 },
     )
   }
-
-  const body = (await req.json().catch(() => ({}))) as { name?: string; personal?: boolean }
-  const personal = body.personal === true
 
   let baseSlug: string
   let displayName: string
@@ -109,7 +116,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     await createOrganization({ name: slug, displayName, personal, sourceOwner: user.owner })
-    await moveUserToOrg(user, slug)
+    // First-run only: make the zero-org user this org's admin. For an additional
+    // org we deliberately do NOT move them (preserve their owner/admin + old org).
+    if (!additional) await moveUserToOrg(user, slug)
   } catch (e) {
     return NextResponse.json(
       { error: `Could not create the organization: ${e instanceof Error ? e.message : String(e)}` },
@@ -117,5 +126,5 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
-  return NextResponse.json({ org: slug, displayName })
+  return NextResponse.json({ org: slug, displayName, additional })
 }
