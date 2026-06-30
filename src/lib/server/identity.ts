@@ -39,12 +39,14 @@ const KMS_URL = trim(process.env.KMS_URL ?? 'http://kms.hanzo.svc')
 /** Confidential client used for app-on-behalf mint/issue/revoke. */
 const MINT_CLIENT_ID = process.env.IAM_MINT_CLIENT_ID ?? ''
 const MINT_CLIENT_SECRET = process.env.IAM_MINT_CLIENT_SECRET ?? ''
-/** The metadata orgs whose admins are GLOBAL (cross-tenant) admins — casdoor's
- *  reserved `built-in` and the platform `admin` org. A member-admin of either is
- *  a global admin (matches admin-policy ORG_METADATA_OWNERS). A tenant org owner
- *  (hanzo, maxpower, …) is NEVER global, even with org-level isAdmin. */
-const ADMIN_ORGS = new Set(['built-in', 'admin'])
-const isAdminOrg = (owner: string): boolean => ADMIN_ORGS.has(owner)
+/** THE global-admin org — standardized as `admin` across the whole stack
+ *  (commerce, ai, gateway all gate cross-tenant on owner=="admin"). A member-admin
+ *  of `admin` is a global (cross-tenant) admin; casdoor's reserved `built-in` is
+ *  NOT used (per the "no built-in admin — seed the z@<domain> superuser in the
+ *  admin org" convention). A tenant org owner (hanzo, maxpower, …) is NEVER global,
+ *  even with org-level isAdmin. */
+const ADMIN_ORG = 'admin'
+const isAdminOrg = (owner: string): boolean => owner === ADMIN_ORG
 
 /** IAM base URL (the admin IAM proxy forwards `/v1/iam/*` here). */
 export const iamBaseUrl = (): string => IAM_URL
