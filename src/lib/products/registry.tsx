@@ -117,6 +117,7 @@ import { CostModule } from '~/components/products/CostModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
+import { BaseModule } from '~/components/products/BaseModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { TracesModule } from '~/components/products/TracesModule'
@@ -574,6 +575,26 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/datastore`,
     kind: 'module',
     routes: resourceRoutes({ kind: 'datastore', productLabel: 'Hanzo Datastore', connectionHint: 'Connect over the Datastore HTTP/native protocol using the connection string.' }),
+  },
+  {
+    // Embeds the @hanzo/superbase-dashboard screens (the SAME ones that run
+    // standalone at base.hanzo.ai). `''` is the tenants list (+ detail drawer);
+    // `new` is the create form. Data flows through console2's `/superbase/*`
+    // proxy (per-user IAM bearer minted server-side).
+    id: 'base',
+    label: 'Base',
+    icon: Boxes,
+    description: 'Multi-tenant Hanzo Base — provision and manage tenant instances.',
+    gcp: 'Firebase',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/superbase',
+    docs: `${DOCS}/base`,
+    kind: 'module',
+    routes: [
+      { path: '', component: BaseModule },
+      { path: 'new', component: BaseModule },
+    ],
   },
   {
     id: 'docdb',
