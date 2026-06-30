@@ -163,6 +163,7 @@ import { GpusModule } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
+import OverviewDashboard from '~/components/products/OverviewModule'
 import {
   DashboardsModule,
   ExperimentsModule,
@@ -295,6 +296,19 @@ const soonRoutes: ProductRoute[] = [{ path: '', component: ComingSoon }]
  * working module is preserved; everything else is an honest `external` or `soon`.
  */
 export const catalog: CatalogEntry[] = [
+  // ── Observe — the usage/spend dashboard home (also rendered at '/') ───
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: Gauge,
+    description: 'Real-time usage, performance, and spend across your AI workloads.',
+    gcp: 'Cloud overview',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/console2',
+    kind: 'module',
+    routes: [{ path: '', component: OverviewDashboard }],
+  },
   // ── AI ───────────────────────────────────────────────────────────────
   {
     // Catalog-first: the default tab is the LIVE model list (the ~49 Zen models),
