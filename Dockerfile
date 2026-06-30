@@ -15,7 +15,13 @@ COPY package.json package-lock.json* ./
 # symlink-handoff fragility. Keeping install and `next build` on the same
 # filesystem removes that seam entirely; the runner stage still copies the final
 # node_modules (runtime `next start` worked through that COPY all along).
-RUN npm install --no-audit --no-fund
+# The full @hanzo/gui dep tree intermittently completes with ~80 packages missing
+# (incl. next) — npm reports success but skips them. Retry-hardened install, then a
+# hard assert + explicit repair so a partial tree fails LOUDLY (or self-heals)
+# instead of surfacing later as a confusing "next not found".
+RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-timeout=120000 \
+ && { [ -f node_modules/next/dist/bin/next ] || npm install --no-audit --no-fund next@15.5.19 ; } \
+ && test -f node_modules/next/dist/bin/next
 COPY . .
 # public/ may be empty (git doesn't track empty dirs) — ensure it exists for the runner COPY.
 RUN mkdir -p public
