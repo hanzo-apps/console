@@ -68,8 +68,8 @@ import {
   LineChart,
   Sparkline,
   type ChartPoint,
-  type DonutSlice,
-} from '~/components/charts/Charts'
+  type Slice,
+} from '~/components/ui/Charts'
 
 // ── format helpers (the repo idiom: local, not a shared util) ────────────────
 const usd = (cents: number): string =>
@@ -486,7 +486,7 @@ function ChartCard({ title, subtitle, flex, children }: { title: string; subtitl
 // ── Spend by model ────────────────────────────────────────────────────────────
 
 function SpendByModel({ byModel, flex }: { byModel: CloudUsageOverview['byModel']; flex?: number }) {
-  const slices: DonutSlice[] = byModel.items.map((m, i) => ({
+  const slices: Slice[] = byModel.items.map((m, i) => ({
     label: m.model,
     value: m.spendCents,
     color: CHART_PALETTE[i % CHART_PALETTE.length],
