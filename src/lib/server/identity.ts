@@ -150,7 +150,7 @@ async function resolveSessionUser(
   let email = d.email ?? d.User?.email ?? ''
   let emailVerified = Boolean(d.emailVerified ?? d.User?.emailVerified)
   let isAdmin = Boolean(d.isAdmin ?? d.User?.isAdmin)
-  let isGlobalAdmin = Boolean(d.isGlobalAdmin ?? d.User?.isGlobalAdmin) || (isAdminOrg(owner) && isAdmin)
+  let isGlobalAdmin = Boolean(d.isGlobalAdmin ?? d.User?.isGlobalAdmin) || isAdminOrg(owner)
 
   // get-account may not carry email/isAdmin (thin claims). When email is absent,
   // IAM is authoritative — fetch the user as the confidential client to resolve
@@ -162,7 +162,7 @@ async function resolveSessionUser(
       email = u.email ?? ''
       emailVerified = Boolean(u.emailVerified)
       isAdmin = Boolean(u.isAdmin)
-      isGlobalAdmin = Boolean(u.isGlobalAdmin) || (isAdminOrg(owner) && isAdmin)
+      isGlobalAdmin = Boolean(u.isGlobalAdmin) || isAdminOrg(owner)
     }
   }
 
