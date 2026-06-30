@@ -12,7 +12,7 @@
  * user and forwards with a short-lived user token. `aiBase()` is that proxy
  * origin — the ONE place the AI runtime is addressed.
  */
-import { restGet, restPost, v1Url, aiBase } from './client'
+import { ApiError, restGet, restPost, v1Url, aiBase } from './client'
 
 /** One OpenAI chat message. */
 export type ChatMessage = {
@@ -48,6 +48,37 @@ export type ChatRequest = {
 /** Raw `/v1/models` response (OpenAI list envelope). */
 type ModelsResponse = { object?: string; data?: { id?: string; owned_by?: string }[] }
 
+/**
+ * A chat message whose content is plain text OR multimodal content parts (the
+ * OpenAI `[{type:'text'},{type:'image_url'}]` shape the Vision tab sends). Kept
+ * permissive (`unknown` content) so one streaming binding serves text and vision.
+ */
+export type StreamMessage = { role: 'system' | 'user' | 'assistant'; content: unknown }
+
+/** Streaming chat request — `ChatRequest` plus optional stop sequences. */
+export type ChatStreamRequest = {
+  model: string
+  messages: StreamMessage[]
+  temperature?: number
+  top_p?: number
+  max_tokens?: number
+  stop?: string[]
+}
+
+/** Request body for an embeddings run. */
+export type EmbeddingsRequest = { model: string; input: string | string[] }
+
+/** The raw OpenAI embeddings response (the fields the playground reads). */
+export type EmbeddingsResponse = {
+  model?: string
+  data?: { index?: number; embedding?: number[] }[]
+  usage?: { prompt_tokens?: number; total_tokens?: number }
+  error?: { message?: string }
+}
+
+/** Request body for a text-to-speech run. */
+export type SpeechRequest = { model: string; input: string; voice?: string; response_format?: string }
+
 export const PlaygroundApi = {
   /**
    * List model ids the gateway accepts. Returns a de-duplicated, sorted id list;
@@ -69,4 +100,56 @@ export const PlaygroundApi = {
    */
   chat: (req: ChatRequest, headers?: Record<string, string>): Promise<ChatCompletion> =>
     restPost<ChatCompletion>(v1Url('chat/completions', aiBase()), { ...req, stream: false }, headers),
+
+  /**
+   * Open a STREAMING chat completion (Server-Sent Events). Returns the raw
+   * `Response` so the caller reads `response.body` chunk-by-chunk — that is what
+   * lets the multi-model compare board measure real time-to-first-token and
+   * render each model's tokens as they arrive. `stream_options.include_usage`
+   * asks the gateway to emit a final usage chunk so prompt/completion token
+   * counts (and therefore cost) are REAL, not estimated. Credentials are the
+   * session cookie only; the keyless `/ai` proxy mints the bearer the gateway
+   * requires and forwards the SSE bytes straight through.
+   */
+  streamChat: (req: ChatStreamRequest, signal?: AbortSignal): Promise<Response> =>
+    fetch(v1Url('chat/completions', aiBase()), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+      body: JSON.stringify({ ...req, stream: true, stream_options: { include_usage: true } }),
+      signal,
+      cache: 'no-store',
+    }),
+
+  /** Run an embeddings request; returns the raw OpenAI embeddings response. */
+  embeddings: (req: EmbeddingsRequest): Promise<EmbeddingsResponse> =>
+    restPost<EmbeddingsResponse>(v1Url('embeddings', aiBase()), req),
+
+  /**
+   * Synthesize speech (text → audio). Returns the audio bytes as a Blob (the
+   * gateway responds with audio/*); throws `ApiError` carrying the gateway
+   * message on failure so the caller renders an honest state, never silence.
+   */
+  speech: async (req: SpeechRequest, signal?: AbortSignal): Promise<Blob> => {
+    const res = await fetch(v1Url('audio/speech', aiBase()), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+      signal,
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      let msg = `Request failed (HTTP ${res.status})`
+      try {
+        const j = JSON.parse(text) as { error?: { message?: string }; msg?: string }
+        msg = j?.error?.message ?? j?.msg ?? msg
+      } catch {
+        /* non-JSON error body — keep the status message */
+      }
+      throw new ApiError(msg, res.status)
+    }
+    return res.blob()
+  },
 }
