@@ -5,25 +5,37 @@
  *
  * Source: the unified `/v1/pricing/models` catalog via `aicatalog.fetchCatalog`
  * (through the `/ai` proxy, so the user bearer is attached). Every column is a
- * REAL field — name + params (specs), modality (derived from the id), context,
- * per-Mtok input/output pricing, the TRUE provider (so qwen→Qwen, glm→Zhipu, our
- * own → "Zen" — never the old "everything is Hanzo" mislabel), and a live
- * Available status (servable now) vs catalog-only. Honest loading/error/empty;
- * nothing fabricated. Filter by provider; "Zen" surfaces our first-party models.
+ * REAL field — provider logo + name + params (specs), modality (derived from the
+ * id), context (joined across the `context`/`contextWindow` shapes), per-Mtok
+ * input/output pricing, the TRUE provider (qwen→Qwen, glm→Zhipu, our own → "Zen"),
+ * and a live Available status (servable now) vs catalog-only. Search + filter by
+ * type/provider/pricing are client-side over the loaded catalog. Honest
+ * loading/error/empty; nothing fabricated.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, ArrowLeft, Play, Settings2, Copy } from '@hanzogui/lucide-icons-2'
+import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
+import { RefreshCw, ArrowLeft, Play, Settings2, Copy, Search, SlidersHorizontal, X } from '@hanzogui/lucide-icons-2'
 
 import {
   fetchCatalog,
+  fetchPlans,
+  plansForTier,
   displayProvider,
   modelType,
+  modelTypes,
+  modelContext,
+  modelDisplayName,
+  matchesQuery,
+  priceBucket,
+  PRICE_BUCKETS,
   fmtPrice,
   fmtContext,
   type CatalogEntry,
+  type Plan,
+  type PriceBucket,
 } from '~/lib/api/aicatalog'
+import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
@@ -47,59 +59,66 @@ const columns: Column<CatalogEntry>[] = [
     key: 'name',
     header: 'Model',
     render: (m) => (
-      <YStack gap={1}>
-        <XStack items="center" gap="$2">
-          <Text fontSize="$3" color="$color12" numberOfLines={1}>
-            {m.name}
-          </Text>
-          {m.specs?.params ? (
-            <Text fontSize="$1" color="$color10">
-              {m.specs.params}
+      <XStack items="center" gap="$2.5" flex={1}>
+        <ProviderLogo provider={m.provider ?? 'Other'} size={26} />
+        <YStack gap={1} flex={1}>
+          <XStack items="center" gap="$2">
+            <Text fontSize="$3" color="$color12" numberOfLines={1}>
+              {modelDisplayName(m)}
+            </Text>
+            {m.specs?.params ? (
+              <Text fontSize="$1" color="$color10">
+                {m.specs.params}
+              </Text>
+            ) : null}
+          </XStack>
+          {m.description ? (
+            <Text fontSize="$1" color="$color10" numberOfLines={1}>
+              {m.description}
             </Text>
           ) : null}
-        </XStack>
-        {m.description ? (
-          <Text fontSize="$1" color="$color10" numberOfLines={1}>
-            {m.description}
-          </Text>
-        ) : null}
-      </YStack>
+        </YStack>
+      </XStack>
     ),
   },
   {
     key: 'type',
     header: 'Type',
-    width: 110,
+    width: 100,
     render: (m) => <Pill label={modelType(m)} />,
   },
   {
     key: 'context',
     header: 'Context',
-    width: 100,
-    render: (m) => <Text fontSize="$3" color="$color11">{fmtContext(m.context)}</Text>,
+    width: 90,
+    render: (m) => <Text fontSize="$3" color="$color11">{fmtContext(modelContext(m))}</Text>,
   },
   {
-    key: 'input',
-    header: 'Input $/M',
-    width: 110,
-    render: (m) => <Text fontSize="$3" color="$color11">{fmtPrice(m.pricing?.input)}</Text>,
-  },
-  {
-    key: 'output',
-    header: 'Output $/M',
-    width: 110,
-    render: (m) => <Text fontSize="$3" color="$color11">{fmtPrice(m.pricing?.output)}</Text>,
+    key: 'pricing',
+    header: 'Price $/M',
+    width: 104,
+    render: (m) => (
+      <YStack gap={1}>
+        <Text fontSize="$3" color="$color12">{fmtPrice(m.pricing?.input)}</Text>
+        <Text fontSize="$1" color="$color10">{fmtPrice(m.pricing?.output)} out</Text>
+      </YStack>
+    ),
   },
   {
     key: 'provider',
     header: 'Provider',
-    width: 140,
-    render: (m) => <Text fontSize="$3">{displayProvider(m.provider)}</Text>,
+    width: 150,
+    render: (m) => (
+      <XStack items="center" gap="$2">
+        <ProviderLogo provider={m.provider ?? 'Other'} size={20} />
+        <Text fontSize="$3" color="$color11" numberOfLines={1}>{displayProvider(m.provider)}</Text>
+      </XStack>
+    ),
   },
   {
     key: 'status',
     header: 'Status',
-    width: 120,
+    width: 116,
     render: (m) =>
       m.available ? <Pill label="● Available" tone="live" /> : <Pill label="Catalog" />,
   },
@@ -128,11 +147,29 @@ const Fact = ({ label, value }: { label: string; value: string }) => (
   </YStack>
 )
 
+/** One subscription-tier badge (resolved from the model's `tier` via /v1/plans). */
+function PlanBadge({ plan }: { plan: Plan }) {
+  const rpm = plan.limits?.requestsPerMinute
+  const tpm = plan.limits?.tokensPerMinute
+  const limit =
+    rpm && tpm ? `${rpm.toLocaleString()} rpm · ${(tpm / 1000).toLocaleString()}k tpm`
+    : rpm ? `${rpm.toLocaleString()} rpm`
+    : tpm ? `${(tpm / 1000).toLocaleString()}k tpm`
+    : null
+  return (
+    <YStack px="$2.5" py="$1.5" rounded="$3" bg="$color3" gap={1}>
+      <Text fontSize="$2" fontWeight="700" color="$color12">{plan.name}</Text>
+      {limit ? <Text fontSize="$1" color="$color10">{limit}</Text> : null}
+    </YStack>
+  )
+}
+
 /** Click-through model detail — full specs, pricing, features, and config actions. */
-function ModelDetailPanel({ m, onBack }: { m: CatalogEntry; onBack: () => void }) {
+function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]; onBack: () => void }) {
   const router = useRouter()
+  const tierPlans = plansForTier(m.tier, plans)
   const copyId = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) void navigator.clipboard.writeText(m.name)
+    if (typeof navigator !== 'undefined' && navigator.clipboard) void navigator.clipboard.writeText(m.id ?? m.name)
   }
   return (
     <YStack gap="$4">
@@ -144,8 +181,9 @@ function ModelDetailPanel({ m, onBack }: { m: CatalogEntry; onBack: () => void }
 
       <YStack gap="$2">
         <XStack items="center" gap="$3" flexWrap="wrap">
+          <ProviderLogo provider={m.provider ?? 'Other'} size={40} />
           <Text fontSize="$8" fontWeight="800" color="$color12">
-            {m.name}
+            {modelDisplayName(m)}
           </Text>
           {m.specs?.params ? <Pill label={m.specs.params} /> : null}
           {m.available ? <Pill label="● Available" tone="live" /> : <Pill label="Catalog" />}
@@ -169,7 +207,7 @@ function ModelDetailPanel({ m, onBack }: { m: CatalogEntry; onBack: () => void }
         <Button
           size="$3"
           icon={<Settings2 size={15} />}
-          onPress={() => router.push(`/models/routing/${encodeURIComponent(m.name)}`)}
+          onPress={() => router.push(`/models/routing/${encodeURIComponent(m.id ?? m.name)}`)}
         >
           Configure routing
         </Button>
@@ -189,7 +227,7 @@ function ModelDetailPanel({ m, onBack }: { m: CatalogEntry; onBack: () => void }
       >
         <Fact label="Type" value={modelType(m)} />
         <Fact label="Provider" value={displayProvider(m.provider)} />
-        <Fact label="Context" value={fmtContext(m.context)} />
+        <Fact label="Context" value={fmtContext(modelContext(m))} />
         <Fact label="Tier" value={m.tier ? m.tier : '—'} />
         <Fact label="Input / Mtok" value={fmtPrice(m.pricing?.input)} />
         <Fact label="Output / Mtok" value={fmtPrice(m.pricing?.output)} />
@@ -197,6 +235,19 @@ function ModelDetailPanel({ m, onBack }: { m: CatalogEntry; onBack: () => void }
         <Fact label="Cache write / Mtok" value={fmtPrice(m.pricing?.cacheWrite)} />
         {m.specs?.arch ? <Fact label="Architecture" value={m.specs.arch} /> : null}
       </XStack>
+
+      {tierPlans.length > 0 ? (
+        <YStack gap="$2">
+          <Text fontSize="$2" color="$color11" fontWeight="600">
+            Included in plans
+          </Text>
+          <XStack gap="$2" flexWrap="wrap">
+            {tierPlans.map((p) => (
+              <PlanBadge key={p.id} plan={p} />
+            ))}
+          </XStack>
+        </YStack>
+      ) : null}
 
       {m.features && m.features.length > 0 ? (
         <YStack gap="$2">
@@ -216,6 +267,51 @@ function ModelDetailPanel({ m, onBack }: { m: CatalogEntry; onBack: () => void }
   )
 }
 
+/** A labelled row of selectable pills (one active at a time, or none). */
+function FilterPills<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: { key: T; label: string }[]
+  value: T | null
+  onChange: (v: T | null) => void
+}) {
+  if (options.length === 0) return null
+  return (
+    <YStack gap="$1.5">
+      <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+        {label}
+      </Text>
+      <XStack gap="$1" flexWrap="wrap">
+        <Button
+          size="$2"
+          bg={value === null ? '$color5' : 'transparent'}
+          borderWidth={1}
+          borderColor="$borderColor"
+          onPress={() => onChange(null)}
+        >
+          All
+        </Button>
+        {options.map((o) => (
+          <Button
+            key={o.key}
+            size="$2"
+            bg={value === o.key ? '$color5' : 'transparent'}
+            borderWidth={1}
+            borderColor="$borderColor"
+            onPress={() => onChange(o.key)}
+          >
+            {o.label}
+          </Button>
+        ))}
+      </XStack>
+    </YStack>
+  )
+}
+
 type LoadState =
   | { phase: 'loading' }
   | { phase: 'error'; err: ApiError }
@@ -223,14 +319,23 @@ type LoadState =
 
 export function ModelCatalogModule(_props: { params: Record<string, string> }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
-  const [provider, setProvider] = useState<string | null>(null)
+  const [plans, setPlans] = useState<Plan[]>([])
   const [selected, setSelected] = useState<CatalogEntry | null>(null)
+
+  // Filters (client-side over the loaded catalog).
+  const [query, setQuery] = useState('')
+  const [provider, setProvider] = useState<string | null>(null)
+  const [type, setType] = useState<string | null>(null)
+  const [price, setPrice] = useState<PriceBucket | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
 
   const run = useCallback(() => {
     setState({ phase: 'loading' })
     fetchCatalog()
       .then((models) => setState({ phase: 'ready', models }))
       .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
+    // Plans are enrichment (tier badges); honest-empty on gate, never blocks.
+    fetchPlans().then(setPlans)
   }, [])
 
   useEffect(() => {
@@ -239,22 +344,38 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
 
   const models = state.phase === 'ready' ? state.models : []
 
-  // Provider filter options, sorted by display name; "Zen" (our own) first.
+  // Filter options derived from the loaded catalog.
   const providers = useMemo(() => {
-    const set = new Map<string, string>()
-    for (const m of models) set.set(displayProvider(m.provider), displayProvider(m.provider))
-    return Array.from(set.keys()).sort((a, b) =>
-      a === 'Zen' ? -1 : b === 'Zen' ? 1 : a.localeCompare(b),
-    )
+    const set = new Set<string>()
+    for (const m of models) set.add(displayProvider(m.provider))
+    return Array.from(set)
+      .sort((a, b) => (a === 'Zen' ? -1 : b === 'Zen' ? 1 : a.localeCompare(b)))
+      .map((p) => ({ key: p, label: p }))
   }, [models])
 
+  const types = useMemo(() => modelTypes(models).map((t) => ({ key: t, label: t })), [models])
+
   const rows = useMemo(
-    () => (provider ? models.filter((m) => displayProvider(m.provider) === provider) : models),
-    [models, provider],
+    () =>
+      models.filter(
+        (m) =>
+          matchesQuery(m, query) &&
+          (provider ? displayProvider(m.provider) === provider : true) &&
+          (type ? modelType(m) === type : true) &&
+          (price ? priceBucket(m) === price : true),
+      ),
+    [models, query, provider, type, price],
   )
 
+  const activeFilters = (provider ? 1 : 0) + (type ? 1 : 0) + (price ? 1 : 0)
+  const clearAll = () => {
+    setProvider(null)
+    setType(null)
+    setPrice(null)
+  }
+
   const stats = useMemo(() => {
-    const ctxs = rows.map((m) => m.context).filter((x): x is number => typeof x === 'number')
+    const ctxs = rows.map((m) => modelContext(m)).filter((x): x is number => typeof x === 'number')
     const ins = rows.map((m) => m.pricing?.input).filter((x): x is number => typeof x === 'number')
     const provCount = new Set(rows.map((m) => displayProvider(m.provider))).size
     const avgIn = ins.length ? ins.reduce((a, b) => a + b, 0) / ins.length : null
@@ -268,7 +389,7 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
 
   // Click-through detail — full specs/pricing/features + config actions.
   if (selected) {
-    return <ModelDetailPanel m={selected} onBack={() => setSelected(null)} />
+    return <ModelDetailPanel m={selected} plans={plans} onBack={() => setSelected(null)} />
   }
 
   return (
@@ -294,39 +415,71 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
         />
       ) : (
         <>
-          {providers.length > 0 ? (
-            <XStack gap="$1" flexWrap="wrap">
-              <Button
+          {/* Search + Filters affordance */}
+          <XStack gap="$2" items="center" flexWrap="wrap">
+            <XStack
+              flex={1}
+              minW={240}
+              items="center"
+              gap="$2"
+              px="$2.5"
+              py="$1.5"
+              rounded="$3"
+              borderWidth={1}
+              borderColor="$borderColor"
+              bg="$color1"
+            >
+              <Search size={14} opacity={0.6} />
+              <Input
+                flex={1}
                 size="$2"
-                bg={provider === null ? '$color5' : 'transparent'}
-                borderWidth={1}
-                borderColor="$borderColor"
-                onPress={() => setProvider(null)}
-              >
-                All
-              </Button>
-              {providers.map((p) => (
-                <Button
-                  key={p}
-                  size="$2"
-                  bg={provider === p ? '$color5' : 'transparent'}
-                  borderWidth={1}
-                  borderColor="$borderColor"
-                  onPress={() => setProvider(p)}
-                >
-                  {p}
-                </Button>
-              ))}
+                borderWidth={0}
+                bg="transparent"
+                placeholder="Search models, providers, descriptions…"
+                value={query}
+                onChangeText={setQuery}
+                autoCapitalize="none"
+              />
+              {query ? (
+                <Button size="$1" chromeless circular icon={<X size={13} />} onPress={() => setQuery('')} />
+              ) : null}
             </XStack>
+            <Button
+              size="$2"
+              icon={<SlidersHorizontal size={15} />}
+              bg={showFilters || activeFilters > 0 ? '$color5' : 'transparent'}
+              borderWidth={1}
+              borderColor="$borderColor"
+              onPress={() => setShowFilters((v) => !v)}
+            >
+              Filters{activeFilters > 0 ? ` · ${activeFilters}` : ''}
+            </Button>
+          </XStack>
+
+          {showFilters ? (
+            <YStack gap="$3" p="$3" rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color1">
+              <FilterPills label="Provider" options={providers} value={provider} onChange={setProvider} />
+              <FilterPills label="Type" options={types} value={type} onChange={setType} />
+              <FilterPills label="Pricing" options={PRICE_BUCKETS} value={price} onChange={setPrice} />
+              {activeFilters > 0 ? (
+                <Button size="$2" chromeless self="flex-start" icon={<X size={14} />} onPress={clearAll}>
+                  Clear filters
+                </Button>
+              ) : null}
+            </YStack>
           ) : null}
 
           <DataTable
             columns={columns}
             rows={rows}
             loading={state.phase === 'loading'}
-            rowKey={(m) => m.name}
+            rowKey={(m) => m.id ?? m.name}
             onRowPress={(m) => setSelected(m)}
-            empty="No models available on this deployment yet."
+            empty={
+              query || activeFilters > 0
+                ? 'No models match your search and filters.'
+                : 'No models available on this deployment yet.'
+            }
           />
 
           {state.phase === 'ready' && rows.length > 0 ? (
