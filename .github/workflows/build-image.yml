@@ -59,7 +59,7 @@ jobs:
         # Dockerfile to avoid Docker Hub's unauthenticated pull-rate limits.
         run: |
           set -u
-          base=public.ecr.aws/docker/library/node:22-alpine
+          base=public.ecr.aws/docker/library/node:24-alpine
           if docker image inspect "$base" >/dev/null 2>&1; then
             echo "base $base already cached on runner"; exit 0
           fi
