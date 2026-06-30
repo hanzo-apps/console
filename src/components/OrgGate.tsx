@@ -74,6 +74,14 @@ export function OrgGate({ children }: { children: ReactNode }) {
   const { account } = useSession()
   const owner = account?.owner ?? ''
   const isAdmin = Boolean(account?.isAdmin)
+  // GLOBAL (cross-tenant) admin — the only one who may use admin.hanzo.ai. An ORG
+  // owner (e.g. Dave/maxpower) carries `isAdmin` for their OWN org but is NOT a
+  // global admin, so the admin-ops banner must gate on this, never on isAdmin.
+  // Mirrors the server rule: explicit isGlobalAdmin, or a member of the admin/
+  // built-in metadata org. (Account's index signature exposes isGlobalAdmin when present.)
+  const isGlobalAdmin =
+    Boolean((account as { isGlobalAdmin?: boolean } | null)?.isGlobalAdmin) ||
+    ((owner === 'admin' || owner === 'built-in') && isAdmin)
   const [bannerDismissed, setBannerDismissed] = useState(true) // start hidden to avoid flash
 
   // Restore banner dismissed state and last org on mount
@@ -106,8 +114,10 @@ export function OrgGate({ children }: { children: ReactNode }) {
     return <OrgOnboarding />
   }
 
-  // Admin on non-admin host: show dismissible banner, render console normally
-  const showBanner = isAdmin && !onAdminHost() && !bannerDismissed
+  // GLOBAL admin on a non-admin host: show dismissible banner, render console
+  // normally. Org-level admins (org owners) never see it — admin.hanzo.ai is
+  // cross-tenant ops they cannot use.
+  const showBanner = isGlobalAdmin && !onAdminHost() && !bannerDismissed
 
   return (
     <YStack flex={1}>
