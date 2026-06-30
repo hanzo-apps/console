@@ -31,6 +31,7 @@ const ALLOWED = new Set([
   'v1/chat/completions',
   'v1/embeddings',
   'v1/rerank',
+  'v1/audio/speech', // text-to-speech (JSON in → audio bytes out) for the Playground Audio tab
 ])
 
 // ── Short-lived user-token cache ─────────────────────────────────────────────
@@ -101,10 +102,19 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
 
   try {
     const res = await fetch(url, init)
-    const text = await res.text()
-    return new NextResponse(text, {
+    // Stream the upstream body straight through — do NOT buffer with res.text().
+    // chat/completions with `stream:true` returns Server-Sent Events, and the
+    // multi-model compare playground measures real time-to-first-token from the
+    // first streamed chunk; buffering would collapse TTFT into total latency.
+    // Passing res.body through is equally correct for the non-streaming JSON
+    // callers (they read the full body) and for binary audio/speech bytes — one
+    // passthrough serves every allow-listed endpoint, streaming or not.
+    return new NextResponse(res.body, {
       status: res.status,
-      headers: { 'Content-Type': res.headers.get('content-type') ?? 'application/json' },
+      headers: {
+        'Content-Type': res.headers.get('content-type') ?? 'application/json',
+        'Cache-Control': 'no-cache, no-transform',
+      },
     })
   } catch (e) {
     return NextResponse.json(
