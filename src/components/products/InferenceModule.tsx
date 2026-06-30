@@ -12,11 +12,12 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
-import { RefreshCw } from '@hanzogui/lucide-icons-2'
+import { RefreshCw, Zap } from '@hanzogui/lucide-icons-2'
 
 import { restGet } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { EmptyState } from '~/components/ui/EmptyState'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
@@ -116,6 +117,19 @@ export function InferenceModule(_props: { params: Record<string, string> }) {
 
       {loadError ? (
         <PlatformStateCard error={loadError} onRetry={() => void load()} />
+      ) : !loading && rows.length === 0 ? (
+        <EmptyState
+          icon={Zap}
+          title="Serve a model"
+          description="Inference endpoints turn a model into a scalable, autoscaling HTTP API — online for low-latency requests or batch for large jobs, billed only for what you use."
+          bullets={[
+            'Pick a Zen model or bring your own checkpoint',
+            'Deploy an endpoint with the hanzo CLI or SDK',
+            'Replicas, request volume, and rollout status appear here',
+          ]}
+          primary={{ label: 'Create an endpoint', href: 'https://docs.hanzo.ai/inference' }}
+          secondary={{ label: 'Browse models', onPress: () => { if (typeof window !== 'undefined') window.location.assign('/models') } }}
+        />
       ) : (
         <DataTable
           columns={columns}

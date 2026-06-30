@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { ApiError, ModelRouteApi, type ModelRoute } from '~/lib/api'
-import { useSession } from '~/lib/auth/session'
+import { currentOrg } from '~/lib/org-scope'
 import { FieldRow, FieldText, FieldSwitch } from '~/components/ui/Field'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { newModelRoute } from './logic'
@@ -21,8 +21,9 @@ export function ModelRouteEditView({
   modelName: string | null
   onDone: () => void
 }) {
-  const { account } = useSession()
-  const owner = account?.name ?? 'admin'
+  // Tenant scope: model routes are org-owned. Use the active org scope so the
+  // route loads by `<org>/<modelName>` and `newModelRoute(owner)` creates under it.
+  const owner = currentOrg()
   const isNew = modelName === null
 
   const [route, setRoute] = useState<ModelRoute | null>(isNew ? newModelRoute(owner) : null)

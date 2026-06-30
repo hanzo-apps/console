@@ -5,7 +5,7 @@ import { Button, Text, XStack } from '@hanzo/gui'
 import { Plus, Trash } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ModelRouteApi, type ModelRoute } from '~/lib/api'
-import { useSession } from '~/lib/auth/session'
+import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 
@@ -31,8 +31,8 @@ export function ModelRouteListView({
   onOpen: (r: ModelRoute) => void
   onNew: () => void
 }) {
-  const { account } = useSession()
-  const owner = account?.name ?? 'admin'
+  // Tenant scope: model routes are org-owned. Use the active org scope.
+  const owner = currentOrg()
 
   const [rows, setRows] = useState<ModelRoute[]>([])
   const [loading, setLoading] = useState(true)
