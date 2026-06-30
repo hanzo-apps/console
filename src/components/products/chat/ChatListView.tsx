@@ -49,7 +49,14 @@ export function ChatListView({ onOpen, onBack }: { onOpen: (c: Chat) => void; on
       key: 'name',
       header: 'Name',
       render: (c) => (
-        <Text fontSize="$3" color="$color12" onPress={() => onOpen(c)} cursor="pointer">
+        <Text
+          fontSize="$3"
+          fontWeight="600"
+          color="$color12"
+          onPress={() => onOpen(c)}
+          cursor="pointer"
+          hoverStyle={{ color: '$color10' }}
+        >
           {c.displayName || c.name}
         </Text>
       ),
