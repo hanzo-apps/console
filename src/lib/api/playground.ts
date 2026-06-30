@@ -55,7 +55,7 @@ type ModelsResponse = { object?: string; data?: { id?: string; owned_by?: string
  */
 export type StreamMessage = { role: 'system' | 'user' | 'assistant'; content: unknown }
 
-/** Streaming chat request — `ChatRequest` plus optional stop sequences. */
+/** Streaming chat request — `ChatRequest` plus optional stop + advanced sampling. */
 export type ChatStreamRequest = {
   model: string
   messages: StreamMessage[]
@@ -63,6 +63,10 @@ export type ChatStreamRequest = {
   top_p?: number
   max_tokens?: number
   stop?: string[]
+  /** Advanced sampling — sent only when set (omitted = gateway default). */
+  frequency_penalty?: number
+  presence_penalty?: number
+  seed?: number
 }
 
 /** Request body for an embeddings run. */
