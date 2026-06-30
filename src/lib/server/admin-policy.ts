@@ -16,7 +16,7 @@
 export type AdminPrincipal = { email: string; emailVerified: boolean; isAdmin: boolean; isGlobalAdmin: boolean }
 
 /** Org-metadata owners casdoor reports — acceptable only on org-list endpoints. */
-const ORG_METADATA_OWNERS = new Set(['admin', 'built-in'])
+const ORG_METADATA_OWNERS = new Set(['admin'])
 
 /** Email is on the brand's admin domain (case-insensitive). */
 export function emailOnBrand(email: string, adminDomain: string): boolean {
