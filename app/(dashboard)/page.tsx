@@ -19,6 +19,7 @@ import { useFavorites } from '~/lib/products/favorites'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FadeIn } from '~/components/ui/FadeIn'
 import { HomeSummary } from '~/components/HomeSummary'
+import { AiMetricsModule } from '~/components/products/AiMetricsModule'
 
 const STATUS_LABEL = { enabled: 'Enabled', external: 'External', soon: 'Soon' } as const
 const STATUS_BG = { enabled: '$color5', external: '$color3', soon: '$color4' } as const
@@ -119,6 +120,12 @@ export default function DashboardHome() {
         subtitle={`See, enable, and manage every ${config.brandName} product from one place.`}
       />
       <HomeSummary />
+
+      {/* Lead with the real AI usage dashboard (the same tested module as /ai-metrics):
+          requests, tokens, spend over time + per-model breakdown — the Langfuse-style
+          project home. The product catalog follows for navigation. */}
+      <AiMetricsModule params={{}} />
+
       {groups.map((group, i) => (
         <FadeIn key={group.category} index={i} style={{ width: '100%' }}>
           <YStack gap="$3">
