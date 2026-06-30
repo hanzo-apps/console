@@ -109,7 +109,7 @@ import { config } from '~/config'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
-import { StoresModule } from '~/components/products/StoresModule'
+import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { PlansModule } from '~/components/products/PlansModule'
@@ -365,16 +365,25 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: FinetuningModule }],
   },
   {
+    // The embeddings product — generate, store, and search vector embeddings.
+    // Collections ARE the per-org knowledge stores (get-stores), each mapping to
+    // the Qdrant/Search index {owner}-{store}-docs; Models/generate use the
+    // gateway (/v1/models, /v1/embeddings); Explore is /v1/search. The old
+    // Stores admin (StoresModule) is SUPERSEDED by this — one surface, not two.
     id: 'embeddings',
     label: 'Embeddings',
     icon: Boxes,
-    description: 'Knowledge stores and vector indexes for retrieval.',
+    description: 'Generate, store, and search vector embeddings at scale.',
+    gcp: 'Vertex AI Vector Search',
     category: 'AI',
     status: 'enabled',
+    repo: 'hanzoai/ai',
+    docs: `${DOCS}/embeddings`,
     kind: 'module',
     routes: [
-      { path: '', component: StoresModule },
-      { path: ':name', component: StoresModule },
+      { path: '', component: EmbeddingsModule },
+      { path: ':tab', component: EmbeddingsModule },
+      { path: 'collections/:name', component: EmbeddingsModule },
     ],
   },
   {
