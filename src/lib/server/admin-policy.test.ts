@@ -55,7 +55,11 @@ describe('tenant scoping — ownerAllowed (cross-tenant read gap closed)', () =>
   })
   it('allows the metadata owner only on org-list endpoints', () => {
     expect(ownerAllowed('admin', { ...brand, orgMetadataOk: true })).toBe(true)
-    expect(ownerAllowed('built-in', { ...brand, orgMetadataOk: true })).toBe(true)
+    // 'built-in' dual-recognition was deliberately dropped (v0.7.15,
+    // 9b59dec — "standardize the global-admin org on 'admin'") so the gate
+    // matches commerce/ai/gateway. The canonical global-admin metadata org is
+    // 'admin' ONLY; 'built-in' must now be rejected even on org-list endpoints.
+    expect(ownerAllowed('built-in', { ...brand, orgMetadataOk: true })).toBe(false)
     expect(ownerAllowed('admin', { ...brand, orgMetadataOk: false })).toBe(false)
   })
 })
