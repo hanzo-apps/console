@@ -30,8 +30,8 @@ export type ContentPart =
 /** One message in a run; content is plain text OR multimodal parts. */
 export type RunMessage = { role: 'system' | 'user' | 'assistant'; content: string | ContentPart[] }
 
-/** Lifecycle of a single column's run. */
-export type RunPhase = 'idle' | 'streaming' | 'done' | 'error'
+/** Lifecycle of a single column's run. `stopped` = user-aborted (partial kept). */
+export type RunPhase = 'idle' | 'streaming' | 'done' | 'error' | 'stopped'
 
 /** The live state of one model column. */
 export type Column = {

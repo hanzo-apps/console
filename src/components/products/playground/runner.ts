@@ -89,20 +89,28 @@ export async function runColumn(input: RunInput, handlers: RunHandlers, signal: 
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
     let buf = ''
-    for (;;) {
-      const { value, done } = await reader.read()
-      if (done) break
-      buf += decoder.decode(value, { stream: true })
-      const split = splitSSE(buf)
-      buf = split.rest
-      for (const ev of split.events) {
-        const data = dataOf(ev)
-        if (data != null) consume(data)
+    try {
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const split = splitSSE(buf)
+        buf = split.rest
+        for (const ev of split.events) {
+          const data = dataOf(ev)
+          if (data != null) consume(data)
+        }
       }
+      // Flush a trailing event that lacked a terminating blank line.
+      const tail = dataOf(buf)
+      if (tail != null) consume(tail)
+    } finally {
+      // Release the lock + underlying connection on EVERY exit path: normal
+      // [DONE]/return, a thrown mid-stream `data:{"error":…}` chunk, or an abort.
+      // Without this the ReadableStream stays locked and the socket is held until
+      // GC — N-at-once on the compare board. `cancel()` is a no-op once ended.
+      await reader.cancel().catch(() => {})
     }
-    // Flush a trailing event that lacked a terminating blank line.
-    const tail = dataOf(buf)
-    if (tail != null) consume(tail)
 
     return settle(null, false)
   } catch (e) {
