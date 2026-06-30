@@ -135,7 +135,13 @@ async function resolveSessionUser(
   if (!name || type === 'anonymous-user') return null
   if (opts.requireOwner && !owner) return null
 
-  const id = explicitId || (owner ? `${owner}/${name}` : name)
+  // IAM's privileged ops (issue-user-token, mint/revoke-user-keys) parse this id
+  // with GetOwnerAndNameFromId, which REQUIRES the `<owner>/<name>` composite key —
+  // a bare UUID (casdoor's `id` field, e.g. 113d4dd4-…) makes it throw "wrong token
+  // count" (the live Models-catalog failure for org-member accounts that carry an
+  // `id`). So always prefer `<owner>/<name>` when both are present; the explicit
+  // UUID is only a last-resort fallback for an owner-less account.
+  const id = owner && name ? `${owner}/${name}` : (explicitId || name)
   if (!id) return null
   let email = d.email ?? d.User?.email ?? ''
   let emailVerified = Boolean(d.emailVerified ?? d.User?.emailVerified)
