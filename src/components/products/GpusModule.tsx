@@ -1,139 +1,150 @@
 'use client'
 
 /**
- * GPUs — accelerator inventory and utilization tracked by the platform.
+ * GPUs — Hanzo Cloud's GPU compute surface (a Lambda/CoreWeave-class console for
+ * accelerator inventory, clusters, pools, utilization, alerts, and cost).
  *
- * Reads the GPU inventory from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/gpus`), which injects the service token server-side. When the
- * GPU service isn't provisioned for the org the list load fails and the
- * honest not-configured / unavailable card renders instead of an empty grid —
- * matching every other infra module.
+ * Hanzo Cloud compute is a metered RESALE layer over DigitalOcean (primary GPU
+ * Droplets + Paperspace) and AWS (secondary GPU instances). The `compute-provider`
+ * connector is not live yet, so this is the UX shell that goes live now and lights up
+ * when that connector lands. EVERY metric/row is a REAL backend call or an honest
+ * empty/not-configured/error state — it never ships invented GPUs, clusters, or spend.
+ *
+ * Real sources (loaded once here, shared to the tabs): the GPU inventory
+ * (`GET /paas/gpus`), the org's DOKS clusters (`GET /paas/org/{org}/cluster`, with GPU
+ * clusters derived from the node size), GPU alerts (`GET /paas/gpus/alerts`), the cloud
+ * usage ledger (`GET /v1/get-cloud-usages`, degrading to the real `/billing/usage`
+ * total). All org-scoped to `currentOrg()`. Tabs map to the registry `:tab` route.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Text } from '@hanzo/gui'
-import { RefreshCw } from '@hanzogui/lucide-icons-2'
+import { useRouter } from 'next/navigation'
+import { Button, XStack } from '@hanzo/gui'
+import { Plus, Upload } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { PlatformApi, type Cluster } from '~/lib/api'
+import { BillingApi, type Usage } from '~/lib/api/billing'
+import { ComputeApi, type Gpu, type GpuAlert, type UsageLedger } from '~/lib/api/compute'
+import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { interpretPlatformError } from './platform/state'
+import { HintButton } from './gpus/charts'
+import { OverviewTab } from './gpus/OverviewTab'
+import { GpusTab } from './gpus/GpusTab'
+import { ClustersTab } from './gpus/ClustersTab'
+import { PoolsTab } from './gpus/PoolsTab'
+import { PricingTab } from './gpus/PricingTab'
+import { AlertsTab } from './gpus/AlertsTab'
+import { SettingsTab } from './gpus/SettingsTab'
+import type { Async, ComputeData } from './gpus/state'
 
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
+const TABS = [
+  { id: '', label: 'Overview', path: '/gpus' },
+  { id: 'gpus', label: 'GPUs', path: '/gpus/gpus' },
+  { id: 'clusters', label: 'Clusters', path: '/gpus/clusters' },
+  { id: 'pools', label: 'Pools', path: '/gpus/pools' },
+  { id: 'pricing', label: 'Pricing', path: '/gpus/pricing' },
+  { id: 'alerts', label: 'Alerts', path: '/gpus/alerts' },
+  { id: 'settings', label: 'Settings', path: '/gpus/settings' },
+] as const
 
-type Gpu = {
-  id: string
-  name?: string
-  model?: string
-  status?: string
-  utilization?: string
-  memory?: string
-  node?: string
-}
+/** Load every real source once; tabs read the typed state and stay presentational. */
+function useComputeData(): ComputeData {
+  const [gpus, setGpus] = useState<Async<Gpu[]>>({ phase: 'loading' })
+  const [clusters, setClusters] = useState<Async<Cluster[]>>({ phase: 'loading' })
+  const [alerts, setAlerts] = useState<Async<GpuAlert[]>>({ phase: 'loading' })
+  const [ledger, setLedger] = useState<Async<UsageLedger, BackendState>>({ phase: 'loading' })
+  const [accountUsage, setAccountUsage] = useState<Async<Usage, BackendState>>({ phase: 'loading' })
 
-export function GpusModule(_props: { params: Record<string, string> }) {
-  const [rows, setRows] = useState<Gpu[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<PlatformError | null>(null)
+  const reload = useCallback(() => {
+    setGpus({ phase: 'loading' })
+    setClusters({ phase: 'loading' })
+    setAlerts({ phase: 'loading' })
+    setLedger({ phase: 'loading' })
+    setAccountUsage({ phase: 'loading' })
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const r = await restGet<{ gpus?: Gpu[] }>(paas('gpus'))
-      setRows(r.gpus ?? [])
-      setLoadError(null)
-    } catch (e) {
-      setLoadError(interpretPlatformError(e))
-      setRows([])
-    } finally {
-      setLoading(false)
-    }
+    ComputeApi.gpus()
+      .then((data) => setGpus({ phase: 'ready', data }))
+      .catch((e) => setGpus({ phase: 'error', error: interpretPlatformError(e) }))
+    PlatformApi.listClusters(currentOrg())
+      .then((data) => setClusters({ phase: 'ready', data }))
+      .catch((e) => setClusters({ phase: 'error', error: interpretPlatformError(e) }))
+    ComputeApi.alerts()
+      .then((data) => setAlerts({ phase: 'ready', data }))
+      .catch((e) => setAlerts({ phase: 'error', error: interpretPlatformError(e) }))
+    ComputeApi.usageLedger(7)
+      .then((data) => setLedger({ phase: 'ready', data }))
+      .catch((e) => setLedger({ phase: 'error', error: classifyBackend(e) }))
+    BillingApi.usage()
+      .then((data) => setAccountUsage({ phase: 'ready', data }))
+      .catch((e) => setAccountUsage({ phase: 'error', error: classifyBackend(e) }))
   }, [])
 
-  useEffect(() => {
-    void load()
-  }, [load])
+  useEffect(() => reload(), [reload])
 
-  const columns: Column<Gpu>[] = [
-    {
-      key: 'name',
-      header: 'Name',
-      render: (g) => (
-        <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
-          {g.name || g.id}
-        </Text>
-      ),
-    },
-    {
-      key: 'model',
-      header: 'Model',
-      width: 160,
-      render: (g) => (
-        <Text fontSize="$3" color="$color11">
-          {g.model || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'node',
-      header: 'Node',
-      width: 140,
-      render: (g) => (
-        <Text fontSize="$3" color="$color11">
-          {g.node || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'utilization',
-      header: 'Utilization',
-      width: 120,
-      render: (g) => (
-        <Text fontSize="$3" color="$color11">
-          {g.utilization || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'memory',
-      header: 'Memory',
-      width: 110,
-      render: (g) => (
-        <Text fontSize="$3" color="$color11">
-          {g.memory || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: 120,
-      render: (g) => <StatusTag status={g.status ?? 'unknown'} />,
-    },
-  ]
+  return { gpus, clusters, alerts, ledger, accountUsage, reload }
+}
+
+export function GpusModule({ params }: { params: Record<string, string> }) {
+  const router = useRouter()
+  const data = useComputeData()
+  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+
+  // Navigate to a GPU subtab (bare id) or an absolute console path (leading '/').
+  const onNav = useCallback(
+    (to: string) => router.push(to.startsWith('/') ? to : `/gpus${to ? `/${to}` : ''}`),
+    [router],
+  )
 
   return (
     <>
       <PageHeader
         title="GPUs"
-        subtitle="Accelerator inventory and utilization."
+        subtitle="Monitor and manage your GPU clusters, utilization, and costs."
         actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
-            Refresh
-          </Button>
+          <XStack gap="$2">
+            <HintButton icon={<Plus size={15} />} disabled hint="Connect a GPU provider (DigitalOcean / AWS) to add capacity">
+              Add GPUs
+            </HintButton>
+            <HintButton icon={<Upload size={15} />} disabled hint="Importing an existing cluster needs the compute-provider connector">
+              Import cluster
+            </HintButton>
+            <HintButton icon={<Plus size={15} />} theme="light" onPress={() => onNav('clusters')}>
+              Create cluster
+            </HintButton>
+          </XStack>
         }
       />
 
-      {loadError ? (
-        <PlatformStateCard error={loadError} onRetry={() => void load()} />
+      <XStack gap="$1" flexWrap="wrap">
+        {TABS.map((t) => (
+          <Button
+            key={t.id || 'overview'}
+            size="$2"
+            bg={t.id === tab ? '$color5' : 'transparent'}
+            borderWidth={1}
+            borderColor="$borderColor"
+            onPress={() => router.push(t.path)}
+          >
+            {t.label}
+          </Button>
+        ))}
+      </XStack>
+
+      {tab === '' ? (
+        <OverviewTab data={data} onNav={onNav} />
+      ) : tab === 'gpus' ? (
+        <GpusTab data={data} onNav={onNav} />
+      ) : tab === 'clusters' ? (
+        <ClustersTab data={data} />
+      ) : tab === 'pools' ? (
+        <PoolsTab />
+      ) : tab === 'pricing' ? (
+        <PricingTab onNav={onNav} />
+      ) : tab === 'alerts' ? (
+        <AlertsTab data={data} />
       ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          rowKey={(g) => g.id}
-          empty="No GPUs yet."
-        />
+        <SettingsTab onNav={onNav} />
       )}
     </>
   )
