@@ -9,41 +9,116 @@
  * turn, send the full history, append the assistant reply. Nothing is faked —
  * every reply is a real completion, and a failure renders an honest state
  * (including the 402 "add credits" billing gate), never fabricated text.
+ *
+ * Presentation: assistant turns read as open text with a sparkle avatar + name +
+ * time (no boxed card); the user turn is a compact accent bubble; both render
+ * light markdown (fenced code, inline code, bold). The empty state is a polished
+ * welcome with clickable suggested prompts, and the composer is a single rounded,
+ * elevated input with a code-insert and send affordance + a muted hint row.
  */
-import { useEffect, useState } from 'react'
-import { Button, Card, ScrollView, Spinner, Text, TextArea, XStack, YStack } from '@hanzo/gui'
-import { Send, Sparkles, Plus, History } from '@hanzogui/lucide-icons-2'
+import { useEffect, useRef, useState } from 'react'
+import { Button, ScrollView, Spinner, Text, TextArea, XStack, YStack } from '@hanzo/gui'
+import { Send, Sparkles, Plus, History, Braces } from '@hanzogui/lucide-icons-2'
 
 import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { Markdown } from './markdown'
 
-function Bubble({ role, content }: ChatMessage) {
-  const isUser = role === 'user'
+/** The sparkle medallion that marks an assistant turn (and the welcome screen). */
+function SparkleAvatar({ size = 28 }: { size?: number }) {
   return (
-    <XStack justify={isUser ? 'flex-end' : 'flex-start'}>
-      <Card
-        p="$3"
-        maxW="82%"
-        bg={isUser ? '$color5' : '$color2'}
-        borderWidth={1}
-        borderColor="$borderColor"
-        rounded="$4"
-      >
-        <YStack gap="$1">
-          <Text fontSize="$1" color="$color10" fontWeight="700">
-            {isUser ? 'You' : 'Assistant'}
-          </Text>
-          {content.split('\n').map((line, i) => (
-            <Text key={i} fontSize="$3" color="$color12">
-              {line === '' ? ' ' : line}
-            </Text>
-          ))}
-        </YStack>
-      </Card>
+    <XStack
+      width={size}
+      height={size}
+      rounded="$10"
+      items="center"
+      justify="center"
+      bg="$color5"
+    >
+      <Sparkles size={Math.round(size * 0.52)} color="$color12" />
     </XStack>
   )
 }
+
+/** A short relative timestamp for a turn ("now"); turns are appended live. */
+const turnTime = () =>
+  new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+
+function Bubble({ role, content, time }: ChatMessage & { time?: string }) {
+  const isUser = role === 'user'
+  if (isUser) {
+    // Right-aligned accent bubble — compact, rounded, comfortable padding.
+    return (
+      <XStack justify="flex-end">
+        <YStack
+          maxW="80%"
+          bg="$color5"
+          px="$3.5"
+          py="$2.5"
+          rounded="$6"
+          borderTopRightRadius="$2"
+        >
+          <Markdown content={content} />
+        </YStack>
+      </XStack>
+    )
+  }
+  // Assistant — open text with avatar + name + time, no boxed card.
+  return (
+    <XStack gap="$3" items="flex-start">
+      <YStack pt="$1">
+        <SparkleAvatar />
+      </YStack>
+      <YStack flex={1} gap="$1.5" minW={0}>
+        <XStack items="center" gap="$2">
+          <Text fontSize="$2" fontWeight="700" color="$color12">
+            Assistant
+          </Text>
+          {time ? (
+            <Text fontSize="$1" color="$color10">
+              {time}
+            </Text>
+          ) : null}
+        </XStack>
+        <Markdown content={content} />
+      </YStack>
+    </XStack>
+  )
+}
+
+/** A clickable suggested-prompt chip — fills the composer (no send). */
+function PromptChip({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <XStack
+      onPress={onPress}
+      cursor="pointer"
+      items="center"
+      gap="$2"
+      px="$3"
+      py="$2.5"
+      rounded="$6"
+      borderWidth={1}
+      borderColor="$borderColor"
+      bg="$color2"
+      hoverStyle={{ bg: '$color3', borderColor: '$color8' }}
+      pressStyle={{ bg: '$color4' }}
+      maxW="100%"
+    >
+      <Sparkles size={13} color="$color10" />
+      <Text fontSize="$3" color="$color12">
+        {label}
+      </Text>
+    </XStack>
+  )
+}
+
+const SUGGESTED_PROMPTS = [
+  'Summarize the latest in open-source LLMs',
+  'Write a Python function to parse JSON safely',
+  'Explain vector databases like I am five',
+  'Draft a product update for our changelog',
+]
 
 export function ChatConversation({
   onShowHistory,
@@ -55,10 +130,11 @@ export function ChatConversation({
   compact?: boolean
 }) {
   const [model, setModel] = useState('')
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messages, setMessages] = useState<(ChatMessage & { time?: string })[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<BackendState | null>(null)
+  const inputRef = useRef<{ focus?: () => void } | null>(null)
 
   // Default to a Zen model once the catalog loads (Hanzo-first), else the first.
   useEffect(() => {
@@ -84,8 +160,8 @@ export function ChatConversation({
   const send = async () => {
     const q = input.trim()
     if (!q || sending) return
-    const history = messages
-    setMessages((m) => [...m, { role: 'user', content: q }])
+    const history = messages.map(({ role, content }) => ({ role, content }))
+    setMessages((m) => [...m, { role: 'user', content: q, time: turnTime() }])
     setInput('')
     setSending(true)
     setError(null)
@@ -96,7 +172,10 @@ export function ChatConversation({
         model: model || undefined,
         temperature: 0.7,
       })
-      setMessages((m) => [...m, { role: 'assistant', content: reply || '(empty response)' }])
+      setMessages((m) => [
+        ...m,
+        { role: 'assistant', content: reply || '(empty response)', time: turnTime() },
+      ])
     } catch (e) {
       setError(classifyBackend(e))
     } finally {
@@ -104,8 +183,28 @@ export function ChatConversation({
     }
   }
 
+  /** Drop a code-fence skeleton into the composer and focus it (presentation aid). */
+  const insertCodeFence = () => {
+    setInput((v) => (v.endsWith('\n') || v === '' ? v : v + '\n') + '```\n\n```')
+    inputRef.current?.focus?.()
+  }
+
+  /** Put a suggested prompt into the composer (user reviews, then sends). */
+  const useSuggestion = (s: string) => {
+    setInput(s)
+    inputRef.current?.focus?.()
+  }
+
+  const newChat = () => {
+    setMessages([])
+    setError(null)
+    setInput('')
+  }
+
+  const empty = messages.length === 0 && !error
+
   return (
-    <YStack flex={1} gap="$3" minH={compact ? 0 : 480}>
+    <YStack flex={1} gap="$4" minH={compact ? 0 : 480}>
       {compact ? (
         <XStack items="center" justify="flex-end" gap="$2">
           <Button size="$2" icon={<History size={15} />} onPress={onShowHistory}>
@@ -115,10 +214,7 @@ export function ChatConversation({
             size="$2"
             icon={<Plus size={15} />}
             disabled={messages.length === 0 && !error}
-            onPress={() => {
-              setMessages([])
-              setError(null)
-            }}
+            onPress={newChat}
           >
             New
           </Button>
@@ -136,10 +232,7 @@ export function ChatConversation({
                 size="$2"
                 icon={<Plus size={15} />}
                 disabled={messages.length === 0 && !error}
-                onPress={() => {
-                  setMessages([])
-                  setError(null)
-                }}
+                onPress={newChat}
               >
                 New chat
               </Button>
@@ -148,29 +241,41 @@ export function ChatConversation({
         />
       )}
 
-      <Card flex={1} borderWidth={1} borderColor="$borderColor" p="$3" gap="$3" minH={compact ? 0 : 320}>
+      {/* Conversation surface — open canvas, not a heavy bordered card. */}
+      <YStack flex={1} minH={compact ? 0 : 320}>
         <ScrollView flex={1}>
-          {messages.length === 0 && !error ? (
-            <YStack flex={1} items="center" justify="center" p="$6" gap="$2">
-              <Sparkles size={26} opacity={0.6} />
-              <Text fontSize="$5" fontWeight="700" color="$color12">
-                Start a conversation
-              </Text>
-              <Text fontSize="$3" color="$color10" maxW={420} style={{ textAlign: 'center' }}>
-                Ask anything. Responses come from the live model gateway, billed to your organization.
-              </Text>
+          {empty ? (
+            <YStack items="center" px="$4" pt={compact ? '$6' : '$9'} pb="$6" gap="$5">
+              <YStack items="center" gap="$3" maxW={460}>
+                <SparkleAvatar size={56} />
+                <Text fontSize={compact ? '$6' : '$8'} fontWeight="800" color="$color12" text="center">
+                  How can I help?
+                </Text>
+                <Text fontSize="$3" color="$color11" text="center" lineHeight={22}>
+                  Ask anything — responses come from the live {model || 'Zen'} gateway, billed to
+                  your organization.
+                </Text>
+              </YStack>
+              <YStack gap="$2.5" items="center" self="stretch" maxW={620} mx="auto" width="100%">
+                {SUGGESTED_PROMPTS.map((s) => (
+                  <PromptChip key={s} label={s} onPress={() => useSuggestion(s)} />
+                ))}
+              </YStack>
             </YStack>
           ) : (
-            <YStack gap="$3">
+            <YStack gap="$5" py="$2">
               {messages.map((m, i) => (
-                <Bubble key={i} role={m.role} content={m.content} />
+                <Bubble key={i} role={m.role} content={m.content} time={m.time} />
               ))}
               {sending ? (
-                <XStack gap="$2" items="center" p="$2">
-                  <Spinner color="$color11" />
-                  <Text color="$color11" fontSize="$3">
-                    Thinking…
-                  </Text>
+                <XStack gap="$3" items="center">
+                  <SparkleAvatar />
+                  <XStack gap="$2" items="center">
+                    <Spinner color="$color11" />
+                    <Text color="$color11" fontSize="$3">
+                      Thinking…
+                    </Text>
+                  </XStack>
                 </XStack>
               ) : null}
               {error ? <BackendStateCard state={error} onRetry={() => void send()} /> : null}
@@ -179,17 +284,36 @@ export function ChatConversation({
             </YStack>
           )}
         </ScrollView>
-      </Card>
+      </YStack>
 
-      <Card borderWidth={1} borderColor="$borderColor" p="$2.5">
+      {/* Composer — one rounded, elevated input with code-insert + send. */}
+      <YStack
+        bg="$color2"
+        borderWidth={1}
+        borderColor="$borderColor"
+        rounded="$7"
+        px="$3"
+        py="$2.5"
+        gap="$2"
+        focusStyle={{ borderColor: '$color8' }}
+        shadowColor="rgba(0,0,0,0.18)"
+        shadowRadius={12}
+        shadowOffset={{ width: 0, height: 2 }}
+      >
         <XStack gap="$2" items="flex-end">
           <YStack flex={1}>
             <TextArea
+              ref={inputRef as never}
               value={input}
               onChangeText={setInput}
-              placeholder="Message the assistant…  (Enter to send, Shift+Enter for a new line)"
-              numberOfLines={2}
+              placeholder={`Message ${model || 'the assistant'}…`}
+              numberOfLines={compact ? 2 : 3}
               disabled={sending}
+              borderWidth={0}
+              bg="transparent"
+              px="$1"
+              py="$1"
+              focusStyle={{ borderWidth: 0, outlineWidth: 0 }}
               onKeyPress={(e) => {
                 const ev = e as unknown as {
                   key?: string
@@ -206,16 +330,36 @@ export function ChatConversation({
               }}
             />
           </YStack>
-          <Button
-            bg="$color5"
-            icon={<Send size={16} />}
-            disabled={sending || !input.trim()}
-            onPress={() => void send()}
-          >
-            Send
-          </Button>
+          <XStack gap="$1.5" items="center" pb="$1">
+            <Button
+              size="$2"
+              circular
+              chromeless
+              icon={<Braces size={16} />}
+              disabled={sending}
+              onPress={insertCodeFence}
+              hoverStyle={{ bg: '$color4' }}
+              aria-label="Insert code block"
+            />
+            <Button
+              size="$3"
+              circular
+              bg="$color5"
+              icon={<Send size={16} />}
+              disabled={sending || !input.trim()}
+              onPress={() => void send()}
+              hoverStyle={{ bg: '$color6' }}
+              pressStyle={{ bg: '$color7' }}
+              aria-label="Send message"
+            />
+          </XStack>
         </XStack>
-      </Card>
+      </YStack>
+      <XStack justify="center" px="$2">
+        <Text fontSize="$1" color="$color10" text="center">
+          Enter to send · Shift+Enter for a new line
+        </Text>
+      </XStack>
     </YStack>
   )
 }

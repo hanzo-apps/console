@@ -1,30 +1,47 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
+import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
+import { Sparkles } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ChatApi, MessageApi, type Chat, type Message } from '~/lib/api'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { Markdown } from './markdown'
+
+/** The sparkle medallion marking an AI turn (matches the live conversation). */
+function SparkleAvatar() {
+  return (
+    <XStack width={28} height={28} rounded="$10" items="center" justify="center" bg="$color5">
+      <Sparkles size={15} color="$color12" />
+    </XStack>
+  )
+}
 
 const Bubble = ({ m }: { m: Message }) => {
   const isAI = m.author === 'AI'
-  return (
-    <XStack justify={isAI ? 'flex-start' : 'flex-end'}>
-      <Card
-        p="$3"
-        maxW="80%"
-        bg={isAI ? '$color2' : '$color4'}
-        borderWidth={1}
-        borderColor="$borderColor"
-        rounded="$4"
-      >
-        <YStack gap="$1">
-          <Text fontSize="$1" color="$color11">
-            {isAI ? 'AI' : m.author || 'User'}
-          </Text>
-          <Text fontSize="$3">{m.text ?? ''}</Text>
+  const text = m.text ?? ''
+  if (!isAI) {
+    // Right-aligned accent bubble.
+    return (
+      <XStack justify="flex-end">
+        <YStack maxW="80%" bg="$color5" px="$3.5" py="$2.5" rounded="$6" borderTopRightRadius="$2">
+          <Markdown content={text} />
         </YStack>
-      </Card>
+      </XStack>
+    )
+  }
+  // AI — open text with sparkle avatar + name.
+  return (
+    <XStack gap="$3" items="flex-start">
+      <YStack pt="$1">
+        <SparkleAvatar />
+      </YStack>
+      <YStack flex={1} gap="$1.5" minW={0}>
+        <Text fontSize="$2" fontWeight="700" color="$color12">
+          {m.author || 'AI'}
+        </Text>
+        <Markdown content={text} />
+      </YStack>
     </XStack>
   )
 }
@@ -85,7 +102,7 @@ export function ChatView({ name, onDone }: { name: string; onDone: () => void })
   if (!chat) return null
 
   return (
-    <>
+    <YStack gap="$4">
       <PageHeader
         title={chat.displayName || chat.name}
         subtitle={`${chat.user ?? ''}${chat.store ? ` · ${chat.store}` : ''}`}
@@ -93,16 +110,17 @@ export function ChatView({ name, onDone }: { name: string; onDone: () => void })
       />
       {error ? <Text color="$color12">{error}</Text> : null}
       {messages.length === 0 ? (
-        <YStack p="$6" items="center" borderWidth={1} borderColor="$borderColor" rounded="$4">
+        <YStack p="$6" items="center" gap="$2" borderWidth={1} borderColor="$borderColor" rounded="$4">
+          <Sparkles size={22} opacity={0.5} />
           <Text color="$color11">No messages in this chat.</Text>
         </YStack>
       ) : (
-        <YStack gap="$3">
+        <YStack gap="$5">
           {messages.map((m) => (
             <Bubble key={`${m.owner}/${m.name}`} m={m} />
           ))}
         </YStack>
       )}
-    </>
+    </YStack>
   )
 }
