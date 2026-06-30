@@ -25,6 +25,7 @@ const AI_GATEWAY_URL = trim(process.env.AI_GATEWAY_URL ?? 'https://api.hanzo.ai'
 /** The exact `/v1/<...>` endpoints the console is allowed to reach. */
 const ALLOWED = new Set([
   'v1/models',
+  'v1/pricing/models', // the rich model+provider catalog (context, pricing, specs, tier) for Models/Providers pages
   'v1/chat',
   'v1/chat/completions',
   'v1/embeddings',
