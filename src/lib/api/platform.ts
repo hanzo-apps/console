@@ -23,20 +23,62 @@ import { restGet, restPost } from './client'
 /** Where a cluster lives: shared multi-tenant Hanzo Cloud, or a BYO/managed DOKS. */
 export type ClusterKind = 'shared' | 'byo' | (string & {})
 
-/** A dedicated Kubernetes cluster as the platform lists it. */
+/**
+ * One node pool of a cluster (`doks_node_pool`). A pool is a set of `count`
+ * identical droplets of `size` (a DigitalOcean size slug, e.g. `s-4vcpu-8gb`).
+ * The cluster's individual MACHINES (nodes) are the union of its pools' nodes —
+ * the control plane exposes pools (size + count), not per-droplet objects.
+ */
+export type NodePool = {
+  poolId?: string
+  doPoolId?: string | null
+  name?: string
+  /** DigitalOcean size slug (e.g. `s-4vcpu-8gb`, `c-2`). */
+  size?: string
+  /** Number of nodes (droplets) in this pool. */
+  count?: number
+  minNodes?: number
+  maxNodes?: number
+  autoScale?: boolean
+  tags?: string[]
+}
+
+/**
+ * A dedicated Kubernetes cluster as the platform lists it
+ * (`GET /v1/org/{org}/cluster` → `DoksClusterWithPools`, kubeconfig redacted).
+ * The REAL fields below come straight from the `doks_cluster` row + its
+ * `nodePools`; the trailing legacy fields are kept optional only so the simple
+ * Clusters list keeps compiling — the authoritative node inventory is `nodePools`.
+ */
 export type Cluster = {
-  id?: string
+  /** Platform's cluster id (primary key). */
+  doksClusterId?: string
+  /** DigitalOcean's own cluster id (null until provisioned). */
+  doClusterId?: string | null
   name: string
+  region?: string
+  /** DigitalOcean state: pending|provisioning|running|error|deleting|deleted. */
   status: string
   /** Platform lifecycle phase (requested→provisioning→installing→ready/error). */
   phase?: string
+  endpoint?: string | null
+  k8sVersion?: string | null
+  ha?: boolean
+  /** This cluster is the org's selected deploy target (≤1 active per org). */
+  active?: boolean
+  operatorInstalled?: boolean
+  baselineInstalled?: boolean
+  baselineError?: string | null
+  createdAt?: string
+  tags?: string[]
+  /** The real per-pool node inventory (size + count). */
+  nodePools?: NodePool[]
+  // ── Legacy/derived display fields (optional; real node info is `nodePools`) ──
+  id?: string
   kind?: ClusterKind
-  region?: string
   nodeSize?: string
   nodeCount?: number
   version?: string
-  endpoint?: string
-  createdAt?: string
 }
 
 /** Provision a fresh dedicated DOKS cluster (the DO token is read from KMS server-side). */
@@ -107,10 +149,23 @@ export const PlatformApi = {
     return r?.apps ?? []
   },
 
-  /** The org's dedicated DOKS clusters (honest empty when none provisioned). */
+  /**
+   * The org's dedicated DOKS clusters (honest empty when none provisioned).
+   * Each cluster carries its `nodePools` (size + count) — the real source of the
+   * org's compute MACHINES (the Machines page projects nodes from these pools;
+   * there is no separate `/v1/machines` route on the control plane).
+   */
   listClusters: async (org: string): Promise<Cluster[]> => {
     const r = await restGet<{ clusters?: Cluster[] }>(url(`org/${enc(org)}/cluster`))
     return r?.clusters ?? []
+  },
+
+  /** One cluster by id (with node pools; kubeconfig redacted). Null when absent. */
+  getCluster: async (org: string, clusterId: string): Promise<Cluster | null> => {
+    const r = await restGet<{ cluster?: Cluster }>(
+      url(`org/${enc(org)}/cluster/${enc(clusterId)}`),
+    )
+    return r?.cluster ?? null
   },
 
   /** Provision a fresh dedicated DOKS cluster for the org. */
