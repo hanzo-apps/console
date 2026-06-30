@@ -95,6 +95,10 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     method: req.method,
     headers,
     cache: 'no-store',
+    // Propagate a client abort (Stop / tab-switch / unmount) through to the
+    // gateway, so cancelling a stream stops upstream generation + billing and
+    // releases the socket — not just the browser→proxy hop.
+    signal: req.signal,
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     init.body = await req.text()

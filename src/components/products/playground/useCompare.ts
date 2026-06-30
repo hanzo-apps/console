@@ -117,7 +117,7 @@ export function useCompare(initialModels: string[], initialSettings: Settings = 
           ctrl.signal,
         )
         patchColumn(col.id, {
-          phase: result.error ? 'error' : 'done',
+          phase: result.error ? 'error' : result.aborted ? 'stopped' : 'done',
           content: result.content,
           usage: result.usage,
           ttftMs: result.ttftMs,

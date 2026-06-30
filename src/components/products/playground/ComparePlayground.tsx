@@ -39,6 +39,12 @@ export function ComparePlayground({ mode }: { mode: 'chat' | 'completions' }) {
   const [showHistory, setShowHistory] = useState(false)
   useEffect(() => setHistory(loadHistory()), [])
 
+  // Abort every in-flight column on unmount (switching to Audio/Embeddings/Vision
+  // mid-stream, or navigating away) so we don't keep streaming + billing N-wide.
+  // `cancel` is referentially stable (useCallback), so this runs only on unmount.
+  const { cancel } = compare
+  useEffect(() => () => cancel(), [cancel])
+
   // Seed default columns once the catalog resolves (2 distinct, Zen-first). On a
   // catalog error, seed one empty column so a model id can still be typed + run.
   const seeded = useRef(false)
@@ -97,7 +103,8 @@ export function ComparePlayground({ mode }: { mode: 'chat' | 'completions' }) {
           user: mode === 'chat' ? user : prompt,
           columns: out.map(({ model, result }) => ({
             model,
-            ok: !result.error,
+            ok: !result.error && !result.aborted,
+            stopped: result.aborted,
             promptTokens: result.usage?.prompt_tokens ?? null,
             completionTokens: result.usage?.completion_tokens ?? null,
             totalUsd: costOf(result.usage, catalog.byId.get(model)?.pricing ?? null).totalUsd,
@@ -291,7 +298,11 @@ export function ComparePlayground({ mode }: { mode: 'chat' | 'completions' }) {
                         <Text fontSize="$1" color="$color10">
                           {formatLatency(c.totalMs)}
                         </Text>
-                        {!c.ok ? (
+                        {c.stopped ? (
+                          <Text fontSize="$1" color="$color10">
+                            stopped
+                          </Text>
+                        ) : !c.ok ? (
                           <Text fontSize="$1" color="$red10">
                             error
                           </Text>

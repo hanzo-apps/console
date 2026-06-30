@@ -125,19 +125,32 @@ export function CompareColumn({
           </Text>
         ) : col.phase === 'error' && col.error ? (
           <BackendStateCard state={col.error} />
-        ) : col.content ? (
-          <Lines text={col.content} />
-        ) : col.phase === 'streaming' ? (
-          <XStack gap="$2" items="center">
-            <Spinner color="$color11" />
-            <Text color="$color11" fontSize="$3">
-              Waiting for first token…
-            </Text>
-          </XStack>
         ) : (
-          <Text fontSize="$3" color="$color10">
-            (empty response)
-          </Text>
+          <YStack gap="$2">
+            {col.phase === 'stopped' ? (
+              <Text fontSize="$1" self="flex-start" px="$2" py="$1" rounded="$2" bg="$color3" color="$color11">
+                Stopped
+              </Text>
+            ) : null}
+            {col.content ? (
+              <Lines text={col.content} />
+            ) : col.phase === 'streaming' ? (
+              <XStack gap="$2" items="center">
+                <Spinner color="$color11" />
+                <Text color="$color11" fontSize="$3">
+                  Waiting for first token…
+                </Text>
+              </XStack>
+            ) : col.phase === 'stopped' ? (
+              <Text fontSize="$3" color="$color10">
+                Stopped before any output.
+              </Text>
+            ) : (
+              <Text fontSize="$3" color="$color10">
+                (empty response)
+              </Text>
+            )}
+          </YStack>
         )}
       </Card>
 

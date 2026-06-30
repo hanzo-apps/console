@@ -9,6 +9,8 @@
 export type HistoryColumn = {
   model: string
   ok: boolean
+  /** User-stopped (not a success, not an error). */
+  stopped?: boolean
   promptTokens: number | null
   completionTokens: number | null
   totalUsd: number | null
