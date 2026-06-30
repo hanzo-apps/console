@@ -77,7 +77,7 @@ export function OrgGate({ children }: { children: ReactNode }) {
   // GLOBAL (cross-tenant) admin — the only one who may use admin.hanzo.ai. An ORG
   // owner (e.g. Dave/maxpower) carries `isAdmin` for their OWN org but is NOT a
   // global admin, so the admin-ops banner must gate on this, never on isAdmin.
-  // Mirrors the server rule: explicit isGlobalAdmin, or a member of the admin/
+  // Mirrors the server rule: explicit isGlobalAdmin, or a member of the 'admin' org.
   // built-in metadata org. (Account's index signature exposes isGlobalAdmin when present.)
   const isGlobalAdmin =
     Boolean((account as { isGlobalAdmin?: boolean } | null)?.isGlobalAdmin) ||

@@ -8,14 +8,14 @@
  *     (`gateAllows` = verified `@<adminDomain>` email AND an IAM admin flag).
  *   - tenant SCOPING: which org may an authorized caller act on? A global admin
  *     → any org; a brand admin is pinned to their own (`ownerAllowed`/`orgFor`),
- *     which is what closes casdoor's cross-tenant read gap and stops a brand
+ *     which is what closes the cross-tenant read gap and stops a brand
  *     admin from targeting another org's KMS.
  */
 
 /** The identity claims a gate decision is made from. */
 export type AdminPrincipal = { email: string; emailVerified: boolean; isAdmin: boolean; isGlobalAdmin: boolean }
 
-/** Org-metadata owners casdoor reports — acceptable only on org-list endpoints. */
+/** The global-admin metadata org ('admin') — acceptable only on org-list endpoints. */
 const ORG_METADATA_OWNERS = new Set(['admin'])
 
 /** Email is on the brand's admin domain (case-insensitive). */
@@ -30,7 +30,7 @@ export function isAdminGranted(p: { isAdmin: boolean; isGlobalAdmin: boolean }):
 
 /**
  * The admin gate for admin.hanzo.ai — CROSS-TENANT ops (IAM/KMS/orgs across every
- * tenant). It must be GLOBAL admins only (members of the built-in/admin org). An
+ * tenant). It must be GLOBAL admins only (members of the `admin` org). An
  * org-level admin — a tenant org owner like Dave/maxpower with org-scoped
  * `isAdmin` — is NOT enough, even with a verified @<adminDomain> email. So gate on
  * `isGlobalAdmin`, NEVER `isAdminGranted` (which also accepts org-level isAdmin and
@@ -42,9 +42,9 @@ export function gateAllows(p: AdminPrincipal, adminDomain: string): boolean {
 }
 
 /**
- * A non-global admin may reference ONLY their own org. casdoor's read endpoints
+ * A non-global admin may reference ONLY their own org. IAM read endpoints
  * do not enforce this, so the proxy must: global admin → any org; brand admin →
- * `orgScope`; the `admin`/`built-in` metadata owner is allowed only where the
+ * `orgScope`; the `admin` metadata owner is allowed only where the
  * endpoint itself scopes to the caller (the org list/get — `orgMetadataOk`).
  */
 export function ownerAllowed(
