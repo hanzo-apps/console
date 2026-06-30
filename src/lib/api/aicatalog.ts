@@ -34,7 +34,7 @@ export type CatalogEntry = RichModel & { available: boolean }
 /** Providers grouped from the catalog — what the Providers "Explore" grid renders. */
 export type ProviderGroup = {
   provider: string
-  models: RichModel[]
+  models: CatalogEntry[]
   count: number
   /** Cheapest input price across the group ($/Mtok), or null when none priced. */
   minInput: number | null
@@ -58,8 +58,8 @@ export async function fetchCatalog(): Promise<CatalogEntry[]> {
 }
 
 /** Group a catalog into provider cards, sorted by model count (desc). */
-export function groupByProvider(models: RichModel[]): ProviderGroup[] {
-  const by = new Map<string, RichModel[]>()
+export function groupByProvider(models: CatalogEntry[]): ProviderGroup[] {
+  const by = new Map<string, CatalogEntry[]>()
   for (const m of models) {
     const p = (m.provider ?? 'Other').trim() || 'Other'
     const arr = by.get(p)
