@@ -1,6 +1,6 @@
 # console2 — Hanzo Cloud Console (Next.js 15 + @hanzo/gui). BSD-3-Clause.
 # NEXT_PUBLIC_* are inlined at build time (browser config), so they are build args.
-FROM mirror.gcr.io/library/node:22-alpine AS build
+FROM ghcr.io/hanzoai/nodejs:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 # npm install (not ci): @hanzo/gui pulls a react-native dep tree whose
@@ -27,9 +27,13 @@ RUN mkdir -p public
 # build node → OOMKill (exit 137). Cap the heap generously, as every other Hanzo
 # Next build does (chat uses 4096).
 ENV NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=6144
-RUN npm run build
+# Invoke next via its real entry, not the .bin/next symlink: the /gui RN dep
+# tree intermittently drops node_modules/.bin/next under the build npm even though
+# the next package installs fine ("sh: next: not found"). Running the dist bin
+# directly is symlink-independent and deterministic.
+RUN node node_modules/next/dist/bin/next build
 
-FROM mirror.gcr.io/library/node:22-alpine AS runner
+FROM ghcr.io/hanzoai/nodejs:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=4000
 RUN addgroup -S app && adduser -S app -G app
@@ -40,4 +44,4 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/next.config.mjs ./next.config.mjs
 USER app
 EXPOSE 4000
-CMD ["npm", "run", "start"]
+CMD ["node", "node_modules/next/dist/bin/next", "start", "-p", "4000"]
