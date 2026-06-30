@@ -12,15 +12,17 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
-import { RefreshCw } from '@hanzogui/lucide-icons-2'
+import { Bot, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { restGet } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { EmptyState } from '~/components/ui/EmptyState'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
 const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
+const DOCS = 'https://docs.hanzo.ai/agents'
 
 type Agent = {
   id: string
@@ -116,6 +118,19 @@ export function AgentsModule(_props: { params: Record<string, string> }) {
 
       {loadError ? (
         <PlatformStateCard error={loadError} onRetry={() => void load()} />
+      ) : !loading && rows.length === 0 ? (
+        <EmptyState
+          icon={Bot}
+          title="Deploy your first agent"
+          description="Agents are autonomous workers — a model, a system prompt, and a set of tools that run on Hanzo compute and call your APIs on their own."
+          bullets={[
+            'Define an agent with the hanzo CLI or the Agents SDK',
+            'Give it tools (HTTP, MCP servers, your own functions)',
+            'Deploy to Hanzo compute — runs and logs show up here',
+          ]}
+          primary={{ label: 'Deploy an agent', href: DOCS }}
+          secondary={{ label: 'Agents SDK docs', href: 'https://docs.hanzo.ai/sdk' }}
+        />
       ) : (
         <DataTable
           columns={columns}
