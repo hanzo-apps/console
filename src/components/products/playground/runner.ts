@@ -30,6 +30,10 @@ export type RunInput = {
   top_p?: number
   max_tokens?: number
   stop?: string[]
+  /** Advanced sampling — sent only when set (omitted = gateway default). */
+  frequency_penalty?: number
+  presence_penalty?: number
+  seed?: number
 }
 
 export type RunHandlers = {
