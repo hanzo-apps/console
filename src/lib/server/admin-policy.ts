@@ -29,12 +29,16 @@ export function isAdminGranted(p: { isAdmin: boolean; isGlobalAdmin: boolean }):
 }
 
 /**
- * The admin gate: a VERIFIED email on the brand's admin domain AND an IAM admin
- * flag. The verified-email requirement stops an unverified address (which a user
- * can set without proving control) from reaching a privileged admin surface.
+ * The admin gate for admin.hanzo.ai — CROSS-TENANT ops (IAM/KMS/orgs across every
+ * tenant). It must be GLOBAL admins only (members of the built-in/admin org). An
+ * org-level admin — a tenant org owner like Dave/maxpower with org-scoped
+ * `isAdmin` — is NOT enough, even with a verified @<adminDomain> email. So gate on
+ * `isGlobalAdmin`, NEVER `isAdminGranted` (which also accepts org-level isAdmin and
+ * was the leak). The verified brand-email requirement stays as a second factor
+ * (defense in depth). Fail-closed on any miss.
  */
 export function gateAllows(p: AdminPrincipal, adminDomain: string): boolean {
-  return emailOnBrand(p.email, adminDomain) && p.emailVerified && isAdminGranted(p)
+  return emailOnBrand(p.email, adminDomain) && p.emailVerified && p.isGlobalAdmin
 }
 
 /**

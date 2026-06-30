@@ -109,9 +109,27 @@ export function OrgGate({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') localStorage.setItem(LS_BANNER_DISMISSED, '1')
   }
 
+  // admin.hanzo.ai is GLOBAL-admin-only (cross-tenant IAM/KMS/orgs ops). A
+  // non-global-admin who lands here — e.g. an org owner like Dave/maxpower — is
+  // bounced to the regular console host; they never reach the admin surfaces (the
+  // server /admin/* proxies also fail-closed, this is the matching UI gate).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (onAdminHost() && owner && !isGlobalAdmin) {
+      const consoleHost = window.location.hostname.replace(/^admin\./, 'console.')
+      window.location.replace(`https://${consoleHost}${window.location.pathname}${window.location.search}`)
+    }
+  }, [owner, isGlobalAdmin])
+
   // No org yet → first-run onboarding
   if (!owner) {
     return <OrgOnboarding />
+  }
+
+  // On the admin host but not a global admin → render nothing while the redirect
+  // above fires, so the admin console never flashes for an unauthorized user.
+  if (onAdminHost() && !isGlobalAdmin) {
+    return null
   }
 
   // GLOBAL admin on a non-admin host: show dismissible banner, render console
