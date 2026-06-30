@@ -5,7 +5,7 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { Plus, Trash } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ProviderApi, type Provider } from '~/lib/api'
-import { useSession } from '~/lib/auth/session'
+import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { newProvider } from './logic'
@@ -22,8 +22,11 @@ const StatusBadge = ({ on }: { on?: boolean }) => (
 )
 
 export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) {
-  const { account } = useSession()
-  const owner = account?.name ?? 'admin'
+  // Tenant scope: casibase providers are owned by the ORG, not the username. Use
+  // the active org scope (the same value stamped as X-Org-Id and switched by the
+  // OrgSwitcher) so reads resolve the org's custom providers and a global admin's
+  // org switch re-scopes (get-providers honors the owner param for admins).
+  const owner = currentOrg()
 
   const [rows, setRows] = useState<ProviderRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,20 +34,26 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
 
   const load = useCallback(async () => {
     setLoading(true)
-    try {
-      const [globalRes, customRes] = await Promise.all([
-        ProviderApi.listGlobal().catch(() => [] as Provider[]),
-        ProviderApi.list({ owner }).then(r => r.rows ?? []).catch(() => [] as Provider[]),
-      ])
-      const globals: ProviderRow[] = (globalRes ?? []).map(p => ({ ...p, _builtin: true }))
-      const custom: ProviderRow[] = customRes
-      setRows([...globals, ...custom])
-      setError(null)
-    } catch (e) {
+    // Load global (platform-key) + custom (per-org BYOK) providers independently so
+    // one failing doesn't hide the other. But if BOTH fail, that's a real backend
+    // error — surface it honestly instead of silently degrading to "No providers".
+    const [globalOut, customOut] = await Promise.allSettled([
+      ProviderApi.listGlobal(),
+      ProviderApi.list({ owner }).then((r) => r.rows ?? []),
+    ])
+    if (globalOut.status === 'rejected' && customOut.status === 'rejected') {
+      const e = globalOut.reason
       setError(e instanceof ApiError ? e.message : 'Failed to load providers')
-    } finally {
+      setRows([])
       setLoading(false)
+      return
     }
+    const globals: ProviderRow[] =
+      globalOut.status === 'fulfilled' ? (globalOut.value ?? []).map((p) => ({ ...p, _builtin: true })) : []
+    const custom: ProviderRow[] = customOut.status === 'fulfilled' ? customOut.value : []
+    setRows([...globals, ...custom])
+    setError(null)
+    setLoading(false)
   }, [owner])
 
   useEffect(() => { void load() }, [load])
