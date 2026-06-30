@@ -77,6 +77,11 @@ export {
   type ChatUsage,
   type ChatCompletion,
   type ChatRequest,
+  type StreamMessage,
+  type ChatStreamRequest,
+  type EmbeddingsRequest,
+  type EmbeddingsResponse,
+  type SpeechRequest,
 } from './playground'
 export { AiApi, type AiChatInput } from './ai'
 export { KeysApi, type KeyStatus } from './keys'
