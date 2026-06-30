@@ -1,6 +1,6 @@
 # console2 — Hanzo Cloud Console (Next.js 15 + @hanzo/gui). BSD-3-Clause.
 # NEXT_PUBLIC_* are inlined at build time (browser config), so they are build args.
-FROM public.ecr.aws/docker/library/node:22-alpine AS build
+FROM mirror.gcr.io/library/node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 # npm install (not ci): @hanzo/gui pulls a react-native dep tree whose
@@ -29,7 +29,7 @@ RUN mkdir -p public
 ENV NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=6144
 RUN npm run build
 
-FROM public.ecr.aws/docker/library/node:22-alpine AS runner
+FROM mirror.gcr.io/library/node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=4000
 RUN addgroup -S app && adduser -S app -G app
