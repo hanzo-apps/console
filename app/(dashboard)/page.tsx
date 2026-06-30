@@ -18,7 +18,7 @@ import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FadeIn } from '~/components/ui/FadeIn'
-import { HomeSummary } from '~/components/HomeSummary'
+import OverviewDashboard from '~/components/products/OverviewModule'
 
 const STATUS_LABEL = { enabled: 'Enabled', external: 'External', soon: 'Soon' } as const
 const STATUS_BG = { enabled: '$color5', external: '$color3', soon: '$color4' } as const
@@ -113,13 +113,14 @@ export default function DashboardHome() {
   const groups = catalogByCategory()
 
   return (
-    <>
-      <PageHeader
-        title={config.brandName}
-        subtitle={`See, enable, and manage every ${config.brandName} product from one place.`}
-      />
-      <HomeSummary />
-      {groups.map((group, i) => (
+    <YStack gap="$7">
+      <OverviewDashboard />
+      <YStack gap="$4">
+        <PageHeader
+          title="Explore products"
+          subtitle={`See, enable, and manage every ${config.brandName} product from one place.`}
+        />
+        {groups.map((group, i) => (
         <FadeIn key={group.category} index={i} style={{ width: '100%' }}>
           <YStack gap="$3">
             <Text fontSize="$5" fontWeight="800" color="$color12">
@@ -139,7 +140,8 @@ export default function DashboardHome() {
             </XStack>
           </YStack>
         </FadeIn>
-      ))}
-    </>
+        ))}
+      </YStack>
+    </YStack>
   )
 }
