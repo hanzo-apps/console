@@ -385,12 +385,14 @@ export function Donut({
       <YStack gap="$1.5" flex={1} minW={150}>
         {positive.map((s, i) => (
           <XStack key={s.label} gap="$2" items="center">
-            <YStack
-              width={10}
-              height={10}
-              rounded="$1"
-              bg={s.color ?? '$color12'}
-              opacity={s.color ? 1 : rampOpacity(i, positive.length)}
+            <div
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 2,
+                backgroundColor: s.color ?? AXIS,
+                opacity: s.color ? 1 : rampOpacity(i, positive.length),
+              }}
             />
             <Text fontSize="$2" color="$color11" flex={1} numberOfLines={1}>
               {s.label}
