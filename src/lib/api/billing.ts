@@ -16,6 +16,7 @@
  */
 import { restGet } from './client'
 import type { CloudBalance } from './wallet'
+import { normalizeUsageRecords, perModel, totalsOf } from './aimetrics'
 
 /** Same-origin URL for the `/billing/*` server proxy (NOT the `/v1` gateway). */
 const billingUrl = (path: string): string => {
@@ -83,9 +84,40 @@ const arrayUnder = (payload: unknown, keys: string[]): Record<string, unknown>[]
   return []
 }
 
+/**
+ * True for the commerce api-usage ledger shape (`{ usage: [ { transactionId,
+ * amount, metadata, createdAt } ] }`), as opposed to a pre-rolled summary. The
+ * ledger carries per-request rows whose model lives in `metadata.model` and whose
+ * `amount` is already in CENTS — flattening it with the generic root-key reader
+ * mislabels every row "Usage" and multiplies the cost ×100 (cents read as
+ * dollars). So we detect it and roll it up with the ONE shared parser.
+ */
+function isUsageLedger(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object') return false
+  const v = (payload as Record<string, unknown>).usage
+  if (!Array.isArray(v) || v.length === 0) return false
+  const first = v[0]
+  return Boolean(first && typeof first === 'object' && ('transactionId' in first || 'metadata' in first || 'createdAt' in first))
+}
+
 function normalizeUsage(payload: unknown): Usage {
   const root = (payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {})
-  const lines = arrayUnder(payload, ['lines', 'breakdown', 'items', 'usage', 'data', 'rows']).map((r) => ({
+
+  // The real commerce ledger: parse + roll up per model with the SAME functions
+  // AI Metrics uses (DRY) — correct cents, real model names, real token sums.
+  if (isUsageLedger(payload)) {
+    const records = normalizeUsageRecords(payload)
+    const lines = perModel(records).map((m) => ({
+      label: m.model || 'API usage',
+      units: m.requests,
+      tokens: m.totalTokens,
+      cents: m.cents,
+    }))
+    return { totalCents: totalsOf(records).cents, lines }
+  }
+
+  // Fallback for any pre-rolled summary shape (root totals + breakdown rows).
+  const lines = arrayUnder(payload, ['lines', 'breakdown', 'items', 'data', 'rows']).map((r) => ({
     label: str(r.label) ?? str(r.product) ?? str(r.model) ?? str(r.name) ?? str(r.sku) ?? 'Usage',
     units: num(r.units) ?? num(r.count) ?? num(r.requests) ?? num(r.quantity),
     tokens: num(r.tokens) ?? num(r.totalTokens),
