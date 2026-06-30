@@ -60,6 +60,7 @@ export {
   DOKS_REGIONS,
   DOKS_NODE_SIZES,
   type Cluster,
+  type NodePool,
   type ClusterKind,
   type ProvisionClusterInput,
   type PlatformApp,
