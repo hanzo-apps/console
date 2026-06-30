@@ -40,7 +40,7 @@ export const providerLabels: Record<string, string> = {
   fireworks: 'Fireworks AI',
   'openai-direct': 'OpenAI Direct',
   anthropic: 'Anthropic',
-  hanzo: 'Hanzo (Zen)',
+  hanzo: 'Zen',
 }
 
 type RawPricing = {
