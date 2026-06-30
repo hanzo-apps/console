@@ -28,7 +28,7 @@ type SurfaceColumn = {
   width?: number
 }
 
-type Surface = {
+export type Surface = {
   id: string
   label: string
   endpoint: string
@@ -131,7 +131,7 @@ const stableKey = (row: Record<string, unknown>, index: number): string => {
 const withIds = (rows: Record<string, unknown>[]): SurfaceRow[] =>
   rows.map((row, index) => ({ ...row, __rowId: stableKey(row, index) }))
 
-function ForwardSurface({ surface }: { surface: Surface }) {
+export function ForwardSurface({ surface }: { surface: Surface }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
 
   const load = useCallback(() => {
@@ -440,7 +440,7 @@ export function ReferralsModule({ params }: { params: Record<string, string> }) 
   )
 }
 
-const zeroTrustSurfaces: Surface[] = [
+export const zeroTrustSurfaces: Surface[] = [
   {
     id: 'services',
     label: 'Services',
@@ -503,17 +503,10 @@ const zeroTrustSurfaces: Surface[] = [
   },
 ]
 
-export function ZeroTrustModule({ params }: { params: Record<string, string> }) {
-  return (
-    <TabbedFeatureModule
-      title="Zero Trust"
-      subtitle="Routers, services, identities, policies, and sessions."
-      basePath="zero-trust"
-      active={params.tab}
-      surfaces={zeroTrustSurfaces}
-    />
-  )
-}
+// ZeroTrustModule moved to its own rich module (`ZeroTrustModule.tsx`) — an
+// Overview landing (KPIs, post-quantum posture, mesh topology) on top of these
+// same `zeroTrustSurfaces` tables, which it reuses via the exported
+// `ForwardSurface`. One zero-trust surface, not two.
 
 const scoreAnalyticsSurface: Surface = {
   id: 'analytics',
