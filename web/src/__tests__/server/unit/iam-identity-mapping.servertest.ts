@@ -28,7 +28,7 @@ describe("identityFromLoginResponse", () => {
     });
   });
 
-  it("falls back to data as the sub (Casdoor returns userId in data with no OAuth type)", () => {
+  it("falls back to data as the sub (IAM returns userId in data with no OAuth type)", () => {
     const res: IamResponse<string> = {
       status: "ok",
       data: "hanzo/bob",

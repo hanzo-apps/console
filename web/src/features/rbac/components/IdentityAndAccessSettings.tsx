@@ -2,7 +2,7 @@
  * Identity & Access — the single, unified IAM management panel for a tenant.
  *
  * A tenant manages THEIR organization's identity and access entirely from here,
- * per-org, without ever touching a raw IAM/Casdoor admin UI:
+ * per-org, without ever touching a raw IAM admin UI:
  *   - Members:      list / invite / remove, and assign each member an org role
  *   - Roles:        a reference matrix of what each org role grants
  *   - API keys:     the Hanzo Cloud API key (hk-) for api.hanzo.ai, plus the

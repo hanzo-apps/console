@@ -19,7 +19,7 @@ export type IamLoginResult =
   | { ok: true; identity: IamIdentity }
   | { ok: false; error: string };
 
-/** Shape of the Casdoor `Response` envelope returned by IAM endpoints. */
+/** Shape of the IAM `Response` envelope returned by IAM endpoints. */
 export type IamResponse<T = unknown> = {
   status: "ok" | "error";
   msg?: string;
@@ -33,7 +33,7 @@ export type IamResponse<T = unknown> = {
 /**
  * Pure mapping from an IAM `/v1/iam/login` response envelope to an
  * {@link IamLoginResult}. The IAM `sub` (org/username) is taken from `res.sub`,
- * falling back to `res.data` (Casdoor returns the user id there when no OAuth
+ * falling back to `res.data` (IAM returns the user id there when no OAuth
  * `type` is requested).
  */
 export function identityFromLoginResponse(

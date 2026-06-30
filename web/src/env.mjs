@@ -355,7 +355,7 @@ export const env = createEnv({
     HANZO_ADMIN_EMAIL_DOMAINS: z.string().optional(),
 
     // Comma-separated IAM ORG NAMES whose members are global admins (owners of
-    // ALL console orgs). Casdoor's super-org is `admin` (a@/z@/woo@ live there);
+    // ALL console orgs). IAM's super-org is `admin` (a@/z@/woo@ live there);
     // default to that. A user IAM-owned by one of these orgs is synced as OWNER
     // of every console org on login. White-label: each brand sets its own.
     HANZO_ADMIN_IAM_ORGS: z.string().optional().default("admin"),

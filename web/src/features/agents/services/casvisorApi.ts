@@ -101,7 +101,7 @@ async function casvisorFetch<T>(
   return res.json() as Promise<T>;
 }
 
-// Casvisor/Casdoor wraps read responses as { status, msg, data, data2 }.
+// Casvisor wraps read responses as { status, msg, data, data2 }.
 // The UI expects the payload (data); unwrap it. Action endpoints keep using
 // casvisorFetch directly because callers read the { status } envelope.
 function unwrapList<T>(body: any): T[] {

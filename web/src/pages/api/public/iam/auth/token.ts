@@ -28,7 +28,7 @@ type TokenLike = {
 /**
  * Derive the signed `hi_session` cookie from a freshly-exchanged token set.
  *
- * Casdoor's *access* token is an API-authz artifact whose claims/format depend
+ * IAM's *access* token is an API-authz artifact whose claims/format depend
  * on the app's token config — it can fail strict JWKS+email validation even
  * when the login itself is perfectly valid. So we try identity sources in order
  * of robustness:

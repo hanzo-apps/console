@@ -254,7 +254,7 @@ Two gaps closed: (1) IAM identity → console orgs, (2) embed EVERY service per-
   the operator reconciles the Deployment. (The committed CR was badly drifted from
   live — this change re-syncs it: SQLite persistence, INIT_ORG_*, IAM_SERVER_URL=
   iam.hanzo.ai, KMS secretKeyRefs, embed URLs.)
-- **IAM API prefix GOTCHA**: Hanzo IAM serves the Casdoor data API under
+- **IAM API prefix GOTCHA**: Hanzo IAM serves the data API under
   `/v1/iam/*`; the bare `/api/*` paths return the IAM SPA HTML. The `@hanzo/iam`
   SDK's `getUser`/`getOrganizations` target `/api/*` → would parse HTML. Our
   `iamGetUser`/`iamListAllOrganizations` call `/v1/iam/*` explicitly.
@@ -286,7 +286,7 @@ Two gaps closed: (1) IAM identity → console orgs, (2) embed EVERY service per-
   the single provisioning point; `hydrateSession()` only READS the result. Policy is
   pure + unit-tested in `.../auth/lib/iamSyncPolicy.ts`:
   - **Global admin** = IAM user owned by an org in `HANZO_ADMIN_IAM_ORGS` (default
-    `admin` — Casdoor's super-org where a@/z@/woo@ live), OR IAM `isGlobalAdmin`/
+    `admin` — IAM's super-org where a@/z@/woo@ live), OR IAM `isGlobalAdmin`/
     `isAdmin`, OR email domain in `HANZO_ADMIN_EMAIL_DOMAINS` → becomes **OWNER of
     EVERY console org** (first materializes a console org per IAM org under owner
     `admin`, then OWNERs all).
@@ -477,7 +477,7 @@ Closes the self-serve loop: a fresh signup gets their OWN isolated org + a worki
 hk- Cloud API key from the UI, then add funds → AI, billed to their org.
 
 ### Model: ONE tenant = ONE IAM org = ONE console org = ONE commerce ns = ONE slug
-DECISIVE (probed live): the `hanzo-console` Casdoor app is NOT org-locked — a login
+DECISIVE (probed live): the `hanzo-console` IAM app is NOT org-locked — a login
 with `organization=hanzo` + email resolves CROSS-ORG and returns the user's own
 `<slug>/<email>` sub. So per-tenant IAM orgs Just Work with the UNCHANGED login flow.
 
@@ -537,7 +537,7 @@ patch operator CR `services.hanzo.ai/console` `spec.image.tag`→3.159.35-payg.
 organization". Root: `cloudApiKeyRouter.ts` resolved the IAM sub as
 `<orgId>/<email>` (and the session `iamSub` carried the email form / a DB UUID),
 so `get-user?id=maxpower/davelorenzini@gmail.com` → null even though the user
-exists as `maxpower/davelorenzini` (Casdoor `name` != email even in an
+exists as `maxpower/davelorenzini` (IAM `name` != email even in an
 `useEmailAsUsername` org). **Fix** (web/src/features): new
 `iamGetUserByOrgEmail(owner,email)` does `get-user?owner=<org>&email=<email>`
 (exact in-org email lookup → authoritative `owner/name`); `resolveIamUser`
@@ -626,7 +626,7 @@ deployed via the operator's declared state (NOT imperative `kubectl set image`).
 `kubectl set image` is reverted. Correct path: `kubectl patch
 services.hanzo.ai/console -p '{"spec":{"image":{"tag":"3.159.50-mono"}}}'` →
 operator rolls the deployment. **Verify creds:** `z@hanzo.ai` /
-`IloveHanzo2026!!!` (THREE `!`, not two — Casdoor rate-limits to a 15-min
+`IloveHanzo2026!!!` (THREE `!`, not two — IAM rate-limits to a 15-min
 lockout after a few wrong tries; a `!!` typo cost a cooldown).
 
 ## Finish + authenticated verification of the 7-ask rework (→ console 3.159.54-mono4)

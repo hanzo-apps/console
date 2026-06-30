@@ -11,7 +11,7 @@
  *
  * Identity: the caller's IAM user is resolved against IAM itself (the authority)
  * by org + email, yielding the canonical `owner/name` sub — NOT reconstructed as
- * `<orgId>/<email>`, because a Casdoor user's `name` is not necessarily their
+ * `<orgId>/<email>`, because an IAM user's `name` is not necessarily their
  * email even in an email-as-username org. The session user's own email + the
  * org-scoped procedure (membership-checked) are the only inputs; the caller can
  * never operate on anyone else's key. The minted value is read back from IAM so
@@ -69,7 +69,7 @@ function maskKey(key: string): string {
  *      up by `owner=<orgId>&email=<email>` — correct for a self-serve tenant
  *      whose IAM org == the console org.
  *
- * Resolution is by IAM record, never by string reconstruction, because a Casdoor
+ * Resolution is by IAM record, never by string reconstruction, because an IAM
  * user's `name` is NOT necessarily their email. Returns null only when neither
  * path finds a user — surfaced as a clear NOT_FOUND.
  */

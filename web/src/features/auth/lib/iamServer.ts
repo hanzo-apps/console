@@ -1,6 +1,6 @@
 /**
  * Server-side Hanzo IAM client — the single source of truth for talking to the
- * IAM backend (`github.com/hanzoai/iam`, Casdoor fork) from console.
+ * IAM backend (`github.com/hanzoai/iam`) from console.
  *
  * IAM is the NATIVE identity for console. This module wraps the canonical
  * `@hanzo/iam` SDK (`IamClient` for HTTP + `validateToken` for JWKS-backed JWT
@@ -84,10 +84,10 @@ export async function iamPasswordLogin(params: {
   if (!client) return { ok: false, error: "IAM is not configured." };
 
   try {
-    // type:"login" ⇒ Casdoor verifies the password and returns the identity
+    // type:"login" ⇒ IAM verifies the password and returns the identity
     // (`data: "<org>/<user>"`) directly — no OAuth code dance, and (verified
     // against live IAM) no dependency on the app's redirectUris/grantTypes/
-    // enableSigninSession. Without a `type`, Casdoor errors "unknown response
+    // enableSigninSession. Without a `type`, IAM errors "unknown response
     // type". console mints its own session cookie from the returned identity.
     const res = await client.apiRequest<IamResponse<string>>("/v1/iam/login", {
       method: "POST",
@@ -112,13 +112,13 @@ export async function iamPasswordLogin(params: {
 }
 
 /**
- * The canonical `owner/name` IAM subject for a validated token. Casdoor sets the
+ * The canonical `owner/name` IAM subject for a validated token. IAM sets the
  * JWT `sub` to the user's UUID id, and a bare UUID is NOT a resolvable identity —
  * `get-user?id=<uuid>` errors ("wrong token count") and `?userId=<uuid>` misses —
  * so it breaks every downstream resolver that keys on `owner/name` (the IAM→
  * console org sync and the per-user Cloud API key mint). When the subject has no
  * org segment we rebuild `owner/name` from the token's `owner`+`name` claims
- * (Casdoor includes both); otherwise we keep the subject as-is. Falls back to the
+ * (IAM includes both); otherwise we keep the subject as-is. Falls back to the
  * raw subject when the claims are absent — never worse than the bare sub.
  */
 function canonicalIamSub(result: {
@@ -161,11 +161,11 @@ export async function iamValidateToken(token: string): Promise<IamLoginResult> {
 }
 
 /**
- * List ALL organizations under an IAM owner (default Casdoor super-org `admin`).
+ * List ALL organizations under an IAM owner (default IAM super-org `admin`).
  * Uses the confidential-client Basic auth (IamClient.apiRequest), so no user
  * token is needed. Returns `[]` on any error so login degrades gracefully.
  *
- * NOTE: Hanzo IAM serves the Casdoor data API under the `/v1/iam/*` prefix (the
+ * NOTE: Hanzo IAM serves the data API under the `/v1/iam/*` prefix (the
  * bare `/api/*` paths return the IAM SPA HTML), so we call `/v1/iam/...`
  * explicitly — the SDK's built-in `getOrganizations()` targets `/api/...` and
  * would silently parse HTML. This mirrors `iamPasswordLogin` (`/v1/iam/login`).
@@ -222,9 +222,9 @@ export async function iamGetUser(sub: string): Promise<{
  * `owner`/`name` (and thus the canonical `owner/name` sub).
  *
  * This is the correct identity resolver when all we hold is the org slug and the
- * user's email: a Casdoor user's `name` is NOT necessarily their email, even in
+ * user's email: an IAM user's `name` is NOT necessarily their email, even in
  * an `useEmailAsUsername` org (a user can pre-exist with a non-email username),
- * so `get-user?id=<owner>/<email>` returns null for them. Casdoor's
+ * so `get-user?id=<owner>/<email>` returns null for them. IAM's
  * `get-user?owner=<org>&email=<email>` does an exact email lookup within the org
  * and returns the real record — from which the true sub is `${owner}/${name}`.
  * (Verified live: id-by-email → null, owner+email → the record.)
@@ -315,7 +315,7 @@ export type IamSendCodeResult = { ok: true } | { ok: false; error: string };
  * Request an email verification code from IAM for the embedded signup flow.
  *
  * Unlike login/signup (which IAM parses as JSON), `/v1/iam/send-verification-code`
- * is parsed via Casdoor `ParseForm` and therefore requires form-encoded data —
+ * is parsed via IAM `ParseForm` and therefore requires form-encoded data —
  * so this posts `application/x-www-form-urlencoded` directly rather than going
  * through the JSON `IamClient.apiRequest`.
  */
@@ -329,7 +329,7 @@ export async function iamSendVerificationCode(params: {
     const body = new URLSearchParams({
       dest: params.email,
       type: "email",
-      // Casdoor requires applicationId in "<owner>/<app>" form.
+      // IAM requires applicationId in "<owner>/<app>" form.
       applicationId: `admin/${config.appName ?? "app"}`,
       method: "signup",
       checkUser: "",
