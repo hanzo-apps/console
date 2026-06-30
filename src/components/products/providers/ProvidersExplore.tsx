@@ -12,12 +12,13 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { Boxes, Upload, Code2, ArrowRight, Plus } from '@hanzogui/lucide-icons-2'
+import { Boxes, Upload, Code2, ArrowRight, ArrowLeft, Plus } from '@hanzogui/lucide-icons-2'
 
 import {
   fetchCatalog,
   groupByProvider,
   displayProvider,
+  modelType,
   fmtPrice,
   fmtContext,
   type ProviderGroup,
@@ -130,6 +131,74 @@ const Stat = ({ label, value }: { label: string; value: string }) => (
   </YStack>
 )
 
+/** Provider detail — metadata + the provider's full model list. */
+function ProviderDetailPanel({ g, onBack }: { g: ProviderGroup; onBack: () => void }) {
+  const name = displayProvider(g.provider)
+  const availableCount = g.models.filter((m) => m.available).length
+  return (
+    <YStack gap="$4">
+      <Button size="$2" chromeless self="flex-start" icon={<ArrowLeft size={16} />} onPress={onBack}>
+        Providers
+      </Button>
+
+      <Text fontSize="$8" fontWeight="800" color="$color12">
+        {name}
+      </Text>
+
+      <XStack
+        gap="$5"
+        flexWrap="wrap"
+        rounded="$4"
+        borderWidth={1}
+        borderColor="$borderColor"
+        bg="$color1"
+        p="$4"
+      >
+        <YStack gap={2} minW={120}>
+          <Text fontSize="$6" fontWeight="700" color="$color12">{String(g.count)}</Text>
+          <Text fontSize="$1" color="$color10">Models</Text>
+        </YStack>
+        <YStack gap={2} minW={120}>
+          <Text fontSize="$6" fontWeight="700" color="$color12">{fmtContext(g.maxContext)}</Text>
+          <Text fontSize="$1" color="$color10">Max context</Text>
+        </YStack>
+        <YStack gap={2} minW={120}>
+          <Text fontSize="$6" fontWeight="700" color="$color12">{fmtPrice(g.minInput)}</Text>
+          <Text fontSize="$1" color="$color10">From / Mtok</Text>
+        </YStack>
+        <YStack gap={2} minW={120}>
+          <Text fontSize="$6" fontWeight="700" color="$color12">{String(availableCount)}</Text>
+          <Text fontSize="$1" color="$color10">Available now</Text>
+        </YStack>
+      </XStack>
+
+      <YStack gap={0} rounded="$4" borderWidth={1} borderColor="$borderColor" overflow="hidden">
+        <XStack px="$3" py="$2" bg="$color2" gap="$3">
+          <Text flex={1} fontSize="$1" color="$color10">MODEL</Text>
+          <Text width={90} fontSize="$1" color="$color10">TYPE</Text>
+          <Text width={80} fontSize="$1" color="$color10">CONTEXT</Text>
+          <Text width={90} fontSize="$1" color="$color10">IN / OUT $</Text>
+          <Text width={90} fontSize="$1" color="$color10">STATUS</Text>
+        </XStack>
+        {g.models.map((m) => (
+          <XStack key={m.name} px="$3" py="$2.5" gap="$3" borderTopWidth={1} borderColor="$borderColor" items="center">
+            <YStack flex={1} gap={1}>
+              <Text fontSize="$3" color="$color12" numberOfLines={1}>{m.name}</Text>
+              {m.description ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{m.description}</Text> : null}
+            </YStack>
+            <Text width={90} fontSize="$2" color="$color11">{modelType(m)}</Text>
+            <Text width={80} fontSize="$2" color="$color11">{fmtContext(m.context)}</Text>
+            <Text width={90} fontSize="$2" color="$color11">{fmtPrice(m.pricing?.input)} / {fmtPrice(m.pricing?.output)}</Text>
+            <Text width={90} fontSize="$1" color={m.available ? '$green11' : '$color10'}>
+              {m.available ? '● Available' : 'Catalog'}
+            </Text>
+          </XStack>
+        ))}
+      </YStack>
+    </YStack>
+  )
+}
+
 type LoadState =
   | { phase: 'loading' }
   | { phase: 'error'; err: ApiError }
@@ -138,6 +207,7 @@ type LoadState =
 export function ProvidersExplore({ onAddCustom }: { onAddCustom: () => void }) {
   const router = useRouter()
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
+  const [selected, setSelected] = useState<ProviderGroup | null>(null)
 
   const run = useCallback(() => {
     setState({ phase: 'loading' })
@@ -160,6 +230,11 @@ export function ProvidersExplore({ onAddCustom }: { onAddCustom: () => void }) {
   const docsUrl = 'https://docs.hanzo.ai'
   const groups = state.phase === 'ready' ? state.groups : []
   const verified = useMemo(() => groups.length, [groups])
+
+  // Click-through provider detail — metadata + the provider's model list.
+  if (selected) {
+    return <ProviderDetailPanel g={selected} onBack={() => setSelected(null)} />
+  }
 
   return (
     <>
@@ -205,7 +280,7 @@ export function ProvidersExplore({ onAddCustom }: { onAddCustom: () => void }) {
         <>
           <XStack gap="$3" flexWrap="wrap">
             {groups.map((g) => (
-              <ProviderCard key={g.provider} g={g} onOpen={() => router.push('/models')} />
+              <ProviderCard key={g.provider} g={g} onOpen={() => setSelected(g)} />
             ))}
           </XStack>
 
