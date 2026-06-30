@@ -11,7 +11,7 @@
  *
  * Least privilege: only an explicit allow-list of admin segments is reachable
  * (GET reads / POST mutations), and a non-global admin may reference ONLY their
- * own org — closing the casdoor `GetUsers(owner)` cross-tenant read gap, which is
+ * own org — closing the IAM `GetUsers(owner)` cross-tenant read gap, which is
  * NOT scoped by the caller server-side.
  */
 import { type NextRequest, NextResponse } from 'next/server'
@@ -49,7 +49,7 @@ const POST_SEGMENTS = new Set([
 ])
 
 /**
- * Organization objects are owned by casdoor's built-in `admin`, and the org
+ * Organization objects are owned by IAM's built-in `admin`, and the org
  * list/get endpoints scope results to the caller's org server-side — so `admin`
  * is an acceptable owner THERE. It is never acceptable for tenant data (users,
  * roles, ...), where the owner must be the caller's own org.
@@ -67,7 +67,7 @@ function idOwner(id: string | null): string | null {
 }
 
 /**
- * A non-global admin may reference ONLY their own org. casdoor's read endpoints
+ * A non-global admin may reference ONLY their own org. IAM's read endpoints
  * (GetUsers/GetUser) do not enforce this, so the proxy must. The decision is the
  * pure `admin-policy` predicate (tested in admin-policy.test.ts); this wrapper
  * just supplies the per-segment org-metadata exception (`ORG_ENDPOINTS`).

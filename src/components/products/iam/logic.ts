@@ -9,7 +9,7 @@ export function newUser(owner: string): IamUser {
   return { owner, name: '', displayName: '', email: '', type: 'normal-user', isAdmin: false }
 }
 
-/** A blank application — casdoor apps are owned by the built-in `admin`, scoped to the org. */
+/** A blank application — IAM apps are owned by the built-in `admin`, scoped to the org. */
 export function newApplication(owner: string): IamApplication {
   return { owner: 'admin', name: '', displayName: '', organization: owner, description: '' }
 }

@@ -5,7 +5,7 @@
  * The browser holds no IAM/KMS credential. Every call here is SAME-ORIGIN to
  * `/admin/iam/*` or `/admin/kms/*`, sending only the first-party session cookie;
  * the server route (`app/admin/{iam,kms}/[...path]/route.ts`) enforces the brand
- * admin gate and forwards to IAM / KMS as the user. IAM speaks the casdoor
+ * admin gate and forwards to IAM / KMS as the user. IAM speaks the
  * `{status,msg,data,data2}` envelope (unwrapped here); KMS speaks plain JSON.
  *
  * Honest errors: a 403 from the gate becomes `ApiError('forbidden', 403)` so the
@@ -15,7 +15,7 @@
 import { ApiError } from './client'
 import { listQuery, type ListParams } from './types'
 
-/** A casdoor organization (`get-organizations`). */
+/** An IAM organization (`get-organizations`). */
 export type Organization = {
   owner: string
   name: string
@@ -23,13 +23,13 @@ export type Organization = {
   createdTime?: string
   websiteUrl?: string
   passwordType?: string
-  /** Org logo URL (casdoor `logo`); shown in the console chrome when set. */
+  /** Org logo URL (IAM `logo`); shown in the console chrome when set. */
   logo?: string
   favicon?: string
   [key: string]: unknown
 }
 
-/** A casdoor user (`get-users`), including the MFA surface (`get-user`). */
+/** An IAM user (`get-users`), including the MFA surface (`get-user`). */
 export type IamUser = {
   owner: string
   name: string
@@ -48,7 +48,7 @@ export type IamUser = {
   [key: string]: unknown
 }
 
-/** A casdoor application (`get-applications`). */
+/** An IAM application (`get-applications`). */
 export type IamApplication = {
   owner: string
   name: string
@@ -60,7 +60,7 @@ export type IamApplication = {
   [key: string]: unknown
 }
 
-/** A casdoor identity provider (`get-providers`). */
+/** An IAM identity provider (`get-providers`). */
 export type IamProvider = {
   owner: string
   name: string
@@ -71,7 +71,7 @@ export type IamProvider = {
   [key: string]: unknown
 }
 
-/** A casdoor role — the RBAC grant (`get-roles`). */
+/** An IAM role — the RBAC grant (`get-roles`). */
 export type Role = {
   owner: string
   name: string
@@ -85,7 +85,7 @@ export type Role = {
   [key: string]: unknown
 }
 
-/** A casdoor audit record (`get-records`). */
+/** An IAM audit record (`get-records`). */
 export type AuditRecord = {
   id?: string | number
   owner?: string
@@ -118,7 +118,7 @@ function qs(query?: Query): string {
   return s ? `?${s}` : ''
 }
 
-// ── IAM admin (casdoor envelope over /admin/iam/*) ───────────────────────────
+// ── IAM admin (IAM envelope over /admin/iam/*) ───────────────────────────────
 
 type Envelope<T> = { status?: string; msg?: string; data?: T; data2?: unknown }
 
@@ -165,11 +165,11 @@ const iamMutate = (segment: string, body: unknown, query?: Query): Promise<void>
   iamReq<unknown>('POST', segment, { body, query }).then(() => undefined)
 
 export const IamAdminApi = {
-  /** Organizations are owned by the built-in `admin`; casdoor scopes to the caller. */
+  /** Organizations are owned by the built-in `admin`; IAM scopes to the caller. */
   organizations: (params: ListParams = {}): Promise<Paged<Organization>> =>
     iamList<Organization>('get-organizations', listQuery({ owner: 'admin', pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
-  /** A single organization by name (casdoor orgs are owned by `admin`). */
+  /** A single organization by name (IAM orgs are owned by `admin`). */
   organization: (name: string): Promise<Organization> =>
     iamOne<Organization>('get-organization', { id: `admin/${name}` }),
 
@@ -194,7 +194,7 @@ export const IamAdminApi = {
   records: (owner: string, params: ListParams = {}): Promise<Paged<AuditRecord>> =>
     iamList<AuditRecord>('get-records', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
-  // Mutations — casdoor takes the object as the JSON body; updates take `?id`.
+  // Mutations — IAM takes the object as the JSON body; updates take `?id`.
   addUser: (user: IamUser): Promise<void> => iamMutate('add-user', user),
   updateUser: (id: string, user: IamUser): Promise<void> => iamMutate('update-user', user, { id }),
   deleteUser: (user: IamUser): Promise<void> => iamMutate('delete-user', user),
