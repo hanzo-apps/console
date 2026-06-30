@@ -410,7 +410,7 @@ export const catalog: CatalogEntry[] = [
     id: 'machines',
     label: 'Machines',
     icon: Server,
-    description: 'Virtual machines and bare-metal compute.',
+    description: 'Compute machines and capacity across regions (your cluster nodes).',
     category: 'Compute',
     status: 'enabled',
     docs: `${DOCS}/machines`,
