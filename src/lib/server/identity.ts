@@ -39,12 +39,10 @@ const KMS_URL = trim(process.env.KMS_URL ?? 'http://kms.hanzo.svc')
 /** Confidential client used for app-on-behalf mint/issue/revoke. */
 const MINT_CLIENT_ID = process.env.IAM_MINT_CLIENT_ID ?? ''
 const MINT_CLIENT_SECRET = process.env.IAM_MINT_CLIENT_SECRET ?? ''
-/** THE global-admin org — standardized as `admin` across the whole stack
- *  (commerce, ai, gateway all gate cross-tenant on owner=="admin"). A member-admin
- *  of `admin` is a global (cross-tenant) admin; casdoor's reserved `built-in` is
- *  NOT used (per the "no built-in admin — seed the z@<domain> superuser in the
- *  admin org" convention). A tenant org owner (hanzo, maxpower, …) is NEVER global,
- *  even with org-level isAdmin. */
+/** THE global-admin org — standardized as `admin` across the whole stack (IAM,
+ *  commerce, ai, gateway all gate cross-tenant on owner=="admin"). A member-admin
+ *  of `admin` is a global (cross-tenant) admin. A tenant org owner (hanzo, maxpower,
+ *  …) is NEVER global, even with org-level isAdmin. One admin org, one way. */
 const ADMIN_ORG = 'admin'
 const isAdminOrg = (owner: string): boolean => owner === ADMIN_ORG
 
@@ -72,7 +70,7 @@ export type SessionUser = {
   emailVerified: boolean
   /** IAM-authoritative org-admin flag. */
   isAdmin: boolean
-  /** True for built-in-org admins — may act across any tenant org. */
+  /** True for admin-org members — may act across any tenant org. */
   isGlobalAdmin: boolean
 }
 
@@ -143,7 +141,7 @@ async function resolveSessionUser(
 
   // IAM's privileged ops (issue-user-token, mint/revoke-user-keys) parse this id
   // with GetOwnerAndNameFromId, which REQUIRES the `<owner>/<name>` composite key —
-  // a bare UUID (casdoor's `id` field, e.g. 113d4dd4-…) makes it throw "wrong token
+  // a bare UUID (e.g. 113d4dd4-…) makes it throw "wrong token
   // count" (the live Models-catalog failure for org-member accounts that carry an
   // `id`). So always prefer `<owner>/<name>` when both are present; the explicit
   // UUID is only a last-resort fallback for an owner-less account.
@@ -245,14 +243,14 @@ export async function issueUserToken(user: SessionUser): Promise<{ accessToken: 
 // (IAM_ORG_ADMIN_APPS) and user-admin (IAM_USER_ADMIN_APPS) capabilities, so it
 // may create an organization and make the signed-in user that org's admin. The
 // cloud backend scopes all data by the user's IAM `owner` (GetEffectiveOrg →
-// session user.Owner), and a casdoor user belongs to exactly ONE org, so giving
+// session user.Owner), and an IAM user belongs to exactly ONE org, so giving
 // a zero-org user their own org means MOVING them into it (owner=slug,
 // isAdmin=true). The user's password travels with the user row (verification
 // uses user.PasswordType first — object/check.go), so the move never locks them
 // out; we still clone the source org's password/locale settings so the new org
 // is well-formed (and covers a user whose PasswordType is empty).
 
-/** A casdoor organization as IAM returns it (only the fields we read/clone). */
+/** An IAM organization as IAM returns it (only the fields we read/clone). */
 type IamOrganization = {
   owner?: string
   name?: string
@@ -307,7 +305,7 @@ async function iamPostBody<T = unknown>(
   return (json.data ?? ({} as T))
 }
 
-/** Read an organization (owned by casdoor's `admin`) by name; null when absent. */
+/** Read an organization (owned by the `admin` org) by name; null when absent. */
 export async function getOrganization(name: string): Promise<IamOrganization | null> {
   return iamGetData<IamOrganization>('/v1/iam/get-organization', { id: `admin/${name}` })
 }
@@ -316,7 +314,7 @@ export async function getOrganization(name: string): Promise<IamOrganization | n
  * Create a customer organization. Clones password + locale settings from the
  * caller's current org (so the org is well-formed and the moved user's login is
  * unaffected) and clears all instance-specific material (apps, logos, master
- * secrets, MFA). The org is owned by casdoor's `admin`; `isPersonal` marks a
+ * secrets, MFA). The org is owned by the `admin` org; `isPersonal` marks a
  * personal org (the "skip" path).
  */
 export async function createOrganization(opts: {
