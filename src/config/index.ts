@@ -5,8 +5,8 @@
  * scoping data by the org claim; each brand authenticates against its OWN IAM
  * (hanzo→hanzo.id, lux→lux.id, zoo→zoolabs.id, pars→pars.id — all live), so the
  * cloud backend validates a per-brand issuer + `aud=<brand>-cloud`. The brand is
- * selected at RUNTIME from the request hostname (console.hanzo.ai → hanzo,
- * console.lux.cloud → lux, console.zoo.cloud → zoo). `config` is a brand-aware
+ * selected at RUNTIME from the request hostname (cloud.hanzo.ai → hanzo,
+ * cloud.lux.cloud → lux, cloud.zoo.cloud → zoo). `config` is a brand-aware
  * proxy resolved from `window.location.hostname`, so the /v1 client + IAM SDK are
  * per-host with no other wiring. `NEXT_PUBLIC_*` still OVERRIDES per field.
  *
@@ -52,19 +52,18 @@ const SHARED = {
 
 /**
  * Cloud `/v1` base — SAME-ORIGIN by default so the session cookie is first-party
- * on every brand host (console.lux.cloud/v1 → backend, no SameSite=None/CORS).
- * Each console host's ingress proxies /v1 to the shared cloud backend. Override
- * with NEXT_PUBLIC_CLOUD_URL for split-origin/dev.
+ * (cloud.hanzo.ai/v1, no SameSite=None/CORS). The console host's edge route sends
+ * /v1 THROUGH the gateway (global IAM-JWT + rate-limit) to the cloud package, so
+ * "everything goes through the api.hanzo.ai gateway" holds without the SPA ever
+ * leaving its origin. Override with NEXT_PUBLIC_CLOUD_URL for split-origin/dev.
  */
 function cloudUrl(): string {
   const env = process.env.NEXT_PUBLIC_CLOUD_URL
   if (env) return trimSlash(env)
   if (typeof window !== 'undefined') return trimSlash(window.location.origin)
-  // SSR/build fallback only (real calls are browser same-origin → each console
-  // host's ingress proxies /v1 to the gateway). Canonical entry is the unified
-  // gated/priced gateway api.hanzo.ai (hanzoai/ingress → hanzoai/gateway →
-  // cloud / separate services / per-org k8s) — NOT cloud.hanzo.ai (SPA host) and
-  // NOT api.cloud.hanzo.ai direct (bypasses rate-limit/gating/pricing).
+  // SSR/build fallback only (real calls are browser same-origin; the gateway
+  // routes the console host's /v1 to the cloud package). The canonical gated API
+  // host is api.hanzo.ai (== api.cloud.hanzo.ai — the same hanzoai/cloud package).
   return 'https://api.hanzo.ai'
 }
 
@@ -110,7 +109,7 @@ export function brandFromHost(host?: string | null): BrandId {
 /** Current hostname: window in the browser, NEXT_PUBLIC_DEFAULT_HOST for SSR/build. */
 function currentHost(): string {
   if (typeof window !== 'undefined') return window.location.hostname
-  return process.env.NEXT_PUBLIC_DEFAULT_HOST ?? 'console.hanzo.ai'
+  return process.env.NEXT_PUBLIC_DEFAULT_HOST ?? 'cloud.hanzo.ai'
 }
 
 const cache = new Map<BrandId, ConsoleConfig>()
