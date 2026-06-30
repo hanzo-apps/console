@@ -1,29 +1,27 @@
 'use client'
 
 /**
- * Playground — try models and prompts against the LIVE gateway, with the marquee
- * being SIDE-BY-SIDE multi-model comparison.
+ * Playground — test models and iterate prompts against the LIVE gateway.
  *
- * One tabbed surface over the OpenAI-compatible gateway (GET /v1/models +
- * POST /v1/chat/completions|embeddings|audio/speech), all through the keyless
- * `/ai` proxy console2 already uses — no key in the browser, no re-auth:
- *   - Chat / Completions  → the COMPARE board: one shared prompt fans out to N
- *     model columns that run in PARALLEL and stream independently, each showing
- *     real tokens, cost (catalog pricing) and latency (time-to-first-token +
- *     total). Single-model mode is just one column.
- *   - Embeddings          → a real single-model embeddings run (dims + usage).
- *   - Audio               → text-to-speech (real audio bytes from the gateway).
- *   - Vision              → multimodal chat with an image URL, same runner.
+ * One tabbed surface over the OpenAI-compatible gateway, all through the keyless
+ * `/ai` proxy console2 already uses (no key in the browser, no re-auth):
+ *   - Chat / Completions → the single-model composer (`ChatPlayground`): a model
+ *     chip with a real context badge, an editable system prompt + message turns,
+ *     and a Response + Model-settings rail showing the real completion, token
+ *     usage and cost. Examples are labelled starters; History is real prior runs.
+ *   - Embeddings → a real single-model embeddings run (dims + usage).
+ *   - Audio → text-to-speech (real audio bytes from the gateway).
+ *   - Vision → multimodal chat with an image URL, same runner.
  * Nothing is fabricated — every output, token count and price is real, and each
  * surface renders an honest state on failure.
  */
 import { useState } from 'react'
 import type { ComponentType } from 'react'
-import { Button, XStack, YStack } from '@hanzo/gui'
+import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { MessageSquare, FileText, Binary, AudioLines, ScanEye } from '@hanzogui/lucide-icons-2'
 
 import { PageHeader } from '~/components/ui/PageHeader'
-import { ComparePlayground } from './playground/ComparePlayground'
+import { ChatPlayground } from './playground/ChatPlayground'
 import { EmbeddingsPlayground } from './playground/EmbeddingsPlayground'
 import { AudioPlayground } from './playground/AudioPlayground'
 import { VisionPlayground } from './playground/VisionPlayground'
@@ -38,28 +36,29 @@ const TABS: { id: Tab; label: string; Icon: ComponentType<{ size?: number }> }[]
   { id: 'vision', label: 'Vision', Icon: ScanEye },
 ]
 
-function TabButton({
-  active,
-  label,
-  Icon,
-  onPress,
-}: {
-  active: boolean
-  label: string
-  Icon: ComponentType<{ size?: number }>
-  onPress: () => void
-}) {
+function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
   return (
-    <Button
-      size="$2"
-      icon={<Icon size={15} />}
-      bg={active ? '$color5' : 'transparent'}
-      borderWidth={1}
-      borderColor="$borderColor"
-      onPress={onPress}
-    >
-      {label}
-    </Button>
+    <XStack gap="$1" bg="$color3" rounded="$10" p="$1" self="flex-start" flexWrap="wrap">
+      {TABS.map(({ id, label, Icon }) => {
+        const active = tab === id
+        return (
+          <Button
+            key={id}
+            size="$2"
+            chromeless={!active}
+            bg={active ? '$color1' : 'transparent'}
+            rounded="$10"
+            px="$3"
+            icon={<Icon size={15} />}
+            onPress={() => onChange(id)}
+          >
+            <Text fontSize="$2" color={active ? '$color12' : '$color10'} fontWeight="600">
+              {label}
+            </Text>
+          </Button>
+        )
+      })}
+    </XStack>
   )
 }
 
@@ -70,19 +69,14 @@ export function PlaygroundModule(_props: { params: Record<string, string> }) {
     <YStack gap="$4">
       <PageHeader
         title="Playground"
-        subtitle="Compare models side by side — one prompt, many models, real tokens, cost and latency."
+        subtitle="Test models, iterate prompts, and build with real-time responses."
       />
 
-      <XStack gap="$1.5" flexWrap="wrap">
-        {TABS.map((t) => (
-          <TabButton key={t.id} active={tab === t.id} label={t.label} Icon={t.Icon} onPress={() => setTab(t.id)} />
-        ))}
-      </XStack>
+      <TabBar tab={tab} onChange={setTab} />
 
-      {tab === 'chat' ? (
-        <ComparePlayground mode="chat" />
-      ) : tab === 'completions' ? (
-        <ComparePlayground mode="completions" />
+      {tab === 'chat' || tab === 'completions' ? (
+        // Same element + key across chat↔completions so the composer state persists.
+        <ChatPlayground key="chat" mode={tab} />
       ) : tab === 'embeddings' ? (
         <EmbeddingsPlayground />
       ) : tab === 'audio' ? (
