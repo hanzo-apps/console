@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 
 import { Provider } from '~/components/Provider'
+import { ChunkGuard } from '~/components/ChunkGuard'
 import { branding } from '~/config'
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="t_dark" style={{ backgroundColor: '#070b13', colorScheme: 'dark' }} suppressHydrationWarning>
       <body style={{ margin: 0 }}>
+        <ChunkGuard />
         <Provider>{children}</Provider>
       </body>
     </html>
