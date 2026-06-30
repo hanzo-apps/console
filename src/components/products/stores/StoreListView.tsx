@@ -5,7 +5,7 @@ import { Button, Text, XStack } from '@hanzo/gui'
 import { Plus, RefreshCw, Trash } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, StoreApi, type Store } from '~/lib/api'
-import { useSession } from '~/lib/auth/session'
+import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { newStore } from './logic'
@@ -24,8 +24,12 @@ const Badge = ({ on }: { on?: boolean }) => (
 )
 
 export function StoreListView({ onOpen }: { onOpen: (s: Store) => void }) {
-  const { account } = useSession()
-  const owner = account?.name ?? 'admin'
+  // Tenant scope: casibase stores (knowledge bases) are owned by the ORG. Use the
+  // active org scope so the list resolves the org's stores AND `newStore(owner)`
+  // creates them under the org — AddStore trusts the body owner, so a username
+  // here would orphan the store (GetStores scopes to the session org and would
+  // never return it).
+  const owner = currentOrg()
 
   const [rows, setRows] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)

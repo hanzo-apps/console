@@ -5,7 +5,7 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { Plus, Trash } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ProviderApi, type Provider } from '~/lib/api'
-import { useSession } from '~/lib/auth/session'
+import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { newProvider } from './logic'
@@ -22,8 +22,11 @@ const StatusBadge = ({ on }: { on?: boolean }) => (
 )
 
 export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) {
-  const { account } = useSession()
-  const owner = account?.name ?? 'admin'
+  // Tenant scope: casibase providers are owned by the ORG, not the username. Use
+  // the active org scope (the same value stamped as X-Org-Id and switched by the
+  // OrgSwitcher) so reads resolve the org's custom providers and a global admin's
+  // org switch re-scopes (get-providers honors the owner param for admins).
+  const owner = currentOrg()
 
   const [rows, setRows] = useState<ProviderRow[]>([])
   const [loading, setLoading] = useState(true)
