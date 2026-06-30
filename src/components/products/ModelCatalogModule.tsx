@@ -1,86 +1,124 @@
 'use client'
 
 /**
- * Model catalog — the available models served by the gateway, native on @hanzo/gui.
+ * Model Catalog — the real, rich model catalog on @hanzo/gui.
  *
- * Ported from hanzoai/console features/cloud-models (ModelsTable + ProviderFilter):
- * the provider filter, the premium badge, and the $/Mtok price columns. Data is
- * the REAL `/v1/models` list (`CloudModelApi`) with a best-effort pricing overlay.
- * Read-only — models come from providers + routes (their own modules). Loading,
- * error (404 not routed / 401 / 503), and empty are honest states; prices that
- * the pricing API doesn't return read "—" rather than being fabricated.
+ * Source: the unified `/v1/pricing/models` catalog via `aicatalog.fetchCatalog`
+ * (through the `/ai` proxy, so the user bearer is attached). Every column is a
+ * REAL field — name + params (specs), modality (derived from the id), context,
+ * per-Mtok input/output pricing, the TRUE provider (so qwen→Qwen, glm→Zhipu, our
+ * own → "Zen" — never the old "everything is Hanzo" mislabel), and a live
+ * Available status (servable now) vs catalog-only. Honest loading/error/empty;
+ * nothing fabricated. Filter by provider; "Zen" surfaces our first-party models.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Text, XStack } from '@hanzo/gui'
+import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { ApiError, CloudModelApi, providerLabels, type CatalogModel } from '~/lib/api'
+import {
+  fetchCatalog,
+  displayProvider,
+  modelType,
+  fmtPrice,
+  fmtContext,
+  type CatalogEntry,
+} from '~/lib/api/aicatalog'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
+import type { ApiError } from '~/lib/api'
 
-/** Format a $/million-tokens price the same way the source ModelsTable did. */
-function formatPrice(perMillion?: number): string {
-  if (perMillion == null) return '—'
-  if (perMillion === 0) return 'Free'
-  if (perMillion < 0.01) return `$${perMillion.toFixed(4)}`
-  if (perMillion < 1) return `$${perMillion.toFixed(3)}`
-  return `$${perMillion.toFixed(2)}`
-}
-
-const Badge = ({ on, label }: { on: boolean; label: string }) => (
+const Pill = ({ label, tone = 'muted' }: { label: string; tone?: 'muted' | 'live' }) => (
   <Text
     fontSize="$1"
     px="$2"
     py="$1"
     rounded="$2"
-    bg={on ? '$color5' : '$color3'}
-    color={on ? '$color12' : '$color11'}
+    bg={tone === 'live' ? '$green3' : '$color3'}
+    color={tone === 'live' ? '$green11' : '$color11'}
   >
     {label}
   </Text>
 )
 
-type LoadState =
-  | { phase: 'loading' }
-  | { phase: 'error'; err: ApiError }
-  | { phase: 'ready'; models: CatalogModel[] }
-
-const columns: Column<CatalogModel>[] = [
+const columns: Column<CatalogEntry>[] = [
   {
-    key: 'id',
+    key: 'name',
     header: 'Model',
     render: (m) => (
-      <Text fontSize="$3" color="$color12" numberOfLines={1}>
-        {m.id}
-      </Text>
+      <YStack gap={1}>
+        <XStack items="center" gap="$2">
+          <Text fontSize="$3" color="$color12" numberOfLines={1}>
+            {m.name}
+          </Text>
+          {m.specs?.params ? (
+            <Text fontSize="$1" color="$color10">
+              {m.specs.params}
+            </Text>
+          ) : null}
+        </XStack>
+        {m.description ? (
+          <Text fontSize="$1" color="$color10" numberOfLines={1}>
+            {m.description}
+          </Text>
+        ) : null}
+      </YStack>
     ),
   },
   {
-    key: 'owned_by',
-    header: 'Provider',
-    width: 180,
-    render: (m) => <Text fontSize="$3">{providerLabels[m.owned_by] ?? m.owned_by}</Text>,
+    key: 'type',
+    header: 'Type',
+    width: 110,
+    render: (m) => <Pill label={modelType(m)} />,
   },
   {
-    key: 'premium',
-    header: 'Tier',
-    width: 110,
-    render: (m) => <Badge on={!!m.premium} label={m.premium ? 'Premium' : 'Standard'} />,
+    key: 'context',
+    header: 'Context',
+    width: 100,
+    render: (m) => <Text fontSize="$3" color="$color11">{fmtContext(m.context)}</Text>,
   },
   {
     key: 'input',
-    header: 'Input $/Mtok',
-    width: 130,
-    render: (m) => <Text fontSize="$3" color="$color11">{formatPrice(m.pricing?.inputPerMillion)}</Text>,
+    header: 'Input $/M',
+    width: 110,
+    render: (m) => <Text fontSize="$3" color="$color11">{fmtPrice(m.pricing?.input)}</Text>,
   },
   {
     key: 'output',
-    header: 'Output $/Mtok',
-    width: 130,
-    render: (m) => <Text fontSize="$3" color="$color11">{formatPrice(m.pricing?.outputPerMillion)}</Text>,
+    header: 'Output $/M',
+    width: 110,
+    render: (m) => <Text fontSize="$3" color="$color11">{fmtPrice(m.pricing?.output)}</Text>,
+  },
+  {
+    key: 'provider',
+    header: 'Provider',
+    width: 140,
+    render: (m) => <Text fontSize="$3">{displayProvider(m.provider)}</Text>,
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    width: 120,
+    render: (m) =>
+      m.available ? <Pill label="● Available" tone="live" /> : <Pill label="Catalog" />,
   },
 ]
+
+const Stat = ({ label, value }: { label: string; value: string }) => (
+  <YStack flex={1} gap={2} px="$3" py="$2.5">
+    <Text fontSize="$6" fontWeight="700" color="$color12">
+      {value}
+    </Text>
+    <Text fontSize="$1" color="$color10">
+      {label}
+    </Text>
+  </YStack>
+)
+
+type LoadState =
+  | { phase: 'loading' }
+  | { phase: 'error'; err: ApiError }
+  | { phase: 'ready'; models: CatalogEntry[] }
 
 export function ModelCatalogModule(_props: { params: Record<string, string> }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
@@ -88,7 +126,7 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
 
   const run = useCallback(() => {
     setState({ phase: 'loading' })
-    CloudModelApi.list()
+    fetchCatalog()
       .then((models) => setState({ phase: 'ready', models }))
       .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
   }, [])
@@ -99,21 +137,38 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
 
   const models = state.phase === 'ready' ? state.models : []
 
-  const providers = useMemo(
-    () => Array.from(new Set(models.map((m) => m.owned_by))).sort(),
-    [models],
-  )
+  // Provider filter options, sorted by display name; "Zen" (our own) first.
+  const providers = useMemo(() => {
+    const set = new Map<string, string>()
+    for (const m of models) set.set(displayProvider(m.provider), displayProvider(m.provider))
+    return Array.from(set.keys()).sort((a, b) =>
+      a === 'Zen' ? -1 : b === 'Zen' ? 1 : a.localeCompare(b),
+    )
+  }, [models])
 
   const rows = useMemo(
-    () => (provider ? models.filter((m) => m.owned_by === provider) : models),
+    () => (provider ? models.filter((m) => displayProvider(m.provider) === provider) : models),
     [models, provider],
   )
+
+  const stats = useMemo(() => {
+    const ctxs = rows.map((m) => m.context).filter((x): x is number => typeof x === 'number')
+    const ins = rows.map((m) => m.pricing?.input).filter((x): x is number => typeof x === 'number')
+    const provCount = new Set(rows.map((m) => displayProvider(m.provider))).size
+    const avgIn = ins.length ? ins.reduce((a, b) => a + b, 0) / ins.length : null
+    return {
+      total: String(rows.length),
+      ctx: ctxs.length ? `${fmtContext(Math.min(...ctxs))} – ${fmtContext(Math.max(...ctxs))}` : '—',
+      avg: avgIn != null ? `$${avgIn.toFixed(2)}` : '—',
+      providers: String(provCount),
+    }
+  }, [rows])
 
   return (
     <>
       <PageHeader
         title="Model Catalog"
-        subtitle="Available models across providers, with pricing. Routing is configured in Models; credentials in Providers."
+        subtitle="Explore and deploy the best open AI models. All models are routeable and usage-based."
         actions={
           <Button size="$2" icon={<RefreshCw size={15} />} onPress={run}>
             Refresh
@@ -127,7 +182,7 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
           onRetry={run}
           copy={{
             notFound:
-              'The model catalog (/v1/models) is not routed on this host yet. It appears automatically once the deployment proxies /v1/models through the gateway.',
+              'The model catalog (/v1/pricing/models) is not routed on this host yet. It appears automatically once the deployment proxies it through the gateway.',
           }}
         />
       ) : (
@@ -152,7 +207,7 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
                   borderColor="$borderColor"
                   onPress={() => setProvider(p)}
                 >
-                  {providerLabels[p] ?? p}
+                  {p}
                 </Button>
               ))}
             </XStack>
@@ -162,9 +217,25 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
             columns={columns}
             rows={rows}
             loading={state.phase === 'loading'}
-            rowKey={(m) => m.id}
+            rowKey={(m) => m.name}
             empty="No models available on this deployment yet."
           />
+
+          {state.phase === 'ready' && rows.length > 0 ? (
+            <XStack
+              rounded="$4"
+              borderWidth={1}
+              borderColor="$borderColor"
+              bg="$color1"
+              mt="$2"
+              flexWrap="wrap"
+            >
+              <Stat label="Total models" value={stats.total} />
+              <Stat label="Context range" value={stats.ctx} />
+              <Stat label="Avg. input / Mtok" value={stats.avg} />
+              <Stat label="Providers" value={stats.providers} />
+            </XStack>
+          ) : null}
         </>
       )}
     </>

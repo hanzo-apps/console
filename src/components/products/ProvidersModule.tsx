@@ -15,11 +15,17 @@ import { useRouter } from 'next/navigation'
 
 import { ProviderListView } from './providers/ProviderListView'
 import { ProviderEditView } from './providers/ProviderEditView'
+import { ProvidersExplore } from './providers/ProvidersExplore'
 
 export function ProvidersModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const name = params.name
 
+  // `/providers/manage` — the custom-provider CRUD (per-org overrides + Add).
+  if (name === 'manage') {
+    return <ProviderListView onOpen={(p) => router.push(`/providers/${encodeURIComponent(p.name)}`)} />
+  }
+  // `/providers/<name>` — view/edit one provider.
   if (name) {
     return (
       <ProviderEditView
@@ -28,5 +34,6 @@ export function ProvidersModule({ params }: { params: Record<string, string> }) 
       />
     )
   }
-  return <ProviderListView onOpen={(p) => router.push(`/providers/${encodeURIComponent(p.name)}`)} />
+  // `/providers` — the Explore grid (real provider catalog). "Add custom" → manage.
+  return <ProvidersExplore onAddCustom={() => router.push('/providers/manage')} />
 }
