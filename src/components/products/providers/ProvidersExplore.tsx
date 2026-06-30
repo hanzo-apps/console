@@ -133,7 +133,7 @@ const Stat = ({ label, value }: { label: string; value: string }) => (
 type LoadState =
   | { phase: 'loading' }
   | { phase: 'error'; err: ApiError }
-  | { phase: 'ready'; groups: ProviderGroup[]; total: number }
+  | { phase: 'ready'; groups: ProviderGroup[]; total: number; available: number }
 
 export function ProvidersExplore({ onAddCustom }: { onAddCustom: () => void }) {
   const router = useRouter()
@@ -143,7 +143,12 @@ export function ProvidersExplore({ onAddCustom }: { onAddCustom: () => void }) {
     setState({ phase: 'loading' })
     fetchCatalog()
       .then((models) =>
-        setState({ phase: 'ready', groups: groupByProvider(models), total: models.length }),
+        setState({
+          phase: 'ready',
+          groups: groupByProvider(models),
+          total: models.length,
+          available: models.filter((m) => m.available).length,
+        }),
       )
       .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
   }, [])
@@ -214,7 +219,7 @@ export function ProvidersExplore({ onAddCustom }: { onAddCustom: () => void }) {
           >
             <Stat label="Providers" value={String(verified)} />
             <Stat label="Total models" value={String(state.total)} />
-            <Stat label="Available now" value={String(groups.reduce((a, g) => a + g.models.filter((m) => m.available).length, 0))} />
+            <Stat label="Available now" value={String(state.available)} />
           </XStack>
         </>
       )}
