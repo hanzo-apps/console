@@ -324,6 +324,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             ) : null}
           </YStack>
         </ScrollView>
+
+        {/* Always-visible wallet: balance + top-up, pinned bottom-left on every page. */}
+        <SidebarWallet collapsed={collapsed} />
       </YStack>
 
       <YStack flex={1}>
