@@ -171,8 +171,8 @@ import {
   IntegrationsModule,
   ReferralsModule,
   ScoreAnalyticsModule,
-  ZeroTrustModule,
 } from '~/components/products/ConsoleFeatureModule'
+import { ZeroTrustModule } from '~/components/products/ZeroTrustModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
