@@ -73,15 +73,16 @@ function AdminBanner({ onDismiss }: { onDismiss: () => void }) {
 export function OrgGate({ children }: { children: ReactNode }) {
   const { account } = useSession()
   const owner = account?.owner ?? ''
-  const isAdmin = Boolean(account?.isAdmin)
-  // GLOBAL (cross-tenant) admin — the only one who may use admin.hanzo.ai. An ORG
-  // owner (e.g. Dave/maxpower) carries `isAdmin` for their OWN org but is NOT a
-  // global admin, so the admin-ops banner must gate on this, never on isAdmin.
-  // Mirrors the server rule: explicit isGlobalAdmin, or a member of the 'admin' org.
-  // built-in metadata org. (Account's index signature exposes isGlobalAdmin when present.)
+  // GLOBAL (cross-tenant) admin — the only one who may use admin.hanzo.ai.
+  // MEMBERSHIP in the reserved `admin` org IS global admin (its whole purpose is
+  // the seeded superuser z@<domain>). We must NOT also require `isAdmin`: IAM never
+  // populates `isGlobalAdmin` (always absent) and admin-org members carry
+  // `isAdmin=false`, so `&& isAdmin` made NO ONE a global admin → every legitimate
+  // admin was bounced from admin.hanzo.ai back to the console (the redirect loop).
+  // A tenant org owner (e.g. Dave/maxpower) has owner!=='admin' → never global.
   const isGlobalAdmin =
     Boolean((account as { isGlobalAdmin?: boolean } | null)?.isGlobalAdmin) ||
-    ((owner === 'admin') && isAdmin)
+    owner === 'admin'
   const [bannerDismissed, setBannerDismissed] = useState(true) // start hidden to avoid flash
 
   // Restore banner dismissed state and last org on mount
