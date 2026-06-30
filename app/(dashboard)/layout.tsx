@@ -8,6 +8,7 @@ import { ScopeProvider } from '~/lib/scope-context'
 import { ToastProvider } from '~/components/ui/Toast'
 import { CommandPaletteProvider } from '~/components/CommandPalette'
 import { AppLauncherProvider } from '~/components/AppLauncher'
+import { FloatingChatProvider } from '~/components/FloatingChat'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -19,7 +20,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               {/* AppLauncher wraps the palette so the palette can open the launcher. */}
               <AppLauncherProvider>
                 <CommandPaletteProvider>
-                  <DashboardShell>{children}</DashboardShell>
+                  {/* FloatingChat floats the assistant bubble over every page. */}
+                  <FloatingChatProvider>
+                    <DashboardShell>{children}</DashboardShell>
+                  </FloatingChatProvider>
                 </CommandPaletteProvider>
               </AppLauncherProvider>
             </ToastProvider>
