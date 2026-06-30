@@ -1,6 +1,6 @@
 # console2 — Hanzo Cloud Console (Next.js 15 + @hanzo/gui). BSD-3-Clause.
 # NEXT_PUBLIC_* are inlined at build time (browser config), so they are build args.
-FROM public.ecr.aws/docker/library/node:22-alpine AS build
+FROM ghcr.io/hanzoai/nodejs:24-alpine AS build
 WORKDIR /app
 # Copy ALL source FIRST, then install — order matters under Kaniko --single-snapshot:
 # a `COPY` that FOLLOWS `RUN npm install` in the same stage drops the RUN's freshly
@@ -24,7 +24,7 @@ RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=
 ENV NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=6144
 RUN npm run build
 
-FROM public.ecr.aws/docker/library/node:22-alpine AS runner
+FROM ghcr.io/hanzoai/nodejs:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=4000
 RUN addgroup -S app && adduser -S app -G app
