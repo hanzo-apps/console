@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { ApiError, StoreApi, type Store } from '~/lib/api'
+import { currentOrg } from '~/lib/org-scope'
 import {
   FieldRow,
   FieldText,
@@ -24,7 +25,7 @@ export function StoreEditView({ name, onDone }: { name: string; onDone: () => vo
   useEffect(() => {
     let live = true
     setLoading(true)
-    StoreApi.get('admin', name)
+    StoreApi.get(currentOrg(), name)
       .then((s) => {
         if (live) {
           setStore(s)
