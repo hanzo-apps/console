@@ -39,8 +39,12 @@ const KMS_URL = trim(process.env.KMS_URL ?? 'http://kms.hanzo.svc')
 /** Confidential client used for app-on-behalf mint/issue/revoke. */
 const MINT_CLIENT_ID = process.env.IAM_MINT_CLIENT_ID ?? ''
 const MINT_CLIENT_SECRET = process.env.IAM_MINT_CLIENT_SECRET ?? ''
-/** casdoor's built-in admin org — a user in it is a global (cross-tenant) admin. */
-const ADMIN_ORG = 'built-in'
+/** The metadata orgs whose admins are GLOBAL (cross-tenant) admins — casdoor's
+ *  reserved `built-in` and the platform `admin` org. A member-admin of either is
+ *  a global admin (matches admin-policy ORG_METADATA_OWNERS). A tenant org owner
+ *  (hanzo, maxpower, …) is NEVER global, even with org-level isAdmin. */
+const ADMIN_ORGS = new Set(['built-in', 'admin'])
+const isAdminOrg = (owner: string): boolean => ADMIN_ORGS.has(owner)
 
 /** IAM base URL (the admin IAM proxy forwards `/v1/iam/*` here). */
 export const iamBaseUrl = (): string => IAM_URL
@@ -146,7 +150,7 @@ async function resolveSessionUser(
   let email = d.email ?? d.User?.email ?? ''
   let emailVerified = Boolean(d.emailVerified ?? d.User?.emailVerified)
   let isAdmin = Boolean(d.isAdmin ?? d.User?.isAdmin)
-  let isGlobalAdmin = Boolean(d.isGlobalAdmin ?? d.User?.isGlobalAdmin) || (owner === ADMIN_ORG && isAdmin)
+  let isGlobalAdmin = Boolean(d.isGlobalAdmin ?? d.User?.isGlobalAdmin) || (isAdminOrg(owner) && isAdmin)
 
   // get-account may not carry email/isAdmin (thin claims). When email is absent,
   // IAM is authoritative — fetch the user as the confidential client to resolve
@@ -158,7 +162,7 @@ async function resolveSessionUser(
       email = u.email ?? ''
       emailVerified = Boolean(u.emailVerified)
       isAdmin = Boolean(u.isAdmin)
-      isGlobalAdmin = Boolean(u.isGlobalAdmin) || (owner === ADMIN_ORG && isAdmin)
+      isGlobalAdmin = Boolean(u.isGlobalAdmin) || (isAdminOrg(owner) && isAdmin)
     }
   }
 
