@@ -15,6 +15,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser, issueUserToken, type SessionUser } from '~/lib/server/identity'
+import { retrievalHeaders } from '~/lib/server/ai-proxy'
 
 export const runtime = 'nodejs'
 
@@ -73,16 +74,24 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
   }
 
   const url = `${AI_GATEWAY_URL}/${rel}${req.nextUrl.search}`
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    // The gateway derives org/user from the JWT; pass the resolved org too so a
+    // pooled-org backend scopes correctly either way (it strips client headers).
+    'X-Org-Id': user.owner,
+  }
+  // Forward the RAG retrieval switch when present (allow-listed in `ai-proxy`).
+  // chat/completions turns on built-in retrieval from `X-Retrieval`/
+  // `X-Retrieval-Store` (backend controllers/chat_retrieval.go); this handler
+  // rebuilds headers from scratch, so without the passthrough `AiApi.ragChat`
+  // silently degraded to a plain answer. The store's org owner is still resolved
+  // server-side from the session.
+  Object.assign(headers, retrievalHeaders((h) => req.headers.get(h)))
   const init: RequestInit = {
     method: req.method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      // The gateway derives org/user from the JWT; pass the resolved org too so a
-      // pooled-org backend scopes correctly either way (it strips client headers).
-      'X-Org-Id': user.owner,
-    },
+    headers,
     cache: 'no-store',
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
