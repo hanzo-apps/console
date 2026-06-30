@@ -278,7 +278,7 @@ const ext = {
   dashboards: 'https://analytics.hanzo.ai',
   crawl: 'https://crawl.hanzo.ai',
   studio: 'https://studio.hanzo.ai',
-  console: 'https://console.hanzo.ai',
+  console: 'https://cloud.hanzo.ai',
   projects: config.platformUrl,
   cost: config.billingUrl,
   mpc: 'https://mpc.hanzo.ai',
