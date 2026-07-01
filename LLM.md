@@ -584,3 +584,63 @@ component system**, not a one-off. The old bespoke `OverviewModule.tsx` +
   with no error, and the `functions`/`gpus` overviews render their honest empty/error states
   (em-dashes + "not reporting" / "Could not load" + Retry) against a feed-less local backend
   without crashing.
+
+## All-pages production build — external→native re-applied + billing/marketplace (claude/console-all-pages)
+
+Branched off `main`; a completeness pass over the whole page taxonomy. Two audits
+(a full catalog inventory + a per-module skeptical review) confirmed console2 was
+**already ~95% production-complete**: ZERO mock modules, ZERO thin/incomplete modules
+— every leaf hits a real `/v1`/proxy feed with honest loading/empty/error states. So
+this pass is small and precise, not padding.
+
+- **External→native re-applied (the priority fix).** `main` was inconsistent: `open.ts`,
+  `match-core`, `NativeOverview`, `overviewFor` were all collapsed to a no-external world,
+  but the registry STILL declared 14 `kind:'external'` entries (gateway, dns, cdn, mpc, cli,
+  sdks, api, ide, desktop, registry, metrics, crawl, studio, console). Result: those 14 pushed
+  `/${id}` → `resolveProductView` returned `notfound` → **hard 404 dead links** from the
+  overview grid + app launcher. (The `claude/console2-native-control-planes` branch had fixed
+  this but is 19 commits behind `main` and was never merged.) Fixed here by converting each to
+  `kind:'module'` `routes: overviewRoutes(id)` (the DRY twin of `soonRoutes`), rendering the
+  already-merged `NativeOverview` from its bespoke `OVERVIEW_SPEC`. `CatalogEntry` union
+  collapsed to module-only; `ProductStatus` → `enabled|soon`; dead `external` branches removed
+  from `DashboardShell`/`OverviewModule`; stale `ext`/`href` config trimmed. `resolve.test.ts`
+  already pins all 14 specs; `match-core.test.ts` updated so the `kind`-guard fails closed for
+  a non-module entry.
+- **Subscriptions + Payment Methods** (`Observe`, next to `cost`/`plans`) — real commerce via
+  the `/billing` per-tenant proxy: `GET /v1/billing/subscriptions`, `GET /v1/billing/payment-methods`.
+  `billing.ts` gains `Subscription`/`PaymentMethod` types + normalizers that handle Stripe
+  snake_case AND camelCase, the nested `card` object, and Unix-seconds/ms dates. Card data is
+  **masked by construction** — the normalizer extracts only brand/last4/exp/isDefault; a
+  PAN/CVV/token in the payload is dropped and never reaches the display object (a dedicated
+  `billing.test.ts` leak test asserts it). Read-only; add/manage link to the brand portal.
+- **Marketplace** (`Apps`, next to `chat`/`bot`/`search`) — the storefront over the real model
+  catalog: `aicatalog.fetchCatalog()` → `GET /v1/pricing/models` via the authed `/ai` proxy.
+  Category tiles + featured shelf (real catalog flag) + filterable listings with real per-Mtok
+  pricing + Try-it→Playground CTA. Reuses the existing `aicatalog` client + `ProviderLogo` — a
+  distinct storefront view over the SAME catalog, NOT a duplicate of Model Catalog/Providers.
+  Pure `marketplace/logic.ts` (categorize/featured/applyFilters/marketStats) with 16 tests incl.
+  a regex-injection guard (search is a literal substring filter).
+- **Intentionally NOT built (honest):** Feature Flags / Backups / Support Tickets have NO backend
+  anywhere in the Hanzo stack — adding permanent empty-state pages would be fabricated padding.
+  Regions/Nodes duplicate `clusters`/`kubernetes`/`machines` (nodes derive from cluster node
+  pools; there is no `/v1/machines` route by design). Jobs is intentionally Tasks (registry's own
+  decision). No `Billing` category exists in `brand-scope.ts` — billing lives under `Observe`.
+- **No cloud changes.** The billing sub-pages ride the existing `/billing/*` proxy (which already
+  forwards any path with server-side org scoping); commerce already serves subscriptions +
+  payment-methods natively. `go build ./clients/...` clean; cloud version NOT bumped.
+- Verification: `npm run typecheck` 0 errors, `npm test` **406/406** (38 files), `next build` ✓
+  compiled successfully (lint+types clean). Idiom: `@hanzo/gui` v5 shorthands only.
+- **RED review fixes (billing-proxy tenant isolation — the one HIGH finding).** The `/billing`
+  proxy's tenant scoping was INERT: it stamped `X-Hanzo-Org` (commerce reads `X-Org-Id` on the
+  service-token path — `commerce/middleware/accesstoken.go`; the header fell back to the service
+  org) and pinned only `?user=` (subscriptions filter `?userId=` — `commerce/api/billing/
+  subscriptions.go`; with no `userId` the query returned every subject's rows = cross-tenant
+  leak). Fix: send **`X-Org-Id`** (matching the `/ai` proxy) and pin the **FULL** subject-key set
+  `{user,userId,customerId}` — identical to commerce's own `billingSubjectKeys` (`commerce/
+  middleware/edgeauth.go`) — so no billing endpoint is left unfiltered whichever param it reads.
+  The scoping is extracted to a pure `src/lib/server/billing-scope.ts` (`scopedBillingSearch` +
+  `billingSubject`) and unit-tested (`billing-scope.test.ts`, 11 tests incl. the client-forged-
+  subject overwrite + two-tenant disjointness). Also (defense-in-depth) `normalizePaymentMethods`
+  clamps `last4` to the last 4 digits even if commerce puts a full PAN there (+ test). New live
+  two-tenant isolation e2e (`e2e/billing-isolation.spec.ts`) asserts two distinct-org sessions get
+  disjoint subscription/payment-method row sets through the proxy. `npm test` **487/487**.
