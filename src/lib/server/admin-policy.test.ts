@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 
-import { emailOnBrand, isAdminGranted, gateAllows, ownerAllowed, orgFor } from './admin-policy'
+import {
+  emailOnBrand,
+  isAdminGranted,
+  gateAllows,
+  ownerAllowed,
+  orgFor,
+  orgWriteAllowed,
+  orgNameAllowed,
+} from './admin-policy'
 
 describe('admin gate — email on brand domain', () => {
   it('accepts an exact brand-domain email, case-insensitively', () => {
@@ -73,5 +81,25 @@ describe('tenant scoping — orgFor (KMS never crosses a brand admin to another 
   })
   it('IGNORES a requested org for a brand admin (no secret leak across orgs)', () => {
     expect(orgFor({ isGlobalAdmin: false, orgScope: 'hanzo' }, 'adnexus')).toBe('hanzo')
+  })
+})
+
+describe('org member proxy — orgWriteAllowed (customer can manage their OWN org)', () => {
+  it('lets an org admin OR a global admin write; a plain member cannot', () => {
+    // Dave/maxpower: org admin, not global → may invite/remove in his own org.
+    expect(orgWriteAllowed({ isGlobalAdmin: false, isAdmin: true })).toBe(true)
+    expect(orgWriteAllowed({ isGlobalAdmin: true, isAdmin: false })).toBe(true)
+    // A non-admin member is read-only.
+    expect(orgWriteAllowed({ isGlobalAdmin: false, isAdmin: false })).toBe(false)
+  })
+})
+
+describe('org member proxy — orgNameAllowed (no cross-org settings read)', () => {
+  const brand = { isGlobalAdmin: false, orgScope: 'maxpower' }
+  it('pins a customer to their OWN org name, lets a global admin read any', () => {
+    expect(orgNameAllowed('maxpower', brand)).toBe(true)
+    expect(orgNameAllowed('hanzo', brand)).toBe(false) // another org's settings — denied
+    expect(orgNameAllowed('hanzo', { isGlobalAdmin: true, orgScope: 'maxpower' })).toBe(true)
+    expect(orgNameAllowed(null, brand)).toBe(true) // no name referenced
   })
 })

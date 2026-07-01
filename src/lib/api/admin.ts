@@ -4,16 +4,19 @@
  *
  * The browser holds no IAM/KMS credential. Every call here is SAME-ORIGIN to
  * `/admin/iam/*` or `/admin/kms/*`, sending only the first-party session cookie;
- * the server route (`app/admin/{iam,kms}/[...path]/route.ts`) enforces the brand
+ * the server route (`app/admin/{iam,kms}/[...path]/route.ts`) enforces the GLOBAL
  * admin gate and forwards to IAM / KMS as the user. IAM speaks the
- * `{status,msg,data,data2}` envelope (unwrapped here); KMS speaks plain JSON.
+ * `{status,msg,data,data2}` envelope; KMS speaks plain JSON.
  *
- * Honest errors: a 403 from the gate becomes `ApiError('forbidden', 403)` so the
- * modules can render the operator-access-required panel; 404 (not routed / no
- * endpoint yet), 501, and network failures map to typed `ApiError`s as well.
+ * Cross-tenant (any org) is global-admin only — a customer managing their OWN org
+ * uses `TeamApi` (the `/org/iam` proxy) instead. Both share the ONE envelope
+ * client (`makeIamClient`), differing only in the gated base path.
  */
 import { ApiError } from './client'
 import { listQuery, type ListParams } from './types'
+import { makeIamClient, DEFAULT_PAGE_SIZE, qs, type Query, type Paged } from './iam-envelope'
+
+export type { Paged }
 
 /** An IAM organization (`get-organizations`). */
 export type Organization = {
@@ -100,112 +103,52 @@ export type AuditRecord = {
   [key: string]: unknown
 }
 
-/** Paged result — rows plus the backend's total (data2). */
-export type Paged<T> = { rows: T[]; total: number }
+// ── IAM admin (global; IAM envelope over /admin/iam/*) ────────────────────────
 
-const DEFAULT_PAGE_SIZE = 50
-
-type Query = Record<string, string | number | boolean | undefined | null>
-
-/** `?a=b&c=d` for a query map, skipping undefined/null. '' when empty. */
-function qs(query?: Query): string {
-  if (!query) return ''
-  const sp = new URLSearchParams()
-  for (const [k, v] of Object.entries(query)) {
-    if (v !== undefined && v !== null) sp.set(k, String(v))
-  }
-  const s = sp.toString()
-  return s ? `?${s}` : ''
-}
-
-// ── IAM admin (IAM envelope over /admin/iam/*) ───────────────────────────────
-
-type Envelope<T> = { status?: string; msg?: string; data?: T; data2?: unknown }
-
-async function iamReq<T>(
-  method: 'GET' | 'POST',
-  segment: string,
-  opts: { query?: Query; body?: unknown } = {},
-): Promise<Envelope<T>> {
-  let res: Response
-  try {
-    res = await fetch(`/admin/iam/${segment}${qs(opts.query)}`, {
-      method,
-      credentials: 'include',
-      headers: opts.body !== undefined
-        ? { 'Content-Type': 'application/json', Accept: 'application/json' }
-        : { Accept: 'application/json' },
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-    })
-  } catch (e) {
-    throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
-  }
-  if (res.status === 403) throw new ApiError('forbidden', 403)
-  const json = (await res.json().catch(() => null)) as Envelope<T> | null
-  if (!res.ok || !json || json.status !== 'ok') {
-    throw new ApiError(json?.msg || `Request failed (HTTP ${res.status})`, res.status)
-  }
-  return json
-}
-
-async function iamList<T>(segment: string, query: Query): Promise<Paged<T>> {
-  const r = await iamReq<T[]>('GET', segment, { query })
-  const rows = Array.isArray(r.data) ? r.data : []
-  const total = typeof r.data2 === 'number' ? r.data2 : rows.length
-  return { rows, total }
-}
-
-async function iamOne<T>(segment: string, query: Query): Promise<T> {
-  const r = await iamReq<T>('GET', segment, { query })
-  if (r.data === undefined || r.data === null) throw new ApiError('Not found', 404)
-  return r.data
-}
-
-const iamMutate = (segment: string, body: unknown, query?: Query): Promise<void> =>
-  iamReq<unknown>('POST', segment, { body, query }).then(() => undefined)
+const admin = makeIamClient('/admin/iam')
 
 export const IamAdminApi = {
   /** Organizations are owned by the built-in `admin`; IAM scopes to the caller. */
   organizations: (params: ListParams = {}): Promise<Paged<Organization>> =>
-    iamList<Organization>('get-organizations', listQuery({ owner: 'admin', pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<Organization>('get-organizations', listQuery({ owner: 'admin', pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   /** A single organization by name (IAM orgs are owned by `admin`). */
   organization: (name: string): Promise<Organization> =>
-    iamOne<Organization>('get-organization', { id: `admin/${name}` }),
+    admin.iamOne<Organization>('get-organization', { id: `admin/${name}` }),
 
   users: (owner: string, params: ListParams = {}): Promise<Paged<IamUser>> =>
-    iamList<IamUser>('get-users', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<IamUser>('get-users', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   /** A single user by id (`owner/name`) — includes the MFA fields. */
-  getUser: (id: string): Promise<IamUser> => iamOne<IamUser>('get-user', { id }),
+  getUser: (id: string): Promise<IamUser> => admin.iamOne<IamUser>('get-user', { id }),
 
   applications: (owner: string, params: ListParams = {}): Promise<Paged<IamApplication>> =>
-    iamList<IamApplication>('get-applications', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<IamApplication>('get-applications', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   application: (id: string): Promise<IamApplication> =>
-    iamOne<IamApplication>('get-application', { id }),
+    admin.iamOne<IamApplication>('get-application', { id }),
 
   providers: (owner: string, params: ListParams = {}): Promise<Paged<IamProvider>> =>
-    iamList<IamProvider>('get-providers', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<IamProvider>('get-providers', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   roles: (owner: string, params: ListParams = {}): Promise<Paged<Role>> =>
-    iamList<Role>('get-roles', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<Role>('get-roles', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   records: (owner: string, params: ListParams = {}): Promise<Paged<AuditRecord>> =>
-    iamList<AuditRecord>('get-records', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<AuditRecord>('get-records', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   // Mutations — IAM takes the object as the JSON body; updates take `?id`.
-  addUser: (user: IamUser): Promise<void> => iamMutate('add-user', user),
-  updateUser: (id: string, user: IamUser): Promise<void> => iamMutate('update-user', user, { id }),
-  deleteUser: (user: IamUser): Promise<void> => iamMutate('delete-user', user),
+  addUser: (user: IamUser): Promise<void> => admin.iamMutate('add-user', user),
+  updateUser: (id: string, user: IamUser): Promise<void> => admin.iamMutate('update-user', user, { id }),
+  deleteUser: (user: IamUser): Promise<void> => admin.iamMutate('delete-user', user),
 
-  addApplication: (app: IamApplication): Promise<void> => iamMutate('add-application', app),
-  updateApplication: (id: string, app: IamApplication): Promise<void> => iamMutate('update-application', app, { id }),
-  deleteApplication: (app: IamApplication): Promise<void> => iamMutate('delete-application', app),
+  addApplication: (app: IamApplication): Promise<void> => admin.iamMutate('add-application', app),
+  updateApplication: (id: string, app: IamApplication): Promise<void> => admin.iamMutate('update-application', app, { id }),
+  deleteApplication: (app: IamApplication): Promise<void> => admin.iamMutate('delete-application', app),
 
-  addProvider: (p: IamProvider): Promise<void> => iamMutate('add-provider', p),
-  updateProvider: (id: string, p: IamProvider): Promise<void> => iamMutate('update-provider', p, { id }),
-  deleteProvider: (p: IamProvider): Promise<void> => iamMutate('delete-provider', p),
+  addProvider: (p: IamProvider): Promise<void> => admin.iamMutate('add-provider', p),
+  updateProvider: (id: string, p: IamProvider): Promise<void> => admin.iamMutate('update-provider', p, { id }),
+  deleteProvider: (p: IamProvider): Promise<void> => admin.iamMutate('delete-provider', p),
 }
 
 // ── KMS admin (plain JSON over /admin/kms/secrets) ───────────────────────────
