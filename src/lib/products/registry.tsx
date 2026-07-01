@@ -144,6 +144,7 @@ import { AttestationsModule } from '~/components/products/AttestationsModule'
 import { ProjectsModule } from '~/components/products/ProjectsModule'
 import { OraclesModule } from '~/components/products/OraclesModule'
 import { IndexerModule } from '~/components/products/IndexerModule'
+import { NetworksModule } from '~/components/products/NetworksModule'
 import { TokensModule } from '~/components/products/TokensModule'
 import { SettlementModule } from '~/components/products/SettlementModule'
 import { AlertsModule } from '~/components/products/AlertsModule'
@@ -1235,6 +1236,21 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/treasury',
     kind: 'module',
     routes: [{ path: '', component: TokensModule }],
+  },
+  {
+    // Bootnode ("Web3 Backend in a Box") blockchain networks — the core web3
+    // provisioning primitive, surfaced in the lux/zoo web3 consoles. Reads the
+    // real bootnode control plane via console2's /bootnode proxy (honest states).
+    id: 'networks',
+    label: 'Networks',
+    icon: Blocks,
+    description: 'Blockchain networks — chain, nodes, status, and RPC.',
+    category: 'Web3',
+    status: 'enabled',
+    repo: 'hanzoai/bootnode',
+    docs: `${DOCS}/networks`,
+    kind: 'module',
+    routes: [{ path: '', component: NetworksModule }],
   },
   {
     id: 'indexer',
