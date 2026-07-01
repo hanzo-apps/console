@@ -18,7 +18,7 @@ import { CreditCard, ExternalLink, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { BillingApi, type Invoice, type Usage } from '~/lib/api/billing'
-import type { CloudBalance } from '~/lib/api/wallet'
+import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
@@ -52,24 +52,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function CostModule(_props: { params: Record<string, string> }) {
-  const [balance, setBalance] = useState<Async<CloudBalance>>({ phase: 'loading' })
+  // Balance = the ONE shared live value (identical to the sidebar + Wallet page),
+  // auto-refreshing on focus/visibility/poll and after a completion or top-up.
+  const { phase: balPhase, balance: bal, error: balError, refresh: refreshBal } = useCloudBalance()
   const [usage, setUsage] = useState<Async<Usage>>({ phase: 'loading' })
   const [invoices, setInvoices] = useState<Async<Invoice[]>>({ phase: 'loading' })
 
   const load = useCallback(() => {
-    setBalance({ phase: 'loading' })
+    refreshBal()
     setUsage({ phase: 'loading' })
     setInvoices({ phase: 'loading' })
-    BillingApi.balance()
-      .then((data) => setBalance({ phase: 'ready', data }))
-      .catch((e) => setBalance({ phase: 'error', error: classifyBackend(e) }))
     BillingApi.usage()
       .then((data) => setUsage({ phase: 'ready', data }))
       .catch((e) => setUsage({ phase: 'error', error: classifyBackend(e) }))
     BillingApi.invoices()
       .then((data) => setInvoices({ phase: 'ready', data }))
       .catch((e) => setInvoices({ phase: 'error', error: classifyBackend(e) }))
-  }, [])
+  }, [refreshBal])
 
   useEffect(() => {
     load()
@@ -126,15 +125,19 @@ export function CostModule(_props: { params: Record<string, string> }) {
             <CreditCard size={16} />
             <Text fontSize="$5" fontWeight="700">Cloud credit</Text>
           </XStack>
-          {balance.phase === 'ready' ? (
+          {balPhase === 'ready' && bal ? (
             <YStack gap="$1">
-              <Text fontSize="$9" fontWeight="900">{usd(balance.data.available)}</Text>
+              <Text fontSize="$9" fontWeight="900">{usd(spendableCents(bal) ?? bal.available)}</Text>
               <Text fontSize="$2" color="$color11">
-                available · {usd(balance.data.balance)} total · {usd(balance.data.holds)} on hold
+                available · {usd(bal.balance)} total · {usd(bal.holds)} on hold
               </Text>
             </YStack>
-          ) : balance.phase === 'error' ? (
-            <BackendStateCard state={balance.error} hint="endpoint · GET /v1/billing/balance" />
+          ) : balPhase === 'noauth' ? (
+            <Text fontSize="$3" color="$color11">Sign in to view your balance.</Text>
+          ) : balPhase === 'unconfigured' ? (
+            <Text fontSize="$3" color="$color11">Balance isn&apos;t available on this deployment yet.</Text>
+          ) : balPhase === 'error' ? (
+            <Text fontSize="$3" color="$color11">Balance unavailable: {balError}</Text>
           ) : (
             <Text fontSize="$3" color="$color11">Loading…</Text>
           )}
