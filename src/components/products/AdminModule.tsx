@@ -252,6 +252,122 @@ function UsersAdminView({ owner }: { owner: string }) {
   )
 }
 
+/**
+ * Roles with full CRUD — create and delete RBAC roles over IamAdminApi
+ * (add/update/delete-role → /v1/iam/*), scoped to `owner`. Mirrors
+ * UsersAdminView; membership editing stays in the full IAM app.
+ */
+function RolesAdminView({ owner }: { owner: string }) {
+  const [state, setState] = useState<LoadState<Role>>({ phase: 'loading' })
+  const [busy, setBusy] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [name, setName] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<Tone | null>(null)
+
+  const run = useCallback(() => {
+    setState({ phase: 'loading' })
+    IamAdminApi.roles(owner)
+      .then((p) => setState({ phase: 'ready', rows: p.rows ?? [] }))
+      .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
+  }, [owner])
+
+  useEffect(() => {
+    run()
+  }, [run])
+
+  const create = useCallback(async () => {
+    if (!name.trim()) {
+      setMsg({ tone: 'err', text: 'Name is required.' })
+      return
+    }
+    setSaving(true)
+    setMsg(null)
+    try {
+      await IamAdminApi.addRole({ owner, name: name.trim(), displayName: displayName.trim() || name.trim(), isEnabled: true } as Role)
+      setMsg({ tone: 'ok', text: `Created role ${owner}/${name.trim()}.` })
+      setName('')
+      setDisplayName('')
+      run()
+    } catch (e) {
+      setMsg({ tone: 'err', text: asApiError(e).message })
+    } finally {
+      setSaving(false)
+    }
+  }, [owner, name, displayName, run])
+
+  const remove = useCallback(
+    async (r: Role) => {
+      if (typeof window !== 'undefined' && !window.confirm(`Delete role ${r.owner}/${r.name}? This cannot be undone.`)) return
+      const k = `${r.owner}/${r.name}`
+      setBusy(k)
+      try {
+        await IamAdminApi.deleteRole(r)
+        run()
+      } catch (e) {
+        setState({ phase: 'error', err: asApiError(e) })
+      } finally {
+        setBusy(null)
+      }
+    },
+    [run],
+  )
+
+  const crudColumns: Column<Role>[] = [
+    ...roleColumns,
+    {
+      key: 'actions',
+      header: '',
+      width: 60,
+      render: (r) => {
+        const k = `${r.owner}/${r.name}`
+        return <Button size="$1" chromeless icon={<Trash2 size={14} />} disabled={busy === k} onPress={() => void remove(r)} />
+      },
+    },
+  ]
+
+  return (
+    <>
+      <XStack justify="flex-end" gap="$2">
+        <Button size="$2" icon={<RefreshCw size={15} />} onPress={run}>Refresh</Button>
+        <Button size="$2" icon={<Plus size={15} />} onPress={() => setShowForm((v) => !v)}>New role</Button>
+      </XStack>
+
+      {showForm && (
+        <Card p="$3.5" gap="$2.5" borderWidth={1} borderColor="$borderColor" maxWidth={820}>
+          <Text fontSize="$4" fontWeight="700">New role in {owner}</Text>
+          <FieldRow label="Name"><FieldText value={name} onChange={setName} placeholder="deployers" disabled={saving} /></FieldRow>
+          <FieldRow label="Display name"><FieldText value={displayName} onChange={setDisplayName} placeholder="Deployers" disabled={saving} /></FieldRow>
+          <XStack gap="$2" items="center">
+            <Button self="flex-start" icon={<Plus size={15} />} disabled={saving} onPress={() => void create()}>
+              {saving ? 'Creating…' : 'Create role'}
+            </Button>
+            {msg && <Text fontSize="$2" color={msg.tone === 'ok' ? '$green10' : '$red10'}>{msg.text}</Text>}
+          </XStack>
+          <Text fontSize="$2" color="$color10">Assign members in the full IAM app; this manages the role itself.</Text>
+        </Card>
+      )}
+
+      {state.phase === 'error' ? (
+        isForbidden(state.err) ? (
+          <OperatorAccessRequired />
+        ) : (
+          <ErrorState err={state.err} onRetry={run} copy={IAM_COPY} />
+        )
+      ) : (
+        <DataTable
+          columns={crudColumns}
+          rows={state.phase === 'ready' ? state.rows : []}
+          loading={state.phase === 'loading'}
+          rowKey={(r) => `${r.owner}/${r.name}`}
+          empty="No roles defined yet."
+        />
+      )}
+    </>
+  )
+}
+
 /** A "manage in the full IAM app" deep-link, shown in the admin headers. */
 function ManageInIam() {
   return (
@@ -339,14 +455,12 @@ export function IamModule({ params }: { params: Record<string, string> }) {
   const org = currentOrg()
 
   const orgFetcher = useCallback(() => IamAdminApi.organizations(), [])
-  const roleFetcher = useCallback(() => IamAdminApi.roles(org), [org])
 
   const view = useMemo(() => {
     if (tab === 'users') return <UsersAdminView key="users" owner={org} />
-    if (tab === 'roles')
-      return <AdminListView key="roles" fetcher={roleFetcher} columns={roleColumns} rowKey={(r) => `${r.owner}/${r.name}`} empty="No roles defined yet." />
+    if (tab === 'roles') return <RolesAdminView key="roles" owner={org} />
     return <AdminListView key="orgs" fetcher={orgFetcher} columns={orgColumns} rowKey={(o) => `${o.owner}/${o.name}`} empty="No organizations visible to this account." />
-  }, [tab, org, orgFetcher, roleFetcher])
+  }, [tab, org, orgFetcher])
 
   return (
     <>
