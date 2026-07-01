@@ -406,6 +406,7 @@ function SidebarNav({
     onNavigate()
   }
   const open = (entry: CatalogEntry) => {
+    setFilter('')
     setOpenId(entry.id)
     router.push(`/${entry.id}`)
   }
@@ -427,8 +428,12 @@ function SidebarNav({
     detail.open({ title: 'Manage pins', subtitle: 'Reorder · group · organize', icon: Star, content: <ManagePins /> })
 
   const openEntry = openId ? findEntry(openId) : undefined
+  const q = (collapsed ? '' : filter).trim().toLowerCase()
+  const filtering = q.length > 0
+  // Level 2 (the open product's sub-nav) yields to the product list while the user
+  // is filtering, so a query typed from ANY level surfaces the list to jump across.
   const showLevel2 =
-    !collapsed && Boolean(openEntry && openEntry.kind === 'module' && (showAdmin || !openEntry.admin))
+    !collapsed && !filtering && Boolean(openEntry && openEntry.kind === 'module' && (showAdmin || !openEntry.admin))
 
   // Grouped pins, gated so a customer never sees an admin-only surface.
   const pinnedGroups = useMemo(
@@ -446,8 +451,6 @@ function SidebarNav({
   )
   const pinnedIds = useMemo(() => pinnedGroups.flatMap((g) => g.entries.map((e) => e.id)), [pinnedGroups])
 
-  const q = (collapsed ? '' : filter).trim().toLowerCase()
-  const filtering = q.length > 0
   const groups = useMemo(
     () =>
       visibleCatalogByCategory(showAdmin)
@@ -577,6 +580,37 @@ function SidebarNav({
         </Button>
       </XStack>
 
+      {/* Product filter — a PERSISTENT header above the two-level slide, so a user
+          deep in a product (level 2) can filter + jump straight to another product
+          without going Back. Typing surfaces the (level-1) list from any level. */}
+      <XStack
+        items="center"
+        gap="$2"
+        px="$2.5"
+        mb="$2"
+        height={34}
+        rounded="$3"
+        borderWidth={1}
+        borderColor="$borderColor"
+        bg="$color2"
+      >
+        <Search size={14} opacity={0.6} />
+        <Input
+          flex={1}
+          unstyled
+          value={filter}
+          onChangeText={setFilter}
+          placeholder="Filter products…"
+          fontSize="$3"
+          color="$color12"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {filter ? (
+          <Button size="$1" chromeless icon={<X size={13} />} onPress={() => setFilter('')} aria-label="Clear filter" />
+        ) : null}
+      </XStack>
+
       <YStack flex={1} minH={0} overflow="hidden" position="relative">
         {/* Level 1 — product list */}
         <YStack
@@ -591,33 +625,6 @@ function SidebarNav({
           pointerEvents={showLevel2 ? 'none' : 'auto'}
           aria-hidden={showLevel2}
         >
-          <XStack
-            items="center"
-            gap="$2"
-            px="$2.5"
-            height={34}
-            rounded="$3"
-            borderWidth={1}
-            borderColor="$borderColor"
-            bg="$color2"
-          >
-            <Search size={14} opacity={0.6} />
-            <Input
-              flex={1}
-              unstyled
-              value={filter}
-              onChangeText={setFilter}
-              placeholder="Filter products…"
-              fontSize="$3"
-              color="$color12"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {filter ? (
-              <Button size="$1" chromeless icon={<X size={13} />} onPress={() => setFilter('')} aria-label="Clear filter" />
-            ) : null}
-          </XStack>
-
           <ScrollView flex={1}>
             <YStack gap="$3">
               {!filtering ? (
