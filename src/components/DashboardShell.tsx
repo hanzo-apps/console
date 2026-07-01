@@ -41,6 +41,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  ChevronRight,
   Circle,
   CircleHelp,
   Command,
@@ -62,6 +63,7 @@ import { config } from '~/config'
 import {
   visibleCatalogByCategory,
   findEntry,
+  categorySlug,
   type CatalogEntry,
   type ProductSubpage,
 } from '~/lib/products/registry'
@@ -312,9 +314,20 @@ function Level2Nav({
               context; keeps the category navigable, never a dead end. */}
           {siblings.length > 0 ? (
             <YStack gap="$1" mt="$3" pt="$2" borderTopWidth={1} borderColor="$borderColor">
-              <Text px="$2" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
-                More in {entry.category}
-              </Text>
+              <XStack
+                px="$2"
+                items="center"
+                justify="space-between"
+                cursor="pointer"
+                hoverStyle={{ opacity: 0.7 }}
+                onPress={() => onGo(`/category/${categorySlug(entry.category)}`)}
+                aria-label={`${entry.category} overview`}
+              >
+                <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+                  More in {entry.category}
+                </Text>
+                <ChevronRight size={11} opacity={0.4} />
+              </XStack>
               {siblings.map((s) => {
                 const SibIcon = s.icon
                 return (
@@ -585,9 +598,20 @@ function SidebarNav({
 
               {groups.map((group) => (
                 <YStack key={group.category} gap="$1">
-                  <Text px="$2" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
-                    {group.category}
-                  </Text>
+                  <XStack
+                    items="center"
+                    justify="space-between"
+                    px="$2"
+                    cursor="pointer"
+                    hoverStyle={{ opacity: 0.7 }}
+                    onPress={() => go(`/category/${categorySlug(group.category)}`)}
+                    aria-label={`${group.category} overview`}
+                  >
+                    <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+                      {group.category}
+                    </Text>
+                    <ChevronRight size={12} opacity={0.4} />
+                  </XStack>
                   {group.entries.map((entry) => (
                     <NavRow
                       key={entry.id}
