@@ -23,8 +23,9 @@ export const runtime = 'nodejs'
 const trim = (s: string) => s.replace(/\/+$/, '')
 /** The durable task engine. Public TLS is not live yet → default to the in-cluster
  *  service. The tasks Service exposes REST on :7243 (http port); there is NO :80,
- *  so target :7243 explicitly. Override with TASKS_URL. */
-const TASKS_URL = trim(process.env.TASKS_URL ?? 'http://tasks.hanzo.svc.cluster.local:7243')
+ *  so target :7243 explicitly. Override with TASKS_URL. `|| default` (not `??`) so a
+ *  blank env still falls back to the in-cluster service. */
+const TASKS_URL = trim(process.env.TASKS_URL?.trim() || 'http://tasks.hanzo.svc.cluster.local:7243')
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const rel = (await ctx.params).path.join('/')

@@ -22,8 +22,10 @@ import { allowCloudSurface } from '~/lib/server/proxy-allow'
 export const runtime = 'nodejs'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
-/** The unified cloud backend (hanzoai/cloud). In-cluster ClusterIP — public egress is CF-403'd. */
-const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud-api.hanzo.svc.cluster.local:8000')
+/** The unified cloud backend (hanzoai/cloud). In-cluster ClusterIP — public egress is CF-403'd.
+ *  `|| default` (not `??`) so an env accidentally reconciled to an EMPTY string still falls
+ *  back to the in-cluster service (a blank CLOUD_API_URL would otherwise break every cloud page). */
+const CLOUD_API_URL = trim(process.env.CLOUD_API_URL?.trim() || 'http://cloud-api.hanzo.svc.cluster.local:8000')
 
 type Ctx = { params: Promise<{ path: string[] }> }
 
