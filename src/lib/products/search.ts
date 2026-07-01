@@ -6,10 +6,12 @@
  * its natural order, so the palette can show everything by default.
  */
 import { catalog, type CatalogEntry } from './registry'
+import { destinationsFor, type Destination } from './match-core'
 
-// The sidebar's per-entry filter predicate lives in the pure core (so it's
-// unit-testable without the GUI tree); re-exported here as the catalog filter API.
+// The sidebar's per-entry filter predicate + the destination indexing live in the
+// pure core (unit-testable without the GUI tree); re-exported here as the search API.
 export { entryMatches } from './match-core'
+export type { Destination } from './match-core'
 
 /** Score one field; 0 = no match, higher = better. */
 function fuzzy(q: string, text: string): number {
@@ -53,4 +55,39 @@ export function searchCatalog(query: string): CatalogEntry[] {
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s)
     .map((x) => x.e)
+}
+
+// ── Destinations — products AND sub-pages (⌘K jumps to any level) ─────────────
+// The indexing + admin gating is the pure `destinationsFor` (unit-tested with
+// fixtures in match-core); this binds it to the real catalog + ranks the results.
+
+/** Best weighted score for a destination — a sub-page ranks on its own label
+ *  and its "Product › Sub-page" pair, weighted just under the product. */
+function scoreDestination(q: string, d: Destination): number {
+  if (d.kind === 'product') return scoreEntry(q, d.entry)
+  const { entry, subpage } = d
+  return Math.max(
+    fuzzy(q, subpage.label) * 2.5,
+    fuzzy(q, `${entry.label} ${subpage.label}`) * 2,
+    fuzzy(q, subpage.slug) * 1.5,
+    fuzzy(q, entry.label),
+    fuzzy(q, entry.category) * 0.5,
+  )
+}
+
+/**
+ * Rank products AND sub-pages for `query`. Empty query → products only (catalog
+ * order), so the palette opens on the familiar product list; typing surfaces
+ * deep sub-page jumps ("queues" → Compute › Tasks › Queues). `showAdmin` gates
+ * admin-only surfaces so a customer can't jump to what they can't see.
+ */
+export function searchDestinations(query: string, showAdmin = true): Destination[] {
+  const q = query.trim().toLowerCase()
+  const all = destinationsFor(catalog, showAdmin)
+  if (!q) return all.filter((d) => d.kind === 'product')
+  return all
+    .map((d) => ({ d, s: scoreDestination(q, d) }))
+    .filter((x) => x.s > 0)
+    .sort((a, b) => b.s - a.s)
+    .map((x) => x.d)
 }

@@ -67,10 +67,11 @@ import {
 
 import { AiApi, IamAdminApi, type Organization } from '~/lib/api'
 import { catalog, findEntry, type CatalogEntry } from '~/lib/products/registry'
-import { searchCatalog } from '~/lib/products/search'
+import { searchDestinations, type Destination } from '~/lib/products/search'
 import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { useAppLauncher } from '~/components/AppLauncher'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
@@ -114,9 +115,11 @@ export function useCommandPalette(): PaletteApi {
   return ctx
 }
 
-/** System prompt for `>` mode: lets the model map a request to ONE product id. */
-function navSystemPrompt(): string {
-  const list = catalog.map((e) => `${e.id} — ${e.label} — ${e.category}`).join('\n')
+/** System prompt for `>` mode: lets the model map a request to ONE product id.
+ *  A customer's prompt omits admin-only surfaces so the AI never suggests them. */
+function navSystemPrompt(showAdmin: boolean): string {
+  const products = showAdmin ? catalog : catalog.filter((e) => !e.admin)
+  const list = products.map((e) => `${e.id} — ${e.label} — ${e.category}`).join('\n')
   return [
     'You are the command bar for the Hanzo Cloud Console.',
     'The user wants to find or open a product, or asks a question.',
@@ -201,6 +204,48 @@ function CatalogRow({
   )
 }
 
+/** A ⌘K result — a product (via CatalogRow) or a deep sub-page jump. */
+function DestinationRow({
+  dest,
+  active,
+  onPress,
+}: {
+  dest: Destination
+  active: boolean
+  onPress: () => void
+}) {
+  if (dest.kind === 'product') return <CatalogRow entry={dest.entry} active={active} onPress={onPress} />
+  const { entry, subpage } = dest
+  const Icon = subpage.icon ?? entry.icon
+  return (
+    <XStack
+      onPress={onPress}
+      cursor="pointer"
+      items="center"
+      gap="$3"
+      px="$3"
+      py="$2.5"
+      rounded="$3"
+      bg={active ? '$color5' : 'transparent'}
+      hoverStyle={{ bg: active ? '$color5' : '$color3' }}
+    >
+      <Icon size={17} />
+      <YStack flex={1}>
+        <Text fontSize="$3" fontWeight="600" color="$color12">
+          {entry.label} › {subpage.label}
+        </Text>
+        <Text fontSize="$1" color="$color10">
+          {entry.category} · {entry.label}
+        </Text>
+      </YStack>
+      <ArrowRight size={13} opacity={active ? 0.8 : 0.3} />
+    </XStack>
+  )
+}
+
+/** Stable key for a destination (product id, or `id/slug` for a sub-page). */
+const destKey = (d: Destination): string => (d.kind === 'product' ? d.entry.id : `${d.entry.id}/${d.subpage.slug}`)
+
 function ActionRow({
   action,
   active,
@@ -258,6 +303,7 @@ function PaletteDialog({
   const router = useRouter()
   const launcher = useAppLauncher()
   const { signOut } = useSession()
+  const showAdmin = useIsGlobalAdmin()
   const { current, resolvedTheme, set: setTheme } = useThemeSetting()
   const isDark = (resolvedTheme ?? current ?? 'dark') !== 'light'
   const [query, setQuery] = useState(seed)
@@ -312,9 +358,11 @@ function PaletteDialog({
     return [...verbs, ...orgVerbs]
   }, [isDark, orgs, router, launcher, signOut, setTheme, onOpenChange])
 
-  const entryResults = useMemo(
-    () => (mode === 'catalog' ? searchCatalog(query).slice(0, 50) : []),
-    [mode, query],
+  // Every jump target — products AND deep sub-pages ("queues" → Tasks › Queues) —
+  // gated so a customer never sees an admin-only surface.
+  const destResults = useMemo(
+    () => (mode === 'catalog' ? searchDestinations(query, showAdmin).slice(0, 50) : []),
+    [mode, query, showAdmin],
   )
 
   const matchedActions = useMemo(
@@ -322,14 +370,14 @@ function PaletteDialog({
     [mode, sub, actions],
   )
 
-  // One ordered list (actions first, then products) so ↑/↓/↵ traverse both.
-  type Item = { kind: 'action'; action: PaletteAction } | { kind: 'entry'; entry: CatalogEntry }
+  // One ordered list (actions first, then destinations) so ↑/↓/↵ traverse both.
+  type Item = { kind: 'action'; action: PaletteAction } | { kind: 'dest'; dest: Destination }
   const items = useMemo<Item[]>(
     () => [
       ...matchedActions.map((action) => ({ kind: 'action' as const, action })),
-      ...entryResults.map((entry) => ({ kind: 'entry' as const, entry })),
+      ...destResults.map((dest) => ({ kind: 'dest' as const, dest })),
     ],
-    [matchedActions, entryResults],
+    [matchedActions, destResults],
   )
 
   // Seed the query each time the palette opens.
@@ -351,12 +399,22 @@ function PaletteDialog({
     [onOpenChange, router],
   )
 
+  /** Activate a destination — a product (open) or a sub-page (navigate deep). */
+  const activateDest = useCallback(
+    (dest: Destination) => {
+      onOpenChange(false)
+      if (dest.kind === 'subpage') router.push(dest.path)
+      else openProduct(dest.entry, (p) => router.push(p))
+    },
+    [onOpenChange, router],
+  )
+
   const submit = useCallback(async () => {
     if (!sub) return
     setRun({ status: 'loading' })
     try {
       if (mode === 'ai') {
-        const ans = (await AiApi.chat({ question: sub, system: navSystemPrompt() })).trim()
+        const ans = (await AiApi.chat({ question: sub, system: navSystemPrompt(showAdmin) })).trim()
         const m = ans.match(/^NAV\s+([a-z0-9-]+)/i)
         const entry = m ? findEntry(m[1]) : undefined
         if (entry) setRun({ status: 'nav', entry })
@@ -368,7 +426,7 @@ function PaletteDialog({
     } catch (e) {
       setRun({ status: 'error', state: classifyBackend(e) })
     }
-  }, [mode, sub])
+  }, [mode, sub, showAdmin])
 
   // Keyboard while open: ↑/↓ select, ↵ activate/ask, Esc close.
   useEffect(() => {
@@ -390,7 +448,7 @@ function PaletteDialog({
           const it = items[sel]
           if (it) {
             if (it.kind === 'action') it.action.run()
-            else activate(it.entry)
+            else activateDest(it.dest)
           }
         }
       } else if (e.key === 'Enter') {
@@ -402,7 +460,7 @@ function PaletteDialog({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, mode, items, sel, run, submit, activate, onOpenChange])
+  }, [open, mode, items, sel, run, submit, activate, activateDest, onOpenChange])
 
   const placeholder =
     mode === 'ai'
@@ -469,10 +527,17 @@ function PaletteDialog({
                     {matchedActions.map((action, i) => (
                       <ActionRow key={`action-${action.id}`} action={action} active={i === sel} onPress={action.run} />
                     ))}
-                    {entryResults.length > 0 && matchedActions.length > 0 ? <SectionLabel>Products</SectionLabel> : null}
-                    {entryResults.map((entry, j) => {
+                    {destResults.length > 0 && matchedActions.length > 0 ? <SectionLabel>Go to</SectionLabel> : null}
+                    {destResults.map((dest, j) => {
                       const i = matchedActions.length + j
-                      return <CatalogRow key={entry.id} entry={entry} active={i === sel} onPress={() => activate(entry)} />
+                      return (
+                        <DestinationRow
+                          key={destKey(dest)}
+                          dest={dest}
+                          active={i === sel}
+                          onPress={() => activateDest(dest)}
+                        />
+                      )
                     })}
                   </YStack>
                 </ScrollView>

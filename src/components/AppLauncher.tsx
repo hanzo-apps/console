@@ -21,9 +21,10 @@ import { useRouter } from 'next/navigation'
 import { Dialog, Input, ScrollView, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
 import { ExternalLink, Lock, Search } from '@hanzogui/lucide-icons-2'
 
-import { catalogByCategory, type CatalogEntry } from '~/lib/products/registry'
+import { visibleCatalogByCategory, type CatalogEntry } from '~/lib/products/registry'
 import { searchCatalog } from '~/lib/products/search'
 import { openProduct } from '~/lib/products/open'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
 
 type LauncherApi = { isOpen: boolean; open: () => void; close: () => void }
 
@@ -86,10 +87,14 @@ function Tile({ entry, onPress }: { entry: CatalogEntry; onPress: () => void }) 
 
 function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const router = useRouter()
+  const showAdmin = useIsGlobalAdmin()
   const [query, setQuery] = useState('')
 
-  const groups = useMemo(() => catalogByCategory(), [])
-  const filtered = useMemo(() => (query.trim() ? searchCatalog(query) : null), [query])
+  const groups = useMemo(() => visibleCatalogByCategory(showAdmin), [showAdmin])
+  const filtered = useMemo(
+    () => (query.trim() ? searchCatalog(query).filter((e) => showAdmin || !e.admin) : null),
+    [query, showAdmin],
+  )
 
   const activate = useCallback(
     (entry: CatalogEntry) => {
