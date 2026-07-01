@@ -78,6 +78,7 @@ import { useDetailPane } from '~/components/DetailPane'
 import { ProductCustomize, ManagePins } from '~/components/SidebarCustomize'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { asColor } from '~/components/ui/color'
+import { ProductIcon } from '~/components/ui/ProductIcon'
 import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
 import { BrandLogo } from '~/components/ui/BrandLogo'
@@ -196,7 +197,7 @@ function NavRow({
         justify="center"
         px="$0"
         height={44}
-        icon={<Icon size={ICON} color={asColor(color)} />}
+        icon={<ProductIcon icon={Icon} color={color} size={ICON} />}
         size="$3"
         aria-label={entry.label}
       />
@@ -210,7 +211,7 @@ function NavRow({
         onPress={onOpen}
         bg={active ? '$color5' : 'transparent'}
         justify="flex-start"
-        icon={<Icon size={18} color={asColor(color)} />}
+        icon={<ProductIcon icon={Icon} color={color} size={18} />}
         iconAfter={hint}
         size="$3"
       >
@@ -279,7 +280,7 @@ function Level2Nav({
         </XStack>
       </XStack>
       <XStack items="center" gap="$2" px="$1.5" mb="$1" height={30} minW={0}>
-        <Icon size={18} color={asColor(color)} />
+        <ProductIcon icon={Icon} color={color} size={22} />
         <Text fontSize="$4" fontWeight="800" color="$color12" numberOfLines={1}>
           {entry.label}
         </Text>
