@@ -24,8 +24,9 @@ export const runtime = 'nodejs'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
 /** The durable task engine. Public TLS is not live yet → default to the in-cluster
- *  service (tasks.hanzo.svc:80 → tasksd :7243). Override with TASKS_URL. */
-const TASKS_URL = trim(process.env.TASKS_URL ?? 'http://tasks.hanzo.svc.cluster.local')
+ *  service. The tasks Service exposes REST on :7243 (http port); there is NO :80,
+ *  so target :7243 explicitly. Override with TASKS_URL. */
+const TASKS_URL = trim(process.env.TASKS_URL ?? 'http://tasks.hanzo.svc.cluster.local:7243')
 
 // ── Short-lived user-token cache (mirrors the /ai proxy) ─────────────────────
 type CachedToken = { token: string; expMs: number }
