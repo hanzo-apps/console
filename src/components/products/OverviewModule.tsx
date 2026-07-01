@@ -711,9 +711,9 @@ function RecentActivity({
           self="flex-start"
           chromeless
           iconAfter={<ArrowRight size={14} />}
-          onPress={() => push(tab === 'payments' ? '/cost' : tab === 'jobs' ? '/jobs' : '/applications')}
+          onPress={() => push(tab === 'payments' ? '/cost' : tab === 'jobs' ? '/tasks' : '/applications')}
         >
-          {tab === 'payments' ? 'Open Cost & billing' : tab === 'jobs' ? 'Open Jobs' : 'Open Deploy'}
+          {tab === 'payments' ? 'Open Cost & billing' : tab === 'jobs' ? 'Open Tasks' : 'Open Deploy'}
         </Button>
       ) : null}
     </YStack>
