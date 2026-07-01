@@ -14,14 +14,15 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { ExternalLink, Users } from '@hanzogui/lucide-icons-2'
+import { Check, ExternalLink, Lock, Users } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, TeamApi, type Organization } from '~/lib/api'
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { FieldRow } from '~/components/ui/Field'
+import { FieldRow, FieldText, FieldSwitch } from '~/components/ui/Field'
 import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
 
 const IAM_COPY: HonestCopy = {
@@ -127,23 +128,215 @@ function GeneralTab() {
   )
 }
 
-function BrandingTab() {
+const BRANDING_COPY: HonestCopy = {
+  ...IAM_COPY,
+  unauthorized:
+    'Editing organization branding requires an admin role in this organization. Ask an organization admin, or contact the Hanzo team.',
+}
+
+/** True for a 3- or 6-digit CSS hex color (`#RGB` / `#RRGGBB`). */
+const looksLikeHex = (v: string): boolean => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v.trim())
+
+type SaveState =
+  | { phase: 'idle' }
+  | { phase: 'saving' }
+  | { phase: 'saved' }
+  | { phase: 'error'; err: ApiError }
+
+/** Honest "not permitted" banner — the org write is gated to org admins server-side. */
+function GatedNotice() {
+  return (
+    <Card borderWidth={1} borderColor="$borderColor" p="$3.5" gap="$2" maxWidth={720}>
+      <XStack gap="$2" items="center">
+        <Lock size={15} />
+        <Text fontSize="$3" fontWeight="700">Read-only</Text>
+      </XStack>
+      <Text fontSize="$2" color="$color11">
+        You need an admin role in this organization to change its branding. These are the current
+        values; ask an organization admin to edit them.
+      </Text>
+    </Card>
+  )
+}
+
+/** A live swatch for the primary color (fills with the hex, or an em-dash when unset/invalid). */
+function ColorSwatch({ hex }: { hex: string }) {
+  const valid = looksLikeHex(hex)
+  return (
+    <XStack
+      width={32}
+      height={32}
+      rounded="$3"
+      borderWidth={1}
+      borderColor="$borderColor"
+      items="center"
+      justify="center"
+      style={valid ? { backgroundColor: hex.trim() } : undefined}
+    >
+      {valid ? null : <Text fontSize="$1" color="$color10">—</Text>}
+    </XStack>
+  )
+}
+
+/**
+ * The editable org-branding form. Loads the FULL org record and round-trips it on
+ * save (spread + override) so no field IAM stores is dropped. Save is honest:
+ * saving → saved / error; a non-admin sees the fields read-only with a gated
+ * notice (the authoritative check is the server proxy, which 403s a non-admin —
+ * surfaced here as the same honest access message). Never a fake success.
+ */
+function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: boolean; onSaved: () => void }) {
+  const [displayName, setDisplayName] = useState(org.displayName ?? '')
+  const [websiteUrl, setWebsiteUrl] = useState(org.websiteUrl ?? '')
+  const [logo, setLogo] = useState(org.logo ?? '')
+  const [favicon, setFavicon] = useState(org.favicon ?? '')
+  const [colorPrimary, setColorPrimary] = useState(org.themeData?.colorPrimary ?? '')
+  const [themeEnabled, setThemeEnabled] = useState(!!org.themeData?.isEnabled)
+  const [save, setSave] = useState<SaveState>({ phase: 'idle' })
+
+  // Any edit clears a prior saved/error banner so status always reflects the pending change.
+  const onEdit = (fn: () => void) => {
+    fn()
+    setSave((s) => (s.phase === 'saved' || s.phase === 'error' ? { phase: 'idle' } : s))
+  }
+
+  const dirty =
+    displayName.trim() !== (org.displayName ?? '') ||
+    websiteUrl.trim() !== (org.websiteUrl ?? '') ||
+    logo.trim() !== (org.logo ?? '') ||
+    favicon.trim() !== (org.favicon ?? '') ||
+    colorPrimary.trim() !== (org.themeData?.colorPrimary ?? '') ||
+    themeEnabled !== !!org.themeData?.isEnabled
+
+  const onSave = async () => {
+    setSave({ phase: 'saving' })
+    const next: Organization = {
+      ...org,
+      displayName: displayName.trim(),
+      websiteUrl: websiteUrl.trim(),
+      logo: logo.trim(),
+      favicon: favicon.trim(),
+      themeData: {
+        ...(org.themeData ?? {}),
+        colorPrimary: colorPrimary.trim(),
+        isEnabled: themeEnabled,
+      },
+    }
+    try {
+      await TeamApi.updateOrganization(next)
+      setSave({ phase: 'saved' })
+      onSaved()
+    } catch (e) {
+      setSave({ phase: 'error', err: asApiError(e) })
+    }
+  }
+
+  const ro = !canEdit
   return (
     <YStack gap="$3">
       <Text fontSize="$3" color="$color10">
-        The runtime branding resolved for this host. One console image serves every brand; these values
-        come from the request hostname.
+        Your organization's identity across the console — display name, logo, and accent color. Saved to
+        Hanzo IAM and applied wherever this org is shown.
       </Text>
+      {ro ? <GatedNotice /> : null}
       <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
-        <InfoRow label="Brand" value={config.brand} />
-        <InfoRow label="Name" value={config.brandName} />
-        <InfoRow label="IAM issuer" value={config.iamUrl} />
-        <InfoRow label="IAM organization" value={config.iamOrgName} />
-        <InfoRow label="IAM application" value={config.iamAppName} />
-        <InfoRow label="Cloud API" value={config.cloudUrl} />
-        <InfoRow label="Platform" value={config.platformUrl} />
-        <InfoRow label="Billing" value={config.billingUrl} />
+        <FieldRow label="Display name">
+          <FieldText value={displayName} onChange={(v) => onEdit(() => setDisplayName(v))} disabled={ro} placeholder={org.name} />
+        </FieldRow>
+        <FieldRow label="Website">
+          <FieldText value={websiteUrl} onChange={(v) => onEdit(() => setWebsiteUrl(v))} disabled={ro} placeholder="https://…" />
+        </FieldRow>
+        <FieldRow label="Logo URL">
+          <YStack gap="$2">
+            <FieldText value={logo} onChange={(v) => onEdit(() => setLogo(v))} disabled={ro} placeholder="https://…/logo.svg" />
+            {logo.trim() ? (
+              // Arbitrary external org logo URL — raw <img> (next/image would need a
+              // per-tenant remote allow-list). Matches BrandLogo's own preview.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logo.trim()}
+                alt="Logo preview"
+                style={{ height: 28, width: 'auto', maxWidth: 160, objectFit: 'contain', display: 'block' }}
+              />
+            ) : null}
+          </YStack>
+        </FieldRow>
+        <FieldRow label="Favicon URL">
+          <FieldText value={favicon} onChange={(v) => onEdit(() => setFavicon(v))} disabled={ro} placeholder="https://…/favicon.ico" />
+        </FieldRow>
+        <FieldRow label="Primary color">
+          <XStack gap="$3" items="center" flexWrap="wrap">
+            <YStack flex={1} minW={200}>
+              <FieldText value={colorPrimary} onChange={(v) => onEdit(() => setColorPrimary(v))} disabled={ro} placeholder="#5E6AD2" />
+            </YStack>
+            <ColorSwatch hex={colorPrimary} />
+          </XStack>
+        </FieldRow>
+        <FieldRow label="Apply custom theme">
+          <XStack items="center" gap="$3">
+            <FieldSwitch checked={themeEnabled} onChange={(v) => onEdit(() => setThemeEnabled(v))} disabled={ro} />
+            <Text fontSize="$2" color="$color10">Use this org's accent color instead of the default.</Text>
+          </XStack>
+        </FieldRow>
+
+        <XStack items="center" gap="$3" pt="$1">
+          <Button
+            size="$3"
+            theme="light"
+            disabled={ro || !dirty || save.phase === 'saving'}
+            icon={save.phase === 'saving' ? <Spinner size="small" /> : save.phase === 'saved' ? <Check size={15} /> : undefined}
+            onPress={onSave}
+          >
+            {save.phase === 'saving' ? 'Saving…' : 'Save changes'}
+          </Button>
+          {save.phase === 'saved' ? (
+            <Text fontSize="$2" color="$green10">Saved.</Text>
+          ) : dirty && !ro ? (
+            <Text fontSize="$2" color="$color10">Unsaved changes</Text>
+          ) : null}
+        </XStack>
       </Card>
+      {save.phase === 'error' ? <ErrorState err={save.err} copy={BRANDING_COPY} /> : null}
+    </YStack>
+  )
+}
+
+function BrandingTab() {
+  const { account } = useSession()
+  const isGlobalAdmin = useIsGlobalAdmin()
+  const org = currentOrg()
+  const fetchOrg = useCallback(() => TeamApi.organization(org), [org])
+  const { state, reload } = useAsync<Organization>(fetchOrg)
+  const canEdit = isGlobalAdmin || !!account?.isAdmin
+
+  return (
+    <YStack gap="$5">
+      <Section title="Organization branding">
+        {state.phase === 'error' ? (
+          <ErrorState err={state.err} onRetry={reload} copy={IAM_COPY} />
+        ) : state.phase === 'loading' ? (
+          <XStack p="$6" justify="center"><Spinner size="large" color="$color11" /></XStack>
+        ) : (
+          <BrandingForm org={state.data} canEdit={canEdit} onSaved={reload} />
+        )}
+      </Section>
+
+      <Section title="Runtime (resolved per host)">
+        <Text fontSize="$3" color="$color10">
+          The runtime branding resolved for this host. One console image serves every brand; these values
+          come from the request hostname and are not editable here.
+        </Text>
+        <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
+          <InfoRow label="Brand" value={config.brand} />
+          <InfoRow label="Name" value={config.brandName} />
+          <InfoRow label="IAM issuer" value={config.iamUrl} />
+          <InfoRow label="IAM organization" value={config.iamOrgName} />
+          <InfoRow label="IAM application" value={config.iamAppName} />
+          <InfoRow label="Cloud API" value={config.cloudUrl} />
+          <InfoRow label="Platform" value={config.platformUrl} />
+          <InfoRow label="Billing" value={config.billingUrl} />
+        </Card>
+      </Section>
     </YStack>
   )
 }
