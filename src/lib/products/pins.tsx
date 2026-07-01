@@ -22,6 +22,7 @@ import { usePreferences } from './preferences'
 import * as core from './pins-core'
 import { DEFAULT_PINNED_IDS, type PinEntry, type PinGroupView, type PinModel } from './pins-core'
 import { productColorHex, productColorKey } from './colors'
+import { findEntry } from './registry'
 
 export type Pins = {
   /** The normalized model (order + groups). */
@@ -109,8 +110,8 @@ export function useProductColors(): ProductColors {
   return useMemo<ProductColors>(
     () => ({
       overrides,
-      colorOf: (id) => productColorHex(id, overrides),
-      keyOf: (id) => productColorKey(id, overrides),
+      colorOf: (id) => productColorHex(id, overrides, findEntry(id)?.category),
+      keyOf: (id) => productColorKey(id, overrides, findEntry(id)?.category),
       setColor: (id, key) => set('productColors', { ...overrides, [id]: key }),
       resetColor: (id) => {
         const next = { ...overrides }
