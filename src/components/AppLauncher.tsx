@@ -19,7 +19,7 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dialog, Input, ScrollView, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
-import { ExternalLink, Lock, Search } from '@hanzogui/lucide-icons-2'
+import { Lock, Search } from '@hanzogui/lucide-icons-2'
 
 import { catalogByCategory, type CatalogEntry } from '~/lib/products/registry'
 import { searchCatalog } from '~/lib/products/search'
@@ -63,10 +63,6 @@ function Tile({ entry, onPress }: { entry: CatalogEntry; onPress: () => void }) 
         {entry.admin ? (
           <XStack position="absolute" t={-4} r={-4} bg="$color2" rounded="$10" p="$1">
             <Lock size={11} opacity={0.7} />
-          </XStack>
-        ) : entry.kind === 'external' ? (
-          <XStack position="absolute" t={-4} r={-4} bg="$color2" rounded="$10" p="$1">
-            <ExternalLink size={11} opacity={0.7} />
           </XStack>
         ) : null}
       </XStack>

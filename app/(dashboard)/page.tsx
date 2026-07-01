@@ -1,16 +1,16 @@
 'use client'
 
 /**
- * Product catalog — the unified console home. Every Hanzo product, grouped by
- * the ten canonical categories, with its enablement state and Google Cloud
- * equivalent. `enabled` and `external` products open straight in (in-console or
- * a new tab); `soon` products link to their discover screen. Each card can be
- * pinned to the sidebar (persisted to the account). Rendered entirely from the
- * catalog registry.
+ * Product catalog — the unified console home. Every Hanzo product, grouped by the
+ * ten canonical categories, with its Google Cloud equivalent. Every product is
+ * open-for-all: each card opens straight into its native in-console surface and
+ * carries a "Learn more" affordance to its docs — there is no enablement gate and
+ * no external bounce. Each card can be pinned to the sidebar (persisted to the
+ * account). Rendered entirely from the catalog registry.
  */
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Star, Lock, ExternalLink, ArrowRight, Info } from '@hanzogui/lucide-icons-2'
+import { Star, Lock, ArrowRight, BookOpen } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { catalogByCategory, type CatalogEntry } from '~/lib/products/registry'
@@ -19,20 +19,6 @@ import { useFavorites } from '~/lib/products/favorites'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FadeIn } from '~/components/ui/FadeIn'
 import OverviewDashboard from '~/components/products/OverviewModule'
-
-const STATUS_LABEL = { enabled: 'Enabled', external: 'External', soon: 'Soon' } as const
-const STATUS_BG = { enabled: '$color5', external: '$color3', soon: '$color4' } as const
-
-function StatusBadge({ entry }: { entry: CatalogEntry }) {
-  return (
-    <XStack bg={STATUS_BG[entry.status]} px="$2" py="$1" rounded="$10" items="center" gap="$1">
-      {entry.admin ? <Lock size={11} opacity={0.6} /> : null}
-      <Text fontSize="$1" color={entry.status === 'enabled' ? '$color12' : '$color11'} fontWeight="600">
-        {STATUS_LABEL[entry.status]}
-      </Text>
-    </XStack>
-  )
-}
 
 function ProductCard({
   entry,
@@ -48,7 +34,6 @@ function ProductCard({
   onLearnMore: () => void
 }) {
   const Icon = entry.icon
-  const openable = entry.status === 'enabled' || entry.status === 'external'
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" width={272}>
       <XStack justify="space-between" items="flex-start">
@@ -66,14 +51,7 @@ function ProductCard({
           </YStack>
         </XStack>
         <XStack gap="$1" items="center">
-          <Button
-            size="$2"
-            chromeless
-            opacity={0.4}
-            icon={<Info size={15} />}
-            onPress={onLearnMore}
-            aria-label={`Learn about ${entry.label}`}
-          />
+          {entry.admin ? <Lock size={13} opacity={0.45} /> : null}
           <Button
             size="$2"
             chromeless
@@ -90,16 +68,24 @@ function ProductCard({
       </Text>
 
       <XStack justify="space-between" items="center">
-        <StatusBadge entry={entry} />
         <Button
           size="$2"
-          bg={openable ? '$color5' : 'transparent'}
+          chromeless
+          icon={<BookOpen size={14} />}
+          onPress={onLearnMore}
+          aria-label={`Learn more about ${entry.label}`}
+        >
+          Learn more
+        </Button>
+        <Button
+          size="$2"
+          bg="$color5"
           borderWidth={1}
           borderColor="$borderColor"
-          onPress={openable ? onOpen : onLearnMore}
-          iconAfter={entry.kind === 'external' ? <ExternalLink size={14} /> : <ArrowRight size={14} />}
+          onPress={onOpen}
+          iconAfter={<ArrowRight size={14} />}
         >
-          {openable ? 'Open' : 'Learn more'}
+          Open
         </Button>
       </XStack>
     </Card>
@@ -118,7 +104,7 @@ export default function DashboardHome() {
       <YStack gap="$4">
         <PageHeader
           title="Explore products"
-          subtitle={`See, enable, and manage every ${config.brandName} product from one place.`}
+          subtitle={`Open and manage every ${config.brandName} product from one place.`}
         />
         {groups.map((group, i) => (
         <FadeIn key={group.category} index={i} style={{ width: '100%' }}>

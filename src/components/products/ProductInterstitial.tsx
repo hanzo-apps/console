@@ -16,7 +16,6 @@ import {
   BookOpen,
   Github,
   Coins,
-  ExternalLink,
   Lock,
 } from '@hanzogui/lucide-icons-2'
 
@@ -80,8 +79,6 @@ export function ProductInterstitial({ id }: { id: string }) {
   }
 
   const Icon = entry.icon
-  const external = entry.kind === 'external'
-  const primaryLabel = external ? `Open ${entry.label}` : 'Open'
 
   return (
     <>
@@ -111,10 +108,10 @@ export function ProductInterstitial({ id }: { id: string }) {
           </YStack>
           <Button
             theme="light"
-            iconAfter={external ? <ExternalLink size={16} /> : <ArrowRight size={16} />}
+            iconAfter={<ArrowRight size={16} />}
             onPress={() => openProduct(entry, (p) => router.push(p))}
           >
-            {primaryLabel}
+            Open
           </Button>
         </XStack>
         {entry.admin ? (
