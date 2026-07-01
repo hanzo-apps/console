@@ -46,7 +46,11 @@ const expiry = (m: PaymentMethod): string => {
 }
 
 function openBillingPortal(): void {
-  if (typeof window !== 'undefined') window.open(`${config.billingUrl}/payment-methods`, '_blank', 'noopener')
+  // The brand billing portal root (billing.<brand>). Kept at the ROOT — not a
+  // deep `/payment-methods` path — so it resolves both today (the standalone
+  // portal) and after billing.<brand> is served by this console in billing-only
+  // mode (where the root redirects to the Billing Center), never a dead link.
+  if (typeof window !== 'undefined') window.open(config.billingUrl, '_blank', 'noopener')
 }
 
 export function PaymentMethodsModule(_props: { params: Record<string, string> }) {

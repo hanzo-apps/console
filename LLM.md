@@ -644,3 +644,85 @@ this pass is small and precise, not padding.
   clamps `last4` to the last 4 digits even if commerce puts a full PAN there (+ test). New live
   two-tenant isolation e2e (`e2e/billing-isolation.spec.ts`) asserts two distinct-org sessions get
   disjoint subscription/payment-method row sets through the proxy. `npm test` **487/487**.
+
+## Unified Billing Center + billing-only shell (feat/billing-center)
+
+A GCP-Cloud-Billing-grade **Billing Center** that works BOTH inside the console
+AND standalone at billing.hanzo.ai — the SAME console image, one set of
+components, zero duplication.
+
+### Part A — the Billing Center (`billing` catalog entry)
+
+ONE tabbed product (`BillingModule`, registry `''` + `:tab` route) under `Observe`
+that CONSOLIDATES the old scattered `cost` / `subscriptions` / `payment-methods`
+entries into a single center (those three top-level entries are REMOVED — folded
+in as tabs; `CostModule` is deleted, superseded). Sub-pages, each real over the
+per-tenant `/billing/*` commerce proxy, honest states throughout (no fabricated
+data):
+- **Overview** (`/billing`, `billing/BillingOverview.tsx`) — cloud-credit balance
+  (`useCloudBalance`), month-to-date spend + a clearly-LABELLED linear projection,
+  a daily-spend trend (`BarChart`), and a top-spend-by-model shortcut → Reports.
+  Numbers from the commerce usage ledger (`GET /v1/billing/usage`) rolled up by the
+  pure `billing/logic.ts` (`monthToDate`/`dailySpend`).
+- **Reports** (`billing/BillingReports.tsx`) — cost broken down by a REAL ledger
+  dimension (model, and provider when present — NO invented project/SKU), a
+  filterable cost table + daily-spend `BarChart` + spend-share `Donut`, over a
+  selectable range. `GET /v1/billing/usage` → `groupSpend`/`presentDimensions`.
+- **Budgets** (`billing/BillingBudgets.tsx`) — REAL create + list of spend budgets
+  over commerce spend-alerts (`GET/POST /v1/billing/spend-alerts`, the user-group
+  endpoints billing.hanzo.ai itself uses; the group's `TokenRequired()` accepts the
+  console's service token). NOT a stub. Edit/delete intentionally NOT surfaced —
+  commerce's PATCH/DELETE don't verify per-alert ownership within a shared
+  personal-billing org (a cross-user hole), so they wait on a server-side ownership
+  check (commerce hardening, tracked separately).
+- **Invoices** (`billing/BillingInvoices.tsx`) — `GET /v1/billing/invoices` + a
+  download link; honest empty.
+- **Subscriptions / Payment methods / Credits** — REUSE `SubscriptionsModule` /
+  `PaymentMethodsModule` / `WalletModule` verbatim as tabs (composition, no fork).
+  `wallet` stays a Web3 entry too (lux/zoo need it) and doubles as Credits.
+
+New write-body scoping: `scopedBillingBody` (in `lib/server/billing-scope.ts`,
+mirrors `scopedBillingSearch`) pins the server-resolved billing subject onto a
+WRITE JSON body's `{user,userId,customerId}` — so create-budget works WITHOUT the
+browser knowing its subject AND a forged body subject can't widen scope. Wired into
+the write path of `app/billing/[...path]/route.ts` (the proxy exports GET + POST;
+the handler scopes any non-GET/HEAD body). Unit-tested (forged-subject overwrite,
+non-JSON/array passthrough, two-tenant disjointness).
+
+### Part B — billing-only shell mode (billing.hanzo.ai = same image, filtered)
+
+`config.billingOnly` (in `src/config/index.ts`) is TRUE on `billing.<brand>`
+(billing.hanzo.ai / billing.lux.cloud / billing.zoo.cloud, via `isBillingOnlyHost`)
+OR with `NEXT_PUBLIC_BILLING_ONLY=1`. In that mode, the SAME shell just filters:
+- `visibleCatalog`/`visibleCatalogByCategory` return ONLY the `billing` entry
+  (bypassing brand-category scope so it shows on every brand's billing host).
+- `DashboardShell`'s `SidebarNav` renders ONLY the Billing Center sub-pages
+  (Overview · Reports · Budgets · Invoices · Subscriptions · Payment methods ·
+  Credits) — full chrome kept (header, brand mark, ⌘K, org switcher, account menu,
+  wallet footer).
+- The default route (`app/(dashboard)/page.tsx`) redirects `/` → `/billing`.
+- ⌘K + AppLauncher now source from `visibleCatalog` (via `search.ts`
+  `searchCatalog`/`searchDestinations` + `CommandPalette`), so billing-only scoping
+  (and brand scoping) apply there too — ⌘K never offers a hidden product.
+console.hanzo.ai is unchanged (billing is one section among all). True 1:1, zero
+duplication — the billing-only portal is the SAME `billing` entry, alone.
+
+### Deploy (billing.hanzo.ai serves the console image)
+
+The console CR (`universe/infra/k8s/operator/crs/console2.yaml`) has
+`ingress.enabled: false` — host routing lives in the gateway (`hanzoai/gateway`
+`routes.yaml`). To light up billing.hanzo.ai: add `billing.hanzo.ai` (and
+`billing.lux.cloud` / `billing.zoo.cloud`) to the console host set in the gateway
+routes so they route to `console2.hanzo.svc:4000` exactly like `cloud.hanzo.ai` —
+no image/env change (billing-only is resolved from the host at runtime). RECOMMEND
+retiring/redirecting the standalone `@hanzo/billing` app (`~/work/hanzo/billing`)
+to billing.hanzo.ai/billing once cut over (do not delete it).
+
+### Verification
+`config`, `billing-scope`, and `billing/logic` type-check clean; new unit tests:
+`billing/logic.test.ts` (forecast run-rate, cost grouping, honest dimensions),
+`billing-scope.test.ts` (+`scopedBillingBody` cases), `config/index.test.ts`
+(+billing-only host resolution). Local `node_modules` is stale so `npm test`/
+`next build` can't run here; changed files verified with a stubbed-externals `tsc`
+(0 genuine errors). `e2e/pages.spec.ts` updated: `cost`/`subscriptions`/
+`payment-methods` → `billing` + its sub-page routes.

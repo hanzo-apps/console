@@ -4,6 +4,7 @@ import {
   BILLING_SUBJECT_KEYS,
   billingSubject,
   scopedBillingSearch,
+  scopedBillingBody,
   personalBillingOrgs,
 } from './billing-scope'
 
@@ -86,5 +87,47 @@ describe('scopedBillingSearch — pins EVERY subject param to the server subject
     // Neither tenant's scoped query contains the other's subject.
     expect(a).not.toContain('globex')
     expect(b).not.toContain('acme')
+  })
+})
+
+describe('scopedBillingBody — pins the subject onto a WRITE body too', () => {
+  const parse = (s: string) => JSON.parse(s) as Record<string, unknown>
+
+  it('sets user, userId AND customerId on a JSON object (create-budget needs userId)', () => {
+    // Commerce CreateSpendAlert binds `userId` from the body — pin it server-side.
+    const out = parse(scopedBillingBody(JSON.stringify({ title: 'cap', threshold: 5000 }), 'maxpower'))
+    expect(out.user).toBe('maxpower')
+    expect(out.userId).toBe('maxpower')
+    expect(out.customerId).toBe('maxpower')
+    // Non-subject fields pass through untouched.
+    expect(out.title).toBe('cap')
+    expect(out.threshold).toBe(5000)
+  })
+
+  it('OVERWRITES a client-forged body subject (no scope-widening from the browser)', () => {
+    const forged = JSON.stringify({ userId: 'victim', user: 'victim', customerId: 'victim', threshold: 1 })
+    const out = parse(scopedBillingBody(forged, 'attacker'))
+    expect(out.userId).toBe('attacker')
+    expect(out.user).toBe('attacker')
+    expect(out.customerId).toBe('attacker')
+    expect(Object.values(out)).not.toContain('victim')
+  })
+
+  it('leaves a non-JSON body untouched (only ever narrows a JSON object)', () => {
+    expect(scopedBillingBody('not json', 'me')).toBe('not json')
+    expect(scopedBillingBody('', 'me')).toBe('')
+  })
+
+  it('leaves a JSON array / primitive untouched (no top-level subject to pin)', () => {
+    expect(scopedBillingBody('[1,2,3]', 'me')).toBe('[1,2,3]')
+    expect(scopedBillingBody('42', 'me')).toBe('42')
+  })
+
+  it('two tenants creating the same budget get disjoint bodies (isolation)', () => {
+    const body = JSON.stringify({ title: 'cap', threshold: 100 })
+    const a = parse(scopedBillingBody(body, 'acme'))
+    const b = parse(scopedBillingBody(body, 'globex'))
+    expect(a.userId).toBe('acme')
+    expect(b.userId).toBe('globex')
   })
 })
