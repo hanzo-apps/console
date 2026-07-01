@@ -56,9 +56,30 @@ body {
   will-change: transform;
 }
 
+/* Backdrop cross-fade behind a SlideOver / dialog. */
+.hz-fade {
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
+}
+
+/* Drag-to-reorder — a pinned row while it is being dragged (pointer DnD). The
+   lifted row gets a subtle lift; siblings ease into place via `.hz-slide`. */
+.hz-drag-item {
+  touch-action: none;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hz-drag-item[data-dragging='true'] {
+  transition: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  opacity: 0.96;
+  cursor: grabbing;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hz-collapse,
-  .hz-slide {
+  .hz-slide,
+  .hz-fade,
+  .hz-drag-item {
     transition: none;
   }
 }

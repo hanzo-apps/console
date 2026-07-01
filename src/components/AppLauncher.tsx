@@ -23,6 +23,8 @@ import { Lock, Search } from '@hanzogui/lucide-icons-2'
 
 import { visibleCatalogByCategory, type CatalogEntry } from '~/lib/products/registry'
 import { searchCatalog } from '~/lib/products/search'
+import { useProductColors } from '~/lib/products/pins'
+import { asColor } from '~/components/ui/color'
 import { openProduct } from '~/lib/products/open'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 
@@ -36,7 +38,7 @@ export function useAppLauncher(): LauncherApi {
   return ctx
 }
 
-function Tile({ entry, onPress }: { entry: CatalogEntry; onPress: () => void }) {
+function Tile({ entry, color, onPress }: { entry: CatalogEntry; color: string; onPress: () => void }) {
   const Icon = entry.icon
   return (
     <YStack
@@ -57,10 +59,10 @@ function Tile({ entry, onPress }: { entry: CatalogEntry; onPress: () => void }) 
         items="center"
         justify="center"
         rounded="$7"
-        bg="$color4"
         position="relative"
+        style={{ backgroundColor: `${color}22` }}
       >
-        <Icon size={26} />
+        <Icon size={26} color={asColor(color)} />
         {entry.admin ? (
           <XStack position="absolute" t={-4} r={-4} bg="$color2" rounded="$10" p="$1">
             <Lock size={11} opacity={0.7} />
@@ -84,6 +86,7 @@ function Tile({ entry, onPress }: { entry: CatalogEntry; onPress: () => void }) 
 function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const router = useRouter()
   const showAdmin = useIsGlobalAdmin()
+  const { colorOf } = useProductColors()
   const [query, setQuery] = useState('')
 
   const groups = useMemo(() => visibleCatalogByCategory(showAdmin), [showAdmin])
@@ -157,7 +160,7 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                 ) : (
                   <XStack flexWrap="wrap" gap="$2">
                     {filtered.map((entry) => (
-                      <Tile key={entry.id} entry={entry} onPress={() => activate(entry)} />
+                      <Tile key={entry.id} entry={entry} color={colorOf(entry.id)} onPress={() => activate(entry)} />
                     ))}
                   </XStack>
                 )
@@ -169,7 +172,7 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                     </Text>
                     <XStack flexWrap="wrap" gap="$2">
                       {group.entries.map((entry) => (
-                        <Tile key={entry.id} entry={entry} onPress={() => activate(entry)} />
+                        <Tile key={entry.id} entry={entry} color={colorOf(entry.id)} onPress={() => activate(entry)} />
                       ))}
                     </XStack>
                   </YStack>

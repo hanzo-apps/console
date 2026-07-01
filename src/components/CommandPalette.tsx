@@ -67,6 +67,8 @@ import {
 import { AiApi, IamAdminApi, type Organization } from '~/lib/api'
 import { catalog, findEntry, type CatalogEntry } from '~/lib/products/registry'
 import { searchDestinations, type Destination } from '~/lib/products/search'
+import { useProductColors } from '~/lib/products/pins'
+import { asColor } from '~/components/ui/color'
 import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
@@ -168,10 +170,12 @@ function Answer({ text }: { text: string }) {
 function CatalogRow({
   entry,
   active,
+  color,
   onPress,
 }: {
   entry: CatalogEntry
   active: boolean
+  color?: string
   onPress: () => void
 }) {
   const Icon = entry.icon
@@ -187,7 +191,7 @@ function CatalogRow({
       bg={active ? '$color5' : 'transparent'}
       hoverStyle={{ bg: active ? '$color5' : '$color3' }}
     >
-      <Icon size={17} />
+      <Icon size={17} color={color ? asColor(color) : undefined} />
       <YStack flex={1}>
         <Text fontSize="$3" fontWeight="600" color="$color12">
           {entry.label}
@@ -207,13 +211,16 @@ function CatalogRow({
 function DestinationRow({
   dest,
   active,
+  colorOf,
   onPress,
 }: {
   dest: Destination
   active: boolean
+  colorOf: (id: string) => string
   onPress: () => void
 }) {
-  if (dest.kind === 'product') return <CatalogRow entry={dest.entry} active={active} onPress={onPress} />
+  if (dest.kind === 'product')
+    return <CatalogRow entry={dest.entry} active={active} color={colorOf(dest.entry.id)} onPress={onPress} />
   const { entry, subpage } = dest
   const Icon = subpage.icon ?? entry.icon
   return (
@@ -228,7 +235,7 @@ function DestinationRow({
       bg={active ? '$color5' : 'transparent'}
       hoverStyle={{ bg: active ? '$color5' : '$color3' }}
     >
-      <Icon size={17} />
+      <Icon size={17} color={asColor(colorOf(entry.id))} />
       <YStack flex={1}>
         <Text fontSize="$3" fontWeight="600" color="$color12">
           {entry.label} › {subpage.label}
@@ -303,6 +310,7 @@ function PaletteDialog({
   const launcher = useAppLauncher()
   const { signOut } = useSession()
   const showAdmin = useIsGlobalAdmin()
+  const { colorOf } = useProductColors()
   const { current, resolvedTheme, set: setTheme } = useThemeSetting()
   const isDark = (resolvedTheme ?? current ?? 'dark') !== 'light'
   const [query, setQuery] = useState(seed)
@@ -472,12 +480,17 @@ function PaletteDialog({
     <Dialog modal open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay key="palette-overlay" bg="rgba(0,0,0,0.5)" />
+        {/* Full-screen on mobile (fills the viewport, reachable from the mobile
+            menu); a floating 640 box at lg+. */}
         <Dialog.Content
           key="palette-content"
           bordered
           elevate
-          width={640}
-          maxW="90%"
+          width="100vw"
+          height="100dvh"
+          maxW="100vw"
+          rounded="$0"
+          $lg={{ width: 640, height: 'auto', maxW: '90%', rounded: '$6' }}
           p="$0"
           gap="$0"
           overflow="hidden"
@@ -512,8 +525,8 @@ function PaletteDialog({
             </XStack>
           </XStack>
 
-          {/* Body */}
-          <YStack minH={120} maxH={420}>
+          {/* Body — fills the viewport on mobile, capped at lg+. */}
+          <YStack flex={1} minH={0} $lg={{ flex: 0, minH: 120, maxH: 420 }}>
             {mode === 'catalog' ? (
               items.length === 0 ? (
                 <YStack p="$5" items="center">
@@ -534,6 +547,7 @@ function PaletteDialog({
                           key={destKey(dest)}
                           dest={dest}
                           active={i === sel}
+                          colorOf={colorOf}
                           onPress={() => activateDest(dest)}
                         />
                       )
@@ -560,7 +574,7 @@ function PaletteDialog({
                     </Text>
                   </XStack>
                 ) : run.status === 'nav' ? (
-                  <CatalogRow entry={run.entry} active onPress={() => activate(run.entry)} />
+                  <CatalogRow entry={run.entry} active color={colorOf(run.entry.id)} onPress={() => activate(run.entry)} />
                 ) : run.status === 'text' ? (
                   <Answer text={run.text} />
                 ) : (
