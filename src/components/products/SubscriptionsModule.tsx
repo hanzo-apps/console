@@ -35,7 +35,10 @@ type Async<T> =
   | { phase: 'ready'; data: T }
 
 function openBillingPortal(): void {
-  if (typeof window !== 'undefined') window.open(`${config.billingUrl}/subscriptions`, '_blank', 'noopener')
+  // The brand billing portal root (billing.<brand>) — kept at the ROOT (not a deep
+  // `/subscriptions` path) so it resolves both today and after billing.<brand> is
+  // served by this console in billing-only mode, never a dead link.
+  if (typeof window !== 'undefined') window.open(config.billingUrl, '_blank', 'noopener')
 }
 
 export function SubscriptionsModule(_props: { params: Record<string, string> }) {

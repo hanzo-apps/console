@@ -43,6 +43,15 @@ export type ConsoleConfig = {
   billingUrl: string
   /** Documentation site — PER BRAND. The console LINKS here (new tab), never embeds it. */
   docsUrl: string
+  /**
+   * Billing-only shell mode — TRUE on a brand's dedicated billing host
+   * (billing.<brand-domain>, e.g. billing.hanzo.ai) or with NEXT_PUBLIC_BILLING_ONLY=1.
+   * The SAME console image serves it; the shell just filters the nav to the Billing
+   * Center and defaults the route to the billing overview, so people who only ever
+   * see billing.hanzo.ai get a full, chromed billing portal — 1:1 with the Billing
+   * section inside the full console (zero duplication, same components).
+   */
+  billingOnly: boolean
 }
 
 /** Fields shared by every brand. Env-overridable per-deploy. */
@@ -133,6 +142,25 @@ export function isAdminHost(host?: string | null): boolean {
   return normHost(host).startsWith('admin.')
 }
 
+/**
+ * True on a brand's dedicated billing host (billing.<brand>, e.g. billing.hanzo.ai
+ * / billing.lux.cloud / billing.zoo.cloud). Such a host runs the SAME console image
+ * but in billing-only shell mode (nav filtered to the Billing Center, default route
+ * → billing overview). Strict `billing.` prefix — no false positives.
+ */
+export function isBillingOnlyHost(host?: string | null): boolean {
+  return normHost(host).startsWith('billing.')
+}
+
+/**
+ * Billing-only mode for a host: the dedicated billing host OR an explicit
+ * NEXT_PUBLIC_BILLING_ONLY=1 override (dev / preview). The env is baked at build,
+ * the host is resolved at runtime — either turns the shell into a billing portal.
+ */
+export function isBillingOnly(host?: string | null): boolean {
+  return process.env.NEXT_PUBLIC_BILLING_ONLY === '1' || isBillingOnlyHost(host)
+}
+
 // Cache is keyed by NORMALIZED HOST (not brand): admin.hanzo.ai and
 // cloud.hanzo.ai are the same brand but MUST resolve to different clients
 // (admin-console vs hanzo-cloud), so a brand-keyed cache would collide.
@@ -159,6 +187,7 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? app,
     billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? b.billingUrl),
     docsUrl: trimSlash(process.env.NEXT_PUBLIC_DOCS_URL ?? b.docsUrl),
+    billingOnly: isBillingOnly(host),
     ...SHARED,
   }
   cache.set(key, resolved)

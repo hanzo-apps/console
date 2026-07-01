@@ -48,9 +48,11 @@ const PAGES: string[] = [
   // Identity / security
   'iam', 'users', 'team', 'authz', 'kms', 'secrets', 'mpc', 'hsm', 'attestations',
   'api-keys', 'tokens', 'applications',
-  // Business / analytics
-  'cost', 'ai-metrics', 'metrics', 'settlement', 'wallet', 'plans', 'referrals',
-  'subscriptions', 'payment-methods', 'marketplace',
+  // Business / analytics — the unified Billing Center + its sub-pages (Cost /
+  // Subscriptions / Payment-methods are now tabs of /billing, not top-level routes).
+  'billing', 'billing/reports', 'billing/budgets', 'billing/invoices',
+  'billing/subscriptions', 'billing/payment-methods', 'billing/credits',
+  'ai-metrics', 'metrics', 'settlement', 'wallet', 'plans', 'referrals', 'marketplace',
   // Ops / tooling
   'logs', 'alerts', 'o11y', 'gateway', 'tasks', 'integrations', 'registry', 'audit',
   'sdks', 'cli', 'ide', 'studio', 'desktop', 'bot', 'profile', 'settings',

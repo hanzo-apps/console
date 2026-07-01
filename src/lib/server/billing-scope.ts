@@ -56,3 +56,31 @@ export function scopedBillingSearch(rawSearch: string, subject: string): string 
   search.delete('org')
   return search.toString()
 }
+
+/**
+ * Pin the billing subject onto a WRITE request body the SAME way `scopedBillingSearch`
+ * pins the query — so a write (e.g. create a spend-alert / budget) is scoped to the
+ * caller's OWN subject even when commerce reads the subject from the JSON body
+ * (`CreateSpendAlert` binds `userId`), not the query. The proxy overwrites every
+ * `BILLING_SUBJECT_KEYS` field on the top-level object with the server-resolved
+ * `subject`, so:
+ *   - the browser NEVER needs to know its billing subject (server-resolved), and
+ *   - a client-forged `userId`/`user`/`customerId` in the body cannot widen scope
+ *     (it is overwritten), mirroring the query defense.
+ * A non-JSON or non-object body (or an empty body) is returned UNCHANGED — this only
+ * ever narrows a JSON object to the caller; it never invents a body.
+ */
+export function scopedBillingBody(rawBody: string, subject: string): string {
+  const body = rawBody.trim()
+  if (!body) return rawBody
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(body)
+  } catch {
+    return rawBody // not JSON (e.g. a form/binary write) — leave untouched
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return rawBody
+  const obj = parsed as Record<string, unknown>
+  for (const k of BILLING_SUBJECT_KEYS) obj[k] = subject
+  return JSON.stringify(obj)
+}
