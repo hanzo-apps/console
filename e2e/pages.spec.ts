@@ -50,6 +50,7 @@ const PAGES: string[] = [
   'api-keys', 'tokens', 'applications',
   // Business / analytics
   'cost', 'ai-metrics', 'metrics', 'settlement', 'wallet', 'plans', 'referrals',
+  'subscriptions', 'payment-methods', 'marketplace',
   // Ops / tooling
   'logs', 'alerts', 'o11y', 'gateway', 'tasks', 'integrations', 'registry', 'audit',
   'sdks', 'cli', 'ide', 'studio', 'desktop', 'bot', 'profile', 'settings',
