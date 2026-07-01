@@ -31,6 +31,17 @@ describe('pathIsClean (traversal / encoded-slash guard — RED HIGH)', () => {
     expect(pathIsClean('v1/collections/tenants/records/%2E%2E/_superusers/records')).toBe(false)
     expect(pathIsClean('v1/%2e%2e/metrics')).toBe(false)
   })
+
+  it('REJECTS N≥3 encoding, overlong, and matrix-param traversal — RED final hardening', () => {
+    expect(pathIsClean('v1/functions/%25252e%25252e/get-account')).toBe(false) // triple-encoded
+    expect(pathIsClean('v1/functions/%c0%ae%c0%ae/x')).toBe(false) // overlong UTF-8
+    expect(pathIsClean('v1/functions/..;/get-account')).toBe(false) // matrix-param `..;`
+    expect(pathIsClean('v1/functions/%5c%2e%2e/x')).toBe(false) // backslash-escaped
+  })
+
+  it('does NOT over-reject a legit segment with a literal percent (no surviving %XX after one decode)', () => {
+    expect(pathIsClean('v1/functions/50%off')).toBe(true) // `%of` — `o` is not hex → allowed
+  })
 })
 
 /** A minimal NextRequest stand-in — the header rebuild only reads `headers.get`. */
