@@ -516,3 +516,71 @@ Three deliverables, one PR, all over the one `/v1` surface (no `/api/` prefixes)
 - Repo drive-by: removed the bogus tracked `node_modules` self-symlink blob (mode
   120000 → itself) that broke `npm install`/`vitest`; `.gitignore` already ignores
   `node_modules/`, so it was never meant to be committed.
+
+## Living overview — one reusable, videogame-like overview across products (claude/living-overview)
+
+The admin Platform Overview (KPI tiles + sparklines, usage/cost timeseries, revenue
+donut, live activity, alerts, system-health) is now a **reusable `LivingOverview`
+component system**, not a one-off. The old bespoke `OverviewModule.tsx` +
+`AiMetricsModule.tsx` (+ its `aimetrics/{StatTile,UsageChart,format}` sub-parts) are
+**deleted** — superseded, one overview system, DRY.
+
+- **`src/components/products/overview/living/`** — the system:
+  - `config.ts` — the DECLARATIVE contract: a `LivingOverviewConfig` names a product's
+    tiles (`metric`/`timeseries`/`distribution`/`activity`/`alerts`/`health`, discriminated
+    on `tile`) in ordered `rows`, a single REAL-data `load(ctx) => OverviewData`, and a
+    `live` block (`pollMs` + `countUp`). Tiles read their slice out of the normalized
+    `OverviewData` by key — a missing slice → honest empty tile (over-declaring is safe).
+  - `motion.ts` (pure, unit-tested) — count-up curve (`countUpValue` lands EXACTLY on
+    target), live-sparkline ring (`pushSample`), self-correcting poll clock
+    (`shouldTick`/`effectiveInterval`, hidden-tab-paused). `hooks.ts` — the thin rAF/interval
+    drivers (`useCountUp` animates from the CURRENT on-screen value on retarget — smooth;
+    `usePoll`, `useReducedMotion`, `usePageHidden`), all self-cleaning (no leaked frames/timers).
+  - `logic.ts` (pure, unit-tested) — the tile decisions: unit-aware `formatMetric`
+    (count/cents/ms/pct, em-dash for non-finite), `deltaOf` (null → honest "—"), `hasTrend`
+    (≥2 real points), status/health/severity colors, `mergeActivity` (dedupe+newest-first for
+    the streaming feed), `windowRows` (virtualization), `worstHealth`/`healthTally`.
+  - `tiles.tsx` — the thin animated tiles (reuse `ui/Charts` verbatim; count-up + live
+    sparkline + skeleton/empty/error paths; the activity stream virtualizes past a viewport).
+  - `LivingOverview.tsx` — the driver: ONE throttled poll loop (floored at 5s, paused when
+    hidden OR errored), a `reqRef` race guard, range selector; a background refetch never
+    blanks a board that already has real data (last real data stays until new lands); the
+    first-load failure shows the shared `ErrorState`. `.hz-skeleton`/`.hz-pulse`/`.hz-row-in`
+    keyframes in `globals.css`, all reduced-motion-guarded.
+- **Backed by REAL `/v1` data, no mocks** (`adapters.ts`, pure, unit-tested): `fromCloudUsage`
+  (commerce usage ledger → the platform + AI-usage overviews), `fromAdminOverview`
+  (`src/lib/api/admin-overview.ts` — the `/v1/admin/overview` aggregate, optional-safe
+  normalizer, degrades to honest empty on 404), `fromFunctions` (real inventory + metrics),
+  `healthFromApps` (operator inventory → the health tile, composable into any board).
+- **Wired across products** (`overview/living/registry.ts` — the declarative catalog):
+  `overview` (platform centerpiece, rendered at `/` home AND `/overview`; primary source
+  `/v1/admin/overview`, honest fallback to the real usage ledger + operator health so it is
+  never blank), `ai-metrics` (commerce usage), `functions` (inventory + metrics), `gpus`
+  (operator inventory). The product route's `''` renders `livingOverviewModule(id)`; the
+  tabbed products keep their `:tab` module, reachable from the sidebar's level-2 sub-nav
+  (declared `subpages`) so the overview is never a dead-end.
+- **Adding a new product overview is one config** — no overview UI:
+  ```ts
+  // overview/living/registry.ts
+  myproduct: {
+    id: 'myproduct', title: 'My Product', subtitle: '…',
+    live: { pollMs: 15000, countUp: true },
+    rows: [
+      [{ tile: 'metric', key: 'foo', label: 'Foo', icon: Zap }],
+      [{ tile: 'timeseries', key: 'foo', title: 'Foo over time' },
+       { tile: 'distribution', key: 'bar', title: 'By kind' }],
+      [{ tile: 'activity' }, { tile: 'health' }],
+    ],
+    load: async ({ range }) => fromMyApi(await MyApi.overview(range)), // REAL data
+  }
+  // registry.tsx: const MyLiving = livingOverviewModule('myproduct'); route '' → MyLiving
+  ```
+- **All real, all tested**: `npm run typecheck` clean (0 errors), `npm test` 449/449 (42
+  files; +78 new across motion/logic/adapters/registry/tile-contract/admin-overview,
+  −10 from the deleted `aimetrics/format.test.ts`), `next build` green (14/14 pages).
+  Visual proof (headless Playwright, no live session needed): the platform overview renders
+  the full board with count-up KPIs + live sparklines + streaming feed + donut + health
+  tally, values change across a 5s poll (live), the reduced-motion path snaps to real values
+  with no error, and the `functions`/`gpus` overviews render their honest empty/error states
+  (em-dashes + "not reporting" / "Could not load" + Retry) against a feed-less local backend
+  without crashing.
