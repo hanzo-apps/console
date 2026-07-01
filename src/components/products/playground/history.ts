@@ -1,10 +1,11 @@
 /**
- * Run history — a local record of compare runs (newest first), capped.
+ * Run history — a local record of runs (newest first), capped, PER USER.
  *
  * The reducer (`pushRun`) is pure and unit-tested; the storage wrapper persists to
- * localStorage so History survives reloads. No server round-trip — a run's results
- * are already shown live; History is a convenience recall of the prompt and which
- * models were compared (with their tokens, cost and latency).
+ * localStorage under a per-user key so one browser's accounts never see each
+ * other's runs, and each entry records the model it ran (the History card shows it
+ * as a chip). No server round-trip — a run's results are already shown live;
+ * History is a convenience recall of the prompt + model + tokens/cost/latency.
  */
 export type HistoryColumn = {
   model: string
@@ -27,19 +28,25 @@ export type HistoryEntry = {
   columns: HistoryColumn[]
 }
 
-const KEY = 'hz.playground.history.v1'
+const KEY_BASE = 'hz.playground.history.v1'
 const CAP = 25
+
+/** The localStorage key for a given user (empty/unknown → a shared `anon` bucket). */
+function keyFor(userKey: string): string {
+  const u = userKey.trim() || 'anon'
+  return `${KEY_BASE}::${u}`
+}
 
 /** Prepend an entry, newest first, capped at `cap`. Pure. */
 export function pushRun(list: HistoryEntry[], entry: HistoryEntry, cap = CAP): HistoryEntry[] {
   return [entry, ...list].slice(0, cap)
 }
 
-/** Load history from localStorage (empty on any failure / SSR). */
-export function loadHistory(): HistoryEntry[] {
+/** Load a user's history from localStorage (empty on any failure / SSR). */
+export function loadHistory(userKey: string): HistoryEntry[] {
   if (typeof window === 'undefined') return []
   try {
-    const raw = window.localStorage.getItem(KEY)
+    const raw = window.localStorage.getItem(keyFor(userKey))
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     return Array.isArray(parsed) ? (parsed as HistoryEntry[]) : []
@@ -48,21 +55,21 @@ export function loadHistory(): HistoryEntry[] {
   }
 }
 
-/** Persist a new run and return the updated list. */
-export function saveRun(entry: HistoryEntry): HistoryEntry[] {
-  const next = pushRun(loadHistory(), entry)
+/** Persist a new run for a user and return the updated list. */
+export function saveRun(userKey: string, entry: HistoryEntry): HistoryEntry[] {
+  const next = pushRun(loadHistory(userKey), entry)
   try {
-    if (typeof window !== 'undefined') window.localStorage.setItem(KEY, JSON.stringify(next))
+    if (typeof window !== 'undefined') window.localStorage.setItem(keyFor(userKey), JSON.stringify(next))
   } catch {
     /* storage full / unavailable — history is best-effort */
   }
   return next
 }
 
-/** Clear stored history. */
-export function clearHistory(): HistoryEntry[] {
+/** Clear a user's stored history. */
+export function clearHistory(userKey: string): HistoryEntry[] {
   try {
-    if (typeof window !== 'undefined') window.localStorage.removeItem(KEY)
+    if (typeof window !== 'undefined') window.localStorage.removeItem(keyFor(userKey))
   } catch {
     /* ignore */
   }
