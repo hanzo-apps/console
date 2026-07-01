@@ -106,7 +106,7 @@ import { Users,
   Blocks,
 } from '@hanzogui/lucide-icons-2'
 
-import { config } from '~/config'
+import { config, type BrandId } from '~/config'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
@@ -1598,28 +1598,57 @@ export const findEntry = (id: string): CatalogEntry | undefined =>
 
 /** The catalog grouped by category, in display order, skipping empty groups. */
 export const catalogByCategory = (): { category: ProductCategory; entries: CatalogEntry[] }[] =>
-  categoryOrder
-    .map((category) => ({ category, entries: catalog.filter((e) => e.category === category) }))
+  brandCategoryOrder()
+    .map((category) => ({ category, entries: catalog.filter((e) => inBrand(e) && e.category === category) }))
     .filter((g) => g.entries.length > 0)
 
 /** An admin-only (global / Hanzo-managed) entry — hidden from a customer's nav. */
 export const isAdminEntry = (e: CatalogEntry): boolean => e.admin === true
 
 /**
+ * Per-brand category scope — the ONE knob that makes each brand's console show
+ * the right surfaces. `hanzo` is the full AI cloud. The sovereign-chain brands
+ * (`lux`, `zoo`, `pars`) are **web3 / bootnode admin** consoles: on-chain
+ * (Web3), the networks/nodes/peering plane (Network), key + HSM + authz
+ * (Security), developer keys/CLI (Dev), and org/account (Settings) — NOT the
+ * AI-cloud surfaces (AI, Compute-for-AI, Training, Data, Observe, Apps,
+ * Platform). `null` = every category. Adjust a brand by editing one row.
+ */
+const BRAND_CATEGORIES: Record<BrandId, ProductCategory[] | null> = {
+  hanzo: null,
+  lux: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
+  zoo: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
+  pars: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
+}
+
+/** Categories the current brand's console surfaces (all, for hanzo). */
+export const brandCategoryOrder = (): ProductCategory[] => {
+  const allowed = BRAND_CATEGORIES[config.brand]
+  return allowed === null ? categoryOrder : categoryOrder.filter((c) => allowed.includes(c))
+}
+
+/** True when an entry belongs to the current brand's console. */
+export const inBrand = (e: CatalogEntry): boolean => {
+  const allowed = BRAND_CATEGORIES[config.brand]
+  return allowed === null || allowed.includes(e.category)
+}
+
+/**
  * The catalog a given user may SEE. A global admin sees everything; a customer
  * (org owner / member) never sees the admin-only surfaces (cross-tenant IAM/KMS,
  * provider + routing config, cluster ops). Access is enforced server-side too —
  * this is the matching nav gate, so a customer never lands on a hostile 403.
+ * Also scoped to the current BRAND (lux/zoo = web3/bootnode, hanzo = full).
  */
 export const visibleCatalog = (showAdmin: boolean): CatalogEntry[] =>
-  showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))
+  (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
 
 /** `catalogByCategory` scoped to what the user may see (admin surfaces gated). */
 export const visibleCatalogByCategory = (
   showAdmin: boolean,
 ): { category: ProductCategory; entries: CatalogEntry[] }[] => {
   const visible = visibleCatalog(showAdmin)
-  return categoryOrder
+  return brandCategoryOrder()
     .map((category) => ({ category, entries: visible.filter((e) => e.category === category) }))
     .filter((g) => g.entries.length > 0)
 }
