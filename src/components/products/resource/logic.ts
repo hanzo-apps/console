@@ -136,8 +136,9 @@ export type ResourceSpec = {
 
 const cloud = 'https://cloud.hanzo.ai'
 
-/** Public docs URL for a managed kind (matches the registry's `${DOCS}/<kind>`). */
-export const docsUrl = (kind: ResourceKind): string => `https://docs.hanzo.ai/${kind}`
+/** Public docs URL for a managed kind (matches the registry's `${DOCS}/<kind>`).
+ * The docs site is served under the /docs base path, so the link must include it. */
+export const docsUrl = (kind: ResourceKind): string => `https://docs.hanzo.ai/docs/${kind}`
 
 /** GitHub URL for a spec's source repo. */
 export const repoUrl = (spec: ResourceSpec): string => `https://github.com/${spec.repo}`
