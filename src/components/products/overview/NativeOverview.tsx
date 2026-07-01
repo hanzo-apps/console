@@ -316,8 +316,8 @@ export function NativeOverview({ entry }: { entry: CatalogEntry }) {
 
 /**
  * Route adapter — the catch-all passes `{ params }`. Each native-overview catalog
- * entry routes here with its id baked in via `forId(...)`, so one component serves
- * every product overview (DRY) and the registry stays declarative.
+ * entry routes here with its id baked in via `overviewFor(id)`, so one component
+ * serves every product overview (DRY) and the registry stays declarative.
  */
 export function overviewFor(id: string) {
   function ProductOverview(_props: { params: Record<string, string> }) {
