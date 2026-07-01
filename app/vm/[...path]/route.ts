@@ -36,7 +36,8 @@ function handle(req: NextRequest, ctx: Ctx) {
       target: VISOR_URL,
       path,
       allow: allowVisorSurface,
-      forwardScope: true,
+      // Org is authoritative (Bearer owner). Don't forward browser X-Project-Id/
+      // X-Environment (unvalidated sub-scopes) — RED MEDIUM.
       unauthorizedMessage: 'Sign in to manage compute.',
     })
   })()
