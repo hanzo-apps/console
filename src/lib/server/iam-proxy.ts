@@ -46,6 +46,19 @@ export function bodyField(text: string, key: string): string | null {
   }
 }
 
+/**
+ * The forwarded query string, PINNING `organization` to the caller's own scope when
+ * the segment is org-keyed and the caller is NOT a global admin — so an omitted/empty
+ * `organization` can't make IAM's lister return every org's rows (RED CRITICAL). A
+ * global admin's value is left as-is (they may target any org, or all).
+ */
+export function pinnedSearch(rawSearch: string, orgKeyed: boolean, isGlobalAdmin: boolean, orgScope: string): string {
+  const p = new URLSearchParams(rawSearch)
+  if (orgKeyed && !isGlobalAdmin) p.set('organization', orgScope)
+  const s = p.toString()
+  return s ? `?${s}` : ''
+}
+
 export type IamForwardOpts = {
   /** `<owner>/<name>` path segment, e.g. `get-users`. */
   segment: string
@@ -60,6 +73,12 @@ export type IamForwardOpts = {
   /** Segments carrying an org NAME to guard (get-organization) so a brand admin
    *  can't read another org's settings via the `admin` metadata owner. */
   orgNameSegments?: Set<string>
+  /** Segments keyed by the `organization` param/body field (projects). For these a
+   *  non-global admin's org is PINNED to their own scope — validating is not enough
+   *  because an OMITTED/EMPTY organization makes IAM's lister drop its WHERE and
+   *  return every org's rows (IAM bypasses Casbin for project routes → this proxy is
+   *  the only gate). RED CRITICAL. */
+  orgParamSegments?: Set<string>
 }
 
 /**
@@ -98,18 +117,34 @@ export async function forwardIam(
     return forbidden()
   }
 
+  const orgKeyed = opts.orgParamSegments?.has(segment) ?? false
+
   let bodyText = ''
   if (method === 'POST') {
     bodyText = await req.text()
     if (!ownerOk(bodyField(bodyText, 'owner'))) return forbidden()
     if (!ownerOk(bodyField(bodyText, 'organization'))) return forbidden()
+    // An org-keyed WRITE (add/delete-project) from a non-global admin MUST carry
+    // their OWN org in owner+organization — ownerOk already blocks a FOREIGN org;
+    // this also rejects an omitted/empty one (which would create an owner="" row
+    // visible in the cross-tenant enumeration). RED.
+    if (orgKeyed && !gate.isGlobalAdmin) {
+      if (bodyField(bodyText, 'organization') !== gate.orgScope || bodyField(bodyText, 'owner') !== gate.orgScope) {
+        return forbidden()
+      }
+    }
   }
+
+  // Forwarded query with `organization` pinned to the caller's scope for an org-keyed
+  // reader + non-global admin (server-authoritative, like X-Org-Id) — RED CRITICAL.
+  const fwdSearch = pinnedSearch(url.search, orgKeyed, gate.isGlobalAdmin, gate.orgScope)
 
   let bearer: string
   try {
     bearer = await adminBearer(gate.user)
   } catch (e) {
-    return NextResponse.json({ status: 'error', msg: `Could not authorize the request: ${msg(e)}` }, { status: 502 })
+    console.error('iam-proxy: could not mint user bearer:', msg(e))
+    return NextResponse.json({ status: 'error', msg: 'Could not authorize the request.' }, { status: 502 })
   }
 
   const headers: Record<string, string> = { Authorization: `Bearer ${bearer}`, Accept: 'application/json' }
@@ -120,13 +155,14 @@ export async function forwardIam(
   }
 
   try {
-    const res = await fetch(`${iamBaseUrl()}/v1/iam/${segment}${url.search}`, init)
+    const res = await fetch(`${iamBaseUrl()}/v1/iam/${segment}${fwdSearch}`, init)
     const text = await res.text()
     return new NextResponse(text, {
       status: res.status,
       headers: { 'Content-Type': res.headers.get('content-type') ?? 'application/json' },
     })
   } catch (e) {
-    return NextResponse.json({ status: 'error', msg: `IAM unreachable: ${msg(e)}` }, { status: 502 })
+    console.error('iam-proxy: IAM unreachable:', msg(e))
+    return NextResponse.json({ status: 'error', msg: 'Identity service is unavailable.' }, { status: 502 })
   }
 }
