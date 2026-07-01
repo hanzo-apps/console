@@ -4,7 +4,7 @@
  * Wraps `@hanzo/iam-js-sdk`. The SDK touches `window`/`sessionStorage`, so it is
  * constructed lazily and only in the browser. Sign-in is the standard authorize
  * redirect: `getSigninUrl()` -> IAM login -> our `/auth/callback?code&state` ->
- * the backend `/v1/signin` exchanges code+state for a session cookie.
+ * the backend `/v1/iam/signin` exchanges code+state for a session cookie.
  */
 import Sdk from '@hanzo/iam-js-sdk'
 

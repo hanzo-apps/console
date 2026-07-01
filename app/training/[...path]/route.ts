@@ -27,7 +27,7 @@ export const runtime = 'nodejs'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
 /** Cloud `/v1` backend (hanzoai/ai) — same target lib/server/identity.ts resolves. */
-const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud-api.hanzo.svc.cluster.local:8000')
+const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud.hanzo.svc.cluster.local:8000')
 
 /** The exact `/v1/<...>` ML/training sub-paths the console is allowed to reach. */
 const ALLOWED = new Set([
