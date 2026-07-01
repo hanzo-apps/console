@@ -1,493 +1,368 @@
 'use client'
 
 /**
- * Tasks — the user's durable workflows and schedules, unified into the console.
+ * Tasks — orchestrate, monitor, and debug durable workflows (a Temporal-style
+ * console) over the hanzoai/tasks engine, through the console's OWN `/tasks` proxy
+ * (mints a user Bearer server-side; org-scoped by the token). Tabs are REAL
+ * sub-routes (the registry `:tab` pattern): Workflows / Schedules / Queues /
+ * Workers / Activities. Selecting a workflow opens the detail panel.
  *
- * Index (`/tasks`): pick a namespace, then browse its workflow executions (one
- * durable "task" each) or its schedules (recurring tasks), with a live cluster
- * strip. Detail (`/tasks/<ns>/<workflowId>`): one workflow's overview + durable
- * history. Reads the REAL `/v1/tasks` engine (hanzoai/tasks) through TasksApi;
- * every call is org-scoped server-side, so the browser sends cookie credentials
- * only. Honest states render when a route is gated/absent — never fabricated.
+ * Every stat/row/chart is a real engine value or an honest state — stat cards
+ * count REAL workflows (an unexposed metric is `—`); the throughput chart plots
+ * REAL workflow starts (no telemetry stream is invented); the cluster-health rail
+ * shows the engine's REAL status (tasksd is a single-node engine, not a 5-service
+ * Temporal cluster, so it is labelled honestly). A 404/unreachable read shows a
+ * truthful BackendStateCard — never fabricated workflows. The public tasks TLS
+ * isn't live yet, so today most reads show that honest state until the in-cluster
+ * engine is reachable.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { ArrowLeft, RefreshCw, ChevronRight } from '@hanzogui/lucide-icons-2'
+import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
+import { Activity, CheckCircle2, XCircle, PauseCircle, Timer, Zap, RefreshCw, ChevronRight } from '@hanzogui/lucide-icons-2'
 
 import {
   TasksApi,
   type ClusterStatus,
   type Namespace,
-  type Schedule,
   type WorkflowExecution,
-  type HistoryEvent,
-  type WorkflowDetail,
+  type Schedule,
+  type TaskQueue,
+  type Worker,
+  type ActivityInfo,
 } from '~/lib/api'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { FieldSelect } from '~/components/ui/Field'
+import { MetricCard, Panel } from '~/components/ui/Metric'
+import { LineChart, BarRows, type ChartPoint } from '~/components/ui/Charts'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { statusOf, statusStyle, type Bucket } from './tasks/status'
+import { WorkflowDetailPanel } from './tasks/detail'
 
-const fmtDate = (v?: string): string => {
-  if (!v) return ''
+type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
+
+const TABS = [
+  { id: '', label: 'Workflows' },
+  { id: 'schedules', label: 'Schedules' },
+  { id: 'queues', label: 'Queues' },
+  { id: 'workers', label: 'Workers' },
+  { id: 'activities', label: 'Activities' },
+] as const
+
+const nsName = (n: Namespace): string => n.namespaceInfo?.name ?? ''
+const fmt = (v?: string): string => {
+  if (!v) return '—'
   const d = new Date(v)
   return Number.isNaN(d.getTime()) ? v : d.toLocaleString()
 }
+function duration(start?: string, end?: string): string {
+  if (!start) return '—'
+  const s = new Date(start).getTime()
+  const e = end ? new Date(end).getTime() : Date.now()
+  if (Number.isNaN(s) || Number.isNaN(e)) return '—'
+  const secs = Math.max(0, Math.floor((e - s) / 1000))
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  return h ? `${h}h ${m}m` : m ? `${m}m` : `${secs}s`
+}
 
-// ── workflow status → label + tone ─────────────────────────────────────────
-type Tone = 'green' | 'yellow' | 'red' | 'neutral'
-const TONE_BG = { green: '$color5', yellow: '$color4', red: '$color4', neutral: '$color3' } as const
-const TONE_FG = { green: '$color12', yellow: '$color12', red: '$color12', neutral: '$color11' } as const
+function StatusPill({ status }: { status: string }) {
+  const { label, bg, color } = statusStyle(status)
+  return <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg={bg as never} color={color as never}>{label}</Text>
+}
 
-/** Map a `WORKFLOW_EXECUTION_STATUS_*` string to a readable label + tone. */
-function wfStatus(raw: string): { label: string; tone: Tone } {
-  const s = (raw || '').replace(/^WORKFLOW_EXECUTION_STATUS_/, '').toUpperCase()
-  switch (s) {
-    case 'RUNNING':
-      return { label: 'Running', tone: 'green' }
-    case 'COMPLETED':
-      return { label: 'Completed', tone: 'green' }
-    case 'FAILED':
-      return { label: 'Failed', tone: 'red' }
-    case 'TIMED_OUT':
-      return { label: 'Timed out', tone: 'red' }
-    case 'TERMINATED':
-      return { label: 'Terminated', tone: 'red' }
-    case 'CANCELED':
-      return { label: 'Canceled', tone: 'neutral' }
-    case 'CONTINUED_AS_NEW':
-      return { label: 'Continued', tone: 'neutral' }
-    default:
-      return { label: s ? s.replace(/_/g, ' ').toLowerCase() : 'unknown', tone: 'neutral' }
+/** Bucket real workflow start times into an hourly throughput series (last 12h). */
+function throughput(workflows: WorkflowExecution[]): ChartPoint[] {
+  const now = Date.now()
+  const buckets = new Array(12).fill(0)
+  for (const w of workflows) {
+    if (!w.startTime) continue
+    const t = new Date(w.startTime).getTime()
+    if (Number.isNaN(t)) continue
+    const hoursAgo = Math.floor((now - t) / 3_600_000)
+    if (hoursAgo >= 0 && hoursAgo < 12) buckets[11 - hoursAgo] += 1
   }
+  return buckets.map((v, i) => ({ label: `${11 - i}h`, value: v }))
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const { label, tone } = wfStatus(status)
-  return (
-    <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg={TONE_BG[tone]} color={TONE_FG[tone]}>
-      {label}
-    </Text>
-  )
+// ── namespace data ──────────────────────────────────────────────────────────
+
+type NsData = {
+  workflows: Async<WorkflowExecution[]>
+  schedules: Async<Schedule[]>
+  queues: Async<TaskQueue[]>
+  workers: Async<Worker[]>
+  activities: Async<ActivityInfo[]>
+  cluster: ClusterStatus | null
+  health: string | null
+  reload: () => void
 }
 
-function StateBadge({ on, onLabel, offLabel }: { on: boolean; onLabel: string; offLabel: string }) {
-  return (
-    <Text
-      fontSize="$1"
-      px="$2"
-      py="$1"
-      rounded="$2"
-      bg={on ? '$color4' : '$color5'}
-      color="$color12"
-    >
-      {on ? onLabel : offLabel}
-    </Text>
-  )
-}
-
-const nsName = (n: Namespace): string => n.namespaceInfo?.name ?? ''
-
-/** The thin live cluster strip (best-effort; hidden when unavailable). */
-function ClusterStrip({ cluster, health }: { cluster: ClusterStatus | null; health: string | null }) {
-  if (!cluster && !health) return null
-  const parts: string[] = []
-  if (cluster?.replicator) parts.push(`engine ${cluster.replicator}`)
-  if (typeof cluster?.openShards === 'number' && typeof cluster?.shardCount === 'number') {
-    parts.push(`shards ${cluster.openShards}/${cluster.shardCount}`)
-  }
-  if (health) parts.push(health === 'ok' ? 'healthy' : health)
-  if (parts.length === 0) return null
-  return (
-    <Text fontSize="$2" color="$color10">
-      {parts.join(' · ')}
-    </Text>
-  )
-}
-
-// ── index: namespace + tabs ─────────────────────────────────────────────────
-
-type Tab = 'workflows' | 'schedules'
-
-function TasksIndex({ onOpen }: { onOpen: (ns: string, wf: WorkflowExecution) => void }) {
-  const [namespaces, setNamespaces] = useState<Namespace[]>([])
-  const [ns, setNs] = useState<string>('')
-  const [tab, setTab] = useState<Tab>('workflows')
-
-  const [workflows, setWorkflows] = useState<WorkflowExecution[]>([])
-  const [schedules, setSchedules] = useState<Schedule[]>([])
-  const [loading, setLoading] = useState(true)
-  const [state, setState] = useState<BackendState | null>(null)
-
+function useNsData(ns: string): NsData {
+  const [workflows, setWorkflows] = useState<Async<WorkflowExecution[]>>({ phase: 'loading' })
+  const [schedules, setSchedules] = useState<Async<Schedule[]>>({ phase: 'loading' })
+  const [queues, setQueues] = useState<Async<TaskQueue[]>>({ phase: 'loading' })
+  const [workers, setWorkers] = useState<Async<Worker[]>>({ phase: 'loading' })
+  const [activities, setActivities] = useState<Async<ActivityInfo[]>>({ phase: 'loading' })
   const [cluster, setCluster] = useState<ClusterStatus | null>(null)
   const [health, setHealth] = useState<string | null>(null)
 
-  // Namespaces first — the org tenant set. Default to "default", else the first.
-  const loadNamespaces = useCallback(async () => {
-    setLoading(true)
-    try {
-      const rows = await TasksApi.namespaces()
-      setNamespaces(rows)
-      const names = rows.map(nsName).filter(Boolean)
-      setNs((cur) => cur || (names.includes('default') ? 'default' : names[0] ?? ''))
-      setState(null)
-    } catch (e) {
-      setState(classifyBackend(e))
-    } finally {
-      setLoading(false)
+  const reload = useCallback(() => {
+    if (!ns) return
+    const one = <T,>(p: Promise<T>, set: (s: Async<T>) => void) => {
+      set({ phase: 'loading' })
+      p.then((data) => set({ phase: 'ready', data })).catch((e) => set({ phase: 'error', error: classifyBackend(e) }))
     }
+    one(TasksApi.workflows(ns), setWorkflows)
+    one(TasksApi.schedules(ns), setSchedules)
+    one(TasksApi.taskQueues(ns), setQueues)
+    one(TasksApi.workers(ns), setWorkers)
+    one(TasksApi.activities(ns), setActivities)
+    TasksApi.cluster().then(setCluster).catch(() => setCluster(null))
+    TasksApi.health().then((h) => setHealth(h.status)).catch(() => setHealth(null))
+  }, [ns])
+
+  useEffect(() => reload(), [reload])
+  return { workflows, schedules, queues, workers, activities, cluster, health, reload }
+}
+
+// ── right rail ──────────────────────────────────────────────────────────────
+
+function RailRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <XStack justify="space-between" items="center" py="$1">
+      <Text fontSize="$2" color="$color11">{label}</Text>
+      <Text fontSize="$2" color="$color12" fontWeight="600" numberOfLines={1}>{value}</Text>
+    </XStack>
+  )
+}
+
+function Rail({ data }: { data: NsData }) {
+  const wf = data.workflows.phase === 'ready' ? data.workflows.data : []
+  const queues = data.queues.phase === 'ready' ? data.queues.data : []
+  const series = throughput(wf)
+  const hasThroughput = series.some((p) => p.value > 0)
+  const recent = [...wf]
+    .filter((w) => w.startTime)
+    .sort((a, b) => new Date(b.startTime as string).getTime() - new Date(a.startTime as string).getTime())
+    .slice(0, 6)
+
+  return (
+    <YStack width={320} minW={280} gap="$3">
+      <Panel title="Engine health" minW={280} grow={false}>
+        <YStack>
+          <RailRow label="Status" value={data.health ? (data.health === 'ok' ? 'Healthy' : data.health) : '—'} />
+          <RailRow label="Node" value={data.cluster?.nodeId || '—'} />
+          <RailRow label="Replicator" value={data.cluster?.replicator || '—'} />
+          <RailRow label="Shards" value={typeof data.cluster?.openShards === 'number' && typeof data.cluster?.shardCount === 'number' ? `${data.cluster.openShards}/${data.cluster.shardCount}` : '—'} />
+          <RailRow label="Accepted" value={data.cluster?.stats?.accepted ?? '—'} />
+          <RailRow label="Timeouts" value={data.cluster?.stats?.timeouts ?? '—'} />
+        </YStack>
+        <Text fontSize="$1" color="$color10">tasksd is a single-node engine — one node, not a 5-service Temporal cluster.</Text>
+      </Panel>
+
+      <Panel title="Workflow throughput" minW={280} grow={false}>
+        {hasThroughput ? (
+          <LineChart data={series} height={120} formatValue={(v) => `${v} started`} />
+        ) : (
+          <Text fontSize="$2" color="$color10">Per-hour workflow starts appear here once workflows run.</Text>
+        )}
+      </Panel>
+
+      <Panel title="Task queue utilization" minW={280} grow={false}>
+        {queues.length ? (
+          <BarRows bars={queues.slice(0, 6).map((q) => ({ label: q.name, value: q.running ?? q.workflows ?? 0 }))} />
+        ) : (
+          <Text fontSize="$2" color="$color10">No active task queues.</Text>
+        )}
+      </Panel>
+
+      <Panel title="Recent workflows" minW={280} grow={false}>
+        {recent.length ? (
+          <YStack gap="$1.5">
+            {recent.map((w) => (
+              <XStack key={`${w.execution?.workflowId}/${w.execution?.runId}`} justify="space-between" items="center" gap="$2">
+                <Text fontSize="$2" color="$color12" flex={1} numberOfLines={1}>{w.execution?.workflowId}</Text>
+                <StatusPill status={w.status} />
+              </XStack>
+            ))}
+          </YStack>
+        ) : (
+          <Text fontSize="$2" color="$color10">No recent workflows.</Text>
+        )}
+      </Panel>
+    </YStack>
+  )
+}
+
+// ── module ──────────────────────────────────────────────────────────────────
+
+export function TasksModule({ params }: { params: Record<string, string> }) {
+  const router = useRouter()
+  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+
+  const [namespaces, setNamespaces] = useState<Namespace[]>([])
+  const [ns, setNs] = useState('')
+  const [nsState, setNsState] = useState<BackendState | null>(null)
+  const [selected, setSelected] = useState<{ wid: string; runId?: string } | null>(null)
+
+  useEffect(() => {
+    TasksApi.namespaces()
+      .then((rows) => {
+        setNamespaces(rows)
+        const names = rows.map(nsName).filter(Boolean)
+        setNs((cur) => cur || (names.includes('default') ? 'default' : names[0] ?? 'default'))
+        setNsState(null)
+      })
+      .catch((e) => {
+        // Even if the namespace list is gated/unreachable, default to 'default' so
+        // the per-namespace reads render their own honest states.
+        setNs((cur) => cur || 'default')
+        setNsState(classifyBackend(e))
+      })
   }, [])
 
-  useEffect(() => {
-    void loadNamespaces()
-    // Cluster strip is best-effort; failures never block the page.
-    TasksApi.cluster().then(setCluster).catch(() => setCluster(null))
-    TasksApi.health()
-      .then((h) => setHealth(h.status))
-      .catch(() => setHealth(null))
-  }, [loadNamespaces])
+  const active = ns || 'default'
+  const data = useNsData(active)
 
-  const loadTab = useCallback(async () => {
-    if (!ns) return
-    setLoading(true)
-    try {
-      if (tab === 'workflows') setWorkflows(await TasksApi.workflows(ns))
-      else setSchedules(await TasksApi.schedules(ns))
-      setState(null)
-    } catch (e) {
-      setState(classifyBackend(e))
-    } finally {
-      setLoading(false)
+  const wf = data.workflows.phase === 'ready' ? data.workflows.data : []
+  const activities = data.activities.phase === 'ready' ? data.activities.data : []
+  const stats = useMemo(() => {
+    const by: Record<Bucket, number> = { running: 0, completed: 0, failed: 0, suspended: 0, other: 0 }
+    let durSum = 0
+    let durN = 0
+    for (const w of wf) {
+      const { bucket } = statusOf(w.status)
+      by[bucket] += 1
+      if (w.startTime && w.closeTime) {
+        const d = new Date(w.closeTime).getTime() - new Date(w.startTime).getTime()
+        if (d >= 0) { durSum += d; durN += 1 }
+      }
     }
-  }, [ns, tab])
-
-  useEffect(() => {
-    void loadTab()
-  }, [loadTab])
+    const avg = durN ? `${Math.round(durSum / durN / 1000)}s` : '—'
+    return { by, avg }
+  }, [wf])
 
   const nsOptions = useMemo(() => namespaces.map(nsName).filter(Boolean), [namespaces])
+  const ready = data.workflows.phase === 'ready'
+
+  const go = (id: string) => router.push(`/tasks${id ? `/${id}` : ''}`)
 
   const workflowColumns: Column<WorkflowExecution>[] = [
     {
-      key: 'workflowId',
-      header: 'Workflow',
+      key: 'wid',
+      header: 'Workflow ID',
       render: (w) => (
-        <Text fontSize="$3" color="$color12" numberOfLines={1} onPress={() => onOpen(ns, w)} cursor="pointer">
-          {w.execution?.workflowId}
-        </Text>
+        <YStack cursor="pointer" onPress={() => setSelected({ wid: w.execution.workflowId, runId: w.execution.runId })}>
+          <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>{w.execution?.workflowId}</Text>
+          <Text fontSize="$1" color="$color10" numberOfLines={1}>{w.execution?.runId}</Text>
+        </YStack>
       ),
     },
+    { key: 'type', header: 'Type', width: 170, render: (w) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{w.type?.name || '—'}</Text> },
+    { key: 'status', header: 'Status', width: 120, render: (w) => <StatusPill status={w.status} /> },
+    { key: 'started', header: 'Started', width: 180, render: (w) => <Text fontSize="$3" color="$color11">{fmt(w.startTime)}</Text> },
+    { key: 'duration', header: 'Duration', width: 100, render: (w) => <Text fontSize="$3" color="$color11">{duration(w.startTime, w.closeTime)}</Text> },
+    { key: 'queue', header: 'Task queue', width: 150, render: (w) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{w.taskQueue || '—'}</Text> },
     {
-      key: 'type',
-      header: 'Type',
-      width: 200,
-      render: (w) => (
-        <Text fontSize="$3" color="$color11" numberOfLines={1}>
-          {w.type?.name}
-        </Text>
-      ),
-    },
-    { key: 'status', header: 'Status', width: 130, render: (w) => <StatusBadge status={w.status} /> },
-    {
-      key: 'taskQueue',
-      header: 'Task queue',
-      width: 160,
-      render: (w) => (
-        <Text fontSize="$3" color="$color11" numberOfLines={1}>
-          {w.taskQueue || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'startTime',
-      header: 'Started',
-      width: 190,
-      render: (w) => (
-        <Text fontSize="$3" color="$color11">
-          {fmtDate(w.startTime)}
-        </Text>
-      ),
-    },
-    {
-      key: 'action',
+      key: 'actions',
       header: '',
-      width: 110,
+      width: 90,
       render: (w) => (
         <XStack justify="flex-end" flex={1}>
-          <Button size="$2" iconAfter={<ChevronRight size={14} />} onPress={() => onOpen(ns, w)}>
-            Open
-          </Button>
+          <Button size="$2" iconAfter={<ChevronRight size={14} />} onPress={() => setSelected({ wid: w.execution.workflowId, runId: w.execution.runId })}>Open</Button>
         </XStack>
       ),
     },
   ]
 
   const scheduleColumns: Column<Schedule>[] = [
-    { key: 'scheduleId', header: 'Schedule', render: (s) => (
-      <Text fontSize="$3" color="$color12" numberOfLines={1}>{s.scheduleId}</Text>
-    ) },
-    {
-      key: 'workflowType',
-      header: 'Workflow',
-      width: 200,
-      render: (s) => (
-        <Text fontSize="$3" color="$color11" numberOfLines={1}>
-          {s.action?.workflowType?.name || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'paused',
-      header: 'State',
-      width: 110,
-      render: (s) => <StateBadge on={!!s.state?.paused} onLabel="Paused" offLabel="Active" />,
-    },
-    {
-      key: 'next',
-      header: 'Next run',
-      width: 190,
-      render: (s) => (
-        <Text fontSize="$3" color="$color11">
-          {fmtDate(s.info?.nextActionTime) || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'count',
-      header: 'Runs',
-      width: 80,
-      render: (s) => (
-        <Text fontSize="$3" color="$color11">
-          {s.info?.actionCount ?? 0}
-        </Text>
-      ),
-    },
+    { key: 'id', header: 'Schedule', render: (s) => <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>{s.scheduleId}</Text> },
+    { key: 'wf', header: 'Workflow', width: 200, render: (s) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{s.action?.workflowType?.name || '—'}</Text> },
+    { key: 'state', header: 'State', width: 100, render: (s) => <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color4" color="$color12">{s.state?.paused ? 'Paused' : 'Active'}</Text> },
+    { key: 'next', header: 'Next run', width: 180, render: (s) => <Text fontSize="$3" color="$color11">{fmt(s.info?.nextActionTime)}</Text> },
+    { key: 'runs', header: 'Runs', width: 70, render: (s) => <Text fontSize="$3" color="$color11">{s.info?.actionCount ?? 0}</Text> },
   ]
 
-  const TabButton = ({ id, label }: { id: Tab; label: string }) => (
-    <Button size="$2" theme={tab === id ? 'light' : undefined} onPress={() => setTab(id)}>
-      {label}
-    </Button>
-  )
+  const queueColumns: Column<TaskQueue>[] = [
+    { key: 'name', header: 'Task queue', render: (q) => <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>{q.name}</Text> },
+    { key: 'workflows', header: 'Workflows', width: 110, render: (q) => <Text fontSize="$3" color="$color11">{q.workflows ?? '—'}</Text> },
+    { key: 'running', header: 'Running', width: 100, render: (q) => <Text fontSize="$3" color="$color11">{q.running ?? '—'}</Text> },
+    { key: 'pollers', header: 'Pollers', width: 90, render: (q) => <Text fontSize="$3" color="$color11">{q.pollers ?? '—'}</Text> },
+    { key: 'latest', header: 'Latest start', width: 180, render: (q) => <Text fontSize="$3" color="$color11">{fmt(q.latestStart)}</Text> },
+  ]
+
+  const workerColumns: Column<Worker>[] = [
+    { key: 'id', header: 'Identity', render: (w) => <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>{w.identity || '—'}</Text> },
+    { key: 'queue', header: 'Task queue', width: 170, render: (w) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{w.taskQueue || '—'}</Text> },
+    { key: 'wfp', header: 'WF pollers', width: 100, render: (w) => <Text fontSize="$3" color="$color11">{w.workflowPollers ?? '—'}</Text> },
+    { key: 'acp', header: 'Act pollers', width: 100, render: (w) => <Text fontSize="$3" color="$color11">{w.activityPollers ?? '—'}</Text> },
+    { key: 'last', header: 'Last seen', width: 180, render: (w) => <Text fontSize="$3" color="$color11">{fmt(w.lastAccessTime)}</Text> },
+  ]
+
+  const activityColumns: Column<ActivityInfo>[] = [
+    { key: 'id', header: 'Activity', render: (a) => <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>{a.activityId || '—'}</Text> },
+    { key: 'type', header: 'Type', width: 170, render: (a) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{typeof a.activityType === 'string' ? a.activityType : a.activityType?.name || '—'}</Text> },
+    { key: 'wf', header: 'Workflow', width: 170, render: (a) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{a.workflowId || '—'}</Text> },
+    { key: 'state', header: 'State', width: 110, render: (a) => <Text fontSize="$3" color="$color11">{a.state || a.status || '—'}</Text> },
+    { key: 'attempt', header: 'Attempt', width: 80, render: (a) => <Text fontSize="$3" color="$color11">{a.attempt ?? '—'}</Text> },
+  ]
+
+  const tabBody = (() => {
+    if (tab === '') {
+      if (data.workflows.phase === 'error') return <BackendStateCard state={data.workflows.error} onRetry={data.reload} hint="Workflows read from the tasks engine (/v1/tasks) with your session. Public TLS isn't live yet — the in-cluster engine is the real path." />
+      return (
+        <YStack gap="$3">
+          <DataTable columns={workflowColumns} rows={wf} loading={data.workflows.phase === 'loading'} rowKey={(w) => `${w.execution?.workflowId}/${w.execution?.runId}`} empty="No workflows in this namespace yet." />
+          {selected ? <WorkflowDetailPanel ns={active} wid={selected.wid} runId={selected.runId} onClose={() => setSelected(null)} /> : null}
+        </YStack>
+      )
+    }
+    if (tab === 'schedules') return data.schedules.phase === 'error' ? <BackendStateCard state={data.schedules.error} onRetry={data.reload} /> : <DataTable columns={scheduleColumns} rows={data.schedules.phase === 'ready' ? data.schedules.data : []} loading={data.schedules.phase === 'loading'} rowKey={(s) => s.scheduleId} empty="No schedules in this namespace." />
+    if (tab === 'queues') return data.queues.phase === 'error' ? <BackendStateCard state={data.queues.error} onRetry={data.reload} /> : <DataTable columns={queueColumns} rows={data.queues.phase === 'ready' ? data.queues.data : []} loading={data.queues.phase === 'loading'} rowKey={(q) => q.name} empty="No task queues in this namespace." />
+    if (tab === 'workers') return data.workers.phase === 'error' ? <BackendStateCard state={data.workers.error} onRetry={data.reload} hint="Workers appear once one heartbeats against a task queue." /> : <DataTable columns={workerColumns} rows={data.workers.phase === 'ready' ? data.workers.data : []} loading={data.workers.phase === 'loading'} rowKey={(w) => w.identity || Math.random().toString()} empty="No workers registered yet." />
+    return data.activities.phase === 'error' ? <BackendStateCard state={data.activities.error} onRetry={data.reload} /> : <DataTable columns={activityColumns} rows={activities} loading={data.activities.phase === 'loading'} rowKey={(a) => a.activityId || Math.random().toString()} empty="No activities in this namespace." />
+  })()
 
   return (
     <>
       <PageHeader
         title="Tasks"
-        subtitle="Your durable workflows and schedules — every running and finished task, in one place."
-        actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void loadTab()}>
-            Refresh
-          </Button>
-        }
+        subtitle="Orchestrate, monitor, and debug workflows powered by Temporal."
+        actions={<Button icon={<RefreshCw size={16} />} onPress={data.reload}>Refresh</Button>}
       />
 
-      <ClusterStrip cluster={cluster} health={health} />
-
-      {state ? (
-        <BackendStateCard
-          state={state}
-          onRetry={() => {
-            void loadNamespaces()
-            void loadTab()
-          }}
-          hint="The Tasks engine (/v1/tasks) is reached through the gateway with your session. Workflows and schedules appear here once the route is live for your org."
-        />
-      ) : nsOptions.length === 0 && !loading ? (
-        <Card p="$4" borderWidth={1} borderColor="$borderColor">
-          <Text color="$color11">
-            No task namespaces yet for your organization. Workflows appear here once a worker registers
-            one.
-          </Text>
-        </Card>
-      ) : (
-        <>
-          <XStack gap="$3" items="center" flexWrap="wrap">
-            <XStack width={260} items="center" gap="$2">
-              <Text fontSize="$2" color="$color11">
-                Namespace
-              </Text>
-              <YStack flex={1}>
-                <FieldSelect value={ns} options={nsOptions} onChange={setNs} />
-              </YStack>
-            </XStack>
-            <XStack gap="$2">
-              <TabButton id="workflows" label="Workflows" />
-              <TabButton id="schedules" label="Schedules" />
-            </XStack>
-          </XStack>
-
-          {tab === 'workflows' ? (
-            <DataTable
-              columns={workflowColumns}
-              rows={workflows}
-              loading={loading}
-              rowKey={(w) => `${w.execution?.workflowId}/${w.execution?.runId}`}
-              empty="No workflows in this namespace yet."
-            />
-          ) : (
-            <DataTable
-              columns={scheduleColumns}
-              rows={schedules}
-              loading={loading}
-              rowKey={(s) => s.scheduleId}
-              empty="No schedules in this namespace yet."
-            />
-          )}
-        </>
-      )}
-    </>
-  )
-}
-
-// ── detail: one workflow ────────────────────────────────────────────────────
-
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <XStack justify="space-between" items="center" py="$2" borderBottomWidth={1} borderColor="$borderColor">
-      <Text fontSize="$3" color="$color11" fontWeight="600">
-        {label}
-      </Text>
-      <Text fontSize="$3" color="$color12" numberOfLines={1}>
-        {value}
-      </Text>
-    </XStack>
-  )
-}
-
-function WorkflowDetailView({ ns, wid, onBack }: { ns: string; wid: string; onBack: () => void }) {
-  const [detail, setDetail] = useState<WorkflowDetail | null>(null)
-  const [events, setEvents] = useState<HistoryEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [state, setState] = useState<BackendState | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const d = await TasksApi.workflow(ns, wid)
-      setDetail(d)
-      const runId = d.workflowExecutionInfo?.execution?.runId
-      setEvents(await TasksApi.history(ns, wid, runId))
-      setState(null)
-    } catch (e) {
-      setState(classifyBackend(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [ns, wid])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const info = detail?.workflowExecutionInfo
-
-  const eventColumns: Column<HistoryEvent>[] = [
-    {
-      key: 'eventId',
-      header: 'ID',
-      width: 70,
-      render: (e) => (
-        <Text fontSize="$3" color="$color11">
-          {e.eventId ?? ''}
-        </Text>
-      ),
-    },
-    {
-      key: 'eventType',
-      header: 'Type',
-      render: (e) => (
-        <Text fontSize="$3" color="$color12" numberOfLines={1}>
-          {e.eventType ?? ''}
-        </Text>
-      ),
-    },
-    {
-      key: 'eventTime',
-      header: 'Time',
-      width: 210,
-      render: (e) => (
-        <Text fontSize="$3" color="$color11">
-          {fmtDate(e.eventTime)}
-        </Text>
-      ),
-    },
-  ]
-
-  return (
-    <>
-      <PageHeader
-        title={wid}
-        subtitle={info?.type?.name ? `${info.type.name} · ${ns}` : ns}
-        actions={
-          <XStack gap="$2">
-            <Button icon={<ArrowLeft size={16} />} onPress={onBack}>
-              Back
-            </Button>
-            <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
-              Refresh
-            </Button>
-          </XStack>
-        }
-      />
-
-      {state ? (
-        <BackendStateCard state={state} onRetry={() => void load()} />
-      ) : loading && !detail ? (
-        <Text color="$color11">Loading…</Text>
-      ) : info ? (
-        <>
-          <Card p="$4" gap="$1" borderWidth={1} borderColor="$borderColor">
-            <Text fontSize="$5" fontWeight="700" mb="$2">
-              Overview
-            </Text>
-            <DetailRow label="Status" value={<StatusBadge status={info.status} />} />
-            <DetailRow label="Type" value={info.type?.name || '—'} />
-            <DetailRow label="Task queue" value={info.taskQueue || detail?.executionConfig?.taskQueue?.name || '—'} />
-            <DetailRow label="Run ID" value={info.execution?.runId || '—'} />
-            {info.startTime ? <DetailRow label="Started" value={fmtDate(info.startTime)} /> : null}
-            {info.closeTime ? <DetailRow label="Closed" value={fmtDate(info.closeTime)} /> : null}
-            {typeof info.historyLength === 'number' ? (
-              <DetailRow label="History length" value={info.historyLength} />
-            ) : null}
-          </Card>
-
-          <YStack gap="$2">
-            <Text fontSize="$5" fontWeight="700">
-              History
-            </Text>
-            <DataTable
-              columns={eventColumns}
-              rows={events}
-              loading={loading}
-              rowKey={(e) => String(e.eventId ?? '')}
-              empty="No history events."
-            />
-          </YStack>
-        </>
+      {nsState ? (
+        <Text fontSize="$2" color="$color10">Namespace list unavailable ({nsState.message}) — showing “{active}”.</Text>
       ) : null}
-    </>
-  )
-}
 
-export function TasksModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
-  const { ns, wid } = params
-  if (ns && wid) {
-    return (
-      <WorkflowDetailView
-        ns={decodeURIComponent(ns)}
-        wid={decodeURIComponent(wid)}
-        onBack={() => router.push('/tasks')}
-      />
-    )
-  }
-  return (
-    <TasksIndex
-      onOpen={(namespace, wf) =>
-        router.push(`/tasks/${encodeURIComponent(namespace)}/${encodeURIComponent(wf.execution.workflowId)}`)
-      }
-    />
+      {/* Stat cards — REAL workflow counts; Activities/Avg from real data, honest "—" otherwise. */}
+      <XStack gap="$3" flexWrap="wrap">
+        <MetricCard icon={<Activity size={15} />} label="Running" value={ready ? String(stats.by.running) : '—'} caption="in flight" />
+        <MetricCard icon={<CheckCircle2 size={15} />} label="Completed" value={ready ? String(stats.by.completed) : '—'} caption="finished ok" />
+        <MetricCard icon={<XCircle size={15} />} label="Failed" value={ready ? String(stats.by.failed) : '—'} caption="failed / timed out" />
+        <MetricCard icon={<PauseCircle size={15} />} label="Suspended" value={ready ? String(stats.by.suspended) : '—'} caption="canceled / terminated" />
+        <MetricCard icon={<Zap size={15} />} label="Activities" value={data.activities.phase === 'ready' ? String(activities.length) : '—'} caption="executions" />
+        <MetricCard icon={<Timer size={15} />} label="Avg duration" value={ready ? stats.avg : '—'} caption="completed runs" />
+      </XStack>
+
+      <XStack gap="$3" items="center" flexWrap="wrap">
+        <XStack width={240} items="center" gap="$2">
+          <Text fontSize="$2" color="$color11">Namespace</Text>
+          <YStack flex={1}><FieldSelect value={active} options={nsOptions.length ? nsOptions : [active]} onChange={setNs} /></YStack>
+        </XStack>
+        <XStack gap="$1" flexWrap="wrap">
+          {TABS.map((t) => (
+            <Button key={t.id || 'workflows'} size="$2" bg={t.id === tab ? '$color5' : 'transparent'} borderWidth={1} borderColor="$borderColor" onPress={() => go(t.id)}>{t.label}</Button>
+          ))}
+        </XStack>
+      </XStack>
+
+      <XStack gap="$4" flexWrap="wrap" items="flex-start">
+        <YStack flex={1} minW={340} gap="$2">{tabBody}</YStack>
+        <Rail data={data} />
+      </XStack>
+    </>
   )
 }
