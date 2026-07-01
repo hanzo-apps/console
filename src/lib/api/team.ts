@@ -35,6 +35,16 @@ export const TeamApi = {
   organization: (orgName: string): Promise<Organization> =>
     org.iamOne<Organization>('get-organization', { id: `admin/${orgName}` }),
 
+  /**
+   * Save the org's branding/settings (displayName, logo, favicon, website, theme).
+   * Send the FULL record back — IAM replaces the row — so callers spread the loaded
+   * org and override only the edited fields. `?id=admin/<name>` locates it; the proxy
+   * requires an ORG ADMIN and pins the name to the caller's own org (no cross-tenant
+   * write). Org objects are owned by the `admin` metadata org.
+   */
+  updateOrganization: (organization: Organization): Promise<void> =>
+    org.iamMutate('update-organization', organization, { id: `admin/${organization.name}` }),
+
   /** Invite (create) a member. `user.owner` MUST be the caller's org (the proxy
    *  rejects any other owner in the body — the cross-tenant write guard). */
   invite: (user: IamUser): Promise<void> => org.iamMutate('add-user', user),

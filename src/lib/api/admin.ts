@@ -18,6 +18,18 @@ import { makeIamClient, DEFAULT_PAGE_SIZE, qs, type Query, type Paged } from './
 
 export type { Paged }
 
+/** An IAM organization's theme (`themeData`) — the accent + surface style the org
+ *  brands with. Mirrors the Casdoor/IAM `ThemeData` shape. */
+export type ThemeData = {
+  themeType?: string
+  /** Primary accent color (hex), e.g. `#5E6AD2`. */
+  colorPrimary?: string
+  borderRadius?: number
+  isCompact?: boolean
+  /** When true the org's custom theme is applied (else the default). */
+  isEnabled?: boolean
+}
+
 /** An IAM organization (`get-organizations`). */
 export type Organization = {
   owner: string
@@ -29,6 +41,8 @@ export type Organization = {
   /** Org logo URL (IAM `logo`); shown in the console chrome when set. */
   logo?: string
   favicon?: string
+  /** Org theme (accent color, radius, …) — the branding surface. */
+  themeData?: ThemeData
   [key: string]: unknown
 }
 
