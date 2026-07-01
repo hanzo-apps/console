@@ -54,6 +54,8 @@ import { useRouter } from 'next/navigation'
 
 import { PlatformApi, type Cluster } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { CustomerMachines } from './machines/CustomerMachines'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
@@ -214,7 +216,21 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 // ── Module ───────────────────────────────────────────────────────────────────
 
-export function MachinesModule(_props: { params: Record<string, string> }) {
+/**
+ * Machines — routes by role. A CUSTOMER (non-global-admin) sees THEIR OWN machines
+ * via the user-scoped visor `/vm` proxy (`CustomerMachines`) — real data or a
+ * graceful "launch one" state, never the infra "PAAS_SERVICE_TOKEN not set"
+ * message. A GLOBAL ADMIN sees the platform fleet across every cluster
+ * (`AdminMachines`, over the `/paas` control plane), whose honest not-configured
+ * state IS the right thing for an operator. One wrapper, one hook — no
+ * rules-of-hooks hazard (each branch is a full component with its own hooks).
+ */
+export function MachinesModule(props: { params: Record<string, string> }) {
+  const showAdmin = useIsGlobalAdmin()
+  return showAdmin ? <AdminMachines {...props} /> : <CustomerMachines />
+}
+
+function AdminMachines(_props: { params: Record<string, string> }) {
   const router = useRouter()
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [loading, setLoading] = useState(true)
