@@ -44,6 +44,9 @@ const POST_SEGMENTS = new Set([
   'add-provider',
   'update-provider',
   'delete-provider',
+  'add-role',
+  'update-role',
+  'delete-role',
 ])
 
 /**
