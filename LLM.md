@@ -644,3 +644,38 @@ this pass is small and precise, not padding.
   clamps `last4` to the last 4 digits even if commerce puts a full PAN there (+ test). New live
   two-tenant isolation e2e (`e2e/billing-isolation.spec.ts`) asserts two distinct-org sessions get
   disjoint subscription/payment-method row sets through the proxy. `npm test` **487/487**.
+
+## Consolidation — two Network modules onto main + one authoritative tag (v8.3.1)
+
+The single-consolidator pass that ends the console2 deploy-war: main is the one
+authoritative source, the operator CR is pinned to exactly what main builds, and
+every stale session branch is pruned. Two genuinely-unmerged Network-category
+modules land; everything else was already on main (verified by `git cherry`) and
+was deleted, not re-merged.
+
+- **Nodes** (`components/products/NodesModule.tsx`, `app/nodes/[...path]/route.ts`,
+  `lib/api/nodes.ts`, `lib/products/brand-scope.ts` `nodeNetworksForBrand`) —
+  per-node blockchain infrastructure (validators via P-chain
+  `platform.getCurrentValidators` + peers via `info.peers`) over LIVE luxd RPC.
+  Same-origin session-gated proxy (mirrors `/bootnode`), brand-scoped DATA
+  (hanzo = all networks; lux/zoo/pars = own chain only), honest not-reporting per
+  unreachable network. Tests: normalizers over real wire shapes + brand→network
+  scope.
+- **DNS** (`components/products/DnsModule.tsx`, registry `dns` entry) — per-org
+  managed DNS (zones + records → CoreDNS + Cloudflare sync) on the unified
+  `/v1/dns` surface; honest BackendStateCard states until the route is bound. The
+  cherry-pick collided with main's existing DNS overview stub (same `id:'dns'`),
+  resolved by upgrading that well-placed Network-cluster entry to render the real
+  `DnsModule` and dropping the duplicate — one id, one entry.
+- **Not merged (already on main, branches deleted):** the `/v1/iam` account
+  reorg (revert-pair, net no-op; main has #20), the `cloud.hanzo.svc` default
+  (main already there), the visor `:19000` default (main already ahead). The
+  `api.hanzo.ai`-gateway default change was **rejected**: the CR documents that
+  the DOKS pod's egress is Cloudflare-403'd on public `api.hanzo.ai`, so the safe
+  env-less default is the in-cluster `cloud.hanzo.svc`.
+- Drive-by: the pre-existing `observability/metrics.test.ts` null-override type
+  errors are fixed (a `NullablePartial<T>` factory-override type) so
+  `tsc --noEmit` is fully green.
+- Verification: `tsc --noEmit` clean; `next build` is the authoritative gate
+  (Node 24, on-cluster Kaniko — no GitHub builders). One tag `v8.3.1` from main
+  HEAD, pinned in `universe/.../crs/console2.yaml`.
