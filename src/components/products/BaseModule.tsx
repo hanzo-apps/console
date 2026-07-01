@@ -4,7 +4,7 @@
  * Base — the embedded Hanzo Base (superbase) tenant manager.
  *
  * This module renders the SAME screens that run standalone at base.hanzo.ai: the
- * host-agnostic `@hanzo/dashboard` package (TenantsScreen /
+ * host-agnostic `@hanzo/dash` package (TenantsScreen /
  * NewTenantScreen). console2 is just the host — it injects the transport and the
  * navigation, nothing more. There is ONE source of these screens; this file does
  * not reimplement them.
@@ -26,7 +26,9 @@ import {
   TenantsScreen,
   NewTenantScreen,
   type TenantsNav,
-} from '@hanzo/dashboard'
+} from '@hanzo/dash'
+import { currentOrg } from '~/lib/org-scope'
+import { useScope } from '~/lib/scope-context'
 
 /** Product base path — must match the registry entry id (`base`). */
 const BASE_PATH = '/base'
@@ -51,8 +53,22 @@ export function BaseModule() {
     [router],
   )
 
+  // A superbase "tenant" IS a full Hanzo Base instance, so the IAM-native console
+  // labels these "Bases" and shows the Org → Project scope (from the top-bar
+  // ScopeSwitcher) as a breadcrumb — consistent with every other resource module.
+  const labels = useMemo(
+    () => ({ singular: 'Base', plural: 'Bases', create: 'New Base' }),
+    [],
+  )
+  const { scope } = useScope()
+  const context = `${currentOrg()} / ${scope.project ?? 'All projects'}`
+
   const isNew = pathname?.endsWith('/new') ?? false
-  return isNew ? <NewTenantScreen api={api} nav={nav} /> : <TenantsScreen api={api} nav={nav} />
+  return isNew ? (
+    <NewTenantScreen api={api} nav={nav} labels={labels} />
+  ) : (
+    <TenantsScreen api={api} nav={nav} labels={labels} context={context} />
+  )
 }
 
 export default BaseModule
