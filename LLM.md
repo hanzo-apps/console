@@ -466,3 +466,53 @@ editor + create; nothing is forked.
   green (14/14 pages). Authenticated visual e2e is gated behind a deploy + IAM
   session — left for live verification (the catch-all `/[...slug]` route that
   renders this compiled and type-checked).
+
+## Native control planes — ZERO external link-outs + Hanzo Functions (claude/console2-native-control-planes)
+
+Three deliverables, one PR, all over the one `/v1` surface (no `/api/` prefixes).
+
+- **No external link-outs (the priority).** The catalog's `external` kind is GONE:
+  `CatalogEntry` is now `module`-only and `ProductStatus` is `'enabled' | 'soon'`.
+  Every product that used to open another domain in a tab (Gateway, DNS, CDN, MPC,
+  CLI, SDKs, API, IDE, Desktop, Registry, Metrics, Crawl, Studio, Console) is now a
+  native in-console route. They render ONE shared `NativeOverview`
+  (`components/products/overview/NativeOverview.tsx`, wired via `overviewFor(id)` +
+  `overviewRoutes(id)` in the registry — the DRY twin of `soonRoutes`): header +
+  what-it-is, a REAL health band (probes `PlatformApi.apps()` for the product's
+  operator service; honest "not deployed / not reporting" states, never a fabricated
+  "operational"), key-fact cards (honest "—"), native primary actions (in-console
+  routes only), and INLINE docs (rendered in-console; the docs SITE is a small
+  secondary reference, never the way to use the product). Content is a pure
+  `OverviewSpec` per product (`overview/spec.ts` + `resolve.ts` — a catalog-derived
+  `defaultSpec` covers any product with no bespoke spec). The `external` branches in
+  `open.ts`, `DashboardShell`, `AppLauncher`, `CommandPalette`, `ProductInterstitial`,
+  and `OverviewModule` are removed — there is one way to open anything: a native route.
+- **Hanzo Functions dashboard.** `FunctionsModule` is rebuilt from the old single
+  `/paas/functions` table into a polished tabbed product (Overview · Functions ·
+  Deployments · Triggers · Secrets · Settings, `:tab` route like GPUs/Models) over
+  the rich `lib/api/functions.ts` (`GET /v1/functions*`). Branded **Hanzo Functions**
+  with the honest **Fission** engine badge (the mock said "OpenFaaS", but the live
+  engine per `go.mod` + `universe/infra/k8s/functions` is Fission — we label the real
+  one). Overview: 6 KPI cards (Functions/Invocations 7D/Success/Avg duration/Errors/
+  Cost) derived from real rows via `deriveOverview` (each degrades to "—"), with real
+  series sparklines + `trendPct` deltas; an "Invocations over time" `LineChart` with
+  1H/6H/24H/7D/30D range toggles; an "Invocation status" `Donut`; and the shared
+  `FunctionsBrowser` (table + `DetailRail`, DRY across Overview and the Functions tab).
+  All chart/donut/cost read `FunctionsApi.metrics(range)`; until that route is bound
+  they show honest "time-series not connected" — never a placeholder trend. Secrets is
+  names-only (values never fetched — Secret Manager principle). `functions/{FunctionsTable,
+  DetailRail,parts}.tsx` (already built on the feature branch) are reused unchanged.
+- **Overview "Explore products" — enablement gate dropped.** The home cards lose the
+  Enabled/External/Soon `StatusBadge` and the open-vs-learn gate; every product is
+  open-for-all with an "Open" (native) + a "Learn more" affordance (the native
+  `/discover/:id` interstitial, which itself surfaces docs + OSS source inline — not a
+  link-out).
+- Idiom: strictly `@hanzo/gui` v5 shorthands (`bg`/`maxW`/`rounded`/`items`/`self`/
+  `p`/`px`/`py`/`gap`), matching every existing module. New tests: `overview/resolve.test.ts`
+  (spec resolution + honest default; the no-`external`/no-`href` invariant is enforced at
+  compile time by the collapsed `CatalogEntry` union). Verification: `npm run typecheck`
+  clean (0 errors), `npm test` 298/298 (31 files), and every route (`/functions/*`, all
+  native overviews, `/`, `/discover/:id`) compiles + returns 200 on the dev server.
+- Repo drive-by: removed the bogus tracked `node_modules` self-symlink blob (mode
+  120000 → itself) that broke `npm install`/`vitest`; `.gitignore` already ignores
+  `node_modules/`, so it was never meant to be committed.
