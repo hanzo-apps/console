@@ -155,7 +155,7 @@ export function SettingsTab({
         <Text fontSize="$4" fontWeight="800" color="$color12">
           Runtime
         </Text>
-        <DetailRow label="Engine" value="Fission (Kubernetes-native FaaS)" />
+        <DetailRow label="Engine" value="Hanzo Functions (Kubernetes-native serverless)" />
         <DetailRow label="Backend" value={live ? 'Connected' : 'Not connected on this deployment'} />
         <DetailRow label="Functions" value={`${functions.length}`} />
         <DetailRow label="Namespaces" value={namespaces.length ? namespaces.join(', ') : '—'} />

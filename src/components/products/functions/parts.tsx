@@ -18,7 +18,7 @@ import type { ProductIcon } from '~/lib/products/registry'
  * the live engine per `go.mod` + `universe/infra/k8s/functions` is Fission). We
  * label the real engine, never the wrong one.
  */
-export function EngineBadge({ label = 'Fission' }: { label?: string }) {
+export function EngineBadge({ label = 'Serverless' }: { label?: string }) {
   return (
     <Text fontSize="$1" px="$2" py="$1" rounded="$10" bg="$color3" color="$color11" fontWeight="700">
       {label}
