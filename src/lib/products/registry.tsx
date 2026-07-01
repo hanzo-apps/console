@@ -139,6 +139,14 @@ import { resourceRoutes } from '~/components/products/ResourceModule'
 import { ComingSoon } from '~/components/products/ComingSoon'
 import { overviewFor } from '~/components/products/overview/NativeOverview'
 import { CategoryOverview } from '~/components/products/overview/CategoryOverview'
+import {
+  StoreProductsModule,
+  StoreOrdersModule,
+  StoreCustomersModule,
+  StoreInventoryModule,
+  StorePromotionsModule,
+  StoreSettingsModule,
+} from '~/components/products/commerce'
 import { ApiKeysModule } from '~/components/products/ApiKeysModule'
 import { SettingsModule } from '~/components/products/SettingsModule'
 import { ScoreConfigsModule } from '~/components/products/ScoreConfigsModule'
@@ -1447,6 +1455,84 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/console`,
     kind: 'module',
     routes: overviewRoutes('console'),
+  },
+
+  // ── Commerce — the merchant store dashboard over hanzoai/commerce, per org ────
+  //    Products/orders/customers/inventory/promotions read through console2's own
+  //    user-bearer `/commerce` proxy (org-scoped server-side); payments (Square)
+  //    stay in Billing. Each page is a native in-console module — no subdomain.
+  {
+    id: 'products',
+    label: 'Products',
+    icon: Package,
+    description: 'Your store catalog — items customers can buy.',
+    gcp: 'Commerce',
+    category: 'Commerce',
+    status: 'enabled',
+    repo: 'hanzoai/commerce',
+    docs: `${DOCS}/commerce`,
+    kind: 'module',
+    routes: [{ path: '', component: StoreProductsModule }],
+  },
+  {
+    id: 'orders',
+    label: 'Orders',
+    icon: ClipboardList,
+    description: 'Purchases placed in your store — status, customer, and total.',
+    category: 'Commerce',
+    status: 'enabled',
+    repo: 'hanzoai/commerce',
+    docs: `${DOCS}/commerce`,
+    kind: 'module',
+    routes: [{ path: '', component: StoreOrdersModule }],
+  },
+  {
+    id: 'customers',
+    label: 'Customers',
+    icon: Users,
+    description: 'People who order from or have an account with your store.',
+    category: 'Commerce',
+    status: 'enabled',
+    repo: 'hanzoai/commerce',
+    docs: `${DOCS}/commerce`,
+    kind: 'module',
+    routes: [{ path: '', component: StoreCustomersModule }],
+  },
+  {
+    id: 'inventory',
+    label: 'Inventory',
+    icon: Boxes,
+    description: 'Stock on hand per SKU across your catalog.',
+    category: 'Commerce',
+    status: 'enabled',
+    repo: 'hanzoai/commerce',
+    docs: `${DOCS}/commerce`,
+    kind: 'module',
+    routes: [{ path: '', component: StoreInventoryModule }],
+  },
+  {
+    id: 'promotions',
+    label: 'Promotions',
+    icon: Tag,
+    description: 'Discount codes and promotions customers apply at checkout.',
+    category: 'Commerce',
+    status: 'enabled',
+    repo: 'hanzoai/commerce',
+    docs: `${DOCS}/commerce`,
+    kind: 'module',
+    routes: [{ path: '', component: StorePromotionsModule }],
+  },
+  {
+    id: 'storefront',
+    label: 'Store settings',
+    icon: Store,
+    description: 'Storefront configuration and how payments are processed.',
+    category: 'Commerce',
+    status: 'enabled',
+    repo: 'hanzoai/commerce',
+    docs: `${DOCS}/commerce`,
+    kind: 'module',
+    routes: [{ path: '', component: StoreSettingsModule }],
   },
 
   // ── Appended modules — ported from hanzoai/console (settings/models + eval engine).

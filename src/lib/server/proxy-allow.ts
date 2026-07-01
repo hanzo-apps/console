@@ -50,3 +50,33 @@ export function allowVisorSurface(path: string): boolean {
   const rel = path.replace(/^\/+/, '')
   return rel === 'v1' || rel.startsWith('v1/')
 }
+
+/**
+ * Commerce `/v1/<head>` store surfaces reachable through `/commerce` as the signed-in
+ * user. Commerce (`commerce.hanzo.svc`) serves the whole store admin over its REST
+ * models, and EdgeAuth scopes every one to the Bearer owner's org — but this list is
+ * defense in depth: it keeps the `/commerce` proxy from being a general tunnel to the
+ * money/tenant-admin surfaces that share the same binary (`billing`, `checkout`,
+ * `_/commerce/tenants`, `namespace`), which the console reaches through their OWN
+ * scoped proxies (`/billing`) or not at all. Only the merchant catalog/order/customer
+ * heads the store dashboard reads + writes are admitted (singular REST model names,
+ * matching commerce's `rest.New(<kind>{})` routes).
+ */
+export const COMMERCE_HEADS: readonly string[] = [
+  'product', // products
+  'variant', // inventory / SKUs
+  'collection', // catalog collections
+  'order', // orders
+  'user', // customers
+  'discount', // promotions & discounts
+  'coupon', // discount codes
+  'saleschannel', // sales channels
+  'stocklocation', // stock locations
+  'store', // storefront settings
+]
+
+/** True iff `path` (e.g. `v1/product/abc`) is an allow-listed commerce store surface. */
+export function allowCommerceSurface(path: string): boolean {
+  const head = v1Head(path)
+  return head != null && COMMERCE_HEADS.includes(head)
+}
