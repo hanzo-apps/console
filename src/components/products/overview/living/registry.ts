@@ -1,0 +1,217 @@
+/**
+ * Living-overview registry — the DECLARATIVE catalog of which products have a
+ * living overview and how each is configured. Adding a product's overview is one
+ * entry here: name its tiles + point its `load` at a REAL source (via an adapter).
+ * No overview UI is written per product — the SAME `LivingOverview` renders them.
+ *
+ * ```ts
+ * // add a new product overview — this is the whole pattern:
+ * myproduct: {
+ *   id: 'myproduct',
+ *   title: 'My Product',
+ *   subtitle: '…',
+ *   live: { pollMs: 15000 },              // videogame layer (throttled + tab-paused)
+ *   rows: [
+ *     [{ tile: 'metric', key: 'foo', label: 'Foo', icon: Zap }],
+ *     [{ tile: 'timeseries', key: 'foo', title: 'Foo over time' },
+ *      { tile: 'distribution', key: 'bar', title: 'By kind' }],
+ *     [{ tile: 'activity' }, { tile: 'health' }],
+ *   ],
+ *   load: async ({ range }) => fromMyApi(await MyApi.overview(range)),  // REAL data
+ * }
+ * ```
+ *
+ * The tile `key`s must match the keys the adapter writes into `OverviewData` — a
+ * mismatch renders an honest empty tile (never a crash), so over-declaring a tile a
+ * slow backend hasn't filled yet is safe.
+ */
+import { Activity, Cpu, DollarSign, FunctionSquare, Gauge, Hash, Layers, Timer, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
+
+import { UsageApi } from '~/lib/api/usage'
+import { AdminApi } from '~/lib/api/admin-overview'
+import { PlatformApi } from '~/lib/api/platform'
+import { FunctionsApi, deriveOverview } from '~/lib/api/functions'
+import type { LivingOverviewConfig, OverviewData, OverviewRange } from './config'
+import { fromAdminOverview, fromCloudUsage, fromFunctions, healthFromApps } from './adapters'
+
+/** The cloud-usage range key the commerce ledger adapter expects (identical set). */
+const usageRange = (r: OverviewRange): '24h' | '7d' | '30d' => r
+/** Functions metrics uses upper-case range codes. */
+const fnRange = (r: OverviewRange): '24H' | '7D' | '30D' => (r === '24h' ? '24H' : r === '7d' ? '7D' : '30D')
+
+/**
+ * Best-effort health enrichment: probe the operator apps inventory and attach the
+ * health rows. A failure (PaaS token unset → 501, or unrouted) leaves health empty
+ * so the tile shows its honest "not reporting" state — the rest of the board still
+ * renders. NEVER throws into the caller.
+ */
+async function withHealth(data: OverviewData): Promise<OverviewData> {
+  try {
+    // Service-token-gated + tenant-scoped server-side, so no org filter from the browser.
+    const apps = await PlatformApi.apps()
+    data.health = healthFromApps(apps)
+  } catch {
+    /* honest empty health */
+  }
+  return data
+}
+
+/**
+ * The platform/admin living overview. Primary source is the `/v1/admin/overview`
+ * aggregate; when that backend isn't routed (404) we fall back to the REAL commerce
+ * usage ledger + operator health that every deployment already serves, so the
+ * centerpiece is never blank. All real, no mocks.
+ */
+const platformOverview: LivingOverviewConfig = {
+  id: 'overview',
+  title: 'Overview',
+  subtitle: 'Real-time usage, performance, and spend across your AI workloads.',
+  live: { pollMs: 15000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'tokens', label: 'Inference tokens', icon: Hash },
+      { tile: 'metric', key: 'spendCents', label: 'Spend', icon: DollarSign, unit: 'cents' },
+      { tile: 'metric', key: 'requests', label: 'Requests', icon: Activity },
+      { tile: 'metric', key: 'models', label: 'Active models', icon: Layers },
+    ],
+    [
+      { tile: 'timeseries', key: 'tokens', title: 'Inference tokens over time' },
+      { tile: 'timeseries', key: 'spendCents', title: 'Spend over time', kind: 'bar', unit: 'cents' },
+    ],
+    [
+      { tile: 'distribution', key: 'revenue', title: 'Spend by product', centerLabel: 'total', unit: 'cents' },
+      { tile: 'alerts' },
+    ],
+    [{ tile: 'activity', title: 'Live activity' }, { tile: 'health', title: 'System health' }],
+  ],
+  load: async ({ range, allOrgs }) => {
+    try {
+      const ov = await AdminApi.overview({ range, allOrgs, activityLimit: 40 })
+      const data = fromAdminOverview(ov)
+      // The admin aggregate carries health; only probe the operator if it didn't.
+      return data.health.length ? data : withHealth(data)
+    } catch {
+      // Admin backend not routed here → the real usage ledger + operator health.
+      const usage = await UsageApi.overview({
+        range: usageRange(range),
+        activityType: 'all',
+        activityLimit: 40,
+        topModels: 6,
+        allOrgs,
+      })
+      const data = fromCloudUsage(usage)
+      // Reuse the byModel breakdown as the "revenue"/spend donut on the fallback path.
+      data.distribution.revenue = data.distribution.byModel ?? []
+      return withHealth(data)
+    }
+  },
+}
+
+/** The AI-usage living overview for a product scoped to the org's model spend. */
+const aiUsageOverview = (id: string, title: string, subtitle: string): LivingOverviewConfig => ({
+  id,
+  title,
+  subtitle,
+  live: { pollMs: 20000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'tokens', label: 'Tokens', icon: Hash },
+      { tile: 'metric', key: 'requests', label: 'Requests', icon: Activity },
+      { tile: 'metric', key: 'spendCents', label: 'Spend', icon: DollarSign, unit: 'cents' },
+      { tile: 'metric', key: 'models', label: 'Models', icon: Layers },
+    ],
+    [
+      { tile: 'timeseries', key: 'requests', title: 'Requests over time' },
+      { tile: 'distribution', key: 'byModel', title: 'Spend by model', centerLabel: 'total', unit: 'cents' },
+    ],
+    [{ tile: 'activity', title: 'Recent inference', empty: 'No inference calls in this range yet.' }],
+  ],
+  load: async ({ range, allOrgs }) =>
+    fromCloudUsage(
+      await UsageApi.overview({ range: usageRange(range), activityType: 'all', activityLimit: 40, topModels: 6, allOrgs }),
+    ),
+})
+
+/** The Functions product living overview — real inventory + metrics. */
+const functionsOverview: LivingOverviewConfig = {
+  id: 'functions',
+  title: 'Functions',
+  subtitle: 'Event-driven serverless functions — invocations, latency, and errors.',
+  live: { pollMs: 15000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'functions', label: 'Functions', icon: FunctionSquare },
+      { tile: 'metric', key: 'invocations', label: 'Invocations', icon: Activity },
+      { tile: 'metric', key: 'success', label: 'Success rate', icon: Gauge, unit: 'pct' },
+      { tile: 'metric', key: 'duration', label: 'Avg duration', icon: Timer, unit: 'ms' },
+      { tile: 'metric', key: 'errors', label: 'Errors', icon: TriangleAlert },
+    ],
+    [
+      { tile: 'timeseries', key: 'invocations', title: 'Invocations over time' },
+      { tile: 'distribution', key: 'status', title: 'Invocation status', centerLabel: 'total' },
+    ],
+    [{ tile: 'health', title: 'Fission health', empty: 'Function health appears once the engine reports.' }],
+  ],
+  load: async ({ range }) => {
+    const fns = await FunctionsApi.list()
+    const stats = deriveOverview(fns)
+    let metrics = null
+    try {
+      metrics = await FunctionsApi.metrics(fnRange(range))
+    } catch {
+      /* metrics route unbound → honest "not connected" on the series/donut */
+    }
+    return withHealth(fromFunctions(stats, metrics))
+  },
+}
+
+/** The GPU/compute living overview — org compute capacity + health from the operator. */
+const computeOverview: LivingOverviewConfig = {
+  id: 'gpus',
+  title: 'GPUs',
+  subtitle: 'GPU clusters, utilization, and cost across your compute.',
+  ranged: false,
+  live: { pollMs: 20000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'services', label: 'Workloads', icon: Cpu },
+      { tile: 'metric', key: 'clusters', label: 'Clusters', icon: Layers },
+      { tile: 'metric', key: 'healthy', label: 'Healthy', icon: Gauge },
+      { tile: 'metric', key: 'orgs', label: 'Orgs', icon: Users },
+    ],
+    [{ tile: 'health', title: 'Cluster workloads', empty: 'Workloads appear once the control plane is reachable.' }, { tile: 'alerts' }],
+  ],
+  load: async () => {
+    const data: OverviewData = { kpi: {}, series: {}, distribution: {}, activity: [], alerts: [], health: [] }
+    try {
+      // The apps inventory is service-token-gated + tenant-scoped server-side, so
+      // the browser sends no org filter; the platform scopes it to the caller.
+      const apps = await PlatformApi.apps()
+      data.health = healthFromApps(apps)
+      const clusters = new Set(apps.map((a) => a.cluster).filter(Boolean))
+      const orgs = new Set(apps.map((a) => a.org).filter(Boolean))
+      const healthy = apps.filter((a) => String(a.health).toLowerCase() === 'green').length
+      data.kpi.services = { value: apps.length }
+      data.kpi.clusters = { value: clusters.size }
+      data.kpi.healthy = { value: healthy }
+      data.kpi.orgs = { value: orgs.size }
+    } catch {
+      /* honest empty — the tiles render em-dashes + "not reporting" */
+    }
+    return data
+  },
+}
+
+/** The declared living overviews, by product id. Add a product = add one entry. */
+export const LIVING_OVERVIEWS: Record<string, LivingOverviewConfig> = {
+  overview: platformOverview,
+  'ai-metrics': aiUsageOverview('ai-metrics', 'AI Metrics', 'Requests, tokens, spend, and per-model usage for your org.'),
+  functions: functionsOverview,
+  gpus: computeOverview,
+}
+
+/** The living-overview config for a product id, if one is declared. */
+export const livingOverviewFor = (id: string): LivingOverviewConfig | undefined => LIVING_OVERVIEWS[id]
+
+/** Product ids that have a living overview (for the registry to wire routes). */
+export const livingOverviewIds = (): string[] => Object.keys(LIVING_OVERVIEWS)
