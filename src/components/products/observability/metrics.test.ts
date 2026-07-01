@@ -20,7 +20,11 @@ const DAY = 86_400_000
 const NOW = Date.UTC(2026, 5, 15, 12, 0, 0) // fixed clock for deterministic buckets
 const iso = (ms: number): string => new Date(ms).toISOString()
 
-const trace = (over: Partial<Trace> = {}): Trace =>
+/** Test-factory override: any field may be set null to exercise the null-safe
+ *  accessors (undated rows), independent of the wire type's narrower optionality. */
+type NullablePartial<T> = { [K in keyof T]?: T[K] | null }
+
+const trace = (over: NullablePartial<Trace> = {}): Trace =>
   ({
     id: 'tr',
     timestamp: iso(NOW),
@@ -36,7 +40,7 @@ const trace = (over: Partial<Trace> = {}): Trace =>
     ...over,
   }) as Trace
 
-const obs = (over: Partial<Observation> = {}): Observation =>
+const obs = (over: NullablePartial<Observation> = {}): Observation =>
   ({
     id: 'ob',
     traceId: 'tr',
@@ -51,7 +55,7 @@ const obs = (over: Partial<Observation> = {}): Observation =>
     ...over,
   }) as Observation
 
-const score = (over: Partial<Score> = {}): Score =>
+const score = (over: NullablePartial<Score> = {}): Score =>
   ({
     id: 'sc',
     name: 'quality',
