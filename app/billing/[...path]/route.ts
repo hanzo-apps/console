@@ -95,7 +95,14 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     const text = await res.text()
     return new NextResponse(text, {
       status: res.status,
-      headers: { 'Content-Type': res.headers.get('content-type') ?? 'application/json' },
+      headers: {
+        'Content-Type': res.headers.get('content-type') ?? 'application/json',
+        // A per-tenant money response (balance/usage/invoices) must NEVER be cached
+        // by the browser or any intermediary — otherwise the wallet shows a stale
+        // number after a completion or a top-up. The live-balance store still polls,
+        // but this guarantees each fetch hits commerce, not a cache.
+        'Cache-Control': 'no-store, must-revalidate',
+      },
     })
   } catch (e) {
     return NextResponse.json(
