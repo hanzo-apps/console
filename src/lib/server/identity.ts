@@ -420,6 +420,28 @@ export async function getAdminGate(req: NextRequest): Promise<AdminGate | null> 
   return { user, brand, orgScope: user.owner }
 }
 
+// ── Org member gate ──────────────────────────────────────────────────────────
+// The trust boundary for the SELF-SERVICE org member proxy (/org/iam), which lets
+// a CUSTOMER manage their OWN org — the /admin/iam gate above is global-only, so a
+// tenant org owner (e.g. Dave/maxpower) could never reach it. Here any
+// authenticated user with an org is admitted; the proxy then scopes reads to the
+// caller's own org and requires org-admin for writes (fail-closed on either miss).
+
+/** A resolved principal for the org proxy: who, whether global, and their org. */
+export type IamGate = { user: SessionUser; isGlobalAdmin: boolean; orgScope: string }
+
+/**
+ * Resolve the caller for the org member proxy. Returns null (→ 403) when there is
+ * no authenticated session with an org. The proxy pins every reference to
+ * `orgScope` (the caller's own org) unless the caller is a global admin, so one
+ * tenant can never read or write another's members.
+ */
+export async function getOrgGate(req: NextRequest): Promise<IamGate | null> {
+  const user = await resolveUser(req)
+  if (!user) return null
+  return { user, isGlobalAdmin: user.isGlobalAdmin, orgScope: user.owner }
+}
+
 // ── Admin bearer-token cache ─────────────────────────────────────────────────
 // The admin proxies forward as the user (not the confidential client) so IAM/KMS
 // enforce tenant isolation from the verified `owner` claim. issue-user-token is
