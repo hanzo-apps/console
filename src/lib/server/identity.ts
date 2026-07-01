@@ -31,11 +31,20 @@ const IAM_URL = trim(process.env.IAM_URL ?? 'https://iam.hanzo.ai')
 /** Cloud `/v1` backend (hanzoai/ai) — resolves the session cookie to a user. */
 const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud.hanzo.svc.cluster.local:8000')
 /**
- * In-cluster Hanzo KMS (kmsd) — the admin KMS proxy forwards here. Default is the
- * ClusterIP `Service kms` (ns hanzo), whose port 80 targets the kmsd container's
- * :8080 (universe `infra/k8s/kms/deployment.yaml`). Override per-deploy with KMS_URL.
+ * Hanzo KMS backing the admin KMS proxy. Repointed to the EMBEDDED KMS in the
+ * unified cloud binary (`hanzoai/cloud` clients/kms serves /v1/kms natively, per
+ * HIP-0106) — the ClusterIP `Service cloud` (ns hanzo) on :8000 — replacing the
+ * legacy standalone Infisical fork at `kms.hanzo.svc`. The proxy forwards to
+ * `${KMS_URL}/v1/kms/orgs/{org}/secrets`, which the embedded KMS serves.
+ * Override per-deploy with KMS_URL.
+ *
+ * DEPENDENCY (not a blocker): the embedded KMS is HEALTH-ONLY (secret ops 503)
+ * until the operator provisions its master key (CLOUD_KMS_MASTER_KEY_REF) and the
+ * secrets are migrated. So this repoint is correct, but the KMS module will show
+ * its honest "backend not initialized" state until that lands — no fabricated
+ * secrets, and the module is designed for exactly that state.
  */
-const KMS_URL = trim(process.env.KMS_URL ?? 'http://kms.hanzo.svc')
+const KMS_URL = trim(process.env.KMS_URL ?? 'http://cloud.hanzo.svc:8000')
 /** Confidential client used for app-on-behalf mint/issue/revoke. */
 const MINT_CLIENT_ID = process.env.IAM_MINT_CLIENT_ID ?? ''
 const MINT_CLIENT_SECRET = process.env.IAM_MINT_CLIENT_SECRET ?? ''
