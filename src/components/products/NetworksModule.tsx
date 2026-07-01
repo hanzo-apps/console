@@ -41,13 +41,13 @@ const FIELDS: FieldDefinition[] = [
 ]
 
 async function listNetworks(): Promise<BootnodeNetwork[]> {
-  const res = await fetch('/bootnode/v1/networks', {
+  const res = await fetch('/v1/networks', {
     credentials: 'include',
     headers: { Accept: 'application/json' },
     cache: 'no-store',
   })
   if (!res.ok) {
-    let msg = `Bootnode ${res.status}`
+    let msg = `Networks ${res.status}`
     try {
       const body = await res.json()
       if (body?.error) msg = String(body.error)
@@ -87,7 +87,7 @@ export function NetworksModule(_props: { params: Record<string, string> }) {
         actions={<Button size="$3" onPress={load} disabled={loading}>Refresh</Button>}
       />
       {state ? (
-        <BackendStateCard state={state} onRetry={load} hint="endpoint · GET /bootnode/v1/networks" />
+        <BackendStateCard state={state} onRetry={load} hint="endpoint · GET /v1/networks" />
       ) : (
         <DataTable
           fields={FIELDS}
