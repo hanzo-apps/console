@@ -241,10 +241,20 @@ function normalizeSubscriptions(payload: unknown): Subscription[] {
  * ONLY the non-sensitive descriptor (brand + last4 + expiry) from `card`/`data` —
  * there is no PAN/CVV/token in this shape and none is ever produced here.
  */
+/**
+ * Defense-in-depth: keep ONLY the last four digits, no matter what commerce sent.
+ * If a full PAN ever lands in `last4` upstream (a commerce bug), this guarantees
+ * at most four digits reach the client — strip non-digits, then take the last 4.
+ */
+function last4Of(v: unknown): string | undefined {
+  const digits = (str(v) ?? '').replace(/\D/g, '')
+  return digits ? digits.slice(-4) : undefined
+}
+
 function normalizePaymentMethods(payload: unknown): PaymentMethod[] {
   return arrayUnder(payload, ['paymentMethods', 'payment_methods', 'data', 'methods', 'rows']).map((r, i) => {
     const card = { ...objAt(r, 'card'), ...objAt(r, 'data') }
-    const last4 = str(r.last4) ?? str(card.last4) ?? str((card as Record<string, unknown>).last_four)
+    const last4 = last4Of(r.last4) ?? last4Of(card.last4) ?? last4Of((card as Record<string, unknown>).last_four)
     return {
       id: str(r.id) ?? str(r.paymentMethodId) ?? `pm-${i}`,
       type: str(r.type) ?? (last4 ? 'card' : undefined),

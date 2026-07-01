@@ -630,3 +630,17 @@ this pass is small and precise, not padding.
   payment-methods natively. `go build ./clients/...` clean; cloud version NOT bumped.
 - Verification: `npm run typecheck` 0 errors, `npm test` **406/406** (38 files), `next build` ✓
   compiled successfully (lint+types clean). Idiom: `@hanzo/gui` v5 shorthands only.
+- **RED review fixes (billing-proxy tenant isolation — the one HIGH finding).** The `/billing`
+  proxy's tenant scoping was INERT: it stamped `X-Hanzo-Org` (commerce reads `X-Org-Id` on the
+  service-token path — `commerce/middleware/accesstoken.go`; the header fell back to the service
+  org) and pinned only `?user=` (subscriptions filter `?userId=` — `commerce/api/billing/
+  subscriptions.go`; with no `userId` the query returned every subject's rows = cross-tenant
+  leak). Fix: send **`X-Org-Id`** (matching the `/ai` proxy) and pin the **FULL** subject-key set
+  `{user,userId,customerId}` — identical to commerce's own `billingSubjectKeys` (`commerce/
+  middleware/edgeauth.go`) — so no billing endpoint is left unfiltered whichever param it reads.
+  The scoping is extracted to a pure `src/lib/server/billing-scope.ts` (`scopedBillingSearch` +
+  `billingSubject`) and unit-tested (`billing-scope.test.ts`, 11 tests incl. the client-forged-
+  subject overwrite + two-tenant disjointness). Also (defense-in-depth) `normalizePaymentMethods`
+  clamps `last4` to the last 4 digits even if commerce puts a full PAN there (+ test). New live
+  two-tenant isolation e2e (`e2e/billing-isolation.spec.ts`) asserts two distinct-org sessions get
+  disjoint subscription/payment-method row sets through the proxy. `npm test` **487/487**.

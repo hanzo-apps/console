@@ -217,6 +217,18 @@ describe('BillingApi.paymentMethods — masked descriptor mapping', () => {
     for (const v of Object.values(m)) expect(v).not.toBe('tok_secret_should_never_surface')
   })
 
+  it('clamps last4 to the last 4 digits even if commerce puts a full PAN there', async () => {
+    // Defense-in-depth for a commerce-side bug: a full PAN (or a spaced/formatted
+    // number) landing IN the last4 field must still surface at most four digits.
+    stubJson({ paymentMethods: [{ id: 'pm_5', brand: 'visa', last4: '4111111111111111' }] })
+    const [a] = await BillingApi.paymentMethods()
+    expect(a.last4).toBe('1111')
+
+    stubJson({ data: [{ id: 'pm_6', card: { brand: 'visa', last4: '4242 4242 4242 4242' } }] })
+    const [b] = await BillingApi.paymentMethods()
+    expect(b.last4).toBe('4242')
+  })
+
   it('degrades a method with no card descriptor to undefined fields, never fabricated', async () => {
     stubJson({ data: [{ id: 'pm_4', type: 'bank_account' }] })
     const [m] = await BillingApi.paymentMethods()
