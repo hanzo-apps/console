@@ -121,6 +121,7 @@ import { BillingModule } from '~/components/products/BillingModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
+import { StorageModule } from '~/components/products/StorageModule'
 import { BaseModule } from '~/components/products/BaseModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
@@ -675,17 +676,22 @@ export const catalog: CatalogEntry[] = [
     routes: resourceRoutes({ kind: 'kv', productLabel: 'Hanzo KV', connectionHint: 'Connect with any KV client using the connection string.' }),
   },
   {
+    // A REAL S3 file manager (buckets + objects, folder navigation, upload/
+    // download/delete) over the org-scoped `/v1/s3` control plane in the unified
+    // cloud binary — NOT the generic provisioning resource card. It complements
+    // the provisioning surface (which allocates the s3 RESOURCE): a bucket
+    // created here or there is browsable here, same org namespace.
     id: 's3',
     label: 'Object Storage',
     icon: HardDrive,
-    description: 'Managed object storage — S3-compatible buckets.',
+    description: 'Managed object storage — S3-compatible buckets and objects.',
     gcp: 'Cloud Storage',
     category: 'Data',
     status: 'enabled',
-    repo: 'hanzoai/storage',
+    repo: 'hanzoai/s3',
     docs: `${DOCS}/storage`,
     kind: 'module',
-    routes: resourceRoutes({ kind: 's3', productLabel: 'Hanzo Object Storage', connectionHint: 'Use as an S3 endpoint with the access key/secret in the connection string.' }),
+    routes: [{ path: '', component: StorageModule }],
   },
   {
     id: 'datastore',
