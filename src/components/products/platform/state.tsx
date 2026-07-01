@@ -8,7 +8,7 @@
  * else is the real error.
  */
 import { Button, Card, Text, XStack } from '@hanzo/gui'
-import { TriangleAlert } from '@hanzogui/lucide-icons-2'
+import { CheckCircle2, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 
@@ -32,7 +32,7 @@ export function interpretPlatformError(e: unknown): PlatformError {
 
 const TITLES: Record<PlatformErrorKind, string> = {
   'not-configured': 'PaaS control plane not configured',
-  forbidden: 'Managed control plane',
+  forbidden: 'Connected · managed by Hanzo',
   unavailable: 'Backend not yet available',
   error: 'Could not reach the platform',
 }
@@ -41,18 +41,24 @@ const BODIES: Record<PlatformErrorKind, string> = {
   'not-configured':
     'This console is wired to platform.hanzo.ai, but the server-side service token (PAAS_SERVICE_TOKEN, from KMS) is not set on this deployment yet. Once it is, real data appears here. No placeholder data is shown.',
   forbidden:
-    'This is an admin-managed view of the shared control plane. Your workloads run on managed Hanzo Cloud — direct control-plane access (clusters, nodes, workloads) is available to workspace admins.',
+    'Your workloads run on managed Hanzo Cloud — no cluster to operate. The full control-plane fleet view (clusters, nodes, raw workloads) is an admin surface; deploy and scale through Functions, Agents, and the platform.',
   unavailable:
     'The platform backend does not serve this endpoint yet (it ships separately). This view lights up automatically once the endpoint is live.',
   error: '',
 }
 
-/** A truthful state card for a platform load failure. */
+/**
+ * A truthful state card for a platform load. `forbidden` is a CONNECTED, customer-
+ * appropriate "managed by Hanzo" state (green check, no Retry) — the caller reached the
+ * control plane, it's just admin-scoped; it must NOT read like a warning/error. The other
+ * kinds are genuine problems (warning triangle + Retry).
+ */
 export function PlatformStateCard({ error, onRetry }: { error: PlatformError; onRetry?: () => void }) {
+  const connected = error.kind === 'forbidden'
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={640}>
       <XStack gap="$2" items="center">
-        <TriangleAlert size={16} />
+        {connected ? <CheckCircle2 size={16} color="$green10" /> : <TriangleAlert size={16} />}
         <Text fontSize="$4" fontWeight="700">
           {TITLES[error.kind]}
         </Text>
@@ -60,7 +66,7 @@ export function PlatformStateCard({ error, onRetry }: { error: PlatformError; on
       <Text fontSize="$3" color="$color11">
         {BODIES[error.kind] || error.message}
       </Text>
-      {onRetry ? (
+      {onRetry && !connected ? (
         <Button size="$2" self="flex-start" onPress={onRetry}>
           Retry
         </Button>

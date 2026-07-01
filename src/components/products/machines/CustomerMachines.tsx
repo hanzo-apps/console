@@ -195,33 +195,35 @@ export function CustomerMachines() {
     )
   }
 
-  // Honest, customer-appropriate state — visor unreachable / not routed here. NOT
-  // an infra "not configured" message.
-  if (error) {
+  // Only a genuine 401 (no session) is a sign-in prompt — everything else is a
+  // signed-in customer with no dedicated machines yet, which is a CONNECTED state.
+  if (error?.kind === 'unauthorized') {
     return (
       <>
         {header}
         <EmptyState
           icon={Server}
-          title="No machines yet"
+          title="Sign in to view your machines"
           description={error.message}
-          bullets={['Dedicated compute is managed by Hanzo.', 'Launch a machine to see it here — nothing is fabricated.']}
-          primary={{ label: 'Launch a machine', onPress: launchDocs }}
-          secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
+          primary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
         />
-        <MachineCatalog />
       </>
     )
   }
 
-  if (rows.length === 0) {
+  // No machines (visor 403 = not provisioned for dedicated compute, or a real empty
+  // list): a CONNECTED "launch your first" state that ALWAYS shows the real region +
+  // size catalog with live pricing below (proving the backend) — never "sign in" to a
+  // signed-in user, never a blank spinner.
+  if (error || rows.length === 0) {
     return (
       <>
         {header}
         <EmptyState
           icon={Server}
           title="Launch your first machine"
-          description="Dedicated compute machines run your workloads across regions. Launch one and it appears here — with real capacity, region, and cost."
+          description="Dedicated compute machines run your workloads across regions. Launch one and it appears here — with real capacity, region, and cost. Managed on Hanzo Cloud."
+          bullets={['Pick a region and size from the live catalog below.', 'Machines, cores, memory, and cost are read from your real machines — nothing is fabricated.']}
           primary={{ label: 'Launch a machine', onPress: launchDocs }}
           secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
         />
