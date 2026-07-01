@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { resolveConfig, isAdminHost, brandFromHost } from './index'
+import { resolveConfig, isAdminHost, isBillingOnlyHost, brandFromHost } from './index'
 
 /**
  * Per-host admin login client (admin.hanzo.ai global-admin cutover).
@@ -57,5 +57,40 @@ describe('isAdminHost', () => {
 
   it('does not change brand resolution', () => {
     expect(brandFromHost('admin.hanzo.ai')).toBe('hanzo')
+  })
+})
+
+describe('billing-only shell host', () => {
+  it('matches billing.<brand> case- and port-insensitively', () => {
+    expect(isBillingOnlyHost('billing.hanzo.ai')).toBe(true)
+    expect(isBillingOnlyHost('BILLING.Lux.cloud:443')).toBe(true)
+    expect(isBillingOnlyHost('billing.zoo.cloud')).toBe(true)
+  })
+
+  it('is a strict billing. prefix — no false positives', () => {
+    expect(isBillingOnlyHost('cloud.hanzo.ai')).toBe(false)
+    expect(isBillingOnlyHost('mybilling.hanzo.ai')).toBe(false)
+    expect(isBillingOnlyHost('')).toBe(false)
+    expect(isBillingOnlyHost(null)).toBe(false)
+  })
+
+  it('resolveConfig marks the billing host billing-only, keeping the brand', () => {
+    const c = resolveConfig('billing.hanzo.ai')
+    expect(c.billingOnly).toBe(true)
+    expect(c.brand).toBe('hanzo')
+    // billing.<brand> keeps the brand's own billing portal URL + IAM.
+    expect(c.iamOrgName).toBe('hanzo')
+  })
+
+  it('a normal console host is NOT billing-only', () => {
+    expect(resolveConfig('cloud.hanzo.ai').billingOnly).toBe(false)
+    expect(resolveConfig('console.hanzo.ai').billingOnly).toBe(false)
+  })
+
+  it('resolves billing-only per brand (lux/zoo billing hosts)', () => {
+    expect(resolveConfig('billing.lux.cloud').billingOnly).toBe(true)
+    expect(resolveConfig('billing.lux.cloud').brand).toBe('lux')
+    expect(resolveConfig('billing.zoo.cloud').billingOnly).toBe(true)
+    expect(resolveConfig('billing.zoo.cloud').brand).toBe('zoo')
   })
 })
