@@ -34,7 +34,10 @@ function handle(req: NextRequest, ctx: Ctx) {
       target: CLOUD_API_URL,
       path,
       allow: allowCloudSurface,
-      forwardScope: true,
+      // Org is authoritative (Bearer owner). Do NOT forward the browser-controlled
+      // X-Project-Id/X-Environment sub-scopes — the data/serverless resources are
+      // org-keyed, and forwarding an unvalidated project id is an attack surface
+      // (RED MEDIUM). A project-scoped feature must validate membership first.
       unauthorizedMessage: 'Sign in to use Hanzo Cloud.',
     })
   })()
