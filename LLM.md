@@ -764,84 +764,89 @@ backends ARE up; the fixes are about pages that were CONNECTED but READ AS BROKE
   `next build` ✓ 14/14. (Recovered from a concurrent-agent branch-switch that stashed
   these uncommitted edits — restored + committed in an isolated git worktree.)
 
-## Persistent product filter at level 2 — jump across products from any nav level (v8.4.5, claude/console2-l2-filter)
+## AI product surface LIVE over same-origin /v1/* + canonical shareable agent builder (v8.4.5, feat/console2-ai-surface-live-8.4.5)
 
-The verbatim ask: "keep showing the filter products filter input in second level? so
-you can quickly jump to next thing without going back?" The sidebar's product filter
-(`DashboardShell.tsx`) is now a **PERSISTENT header above the two-level slide** instead
-of living inside the level-1 panel — so a user deep in a product's sub-pages (level 2)
-can filter + jump straight to another product WITHOUT sliding Back to level 1 first.
-ONE input, ONE predicate (`entryMatches`, the same the L1 filter uses and ⌘K's
-`searchDestinations` is built from), ONE list — no duplication.
+The wave that (1) kills the Prompts/Evals 403, (2) makes the agent builder the ONE
+canonical builder, and (3) collapses the AI surface to prefix-free `/v1/*`. Branched
+off `main` (v8.4.4); commit only (CI builds the image).
 
-- **`showLevel2` yields to the product list while filtering** (`!filtering` added to the
-  gate). A query typed from ANY level surfaces the exact same level-1 filtered `groups`
-  in place — the filter box stays put, only the list slides in (rides the existing
-  `.hz-slide`, reduced-motion honored). Selecting a result calls the existing `open()`,
-  which now **clears the filter** and slides to that product's level-2 sub-nav. When the
-  filter is empty on a product page, the input simply sits above the L2 breadcrumb.
-- Level-1 filtering is otherwise unchanged (Overview/Docs/Pinned still hide while
-  filtering; "No products match" still shows). The **mobile drawer** (same shared
-  `SidebarNav`) gets the persistent filter for free — filter + jump on phone/tablet too.
-- **Surgical:** only `DashboardShell.tsx` — the `<Input>` block hoisted out of the L1
-  sliding panel into a persistent `<XStack>` header; `open` gained `setFilter('')`;
-  `q`/`filtering` computed before `showLevel2`. No new deps, no product/commerce/
-  platform/wallet/auth files touched (the HOT-tree lanes). Built in an isolated worktree
-  off `origin/main` (the shared tree carried concurrent agents' uncommitted files).
-  `tsc --noEmit` clean, `vitest` **706/706** (60 files), `next build` ✓ (all routes).
-
-## Per-category color-coding + category-overview color wiring (v8.4.6, claude/console2-l2-filter)
-
-Two more sidebar/nav asks, same lane (the ONE registry color system + the category
-surfaces), no product/commerce/platform/wallet files touched.
-
-- **Color-code all products PER CATEGORY.** `colors.ts` gains `CATEGORY_COLORS` (one
-  Linear-family swatch per category — AI=violet, Compute=blue, Data=cyan, Security=red,
-  Observe=green, …) + `categoryColorKey`/`categoryColorHex`. `defaultColorKey(id, category?)`
-  now, when the category is known, returns the CATEGORY family color (so a whole category
-  reads as ONE scheme); the user's per-product override STILL wins, and the no-category
-  path (product modules calling `productColorHex('agents')`) keeps its legacy curated pick
-  — a pure, additive, backward-compatible signature. `colorOf`/`keyOf` (`pins.tsx`) thread
-  the entry's category (`findEntry(id)?.category`) — the ONE change that recolors the
-  sidebar icons, the collapsed rail, AND the level-2 product-header icon per category (DRY).
-- **Category → overview (already built, now color-consistent).** Every sidebar category
-  header already links to its `/category/<slug>` landing (`CategoryOverview` — a grid of
-  ALL the category's products, derived LIVE from the registry, honest SOON badges, never
-  fabricated). Its product tiles + the header glyph are now tinted with the category color,
-  and the L1 category label + L2 breadcrumb label carry the category color too — so
-  category = a color, consistently across the sidebar, the tiles, and the L2 header.
-- Pure + tested: `colors.test.ts` +5 (every category color is a real swatch; category wins
-  over curated when known; the override still wins; deterministic unknowns). No circular
-  import (pins→registry is one-directional; registry never imports pins). `tsc` clean,
-  `vitest` **711/711**, `next build` ✓ (all routes).
-
-## Real launch flow + full catalog + Hanzo-branding (v8.4.7, claude/console2-launch-drawer)
-
-"Launch GPU" (and Machines "Launch") opened a DOCS link — now it opens a REAL launch
-flow, per-org, metered, PROVEN live as Dave (maxpower) against visor (`vm:0.1.10`).
-
-- **One shared `LaunchDrawer`** (`machines/LaunchDrawer.tsx`, `kind: 'cpu' | 'gpu'` — a
-  GPU is a machine with a `gpu-*` slug, DRY) opened in the shared `DetailPane` from BOTH
-  the GPUs and Machines pages (primary CTA + empty-state). It loads the COMPLETE live
-  catalog (`/vm/v1/{sizes,gpus}` — 172 sizes / 9 GPUs, searchable) + regions, shows OUR
-  market price ($/hr + $/mo), and on Launch calls **`POST /vm/v1/machines/launch`** via
-  the `/vm` BFF (`VisorApi.launch`). New machine → prepended to the list + reload. Honest
-  errors: 402 / "insufficient balance" → an **"Add credits"** prompt (→ /wallet), never a
-  fabricated success. Docs demoted to a secondary "Learn more".
-- **Pricing reconciled (ONE source).** Verified live: catalog `/v1/gpus|sizes` price ==
-  the `dryRun` launch quote EXACTLY (gpu-4000adax1-20gb $0.95/hr·$706.8/mo; s-1vcpu-512mb
-  $0.00833/hr·$5.6/mo) — visor applies `HanzoPrice` markup ONCE in `pricing.go`, used by
-  both the catalog list and `LaunchQuote`. No visor change needed. Fixed a console bug:
-  the GPU/size `$/mo` was `priceHourly×730` (693.5) not the real `priceMonthly` (706.8) —
-  now uses the authoritative `priceMonthly` everywhere. `VisorApi.quote`/`launch` added
-  (dryRun=true → LaunchQuote, dryRun=false → machine; casibase-envelope unwrap).
-- **Complete catalog.** `MachineCatalog` (Machines empty state) now shows ALL available
-  sizes (search + scroll) not a top-6 subset; `CustomerGpus` shows all 9 GPUs. Every entry
-  carries accurate our-market $/hr + $/mo.
-- **White-labeled upstream names** (Hanzo branding rule): Tasks drops "Temporal" (subtitle
-  → "Durable workflows, schedules, and queues…"; "5-service Temporal cluster" → "multi-
-  service cluster") → **Hanzo Tasks**; Functions drops "Fission" (EngineBadge default
-  `Fission`→`Serverless`; Runtime row `Fission (…FaaS)`→`Hanzo Functions (…serverless)`).
-- `tsc` clean; `vitest` green (34 visor+agents); `next build` ✓ 14/14. Built in the
-  isolated worktree (the shared tree is a hot multi-agent lane). Live-verified: the Launch
-  drawer opens with the real GPU/size catalog + pricing (not a docs redirect).
+- **ROOT CAUSE (verified vs cloud `clients/{prompts,agents,eval}.go` +
+  `middleware_identity.go`).** Prompts + Evals made a cookie-only call to the cloud
+  ORIGIN (`v1Url` → `cloud.hanzo.ai`). cloud's bearer surfaces resolve the org from a
+  VALIDATED JWT owner claim (`SanitizeIdentity` → `tenant(c)`) and 403 a cookie-only
+  request ("X-Org-Id required") — the live "Access required · GET /v1/prompts" card,
+  same class as the "models missing" bug. cloud does NOT serve `/v1/get-account`
+  (that's IAM/casibase, a DIFFERENT cookie), which is why get-account works cookie-only
+  but `/v1/prompts` 403s. Agents already used the `/cloud` bearer proxy → "Connected".
+- **ONE-ENDPOINT-FORM — same-origin `/v1/*`, NO prefix (CTO law).** New `originV1Url`
+  (`client.ts`) builds `<origin>/v1/<path>`. `next.config.mjs` `rewrites().beforeFiles`
+  maps a CLOSED head list to the console's already-hardened server-side bearer proxies:
+  `prompts|agents|evals` → `/cloud`, `models|chat|embeddings|rerank|audio` → `/ai`. The
+  client URL is `/v1/prompts`; the request terminates at OUR Next handler, which strips
+  the cookie and mints a short-lived user bearer (`bearer-proxy.ts`). The raw session
+  cookie NEVER reaches cloud-api → cloud-api carries no cookie-CSRF surface. This gives
+  the clean URL WITHOUT weakening the bearer trust boundary. Repointed: `agents.ts`,
+  `prompts.ts` (NEW facade), `evals.ts`, `models-catalog.ts`, `playground.ts`; `evals`
+  added to `CLOUD_HEADS` (`proxy-allow.ts`). The rewrite CAN'T bypass least-privilege:
+  it terminates at `/cloud`|`/ai` whose `pathIsClean` (rejects `..`/`%2e`/`%2f`/double-
+  encode/matrix-param) + `allowCloudSurface`/`ALLOWED` re-validate the NORMALIZED path
+  (13 existing bearer-proxy traversal tests + new proxy-allow evals tests).
+- **CSRF HARDENING (proactive, `bearer-proxy.ts` `sameOriginOK`).** The proxy
+  authenticates from the first-party session cookie (auto-sent cross-site), so a
+  MUTATING request (POST/PUT/PATCH/DELETE) now requires the `Origin`/`Referer` host to
+  equal `Host` — fail closed (403) BEFORE resolving the user. Stops a cross-site POST
+  from creating/deleting an agent or running a paid eval as the victim; belt-and-
+  suspenders on the cookie's own SameSite. Safe methods (GET/HEAD/OPTIONS) pass. This
+  protects EVERY proxy (`/cloud`,`/ai`,`/vm`,`/paas`,`/tasksd`,`/billing`,`/commerce`),
+  not just the AI surface (+7 tests).
+- **CANONICAL AGENT BUILDER — ONE builder, zero duplication (CTO top principle).**
+  `src/components/agent-builder/` is self-contained + schema-driven with NO host
+  coupling (imports nothing from `~/lib/api`). It takes its data + effects as INJECTED
+  loaders (`AgentBuilderLoaders`: `loadModels`/`loadPrompts`/`loadPromptBody`/`loadTools`/
+  `createAgent`) over the ONE backend (`POST /v1/agents`). Lifts cleanly into
+  `@hanzo/agent-builder`. `types.ts` (contract) + `logic.ts` (pure) + `AgentBuilder.tsx`
+  (UI) + `index.ts`. DYNAMIC: Model = live `ComboBox` (type any id OR pick from the live
+  `/v1/models` catalog); Prompt = selector of the org's saved prompts that fills the
+  system prompt (Custom = free text — "selectable OR typed"); Tools = live `ComboBox` +
+  chips. Every option set is REAL or the field degrades to typeable — never fabricated.
+  New primitive `ui/ComboBox.tsx` + `combobox/filter.ts` (`filterOptions` is a LITERAL
+  case-insensitive substring — never a compiled RegExp of user input; ReDoS-guarded).
+  console2 wires it via `agents/loaders.ts`; `NewAgentForm` is a thin adapter.
+- **Prompts UI:** `PromptsModule` uses the new DRY `PromptsApi` facade (mirrors
+  `agents.ts`, defensive normalizers); list/detail/create/metrics over `/v1/prompts`.
+- **Cloud-side direct-cookie path (FLAGGED, NOT done here):** `SanitizeIdentity`
+  ALREADY validates a session-cookie JWT (`cookieTokenNames`). The "true" prefix-free
+  direct path needs the console login to set the `iam_access_token` JWT cookie the
+  sanitizer looks for — a CLOUD change on a separate branch. Making cloud accept the
+  casibase session cookie directly would EXPAND cookie-CSRF to the cloud-api host, so
+  it was deliberately NOT done; the clean `/v1/*` rewrite keeps the bearer BFF.
+- **Unification map (research):** only `chat`/LibreChat has a real builder (Mongo
+  `/api/agents`, model dropdown from `/api/models`); `app` (ai-supervisor=monitor,
+  agents page=mock, Jan chat pkg=local), `hanzo.app` (dummy/marketing), `bot` (no code),
+  `hanzobot/hub` (persona artifact registry — different concept), `team` (Huly fork).
+  NONE call `/v1/agents` today. Migration = each surface supplies its own
+  `AgentBuilderLoaders` for the ONE canonical `AgentBuilder` over `/v1/agents`.
+- Verification: `tsc --noEmit` clean; `npm test` **773/773** (65 files; +7 filter,
+  +14 builder-logic, +18 prompts normalizers, +4 origin-url, +6 loaders extractBody,
+  +2 proxy-allow evals, +18 bearer-proxy CSRF/isolation/traversal; the stale
+  `models-catalog` `/ai` assertion updated to the new same-origin contract);
+  `next build` ✓ 14/14. Authenticated visual e2e is post-deploy.
+- **RED review (fix-then-ship, 0 critical/high, 1 med, 2 low — all addressed):**
+  - **MED-1 cross-tenant eval read.** RED found the isolation of `/v1/evals/scores`
+    hung SOLELY on `/cloud` dropping the client `X-Project-Id`, with no test guarding
+    it (the cloud `clients/eval` `tenant()` PREFERRED the client-controllable
+    `X-Project-Id` over the bearer org for KMS key selection). Fixed at BOTH layers:
+    (a) console2 — a dedicated regression suite pins `upstreamHeaders` DROPS a
+    client-forged `X-Project-Id` without `forwardScope` (`bearer-proxy.test.ts`); (b)
+    cloud — `eval.tenant()` now uses ONLY the sanitized `c.Org()`, never a raw header
+    (branch `fix/eval-tenant-project-id-isolation`, `TestTenantIgnoresClientProjectID`).
+  - **LOW-1 CSRF (already shipped, then hardened).** `sameOriginOK` now also honors
+    `Sec-Fetch-Site` (browser-set, JS-unforgeable) — a `cross-site` mutating request is
+    refused outright, on top of the Origin/Referer host==Host check.
+  - **LOW-2 end-to-end traversal test.** Added `forwardWithUserBearer` tests with a
+    mocked fetch proving a rewrite-fed traversal (`%2e%2e`, `../`, `%2f..%2f`, `..;`,
+    direct `v1/iam`) returns 404 and NEVER fetches upstream, while a clean `v1/agents`
+    forwards to the exact normalized path — closing RED's regression-net gap (the prior
+    tests only exercised `pathIsClean` in isolation).
+  - RED refuted (live-probed): rewrite→allow-list bypass, org-forgery, ComboBox ReDoS,
+    prompt/spec injection, rewrite shadowing, honest-state.

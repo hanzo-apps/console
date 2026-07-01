@@ -35,10 +35,40 @@ function guiPackages() {
   return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', 'react-native-web', ...scoped]
 }
 
+/**
+ * Same-origin `/v1/*` for the AI product surface — ZERO client-visible prefix.
+ *
+ * The CTO contract is "no prefix before /v1/ in any API call": the browser calls
+ * its OWN origin at a clean `/v1/<head>/...`, never `/cloud/...` or `/ai/...`.
+ * These rewrites map exactly the AI-surface heads to the console's already-hardened
+ * server-side bearer proxies (`app/cloud`, `app/ai`) — so the URL the client builds
+ * is `/v1/prompts` while the request still terminates at OUR Next origin, which
+ * mints a short-lived user bearer and forwards it (the raw session cookie NEVER
+ * reaches cloud-api, so cloud-api carries no cookie-CSRF surface). This gives the
+ * one-endpoint-form goal WITHOUT weakening the bearer trust boundary.
+ *
+ * Scope is deliberately the CLOSED head list the AI clients use (prompts/agents/
+ * evals via /cloud, models/chat/embeddings/rerank via /ai) — a blanket `/v1/:path*`
+ * would shadow paths meant for other backends. Each destination handler still
+ * enforces its own least-privilege allow-list (`proxy-allow.ts`), so a rewrite can
+ * never widen what the proxy admits. `beforeFiles` so these win over any route.
+ */
+const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals']
+const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio']
+const aiSurfaceRewrites = () => ({
+  beforeFiles: [
+    ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
+    ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/cloud/v1/${h}/:path*` })),
+    ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/ai/v1/${h}` })),
+    ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/v1/${h}/:path*` })),
+  ],
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: guiPackages(),
+  rewrites: aiSurfaceRewrites,
   experimental: {
     esmExternals: true,
   },
