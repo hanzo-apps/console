@@ -188,6 +188,7 @@ function CatalogRow({
       px="$3"
       py="$2.5"
       rounded="$3"
+      id={active ? 'cmdk-active' : undefined}
       bg={active ? '$color5' : 'transparent'}
       hoverStyle={{ bg: active ? '$color5' : '$color3' }}
     >
@@ -232,6 +233,7 @@ function DestinationRow({
       px="$3"
       py="$2.5"
       rounded="$3"
+      id={active ? 'cmdk-active' : undefined}
       bg={active ? '$color5' : 'transparent'}
       hoverStyle={{ bg: active ? '$color5' : '$color3' }}
     >
@@ -271,6 +273,7 @@ function ActionRow({
       px="$3"
       py="$2.5"
       rounded="$3"
+      id={active ? 'cmdk-active' : undefined}
       bg={active ? '$color5' : 'transparent'}
       hoverStyle={{ bg: active ? '$color5' : '$color3' }}
     >
@@ -469,6 +472,13 @@ function PaletteDialog({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, mode, items, sel, run, submit, activate, activateDest, onOpenChange])
 
+  // Keep the ↑/↓-selected row visible: as selection moves past the fold, scroll
+  // the active row into view (the list can hold 50 results — well beyond 420px).
+  useEffect(() => {
+    if (!open || mode !== 'catalog' || typeof document === 'undefined') return
+    document.getElementById('cmdk-active')?.scrollIntoView({ block: 'nearest' })
+  }, [sel, open, mode])
+
   const placeholder =
     mode === 'ai'
       ? 'Ask AI to find or do something…'
@@ -526,14 +536,14 @@ function PaletteDialog({
           </XStack>
 
           {/* Body — fills the viewport on mobile, capped at lg+. */}
-          <YStack flex={1} minH={0} $lg={{ flex: 0, minH: 120, maxH: 420 }}>
+          <YStack flex={1} minH={0} overflow="hidden" $lg={{ flex: 0, minH: 120, maxH: 420 }}>
             {mode === 'catalog' ? (
               items.length === 0 ? (
                 <YStack p="$5" items="center">
                   <Text color="$color10">No commands or products match “{sub}”.</Text>
                 </YStack>
               ) : (
-                <ScrollView p="$2">
+                <ScrollView flex={1} p="$2" showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">
                   <YStack gap="$0.5">
                     {matchedActions.length > 0 ? <SectionLabel>Actions</SectionLabel> : null}
                     {matchedActions.map((action, i) => (
