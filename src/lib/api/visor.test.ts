@@ -36,13 +36,19 @@ describe('normalizeMachine', () => {
 })
 
 describe('interpretVisorError — customer-appropriate, never infra jargon', () => {
-  it('401/403 → sign in', () => {
+  it('only a genuine 401 (no session) is a sign-in prompt', () => {
     expect(interpretVisorError(new ApiError('no', 401)).kind).toBe('unauthorized')
-    expect(interpretVisorError(new ApiError('no', 403)).kind).toBe('unauthorized')
   })
 
-  it('404 / 501 / network → managed-compute, with NO infra-token wording', () => {
-    for (const e of [new ApiError('x', 404), new ApiError('x', 501), new ApiError('x', 503), new Error('network')]) {
+  it('403 (signed-in customer, no dedicated compute) → CONNECTED managed state, NOT sign-in', () => {
+    const v = interpretVisorError(new ApiError('no', 403))
+    expect(v.kind).toBe('unavailable')
+    // Must NOT tell a signed-in user to sign in (that reads as broken).
+    expect(v.message.toLowerCase()).not.toContain('sign in')
+  })
+
+  it('403 / 404 / 501 / network → managed-compute, with NO infra-token wording', () => {
+    for (const e of [new ApiError('x', 403), new ApiError('x', 404), new ApiError('x', 501), new ApiError('x', 503), new Error('network')]) {
       const v = interpretVisorError(e)
       expect(v.kind).toBe('unavailable')
       expect(v.message.toLowerCase()).not.toContain('paas')

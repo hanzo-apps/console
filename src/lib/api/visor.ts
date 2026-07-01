@@ -85,7 +85,12 @@ export type VisorError = { kind: VisorErrorKind; message: string }
  */
 export function interpretVisorError(e: unknown): VisorError {
   const status = e instanceof ApiError ? e.status : undefined
-  if (status === 401 || status === 403) return { kind: 'unauthorized', message: 'Sign in to view your machines.' }
+  // 401 = no session → a genuine sign-in prompt. 403 = visor authenticated the caller
+  // but the per-org machine list isn't provisioned for them (a signed-in customer with
+  // no dedicated compute) — that is a CONNECTED "no machines yet / managed" state, NOT a
+  // sign-in wall (showing "sign in" to a signed-in user reads as broken). Everything else
+  // (404 / 5xx / network) is likewise a customer-managed state, never an infra error.
+  if (status === 401) return { kind: 'unauthorized', message: 'Sign in to view your machines.' }
   return {
     kind: 'unavailable',
     message: 'Managed compute — dedicated machines appear here once you launch one.',

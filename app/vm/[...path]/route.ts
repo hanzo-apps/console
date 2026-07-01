@@ -24,8 +24,11 @@ export const runtime = 'nodejs'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
 /** Visor (vm.hanzo.ai). In-cluster ClusterIP on :19000 (its Service has NO :80) — public
- *  egress is CF-403'd. Override with VISOR_URL (the CR sets visor.hanzo.svc:19000). */
-const VISOR_URL = trim(process.env.VISOR_URL ?? 'http://visor.hanzo.svc:19000')
+ *  egress is CF-403'd. Override with VISOR_URL (the CR sets visor.hanzo.svc:19000).
+ *  `|| default` (not `??`): if the env is reconciled to an EMPTY string (observed drift on
+ *  the live pod), `??` would keep the blank and every machines/GPUs call would fail —
+ *  `|| default` treats blank/whitespace as unset so visor ALWAYS resolves. */
+const VISOR_URL = trim(process.env.VISOR_URL?.trim() || 'http://visor.hanzo.svc:19000')
 
 type Ctx = { params: Promise<{ path: string[] }> }
 

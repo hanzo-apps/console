@@ -50,11 +50,12 @@ export function CustomerGpus() {
 
   const load = () => {
     setLoading(true)
-    Promise.allSettled([VisorApi.gpus(), VisorApi.machines()]).then(([g, m]) => {
-      setCatalog(g.status === 'fulfilled' ? g.value : [])
-      setMachines(m.status === 'fulfilled' ? m.value.filter(isGpuMachine) : [])
-      setLoading(false)
-    })
+    // The GPU catalog (fast, public `/v1/gpus`) gates the page render; the org's OWN
+    // machines (`/v1/machines`, which 403s for a customer with no dedicated compute)
+    // load INDEPENDENTLY so a slow/denied machines call never blocks the catalog —
+    // the page shows real accelerators as soon as the catalog resolves.
+    VisorApi.gpus().then(setCatalog).catch(() => setCatalog([])).finally(() => setLoading(false))
+    VisorApi.machines().then((m) => setMachines(m.filter(isGpuMachine))).catch(() => setMachines([]))
   }
   useEffect(load, [])
 
