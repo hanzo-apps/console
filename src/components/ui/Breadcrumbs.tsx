@@ -11,7 +11,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Text, XStack } from '@hanzo/gui'
 import { ChevronRight } from '@hanzogui/lucide-icons-2'
 
-import { findEntry } from '~/lib/products/registry'
+import { findEntry, categoryFromSlug } from '~/lib/products/registry'
 
 type Crumb = { label: string; href?: string }
 
@@ -24,6 +24,14 @@ function crumbsFor(pathname: string): Crumb[] {
     crumbs.push({ label: 'Discover' })
     const e = segs[1] ? findEntry(segs[1]) : undefined
     if (e) crumbs.push({ label: e.label })
+    else if (segs[1]) crumbs.push({ label: decodeURIComponent(segs[1]) })
+    return crumbs
+  }
+
+  if (segs[0] === 'category') {
+    crumbs.push({ label: 'Category' })
+    const cat = segs[1] ? categoryFromSlug(segs[1]) : null
+    if (cat) crumbs.push({ label: cat })
     else if (segs[1]) crumbs.push({ label: decodeURIComponent(segs[1]) })
     return crumbs
   }
