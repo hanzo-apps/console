@@ -129,7 +129,22 @@ export {
   type WorkflowDetail,
   type HistoryEvent,
   type Schedule,
+  type TaskQueue,
+  type Worker,
+  type ActivityInfo,
 } from './tasks'
+export {
+  TrainApi,
+  TRAIN_TYPES,
+  TRAIN_PRESETS,
+  TRAIN_GPUS,
+  type TrainJob,
+  type TrainStatus,
+  type TrainExperiment,
+  type MetricPoint,
+  type MlModel,
+  type CreateTrainJobInput,
+} from './train'
 export {
   O11yApi,
   type O11yList,
