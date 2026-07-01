@@ -123,7 +123,6 @@ import { BaseModule } from '~/components/products/BaseModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { TracesModule } from '~/components/products/TracesModule'
-import { AiMetricsModule } from '~/components/products/AiMetricsModule'
 import { ObservationsModule } from '~/components/products/ObservationsModule'
 import { UsersModule } from '~/components/products/UsersModule'
 import { SessionsModule } from '~/components/products/SessionsModule'
@@ -169,7 +168,7 @@ import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
 import { TeamModule } from '~/components/products/TeamModule'
 import { ProfileModule } from '~/components/products/ProfileModule'
-import OverviewDashboard from '~/components/products/OverviewModule'
+import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
 import {
   DashboardsModule,
   ExperimentsModule,
@@ -177,6 +176,18 @@ import {
   ReferralsModule,
   ScoreAnalyticsModule,
 } from '~/components/products/ConsoleFeatureModule'
+
+/**
+ * Living overviews — the reusable, videogame-like overview (count-up KPIs, live
+ * sparklines, streaming activity, throttled polling) declared as one config per
+ * product in `overview/living/registry.ts`. `livingOverviewModule(id)` resolves the
+ * config and renders the ONE `LivingOverview`. The platform overview + these product
+ * overviews all render from that single component — adding one is a config, not UI.
+ */
+const OverviewDashboard = livingOverviewModule('overview')
+const AiMetricsLiving = livingOverviewModule('ai-metrics')
+const FunctionsLiving = livingOverviewModule('functions')
+const GpusLiving = livingOverviewModule('gpus')
 import { ZeroTrustModule } from '~/components/products/ZeroTrustModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
@@ -500,9 +511,19 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/operator',
     docs: `${DOCS}/gpus`,
     kind: 'module',
+    // Overview ('') is the reusable LivingOverview (real operator inventory + health);
+    // the product tabs stay on GpusModule via `:tab`, reachable from the sidebar's
+    // level-2 sub-nav (declared below) so the overview is never a dead-end.
     routes: [
-      { path: '', component: GpusModule },
+      { path: '', component: GpusLiving },
       { path: ':tab', component: GpusModule },
+    ],
+    subpages: [
+      { slug: 'gpus', label: 'GPUs' },
+      { slug: 'clusters', label: 'Clusters' },
+      { slug: 'pools', label: 'Pools' },
+      { slug: 'pricing', label: 'Pricing' },
+      { slug: 'alerts', label: 'Alerts' },
     ],
   },
   {
@@ -537,7 +558,19 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/functions',
     docs: `${DOCS}/functions`,
     kind: 'module',
-    routes: [{ path: '', component: FunctionsModule }],
+    // Overview ('') is the reusable LivingOverview (real inventory + metrics); the
+    // product tabs (Functions/Deployments/Triggers/Secrets/Settings) render via the
+    // `:tab` route the module already targets (`/functions/:tab`).
+    routes: [
+      { path: '', component: FunctionsLiving },
+      { path: ':tab', component: FunctionsModule },
+    ],
+    subpages: [
+      { slug: 'functions', label: 'Functions' },
+      { slug: 'deployments', label: 'Deployments' },
+      { slug: 'triggers', label: 'Triggers' },
+      { slug: 'secrets', label: 'Secrets' },
+    ],
   },
   {
     id: 'edge',
@@ -1098,7 +1131,9 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/billing`,
     kind: 'module',
-    routes: [{ path: '', component: AiMetricsModule }],
+    // The reusable LivingOverview over the SAME real commerce usage ledger the old
+    // AiMetricsModule read — now with count-up KPIs, live sparklines, and streaming.
+    routes: [{ path: '', component: AiMetricsLiving }],
   },
   {
     id: 'dashboards',
