@@ -3,9 +3,9 @@
 /**
  * Session context — the one source of auth truth for the console.
  *
- * On mount it asks the backend `/v1/get-account`. `signIn()` redirects to IAM;
+ * On mount it asks the backend `/v1/iam/get-account`. `signIn()` redirects to IAM;
  * `completeSignIn(code, state)` (used by the callback route) posts to
- * `/v1/signin` to mint the session cookie, then reloads the account.
+ * `/v1/iam/signin` to mint the session cookie, then reloads the account.
  */
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
