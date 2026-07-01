@@ -133,6 +133,7 @@ import { UsersModule } from '~/components/products/UsersModule'
 import { SessionsModule } from '~/components/products/SessionsModule'
 import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
+import { DnsModule } from '~/components/products/DnsModule'
 import { PlaygroundModule } from '~/components/products/PlaygroundModule'
 import { PromptCreateModule, PromptMetricsModule, PromptsModule } from '~/components/products/PromptsModule'
 import { EvalsModule } from '~/components/products/EvalsModule'
@@ -1325,6 +1326,21 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/networks`,
     kind: 'module',
     routes: [{ path: '', component: NetworksModule }],
+  },
+  {
+    // Per-org managed DNS via the hanzodns control plane (zones + records → CoreDNS
+    // + Cloudflare sync). Reached on the unified /v1/dns surface (api.hanzo.ai
+    // gateway → hanzodns); honest states until the route is bound.
+    id: 'dns',
+    label: 'DNS',
+    icon: Globe,
+    description: 'Per-org managed DNS — zones, records, CoreDNS + Cloudflare sync.',
+    category: 'Network',
+    status: 'enabled',
+    repo: 'hanzoai/dns',
+    docs: `${DOCS}/dns`,
+    kind: 'module',
+    routes: [{ path: '', component: DnsModule }],
   },
   {
     id: 'indexer',
