@@ -21,10 +21,25 @@ import { forwardIam } from '~/lib/server/iam-proxy'
 export const runtime = 'nodejs'
 
 /** Reads — any member of the org (own org only, unless global). */
-const GET_SEGMENTS = new Set(['get-users', 'get-user', 'get-roles', 'get-organization'])
+const GET_SEGMENTS = new Set([
+  'get-users',
+  'get-user',
+  'get-roles',
+  'get-organization',
+  // Projects live under the org (IAM-served); the console host's /v1 sends /v1/iam/*
+  // to the cloud binary → 404, so the Projects page routes here (Bearer → IAM).
+  'get-organization-projects',
+])
 
 /** Writes — org admin only, own org only (unless global). */
-const POST_SEGMENTS = new Set(['add-user', 'update-user', 'delete-user'])
+const POST_SEGMENTS = new Set([
+  'add-user',
+  'update-user',
+  'delete-user',
+  // Project CRUD — org-admin only (requireAdminForWrite), pinned to the caller's org.
+  'add-project',
+  'delete-project',
+])
 
 /** get-organization's owner is the `admin` metadata org (name guarded separately). */
 const ORG_META = new Set(['get-organization'])
