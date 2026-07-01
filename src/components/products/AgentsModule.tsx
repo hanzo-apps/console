@@ -1,145 +1,512 @@
 'use client'
 
 /**
- * Agents — autonomous agent definitions and their runs, registered and executed
- * by the platform.
+ * Agents — the autonomous-agent dashboard (AI / Automation). A rich, at-a-glance
+ * board over the REAL agent registry (`AgentsApi.list` → the user-bearer
+ * `/cloud/v1/agents` proxy, org-scoped server-side): five headline stat cards, an
+ * invocations-over-time area chart, an agent-health donut, the agents table
+ * (status tabs + pagination), a recent-activity feed, a top-agents bar list, and a
+ * 30-day resource-usage panel.
  *
- * Reads the agent registry from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/agents`), which injects the service token server-side. When the agent
- * service isn't provisioned for the org the list load fails and the honest
- * not-configured / unavailable card renders instead of an empty grid — matching
- * every other infra module.
+ * Honest by construction — EVERY number is real or derived from real rows
+ * (`deriveAgentStats`, `healthBreakdown`, `topByInvocations`, `deriveActivity`); a
+ * metric no row carries reads "—". The chart + resource panel read the time-series
+ * facade (`AgentsApi.metrics`); until that route is bound they show a truthful "not
+ * connected" note, never a placeholder trend. When the org has ZERO agents (or the
+ * `/v1/agents` route isn't bound yet) the board is replaced by a polished
+ * "create your first agent" empty state with the real New-Agent flow — never the
+ * mockup's sample data.
+ *
+ * Style props use the @hanzo/gui v5 shorthand set (bg/p/px/py/gap/rounded/items/…).
  */
-import { useCallback, useEffect, useState } from 'react'
-import { Button, Text } from '@hanzo/gui'
-import { Bot, RefreshCw } from '@hanzogui/lucide-icons-2'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
+import {
+  Activity,
+  Bot,
+  ChevronLeft,
+  ChevronRight,
+  Gauge,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Search,
+  Timer,
+  Trash2,
+  Zap,
+} from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { config } from '~/config'
+import {
+  AgentsApi,
+  deriveActivity,
+  deriveAgentStats,
+  filterAgents,
+  fmtCompact,
+  fmtDuration,
+  fmtInt,
+  fmtPct,
+  fmtRelative,
+  healthBreakdown,
+  paginate,
+  summedSeries,
+  topByInvocations,
+  trendPct,
+  AGENT_STATUSES,
+  AGENT_STATUS_LABEL,
+  METRICS_RANGES,
+  type Agent,
+  type AgentActivity,
+  type AgentsMetrics,
+  type AgentStatus,
+  type MetricsRange,
+} from '~/lib/api/agents'
+import { productColorHex } from '~/lib/products/colors'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { LineChart, Sparkline, type ChartPoint } from '~/components/ui/Charts'
+import { useDetailPane } from '~/components/DetailPane'
+import { MetricCard, Delta } from './functions/parts'
+import {
+  AgentAvatar,
+  ActivityFeed,
+  HealthDonut,
+  Panel,
+  ResourceUsagePanel,
+  StatusPill,
+  TopAgents,
+  VersionBadge,
+} from './agents/parts'
+import { AgentDetailView, NewAgentForm } from './agents/forms'
 
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
-const DOCS = 'https://docs.hanzo.ai/agents'
+const PAGE_SIZE = 8
+const DASH = '—'
+const DOCS = `${config.docsUrl}/agents`
 
-type Agent = {
-  id: string
-  name?: string
-  model?: string
-  status?: string
-  runs?: number
-  updatedAt?: string
+type StatusTab = AgentStatus | 'all'
+
+/** Compact bucket label from a loose timestamp (month/day/hour). */
+function bucketLabel(t: string): string {
+  if (!t) return ''
+  const d = new Date(t)
+  if (Number.isNaN(d.getTime())) return t
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric' })
 }
 
-export function AgentsModule(_props: { params: Record<string, string> }) {
-  const [rows, setRows] = useState<Agent[]>([])
+/** Load the registry once; `live` = it loaded over a real 200 (gates mutations). */
+function useAgents() {
+  const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<PlatformError | null>(null)
+  const [error, setError] = useState<BackendState | null>(null)
+  const [live, setLive] = useState(false)
+  const [activity, setActivity] = useState<AgentActivity[]>([])
 
-  const load = useCallback(async () => {
+  const reload = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ agents?: Agent[] }>(paas('agents'))
-      setRows(r.agents ?? [])
-      setLoadError(null)
+      const list = await AgentsApi.list()
+      setAgents(list)
+      setLive(true)
+      setError(null)
+      // Prefer a real activity feed; fall back to the agents' own timestamps.
+      try {
+        const feed = await AgentsApi.activity()
+        setActivity(feed.length ? feed : deriveActivity(list))
+      } catch {
+        setActivity(deriveActivity(list))
+      }
     } catch (e) {
-      setLoadError(interpretPlatformError(e))
-      setRows([])
+      setAgents([])
+      setLive(false)
+      setActivity([])
+      setError(classifyBackend(e))
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    void reload()
+  }, [reload])
+
+  return { agents, loading, error, live, activity, reload, setAgents }
+}
+
+export function AgentsModule(_props: { params: Record<string, string> }) {
+  const detail = useDetailPane()
+  const { agents, loading, error, live, activity, reload, setAgents } = useAgents()
+
+  const [range, setRange] = useState<MetricsRange>('30D')
+  const [metrics, setMetrics] = useState<AgentsMetrics | null>(null)
+  const [metricsConnected, setMetricsConnected] = useState(false)
+
+  const [q, setQ] = useState('')
+  const [tab, setTab] = useState<StatusTab>('all')
+  const [page, setPage] = useState(1)
+
+  const loadMetrics = useCallback(async (r: MetricsRange) => {
+    try {
+      const m = await AgentsApi.metrics(r)
+      setMetrics(m)
+      setMetricsConnected(true)
+    } catch {
+      setMetrics(null)
+      setMetricsConnected(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadMetrics(range)
+  }, [loadMetrics, range])
+
+  const stats = useMemo(() => deriveAgentStats(agents), [agents])
+  const health = useMemo(() => healthBreakdown(agents), [agents])
+  const top = useMemo(() => topByInvocations(agents, 5), [agents])
+
+  const invTotals = useMemo(() => summedSeries(metrics?.series ?? []), [metrics])
+  const invDelta = trendPct(invTotals)
+  const chartData: ChartPoint[] = useMemo(() => {
+    const series = metrics?.series ?? []
+    if (!series.length) return []
+    const longest = series.reduce((a, b) => (b.points.length > a.points.length ? b : a), series[0])
+    return invTotals.map((v, i) => ({ label: bucketLabel(longest.points[i]?.t ?? ''), value: v }))
+  }, [metrics, invTotals])
+
+  const filtered = useMemo(() => filterAgents(agents, { search: q, status: tab }), [agents, q, tab])
+  const pageState = paginate(filtered, page, PAGE_SIZE)
+  const agentColor = productColorHex('agents')
+
+  const openDetail = useCallback(
+    (a: Agent) =>
+      detail.open({
+        title: a.name,
+        subtitle: `${a.model || 'agent'} · ${AGENT_STATUS_LABEL[a.status]}`,
+        icon: Bot,
+        iconColor: agentColor,
+        content: <AgentDetailView agent={a} />,
+        footer: live ? (
+          <>
+            <Button flex={1} chromeless onPress={detail.close}>
+              Close
+            </Button>
+            <Button
+              flex={1}
+              theme="red"
+              icon={<Trash2 size={15} />}
+              onPress={() => {
+                if (typeof window !== 'undefined' && !window.confirm(`Delete agent “${a.name}”? This cannot be undone.`)) return
+                void AgentsApi.remove(a.id)
+                  .then(() => {
+                    setAgents((rows) => rows.filter((r) => r.id !== a.id))
+                    detail.close()
+                  })
+                  .catch(() => {
+                    /* keep the pane open; the row stays until a real delete succeeds */
+                  })
+              }}
+            >
+              Delete
+            </Button>
+          </>
+        ) : (
+          <Button flex={1} chromeless onPress={detail.close}>
+            Close
+          </Button>
+        ),
+      }),
+    [detail, agentColor, live, setAgents],
+  )
+
+  const openNew = useCallback(
+    () =>
+      detail.open({
+        title: 'New agent',
+        subtitle: 'Define a model, prompt, and tools',
+        icon: Bot,
+        iconColor: agentColor,
+        content: (
+          <NewAgentForm
+            onCancel={detail.close}
+            onCreated={() => {
+              detail.close()
+              void reload()
+            }}
+          />
+        ),
+      }),
+    [detail, agentColor, reload],
+  )
+
+  const header = (
+    <PageHeader
+      title="Agents"
+      subtitle="Autonomous agents — a model, a prompt, and tools that run on Hanzo compute."
+      actions={
+        <XStack gap="$2" items="center" flexWrap="wrap">
+          {agents.length > 0 ? (
+            <XStack items="center" gap="$2" px="$3" borderWidth={1} borderColor="$borderColor" rounded="$3" minW={200}>
+              <Search size={15} />
+              <Input
+                flex={1}
+                unstyled
+                value={q}
+                onChangeText={(v: string) => {
+                  setQ(v)
+                  setPage(1)
+                }}
+                placeholder="Search agents…"
+                autoCapitalize="none"
+                py="$2"
+              />
+            </XStack>
+          ) : null}
+          <Button size="$3" chromeless icon={<RefreshCw size={15} />} onPress={() => void reload()} aria-label="Refresh" />
+          <Button size="$3" theme="light" icon={<Plus size={15} />} onPress={openNew}>
+            New Agent
+          </Button>
+        </XStack>
+      }
+    />
+  )
+
+  // ── Initial loading ─────────────────────────────────────────────────────────
+  if (loading && agents.length === 0 && !error) {
+    return (
+      <>
+        {header}
+        <XStack p="$6" justify="center">
+          <Spinner size="large" color="$color11" />
+        </XStack>
+      </>
+    )
+  }
+
+  // ── Hard backend failure (access / not-initialized / error) ───────────────────
+  if (error && error.kind !== 'unavailable') {
+    return (
+      <>
+        {header}
+        <BackendStateCard state={error} onRetry={() => void reload()} hint="endpoint · GET /v1/agents" />
+      </>
+    )
+  }
+
+  // ── Honest empty (zero agents, or the /v1/agents route isn't bound yet) ───────
+  if (agents.length === 0) {
+    return (
+      <>
+        {header}
+        <EmptyState
+          icon={Bot}
+          title="Create your first agent"
+          description="Agents are autonomous workers — a model, a system prompt, and a set of tools that run on Hanzo compute and call your APIs on their own."
+          bullets={[
+            'Define an agent with a model, prompt, and tools',
+            'Give it tools — HTTP, MCP servers, or your own functions',
+            'Deploy to Hanzo compute — invocations, health, and cost show up here',
+          ]}
+          primary={{ label: 'New Agent', onPress: openNew }}
+          secondary={{ label: 'Agents docs', href: DOCS }}
+        />
+      </>
+    )
+  }
+
+  const spark = invTotals.length >= 2 ? <Sparkline values={invTotals} /> : undefined
+  const now = Date.now()
 
   const columns: Column<Agent>[] = [
     {
       key: 'name',
       header: 'Name',
       render: (a) => (
-        <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
-          {a.name || a.id}
+        <XStack items="center" gap="$2.5" minW={0}>
+          <AgentAvatar />
+          <YStack minW={0} gap="$0.5">
+            <XStack items="center" gap="$2" minW={0}>
+              <Text fontSize="$3" fontWeight="700" color="$color12" numberOfLines={1}>
+                {a.name}
+              </Text>
+              <VersionBadge version={a.version} />
+            </XStack>
+            <Text fontSize="$1" color="$color10" numberOfLines={1}>
+              {a.model || DASH}
+            </Text>
+          </YStack>
+        </XStack>
+      ),
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      render: (a) => (
+        <Text fontSize="$2" color="$color11" numberOfLines={2}>
+          {a.description || DASH}
+        </Text>
+      ),
+    },
+    { key: 'status', header: 'Status', width: 104, render: (a) => <StatusPill status={a.status} /> },
+    {
+      key: 'last',
+      header: 'Last invocation',
+      width: 130,
+      render: (a) => (
+        <Text fontSize="$2" color="$color11" numberOfLines={1}>
+          {fmtRelative(a.lastInvocationAt, now)}
         </Text>
       ),
     },
     {
-      key: 'model',
-      header: 'Model',
-      width: 180,
+      key: 'invocations',
+      header: 'Invocations 30d',
+      width: 122,
       render: (a) => (
-        <Text fontSize="$3" color="$color11">
-          {a.model || '—'}
+        <Text fontSize="$3" color="$color12" fontWeight="600">
+          {fmtCompact(a.invocations30d)}
         </Text>
       ),
     },
     {
-      key: 'runs',
-      header: 'Runs',
-      width: 90,
-      render: (a) => (
-        <Text fontSize="$3" color="$color11">
-          {a.runs ?? '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: 120,
-      render: (a) => <StatusTag status={a.status ?? 'unknown'} />,
-    },
-    {
-      key: 'updatedAt',
-      header: 'Updated',
-      width: 190,
-      render: (a) => (
-        <Text fontSize="$3" color="$color11">
-          {a.updatedAt ? new Date(a.updatedAt).toLocaleString() : '—'}
-        </Text>
+      key: 'actions',
+      header: '',
+      width: 40,
+      render: () => (
+        <XStack justify="flex-end" opacity={0.6}>
+          <MoreHorizontal size={16} />
+        </XStack>
       ),
     },
   ]
 
+  const tabs: StatusTab[] = ['all', ...AGENT_STATUSES]
+  const tabCount = (t: StatusTab): number => (t === 'all' ? agents.length : health[t])
+
   return (
     <>
-      <PageHeader
-        title="Agents"
-        subtitle="Autonomous agent definitions and runs."
-        actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
-            Refresh
-          </Button>
-        }
-      />
+      {header}
 
-      {loadError ? (
-        <PlatformStateCard error={loadError} onRetry={() => void load()} />
-      ) : !loading && rows.length === 0 ? (
-        <EmptyState
-          icon={Bot}
-          title="Deploy your first agent"
-          description="Agents are autonomous workers — a model, a system prompt, and a set of tools that run on Hanzo compute and call your APIs on their own."
-          bullets={[
-            'Define an agent with the hanzo CLI or the Agents SDK',
-            'Give it tools (HTTP, MCP servers, your own functions)',
-            'Deploy to Hanzo compute — runs and logs show up here',
-          ]}
-          primary={{ label: 'Deploy an agent', href: DOCS }}
-          secondary={{ label: 'Agents SDK docs', href: 'https://docs.hanzo.ai/sdk' }}
+      {/* Row 1 — five headline stat cards (real / derived; spark+delta from series) */}
+      <XStack flexWrap="wrap" gap="$3" items="stretch">
+        <MetricCard icon={Bot} label="Total agents" value={fmtInt(stats.total)} sub="registered" />
+        <MetricCard icon={Activity} label="Active" value={fmtInt(stats.active)} sub={`${stats.idle} idle · ${stats.error} error`} />
+        <MetricCard icon={Gauge} label="Success rate 30d" value={fmtPct(stats.successRate)} sub="weighted" />
+        <MetricCard
+          icon={Zap}
+          label="Invocations 30d"
+          value={fmtCompact(stats.invocations30d)}
+          sub="last 30 days"
+          spark={spark}
+          delta={<Delta pct={invDelta} />}
         />
-      ) : (
+        <MetricCard icon={Timer} label="Avg latency" value={fmtDuration(stats.avgLatencyMs)} sub="per invocation" />
+      </XStack>
+
+      {/* Row 2 — invocations over time + agent health donut */}
+      <XStack flexWrap="wrap" gap="$3" items="stretch">
+        <Panel
+          title="Invocations over time"
+          flex={2}
+          minW={360}
+          action={
+            <XStack gap="$1">
+              {METRICS_RANGES.map((r) => (
+                <Button
+                  key={r}
+                  size="$1"
+                  bg={r === range ? '$color5' : 'transparent'}
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  onPress={() => setRange(r)}
+                >
+                  {r}
+                </Button>
+              ))}
+            </XStack>
+          }
+        >
+          {chartData.length >= 2 ? (
+            <LineChart data={chartData} formatValue={(v) => fmtCompact(v)} />
+          ) : (
+            <YStack height={210} items="center" justify="center" gap="$1">
+              <Text fontSize="$3" color="$color11" fontWeight="600">
+                No invocation time-series yet
+              </Text>
+              <Text fontSize="$2" color="$color10" text="center" maxW={420}>
+                {metricsConnected
+                  ? 'No agent invocations in this range yet — the headline counts above read from the live registry.'
+                  : 'The Agents metrics route isn’t connected on this deployment, so no trend is drawn. Counts above are read from the live registry.'}
+              </Text>
+            </YStack>
+          )}
+        </Panel>
+
+        <Panel title="Agent health" flex={1} minW={240}>
+          <HealthDonut breakdown={health} />
+        </Panel>
+      </XStack>
+
+      {/* Row 3 — agents table (status tabs + pagination) */}
+      <Panel title="Agents" minW={320}>
+        <XStack gap="$1" flexWrap="wrap">
+          {tabs.map((t) => (
+            <Button
+              key={t}
+              size="$2"
+              bg={t === tab ? '$color5' : 'transparent'}
+              borderWidth={1}
+              borderColor="$borderColor"
+              onPress={() => {
+                setTab(t)
+                setPage(1)
+              }}
+            >
+              {t === 'all' ? 'All' : AGENT_STATUS_LABEL[t]} · {tabCount(t)}
+            </Button>
+          ))}
+        </XStack>
+
         <DataTable
           columns={columns}
-          rows={rows}
-          loading={loading}
+          rows={pageState.rows}
           rowKey={(a) => a.id}
-          empty="No agents yet."
+          onRowPress={openDetail}
+          empty="No agents match these filters."
         />
-      )}
+
+        {pageState.totalPages > 1 ? (
+          <XStack justify="space-between" items="center">
+            <Text fontSize="$2" color="$color10">
+              Page {pageState.page} of {pageState.totalPages} · {filtered.length} agents
+            </Text>
+            <XStack gap="$2">
+              <Button size="$2" chromeless icon={<ChevronLeft size={15} />} disabled={pageState.page <= 1} onPress={() => setPage(pageState.page - 1)}>
+                Prev
+              </Button>
+              <Button size="$2" chromeless iconAfter={<ChevronRight size={15} />} disabled={pageState.page >= pageState.totalPages} onPress={() => setPage(pageState.page + 1)}>
+                Next
+              </Button>
+            </XStack>
+          </XStack>
+        ) : null}
+      </Panel>
+
+      {/* Row 4 — recent activity · top agents · resource usage */}
+      <XStack flexWrap="wrap" gap="$3" items="stretch">
+        <Panel title="Recent activity" flex={1} minW={280}>
+          <ActivityFeed events={activity} now={now} />
+        </Panel>
+        <Panel title="Top agents by invocations" flex={1} minW={280}>
+          <TopAgents agents={top} />
+        </Panel>
+        <Panel title="Resource usage · 30d" flex={1} minW={260}>
+          <ResourceUsagePanel
+            usage={metrics?.resource ?? { cpuVcpuHours: null, memGbHours: null, storageIoBytes: null, costCents: null }}
+            connected={metricsConnected}
+          />
+        </Panel>
+      </XStack>
     </>
   )
 }

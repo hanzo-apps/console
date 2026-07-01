@@ -10,12 +10,14 @@
  * matching every other infra module.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Text } from '@hanzo/gui'
-import { RefreshCw } from '@hanzogui/lucide-icons-2'
+import { Button, Spinner, Text, XStack } from '@hanzo/gui'
+import { RefreshCw, Radio } from '@hanzogui/lucide-icons-2'
 
+import { config } from '~/config'
 import { restGet } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { EmptyState } from '~/components/ui/EmptyState'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
@@ -113,15 +115,30 @@ export function EdgeModule(_props: { params: Record<string, string> }) {
         }
       />
 
-      {loadError ? (
+      {loading ? (
+        <XStack p="$6" justify="center">
+          <Spinner size="large" color="$color11" />
+        </XStack>
+      ) : rows.length ? (
+        // Real edge nodes reported by the platform → the live inventory.
+        <DataTable columns={columns} rows={rows} rowKey={(n) => n.id} empty="No edge nodes yet." />
+      ) : loadError && loadError.kind === 'error' ? (
+        // A genuine transient failure (not "no backend") → the honest retry card.
         <PlatformStateCard error={loadError} onRetry={() => void load()} />
       ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          rowKey={(n) => n.id}
-          empty="No edge nodes yet."
+        // No edge backend on this deployment (403/404/501) OR a real empty list →
+        // an honest "coming soon / managed" state, never a fabricated node grid.
+        <EmptyState
+          icon={Radio}
+          title="Edge is coming soon"
+          description="Globally-distributed edge compute — run functions and containers close to your users. It’s managed by Hanzo; today your workloads run on shared Hanzo Cloud regions."
+          bullets={[
+            'Deploy once — served from the edge location nearest each request',
+            'Backed by the same functions + containers you already run',
+            'Nodes and traffic show up here as the edge fleet comes online',
+          ]}
+          primary={{ label: 'Edge docs', href: `${config.docsUrl}/edge` }}
+          secondary={{ label: 'Containers', onPress: () => { if (typeof window !== 'undefined') window.location.assign('/containers') } }}
         />
       )}
     </>

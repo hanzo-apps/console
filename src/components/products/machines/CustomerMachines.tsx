@@ -32,6 +32,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { useDetailPane } from '~/components/DetailPane'
 import { asColor } from '~/components/ui/color'
+import { MachineCatalog } from './MachineCatalog'
 
 const VERDICT_TONE = {
   ok: '$green10',
@@ -208,6 +209,7 @@ export function CustomerMachines() {
           primary={{ label: 'Launch a machine', onPress: launchDocs }}
           secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
         />
+        <MachineCatalog />
       </>
     )
   }
@@ -218,11 +220,12 @@ export function CustomerMachines() {
         {header}
         <EmptyState
           icon={Server}
-          title="No machines yet"
-          description="Launch your first machine and it appears here."
+          title="Launch your first machine"
+          description="Dedicated compute machines run your workloads across regions. Launch one and it appears here — with real capacity, region, and cost."
           primary={{ label: 'Launch a machine', onPress: launchDocs }}
           secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
         />
+        <MachineCatalog />
       </>
     )
   }
