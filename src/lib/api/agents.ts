@@ -2,13 +2,14 @@
  * Agents API — Hanzo Agents (autonomous workers: a model + system prompt + tools
  * that run on Hanzo compute and call APIs on their own).
  *
- * The DOCUMENTED same-origin contract is `GET /v1/agents` on the unified cloud
- * backend, reached through the console's OWN user-bearer `/cloud` proxy
- * (`cloudProxyV1Url('agents')` → `<origin>/cloud/v1/agents`): the proxy mints a
- * short-lived user-bound IAM token server-side and the cloud backend resolves the
+ * The DOCUMENTED contract is `GET /v1/agents` on the unified cloud backend, called
+ * SAME-ORIGIN with NO prefix (`originV1Url('agents')` → `<origin>/v1/agents`, the
+ * CTO one-endpoint-form). `next.config.mjs` rewrites the `agents` head to the
+ * console's OWN user-bearer proxy (`app/cloud`), which mints a short-lived
+ * user-bound IAM token server-side and forwards it; the cloud backend resolves the
  * org from the token's `owner` claim, so every read is org-scoped server-side and
- * no credential reaches the browser. This is the SAME per-tenant path Functions +
- * Prompts use (allow-listed in `proxy-allow.ts`).
+ * no credential reaches the browser. This is the SAME per-tenant path Prompts +
+ * Evals use (allow-listed in `proxy-allow.ts`).
  *
  * Until the `/v1/agents` route is bound the list 404s and callers render an honest
  * "not connected / create your first agent" state (`classifyBackend`) — NEVER a
@@ -22,9 +23,9 @@
  * than throwing, and the list is read from whichever envelope key the backend uses
  * (`agents` / `data` / `items` / `rows`).
  */
-import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
+import { restGet, restPost, restDelete, originV1Url } from './client'
 
-/** Inventory facade base path (same-origin `/cloud/v1/agents`). */
+/** Inventory facade base path (same-origin `/v1/agents`). */
 const BASE = 'agents'
 const enc = encodeURIComponent
 
@@ -502,28 +503,39 @@ export const fmtRelative = (iso?: string | null, now: number = Date.now()): stri
 
 // ── Network methods (thin — forward-compatible against the documented contract) ─
 
-/** The body accepted by the New-Agent create flow. */
-export type NewAgentBody = { name: string; model?: string; description?: string; systemPrompt?: string }
+/**
+ * The body accepted by the New-Agent create flow — the canonical agent spec
+ * (name · model · description · systemPrompt · tools). Every field but `name` is
+ * optional so a bare definition (and the pruned body the shared builder produces)
+ * posts cleanly; the backend stores what's present.
+ */
+export type NewAgentBody = {
+  name: string
+  model?: string
+  description?: string
+  systemPrompt?: string
+  tools?: string[]
+}
 
 export const AgentsApi = {
   /** The agent registry (`GET /v1/agents`). Honest-empty/error until bound. */
-  list: (): Promise<Agent[]> => restGet<unknown>(cloudProxyV1Url(BASE)).then(normalizeAgents),
+  list: (): Promise<Agent[]> => restGet<unknown>(originV1Url(BASE)).then(normalizeAgents),
 
   /** One agent's detail (`GET /v1/agents/{id}`) — facts + recent activity. */
   get: (id: string): Promise<AgentDetail | null> =>
-    restGet<unknown>(cloudProxyV1Url(`${BASE}/${enc(id)}`)).then(normalizeAgentDetail),
+    restGet<unknown>(originV1Url(`${BASE}/${enc(id)}`)).then(normalizeAgentDetail),
 
   /** Invocations-over-time series + resource rollup (`GET /v1/agents/metrics?range=`). */
   metrics: (range: MetricsRange): Promise<AgentsMetrics> =>
-    restGet<unknown>(cloudProxyV1Url(`${BASE}/metrics?range=${range}`)).then(normalizeMetrics),
+    restGet<unknown>(originV1Url(`${BASE}/metrics?range=${range}`)).then(normalizeMetrics),
 
   /** The org's recent agent activity feed (`GET /v1/agents/activity`). */
   activity: (): Promise<AgentActivity[]> =>
-    restGet<unknown>(cloudProxyV1Url(`${BASE}/activity`)).then(normalizeActivity),
+    restGet<unknown>(originV1Url(`${BASE}/activity`)).then(normalizeActivity),
 
   /** Create an agent (`POST /v1/agents`) — only called when the backend is live. */
-  create: (body: NewAgentBody): Promise<unknown> => restPost<unknown>(cloudProxyV1Url(BASE), body),
+  create: (body: NewAgentBody): Promise<unknown> => restPost<unknown>(originV1Url(BASE), body),
 
   /** Delete an agent (`DELETE /v1/agents/{id}`) — only called when the backend is live. */
-  remove: (id: string): Promise<void> => restDelete(cloudProxyV1Url(`${BASE}/${enc(id)}`)),
+  remove: (id: string): Promise<void> => restDelete(originV1Url(`${BASE}/${enc(id)}`)),
 }
