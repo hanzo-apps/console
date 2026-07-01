@@ -10,8 +10,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Text, XStack } from '@hanzo/gui'
-import { RefreshCw, ExternalLink } from '@hanzogui/lucide-icons-2'
+import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { RefreshCw, ExternalLink, Plus, Trash2, ShieldCheck, ShieldOff } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import {
@@ -26,7 +26,8 @@ import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
-import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
+import { FieldRow, FieldText } from '~/components/ui/Field'
+import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
 
 /** IAM-specific guidance for the honest 404 / unauthorized states. */
 const IAM_COPY: HonestCopy = {
@@ -96,6 +97,155 @@ function AdminListView<T>({
           loading={state.phase === 'loading'}
           rowKey={rowKey}
           empty={empty}
+        />
+      )}
+    </>
+  )
+}
+
+type Tone = { tone: 'ok' | 'err'; text: string }
+
+/**
+ * Users with full CRUD — create, promote/demote admin, and delete — over the
+ * ready IamAdminApi mutations (add/update/delete-user) through the server-gated
+ * /admin/iam proxy, scoped to `owner`. This is the casdoor user surface, in
+ * console: no link-out for the common lifecycle. Honest states throughout.
+ */
+function UsersAdminView({ owner }: { owner: string }) {
+  const [state, setState] = useState<LoadState<IamUser>>({ phase: 'loading' })
+  const [busy, setBusy] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<Tone | null>(null)
+
+  const run = useCallback(() => {
+    setState({ phase: 'loading' })
+    IamAdminApi.users(owner)
+      .then((p) => setState({ phase: 'ready', rows: p.rows ?? [] }))
+      .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
+  }, [owner])
+
+  useEffect(() => {
+    run()
+  }, [run])
+
+  const create = useCallback(async () => {
+    if (!name.trim() || !password) {
+      setMsg({ tone: 'err', text: 'Name and password are required.' })
+      return
+    }
+    setSaving(true)
+    setMsg(null)
+    try {
+      await IamAdminApi.addUser({ owner, name: name.trim(), email: email.trim(), password } as IamUser)
+      setMsg({ tone: 'ok', text: `Created ${owner}/${name.trim()}.` })
+      setName('')
+      setEmail('')
+      setPassword('')
+      run()
+    } catch (e) {
+      setMsg({ tone: 'err', text: asApiError(e).message })
+    } finally {
+      setSaving(false)
+    }
+  }, [owner, name, email, password, run])
+
+  const toggleAdmin = useCallback(
+    async (u: IamUser) => {
+      const k = `${u.owner}/${u.name}`
+      setBusy(k)
+      try {
+        await IamAdminApi.updateUser(k, { ...u, isAdmin: !u.isAdmin })
+        run()
+      } catch (e) {
+        setState({ phase: 'error', err: asApiError(e) })
+      } finally {
+        setBusy(null)
+      }
+    },
+    [run],
+  )
+
+  const remove = useCallback(
+    async (u: IamUser) => {
+      if (typeof window !== 'undefined' && !window.confirm(`Delete user ${u.owner}/${u.name}? This cannot be undone.`)) return
+      const k = `${u.owner}/${u.name}`
+      setBusy(k)
+      try {
+        await IamAdminApi.deleteUser(u)
+        run()
+      } catch (e) {
+        setState({ phase: 'error', err: asApiError(e) })
+      } finally {
+        setBusy(null)
+      }
+    },
+    [run],
+  )
+
+  const crudColumns: Column<IamUser>[] = [
+    ...userColumns,
+    {
+      key: 'actions',
+      header: '',
+      width: 120,
+      render: (u) => {
+        const k = `${u.owner}/${u.name}`
+        return (
+          <XStack gap="$1.5">
+            <Button
+              size="$1"
+              chromeless
+              icon={u.isAdmin ? <ShieldOff size={14} /> : <ShieldCheck size={14} />}
+              disabled={busy === k}
+              onPress={() => void toggleAdmin(u)}
+            />
+            <Button size="$1" chromeless icon={<Trash2 size={14} />} disabled={busy === k} onPress={() => void remove(u)} />
+          </XStack>
+        )
+      },
+    },
+  ]
+
+  return (
+    <>
+      <XStack justify="flex-end" gap="$2">
+        <Button size="$2" icon={<RefreshCw size={15} />} onPress={run}>Refresh</Button>
+        <Button size="$2" icon={<Plus size={15} />} onPress={() => setShowForm((v) => !v)}>New user</Button>
+      </XStack>
+
+      {showForm && (
+        <Card p="$3.5" gap="$2.5" borderWidth={1} borderColor="$borderColor" maxWidth={820}>
+          <Text fontSize="$4" fontWeight="700">New user in {owner}</Text>
+          <FieldRow label="Name"><FieldText value={name} onChange={setName} placeholder="jdoe" disabled={saving} /></FieldRow>
+          <FieldRow label="Email"><FieldText value={email} onChange={setEmail} placeholder="jdoe@hanzo.ai" disabled={saving} /></FieldRow>
+          <FieldRow label="Password"><FieldText value={password} onChange={setPassword} placeholder="initial password" secure disabled={saving} /></FieldRow>
+          <XStack gap="$2" items="center">
+            <Button self="flex-start" icon={<Plus size={15} />} disabled={saving} onPress={() => void create()}>
+              {saving ? 'Creating…' : 'Create user'}
+            </Button>
+            {msg && <Text fontSize="$2" color={msg.tone === 'ok' ? '$green10' : '$red10'}>{msg.text}</Text>}
+          </XStack>
+          <Text fontSize="$2" color="$color10">Password is hashed by IAM (argon2id). The shield toggles global-admin.</Text>
+        </Card>
+      )}
+
+      {state.phase === 'error' ? (
+        isForbidden(state.err) ? (
+          <OperatorAccessRequired />
+        ) : (
+          <ErrorState err={state.err} onRetry={run} copy={IAM_COPY} />
+        )
+      ) : (
+        <DataTable
+          columns={crudColumns}
+          rows={state.phase === 'ready' ? state.rows : []}
+          loading={state.phase === 'loading'}
+          rowKey={(u) => `${u.owner}/${u.name}`}
+          empty="No users in this organization."
         />
       )}
     </>
@@ -189,16 +339,14 @@ export function IamModule({ params }: { params: Record<string, string> }) {
   const org = currentOrg()
 
   const orgFetcher = useCallback(() => IamAdminApi.organizations(), [])
-  const userFetcher = useCallback(() => IamAdminApi.users(org), [org])
   const roleFetcher = useCallback(() => IamAdminApi.roles(org), [org])
 
   const view = useMemo(() => {
-    if (tab === 'users')
-      return <AdminListView key="users" fetcher={userFetcher} columns={userColumns} rowKey={(u) => `${u.owner}/${u.name}`} empty="No users in this organization." />
+    if (tab === 'users') return <UsersAdminView key="users" owner={org} />
     if (tab === 'roles')
       return <AdminListView key="roles" fetcher={roleFetcher} columns={roleColumns} rowKey={(r) => `${r.owner}/${r.name}`} empty="No roles defined yet." />
     return <AdminListView key="orgs" fetcher={orgFetcher} columns={orgColumns} rowKey={(o) => `${o.owner}/${o.name}`} empty="No organizations visible to this account." />
-  }, [tab, orgFetcher, userFetcher, roleFetcher])
+  }, [tab, org, orgFetcher, roleFetcher])
 
   return (
     <>
