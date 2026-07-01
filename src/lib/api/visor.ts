@@ -14,7 +14,7 @@
  * machines yet" state, and a not-routed/unavailable upstream degrades to a
  * customer-appropriate "managed compute" state — NOT an infra error.
  */
-import { restGet, ApiError } from './client'
+import { restGet, restPost, ApiError } from './client'
 
 const vm = (path: string): string => `/vm/v1/${path.replace(/^\/+/, '')}`
 
@@ -179,6 +179,26 @@ export function normalizeGpuSize(raw: unknown): VisorGpuSize {
   }
 }
 
+/** What the user launches — a size/GPU slug in a region, with a name. */
+export type LaunchInput = { size: string; region: string; name: string }
+
+/** The resale price quote for a launch (OUR market price — same as the catalog). */
+export type LaunchQuote = {
+  size: string
+  region: string
+  currency?: string
+  priceHourly?: number
+  priceMonthly?: number
+  gpu?: { count?: number; model?: string; vramGb?: number }
+}
+
+/** Unwrap the casibase `{status,msg,data}` envelope; throw the honest msg on `status:error`. */
+function unwrapEnvelope(r: unknown): Record<string, unknown> {
+  const o = rec(r)
+  if (o.status === 'error') throw new ApiError(str(o.msg) || 'Request failed')
+  return rec(o.data ?? o)
+}
+
 export const VisorApi = {
   /** The signed-in org's own machines (user-scoped by visor). */
   machines: async (): Promise<VisorMachine[]> => {
@@ -202,6 +222,37 @@ export const VisorApi = {
   gpus: async (): Promise<VisorGpuSize[]> => {
     const r = await restGet<unknown>(vm('gpus'))
     return arrayUnder(r, ['gpus', 'data', 'items', 'rows']).map(normalizeGpuSize)
+  },
+
+  /**
+   * The authoritative launch QUOTE for a size in a region (`POST /v1/machines/launch`
+   * with `dryRun:true` — NO spend). Returns OUR market price (visor `HanzoPrice`), the
+   * SAME figure the real launch charges and the catalog shows (one pricing source).
+   */
+  quote: async (input: LaunchInput): Promise<LaunchQuote> => {
+    const r = await restPost<unknown>(vm('machines/launch'), {
+      size: input.size, instanceType: input.size, region: input.region, name: input.name || 'quote', dryRun: true,
+    })
+    const d = unwrapEnvelope(r)
+    const g = rec(d.gpu)
+    return {
+      size: str(d.size) ?? input.size,
+      region: str(d.region) ?? input.region,
+      currency: str(d.currency),
+      priceHourly: num(d.priceHourly),
+      priceMonthly: num(d.priceMonthly),
+      gpu: Object.keys(g).length ? { count: num(g.count), model: prettyGpuModel(str(g.model)) ?? str(g.model), vramGb: num(g.vram) } : undefined,
+    }
+  },
+
+  /** Launch a metered, per-org machine (`POST /v1/machines/launch`, dryRun:false). The
+   *  new machine is billed to the org's Hanzo balance; a 402 (or "insufficient balance")
+   *  surfaces to the caller as an honest "add credits" — never a fabricated success. */
+  launch: async (input: LaunchInput): Promise<VisorMachine> => {
+    const r = await restPost<unknown>(vm('machines/launch'), {
+      size: input.size, instanceType: input.size, region: input.region, name: input.name, dryRun: false,
+    })
+    return normalizeMachine(unwrapEnvelope(r))
   },
 }
 

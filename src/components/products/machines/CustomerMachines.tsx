@@ -33,6 +33,7 @@ import { EmptyState } from '~/components/ui/EmptyState'
 import { useDetailPane } from '~/components/DetailPane'
 import { asColor } from '~/components/ui/color'
 import { MachineCatalog } from './MachineCatalog'
+import { LaunchDrawer } from './LaunchDrawer'
 
 const VERDICT_TONE = {
   ok: '$green10',
@@ -83,10 +84,6 @@ function MachineDetail({ m }: { m: VisorMachine }) {
   )
 }
 
-const launchDocs = () => {
-  if (typeof window !== 'undefined') window.open(`${config.docsUrl}/vm`, '_blank', 'noopener')
-}
-
 export function CustomerMachines() {
   const detail = useDetailPane()
   const [rows, setRows] = useState<VisorMachine[]>([])
@@ -124,6 +121,29 @@ export function CustomerMachines() {
             Refresh
           </Button>
         </>
+      ),
+    })
+
+  // The REAL launch flow — the shared drawer (a machine is a `cpu` size); on success
+  // the new machine is prepended and the list reloaded. Replaces the old docs link.
+  const openLaunch = () =>
+    detail.open({
+      title: 'Launch a machine',
+      subtitle: 'Pick a size and region',
+      icon: Rocket,
+      iconColor: machineColor,
+      size: 520,
+      content: (
+        <LaunchDrawer
+          kind="cpu"
+          onClose={detail.close}
+          onLaunched={(m) => {
+            detail.close()
+            setRows((r) => [m, ...r.filter((x) => x.id !== m.id)])
+            setError(null)
+            void load()
+          }}
+        />
       ),
     })
 
@@ -176,7 +196,7 @@ export function CustomerMachines() {
               Refresh
             </Text>
           </Button>
-          <Button size="$3" icon={<Rocket size={15} />} onPress={launchDocs}>
+          <Button size="$3" theme="light" icon={<Rocket size={15} />} onPress={openLaunch}>
             Launch
           </Button>
         </XStack>
@@ -224,7 +244,7 @@ export function CustomerMachines() {
           title="Launch your first machine"
           description="Dedicated compute machines run your workloads across regions. Launch one and it appears here — with real capacity, region, and cost. Managed on Hanzo Cloud."
           bullets={['Pick a region and size from the live catalog below.', 'Machines, cores, memory, and cost are read from your real machines — nothing is fabricated.']}
-          primary={{ label: 'Launch a machine', onPress: launchDocs }}
+          primary={{ label: 'Launch a machine', onPress: openLaunch }}
           secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
         />
         <MachineCatalog />

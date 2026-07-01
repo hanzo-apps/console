@@ -814,3 +814,34 @@ surfaces), no product/commerce/platform/wallet files touched.
   over curated when known; the override still wins; deterministic unknowns). No circular
   import (pins→registry is one-directional; registry never imports pins). `tsc` clean,
   `vitest` **711/711**, `next build` ✓ (all routes).
+
+## Real launch flow + full catalog + Hanzo-branding (v8.4.7, claude/console2-launch-drawer)
+
+"Launch GPU" (and Machines "Launch") opened a DOCS link — now it opens a REAL launch
+flow, per-org, metered, PROVEN live as Dave (maxpower) against visor (`vm:0.1.10`).
+
+- **One shared `LaunchDrawer`** (`machines/LaunchDrawer.tsx`, `kind: 'cpu' | 'gpu'` — a
+  GPU is a machine with a `gpu-*` slug, DRY) opened in the shared `DetailPane` from BOTH
+  the GPUs and Machines pages (primary CTA + empty-state). It loads the COMPLETE live
+  catalog (`/vm/v1/{sizes,gpus}` — 172 sizes / 9 GPUs, searchable) + regions, shows OUR
+  market price ($/hr + $/mo), and on Launch calls **`POST /vm/v1/machines/launch`** via
+  the `/vm` BFF (`VisorApi.launch`). New machine → prepended to the list + reload. Honest
+  errors: 402 / "insufficient balance" → an **"Add credits"** prompt (→ /wallet), never a
+  fabricated success. Docs demoted to a secondary "Learn more".
+- **Pricing reconciled (ONE source).** Verified live: catalog `/v1/gpus|sizes` price ==
+  the `dryRun` launch quote EXACTLY (gpu-4000adax1-20gb $0.95/hr·$706.8/mo; s-1vcpu-512mb
+  $0.00833/hr·$5.6/mo) — visor applies `HanzoPrice` markup ONCE in `pricing.go`, used by
+  both the catalog list and `LaunchQuote`. No visor change needed. Fixed a console bug:
+  the GPU/size `$/mo` was `priceHourly×730` (693.5) not the real `priceMonthly` (706.8) —
+  now uses the authoritative `priceMonthly` everywhere. `VisorApi.quote`/`launch` added
+  (dryRun=true → LaunchQuote, dryRun=false → machine; casibase-envelope unwrap).
+- **Complete catalog.** `MachineCatalog` (Machines empty state) now shows ALL available
+  sizes (search + scroll) not a top-6 subset; `CustomerGpus` shows all 9 GPUs. Every entry
+  carries accurate our-market $/hr + $/mo.
+- **White-labeled upstream names** (Hanzo branding rule): Tasks drops "Temporal" (subtitle
+  → "Durable workflows, schedules, and queues…"; "5-service Temporal cluster" → "multi-
+  service cluster") → **Hanzo Tasks**; Functions drops "Fission" (EngineBadge default
+  `Fission`→`Serverless`; Runtime row `Fission (…FaaS)`→`Hanzo Functions (…serverless)`).
+- `tsc` clean; `vitest` green (34 visor+agents); `next build` ✓ 14/14. Built in the
+  isolated worktree (the shared tree is a hot multi-agent lane). Live-verified: the Launch
+  drawer opens with the real GPU/size catalog + pricing (not a docs redirect).
