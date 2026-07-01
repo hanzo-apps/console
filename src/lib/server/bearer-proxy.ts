@@ -117,13 +117,17 @@ export function upstreamHeaders(
  */
 export function pathIsClean(path: string): boolean {
   if (!path) return false
-  // Reject empty (`//`), `.`/`..` dot-segments, AND URL-encoded dots/slashes
-  // (`%2e`/`%2f`). Next decodes a catch-all segment exactly ONCE, so a double-encoded
-  // `%252e%252e` arrives here as literal `%2e%2e`; a raw `..` check misses it, then
-  // undici's URL parser normalizes `%2e%2e` into real `../` at fetch time (RED HIGH).
-  // The forward path ALSO re-validates the post-normalization URL — this is the fast,
-  // defense-in-depth first gate.
-  return path.split('/').every((s) => s !== '' && s !== '.' && s !== '..' && !/%2[ef]/i.test(s))
+  // Reject empty (`//`), `.`/`..` dot-segments, ANY surviving percent-escape (`%XX`),
+  // and matrix-param (`;`) segments. Next decodes a catch-all segment exactly ONCE, so
+  // a legitimate segment carries NO percent-escape here — a residual `%2e`/`%252e`/
+  // `%c0%ae` is a multi-encoding/overlong tell that undici (or any re-decoding hop)
+  // could still normalize into `/` or `..`; and `..;` is a matrix-param traversal on a
+  // `;`-stripping upstream. Rejecting all `%XX`/`;` closes single-, double-, N-encoded,
+  // overlong, and matrix-param traversal at the boundary, independent of upstream decode
+  // behavior (RED). The forward path ALSO re-validates the post-normalization URL.
+  return path
+    .split('/')
+    .every((s) => s !== '' && s !== '.' && s !== '..' && !/%[0-9a-f]{2}/i.test(s) && !s.includes(';'))
 }
 
 export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyOpts): Promise<NextResponse> {
