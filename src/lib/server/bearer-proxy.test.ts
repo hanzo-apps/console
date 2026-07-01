@@ -23,6 +23,14 @@ describe('pathIsClean (traversal / encoded-slash guard — RED HIGH)', () => {
     expect(pathIsClean('v1/functions%2F..')).toBe(false)
     expect(pathIsClean('')).toBe(false)
   })
+
+  it('REJECTS the double-encoded dot-segment (%252e%252e → Next decodes once → %2e%2e → undici normalizes to ../) — RED re-review HIGH', () => {
+    // What reaches the handler after Next.js single-decodes the catch-all segment:
+    expect(pathIsClean('v1/functions/%2e%2e/get-account')).toBe(false)
+    expect(pathIsClean('v1/sql/%2e%2e/%2e%2e/admin/overview')).toBe(false)
+    expect(pathIsClean('v1/collections/tenants/records/%2E%2E/_superusers/records')).toBe(false)
+    expect(pathIsClean('v1/%2e%2e/metrics')).toBe(false)
+  })
 })
 
 /** A minimal NextRequest stand-in — the header rebuild only reads `headers.get`. */
