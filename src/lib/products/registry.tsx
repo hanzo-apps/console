@@ -35,10 +35,8 @@ Product catalog — the single source of truth for the unified console.
  * subset) is derived, so the router/match layer is unchanged.
  *
  * Taxonomy: the ten canonical "Open AI Cloud" categories — exact labels and
- * order — as the open-source equivalent of Google Cloud, plus an appended
- * `Async` category for durable orchestration (Tasks/Temporal; GCP Cloud
- * Tasks/Workflows). The first ten keep their exact order; `Async` is appended so
- * nothing is reordered. Each entry names the Google Cloud product it stands in
+ * order — as the open-source equivalent of Google Cloud. Each entry names the
+ * Google Cloud product it stands in
  * for (`gcp`), and carries
  * an honest enablement `status`: an in-console module that works (`enabled`), a
  * live external Hanzo surface (`external`), or a primitive that ships but has no
@@ -57,7 +55,6 @@ import { Users,
   Container,
   FunctionSquare,
   Radio,
-  Repeat,
   Box,
   Database,
   Key,
@@ -156,7 +153,6 @@ import { AuthzModule } from '~/components/products/AuthzModule'
 import { ServiceMeshModule } from '~/components/products/ServiceMeshModule'
 import { LoadBalancerModule } from '~/components/products/LoadBalancerModule'
 import { VpcModule } from '~/components/products/VpcModule'
-import { JobsModule } from '~/components/products/JobsModule'
 import { EdgeModule } from '~/components/products/EdgeModule'
 import { FunctionsModule } from '~/components/products/FunctionsModule'
 import { ContainersModule } from '~/components/products/ContainersModule'
@@ -188,8 +184,7 @@ export type ProductRoute = {
 
 /**
  * The canonical "Open AI Cloud" categories — the ten GCP-equivalent groups in
- * exact label + order, plus an appended `Async` group for durable orchestration
- * (Tasks/Temporal). The marketing site, the console nav, the catalog overview,
+ * exact label + order. The marketing site, the console nav, the catalog overview,
  * and the discover screens all read this one taxonomy. `catalogByCategory` skips
  * empty groups.
  */
@@ -204,7 +199,6 @@ export type ProductCategory =
   | 'Observe'
   | 'Web3'
   | 'Apps'
-  | 'Async'
 
 export const categoryOrder: ProductCategory[] = [
   'AI',
@@ -217,7 +211,6 @@ export const categoryOrder: ProductCategory[] = [
   'Observe',
   'Web3',
   'Apps',
-  'Async',
 ]
 
 /**
@@ -377,8 +370,12 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Vertex AI Training',
     category: 'AI',
     status: 'enabled',
+    repo: 'hanzoai/ai',
     kind: 'module',
-    routes: [{ path: '', component: FinetuningModule }],
+    routes: [
+      { path: '', component: FinetuningModule },
+      { path: ':tab', component: FinetuningModule },
+    ],
   },
   {
     // The embeddings product — generate, store, and search vector embeddings.
@@ -452,12 +449,17 @@ export const catalog: CatalogEntry[] = [
     id: 'containers',
     label: 'Containers',
     icon: Container,
-    description: 'Run containers as managed, autoscaling services.',
+    description: 'Workloads, pods, images, and events across your clusters.',
     gcp: 'Cloud Run',
     category: 'Compute',
     status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/operator',
     kind: 'module',
-    routes: [{ path: '', component: ContainersModule }],
+    routes: [
+      { path: '', component: ContainersModule },
+      { path: ':tab', component: ContainersModule },
+    ],
   },
   {
     id: 'functions',
@@ -482,16 +484,6 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/edge`,
     kind: 'module',
     routes: [{ path: '', component: EdgeModule }],
-  },
-  {
-    id: 'jobs',
-    label: 'Jobs',
-    icon: Repeat,
-    description: 'Scheduled and batch jobs that run to completion.',
-    category: 'Compute',
-    status: 'enabled',
-    kind: 'module',
-    routes: [{ path: '', component: JobsModule }],
   },
   {
     // Real, enabled deploy surface — kept under Compute as the running-app
@@ -960,21 +952,19 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: ClustersModule }],
   },
   {
-    // Real, enabled — browse workloads + operator custom resources per cluster,
-    // via the PaaS control plane (/paas → platform). Honest states if not live.
+    // Real, enabled — the org's dedicated DOKS clusters (capacity, health) +
+    // provisioning, via the PaaS control plane (/paas → platform). Honest states
+    // when the service token isn't set or the caller isn't a brand admin.
     id: 'kubernetes',
     label: 'Kubernetes',
     icon: Boxes,
-    description: 'Workloads and operator custom resources, per cluster.',
-    category: 'Deploy',
+    description: 'Your Kubernetes clusters — capacity, health, and provisioning.',
+    category: 'Compute',
     status: 'enabled',
     admin: true,
     repo: 'hanzoai/operator',
     kind: 'module',
-    routes: [
-      { path: '', component: KubernetesModule },
-      { path: ':tab', component: KubernetesModule },
-    ],
+    routes: [{ path: '', component: KubernetesModule }],
   },
 
   // ── Observe ──────────────────────────────────────────────────────────
@@ -1427,23 +1417,22 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
-    // Durable workflows + schedules — the user's tasks across all their work.
-    // REAL /v1/tasks engine (hanzoai/tasks), org-scoped server-side. The
-    // canonical home is the Async category (Tasks/Temporal); maps to GCP Cloud
-    // Tasks/Workflows.
+    // Durable workflows, schedules, queues, workers, activities — a Temporal-style
+    // console over the REAL tasks engine (hanzoai/tasks), org-scoped server-side.
+    // Under Compute; maps to GCP Cloud Tasks/Workflows. Tabs are `:tab` sub-routes.
     id: 'tasks',
     label: 'Tasks',
     icon: Workflow,
-    description: 'Durable workflows and schedules — every running and finished task.',
+    description: 'Orchestrate, monitor, and debug durable workflows powered by Temporal.',
     gcp: 'Cloud Tasks',
-    category: 'Async',
+    category: 'Compute',
     status: 'enabled',
     repo: 'hanzoai/tasks',
     docs: `${DOCS}/tasks`,
     kind: 'module',
     routes: [
       { path: '', component: TasksModule },
-      { path: ':ns/:wid', component: TasksModule },
+      { path: ':tab', component: TasksModule },
     ],
   },
 ]
