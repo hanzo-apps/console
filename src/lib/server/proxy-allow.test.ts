@@ -37,6 +37,20 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/agents/agent-1/runs')).toBe(true)
   })
 
+  it('admits the evals facade (scores/datasets/dataset-items/evaluators/runs)', () => {
+    expect(CLOUD_HEADS).toContain('evals')
+    for (const sub of ['scores', 'datasets', 'dataset-items', 'evaluators', 'runs']) {
+      expect(allowCloudSurface(`v1/evals/${sub}`)).toBe(true)
+    }
+    // the bare head + a query-less path both admit
+    expect(allowCloudSurface('v1/evals')).toBe(true)
+  })
+
+  it('admits the prompts metrics + detail sub-paths (the AI surface heads)', () => {
+    expect(allowCloudSurface('v1/prompts/metrics')).toBe(true)
+    expect(allowCloudSurface('v1/prompts/support-triage')).toBe(true)
+  })
+
   it('REFUSES privileged / unlisted cloud-api surfaces (not a general tunnel)', () => {
     expect(allowCloudSurface('v1/iam/get-users')).toBe(false)
     expect(allowCloudSurface('v1/admin/overview')).toBe(false)

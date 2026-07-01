@@ -1,16 +1,19 @@
 'use client'
 
 /**
- * Agents — the New-Agent create form and the per-agent detail view, both rendered
- * inside the shared right-side `DetailPane`. The create form POSTs the REAL
- * `/v1/agents` create; when that route isn't bound yet it 404s and the form shows an
- * honest "not connected — create with the CLI" note instead of pretending to work.
- * The detail view renders the agent's REAL facts (+ best-effort recent activity from
- * `GET /v1/agents/{id}`), never fabricated telemetry.
+ * Agents — the New-Agent form and the per-agent detail view, both rendered inside
+ * the shared right-side `DetailPane`.
+ *
+ * The New-Agent form is now a THIN adapter over the CANONICAL, shareable
+ * `AgentBuilder` (`~/components/agent-builder`) — the ONE agent builder across every
+ * Hanzo surface. console2 supplies its live `/v1` sources via `agentBuilderLoaders`
+ * (model catalog → `/v1/models`, saved prompts → `/v1/prompts`, create →
+ * `/v1/agents`); the builder owns the form, the LIVE model + prompt dropdowns, and
+ * the honest states. The detail view renders the agent's REAL facts (+ best-effort
+ * recent activity from `GET /v1/agents/{id}`), never fabricated telemetry.
  */
 import { useEffect, useState } from 'react'
-import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Bot, Terminal } from '@hanzogui/lucide-icons-2'
+import { Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import {
   AgentsApi,
@@ -22,10 +25,9 @@ import {
   fmtVersion,
   type Agent,
   type AgentActivity,
-  type NewAgentBody,
 } from '~/lib/api/agents'
-import { classifyBackend } from '~/components/ui/BackendState'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
+import { AgentBuilder } from '~/components/agent-builder'
+import { agentBuilderLoaders } from './loaders'
 import { StatusPill, ActivityFeed } from './parts'
 
 const DASH = '—'
@@ -45,91 +47,13 @@ function Fact({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * The New-Agent form. Submits `POST /v1/agents`; on success calls `onCreated` (the
- * board reloads + the pane closes). A 404/unavailable backend degrades to an honest
- * note — the console never fakes a create.
+ * The New-Agent form — the canonical `AgentBuilder` wired to console2's live `/v1`
+ * sources. On a successful `POST /v1/agents` it calls `onCreated` (the board
+ * reloads + the pane closes); a 404/unavailable backend degrades to the builder's
+ * own honest "not connected — create with the CLI" note.
  */
 export function NewAgentForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
-  const [body, setBody] = useState<NewAgentBody>({ name: '', model: '', description: '', systemPrompt: '' })
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [unavailable, setUnavailable] = useState(false)
-
-  const set = <K extends keyof NewAgentBody>(k: K, v: NewAgentBody[K]) => setBody((b) => ({ ...b, [k]: v }))
-  const canSubmit = body.name.trim().length > 0 && !busy
-
-  const submit = async () => {
-    if (!canSubmit) return
-    setBusy(true)
-    setError(null)
-    setUnavailable(false)
-    try {
-      await AgentsApi.create({
-        name: body.name.trim(),
-        model: body.model?.trim() || undefined,
-        description: body.description?.trim() || undefined,
-        systemPrompt: body.systemPrompt?.trim() || undefined,
-      })
-      onCreated()
-    } catch (e) {
-      const state = classifyBackend(e)
-      if (state.kind === 'unavailable') setUnavailable(true)
-      else setError(state.message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <YStack gap="$3">
-      <Text fontSize="$2" color="$color11">
-        An agent is a model, a system prompt, and a set of tools that runs on Hanzo compute and calls your APIs on
-        its own.
-      </Text>
-
-      <FieldRow label="Name">
-        <FieldText value={body.name} onChange={(v) => set('name', v)} placeholder="support-triage" />
-      </FieldRow>
-      <FieldRow label="Model">
-        <FieldText value={body.model ?? ''} onChange={(v) => set('model', v)} placeholder="zen-omni · gpt-4o-mini · claude-sonnet-4-5" />
-      </FieldRow>
-      <FieldRow label="Description">
-        <FieldText value={body.description ?? ''} onChange={(v) => set('description', v)} placeholder="What this agent does" />
-      </FieldRow>
-      <FieldRow label="System prompt">
-        <FieldTextArea value={body.systemPrompt ?? ''} onChange={(v) => set('systemPrompt', v)} rows={6} />
-      </FieldRow>
-
-      {unavailable ? (
-        <YStack gap="$1.5" p="$3" rounded="$4" bg="$color2" borderWidth={1} borderColor="$borderColor">
-          <XStack items="center" gap="$2">
-            <Terminal size={14} />
-            <Text fontSize="$3" fontWeight="700">
-              Agents API isn’t connected on this deployment yet
-            </Text>
-          </XStack>
-          <Text fontSize="$2" color="$color11">
-            Your definition wasn’t saved (the `/v1/agents` route isn’t bound here yet). Create with the CLI —{' '}
-            <Text fontSize="$1" bg="$color3" px="$1" py="$0.5" rounded="$2">hanzo agents create</Text> — and it appears here once the backend is live.
-          </Text>
-        </YStack>
-      ) : null}
-      {error ? (
-        <Text fontSize="$2" color="$red10">
-          {error}
-        </Text>
-      ) : null}
-
-      <XStack gap="$2" pt="$1">
-        <Button flex={1} chromeless onPress={onCancel} disabled={busy}>
-          Cancel
-        </Button>
-        <Button flex={1} theme="light" icon={busy ? undefined : <Bot size={15} />} onPress={() => void submit()} disabled={!canSubmit}>
-          {busy ? <Spinner size="small" /> : 'Create agent'}
-        </Button>
-      </XStack>
-    </YStack>
-  )
+  return <AgentBuilder loaders={agentBuilderLoaders} onCreated={onCreated} onCancel={onCancel} />
 }
 
 /**
