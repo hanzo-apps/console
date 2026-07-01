@@ -11,8 +11,14 @@
  * 404 where the surface is unrouted); `restGet` throws a typed `ApiError` carrying
  * that status, so callers render honest states instead of fabricating data.
  *
- * Tenancy is server-side: the gateway validates the session cookie and injects the
- * org from the JWT, so the browser sends cookie credentials only.
+ * Tenancy: every call rides the shared `restGet` transport, whose `baseHeaders`
+ * (lib/api/client.ts) stamp `X-Org-Id` (`currentOrg()`) on EVERY request and add
+ * `X-Project-Id` ONLY when a project is selected. So these Langfuse-derived views
+ * are ORGANISATION-WIDE by default — no project is required on login — and narrow
+ * to a project the moment one is picked in the scope switcher. The backend scopes
+ * on the org either way: where a gateway re-injects `X-Org-Id` from the validated
+ * session it simply overwrites the stamped value, so sending it is correct in both
+ * topologies (direct cloud-api and gatewayed).
  */
 import { restGet, v1Url } from './client'
 
