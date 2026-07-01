@@ -6,11 +6,16 @@
  *
  * Same trust boundary as the `/admin/iam` + `/admin/kms` proxies, but the authz is
  * PER-TENANT, not admin: any authenticated session may read/act on ITS OWN billing
- * (balance / usage / invoices / credit-grants). The org is resolved server-side
- * from the validated session (`resolveUser`) and stamped as `X-Hanzo-Org` + the
- * `user` billing-subject — the client CANNOT widen scope (a supplied `?user=`/`?org=`
- * is overwritten), so commerce's per-org isolation can never be crossed from the
- * browser. No session → 401.
+ * (balance / usage / invoices / credit-grants / subscriptions / payment-methods).
+ * The org is resolved server-side from the validated session (`resolveUser`) and
+ * stamped as `X-Org-Id` (the header commerce's service-token path actually reads —
+ * `commerce/middleware/accesstoken.go`), and the server-resolved billing subject is
+ * pinned onto the FULL commerce subject-key set (`user`/`userId`/`customerId`, via
+ * `scopedBillingSearch`) while `?org=` is dropped. The client CANNOT widen scope: a
+ * forged `?userId=`/`?customerId=`/`?org=` is overwritten, and because EVERY subject
+ * param is pinned, no billing endpoint is left unfiltered regardless of which one it
+ * reads (subscriptions filter `userId`, payment-methods `customerId`). So commerce's
+ * per-tenant isolation can never be crossed from the browser. No session → 401.
  *
  * Billing-subject mirrors `object.BillingSubject` (hanzoai/ai) + chat's
  * `billingSubject`: a member of a PERSONAL-billing org (default the shared `hanzo`
@@ -24,31 +29,12 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser } from '~/lib/server/identity'
+import { billingSubject, scopedBillingSearch } from '~/lib/server/billing-scope'
 
 export const runtime = 'nodejs'
 
 const isSafeSegment = (s: string): boolean =>
   s.length > 0 && s !== '.' && s !== '..' && !s.includes('/') && !s.includes('\\') && !s.includes('\0')
-
-/** Orgs whose members bill per-USER (the shared catch-all). Mirrors PERSONAL_BILLING_ORGS. */
-function personalBillingOrgs(): Set<string> {
-  const raw = (process.env.PERSONAL_BILLING_ORGS || process.env.HANZO_DEFAULT_ORG || 'hanzo')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-  return new Set(raw)
-}
-
-/** Commerce billing subject for an org+user (= the subject the gateway debits). */
-function billingSubject(org: string, name: string): string {
-  const o = org.trim().toLowerCase()
-  if (!o) return ''
-  if (personalBillingOrgs().has(o)) {
-    const n = name.trim().toLowerCase()
-    return n ? `${o}/${n}` : o
-  }
-  return o
-}
 
 function commerceBaseUrl(): string {
   return (process.env.COMMERCE_URL ?? 'http://commerce.hanzo.svc:8001').replace(/\/+$/, '')
@@ -76,18 +62,26 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
   const org = user.owner.trim()
   const subject = billingSubject(org, user.name)
 
-  // Overwrite any client `user`/`org` so the browser cannot read another tenant's ledger.
-  const search = new URLSearchParams(req.nextUrl.search)
-  search.set('user', subject)
-  search.delete('org')
-  const qs = search.toString()
+  // Pin the FULL billing-subject key set to the server-resolved subject, and
+  // strip `org`, so the browser can never read another tenant's ledger. Commerce
+  // filters each endpoint on a DIFFERENT param — subscriptions on `userId`,
+  // payment-methods on `customerId` (or `user`), usage on `user` — so pinning
+  // only ONE param leaves the others unfiltered (a cross-tenant read). This
+  // mirrors commerce's own edge-auth `billingSubjectKeys`
+  // (commerce/middleware/edgeauth.go: {"user","userId","customerId"}) exactly, so
+  // every billing endpoint is scoped no matter which param it reads.
+  const qs = scopedBillingSearch(req.nextUrl.search, subject)
   const url = `${commerceBaseUrl()}/v1/billing/${path.join('/')}${qs ? `?${qs}` : ''}`
 
   const init: RequestInit = {
     method: req.method,
     headers: {
       Authorization: `Bearer ${token}`,
-      'X-Hanzo-Org': org,
+      // Commerce resolves the tenant namespace from `X-Org-Id` on the service-token
+      // path (commerce/middleware/accesstoken.go). It does NOT read `X-Hanzo-Org`,
+      // so sending that alone silently falls back to the service org — every tenant
+      // sharing one namespace. Send `X-Org-Id`, matching the `/ai` proxy.
+      'X-Org-Id': org,
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },
