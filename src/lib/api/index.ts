@@ -84,6 +84,25 @@ export {
   type KmsScope,
   type KmsRef,
 } from './admin'
+export {
+  NodesApi,
+  NODE_NETWORK_META,
+  normalizeValidators,
+  normalizePeers,
+  combineInventory,
+  parseUptimePct,
+  parseHeight,
+  fmtUptime,
+  fmtHeight,
+  fmtWeight,
+  type NodeRow,
+  type NodeRole,
+  type NodeStatus,
+  type NodeNetworkId,
+  type NetworkInventory,
+  type RawValidator,
+  type RawPeer,
+} from './nodes'
 export { TeamApi } from './team'
 export {
   PlaygroundApi,

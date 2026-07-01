@@ -7,7 +7,11 @@ import {
   categorySlug,
   categoryFromSlug,
   CATEGORY_SUMMARY,
+  ALL_NODE_NETWORKS,
+  BRAND_NODE_NETWORKS,
+  nodeNetworksForBrand,
   type ProductCategory,
+  type NodeNetworkId,
 } from './brand-scope'
 import type { BrandId } from '~/config'
 
@@ -97,5 +101,46 @@ describe('category landing pages', () => {
     }
     // no stray keys beyond the taxonomy
     expect(Object.keys(CATEGORY_SUMMARY).sort()).toEqual([...categoryOrder].sort())
+  })
+})
+
+// Proves the per-brand DATA scope for the Nodes surface: hanzo = every configured
+// network (all-networks super-admin/infra view); each sovereign brand = ONLY its
+// own chain's networks. Pure (brand passed in), so no hostname mocking needed.
+describe('per-brand Nodes network scope', () => {
+  it('hanzo sees EVERY configured network, in order (all-networks admin view)', () => {
+    expect(BRAND_NODE_NETWORKS.hanzo).toBe('all')
+    expect(nodeNetworksForBrand('hanzo')).toEqual(ALL_NODE_NETWORKS)
+  })
+
+  it('lux sees only the three Lux networks', () => {
+    expect(nodeNetworksForBrand('lux')).toEqual(['lux-mainnet', 'lux-testnet', 'lux-devnet'])
+  })
+
+  it('zoo sees only Zoo, pars sees only Pars — no cross-brand leak', () => {
+    expect(nodeNetworksForBrand('zoo')).toEqual(['zoo-mainnet'])
+    expect(nodeNetworksForBrand('pars')).toEqual(['pars-mainnet'])
+    // a sovereign brand NEVER sees another chain's networks
+    for (const brand of ['lux', 'zoo', 'pars'] as BrandId[]) {
+      const seen = nodeNetworksForBrand(brand)
+      const otherChains = seen.filter((n) => !n.startsWith(brand === 'lux' ? 'lux' : brand))
+      expect(otherChains).toEqual([])
+    }
+  })
+
+  it('returns networks in the canonical ALL_NODE_NETWORKS order', () => {
+    for (const brand of Object.keys(BRAND_NODE_NETWORKS) as BrandId[]) {
+      const seen = nodeNetworksForBrand(brand)
+      const ordered = ALL_NODE_NETWORKS.filter((n) => seen.includes(n))
+      expect(seen).toEqual(ordered)
+    }
+  })
+
+  it('every brand-scoped network id is a real configured network', () => {
+    for (const brand of Object.keys(BRAND_NODE_NETWORKS) as BrandId[]) {
+      const cfg = BRAND_NODE_NETWORKS[brand]
+      if (cfg === 'all') continue
+      for (const n of cfg as NodeNetworkId[]) expect(ALL_NODE_NETWORKS).toContain(n)
+    }
   })
 })
