@@ -778,7 +778,9 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/dns',
     docs: ext.dns,
     kind: 'module',
-    routes: overviewRoutes('dns'),
+    // Real per-org managed DNS via hanzodns (zones + records → CoreDNS + Cloudflare
+    // sync) on the unified /v1/dns surface; honest states until the route is bound.
+    routes: [{ path: '', component: DnsModule }],
   },
   {
     id: 'cdn',
@@ -1344,21 +1346,6 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/networks`,
     kind: 'module',
     routes: [{ path: '', component: NetworksModule }],
-  },
-  {
-    // Per-org managed DNS via the hanzodns control plane (zones + records → CoreDNS
-    // + Cloudflare sync). Reached on the unified /v1/dns surface (api.hanzo.ai
-    // gateway → hanzodns); honest states until the route is bound.
-    id: 'dns',
-    label: 'DNS',
-    icon: Globe,
-    description: 'Per-org managed DNS — zones, records, CoreDNS + Cloudflare sync.',
-    category: 'Network',
-    status: 'enabled',
-    repo: 'hanzoai/dns',
-    docs: `${DOCS}/dns`,
-    kind: 'module',
-    routes: [{ path: '', component: DnsModule }],
   },
   {
     id: 'indexer',
