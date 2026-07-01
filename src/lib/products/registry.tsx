@@ -89,6 +89,7 @@ import { Users,
   LineChart,
   Bell,
   CreditCard,
+  Repeat,
   Gauge,
   Tag,
   ArrowLeftRight,
@@ -104,6 +105,7 @@ import { Users,
   NotebookPen,
   IdCard,
   Blocks,
+  Store,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId } from '~/config'
@@ -114,8 +116,11 @@ import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
+import { MarketplaceModule } from '~/components/products/MarketplaceModule'
 import { PlansModule } from '~/components/products/PlansModule'
 import { CostModule } from '~/components/products/CostModule'
+import { SubscriptionsModule } from '~/components/products/SubscriptionsModule'
+import { PaymentMethodsModule } from '~/components/products/PaymentMethodsModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
@@ -1190,6 +1195,38 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: CostModule }],
   },
   {
+    // Real, enabled — the org's subscriptions (plan/status/renewal) over the same
+    // per-tenant `/billing/*` commerce proxy as Cost. Read-only; subscribing +
+    // changing plans stays in the brand billing portal.
+    id: 'subscriptions',
+    label: 'Subscriptions',
+    icon: Repeat,
+    description: 'Plans your organization is subscribed to — status, seats, and renewal.',
+    gcp: 'Cloud Billing',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/commerce',
+    docs: `${DOCS}/billing`,
+    kind: 'module',
+    routes: [{ path: '', component: SubscriptionsModule }],
+  },
+  {
+    // Real, enabled — the org's saved payment methods (masked brand + last4 only)
+    // over the per-tenant `/billing/*` commerce proxy. Read-only; adding/removing
+    // a method stays in the brand billing portal.
+    id: 'payment-methods',
+    label: 'Payment Methods',
+    icon: CreditCard,
+    description: 'Saved payment methods for your organization.',
+    gcp: 'Cloud Billing',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/commerce',
+    docs: `${DOCS}/billing`,
+    kind: 'module',
+    routes: [{ path: '', component: PaymentMethodsModule }],
+  },
+  {
     // Real, enabled — the all-services health view, from real cluster data.
     id: 'status',
     label: 'Status',
@@ -1339,6 +1376,19 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/bot',
     kind: 'module',
     routes: [{ path: '', component: BotModule }],
+  },
+  {
+    id: 'marketplace',
+    label: 'Marketplace',
+    icon: Store,
+    description: 'Browse and deploy AI models & providers — real pricing, live availability.',
+    gcp: 'Marketplace',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/console',
+    docs: `${DOCS}/marketplace`,
+    kind: 'module',
+    routes: [{ path: '', component: MarketplaceModule }],
   },
   {
     id: 'search',
