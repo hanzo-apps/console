@@ -62,3 +62,69 @@ body {
     transition: none;
   }
 }
+
+/* LivingOverview motion — the "videogame-like" living dashboard. The count-up +
+   live sparkline are driven in JS (rAF, gated by prefers-reduced-motion in the
+   hooks); these are the pure-CSS bits: a loading shimmer, a live-feed pulse, and
+   a brief highlight when a tile's number changes. One place defines the easing. */
+
+/* Skeleton shimmer — an honest "loading", never fabricated content. */
+@keyframes hz-shimmer {
+  0% {
+    background-position: -160px 0;
+  }
+  100% {
+    background-position: 160px 0;
+  }
+}
+
+.hz-skeleton {
+  background-color: var(--color3, rgba(148, 163, 184, 0.14));
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color4, rgba(148, 163, 184, 0.22)) 50%,
+    transparent 100%
+  );
+  background-size: 160px 100%;
+  background-repeat: no-repeat;
+  animation: hz-shimmer 1.2s ease-in-out infinite;
+}
+
+/* Live-feed pulse — the "Live" dot on a streaming panel. */
+@keyframes hz-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+/* Entrance for a freshly-arrived activity row (staggerless — one row at a time). */
+@keyframes hz-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hz-row-in {
+  animation: hz-row-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hz-skeleton {
+    animation: none;
+  }
+  .hz-row-in {
+    animation: none;
+  }
+}

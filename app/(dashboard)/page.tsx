@@ -19,7 +19,11 @@ import { useFavorites } from '~/lib/products/favorites'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FadeIn } from '~/components/ui/FadeIn'
-import OverviewDashboard from '~/components/products/OverviewModule'
+import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
+
+// The home centerpiece is the reusable LivingOverview (count-up KPIs, live
+// sparklines, streaming activity) — the SAME component every product overview uses.
+const OverviewDashboard = livingOverviewModule('overview')
 
 function ProductCard({
   entry,
@@ -102,7 +106,7 @@ export default function DashboardHome() {
 
   return (
     <YStack gap="$7">
-      <OverviewDashboard />
+      <OverviewDashboard params={{}} />
       <YStack gap="$4">
         <PageHeader
           title="Explore products"
