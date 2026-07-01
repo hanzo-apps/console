@@ -1,20 +1,23 @@
 /**
  * Keyless AI proxy — the ONE path the console uses to reach the model gateway.
  *
- * `/v1/chat/completions` (and friends) REQUIRE an `Authorization: Bearer` token;
- * a browser session cookie alone is rejected. Rather than ship the user's durable
- * `hk-` key to the browser, the console calls its OWN origin (`/ai/v1/...`) with
- * just the session cookie; this server handler resolves the user, mints a
- * SHORT-LIVED, user-bound IAM token (issue-user-token, cached until just before
- * expiry), and forwards to the gateway with that token. No key in the browser, no
- * rotation on a chat turn, and every call is billed to the user's own org.
+ * `/v1/chat/completions` (and friends) REQUIRE an `Authorization: Bearer` token; a
+ * browser session cookie alone is rejected. Rather than ship the user's durable
+ * `hk-` key to the browser, the console calls its OWN origin (`/ai/v1/...`) with just
+ * the session cookie; `forwardWithUserBearer` resolves the user, mints a SHORT-LIVED,
+ * user-bound IAM token (shared per-user cache in identity.ts), and forwards to the
+ * gateway with that token. No key in the browser, no rotation on a chat turn, and
+ * every call is billed to the user's own org. The response STREAMS through, so
+ * `chat/completions` SSE (and the multi-model TTFT measurement) is preserved.
  *
- * Least privilege: only the read/inference AI endpoints are proxied; anything
- * else 404s, so this is not a general gateway tunnel.
+ * Least privilege: only the read/inference AI endpoints are proxied (the ALLOWED
+ * allow-list); anything else 404s, so this is not a general gateway tunnel. The RAG
+ * retrieval switch (`X-Retrieval`/`X-Retrieval-Store`) is the ONE client-header
+ * passthrough (allow-listed in `ai-proxy`).
  */
-import { type NextRequest, NextResponse } from 'next/server'
+import { type NextRequest } from 'next/server'
 
-import { resolveUser, issueUserToken, type SessionUser } from '~/lib/server/identity'
+import { forwardWithUserBearer } from '~/lib/server/bearer-proxy'
 import { retrievalHeaders } from '~/lib/server/ai-proxy'
 
 export const runtime = 'nodejs'
@@ -35,105 +38,27 @@ const ALLOWED = new Set([
   'v1/audio/speech', // text-to-speech (JSON in → audio bytes out) for the Playground Audio tab
 ])
 
-// ── Short-lived user-token cache ─────────────────────────────────────────────
-// issue-user-token is an IAM round-trip; cache the JWT per user until ~60s before
-// it expires so a chat session reuses one token instead of issuing per turn.
-type CachedToken = { token: string; expMs: number }
-const tokenCache = new Map<string, CachedToken>()
-const SKEW_MS = 60_000
-const FALLBACK_TTL_MS = 5 * 60_000
-
-async function tokenFor(user: SessionUser): Promise<string> {
-  const hit = tokenCache.get(user.id)
-  if (hit && hit.expMs > Date.now()) return hit.token
-  const { accessToken, expiresIn } = await issueUserToken(user)
-  const ttl = expiresIn > 0 ? expiresIn * 1000 : FALLBACK_TTL_MS
-  tokenCache.set(user.id, { token: accessToken, expMs: Date.now() + ttl - SKEW_MS })
-  return accessToken
-}
-
-async function forward(req: NextRequest, path: string[]): Promise<NextResponse> {
-  const rel = path.join('/')
-  if (!ALLOWED.has(rel)) {
-    return NextResponse.json({ error: { message: 'Not found', type: 'not_found' } }, { status: 404 })
-  }
-
-  const user = await resolveUser(req)
-  if (!user) {
-    return NextResponse.json(
-      { error: { message: 'Sign in to use AI.', type: 'auth_error', code: 'unauthenticated' } },
-      { status: 401 },
-    )
-  }
-
-  let token: string
-  try {
-    token = await tokenFor(user)
-  } catch (e) {
-    return NextResponse.json(
-      { error: { message: `Could not authorize the request: ${e instanceof Error ? e.message : String(e)}`, type: 'auth_error' } },
-      { status: 502 },
-    )
-  }
-
-  const url = `${AI_GATEWAY_URL}/${rel}${req.nextUrl.search}`
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-    // The gateway derives org/user from the JWT; pass the resolved org too so a
-    // pooled-org backend scopes correctly either way (it strips client headers).
-    'X-Org-Id': user.owner,
-  }
-  // Forward the RAG retrieval switch when present (allow-listed in `ai-proxy`).
-  // chat/completions turns on built-in retrieval from `X-Retrieval`/
-  // `X-Retrieval-Store` (backend controllers/chat_retrieval.go); this handler
-  // rebuilds headers from scratch, so without the passthrough `AiApi.ragChat`
-  // silently degraded to a plain answer. The store's org owner is still resolved
-  // server-side from the session.
-  Object.assign(headers, retrievalHeaders((h) => req.headers.get(h)))
-  const init: RequestInit = {
-    method: req.method,
-    headers,
-    cache: 'no-store',
-    // Propagate a client abort (Stop / tab-switch / unmount) through to the
-    // gateway, so cancelling a stream stops upstream generation + billing and
-    // releases the socket — not just the browser→proxy hop.
-    signal: req.signal,
-  }
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    init.body = await req.text()
-  }
-
-  try {
-    const res = await fetch(url, init)
-    // Stream the upstream body straight through — do NOT buffer with res.text().
-    // chat/completions with `stream:true` returns Server-Sent Events, and the
-    // multi-model compare playground measures real time-to-first-token from the
-    // first streamed chunk; buffering would collapse TTFT into total latency.
-    // Passing res.body through is equally correct for the non-streaming JSON
-    // callers (they read the full body) and for binary audio/speech bytes — one
-    // passthrough serves every allow-listed endpoint, streaming or not.
-    return new NextResponse(res.body, {
-      status: res.status,
-      headers: {
-        'Content-Type': res.headers.get('content-type') ?? 'application/json',
-        'Cache-Control': 'no-cache, no-transform',
-      },
-    })
-  } catch (e) {
-    return NextResponse.json(
-      { error: { message: `AI gateway unreachable: ${e instanceof Error ? e.message : String(e)}`, type: 'upstream_error' } },
-      { status: 502 },
-    )
-  }
-}
-
 type Ctx = { params: Promise<{ path: string[] }> }
 
+function handle(req: NextRequest, ctx: Ctx) {
+  return (async () => {
+    const path = (await ctx.params).path.join('/')
+    return forwardWithUserBearer(req, {
+      target: AI_GATEWAY_URL,
+      path,
+      allow: (p) => ALLOWED.has(p),
+      // Forward the RAG retrieval switch when present; the store's org owner is still
+      // resolved server-side from the session (the bearer), never the browser.
+      extraHeaders: retrievalHeaders((h) => req.headers.get(h)),
+      errorShape: 'openai',
+      unauthorizedMessage: 'Sign in to use AI.',
+    })
+  })()
+}
+
 export async function GET(req: NextRequest, ctx: Ctx) {
-  return forward(req, (await ctx.params).path)
+  return handle(req, ctx)
 }
 export async function POST(req: NextRequest, ctx: Ctx) {
-  return forward(req, (await ctx.params).path)
+  return handle(req, ctx)
 }
