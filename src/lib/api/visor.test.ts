@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import { ApiError } from './client'
-import { fmtSpec, interpretVisorError, normalizeMachine, statusVerdict } from './visor'
+import {
+  fmtSpec,
+  interpretVisorError,
+  normalizeGpuSize,
+  normalizeMachine,
+  normalizeRegion,
+  normalizeSize,
+  prettyGpuModel,
+  statusVerdict,
+} from './visor'
 
 describe('normalizeMachine', () => {
   it('maps common field aliases and fills an id', () => {
@@ -54,5 +63,33 @@ describe('fmtSpec / statusVerdict', () => {
     expect(statusVerdict('provisioning')).toBe('warn')
     expect(statusVerdict('terminated')).toBe('down')
     expect(statusVerdict('weird')).toBe('idle')
+  })
+})
+
+describe('compute catalog normalizers (real visor shapes)', () => {
+  it('prettyGpuModel renders vendor slugs as display names', () => {
+    expect(prettyGpuModel('nvidia_l40s')).toBe('L40S')
+    expect(prettyGpuModel('nvidia_h100')).toBe('H100')
+    expect(prettyGpuModel('nvidia_rtx4000_ada')).toBe('RTX 4000 Ada')
+    expect(prettyGpuModel(undefined)).toBeUndefined()
+  })
+
+  it('normalizeRegion counts sizes and reads availability', () => {
+    const r = normalizeRegion({ slug: 'nyc1', name: 'New York 1', available: true, sizes: ['a', 'b', 'c'] })
+    expect(r).toMatchObject({ slug: 'nyc1', name: 'New York 1', available: true, sizeCount: 3 })
+    expect(normalizeRegion({ slug: 'x' })).toMatchObject({ available: false, sizeCount: 0 })
+  })
+
+  it('normalizeSize converts memoryMb→GB and reads price', () => {
+    const s = normalizeSize({ slug: 's-2vcpu-2gb', vcpus: 2, memoryMb: 2048, diskGb: 60, available: true, priceHourly: 0.03, priceMonthly: 18 })
+    expect(s).toMatchObject({ slug: 's-2vcpu-2gb', vcpus: 2, memGb: 2, diskGb: 60, available: true, priceHourly: 0.03, priceMonthly: 18 })
+  })
+
+  it('normalizeGpuSize reads the nested gpu object + VRAM unit', () => {
+    const g = normalizeGpuSize({
+      slug: 'gpu-l40sx1-48gb', vcpus: 8, memoryMb: 65536, diskGb: 500, available: true, priceHourly: 1.57,
+      gpu: { count: 1, model: 'nvidia_l40s', vram: 48, vramUnit: 'gib' },
+    })
+    expect(g).toMatchObject({ slug: 'gpu-l40sx1-48gb', vcpus: 8, memGb: 64, model: 'L40S', gpuCount: 1, vramGb: 48, priceHourly: 1.57 })
   })
 })

@@ -12,7 +12,7 @@ import { TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 
-export type PlatformErrorKind = 'not-configured' | 'unavailable' | 'error'
+export type PlatformErrorKind = 'not-configured' | 'forbidden' | 'unavailable' | 'error'
 
 export type PlatformError = { kind: PlatformErrorKind; message: string }
 
@@ -20,16 +20,19 @@ export type PlatformError = { kind: PlatformErrorKind; message: string }
 export function interpretPlatformError(e: unknown): PlatformError {
   const status = e instanceof ApiError ? e.status : 0
   const message = e instanceof Error ? e.message : String(e)
-  // 501 = proxy has no service token; 401/403 = the proxy HAS a token but the
-  // platform rejected it (mis-wired/expired token) — both mean "this console's
-  // PaaS credential is not configured correctly", never a user-auth problem.
-  if (status === 501 || status === 401 || status === 403) return { kind: 'not-configured', message }
+  // 501 = the console's PaaS service token is not set (an ADMIN infra concern).
+  // 401/403 = the CALLER can't read the control plane — a customer (not a workspace
+  // admin), NOT a token problem: show a graceful "managed control plane" state, never
+  // the infra PAAS_SERVICE_TOKEN message (that would be a false claim to a customer).
+  if (status === 501) return { kind: 'not-configured', message }
+  if (status === 401 || status === 403) return { kind: 'forbidden', message }
   if (status === 404) return { kind: 'unavailable', message }
   return { kind: 'error', message }
 }
 
 const TITLES: Record<PlatformErrorKind, string> = {
   'not-configured': 'PaaS control plane not configured',
+  forbidden: 'Managed control plane',
   unavailable: 'Backend not yet available',
   error: 'Could not reach the platform',
 }
@@ -37,6 +40,8 @@ const TITLES: Record<PlatformErrorKind, string> = {
 const BODIES: Record<PlatformErrorKind, string> = {
   'not-configured':
     'This console is wired to platform.hanzo.ai, but the server-side service token (PAAS_SERVICE_TOKEN, from KMS) is not set on this deployment yet. Once it is, real data appears here. No placeholder data is shown.',
+  forbidden:
+    'This is an admin-managed view of the shared control plane. Your workloads run on managed Hanzo Cloud — direct control-plane access (clusters, nodes, workloads) is available to workspace admins.',
   unavailable:
     'The platform backend does not serve this endpoint yet (it ships separately). This view lights up automatically once the endpoint is live.',
   error: '',

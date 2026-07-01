@@ -27,6 +27,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { FieldSelect } from '~/components/ui/Field'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { HintButton } from '~/components/ui/Metric'
+import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 import { WorkloadsTab } from './containers/WorkloadsTab'
 import {
   PaasResourceTab,
@@ -106,9 +107,20 @@ export function ContainersModule({ params }: { params: Record<string, string> })
   const [apps, setApps] = useState<PlatformApp[]>([])
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [cluster, setCluster] = useState<string>('')
+  // Surface the apps-inventory failure honestly (a customer 403 → "Managed control
+  // plane"), instead of masking it as a bare empty Workloads table.
+  const [error, setError] = useState<PlatformError | null>(null)
 
   const load = useCallback(() => {
-    PlatformApi.apps().then(setApps).catch(() => setApps([]))
+    PlatformApi.apps()
+      .then((a) => {
+        setApps(a)
+        setError(null)
+      })
+      .catch((e) => {
+        setApps([])
+        setError(interpretPlatformError(e))
+      })
     PlatformApi.listClusters(currentOrg()).then(setClusters).catch(() => setClusters([]))
   }, [])
 
@@ -162,7 +174,11 @@ export function ContainersModule({ params }: { params: Record<string, string> })
       <XStack gap="$4" flexWrap="wrap" items="flex-start">
         <YStack flex={1} minW={320} gap="$2">
           {tab === '' ? (
-            <WorkloadsTab apps={scopedApps} />
+            error ? (
+              <PlatformStateCard error={error} onRetry={load} />
+            ) : (
+              <WorkloadsTab apps={scopedApps} />
+            )
           ) : tab === 'pods' ? (
             <PaasResourceTab path="pods" arrayKeys={['pods']} columns={PODS_COLUMNS} empty="No pods reported for this deployment." hint="The platform pods endpoint lights up here once served." />
           ) : tab === 'containers' ? (

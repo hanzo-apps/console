@@ -92,11 +92,111 @@ export function interpretVisorError(e: unknown): VisorError {
   }
 }
 
+// ── Compute catalog (regions / sizes / GPUs) — the REAL DO offer, per visor ────
+//
+// These are the PUBLIC catalog endpoints (`GET /v1/regions|sizes|gpus`, 200 for any
+// signed-in user; visor's authz allows them un-scoped). They power the customer
+// "launch" surface: real regions, real machine sizes with pricing, and the real GPU
+// accelerator catalog with hourly/monthly price — so Machines/GPUs render the actual
+// offer even before the org owns a single machine (never a blank state, never a fake).
+
+/** One region visor offers, with a count of the sizes available there. */
+export type VisorRegion = { slug: string; name?: string; available: boolean; sizeCount: number }
+/** One standard (CPU) machine size with its real price. */
+export type VisorSize = {
+  slug: string
+  vcpus?: number
+  memGb?: number
+  diskGb?: number
+  available: boolean
+  priceHourly?: number
+  priceMonthly?: number
+}
+/** One GPU machine size — the accelerator model/count + VRAM + real price. */
+export type VisorGpuSize = VisorSize & { model?: string; gpuCount?: number; vramGb?: number }
+
+const bool = (v: unknown): boolean => v === true || v === 'true' || v === 1
+
+/** `nvidia_rtx4000_ada` / `nvidia_l40s` / `nvidia_h100` → `RTX 4000 Ada` / `L40S` / `H100`. */
+export function prettyGpuModel(model?: string): string | undefined {
+  const m = str(model)
+  if (!m) return undefined
+  const base = m.replace(/^nvidia[_-]?/i, '')
+  return base
+    .split(/[_\s]+/)
+    .map((tok) => {
+      const rtx = /^rtx(\d*)$/i.exec(tok) // `rtx4000` → `RTX 4000`, `rtx` → `RTX`
+      if (rtx) return rtx[1] ? `RTX ${rtx[1]}` : 'RTX'
+      if (/^ada$/i.test(tok)) return 'Ada'
+      // A model token that carries a number (l40s, h100, a100) is an all-caps SKU;
+      // a plain word (e.g. a family name) is title-cased.
+      return /\d/.test(tok) ? tok.toUpperCase() : tok.charAt(0).toUpperCase() + tok.slice(1)
+    })
+    .join(' ')
+}
+
+const mbToGb = (mb?: number): number | undefined => (mb == null ? undefined : Math.round((mb / 1024) * 10) / 10)
+
+export function normalizeRegion(raw: unknown): VisorRegion {
+  const r = rec(raw)
+  const sizes = r.sizes
+  return {
+    slug: str(r.slug) ?? str(r.id) ?? str(r.name) ?? '—',
+    name: str(r.name) ?? str(r.label),
+    available: bool(r.available),
+    sizeCount: Array.isArray(sizes) ? sizes.length : 0,
+  }
+}
+
+export function normalizeSize(raw: unknown): VisorSize {
+  const r = rec(raw)
+  return {
+    slug: str(r.slug) ?? str(r.id) ?? '—',
+    vcpus: num(r.vcpus) ?? num(r.vcpu) ?? num(r.cpu),
+    memGb: mbToGb(num(r.memoryMb)) ?? num(r.memoryGb) ?? num(r.memGb),
+    diskGb: num(r.diskGb) ?? num(r.disk),
+    available: bool(r.available),
+    priceHourly: num(r.priceHourly) ?? num(r.hourly),
+    priceMonthly: num(r.priceMonthly) ?? num(r.monthly),
+  }
+}
+
+export function normalizeGpuSize(raw: unknown): VisorGpuSize {
+  const base = normalizeSize(raw)
+  const gpu = rec(rec(raw).gpu)
+  const vram = num(gpu.vram)
+  const unit = (str(gpu.vramUnit) ?? 'gib').toLowerCase()
+  return {
+    ...base,
+    model: prettyGpuModel(str(gpu.model)) ?? str(gpu.model),
+    gpuCount: num(gpu.count),
+    vramGb: vram != null ? (unit.startsWith('m') ? Math.round(vram / 1024) : vram) : undefined,
+  }
+}
+
 export const VisorApi = {
   /** The signed-in org's own machines (user-scoped by visor). */
   machines: async (): Promise<VisorMachine[]> => {
     const r = await restGet<unknown>(vm('machines'))
     return arrayUnder(r, ['machines', 'instances', 'data', 'items', 'rows', 'droplets']).map((m, i) => normalizeMachine(m, i))
+  },
+
+  /** The real region catalog (`GET /v1/regions`). */
+  regions: async (): Promise<VisorRegion[]> => {
+    const r = await restGet<unknown>(vm('regions'))
+    return arrayUnder(r, ['regions', 'data', 'items', 'rows']).map(normalizeRegion)
+  },
+
+  /** The real standard (CPU) size catalog with pricing (`GET /v1/sizes`). */
+  sizes: async (): Promise<VisorSize[]> => {
+    const r = await restGet<unknown>(vm('sizes'))
+    return arrayUnder(r, ['sizes', 'data', 'items', 'rows']).map(normalizeSize)
+  },
+
+  /** The real GPU accelerator catalog with pricing (`GET /v1/gpus`). */
+  gpus: async (): Promise<VisorGpuSize[]> => {
+    const r = await restGet<unknown>(vm('gpus'))
+    return arrayUnder(r, ['gpus', 'data', 'items', 'rows']).map(normalizeGpuSize)
   },
 }
 
