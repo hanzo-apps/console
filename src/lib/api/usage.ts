@@ -1,19 +1,23 @@
 /**
- * Cloud usage client — the read side of the `hanzo.cloud_usage` ledger.
+ * Cloud usage client — the read side of the Overview dashboard.
  *
- * Hits the unified `/v1/get-cloud-usages` endpoint (controllers/cloud_usage.go in
- * hanzoai/ai) through the same cookie-credentialed envelope transport as the rest
- * of the console. Org scope is server-side: `client.ts` stamps `X-Org-Id:
- * currentOrg()` on every call, so a tenant sees only its own org and a global
- * admin sees the org it switched to. For the all-orgs admin god-view (the same
- * endpoint, the same shape — reused by admin.hanzo.ai) pass `allOrgs: true`,
- * which forwards `?org=all`; the backend honors it only for a global admin and
- * ignores it for a tenant (who stays scoped — no cross-org leak).
+ * SOURCE: the REAL commerce usage ledger (`GET /v1/billing/usage`) through the
+ * console's OWN per-tenant `/billing/*` proxy (`app/billing/[...path]/route.ts`),
+ * which injects the commerce service token server-side and scopes every request
+ * to the caller's own org/billing-subject — the SAME subject the gateway debits
+ * and the Cost page reads. This deliberately does NOT use cloud `get-cloud-usages`
+ * anymore: that endpoint returns 200 with `{"status":"error","msg":"usage ledger
+ * unavailable: datastore peer not connected"}` (its o11y/ClickHouse peer is down),
+ * so the customer saw no spend. "Billing IS commerce" — the Overview reads the one
+ * real, charged source, and `usage-adapter.ts` rolls the raw records up into the
+ * rich `CloudUsageOverview` the dashboard renders (reusing the aimetrics parse, so
+ * Overview and Cost agree to the cent).
  *
  * Money is USD cents end-to-end. A delta `pct` is `null` when the prior period
  * had no basis, so the UI shows an honest "—" rather than a fabricated ratio.
  */
-import { get } from './client'
+import { fetchUsageRecords } from './aimetrics'
+import { buildCloudUsageOverview } from './usage-adapter'
 
 export type CloudUsageTotals = {
   tokens: number
@@ -134,15 +138,25 @@ export type UsageOverviewParams = {
 }
 
 export const UsageApi = {
-  overview: (p: UsageOverviewParams = {}): Promise<CloudUsageOverview> =>
-    get<CloudUsageOverview>('get-cloud-usages', {
-      range: p.range,
+  /**
+   * Fetch the tenant's usage ledger once (per-tenant `/billing/usage` proxy) and
+   * roll it up into the dashboard overview for the requested range/tab/page. The
+   * whole ledger is small per subject and the aggregation is client-side, so
+   * range/tab/pagination changes never widen scope — they re-slice the same real
+   * records.
+   */
+  overview: async (p: UsageOverviewParams = {}): Promise<CloudUsageOverview> => {
+    const records = await fetchUsageRecords()
+    return buildCloudUsageOverview(records, {
+      range: p.range ?? '24h',
       start: p.start,
       end: p.end,
-      topModels: p.topModels,
-      activityType: p.activityType,
-      activityLimit: p.activityLimit,
-      activityOffset: p.activityOffset,
-      org: p.allOrgs ? 'all' : p.org,
-    }),
+      topModels: p.topModels ?? 6,
+      activityType: p.activityType ?? 'all',
+      activityLimit: p.activityLimit ?? 8,
+      activityOffset: p.activityOffset ?? 0,
+      now: Date.now(),
+      allOrgs: p.allOrgs,
+    })
+  },
 }

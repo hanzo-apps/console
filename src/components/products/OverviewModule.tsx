@@ -5,9 +5,10 @@
  *
  * Real-time usage, performance, and spend across AI workloads, wired end-to-end
  * to live data (NO mock data):
- *   • metrics / charts / spend-by-model / recent activity ← `/v1/get-cloud-usages`
- *     (the hanzo.cloud_usage ledger), org-scoped by the X-Org-Id header the client
- *     stamps from currentOrg();
+ *   • metrics / charts / spend-by-model / recent activity ← the REAL commerce
+ *     usage ledger `/v1/billing/usage` (via the per-tenant `/billing/*` proxy),
+ *     rolled up by `usage-adapter.ts`. The SAME source the Cost page and gateway
+ *     debit against — replaces the dead cloud `get-cloud-usages` datastore;
  *   • wallet balance ← commerce `/v1/billing/balance` (WalletApi.cloudBalance);
  *   • quick actions ← the real product registry (no dead links).
  *
@@ -211,7 +212,7 @@ export default function OverviewDashboard({ allOrgs }: { params?: Record<string,
           err={overview.e}
           onRetry={() => onRange(range)}
           copy={{
-            notFound: 'The usage ledger is not reachable on this deployment yet. It lights up once the cloud-api datastore peer is connected.',
+            notFound: 'Usage is not available on this deployment yet — it appears once commerce billing (the metered-spend ledger) is reachable for your org.',
           }}
         />
       ) : overview.s === 'loading' ? (

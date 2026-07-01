@@ -23,6 +23,13 @@ import { ErrorState } from '~/components/ui/States'
 
 const DOCS_API = 'https://docs.hanzo.ai/api'
 
+/** Honest date label for the key's last mint/rotate; empty string when unknown. */
+function fmtKeyDate(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 /** Copy-to-clipboard button with a transient confirmed state. */
 function CopyButton({ value, label = 'Copy' }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false)
@@ -111,7 +118,7 @@ export function ApiKeysView() {
       try {
         const { accessKey } = await KeysApi.create()
         setNewKey(accessKey)
-        setStatus({ hasKey: true, keyPrefix: accessKey.slice(0, 11) })
+        setStatus({ hasKey: true, keyPrefix: accessKey.slice(0, 11), createdAt: new Date().toISOString() })
       } catch (e) {
         setError(e instanceof ApiError ? e.message : 'Failed to create the API key')
       } finally {
@@ -176,6 +183,11 @@ export function ApiKeysView() {
                 <Text fontSize="$2" color="$color10" style={{ fontFamily: 'monospace' }}>
                   {status?.keyPrefix ? `${status.keyPrefix}…` : 'hk-…'}
                 </Text>
+                {fmtKeyDate(status?.createdAt) ? (
+                  <Text fontSize="$1" color="$color10">
+                    Last created/rotated {fmtKeyDate(status?.createdAt)}
+                  </Text>
+                ) : null}
               </YStack>
             </XStack>
             <Text fontSize="$3" color="$color11">
