@@ -45,6 +45,9 @@ const POST_SEGMENTS = new Set([
 const ORG_META = new Set(['get-organization'])
 /** Segments carrying an org NAME to pin to the caller's scope. */
 const ORG_NAME = new Set(['get-organization'])
+/** Segments keyed by `organization` (projects) — pin it to the caller's own org so an
+ *  omitted/empty organization can't enumerate/pollute across tenants. */
+const ORG_PARAM = new Set(['get-organization-projects', 'add-project', 'delete-project'])
 
 const forbidden = () => NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
@@ -57,6 +60,7 @@ async function handle(req: NextRequest, path: string[], method: 'GET' | 'POST'):
     allowed: method === 'GET' ? GET_SEGMENTS : POST_SEGMENTS,
     orgMetaSegments: ORG_META,
     orgNameSegments: ORG_NAME,
+    orgParamSegments: ORG_PARAM,
     requireAdminForWrite: true,
   })
 }

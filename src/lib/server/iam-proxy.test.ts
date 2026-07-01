@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest'
 
-import { bodyField } from './iam-proxy'
+import { bodyField, pinnedSearch } from './iam-proxy'
+
+describe('pinnedSearch (org-keyed lister pin — RED CRITICAL)', () => {
+  it('PINS an omitted organization to the caller org for a non-global admin (closes the cross-tenant enumeration)', () => {
+    // Omitted org would make IAM return EVERY org's projects; pin forces the caller's own.
+    expect(pinnedSearch('', true, false, 'maxpower')).toBe('?organization=maxpower')
+  })
+
+  it('OVERWRITES a supplied organization for a non-global admin (server-authoritative)', () => {
+    expect(pinnedSearch('?organization=hanzo', true, false, 'maxpower')).toBe('?organization=maxpower')
+    expect(pinnedSearch('?organization=maxpower', true, false, 'maxpower')).toBe('?organization=maxpower')
+  })
+
+  it('leaves a GLOBAL admin free to target any org (or all)', () => {
+    expect(pinnedSearch('?organization=hanzo', true, true, 'admin')).toBe('?organization=hanzo')
+    expect(pinnedSearch('', true, true, 'admin')).toBe('')
+  })
+
+  it('does not touch a non-org-keyed segment', () => {
+    expect(pinnedSearch('?owner=maxpower', false, false, 'maxpower')).toBe('?owner=maxpower')
+  })
+})
 
 // `bodyField` is the extraction the IAM proxy's tenant-scoping relies on: a
 // mutation carries its target org in the BODY (owner/organization), so the proxy

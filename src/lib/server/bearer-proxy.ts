@@ -105,9 +105,29 @@ export function upstreamHeaders(
  * forward the request to `target/path` as that user. Fails CLOSED: 401 with no
  * session, 502 when the bearer can't be minted or the upstream is unreachable.
  */
+/**
+ * A path is safe to allow-list + forward ONLY when every segment is a real name —
+ * no empty (`//`), `.`/`..` dot-segment, or surviving encoded slash (`%2f`). Next
+ * decodes `%2f` into the catch-all segment array WITHOUT re-normalizing dot-segments,
+ * and `fetch()` collapses `..` AFTER the allow-list runs — so `functions%2f..%2f..%2fiam`
+ * would slip a foreign head (`functions`) past `allowCloudSurface` and then be
+ * rewritten to `/v1/iam` upstream. Gating on clean segments (before the allow-list)
+ * makes the check operate on the exact path `fetch` will send. Leading/trailing
+ * slashes are trimmed by the caller.
+ */
+export function pathIsClean(path: string): boolean {
+  if (!path) return false
+  return path.split('/').every((s) => s !== '' && s !== '.' && s !== '..' && !/%2f/i.test(s))
+}
+
 export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyOpts): Promise<NextResponse> {
   const shape = opts.errorShape ?? 'plain'
-  const path = trimL(opts.path)
+  const path = trimL(opts.path).replace(/\/+$/, '')
+
+  // Reject traversal / empty / encoded-slash segments BEFORE the allow-list (RED HIGH).
+  if (!pathIsClean(path)) {
+    return NextResponse.json(errorBody(shape, opts.notFoundMessage ?? 'Not found', 'not_found'), { status: 404 })
+  }
 
   if (opts.allow && !opts.allow(path)) {
     return NextResponse.json(errorBody(shape, opts.notFoundMessage ?? 'Not found', 'not_found'), { status: 404 })
@@ -125,7 +145,9 @@ export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyO
   try {
     bearer = await adminBearer(user)
   } catch (e) {
-    return NextResponse.json(errorBody(shape, `Could not authorize the request: ${msgOf(e)}`, 'auth_error'), {
+    // Redact the exception (it carries internal IAM host/port) — log server-side only.
+    console.error('bearer-proxy: could not mint user bearer:', msgOf(e))
+    return NextResponse.json(errorBody(shape, 'Could not authorize the request.', 'auth_error'), {
       status: 502,
     })
   }
@@ -151,6 +173,8 @@ export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyO
       },
     })
   } catch (e) {
-    return NextResponse.json(errorBody(shape, `Upstream unreachable: ${msgOf(e)}`, 'upstream_error'), { status: 502 })
+    // Redact the exception (it carries the internal service host/port) — log server-side.
+    console.error('bearer-proxy: upstream unreachable:', opts.target, msgOf(e))
+    return NextResponse.json(errorBody(shape, 'Upstream service is unavailable.', 'upstream_error'), { status: 502 })
   }
 }

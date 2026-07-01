@@ -1,7 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import { type NextRequest } from 'next/server'
 
-import { errorBody, upstreamHeaders } from './bearer-proxy'
+import { errorBody, upstreamHeaders, pathIsClean } from './bearer-proxy'
+
+describe('pathIsClean (traversal / encoded-slash guard — RED HIGH)', () => {
+  it('admits real resource paths', () => {
+    expect(pathIsClean('v1/vector')).toBe(true)
+    expect(pathIsClean('v1/functions/foo/logs')).toBe(true)
+    expect(pathIsClean('v1/collections/tenants/records')).toBe(true)
+  })
+
+  it('REJECTS dot-segment traversal (the %2f-decoded escape that slips a foreign head past the allow-list)', () => {
+    expect(pathIsClean('v1/functions/../../iam')).toBe(false)
+    expect(pathIsClean('v1/collections/tenants/records/../../users/records')).toBe(false)
+    expect(pathIsClean('v1/tasks/../admin')).toBe(false)
+    expect(pathIsClean('v1/./functions')).toBe(false)
+  })
+
+  it('rejects empty segments, a surviving encoded slash, and the empty path', () => {
+    expect(pathIsClean('v1//iam')).toBe(false)
+    expect(pathIsClean('v1/functions%2f..%2fiam')).toBe(false)
+    expect(pathIsClean('v1/functions%2F..')).toBe(false)
+    expect(pathIsClean('')).toBe(false)
+  })
+})
 
 /** A minimal NextRequest stand-in — the header rebuild only reads `headers.get`. */
 const reqWith = (headers: Record<string, string>): NextRequest =>
