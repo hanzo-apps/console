@@ -16,19 +16,37 @@
  */
 import { config } from '~/config'
 
-const KEY = 'hanzo.console.org'
+const KEY = 'hanzo.console.org'         // explicit switcher override
+const SESSION_KEY = 'hanzo.console.session-org' // the signed-in user's own org
 
-/** The org the console is currently scoped to (default: the brand org). */
+/** THE global-admin org — a member of `admin` may act cross-tenant. Mirrors the
+ * server admin-policy; a tenant member (owner=maxpower/…) is NEVER global. */
+export const ADMIN_ORG = 'admin'
+
+/** True when the account is a global (cross-tenant) admin — the ONLY principal
+ * allowed to hit the admin-scoped IAM/overview/PaaS surfaces. A tenant member
+ * (Dave in maxpower) is not, so the console must NOT call those for them. */
+export function isGlobalAdmin(account: { owner?: string; isGlobalAdmin?: boolean } | null | undefined): boolean {
+  return Boolean(account) && (account!.owner === ADMIN_ORG || account!.isGlobalAdmin === true)
+}
+
+/** Seed the signed-in user's own org as the scope default (called once the
+ * session resolves). Persisted so reloads scope to the user's org immediately,
+ * eliminating the brief wrong-org (brand-default) window. */
+export function setSessionOrg(org: string): void {
+  if (typeof window === 'undefined' || !org) return
+  try { window.localStorage.setItem(SESSION_KEY, org) } catch { /* storage blocked */ }
+}
+
+function read(key: string): string {
+  if (typeof window === 'undefined') return ''
+  try { return window.localStorage.getItem(key) ?? '' } catch { return '' }
+}
+
+/** The org the console is currently scoped to: an explicit switcher override, else
+ * the signed-in user's OWN org, else the brand org (pre-session / SSR fallback). */
 export function currentOrg(): string {
-  if (typeof window !== 'undefined') {
-    try {
-      const v = window.localStorage.getItem(KEY)
-      if (v) return v
-    } catch {
-      // localStorage blocked (private mode / SSR) — fall back to the brand org.
-    }
-  }
-  return config.iamOrgName
+  return read(KEY) || read(SESSION_KEY) || config.iamOrgName
 }
 
 /** Switch the active org scope. Passing the brand org clears the override. */

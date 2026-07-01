@@ -10,7 +10,15 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 import { AccountApi, type Account } from '~/lib/api'
+import { setSessionOrg } from '~/lib/org-scope'
 import { getProviderSigninUrl, getSigninUrl } from './iam'
+
+/** Seed the console's org scope to the signed-in user's OWN org, so tenant
+ * members (e.g. maxpower) don't briefly query the brand-default org. */
+function seedOrg(account: Account | null): Account | null {
+  if (account?.owner && account.type !== 'anonymous-user') setSessionOrg(account.owner)
+  return account
+}
 
 type SessionState = {
   account: Account | null
@@ -31,7 +39,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(async () => {
     setLoading(true)
     try {
-      setAccount(await AccountApi.current())
+      setAccount(seedOrg(await AccountApi.current()))
     } finally {
       setLoading(false)
     }
