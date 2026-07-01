@@ -22,6 +22,7 @@ export type ProductCategory =
   | 'Dev'
   | 'Web3'
   | 'Apps'
+  | 'Commerce'
   | 'Settings'
 
 export const categoryOrder: ProductCategory[] = [
@@ -36,6 +37,7 @@ export const categoryOrder: ProductCategory[] = [
   'Dev',
   'Web3',
   'Apps',
+  'Commerce',
   'Settings',
 ]
 
@@ -88,6 +90,7 @@ export const CATEGORY_SUMMARY: Record<ProductCategory, string> = {
   Dev: 'API, SDKs, CLI, IDE, desktop, and keys — the developer tools to build against the cloud.',
   Web3: 'Networks, tokens, wallets, oracles, indexer, and settlement — the on-chain surface.',
   Apps: 'Chat, bot, search, marketplace, and studio — end-user AI applications.',
+  Commerce: 'Products, orders, customers, inventory, and promotions — run your store on Hanzo Commerce (payments via Square in Billing).',
   Settings: 'Team, organization, and profile — administer your account and members.',
 }
 

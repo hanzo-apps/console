@@ -189,6 +189,22 @@ export const cloudProxyBase = (): string =>
 /** Build a `/v1/<path>` URL on the cloud-api user-bearer proxy (`<origin>/cloud/v1/<path>`). */
 export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyBase())
 
+/**
+ * The console's OWN same-origin commerce USER-BEARER proxy base (`<origin>/commerce`).
+ * The commerce store surface (products/orders/customers/collections/variants/
+ * discounts) authorizes on a Bearer JWT: commerce's EdgeAuth validates the token
+ * and mints the org from its `owner` claim, so every read/write is org-scoped
+ * server-side (a cookie-only browser call can't list). The browser calls this proxy
+ * with just its cookie; the server route (`app/commerce/[...path]`) mints a
+ * short-lived user token + forwards it as the Bearer. ONE place defines this origin
+ * (the DRY twin of `cloudProxyBase`); every commerce-store module uses it.
+ */
+export const commerceProxyBase = (): string =>
+  typeof window !== 'undefined' ? `${window.location.origin}/commerce` : '/commerce'
+
+/** Build a `/v1/<path>` URL on the commerce user-bearer proxy (`<origin>/commerce/v1/<path>`). */
+export const commerceProxyV1Url = (path: string): string => v1Url(path, commerceProxyBase())
+
 async function restRequest<T>(
   method: 'GET' | 'POST' | 'DELETE',
   url: string,

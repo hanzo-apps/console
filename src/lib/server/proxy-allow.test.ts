@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { allowCloudSurface, allowVisorSurface, v1Head, CLOUD_HEADS } from './proxy-allow'
+import {
+  allowCloudSurface,
+  allowVisorSurface,
+  allowCommerceSurface,
+  v1Head,
+  CLOUD_HEADS,
+  COMMERCE_HEADS,
+} from './proxy-allow'
 
 describe('v1Head', () => {
   it('extracts the head of a v1 path', () => {
@@ -51,5 +58,23 @@ describe('allowVisorSurface', () => {
     expect(allowVisorSurface('admin/machines')).toBe(false)
     expect(allowVisorSurface('v2/machines')).toBe(false)
     expect(allowVisorSurface('')).toBe(false)
+  })
+})
+
+describe('allowCommerceSurface', () => {
+  it('admits every merchant store head', () => {
+    for (const head of COMMERCE_HEADS) {
+      expect(allowCommerceSurface(`v1/${head}`)).toBe(true)
+      expect(allowCommerceSurface(`v1/${head}/some-id`)).toBe(true)
+    }
+  })
+
+  it('refuses the money / tenant-admin surfaces that share the commerce binary', () => {
+    // Billing rides its OWN scoped `/billing` proxy; checkout + tenant-admin are off-limits.
+    expect(allowCommerceSurface('v1/billing/balance')).toBe(false)
+    expect(allowCommerceSurface('v1/checkout/sessions')).toBe(false)
+    expect(allowCommerceSurface('v1/namespace')).toBe(false)
+    expect(allowCommerceSurface('_/commerce/tenants')).toBe(false)
+    expect(allowCommerceSurface('product')).toBe(false) // must be a v1 path
   })
 })
