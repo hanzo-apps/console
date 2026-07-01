@@ -11,7 +11,7 @@
 import { useRef } from 'react'
 import type { ChangeEvent } from 'react'
 import { Button, Card, Popover, Text, XStack, YStack } from '@hanzo/gui'
-import { Copy, Trash2, Plus, Upload, Braces, Play, Square, ChevronDown, X } from '@hanzogui/lucide-icons-2'
+import { Copy, Trash2, Plus, Upload, Braces, Play, Square, ChevronDown, X, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
 
 import { MessageCard } from './MessageCard'
 import { ModelPicker } from './ModelPicker'
@@ -40,6 +40,9 @@ export function Composer({
   onStop,
   curl,
   json,
+  settingsOpen,
+  onToggleSettings,
+  onOpenSettingsSheet,
 }: {
   composer: ComposerState
   mode: 'chat' | 'completions'
@@ -50,6 +53,12 @@ export function Composer({
   onStop: () => void
   curl: string
   json: string
+  /** Whether the desktop settings side-pane is shown (chevron reflects it). */
+  settingsOpen: boolean
+  /** Toggle the desktop inline settings side-pane. */
+  onToggleSettings: () => void
+  /** Open the mobile settings bottom sheet. */
+  onOpenSettingsSheet: () => void
 }) {
   const fileRef = useRef<HTMLInputElement | null>(null)
 
@@ -74,6 +83,31 @@ export function Composer({
           disabled={running || modelsLoading}
         />
         <XStack items="center" gap="$0.5">
+          {/* Settings — desktop toggles the attached side-pane; the chevron shows
+              its state. (Hidden below md, where the mobile trigger takes over.) */}
+          <Button
+            size="$2"
+            chromeless
+            display="none"
+            $md={{ display: 'flex' }}
+            icon={<SlidersHorizontal size={15} />}
+            iconAfter={<ChevronDown size={13} opacity={0.6} rotate={settingsOpen ? '0deg' : '-90deg'} />}
+            onPress={onToggleSettings}
+            aria-label={settingsOpen ? 'Hide model settings' : 'Show model settings'}
+          >
+            <Text fontSize="$2" color="$color11">
+              Settings
+            </Text>
+          </Button>
+          {/* Settings — mobile opens the bottom sheet. (Hidden at md+.) */}
+          <Button
+            size="$2"
+            chromeless
+            $md={{ display: 'none' }}
+            icon={<SlidersHorizontal size={16} />}
+            onPress={onOpenSettingsSheet}
+            aria-label="Model settings"
+          />
           <Button
             size="$2"
             chromeless
