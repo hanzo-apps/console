@@ -29,10 +29,10 @@ function guiPackages() {
   } catch {
     scoped = []
   }
-  // @hanzo/dashboard and @hanzo/data ship their screens/components as ESM/TSX
+  // @hanzo/dash and @hanzo/data ship their screens/components as ESM/TSX
   // source (no compiled dist), so the shared Base UI is transpiled here the same
   // way Gui is.
-  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dashboard', '@hanzo/data', 'react-native-web', ...scoped]
+  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', 'react-native-web', ...scoped]
 }
 
 /** @type {import('next').NextConfig} */
