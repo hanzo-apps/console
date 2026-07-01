@@ -153,6 +153,7 @@ import { ProjectsModule } from '~/components/products/ProjectsModule'
 import { OraclesModule } from '~/components/products/OraclesModule'
 import { IndexerModule } from '~/components/products/IndexerModule'
 import { NetworksModule } from '~/components/products/NetworksModule'
+import { NodesModule } from '~/components/products/NodesModule'
 import { TokensModule } from '~/components/products/TokensModule'
 import { SettlementModule } from '~/components/products/SettlementModule'
 import { AlertsModule } from '~/components/products/AlertsModule'
@@ -738,6 +739,23 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/gateway`,
     kind: 'module',
     routes: overviewRoutes('gateway'),
+  },
+  {
+    // Per-node blockchain infrastructure — validators (P-chain) + peers (info
+    // API) across the REAL luxd primary networks. In `Network`, so it surfaces on
+    // hanzo (all-networks super-admin/infra view) AND lux/zoo/pars (each scoped to
+    // its own chain — see `nodeNetworksForBrand`). Reads live luxd RPC via the
+    // /nodes proxy; honest "not reporting" per unreachable network.
+    id: 'nodes',
+    label: 'Nodes',
+    icon: Server,
+    description: 'Blockchain node infrastructure — validators and peers across networks.',
+    category: 'Network',
+    status: 'enabled',
+    repo: 'luxfi/node',
+    docs: `${DOCS}/nodes`,
+    kind: 'module',
+    routes: [{ path: '', component: NodesModule }],
   },
   {
     id: 'vpc',
