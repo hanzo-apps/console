@@ -763,3 +763,29 @@ backends ARE up; the fixes are about pages that were CONNECTED but READ AS BROKE
   Containers/Applications/Edge (Connected · managed). `tsc` clean; `vitest` green;
   `next build` ✓ 14/14. (Recovered from a concurrent-agent branch-switch that stashed
   these uncommitted edits — restored + committed in an isolated git worktree.)
+
+## Persistent product filter at level 2 — jump across products from any nav level (v8.4.5, claude/console2-l2-filter)
+
+The verbatim ask: "keep showing the filter products filter input in second level? so
+you can quickly jump to next thing without going back?" The sidebar's product filter
+(`DashboardShell.tsx`) is now a **PERSISTENT header above the two-level slide** instead
+of living inside the level-1 panel — so a user deep in a product's sub-pages (level 2)
+can filter + jump straight to another product WITHOUT sliding Back to level 1 first.
+ONE input, ONE predicate (`entryMatches`, the same the L1 filter uses and ⌘K's
+`searchDestinations` is built from), ONE list — no duplication.
+
+- **`showLevel2` yields to the product list while filtering** (`!filtering` added to the
+  gate). A query typed from ANY level surfaces the exact same level-1 filtered `groups`
+  in place — the filter box stays put, only the list slides in (rides the existing
+  `.hz-slide`, reduced-motion honored). Selecting a result calls the existing `open()`,
+  which now **clears the filter** and slides to that product's level-2 sub-nav. When the
+  filter is empty on a product page, the input simply sits above the L2 breadcrumb.
+- Level-1 filtering is otherwise unchanged (Overview/Docs/Pinned still hide while
+  filtering; "No products match" still shows). The **mobile drawer** (same shared
+  `SidebarNav`) gets the persistent filter for free — filter + jump on phone/tablet too.
+- **Surgical:** only `DashboardShell.tsx` — the `<Input>` block hoisted out of the L1
+  sliding panel into a persistent `<XStack>` header; `open` gained `setFilter('')`;
+  `q`/`filtering` computed before `showLevel2`. No new deps, no product/commerce/
+  platform/wallet/auth files touched (the HOT-tree lanes). Built in an isolated worktree
+  off `origin/main` (the shared tree carried concurrent agents' uncommitted files).
+  `tsc --noEmit` clean, `vitest` **706/706** (60 files), `next build` ✓ (all routes).
