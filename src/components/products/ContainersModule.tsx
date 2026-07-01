@@ -1,140 +1,188 @@
 'use client'
 
 /**
- * Containers — running container workloads scheduled by the platform.
+ * Containers — the workload console for a cluster, over the Hanzo PaaS control
+ * plane via the same-origin `/paas` proxy (admin-gated; service token injected
+ * server-side). Tabs are REAL sub-routes (the registry `:tab` pattern, like
+ * Models/GPUs): Workloads / Pods / Containers / Images / Namespaces / Events.
  *
- * Reads the container inventory from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/containers`), which injects the service token server-side. When the
- * container service isn't provisioned for the org the list load fails and the
- * honest not-configured / unavailable card renders instead of an empty grid —
- * matching every other infra module.
+ *  - Workloads reads the canonical apps inventory (`GET /v1/apps`), scoped to the
+ *    picked cluster — real declared/running tag, drift, health.
+ *  - Pods/Containers/Images/Namespaces/Events each list their platform resource
+ *    kind through the shared, tolerant `PaasResourceTab` (honest states when a
+ *    kind isn't served on this deployment yet).
+ *  - The right rail is the picked cluster's detail (k8s version, region, nodes,
+ *    PROVISIONED CPU/RAM from its node pools) + Quick Actions (real routes or
+ *    honest "coming soon"). Nothing is fabricated.
  */
-import { useCallback, useEffect, useState } from 'react'
-import { Button, Text } from '@hanzo/gui'
-import { RefreshCw } from '@hanzogui/lucide-icons-2'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { RefreshCw, Terminal, ScrollText, Plus, FolderPlus } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { PlatformApi, clustersFromApps, type Cluster, type PlatformApp } from '~/lib/api'
+import { clusterCapacity, fmtVcpu, fmtRam } from '~/lib/api/nodes'
+import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { FieldSelect } from '~/components/ui/Field'
 import { StatusTag } from '~/components/ui/StatusTag'
-import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { HintButton } from '~/components/ui/Metric'
+import { WorkloadsTab } from './containers/WorkloadsTab'
+import {
+  PaasResourceTab,
+  PODS_COLUMNS,
+  CONTAINERS_COLUMNS,
+  IMAGES_COLUMNS,
+  NAMESPACES_COLUMNS,
+  EVENTS_COLUMNS,
+} from './containers/resource'
 
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
+const TABS = [
+  { id: '', label: 'Workloads' },
+  { id: 'pods', label: 'Pods' },
+  { id: 'containers', label: 'Containers' },
+  { id: 'images', label: 'Images' },
+  { id: 'namespaces', label: 'Namespaces' },
+  { id: 'events', label: 'Events' },
+] as const
 
-type Container = {
-  id: string
-  name?: string
-  image?: string
-  status?: string
-  cpu?: string
-  memory?: string
-  node?: string
+function SidebarRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <XStack justify="space-between" items="center" py="$1.5" borderBottomWidth={1} borderColor="$borderColor">
+      <Text fontSize="$2" color="$color11">{label}</Text>
+      <Text fontSize="$2" color="$color12" fontWeight="600" numberOfLines={1}>{value}</Text>
+    </XStack>
+  )
 }
 
-export function ContainersModule(_props: { params: Record<string, string> }) {
-  const [rows, setRows] = useState<Container[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<PlatformError | null>(null)
+/** Right rail: the picked cluster's real detail + quick actions. */
+function ClusterSidebar({
+  name,
+  doks,
+  workloads,
+  onLogs,
+}: {
+  name: string
+  doks: Cluster | null
+  workloads: number
+  onLogs: () => void
+}) {
+  const cap = doks ? clusterCapacity(doks) : null
+  return (
+    <YStack width={300} minW={264} gap="$3">
+      <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor">
+        <Text fontSize="$5" fontWeight="700" numberOfLines={1}>{name || 'No cluster'}</Text>
+        <Text fontSize="$2" color="$color10">{doks ? 'Dedicated Hanzo K8S' : 'Shared Hanzo Cloud / observed'}</Text>
+        <YStack mt="$2">
+          <SidebarRow label="Status" value={doks ? <StatusTag status={doks.phase || doks.status} /> : '—'} />
+          <SidebarRow label="K8s version" value={doks?.k8sVersion || doks?.version || '—'} />
+          <SidebarRow label="Region" value={doks?.region || '—'} />
+          <SidebarRow label="Nodes" value={cap?.nodes ? String(cap.nodes) : '—'} />
+          <SidebarRow label="CPU" value={cap ? fmtVcpu(cap.vcpu) : '—'} />
+          <SidebarRow label="Memory" value={cap ? fmtRam(cap.ramGb) : '—'} />
+          <SidebarRow label="Pods" value="—" />
+          <SidebarRow label="Workloads" value={String(workloads)} />
+        </YStack>
+      </Card>
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const r = await restGet<{ containers?: Container[] }>(paas('containers'))
-      setRows(r.containers ?? [])
-      setLoadError(null)
-    } catch (e) {
-      setLoadError(interpretPlatformError(e))
-      setRows([])
-    } finally {
-      setLoading(false)
-    }
+      <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor">
+        <Text fontSize="$4" fontWeight="700">Quick actions</Text>
+        <YStack gap="$2">
+          <HintButton icon={<Plus size={15} />} disabled hint="Deploy a workload via Builds → Pipelines — in-console create coming soon">Create Deployment</HintButton>
+          <HintButton icon={<FolderPlus size={15} />} disabled hint="Namespace create through the control plane is coming soon">Create Namespace</HintButton>
+          <HintButton icon={<ScrollText size={15} />} onPress={onLogs}>View Logs</HintButton>
+          <HintButton icon={<Terminal size={15} />} disabled hint="In-browser shell needs cluster exec — coming soon">Shell Access</HintButton>
+        </YStack>
+      </Card>
+    </YStack>
+  )
+}
+
+export function ContainersModule({ params }: { params: Record<string, string> }) {
+  const router = useRouter()
+  const search = useSearchParams()
+  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+
+  const [apps, setApps] = useState<PlatformApp[]>([])
+  const [clusters, setClusters] = useState<Cluster[]>([])
+  const [cluster, setCluster] = useState<string>('')
+
+  const load = useCallback(() => {
+    PlatformApi.apps().then(setApps).catch(() => setApps([]))
+    PlatformApi.listClusters(currentOrg()).then(setClusters).catch(() => setClusters([]))
   }, [])
 
-  useEffect(() => {
-    void load()
-  }, [load])
+  useEffect(() => load(), [load])
 
-  const columns: Column<Container>[] = [
-    {
-      key: 'name',
-      header: 'Name',
-      render: (c) => (
-        <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
-          {c.name || c.id}
-        </Text>
-      ),
-    },
-    {
-      key: 'image',
-      header: 'Image',
-      width: 220,
-      render: (c) => (
-        <Text fontSize="$3" color="$color11" numberOfLines={1}>
-          {c.image || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'node',
-      header: 'Node',
-      width: 140,
-      render: (c) => (
-        <Text fontSize="$3" color="$color11">
-          {c.node || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'cpu',
-      header: 'CPU',
-      width: 90,
-      render: (c) => (
-        <Text fontSize="$3" color="$color11">
-          {c.cpu || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'memory',
-      header: 'Memory',
-      width: 100,
-      render: (c) => (
-        <Text fontSize="$3" color="$color11">
-          {c.memory || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: 120,
-      render: (c) => <StatusTag status={c.status ?? 'unknown'} />,
-    },
-  ]
+  // Cluster options: every cluster that appears in the inventory (real). Seed the
+  // selection from the ?cluster= deep link (the Kubernetes page "Workloads" button).
+  const options = useMemo(() => clustersFromApps(apps), [apps])
+  useEffect(() => {
+    const fromUrl = search.get('cluster') ?? ''
+    setCluster((cur) => cur || (fromUrl && (options.includes(fromUrl) || options.length === 0) ? fromUrl : options[0] ?? ''))
+  }, [options, search])
+
+  const active = cluster || options[0] || ''
+  const scopedApps = useMemo(() => apps.filter((a) => a.cluster === active), [apps, active])
+  const doks = useMemo(() => clusters.find((c) => c.name === active) ?? null, [clusters, active])
+
+  const go = (id: string) => router.push(`/containers${id ? `/${id}` : ''}${active ? `?cluster=${encodeURIComponent(active)}` : ''}`)
 
   return (
     <>
       <PageHeader
         title="Containers"
-        subtitle="Running container workloads."
-        actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
-            Refresh
-          </Button>
-        }
+        subtitle="Workloads, pods, and images across your clusters."
+        actions={<Button icon={<RefreshCw size={16} />} onPress={load}>Refresh</Button>}
       />
 
-      {loadError ? (
-        <PlatformStateCard error={loadError} onRetry={() => void load()} />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          rowKey={(c) => c.id}
-          empty="No containers running yet."
+      <XStack gap="$3" items="center" flexWrap="wrap">
+        <XStack width={260} items="center" gap="$2">
+          <Text fontSize="$2" color="$color11">Cluster</Text>
+          <YStack flex={1}>
+            <FieldSelect value={active} options={options.length ? options : ['—']} onChange={setCluster} />
+          </YStack>
+        </XStack>
+        <XStack gap="$1" flexWrap="wrap">
+          {TABS.map((t) => (
+            <Button
+              key={t.id || 'workloads'}
+              size="$2"
+              bg={t.id === tab ? '$color5' : 'transparent'}
+              borderWidth={1}
+              borderColor="$borderColor"
+              onPress={() => go(t.id)}
+            >
+              {t.label}
+            </Button>
+          ))}
+        </XStack>
+      </XStack>
+
+      <XStack gap="$4" flexWrap="wrap" items="flex-start">
+        <YStack flex={1} minW={320} gap="$2">
+          {tab === '' ? (
+            <WorkloadsTab apps={scopedApps} />
+          ) : tab === 'pods' ? (
+            <PaasResourceTab path="pods" arrayKeys={['pods']} columns={PODS_COLUMNS} empty="No pods reported for this deployment." hint="The platform pods endpoint lights up here once served." />
+          ) : tab === 'containers' ? (
+            <PaasResourceTab path="containers" arrayKeys={['containers']} columns={CONTAINERS_COLUMNS} empty="No containers reported." />
+          ) : tab === 'images' ? (
+            <PaasResourceTab path="images" arrayKeys={['images']} columns={IMAGES_COLUMNS} empty="No images reported." />
+          ) : tab === 'namespaces' ? (
+            <PaasResourceTab path="namespaces" arrayKeys={['namespaces']} columns={NAMESPACES_COLUMNS} empty="No namespaces reported." />
+          ) : (
+            <PaasResourceTab path="events" arrayKeys={['events']} columns={EVENTS_COLUMNS} empty="No recent events." />
+          )}
+        </YStack>
+
+        <ClusterSidebar
+          name={active}
+          doks={doks}
+          workloads={scopedApps.length}
+          onLogs={() => router.push('/logs')}
         />
-      )}
+      </XStack>
     </>
   )
 }
