@@ -679,3 +679,51 @@ was deleted, not re-merged.
 - Verification: `tsc --noEmit` clean; `next build` is the authoritative gate
   (Node 24, on-cluster Kaniko — no GitHub builders). One tag `v8.3.1` from main
   HEAD, pinned in `universe/.../crs/console2.yaml`.
+
+## Compute category wired per-org + rich Agents dashboard (v8.4.1, claude/console2-compute-agents)
+
+Every Compute page is wired to its REAL backend, per-org, via the user-bearer BFF
+proxies — and a customer (non-admin) never sees the admin `/paas` "PAAS_SERVICE_TOKEN
+not configured" message. Plus a rich **Agents** dashboard over `/cloud/v1/agents`.
+
+- **Backends, per page (one proxy each, org resolved from the minted user Bearer):**
+  Machines / GPUs / Regions → **visor** `/vm/v1/{machines,gpus,sizes,regions}`;
+  Agents / Functions / Prompts → **cloud** `/cloud/v1/*` (allow-listed in
+  `proxy-allow.ts`); Containers / Applications → **paas** `/paas`; Tasks → **tasksd**
+  `/tasksd/v1/tasks/*`; Edge → honest managed/coming-soon (no backend). Verified live
+  in-cluster: visor `/v1/regions|sizes|gpus` = 200 real DO catalog + pricing,
+  `/v1/machines` = 403 without the bearer (per-org); cloud `/v1/agents`/`/v1/functions`
+  = 404 (concurrent cloud lane binding them), `/v1/prompts` = 200 `{data,meta}`; tasks
+  `/v1/tasks/cluster/health` = 200.
+- **Agents dashboard** (`AgentsModule` + `lib/api/agents.ts` + `agents/{parts,forms}.tsx`):
+  five stat cards (Total / Active / Success 30d / Invocations 30d / Avg latency, spark+
+  delta from the real series), invocations-over-time area chart with range toggles,
+  Agent Health donut (active/idle/error/draft), agents table (status tabs + pagination,
+  version badges, row → detail pane), Recent Activity feed, Top Agents bar list, and a
+  30-day Resource Usage panel. EVERY number is real or derived (`deriveAgentStats`,
+  `healthBreakdown`, `topByInvocations`, `deriveActivity`) — no fabricated 58-agents/
+  1.92M-invocations. Zero agents (or `/v1/agents` 404) → a polished "create your first
+  agent" empty state with a REAL New-Agent flow (POST `/v1/agents`; honest "not connected
+  — use the CLI" on 404). 22 unit tests.
+- **Machines** (role-routed): the customer branch (`CustomerMachines`) now renders the
+  real region + size catalog with live pricing (`MachineCatalog` over visor
+  `/v1/regions|sizes`) under the "Launch your first machine" state — never a blank
+  spinner, proving the backend. Root cause of "not loading" (VISOR_URL unset) already
+  fixed on main (proxy default `visor.hanzo.svc:19000` + CR env).
+- **GPUs** (now role-routed like Machines): customer → `CustomerGpus` — the real visor
+  GPU accelerator catalog (model/count/VRAM/host/price) + the org's own GPU machines;
+  admin → the `/paas` operator fleet. The Overview route (`GpusOverview`) is role-aware
+  (admin living-overview vs customer catalog). +4 visor catalog normalizer tests.
+- **Containers**: the apps-inventory 403 is surfaced as the graceful "Managed control
+  plane" card (was masked as a bare empty Workloads table).
+- **Edge**: honest "coming soon / managed" state (no real edge backend), real nodes only
+  if the platform ever reports them.
+- **Shared decomplection** (`platform/state.tsx`): split 401/403 (`forbidden` →
+  "Managed control plane", customer-appropriate) from 501 (`not-configured` → the admin
+  PAAS_SERVICE_TOKEN hint). ONE fix removes the false infra-token claim for customers
+  across every `/paas` module (Containers/Edge/GPUs-admin/Clusters/Kubernetes).
+- **Already customer-safe, unchanged:** Applications (cloud `/v1`), Tasks (`/tasksd`
+  per-user), Functions (`/cloud/v1/functions`).
+- Verification: `tsc --noEmit` clean, `vitest` **639+ green** (all suites; +22 agents,
+  +4 visor), `next build` ✓ 14/14 pages. Live visual verification as Dave is post-deploy
+  (ships in the merge agent's authoritative image from main HEAD).

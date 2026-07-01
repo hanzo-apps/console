@@ -168,7 +168,7 @@ import { EdgeModule } from '~/components/products/EdgeModule'
 import { FunctionsModule } from '~/components/products/FunctionsModule'
 import { ContainersModule } from '~/components/products/ContainersModule'
 import { MachinesModule } from '~/components/products/MachinesModule'
-import { GpusModule } from '~/components/products/GpusModule'
+import { GpusModule, GpusOverview } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
@@ -193,7 +193,9 @@ import {
 const OverviewDashboard = livingOverviewModule('overview')
 const AiMetricsLiving = livingOverviewModule('ai-metrics')
 const FunctionsLiving = livingOverviewModule('functions')
-const GpusLiving = livingOverviewModule('gpus')
+// GPUs Overview is role-aware (admin → living overview, customer → visor catalog);
+// the living-overview construction lives in GpusModule (GpusOverview) so this route
+// is a plain component reference like every other.
 import { ZeroTrustModule } from '~/components/products/ZeroTrustModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
@@ -533,11 +535,12 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/operator',
     docs: `${DOCS}/gpus`,
     kind: 'module',
-    // Overview ('') is the reusable LivingOverview (real operator inventory + health);
-    // the product tabs stay on GpusModule via `:tab`, reachable from the sidebar's
-    // level-2 sub-nav (declared below) so the overview is never a dead-end.
+    // Overview ('') is role-aware (GpusOverview: admin → LivingOverview of the real
+    // operator inventory + health; customer → the visor GPU catalog + their machines);
+    // the product tabs stay on GpusModule via `:tab` (also role-routed), reachable from
+    // the sidebar's level-2 sub-nav (declared below) so the overview is never a dead-end.
     routes: [
-      { path: '', component: GpusLiving },
+      { path: '', component: GpusOverview },
       { path: ':tab', component: GpusModule },
     ],
     subpages: [
