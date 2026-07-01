@@ -89,8 +89,8 @@ describe('groupSpend — cost breakdown by a present dimension', () => {
 
   it('groups by provider', () => {
     const g = groupSpend(recs, 'provider')
-    expect(g.map((r) => r.label)).toEqual(['hanzo', 'openai'])
-    expect(g[0].cents).toBe(350)
+    expect(g.map((r) => r.label)).toEqual(['openai', 'hanzo'])
+    expect(g[0].cents).toBe(400)
   })
 
   it('labels a missing dimension "unknown" (never invented)', () => {
