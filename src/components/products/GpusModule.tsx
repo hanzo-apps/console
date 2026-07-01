@@ -25,9 +25,12 @@ import { PlatformApi, type Cluster } from '~/lib/api'
 import { BillingApi, type Usage } from '~/lib/api/billing'
 import { ComputeApi, type Gpu, type GpuAlert, type UsageLedger } from '~/lib/api/compute'
 import { currentOrg } from '~/lib/org-scope'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { interpretPlatformError } from './platform/state'
+import { livingOverviewModule } from './overview/living/LivingOverviewModule'
+import { CustomerGpus } from './gpus/CustomerGpus'
 import { HintButton } from './gpus/charts'
 import { OverviewTab } from './gpus/OverviewTab'
 import { GpusTab } from './gpus/GpusTab'
@@ -85,7 +88,27 @@ function useComputeData(): ComputeData {
   return { gpus, clusters, alerts, ledger, accountUsage, reload }
 }
 
-export function GpusModule({ params }: { params: Record<string, string> }) {
+/**
+ * GPUs — routes by role. A CUSTOMER sees the visor accelerator catalog + their own
+ * GPU machines (`CustomerGpus`, over the user-bearer `/vm` proxy) — real per-org data
+ * or an honest empty state, never the admin `/paas` fleet view. A GLOBAL ADMIN sees
+ * the operator fleet (`AdminGpus`, over the `/paas` control plane), whose
+ * not-configured/forbidden state is the right operator signal. One wrapper per route
+ * (Overview + tabs), each branch a full component with its own hooks — no
+ * rules-of-hooks hazard.
+ */
+export function GpusModule(props: { params: Record<string, string> }) {
+  return useIsGlobalAdmin() ? <AdminGpus {...props} /> : <CustomerGpus />
+}
+
+/** The GPUs Overview route (`/gpus`): the platform living overview for admins, the
+ *  visor catalog for a customer. Kept here so the registry stays a plain data file. */
+const GpusLiving = livingOverviewModule('gpus')
+export function GpusOverview(props: { params: Record<string, string> }) {
+  return useIsGlobalAdmin() ? <GpusLiving {...props} /> : <CustomerGpus />
+}
+
+function AdminGpus({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const data = useComputeData()
   const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
