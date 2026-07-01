@@ -55,6 +55,14 @@ export type UsageRecord = {
   at: number | null
   /** The free-text note commerce stores, e.g. "API usage: gpt-4o-mini (1234 tokens)". */
   notes: string
+  /** True when the call hit a premium (paid-tier) model — from metadata. */
+  premium: boolean
+  /** True when the response was streamed — from metadata. */
+  stream: boolean
+  /** Provider/gateway status for the call (e.g. `success`) — from metadata; '' when absent. */
+  status: string
+  /** Gateway request id (from metadata) for tracing; '' when absent. */
+  requestId: string
 }
 
 /** A point in the per-day usage series — one calendar day in the window. */
@@ -99,6 +107,7 @@ export const RANGE_DAYS: Record<RangeKey, number> = { '24h': 1, '7d': 7, '30d': 
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+const bool = (v: unknown): boolean => v === true
 
 /** Parse an ISO/RFC3339 (or epoch) timestamp to ms; null when unparseable. */
 const epochMs = (v: unknown): number | null => {
@@ -137,6 +146,10 @@ export function normalizeRecord(r: Record<string, unknown>, i: number): UsageRec
     totalTokens: total,
     at: epochMs(r.createdAt) ?? epochMs(r.timestamp),
     notes: str(r.notes),
+    premium: bool(meta.premium),
+    stream: bool(meta.stream),
+    status: str(meta.status),
+    requestId: str(meta.requestId) || str(r.requestId),
   }
 }
 
