@@ -1,6 +1,10 @@
 {
   "name": "@hanzo/console",
-  "version": "8.0.2",
+<<<<<<< HEAD
+  "version": "8.0.3",
+=======
+  "version": "8.0.3",
+>>>>>>> origin/feat/console-shell-ia
   "private": true,
   "license": "BSD-3-Clause",
   "author": "Hanzo AI <dev@hanzo.ai>",
