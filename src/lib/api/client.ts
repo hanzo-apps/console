@@ -171,6 +171,22 @@ export const aiBase = (): string => (typeof window !== 'undefined' ? `${window.l
 /** Build a `/v1/<path>` URL on the AI proxy (`<origin>/ai/v1/<path>`). */
 export const aiV1Url = (path: string): string => v1Url(path, aiBase())
 
+/**
+ * The console's OWN same-origin cloud-api USER-BEARER proxy base (`<origin>/cloud`).
+ * The managed-data (vector/sql/kv/s3/docdb/datastore/search) and serverless
+ * (functions/prompts/agents) surfaces authorize on a Bearer JWT — the org comes
+ * from the token's owner claim, so a cookie-only browser call 403s ("X-Org-Id
+ * required"). The browser therefore calls this proxy with just the cookie and the
+ * server route (`app/cloud/[...path]`) mints a short-lived user token + forwards it
+ * as the Bearer (dodging the public-gateway 431 — in-cluster, bearer-only). ONE
+ * place defines this origin; provisioning + functions (+ prompts/agents) use it.
+ */
+export const cloudProxyBase = (): string =>
+  typeof window !== 'undefined' ? `${window.location.origin}/cloud` : '/cloud'
+
+/** Build a `/v1/<path>` URL on the cloud-api user-bearer proxy (`<origin>/cloud/v1/<path>`). */
+export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyBase())
+
 async function restRequest<T>(
   method: 'GET' | 'POST' | 'DELETE',
   url: string,
