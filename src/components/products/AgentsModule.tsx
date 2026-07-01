@@ -298,6 +298,12 @@ export function AgentsModule(_props: { params: Record<string, string> }) {
     return (
       <>
         {header}
+        {live ? (
+          <XStack items="center" gap="$2" px="$3" py="$2" rounded="$4" bg="$color2" borderWidth={1} borderColor="$borderColor" self="center">
+            <YStack width={8} height={8} rounded="$10" bg="$green10" />
+            <Text fontSize="$2" color="$color11">Connected to Agents · no agents yet</Text>
+          </XStack>
+        ) : null}
         <EmptyState
           icon={Bot}
           title="Create your first agent"
