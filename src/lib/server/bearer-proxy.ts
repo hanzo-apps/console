@@ -117,21 +117,37 @@ export function upstreamHeaders(
  */
 export function pathIsClean(path: string): boolean {
   if (!path) return false
-  return path.split('/').every((s) => s !== '' && s !== '.' && s !== '..' && !/%2f/i.test(s))
+  // Reject empty (`//`), `.`/`..` dot-segments, AND URL-encoded dots/slashes
+  // (`%2e`/`%2f`). Next decodes a catch-all segment exactly ONCE, so a double-encoded
+  // `%252e%252e` arrives here as literal `%2e%2e`; a raw `..` check misses it, then
+  // undici's URL parser normalizes `%2e%2e` into real `../` at fetch time (RED HIGH).
+  // The forward path ALSO re-validates the post-normalization URL — this is the fast,
+  // defense-in-depth first gate.
+  return path.split('/').every((s) => s !== '' && s !== '.' && s !== '..' && !/%2[ef]/i.test(s))
 }
 
 export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyOpts): Promise<NextResponse> {
   const shape = opts.errorShape ?? 'plain'
-  const path = trimL(opts.path).replace(/\/+$/, '')
+  const notFound = () =>
+    NextResponse.json(errorBody(shape, opts.notFoundMessage ?? 'Not found', 'not_found'), { status: 404 })
 
-  // Reject traversal / empty / encoded-slash segments BEFORE the allow-list (RED HIGH).
-  if (!pathIsClean(path)) {
-    return NextResponse.json(errorBody(shape, opts.notFoundMessage ?? 'Not found', 'not_found'), { status: 404 })
-  }
+  const rawPath = trimL(opts.path).replace(/\/+$/, '')
+  // Fast reject on the raw (pre-normalization) path — literal traversal / %2e / %2f.
+  if (!pathIsClean(rawPath) || (opts.allow && !opts.allow(rawPath))) return notFound()
 
-  if (opts.allow && !opts.allow(path)) {
-    return NextResponse.json(errorBody(shape, opts.notFoundMessage ?? 'Not found', 'not_found'), { status: 404 })
+  // Re-parse the destination so the AUTHORITATIVE gate runs on the EXACT path fetch
+  // will send: WHATWG URL (undici) resolves %2e and double-encoded (%252e→%2e)
+  // dot-segments a raw-string check can't see, turning `functions/%2e%2e/iam` into
+  // `/iam` upstream (RED HIGH). We validate — and fetch — the normalized URL.
+  let dest: URL
+  try {
+    dest = new URL(`${trimR(opts.target)}/${rawPath}${req.nextUrl.search}`)
+  } catch {
+    return notFound()
   }
+  const basePath = new URL(trimR(opts.target)).pathname // '/' for an origin target (all ours are)
+  const normPath = trimL(dest.pathname.slice(basePath.length)).replace(/\/+$/, '')
+  if (!pathIsClean(normPath) || (opts.allow && !opts.allow(normPath))) return notFound()
 
   const user = await resolveUser(req)
   if (!user) {
@@ -156,12 +172,12 @@ export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyO
   const headers = upstreamHeaders(req, user.owner, hasBody, opts)
   headers.Authorization = `Bearer ${bearer}`
 
-  const url = `${trimR(opts.target)}/${path}${req.nextUrl.search}`
   const init: RequestInit = { method: req.method, headers, cache: 'no-store', signal: req.signal }
   if (hasBody) init.body = await req.text()
 
   try {
-    const res = await fetch(url, init)
+    // Fetch the NORMALIZED dest (exactly what we validated) — never the raw string.
+    const res = await fetch(dest, init)
     // Stream the upstream body straight through — correct for SSE, JSON, binary,
     // and empty (204). The upstream status flows verbatim so an honest 402/403/501
     // reaches the UI unchanged.
