@@ -57,6 +57,43 @@ test.describe('Hanzo Cloud Console — public', () => {
     await expect(page.locator('button:has-text("Continue with Google")')).toBeVisible()
     await expect(page.locator('text=/passkey/i')).toBeVisible()
   })
+
+  test('root serves the app (200, dark #0a0a0a) + /base resolves', async ({ page, request }) => {
+    const res = await page.goto(BASE_URL)
+    expect(res?.status()).toBe(200)
+    await expect(page).toHaveTitle(/Hanzo Cloud Console/)
+    await expect(page.locator('meta[name="theme-color"][content="#0a0a0a"]')).toHaveCount(1)
+    expect((await request.get(`${BASE_URL}/base`)).status()).toBe(200)
+  })
+
+  // Security gates — the server proxies must reject unauthenticated calls and
+  // stay inside their allow-list. No credentials (plain request context) so this
+  // proves the production posture in CI. A regression is a real security bug.
+  test('server proxies reject unauthenticated calls (401)', async ({ request }) => {
+    for (const path of [
+      '/superbase/v1/collections/tenants/records',
+      '/bootnode/v1/networks',
+      '/keys',
+    ]) {
+      const res = await request.get(`${BASE_URL}${path}`)
+      expect(res.status(), `${path} must gate`).toBe(401)
+    }
+  })
+
+  test('proxy allow-lists reject off-list paths (no tunnel)', async ({ request }) => {
+    for (const path of [
+      '/superbase/v1/collections/secrets/records',
+      '/bootnode/v1/secrets',
+    ]) {
+      const res = await request.get(`${BASE_URL}${path}`)
+      expect(res.status(), `${path} must not tunnel`).toBe(404)
+    }
+  })
+
+  test('unknown route never 5xxs', async ({ request }) => {
+    const res = await request.get(`${BASE_URL}/no-such-surface-xyz`)
+    expect(res.status()).toBeLessThan(500)
+  })
 })
 
 test.describe('Hanzo Cloud Console e2e', () => {
