@@ -16,14 +16,13 @@
  * The balance comes from the per-tenant `/billing/*` server proxy, scoped to the
  * caller's OWN org — the exact credit the gateway debits.
  */
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Avatar, Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ChevronRight, LogOut, Wallet } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
-import { WalletApi } from '~/lib/api/wallet'
+import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
 
 const fmtUsd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 
@@ -60,27 +59,11 @@ export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
   const { account, signOut } = useSession()
   const router = useRouter()
   const owner = account?.owner ?? ''
-  const [cents, setCents] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (!owner) return
-    let alive = true
-    const load = async () => {
-      try {
-        const b = await WalletApi.cloudBalance(owner)
-        if (alive) setCents(typeof b.available === 'number' ? b.available : b.balance)
-      } catch {
-        if (alive) setCents(null)
-      }
-    }
-    void load()
-    // Refresh periodically so spend (chat/playground/usage) reflects without a reload.
-    const t = setInterval(() => void load(), 30_000)
-    return () => {
-      alive = false
-      clearInterval(t)
-    }
-  }, [owner])
+  // ONE shared live balance (same value the Wallet/Cost pages show): refetches on
+  // mount, on window focus/visibility, on a 30s poll, and after any completion or
+  // top-up — so spend/credit changes reflect here without a reload.
+  const { balance } = useCloudBalance()
+  const cents = spendableCents(balance)
 
   if (!owner) return null
 

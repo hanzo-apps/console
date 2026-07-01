@@ -28,7 +28,8 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { AccountApi, type Account } from '~/lib/api'
-import { WalletApi, ApiError, type CloudBalance } from '~/lib/api/wallet'
+import { WalletApi } from '~/lib/api/wallet'
+import { useCloudBalance, invalidateBalance, spendableCents } from '~/lib/billing/live-balance'
 import * as evm from '~/lib/wallet/hanzo-evm'
 import { PageHeader } from '~/components/ui/PageHeader'
 
@@ -55,33 +56,17 @@ export function WalletModule(_props: { params: Record<string, string> }) {
   const [connecting, setConnecting] = useState(false)
   const [connectErr, setConnectErr] = useState<string | null>(null)
   const [walletHusd, setWalletHusd] = useState<Loadable<bigint>>({ state: 'idle' })
-  const [cloud, setCloud] = useState<Loadable<CloudBalance>>({ state: 'idle' })
   const [amount, setAmount] = useState('')
   const [topup, setTopup] = useState<Topup>({ state: 'idle' })
+
+  // Cloud credit = the ONE shared live balance (same value the sidebar + Cost page
+  // show), auto-refreshing on focus/visibility/poll and after a completion/top-up.
+  const { phase: cloudPhase, balance: cloudBalance, error: cloudError, refresh: refreshCloud } = useCloudBalance()
+  const cloudCents = spendableCents(cloudBalance)
 
   const walletReady = typeof window !== 'undefined' && evm.walletAvailable()
 
   // ── Loaders ────────────────────────────────────────────────────────────────
-  const loadCloud = useCallback(async (acc: Account | null) => {
-    const uid = userIdOf(acc)
-    if (!uid) {
-      setCloud({ state: 'noauth' })
-      return
-    }
-    setCloud({ state: 'loading' })
-    try {
-      const value = await WalletApi.cloudBalance(uid)
-      setCloud({ state: 'ok', value })
-    } catch (e) {
-      const code = e instanceof ApiError ? e.status : 0
-      // 404 = the credit-balance endpoint is not routed on this host yet (billing
-      // ships separately) — honest "not available", not a scary error.
-      if (code === 401 || code === 403) setCloud({ state: 'noauth' })
-      else if (code === 404) setCloud({ state: 'unconfigured' })
-      else setCloud({ state: 'error', error: e instanceof Error ? e.message : 'Failed to load balance' })
-    }
-  }, [])
-
   const loadWalletHusd = useCallback(async (address: string | null) => {
     if (!address) {
       setWalletHusd({ state: 'idle' })
@@ -107,7 +92,6 @@ export function WalletModule(_props: { params: Record<string, string> }) {
       const acc = await AccountApi.current()
       if (!live) return
       setAccount(acc)
-      void loadCloud(acc)
       const addr = await evm.currentAddress()
       if (!live || !addr) return
       const c = { address: addr, chainId: evm.HANZO_MAINNET.chainId }
@@ -117,7 +101,7 @@ export function WalletModule(_props: { params: Record<string, string> }) {
     return () => {
       live = false
     }
-  }, [loadCloud, loadWalletHusd])
+  }, [loadWalletHusd])
 
   // ── Actions ─────────────────────────────────────────────────────────────────
   const onConnect = useCallback(async () => {
@@ -152,17 +136,17 @@ export function WalletModule(_props: { params: Record<string, string> }) {
       })
       setTopup({ state: 'success', txHash: result.txHash, creditedCents: result.creditedCents })
       setAmount('')
-      void loadCloud(account)
+      invalidateBalance() // credit landed — reflect it in the cloud-credit card now
       void loadWalletHusd(conn.address)
     } catch (e) {
       setTopup({ state: 'error', error: e instanceof Error ? e.message : 'Top-up failed' })
     }
-  }, [conn, amount, account, loadCloud, loadWalletHusd])
+  }, [conn, amount, account, loadWalletHusd])
 
   const refresh = useCallback(() => {
-    void loadCloud(account)
+    refreshCloud()
     void loadWalletHusd(conn?.address ?? null)
-  }, [account, conn, loadCloud, loadWalletHusd])
+  }, [conn, refreshCloud, loadWalletHusd])
 
   const busy = topup.state === 'sending' || topup.state === 'recording'
   const onHanzo = conn?.chainId === evm.HANZO_MAINNET.chainId
@@ -188,27 +172,27 @@ export function WalletModule(_props: { params: Record<string, string> }) {
               Cloud credit
             </Text>
           </XStack>
-          {cloud.state === 'ok' ? (
+          {cloudPhase === 'ready' && cloudBalance ? (
             <YStack gap="$1">
               <Text fontSize="$9" fontWeight="900">
-                {usd(cloud.value.available)}
+                {usd(cloudCents ?? cloudBalance.available)}
               </Text>
               <Text fontSize="$2" color="$color11">
-                available · {usd(cloud.value.balance)} total · {usd(cloud.value.holds)} on hold
+                available · {usd(cloudBalance.balance)} total · {usd(cloudBalance.holds)} on hold
               </Text>
             </YStack>
-          ) : cloud.state === 'noauth' ? (
+          ) : cloudPhase === 'noauth' ? (
             <Text fontSize="$3" color="$color11">
               Sign in to view your cloud credit balance.
             </Text>
-          ) : cloud.state === 'unconfigured' ? (
+          ) : cloudPhase === 'unconfigured' ? (
             <Text fontSize="$3" color="$color11">
               Cloud credit balance isn&apos;t available on this deployment yet. Manage billing in
               Hanzo Billing.
             </Text>
-          ) : cloud.state === 'error' ? (
+          ) : cloudPhase === 'error' ? (
             <Text fontSize="$3" color="$color11">
-              Balance unavailable: {cloud.error}
+              Balance unavailable: {cloudError}
             </Text>
           ) : (
             <Text fontSize="$3" color="$color11">
