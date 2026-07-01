@@ -107,6 +107,7 @@ import { Users,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId } from '~/config'
+import { type ProductCategory, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
@@ -239,34 +240,16 @@ export type ProductSubpage = {
  *   - `Dev` and `Web3` are retained (they hold real developer + on-chain
  *     products); the axis above lists the primary groups, not an exclusive set.
  */
-export type ProductCategory =
-  | 'AI'
-  | 'Compute'
-  | 'Training'
-  | 'Data'
-  | 'Network'
-  | 'Security'
-  | 'Observe'
-  | 'Platform'
-  | 'Dev'
-  | 'Web3'
-  | 'Apps'
-  | 'Settings'
-
-export const categoryOrder: ProductCategory[] = [
-  'AI',
-  'Compute',
-  'Training',
-  'Data',
-  'Network',
-  'Security',
-  'Observe',
-  'Platform',
-  'Dev',
-  'Web3',
-  'Apps',
-  'Settings',
-]
+// ProductCategory + categoryOrder + the pure per-brand scope live in
+// ./brand-scope (dependency-free, unit-tested in registry-brand.test.ts).
+// Re-exported here so existing importers of the registry are unchanged.
+export type { ProductCategory } from './brand-scope'
+export {
+  categoryOrder,
+  BRAND_CATEGORIES,
+  categoriesForBrand,
+  categoryInBrand,
+} from './brand-scope'
 
 /**
  * Enablement state — honest, three values only:
@@ -1630,24 +1613,15 @@ export const isAdminEntry = (e: CatalogEntry): boolean => e.admin === true
  * AI-cloud surfaces (AI, Compute-for-AI, Training, Data, Observe, Apps,
  * Platform). `null` = every category. Adjust a brand by editing one row.
  */
-const BRAND_CATEGORIES: Record<BrandId, ProductCategory[] | null> = {
-  hanzo: null,
-  lux: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
-  zoo: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
-  pars: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
-}
+// The pure scope (categoriesForBrand/categoryInBrand/BRAND_CATEGORIES) is
+// re-exported above from ./brand-scope. These two wrappers bind it to the
+// CURRENT brand (resolved from the request host).
 
-/** Categories the current brand's console surfaces (all, for hanzo). */
-export const brandCategoryOrder = (): ProductCategory[] => {
-  const allowed = BRAND_CATEGORIES[config.brand]
-  return allowed === null ? categoryOrder : categoryOrder.filter((c) => allowed.includes(c))
-}
+/** Categories the CURRENT brand's console surfaces (all, for hanzo). */
+export const brandCategoryOrder = (): ProductCategory[] => categoriesForBrand(config.brand)
 
-/** True when an entry belongs to the current brand's console. */
-export const inBrand = (e: CatalogEntry): boolean => {
-  const allowed = BRAND_CATEGORIES[config.brand]
-  return allowed === null || allowed.includes(e.category)
-}
+/** True when an entry belongs to the CURRENT brand's console. */
+export const inBrand = (e: CatalogEntry): boolean => categoryInBrand(config.brand, e.category)
 
 /**
  * The catalog a given user may SEE. A global admin sees everything; a customer
