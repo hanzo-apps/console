@@ -140,6 +140,7 @@ import { DatasetItemsModule, DatasetRunsModule, DatasetsModule } from '~/compone
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { ComingSoon } from '~/components/products/ComingSoon'
 import { overviewFor } from '~/components/products/overview/NativeOverview'
+import { CategoryOverview } from '~/components/products/overview/CategoryOverview'
 import { ApiKeysModule } from '~/components/products/ApiKeysModule'
 import { SettingsModule } from '~/components/products/SettingsModule'
 import { ScoreConfigsModule } from '~/components/products/ScoreConfigsModule'
@@ -266,6 +267,9 @@ export {
   BRAND_CATEGORIES,
   categoriesForBrand,
   categoryInBrand,
+  categorySlug,
+  categoryFromSlug,
+  CATEGORY_SUMMARY,
 } from './brand-scope'
 
 /**
@@ -1683,10 +1687,30 @@ export type ProductModule = {
   routes: ProductRoute[]
 }
 
-/** The in-console subset, in catalog order. The router/match layer reads this. */
-export const productModules: ProductModule[] = catalog
-  .filter((e): e is Extract<CatalogEntry, { kind: 'module' }> => e.kind === 'module')
-  .map(({ id, label, icon, description, routes }) => ({ id, label, icon, description, routes }))
+/**
+ * Category landing pages resolve at `/category/<slug>` through the SAME router as
+ * products — one `ProductModule` with one `:slug` `ProductRoute`, matched by the
+ * same `resolveRoute` and rendered by the same catch-all. It is deliberately NOT a
+ * `catalog` entry: a category is a GROUPING of products, not a product, so it
+ * never shows up as a card in the nav / home / launcher. `CategoryOverview`
+ * derives its whole content from the catalog (`visibleCatalogByCategory`).
+ */
+export const CATEGORY_ROUTE_ID = 'category'
+const categoryRouteModule: ProductModule = {
+  id: CATEGORY_ROUTE_ID,
+  label: 'Category',
+  icon: Boxes,
+  description: 'Category overview',
+  routes: [{ path: ':slug', component: CategoryOverview }],
+}
+
+/** The in-console subset, in catalog order, plus the category-landing router. */
+export const productModules: ProductModule[] = [
+  ...catalog
+    .filter((e): e is Extract<CatalogEntry, { kind: 'module' }> => e.kind === 'module')
+    .map(({ id, label, icon, description, routes }) => ({ id, label, icon, description, routes })),
+  categoryRouteModule,
+]
 
 /** Look up an in-console module by id (base path segment). */
 export const findModule = (id: string): ProductModule | undefined =>
