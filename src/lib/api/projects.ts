@@ -1,17 +1,25 @@
 /**
  * Projects API — projects live UNDER the brand org (Hanzo IAM owns them) and
  * scope every resource (o11y, API keys, datasets, deploys) below them. Served by
- * IAM on the unified backend at `/v1/iam/*`: `get-organization-projects`
- * (org-scoped list), `add-project`, `delete-project` — the same `/v1/iam/`
- * surface as `get-organizations`. The IAM `Project` is keyed `(owner, name)`
- * with an indexed `organization`; we set owner = organization = the brand org so
- * the record is owned and listed under it.
+ * **IAM** (not the cloud binary): `get-organization-projects` (org-scoped list),
+ * `add-project`, `delete-project`. The IAM `Project` is keyed `(owner, name)` with
+ * an indexed `organization`; we set owner = organization = the brand org so the
+ * record is owned and listed under it.
+ *
+ * ROUTING (the "projects not routed" fix): these are `/v1/iam/*` endpoints, which
+ * the console host's `/v1` sends to the CLOUD binary → 404 (cloud doesn't serve
+ * IAM). So Projects goes through the same-origin **`/org/iam`** BFF proxy, which
+ * mints a user-bound Bearer server-side and forwards to `iam.hanzo.svc` — the org
+ * is resolved from the token owner claim (per-tenant), the same pattern the member
+ * roster already uses. The proxy pins the `organization` param to the caller's own
+ * org, so one tenant can never list another's projects.
  *
  * Environments (mainnet/testnet/devnet + custom) are a console-side scoping
  * dimension — IAM's Project has no environments column — so they live in
  * `lib/scope.ts`, not in this payload.
  */
-import { get, post, idOf, type ApiResponse } from './client'
+import { idOf } from './client'
+import { makeIamClient } from './iam-envelope'
 import { currentOrg } from '~/lib/org-scope'
 import { STOCK_ENVIRONMENTS } from '~/lib/scope'
 
@@ -40,20 +48,22 @@ export const projectEnvironments = (p?: Project): string[] => {
   return [...STOCK_ENVIRONMENTS, ...custom]
 }
 
+/** The IAM member proxy — mints the user Bearer server-side, scopes to the caller's org. */
+const iam = makeIamClient('/org/iam')
 const org = () => currentOrg()
 
 export const ProjectApi = {
   /**
-   * List the org's projects. IAM's `get-organization-projects?organization=<org>`
-   * returns exactly the projects under the org (the purpose-built lister), so the
-   * console doesn't have to know the record owner.
+   * List the org's projects via the `/org/iam` Bearer proxy. IAM's
+   * `get-organization-projects?organization=<org>` returns exactly the projects
+   * under the org; the proxy pins `organization` to the caller's own scope.
    */
   list: (): Promise<Project[]> =>
-    get<Project[]>('iam/get-organization-projects', { organization: org() }),
+    iam.iamList<Project>('get-organization-projects', { organization: org() }).then((r) => r.rows),
 
-  /** Create a project under the org (`POST /v1/iam/add-project`). */
-  create: (p: { name: string; description?: string }): Promise<ApiResponse<string>> =>
-    post('iam/add-project', {
+  /** Create a project under the org (`POST /org/iam/add-project`). */
+  create: (p: { name: string; description?: string }): Promise<void> =>
+    iam.iamMutate('add-project', {
       owner: org(),
       name: p.name,
       displayName: p.name,
@@ -61,7 +71,7 @@ export const ProjectApi = {
       description: p.description ?? '',
     }),
 
-  /** Delete a project (`POST /v1/iam/delete-project`, keyed by `owner/name`). */
-  remove: (name: string): Promise<ApiResponse<string>> =>
-    post('iam/delete-project', { owner: org(), name, organization: org() }, { id: idOf(org(), name) }),
+  /** Delete a project (`POST /org/iam/delete-project`, keyed by `owner/name`). */
+  remove: (name: string): Promise<void> =>
+    iam.iamMutate('delete-project', { owner: org(), name, organization: org() }, { id: idOf(org(), name) }),
 }
