@@ -12,26 +12,15 @@
  */
 import { useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Copy, Check, ThumbsUp, ThumbsDown } from '@hanzogui/lucide-icons-2'
+import { Copy, Check, ThumbsUp, ThumbsDown, Square } from '@hanzogui/lucide-icons-2'
 
 import { BackendStateCard } from '~/components/ui/BackendState'
+import { MarkdownView } from './MarkdownView'
 import { costOf, formatLatency, formatTokens, formatUsd, tokensPerSecond } from './cost'
 import type { ChatRun } from './useChatRun'
 import type { ModelPricing } from '~/lib/api'
 
 type Tab = 'response' | 'logs'
-
-function Lines({ text }: { text: string }) {
-  return (
-    <YStack>
-      {text.split('\n').map((line, i) => (
-        <Text key={i} fontSize="$3" color="$color12" style={{ whiteSpace: 'pre-wrap' }}>
-          {line === '' ? ' ' : line}
-        </Text>
-      ))}
-    </YStack>
-  )
-}
 
 function CopyButton({ text, size = 14 }: { text: string; size?: number }) {
   const [done, setDone] = useState(false)
@@ -119,23 +108,42 @@ export function ResponsePanel({
             </Button>
           ))}
         </XStack>
-        {run.content ? (
-          <XStack gap="$0.5" items="center">
-            <CopyButton text={run.content} />
+        <XStack gap="$1" items="center">
+          {/* Stop — halts the in-flight stream right where the output is watched
+              (the partial answer is kept). Mirrors the composer's Stop. */}
+          {run.running ? (
             <Button
-              size="$1"
-              chromeless
-              icon={<ThumbsUp size={14} color={feedback === 'up' ? '$green10' : undefined} />}
-              onPress={() => setFeedback((f) => (f === 'up' ? null : 'up'))}
-            />
-            <Button
-              size="$1"
-              chromeless
-              icon={<ThumbsDown size={14} color={feedback === 'down' ? '$red10' : undefined} />}
-              onPress={() => setFeedback((f) => (f === 'down' ? null : 'down'))}
-            />
-          </XStack>
-        ) : null}
+              size="$2"
+              icon={<Square size={13} />}
+              onPress={run.cancel}
+              borderWidth={1}
+              borderColor="$red8"
+              bg="$color2"
+              aria-label="Stop generating"
+            >
+              <Text fontSize="$2" color="$red10" fontWeight="700">
+                Stop
+              </Text>
+            </Button>
+          ) : null}
+          {run.content ? (
+            <>
+              <CopyButton text={run.content} />
+              <Button
+                size="$1"
+                chromeless
+                icon={<ThumbsUp size={14} color={feedback === 'up' ? '$green10' : undefined} />}
+                onPress={() => setFeedback((f) => (f === 'up' ? null : 'up'))}
+              />
+              <Button
+                size="$1"
+                chromeless
+                icon={<ThumbsDown size={14} color={feedback === 'down' ? '$red10' : undefined} />}
+                onPress={() => setFeedback((f) => (f === 'down' ? null : 'down'))}
+              />
+            </>
+          ) : null}
+        </XStack>
       </XStack>
 
       {tab === 'response' ? (
@@ -150,7 +158,15 @@ export function ResponsePanel({
                     Stopped
                   </Text>
                 ) : null}
-                <Lines text={run.content} />
+                <MarkdownView text={run.content} />
+                {run.phase === 'streaming' ? (
+                  <XStack items="center" gap="$2">
+                    <Spinner size="small" color="$color10" />
+                    <Text fontSize="$1" color="$color10">
+                      streaming…
+                    </Text>
+                  </XStack>
+                ) : null}
               </YStack>
             ) : run.phase === 'streaming' ? (
               <XStack gap="$2" items="center">
