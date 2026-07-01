@@ -1,4 +1,4 @@
-/** Account/session API — `/v1/get-account`, `/v1/signin`, `/v1/signout`. */
+/** Account/session API — `/v1/iam/get-account`, `/v1/iam/signin`, `/v1/iam/signout`. */
 import { get, post } from './client'
 import { type Account } from './types'
 
@@ -12,7 +12,7 @@ export const AccountApi = {
    * logged-out and force a real IAM sign-in. */
   current: async (): Promise<Account | null> => {
     try {
-      const account = await get<Account>('get-account')
+      const account = await get<Account>('iam/get-account')
       if (!account || account.type === 'anonymous-user') return null
       return account
     } catch {
@@ -21,9 +21,9 @@ export const AccountApi = {
   },
 
   /** Exchange the IAM OAuth code+state for a backend session cookie. */
-  signin: (code: string, state: string) => post<Account>('signin', undefined, { code, state }),
+  signin: (code: string, state: string) => post<Account>('iam/signin', undefined, { code, state }),
 
-  signout: () => post('signout'),
+  signout: () => post('iam/signout'),
 
   /**
    * Persist a partial set of cross-product user preferences onto the account.
@@ -35,7 +35,7 @@ export const AccountApi = {
   updatePreferences: async (
     partial: Record<string, unknown>,
   ): Promise<Record<string, unknown>> => {
-    const r = await post<Record<string, unknown>>('update-preferences', partial)
+    const r = await post<Record<string, unknown>>('iam/update-preferences', partial)
     return r.data ?? {}
   },
 }

@@ -29,7 +29,7 @@ const trim = (s: string) => s.replace(/\/+$/, '')
 /** IAM OIDC issuer host that serves the privileged primitives (/v1/iam/*). */
 const IAM_URL = trim(process.env.IAM_URL ?? 'https://iam.hanzo.ai')
 /** Cloud `/v1` backend (hanzoai/ai) — resolves the session cookie to a user. */
-const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud-api.hanzo.svc.cluster.local:8000')
+const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud.hanzo.svc.cluster.local:8000')
 /**
  * In-cluster Hanzo KMS (kmsd) — the admin KMS proxy forwards here. Default is the
  * ClusterIP `Service kms` (ns hanzo), whose port 80 targets the kmsd container's
@@ -90,7 +90,7 @@ type AccountClaims = UserClaims & { User?: UserClaims }
 
 /**
  * Resolve the signed-in user from the request's first-party cloud session cookie
- * by asking the cloud backend `/v1/get-account` (which itself refreshes the user
+ * by asking the cloud backend `/v1/iam/get-account` (which itself refreshes the user
  * from IAM). Returns null when there is no real session (no cookie, anonymous
  * casibase session, or a backend error) so callers fail CLOSED with 401.
  */
@@ -116,7 +116,7 @@ async function resolveSessionUser(
 
   let res: Response
   try {
-    res = await fetch(`${CLOUD_API_URL}/v1/get-account`, {
+    res = await fetch(`${CLOUD_API_URL}/v1/iam/get-account`, {
       headers: { cookie, Accept: 'application/json' },
       cache: 'no-store',
     })

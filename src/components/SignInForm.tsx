@@ -6,7 +6,7 @@
  * The console resolves a user's ORG from their email (not the brand's own org),
  * so a customer in any org signs in here with email + password: we POST the
  * canonical IAM login with `organization: ""` (see `lib/auth/iam-login`), get an
- * OAuth code, and complete the SAME `/v1/signin` exchange the redirect flow uses.
+ * OAuth code, and complete the SAME `/v1/iam/signin` exchange the redirect flow uses.
  *
  * Social buttons start IAM's hosted provider flow (IAM owns each provider's
  * OAuth — client id, scope, callback). Accounts that require two-factor finish
