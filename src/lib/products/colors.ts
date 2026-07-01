@@ -131,22 +131,63 @@ export const hashColorKey = (id: string): string =>
   COLOR_SWATCHES[hash32(id) % COLOR_SWATCHES.length].key
 
 /**
- * The DEFAULT swatch key for a product (no user override): a curated pick if the
- * product is flagship, else the deterministic hash. Stable per id.
+ * One accent color per CATEGORY — the Linear-style family that every product in a
+ * category inherits by DEFAULT, so the sidebar icons, the category-overview tiles,
+ * and the level-2 header read as one coherent per-category scheme (a user's
+ * per-product override still wins). Keys MUST be real swatch keys; a category not
+ * listed here (or an entry with no category) falls back to a stable hash.
  */
-export const defaultColorKey = (id: string): string => CURATED_COLORS[id] ?? hashColorKey(id)
+export const CATEGORY_COLORS: Record<string, string> = {
+  AI: 'violet',
+  Compute: 'blue',
+  Training: 'purple',
+  Data: 'cyan',
+  Network: 'sky',
+  Security: 'red',
+  Observe: 'green',
+  Platform: 'teal',
+  Dev: 'indigo',
+  Web3: 'amber',
+  Apps: 'pink',
+  Commerce: 'orange',
+  Settings: 'slate',
+}
+
+/** The swatch key for a category — its curated family color, else a stable hash. */
+export const categoryColorKey = (category: string | undefined | null): string =>
+  (typeof category === 'string' && CATEGORY_COLORS[category]) || hashColorKey(category ?? 'category')
+
+/** The hex for a category's accent — for tinting category headers / breadcrumbs. */
+export const categoryColorHex = (category: string | undefined | null): string =>
+  swatchHex(categoryColorKey(category))
+
+/**
+ * The DEFAULT swatch key for a product (no user override). When the product's
+ * CATEGORY is known, the category family color wins (so a whole category reads as
+ * one color scheme); with no category it is a curated flagship pick, else the
+ * deterministic hash. Stable per id (+ category).
+ */
+export const defaultColorKey = (id: string, category?: string | null): string =>
+  category ? categoryColorKey(category) : CURATED_COLORS[id] ?? hashColorKey(id)
 
 /**
  * The EFFECTIVE swatch key for a product, honoring the user's overrides first.
  * `overrides` is the per-user `productColors` preference (id → swatch key). An
  * override to an unknown key is ignored (falls through to the default).
  */
-export function productColorKey(id: string, overrides?: Record<string, string> | null): string {
+export function productColorKey(
+  id: string,
+  overrides?: Record<string, string> | null,
+  category?: string | null,
+): string {
   const override = overrides?.[id]
   if (isSwatchKey(override)) return override
-  return defaultColorKey(id)
+  return defaultColorKey(id, category)
 }
 
-/** The effective hex for a product's icon, honoring user overrides. */
-export const productColorHex = (id: string, overrides?: Record<string, string> | null): string =>
-  swatchHex(productColorKey(id, overrides))
+/** The effective hex for a product's icon, honoring user overrides (+ category default). */
+export const productColorHex = (
+  id: string,
+  overrides?: Record<string, string> | null,
+  category?: string | null,
+): string => swatchHex(productColorKey(id, overrides, category))

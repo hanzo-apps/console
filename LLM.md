@@ -789,3 +789,28 @@ ONE input, ONE predicate (`entryMatches`, the same the L1 filter uses and ⌘K's
   platform/wallet/auth files touched (the HOT-tree lanes). Built in an isolated worktree
   off `origin/main` (the shared tree carried concurrent agents' uncommitted files).
   `tsc --noEmit` clean, `vitest` **706/706** (60 files), `next build` ✓ (all routes).
+
+## Per-category color-coding + category-overview color wiring (v8.4.6, claude/console2-l2-filter)
+
+Two more sidebar/nav asks, same lane (the ONE registry color system + the category
+surfaces), no product/commerce/platform/wallet files touched.
+
+- **Color-code all products PER CATEGORY.** `colors.ts` gains `CATEGORY_COLORS` (one
+  Linear-family swatch per category — AI=violet, Compute=blue, Data=cyan, Security=red,
+  Observe=green, …) + `categoryColorKey`/`categoryColorHex`. `defaultColorKey(id, category?)`
+  now, when the category is known, returns the CATEGORY family color (so a whole category
+  reads as ONE scheme); the user's per-product override STILL wins, and the no-category
+  path (product modules calling `productColorHex('agents')`) keeps its legacy curated pick
+  — a pure, additive, backward-compatible signature. `colorOf`/`keyOf` (`pins.tsx`) thread
+  the entry's category (`findEntry(id)?.category`) — the ONE change that recolors the
+  sidebar icons, the collapsed rail, AND the level-2 product-header icon per category (DRY).
+- **Category → overview (already built, now color-consistent).** Every sidebar category
+  header already links to its `/category/<slug>` landing (`CategoryOverview` — a grid of
+  ALL the category's products, derived LIVE from the registry, honest SOON badges, never
+  fabricated). Its product tiles + the header glyph are now tinted with the category color,
+  and the L1 category label + L2 breadcrumb label carry the category color too — so
+  category = a color, consistently across the sidebar, the tiles, and the L2 header.
+- Pure + tested: `colors.test.ts` +5 (every category color is a real swatch; category wins
+  over curated when known; the override still wins; deterministic unknowns). No circular
+  import (pins→registry is one-directional; registry never imports pins). `tsc` clean,
+  `vitest` **711/711**, `next build` ✓ (all routes).
