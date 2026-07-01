@@ -105,10 +105,10 @@ export type EvalRunRequest = {
   judge?: { model?: string; criteria?: string; name?: string }
 }
 
-/** Create-dataset body (console `/api/public/v2/datasets`). */
+/** Create-dataset body (the cloud `/v1/evals/datasets` facade). */
 export type CreateDatasetBody = { name: string; description?: string; metadata?: unknown }
 
-/** Create-dataset-item body (console `/api/public/dataset-items`). */
+/** Create-dataset-item body (the cloud `/v1/evals/dataset-items` facade). */
 export type CreateDatasetItemBody = {
   datasetName: string
   input?: unknown
