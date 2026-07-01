@@ -11,7 +11,7 @@
  * sends cookie credentials only. One client, parameterized by `kind` — the
  * ResourceModule factory binds a kind and gets a working admin surface.
  */
-import { restGet, restPost, restDelete, v1Url } from './client'
+import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
 
 /** Wire kind = the REST path segment the provisioning service serves. */
 export type ResourceKind =
@@ -47,14 +47,14 @@ export type ResourceCreated = Resource & {
 }
 
 export const ProvisioningApi = {
-  list: (kind: ResourceKind) => restGet<Resource[]>(v1Url(kind)),
+  list: (kind: ResourceKind) => restGet<Resource[]>(cloudProxyV1Url(kind)),
 
   get: (kind: ResourceKind, name: string) =>
-    restGet<Resource>(v1Url(`${kind}/${encodeURIComponent(name)}`)),
+    restGet<Resource>(cloudProxyV1Url(`${kind}/${encodeURIComponent(name)}`)),
 
   create: (kind: ResourceKind, name: string) =>
-    restPost<ResourceCreated>(v1Url(kind), { name }),
+    restPost<ResourceCreated>(cloudProxyV1Url(kind), { name }),
 
   remove: (kind: ResourceKind, name: string) =>
-    restDelete(v1Url(`${kind}/${encodeURIComponent(name)}`)),
+    restDelete(cloudProxyV1Url(`${kind}/${encodeURIComponent(name)}`)),
 }

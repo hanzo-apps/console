@@ -23,7 +23,7 @@
  * (`deriveOverview`) — there is no fabricated rollup. When the inventory is empty
  * or unreachable, the metrics degrade to `null` (rendered "—"), never invented.
  */
-import { restGet, restPost, restDelete, v1Url } from './client'
+import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
 
 /** Inventory facade base path (same-origin `/v1/functions`). */
 const BASE = 'functions'
@@ -419,19 +419,19 @@ export const fmtRelative = (iso?: string | null, now: number = Date.now()): stri
 
 export const FunctionsApi = {
   /** The function inventory (`GET /v1/functions`). Honest-empty/error until bound. */
-  list: (): Promise<ServerlessFunction[]> => restGet<unknown>(v1Url(BASE)).then(normalizeFunctions),
+  list: (): Promise<ServerlessFunction[]> => restGet<unknown>(cloudProxyV1Url(BASE)).then(normalizeFunctions),
 
   /** One function's detail (`GET /v1/functions/{name}`) — about facts + triggers + calls. */
   get: (name: string): Promise<FunctionDetail | null> =>
-    restGet<unknown>(v1Url(`${BASE}/${enc(name)}`)).then(normalizeFunctionDetail),
+    restGet<unknown>(cloudProxyV1Url(`${BASE}/${enc(name)}`)).then(normalizeFunctionDetail),
 
   /** Recent invocations for one function (`GET /v1/functions/{name}/invocations`). */
   invocations: (name: string): Promise<FunctionInvocation[]> =>
-    restGet<unknown>(v1Url(`${BASE}/${enc(name)}/invocations`)).then(normalizeInvocations),
+    restGet<unknown>(cloudProxyV1Url(`${BASE}/${enc(name)}/invocations`)).then(normalizeInvocations),
 
   /** Raw recent logs for one function (`GET /v1/functions/{name}/logs`). */
   logs: (name: string): Promise<string> =>
-    restGet<unknown>(v1Url(`${BASE}/${enc(name)}/logs`)).then((p) => {
+    restGet<unknown>(cloudProxyV1Url(`${BASE}/${enc(name)}/logs`)).then((p) => {
       if (typeof p === 'string') return p
       const r = asRecord(p)
       return str(r.logs) ?? str(r.text) ?? ''
@@ -439,15 +439,15 @@ export const FunctionsApi = {
 
   /** Invocations-over-time series + status donut + cost (`GET /v1/functions/metrics`). */
   metrics: (range: MetricsRange): Promise<FunctionsMetrics> =>
-    restGet<unknown>(v1Url(`${BASE}/metrics?range=${range}`)).then(normalizeMetrics),
+    restGet<unknown>(cloudProxyV1Url(`${BASE}/metrics?range=${range}`)).then(normalizeMetrics),
 
   /** All triggers across functions (`GET /v1/functions/triggers`). */
   triggers: (): Promise<FunctionTrigger[]> =>
-    restGet<unknown>(v1Url(`${BASE}/triggers`)).then(normalizeTriggers),
+    restGet<unknown>(cloudProxyV1Url(`${BASE}/triggers`)).then(normalizeTriggers),
 
   /** Deployment history (`GET /v1/functions/deployments`) — forward-compatible. */
   deployments: (): Promise<ServerlessFunction[]> =>
-    restGet<unknown>(v1Url(`${BASE}/deployments`)).then(normalizeFunctions),
+    restGet<unknown>(cloudProxyV1Url(`${BASE}/deployments`)).then(normalizeFunctions),
 
   /**
    * Secret NAMES bound to functions (`GET /v1/functions/secrets`). Names/refs only —
@@ -455,7 +455,7 @@ export const FunctionsApi = {
    * names-only KMS inventory.
    */
   secrets: (): Promise<{ name: string; namespace?: string; mountedBy?: string }[]> =>
-    restGet<unknown>(v1Url(`${BASE}/secrets`)).then((p) =>
+    restGet<unknown>(cloudProxyV1Url(`${BASE}/secrets`)).then((p) =>
       arrayUnder(p, ['secrets', 'items', 'data', 'rows']).map((raw) => {
         const r = asRecord(raw)
         const meta = asRecord(r.metadata)
@@ -469,8 +469,8 @@ export const FunctionsApi = {
 
   /** Deploy a function (`POST /v1/functions`) — only called when the backend is live. */
   deploy: (body: { name: string; environment: string; image?: string; namespace?: string }): Promise<unknown> =>
-    restPost<unknown>(v1Url(BASE), body),
+    restPost<unknown>(cloudProxyV1Url(BASE), body),
 
   /** Delete a function (`DELETE /v1/functions/{name}`) — only called when the backend is live. */
-  remove: (name: string): Promise<void> => restDelete(v1Url(`${BASE}/${enc(name)}`)),
+  remove: (name: string): Promise<void> => restDelete(cloudProxyV1Url(`${BASE}/${enc(name)}`)),
 }
