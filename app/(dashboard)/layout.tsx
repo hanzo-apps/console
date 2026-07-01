@@ -8,6 +8,7 @@ import { ScopeProvider } from '~/lib/scope-context'
 import { ToastProvider } from '~/components/ui/Toast'
 import { CommandPaletteProvider } from '~/components/CommandPalette'
 import { AppLauncherProvider } from '~/components/AppLauncher'
+import { DetailPaneProvider } from '~/components/DetailPane'
 import { FloatingChatProvider } from '~/components/FloatingChat'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -22,7 +23,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <CommandPaletteProvider>
                   {/* FloatingChat floats the assistant bubble over every page. */}
                   <FloatingChatProvider>
-                    <DashboardShell>{children}</DashboardShell>
+                    {/* DetailPane hosts the ONE right-side item detail/edit pane. */}
+                    <DetailPaneProvider>
+                      <DashboardShell>{children}</DashboardShell>
+                    </DetailPaneProvider>
                   </FloatingChatProvider>
                 </CommandPaletteProvider>
               </AppLauncherProvider>
