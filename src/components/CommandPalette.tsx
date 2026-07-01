@@ -65,7 +65,7 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { AiApi, IamAdminApi, type Organization } from '~/lib/api'
-import { catalog, findEntry, type CatalogEntry } from '~/lib/products/registry'
+import { visibleCatalog, findEntry, type CatalogEntry } from '~/lib/products/registry'
 import { searchDestinations, type Destination } from '~/lib/products/search'
 import { useProductColors } from '~/lib/products/pins'
 import { asColor } from '~/components/ui/color'
@@ -120,7 +120,7 @@ export function useCommandPalette(): PaletteApi {
 /** System prompt for `>` mode: lets the model map a request to ONE product id.
  *  A customer's prompt omits admin-only surfaces so the AI never suggests them. */
 function navSystemPrompt(showAdmin: boolean): string {
-  const products = showAdmin ? catalog : catalog.filter((e) => !e.admin)
+  const products = visibleCatalog(showAdmin)
   const list = products.map((e) => `${e.id} — ${e.label} — ${e.category}`).join('\n')
   return [
     'You are the command bar for the Hanzo Cloud Console.',

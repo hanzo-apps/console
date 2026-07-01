@@ -18,7 +18,7 @@
  * On a 404/501/401 the caller renders the shared `BackendStateCard` — never
  * fabricated spend, balance, or card data.
  */
-import { restGet } from './client'
+import { restGet, restPost } from './client'
 import type { CloudBalance } from './wallet'
 import { normalizeUsageRecords, perModel, totalsOf } from './aimetrics'
 
@@ -102,6 +102,27 @@ export type PaymentMethod = {
   expYear?: number
   /** The org's default payment method. */
   isDefault?: boolean
+}
+
+/**
+ * One spend alert / budget — a threshold (USD cents) that trips when the org's
+ * spend crosses it (commerce `spendalert`). This is the ONE real budgets surface:
+ * commerce serves `GET/POST /v1/billing/spend-alerts` under the user group (the
+ * same one billing.hanzo.ai calls), so the console reads + creates real budgets —
+ * never a fake form. `triggeredAt` is set by commerce when the threshold trips.
+ */
+export type SpendAlert = {
+  id: string
+  /** Human name for the budget, e.g. "Monthly cap". */
+  title: string
+  /** Threshold in USD cents; the alert trips when spend crosses it. */
+  thresholdCents: number
+  /** Ledger currency (lowercase ISO), e.g. `usd`. */
+  currency: string
+  /** ISO time the alert last tripped, or undefined if it never has. */
+  triggeredAt?: string
+  /** ISO creation time. */
+  createdAt?: string
 }
 
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
@@ -267,6 +288,22 @@ function normalizePaymentMethods(payload: unknown): PaymentMethod[] {
   })
 }
 
+/**
+ * Roll commerce's `spendAlertResponse` shape into the display `SpendAlert`. The
+ * list endpoint returns a bare array; `threshold` is USD cents (commerce is cents
+ * end-to-end). A missing/renamed field degrades, never throws.
+ */
+function normalizeSpendAlerts(payload: unknown): SpendAlert[] {
+  return arrayUnder(payload, ['spendAlerts', 'alerts', 'data', 'items', 'rows']).map((r, i) => ({
+    id: str(r.id) ?? str(r.alertId) ?? `alert-${i}`,
+    title: str(r.title) ?? '—',
+    thresholdCents: Math.round(num(r.threshold) ?? num(r.thresholdCents) ?? 0),
+    currency: (str(r.currency) ?? 'usd').toLowerCase(),
+    triggeredAt: isoDate(r.triggeredAt) ?? undefined,
+    createdAt: isoDate(r.createdAt) ?? isoDate(r.created) ?? undefined,
+  }))
+}
+
 export const BillingApi = {
   /** Cloud credit balance (USD cents) — same proxy as the Wallet/sidebar. */
   balance: (currency = 'usd'): Promise<CloudBalance> =>
@@ -291,4 +328,25 @@ export const BillingApi = {
   /** The org's saved payment methods (masked brand + last4 only) — read-only. */
   paymentMethods: (): Promise<PaymentMethod[]> =>
     restGet<unknown>(billingUrl('payment-methods')).then(normalizePaymentMethods),
+
+  /**
+   * The org's spend alerts / budgets (`GET /v1/billing/spend-alerts`). The proxy
+   * scopes the read to the caller's OWN subject (pins `?user=`), so this returns
+   * only the caller's budgets.
+   */
+  spendAlerts: (): Promise<SpendAlert[]> =>
+    restGet<unknown>(billingUrl('spend-alerts')).then(normalizeSpendAlerts),
+
+  /**
+   * Create a spend alert / budget (`POST /v1/billing/spend-alerts`). The subject is
+   * pinned server-side by the proxy (`scopedBillingBody`) — the browser sends only
+   * the title + threshold (USD cents) + currency, and cannot create a budget for
+   * another tenant. Returns the created alert.
+   */
+  createSpendAlert: (input: { title: string; thresholdCents: number; currency?: string }): Promise<SpendAlert> =>
+    restPost<unknown>(billingUrl('spend-alerts'), {
+      title: input.title,
+      threshold: Math.round(input.thresholdCents),
+      currency: (input.currency ?? 'usd').toLowerCase(),
+    }).then((r) => normalizeSpendAlerts([r])[0]),
 }
