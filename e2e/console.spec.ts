@@ -44,15 +44,23 @@ async function waitForDashboard(page: Page) {
 
 // ─── tests ──────────────────────────────────────────────────────────────────
 
-test.describe('Hanzo Cloud Console e2e', () => {
-  test.skip(!PASSWORD, 'HANZO_PASSWORD not set — skipping live tests')
-
-  test('sign-in page renders', async ({ page }) => {
+// Public smoke — needs no credentials, so it always runs (in CI, for Dave, etc.)
+// and catches a dead/blank sign-in gate. The authenticated flows below gate on
+// HANZO_PASSWORD.
+test.describe('Hanzo Cloud Console — public', () => {
+  test('sign-in page renders (email/password + OAuth + passkey)', async ({ page }) => {
     await page.goto(`${BASE_URL}/signin`)
     await expect(page.locator('input[placeholder="Email"]')).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('input[placeholder="Password"]')).toBeVisible()
     await expect(page.locator('button:has-text("Sign in")')).toBeVisible()
+    await expect(page.locator('button:has-text("Continue with GitHub")')).toBeVisible()
+    await expect(page.locator('button:has-text("Continue with Google")')).toBeVisible()
+    await expect(page.locator('text=/passkey/i')).toBeVisible()
   })
+})
+
+test.describe('Hanzo Cloud Console e2e', () => {
+  test.skip(!PASSWORD, 'HANZO_PASSWORD not set — skipping live authenticated tests')
 
   test('login as z@hanzo.ai — dashboard renders', async ({ page }) => {
     await signIn(page)
