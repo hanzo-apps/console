@@ -8,6 +8,7 @@ import { findEntry } from '~/lib/products/registry'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { ProductSubpageStub } from '~/components/products/ProductSubpageStub'
 import { AdminManagedNotice } from '~/components/products/AdminManagedNotice'
+import { ProductErrorBoundary } from '~/components/errors/ProductErrorBoundary'
 
 /**
  * Catch-all product route. Resolves the module + route from the registry and
@@ -22,6 +23,13 @@ import { AdminManagedNotice } from '~/components/products/AdminManagedNotice'
  *   IAM/KMS, provider + routing config) gets a graceful "managed by Hanzo" notice
  *   instead of the module's hostile 403 red error. Access is enforced
  *   server-side regardless.
+ *
+ * The resolved module renders inside `ProductErrorBoundary`: modules mount
+ * client-only (the authed shell renders a loader during SSR), so a throw in one
+ * module's first render had no boundary and white-screened the whole console
+ * ("Application error: a client-side exception") on a direct load / refresh. The
+ * boundary keeps the shell + nav and shows an honest, retryable card instead —
+ * one place, every product route (DRY).
  */
 export default function ProductPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = use(params)
@@ -42,5 +50,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   if (view.kind === 'stub') return <ProductSubpageStub entry={view.entry} subpage={view.subpage} />
 
   const Component = view.matched.route.component
-  return <Component params={view.matched.params} />
+  return (
+    <ProductErrorBoundary resetKey={slug.join('/')}>
+      <Component params={view.matched.params} />
+    </ProductErrorBoundary>
+  )
 }
