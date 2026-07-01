@@ -90,3 +90,53 @@ export const CATEGORY_SUMMARY: Record<ProductCategory, string> = {
   Apps: 'Chat, bot, search, marketplace, and studio — end-user AI applications.',
   Settings: 'Team, organization, and profile — administer your account and members.',
 }
+
+// ── Nodes surface — which chain networks each brand reports on ────────────────
+// The Nodes module (Network category) surfaces per-node blockchain infrastructure
+// — validators (P-chain) + peers (info API) — of the REAL luxd primary networks.
+// Category visibility already admits it on every brand (`hanzo` = all, and the
+// sovereign brands include `Network`); this is the orthogonal DATA scope: which
+// networks' nodes a given brand may SEE. It is the ONE knob for the per-brand
+// node inventory — a value, not a place — so it stays here (pure, dependency-free,
+// unit-testable) alongside the category scope.
+
+/**
+ * A configured chain network the Nodes surface can report on. Each maps to a
+ * luxd endpoint (the host lives server-side in the `/nodes` proxy — this is just
+ * the identity). The Hanzo L2 runs as a subnet ON the Lux primary networks, so
+ * "all networks' nodes" for the hanzo super-admin view IS this whole set.
+ */
+export type NodeNetworkId =
+  | 'lux-mainnet'
+  | 'lux-testnet'
+  | 'lux-devnet'
+  | 'pars-mainnet'
+  | 'zoo-mainnet'
+
+/** Every configured node network, in display order. */
+export const ALL_NODE_NETWORKS: NodeNetworkId[] = [
+  'lux-mainnet',
+  'lux-testnet',
+  'lux-devnet',
+  'pars-mainnet',
+  'zoo-mainnet',
+]
+
+/**
+ * Which chain networks each brand's Nodes surface reports on. `hanzo` is the
+ * all-networks super-admin / infra view (every configured network — since every
+ * L2 runs as a subnet on these primary node fleets). Each sovereign brand sees
+ * ONLY its own chain's networks. Re-scope a brand by editing one row.
+ */
+export const BRAND_NODE_NETWORKS: Record<BrandId, NodeNetworkId[] | 'all'> = {
+  hanzo: 'all',
+  lux: ['lux-mainnet', 'lux-testnet', 'lux-devnet'],
+  zoo: ['zoo-mainnet'],
+  pars: ['pars-mainnet'],
+}
+
+/** The node networks a given brand may see, in display order (all for hanzo). */
+export const nodeNetworksForBrand = (brand: BrandId): NodeNetworkId[] => {
+  const allowed = BRAND_NODE_NETWORKS[brand]
+  return allowed === 'all' ? ALL_NODE_NETWORKS : ALL_NODE_NETWORKS.filter((n) => allowed.includes(n))
+}
