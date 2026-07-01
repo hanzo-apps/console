@@ -47,4 +47,16 @@ describe('bodyField', () => {
     expect(bodyField('', 'owner')).toBeNull()
     expect(bodyField('not json', 'organization')).toBeNull()
   })
+
+  // An org-metadata WRITE (update-organization) carries the target org in the record's
+  // `name` field (owner is the `admin` metadata org). forwardIam pins that name via
+  // orgNameAllowed so a brand admin can't retarget/rename another tenant — this pins
+  // the parsing that guard depends on.
+  it('extracts the org NAME an update-organization write carries', () => {
+    const own = JSON.stringify({ owner: 'admin', name: 'maxpower', displayName: 'Max Power' })
+    const foreign = JSON.stringify({ owner: 'admin', name: 'hanzo' })
+    expect(bodyField(own, 'name')).toBe('maxpower')
+    // A foreign name is surfaced so orgNameAllowed() refuses it (→ forwardIam 403s).
+    expect(bodyField(foreign, 'name')).toBe('hanzo')
+  })
 })

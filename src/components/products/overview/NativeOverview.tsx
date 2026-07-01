@@ -35,15 +35,17 @@ import {
 
 import { config } from '~/config'
 import { githubUrl } from '~/lib/oss-program'
-import { findEntry, type CatalogEntry, type ProductIcon } from '~/lib/products/registry'
+import { findEntry, type CatalogEntry, type ProductIcon as IconType } from '~/lib/products/registry'
 import { PlatformApi, type PlatformApp } from '~/lib/api/platform'
+import { useProductColors } from '~/lib/products/pins'
 import { interpretPlatformError, type PlatformError } from '~/components/products/platform/state'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { ProductIcon } from '~/components/ui/ProductIcon'
 import type { OverviewAction, OverviewSpec } from './spec'
 import { resolveSpec } from './resolve'
 
 /** Map a spec action's icon name to a real Lucide icon (kept out of the data layer). */
-const ACTION_ICON: Record<NonNullable<OverviewAction['icon']>, ProductIcon> = {
+const ACTION_ICON: Record<NonNullable<OverviewAction['icon']>, IconType> = {
   arrow: ArrowRight,
   book: BookOpen,
   plus: Plus,
@@ -211,6 +213,7 @@ function DocBlock({ heading, body, code }: { heading: string; body: string; code
 /** The shared native product overview, resolved from the catalog entry. */
 export function NativeOverview({ entry }: { entry: CatalogEntry }) {
   const router = useRouter()
+  const { colorOf } = useProductColors()
   const spec: OverviewSpec = resolveSpec(entry)
   const Icon = entry.icon
   const docsHref = entry.docs ?? config.docsUrl
@@ -242,9 +245,7 @@ export function NativeOverview({ entry }: { entry: CatalogEntry }) {
       {/* Identity + what-it-is */}
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack gap="$3" items="flex-start">
-          <YStack width={44} height={44} items="center" justify="center" rounded="$4" bg="$color3">
-            <Icon size={22} />
-          </YStack>
+          <ProductIcon icon={Icon} color={colorOf(entry.id)} size={44} />
           <YStack flex={1} gap="$1">
             <Text fontSize="$6" fontWeight="800" color="$color12">
               {entry.label}
