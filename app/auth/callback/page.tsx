@@ -2,7 +2,7 @@
 
 /**
  * IAM OAuth callback. IAM redirects here with `?code&state`; we exchange them
- * for a backend session (`/v1/signin`) and land on the dashboard. On failure we
+ * for a backend session (`/v1/iam/signin`) and land on the dashboard. On failure we
  * surface the error and offer a retry.
  */
 import { Suspense, useEffect, useState } from 'react'

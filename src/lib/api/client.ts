@@ -2,7 +2,7 @@
  * Core client for the unified Hanzo Cloud `/v1` backend (the casibase API).
  *
  * One `request` function: every endpoint goes through it. Cookie credentials are
- * always included (the backend sets a session cookie at `/v1/signin`), and the
+ * always included (the backend sets a session cookie at `/v1/iam/signin`), and the
  * Accept-Language header is forwarded so server-side messages localize.
  *
  * The backend wraps every response as `{ status, msg, data, data2 }`. We unwrap

@@ -8,7 +8,7 @@
  * Hanzo-branded console with their email and IAM resolves THEIR org. So we POST
  * the canonical `/v1/iam/login` with an EMPTY `organization` — IAM matches the
  * user across every org by email — and get back an OAuth code, which the
- * existing `completeSignIn` → `/v1/signin` exchange turns into the session
+ * existing `completeSignIn` → `/v1/iam/signin` exchange turns into the session
  * cookie. Pinning the brand's own org (the old SDK `organizationName`) is the
  * bug this replaces: it makes a non-brand-org user un-signinable.
  *
@@ -36,7 +36,7 @@ export type LoginResult =
 type IamEnvelope = { status?: string; msg?: string; data?: unknown }
 
 /**
- * The `state` carried through the code → `/v1/signin` exchange. The application
+ * The `state` carried through the code → `/v1/iam/signin` exchange. The application
  * name satisfies every IAM path (the password path performs no state check; the
  * provider path requires this exact app-name prefix) and the backend accepts it
  * verbatim — verified against live IAM.
