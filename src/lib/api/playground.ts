@@ -13,6 +13,7 @@
  * origin — the ONE place the AI runtime is addressed.
  */
 import { ApiError, restGet, restPost, v1Url, aiBase } from './client'
+import { invalidateBalance } from '~/lib/billing/live-balance'
 
 /** One OpenAI chat message. */
 export type ChatMessage = {
@@ -102,8 +103,13 @@ export const PlaygroundApi = {
    * ride the same request — the retrieval/RAG switch (`X-Retrieval-Store`) is the
    * only caller of this today, so RAG and plain chat share ONE gateway binding.
    */
-  chat: (req: ChatRequest, headers?: Record<string, string>): Promise<ChatCompletion> =>
-    restPost<ChatCompletion>(v1Url('chat/completions', aiBase()), { ...req, stream: false }, headers),
+  chat: async (req: ChatRequest, headers?: Record<string, string>): Promise<ChatCompletion> => {
+    const res = await restPost<ChatCompletion>(v1Url('chat/completions', aiBase()), { ...req, stream: false }, headers)
+    // A completion just debited cloud credit (gateway meters synchronously) — nudge
+    // the shared live balance so every wallet surface reflects the new number now.
+    invalidateBalance()
+    return res
+  },
 
   /**
    * Open a STREAMING chat completion (Server-Sent Events). Returns the raw

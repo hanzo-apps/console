@@ -11,6 +11,7 @@
  * text kept — so one column can fail or be stopped without disturbing the others.
  */
 import { ApiError, PlaygroundApi, type ChatUsage } from '~/lib/api'
+import { invalidateBalance } from '~/lib/billing/live-balance'
 import { splitSSE, dataOf, parseChatData } from './stream'
 import type { RunError, RunMessage, RunResult } from './types'
 
@@ -116,6 +117,9 @@ export async function runColumn(input: RunInput, handlers: RunHandlers, signal: 
       await reader.cancel().catch(() => {})
     }
 
+    // A streamed completion finished — it debited cloud credit; nudge the shared
+    // live balance so the wallet reflects the spend without a reload.
+    invalidateBalance()
     return settle(null, false)
   } catch (e) {
     if (signal.aborted) return settle(null, true)
