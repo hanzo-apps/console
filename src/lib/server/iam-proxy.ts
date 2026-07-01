@@ -34,12 +34,13 @@ function idName(id: string | null): string | null {
   return slash > 0 ? id.slice(slash + 1) : id
 }
 
-/** The `owner` field of a JSON body, or null (best-effort — a mutation carries it). */
-function bodyOwner(text: string): string | null {
+/** A string `key` field of a JSON body, or null (best-effort — a mutation carries it). */
+export function bodyField(text: string, key: string): string | null {
   if (!text) return null
   try {
-    const j = JSON.parse(text) as { owner?: unknown }
-    return typeof j.owner === 'string' ? j.owner : null
+    const j = JSON.parse(text) as Record<string, unknown>
+    const v = j[key]
+    return typeof v === 'string' ? v : null
   } catch {
     return null
   }
@@ -83,12 +84,14 @@ export async function forwardIam(
   const ownerOk = (owner: string | null) =>
     policyOwnerAllowed(owner, { isGlobalAdmin: gate.isGlobalAdmin, orgScope: gate.orgScope, orgMetadataOk })
 
-  // Every owner the request references must be in scope: ?owner, the ?id owner,
-  // and — critically — for a mutation the BODY owner (else a brand admin could
-  // POST add-user with body.owner = another tenant, which the query-only check
-  // would miss).
+  // Every org the request references must be in scope: ?owner, the ?id owner, the
+  // ?organization param (the projects lister keys on it), and — critically — for a
+  // mutation the BODY owner + BODY organization (else a brand admin could POST
+  // add-project/add-user with a body field = another tenant, which a query-only
+  // check would miss). ownerOk(null) is true, so an absent field is a no-op.
   if (!ownerOk(url.searchParams.get('owner'))) return forbidden()
   if (!ownerOk(idOwner(url.searchParams.get('id')))) return forbidden()
+  if (!ownerOk(url.searchParams.get('organization'))) return forbidden()
 
   // Org-metadata reads (get-organization id=admin/<name>): also pin the org NAME.
   if (opts.orgNameSegments?.has(segment) && !orgNameAllowed(idName(url.searchParams.get('id')), gate)) {
@@ -98,7 +101,8 @@ export async function forwardIam(
   let bodyText = ''
   if (method === 'POST') {
     bodyText = await req.text()
-    if (!ownerOk(bodyOwner(bodyText))) return forbidden()
+    if (!ownerOk(bodyField(bodyText, 'owner'))) return forbidden()
+    if (!ownerOk(bodyField(bodyText, 'organization'))) return forbidden()
   }
 
   let bearer: string
