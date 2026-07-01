@@ -1,42 +1,36 @@
 'use client'
 
 /**
- * Prompts — versioned prompt management, ported from the old console.
+ * Prompts — versioned prompt management over the REAL cloud `/v1/prompts` surface
+ * (cloud `clients/prompts`), reached through the console's OWN user-bearer `/cloud`
+ * proxy (`PromptsApi` → `cloudProxyV1Url('prompts')`). The proxy mints a short-lived
+ * user token server-side and the backend scopes to the token owner's org, so every
+ * read is org-scoped and no credential reaches the browser — the SAME per-tenant
+ * path Agents + Functions use.
+ *
+ * This replaces the old cookie-only same-origin `v1Url('prompts')` calls, which the
+ * cloud surface 403'd ("X-Org-Id required") and surfaced as the live "Access
+ * required · GET /v1/prompts" card (same class as the "models empty" bug).
  *
  * Routes:
  *   /prompts          list prompt metadata
- *   /prompts/new      create a prompt through the forward-compatible API
+ *   /prompts/new      create a prompt
  *   /prompts/metrics  prompt usage/performance metrics
- *   /prompts/:name    prompt detail/history payload
+ *   /prompts/:name    prompt detail / version history
  *
- * The cloud gateway may not mount every prompt route yet. When a route returns
- * 404/405/503, the shared backend-state card renders instead of placeholder
- * prompts or charts.
+ * Every state is honest: loading, the shared backend-state card on 401/403/404/503,
+ * and a true empty state — never placeholder prompts or fabricated metrics.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { ArrowLeft, BarChart3, ExternalLink, Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
+import { ArrowLeft, BarChart3, Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet, restPost, v1Url } from '~/lib/api/client'
+import { PromptsApi, type Prompt, type PromptMetricRow } from '~/lib/api/prompts'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-
-const PROMPTS_SURFACE = 'https://insights.hanzo.ai'
-const PROMPTS_DOCS = 'https://docs.hanzo.ai/prompts'
-
-type PromptMeta = {
-  name: string
-  versions?: number[]
-  type?: string
-  labels?: string[]
-  tags?: string[]
-  lastUpdatedAt?: string
-}
-
-type MetricRow = Record<string, unknown> & { __rowId: string }
 
 type Async<T> =
   | { phase: 'loading' }
@@ -59,38 +53,14 @@ const csv = (s: string): string[] | undefined => {
   return xs.length ? xs : undefined
 }
 
-const promptRows = (payload: { data?: PromptMeta[] } | PromptMeta[]): PromptMeta[] =>
-  Array.isArray(payload) ? payload : (payload.data ?? [])
-
-const metricRows = (payload: unknown): MetricRow[] => {
-  const rows =
-    Array.isArray(payload)
-      ? payload
-      : payload && typeof payload === 'object'
-        ? ((payload as Record<string, unknown>).data ??
-          (payload as Record<string, unknown>).metrics ??
-          (payload as Record<string, unknown>).rows)
-        : []
-  if (!Array.isArray(rows)) return []
-  return rows
-    .filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === 'object' && !Array.isArray(row))
-    .map((row, index) => ({
-      ...row,
-      __rowId:
-        (typeof row.name === 'string' && row.name) ||
-        (typeof row.id === 'string' && row.id) ||
-        `metric-${index}`,
-    }))
-}
-
 function PromptListView() {
   const router = useRouter()
-  const [state, setState] = useState<Async<PromptMeta[]>>({ phase: 'loading' })
+  const [state, setState] = useState<Async<Prompt[]>>({ phase: 'loading' })
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
-    restGet<{ data?: PromptMeta[] } | PromptMeta[]>(v1Url('prompts'))
-      .then((res) => setState({ phase: 'ready', data: promptRows(res) }))
+    PromptsApi.list()
+      .then((data) => setState({ phase: 'ready', data }))
       .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [])
 
@@ -98,7 +68,7 @@ function PromptListView() {
     load()
   }, [load])
 
-  const columns: Column<PromptMeta>[] = [
+  const columns: Column<Prompt>[] = [
     {
       key: 'name',
       header: 'Name',
@@ -160,44 +130,14 @@ function PromptListView() {
       />
 
       {state.phase === 'error' ? (
-        <YStack gap="$3">
-          <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/prompts" />
-          <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor" bg="$color2" maxWidth={640}>
-            <Text fontSize="$4" fontWeight="700">Where prompts live today</Text>
-            <Text fontSize="$3" color="$color11">
-              Prompt versions, labels, and history are managed in the observability surface until
-              the unified prompt API is mounted on this deployment.
-            </Text>
-            <XStack gap="$2">
-              <Button
-                size="$2"
-                iconAfter={<ExternalLink size={14} />}
-                onPress={() => {
-                  if (typeof window !== 'undefined') window.open(PROMPTS_SURFACE, '_blank', 'noopener')
-                }}
-              >
-                Observability
-              </Button>
-              <Button
-                size="$2"
-                chromeless
-                iconAfter={<ExternalLink size={14} />}
-                onPress={() => {
-                  if (typeof window !== 'undefined') window.open(PROMPTS_DOCS, '_blank', 'noopener')
-                }}
-              >
-                Docs
-              </Button>
-            </XStack>
-          </Card>
-        </YStack>
+        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/prompts" />
       ) : (
         <DataTable
           columns={columns}
           rows={state.phase === 'ready' ? state.data : []}
           loading={state.phase === 'loading'}
           rowKey={(p) => p.name}
-          empty="No prompts yet."
+          empty="No prompts yet. Create your first prompt to version it with labels and history."
           onRowPress={(p) => router.push(`/prompts/${encodeURIComponent(p.name)}`)}
         />
       )}
@@ -211,7 +151,7 @@ function PromptDetailView({ name }: { name: string }) {
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
-    restGet<unknown>(v1Url(`prompts/${encodeURIComponent(name)}`))
+    PromptsApi.get(name)
       .then((data) => setState({ phase: 'ready', data }))
       .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [name])
@@ -256,12 +196,12 @@ function PromptDetailView({ name }: { name: string }) {
 
 function PromptMetricsView() {
   const router = useRouter()
-  const [state, setState] = useState<Async<MetricRow[]>>({ phase: 'loading' })
+  const [state, setState] = useState<Async<PromptMetricRow[]>>({ phase: 'loading' })
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
-    restGet<unknown>(v1Url('prompts/metrics'))
-      .then((data) => setState({ phase: 'ready', data: metricRows(data) }))
+    PromptsApi.metrics()
+      .then((data) => setState({ phase: 'ready', data }))
       .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [])
 
@@ -269,7 +209,7 @@ function PromptMetricsView() {
     load()
   }, [load])
 
-  const columns: Column<MetricRow>[] = useMemo(
+  const columns: Column<PromptMetricRow>[] = useMemo(
     () => [
       { key: 'name', header: 'Prompt', render: (r) => <Text fontSize="$3" fontWeight="600">{String(r.name ?? r.id ?? '-')}</Text> },
       { key: 'version', header: 'Version', width: 100, render: (r) => <Text fontSize="$3" color="$color11">{String(r.version ?? '-')}</Text> },
@@ -329,7 +269,7 @@ function PromptCreateView() {
     setWorking(true)
     setError(null)
     try {
-      await restPost<unknown>(v1Url('prompts'), {
+      await PromptsApi.create({
         name: name.trim(),
         type: type.trim() || 'text',
         prompt,
@@ -348,7 +288,7 @@ function PromptCreateView() {
     <>
       <PageHeader
         title="New Prompt"
-        subtitle="Create a versioned prompt through the unified prompt API."
+        subtitle="Create a versioned prompt on the unified prompt API."
         actions={
           <Button size="$2" icon={<ArrowLeft size={15} />} onPress={() => router.push('/prompts')}>
             Back

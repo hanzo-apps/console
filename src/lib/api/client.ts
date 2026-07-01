@@ -161,6 +161,21 @@ export const v1Url = (path: string, base: string = config.cloudUrl): string =>
   `${base.replace(/\/+$/, '')}/v1/${path.replace(/^\/+/, '')}`
 
 /**
+ * The console's OWN same-origin `/v1/<path>` — the ONE client-visible form for the
+ * AI product surface (agents / prompts / evals / models / chat / embeddings), with
+ * NO prefix before `/v1/` (CTO contract). The browser calls `<origin>/v1/prompts`;
+ * `next.config.mjs` rewrites that head to the hardened server-side bearer proxy
+ * (`/cloud` or `/ai`), which mints a short-lived user token and forwards it — so
+ * the client stays keyless and prefix-free while the bearer trust boundary is
+ * unchanged. On the server (SSR / route handlers) there is no `window`, so this
+ * yields a root-relative `/v1/<path>` (the rewrite still applies).
+ */
+export const originV1Url = (path: string): string => {
+  const clean = path.replace(/^\/+/, '')
+  return typeof window !== 'undefined' ? `${window.location.origin}/v1/${clean}` : `/v1/${clean}`
+}
+
+/**
  * The console's OWN same-origin keyless AI proxy base (`<origin>/ai`). The gateway
  * model/inference endpoints REQUIRE an `Authorization: Bearer` token (a session
  * cookie is rejected — the "models missing" bug), so the browser never calls the
