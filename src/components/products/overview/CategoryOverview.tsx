@@ -29,6 +29,7 @@ import {
   Network,
   Rocket,
   Shield,
+  ShoppingBag,
   SlidersHorizontal,
   Sparkles,
   Store,
@@ -60,6 +61,7 @@ const CATEGORY_ICON: Record<ProductCategory, ProductIcon> = {
   Dev: Code2,
   Web3: Blocks,
   Apps: Store,
+  Commerce: ShoppingBag,
   Settings: SlidersHorizontal,
 }
 
