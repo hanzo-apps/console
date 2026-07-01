@@ -119,6 +119,15 @@ export {
 export { AiApi, type AiChatInput } from './ai'
 export { KeysApi, type KeyStatus } from './keys'
 export {
+  PromptsApi,
+  normalizePrompt,
+  normalizePrompts,
+  normalizeMetricRows,
+  type Prompt,
+  type NewPromptBody,
+  type PromptMetricRow,
+} from './prompts'
+export {
   EvalsApi,
   type EvalScore,
   type EvalScoresPage,

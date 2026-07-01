@@ -22,10 +22,16 @@ export const CLOUD_HEADS: readonly string[] = [
   'search',
   's3',
   'docdb',
-  // Serverless + prompt/agent surfaces (org resolved from the Bearer owner claim).
+  // Serverless + prompt/agent/eval surfaces (org resolved from the Bearer owner claim).
   'functions',
   'prompts',
   'agents',
+  // Evals facade (cloud clients/eval): /v1/evals/{scores,datasets,dataset-items,
+  // evaluators,runs}. Single-segment sub-paths under the one `evals` head; the
+  // facade resolves the console project key pair from the request tenant (the
+  // Bearer owner), so routing it through /cloud gives correct per-org scoping —
+  // the same reason it must NOT be a cookie-only same-origin call (that 403s).
+  'evals',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */

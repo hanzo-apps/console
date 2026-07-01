@@ -115,6 +115,65 @@ export function upstreamHeaders(
  * makes the check operate on the exact path `fetch` will send. Leading/trailing
  * slashes are trimmed by the caller.
  */
+/** The safe (non-mutating) HTTP methods — never a CSRF concern. */
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+/** The host of a URL string, or '' when it isn't a parseable absolute URL. */
+function hostOf(url: string | null): string {
+  if (!url) return ''
+  try {
+    return new URL(url).host
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * The fetch-metadata + Origin/Referer signals a CSRF check reads off a request.
+ * `secFetchSite` is the browser-set `Sec-Fetch-Site` (`same-origin`/`same-site`/
+ * `none`/`cross-site`) — unforgeable by page JS, so it is the strongest signal.
+ */
+export type OriginSignals = {
+  host: string
+  origin: string | null
+  referer: string | null
+  /** `Sec-Fetch-Site` header value (browser-set, JS-unforgeable). */
+  secFetchSite: string | null
+}
+
+/**
+ * CSRF guard for the cookie-authenticated proxy: a same-origin check on MUTATING
+ * requests (POST/PUT/PATCH/DELETE). The proxy authenticates from the first-party
+ * session cookie alone (`resolveUser`), and cookies are auto-sent cross-site — so a
+ * cross-origin page could otherwise drive a state change (create/delete an agent,
+ * run a paid eval) as the victim. Two independent signals, both fail-closed:
+ *   1. `Sec-Fetch-Site` (browser-set, JS-unforgeable): `cross-site` is refused
+ *      outright; `same-origin`/`same-site`/`none` (a user-typed URL / bookmark) pass
+ *      the fetch-metadata gate.
+ *   2. `Origin` host must equal `Host` (falling back to `Referer` host) — modern
+ *      browsers send `Origin` on every mutating fetch/form-POST.
+ * A mutating request that trips EITHER gate is refused. Safe methods (GET/HEAD/
+ * OPTIONS) are never gated — they change nothing, and SameSite=Lax already covers
+ * top-level cross-site navigation. Defense in depth ON TOP OF the session cookie's
+ * own SameSite attribute. PURE.
+ */
+export function sameOriginOK(method: string, s: OriginSignals): boolean {
+  if (SAFE_METHODS.has(method.toUpperCase())) return true
+  // 1. Fetch-metadata: an explicit cross-site request is refused (unforgeable).
+  const site = (s.secFetchSite ?? '').trim().toLowerCase()
+  if (site === 'cross-site') return false
+  // 2. Origin/Referer host must match Host.
+  const h = (s.host ?? '').trim()
+  if (!h) return false // no Host to compare against — refuse a mutating request
+  const o = hostOf(s.origin)
+  if (o) return o === h
+  const r = hostOf(s.referer)
+  if (r) return r === h
+  // No Origin/Referer: allow ONLY when fetch-metadata already affirmed same-origin
+  // (a same-origin fetch may omit Origin on some engines but sets Sec-Fetch-Site).
+  return site === 'same-origin'
+}
+
 export function pathIsClean(path: string): boolean {
   if (!path) return false
   // Reject empty (`//`), `.`/`..` dot-segments, ANY surviving percent-escape (`%XX`),
@@ -152,6 +211,22 @@ export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyO
   const basePath = new URL(trimR(opts.target)).pathname // '/' for an origin target (all ours are)
   const normPath = trimL(dest.pathname.slice(basePath.length)).replace(/\/+$/, '')
   if (!pathIsClean(normPath) || (opts.allow && !opts.allow(normPath))) return notFound()
+
+  // CSRF: this proxy authenticates from the first-party session cookie (auto-sent
+  // cross-site), so a MUTATING request must be same-origin (Sec-Fetch-Site not
+  // cross-site AND Origin/Referer host == Host). Fail closed with a 403 BEFORE
+  // resolving the user, so a cross-site POST can never create/delete/run anything on
+  // the victim's behalf. Safe methods pass.
+  if (
+    !sameOriginOK(req.method, {
+      host: req.headers.get('host') ?? '',
+      origin: req.headers.get('origin'),
+      referer: req.headers.get('referer'),
+      secFetchSite: req.headers.get('sec-fetch-site'),
+    })
+  ) {
+    return NextResponse.json(errorBody(shape, 'Cross-origin request refused.', 'forbidden'), { status: 403 })
+  }
 
   const user = await resolveUser(req)
   if (!user) {
