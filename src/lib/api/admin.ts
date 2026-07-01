@@ -149,6 +149,10 @@ export const IamAdminApi = {
   addProvider: (p: IamProvider): Promise<void> => admin.iamMutate('add-provider', p),
   updateProvider: (id: string, p: IamProvider): Promise<void> => admin.iamMutate('update-provider', p, { id }),
   deleteProvider: (p: IamProvider): Promise<void> => admin.iamMutate('delete-provider', p),
+
+  addRole: (role: Role): Promise<void> => admin.iamMutate('add-role', role),
+  updateRole: (id: string, role: Role): Promise<void> => admin.iamMutate('update-role', role, { id }),
+  deleteRole: (role: Role): Promise<void> => admin.iamMutate('delete-role', role),
 }
 
 // ── KMS admin (plain JSON over /admin/kms/secrets) ───────────────────────────
