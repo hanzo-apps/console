@@ -321,7 +321,10 @@ type CatalogBase = {
  */
 export type CatalogEntry = CatalogBase & { kind: 'module'; routes: ProductRoute[] }
 
-const DOCS = 'https://docs.hanzo.ai'
+// docs.hanzo.ai serves the Fumadocs site under the /docs base path
+// (docs.hanzo.ai/docs/<slug>), so product deep links must include it — a bare
+// docs.hanzo.ai/<slug> 404s.
+const DOCS = 'https://docs.hanzo.ai/docs'
 
 /**
  * Docs deep links for products whose `docs` slug differs from `${DOCS}/<id>`.
