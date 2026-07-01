@@ -5,7 +5,7 @@
  * (label > id > category/gcp > description). Empty query returns the catalog in
  * its natural order, so the palette can show everything by default.
  */
-import { catalog, type CatalogEntry } from './registry'
+import { visibleCatalog, type CatalogEntry } from './registry'
 import { destinationsFor, type Destination } from './match-core'
 
 // The sidebar's per-entry filter predicate + the destination indexing live in the
@@ -46,11 +46,17 @@ function scoreEntry(q: string, e: CatalogEntry): number {
   )
 }
 
-/** The catalog ranked for `query`. Empty query → full catalog in natural order. */
+/**
+ * The catalog ranked for `query`. Empty query → the visible catalog in natural
+ * order. Sourced from `visibleCatalog(true)` so brand scope AND billing-only shell
+ * mode apply (admin entries are kept for callers to gate) — one scoping rule shared
+ * with the sidebar/home/launcher, so ⌘K never offers a product the shell hides.
+ */
 export function searchCatalog(query: string): CatalogEntry[] {
+  const scope = visibleCatalog(true)
   const q = query.trim().toLowerCase()
-  if (!q) return catalog
-  return catalog
+  if (!q) return scope
+  return scope
     .map((e) => ({ e, s: scoreEntry(q, e) }))
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s)
@@ -83,7 +89,9 @@ function scoreDestination(q: string, d: Destination): number {
  */
 export function searchDestinations(query: string, showAdmin = true): Destination[] {
   const q = query.trim().toLowerCase()
-  const all = destinationsFor(catalog, showAdmin)
+  // Scope to the visible catalog (brand + billing-only shell), then gate admin — so
+  // ⌘K jumps match exactly what the nav shows (billing-only offers only billing).
+  const all = destinationsFor(visibleCatalog(showAdmin), showAdmin)
   if (!q) return all.filter((d) => d.kind === 'product')
   return all
     .map((d) => ({ d, s: scoreDestination(q, d) }))
