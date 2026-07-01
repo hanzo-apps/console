@@ -45,6 +45,9 @@ import {
   type ProductIcon,
 } from '~/lib/products/registry'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useProductColors } from '~/lib/products/pins'
+import { categoryColorHex } from '~/lib/products/colors'
+import { asColor } from '~/components/ui/color'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FadeIn } from '~/components/ui/FadeIn'
 
@@ -90,10 +93,12 @@ function SoonBadge() {
 /** One product card in the category grid — mirrors the catalog-home card (no pin). */
 function ProductCard({
   entry,
+  color,
   onOpen,
   onLearnMore,
 }: {
   entry: CatalogEntry
+  color: string
   onOpen: () => void
   onLearnMore: () => void
 }) {
@@ -103,7 +108,7 @@ function ProductCard({
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" width={272}>
       <XStack justify="space-between" items="flex-start" gap="$2">
         <XStack gap="$2" items="center" flex={1}>
-          <Icon size={20} />
+          <Icon size={20} color={asColor(color)} />
           <YStack flex={1}>
             <Text fontSize="$5" fontWeight="700">
               {entry.label}
@@ -154,6 +159,7 @@ function ProductCard({
 export function CategoryOverview({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const showAdmin = useIsGlobalAdmin()
+  const { colorOf } = useProductColors()
   const push = (path: string) => router.push(path)
 
   const category = categoryFromSlug(params.slug ?? '')
@@ -204,7 +210,7 @@ export function CategoryOverview({ params }: { params: Record<string, string> })
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack gap="$3" items="flex-start">
           <YStack width={44} height={44} items="center" justify="center" rounded="$4" bg="$color3">
-            <Icon size={22} />
+            <Icon size={22} color={asColor(categoryColorHex(category))} />
           </YStack>
           <YStack flex={1} gap="$1">
             <Text fontSize="$6" fontWeight="800" color="$color12">
@@ -224,6 +230,7 @@ export function CategoryOverview({ params }: { params: Record<string, string> })
             <ProductCard
               key={entry.id}
               entry={entry}
+              color={colorOf(entry.id)}
               onOpen={() => push(`/${entry.id}`)}
               onLearnMore={() => push(`/discover/${entry.id}`)}
             />

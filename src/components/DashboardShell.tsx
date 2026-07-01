@@ -74,6 +74,7 @@ import {
 import { productSubpages, subpageWired } from '~/lib/products/match'
 import { entryMatches } from '~/lib/products/search'
 import { usePins, useProductColors } from '~/lib/products/pins'
+import { categoryColorHex } from '~/lib/products/colors'
 import { usePreferences } from '~/lib/products/preferences'
 import { useSession } from '~/lib/auth/session'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
@@ -292,7 +293,7 @@ function Level2Nav({
       <XStack items="center" gap="$1" height={30}>
         <Button size="$2" chromeless icon={<ArrowLeft size={18} />} onPress={onBack} aria-label="Back to products" />
         <XStack onPress={onBack} cursor="pointer" items="center" hoverStyle={{ opacity: 0.7 }}>
-          <Text fontSize="$1" color="$color10" fontWeight="800" textTransform="uppercase" letterSpacing={0.4}>
+          <Text fontSize="$1" color={asColor(categoryColorHex(entry.category))} fontWeight="800" textTransform="uppercase" letterSpacing={0.4}>
             {entry.category}
           </Text>
         </XStack>
@@ -685,7 +686,7 @@ function SidebarNav({
                     onPress={() => go(`/category/${categorySlug(group.category)}`)}
                     aria-label={`${group.category} overview`}
                   >
-                    <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+                    <Text fontSize="$1" color={asColor(categoryColorHex(group.category))} fontWeight="700" textTransform="uppercase">
                       {group.category}
                     </Text>
                     <ChevronRight size={12} opacity={0.4} />
