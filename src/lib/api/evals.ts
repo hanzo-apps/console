@@ -18,8 +18,17 @@
  *
  * All routes are raw JSON (the proxied console public API / the orchestrator's
  * own JSON), so they use the REST layer, not the casibase envelope.
+ *
+ * TRANSPORT: every call is SAME-ORIGIN with NO prefix (`originV1Url` →
+ * `<origin>/v1/evals/...`, the CTO one-endpoint-form); `next.config.mjs` rewrites
+ * the `evals` head to the console's OWN user-bearer proxy (`app/cloud`), the SAME
+ * per-tenant path Agents + Prompts use. The evals facade authorizes on the Bearer
+ * owner claim and resolves the console project key pair from that tenant (cloud
+ * `clients/eval` `resolveKeys(tenant(c))`); a cookie-only call to the cloud origin
+ * has no bearer and 403s (the old "Access required" bug). `evals` is allow-listed
+ * in `proxy-allow.ts`, so the proxy admits `v1/evals/*` and nothing else.
  */
-import { restGet, restPost, v1Url } from './client'
+import { restGet, restPost, originV1Url } from './client'
 
 /** A score row (Langfuse v2 score shape; only the surfaced fields are typed). */
 export type EvalScore = {
@@ -119,7 +128,7 @@ export type CreateDatasetItemBody = {
 export const EvalsApi = {
   /** List scores; throws `ApiError` (with status) on an unreachable backend. */
   listScores: (query?: { name?: string; limit?: number; page?: number }): Promise<EvalScoresPage> => {
-    const url = new URL(v1Url('evals/scores'))
+    const url = new URL(originV1Url('evals/scores'))
     if (query?.name) url.searchParams.set('name', query.name)
     if (query?.limit) url.searchParams.set('limit', String(query.limit))
     if (query?.page) url.searchParams.set('page', String(query.page))
@@ -128,19 +137,19 @@ export const EvalsApi = {
 
   /** Run a dataset against a model with an LLM-as-judge; returns a real summary. */
   run: (req: EvalRunRequest): Promise<EvalRunSummary> =>
-    restPost<EvalRunSummary>(v1Url('evals/runs'), req),
+    restPost<EvalRunSummary>(originV1Url('evals/runs'), req),
 
   /** Create a dataset (verbatim proxy to the console). Returns the created row. */
   createDataset: (body: CreateDatasetBody): Promise<EvalDataset> =>
-    restPost<EvalDataset>(v1Url('evals/datasets'), body),
+    restPost<EvalDataset>(originV1Url('evals/datasets'), body),
 
   /** Add an item to a dataset (verbatim proxy to the console). */
   createDatasetItem: (body: CreateDatasetItemBody): Promise<unknown> =>
-    restPost<unknown>(v1Url('evals/dataset-items'), body),
+    restPost<unknown>(originV1Url('evals/dataset-items'), body),
 
   /** Register an evaluator (verbatim proxy to the console; unstable API). */
   createEvaluator: (body: unknown): Promise<unknown> =>
-    restPost<unknown>(v1Url('evals/evaluators'), body),
+    restPost<unknown>(originV1Url('evals/evaluators'), body),
 
   /**
    * Forward-compatible dataset list. The gateway does not mount GET datasets
@@ -148,13 +157,13 @@ export const EvalsApi = {
    * lights up automatically if/when the read route lands.
    */
   listDatasets: (): Promise<{ data?: EvalDataset[] } | EvalDataset[]> =>
-    restGet<{ data?: EvalDataset[] } | EvalDataset[]>(v1Url('evals/datasets')),
+    restGet<{ data?: EvalDataset[] } | EvalDataset[]>(originV1Url('evals/datasets')),
 
   /** Forward-compatible dataset item list. */
   listDatasetItems: (): Promise<{ data?: EvalDatasetItem[] } | EvalDatasetItem[]> =>
-    restGet<{ data?: EvalDatasetItem[] } | EvalDatasetItem[]>(v1Url('evals/dataset-items')),
+    restGet<{ data?: EvalDatasetItem[] } | EvalDatasetItem[]>(originV1Url('evals/dataset-items')),
 
   /** Forward-compatible dataset run / experiment list. */
   listDatasetRuns: (): Promise<{ data?: EvalDatasetRun[] } | EvalDatasetRun[]> =>
-    restGet<{ data?: EvalDatasetRun[] } | EvalDatasetRun[]>(v1Url('evals/dataset-runs')),
+    restGet<{ data?: EvalDatasetRun[] } | EvalDatasetRun[]>(originV1Url('evals/dataset-runs')),
 }
