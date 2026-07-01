@@ -134,6 +134,7 @@ import { EvalsModule } from '~/components/products/EvalsModule'
 import { DatasetItemsModule, DatasetRunsModule, DatasetsModule } from '~/components/products/DatasetsModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { ComingSoon } from '~/components/products/ComingSoon'
+import { overviewFor } from '~/components/products/overview/NativeOverview'
 import { ApiKeysModule } from '~/components/products/ApiKeysModule'
 import { SettingsModule } from '~/components/products/SettingsModule'
 import { ScoreConfigsModule } from '~/components/products/ScoreConfigsModule'
@@ -263,13 +264,18 @@ export {
 } from './brand-scope'
 
 /**
- * Enablement state — honest, three values only:
- *  - `enabled`  : an in-console module that works now (opens straight in).
- *  - `external` : a live external Hanzo surface (opens in a new tab).
+ * Enablement state — honest, two values only:
+ *  - `enabled`  : an in-console module that works now (opens straight in, whether
+ *                 a bespoke admin surface or a native product overview).
  *  - `soon`     : the primitive ships but has no console surface yet; the entry
  *                 opens an honest "coming soon" page pointing at the API/CLI.
+ *
+ * There is NO `external` state: every product is a native in-console route. A
+ * product the console does not yet deep-manage still opens to a real in-console
+ * overview (`overviewRoutes(id)` → NativeOverview) with live health + inline docs,
+ * never a bounce to another domain.
  */
-export type ProductStatus = 'enabled' | 'external' | 'soon'
+export type ProductStatus = 'enabled' | 'soon'
 
 type CatalogBase = {
   /** Stable id and base path segment, e.g. 'vector'. */
@@ -301,20 +307,24 @@ type CatalogBase = {
 }
 
 /**
- * A catalog entry is EITHER an in-console module (owns routes) OR an external
- * surface (owned by another service, opened in a new tab). Discriminated on
- * `kind` so consumers branch exhaustively. `enabled`/`soon` are modules;
- * `external` opens a tab.
+ * A catalog entry is always an in-console module that owns its routes — there is
+ * ONE way to open anything (a native route), no external-tab variant. A product
+ * with no bespoke admin surface still owns a route: a native overview
+ * (`routes: overviewRoutes(id)`). `kind: 'module'` is retained as the single
+ * discriminant so every existing exhaustive `kind === 'module'` guard still
+ * compiles and the field stays explicit.
  */
-export type CatalogEntry =
-  | (CatalogBase & { kind: 'module'; routes: ProductRoute[] })
-  | (CatalogBase & { kind: 'external'; href: string })
+export type CatalogEntry = CatalogBase & { kind: 'module'; routes: ProductRoute[] }
 
 const DOCS = 'https://docs.hanzo.ai'
 
-/** Canonical external product surfaces (public product domains, not secrets). */
+/**
+ * Docs deep links for products whose `docs` slug differs from `${DOCS}/<id>`.
+ * These feed the `docs` FIELD (the small secondary "Full docs" reference on the
+ * native overview) — NOT an external product link-out; every product opens IN
+ * the console. Products whose docs slug matches their id use `${DOCS}/<id>` inline.
+ */
 const ext = {
-  gateway: 'https://api.hanzo.ai',
   dns: `${DOCS}/dns`,
   cdn: `${DOCS}/cdn`,
   cli: `${DOCS}/cli`,
@@ -322,15 +332,6 @@ const ext = {
   api: `${DOCS}/api`,
   ide: `${DOCS}/code`,
   desktop: `${DOCS}/desktop`,
-  registry: 'https://github.com/orgs/hanzoai/packages',
-  metrics: 'https://insights.hanzo.ai',
-  dashboards: 'https://analytics.hanzo.ai',
-  crawl: 'https://crawl.hanzo.ai',
-  studio: 'https://studio.hanzo.ai',
-  console: 'https://cloud.hanzo.ai',
-  projects: config.platformUrl,
-  cost: config.billingUrl,
-  mpc: 'https://mpc.hanzo.ai',
 } as const
 
 /**
@@ -339,6 +340,16 @@ const ext = {
  * every `soon` leaf (DRY), so a soon entry is just `routes: soonRoutes`.
  */
 const soonRoutes: ProductRoute[] = [{ path: '', component: ComingSoon }]
+
+/**
+ * The native product overview for a product that has no bespoke admin surface yet.
+ * ONE component (`NativeOverview`, driven by a pure `OverviewSpec` in overview/
+ * spec.ts) renders a real in-console page — header, live health from the platform
+ * apps inventory, key facts, native actions, and INLINE docs — so the console has
+ * ZERO external link-outs (a product opens IN the console, never in another tab).
+ * DRY twin of `soonRoutes`: a native-overview leaf is just `routes: overviewRoutes(id)`.
+ */
+const overviewRoutes = (id: string): ProductRoute[] => [{ path: '', component: overviewFor(id) }]
 
 /**
  * The Hanzo product catalog — the open-source Google Cloud, ten categories.
@@ -709,10 +720,11 @@ export const catalog: CatalogEntry[] = [
     description: 'The unified, gated, priced API gateway — api.hanzo.ai.',
     gcp: 'API Gateway',
     category: 'Network',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/gateway',
-    kind: 'external',
-    href: ext.gateway,
+    docs: `${DOCS}/gateway`,
+    kind: 'module',
+    routes: overviewRoutes('gateway'),
   },
   {
     id: 'vpc',
@@ -731,11 +743,11 @@ export const catalog: CatalogEntry[] = [
     description: 'Managed authoritative DNS.',
     gcp: 'Cloud DNS',
     category: 'Network',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/dns',
     docs: ext.dns,
-    kind: 'external',
-    href: ext.dns,
+    kind: 'module',
+    routes: overviewRoutes('dns'),
   },
   {
     id: 'cdn',
@@ -743,10 +755,10 @@ export const catalog: CatalogEntry[] = [
     icon: Cable,
     description: 'Global content delivery and edge caching.',
     category: 'Network',
-    status: 'external',
+    status: 'enabled',
     docs: ext.cdn,
-    kind: 'external',
-    href: ext.cdn,
+    kind: 'module',
+    routes: overviewRoutes('cdn'),
   },
   {
     id: 'load-balancer',
@@ -847,11 +859,11 @@ export const catalog: CatalogEntry[] = [
     icon: Network,
     description: 'Threshold signing & multi-party computation — Hanzo MPC.',
     category: 'Security',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/mpc',
     docs: `${DOCS}/mpc`,
-    kind: 'external',
-    href: ext.mpc,
+    kind: 'module',
+    routes: overviewRoutes('mpc'),
   },
   {
     id: 'audit',
@@ -888,11 +900,11 @@ export const catalog: CatalogEntry[] = [
     icon: Terminal,
     description: 'The hanzo command-line interface.',
     category: 'Dev',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/cli',
     docs: ext.cli,
-    kind: 'external',
-    href: ext.cli,
+    kind: 'module',
+    routes: overviewRoutes('cli'),
   },
   {
     id: 'sdks',
@@ -900,10 +912,10 @@ export const catalog: CatalogEntry[] = [
     icon: Package,
     description: 'Python, TypeScript, Go, and Rust SDKs.',
     category: 'Dev',
-    status: 'external',
+    status: 'enabled',
     docs: ext.sdk,
-    kind: 'external',
-    href: ext.sdk,
+    kind: 'module',
+    routes: overviewRoutes('sdks'),
   },
   {
     id: 'api',
@@ -911,11 +923,11 @@ export const catalog: CatalogEntry[] = [
     icon: Code2,
     description: 'The REST API reference for every service.',
     category: 'Dev',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/ai',
     docs: ext.api,
-    kind: 'external',
-    href: ext.api,
+    kind: 'module',
+    routes: overviewRoutes('api'),
   },
   {
     id: 'integrations',
@@ -952,11 +964,11 @@ export const catalog: CatalogEntry[] = [
     icon: Code,
     description: 'The Hanzo AI development environment.',
     category: 'Dev',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/code',
     docs: ext.ide,
-    kind: 'external',
-    href: ext.ide,
+    kind: 'module',
+    routes: overviewRoutes('ide'),
   },
   {
     id: 'desktop',
@@ -964,11 +976,11 @@ export const catalog: CatalogEntry[] = [
     icon: Monitor,
     description: 'The Hanzo desktop app.',
     category: 'Dev',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/desktop',
     docs: ext.desktop,
-    kind: 'external',
-    href: ext.desktop,
+    kind: 'module',
+    routes: overviewRoutes('desktop'),
   },
 
   // ── Deploy — the PaaS control plane (platform.hanzo.ai) over the /paas
@@ -1013,11 +1025,11 @@ export const catalog: CatalogEntry[] = [
     description: 'Container images and artifacts — ghcr.io/hanzoai.',
     gcp: 'Artifact Registry',
     category: 'Platform',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/registry',
     docs: `${DOCS}/registry`,
-    kind: 'external',
-    href: ext.registry,
+    kind: 'module',
+    routes: overviewRoutes('registry'),
   },
   {
     id: 'releases',
@@ -1091,11 +1103,11 @@ export const catalog: CatalogEntry[] = [
     icon: BarChart3,
     description: 'Product metrics, events, and sessions.',
     category: 'Observe',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/insights',
     docs: `${DOCS}/metrics`,
-    kind: 'external',
-    href: ext.metrics,
+    kind: 'module',
+    routes: overviewRoutes('metrics'),
   },
   {
     // Console-native traces — list + detail (observations, scores, I/O) on the
@@ -1346,9 +1358,10 @@ export const catalog: CatalogEntry[] = [
     icon: Globe,
     description: 'Crawl and extract the web for your agents.',
     category: 'Apps',
-    status: 'external',
-    kind: 'external',
-    href: ext.crawl,
+    status: 'enabled',
+    docs: `${DOCS}/crawl`,
+    kind: 'module',
+    routes: overviewRoutes('crawl'),
   },
   {
     id: 'studio',
@@ -1356,11 +1369,11 @@ export const catalog: CatalogEntry[] = [
     icon: Sparkles,
     description: 'Build AI apps and pipelines visually.',
     category: 'Apps',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/studio',
     docs: `${DOCS}/ai-studio`,
-    kind: 'external',
-    href: ext.studio,
+    kind: 'module',
+    routes: overviewRoutes('studio'),
   },
   {
     id: 'console',
@@ -1368,11 +1381,11 @@ export const catalog: CatalogEntry[] = [
     icon: Boxes,
     description: 'The unified cloud console — this app.',
     category: 'Apps',
-    status: 'external',
+    status: 'enabled',
     repo: 'hanzoai/console',
     docs: `${DOCS}/console`,
-    kind: 'external',
-    href: ext.console,
+    kind: 'module',
+    routes: overviewRoutes('console'),
   },
 
   // ── Appended modules — ported from hanzoai/console (settings/models + eval engine).
