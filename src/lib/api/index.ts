@@ -83,6 +83,7 @@ export {
   type KmsScope,
   type KmsRef,
 } from './admin'
+export { TeamApi } from './team'
 export {
   PlaygroundApi,
   type ChatMessage,

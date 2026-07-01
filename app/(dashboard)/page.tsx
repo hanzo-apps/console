@@ -13,9 +13,10 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Star, Lock, ExternalLink, ArrowRight, Info } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { catalogByCategory, type CatalogEntry } from '~/lib/products/registry'
+import { visibleCatalogByCategory, type CatalogEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FadeIn } from '~/components/ui/FadeIn'
 import OverviewDashboard from '~/components/products/OverviewModule'
@@ -109,8 +110,9 @@ function ProductCard({
 export default function DashboardHome() {
   const router = useRouter()
   const { toggle, isPinned } = useFavorites()
+  const showAdmin = useIsGlobalAdmin()
   const push = (path: string) => router.push(path)
-  const groups = catalogByCategory()
+  const groups = visibleCatalogByCategory(showAdmin)
 
   return (
     <YStack gap="$7">

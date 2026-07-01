@@ -61,3 +61,33 @@ export function ownerAllowed(
 export function orgFor(opts: { isGlobalAdmin: boolean; orgScope: string }, requested: string | null): string {
   return opts.isGlobalAdmin && requested ? requested : opts.orgScope
 }
+
+// ── Org member proxy (/org/iam) — self-service, own-org only ──────────────────
+// The org proxy admits any authenticated member (reads) but must (a) require an
+// ORG ADMIN for writes and (b) pin every reference to the caller's own org. These
+// pure predicates are the decision; the route handler wires transport around them.
+
+/**
+ * May this caller WRITE to org members (invite / change-role / remove)? A global
+ * admin may (owner checks then scope the target org); a non-global must be an
+ * admin of their own org. A plain member → read-only (false).
+ */
+export function orgWriteAllowed(p: { isGlobalAdmin: boolean; isAdmin: boolean }): boolean {
+  return p.isGlobalAdmin || p.isAdmin
+}
+
+/**
+ * May this caller reference an org by NAME (get-organization `id=admin/<name>`)?
+ * Organization objects are owned by the `admin` metadata org, so the owner check
+ * alone (`ownerAllowed` with `orgMetadataOk`) would let a brand admin read ANOTHER
+ * org's settings — this closes that by requiring the requested name to equal the
+ * caller's scope, unless they are a global admin.
+ */
+export function orgNameAllowed(
+  requested: string | null,
+  p: { isGlobalAdmin: boolean; orgScope: string },
+): boolean {
+  if (!requested) return true
+  if (p.isGlobalAdmin) return true
+  return requested === p.orgScope
+}
