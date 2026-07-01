@@ -30,7 +30,6 @@ import {
   Clock,
   Cpu,
   DollarSign,
-  ExternalLink,
   Hash,
   Layers,
   MessageSquare,
@@ -736,7 +735,6 @@ function Tag({ text, tone }: { text: string; tone?: 'accent' }) {
 function QuickAction({ action, push }: { action: { id: string; label: string; icon: ProductIcon; hint: string }; push: (p: string) => void }) {
   const entry = catalog.find((e) => e.id === action.id)
   const Icon = action.icon
-  const external = entry?.kind === 'external'
   return (
     <Card
       borderWidth={1}
@@ -750,7 +748,7 @@ function QuickAction({ action, push }: { action: { id: string; label: string; ic
     >
       <XStack justify="space-between" items="center">
         <Icon size={20} />
-        {external ? <ExternalLink size={13} opacity={0.5} /> : <ArrowRight size={14} opacity={0.5} />}
+        <ArrowRight size={14} opacity={0.5} />
       </XStack>
       <Text fontSize="$4" fontWeight="700" color="$color12">
         {action.label}

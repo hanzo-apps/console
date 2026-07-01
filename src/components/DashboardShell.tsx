@@ -135,11 +135,9 @@ function NavRow({
       />
     )
   }
-  const hint = entry.admin ? (
-    <Lock size={12} opacity={0.45} />
-  ) : entry.kind === 'external' ? (
-    <ExternalLink size={12} opacity={0.4} />
-  ) : undefined
+  // Every product opens natively now (no external link-out); the only nav hint is
+  // the admin lock for access-gated surfaces.
+  const hint = entry.admin ? <Lock size={12} opacity={0.45} /> : undefined
   return (
     <XStack items="center" gap="$1">
       <Button
@@ -332,7 +330,7 @@ function SidebarNav({
                 <NavRow
                   key={`pin-${entry.id}`}
                   entry={entry}
-                  active={entry.kind === 'module' && isActive(entry.id)}
+                  active={isActive(entry.id)}
                   pinned
                   collapsed={collapsed}
                   onOpen={() => open(entry)}
@@ -353,7 +351,7 @@ function SidebarNav({
                 <NavRow
                   key={entry.id}
                   entry={entry}
-                  active={entry.kind === 'module' && isActive(entry.id)}
+                  active={isActive(entry.id)}
                   pinned={isPinned(entry.id)}
                   collapsed={collapsed}
                   onOpen={() => open(entry)}
