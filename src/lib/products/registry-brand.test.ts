@@ -4,6 +4,9 @@ import {
   categoryInBrand,
   BRAND_CATEGORIES,
   categoryOrder,
+  categorySlug,
+  categoryFromSlug,
+  CATEGORY_SUMMARY,
   type ProductCategory,
 } from './brand-scope'
 import type { BrandId } from '~/config'
@@ -57,5 +60,42 @@ describe('per-brand catalog scope', () => {
       if (cats === null) continue
       for (const c of cats) expect(categoryOrder).toContain(c)
     }
+  })
+})
+
+// Category landing pages — the `/category/<slug>` surface. The slug<->category
+// mapping is pure, so this proves it (and the one-line copy) without loading the
+// React-heavy registry or mocking a hostname.
+describe('category landing pages', () => {
+  it('slugs are lowercase, stable, and round-trip through categoryFromSlug', () => {
+    for (const c of categoryOrder) {
+      const slug = categorySlug(c)
+      expect(slug).toBe(c.toLowerCase())
+      expect(categoryFromSlug(slug)).toBe(c)
+    }
+    // known shapes
+    expect(categorySlug('AI')).toBe('ai')
+    expect(categorySlug('Web3')).toBe('web3')
+  })
+
+  it('every category maps to a UNIQUE slug (no collisions)', () => {
+    const slugs = categoryOrder.map(categorySlug)
+    expect(new Set(slugs).size).toBe(categoryOrder.length)
+  })
+
+  it('categoryFromSlug is case-insensitive and null for unknown slugs', () => {
+    expect(categoryFromSlug('AI')).toBe('AI')
+    expect(categoryFromSlug('ai')).toBe('AI')
+    expect(categoryFromSlug('nope')).toBeNull()
+    expect(categoryFromSlug('')).toBeNull()
+  })
+
+  it('has an honest one-line summary for EVERY category', () => {
+    for (const c of categoryOrder) {
+      expect(typeof CATEGORY_SUMMARY[c]).toBe('string')
+      expect(CATEGORY_SUMMARY[c].length).toBeGreaterThan(20)
+    }
+    // no stray keys beyond the taxonomy
+    expect(Object.keys(CATEGORY_SUMMARY).sort()).toEqual([...categoryOrder].sort())
   })
 })
