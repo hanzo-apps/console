@@ -23,20 +23,22 @@
     },
 Product catalog — the single source of truth for the unified console.
  *
- * ONE list (`catalog`) describes every Hanzo product. EVERY entry is an
- * in-console module that owns its routes (rendered here) — there is no external
- * surface that opens another domain. The nav shell, the catalog overview, the
- * discover interstitials, the favorites system, and the router all render from
- * this list, so surfacing a product = adding ONE `CatalogEntry` — no
+ * ONE list (`catalog`) describes every Hanzo product, whether it is an
+ * in-console admin module (owns routes, rendered here) or an external surface
+ * (owned by another service, opened in a tab). The nav shell, the catalog
+ * overview, the discover interstitials, the favorites system, and the router all
+ * render from this list, so surfacing a product = adding ONE `CatalogEntry` — no
  * shell/route/page edits.
  *
- * Orthogonal: an entry owns its identity + routes and knows nothing about
- * siblings. The catalog only composes them. `productModules` (the routable
+ * Orthogonal: an entry owns its identity + how it opens and knows nothing about
+ * siblings. The catalog only composes them. `productModules` (the in-console
  * subset) is derived, so the router/match layer is unchanged.
  *
  * Taxonomy: the ten canonical "Open AI Cloud" categories — exact labels and
- * order — as the open-source equivalent of Google Cloud. Each entry names the
- * Google Cloud product it stands in
+ * order — as the open-source equivalent of Google Cloud, plus an appended
+ * `Async` category for durable orchestration (Tasks/Temporal; GCP Cloud
+ * Tasks/Workflows). The first ten keep their exact order; `Async` is appended so
+ * nothing is reordered. Each entry names the Google Cloud product it stands in
  * for (`gcp`), and carries
  * an honest enablement `status`: an in-console module that works (`enabled`), a
  * live external Hanzo surface (`external`), or a primitive that ships but has no
@@ -100,8 +102,11 @@ import { Users,
   ClipboardList,
   Workflow,
   NotebookPen,
+  IdCard,
+  Blocks,
 } from '@hanzogui/lucide-icons-2'
 
+import { config } from '~/config'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
@@ -160,6 +165,8 @@ import { GpusModule } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
+import { TeamModule } from '~/components/products/TeamModule'
+import { ProfileModule } from '~/components/products/ProfileModule'
 import OverviewDashboard from '~/components/products/OverviewModule'
 import {
   DashboardsModule,
@@ -169,7 +176,6 @@ import {
   ScoreAnalyticsModule,
 } from '~/components/products/ConsoleFeatureModule'
 import { ZeroTrustModule } from '~/components/products/ZeroTrustModule'
-import { overviewFor } from '~/components/products/overview/NativeOverview'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -183,46 +189,92 @@ export type ProductRoute = {
 }
 
 /**
- * The canonical "Open AI Cloud" categories — the ten GCP-equivalent groups in
- * exact label + order. The marketing site, the console nav, the catalog overview,
- * and the discover screens all read this one taxonomy. `catalogByCategory` skips
- * empty groups.
+ * A declared sub-page in a product's level-2 nav (the Linear-style slide-in).
+ *
+ * A product declares its SPECIFIC sub-pages here (the meaningful tabs beyond the
+ * index/Overview); the uniform base set — Overview · Settings · Status · Logs ·
+ * Metrics — is auto-added by `productSubpages` so no product is a snowflake. The
+ * Overview ('' index) is implicit and never declared. A declared sub-page whose
+ * `slug` has no backing route (the module/route isn't merged yet) renders an
+ * honest placeholder and is still a ⌘K jump target — never a 404, never a fake.
+ */
+export type ProductSubpage = {
+  /** Path segment under the product (e.g. 'routing', 'queues'). Never '' — the
+   *  index Overview is implicit. */
+  slug: string
+  /** Display label in the level-2 nav and the command palette. */
+  label: string
+  /** Optional icon (defaults per well-known base slug in `productSubpages`). */
+  icon?: ProductIcon
+  /**
+   * Admin-only (global / Hanzo-managed) sub-page — hidden from a customer's
+   * level-2 nav and the command palette, and rendered as an honest "managed by
+   * Hanzo" notice if reached directly. Access is enforced server-side too. Used
+   * for the shared-gateway config (e.g. Models › Routing) that customers read but
+   * do not administer.
+   */
+  admin?: boolean
+}
+
+/**
+ * The canonical Hanzo Cloud category axis — the top-level nav sections, in exact
+ * order. The console nav, catalog overview, app launcher, and discover screens all
+ * read this one taxonomy; `catalogByCategory` skips empty groups.
+ *
+ * Canonical axis (2-level nav, category → product → sub-pages):
+ *   AI · Compute · Training · Data · Network · Security · Observe · Platform ·
+ *   Dev · Web3 · Apps · Settings
+ *
+ * Decisions:
+ *   - `Deploy` was renamed `Platform` (the ship-and-run pipeline: Projects,
+ *     Environments, Builds, Registry, Releases, Pipelines).
+ *   - `Training` is a new group (Fine-tuning + ML Pipelines/Kubeflow), split out
+ *     of AI so model *building* is its own axis.
+ *   - `Compute` is the infra axis: Kubernetes, Containers, Tasks, Functions,
+ *     GPUs, Machines, Edge, Clusters, Applications. `Tasks` (durable workflows)
+ *     REPLACES the retired `Jobs` entry; the `Async` group is gone.
+ *   - `Settings` is a new group for org/account administration (Team, Settings,
+ *     Profile).
+ *   - `Dev` and `Web3` are retained (they hold real developer + on-chain
+ *     products); the axis above lists the primary groups, not an exclusive set.
  */
 export type ProductCategory =
   | 'AI'
   | 'Compute'
+  | 'Training'
   | 'Data'
   | 'Network'
   | 'Security'
-  | 'Dev'
-  | 'Deploy'
   | 'Observe'
+  | 'Platform'
+  | 'Dev'
   | 'Web3'
   | 'Apps'
+  | 'Settings'
 
 export const categoryOrder: ProductCategory[] = [
   'AI',
   'Compute',
+  'Training',
   'Data',
   'Network',
   'Security',
-  'Dev',
-  'Deploy',
   'Observe',
+  'Platform',
+  'Dev',
   'Web3',
   'Apps',
+  'Settings',
 ]
 
 /**
- * Enablement state — honest, two values only. EVERY product is a native
- * in-console route now (there is no `external` link-out kind), so the badge is
- * purely informational:
- *  - `enabled`  : a fully-wired admin surface (opens straight in).
- *  - `soon`     : a primitive whose deep admin UI is still landing; it opens a
- *                 real native overview (header, health, inline docs), NOT a 404
- *                 and NOT a bounce to another domain.
+ * Enablement state — honest, three values only:
+ *  - `enabled`  : an in-console module that works now (opens straight in).
+ *  - `external` : a live external Hanzo surface (opens in a new tab).
+ *  - `soon`     : the primitive ships but has no console surface yet; the entry
+ *                 opens an honest "coming soon" page pointing at the API/CLI.
  */
-export type ProductStatus = 'enabled' | 'soon'
+export type ProductStatus = 'enabled' | 'external' | 'soon'
 
 type CatalogBase = {
   /** Stable id and base path segment, e.g. 'vector'. */
@@ -237,7 +289,7 @@ type CatalogBase = {
   gcp?: string
   /** Category grouping. */
   category: ProductCategory
-  /** Enablement state — informational badge only (every product opens natively). */
+  /** Enablement state — drives the nav badge + Open vs coming soon. */
   status: ProductStatus
   /** Source repo for the product, e.g. 'hanzoai/vector'. Only set where it exists. */
   repo?: string
@@ -245,18 +297,46 @@ type CatalogBase = {
   docs?: string
   /** Admin-gated surface (shown with a lock hint; access enforced server-side). */
   admin?: boolean
+  /**
+   * The product's SPECIFIC level-2 sub-pages (beyond Overview + the uniform base
+   * set, which `productSubpages` auto-adds). Only meaningful for `module` kinds.
+   * Omit for a single-screen product — it still gets Overview + the base set.
+   */
+  subpages?: ProductSubpage[]
 }
 
 /**
- * A catalog entry is ALWAYS an in-console module that owns its routes. There is no
- * external kind: products the console doesn't yet deep-manage open a shared NATIVE
- * overview (`overviewFor(id)` → NativeOverview) instead of opening another domain
- * in a new tab. This is the "zero external link-outs" invariant — one way to open
- * anything: a native route.
+ * A catalog entry is EITHER an in-console module (owns routes) OR an external
+ * surface (owned by another service, opened in a new tab). Discriminated on
+ * `kind` so consumers branch exhaustively. `enabled`/`soon` are modules;
+ * `external` opens a tab.
  */
-export type CatalogEntry = CatalogBase & { kind: 'module'; routes: ProductRoute[] }
+export type CatalogEntry =
+  | (CatalogBase & { kind: 'module'; routes: ProductRoute[] })
+  | (CatalogBase & { kind: 'external'; href: string })
 
 const DOCS = 'https://docs.hanzo.ai'
+
+/** Canonical external product surfaces (public product domains, not secrets). */
+const ext = {
+  gateway: 'https://api.hanzo.ai',
+  dns: `${DOCS}/dns`,
+  cdn: `${DOCS}/cdn`,
+  cli: `${DOCS}/cli`,
+  sdk: `${DOCS}/sdk`,
+  api: `${DOCS}/api`,
+  ide: `${DOCS}/code`,
+  desktop: `${DOCS}/desktop`,
+  registry: 'https://github.com/orgs/hanzoai/packages',
+  metrics: 'https://insights.hanzo.ai',
+  dashboards: 'https://analytics.hanzo.ai',
+  crawl: 'https://crawl.hanzo.ai',
+  studio: 'https://studio.hanzo.ai',
+  console: 'https://cloud.hanzo.ai',
+  projects: config.platformUrl,
+  cost: config.billingUrl,
+  mpc: 'https://mpc.hanzo.ai',
+} as const
 
 /**
  * The shared "coming soon" surface for a `soon` entry — an honest page that
@@ -266,17 +346,9 @@ const DOCS = 'https://docs.hanzo.ai'
 const soonRoutes: ProductRoute[] = [{ path: '', component: ComingSoon }]
 
 /**
- * The shared NATIVE overview surface — a product with no bespoke admin UI yet
- * opens this in-console page (header, live health, key facts, inline docs) instead
- * of linking out. ONE component for every such leaf (DRY): `routes: overviewRoutes(id)`.
- */
-const overviewRoutes = (id: string): ProductRoute[] => [{ path: '', component: overviewFor(id) }]
-
-/**
- * The Hanzo product catalog — the open-source Google Cloud, ten categories. EVERY
- * entry is a native in-console module: a fully-wired admin surface, a native
- * overview (for products whose deep UI is still landing), or an honest `soon`
- * page. Nothing links out to another domain.
+ * The Hanzo product catalog — the open-source Google Cloud, ten categories.
+ * In-console modules render here; external surfaces open in a tab. Every real
+ * working module is preserved; everything else is an honest `external` or `soon`.
  */
 export const catalog: CatalogEntry[] = [
   // ── Observe — the usage/spend dashboard home (also rendered at '/') ───
@@ -311,14 +383,23 @@ export const catalog: CatalogEntry[] = [
       { path: ':tab', component: ModelsModule },
       { path: 'routing/:name', component: ModelsModule },
     ],
+    // Models is a CUSTOMER surface — everyone browses the live catalog. The
+    // routing POLICY, though, is admin-only shared-gateway config (hidden from a
+    // customer's sub-nav; graceful notice if reached directly).
+    subpages: [{ slug: 'routing', label: 'Routing', admin: true }],
   },
   {
+    // Admin-only: providers + credentials are shared-gateway config managed by
+    // Hanzo (the cloud `get/add/update-provider` endpoints require a platform
+    // admin — a customer org gets 403). Hidden from a customer's nav; reaching it
+    // directly shows an honest "managed by Hanzo" notice, never a red error.
     id: 'providers',
     label: 'Providers',
     icon: Server,
     description: 'Model, storage, and embedding providers and credentials.',
     category: 'AI',
     status: 'enabled',
+    admin: true,
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [
@@ -356,14 +437,25 @@ export const catalog: CatalogEntry[] = [
     icon: Sparkles,
     description: 'Fine-tune and train models on your own data.',
     gcp: 'Vertex AI Training',
-    category: 'AI',
+    category: 'Training',
     status: 'enabled',
-    repo: 'hanzoai/ai',
     kind: 'module',
-    routes: [
-      { path: '', component: FinetuningModule },
-      { path: ':tab', component: FinetuningModule },
-    ],
+    routes: [{ path: '', component: FinetuningModule }],
+  },
+  {
+    // ML Pipelines (Kubeflow) — orchestrated training/eval DAGs. The console
+    // surface is on the roadmap; the honest "coming soon" page points at the API
+    // + CLI. Grouped with Fine-tuning under Training (the model-building axis).
+    id: 'kubeflow',
+    label: 'ML Pipelines',
+    icon: Blocks,
+    description: 'Orchestrated training and evaluation pipelines (Kubeflow).',
+    gcp: 'Vertex AI Pipelines',
+    category: 'Training',
+    status: 'soon',
+    docs: `${DOCS}/pipelines`,
+    kind: 'module',
+    routes: soonRoutes,
   },
   {
     // The embeddings product — generate, store, and search vector embeddings.
@@ -385,6 +477,13 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: EmbeddingsModule },
       { path: ':tab', component: EmbeddingsModule },
       { path: 'collections/:name', component: EmbeddingsModule },
+    ],
+    subpages: [
+      { slug: 'explore', label: 'Explore' },
+      { slug: 'collections', label: 'Collections' },
+      { slug: 'jobs', label: 'Jobs' },
+      { slug: 'models', label: 'Models' },
+      { slug: 'settings', label: 'Settings' },
     ],
   },
   {
@@ -437,17 +536,12 @@ export const catalog: CatalogEntry[] = [
     id: 'containers',
     label: 'Containers',
     icon: Container,
-    description: 'Workloads, pods, images, and events across your clusters.',
+    description: 'Run containers as managed, autoscaling services.',
     gcp: 'Cloud Run',
     category: 'Compute',
     status: 'enabled',
-    admin: true,
-    repo: 'hanzoai/operator',
     kind: 'module',
-    routes: [
-      { path: '', component: ContainersModule },
-      { path: ':tab', component: ContainersModule },
-    ],
+    routes: [{ path: '', component: ContainersModule }],
   },
   {
     id: 'functions',
@@ -459,10 +553,7 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/functions',
     docs: `${DOCS}/functions`,
     kind: 'module',
-    routes: [
-      { path: '', component: FunctionsModule },
-      { path: ':tab', component: FunctionsModule },
-    ],
+    routes: [{ path: '', component: FunctionsModule }],
   },
   {
     id: 'edge',
@@ -601,11 +692,10 @@ export const catalog: CatalogEntry[] = [
     description: 'The unified, gated, priced API gateway — api.hanzo.ai.',
     gcp: 'API Gateway',
     category: 'Network',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/gateway',
-    docs: `${DOCS}/api`,
-    kind: 'module',
-    routes: overviewRoutes('gateway'),
+    kind: 'external',
+    href: ext.gateway,
   },
   {
     id: 'vpc',
@@ -624,11 +714,11 @@ export const catalog: CatalogEntry[] = [
     description: 'Managed authoritative DNS.',
     gcp: 'Cloud DNS',
     category: 'Network',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/dns',
-    docs: `${DOCS}/dns`,
-    kind: 'module',
-    routes: overviewRoutes('dns'),
+    docs: ext.dns,
+    kind: 'external',
+    href: ext.dns,
   },
   {
     id: 'cdn',
@@ -636,10 +726,10 @@ export const catalog: CatalogEntry[] = [
     icon: Cable,
     description: 'Global content delivery and edge caching.',
     category: 'Network',
-    status: 'enabled',
-    docs: `${DOCS}/cdn`,
-    kind: 'module',
-    routes: overviewRoutes('cdn'),
+    status: 'external',
+    docs: ext.cdn,
+    kind: 'external',
+    href: ext.cdn,
   },
   {
     id: 'load-balancer',
@@ -677,6 +767,10 @@ export const catalog: CatalogEntry[] = [
     routes: [
       { path: '', component: IamModule },
       { path: ':tab', component: IamModule },
+    ],
+    subpages: [
+      { slug: 'users', label: 'Users' },
+      { slug: 'roles', label: 'Roles' },
     ],
   },
   {
@@ -736,11 +830,11 @@ export const catalog: CatalogEntry[] = [
     icon: Network,
     description: 'Threshold signing & multi-party computation — Hanzo MPC.',
     category: 'Security',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/mpc',
     docs: `${DOCS}/mpc`,
-    kind: 'module',
-    routes: overviewRoutes('mpc'),
+    kind: 'external',
+    href: ext.mpc,
   },
   {
     id: 'audit',
@@ -777,11 +871,11 @@ export const catalog: CatalogEntry[] = [
     icon: Terminal,
     description: 'The hanzo command-line interface.',
     category: 'Dev',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/cli',
-    docs: `${DOCS}/cli`,
-    kind: 'module',
-    routes: overviewRoutes('cli'),
+    docs: ext.cli,
+    kind: 'external',
+    href: ext.cli,
   },
   {
     id: 'sdks',
@@ -789,10 +883,10 @@ export const catalog: CatalogEntry[] = [
     icon: Package,
     description: 'Python, TypeScript, Go, and Rust SDKs.',
     category: 'Dev',
-    status: 'enabled',
-    docs: `${DOCS}/sdk`,
-    kind: 'module',
-    routes: overviewRoutes('sdks'),
+    status: 'external',
+    docs: ext.sdk,
+    kind: 'external',
+    href: ext.sdk,
   },
   {
     id: 'api',
@@ -800,11 +894,11 @@ export const catalog: CatalogEntry[] = [
     icon: Code2,
     description: 'The REST API reference for every service.',
     category: 'Dev',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/ai',
-    docs: `${DOCS}/api`,
-    kind: 'module',
-    routes: overviewRoutes('api'),
+    docs: ext.api,
+    kind: 'external',
+    href: ext.api,
   },
   {
     id: 'integrations',
@@ -841,11 +935,11 @@ export const catalog: CatalogEntry[] = [
     icon: Code,
     description: 'The Hanzo AI development environment.',
     category: 'Dev',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/code',
-    docs: `${DOCS}/code`,
-    kind: 'module',
-    routes: overviewRoutes('ide'),
+    docs: ext.ide,
+    kind: 'external',
+    href: ext.ide,
   },
   {
     id: 'desktop',
@@ -853,11 +947,11 @@ export const catalog: CatalogEntry[] = [
     icon: Monitor,
     description: 'The Hanzo desktop app.',
     category: 'Dev',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/desktop',
-    docs: `${DOCS}/desktop`,
-    kind: 'module',
-    routes: overviewRoutes('desktop'),
+    docs: ext.desktop,
+    kind: 'external',
+    href: ext.desktop,
   },
 
   // ── Deploy — the PaaS control plane (platform.hanzo.ai) over the /paas
@@ -869,7 +963,7 @@ export const catalog: CatalogEntry[] = [
     icon: FolderGit2,
     description: 'Projects organize resources under your org — the scope for o11y, API keys, datasets, and deploys.',
     gcp: 'Resource Manager',
-    category: 'Deploy',
+    category: 'Platform',
     status: 'enabled',
     repo: 'hanzoai/console2',
     kind: 'module',
@@ -880,7 +974,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Environments',
     icon: Layers,
     description: 'Promote builds across dev, staging, and prod.',
-    category: 'Deploy',
+    category: 'Platform',
     status: 'enabled',
     kind: 'module',
     routes: [{ path: '', component: EnvironmentsModule }],
@@ -890,7 +984,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Builds',
     icon: Hammer,
     description: 'Build images and artifacts from source.',
-    category: 'Deploy',
+    category: 'Platform',
     status: 'enabled',
     kind: 'module',
     routes: [{ path: '', component: BuildsModule }],
@@ -901,19 +995,19 @@ export const catalog: CatalogEntry[] = [
     icon: Package,
     description: 'Container images and artifacts — ghcr.io/hanzoai.',
     gcp: 'Artifact Registry',
-    category: 'Deploy',
-    status: 'enabled',
+    category: 'Platform',
+    status: 'external',
     repo: 'hanzoai/registry',
     docs: `${DOCS}/registry`,
-    kind: 'module',
-    routes: overviewRoutes('registry'),
+    kind: 'external',
+    href: ext.registry,
   },
   {
     id: 'releases',
     label: 'Releases',
     icon: Rocket,
     description: 'Versioned releases and rollbacks.',
-    category: 'Deploy',
+    category: 'Platform',
     status: 'enabled',
     kind: 'module',
     routes: [{ path: '', component: ReleasesModule }],
@@ -923,7 +1017,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Pipelines',
     icon: GitBranch,
     description: 'CI/CD pipelines from commit to deploy.',
-    category: 'Deploy',
+    category: 'Platform',
     status: 'enabled',
     docs: `${DOCS}/pipelines`,
     kind: 'module',
@@ -936,7 +1030,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Clusters',
     icon: Network,
     description: 'Your Kubernetes — shared Hanzo Cloud or your own DOKS.',
-    category: 'Deploy',
+    category: 'Compute',
     status: 'enabled',
     admin: true,
     repo: 'hanzoai/operator',
@@ -944,19 +1038,21 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: ClustersModule }],
   },
   {
-    // Real, enabled — the org's dedicated DOKS clusters (capacity, health) +
-    // provisioning, via the PaaS control plane (/paas → platform). Honest states
-    // when the service token isn't set or the caller isn't a brand admin.
+    // Real, enabled — browse workloads + operator custom resources per cluster,
+    // via the PaaS control plane (/paas → platform). Honest states if not live.
     id: 'kubernetes',
     label: 'Kubernetes',
     icon: Boxes,
-    description: 'Your Kubernetes clusters — capacity, health, and provisioning.',
+    description: 'Workloads and operator custom resources, per cluster.',
     category: 'Compute',
     status: 'enabled',
     admin: true,
     repo: 'hanzoai/operator',
     kind: 'module',
-    routes: [{ path: '', component: KubernetesModule }],
+    routes: [
+      { path: '', component: KubernetesModule },
+      { path: ':tab', component: KubernetesModule },
+    ],
   },
 
   // ── Observe ──────────────────────────────────────────────────────────
@@ -978,11 +1074,11 @@ export const catalog: CatalogEntry[] = [
     icon: BarChart3,
     description: 'Product metrics, events, and sessions.',
     category: 'Observe',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/insights',
     docs: `${DOCS}/metrics`,
-    kind: 'module',
-    routes: overviewRoutes('metrics'),
+    kind: 'external',
+    href: ext.metrics,
   },
   {
     // Console-native traces — list + detail (observations, scores, I/O) on the
@@ -1216,10 +1312,9 @@ export const catalog: CatalogEntry[] = [
     icon: Globe,
     description: 'Crawl and extract the web for your agents.',
     category: 'Apps',
-    status: 'enabled',
-    docs: `${DOCS}/crawl`,
-    kind: 'module',
-    routes: overviewRoutes('crawl'),
+    status: 'external',
+    kind: 'external',
+    href: ext.crawl,
   },
   {
     id: 'studio',
@@ -1227,11 +1322,11 @@ export const catalog: CatalogEntry[] = [
     icon: Sparkles,
     description: 'Build AI apps and pipelines visually.',
     category: 'Apps',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/studio',
     docs: `${DOCS}/ai-studio`,
-    kind: 'module',
-    routes: overviewRoutes('studio'),
+    kind: 'external',
+    href: ext.studio,
   },
   {
     id: 'console',
@@ -1239,11 +1334,11 @@ export const catalog: CatalogEntry[] = [
     icon: Boxes,
     description: 'The unified cloud console — this app.',
     category: 'Apps',
-    status: 'enabled',
+    status: 'external',
     repo: 'hanzoai/console',
     docs: `${DOCS}/console`,
-    kind: 'module',
-    routes: overviewRoutes('console'),
+    kind: 'external',
+    href: ext.console,
   },
 
   // ── Appended modules — ported from hanzoai/console (settings/models + eval engine).
@@ -1264,8 +1359,8 @@ export const catalog: CatalogEntry[] = [
     id: 'settings',
     label: 'Settings',
     icon: SlidersHorizontal,
-    description: 'Account, organization, API keys, and branding.',
-    category: 'Security',
+    description: 'Organization and account settings — name, defaults, and branding.',
+    category: 'Settings',
     status: 'enabled',
     repo: 'hanzoai/iam',
     kind: 'module',
@@ -1273,6 +1368,7 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: SettingsModule },
       { path: ':tab', component: SettingsModule },
     ],
+    subpages: [{ slug: 'branding', label: 'Branding' }],
   },
   {
     id: 'prompts',
@@ -1290,6 +1386,7 @@ export const catalog: CatalogEntry[] = [
       { path: 'metrics', component: PromptMetricsModule },
       { path: ':name', component: PromptsModule },
     ],
+    subpages: [{ slug: 'metrics', label: 'Metrics' }],
   },
   {
     id: 'datasets',
@@ -1305,6 +1402,10 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: DatasetsModule },
       { path: 'items', component: DatasetItemsModule },
       { path: 'runs', component: DatasetRunsModule },
+    ],
+    subpages: [
+      { slug: 'items', label: 'Items' },
+      { slug: 'runs', label: 'Runs' },
     ],
   },
   {
@@ -1355,6 +1456,7 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: ScoresModule },
       { path: 'analytics', component: ScoreAnalyticsModule },
     ],
+    subpages: [{ slug: 'analytics', label: 'Analytics' }],
   },
   {
     // Native — score DEFINITIONS (data type + valid range/categories) on the REAL
@@ -1410,13 +1512,14 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
-    // Durable workflows, schedules, queues, workers, activities — a Temporal-style
-    // console over the REAL tasks engine (hanzoai/tasks), org-scoped server-side.
-    // Under Compute; maps to GCP Cloud Tasks/Workflows. Tabs are `:tab` sub-routes.
+    // Durable workflows + schedules — the user's tasks across all their work.
+    // REAL /v1/tasks engine (hanzoai/tasks), org-scoped server-side. The
+    // canonical home is the Async category (Tasks/Temporal); maps to GCP Cloud
+    // Tasks/Workflows.
     id: 'tasks',
     label: 'Tasks',
     icon: Workflow,
-    description: 'Orchestrate, monitor, and debug durable workflows powered by Temporal.',
+    description: 'Durable workflows and schedules — every running and finished task.',
     gcp: 'Cloud Tasks',
     category: 'Compute',
     status: 'enabled',
@@ -1425,7 +1528,48 @@ export const catalog: CatalogEntry[] = [
     kind: 'module',
     routes: [
       { path: '', component: TasksModule },
-      { path: ':tab', component: TasksModule },
+      { path: ':ns/:wid', component: TasksModule },
+    ],
+    subpages: [{ slug: 'queues', label: 'Queues' }],
+  },
+
+  // ── Settings — org & account administration. Team (members + roles), org
+  //    Settings (name/defaults/branding), and the per-user Profile. Member
+  //    management runs over the org-scoped `/org/iam` proxy so an ORG admin can
+  //    manage their OWN org (not only a global admin), tenant-isolated server-side.
+  {
+    id: 'team',
+    label: 'Team',
+    icon: Users,
+    description: 'Organization members and roles — invite, assign roles, remove.',
+    gcp: 'IAM & Admin',
+    category: 'Settings',
+    status: 'enabled',
+    repo: 'hanzoai/iam',
+    docs: `${DOCS}/iam`,
+    kind: 'module',
+    routes: [
+      { path: '', component: TeamModule },
+      { path: ':tab', component: TeamModule },
+    ],
+    subpages: [{ slug: 'roles', label: 'Roles' }],
+  },
+  {
+    id: 'profile',
+    label: 'Profile',
+    icon: IdCard,
+    description: 'Your account — identity, security, and personal API keys.',
+    category: 'Settings',
+    status: 'enabled',
+    repo: 'hanzoai/iam',
+    kind: 'module',
+    routes: [
+      { path: '', component: ProfileModule },
+      { path: ':tab', component: ProfileModule },
+    ],
+    subpages: [
+      { slug: 'security', label: 'Security' },
+      { slug: 'keys', label: 'API Keys' },
     ],
   },
 ]
@@ -1439,14 +1583,10 @@ export type ProductModule = {
   routes: ProductRoute[]
 }
 
-/**
- * The routable module shape, in catalog order. The router/match layer reads this.
- * Every catalog entry is a module now, so this is the whole catalog projected to
- * the routing fields.
- */
-export const productModules: ProductModule[] = catalog.map(
-  ({ id, label, icon, description, routes }) => ({ id, label, icon, description, routes }),
-)
+/** The in-console subset, in catalog order. The router/match layer reads this. */
+export const productModules: ProductModule[] = catalog
+  .filter((e): e is Extract<CatalogEntry, { kind: 'module' }> => e.kind === 'module')
+  .map(({ id, label, icon, description, routes }) => ({ id, label, icon, description, routes }))
 
 /** Look up an in-console module by id (base path segment). */
 export const findModule = (id: string): ProductModule | undefined =>
@@ -1461,3 +1601,25 @@ export const catalogByCategory = (): { category: ProductCategory; entries: Catal
   categoryOrder
     .map((category) => ({ category, entries: catalog.filter((e) => e.category === category) }))
     .filter((g) => g.entries.length > 0)
+
+/** An admin-only (global / Hanzo-managed) entry — hidden from a customer's nav. */
+export const isAdminEntry = (e: CatalogEntry): boolean => e.admin === true
+
+/**
+ * The catalog a given user may SEE. A global admin sees everything; a customer
+ * (org owner / member) never sees the admin-only surfaces (cross-tenant IAM/KMS,
+ * provider + routing config, cluster ops). Access is enforced server-side too —
+ * this is the matching nav gate, so a customer never lands on a hostile 403.
+ */
+export const visibleCatalog = (showAdmin: boolean): CatalogEntry[] =>
+  showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))
+
+/** `catalogByCategory` scoped to what the user may see (admin surfaces gated). */
+export const visibleCatalogByCategory = (
+  showAdmin: boolean,
+): { category: ProductCategory; entries: CatalogEntry[] }[] => {
+  const visible = visibleCatalog(showAdmin)
+  return categoryOrder
+    .map((category) => ({ category, entries: visible.filter((e) => e.category === category) }))
+    .filter((g) => g.entries.length > 0)
+}
