@@ -1,16 +1,20 @@
 /**
- * Tasks API — the durable workflow engine (hanzoai/tasks), unified into the
- * console. Plain REST over `/v1/tasks` (restGet): the engine returns raw JSON
- * (200) or `{ error, code }`. Multi-tenant — every call is scoped to the
- * caller's org server-side (the gateway injects identity from the session and
- * strips client-supplied identity headers), so the browser sends cookie
- * credentials only. Honest states render when a route is gated/absent.
+ * Tasks API — the durable workflow engine (hanzoai/tasks `tasksd`, the native
+ * Temporal-style HTTP surface), unified into the console. Every call goes through
+ * the console's OWN same-origin `/tasks` proxy (`app/tasks/[...path]/route.ts`),
+ * which mints a short-lived user Bearer JWT server-side (tasksd requires a Bearer
+ * and strips client identity headers, minting org from the token's `owner` claim).
+ * The browser sends the session cookie only. The engine returns named-key JSON
+ * (`{ executions:[…] }`, `{ taskQueues:[…] }`, …) at 200, or `{ error, code }`.
+ * Honest states render when a route is gated/absent/unreachable.
  *
- * Contract verified against hanzoai/tasks `pkg/tasks/embed.go` (the HTTP shim
- * that mirrors the ZAP engine so the two transports can't drift): namespaces
- * group an org's work; one workflow execution is one durable "task".
+ * Contract verified against hanzoai/tasks `pkg/tasks/embed.go`: namespaces group
+ * an org's work (one per org); one workflow execution is one durable "task"; task
+ * queues + workers + activities complete the Temporal-console read surface. NOTE:
+ * public `tasks.hanzo.ai` TLS is not live yet — the real path is the in-cluster
+ * service the proxy targets (TASKS_URL); elsewhere the honest BackendStateCard shows.
  */
-import { restGet, v1Url } from './client'
+import { restGet } from './client'
 
 /** Cluster liveness — `{ status: "ok" | "down" }`. */
 export type ClusterHealth = { status: string }
@@ -75,7 +79,44 @@ export type Schedule = {
   action?: { workflowType?: { name?: string }; taskQueue?: string }
 }
 
-const u = (path: string): string => v1Url(`tasks/${path.replace(/^\/+/, '')}`)
+/** A task queue — the routing rendezvous for workflows + their workers. */
+export type TaskQueue = {
+  name: string
+  workflows?: number
+  running?: number
+  latestStart?: string
+  backlog?: number
+  pollers?: number
+}
+
+/** A worker/poller registered against a task queue. */
+export type Worker = {
+  identity?: string
+  taskQueue?: string
+  lastAccessTime?: string
+  ratePerSecond?: number
+  workflowPollers?: number
+  activityPollers?: number
+}
+
+/** One activity execution (a step within a workflow). */
+export type ActivityInfo = {
+  activityId?: string
+  activityType?: { name?: string } | string
+  workflowId?: string
+  runId?: string
+  state?: string
+  status?: string
+  attempt?: number
+  scheduledTime?: string
+  taskQueue?: string
+}
+
+/** Same-origin `/tasksd` proxy base (server route mints the Bearer + forwards).
+ *  NB: the proxy lives at `/tasksd`, NOT `/tasks` — the `tasks` product page owns
+ *  the `/tasks/*` SPA routes, so a proxy there would shadow `/tasks/queues` etc. */
+const tasksBase = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/tasksd` : '/tasksd')
+const u = (path: string): string => `${tasksBase()}/${path.replace(/^\/+/, '')}`
 const enc = encodeURIComponent
 
 export const TasksApi = {
@@ -118,5 +159,23 @@ export const TasksApi = {
   schedules: async (ns: string): Promise<Schedule[]> => {
     const r = await restGet<{ schedules?: Schedule[] }>(u(`namespaces/${enc(ns)}/schedules`))
     return r?.schedules ?? []
+  },
+
+  /** Task queues in a namespace (aggregated from workflows by the engine). */
+  taskQueues: async (ns: string): Promise<TaskQueue[]> => {
+    const r = await restGet<{ taskQueues?: TaskQueue[] }>(u(`namespaces/${enc(ns)}/task-queues`))
+    return r?.taskQueues ?? []
+  },
+
+  /** Registered workers/pollers in a namespace (empty until a worker heartbeats). */
+  workers: async (ns: string): Promise<Worker[]> => {
+    const r = await restGet<{ workers?: Worker[] }>(u(`namespaces/${enc(ns)}/workers`))
+    return r?.workers ?? []
+  },
+
+  /** Activity executions (workflow steps) in a namespace. */
+  activities: async (ns: string): Promise<ActivityInfo[]> => {
+    const r = await restGet<{ activities?: ActivityInfo[] }>(u(`namespaces/${enc(ns)}/activities`))
+    return r?.activities ?? []
   },
 }
