@@ -187,24 +187,24 @@ export type DeployResult = {
 
 export const FinetuneApi = {
   listJobs: async (): Promise<FinetuneJob[]> =>
-    unwrap(await restGet<Envelope<FinetuneJob[]>>(trainingUrl('jobs'))) ?? [],
+    unwrap(await restGet<Envelope<FinetuneJob[]>>(trainingUrl('finetune/jobs'))) ?? [],
 
   getJob: async (name: string): Promise<FinetuneJob> =>
-    unwrap(await restGet<Envelope<FinetuneJob>>(trainingUrl('job', { name }))),
+    unwrap(await restGet<Envelope<FinetuneJob>>(trainingUrl('finetune/job', { name }))),
 
   createJob: async (input: CreateFinetuneInput): Promise<FinetuneJob> =>
-    unwrap(await restPost<Envelope<FinetuneJob>>(trainingUrl('jobs'), input)),
+    unwrap(await restPost<Envelope<FinetuneJob>>(trainingUrl('finetune/jobs'), input)),
 
   cancelJob: async (name: string): Promise<FinetuneJob> =>
-    unwrap(await restPost<Envelope<FinetuneJob>>(trainingUrl('cancel', { name }))),
+    unwrap(await restPost<Envelope<FinetuneJob>>(trainingUrl('finetune/cancel', { name }))),
 
   deployJob: async (name: string): Promise<DeployResult> =>
-    unwrap(await restPost<Envelope<DeployResult>>(trainingUrl('deploy', { name }))),
+    unwrap(await restPost<Envelope<DeployResult>>(trainingUrl('finetune/deploy', { name }))),
 
   catalog: async (): Promise<{ catalog: FinetuneCatalog; recommendation?: FinetuneRecommendation }> =>
     unwrap(
       await restGet<Envelope<{ catalog: FinetuneCatalog; recommendation?: FinetuneRecommendation }>>(
-        trainingUrl('presets'),
+        trainingUrl('finetune/presets'),
       ),
     ),
 
@@ -217,16 +217,16 @@ export const FinetuneApi = {
   }): Promise<{ catalog: FinetuneCatalog; recommendation: FinetuneRecommendation }> =>
     unwrap(
       await restGet<Envelope<{ catalog: FinetuneCatalog; recommendation: FinetuneRecommendation }>>(
-        trainingUrl('presets', q),
+        trainingUrl('finetune/presets', q),
       ),
     ),
 
   searchModels: async (q: string, task?: string, limit = 30): Promise<HfModel[]> =>
-    unwrap(await restGet<Envelope<HfModel[]>>(trainingUrl('hf/models', { q, task, limit }))) ?? [],
+    unwrap(await restGet<Envelope<HfModel[]>>(trainingUrl('finetune/hf/models', { q, task, limit }))) ?? [],
 
   searchDatasets: async (q: string, limit = 30): Promise<HfDataset[]> =>
-    unwrap(await restGet<Envelope<HfDataset[]>>(trainingUrl('hf/datasets', { q, limit }))) ?? [],
+    unwrap(await restGet<Envelope<HfDataset[]>>(trainingUrl('finetune/hf/datasets', { q, limit }))) ?? [],
 
   getRepo: async (id: string, kind: 'model' | 'dataset' = 'model'): Promise<HfRepoInfo> =>
-    unwrap(await restGet<Envelope<HfRepoInfo>>(trainingUrl('hf/repo', { id, kind }))),
+    unwrap(await restGet<Envelope<HfRepoInfo>>(trainingUrl('finetune/hf/repo', { id, kind }))),
 }
