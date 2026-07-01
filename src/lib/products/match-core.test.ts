@@ -140,9 +140,13 @@ const tasks = mod('tasks', {
   ],
 })
 const providers = mod('providers', { admin: true })
-const external = mod('gateway', { kind: 'external', href: 'https://api', routes: undefined } as never)
+// A defensive edge case: an entry that VIOLATES the module contract (kind is not
+// 'module'). The catalog type is module-only now, but the match-core guards
+// (`kind !== 'module'`) still fail closed for any malformed entry that slips
+// through at runtime — this fixture proves the guard holds.
+const nonModule = mod('bogus', { kind: 'other', routes: undefined } as never)
 
-const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, external]
+const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, nonModule]
 const MODULES = CATALOG.filter((e) => e.kind === 'module').map((e) => e as unknown as ProductModule)
 
 describe('productSubpages — Overview + specifics + uniform base set', () => {
@@ -162,8 +166,8 @@ describe('productSubpages — Overview + specifics + uniform base set', () => {
   it('hides an admin-only specific from a customer', () => {
     expect(slugs(models, false)).toEqual(['', 'settings', 'status', 'logs', 'metrics'])
   })
-  it('is empty for an external entry', () => {
-    expect(productSubpages(external)).toEqual([])
+  it('fails closed (empty sub-pages) for a non-module entry', () => {
+    expect(productSubpages(nonModule)).toEqual([])
   })
   it('BASE_SUBPAGES is exactly Settings · Status · Logs · Metrics', () => {
     expect(BASE_SUBPAGES.map((s) => s.slug)).toEqual(['settings', 'status', 'logs', 'metrics'])

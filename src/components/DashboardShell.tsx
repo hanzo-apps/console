@@ -64,7 +64,6 @@ import {
 } from '~/lib/products/registry'
 import { productSubpages, subpageWired } from '~/lib/products/match'
 import { entryMatches } from '~/lib/products/search'
-import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { usePreferences } from '~/lib/products/preferences'
 import { useSession } from '~/lib/auth/session'
@@ -173,11 +172,9 @@ function NavRow({
       />
     )
   }
-  const hint = entry.admin ? (
-    <Lock size={12} opacity={0.45} />
-  ) : entry.kind === 'external' ? (
-    <ExternalLink size={12} opacity={0.4} />
-  ) : undefined
+  // Only the admin lock hint remains — every product is a native in-console
+  // route now, so there is no external-link affordance in the nav.
+  const hint = entry.admin ? <Lock size={12} opacity={0.45} /> : undefined
   return (
     <XStack items="center" gap="$1">
       <Button
@@ -304,12 +301,9 @@ function SidebarNav({
     router.push(path)
     onNavigate()
   }
+  // Every product is a native module now — opening reveals its sub-nav and
+  // navigates to its overview. There is no external-tab branch.
   const open = (entry: CatalogEntry) => {
-    if (entry.kind === 'external') {
-      openProduct(entry, () => {})
-      onNavigate()
-      return
-    }
     setOpenId(entry.id)
     router.push(`/${entry.id}`)
   }
