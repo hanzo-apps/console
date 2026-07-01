@@ -27,7 +27,7 @@ const entry = (over: Partial<CatalogEntry> & { id: string }): CatalogEntry => ({
   kind: 'module',
   routes: [],
   ...over,
-})
+}) as CatalogEntry
 
 describe('resolveSpec', () => {
   it('returns the registered spec when one exists (by id)', () => {
