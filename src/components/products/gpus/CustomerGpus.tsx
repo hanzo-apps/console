@@ -27,6 +27,9 @@ import {
 } from '~/lib/api/visor'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { useDetailPane } from '~/components/DetailPane'
+import { productColorHex } from '~/lib/products/colors'
+import { LaunchDrawer } from '../machines/LaunchDrawer'
 
 const VERDICT_TONE = { ok: '$green10', warn: '$yellow10', down: '$red10', idle: '$color9' } as const
 
@@ -44,6 +47,7 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 }
 
 export function CustomerGpus() {
+  const detail = useDetailPane()
   const [catalog, setCatalog] = useState<VisorGpuSize[]>([])
   const [machines, setMachines] = useState<VisorMachine[]>([])
   const [loading, setLoading] = useState(true)
@@ -94,7 +98,7 @@ export function CustomerGpus() {
       ),
     },
     { key: 'hr', header: '$/hr', width: 84, render: (c) => <Text fontSize="$3" color="$color12" fontWeight="600">{fmtHourly(c.priceHourly)}</Text> },
-    { key: 'mo', header: '$/mo', width: 96, render: (c) => <Text fontSize="$3" color="$color11">{fmtMonthly(c.priceHourly)}</Text> },
+    { key: 'mo', header: '$/mo', width: 96, render: (c) => <Text fontSize="$3" color="$color11">{c.priceMonthly != null ? `$${Math.round(c.priceMonthly).toLocaleString()}/mo` : DASH}</Text> },
   ]
 
   const machineCols: Column<VisorMachine>[] = [
@@ -125,9 +129,27 @@ export function CustomerGpus() {
     { key: 'cost', header: 'Cost', width: 92, render: (m) => <Text fontSize="$3" color="$color12">{fmtHourly(m.costHourlyUsd)}</Text> },
   ]
 
-  const launch = () => {
-    if (typeof window !== 'undefined') window.open(`${config.docsUrl}/gpus`, '_blank', 'noopener')
-  }
+  // The REAL launch flow — the shared drawer (kind=gpu). On success, reload so the new
+  // GPU machine appears under "Your GPU machines". Replaces the old docs link.
+  const launch = () =>
+    detail.open({
+      title: 'Launch a GPU',
+      subtitle: 'Pick an accelerator and region',
+      icon: Rocket,
+      iconColor: productColorHex('gpus'),
+      size: 520,
+      content: (
+        <LaunchDrawer
+          kind="gpu"
+          onClose={detail.close}
+          onLaunched={(m) => {
+            detail.close()
+            setMachines((r) => [m, ...r.filter((x) => x.id !== m.id)])
+            load()
+          }}
+        />
+      ),
+    })
 
   const header = (
     <PageHeader

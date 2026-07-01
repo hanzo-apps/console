@@ -159,7 +159,7 @@ function Rail({ data }: { data: NsData }) {
           <RailRow label="Accepted" value={data.cluster?.stats?.accepted ?? '—'} />
           <RailRow label="Timeouts" value={data.cluster?.stats?.timeouts ?? '—'} />
         </YStack>
-        <Text fontSize="$1" color="$color10">tasksd is a single-node engine — one node, not a 5-service Temporal cluster.</Text>
+        <Text fontSize="$1" color="$color10">Hanzo Tasks runs as a single-node engine — one node, not a multi-service cluster.</Text>
       </Panel>
 
       <Panel title="Workflow throughput" minW={280} grow={false}>
@@ -329,7 +329,7 @@ export function TasksModule({ params }: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Tasks"
-        subtitle="Orchestrate, monitor, and debug workflows powered by Temporal."
+        subtitle="Durable workflows, schedules, and queues — orchestrate, monitor, and debug."
         actions={<Button icon={<RefreshCw size={16} />} onPress={data.reload}>Refresh</Button>}
       />
 
