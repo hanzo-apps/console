@@ -29,7 +29,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser } from '~/lib/server/identity'
-import { billingSubject, scopedBillingSearch } from '~/lib/server/billing-scope'
+import { billingSubject, scopedBillingSearch, scopedBillingBody } from '~/lib/server/billing-scope'
 
 export const runtime = 'nodejs'
 
@@ -88,7 +88,11 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     cache: 'no-store',
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    init.body = await req.text()
+    // Scope the WRITE body to the caller's OWN subject too (not just the query):
+    // commerce reads the subject from the JSON body on writes like create-spend-alert
+    // (`userId`), so pin it server-side — the browser needn't know its subject and a
+    // forged body subject cannot widen scope. Mirrors `scopedBillingSearch`.
+    init.body = scopedBillingBody(await req.text(), subject)
   }
   try {
     const res = await fetch(url, init)

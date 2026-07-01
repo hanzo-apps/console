@@ -8,8 +8,9 @@
  * no external bounce. Each card can be pinned to the sidebar (persisted to the
  * account). Rendered entirely from the catalog registry.
  */
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Star, Lock, ArrowRight, BookOpen } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
@@ -103,6 +104,20 @@ export default function DashboardHome() {
   const showAdmin = useIsGlobalAdmin()
   const push = (path: string) => router.push(path)
   const groups = visibleCatalogByCategory(showAdmin)
+
+  // Billing-only shell (billing.<brand> / NEXT_PUBLIC_BILLING_ONLY): the default
+  // route IS the Billing Center — redirect the catalog home to the billing overview
+  // so people who only ever see billing.hanzo.ai land straight on billing.
+  useEffect(() => {
+    if (config.billingOnly) router.replace('/billing')
+  }, [router])
+  if (config.billingOnly) {
+    return (
+      <XStack flex={1} justify="center" items="center" p="$8">
+        <Spinner size="large" color="$color11" />
+      </XStack>
+    )
+  }
 
   return (
     <YStack gap="$7">
