@@ -13,7 +13,7 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Star, Lock, ArrowRight, BookOpen } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { visibleCatalogByCategory, type CatalogEntry } from '~/lib/products/registry'
+import { visibleCatalogByCategory, categorySlug, type CatalogEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
@@ -115,9 +115,20 @@ export default function DashboardHome() {
         {groups.map((group, i) => (
         <FadeIn key={group.category} index={i} style={{ width: '100%' }}>
           <YStack gap="$3">
-            <Text fontSize="$5" fontWeight="800" color="$color12">
-              {group.category}
-            </Text>
+            <XStack
+              self="flex-start"
+              items="center"
+              gap="$2"
+              cursor="pointer"
+              hoverStyle={{ opacity: 0.75 }}
+              onPress={() => push(`/category/${categorySlug(group.category)}`)}
+              aria-label={`${group.category} overview`}
+            >
+              <Text fontSize="$5" fontWeight="800" color="$color12">
+                {group.category}
+              </Text>
+              <ArrowRight size={16} opacity={0.5} />
+            </XStack>
             <XStack flexWrap="wrap" gap="$3">
               {group.entries.map((entry) => (
                 <ProductCard
