@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, ArrowLeft, Play, Settings2, Copy, Search, SlidersHorizontal, X } from '@hanzogui/lucide-icons-2'
+import { RefreshCw, ArrowLeft, Play, Settings2, Copy, Search, SlidersHorizontal, X, Boxes } from '@hanzogui/lucide-icons-2'
 
 import {
   fetchCatalog,
@@ -318,6 +318,7 @@ type LoadState =
   | { phase: 'ready'; models: CatalogEntry[] }
 
 export function ModelCatalogModule(_props: { params: Record<string, string> }) {
+  const router = useRouter()
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const [plans, setPlans] = useState<Plan[]>([])
   const [selected, setSelected] = useState<CatalogEntry | null>(null)
@@ -398,9 +399,14 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
         title="Model Catalog"
         subtitle="Explore and deploy the best open AI models. All models are routeable and usage-based."
         actions={
-          <Button size="$2" icon={<RefreshCw size={15} />} onPress={run}>
-            Refresh
-          </Button>
+          <XStack gap="$2" items="center" flexWrap="wrap">
+            <Button size="$2" chromeless icon={<Boxes size={15} />} onPress={() => router.push('/providers')}>
+              Providers
+            </Button>
+            <Button size="$2" icon={<RefreshCw size={15} />} onPress={run}>
+              Refresh
+            </Button>
+          </XStack>
         }
       />
 
