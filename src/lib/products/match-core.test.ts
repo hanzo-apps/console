@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveRoute, entryMatches } from './match-core'
+import {
+  resolveRoute,
+  entryMatches,
+  productSubpages,
+  resolveProductView,
+  subpageIsWired,
+  isAdminView,
+  destinationsFor,
+  BASE_SUBPAGES,
+} from './match-core'
 import type { CatalogEntry, ProductModule } from './registry'
 
 // Runtime stubs for the type-only icon/component fields (matching never renders).
@@ -90,5 +99,132 @@ describe('entryMatches — the sidebar filter (ask 4)', () => {
     expect(entryMatches(entry, 'vertex')).toBe(true) // gcp
     expect(entryMatches(entry, 'semantic')).toBe(true) // description
     expect(entryMatches(entry, 'kubernetes')).toBe(false)
+  })
+})
+
+// ── The level-2 sub-page contract (asks 1 & 2) ───────────────────────────────
+
+/** Build a module catalog entry with optional declared sub-pages + routes. */
+const mod = (
+  id: string,
+  extra: Partial<CatalogEntry> & { routes?: ProductModule['routes'] } = {},
+): CatalogEntry =>
+  ({
+    id,
+    label: id[0].toUpperCase() + id.slice(1),
+    icon: I,
+    description: '',
+    category: 'AI',
+    status: 'enabled',
+    kind: 'module',
+    routes: extra.routes ?? [{ path: '', component: C }],
+    ...extra,
+  }) as unknown as CatalogEntry
+
+// A registry mirroring the real shape: a :tab product (models, with an admin-only
+// Routing specific), a single-screen product (vpc), a product with a declared
+// specific that has NO route yet (tasks › queues), and an admin product.
+const models = mod('models', {
+  subpages: [{ slug: 'routing', label: 'Routing', admin: true }],
+  routes: [
+    { path: '', component: C },
+    { path: ':tab', component: C },
+  ],
+})
+const vpc = mod('vpc')
+const tasks = mod('tasks', {
+  subpages: [{ slug: 'queues', label: 'Queues' }],
+  routes: [
+    { path: '', component: C },
+    { path: ':ns/:wid', component: C },
+  ],
+})
+const providers = mod('providers', { admin: true })
+const external = mod('gateway', { kind: 'external', href: 'https://api', routes: undefined } as never)
+
+const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, external]
+const MODULES = CATALOG.filter((e) => e.kind === 'module').map((e) => e as unknown as ProductModule)
+
+describe('productSubpages — Overview + specifics + uniform base set', () => {
+  const slugs = (e: CatalogEntry, showAdmin = true) => productSubpages(e, showAdmin).map((s) => s.slug)
+
+  it('auto-adds Overview + the base set to a single-screen product', () => {
+    expect(slugs(vpc)).toEqual(['', 'settings', 'status', 'logs', 'metrics'])
+  })
+  it('places a specific between Overview and the base set', () => {
+    // models declares Routing (admin) — visible to an admin, before the base set.
+    expect(slugs(models, true)).toEqual(['', 'routing', 'settings', 'status', 'logs', 'metrics'])
+  })
+  it('does NOT duplicate a base slug a product declares as a specific', () => {
+    const withMetrics = mod('x', { subpages: [{ slug: 'metrics', label: 'Metrics' }] })
+    expect(slugs(withMetrics)).toEqual(['', 'metrics', 'settings', 'status', 'logs'])
+  })
+  it('hides an admin-only specific from a customer', () => {
+    expect(slugs(models, false)).toEqual(['', 'settings', 'status', 'logs', 'metrics'])
+  })
+  it('is empty for an external entry', () => {
+    expect(productSubpages(external)).toEqual([])
+  })
+  it('BASE_SUBPAGES is exactly Settings · Status · Logs · Metrics', () => {
+    expect(BASE_SUBPAGES.map((s) => s.slug)).toEqual(['settings', 'status', 'logs', 'metrics'])
+  })
+})
+
+describe('resolveProductView — route wins, known sub-pages stub, else 404 (ask 2)', () => {
+  const view = (slug: string[]) => resolveProductView(CATALOG, MODULES, slug)
+
+  it('renders a real route (index and :tab) when one matches', () => {
+    expect(view(['models']).kind).toBe('route')
+    expect(view(['models', 'routing']).kind).toBe('route') // :tab catches it
+  })
+  it('stubs an undeclared BASE sub-page on a single-screen product', () => {
+    const v = view(['vpc', 'status'])
+    expect(v.kind).toBe('stub')
+    if (v.kind === 'stub') expect(v.subpage.slug).toBe('status')
+  })
+  it('stubs a DECLARED specific that has no route yet (Tasks › Queues)', () => {
+    const v = view(['tasks', 'queues'])
+    expect(v.kind).toBe('stub')
+    if (v.kind === 'stub') expect(v.subpage.label).toBe('Queues')
+  })
+  it('404s an unknown product or an unknown deep path', () => {
+    expect(view(['nope']).kind).toBe('notfound')
+    expect(view(['vpc', 'nope', 'deep']).kind).toBe('notfound')
+  })
+})
+
+describe('subpageIsWired — mirrors the render (route vs. stub)', () => {
+  it('is wired for the index and a :tab specific, not for an unrouted sub-page', () => {
+    expect(subpageIsWired(MODULES, 'models', '')).toBe(true)
+    expect(subpageIsWired(MODULES, 'models', 'routing')).toBe(true)
+    expect(subpageIsWired(MODULES, 'vpc', 'status')).toBe(false)
+    expect(subpageIsWired(MODULES, 'tasks', 'queues')).toBe(false)
+  })
+})
+
+describe('isAdminView — admin product OR admin sub-page (customer gating)', () => {
+  it('flags an admin product and an admin sub-page, not customer surfaces', () => {
+    expect(isAdminView(CATALOG, ['providers'])).toBe(true)
+    expect(isAdminView(CATALOG, ['models'])).toBe(false)
+    expect(isAdminView(CATALOG, ['models', 'routing'])).toBe(true)
+    expect(isAdminView(CATALOG, ['models', 'status'])).toBe(false)
+  })
+})
+
+describe('destinationsFor — ⌘K indexes products + specifics, admin-gated (ask 3)', () => {
+  it('indexes products then declared specifics; a deep sub-page carries its path', () => {
+    const dests = destinationsFor(CATALOG, true)
+    expect(dests.some((d) => d.kind === 'product' && d.entry.id === 'models')).toBe(true)
+    const q = dests.find((d) => d.kind === 'subpage' && d.entry.id === 'tasks' && d.subpage.slug === 'queues')
+    expect(q).toBeTruthy()
+    if (q && q.kind === 'subpage') expect(q.path).toBe('/tasks/queues')
+  })
+  it('gates the admin product AND the admin sub-page for a customer', () => {
+    const customer = destinationsFor(CATALOG, false)
+    expect(customer.some((d) => d.entry.id === 'providers')).toBe(false)
+    expect(customer.some((d) => d.kind === 'subpage' && d.subpage.slug === 'routing')).toBe(false)
+    const admin = destinationsFor(CATALOG, true)
+    expect(admin.some((d) => d.entry.id === 'providers')).toBe(true)
+    expect(admin.some((d) => d.kind === 'subpage' && d.subpage.slug === 'routing')).toBe(true)
   })
 })

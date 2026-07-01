@@ -30,6 +30,7 @@ import {
   Clock,
   Cpu,
   DollarSign,
+  ExternalLink,
   Hash,
   Layers,
   MessageSquare,
@@ -113,8 +114,8 @@ const ACTIVITY_TABS: { key: ActivityTab; label: string }[] = [
 const ACTIVITY_EMPTY: Record<ActivityTab, string> = {
   all: 'No activity in this range yet.',
   inference: 'No inference calls in this range yet.',
-  deployments: "Deployment events aren't in the usage ledger — open Deploy for these.",
-  jobs: "Job events aren't in the usage ledger — open Jobs for these.",
+  deployments: "Deployment events aren't in the usage ledger — open Platform for these.",
+  jobs: "Task events aren't in the usage ledger — open Tasks for these.",
   payments: "Payment events aren't in the usage ledger — open Cost & billing for these.",
 }
 
@@ -713,7 +714,7 @@ function RecentActivity({
           iconAfter={<ArrowRight size={14} />}
           onPress={() => push(tab === 'payments' ? '/cost' : tab === 'jobs' ? '/tasks' : '/applications')}
         >
-          {tab === 'payments' ? 'Open Cost & billing' : tab === 'jobs' ? 'Open Tasks' : 'Open Deploy'}
+          {tab === 'payments' ? 'Open Cost & billing' : tab === 'jobs' ? 'Open Tasks' : 'Open Platform'}
         </Button>
       ) : null}
     </YStack>
@@ -735,6 +736,7 @@ function Tag({ text, tone }: { text: string; tone?: 'accent' }) {
 function QuickAction({ action, push }: { action: { id: string; label: string; icon: ProductIcon; hint: string }; push: (p: string) => void }) {
   const entry = catalog.find((e) => e.id === action.id)
   const Icon = action.icon
+  const external = entry?.kind === 'external'
   return (
     <Card
       borderWidth={1}
@@ -748,7 +750,7 @@ function QuickAction({ action, push }: { action: { id: string; label: string; ic
     >
       <XStack justify="space-between" items="center">
         <Icon size={20} />
-        <ArrowRight size={14} opacity={0.5} />
+        {external ? <ExternalLink size={13} opacity={0.5} /> : <ArrowRight size={14} opacity={0.5} />}
       </XStack>
       <Text fontSize="$4" fontWeight="700" color="$color12">
         {action.label}
