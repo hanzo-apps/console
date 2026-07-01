@@ -73,11 +73,18 @@ function cloudUrl(): string {
  * and billingUrl are the per-brand surfaces. Each brand's billing host runs the
  * same multi-brand billing SPA, scoped to the brand's org via the brand JWT.
  */
-const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string; billingUrl: string; docsUrl: string }> = {
-  hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud', billingUrl: 'https://billing.hanzo.ai', docsUrl: 'https://docs.hanzo.ai' },
-  lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud', billingUrl: 'https://billing.lux.cloud', docsUrl: 'https://docs.lux.network' },
-  zoo: { brandName: 'Zoo Cloud', iamUrl: 'https://zoolabs.id', iamOrgName: 'zoo', iamApp: 'zoo-cloud', billingUrl: 'https://billing.zoo.cloud', docsUrl: 'https://docs.zoo.ngo' },
-  pars: { brandName: 'Pars Cloud', iamUrl: 'https://pars.id', iamOrgName: 'pars', iamApp: 'pars-cloud', billingUrl: 'https://billing.pars.cloud', docsUrl: 'https://docs.pars.network' },
+// `adminApp` is the OAuth client used on a brand's admin console host
+// (admin.<brand>). It targets an app whose IAM organization is the reserved
+// `admin` org, so login resolves the global-admin identity (owner=admin) — the
+// keystone of the admin.hanzo.ai cutover. The reserved admin org is ONE global
+// org, so there is ONE admin login app (`admin-console`); enabling a new brand's
+// admin host = add its /auth/callback to that app's redirectUris. Non-admin
+// hosts keep the brand's normal `iamApp`.
+const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string; adminApp: string; billingUrl: string; docsUrl: string }> = {
+  hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.hanzo.ai', docsUrl: 'https://docs.hanzo.ai' },
+  lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.lux.cloud', docsUrl: 'https://docs.lux.network' },
+  zoo: { brandName: 'Zoo Cloud', iamUrl: 'https://zoolabs.id', iamOrgName: 'zoo', iamApp: 'zoo-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.zoo.cloud', docsUrl: 'https://docs.zoo.ngo' },
+  pars: { brandName: 'Pars Cloud', iamUrl: 'https://pars.id', iamOrgName: 'pars', iamApp: 'pars-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.pars.cloud', docsUrl: 'https://docs.pars.network' },
 }
 
 /** Hostname suffix → brand. First match wins. */
@@ -112,27 +119,49 @@ function currentHost(): string {
   return process.env.NEXT_PUBLIC_DEFAULT_HOST ?? 'cloud.hanzo.ai'
 }
 
-const cache = new Map<BrandId, ConsoleConfig>()
+/** Normalize a host for keying/matching (lowercase, strip port). */
+function normHost(host?: string | null): string {
+  return (host ?? '').toLowerCase().replace(/:\d+$/, '').trim()
+}
+
+/**
+ * True on a brand admin console host (admin.<brand>, e.g. admin.hanzo.ai). Such
+ * hosts authenticate against the admin-org OAuth app (`adminApp`) so login
+ * resolves the global-admin identity, whereas every normal host uses `iamApp`.
+ */
+export function isAdminHost(host?: string | null): boolean {
+  return normHost(host).startsWith('admin.')
+}
+
+// Cache is keyed by NORMALIZED HOST (not brand): admin.hanzo.ai and
+// cloud.hanzo.ai are the same brand but MUST resolve to different clients
+// (admin-console vs hanzo-cloud), so a brand-keyed cache would collide.
+const cache = new Map<string, ConsoleConfig>()
 
 /** Resolve the full config for the current host. iamOrgName overridable via env. */
 export function resolveConfig(host: string = currentHost()): ConsoleConfig {
-  const brand = brandFromHost(host)
-  const cached = cache.get(brand)
+  const key = normHost(host) || 'default'
+  const cached = cache.get(key)
   if (cached) return cached
+  const brand = brandFromHost(host)
   const b = BRANDS[brand]
+  // On an admin host, the login client is the admin-org app; otherwise the
+  // brand's normal cloud app. iamAppName and iamClientId travel together (same
+  // app). An explicit NEXT_PUBLIC_* override still wins (unchanged precedence).
+  const app = isAdminHost(host) ? b.adminApp : b.iamApp
   const resolved: ConsoleConfig = {
     brand,
     brandName: b.brandName,
     cloudUrl: cloudUrl(),
     iamUrl: trimSlash(process.env.NEXT_PUBLIC_IAM_URL ?? b.iamUrl),
     iamOrgName: process.env.NEXT_PUBLIC_IAM_ORG_NAME ?? b.iamOrgName,
-    iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? b.iamApp,
-    iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? b.iamApp,
+    iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? app,
+    iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? app,
     billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? b.billingUrl),
     docsUrl: trimSlash(process.env.NEXT_PUBLIC_DOCS_URL ?? b.docsUrl),
     ...SHARED,
   }
-  cache.set(brand, resolved)
+  cache.set(key, resolved)
   return resolved
 }
 
