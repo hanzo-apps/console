@@ -16,12 +16,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Text, XStack, YStack } from '@hanzo/gui'
 
 import { BackendStateCard } from '~/components/ui/BackendState'
+import { useSession } from '~/lib/auth/session'
 import { useComposer } from './useComposer'
 import { useModels, pricingOf, defaultModelId } from './useModels'
 import { useChatRun } from './useChatRun'
 import { Composer } from './Composer'
 import { ResponsePanel } from './ResponsePanel'
 import { ModelSettings } from './ModelSettings'
+import { SettingsSheet } from './SettingsSheet'
 import { ExamplesCard } from './ExamplesCard'
 import { HistoryCard } from './HistoryCard'
 import { HeaderActions } from './HeaderActions'
@@ -38,16 +40,24 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
   const composer = useComposer()
   const models = useModels()
   const run = useChatRun()
+  const { account } = useSession()
+  // Per-user history key (org-qualified username), '' until the session resolves.
+  const userKey = account ? `${account.owner}/${account.name}` : ''
 
   const [validation, setValidation] = useState<string | null>(null)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [saved, setSaved] = useState<SavedPrompt[]>([])
+  const [settingsOpen, setSettingsOpen] = useState(true) // desktop side-pane
+  const [settingsSheet, setSettingsSheet] = useState(false) // mobile bottom sheet
 
-  // Load locally-persisted History + Saved prompts on mount.
+  // Saved prompts load once; History (re)loads for the resolved user, so every
+  // completed run auto-populates it and one account never sees another's runs.
   useEffect(() => {
-    setHistory(loadHistory())
     setSaved(loadSaved())
   }, [])
+  useEffect(() => {
+    setHistory(loadHistory(userKey))
+  }, [userKey])
 
   // Once the catalog resolves, seed the model — restoring a `?p=` share link when
   // present, else picking a sensible Zen-first default. Runs once.
@@ -116,7 +126,7 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
     const result = await run.run({ model: composer.model, messages, ...paramsOf(composer.settings) })
     const cost = costOf(result.usage, pricing)
     setHistory(
-      saveRun({
+      saveRun(userKey, {
         id: `run_${Date.now().toString(36)}`,
         at: Date.now(),
         mode,
@@ -194,21 +204,39 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
       ) : null}
 
       <XStack gap="$4" flexWrap="wrap" items="flex-start">
-        {/* Left: composer + examples + history */}
-        <YStack flex={2} minW={420} gap="$3">
-          <Composer
-            composer={composer}
-            mode={mode}
-            models={models.options}
-            modelsLoading={models.phase === 'loading'}
-            running={run.running}
-            onRun={() => void onRun()}
-            onStop={run.cancel}
-            curl={curl}
-            json={json}
-          />
+        {/* Builder — the composer with an attached, collapsible Model settings
+            side-pane (a bottom sheet on mobile). The two outer columns each ask
+            for a phone-safe min width, so they sit side-by-side on desktop and
+            wrap into a clean vertical stack on a narrow screen (no h-scroll). */}
+        <YStack flex={2} minW={320} gap="$3">
+          <XStack gap="$3" items="flex-start" flexWrap="wrap">
+            <YStack flex={1} minW={300}>
+              <Composer
+                composer={composer}
+                mode={mode}
+                models={models.options}
+                modelsLoading={models.phase === 'loading'}
+                running={run.running}
+                onRun={() => void onRun()}
+                onStop={run.cancel}
+                curl={curl}
+                json={json}
+                settingsOpen={settingsOpen}
+                onToggleSettings={() => setSettingsOpen((s) => !s)}
+                onOpenSettingsSheet={() => setSettingsSheet(true)}
+              />
+            </YStack>
+            {/* Desktop settings side-pane — attached to the builder, collapsible.
+                Hidden on mobile (base display:none); the bottom sheet takes over. */}
+            {settingsOpen ? (
+              <YStack display="none" $md={{ display: 'flex', width: 292 }}>
+                <ModelSettings value={composer.settings} onChange={composer.setSettings} disabled={run.running} />
+              </YStack>
+            ) : null}
+          </XStack>
+
           <XStack gap="$3" flexWrap="wrap" items="flex-start">
-            <YStack flex={1} minW={260}>
+            <YStack flex={1} minW={240}>
               <ExamplesCard
                 onApply={applyExample}
                 saved={saved}
@@ -216,18 +244,22 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
                 onRemoveSaved={(id) => setSaved(removeSaved(id))}
               />
             </YStack>
-            <YStack flex={1} minW={260}>
-              <HistoryCard history={history} onReplay={replay} onClear={() => setHistory(clearHistory())} />
+            <YStack flex={1} minW={240}>
+              <HistoryCard history={history} onReplay={replay} onClear={() => setHistory(clearHistory(userKey))} />
             </YStack>
           </XStack>
         </YStack>
 
-        {/* Right: response + settings */}
+        {/* Response — a 1/3 flex column at desktop; wraps below the builder on mobile. */}
         <YStack flex={1} minW={320} gap="$3">
           <ResponsePanel run={run} pricing={pricing} model={composer.model} requestJson={json} />
-          <ModelSettings value={composer.settings} onChange={composer.setSettings} disabled={run.running} />
         </YStack>
       </XStack>
+
+      {/* Mobile: the same Model settings as a dismissable bottom sheet. */}
+      <SettingsSheet open={settingsSheet} onOpenChange={setSettingsSheet}>
+        <ModelSettings value={composer.settings} onChange={composer.setSettings} disabled={run.running} chrome={false} />
+      </SettingsSheet>
     </YStack>
   )
 }
