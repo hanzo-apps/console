@@ -124,6 +124,12 @@ export async function forwardIam(
     bodyText = await req.text()
     if (!ownerOk(bodyField(bodyText, 'owner'))) return forbidden()
     if (!ownerOk(bodyField(bodyText, 'organization'))) return forbidden()
+    // Org-metadata WRITE (update-organization): the ?id name is pinned above; the
+    // record's own `name` field must ALSO be in scope, so a non-global admin can't
+    // retarget/rename another tenant's org via the body. (No-op when absent.)
+    if (opts.orgNameSegments?.has(segment) && !orgNameAllowed(bodyField(bodyText, 'name'), gate)) {
+      return forbidden()
+    }
     // An org-keyed WRITE (add/delete-project) from a non-global admin MUST carry
     // their OWN org in owner+organization — ownerOk already blocks a FOREIGN org;
     // this also rejects an omitted/empty one (which would create an owner="" row

@@ -73,6 +73,7 @@ export {
   KmsAdminApi,
   type Paged,
   type Organization,
+  type ThemeData,
   type IamUser,
   type IamApplication,
   type IamProvider,
