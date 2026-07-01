@@ -45,6 +45,7 @@ import {
   Circle,
   CircleHelp,
   Command,
+  CreditCard,
   ExternalLink,
   House,
   LayoutGrid,
@@ -52,10 +53,12 @@ import {
   LogOut,
   Menu,
   PanelLeft,
+  Repeat,
   ScrollText,
   Search,
   SlidersHorizontal,
   Star,
+  Wallet,
   X,
 } from '@hanzogui/lucide-icons-2'
 
@@ -64,6 +67,7 @@ import {
   visibleCatalogByCategory,
   findEntry,
   categorySlug,
+  BILLING_CENTER_ID,
   type CatalogEntry,
   type ProductSubpage,
 } from '~/lib/products/registry'
@@ -101,6 +105,18 @@ const SUBPAGE_ICON: Record<string, ComponentType<{ size?: number }>> = {
   metrics: BarChart3,
 }
 const subpageIcon = (slug: string): ComponentType<{ size?: number }> => SUBPAGE_ICON[slug] ?? Circle
+
+/** Icons for the Billing Center tabs — used by the billing-only shell nav. */
+const BILLING_SUBPAGE_ICON: Record<string, ComponentType<{ size?: number }>> = {
+  '': House,
+  reports: BarChart3,
+  budgets: Bell,
+  invoices: ScrollText,
+  subscriptions: Repeat,
+  'payment-methods': CreditCard,
+  credits: Wallet,
+}
+const billingSubpageIcon = (slug: string): ComponentType<{ size?: number }> => BILLING_SUBPAGE_ICON[slug] ?? Circle
 
 /** The active in-console module id for a path, or null (home / external / unknown). */
 function activeModuleId(pathname: string): string | null {
@@ -439,6 +455,60 @@ function SidebarNav({
         .filter((g) => g.entries.length > 0),
     [q, showAdmin],
   )
+
+  // ── Billing-only shell — the nav IS the Billing Center's tabs ─────────────
+  // Same components, filtered nav: on billing.<brand> (or NEXT_PUBLIC_BILLING_ONLY)
+  // the sidebar shows ONLY the Billing Center sub-pages (Overview · Reports ·
+  // Budgets · Invoices · Subscriptions · Payment methods · Credits). The rest of the
+  // chrome (header, cmd+K, org switcher, account menu, wallet footer) is untouched.
+  if (config.billingOnly) {
+    const billing = findEntry(BILLING_CENTER_ID)
+    const subs: ProductSubpage[] =
+      billing && billing.kind === 'module'
+        ? [{ slug: '', label: 'Overview' }, ...(billing.subpages ?? []).filter((s) => showAdmin || !s.admin)]
+        : []
+    const activeSlug = billing ? activeSubpageSlug(pathname, billing.id) : ''
+    return (
+      <>
+        <XStack items="center" height={36} mb="$2">
+          <Button
+            flex={collapsed ? undefined : 1}
+            chromeless
+            justify={collapsed ? 'center' : 'flex-start'}
+            px="$1"
+            onPress={() => go(`/${BILLING_CENTER_ID}`)}
+            aria-label="Billing"
+          >
+            <BrandLogo size={22} wordmark={false} />
+          </Button>
+        </XStack>
+        <ScrollView flex={1}>
+          <YStack gap="$1">
+            {subs.map((sp) => {
+              const active = sp.slug === activeSlug
+              const SubIcon = billingSubpageIcon(sp.slug)
+              return (
+                <Button
+                  key={sp.slug || 'overview'}
+                  onPress={() => go(sp.slug ? `/${BILLING_CENTER_ID}/${sp.slug}` : `/${BILLING_CENTER_ID}`)}
+                  bg={active ? '$color5' : 'transparent'}
+                  justify={collapsed ? 'center' : 'flex-start'}
+                  px={collapsed ? '$0' : '$2.5'}
+                  height={collapsed ? 44 : undefined}
+                  icon={<SubIcon size={collapsed ? ICON : 17} />}
+                  size="$3"
+                  aria-label={sp.label}
+                >
+                  {collapsed ? undefined : sp.label}
+                </Button>
+              )
+            })}
+          </YStack>
+        </ScrollView>
+        <SidebarWallet collapsed={collapsed} />
+      </>
+    )
+  }
 
   // ── Collapsed icon rail — products as colored icons; expand for sub-nav ──
   if (collapsed) {

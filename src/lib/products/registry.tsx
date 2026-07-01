@@ -89,7 +89,6 @@ import { Users,
   LineChart,
   Bell,
   CreditCard,
-  Repeat,
   Gauge,
   Tag,
   ArrowLeftRight,
@@ -118,9 +117,7 @@ import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
 import { PlansModule } from '~/components/products/PlansModule'
-import { CostModule } from '~/components/products/CostModule'
-import { SubscriptionsModule } from '~/components/products/SubscriptionsModule'
-import { PaymentMethodsModule } from '~/components/products/PaymentMethodsModule'
+import { BillingModule } from '~/components/products/BillingModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
@@ -1186,52 +1183,35 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AlertsModule }],
   },
   {
-    // Native — the tenant's balance, metered usage by product/model, and invoice
-    // history over the per-tenant `/billing/*` commerce proxy. Read-only; paying +
-    // payment methods stay in the brand billing portal (the "Add credits" CTA).
-    id: 'cost',
-    label: 'Cost',
+    // The unified Billing Center — the ONE GCP-Cloud-Billing-style money surface.
+    // A tabbed product (Overview · Reports · Budgets · Invoices · Subscriptions ·
+    // Payment methods · Credits) over the per-tenant `/billing/*` commerce proxy.
+    // SUPERSEDES the old scattered Cost / Subscriptions / Payment-methods entries
+    // (folded in as tabs — one center, zero duplication). It is ALSO the whole
+    // surface shown in billing-only shell mode at billing.<brand> (SAME component,
+    // filtered nav + default route), so console and billing.hanzo.ai are 1:1.
+    id: 'billing',
+    label: 'Billing',
     icon: CreditCard,
-    description: 'Balance, usage, and invoices for every product.',
-    gcp: 'Cloud Billing',
-    category: 'Observe',
-    status: 'enabled',
-    repo: 'hanzoai/billing',
-    docs: `${DOCS}/billing`,
-    kind: 'module',
-    routes: [{ path: '', component: CostModule }],
-  },
-  {
-    // Real, enabled — the org's subscriptions (plan/status/renewal) over the same
-    // per-tenant `/billing/*` commerce proxy as Cost. Read-only; subscribing +
-    // changing plans stays in the brand billing portal.
-    id: 'subscriptions',
-    label: 'Subscriptions',
-    icon: Repeat,
-    description: 'Plans your organization is subscribed to — status, seats, and renewal.',
+    description: 'Balance, spend, budgets, invoices, subscriptions, and payment methods.',
     gcp: 'Cloud Billing',
     category: 'Observe',
     status: 'enabled',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/billing`,
     kind: 'module',
-    routes: [{ path: '', component: SubscriptionsModule }],
-  },
-  {
-    // Real, enabled — the org's saved payment methods (masked brand + last4 only)
-    // over the per-tenant `/billing/*` commerce proxy. Read-only; adding/removing
-    // a method stays in the brand billing portal.
-    id: 'payment-methods',
-    label: 'Payment Methods',
-    icon: CreditCard,
-    description: 'Saved payment methods for your organization.',
-    gcp: 'Cloud Billing',
-    category: 'Observe',
-    status: 'enabled',
-    repo: 'hanzoai/commerce',
-    docs: `${DOCS}/billing`,
-    kind: 'module',
-    routes: [{ path: '', component: PaymentMethodsModule }],
+    routes: [
+      { path: '', component: BillingModule },
+      { path: ':tab', component: BillingModule },
+    ],
+    subpages: [
+      { slug: 'reports', label: 'Reports' },
+      { slug: 'budgets', label: 'Budgets' },
+      { slug: 'invoices', label: 'Invoices' },
+      { slug: 'subscriptions', label: 'Subscriptions' },
+      { slug: 'payment-methods', label: 'Payment methods' },
+      { slug: 'credits', label: 'Credits' },
+    ],
   },
   {
     // Real, enabled — the all-services health view, from real cluster data.
@@ -1755,14 +1735,33 @@ export const inBrand = (e: CatalogEntry): boolean => categoryInBrand(config.bran
  * this is the matching nav gate, so a customer never lands on a hostile 403.
  * Also scoped to the current BRAND (lux/zoo = web3/bootnode, hanzo = full).
  */
-export const visibleCatalog = (showAdmin: boolean): CatalogEntry[] =>
-  (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
+/** The unified Billing Center entry id — the ONE money surface + the billing-only shell root. */
+export const BILLING_CENTER_ID = 'billing'
+
+export const visibleCatalog = (showAdmin: boolean): CatalogEntry[] => {
+  // Billing-only shell mode (billing.<brand> host / NEXT_PUBLIC_BILLING_ONLY): the
+  // SAME console image, but every surface is filtered to the ONE Billing Center.
+  // Bypass the brand-category scope so the center shows on EVERY brand's billing
+  // host (Observe isn't in the web3 brands' normal category set). Zero duplication —
+  // it's the same catalog entry the full console shows, just alone.
+  if (config.billingOnly) {
+    const billing = catalog.find((e) => e.id === BILLING_CENTER_ID)
+    return billing ? [billing] : []
+  }
+  return (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
+}
 
 /** `catalogByCategory` scoped to what the user may see (admin surfaces gated). */
 export const visibleCatalogByCategory = (
   showAdmin: boolean,
 ): { category: ProductCategory; entries: CatalogEntry[] }[] => {
   const visible = visibleCatalog(showAdmin)
+  // In billing-only mode the Billing Center is the whole catalog — surface it as a
+  // single group regardless of the brand's category order (its category may be
+  // outside the brand's normal set).
+  if (config.billingOnly) {
+    return visible.length ? [{ category: visible[0].category, entries: visible }] : []
+  }
   return brandCategoryOrder()
     .map((category) => ({ category, entries: visible.filter((e) => e.category === category) }))
     .filter((g) => g.entries.length > 0)
