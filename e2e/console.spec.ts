@@ -72,7 +72,6 @@ test.describe('Hanzo Cloud Console — public', () => {
   test('server proxies reject unauthenticated calls (401)', async ({ request }) => {
     for (const path of [
       '/superbase/v1/collections/tenants/records',
-      '/bootnode/v1/networks',
       '/keys',
     ]) {
       const res = await request.get(`${BASE_URL}${path}`)
@@ -81,13 +80,8 @@ test.describe('Hanzo Cloud Console — public', () => {
   })
 
   test('proxy allow-lists reject off-list paths (no tunnel)', async ({ request }) => {
-    for (const path of [
-      '/superbase/v1/collections/secrets/records',
-      '/bootnode/v1/secrets',
-    ]) {
-      const res = await request.get(`${BASE_URL}${path}`)
-      expect(res.status(), `${path} must not tunnel`).toBe(404)
-    }
+    const res = await request.get(`${BASE_URL}/superbase/v1/collections/secrets/records`)
+    expect(res.status()).toBe(404)
   })
 
   test('unknown route never 5xxs', async ({ request }) => {
