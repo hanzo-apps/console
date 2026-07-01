@@ -15,7 +15,7 @@
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { resolveUser, mintUserKey, revokeUserKey, mintConfigured } from '~/lib/server/identity'
+import { resolveUser, mintUserKey, revokeUserKey, mintConfigured, getUserKey } from '~/lib/server/identity'
 
 export const runtime = 'nodejs'
 
@@ -31,11 +31,18 @@ const notConfigured = () =>
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const user = await resolveUser(req)
   if (!user) return unauthorized()
-  // No secret material on GET — only whether a key exists and its public prefix.
-  const hasKey = Boolean(user.accessKey)
+  // Read the key AUTHORITATIVELY from IAM (not the stale get-account claim, which
+  // returns '' for a freshly-minted key → the "key never listed" bug). No secret
+  // material on GET — only whether a key exists, its public prefix, and when the
+  // key row last changed. Fail-soft to the session claim if IAM is unconfigured.
+  const { accessKey, updatedAt } = mintConfigured()
+    ? await getUserKey(user)
+    : { accessKey: user.accessKey, updatedAt: '' }
+  const hasKey = Boolean(accessKey)
   return NextResponse.json({
     hasKey,
-    keyPrefix: hasKey ? user.accessKey.slice(0, 11) : '',
+    keyPrefix: hasKey ? accessKey.slice(0, 11) : '',
+    createdAt: hasKey ? updatedAt : '',
   })
 }
 

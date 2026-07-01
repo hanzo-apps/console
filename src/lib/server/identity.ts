@@ -229,6 +229,25 @@ export async function revokeUserKey(user: SessionUser): Promise<void> {
   await iamCall('/v1/iam/revoke-user-keys', { id: user.id })
 }
 
+/**
+ * The user's CURRENT `hk-` key state, read AUTHORITATIVELY from IAM (`get-user`),
+ * not from the cloud `get-account` session claim.
+ *
+ * Why: the `hk-` key IS `User.AccessKey` in IAM. Minting sets it there (a
+ * column-scoped write), but the console's cloud session (`get-account`) does NOT
+ * carry the freshly-minted `accessKey` — it returns '' — so `GET /keys` reported
+ * `hasKey:false` and the page reverted to the empty "Create" state, hiding an
+ * active key (uncopyable, unrevocable, and re-minted as a duplicate). IAM
+ * `get-user?id=<owner>/<name>` returns the real `accessKey` (+ the user's
+ * `updatedTime`, the last time the key row changed). Basic-auth confidential
+ * client, fail-soft: an unreadable IAM leaves the key absent (honest empty),
+ * never fabricates one.
+ */
+export async function getUserKey(user: SessionUser): Promise<{ accessKey: string; updatedAt: string }> {
+  const u = await iamGetData<{ accessKey?: string; updatedTime?: string }>('/v1/iam/get-user', { id: user.id })
+  return { accessKey: u?.accessKey ?? '', updatedAt: u?.updatedTime ?? '' }
+}
+
 /** Issue a short-lived, user-bound IAM JWT for the AI proxy to forward. */
 export async function issueUserToken(user: SessionUser): Promise<{ accessToken: string; expiresIn: number }> {
   const data = await iamCall<{ accessToken?: string; expiresIn?: number }>('/v1/iam/issue-user-token', {

@@ -9,7 +9,12 @@
  */
 import { ApiError } from './client'
 
-export type KeyStatus = { hasKey: boolean; keyPrefix: string }
+export type KeyStatus = {
+  hasKey: boolean
+  keyPrefix: string
+  /** When the key row last changed in IAM (mint/rotate), ISO; '' when unknown. */
+  createdAt?: string
+}
 
 async function keysReq<T>(method: 'GET' | 'POST' | 'DELETE'): Promise<T> {
   let res: Response
