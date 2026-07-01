@@ -1,128 +1,173 @@
 'use client'
 
 /**
- * Functions — serverless compute (FaaS) deployed and invoked by the platform.
+ * Functions — the "Hanzo Functions" product surface (serverless / FaaS). A polished
+ * tabbed console over the REAL `hanzoai/functions` inventory: Overview · Functions ·
+ * Deployments · Triggers · Secrets · Settings. The engine is **Fission** (Kubernetes-
+ * native FaaS), branded "Hanzo Functions" — never the underlying OSS name.
  *
- * Reads the function inventory from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/functions`), which injects the service token server-side. When the
- * functions service isn't provisioned for the org the list load fails and the
- * honest not-configured / unavailable card renders instead of an empty grid —
- * matching every other infra module.
+ * The inventory is loaded ONCE here (`FunctionsApi.list` → the documented same-origin
+ * `GET /v1/functions`, with X-Org-Id stamped by the client) and shared to the tabs;
+ * `live` records whether it loaded over a real 200, which gates destructive actions in
+ * the detail rail. Every aggregate is DERIVED from real rows and the time-series/cost
+ * come from `FunctionsApi.metrics`; until those routes are bound the page shows honest
+ * loading/empty/not-connected states — never fabricated functions, invocations, or spend.
+ *
+ * Tabs map to the registry `:tab` route (`/functions/:tab`), the same pattern as GPUs
+ * and Models. Style props use the v5 shorthand set (bg/p/px/py/gap/rounded/items/...).
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Text } from '@hanzo/gui'
-import { RefreshCw } from '@hanzogui/lucide-icons-2'
+import { useRouter } from 'next/navigation'
+import { Button, Text, XStack } from '@hanzo/gui'
+import { BookOpen, Plus, Terminal } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { config } from '~/config'
+import { FunctionsApi, type ServerlessFunction } from '~/lib/api/functions'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { classifyBackend, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
+import { EngineBadge } from './functions/parts'
+import { OverviewTab } from './functions/OverviewTab'
+import { FunctionsBrowser } from './functions/FunctionsBrowser'
+import { DeploymentsTab, TriggersTab, SecretsTab, SettingsTab } from './functions/tabs'
 
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
+const TABS = [
+  { id: '', label: 'Overview' },
+  { id: 'functions', label: 'Functions' },
+  { id: 'deployments', label: 'Deployments' },
+  { id: 'triggers', label: 'Triggers' },
+  { id: 'secrets', label: 'Secrets' },
+  { id: 'settings', label: 'Settings' },
+] as const
 
-type Func = {
-  id: string
-  name?: string
-  runtime?: string
-  status?: string
-  invocations?: string
-  lastInvoked?: string
+const openExternal = (href: string) => {
+  if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
 }
 
-export function FunctionsModule(_props: { params: Record<string, string> }) {
-  const [rows, setRows] = useState<Func[]>([])
+/** Load the inventory once; `live` = it loaded over a real 200 (gates mutations). */
+function useInventory() {
+  const [functions, setFunctions] = useState<ServerlessFunction[]>([])
   const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<PlatformError | null>(null)
+  const [error, setError] = useState<BackendState | null>(null)
+  const [live, setLive] = useState(false)
 
-  const load = useCallback(async () => {
+  const reload = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ functions?: Func[] }>(paas('functions'))
-      setRows(r.functions ?? [])
-      setLoadError(null)
+      const data = await FunctionsApi.list()
+      setFunctions(data)
+      setLive(true)
+      setError(null)
     } catch (e) {
-      setLoadError(interpretPlatformError(e))
-      setRows([])
+      setFunctions([])
+      setLive(false)
+      setError(classifyBackend(e))
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    void reload()
+  }, [reload])
 
-  const columns: Column<Func>[] = [
-    {
-      key: 'name',
-      header: 'Name',
-      render: (f) => (
-        <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
-          {f.name || f.id}
-        </Text>
-      ),
-    },
-    {
-      key: 'runtime',
-      header: 'Runtime',
-      width: 140,
-      render: (f) => (
-        <Text fontSize="$3" color="$color11">
-          {f.runtime || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'invocations',
-      header: 'Invocations',
-      width: 120,
-      render: (f) => (
-        <Text fontSize="$3" color="$color11">
-          {f.invocations || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: 120,
-      render: (f) => <StatusTag status={f.status ?? 'unknown'} />,
-    },
-    {
-      key: 'lastInvoked',
-      header: 'Last invoked',
-      width: 190,
-      render: (f) => (
-        <Text fontSize="$3" color="$color11">
-          {f.lastInvoked ? new Date(f.lastInvoked).toLocaleString() : '—'}
-        </Text>
-      ),
-    },
-  ]
+  return { functions, loading, error, live, reload, setFunctions }
+}
+
+export function FunctionsModule({ params }: { params: Record<string, string> }) {
+  const router = useRouter()
+  const inv = useInventory()
+  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+  const docsHref = config.docsUrl + '/functions'
+
+  const hint = 'endpoint · GET /v1/functions'
+
+  // The inventory-load error short-circuits only the tabs that READ the inventory
+  // (Overview, Functions). The other tabs run independent reads (Deployments/
+  // Triggers/Secrets) or are useful offline (Settings shows the honest "not
+  // connected" runtime + the deploy CLI), so they always render.
+  const inventoryTab = tab === '' || tab === 'functions'
+
+  // Removing a function locally keeps the shared inventory honest after a real delete.
+  const onAfterDelete = useCallback(
+    (name: string) => inv.setFunctions((rows) => rows.filter((f) => f.name !== name)),
+    [inv],
+  )
 
   return (
     <>
       <PageHeader
         title="Functions"
-        subtitle="Serverless compute (FaaS)."
+        subtitle="Event-driven serverless functions, deployed and invoked by the platform."
         actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
-            Refresh
-          </Button>
+          <>
+            <Button size="$3" chromeless icon={<Terminal size={15} />} onPress={() => openExternal(docsHref)}>
+              CLI
+            </Button>
+            <Button size="$3" chromeless icon={<BookOpen size={15} />} onPress={() => openExternal(docsHref)}>
+              Documentation
+            </Button>
+            <Button size="$3" theme="light" icon={<Plus size={15} />} onPress={() => router.push('/functions/settings')}>
+              Deploy function
+            </Button>
+          </>
         }
       />
 
-      {loadError ? (
-        <PlatformStateCard error={loadError} onRetry={() => void load()} />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          rowKey={(f) => f.id}
-          empty="No functions deployed yet."
+      {/* Brand tag — "Hanzo Functions" (Fission engine), never the OSS name */}
+      <XStack items="center" gap="$2">
+        <Text fontSize="$2" px="$2" py="$1" rounded="$10" bg="$color4" color="$color12" fontWeight="800">
+          Hanzo Functions
+        </Text>
+        <EngineBadge />
+        <Text fontSize="$1" color="$color10">
+          Kubernetes-native serverless
+        </Text>
+      </XStack>
+
+      {/* Tab strip */}
+      <XStack gap="$1" flexWrap="wrap">
+        {TABS.map((t) => (
+          <Button
+            key={t.id || 'overview'}
+            size="$2"
+            bg={t.id === tab ? '$color5' : 'transparent'}
+            borderWidth={1}
+            borderColor="$borderColor"
+            onPress={() => router.push(t.id ? `/functions/${t.id}` : '/functions')}
+          >
+            {t.label}
+          </Button>
+        ))}
+      </XStack>
+
+      {/* A hard backend failure on the inventory is surfaced honestly on the tabs
+          that depend on it; the per-tab reads and Settings render their own states. */}
+      {inv.error && inventoryTab ? (
+        <BackendStateCard state={inv.error} onRetry={() => void inv.reload()} hint={hint} />
+      ) : tab === '' ? (
+        <OverviewTab
+          functions={inv.functions}
+          loading={inv.loading}
+          live={inv.live}
+          docsHref={docsHref}
+          onAfterDelete={onAfterDelete}
         />
+      ) : tab === 'functions' ? (
+        <FunctionsBrowser
+          functions={inv.functions}
+          loading={inv.loading}
+          live={inv.live}
+          docsHref={docsHref}
+          onAfterDelete={onAfterDelete}
+        />
+      ) : tab === 'deployments' ? (
+        <DeploymentsTab hint="endpoint · GET /v1/functions/deployments" />
+      ) : tab === 'triggers' ? (
+        <TriggersTab hint="endpoint · GET /v1/functions/triggers" />
+      ) : tab === 'secrets' ? (
+        <SecretsTab hint="endpoint · GET /v1/functions/secrets" docsHref={config.docsUrl + '/kms'} />
+      ) : (
+        <SettingsTab functions={inv.functions} live={inv.live} docsHref={docsHref} />
       )}
     </>
   )

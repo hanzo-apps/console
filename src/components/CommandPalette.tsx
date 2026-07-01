@@ -52,7 +52,6 @@ import {
   Building2,
   Command,
   CornerDownLeft,
-  ExternalLink,
   House,
   LayoutGrid,
   Lock,
@@ -196,7 +195,7 @@ function CatalogRow({
         </Text>
       </YStack>
       {entry.admin ? <Lock size={13} opacity={0.45} /> : null}
-      {entry.kind === 'external' ? <ExternalLink size={13} opacity={0.45} /> : <ArrowRight size={13} opacity={active ? 0.8 : 0.3} />}
+      <ArrowRight size={13} opacity={active ? 0.8 : 0.3} />
     </XStack>
   )
 }
