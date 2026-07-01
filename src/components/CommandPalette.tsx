@@ -69,6 +69,7 @@ import { catalog, findEntry, type CatalogEntry } from '~/lib/products/registry'
 import { searchDestinations, type Destination } from '~/lib/products/search'
 import { useProductColors } from '~/lib/products/pins'
 import { asColor } from '~/components/ui/color'
+import { ProductIcon } from '~/components/ui/ProductIcon'
 import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
@@ -191,7 +192,7 @@ function CatalogRow({
       bg={active ? '$color5' : 'transparent'}
       hoverStyle={{ bg: active ? '$color5' : '$color3' }}
     >
-      <Icon size={17} color={color ? asColor(color) : undefined} />
+      <ProductIcon icon={Icon} color={color} size={24} />
       <YStack flex={1}>
         <Text fontSize="$3" fontWeight="600" color="$color12">
           {entry.label}

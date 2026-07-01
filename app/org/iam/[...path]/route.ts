@@ -36,15 +36,18 @@ const POST_SEGMENTS = new Set([
   'add-user',
   'update-user',
   'delete-user',
+  // Org branding/settings — org-admin only, pinned to the caller's OWN org by both
+  // the `?id` name AND the body name (below), so a brand admin can't retarget another.
+  'update-organization',
   // Project CRUD — org-admin only (requireAdminForWrite), pinned to the caller's org.
   'add-project',
   'delete-project',
 ])
 
-/** get-organization's owner is the `admin` metadata org (name guarded separately). */
-const ORG_META = new Set(['get-organization'])
-/** Segments carrying an org NAME to pin to the caller's scope. */
-const ORG_NAME = new Set(['get-organization'])
+/** Org objects are owned by the `admin` metadata org (name guarded separately). */
+const ORG_META = new Set(['get-organization', 'update-organization'])
+/** Segments carrying an org NAME to pin to the caller's scope (read id + write body). */
+const ORG_NAME = new Set(['get-organization', 'update-organization'])
 /** Segments keyed by `organization` (projects) — pin it to the caller's own org so an
  *  omitted/empty organization can't enumerate/pollute across tenants. */
 const ORG_PARAM = new Set(['get-organization-projects', 'add-project', 'delete-project'])
