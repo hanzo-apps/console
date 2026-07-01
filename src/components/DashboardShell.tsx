@@ -1,42 +1,45 @@
 'use client'
 
 /**
- * Dashboard shell — sidebar (Overview + Docs + Pinned + categorized catalog) + top
+ * Dashboard shell — a TWO-LEVEL sidebar (category → product → sub-pages) + top
  * bar + content, responsive across phone / tablet / laptop / desktop.
  *
- * The sidebar renders from the product catalog: fixed Overview/Docs links, a Pinned
- * section the user curates (favorites), then every product grouped by category. A
- * filter box narrows the whole sidebar so any product is one keystroke away, and
- * each catalog row carries a pin toggle. The brand "H" mark COLLAPSES/expands the
- * sidebar (icon-only ↔ full) on desktop, persisted to the account so it follows the
- * user. Active state is an EXACT match so e.g. `stores` never lights up while a
- * sibling is open. Adding a product to the catalog makes it appear here with no
- * shell edits.
+ * Level 1 (the product list) renders from the catalog: fixed Overview/Docs, a
+ * Pinned section the user curates, then every product grouped by category, with a
+ * filter that narrows the whole list. Clicking a PRODUCT slides the sidebar INTO
+ * that product's sub-nav (Linear-style); a back affordance returns to the list.
+ * Level 2 is `productSubpages(entry)` — Overview + the product's specifics + the
+ * uniform base set (Settings · Status · Logs · Metrics). Sub-pages with no backend
+ * yet are dimmed and open an honest placeholder (never a dead link). The open
+ * product follows the route, so landing on any product URL shows its sub-nav.
+ *
+ * Chrome: the sidebar shows only the brand H mark (→ Overview) — no wordmark and
+ * no in-sidebar collapse toggle (collapse lives in the header, the one place).
+ * Identity, balance, top-up, and Sign out live in the footer wallet; the header
+ * keeps org/project/env switchers, theme, help, and notifications.
  *
  * Responsive (one breakpoint, `lg` = 1024px, applied with CSS media style props):
- * - Desktop/laptop (≥lg): the persistent sidebar is always on (collapsible), and
- *   the topbar shows the full inline controls.
- * - Phone/tablet (<lg): the sidebar is HIDDEN and reachable via a hamburger in the
- *   topbar that opens the SAME nav as a left drawer (closes on select / backdrop);
- *   the topbar condenses — org/scope/user/sign-out fold into one overflow menu so
- *   nothing overflows at 375px.
+ * - Desktop/laptop (≥lg): the persistent sidebar is always on (collapsible from
+ *   the header), and the topbar shows the full inline controls.
+ * - Phone/tablet (<lg): the sidebar is HIDDEN and reached via a hamburger that
+ *   opens the SAME two-level nav as a left drawer; the topbar condenses.
  *
- * Layout responsiveness is CSS-driven (`display="none"` + `$lg={{ display:'flex' }}`),
- * NOT a JavaScript `useMedia()` branch. The browser resolves these media queries at
- * first paint, so the server and the client's first render emit IDENTICAL markup —
- * no hydration mismatch, and no flash of the compact layout on a wide screen (which
- * a JS branch would cause, since `useMedia()` reports "compact" until the client
- * mounts). The drawer/menu overlays stay mounted (closed); their triggers are
- * CSS-hidden ≥lg, so they can never open on desktop.
- *
- * The nav body (`SidebarNav`) is shared by the persistent sidebar and the drawer
- * (DRY) — one nav definition, two mounts.
+ * Layout responsiveness is CSS-driven (`display="none"` + `$lg={{...}}`), NOT a
+ * `useMedia()` JS branch, so SSR and the client's first paint emit identical
+ * markup — no hydration mismatch, no flash of the compact layout on a wide
+ * screen. The nav body (`SidebarNav`) is shared by the persistent sidebar and the
+ * drawer (DRY) — one definition, two mounts.
  */
-import { useMemo, useState, type ComponentType, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, Dialog, Input, ScrollView, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
 import {
+  Activity,
+  ArrowLeft,
+  BarChart3,
+  Bell,
   BookOpen,
+  Circle,
   CircleHelp,
   ExternalLink,
   House,
@@ -45,6 +48,7 @@ import {
   LogOut,
   Menu,
   PanelLeft,
+  ScrollText,
   Search,
   SlidersHorizontal,
   Star,
@@ -52,12 +56,19 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { catalogByCategory, findEntry, type CatalogEntry } from '~/lib/products/registry'
+import {
+  visibleCatalogByCategory,
+  findEntry,
+  type CatalogEntry,
+  type ProductSubpage,
+} from '~/lib/products/registry'
+import { productSubpages, subpageWired } from '~/lib/products/match'
 import { entryMatches } from '~/lib/products/search'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { usePreferences } from '~/lib/products/preferences'
 import { useSession } from '~/lib/auth/session'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { SidebarWallet } from '~/components/SidebarWallet'
 import { CommandSearchBox } from '~/components/CommandPalette'
 import { useAppLauncher } from '~/components/AppLauncher'
@@ -71,6 +82,31 @@ const EXPANDED_W = 264
 const COLLAPSED_W = 64
 /** Collapsed-rail icon size — large enough to be a comfortable hit target. */
 const ICON = 20
+
+/** Default icon for a level-2 sub-page (base slugs get a real one; others a dot). */
+const SUBPAGE_ICON: Record<string, ComponentType<{ size?: number }>> = {
+  '': House,
+  settings: SlidersHorizontal,
+  status: Activity,
+  logs: ScrollText,
+  metrics: BarChart3,
+}
+const subpageIcon = (slug: string): ComponentType<{ size?: number }> => SUBPAGE_ICON[slug] ?? Circle
+
+/** The active in-console module id for a path, or null (home / external / unknown). */
+function activeModuleId(pathname: string): string | null {
+  const seg = pathname.split('/').filter(Boolean)[0]
+  if (!seg) return null
+  const e = findEntry(seg)
+  return e && e.kind === 'module' ? e.id : null
+}
+
+/** The active sub-page slug within a product ('' = Overview), or '' when elsewhere. */
+function activeSubpageSlug(pathname: string, id: string): string {
+  const segs = pathname.split('/').filter(Boolean)
+  if (segs[0] !== id) return ''
+  return segs[1] ?? ''
+}
 
 /** A fixed (non-catalog) sidebar link: Overview, Docs. */
 function FixedRow({
@@ -105,6 +141,8 @@ function FixedRow({
   )
 }
 
+/** A level-1 catalog row — opens the product (module → slide to its sub-nav;
+ *  external → new tab), with a pin toggle and honest status hints. */
 function NavRow({
   entry,
   active,
@@ -172,207 +210,334 @@ function NavRow({
   )
 }
 
+/** Level 2 — the open product's sub-nav (back + product header + sub-pages). */
+function Level2Nav({
+  entry,
+  pathname,
+  showAdmin,
+  onBack,
+  onGo,
+}: {
+  entry: CatalogEntry
+  pathname: string
+  showAdmin: boolean
+  onBack: () => void
+  onGo: (path: string) => void
+}) {
+  const Icon = entry.icon
+  const subs = productSubpages(entry, showAdmin)
+  const activeSlug = activeSubpageSlug(pathname, entry.id)
+  return (
+    <>
+      <XStack items="center" gap="$1" mb="$1" height={36}>
+        <Button size="$2" chromeless icon={<ArrowLeft size={18} />} onPress={onBack} aria-label="Back to products" />
+        <XStack items="center" gap="$2" flex={1} minW={0}>
+          <Icon size={18} />
+          <Text fontSize="$4" fontWeight="800" color="$color12" numberOfLines={1}>
+            {entry.label}
+          </Text>
+        </XStack>
+      </XStack>
+      <ScrollView flex={1}>
+        <YStack gap="$1">
+          {subs.map((sp: ProductSubpage) => {
+            const wired = subpageWired(entry.id, sp.slug)
+            const active = sp.slug === activeSlug
+            const SubIcon = subpageIcon(sp.slug)
+            return (
+              <Button
+                key={sp.slug || 'overview'}
+                onPress={() => onGo(sp.slug ? `/${entry.id}/${sp.slug}` : `/${entry.id}`)}
+                bg={active ? '$color5' : 'transparent'}
+                justify="flex-start"
+                icon={<SubIcon size={17} />}
+                iconAfter={!wired ? <Circle size={7} opacity={0.5} /> : undefined}
+                size="$3"
+                opacity={wired ? 1 : 0.6}
+                aria-label={wired ? sp.label : `${sp.label} (not available yet)`}
+              >
+                {sp.label}
+              </Button>
+            )
+          })}
+        </YStack>
+      </ScrollView>
+    </>
+  )
+}
+
 /**
- * The nav body — header, filter, scrollable catalog, wallet. Shared by the
- * persistent desktop sidebar and the mobile drawer. `onNavigate` lets the drawer
- * close itself when the user selects something (desktop passes a no-op).
+ * The nav body — shared by the persistent desktop sidebar and the mobile drawer.
+ * `onNavigate` lets the drawer close on a leaf selection (desktop passes a no-op).
  */
 function SidebarNav({
   collapsed,
-  collapsible,
   onNavigate,
 }: {
   collapsed: boolean
-  /** Desktop only: the H mark toggles collapse. In the drawer the nav is always full. */
-  collapsible: boolean
   onNavigate: () => void
 }) {
   const pathname = usePathname()
   const router = useRouter()
   const { pinned, toggle, isPinned } = useFavorites()
-  const { get, set } = usePreferences()
   const launcher = useAppLauncher()
+  const showAdmin = useIsGlobalAdmin()
   const [filter, setFilter] = useState('')
 
-  const toggleCollapsed = () => set('sidebarCollapsed', !get<boolean>('sidebarCollapsed', false))
+  // The open product's sub-nav (level 2) FOLLOWS the route: navigating to a
+  // different product opens its sub-nav; Back returns to the list without moving.
+  const activeId = activeModuleId(pathname)
+  const [openId, setOpenId] = useState<string | null>(activeId)
+  const prevActive = useRef(activeId)
+  useEffect(() => {
+    if (activeId !== prevActive.current) {
+      prevActive.current = activeId
+      setOpenId(activeId)
+    }
+  }, [activeId])
 
-  const push = (path: string) => {
+  const isActive = (id: string) => pathname === `/${id}` || pathname.startsWith(`/${id}/`)
+
+  // Go to a path and (for a leaf/drawer) close. Opening a product does NOT close —
+  // it reveals the sub-nav first.
+  const go = (path: string) => {
     router.push(path)
     onNavigate()
   }
   const open = (entry: CatalogEntry) => {
-    openProduct(entry, (p) => router.push(p))
-    onNavigate()
+    if (entry.kind === 'external') {
+      openProduct(entry, () => {})
+      onNavigate()
+      return
+    }
+    setOpenId(entry.id)
+    router.push(`/${entry.id}`)
   }
-  const isActive = (id: string) => pathname === `/${id}` || pathname.startsWith(`/${id}/`)
   const openDocs = () => {
     if (typeof window !== 'undefined') window.open(config.docsUrl, '_blank', 'noopener')
     onNavigate()
   }
 
-  // When collapsed the filter box is hidden, so it never silently hides icons.
-  const q = (collapsed ? '' : filter).trim().toLowerCase()
-  const filtering = q.length > 0
+  const openEntry = openId ? findEntry(openId) : undefined
+  // Never slide into an admin product's sub-nav for a customer (they'd see a
+  // surface they can't use); the content shows the managed notice instead.
+  const showLevel2 =
+    !collapsed && Boolean(openEntry && openEntry.kind === 'module' && (showAdmin || !openEntry.admin))
 
+  // Pins and the catalog are gated: a customer never sees admin-only surfaces
+  // (a pin from a prior global session is hidden too, not a dead row).
   const pinnedEntries = pinned
     .map((id) => findEntry(id))
-    .filter((e): e is CatalogEntry => Boolean(e))
+    .filter((e): e is CatalogEntry => Boolean(e) && (showAdmin || !e!.admin))
 
+  const q = (collapsed ? '' : filter).trim().toLowerCase()
+  const filtering = q.length > 0
   const groups = useMemo(
     () =>
-      catalogByCategory()
+      visibleCatalogByCategory(showAdmin)
         .map((g) => ({ category: g.category, entries: g.entries.filter((e) => entryMatches(e, q)) }))
         .filter((g) => g.entries.length > 0),
-    [q],
+    [q, showAdmin],
   )
 
+  // ── Collapsed icon rail — one level (products as icons); expand for sub-nav ──
+  if (collapsed) {
+    return (
+      <>
+        <YStack items="center" mb="$1">
+          <Button
+            size="$3"
+            chromeless
+            onPress={() => go('/')}
+            icon={<BrandLogo size={22} wordmark={false} />}
+            aria-label="Overview"
+          />
+        </YStack>
+        <ScrollView flex={1}>
+          <YStack gap="$3">
+            <YStack gap="$1">
+              <FixedRow icon={House} label="Overview" active={pathname === '/'} collapsed onPress={() => go('/')} />
+              <FixedRow icon={BookOpen} label="Docs" external collapsed onPress={openDocs} />
+            </YStack>
+            {pinnedEntries.length > 0 ? (
+              <YStack gap="$1">
+                {pinnedEntries.map((entry) => (
+                  <NavRow
+                    key={`pin-${entry.id}`}
+                    entry={entry}
+                    active={entry.kind === 'module' && isActive(entry.id)}
+                    pinned
+                    collapsed
+                    onOpen={() => open(entry)}
+                    onToggle={() => toggle(entry.id)}
+                  />
+                ))}
+              </YStack>
+            ) : null}
+            {groups.map((group) => (
+              <YStack key={group.category} gap="$1">
+                {group.entries.map((entry) => (
+                  <NavRow
+                    key={entry.id}
+                    entry={entry}
+                    active={entry.kind === 'module' && isActive(entry.id)}
+                    pinned={isPinned(entry.id)}
+                    collapsed
+                    onOpen={() => open(entry)}
+                    onToggle={() => toggle(entry.id)}
+                  />
+                ))}
+              </YStack>
+            ))}
+          </YStack>
+        </ScrollView>
+        <SidebarWallet collapsed />
+      </>
+    )
+  }
+
+  // ── Expanded: constant H-mark header + two-level slide + wallet footer ──
   return (
     <>
-      {/* Header: the H mark toggles collapse (desktop); the grid opens the launcher. */}
-      {collapsed ? (
-        <YStack items="center" gap="$2" mb="$1">
-          <Button
-            size="$3"
-            chromeless
-            onPress={toggleCollapsed}
-            icon={<BrandLogo size={22} wordmark={false} />}
-            aria-label="Expand sidebar"
-          />
-          <Button
-            size="$3"
-            chromeless
-            icon={<LayoutGrid size={ICON} />}
-            onPress={() => {
-              launcher.open()
-              onNavigate()
-            }}
-            aria-label="All apps"
-          />
-        </YStack>
-      ) : (
-        <XStack items="center" gap="$1" mb="$1">
-          <Button
-            flex={1}
-            onPress={collapsible ? toggleCollapsed : () => push('/')}
-            bg="transparent"
-            justify="flex-start"
-            iconAfter={collapsible ? <PanelLeft size={15} opacity={0.4} /> : undefined}
-            size="$3"
-            aria-label={collapsible ? 'Collapse sidebar' : 'Overview'}
-          >
-            <BrandLogo size={22} />
-          </Button>
-          <Button
-            size="$3"
-            chromeless
-            icon={<LayoutGrid size={18} />}
-            onPress={() => {
-              launcher.open()
-              onNavigate()
-            }}
-            aria-label="All apps"
-          />
-        </XStack>
-      )}
-
-      {/* Filter box — narrows the whole sidebar to find any product fast. */}
-      {!collapsed ? (
-        <XStack
-          items="center"
-          gap="$2"
-          px="$2.5"
-          height={34}
-          rounded="$3"
-          borderWidth={1}
-          borderColor="$borderColor"
-          bg="$color2"
+      <XStack items="center" height={36} mb="$1">
+        <Button
+          flex={1}
+          chromeless
+          justify="flex-start"
+          px="$1"
+          onPress={() => go('/')}
+          aria-label="Overview"
         >
-          <Search size={14} opacity={0.6} />
-          <Input
-            flex={1}
-            unstyled
-            value={filter}
-            onChangeText={setFilter}
-            placeholder="Filter products…"
-            fontSize="$3"
-            color="$color12"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {filter ? (
-            <Button size="$1" chromeless icon={<X size={13} />} onPress={() => setFilter('')} aria-label="Clear filter" />
-          ) : null}
-        </XStack>
-      ) : null}
+          <BrandLogo size={22} wordmark={false} />
+        </Button>
+      </XStack>
 
-      <ScrollView flex={1}>
-        <YStack gap="$3">
-          {/* Fixed links — hidden while filtering so results stay focused. */}
-          {!filtering ? (
-            <YStack gap="$1">
-              <FixedRow
-                icon={House}
-                label="Overview"
-                active={pathname === '/'}
-                collapsed={collapsed}
-                onPress={() => push('/')}
-              />
-              <FixedRow icon={BookOpen} label="Docs" external collapsed={collapsed} onPress={openDocs} />
-            </YStack>
-          ) : null}
+      {/* Two-level slide — level 1 (products) and level 2 (the open product's
+          sub-nav) are stacked; the active one is on-screen, the other slid out.
+          `.hz-slide` transitions the transform (reduced-motion aware). */}
+      <YStack flex={1} minH={0} overflow="hidden" position="relative">
+        {/* Level 1 — product list */}
+        <YStack
+          position="absolute"
+          t={0}
+          l={0}
+          r={0}
+          b={0}
+          gap="$2"
+          className="hz-slide"
+          style={{ transform: showLevel2 ? 'translateX(-100%)' : 'translateX(0)' }}
+          pointerEvents={showLevel2 ? 'none' : 'auto'}
+          aria-hidden={showLevel2}
+        >
+          <XStack
+            items="center"
+            gap="$2"
+            px="$2.5"
+            height={34}
+            rounded="$3"
+            borderWidth={1}
+            borderColor="$borderColor"
+            bg="$color2"
+          >
+            <Search size={14} opacity={0.6} />
+            <Input
+              flex={1}
+              unstyled
+              value={filter}
+              onChangeText={setFilter}
+              placeholder="Filter products…"
+              fontSize="$3"
+              color="$color12"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {filter ? (
+              <Button size="$1" chromeless icon={<X size={13} />} onPress={() => setFilter('')} aria-label="Clear filter" />
+            ) : null}
+          </XStack>
 
-          {!filtering && pinnedEntries.length > 0 ? (
-            <YStack gap="$1">
-              {!collapsed ? (
-                <Text px="$2" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
-                  Pinned
+          <ScrollView flex={1}>
+            <YStack gap="$3">
+              {!filtering ? (
+                <YStack gap="$1">
+                  <FixedRow icon={House} label="Overview" active={pathname === '/'} collapsed={false} onPress={() => go('/')} />
+                  <FixedRow icon={BookOpen} label="Docs" external collapsed={false} onPress={openDocs} />
+                </YStack>
+              ) : null}
+
+              {!filtering && pinnedEntries.length > 0 ? (
+                <YStack gap="$1">
+                  <Text px="$2" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+                    Pinned
+                  </Text>
+                  {pinnedEntries.map((entry) => (
+                    <NavRow
+                      key={`pin-${entry.id}`}
+                      entry={entry}
+                      active={entry.kind === 'module' && isActive(entry.id)}
+                      pinned
+                      collapsed={false}
+                      onOpen={() => open(entry)}
+                      onToggle={() => toggle(entry.id)}
+                    />
+                  ))}
+                </YStack>
+              ) : null}
+
+              {groups.map((group) => (
+                <YStack key={group.category} gap="$1">
+                  <Text px="$2" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+                    {group.category}
+                  </Text>
+                  {group.entries.map((entry) => (
+                    <NavRow
+                      key={entry.id}
+                      entry={entry}
+                      active={entry.kind === 'module' && isActive(entry.id)}
+                      pinned={isPinned(entry.id)}
+                      collapsed={false}
+                      onOpen={() => open(entry)}
+                      onToggle={() => toggle(entry.id)}
+                    />
+                  ))}
+                </YStack>
+              ))}
+
+              {filtering && groups.length === 0 ? (
+                <Text px="$2" py="$3" fontSize="$2" color="$color10">
+                  No products match “{filter.trim()}”.
                 </Text>
               ) : null}
-              {pinnedEntries.map((entry) => (
-                <NavRow
-                  key={`pin-${entry.id}`}
-                  entry={entry}
-                  active={entry.kind === 'module' && isActive(entry.id)}
-                  pinned
-                  collapsed={collapsed}
-                  onOpen={() => open(entry)}
-                  onToggle={() => toggle(entry.id)}
-                />
-              ))}
             </YStack>
-          ) : null}
+          </ScrollView>
+        </YStack>
 
-          {groups.map((group) => (
-            <YStack key={group.category} gap="$1">
-              {!collapsed ? (
-                <Text px="$2" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
-                  {group.category}
-                </Text>
-              ) : null}
-              {group.entries.map((entry) => (
-                <NavRow
-                  key={entry.id}
-                  entry={entry}
-                  active={entry.kind === 'module' && isActive(entry.id)}
-                  pinned={isPinned(entry.id)}
-                  collapsed={collapsed}
-                  onOpen={() => open(entry)}
-                  onToggle={() => toggle(entry.id)}
-                />
-              ))}
-            </YStack>
-          ))}
-
-          {filtering && groups.length === 0 ? (
-            <Text px="$2" py="$3" fontSize="$2" color="$color10">
-              No products match “{filter.trim()}”.
-            </Text>
+        {/* Level 2 — the open product's sub-nav */}
+        <YStack
+          position="absolute"
+          t={0}
+          l={0}
+          r={0}
+          b={0}
+          gap="$2"
+          className="hz-slide"
+          style={{ transform: showLevel2 ? 'translateX(0)' : 'translateX(100%)' }}
+          pointerEvents={showLevel2 ? 'auto' : 'none'}
+          aria-hidden={!showLevel2}
+        >
+          {openEntry && openEntry.kind === 'module' ? (
+            <Level2Nav
+              entry={openEntry}
+              pathname={pathname}
+              showAdmin={showAdmin}
+              onBack={() => setOpenId(null)}
+              onGo={go}
+            />
           ) : null}
         </YStack>
-      </ScrollView>
+      </YStack>
 
-      {/* Always-visible wallet: identity + balance + top-up, pinned bottom-left. */}
-      <SidebarWallet collapsed={collapsed} />
+      <SidebarWallet collapsed={false} />
     </>
   )
 }
@@ -401,7 +566,7 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
           <VisuallyHidden>
             <Dialog.Title>Navigation</Dialog.Title>
           </VisuallyHidden>
-          <SidebarNav collapsed={false} collapsible={false} onNavigate={() => onOpenChange(false)} />
+          <SidebarNav collapsed={false} onNavigate={() => onOpenChange(false)} />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>
@@ -411,27 +576,23 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { account, signOut } = useSession()
-  const { get } = usePreferences()
+  const { signOut } = useSession()
+  const { get, set } = usePreferences()
   const launcher = useAppLauncher()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
   const collapsed = get<boolean>('sidebarCollapsed', false)
+  const toggleCollapsed = () => set('sidebarCollapsed', !collapsed)
   const push = (path: string) => router.push(path)
   const openDocs = () => {
     if (typeof window !== 'undefined') window.open(config.docsUrl, '_blank', 'noopener')
   }
 
-  // Layout responsiveness is CSS-driven (media style props), NOT a JS `useMedia`
-  // branch — so the server and the client's first paint render identical markup
-  // (no hydration mismatch, no flash of the wrong layout on a wide screen). The
-  // persistent sidebar shows only ≥`lg`; the hamburger + compact menu show only
-  // below `lg`. The drawer/menu overlays stay mounted (closed) — their triggers
-  // are CSS-hidden on desktop, so they can never open there.
   return (
     <XStack flex={1} minH="100vh" bg="$background">
-      {/* Persistent sidebar — hidden below lg (1024px), shown at lg+. */}
+      {/* Persistent sidebar — hidden below lg (1024px), shown at lg+. The width
+          transition (`.hz-collapse`) animates the collapse smoothly. */}
       <YStack
         display="none"
         $lg={{ display: 'flex' }}
@@ -441,8 +602,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         borderRightWidth={1}
         borderColor="$borderColor"
         bg="$color1"
+        className="hz-collapse"
       >
-        <SidebarNav collapsed={collapsed} collapsible onNavigate={() => {}} />
+        <SidebarNav collapsed={collapsed} onNavigate={() => {}} />
       </YStack>
 
       {/* Mobile/tablet nav drawer — opened by the hamburger (hidden ≥ lg). */}
@@ -458,6 +620,17 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           borderBottomWidth={1}
           borderColor="$borderColor"
         >
+          {/* Collapse the sidebar — the ONE collapse control (desktop only). */}
+          <Button
+            size="$3"
+            chromeless
+            display="none"
+            $lg={{ display: 'flex' }}
+            icon={<PanelLeft size={ICON} />}
+            onPress={toggleCollapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          />
+
           {/* Hamburger — opens the nav drawer. Shown only below lg. */}
           <Button
             size="$3"
@@ -470,9 +643,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
           <CommandSearchBox />
 
-          {/* Apps — icon-only below lg (saves topbar width on phones), labeled at
-              lg+. The label is a CSS-hidden Text child (browser-resolved), so it
-              toggles with no stale string-child re-render and no SSR flash. */}
+          {/* Apps launcher — icon-only below lg, labeled at lg+. */}
           <Button
             size="$3"
             icon={<LayoutGrid size={18} />}
@@ -488,7 +659,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
           <XStack flex={1} />
 
-          {/* Full topbar controls — shown only at lg+. */}
+          {/* Full topbar controls — shown only at lg+. No user name and no Sign
+              out here (both moved to the footer wallet). */}
           <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$2">
             <ThemeToggle />
             <Button
@@ -498,25 +670,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               onPress={openDocs}
               aria-label="Documentation"
             />
+            <Button
+              size="$2"
+              chromeless
+              icon={<Bell size={16} />}
+              onPress={() => push('/alerts')}
+              aria-label="Notifications"
+            />
             <OrgSwitcher />
             <ScopeSwitcher />
-            {account ? (
-              <Button
-                size="$2"
-                chromeless
-                icon={<SlidersHorizontal size={15} />}
-                onPress={() => push('/settings')}
-              >
-                {account.displayName || account.name}
-              </Button>
-            ) : null}
-            <Button size="$2" chromeless icon={<LogOut size={16} />} onPress={() => void signOut()}>
-              Sign out
-            </Button>
           </XStack>
 
-          {/* Compact topbar trigger — the switchers + account fold into a menu.
-              Shown only below lg. */}
+          {/* Compact topbar trigger — the switchers + account fold into a menu. */}
           <Button
             size="$3"
             chromeless
@@ -540,8 +705,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </ScrollView>
       </YStack>
 
-      {/* Mobile overflow menu — org/scope switching, settings, theme, sign-out.
-          Mounted always; opened only by the compact trigger (hidden ≥ lg). */}
+      {/* Mobile overflow menu — org/scope switching, notifications, theme, docs,
+          sign-out. Mounted always; opened only by the compact trigger (< lg). */}
       <Dialog modal open={menuOpen} onOpenChange={setMenuOpen}>
         <Dialog.Portal>
           <Dialog.Overlay key="menu-overlay" bg="rgba(0,0,0,0.55)" />
@@ -565,7 +730,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </VisuallyHidden>
             <XStack items="center" justify="space-between">
               <Text fontSize="$5" fontWeight="700" color="$color12">
-                {account?.displayName || account?.name || 'Account'}
+                Account
               </Text>
               <Button
                 size="$2"
@@ -587,13 +752,23 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <ScopeSwitcher />
               <Button
                 justify="flex-start"
+                icon={<Bell size={16} />}
+                onPress={() => {
+                  setMenuOpen(false)
+                  push('/alerts')
+                }}
+              >
+                Notifications
+              </Button>
+              <Button
+                justify="flex-start"
                 icon={<SlidersHorizontal size={16} />}
                 onPress={() => {
                   setMenuOpen(false)
-                  push('/settings')
+                  push('/profile')
                 }}
               >
-                Settings
+                Profile
               </Button>
               <Button
                 justify="flex-start"

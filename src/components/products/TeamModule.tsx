@@ -1,0 +1,416 @@
+'use client'
+
+/**
+ * Team — organization member management for a CUSTOMER's own org.
+ *
+ * Lists the org's members (and, read-only, its RBAC roles) from IAM via the
+ * server-gated `/org/iam` proxy scoped to `currentOrg()`, and lets an ORG ADMIN
+ * invite a member (email + role), change a member's role (admin ↔ member), and
+ * remove a member. This is what closes "can't manage members in an org" — it does
+ * NOT require a global admin (unlike the cross-tenant IAM module).
+ *
+ * Honest by construction: real members / roles or an honest empty; loading, 404
+ * (IAM not routed), and 403 (access) are truthful states, never fabricated rows.
+ * Writes are gated in the UI (shown only to an org admin) AND server-side (the
+ * proxy requires org admin + pins the caller to their own org).
+ */
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button, Card, Dialog, Spinner, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
+import { RefreshCw, Shield, Trash2, UserPlus, X } from '@hanzogui/lucide-icons-2'
+
+import { ApiError, TeamApi, type IamUser, type Role, type Paged } from '~/lib/api'
+import { config } from '~/config'
+import { currentOrg } from '~/lib/org-scope'
+import { useSession } from '~/lib/auth/session'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { PageHeader } from '~/components/ui/PageHeader'
+import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { DataTable, type Column } from '~/components/ui/DataTable'
+import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
+import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
+import { useToast } from '~/components/ui/Toast'
+
+const TEAM_COPY: HonestCopy = {
+  notFound:
+    'Member management (IAM) is not routed on this host yet. It appears automatically once the deployment proxies /org/iam to Hanzo IAM.',
+  unauthorized:
+    'Managing members requires an organization admin. You can view the team; ask an admin to make changes.',
+}
+
+const fmtDate = (v?: string): string => {
+  if (!v) return '—'
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString()
+}
+
+/** A member's role, derived from the IAM admin flag. */
+const roleOf = (u: IamUser): 'admin' | 'member' => (u.isAdmin ? 'admin' : 'member')
+
+/** Derive a stable IAM handle from an email local-part (a-z0-9-_. only). */
+function handleFromEmail(email: string): string {
+  const local = email.split('@')[0] ?? ''
+  const slug = local.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '')
+  return slug || `member-${Math.random().toString(36).slice(2, 8)}`
+}
+
+type Async<T> = { phase: 'loading' } | { phase: 'error'; err: ApiError } | { phase: 'ready'; data: T }
+
+function RoleBadge({ role }: { role: 'admin' | 'member' }) {
+  return (
+    <Text
+      fontSize="$2"
+      px="$2"
+      py="$1"
+      rounded="$2"
+      bg={role === 'admin' ? '$color5' : '$color3'}
+      color={role === 'admin' ? '$color12' : '$color11'}
+    >
+      {role}
+    </Text>
+  )
+}
+
+// ── Invite dialog ─────────────────────────────────────────────────────────────
+
+function InviteDialog({
+  open,
+  onOpenChange,
+  org,
+  onInvited,
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  org: string
+  onInvited: () => void
+}) {
+  const toast = useToast()
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState('member')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const reset = () => {
+    setEmail('')
+    setRole('member')
+    setErr(null)
+    setBusy(false)
+  }
+
+  const submit = async () => {
+    const trimmed = email.trim()
+    if (!trimmed || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+      setErr('Enter a valid email address.')
+      return
+    }
+    setBusy(true)
+    setErr(null)
+    const name = handleFromEmail(trimmed)
+    const user: IamUser = {
+      owner: org,
+      name,
+      displayName: name,
+      email: trimmed,
+      isAdmin: role === 'admin',
+      type: 'normal-user',
+      createdTime: new Date().toISOString(),
+    }
+    try {
+      await TeamApi.invite(user)
+      toast.success('Member invited', `${trimmed} was added to ${org}.`)
+      onOpenChange(false)
+      reset()
+      onInvited()
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not invite the member.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog modal open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset() }}>
+      <Dialog.Portal>
+        <Dialog.Overlay key="invite-overlay" bg="rgba(0,0,0,0.55)" />
+        <Dialog.Content key="invite-content" bordered elevate width={460} maxW="92vw" p="$4" gap="$3.5">
+          <XStack items="center" justify="space-between">
+            <Dialog.Title>
+              <Text fontSize="$6" fontWeight="800">Invite member</Text>
+            </Dialog.Title>
+            <Button size="$2" chromeless icon={<X size={18} />} onPress={() => onOpenChange(false)} aria-label="Close" />
+          </XStack>
+          <Text fontSize="$3" color="$color11">
+            Add someone to {org}. They sign in with your organization's login; no password is set here.
+          </Text>
+          <YStack gap="$3">
+            <FieldRow label="Email">
+              <FieldText value={email} onChange={setEmail} placeholder="teammate@company.com" />
+            </FieldRow>
+            <FieldRow label="Role">
+              <FieldSelect value={role} options={['member', 'admin']} onChange={setRole} />
+            </FieldRow>
+          </YStack>
+          {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
+          <XStack gap="$2" justify="flex-end">
+            <Button chromeless onPress={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
+            <PrimaryButton
+              onPress={() => void submit()}
+              disabled={busy || !email.trim()}
+              icon={busy ? <Spinner size="small" /> : <UserPlus size={16} />}
+            >
+              Invite
+            </PrimaryButton>
+          </XStack>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog>
+  )
+}
+
+// ── Remove confirm ────────────────────────────────────────────────────────────
+
+function RemoveDialog({
+  member,
+  onOpenChange,
+  onRemoved,
+}: {
+  member: IamUser | null
+  onOpenChange: (o: boolean) => void
+  onRemoved: () => void
+}) {
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+
+  const submit = async () => {
+    if (!member) return
+    setBusy(true)
+    try {
+      await TeamApi.remove(member)
+      toast.success('Member removed', `${member.email || member.name} was removed.`)
+      onOpenChange(false)
+      onRemoved()
+    } catch (e) {
+      toast.error('Could not remove member', e instanceof ApiError ? e.message : undefined)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog modal open={Boolean(member)} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay key="remove-overlay" bg="rgba(0,0,0,0.55)" />
+        <Dialog.Content key="remove-content" bordered elevate width={440} maxW="92vw" p="$4" gap="$3">
+          <VisuallyHidden>
+            <Dialog.Title>Remove member</Dialog.Title>
+          </VisuallyHidden>
+          <Text fontSize="$6" fontWeight="800">Remove member?</Text>
+          <Text fontSize="$3" color="$color11">
+            {member?.email || member?.name} will lose access to this organization. This can't be undone here.
+          </Text>
+          <XStack gap="$2" justify="flex-end">
+            <Button chromeless onPress={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
+            <Button theme="red" onPress={() => void submit()} disabled={busy} icon={busy ? <Spinner size="small" /> : <Trash2 size={16} />}>
+              Remove
+            </Button>
+          </XStack>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog>
+  )
+}
+
+// ── Members ───────────────────────────────────────────────────────────────────
+
+function MembersTab({ org, canManage }: { org: string; canManage: boolean }) {
+  const toast = useToast()
+  const [state, setState] = useState<Async<IamUser[]>>({ phase: 'loading' })
+  const [inviting, setInviting] = useState(false)
+  const [removing, setRemoving] = useState<IamUser | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    setState({ phase: 'loading' })
+    TeamApi.members(org)
+      .then((p: Paged<IamUser>) => setState({ phase: 'ready', data: p.rows ?? [] }))
+      .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
+  }, [org])
+
+  useEffect(() => { load() }, [load])
+
+  const toggleRole = useCallback(
+    async (u: IamUser) => {
+      const id = `${u.owner}/${u.name}`
+      setBusyId(id)
+      try {
+        // update-user overwrites from the body, so send the FULL current user
+        // with only isAdmin changed (never a partial that would blank fields).
+        const full = await TeamApi.member(id).catch(() => u)
+        await TeamApi.update(id, { ...full, isAdmin: !u.isAdmin })
+        toast.success('Role updated', `${u.email || u.name} is now ${!u.isAdmin ? 'admin' : 'member'}.`)
+        load()
+      } catch (e) {
+        toast.error('Could not change role', e instanceof ApiError ? e.message : undefined)
+      } finally {
+        setBusyId(null)
+      }
+    },
+    [load, toast],
+  )
+
+  const columns = useMemo<Column<IamUser>[]>(() => {
+    const cols: Column<IamUser>[] = [
+      {
+        key: 'name',
+        header: 'Member',
+        render: (u) => (
+          <YStack>
+            <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{u.displayName || u.name}</Text>
+            <Text fontSize="$1" color="$color10" numberOfLines={1}>{u.email || '—'}</Text>
+          </YStack>
+        ),
+      },
+      { key: 'role', header: 'Role', width: 110, render: (u) => <RoleBadge role={roleOf(u)} /> },
+      { key: 'createdTime', header: 'Joined', width: 130, render: (u) => <Text fontSize="$2" color="$color11">{fmtDate(u.createdTime)}</Text> },
+    ]
+    if (canManage) {
+      cols.push({
+        key: 'actions',
+        header: '',
+        width: 210,
+        render: (u) => {
+          const id = `${u.owner}/${u.name}`
+          const busy = busyId === id
+          return (
+            <XStack gap="$2" justify="flex-end">
+              <Button size="$2" chromeless icon={<Shield size={14} />} disabled={busy} onPress={() => void toggleRole(u)}>
+                {u.isAdmin ? 'Make member' : 'Make admin'}
+              </Button>
+              <Button size="$2" chromeless theme="red" icon={<Trash2 size={14} />} disabled={busy} onPress={() => setRemoving(u)} aria-label={`Remove ${u.name}`} />
+            </XStack>
+          )
+        },
+      })
+    }
+    return cols
+  }, [canManage, busyId, toggleRole])
+
+  return (
+    <>
+      <XStack justify="space-between" items="center" flexWrap="wrap" gap="$2">
+        <Text fontSize="$3" color="$color11">
+          {state.phase === 'ready' ? `${state.data.length} member${state.data.length === 1 ? '' : 's'} in ${org}` : `Members of ${org}`}
+        </Text>
+        <XStack gap="$2">
+          <Button size="$2" icon={<RefreshCw size={15} />} onPress={load}>Refresh</Button>
+          {canManage ? (
+            <PrimaryButton size="$2" icon={<UserPlus size={15} />} onPress={() => setInviting(true)}>Invite member</PrimaryButton>
+          ) : null}
+        </XStack>
+      </XStack>
+
+      {!canManage ? (
+        <Card p="$3" gap="$1" borderWidth={1} borderColor="$borderColor" maxWidth={640}>
+          <Text fontSize="$2" color="$color11">
+            You can view the team. Inviting, changing roles, and removing members requires an organization admin.
+          </Text>
+        </Card>
+      ) : null}
+
+      {state.phase === 'error' ? (
+        <ErrorState err={state.err} onRetry={load} copy={TEAM_COPY} />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={state.phase === 'ready' ? state.data : []}
+          loading={state.phase === 'loading'}
+          rowKey={(u) => `${u.owner}/${u.name}`}
+          empty={`No members in ${org} yet.`}
+        />
+      )}
+
+      <InviteDialog open={inviting} onOpenChange={setInviting} org={org} onInvited={load} />
+      <RemoveDialog member={removing} onOpenChange={(o) => { if (!o) setRemoving(null) }} onRemoved={load} />
+    </>
+  )
+}
+
+// ── Roles (read-only) ─────────────────────────────────────────────────────────
+
+const roleColumns: Column<Role>[] = [
+  { key: 'name', header: 'Role', render: (r) => <Text fontSize="$3" fontWeight="600">{r.displayName || r.name}</Text> },
+  { key: 'members', header: 'Members', width: 110, render: (r) => <Text fontSize="$3" color="$color11">{r.users?.length ?? 0}</Text> },
+  { key: 'enabled', header: 'Enabled', width: 110, render: (r) => <Text fontSize="$3" color="$color11">{r.isEnabled === false ? 'no' : 'yes'}</Text> },
+]
+
+function RolesTab({ org }: { org: string }) {
+  const [state, setState] = useState<Async<Role[]>>({ phase: 'loading' })
+  const load = useCallback(() => {
+    setState({ phase: 'loading' })
+    TeamApi.roles(org)
+      .then((p) => setState({ phase: 'ready', data: p.rows ?? [] }))
+      .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
+  }, [org])
+  useEffect(() => { load() }, [load])
+
+  return (
+    <>
+      <XStack justify="space-between" items="center">
+        <Text fontSize="$3" color="$color11">RBAC roles defined in {org}. Assigning named roles is managed in IAM.</Text>
+        <Button size="$2" icon={<RefreshCw size={15} />} onPress={load}>Refresh</Button>
+      </XStack>
+      {state.phase === 'error' ? (
+        <ErrorState err={state.err} onRetry={load} copy={TEAM_COPY} />
+      ) : (
+        <DataTable
+          columns={roleColumns}
+          rows={state.phase === 'ready' ? state.data : []}
+          loading={state.phase === 'loading'}
+          rowKey={(r) => `${r.owner}/${r.name}`}
+          empty="No roles defined in this organization yet."
+        />
+      )}
+    </>
+  )
+}
+
+// ── Module ────────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: '', label: 'Members' },
+  { id: 'roles', label: 'Roles' },
+] as const
+
+export function TeamModule({ params }: { params: Record<string, string> }) {
+  const router = useRouter()
+  const { account } = useSession()
+  const isGlobal = useIsGlobalAdmin()
+  const tab = params.tab ?? ''
+  const org = currentOrg()
+  // Writes are allowed for an org admin (own org) or a global admin — the server
+  // proxy enforces the same; this only decides which controls to show.
+  const canManage = Boolean(account?.isAdmin) || isGlobal
+
+  return (
+    <>
+      <PageHeader
+        title="Team"
+        subtitle={`Members and roles for ${org === config.iamOrgName ? 'your organization' : org}.`}
+      />
+      <XStack gap="$1" flexWrap="wrap">
+        {TABS.map((t) => (
+          <Button
+            key={t.id || 'members'}
+            size="$2"
+            bg={t.id === tab ? '$color5' : 'transparent'}
+            borderWidth={1}
+            borderColor="$borderColor"
+            onPress={() => router.push(t.id ? `/team/${t.id}` : '/team')}
+          >
+            {t.label}
+          </Button>
+        ))}
+      </XStack>
+      {tab === 'roles' ? <RolesTab org={org} /> : <MembersTab org={org} canManage={canManage} />}
+    </>
+  )
+}

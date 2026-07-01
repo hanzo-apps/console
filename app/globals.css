@@ -41,3 +41,24 @@ body {
     animation: none;
   }
 }
+
+/* Shell chrome motion — the sidebar collapse (width) and the Linear-style
+   two-level nav slide (transform). One place defines the easing; the shell
+   applies the class. `className` forwards to the underlying DOM node on web, so
+   the browser transitions the Gui-driven inline width/transform. */
+.hz-collapse {
+  transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width;
+}
+
+.hz-slide {
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hz-collapse,
+  .hz-slide {
+    transition: none;
+  }
+}

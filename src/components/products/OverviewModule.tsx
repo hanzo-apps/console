@@ -114,8 +114,8 @@ const ACTIVITY_TABS: { key: ActivityTab; label: string }[] = [
 const ACTIVITY_EMPTY: Record<ActivityTab, string> = {
   all: 'No activity in this range yet.',
   inference: 'No inference calls in this range yet.',
-  deployments: "Deployment events aren't in the usage ledger — open Deploy for these.",
-  jobs: "Job events aren't in the usage ledger — open Jobs for these.",
+  deployments: "Deployment events aren't in the usage ledger — open Platform for these.",
+  jobs: "Task events aren't in the usage ledger — open Tasks for these.",
   payments: "Payment events aren't in the usage ledger — open Cost & billing for these.",
 }
 
@@ -712,9 +712,9 @@ function RecentActivity({
           self="flex-start"
           chromeless
           iconAfter={<ArrowRight size={14} />}
-          onPress={() => push(tab === 'payments' ? '/cost' : tab === 'jobs' ? '/jobs' : '/applications')}
+          onPress={() => push(tab === 'payments' ? '/cost' : tab === 'jobs' ? '/tasks' : '/applications')}
         >
-          {tab === 'payments' ? 'Open Cost & billing' : tab === 'jobs' ? 'Open Jobs' : 'Open Deploy'}
+          {tab === 'payments' ? 'Open Cost & billing' : tab === 'jobs' ? 'Open Tasks' : 'Open Platform'}
         </Button>
       ) : null}
     </YStack>
