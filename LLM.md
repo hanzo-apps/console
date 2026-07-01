@@ -727,3 +727,39 @@ not configured" message. Plus a rich **Agents** dashboard over `/cloud/v1/agents
 - Verification: `tsc --noEmit` clean, `vitest` **639+ green** (all suites; +22 agents,
   +4 visor), `next build` ✓ 14/14 pages. Live visual verification as Dave is post-deploy
   (ships in the merge agent's authoritative image from main HEAD).
+
+## Compute reads CONNECTED — live browser pass fixes (v8.4.2, claude/console2-compute-connected)
+
+Logged in LIVE as Dave (davelorenzini@gmail.com, org maxpower) on console.hanzo.ai
+(v8.4.1) and probed every Compute page from the authenticated page context. The
+backends ARE up; the fixes are about pages that were CONNECTED but READ AS BROKEN.
+
+- Live map as a customer: `/vm/v1/{regions,sizes,gpus}` = 200 real DO catalog+pricing;
+  `/vm/v1/machines` = **403 "Unauthorized operation"** (visor authorizes the public
+  catalog but denies the per-org list to a signed-in customer); `/cloud/v1/{agents,
+  functions,prompts}` = 200 `{[]}` (connected, empty — maxpower has none); `/tasksd/
+  {cluster/health,namespaces}` = 200 (connected, empty); `/paas/apps` = 403 forbidden.
+- **Machines** (the visible bug): the page showed "Sign in to view your machines" next
+  to the real 14-region + size catalog. `interpretVisorError` now maps **403 → connected
+  `unavailable`** (only 401 = a real sign-in); `CustomerMachines` shows "Launch your
+  first machine" + the live catalog for both 403 and empty — a signed-in user is never
+  told to sign in. (+visor test updated.)
+- **platform/state `forbidden`** reframed from a warning ("Managed control plane",
+  TriangleAlert) to a CONNECTED state — **"Connected · managed by Hanzo"**, green
+  `CheckCircle2`, no Retry — so Containers/Edge/Applications read connected, not error.
+- **Applications** repointed from the casibase IAM **OAuth-application** admin
+  (`get-applications`/`deploy-application` — an identity concern, mis-placed under
+  Compute) to the **deployed application services** (`PlatformApi.apps()` → `/v1/apps`):
+  real fleet for an admin, the connected "managed by Hanzo" + deploy-via-Functions/Agents
+  state for a customer, honest "nothing deployed yet" when empty.
+- **Agents** live 200-empty now shows a "Connected · no agents yet" badge above the
+  "create your first agent" state, so it's unmistakably connected (not "not routed").
+- **Proxy defaults hardened** (`/vm`,`/cloud`,`/tasksd`): `?.trim() || default` (not
+  `??`) so a VISOR_URL/CLOUD_API_URL/TASKS_URL reconciled to an EMPTY string still
+  resolves the in-cluster service (observed env drift on the live pod — "keeps getting
+  stripped"). Machines/GPUs now ALWAYS reach visor.
+- Verified connected as Dave: Machines (real catalog + launch), GPUs (real accelerator
+  catalog), Functions/Agents/Prompts (connected-empty), Tasks (connected-empty),
+  Containers/Applications/Edge (Connected · managed). `tsc` clean; `vitest` green;
+  `next build` ✓ 14/14. (Recovered from a concurrent-agent branch-switch that stashed
+  these uncommitted edits — restored + committed in an isolated git worktree.)
