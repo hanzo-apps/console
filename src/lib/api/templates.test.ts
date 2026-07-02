@@ -4,6 +4,8 @@ import {
   normalizeTemplate,
   normalizeTemplates,
   normalizeForkedProject,
+  normalizeDeployResult,
+  isLive,
   groupByCategory,
   customizePrompt,
   buildBuilderUrl,
@@ -220,5 +222,79 @@ describe('TemplatesApi.fork — POST /v1/projects/fork (same-origin, no prefix)'
     )
     expect(err).toBeInstanceOf(ApiError)
     expect((err as ApiError).status).toBe(404)
+  })
+})
+
+describe('normalizeDeployResult', () => {
+  it('defaults status to building and reads liveUrl/message', () => {
+    expect(normalizeDeployResult({})).toEqual({ status: 'building', liveUrl: undefined, message: undefined })
+    expect(normalizeDeployResult({ status: 'queued' })).toMatchObject({ status: 'queued' })
+    expect(normalizeDeployResult({ status: 'live', liveUrl: 'https://x' })).toMatchObject({
+      status: 'live',
+      liveUrl: 'https://x',
+    })
+    expect(normalizeDeployResult({ status: 'error', message: 'boom' })).toMatchObject({
+      status: 'error',
+      message: 'boom',
+    })
+  })
+})
+
+describe('isLive', () => {
+  it('is true with a liveUrl or a live status (case-insensitive), false otherwise', () => {
+    expect(isLive('live')).toBe(true)
+    expect(isLive('LIVE')).toBe(true)
+    expect(isLive('building', 'https://x')).toBe(true)
+    expect(isLive('building')).toBe(false)
+    expect(isLive(undefined, undefined)).toBe(false)
+  })
+})
+
+describe('TemplatesApi.deploy / status — projectsvc deploy (same-origin, no prefix)', () => {
+  const ORIGIN = 'https://console.hanzo.ai'
+  let calls: { url: string; method?: string; body?: unknown }[]
+
+  beforeEach(() => {
+    calls = []
+    ;(globalThis as { window?: unknown }).window = {
+      location: { origin: ORIGIN, hostname: 'console.hanzo.ai' },
+      localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    }
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (globalThis as { window?: unknown }).window
+  })
+
+  const stub = (status: number, body: unknown) =>
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+      calls.push({ url, method: init?.method, body: init?.body ? JSON.parse(String(init.body)) : undefined })
+      return Promise.resolve(
+        new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }),
+      )
+    })
+
+  it('deploy POSTs {source:git} to <origin>/v1/projects/{slug}/deploy (never /cloud-prefixed)', async () => {
+    stub(202, { status: 'queued' })
+    const r = await TemplatesApi.deploy('brainwave')
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/projects/brainwave/deploy`)
+    expect(calls[0].url).not.toContain('/cloud/')
+    expect(calls[0].method).toBe('POST')
+    expect(calls[0].body).toEqual({ source: 'git' })
+    expect(r).toMatchObject({ status: 'queued' })
+  })
+
+  it('deploy percent-encodes the slug', async () => {
+    stub(202, { status: 'queued' })
+    await TemplatesApi.deploy('a/b')
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/projects/a%2Fb/deploy`)
+  })
+
+  it('status GETs <origin>/v1/projects/{slug} and normalizes to a ForkedProject', async () => {
+    stub(200, { slug: 'brainwave', name: 'Brainwave', framework: 'next', status: 'live', liveUrl: 'https://x' })
+    const p = await TemplatesApi.status('brainwave')
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/projects/brainwave`)
+    expect(calls[0].method ?? 'GET').toBe('GET')
+    expect(p).toMatchObject({ status: 'live', liveUrl: 'https://x' })
   })
 })
