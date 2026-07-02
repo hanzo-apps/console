@@ -40,6 +40,37 @@ export interface ListRecordsParams {
   skipTotal?: boolean
 }
 
+/**
+ * One field in a NEW content type, in Base's modern flat shape (`POST
+ * /v1/collections`). Type-specific options are flat (`values`/`maxSelect`/
+ * `collectionId`/`mimeTypes`), never nested under legacy `options`.
+ */
+export interface CollectionFieldInput {
+  name: string
+  type: string
+  required?: boolean
+  /** select: the accepted values. */
+  values?: string[]
+  /** select/file/relation: 1 = single value, >1 = multiple. */
+  maxSelect?: number
+  /** relation: the TARGET collection's id (not its name). */
+  collectionId?: string
+  /** relation: delete this record when the related record is deleted. */
+  cascadeDelete?: boolean
+  /** file: max bytes (0 ⇒ Base's 5 MB default). */
+  maxSize?: number
+  /** file: accepted MIME types (empty ⇒ any). */
+  mimeTypes?: string[]
+}
+
+/** A NEW content type — `POST /v1/collections` body. Base injects the `id` field. */
+export interface CollectionInput {
+  name: string
+  /** `base` (default) | `auth` | `view`. */
+  type?: string
+  fields: CollectionFieldInput[]
+}
+
 export interface BaseDataApiOptions {
   /** Base origin or same-origin proxy prefix (e.g. `/superbase` or `https://x.base.hanzo.ai`). */
   baseUrl: string
@@ -107,6 +138,26 @@ export class BaseDataApi {
    *  shared by the list + detail views. Returns `undefined` when it isn't visible. */
   async getCollection(name: string): Promise<BaseCollection | undefined> {
     return (await this.listCollections()).find((c) => c.name === name)
+  }
+
+  /**
+   * Create a content type — `POST /v1/collections`. Base gates this behind its
+   * superuser check (an org admin's minted token qualifies) and scopes it to the
+   * caller's org (the proxy stamps `X-Org-Id` from the JWT owner), so the new
+   * collection persists to THIS org's Base only. Base injects the `id` primary key.
+   */
+  async createCollection(input: CollectionInput): Promise<BaseCollection> {
+    const body: Record<string, unknown> = {
+      name: input.name,
+      type: input.type ?? 'base',
+      fields: input.fields,
+    }
+    return (await this.request('POST', 'collections', { body })) as BaseCollection
+  }
+
+  /** Delete a content type — `DELETE /v1/collections/<name>` (superuser-gated, 204). */
+  async deleteCollection(name: string): Promise<void> {
+    await this.request('DELETE', `collections/${encodeURIComponent(name)}`)
   }
 
   /** List one collection's records — `GET /v1/collections/<name>/records`. */
