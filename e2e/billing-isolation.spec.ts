@@ -1,7 +1,7 @@
 /**
  * e2e: two-tenant BILLING ISOLATION through the `/billing/*` proxy.
  *
- * The proxy (app/billing/[...path]/route.ts) resolves the billing subject from the
+ * The proxy (app/billing/v1/[...path]/route.ts) resolves the billing subject from the
  * session server-side and pins the full subject-key set (user/userId/customerId) +
  * the X-Org-Id header, so a tenant can only ever read its OWN commerce ledger. This
  * spec proves that end-to-end against the LIVE proxy: two accounts in DIFFERENT orgs
@@ -36,10 +36,11 @@ async function signIn(page: Page, email: string, password: string) {
   await page.waitForLoadState('domcontentloaded')
 }
 
-/** Fetch a billing path through the same-origin proxy, as the signed-in browser. */
+/** Fetch a billing path through the same-origin DATA proxy (`/billing/v1/*`), as the
+ *  signed-in browser. (`/billing/<slug>` without `v1/` is a UI tab, served by the SPA.) */
 async function billing(page: Page, path: string): Promise<{ status: number; ids: string[] }> {
   return page.evaluate(async (p) => {
-    const res = await fetch(`/billing/${p}`, { credentials: 'include', headers: { Accept: 'application/json' } })
+    const res = await fetch(`/billing/v1/${p}`, { credentials: 'include', headers: { Accept: 'application/json' } })
     let ids: string[] = []
     try {
       const body = await res.json()
