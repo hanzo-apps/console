@@ -96,6 +96,14 @@ export type NewPromptBody = {
   tags?: string[]
 }
 
+/**
+ * One entry in the read-only Hanzo starter library (`GET /v1/prompts/catalog`).
+ * These are NOT the org's prompts — they are reference starters a user can
+ * import (an import is just a normal `create`), so the shape is exactly a
+ * `NewPromptBody`.
+ */
+export type CatalogEntry = NewPromptBody
+
 /** One row of the prompt-metrics table (usage/performance per prompt version). */
 export type PromptMetricRow = Record<string, unknown> & { __rowId: string }
 
@@ -124,6 +132,22 @@ export function normalizePrompts(payload: unknown): Prompt[] {
     .filter((p): p is Prompt => p !== null)
 }
 
+/** Normalize one starter-library record to a `CatalogEntry` (drops entries with no name/body). */
+export function normalizeCatalogEntry(raw: unknown): CatalogEntry | null {
+  const r = asRecord(raw)
+  const name = str(r.name)
+  const prompt = str(r.prompt) ?? str(r.content)
+  if (!name || !prompt) return null
+  return { name, prompt, type: str(r.type) ?? 'text', labels: strList(r.labels), tags: strList(r.tags) }
+}
+
+/** Normalize the starter-library payload to a list of importable entries. */
+export function normalizeCatalog(payload: unknown): CatalogEntry[] {
+  return arrayUnder(payload, ['data', 'prompts', 'items', 'rows'])
+    .map(normalizeCatalogEntry)
+    .filter((e): e is CatalogEntry => e !== null)
+}
+
 /**
  * Normalize a metrics payload to table rows. Each row keeps its raw fields (the
  * metrics table renders columns opportunistically) plus a stable `__rowId` for the
@@ -141,6 +165,10 @@ export function normalizeMetricRows(payload: unknown): PromptMetricRow[] {
 export const PromptsApi = {
   /** The prompt registry (`GET /v1/prompts`). Honest-empty/error until bound. */
   list: (): Promise<Prompt[]> => restGet<unknown>(originV1Url(BASE)).then(normalizePrompts),
+
+  /** The read-only Hanzo starter library (`GET /v1/prompts/catalog`) — importable entries. */
+  catalog: (): Promise<CatalogEntry[]> =>
+    restGet<unknown>(originV1Url(`${BASE}/catalog`)).then(normalizeCatalog),
 
   /** One prompt's detail + version history (`GET /v1/prompts/{name}`) — raw payload. */
   get: (name: string): Promise<unknown> => restGet<unknown>(originV1Url(`${BASE}/${enc(name)}`)),
