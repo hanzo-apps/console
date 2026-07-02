@@ -1,0 +1,41 @@
+Hanzo Cloud Console (console2)
+Copyright (c) Hanzo AI, Inc. Licensed BSD-3-Clause (see LICENSE).
+
+------------------------------------------------------------------------
+Third-party attribution
+------------------------------------------------------------------------
+
+Observe surface — Langfuse (MIT License)
+
+The console's Observe screens (Traces, Trace detail with the span-tree /
+latency-waterfall, Observations, Sessions, Scores, Score Configs, Datasets,
+Dataset Items, Dataset Runs / Experiments, and the observability Dashboards /
+Metrics) reproduce the SCREEN LAYOUT AND USER FLOWS of Langfuse's observability
+product.
+
+This is a clean-room reimplementation in our own code (React + @hanzo/gui),
+wired to the native Hanzo Cloud /v1/evals contract. No Langfuse source code is
+copied. Only the MIT-licensed layout/flow concepts inform the design; the
+Langfuse EE / commercial ("ee") code is neither used nor referenced.
+
+  Langfuse — https://github.com/langfuse/langfuse
+  Copyright (c) Langfuse GmbH
+  Licensed under the MIT License.
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.

@@ -1,90 +1,89 @@
 /**
- * Evals API — the Hanzo Cloud `/v1/evals/*` facade (cloud `clients/evalsvc`).
+ * Evals + Observe API — the native Hanzo Cloud `/v1/evals/*` surface (cloud
+ * `clients/eval`, the THIN API; the trace/observation store is the datastore
+ * warehouse owned by hanzoai/ai — `hanzo.observations` / `hanzo.cloud_usage`).
  *
- * This is a thin composition over two systems that already work: the console
- * eval engine (datasets / dataset-items / evaluators / scores) and the model
- * gateway (chat completions, used by the run orchestrator). The surface that is
- * actually mounted at the gateway is small and HONEST — only these routes exist:
+ * This is the ONE client for the console's Observe surface: datasets, dataset
+ * items, evaluators, score-configs, scores, traces (+ the trace-detail
+ * span/observation tree), observations, sessions, dataset runs / experiments,
+ * and the dashboard metrics. It is the faithful port target of Langfuse's
+ * observability screens, reskinned to @hanzo/gui.
  *
- *   - POST /v1/evals/datasets        create a dataset            (verbatim proxy)
- *   - POST /v1/evals/dataset-items   add an item to a dataset    (verbatim proxy)
- *   - POST /v1/evals/evaluators      register an evaluator       (verbatim proxy)
- *   - GET  /v1/evals/scores          list scores                 (verbatim proxy)
- *   - POST /v1/evals/runs            run a dataset against a model + LLM judge
+ * TRANSPORT: every call is SAME-ORIGIN with NO prefix (`originV1Url('evals/…')`
+ * → `<origin>/v1/evals/…`, the CTO one-endpoint-form). `next.config.mjs` rewrites
+ * the `evals` head to the console's `/cloud` user-bearer proxy — the SAME
+ * per-tenant path Prompts/Agents use. The facade authorizes on the validated
+ * Bearer owner claim and scopes every read/write to that org SERVER-SIDE; a
+ * cookie-only call has no bearer and 403s. `evals` is allow-listed in
+ * `proxy-allow.ts`, so the proxy admits `v1/evals/*` and nothing else.
  *
- * There is no list endpoint for datasets/items/evaluators at this gateway; the
- * modules attempt the forward-compatible GET and render an honest "not available
- * here yet" state on 404/405 rather than fabricating rows.
+ * SHAPES: list endpoints return `{ data: [...] }`. Trace / Observation / Score /
+ * Session are mapped into the canonical Langfuse-derived view-model types
+ * (`./o11y`), so the shared observability primitives (SpanTree waterfall,
+ * metrics folds, formatters) render either surface unchanged.
  *
- * All routes are raw JSON (the proxied console public API / the orchestrator's
- * own JSON), so they use the REST layer, not the casibase envelope.
+ * HONESTY: every field is a real backend value. A missing enrichment (latency /
+ * cost / tokens the thin API does not yet roll up) is `null` → the UI renders an
+ * em dash. An unbound endpoint (trace-detail / observations / sessions / metrics,
+ * pending the ai-store read-through — see the module BE-gap notes) throws a typed
+ * `ApiError` the module turns into an honest BackendStateCard — never a fabricated
+ * row.
  *
- * TRANSPORT: every call is SAME-ORIGIN with NO prefix (`originV1Url` →
- * `<origin>/v1/evals/...`, the CTO one-endpoint-form); `next.config.mjs` rewrites
- * the `evals` head to the console's OWN user-bearer proxy (`app/cloud`), the SAME
- * per-tenant path Agents + Prompts use. The evals facade authorizes on the Bearer
- * owner claim and resolves the console project key pair from that tenant (cloud
- * `clients/eval` `resolveKeys(tenant(c))`); a cookie-only call to the cloud origin
- * has no bearer and 403s (the old "Access required" bug). `evals` is allow-listed
- * in `proxy-allow.ts`, so the proxy admits `v1/evals/*` and nothing else.
+ * Ported layout/flows from Langfuse (MIT) — see NOTICE. No Langfuse code is
+ * copied; this is a clean client over the native `/v1/evals` contract.
  */
-import { restGet, restPost, originV1Url } from './client'
+import { restGet, restPost, restDelete, originV1Url } from './client'
+import type { Observation, Score, Trace, TraceDetail } from './o11y'
 
-/** A score row (Langfuse v2 score shape; only the surfaced fields are typed). */
-export type EvalScore = {
-  id: string
-  name?: string
-  value?: number
-  stringValue?: string
-  dataType?: string
-  source?: string
-  comment?: string
-  traceId?: string
-  observationId?: string
-  datasetRunId?: string
-  timestamp?: string
-  createdAt?: string
-}
+// ── native wire shapes (exactly what cloud clients/eval returns) ─────────────
 
-/** Paged list envelope returned by the console public API. */
-export type EvalScoresPage = {
-  data: EvalScore[]
-  meta?: { page?: number; limit?: number; totalItems?: number; totalPages?: number }
-}
-
-/** A dataset (Langfuse v2 dataset shape) — used by the forward-compatible list. */
+/** A dataset (cloud `datasetView`). */
 export type EvalDataset = {
   id?: string
   name: string
   description?: string
-  metadata?: unknown
+  metadata?: Record<string, unknown>
+  items?: number
   createdAt?: string
   updatedAt?: string
 }
 
-/** A dataset item (input/expected-output pair) used by eval runs. */
+/** A dataset item — one input/expected pair (cloud `itemView`). */
 export type EvalDatasetItem = {
-  id?: string
+  id: string
   datasetName?: string
   input?: unknown
   expectedOutput?: unknown
-  metadata?: unknown
-  createdAt?: string
-}
-
-/** A dataset run / experiment row returned by the forward-compatible read API. */
-export type EvalDatasetRun = {
-  id?: string
-  name?: string
-  datasetName?: string
-  model?: string
+  metadata?: Record<string, unknown>
   status?: string
-  score?: number
   createdAt?: string
   updatedAt?: string
 }
 
-/** One per-item result from a run (mirrors evalsvc `itemResult`). */
+/** An evaluator — a judge model + rubric (cloud `evaluatorView`). */
+export type EvalEvaluator = {
+  name: string
+  model?: string
+  criteria?: string
+  scoreName?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** A dataset run / experiment row (cloud `listRuns`). */
+export type EvalDatasetRun = {
+  dataset?: string
+  runName?: string
+  model?: string
+  judgeModel?: string
+  items?: number
+  scored?: number
+  avgScore?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** One per-item run result (cloud `itemResult`). */
 export type EvalItemResult = {
   itemId: string
   traceId?: string
@@ -93,7 +92,7 @@ export type EvalItemResult = {
   error?: string
 }
 
-/** The summary returned by POST /v1/evals/runs (mirrors evalsvc `runSummary`). */
+/** The summary returned by POST /v1/evals/runs (cloud `runSummary`). */
 export type EvalRunSummary = {
   dataset: string
   model: string
@@ -105,7 +104,7 @@ export type EvalRunSummary = {
   results?: EvalItemResult[]
 }
 
-/** Run request (mirrors evalsvc `runRequest`). */
+/** Run request (cloud `runRequest`). */
 export type EvalRunRequest = {
   dataset: string
   model: string
@@ -114,56 +113,320 @@ export type EvalRunRequest = {
   judge?: { model?: string; criteria?: string; name?: string }
 }
 
-/** Create-dataset body (console `/api/public/v2/datasets`). */
-export type CreateDatasetBody = { name: string; description?: string; metadata?: unknown }
-
-/** Create-dataset-item body (console `/api/public/dataset-items`). */
+export type CreateDatasetBody = { name: string; description?: string; metadata?: Record<string, unknown> }
 export type CreateDatasetItemBody = {
   datasetName: string
   input?: unknown
   expectedOutput?: unknown
-  metadata?: unknown
+  metadata?: Record<string, unknown>
+  status?: string
+}
+export type CreateEvaluatorBody = { name: string; model?: string; criteria?: string; scoreName?: string }
+export type CreateScoreConfigBody = {
+  name: string
+  dataType?: 'NUMERIC' | 'CATEGORICAL' | 'BOOLEAN'
+  minValue?: number
+  maxValue?: number
+  categories?: string[]
 }
 
+// ── legacy score-page shape kept for EvalScoresView (backward compatible) ────
+
+export type EvalScore = {
+  id: string
+  name?: string
+  value?: number
+  stringValue?: string
+  dataType?: string
+  source?: string
+  comment?: string
+  traceId?: string
+  observationId?: string
+  datasetRunId?: string
+  runName?: string
+  timestamp?: string
+  createdAt?: string
+}
+export type EvalScoresPage = {
+  data: EvalScore[]
+  meta?: { page?: number; limit?: number; totalItems?: number; totalPages?: number }
+}
+
+/** Native score-config wire shape (cloud `scoreConfigView`). */
+export type EvalScoreConfig = {
+  name: string
+  dataType: string
+  minValue?: number | null
+  maxValue?: number | null
+  categories?: string[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** Dashboard metrics rollup (Observe · Dashboards). BE-gap shape; folded client-side today. */
+export type EvalMetrics = {
+  totals: {
+    traces: number
+    cost: number | null
+    tokens: number | null
+    avgLatency: number | null
+    p95Latency: number | null
+  }
+  tracesSeries: { label: string; value: number }[]
+  costSeries: { label: string; value: number }[]
+  tokensSeries: { label: string; value: number }[]
+}
+
+// ── envelope helpers ─────────────────────────────────────────────────────────
+
+/** Unwrap a `{ data: [...] }` list envelope (or a bare array), never throwing on shape. */
+const rows = <T>(res: { data?: T[] } | T[] | null | undefined): T[] =>
+  Array.isArray(res) ? res : Array.isArray(res?.data) ? (res as { data: T[] }).data : []
+
+const url = (path: string, query?: Record<string, string | number | undefined>): string => {
+  const u = new URL(originV1Url(`evals/${path}`))
+  if (query) {
+    for (const [k, v] of Object.entries(query)) {
+      if (v !== undefined && v !== '' && v !== null) u.searchParams.set(k, String(v))
+    }
+  }
+  return u.toString()
+}
+
+// ── adapters: native wire → canonical Langfuse view-models ───────────────────
+
+type TraceWire = {
+  id: string
+  name?: string
+  datasetName?: string
+  datasetItemId?: string
+  runName?: string
+  sessionId?: string
+  model?: string
+  input?: unknown
+  output?: unknown
+  timestamp?: string
+  latency?: number | null
+  latencyMs?: number | null
+  totalCost?: number | null
+  totalTokens?: number | null
+  tags?: string[]
+}
+
+/** Map a native trace to the canonical Trace. Missing enrichment stays null (→ em dash). */
+export const toTrace = (t: TraceWire): Trace => {
+  const latency =
+    typeof t.latency === 'number'
+      ? t.latency
+      : typeof t.latencyMs === 'number'
+        ? t.latencyMs / 1000
+        : null
+  return {
+    id: t.id,
+    timestamp: t.timestamp ?? '',
+    name: t.name ?? (t.runName ? `eval:${t.runName}` : null),
+    userId: null,
+    sessionId: t.sessionId ?? t.runName ?? null,
+    environment: 'default',
+    release: null,
+    version: null,
+    tags: Array.isArray(t.tags) ? t.tags : t.runName ? [t.runName] : [],
+    public: false,
+    bookmarked: false,
+    input: t.input,
+    output: t.output,
+    metadata: { dataset: t.datasetName, datasetItemId: t.datasetItemId, model: t.model, runName: t.runName },
+    latency,
+    totalCost: typeof t.totalCost === 'number' ? t.totalCost : null,
+    totalTokens: typeof t.totalTokens === 'number' ? t.totalTokens : null,
+  }
+}
+
+type ObservationWire = {
+  id: string
+  traceId?: string
+  parentObservationId?: string | null
+  parentId?: string | null
+  name?: string
+  type?: string
+  model?: string
+  input?: unknown
+  output?: unknown
+  startTime?: string
+  endTime?: string | null
+  level?: string
+  statusMessage?: string | null
+  latencyMs?: number | null
+  promptTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  totalCost?: number
+  usage?: { unit?: string | null; input?: number; output?: number; total?: number }
+}
+
+/** Map a native observation to the canonical Observation (SpanTree/metrics ready). */
+export const toObservation = (o: ObservationWire): Observation => ({
+  id: o.id,
+  traceId: o.traceId ?? null,
+  parentObservationId: o.parentObservationId ?? o.parentId ?? null,
+  name: o.name ?? null,
+  type: (o.type ?? 'SPAN').toUpperCase(),
+  startTime: o.startTime ?? '',
+  endTime: o.endTime ?? null,
+  level: o.level ?? 'DEFAULT',
+  statusMessage: o.statusMessage ?? null,
+  model: o.model ?? null,
+  input: o.input,
+  output: o.output,
+  metadata: undefined,
+  usage: o.usage
+    ? { unit: o.usage.unit ?? null, input: o.usage.input ?? 0, output: o.usage.output ?? 0, total: o.usage.total ?? 0 }
+    : {
+        unit: 'TOKENS',
+        input: o.promptTokens ?? 0,
+        output: o.outputTokens ?? 0,
+        total: o.totalTokens ?? (o.promptTokens ?? 0) + (o.outputTokens ?? 0),
+      },
+})
+
+type ScoreWire = {
+  id: string
+  name?: string
+  value?: number
+  stringValue?: string
+  dataType?: string
+  comment?: string | null
+  timestamp?: string
+  traceId?: string
+  observationId?: string | null
+  runName?: string
+}
+
+/** Map a native score event to the canonical Score. */
+export const toScore = (s: ScoreWire): Score => ({
+  id: s.id,
+  name: s.name ?? '',
+  value: typeof s.value === 'number' ? s.value : 0,
+  stringValue: s.stringValue ?? null,
+  dataType: (s.dataType ?? 'NUMERIC').toUpperCase(),
+  source: 'EVAL',
+  comment: s.comment ?? null,
+  timestamp: s.timestamp ?? '',
+  traceId: s.traceId ?? null,
+  observationId: s.observationId ?? null,
+  sessionId: null,
+  configId: null,
+})
+
+/** A session — traces grouped by session id, with read-time rollups (cloud `sessionView`). */
+export type EvalSession = {
+  id: string
+  createdAt?: string
+  firstAt?: string
+  lastAt?: string
+  traceCount?: number | null
+  totalCost?: number | null
+  totalTokens?: number | null
+}
+
+/** Full session detail — the session + its traces. */
+export type EvalSessionDetail = { session: EvalSession; traces: Trace[] }
+
+// ── the one Observe client ────────────────────────────────────────────────────
+
 export const EvalsApi = {
-  /** List scores; throws `ApiError` (with status) on an unreachable backend. */
-  listScores: (query?: { name?: string; limit?: number; page?: number }): Promise<EvalScoresPage> => {
-    const url = new URL(originV1Url('evals/scores'))
-    if (query?.name) url.searchParams.set('name', query.name)
-    if (query?.limit) url.searchParams.set('limit', String(query.limit))
-    if (query?.page) url.searchParams.set('page', String(query.page))
-    return restGet<EvalScoresPage>(url.toString())
+  // ---- traces + the trace-detail tree (Observe · Traces) --------------------
+  /** List traces (newest first). Backed today; enrichment columns may be null. */
+  listTraces: async (q: { runName?: string; datasetName?: string; limit?: number } = {}): Promise<Trace[]> => {
+    const res = await restGet<{ data?: TraceWire[] }>(url('traces', q))
+    return rows<TraceWire>(res).map(toTrace)
+  },
+  /**
+   * Trace detail — the trace + its observation TREE + its scores (the crown-jewel
+   * span-tree/waterfall). BE GAP until the ai-store read-through is bound; the
+   * module renders an honest state on 404/503, never a fabricated tree.
+   */
+  getTrace: async (id: string): Promise<TraceDetail> => {
+    const res = await restGet<{ trace?: TraceWire; observations?: ObservationWire[]; scores?: ScoreWire[] } & TraceWire>(
+      url(`traces/${encodeURIComponent(id)}`),
+    )
+    const base = res.trace ?? (res as TraceWire)
+    return {
+      ...toTrace(base),
+      observations: (res.observations ?? []).map(toObservation),
+      scores: (res.scores ?? []).map(toScore),
+    }
   },
 
-  /** Run a dataset against a model with an LLM-as-judge; returns a real summary. */
-  run: (req: EvalRunRequest): Promise<EvalRunSummary> =>
-    restPost<EvalRunSummary>(originV1Url('evals/runs'), req),
+  // ---- observations (Observe · Observations) --------------------------------
+  /** List observations (generations/spans). BE GAP until bound. */
+  listObservations: async (q: { traceId?: string; type?: string; limit?: number } = {}): Promise<Observation[]> => {
+    const res = await restGet<{ data?: ObservationWire[] }>(url('observations', q))
+    return rows<ObservationWire>(res).map(toObservation)
+  },
 
-  /** Create a dataset (verbatim proxy to the console). Returns the created row. */
-  createDataset: (body: CreateDatasetBody): Promise<EvalDataset> =>
-    restPost<EvalDataset>(originV1Url('evals/datasets'), body),
+  // ---- sessions (Observe · Sessions) ----------------------------------------
+  /** List sessions (traces grouped by session id, with rollups). BE GAP until bound. */
+  listSessions: async (q: { limit?: number } = {}): Promise<EvalSession[]> => {
+    const res = await restGet<{ data?: EvalSession[] }>(url('sessions', q))
+    return rows<EvalSession>(res)
+  },
+  /** Session detail — the session + its traces. BE GAP until bound. */
+  session: async (id: string): Promise<EvalSessionDetail> => {
+    const res = await restGet<{ session?: EvalSession; traces?: TraceWire[] } & EvalSession>(
+      url(`sessions/${encodeURIComponent(id)}`),
+    )
+    const base: EvalSession = res.session ?? (res as EvalSession)
+    return { session: base, traces: (res.traces ?? []).map(toTrace) }
+  },
 
-  /** Add an item to a dataset (verbatim proxy to the console). */
-  createDatasetItem: (body: CreateDatasetItemBody): Promise<unknown> =>
-    restPost<unknown>(originV1Url('evals/dataset-items'), body),
+  // ---- scores + score-configs (Observe · Scores) ----------------------------
+  /** List scores as canonical Score[] (for the scores table + metrics folds). */
+  listScoresTyped: async (
+    q: { name?: string; runName?: string; traceId?: string; limit?: number } = {},
+  ): Promise<Score[]> => {
+    const res = await restGet<{ data?: ScoreWire[] }>(url('scores', q))
+    return rows<ScoreWire>(res).map(toScore)
+  },
+  /** Legacy score-page shape kept for EvalScoresView. */
+  listScores: async (query?: { name?: string; limit?: number; page?: number }): Promise<EvalScoresPage> => {
+    const res = await restGet<{ data?: EvalScore[] }>(url('scores', { name: query?.name, limit: query?.limit }))
+    return { data: rows<EvalScore>(res) }
+  },
+  listScoreConfigs: async (): Promise<EvalScoreConfig[]> => {
+    const res = await restGet<{ data?: EvalScoreConfig[] }>(url('score-configs'))
+    return rows<EvalScoreConfig>(res)
+  },
+  createScoreConfig: (body: CreateScoreConfigBody): Promise<EvalScoreConfig> =>
+    restPost<EvalScoreConfig>(url('score-configs'), body),
 
-  /** Register an evaluator (verbatim proxy to the console; unstable API). */
-  createEvaluator: (body: unknown): Promise<unknown> =>
-    restPost<unknown>(originV1Url('evals/evaluators'), body),
+  // ---- datasets + items (Observe · Datasets) --------------------------------
+  listDatasets: async (): Promise<EvalDataset[]> => {
+    const res = await restGet<{ data?: EvalDataset[] }>(url('datasets'))
+    return rows<EvalDataset>(res)
+  },
+  getDataset: (name: string): Promise<EvalDataset> => restGet<EvalDataset>(url(`datasets/${encodeURIComponent(name)}`)),
+  createDataset: (body: CreateDatasetBody): Promise<EvalDataset> => restPost<EvalDataset>(url('datasets'), body),
+  deleteDataset: (name: string): Promise<void> => restDelete(url(`datasets/${encodeURIComponent(name)}`)),
+  listDatasetItems: async (datasetName: string, limit?: number): Promise<EvalDatasetItem[]> => {
+    const res = await restGet<{ data?: EvalDatasetItem[] }>(url('dataset-items', { datasetName, limit }))
+    return rows<EvalDatasetItem>(res)
+  },
+  createDatasetItem: (body: CreateDatasetItemBody): Promise<EvalDatasetItem> =>
+    restPost<EvalDatasetItem>(url('dataset-items'), body),
 
-  /**
-   * Forward-compatible dataset list. The gateway does not mount GET datasets
-   * today, so this 404/405s; the module renders an honest unavailable state and
-   * lights up automatically if/when the read route lands.
-   */
-  listDatasets: (): Promise<{ data?: EvalDataset[] } | EvalDataset[]> =>
-    restGet<{ data?: EvalDataset[] } | EvalDataset[]>(originV1Url('evals/datasets')),
+  // ---- evaluators -----------------------------------------------------------
+  listEvaluators: async (): Promise<EvalEvaluator[]> => {
+    const res = await restGet<{ data?: EvalEvaluator[] }>(url('evaluators'))
+    return rows<EvalEvaluator>(res)
+  },
+  createEvaluator: (body: CreateEvaluatorBody): Promise<EvalEvaluator> =>
+    restPost<EvalEvaluator>(url('evaluators'), body),
 
-  /** Forward-compatible dataset item list. */
-  listDatasetItems: (): Promise<{ data?: EvalDatasetItem[] } | EvalDatasetItem[]> =>
-    restGet<{ data?: EvalDatasetItem[] } | EvalDatasetItem[]>(originV1Url('evals/dataset-items')),
-
-  /** Forward-compatible dataset run / experiment list. */
-  listDatasetRuns: (): Promise<{ data?: EvalDatasetRun[] } | EvalDatasetRun[]> =>
-    restGet<{ data?: EvalDatasetRun[] } | EvalDatasetRun[]>(originV1Url('evals/dataset-runs')),
+  // ---- runs / experiments (Observe · Experiments) ---------------------------
+  listRuns: async (datasetName?: string): Promise<EvalDatasetRun[]> => {
+    const res = await restGet<{ data?: EvalDatasetRun[] }>(url('runs', { datasetName }))
+    return rows<EvalDatasetRun>(res)
+  },
+  run: (req: EvalRunRequest): Promise<EvalRunSummary> => restPost<EvalRunSummary>(url('runs'), req),
 }
