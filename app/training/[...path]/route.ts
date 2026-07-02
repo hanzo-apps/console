@@ -36,6 +36,9 @@ const ALLOWED = new Set([
   'train/jobs',
   'train/experiments',
   'ml/models',
+  // Real Kubeflow control-plane probe (which operators/CRDs are actually served).
+  // Read-only; 503 + body flows through so the UI can report a degraded plane.
+  'train/health',
   // fine-tuning broker (custom-data runs, HF search) — sibling surface.
   'finetune/jobs',
   'finetune/job',
