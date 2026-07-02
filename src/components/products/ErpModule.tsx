@@ -62,8 +62,10 @@ export function ErpModule() {
 
   const status = state.data
 
-  // Live ERP for this brand → embed the real desk in the console shell.
-  if (status.reachable) {
+  // Entitled (brand org / global admin) AND a live ERP → embed the real desk in the
+  // console shell. A customer org is `entitled:false` (server-withheld URL) and falls
+  // through to the honest Deploy panel — never framed into the brand's ERP.
+  if (status.entitled && status.reachable) {
     return (
       <EmbeddedApp
         title="ERP"
