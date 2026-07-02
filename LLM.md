@@ -1083,3 +1083,58 @@ aborts-on-timeout, aborts-on-caller-signal, already-aborted, timer-cleared, and
 the non-positive opt-out. Verification: `npm run typecheck` 0 errors, `npm test`
 **823/823** (69 files), `next build` green (all routes), and the Host-header curl
 test returns 200 fast for BOTH cloud.lux.network and console.hanzo.ai.
+
+## Content de-link-out + native ERP/Help — embedded Business-OS apps (v8.4.22)
+
+CMS was a `window.open` link-out and ERP/Help were `soon` placeholders. This wave
+ports all three into the console as EMBEDDED (SSO iframe) or HONEST-provision
+surfaces — no `window.open` as the primary path, no fabricated app data — binding
+to the canonical Payload/Frappe backends (never reimplementing them). CRM stays the
+native-`/v1/crm` reference; these three are the *embed* half of the Business-OS.
+
+- **Ground truth (verified live + against the cluster/repos), the design driver.**
+  All three apps are today SINGLE shared per-BRAND instances (`HANZO_ORG=hanzo`),
+  NOT per-customer-org: `cms.hanzo.ai` (one Payload, one SQLite/bucket, JWKS+proxy
+  IAM — framable, no XFO/CSP), `help.hanzo.ai` (LIVE Frappe Helpdesk, real hanzo IAM
+  OAuth2 `hanzo-helpdesk`, framable), `erp.hanzo.ai` (**502 — no backend at all**;
+  single-site Docker-Compose ERPNext **v15**, `frame-ancestors 'self'`, no per-org
+  host, no platform one-click endpoint). So per-org isolation is NOT implemented for
+  customer orgs — embedding hanzo's CMS for maxpower would be cross-tenant. The
+  modules encode exactly this reality; they never claim isolation that isn't there.
+- **`EmbeddedApp` (`components/products/embed/EmbeddedApp.tsx`) — the ONE way to
+  frame a canonical app IN the console shell.** Full-height iframe (viewport-minus-
+  chrome) with a permissive-but-scoped `sandbox` (SSO/forms/popups; SOP still blocks
+  the cross-origin console parent), a real loading state, "Reload", and an honest
+  "Open full screen" fallback + printed origin (an iframe can't report a cross-origin
+  load failure — so it NEVER fabricates a loaded/failed verdict it can't observe).
+  CMS/ERP/Help all render through it. `ProvisionPanel` is the DRY honest pre-provision
+  surface (what-it-is + features + a REAL `/waitlist` provisioning request, honest 501
+  when the intake is closed — never a lying "deployed").
+- **White-label host derivation** (`lib/products/embed-hosts.ts`, PURE + tested):
+  `cms|erp|help.<brand-domain>` from the console host (drop the service label), so a
+  Lux/Zoo console frames ITS OWN app, never Hanzo's. Tenancy is NOT in the host (per
+  the reality above) — the ORG comes from the shared IAM session inside the embed.
+- **`/embed-status` BFF (`app/embed-status/route.ts` + pure `lib/server/embed-probe.ts`).**
+  A cross-origin browser can't read another origin's status (SOP+CORS), so this
+  session-gated server route probes the brand app once and returns `{origin, embedUrl,
+  reachable}` — the module decides embed-vs-provision. **NO god-mode** (unlike the
+  admin-gated `/paas`, it holds no service token): the probe target is `<app>.<brand>`
+  CLAMPED to the known brand domains, so a forged Host header can never turn it into
+  an SSRF probe of an arbitrary host (unit-tested: `console.evil.com` → `cms.hanzo.ai`).
+  The probe `fetch` is `AbortSignal.timeout(4500)`-bounded (the v8.4.21 no-hang rule).
+- **Modules** (`Cms/Erp/HelpModule.tsx`): CMS embeds the Studio ONLY for a brand-org
+  member / global admin (never frames the brand's content for a customer org — that's
+  the cross-tenant guard); a customer org gets the honest "a Studio for your org isn't
+  provisioned yet" panel. ERP is a `soon`→`enabled` native module: `erp.<brand>` is
+  502 so it shows the honest "Deploy ERP" panel (real provisioning request), and the
+  SAME reachability gate embeds the real desk the moment one is live (the ERP side must
+  also allow the console origin in `frame-ancestors`; until then "Open full screen" is
+  the honest fallback). Help embeds the LIVE shared brand support desk for every
+  signed-in user (Frappe scopes tickets per-user via SSO — no per-org gate, no leak).
+- Registry: `erp` + `helpdesk` flipped `soon`→`enabled` with real modules; `cms`
+  entry unchanged (now renders the embed/provision module, not the link-out).
+- Verification: `npm run typecheck` 0 errors, `npm test` **914/914** (76 files; +21:
+  9 embed-hosts, 8 embed-probe incl. the SSRF clamp, 4 embed client normalizer),
+  `next build` ✓ Compiled (`/embed-status` + the `/[...slug]` catch-all registered).
+  Live visual e2e (Dave/maxpower → honest provision states; a brand-org identity →
+  the real CMS/Help embed) is post-deploy.
