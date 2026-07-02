@@ -123,6 +123,30 @@ const BASE_RECORDS = /^v1\/collections\/[^/]+\/records(?:\/[^/]+)?$/
 const BASE_COLLECTION = /^v1\/collections\/[^/]+$/
 
 /**
+ * VictoriaMetrics READ endpoints reachable through `/telemetry` (the platform
+ * status/metrics proxy). VictoriaMetrics is Prometheus-compatible; only the
+ * READ/query surface is admitted — never `/api/v1/write`, `/api/v1/import`, admin,
+ * or `/-/reload`. This keeps the proxy a read-only telemetry window, so a signed-in
+ * user can see live platform health/metrics but can never write or mutate the TSDB.
+ */
+const TELEMETRY_READ = new Set([
+  'api/v1/query',
+  'api/v1/query_range',
+  'api/v1/series',
+  'api/v1/labels',
+  'api/v1/status/tsdb',
+  'api/v1/metadata',
+])
+/** Matches `api/v1/label/<name>/values` (one clean label-name segment). */
+const TELEMETRY_LABEL_VALUES = /^api\/v1\/label\/[^/]+\/values$/
+
+/** True iff `path` is an allow-listed, READ-only VictoriaMetrics query endpoint. */
+export function allowTelemetrySurface(path: string): boolean {
+  const rel = path.replace(/^\/+/, '')
+  return TELEMETRY_READ.has(rel) || TELEMETRY_LABEL_VALUES.test(rel)
+}
+
+/**
  * True iff `path` targets the Hanzo Base COLLECTION surface reachable through
  * `/superbase` as the signed-in user:
  *  - `v1/collections` — list the schemas (read) AND create a content type (POST);
