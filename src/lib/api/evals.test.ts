@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { toObservation, toScore, toTrace } from './evals'
+import { fmtCost, fmtLatency } from '~/components/products/observability/format'
 
 describe('toTrace', () => {
   it('derives latency in seconds from latencyMs', () => {
@@ -65,5 +66,37 @@ describe('toScore', () => {
     const s = toScore({ id: 's1', name: 'tone', dataType: 'CATEGORICAL', stringValue: 'good', value: 1 })
     expect(s.stringValue).toBe('good')
     expect(s.value).toBe(1)
+  })
+  it('coerces a non-finite score value to 0 (never "Infinity" in the table)', () => {
+    expect(toScore({ id: 's1', name: 'q', value: Infinity }).value).toBe(0)
+    expect(toScore({ id: 's1', name: 'q', value: NaN }).value).toBe(0)
+  })
+  it('preserves a legitimately negative score value', () => {
+    expect(toScore({ id: 's1', name: 'q', value: -0.5 }).value).toBe(-0.5)
+  })
+})
+
+// RED honesty guard: a malformed backend row (JSON allows 1e999 → Infinity, or a
+// negative latency/cost/token) must degrade to null/0 — never a fabricated or
+// "Infinitys"-rendering value that would also skew the metric folds.
+describe('non-finite / negative enrichment → null (honest em dash)', () => {
+  it('drops Infinity / negative / NaN latency, cost, and tokens on a trace', () => {
+    const t = toTrace({ id: 't1', latencyMs: 1e999, totalCost: -5, totalTokens: NaN })
+    expect(t.latency).toBeNull()
+    expect(t.totalCost).toBeNull()
+    expect(t.totalTokens).toBeNull()
+  })
+  it('drops a negative direct latency', () => {
+    expect(toTrace({ id: 't1', latency: -2 }).latency).toBeNull()
+  })
+  it('zeroes bogus observation token usage (Infinity / negative)', () => {
+    const o = toObservation({ id: 'o1', promptTokens: 1e999, outputTokens: -10 })
+    expect(o.usage).toEqual({ unit: 'TOKENS', input: 0, output: 0, total: 0 })
+  })
+  it('formatters mirror the guard (em dash for non-finite / negative)', () => {
+    expect(fmtLatency(Infinity)).toBe('—')
+    expect(fmtLatency(-1)).toBe('—')
+    expect(fmtCost(Infinity)).toBe('—')
+    expect(fmtCost(-5)).toBe('—')
   })
 })
