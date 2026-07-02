@@ -31,6 +31,12 @@ export type ConsoleConfig = {
   cloudUrl: string
   /** PaaS base URL (DOKS cluster control plane) — shared. */
   platformUrl: string
+  /**
+   * hanzo.app builder base URL — where the Templates gallery's "Open in builder"
+   * deep-links (fork a starter → customize by prompt in the builder). Shared,
+   * env-overridable via NEXT_PUBLIC_APP_URL; default https://hanzo.app.
+   */
+  appUrl: string
   /** Canonical IAM OIDC issuer (the cloud /v1 validates) — shared. */
   iamUrl: string
   /** IAM application name (aud=hanzo-cloud) — shared. */
@@ -57,6 +63,7 @@ export type ConsoleConfig = {
 /** Fields shared by every brand. Env-overridable per-deploy. */
 const SHARED = {
   platformUrl: trimSlash(process.env.NEXT_PUBLIC_PLATFORM_URL ?? 'https://platform.hanzo.ai'),
+  appUrl: trimSlash(process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanzo.app'),
 }
 
 /**

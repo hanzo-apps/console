@@ -110,6 +110,44 @@ export function normalizeForkedProject(raw: unknown): ForkedProject | null {
   }
 }
 
+/**
+ * The first-edition seed prompt for the builder — the template context (title,
+ * framework, description) plus the user's optional customization ask. The builder
+ * generates the first edition from THIS prompt, so it must carry enough of the
+ * template to land on the right kind of app. `userText` is optional: with nothing
+ * typed we seed just the template ("Customize it to my needs.").
+ */
+export function customizePrompt(template: Template, userText = ''): string {
+  const fw = template.framework ? ` (${template.framework})` : ''
+  const desc = template.description ? ` ${template.description.trim()}` : ''
+  const ask = userText.trim()
+  const tail = ask ? ` Customize it: ${ask}` : ' Customize it to my needs.'
+  return `Start from the ${template.title} template${fw}.${desc}${tail}`
+}
+
+/**
+ * The hanzo.app builder deep-link that opens this starter pre-seeded to customize
+ * by prompt — the "fork → open in builder" loop. The builder (`app/dev`) reads
+ * `?template=` (the gallery source it customizes from), `?prompt=` (the
+ * first-edition seed — its presence AUTO-STARTS generation), and `?action=edit`.
+ *
+ * Injection-safe: the template fields and `userText` are single, URL-encoded
+ * query params (`URLSearchParams` encodes `&`, `=`, `#`, quotes, …), so nothing
+ * the user types can inject another param or escape the query. `appBase` is
+ * defaulted so the helper is pure/testable; callers pass `config.appUrl`.
+ */
+export function buildBuilderUrl(
+  template: Template,
+  userText = '',
+  appBase = 'https://hanzo.app',
+): string {
+  const url = new URL(`${appBase.replace(/\/+$/, '')}/dev`)
+  if (template.source) url.searchParams.set('template', template.source)
+  url.searchParams.set('prompt', customizePrompt(template, userText))
+  url.searchParams.set('action', 'edit')
+  return url.toString()
+}
+
 /** Group templates by category, categories alphabetized, preserving list order within each. */
 export function groupByCategory(templates: Template[]): [string, Template[]][] {
   const byCat = new Map<string, Template[]>()
