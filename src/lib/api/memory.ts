@@ -65,24 +65,51 @@ function rows<T>(r: unknown, ...keys: string[]): T[] {
 const LIST_KEYS = ['memories', 'items', 'results', 'data'] as const
 const FACT_KEYS = ['facts', 'items', 'results', 'data'] as const
 
+const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+
+/**
+ * The stable KEY of a memory row. The backend keys memories by `name` (like KMS
+ * secrets / Base collections), not a UUID `id` — so a raw row often has NO `id`
+ * and the UI's `/memory/<id>` link, delete, and rowKey all broke on `undefined`
+ * ("/memory/undefined → this memory no longer exists"). Derive the key from the
+ * first present of the known key fields so open/edit/delete work whatever the
+ * backend calls it, and MAP it into `id` (the one field the whole module reads).
+ */
+const keyOf = (r: Record<string, unknown>): string =>
+  str(r.id) || str(r.name) || str(r.key) || str(r.memoryId) || str(r.memory_id) || str(r._id)
+
+/** Normalize a raw memory row into `Memory`, guaranteeing a usable `id` key. */
+export function normalizeMemory(raw: unknown): Memory {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const kind = str(r.kind) as MemoryKind
+  return {
+    id: keyOf(r),
+    kind: (MEMORY_KINDS as readonly string[]).includes(kind) ? kind : 'user',
+    content: str(r.content) || str(r.text) || str(r.value),
+    metadata: r.metadata && typeof r.metadata === 'object' ? (r.metadata as Record<string, unknown>) : undefined,
+    createdAt: str(r.createdAt) || str(r.created_at) || undefined,
+    updatedAt: str(r.updatedAt) || str(r.updated_at) || undefined,
+  }
+}
+
 export const MemoryApi = {
   /** All memories, newest first — optionally filtered to one kind. */
   list: async (kind?: MemoryKind): Promise<Memory[]> => {
     const q = kind ? `?kind=${encodeURIComponent(kind)}` : ''
-    return rows<Memory>(await restGet<unknown>(u(`list${q}`)), ...LIST_KEYS)
+    return rows<unknown>(await restGet<unknown>(u(`list${q}`)), ...LIST_KEYS).map(normalizeMemory)
   },
 
   /** Semantic + text search across memories. */
   search: async (q: string, kind?: MemoryKind): Promise<Memory[]> => {
     const p = new URLSearchParams({ q })
     if (kind) p.set('kind', kind)
-    return rows<Memory>(await restGet<unknown>(u(`search?${p.toString()}`)), ...LIST_KEYS)
+    return rows<unknown>(await restGet<unknown>(u(`search?${p.toString()}`)), ...LIST_KEYS).map(normalizeMemory)
   },
 
   /** Recall the most relevant/recent memories (optionally for a query). */
   recall: async (q?: string): Promise<Memory[]> => {
     const query = q ? `?q=${encodeURIComponent(q)}` : ''
-    return rows<Memory>(await restGet<unknown>(u(`recall${query}`)), ...LIST_KEYS)
+    return rows<unknown>(await restGet<unknown>(u(`recall${query}`)), ...LIST_KEYS).map(normalizeMemory)
   },
 
   /** Structured facts distilled from memory. */
@@ -90,13 +117,17 @@ export const MemoryApi = {
     rows<MemoryFact>(await restGet<unknown>(u('facts')), ...FACT_KEYS),
 
   /** Store a new memory; the backend echoes the created row. */
-  remember: (input: RememberInput): Promise<Memory> => restPost<Memory>(u('remember'), input),
+  remember: async (input: RememberInput): Promise<Memory> =>
+    normalizeMemory(await restPost<unknown>(u('remember'), input)),
 
-  /** Update an existing memory's content/kind/metadata. */
-  update: (input: UpdateInput): Promise<Memory> => restPost<Memory>(u('update'), input),
+  /** Update an existing memory's content/kind/metadata (key sent as BOTH id + name
+   *  so it works whether the backend reads `id` or its real `name` key). */
+  update: async (input: UpdateInput): Promise<Memory> =>
+    normalizeMemory(await restPost<unknown>(u('update'), { ...input, name: input.id })),
 
-  /** Delete a memory by id (POST, per the contract — not a REST DELETE). */
+  /** Delete a memory by its key (POST, per the contract — not a REST DELETE).
+   *  Sent as BOTH `id` and `name` so it works whichever the backend keys on. */
   remove: async (id: string): Promise<void> => {
-    await restPost(u('delete'), { id })
+    await restPost(u('delete'), { id, name: id })
   },
 }
