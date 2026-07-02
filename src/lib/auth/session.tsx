@@ -10,7 +10,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 import { AccountApi, type Account } from '~/lib/api'
-import { getProviderSigninUrl, getSigninUrl } from './iam'
+import { getProviderSigninUrl, getSigninUrl, stashReturnTo } from './iam'
 
 type SessionState = {
   account: Account | null
@@ -42,10 +42,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [reload])
 
   const signIn = useCallback(() => {
+    // Remember the current task so re-auth returns here (graceful mid-task expiry).
+    stashReturnTo()
     window.location.assign(getSigninUrl())
   }, [])
 
   const signInWith = useCallback((provider: string) => {
+    stashReturnTo()
     window.location.assign(getProviderSigninUrl(provider))
   }, [])
 

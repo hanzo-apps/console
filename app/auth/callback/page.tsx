@@ -12,6 +12,7 @@ import { Button, Text, YStack } from '@hanzo/gui'
 import { ApiError } from '~/lib/api'
 import { Loader } from '~/components/ui/Loader'
 import { useSession } from '~/lib/auth/session'
+import { takeReturnTo } from '~/lib/auth/iam'
 
 function Callback() {
   const params = useSearchParams()
@@ -27,7 +28,8 @@ function Callback() {
       return
     }
     completeSignIn(code, state)
-      .then(() => router.replace('/'))
+      // Land the user back where a mid-task expiry interrupted them (default home).
+      .then(() => router.replace(takeReturnTo()))
       .catch((e: unknown) => setError(e instanceof ApiError ? e.message : 'Sign-in failed.'))
   }, [params, completeSignIn, router])
 
