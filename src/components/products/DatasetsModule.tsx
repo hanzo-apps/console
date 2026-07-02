@@ -59,8 +59,6 @@ const columns: Column<EvalDataset>[] = [
   ) },
 ]
 
-const rowsOf = <T,>(res: { data?: T[] } | T[]): T[] => (Array.isArray(res) ? res : (res.data ?? []))
-
 const preview = (value: unknown): string => {
   if (value === undefined || value === null || value === '') return '—'
   if (typeof value === 'string') return value
@@ -87,10 +85,7 @@ export function DatasetsModule(_props: { params: Record<string, string> }) {
   const loadList = useCallback(() => {
     setList({ phase: 'loading' })
     EvalsApi.listDatasets()
-      .then((res) => {
-        const rows = Array.isArray(res) ? res : (res?.data ?? [])
-        setList({ phase: 'ready', rows })
-      })
+      .then((rows) => setList({ phase: 'ready', rows }))
       .catch((e) => setList({ phase: 'error', error: classifyBackend(e) }))
   }, [])
 
@@ -242,8 +237,13 @@ export function DatasetItemsModule(_props: { params: Record<string, string> }) {
 
   const load = useCallback(() => {
     setList({ phase: 'loading' })
-    EvalsApi.listDatasetItems()
-      .then((res) => setList({ phase: 'ready', rows: rowsOf(res) }))
+    // Native dataset-items require a datasetName; fetch the org's datasets, then
+    // their items in parallel, and flatten — real rows, never fabricated.
+    EvalsApi.listDatasets()
+      .then((datasets) =>
+        Promise.all(datasets.map((d) => EvalsApi.listDatasetItems(d.name).catch(() => [] as EvalDatasetItem[]))),
+      )
+      .then((batches) => setList({ phase: 'ready', rows: batches.flat() }))
       .catch((e) => setList({ phase: 'error', error: classifyBackend(e) }))
   }, [])
 
@@ -303,8 +303,8 @@ export function DatasetRunsModule(_props: { params: Record<string, string> }) {
 
   const load = useCallback(() => {
     setList({ phase: 'loading' })
-    EvalsApi.listDatasetRuns()
-      .then((res) => setList({ phase: 'ready', rows: rowsOf(res) }))
+    EvalsApi.listRuns()
+      .then((rows) => setList({ phase: 'ready', rows }))
       .catch((e) => setList({ phase: 'error', error: classifyBackend(e) }))
   }, [])
 
@@ -313,12 +313,13 @@ export function DatasetRunsModule(_props: { params: Record<string, string> }) {
   }, [load])
 
   const runColumns: Column<EvalDatasetRun>[] = [
-    { key: 'name', header: 'Run', render: (r) => <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{r.name || r.id || '—'}</Text> },
-    { key: 'datasetName', header: 'Dataset', width: 180, render: (r) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{r.datasetName || '—'}</Text> },
-    { key: 'model', header: 'Model', width: 180, render: (r) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{r.model || '—'}</Text> },
-    { key: 'status', header: 'Status', width: 120, render: (r) => <Text fontSize="$3" color="$color11">{r.status || '—'}</Text> },
-    { key: 'score', header: 'Score', width: 100, render: (r) => <Text fontSize="$3" color="$color11">{r.score ?? '—'}</Text> },
-    { key: 'createdAt', header: 'Created', width: 190, render: (r) => <Text fontSize="$3" color="$color10">{fmtTime(r.createdAt)}</Text> },
+    { key: 'runName', header: 'Run', render: (r) => <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{r.runName || '—'}</Text> },
+    { key: 'dataset', header: 'Dataset', width: 160, render: (r) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{r.dataset || '—'}</Text> },
+    { key: 'model', header: 'Model', width: 160, render: (r) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{r.model || '—'}</Text> },
+    { key: 'judgeModel', header: 'Judge', width: 150, render: (r) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{r.judgeModel || '—'}</Text> },
+    { key: 'scored', header: 'Scored', width: 90, render: (r) => <Text fontSize="$3" color="$color11">{r.scored != null ? `${r.scored}/${r.items ?? '—'}` : '—'}</Text> },
+    { key: 'avgScore', header: 'Avg score', width: 100, render: (r) => <Text fontSize="$3" color="$color11">{typeof r.avgScore === 'number' ? r.avgScore.toFixed(3) : '—'}</Text> },
+    { key: 'createdAt', header: 'Created', width: 180, render: (r) => <Text fontSize="$3" color="$color10">{fmtTime(r.createdAt)}</Text> },
   ]
 
   return (
@@ -347,7 +348,7 @@ export function DatasetRunsModule(_props: { params: Record<string, string> }) {
           columns={runColumns}
           rows={list.phase === 'ready' ? list.rows : []}
           loading={list.phase === 'loading'}
-          rowKey={(r) => r.id ?? r.name ?? `${r.datasetName ?? 'dataset'}-${r.model ?? 'model'}`}
+          rowKey={(r) => `${r.dataset ?? 'dataset'}-${r.runName ?? 'run'}`}
           empty="No dataset runs returned."
         />
       )}
