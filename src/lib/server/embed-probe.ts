@@ -54,3 +54,44 @@ export function isUp(status: number): boolean {
   if (status === 404) return false
   return status > 0
 }
+
+/** The IAM org that OWNS each brand's shared app instances (single-tenant today). */
+export const BRAND_DOMAIN_TO_ORG: Record<string, string> = {
+  'hanzo.ai': 'hanzo',
+  'lux.cloud': 'lux',
+  'zoo.cloud': 'zoo',
+  'pars.cloud': 'pars',
+}
+
+/** The brand-owning IAM org for a console host (clamped), e.g. console.hanzo.ai → 'hanzo'. */
+export function brandOrgForHost(host: string | null | undefined): string {
+  return BRAND_DOMAIN_TO_ORG[clampedBrandDomain(host)] ?? 'hanzo'
+}
+
+/**
+ * Ownership model per app — VERIFIED ground truth, not aspiration: cms/erp/help are
+ * each a SINGLE shared per-BRAND instance (`HANZO_ORG=hanzo`, one store), NOT a
+ * per-customer-org instance. So only a member of the owning BRAND org (or a global
+ * admin) may frame them — embedding a brand's shared Studio/ERP/Helpdesk for a
+ * CUSTOMER org would expose the brand's content/tickets (cross-tenant). A customer
+ * org gets an honest provision panel instead.
+ */
+export const EMBED_OWNERSHIP: Record<EmbedAppId, 'brand'> = {
+  cms: 'brand',
+  erp: 'brand',
+  help: 'brand',
+}
+
+/**
+ * Is the caller ENTITLED to embed this app? The SERVER-SIDE gate (defense beyond the
+ * cosmetic client check): a 'brand'-owned app embeds only for a member of the owning
+ * brand org or a global admin. A non-entitled caller NEVER receives the embed URL —
+ * the route returns entitled:false and the module shows the provision panel. The org
+ * is the token owner (server-resolved), never a browser claim.
+ */
+export function isEntitled(app: EmbedAppId, callerOrg: string, brandOrg: string, isGlobalAdmin: boolean): boolean {
+  // EMBED_OWNERSHIP[app] is 'brand' for every app today; the guard keeps the door
+  // open for a future genuinely-shared app without changing callers.
+  if (EMBED_OWNERSHIP[app] !== 'brand') return true
+  return (callerOrg !== '' && callerOrg === brandOrg) || isGlobalAdmin === true
+}

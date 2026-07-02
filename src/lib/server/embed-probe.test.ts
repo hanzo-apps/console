@@ -7,6 +7,9 @@ import {
   isEmbedApp,
   isUp,
   EMBED_APPS,
+  brandOrgForHost,
+  isEntitled,
+  EMBED_OWNERSHIP,
 } from './embed-probe'
 
 /**
@@ -74,5 +77,47 @@ describe('isUp (liveness classifier)', () => {
   })
   it('treats a zero/invalid status (network error sentinel) as down', () => {
     expect(isUp(0)).toBe(false)
+  })
+})
+
+describe('brandOrgForHost', () => {
+  it('maps a console host to its owning brand org', () => {
+    expect(brandOrgForHost('console.hanzo.ai')).toBe('hanzo')
+    expect(brandOrgForHost('cloud.lux.cloud')).toBe('lux')
+    expect(brandOrgForHost('admin.zoo.cloud')).toBe('zoo')
+    expect(brandOrgForHost('cloud.pars.cloud')).toBe('pars')
+  })
+  it('a forged/unknown host maps to the hanzo brand org (clamped, never attacker-chosen)', () => {
+    expect(brandOrgForHost('console.evil.com')).toBe('hanzo')
+    expect(brandOrgForHost('localhost')).toBe('hanzo')
+    expect(brandOrgForHost(null)).toBe('hanzo')
+  })
+})
+
+describe('isEntitled (server-side embed gate)', () => {
+  it('every app is brand-owned today (no shared app)', () => {
+    expect(EMBED_OWNERSHIP).toEqual({ cms: 'brand', erp: 'brand', help: 'brand' })
+  })
+
+  it('a brand-org member is entitled to their brand app', () => {
+    expect(isEntitled('cms', 'hanzo', 'hanzo', false)).toBe(true)
+    expect(isEntitled('erp', 'lux', 'lux', false)).toBe(true)
+    expect(isEntitled('help', 'hanzo', 'hanzo', false)).toBe(true)
+  })
+
+  it('a CUSTOMER org is NOT entitled (no cross-tenant frame)', () => {
+    expect(isEntitled('cms', 'maxpower', 'hanzo', false)).toBe(false)
+    expect(isEntitled('erp', 'maxpower', 'hanzo', false)).toBe(false)
+    expect(isEntitled('help', 'maxpower', 'hanzo', false)).toBe(false)
+  })
+
+  it('a global admin is entitled regardless of their own org', () => {
+    expect(isEntitled('cms', 'admin', 'hanzo', true)).toBe(true)
+    expect(isEntitled('help', 'maxpower', 'hanzo', true)).toBe(true)
+  })
+
+  it('an empty/blank caller org is NEVER entitled (fail closed)', () => {
+    expect(isEntitled('cms', '', 'hanzo', false)).toBe(false)
+    expect(isEntitled('cms', '', '', false)).toBe(false) // no org both sides → still refused
   })
 })
