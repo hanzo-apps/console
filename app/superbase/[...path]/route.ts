@@ -14,22 +14,24 @@
  * gate is "must be signed in" (resolveUser → 401). A non-admin simply sees their own
  * tenants and gets Base's 403 on a mutation — honest, not faked.
  *
- * Least privilege on the path too: only the `tenants` collection records surface is
- * proxied; anything else 404s, so this is not a general Base tunnel.
+ * Least privilege on the path too: only the Base DATA PLANE is proxied — the
+ * collection schemas (read) and any collection's records (list/get/create/update/
+ * delete), via `allowBaseSurface`. Base's admin/settings/backup/log surfaces 404,
+ * so this stays a data-plane proxy, not a general Base tunnel. Base still authorizes
+ * every read/write per-user and per-collection itself, so a non-admin sees only what
+ * a collection's rules permit and gets Base's own honest 403 on a denied mutation.
+ * (The tenants manager rides this same proxy — records/tenants is one such path.)
  */
 import { type NextRequest } from 'next/server'
 
 import { forwardWithUserBearer } from '~/lib/server/bearer-proxy'
+import { allowBaseSurface } from '~/lib/server/proxy-allow'
 
 export const runtime = 'nodejs'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
 /** The Base control plane the proxied calls are forwarded to. */
 const BASE_URL = trim(process.env.BASE_DASHBOARD_URL ?? 'https://base.hanzo.ai')
-
-/** Only the tenants collection records surface (list/get/create/update/delete). */
-const RECORDS = 'v1/collections/tenants/records'
-const allow = (rel: string): boolean => rel === RECORDS || rel.startsWith(`${RECORDS}/`)
 
 type Ctx = { params: Promise<{ path: string[] }> }
 
@@ -39,8 +41,8 @@ function handle(req: NextRequest, ctx: Ctx) {
     return forwardWithUserBearer(req, {
       target: BASE_URL,
       path,
-      allow,
-      unauthorizedMessage: 'Sign in to manage Base tenants.',
+      allow: allowBaseSurface,
+      unauthorizedMessage: 'Sign in to manage Base records.',
     })
   })()
 }

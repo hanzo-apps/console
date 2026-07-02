@@ -1,7 +1,8 @@
 /**
  * BaseDataApi — a tiny typed client for a Hanzo Base (hanzoai/base) instance's
- * `/v1` REST surface. Two reads power the data views: list the collections (their
- * schemas) and list a collection's records.
+ * `/v1` REST surface. It covers the metadata-driven record surface end to end: read
+ * the collection schemas (to build the field model), then list / get / create /
+ * update / delete a collection's records.
  *
  * A Base instance speaks plain JSON REST (NOT the cloud casibase
  * `{status,msg,data}` envelope), so this does NOT reuse the cloud `/v1` client.
@@ -99,34 +100,77 @@ export class BaseDataApi {
 
   /** List every collection schema — `GET /v1/collections`. */
   async listCollections(): Promise<BaseCollection[]> {
-    return asItems<BaseCollection>(await this.get('collections'))
+    return asItems<BaseCollection>(await this.request('GET', 'collections'))
+  }
+
+  /** One collection's schema by name (from the list) — the ONE schema-read path,
+   *  shared by the list + detail views. Returns `undefined` when it isn't visible. */
+  async getCollection(name: string): Promise<BaseCollection | undefined> {
+    return (await this.listCollections()).find((c) => c.name === name)
   }
 
   /** List one collection's records — `GET /v1/collections/<name>/records`. */
   async listRecords(collection: string, params?: ListRecordsParams): Promise<BaseListResult<BaseRecord>> {
-    return asListResult<BaseRecord>(await this.get(`collections/${encodeURIComponent(collection)}/records`, params))
+    return asListResult<BaseRecord>(await this.request('GET', this.records(collection), { query: params }))
   }
 
-  private async get(path: string, query?: ListRecordsParams): Promise<unknown> {
+  /** One record — `GET /v1/collections/<name>/records/<id>`. */
+  async getRecord(collection: string, id: string): Promise<BaseRecord> {
+    return (await this.request('GET', this.records(collection, id))) as BaseRecord
+  }
+
+  /** Create a record — `POST /v1/collections/<name>/records`. */
+  async createRecord(collection: string, body: Record<string, unknown>): Promise<BaseRecord> {
+    return (await this.request('POST', this.records(collection), { body })) as BaseRecord
+  }
+
+  /** Update a record — `PATCH /v1/collections/<name>/records/<id>`. */
+  async updateRecord(collection: string, id: string, body: Record<string, unknown>): Promise<BaseRecord> {
+    return (await this.request('PATCH', this.records(collection, id), { body })) as BaseRecord
+  }
+
+  /** Delete a record — `DELETE /v1/collections/<name>/records/<id>` (204, no body). */
+  async deleteRecord(collection: string, id: string): Promise<void> {
+    await this.request('DELETE', this.records(collection, id))
+  }
+
+  /** The records path for a collection (+ optional record id), each segment encoded. */
+  private records(collection: string, id?: string): string {
+    const base = `collections/${encodeURIComponent(collection)}/records`
+    return id === undefined ? base : `${base}/${encodeURIComponent(id)}`
+  }
+
+  private async request(
+    method: string,
+    path: string,
+    opts?: { query?: ListRecordsParams; body?: Record<string, unknown> },
+  ): Promise<unknown> {
     const url = new URL(`${this.baseUrl}/v1/${path}`, pageOrigin())
-    if (query) {
-      for (const [k, v] of Object.entries(query)) {
+    if (opts?.query) {
+      for (const [k, v] of Object.entries(opts.query)) {
         if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
       }
     }
 
+    const headers: Record<string, string> = { Accept: 'application/json' }
+    if (this.token) headers.Authorization = `Bearer ${this.token}`
+    const init: RequestInit = { method, credentials: 'include', headers }
+    if (opts?.body !== undefined) {
+      headers['Content-Type'] = 'application/json'
+      init.body = JSON.stringify(opts.body)
+    }
+
     let res: Response
     try {
-      res = await fetch(url.toString(), {
-        method: 'GET',
-        credentials: 'include',
-        headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
-      })
+      res = await fetch(url.toString(), init)
     } catch (e) {
       throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
     }
 
     if (!res.ok) throw new ApiError(await errorMessage(res), res.status)
+
+    // 204 No Content (a successful DELETE) — nothing to parse.
+    if (res.status === 204 || res.headers.get('content-length') === '0') return null
 
     try {
       return await res.json()

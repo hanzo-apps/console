@@ -116,6 +116,7 @@ import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
+import { TemplatesModule } from '~/components/products/TemplatesModule'
 import { PlansModule } from '~/components/products/PlansModule'
 import { BillingModule } from '~/components/products/BillingModule'
 import { WalletModule } from '~/components/products/WalletModule'
@@ -123,6 +124,7 @@ import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
 import { StorageModule } from '~/components/products/StorageModule'
 import { BaseModule } from '~/components/products/BaseModule'
+import { RecordsModule } from '~/components/products/RecordsModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { TracesModule } from '~/components/products/TracesModule'
@@ -683,9 +685,9 @@ export const catalog: CatalogEntry[] = [
     // the provisioning surface (which allocates the s3 RESOURCE): a bucket
     // created here or there is browsable here, same org namespace.
     id: 's3',
-    label: 'Object Storage',
+    label: 'S3',
     icon: HardDrive,
-    description: 'Managed object storage — S3-compatible buckets and objects.',
+    description: 'Managed S3-compatible object storage — buckets and objects, scoped to your org.',
     gcp: 'Cloud Storage',
     category: 'Data',
     status: 'enabled',
@@ -725,6 +727,26 @@ export const catalog: CatalogEntry[] = [
     routes: [
       { path: '', component: BaseModule },
       { path: 'new', component: BaseModule },
+    ],
+  },
+  {
+    // Records — browse + edit any Base collection's data BY CLICKING (the CRM/CMS
+    // surface). Renders each collection's rows/detail from its own field schema
+    // through @hanzo/data (DataTable + RecordDetail/RecordForm) over the same
+    // per-user /superbase proxy. Base is the backend; this is the app on top.
+    id: 'records',
+    label: 'Records',
+    icon: Boxes,
+    description: 'Browse and edit any Base collection as a CRM/CMS — from its own schema.',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/base',
+    docs: `${DOCS}/base`,
+    kind: 'module',
+    routes: [
+      { path: '', component: RecordsModule },
+      { path: ':collection', component: RecordsModule },
+      { path: ':collection/:id', component: RecordsModule },
     ],
   },
   {
@@ -1474,6 +1496,18 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/ai-studio`,
     kind: 'module',
     routes: overviewRoutes('studio'),
+  },
+  {
+    id: 'templates',
+    label: 'Templates',
+    icon: Blocks,
+    description: 'Production-ready starter kits — fork a template and deploy.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/gallery',
+    docs: `${DOCS}/templates`,
+    kind: 'module',
+    routes: [{ path: '', component: TemplatesModule }],
   },
   {
     id: 'console',
