@@ -22,6 +22,7 @@ export enum RouteGroup {
   Agents = "Agents",
   Bots = "Bots",
   Base = "Base",
+  Content = "Content",
   Tasks = "Tasks",
   Functions = "Functions",
   KMS = "KMS",

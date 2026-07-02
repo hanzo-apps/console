@@ -47,6 +47,9 @@ const TENANT_HEADERS = new Set([
   "x-project-id",
   "x-tenant-id",
   "x-actor-id",
+  // The upstream proxy-trust secret is injected server-side only; a client must
+  // never be able to supply it (else it could spoof the trusted-proxy channel).
+  "x-hanzo-proxy-secret",
 ]);
 
 function readBody(req: NextApiRequest): Promise<Buffer> {
@@ -89,6 +92,16 @@ export type ServiceProxyOptions = {
    * the slash-less console path (e.g. `/api/base/_`).
    */
   forceTrailingSlashFor?: string[];
+  /**
+   * When set, inject a server-side shared-secret header on the upstream request
+   * so the upstream can trust this same-origin SSO proxy (e.g. @hanzo/cms's
+   * `hanzoProxyStrategy` requires `x-hanzo-proxy-secret`). The value is resolved
+   * at request time from the server env and is NEVER exposed to the client; any
+   * client-supplied copy of the header is stripped (see TENANT_HEADERS). When
+   * the resolver returns undefined the header is simply not sent (fail-secure:
+   * the upstream then rejects the trusted-proxy path).
+   */
+  injectSecretHeader?: { name: string; value: () => string | undefined };
 };
 
 /**
@@ -112,6 +125,7 @@ export function createServiceProxy(options: ServiceProxyOptions) {
   ).replace(/\/+$/, "");
   const rewritePrefixes = options.rewritePrefixes ?? [];
   const forceTrailingSlashFor = new Set(options.forceTrailingSlashFor ?? []);
+  const injectSecretHeader = options.injectSecretHeader;
 
   return async function handler(req: NextApiRequest, res: NextApiResponse) {
     const baseUrl = options.upstreamBaseUrl();
@@ -157,6 +171,12 @@ export function createServiceProxy(options: ServiceProxyOptions) {
     }
 
     applyProxyTenantHeaders(headers, await buildProxyTenantHeaders(req, res));
+
+    // Inject the server-side trusted-proxy secret (never from the client).
+    if (injectSecretHeader) {
+      const secret = injectSecretHeader.value();
+      if (secret) headers[injectSecretHeader.name] = secret;
+    }
 
     let body: Buffer | undefined;
     if (req.method && !["GET", "HEAD", "OPTIONS"].includes(req.method)) {

@@ -45,6 +45,14 @@ function handlerForSlug(slug: string) {
     mountPath: serviceMountPath(def.slug),
     rewritePrefixes: def.rewritePrefixes,
     forceTrailingSlashFor: def.forceTrailingSlashFor,
+    // Header-based trusted-proxy auth (e.g. @hanzo/cms) — inject the shared
+    // secret server-side. Resolved at request time; server-only, never client.
+    injectSecretHeader: def.injectProxySecret
+      ? {
+          name: "x-hanzo-proxy-secret",
+          value: () => process.env.HANZO_PROXY_SECRET?.trim() || undefined,
+        }
+      : undefined,
   });
   handlerCache.set(slug, handler);
   return handler;

@@ -28,6 +28,7 @@ import {
   ShoppingCart,
   KeyRound,
   Boxes,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import { RouteGroup } from "@/src/components/layouts/route-groups";
@@ -84,6 +85,15 @@ export type EmbeddedServiceDef = {
    * Base serves its admin UI at `/_`). Defaults to the mount root.
    */
   rootPath?: string;
+  /**
+   * When true, the SSO proxy injects the server-side `x-hanzo-proxy-secret`
+   * header (from `HANZO_PROXY_SECRET`) so the upstream can trust this
+   * same-origin proxy for header-based auth (e.g. @hanzo/cms's proxy strategy).
+   * The secret is server-only and any client copy is stripped. Fail-secure:
+   * when the env is unset the header is omitted and the upstream rejects the
+   * trusted-proxy path.
+   */
+  injectProxySecret?: boolean;
 };
 
 /** First defined env var value, trimmed; undefined when none are set. */
@@ -119,6 +129,27 @@ export const EMBEDDED_SERVICES: readonly EmbeddedServiceDef[] = [
     forceTrailingSlashFor: ["_"],
     // Admin UI lives at /_ (slash-less so Next.js trailingSlash:false is happy).
     rootPath: "/_",
+  },
+  {
+    slug: "content",
+    title: "Content",
+    icon: FileText,
+    group: RouteGroup.Content,
+    productModule: "cms",
+    // @hanzo/cms (Payload fork) — Base/SQLite + SeaweedFS media, per-org.
+    // The CMS admin authenticates via the same-origin SSO proxy: console has
+    // already verified the IAM session and the proxy injects x-org-id (==
+    // IAM org == CMS tenant) + x-actor-id + the shared HANZO_PROXY_SECRET, so
+    // the embedded admin is scoped to the current org with no second login.
+    // Admin (collections / media / publishing) is served at /admin.
+    upstreamBaseUrl: () =>
+      firstEnv("CMS_DASHBOARD_URL", "CMS_APP_URL"),
+    // Payload admin is a Next.js app: rewrite its root-absolute asset + API
+    // prefixes into the proxy mount so it renders through the same origin.
+    rewritePrefixes: ["/admin/", "/_next/", "/api/", "/static/", "/favicon"],
+    rootPath: "/admin",
+    // CMS admin auth is header-based (hanzoProxyStrategy): trust this proxy.
+    injectProxySecret: true,
   },
   // NOTE: no embedded "playground" service here — the native Playground page
   // (/project/[projectId]/playground, productModule "playground") is the one
