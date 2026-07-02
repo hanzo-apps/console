@@ -6,19 +6,21 @@
  * `/v1/templates` catalog (`TemplatesApi` → `originV1Url('templates')` → the
  * console's own `/cloud` bearer proxy).
  *
- * Browse + filter by category + search; each card hands off to the live gallery
- * to fork/deploy (`source`). Every state is honest: loading, the backend-state
- * card on error, and a true empty state — never a fabricated template card.
- *
- * The native fork-to-project flow (clone → object store → optional GitHub sync)
- * is the roadmap; today "Fork / deploy" is a real handoff to the gallery where
- * that flow works, not a faked one-click.
+ * Browse + filter by category + search; "Fork / deploy" creates a REAL project
+ * in-console via `TemplatesApi.fork` → cloud `POST /v1/projects/fork` (the ONE
+ * way to start a project from a template): projectsvc seeds an org-scoped Project
+ * from the template (framework mapped, repo = gallery source) and the card shows
+ * the new project. Every state is honest: loading, the backend-state card on
+ * error, a true empty state, per-card forking/created/error — never a fabricated
+ * card. If the fork route is absent (older backend → 404) it falls back to opening
+ * the gallery source, so the button is never dead.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
-import { ArrowUpRight, LayoutTemplate, RefreshCw, Search, X } from '@hanzogui/lucide-icons-2'
+import { ArrowUpRight, Check, LayoutTemplate, Loader, RefreshCw, Search, X } from '@hanzogui/lucide-icons-2'
 
-import { TemplatesApi, groupByCategory, type Template } from '~/lib/api/templates'
+import { TemplatesApi, groupByCategory, type ForkedProject, type Template } from '~/lib/api/templates'
+import { ApiError } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
@@ -31,7 +33,35 @@ const openSource = (url?: string) => {
   if (url && typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+// Per-card fork state: idle → forking → forked (success) | error. On a 404 (an
+// older backend without the fork route) we don't surface an error — we fall back
+// to the previous behavior (open the gallery source), so the button is never dead.
+type ForkState =
+  | { phase: 'idle' }
+  | { phase: 'forking' }
+  | { phase: 'forked'; project: ForkedProject }
+  | { phase: 'error'; message: string }
+
 function TemplateCard({ t }: { t: Template }) {
+  const [fork, setFork] = useState<ForkState>({ phase: 'idle' })
+
+  const onFork = useCallback(() => {
+    // No fork target and no source → nothing we can do (button is disabled below).
+    setFork({ phase: 'forking' })
+    TemplatesApi.fork(t.slug)
+      .then((project) => setFork({ phase: 'forked', project }))
+      .catch((e) => {
+        // Honest fallback: a 404 means this backend has no fork route yet — open
+        // the gallery source (the original behavior) instead of showing an error.
+        if (e instanceof ApiError && e.status === 404 && t.source) {
+          openSource(t.source)
+          setFork({ phase: 'idle' })
+          return
+        }
+        setFork({ phase: 'error', message: e instanceof Error ? e.message : 'Fork failed' })
+      })
+  }, [t.slug, t.source])
+
   return (
     <Card
       p="$3"
@@ -55,16 +85,47 @@ function TemplateCard({ t }: { t: Template }) {
           ))}
         </XStack>
       ) : null}
-      <Button
-        size="$2"
-        mt="$1"
-        self="flex-start"
-        icon={<ArrowUpRight size={14} />}
-        disabled={!t.source}
-        onPress={() => openSource(t.source)}
-      >
-        Fork / deploy
-      </Button>
+
+      {fork.phase === 'forked' ? (
+        <YStack gap="$1" mt="$1">
+          <XStack items="center" gap="$2">
+            <Check size={14} color="var(--green10)" />
+            <Text fontSize="$2" color="$color11" numberOfLines={1}>
+              Project “{fork.project.name}” created
+            </Text>
+          </XStack>
+          {fork.project.liveUrl ? (
+            <Button
+              size="$2"
+              self="flex-start"
+              icon={<ArrowUpRight size={14} />}
+              onPress={() => openSource(fork.project.liveUrl)}
+            >
+              Open site
+            </Button>
+          ) : (
+            <Text fontSize="$1" color="$color10">
+              Draft ({fork.project.framework}) — deploy it to go live.
+            </Text>
+          )}
+        </YStack>
+      ) : (
+        <>
+          <Button
+            size="$2"
+            mt="$1"
+            self="flex-start"
+            icon={fork.phase === 'forking' ? <Loader size={14} /> : <ArrowUpRight size={14} />}
+            disabled={fork.phase === 'forking' || (!t.source && !t.slug)}
+            onPress={onFork}
+          >
+            {fork.phase === 'forking' ? 'Forking…' : 'Fork / deploy'}
+          </Button>
+          {fork.phase === 'error' ? (
+            <Text fontSize="$1" color="$red10" numberOfLines={2}>{fork.message}</Text>
+          ) : null}
+        </>
+      )}
     </Card>
   )
 }
