@@ -5,9 +5,14 @@
  * IAM + commerce + o11y into one place): `GET /v1/admin/overview` returns the
  * whole board (KPIs, usage/cost timeseries, revenue-by-product, live activity,
  * alerts, service health) in ONE call, and the narrower `GET /v1/admin/{usage,
- * orgs,audit,products}` feed the drill-downs. Requests go through the cloud `/v1`
- * client (cookie creds, envelope unwrap, `X-Org-Id`), so tenancy + the admin gate
- * are enforced server-side — the browser holds no admin credential.
+ * orgs,audit,products}` feed the drill-downs. Requests go through `originGet` — the
+ * console's OWN origin (`<origin>/v1/admin/*`), which `next.config.mjs` rewrites to
+ * the GLOBAL-ADMIN-GATED `app/admin/aggregate` proxy (`getAdminGate`, fail-closed
+ * 403, THEN a minted user bearer). This is a CONSOLE-SIDE server gate for the
+ * all-orgs god view, so a tenant customer can never reach the cross-tenant aggregate
+ * even if the cloud-side gate were absent (RED H1); pinning the ORIGIN (not
+ * `config.cloudUrl`) means a split-origin `NEXT_PUBLIC_CLOUD_URL` cannot bypass it.
+ * The browser holds no admin credential.
  *
  * Coded to the documented shape and OPTIONAL-SAFE end to end: `normalizeOverview`
  * maps whatever the endpoint returns onto `AdminOverview`, and every missing field
@@ -15,7 +20,7 @@
  * admin backend is not yet routed (`ApiError 404`), renders honest skeletons and
  * em-dashes, NEVER fabricated numbers. Money is USD cents end to end.
  */
-import { get } from './client'
+import { originGet } from './client'
 
 /** A KPI headline — a single number with an optional prior-period basis + live series. */
 export type AdminKpi = {
@@ -210,7 +215,7 @@ export const AdminApi = {
    * backend isn't routed on this host) the caller renders as an honest state.
    */
   overview: async (p: AdminOverviewParams = {}): Promise<AdminOverview> => {
-    const data = await get<unknown>('admin/overview', {
+    const data = await originGet<unknown>('admin/overview', {
       range: p.range ?? '24h',
       activityLimit: p.activityLimit ?? 20,
       org: p.allOrgs ? 'all' : undefined,
@@ -223,7 +228,7 @@ export const AdminApi = {
    * refreshes. Same honest degradation; returns `[]` when empty.
    */
   activity: async (p: { limit?: number; allOrgs?: boolean } = {}): Promise<AdminActivity[]> => {
-    const data = await get<unknown>('admin/audit', {
+    const data = await originGet<unknown>('admin/audit', {
       limit: p.limit ?? 20,
       org: p.allOrgs ? 'all' : undefined,
     })
