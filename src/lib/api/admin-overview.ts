@@ -89,6 +89,13 @@ export type AdminOverview = {
   series: AdminSeries[]
   /** Revenue/spend distribution (donut). */
   distribution: AdminSlice[]
+  /**
+   * Named distributions for the business board (revenue by product, plan mix, top
+   * agents/bots by cost, …), keyed by a stable slug the tile reads. OPTIONAL and
+   * only present when the backend emits it — an empty payload omits it entirely, so
+   * a deployment without the business aggregate degrades to honest empty tiles.
+   */
+  distributions?: Record<string, AdminSlice[]>
   activity: AdminActivity[]
   alerts: AdminAlert[]
   health: AdminHealthRow[]
@@ -134,19 +141,42 @@ function normalizeActivity(raw: unknown): AdminActivity {
   return a
 }
 
+/** Normalize a list of distribution slices (label + value + optional hint). */
+function normalizeSlices(v: unknown): AdminSlice[] {
+  return arr(v).map((s) => {
+    const sr = (s ?? {}) as Record<string, unknown>
+    const slice: AdminSlice = { label: str(sr.label), value: num(sr.value) }
+    if (sr.hint) slice.hint = str(sr.hint)
+    return slice
+  })
+}
+
+/**
+ * Parse a named-distributions map (`{ revenue: [...], plans: [...], topAgents:
+ * [...] }`) — only when the backend actually sent one. Returns undefined for an
+ * absent/empty map so the empty payload maps to the SAME object as before (no
+ * spurious key) and honest-empty tiles render.
+ */
+function normalizeDistributions(v: unknown): Record<string, AdminSlice[]> | undefined {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined
+  const out: Record<string, AdminSlice[]> = {}
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    const slices = normalizeSlices(val)
+    if (slices.length) out[k] = slices
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
 /** Map an arbitrary `/v1/admin/overview` payload onto `AdminOverview` (optional-safe). */
 export function normalizeOverview(raw: unknown): AdminOverview {
   const r = (raw ?? {}) as Record<string, unknown>
+  const distributions = normalizeDistributions(r.distributions)
   return {
     range: str(r.range) || '24h',
     kpis: arr(r.kpis).map(normalizeKpi),
     series: arr(r.series).map(normalizeSeries),
-    distribution: arr(r.distribution).map((s) => {
-      const sr = (s ?? {}) as Record<string, unknown>
-      const slice: AdminSlice = { label: str(sr.label), value: num(sr.value) }
-      if (sr.hint) slice.hint = str(sr.hint)
-      return slice
-    }),
+    distribution: normalizeSlices(r.distribution),
+    ...(distributions ? { distributions } : {}),
     activity: arr(r.activity).map(normalizeActivity),
     alerts: arr(r.alerts).map((a) => {
       const ar = (a ?? {}) as Record<string, unknown>
