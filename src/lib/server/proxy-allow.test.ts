@@ -52,6 +52,13 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/prompts/support-triage')).toBe(true)
   })
 
+  it('admits the projects store incl. the template fork route', () => {
+    expect(CLOUD_HEADS).toContain('projects')
+    expect(allowCloudSurface('v1/projects')).toBe(true)
+    expect(allowCloudSurface('v1/projects/fork')).toBe(true)
+    expect(allowCloudSurface('v1/projects/my-site')).toBe(true)
+  })
+
   it('REFUSES privileged / unlisted cloud-api surfaces (not a general tunnel)', () => {
     expect(allowCloudSurface('v1/iam/get-users')).toBe(false)
     expect(allowCloudSurface('v1/admin/overview')).toBe(false)
