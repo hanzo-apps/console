@@ -117,15 +117,19 @@ function sealKey(): Buffer {
   return cachedKey
 }
 
-/** The token set we persist, plus the access-token expiry (ms epoch) so a stale
- *  access token is refreshed without decoding it twice. */
+/** What we persist in the cookie. Deliberately NOT the raw access token: a Casdoor
+ *  access JWT packs the WHOLE user object (~5-10 KB — password hash, TOTP secret,
+ *  every profile/social field), which blows past the browser's ~4 KB per-cookie limit
+ *  AND needlessly seals secret material. Instead we seal the rotating refresh token,
+ *  the access expiry, and the SMALL projected claims (`accessClaims`) the console
+ *  actually reads — a compact, bounded cookie (~1 KB) that a browser accepts. */
 export type SealedSession = {
-  /** IAM access token (JWT). */
-  a: string
   /** IAM refresh token (rotating, one-time-use). */
   r: string
-  /** access_token expiry, ms epoch. */
+  /** access_token expiry, ms epoch (when to refresh). */
   e: number
+  /** Projected identity/authz claims (display fields only; never secret material). */
+  c: ConsoleClaims
 }
 
 /** Seal a session into a compact base64url(iv|tag|ciphertext) string. */
@@ -155,7 +159,7 @@ export function open(sealed: string | undefined | null): SealedSession | null {
     decipher.setAuthTag(tag)
     const pt = Buffer.concat([decipher.update(ct), decipher.final()]).toString('utf8')
     const obj = JSON.parse(pt) as SealedSession
-    if (typeof obj?.a !== 'string' || typeof obj?.r !== 'string' || typeof obj?.e !== 'number') return null
+    if (typeof obj?.r !== 'string' || typeof obj?.e !== 'number' || !obj?.c || typeof obj.c !== 'object') return null
     return obj
   } catch {
     return null
@@ -228,9 +232,8 @@ export function accessClaims(jwt: string): ConsoleClaims | null {
 export function consoleSession(req: NextRequest): { claims: ConsoleClaims; expiresInSec: number } | null {
   const s = readConsoleSession(req)
   if (!s || s.e <= Date.now() + ACCESS_SKEW_MS) return null // absent/stale → caller refreshes
-  const claims = accessClaims(s.a)
-  if (!claims) return null
-  return { claims, expiresInSec: Math.max(0, Math.floor((s.e - Date.now()) / 1000)) }
+  if (!s.c.name) return null
+  return { claims: s.c, expiresInSec: Math.max(0, Math.floor((s.e - Date.now()) / 1000)) }
 }
 
 /** The unexpired console claims for a request, or null when there is no live session. */
@@ -302,10 +305,18 @@ export function refreshGrant(refreshToken: string): Promise<Tokens> {
   return tokenRequest({ grant_type: 'refresh_token', client_id: CLIENT_ID, refresh_token: refreshToken })
 }
 
-/** Seal a fresh token set into a cookie-ready value + report the access lifetime. */
-export function sealTokens(t: Tokens): { sealed: string; expiresInMs: number } {
+/**
+ * Seal a fresh token set into a cookie-ready value. Projects the access token to the
+ * small claim set (`accessClaims`) and seals ONLY {refresh, exp, claims} — a compact,
+ * browser-safe cookie. Returns the claims too (the routes use them for the account +
+ * the identity-match check). null when the access token has no usable identity.
+ */
+export function sealSession(t: Tokens): { sealed: string; expiresInMs: number; claims: ConsoleClaims } | null {
+  const claims = accessClaims(t.accessToken)
+  if (!claims || !claims.name) return null
   const expiresInMs = (t.expiresIn > 0 ? t.expiresIn : 3600) * 1000
-  return { sealed: seal({ a: t.accessToken, r: t.refreshToken, e: Date.now() + expiresInMs }), expiresInMs }
+  const sealed = seal({ r: t.refreshToken, e: Date.now() + expiresInMs, c: claims })
+  return { sealed, expiresInMs, claims }
 }
 
 /** Best-effort revoke of a refresh token on sign-out. Never throws (fail-open on the
