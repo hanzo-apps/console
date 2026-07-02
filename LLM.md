@@ -1246,3 +1246,51 @@ Help embedded the shared desk for everyone. Fixed:
   enroll `victim@othercorp`); stopped forwarding the forgeable `X-Forwarded-For`.
 - Verification: `tsc` clean; `npm test` **+13** embed tests (entitlement + brand-org
   map + fail-closed normalizer); `next build` ✓ (`/embed-status` + `/[...slug]`).
+
+## Honest-state punch-list — signed-in 403≠"sign in", read-402≠paywall, graceful re-auth, chunk self-heal (v8.4.25)
+
+A patch above #49's v8.4.24 (whose CMS/ERP/Help entitlement gate is preserved
+untouched). Closes the "renders real → every state honest" punch-list. All DRY —
+one fix per shared primitive, no per-module snowflakes.
+
+- **P1 — a SIGNED-IN 403 is NEVER "sign in" (3 broken pages + every 403 surface).**
+  Finetuning (`/training`→`/v1/train/jobs`), Dashboards + Annotation Queues
+  (`/v1/o11y/*`) told a logged-in user to "sign in" on a 403 — reads like a bug
+  ("I AM signed in"). Root: the THREE shared error mappers conflated 401 and 403.
+  Fixed in ONE place each: `BackendState.classifyBackend` (+`signin` kind),
+  `observability/RuntimeNotice.classifyRuntime` (+`signin`), and
+  `ui/States.honestError` (+`reauth`). Now **401 = session lapsed** → "Your session
+  expired" + a graceful **Sign in again** action; **403 = signed-in-but-not-enabled**
+  → honest "not enabled for your organization / admin-only surface" (o11y points to
+  the real AI Metrics), never "sign in". Covers finetuning/dashboards/annotation-
+  queues AND every other surface using these mappers (evals/datasets/prompts/
+  settings/IAM/KMS/…).
+- **P2 — a READ is never credit-gated (S3 402→"add credits").** Listing S3 buckets/
+  objects that 402'd showed the "Add credits to continue" paywall on a READ. New DRY
+  `BackendState.classifyRead` maps a 402-on-read → `null` → the caller's honest EMPTY
+  state ("No buckets yet · Create one"), not a wall. `StorageModule` uses it for both
+  the bucket list and the object list. (A paid WRITE still surfaces the billing
+  message via the create toast — the paywall belongs on the write, not the read.)
+- **P3 — graceful mid-task re-auth (session).** A mid-task expiry no longer dumps the
+  user on `/`. New `auth/iam.ts` `stashReturnTo`/`takeReturnTo`/`startReauth`: `signIn`
+  + `signInWith` (session.tsx) and every P1 `signin` card remember the current path
+  (same-origin-only, auth-pages excluded) before redirecting to IAM; the `/auth/
+  callback` lands the user **back where they were**. NOTE: token/session TTL itself is
+  an IAM/cloud config concern (not console-side) — FLAGGED for the IAM lane; the
+  console side (return-to + one-click re-auth) is done.
+- **P4 — chunk-load self-heal hardened (the sweep's crash class).** A stale-deploy
+  chunk error thrown during React RENDER hit the error boundary (a manual card), and
+  the HTML-as-JS signature ("Unexpected token '<'" — a 404'd chunk served the SPA
+  shell) wasn't even recognized as a chunk skew. Fixed: `boundary-logic.isChunkLoadError`
+  now matches that signature (kept in sync with `ChunkGuard`), and the dashboard
+  `error.tsx` AUTO-RELOADS once-per-window (shared guard key with `ProductErrorBoundary`
+  — never double-reload) instead of stranding a card. So a redeploy self-heals at
+  BOTH the product-boundary and segment-boundary levels + the window listeners.
+- **Buttons:** self-audited — no dead/no-op `onPress`; the disabled CTAs
+  (Containers/Kubernetes "Create …") are honest `HintButton`s with a reason, not dead
+  buttons. The Base builder + Applications deploy buttons were verified working live
+  in v8.4.23. (The separate interaction-sweep agent's specific button list wasn't
+  accessible from here; its findings fold into a follow-up if any remain.)
+- Verification: `tsc --noEmit` clean; `npm test` **953/953** (79 files; +6 boundary
+  HTML-as-JS chunk cases); `next build` ✓. Live re-verify (the 3 pages honest, S3
+  read empty-not-paywall, #49's entitlement gate still holds) is post-deploy.

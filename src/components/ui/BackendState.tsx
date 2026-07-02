@@ -15,26 +15,48 @@ import { Button, Card, Text, XStack } from '@hanzo/gui'
 import { TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
+import { startReauth } from '~/lib/auth/iam'
 
-export type BackendStateKind = 'not-initialized' | 'unavailable' | 'access' | 'billing' | 'error'
+export type BackendStateKind = 'not-initialized' | 'unavailable' | 'access' | 'signin' | 'billing' | 'error'
 
 export type BackendState = { kind: BackendStateKind; message: string }
 
-/** Classify a thrown `/v1` error into an honest kind + raw message. */
+/**
+ * Classify a thrown `/v1` error into an honest kind + raw message.
+ *
+ * 401 and 403 are DISTINCT for a signed-in user: 401 = the session is expired /
+ * not recognized (re-auth fixes it → `signin`), 403 = the account IS signed in
+ * but this surface isn't authorized/enabled for its org (`access`). A signed-in
+ * user is NEVER told to "sign in" for a 403 — that would be a false instruction.
+ */
 export function classifyBackend(e: unknown): BackendState {
   const status = e instanceof ApiError ? e.status : 0
   const message = e instanceof Error ? e.message : String(e)
   if (status === 503) return { kind: 'not-initialized', message }
   if (status === 404 || status === 405) return { kind: 'unavailable', message }
   if (status === 402) return { kind: 'billing', message }
-  if (status === 401 || status === 403) return { kind: 'access', message }
+  if (status === 401) return { kind: 'signin', message }
+  if (status === 403) return { kind: 'access', message }
   return { kind: 'error', message }
+}
+
+/**
+ * Classify a READ (GET/list) failure. Identical to `classifyBackend` EXCEPT a 402
+ * is NOT a wall: listing/reading a resource is never credit-gated, so a 402 on a
+ * read means "nothing is provisioned yet" — the caller shows its honest EMPTY
+ * state (e.g. "No buckets yet · Create one"), never an "add credits" paywall
+ * (that belongs only on a paid WRITE). Returns `null` for a 402 → treat as empty.
+ */
+export function classifyRead(e: unknown): BackendState | null {
+  const s = classifyBackend(e)
+  return s.kind === 'billing' ? null : s
 }
 
 const TITLES: Record<BackendStateKind, string> = {
   'not-initialized': 'Backend not initialized',
   unavailable: 'Not available on this deployment yet',
-  access: 'Access required',
+  access: 'Not enabled for your account',
+  signin: 'Your session expired',
   billing: 'Add credits to continue',
   error: 'Could not reach the backend',
 }
@@ -44,7 +66,11 @@ const BODIES: Record<BackendStateKind, string> = {
     'The /v1 route is mounted but its runtime (or the console API key it proxies to) is not configured on this deployment yet. Real data appears here once it is — no placeholder data is shown.',
   unavailable:
     'This endpoint is not mounted at the gateway on this host yet. The view lights up automatically once the route is live.',
-  access: 'Sign in with an account that can read this data.',
+  // 403 for a SIGNED-IN user — never "sign in".
+  access:
+    "You're signed in, but this isn't enabled for your organization on this deployment, or it's an admin-only surface. It appears here automatically once your account has access — nothing is fabricated.",
+  // 401 — the session itself lapsed; re-auth returns to this exact page.
+  signin: 'Your session has expired or isn’t recognized here. Sign in again to continue where you left off.',
   // Empty → the card shows the backend's own message (the honest "Insufficient
   // balance. Please add credits…" from the gateway billing gate).
   billing: '',
@@ -77,7 +103,11 @@ export function BackendStateCard({
           {hint}
         </Text>
       ) : null}
-      {onRetry ? (
+      {state.kind === 'signin' ? (
+        <Button size="$2" theme="light" self="flex-start" onPress={startReauth}>
+          Sign in again
+        </Button>
+      ) : onRetry ? (
         <Button size="$2" self="flex-start" onPress={onRetry}>
           Retry
         </Button>
