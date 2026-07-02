@@ -7,6 +7,7 @@ import { resolveView, isAdminRoute } from '~/lib/products/match'
 import { findEntry } from '~/lib/products/registry'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { ProductSubpageStub } from '~/components/products/ProductSubpageStub'
+import { ProductSubpageModule } from '~/components/products/subpage/ProductSubpageModule'
 import { AdminManagedNotice } from '~/components/products/AdminManagedNotice'
 import { ProductErrorBoundary } from '~/components/errors/ProductErrorBoundary'
 
@@ -48,6 +49,16 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   }
 
   if (view.kind === 'stub') return <ProductSubpageStub entry={view.entry} subpage={view.subpage} />
+
+  // A uniform base sub-page (Status/Logs/Metrics/Settings) → the shared per-product
+  // sub-page system (real feed or honest state), inside the same error boundary so
+  // a data fetch that throws shows the retryable card, never a white screen.
+  if (view.kind === 'subpage')
+    return (
+      <ProductErrorBoundary resetKey={slug.join('/')}>
+        <ProductSubpageModule entry={view.entry} subpage={view.subpage} />
+      </ProductErrorBoundary>
+    )
 
   const Component = view.matched.route.component
   return (
