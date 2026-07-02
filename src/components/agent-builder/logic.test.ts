@@ -2,15 +2,20 @@ import { describe, it, expect } from 'vitest'
 
 import {
   emptySpec,
+  defaultConfig,
   defaultModel,
   canSubmit,
+  normalizeList,
   normalizeTools,
+  normalizeKnowledge,
+  clampConfig,
+  pruneConfig,
   toCreateBody,
   promptBodyFromRow,
   promptOptions,
   classifyBuilderError,
 } from './logic'
-import type { AgentSpec, BuilderOption, BuilderPrompt } from './types'
+import type { AgentConfig, AgentSpec, BuilderOption, BuilderPrompt } from './types'
 
 const spec = (over: Partial<AgentSpec> = {}): AgentSpec => ({ ...emptySpec(), ...over })
 
@@ -54,9 +59,73 @@ describe('canSubmit', () => {
   })
 })
 
-describe('normalizeTools', () => {
+describe('normalizeList / normalizeTools / normalizeKnowledge', () => {
   it('trims, drops blanks, and de-duplicates preserving first-seen order', () => {
-    expect(normalizeTools([' web.search ', 'code.exec', 'web.search', '', '  '])).toEqual(['web.search', 'code.exec'])
+    expect(normalizeList([' a ', 'b', 'a', '', '  '])).toEqual(['a', 'b'])
+  })
+  it('normalizeTools + normalizeKnowledge share the one behavior (DRY)', () => {
+    const raw = [' web.search ', 'code.exec', 'web.search', '', '  ']
+    expect(normalizeTools(raw)).toEqual(['web.search', 'code.exec'])
+    expect(normalizeKnowledge([' kb:1 ', 'kb:2', 'kb:1'])).toEqual(['kb:1', 'kb:2'])
+  })
+})
+
+describe('defaultConfig', () => {
+  it('is the documented generation default', () => {
+    expect(defaultConfig()).toEqual({
+      temperature: 0.7,
+      topP: 1,
+      topK: 0,
+      stream: true,
+      thinking: false,
+      useTools: true,
+      webSearch: false,
+    })
+  })
+  it('is a fresh object each call (no shared mutable state)', () => {
+    const a = defaultConfig()
+    a.temperature = 2
+    expect(defaultConfig().temperature).toBe(0.7)
+  })
+})
+
+describe('clampConfig', () => {
+  const base = defaultConfig()
+  it('clamps temperature into [0,2]', () => {
+    expect(clampConfig({ ...base, temperature: 9 }).temperature).toBe(2)
+    expect(clampConfig({ ...base, temperature: -1 }).temperature).toBe(0)
+  })
+  it('clamps topP into [0,1] and topK to a non-negative integer', () => {
+    expect(clampConfig({ ...base, topP: 5 }).topP).toBe(1)
+    expect(clampConfig({ ...base, topP: -0.5 }).topP).toBe(0)
+    expect(clampConfig({ ...base, topK: -3 }).topK).toBe(0)
+    expect(clampConfig({ ...base, topK: 7.9 }).topK).toBe(7)
+  })
+  it('maps NaN → min but clamps ±∞ to the nearest bound', () => {
+    expect(clampConfig({ ...base, temperature: NaN }).temperature).toBe(0) // garbage → min
+    expect(clampConfig({ ...base, topP: Infinity }).topP).toBe(1) // slider-to-top → max
+    expect(clampConfig({ ...base, temperature: -Infinity }).temperature).toBe(0) // → min bound
+  })
+})
+
+describe('pruneConfig', () => {
+  it('returns undefined when every knob is at its default (simple agent posts no config)', () => {
+    expect(pruneConfig(defaultConfig())).toBeUndefined()
+  })
+  it('returns ONLY the knobs that differ from default', () => {
+    expect(pruneConfig({ ...defaultConfig(), temperature: 0.2, thinking: true })).toEqual({
+      temperature: 0.2,
+      thinking: true,
+    })
+  })
+  it('clamps before diffing (an out-of-range value that clamps to default prunes away)', () => {
+    // topP default is 1; a value of 5 clamps to 1 → same as default → pruned out.
+    expect(pruneConfig({ ...defaultConfig(), topP: 5 })).toBeUndefined()
+  })
+  it('carries reasoningEffort across the full ladder when set (it has no default)', () => {
+    expect(pruneConfig({ ...defaultConfig(), reasoningEffort: 'high' })).toEqual({ reasoningEffort: 'high' })
+    // The top tier — "xhigh + workflows" — survives pruning like any other level.
+    expect(pruneConfig({ ...defaultConfig(), reasoningEffort: 'ultracode' })).toEqual({ reasoningEffort: 'ultracode' })
   })
 })
 

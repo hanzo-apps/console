@@ -12,7 +12,7 @@
  */
 import { PlaygroundApi, PromptsApi } from '~/lib/api'
 import { AgentsApi } from '~/lib/api/agents'
-import type { AgentBuilderLoaders, AgentSpec, BuilderOption, BuilderPrompt } from '~/components/agent-builder/types'
+import type { AgentBuilderLoaders, BuilderOption, BuilderPrompt } from '~/components/agent-builder/types'
 
 /** The live model catalog as builder options (id → {value,label,hint}). */
 async function loadModels(): Promise<BuilderOption[]> {
@@ -75,5 +75,5 @@ export const agentBuilderLoaders: AgentBuilderLoaders = {
   // No live tool catalog endpoint on this deployment yet — the builder's tools
   // field stays typeable-only (honest), never a fabricated tool list. Wire
   // `loadTools` here when `/v1/agents/tools` (or the MCP tool catalog) is bound.
-  createAgent: (spec: AgentSpec) => AgentsApi.create(spec),
+  createAgent: (body) => AgentsApi.create(body),
 }
