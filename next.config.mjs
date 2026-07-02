@@ -58,15 +58,26 @@ function guiPackages() {
  * would shadow paths meant for other backends. Each destination handler still
  * enforces its own least-privilege allow-list (`proxy-allow.ts`), so a rewrite can
  * never widen what the proxy admits. `beforeFiles` so these win over any route.
+ *
+ * The admin AGGREGATE reads (`/v1/admin/{overview,usage,orgs,audit,products}` — the
+ * cross-tenant business/platform board) map to the GLOBAL-ADMIN-GATED proxy
+ * (`app/admin/aggregate`), which runs `getAdminGate` (fail-closed 403) BEFORE
+ * forwarding. This is the console-side server gate for the all-orgs god view (RED
+ * H1) — NOT the ungated `/cloud` proxy. `admin/iam` + `admin/kms` are deliberately
+ * NOT rewritten here: they keep their own gated proxies with their own tenant
+ * scoping, and are reached by the client's explicit `/admin/*` origin path.
  */
 const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates']
 const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio']
+const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products']
 const aiSurfaceRewrites = () => ({
   beforeFiles: [
     ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
     ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/cloud/v1/${h}/:path*` })),
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/ai/v1/${h}` })),
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/v1/${h}/:path*` })),
+    ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}`, destination: `/admin/aggregate/${h}` })),
+    ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}/:path*`, destination: `/admin/aggregate/${h}/:path*` })),
   ],
 })
 

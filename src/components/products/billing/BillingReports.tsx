@@ -28,6 +28,8 @@ import {
   filterGroups,
   presentDimensions,
   dailySpend,
+  capRows,
+  COST_ROW_CAP,
   type SpendDimension,
   type SpendGroup,
 } from './logic'
@@ -45,6 +47,7 @@ export function BillingReports(_props: { params: Record<string, string> }) {
   const [range, setRange] = useState<RangeKey>('30d')
   const [dim, setDim] = useState<SpendDimension>('model')
   const [query, setQuery] = useState('')
+  const [showAll, setShowAll] = useState(false)
   const [usage, setUsage] = useState<Async<UsageRecord[]>>({ phase: 'loading' })
 
   const load = useCallback(() => {
@@ -66,6 +69,10 @@ export function BillingReports(_props: { params: Record<string, string> }) {
   const activeDim = dims.includes(dim) ? dim : 'model'
   const groups = useMemo(() => groupSpend(windowed, activeDim), [windowed, activeDim])
   const filtered = useMemo(() => filterGroups(groups, query), [groups, query])
+  // Bound the rendered rows (top-by-spend) so a high-cardinality dimension (agent/
+  // product tags are set at inference time) can't blow up the DOM (RED L2); the
+  // hidden count is shown honestly and "Show all" reveals every real row.
+  const capped = useMemo(() => capRows(filtered, showAll), [filtered, showAll])
   const trend = useMemo(() => dailySpend(windowed, range, now), [windowed, range, now])
   const totalCents = groups.reduce((a, g) => a + g.cents, 0)
 
@@ -156,11 +163,28 @@ export function BillingReports(_props: { params: Record<string, string> }) {
 
           <DataTable
             columns={columns}
-            rows={usage.phase === 'ready' ? filtered : []}
+            rows={usage.phase === 'ready' ? capped.rows : []}
             loading={usage.phase === 'loading'}
             rowKey={(g) => g.label}
             empty={query ? `No ${DIM_LABEL[activeDim].toLowerCase()}s match “${query.trim()}”.` : 'No metered spend in this range yet.'}
           />
+
+          {capped.hidden > 0 ? (
+            <XStack items="center" justify="center" gap="$2" py="$1" flexWrap="wrap">
+              <Text fontSize="$2" color="$color10">
+                Showing the top {COST_ROW_CAP} by spend · {capped.hidden.toLocaleString()} more
+              </Text>
+              <Button size="$2" chromeless onPress={() => setShowAll(true)}>
+                Show all
+              </Button>
+            </XStack>
+          ) : showAll && filtered.length > COST_ROW_CAP ? (
+            <XStack justify="center" py="$1">
+              <Button size="$2" chromeless onPress={() => setShowAll(false)}>
+                Show top {COST_ROW_CAP}
+              </Button>
+            </XStack>
+          ) : null}
         </>
       )}
     </>

@@ -917,3 +917,49 @@ $X", and admin.hanzo.ai gets a SaaS business control board.
   product/agent groupSpend + presentDimensions gating, +4 admin-overview/adapters
   named distributions); `next build` ✓ Compiled successfully (lint+types clean).
   Authenticated visual e2e (business board as a global admin) is post-deploy.
+
+### RED review fixes — god-view server gate + attribution + row cap (v8.4.15)
+
+RED reviewed v8.4.14 (0 critical, 1 high, 1 med, 3 low, 1 info). All actionable
+findings fixed; the fixes are defense-in-depth + correctness, no behavior regression.
+
+- **H1 (HIGH → fixed): the admin business god-view had NO console-side server gate.**
+  `AdminApi.overview`/`activity` hit `${config.cloudUrl}/v1/admin/*` — same-origin in
+  prod, but `admin/*` was NOT in the `next.config.mjs` rewrite heads and there was no
+  `app/admin/overview` route, so the all-orgs (`?org=all`) aggregate rested SOLELY on
+  an unverified casibase backend gate (RED correctly caught that `getAdminGate` guards
+  only `/admin/iam`, `/admin/kms`, `/paas` — not the overview path). Fix: NEW
+  `app/admin/aggregate/[...path]/route.ts` runs `getAdminGate` (global-admin only,
+  fail-closed 403) BEFORE forwarding through the shared `forwardWithUserBearer`
+  (traversal + same-origin-CSRF hardening) to cloud-api. `next.config.mjs` rewrites
+  `/v1/admin/{overview,usage,orgs,audit,products}` → `/admin/aggregate/*` (iam/kms
+  deliberately NOT rewritten — they keep their own tenant-scoped proxies). New
+  `originGet` (`client.ts`) pins the request to the console's OWN origin (not
+  `config.cloudUrl`), so a split-origin `NEXT_PUBLIC_CLOUD_URL` can't bypass the gate;
+  `AdminApi` uses it. Least-privilege surface is the pure, tested
+  `lib/server/admin-aggregate.ts` `allowAdminSurface` (admits only the read heads,
+  REFUSES `admin/iam`/`admin/kms`/bare `admin`). M1 (client-only render gate) is
+  downstream of H1 and now backed by a real server gate.
+- **L1 (LOW → fixed, proven): `agentUsageFor` id-OR-name collision.** The old
+  `Set([id,name])` union conflated two distinct agents within an org when one's id
+  equalled another's ledger tag, or two shared a name. Fix: try the id FIRST, fall
+  back to the name only when the id matched nothing — never a union. Two RED-proven
+  collision cases added to the tests.
+- **L2 (LOW → fixed, proven): unbounded cost table.** A high-cardinality dimension
+  (agent/product tags are set at inference time) could render thousands of rows. New
+  pure `capRows` (`billing/logic.ts`, `COST_ROW_CAP=100`) bounds the DOM to the
+  top-by-spend prefix with an honest "N more · Show all" affordance that reveals every
+  real row on demand (a render bound, not a trust boundary — the rows are the caller's
+  own paid spend). Tested.
+- **I1 (INFO → accepted-as-is):** `AgentDetailView` fetches the org ledger per open.
+  Within the existing `/billing` proxy policy (any session sees its OWN org billing —
+  the same data the Cost Reports page shows), so not a new trust boundary; left as-is.
+- **RED-refuted (verified safe, unchanged):** the fallback path (`UsageApi.overview
+  ({allOrgs:true})` calls `fetchUsageRecords()` with NO args; the `/billing` proxy
+  drops `?org` and pins the full billing-subject key set — no cross-tenant leak);
+  metadata forgery is org-scoped display only; `normalizeDistributions` DoS; honest-
+  state (no fabrication); client nav/launcher/palette gating of `business`.
+- Verification: `npm run typecheck` clean; `npm test` **853/853** (69 files; +6
+  admin-aggregate allow-list, +4 agentUsageFor L1 collision, +4 capRows L2);
+  `next build` ✓ Compiled successfully — the new `/admin/aggregate/[...path]` route
+  is registered. Live re-test (org=all → 403 as a customer / org-admin) is post-deploy.
