@@ -123,6 +123,7 @@ import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
 import { StorageModule } from '~/components/products/StorageModule'
 import { BaseModule } from '~/components/products/BaseModule'
+import { RecordsModule } from '~/components/products/RecordsModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { TracesModule } from '~/components/products/TracesModule'
@@ -724,6 +725,26 @@ export const catalog: CatalogEntry[] = [
     routes: [
       { path: '', component: BaseModule },
       { path: 'new', component: BaseModule },
+    ],
+  },
+  {
+    // Records — browse + edit any Base collection's data BY CLICKING (the CRM/CMS
+    // surface). Renders each collection's rows/detail from its own field schema
+    // through @hanzo/data (DataTable + RecordDetail/RecordForm) over the same
+    // per-user /superbase proxy. Base is the backend; this is the app on top.
+    id: 'records',
+    label: 'Records',
+    icon: Boxes,
+    description: 'Browse and edit any Base collection as a CRM/CMS — from its own schema.',
+    category: 'Data',
+    status: 'enabled',
+    repo: 'hanzoai/base',
+    docs: `${DOCS}/base`,
+    kind: 'module',
+    routes: [
+      { path: '', component: RecordsModule },
+      { path: ':collection', component: RecordsModule },
+      { path: ':collection/:id', component: RecordsModule },
     ],
   },
   {
