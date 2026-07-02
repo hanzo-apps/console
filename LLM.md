@@ -1138,3 +1138,83 @@ native-`/v1/crm` reference; these three are the *embed* half of the Business-OS.
   `next build` ✓ Compiled (`/embed-status` + the `/[...slug]` catch-all registered).
   Live visual e2e (Dave/maxpower → honest provision states; a brand-org identity →
   the real CMS/Help embed) is post-deploy.
+
+## Real per-product Status/Logs/Metrics/Settings + Base content-type builder + live PaaS Applications (v8.4.23)
+
+Three deliverables, one console image; all real per-org data or an honest state,
+never a broken/blank/fabricated page. DRY: ONE shared per-product sub-page system,
+ONE Base binding, ONE PaaS client — nothing bespoke-per-product, nothing
+reimplemented.
+
+- **Per-product Status · Logs · Metrics · Settings are REAL per product (the
+  #1 fix).** The uniform base sub-pages were the console's weakest surface: a
+  single-screen product's `/x/{status|logs|metrics|settings}` fell to
+  `ProductSubpageStub` (a "not wired yet" placeholder — the "broken/generic" the
+  user saw), and a tabbed product's `:tab` route SWALLOWED those slugs into its
+  default tab. Fixed with ONE shared sub-page system driven by per-product
+  metadata, plus a routing precedence change:
+  - **Routing** (`match-core.resolveProductView`): a base slug the product does
+    NOT own as a declared specific now resolves to `{ kind: 'subpage' }` — the
+    shared per-product view — taking precedence over any generic `:tab` route.
+    A product that OWNS a base slug (Embeddings › Settings, Prompts › Metrics)
+    keeps its bespoke route; a declared-but-unwired non-base specific still stubs.
+    `subpageIsWired` now returns true for every base slug (always real → never
+    dimmed in the nav). `ProductView` gains the `subpage` kind; the catch-all
+    renders `ProductSubpageModule` inside the error boundary.
+  - **Per-product metadata** (`components/products/subpage/sources.ts`, pure +
+    tested): `subpageSourcesFor(entry)` derives — reusing the native-overview
+    health spec — the product's status service, logs service, metrics feed
+    (`o11y` for AI/LLM products, else `usage`), and settings feed. No 105 bespoke
+    maps: sensible defaults + tiny override sets.
+  - **The ONE shared system** (`components/products/subpage/`): `ProductStatusView`
+    (real per-service health from `PlatformApi.apps()` filtered to the product's
+    service; admin → live verdict + workloads table, customer → honest "Connected ·
+    managed by Hanzo", no service → honest managed card — never a fake green),
+    `ProductLogsView` (real `/paas/logs?service=` filtered to the product; honest
+    states), `ProductMetricsView` (AI/LLM → the real org o11y `MetricsModule`
+    verbatim; else the commerce usage ledger filtered to the product tag, honest-
+    empty), `ProductSettingsView` (real deployment facts — image/tag/cluster,
+    read-only — + an org-Settings pointer; never a dead form), and the
+    `ProductSubpageModule` dispatcher. Coverage map: `status`/`logs` are real for
+    operator-managed products (admin) and honest-managed for customers/serviceless
+    products; `metrics` is real o11y for {models, providers, inference, chat,
+    agents, playground, embeddings, prompts, gateway, api} and per-product usage
+    (honest-empty until tagged) for the rest; `settings` is honest-managed +
+    real deployment facts everywhere (no product ships a fake editable form).
+- **Base is a Supabase-style content-type dashboard (the #2 fix).** The `base`
+  product (was the superbase *tenants* list) is now the per-org Base dashboard:
+  list content types (collections) · **build a new content type** (name + typed
+  fields incl. File/Media and Relation) · click a type to browse/edit its records.
+  ONE Base binding — console2's OWN `/superbase` proxy (mints the user IAM bearer,
+  stamps `X-Org-Id` from the JWT owner → persists to THIS org's Base). We do NOT
+  reimplement Base; we drive its real `/v1/collections` API.
+  - `base-data/api.ts` `BaseDataApi` gains `createCollection` (POST
+    `/v1/collections`) + `deleteCollection`; the browse half (`CollectionTable`/
+    `RecordDetailView`, shared with `Records`) is reused unchanged.
+  - `proxy-allow.ts` `allowBaseSurface` widened to admit single content-type admin
+    (`v1/collections/<name>`) + the scaffolds palette — still Base-superuser-gated
+    + per-org (`X-Org-Id`); it STILL refuses Base's non-collection admin
+    (settings/backups/logs), so `/superbase` stays a collections proxy, not a
+    tunnel. (POST `/v1/collections` was already allowed by the existing
+    `v1/collections` rule.)
+  - `components/products/base/`: `logic.ts` (pure + tested — the 12-kind field
+    palette incl. file/relation, validation, and the field→Base-payload mapping),
+    `CollectionBuilder.tsx` (the table-editor form), `BaseDashboard.tsx` (index +
+    builder + records routes). `BaseModule` is a thin adapter over it. Registry
+    `base` routes → `'' · new · :collection · :collection/:id`.
+- **Applications shows the org's REAL deployed apps on the LIVE PaaS.** The
+  Compute → Applications page was a generic "managed by Hanzo" placeholder over the
+  admin `/paas` inventory. It now drives the live per-org `/v1/platform/*` surface
+  (projects → apps → deployments) through the `/cloud` bearer proxy (org resolved
+  from the Bearer owner — a caller sees only their own apps). New `lib/api/paas.ts`
+  `PaasApi` (projects/apps/deployments CRUD + `deploy` + `listAllApps` aggregate;
+  plain-JSON transport like `functions.ts`), `platform` added to `CLOUD_HEADS`.
+  New `components/products/paas/` `PaasApplications` (real app list with status +
+  source + live URL, a **New app** deploy flow — project + git/image → build →
+  live, and an app detail rail with deployment history + build status + redeploy)
+  + pure `logic.ts` (tested). `ApplicationsModule` is a thin adapter. `StatusTag`
+  learned the PaaS lifecycle words (live/building/deploying/succeeded/queued/…).
+- Verification: `tsc --noEmit` clean; `npm test` **922/922** (76 files; +6
+  subpage-sources, +18 base-builder logic, +12 paas logic, +2 proxy-allow base,
+  +8 match-core subpage routing); `next build` ✓ (all routes). Live visual e2e as
+  Dave (maxpower) is post-deploy.
