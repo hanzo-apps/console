@@ -137,7 +137,7 @@ function PostureCard({ posture }: { posture: ZtPosture }) {
         <PostureRow icon={KeyRound} label="Key exchange" value={posture.kem} />
         <PostureRow icon={Lock} label="Signatures" value={posture.sig} />
         <PostureRow icon={ArrowLeftRight} label="Transport" value={posture.transport} />
-        <PostureRow icon={HardDrive} label="Data plane" value="Object Storage (S3) ⇄ Zero Trust" />
+        <PostureRow icon={HardDrive} label="Data plane" value="S3 ⇄ Zero Trust" />
         <PostureRow
           icon={Activity}
           label="PQ sessions"

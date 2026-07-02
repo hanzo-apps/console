@@ -850,3 +850,21 @@ off `main` (v8.4.4); commit only (CI builds the image).
     tests only exercised `pathIsClean` in isolation).
   - RED refuted (live-probed): rewrite→allow-list bypass, org-forgery, ComboBox ReDoS,
     prompt/spec injection, rewrite shadowing, honest-state.
+
+## Product-release versioning — one umbrella, two build lineages
+
+Hanzo Cloud ships as ONE product under a shared **"Hanzo Cloud &lt;MAJOR.MINOR&gt;"**
+release label (**8.4** today), but the two artifacts keep their OWN correct build
+versions — do NOT try to make them equal:
+
+- **console** (this app) — npm/Next, versioned from `package.json` (8.4.x). CI tags
+  the image `:v<package.json version>`. Its `major.minor` IS the umbrella release.
+- **cloud** (`github.com/hanzoai/cloud`) — a **Go module**, versioned by git tag
+  (v1.786.x). It MUST stay **v1.x.x** forever (the "never bump Go above v1" rule +
+  Go module semantics: v8 would force the `/v8` module path). It ships under the
+  same "Hanzo Cloud 8.4" umbrella, not on 8.x.
+
+The umbrella label has **one source**: the console app version. `next.config.mjs`
+injects `NEXT_PUBLIC_APP_VERSION` from `package.json`; `config.ts` derives
+`branding.release` (major.minor) + `branding.productLine` ("Hanzo Cloud 8.4"),
+shown on the sign-in screen. Never hardcode "8.4" a second time.
