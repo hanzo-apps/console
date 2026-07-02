@@ -146,6 +146,13 @@ export type OverviewContext = {
   range: OverviewRange
   /** Global-admin all-orgs god view. */
   allOrgs?: boolean
+  /**
+   * True when the viewer is a global (cross-tenant) admin. Loaders use this to
+   * SKIP admin-only aggregates (e.g. `/v1/admin/overview`, `/paas/apps`) that a
+   * tenant user's browser would only ever get a 403 from, going straight to the
+   * org-scoped source instead — the board renders the same, minus the console noise.
+   */
+  isGlobalAdmin?: boolean
 }
 
 export type OverviewRange = '24h' | '7d' | '30d'
