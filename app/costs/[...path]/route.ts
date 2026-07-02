@@ -26,6 +26,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { getAdminGate } from '~/lib/server/identity'
+import { pathIsClean } from '~/lib/server/bearer-proxy'
 
 export const runtime = 'nodejs'
 
@@ -47,11 +48,6 @@ function platformOrg(): string {
  *  else 404s here, so the proxy can never become a general commerce tunnel. */
 const ALLOWED = new Set(['costs', 'costs/margin'])
 
-/** A path segment is safe iff it's a real name — no empty, dot-segment, slash, or
- *  percent-escape (a residual `%2e`/`%2f` is a multi-encoding traversal tell). */
-const isSafeSegment = (s: string): boolean =>
-  s.length > 0 && s !== '.' && s !== '..' && !s.includes('/') && !s.includes('\\') && !s.includes('\0') && !/%[0-9a-f]{2}/i.test(s)
-
 const forbidden = () => NextResponse.json({ status: 'error', msg: 'forbidden' }, { status: 403 })
 
 type Ctx = { params: Promise<{ path: string[] }> }
@@ -62,11 +58,14 @@ async function handle(req: NextRequest, ctx: Ctx): Promise<NextResponse> {
   const gate = await getAdminGate(req)
   if (!gate) return forbidden()
 
-  const segs = (await ctx.params).path
-  if (!segs.every(isSafeSegment)) {
+  // Traversal/encoding guard — the SAME rigorous helper the bearer proxy uses
+  // (rejects dot-segments, ANY surviving %XX single/double/N/overlong encoding, and
+  // `..;` matrix-params), so this proxy can never be normalized into another commerce
+  // endpoint. The closed ALLOWED set below is the authoritative backstop.
+  const path = (await ctx.params).path.join('/')
+  if (!pathIsClean(path)) {
     return NextResponse.json({ status: 'error', msg: 'invalid costs path' }, { status: 400 })
   }
-  const path = segs.join('/')
   if (!ALLOWED.has(path)) {
     return NextResponse.json({ status: 'error', msg: 'not found' }, { status: 404 })
   }
