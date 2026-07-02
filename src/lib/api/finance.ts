@@ -1,8 +1,9 @@
 /**
  * Finance API — the SaaS business/finance feed for admin.hanzo.ai.
  *
- * SOURCE: `GET /v1/admin/finance` (the cloud admin aggregate: DigitalOcean billing
- * for cost + commerce for revenue). Like every other admin read it goes through
+ * SOURCE: `GET /v1/admin/finance` (the cloud admin aggregate: commerce /v1/costs
+ * for the multi-vendor COGS breakdown, DigitalOcean for the promo-credit treasury,
+ * and commerce for revenue). Like every other admin read it goes through
  * `originGet` — the console's OWN origin (`<origin>/v1/admin/finance`), which
  * `next.config.mjs` rewrites to the GLOBAL-ADMIN-GATED `app/admin/aggregate` proxy
  * (`getAdminGate`, fail-closed 403, THEN a minted user bearer). Financial data is
@@ -67,9 +68,43 @@ export type FinanceDerived = {
   profitable: boolean
 }
 
+/** One per-vendor COGS line — what WE pay a vendor for a service in the period. */
+export type FinanceVendorCost = {
+  /** e.g. "digitalocean", "openai". */
+  vendor: string
+  /** e.g. "compute", "llm-inference". */
+  service: string
+  /** What we pay, USD cents (>= 0). */
+  amountCents: number
+  /** 'actual' (from the vendor's billing API) | 'estimated' (metered × cost-basis). */
+  source: string
+  /** Honest context (e.g. "no vendor cost API — estimated from metered tokens"). */
+  note: string
+}
+
+/**
+ * The platform COGS view — what WE pay our vendors. Its authority is commerce
+ * /v1/costs (surfaced by cloud): `totalCents` is the whole-platform COGS (the margin
+ * cost) and `vendors` is the per-vendor breakdown (DigitalOcean compute + each LLM
+ * provider we resell). `configured` is false (and every number 0) when commerce
+ * /v1/costs is unreachable — the board then shows the honest not-configured state.
+ *
+ * `digitalocean` is an ORTHOGONAL treasury view (promo-credit remaining + the
+ * burn-down series), NOT part of COGS — commerce tracks what we SPEND with DO, not
+ * our prepaid credit, so it stays a direct DO account read.
+ */
+export type FinanceCost = {
+  configured: boolean
+  error: string
+  period: string
+  totalCents: number
+  vendors: FinanceVendorCost[]
+  digitalocean: FinanceDoCost
+}
+
 /** The whole finance aggregate in one payload. */
 export type Finance = {
-  cost: { digitalocean: FinanceDoCost }
+  cost: FinanceCost
   revenue: FinanceRevenue
   derived: FinanceDerived
   generatedAt: string
@@ -102,6 +137,25 @@ function normalizeDoCost(v: unknown): FinanceDoCost {
   }
 }
 
+function normalizeVendors(v: unknown): FinanceVendorCost[] {
+  return arr(v).map((x) => {
+    const r = obj(x)
+    return { vendor: str(r.vendor), service: str(r.service), amountCents: num(r.amountCents), source: str(r.source), note: str(r.note) }
+  })
+}
+
+function normalizeCost(v: unknown): FinanceCost {
+  const r = obj(v)
+  return {
+    configured: bool(r.configured),
+    error: str(r.error),
+    period: str(r.period),
+    totalCents: num(r.totalCents),
+    vendors: normalizeVendors(r.vendors),
+    digitalocean: normalizeDoCost(r.digitalocean),
+  }
+}
+
 function normalizeRevenue(v: unknown): FinanceRevenue {
   const r = obj(v)
   return {
@@ -129,7 +183,7 @@ function normalizeDerived(v: unknown): FinanceDerived {
 export function normalizeFinance(raw: unknown): Finance {
   const r = obj(raw)
   return {
-    cost: { digitalocean: normalizeDoCost(obj(r.cost).digitalocean) },
+    cost: normalizeCost(r.cost),
     revenue: normalizeRevenue(r.revenue),
     derived: normalizeDerived(r.derived),
     generatedAt: str(r.generatedAt),
