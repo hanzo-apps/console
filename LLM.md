@@ -1049,3 +1049,37 @@ Reconciliation decisions (DRY, one way):
   cloud-origin call). Authenticated visual e2e (the `(dashboard)` modules) is gated
   behind an IAM session → post-deploy; component-mount + the live axe-core scan were
   Playwright-verified locally.
+
+## Bounded upstream timeouts — no request-time server fetch can hang (v8.4.21)
+
+Investigated the "brand host (cloud.lux.network) hangs during render while
+console.hanzo.ai is fast" report. **It does NOT reproduce in the app** — and it
+CANNOT, by design: the page render path (`app/layout.tsx` + `(dashboard)/layout.tsx`,
+the only server components) does ZERO per-brand network fetch. There is no
+`next/headers`, no `cookies()`, no `generateMetadata`, no `server-only` render
+fetch. Brand is resolved from `window.location` in the browser; SSR uses the
+build-time `NEXT_PUBLIC_DEFAULT_HOST`, so the SERVER HTML is byte-identical for
+every brand host (verified: `curl -H 'Host: cloud.lux.network'` and
+`-H 'Host: console.hanzo.ai'` return the SAME md5, `<title>Hanzo Cloud Console</title>`,
+HTTP 200 in ~4-18ms for lux/zoo/pars/hanzo alike). The prod origin difference is
+therefore an ingress/routing artifact, not app SSR (out of scope — app code only).
+
+The one real "no timeout → the route wedges" hazard IS in code: every request-time
+server `fetch()` (the `/v1/*` BFF proxies + IAM/cloud identity resolution) had NO
+upstream timeout, so a reachable-but-silent backend would block that route until
+the client gave up — the exact failure class described. Fixed DRY with ONE
+`src/lib/server/fetch-timeout.ts` (`fetchWithTimeout`): a bounded `AbortSignal`
+COMPOSED with any caller signal (`init.signal`, e.g. `req.signal`), so a request
+aborts on EITHER a client disconnect OR the timeout. Default `10_000`ms, env
+`HANZO_UPSTREAM_TIMEOUT_MS`. On timeout it rejects like an aborted `fetch`, so
+every existing catch turns an infinite hang into the existing honest fallback
+(`resolveUser` → null → 401; proxies → 502). Threaded through `identity.ts` (all
+5 IAM/cloud calls), `bearer-proxy.ts` (the shared proxy engine → cloud/ai/vm/
+tasksd/commerce/superbase), `iam-proxy.ts`, and the custom proxies (`/paas`,
+`/training`, `/admin/kms`, `/billing`, `/billing/topup/wallet`, `/waitlist`). The
+`/nodes` per-brand luxd RPC probe was ALREADY bounded (`NODES_RPC_TIMEOUT_MS`) and
+is left as-is. New `fetch-timeout.test.ts` (6 tests): resolves-before-timeout,
+aborts-on-timeout, aborts-on-caller-signal, already-aborted, timer-cleared, and
+the non-positive opt-out. Verification: `npm run typecheck` 0 errors, `npm test`
+**823/823** (69 files), `next build` green (all routes), and the Host-header curl
+test returns 200 fast for BOTH cloud.lux.network and console.hanzo.ai.
