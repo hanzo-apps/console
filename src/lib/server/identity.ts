@@ -23,6 +23,7 @@ import { type NextRequest } from 'next/server'
 import { brandFromHost } from '~/config'
 import { BRANDS, type Brand } from '~/lib/branding/brands'
 import { emailOnBrand, gateAllows } from './admin-policy'
+import { fetchWithTimeout } from './fetch-timeout'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
 
@@ -125,7 +126,7 @@ async function resolveSessionUser(
 
   let res: Response
   try {
-    res = await fetch(`${CLOUD_API_URL}/v1/iam/get-account`, {
+    res = await fetchWithTimeout(`${CLOUD_API_URL}/v1/iam/get-account`, {
       headers: { cookie, Accept: 'application/json' },
       cache: 'no-store',
     })
@@ -188,7 +189,7 @@ async function iamGetUser(id: string): Promise<UserClaims | null> {
   if (!mintConfigured()) return null
   let res: Response
   try {
-    res = await fetch(`${IAM_URL}/v1/iam/get-user?id=${encodeURIComponent(id)}`, {
+    res = await fetchWithTimeout(`${IAM_URL}/v1/iam/get-user?id=${encodeURIComponent(id)}`, {
       headers: { Authorization: basicAuth(), Accept: 'application/json' },
       cache: 'no-store',
     })
@@ -213,7 +214,7 @@ async function iamCall<T = Record<string, unknown>>(
   query: Record<string, string>,
 ): Promise<T> {
   const qs = new URLSearchParams(query).toString()
-  const res = await fetch(`${IAM_URL}${path}?${qs}`, {
+  const res = await fetchWithTimeout(`${IAM_URL}${path}?${qs}`, {
     method: 'POST',
     headers: { Authorization: basicAuth(), Accept: 'application/json' },
     cache: 'no-store',
@@ -301,7 +302,7 @@ async function iamGetData<T>(path: string, query: Record<string, string>): Promi
   const qs = new URLSearchParams(query).toString()
   let res: Response
   try {
-    res = await fetch(`${IAM_URL}${path}?${qs}`, {
+    res = await fetchWithTimeout(`${IAM_URL}${path}?${qs}`, {
       headers: { Authorization: basicAuth(), Accept: 'application/json' },
       cache: 'no-store',
     })
@@ -320,7 +321,7 @@ async function iamPostBody<T = unknown>(
   body: unknown,
 ): Promise<T> {
   const qs = new URLSearchParams(query).toString()
-  const res = await fetch(`${IAM_URL}${path}${qs ? `?${qs}` : ''}`, {
+  const res = await fetchWithTimeout(`${IAM_URL}${path}${qs ? `?${qs}` : ''}`, {
     method: 'POST',
     headers: { Authorization: basicAuth(), Accept: 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
