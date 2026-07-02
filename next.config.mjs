@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -19,6 +19,12 @@ import { dirname, join } from 'node:path'
  * type-checks too (no error suppression).
  */
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+// Single source of the app version: package.json. Exposed to the browser as
+// NEXT_PUBLIC_APP_VERSION so the shell can render the shared "Hanzo Cloud <MAJOR.MINOR>"
+// product-release label (console app-semver; cloud ships its own Go v1.x under the
+// same umbrella). No second place holds the version.
+const pkgVersion = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')).version
 
 /** Every installed `@hanzogui/*` package, discovered (not hardcoded). */
 function guiPackages() {
@@ -67,6 +73,7 @@ const aiSurfaceRewrites = () => ({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  env: { NEXT_PUBLIC_APP_VERSION: pkgVersion },
   transpilePackages: guiPackages(),
   rewrites: aiSurfaceRewrites,
   experimental: {
