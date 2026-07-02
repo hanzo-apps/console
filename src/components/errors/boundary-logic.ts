@@ -23,7 +23,15 @@
  *    window, never looping when a chunk is genuinely gone.
  */
 
-/** True for a webpack/Next dynamic chunk (JS or CSS) load failure. */
+/**
+ * True for a webpack/Next dynamic chunk (JS or CSS) load failure — including the
+ * stale-deploy case where a 404'd chunk URL falls through to the SPA and the
+ * browser parses HTML as JS ("Unexpected token '<'" / module-script failed). In a
+ * PRODUCTION build user code never throws "Unexpected token '<'" at runtime (that
+ * is a build-time syntax error), so at runtime it is a chunk skew — recover, don't
+ * crash. Kept in sync with `ChunkGuard`'s window-level pattern (one definition of
+ * "this is a chunk skew" for both the boundary and the global listeners).
+ */
 export function isChunkLoadError(e: unknown): boolean {
   if (!e) return false
   const name = typeof e === 'object' && e !== null && 'name' in e ? String((e as { name?: unknown }).name) : ''
@@ -33,7 +41,10 @@ export function isChunkLoadError(e: unknown): boolean {
     /ChunkLoadError/i.test(msg) ||
     /Loading (?:CSS )?chunk [\w./-]+ failed/i.test(msg) ||
     /(?:Failed to fetch|error loading|Importing a module script failed).*dynamically imported module/i.test(msg) ||
-    /Failed to fetch dynamically imported module/i.test(msg)
+    /Failed to fetch dynamically imported module/i.test(msg) ||
+    /Importing a module script failed/i.test(msg) ||
+    // Stale chunk URL served the HTML shell → parsed as JS.
+    /Unexpected token '<'|expected expression, got '<'|Unexpected token <|<!DOCTYPE/i.test(msg)
   )
 }
 

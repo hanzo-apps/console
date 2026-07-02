@@ -14,14 +14,32 @@ import { useEffect } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
-import { isChunkLoadError } from '~/components/errors/boundary-logic'
+import { isChunkLoadError, shouldReloadForChunk } from '~/components/errors/boundary-logic'
+
+/** Shared once-per-window guard key (same as ProductErrorBoundary — never double-reload). */
+const RELOAD_AT_KEY = 'hz.console.chunkReloadAt'
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const chunk = isChunkLoadError(error)
+
   useEffect(() => {
     console.error('[console] dashboard route error:', error)
-  }, [error])
+    // A chunk skew self-heals: reload ONCE per window to pull the fresh HTML +
+    // current chunks (same recovery the product boundary does), so a stale-deploy
+    // crash at the segment level auto-recovers instead of stranding a manual card.
+    if (!chunk || typeof window === 'undefined') return
+    try {
+      const raw = window.sessionStorage.getItem(RELOAD_AT_KEY)
+      const last = raw ? Number(raw) : null
+      if (shouldReloadForChunk(Date.now(), last)) {
+        window.sessionStorage.setItem(RELOAD_AT_KEY, String(Date.now()))
+        window.location.reload()
+      }
+    } catch {
+      /* sessionStorage blocked (private mode) — fall through to the manual card */
+    }
+  }, [error, chunk])
 
-  const chunk = isChunkLoadError(error)
   return (
     <YStack p="$4">
       <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" maxWidth={640} bg="$color1">
