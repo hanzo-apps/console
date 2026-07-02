@@ -25,10 +25,12 @@
 import { ApiError, restGet } from './client'
 import type { CloudBalance } from './wallet'
 
-/** Same-origin URL for the `/billing/*` server proxy (NOT the `/v1` gateway). */
+/** Same-origin URL for the billing DATA proxy (`/billing/v1/*` → commerce; NOT the
+ *  `/v1` gateway). Namespaced under `/billing/v1/` so it never shadows the billing
+ *  UI tab URLs (`/billing/reports`, …), which fall through to the SPA. */
 const billingUrl = (path: string): string => {
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${origin}/billing/${path.replace(/^\/+/, '')}`
+  return `${origin}/billing/v1/${path.replace(/^\/+/, '')}`
 }
 
 /**

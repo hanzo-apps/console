@@ -963,3 +963,33 @@ findings fixed; the fixes are defense-in-depth + correctness, no behavior regres
   admin-aggregate allow-list, +4 agentUsageFor L1 collision, +4 capRows L2);
   `next build` ✓ Compiled successfully — the new `/admin/aggregate/[...path]` route
   is registered. Live re-test (org=all → 403 as a customer / org-admin) is post-deploy.
+
+## Billing tab URLs unshadowed — data proxy namespaced under /billing/v1/* (v8.4.16)
+
+Live-verifying v8.4.15 surfaced a PRE-EXISTING routing collision that made every
+billing tab except Overview unreachable in the deployed app: `app/billing/[...path]/
+route.ts` (the per-tenant commerce DATA proxy) claimed the WHOLE `/billing/*` URL
+space, and a Next route handler always wins over the catch-all page for a matching
+segment. So `/billing/reports`, `/billing/budgets`, `/billing/invoices`, `/billing/
+subscriptions`, `/billing/payment-methods`, `/billing/credits` — the tabbed
+`BillingModule` sub-routes (`router.push('/billing/<tab>')`) — resolved to the proxy
+and returned commerce's `{"error":"not found"}` (or, for `subscriptions`/`payment-
+methods`/`invoices`, raw ledger JSON) instead of the UI. This blocked live
+verification of the v8.4.15 Reports cost-dimension (product/agent) surface.
+
+Fix (one-way, minimal): the DATA proxy is namespaced under **`/billing/v1/*`**
+(matching the "always `/v1/`" convention), so it can never share path space with a
+UI tab slug; the tab URLs fall through to the SPA (`app/(dashboard)/[...slug]`).
+- Route handlers moved: `app/billing/[...path]` → `app/billing/v1/[...path]`,
+  `app/billing/topup/wallet` → `app/billing/v1/topup/wallet`. The forward target is
+  unchanged (`commerce/v1/billing/<path>` — the moved `v1` is a static URL segment,
+  not part of the `[...path]` array).
+- Client callers prepend `v1/`: `billingUrl()` in `lib/api/billing.ts` +
+  `lib/api/aimetrics.ts` (both build `/billing/v1/<path>`), and `wallet.ts`
+  (`appUrl('billing/v1/balance')`, `appUrl('billing/v1/topup/wallet')`).
+- Tests updated to the new data path: `aimetrics.test.ts` (asserts
+  `/billing/v1/usage`), `e2e/billing-isolation.spec.ts` (fetches `/billing/v1/<p>`).
+  UI nav paths (`/billing/reports`, …) are unchanged — they now render the tab.
+- Verification: `tsc --noEmit` clean; `npm test` **874/874** (70 files); `next build`
+  ✓ — route table shows `/billing/v1/[...path]`, `/billing/v1/topup/wallet`, and the
+  `/[...slug]` catch-all that now serves the billing tabs. Live confirm post-deploy.
