@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Storage — the "Hanzo Object Storage" product surface (S3 file manager). A real
+ * Storage — the "Hanzo S3" product surface (S3 file manager). A real
  * file manager over the org-scoped `/v1/s3` control plane in the unified cloud
  * binary (`hanzoai/cloud` clients/s3): the browser calls the same-origin `/cloud`
  * user-bearer proxy, the server scopes every op to the caller's own org, and this
@@ -181,7 +181,7 @@ function BucketList({ onOpen }: { onOpen: (bucket: string) => void }) {
   return (
     <YStack gap="$4">
       <PageHeader
-        title="Object Storage"
+        title="S3"
         subtitle="S3-compatible buckets and objects, scoped to your organization."
         actions={
           <PrimaryButton icon={<Plus size={15} />} onPress={() => setCreating(true)}>

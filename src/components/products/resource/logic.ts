@@ -2,7 +2,7 @@
  * Managed-resource domain logic — PURE, no UI, no transport (types only, erased).
  *
  * ONE provisioning contract (`POST/GET/DELETE /v1/<kind>`) backs every Hanzo data
- * product (SQL, KV, Datastore, Object Storage, Vector, DocDB). The list/detail API
+ * product (SQL, KV, Datastore, S3, Vector, DocDB). The list/detail API
  * carries lifecycle facts only — name, status, host/port, the optional username/
  * database, and createdAt. It does NOT carry content/usage metrics (rows, keys,
  * objects, storage bytes, queries, latency, cost): those are the shape of the

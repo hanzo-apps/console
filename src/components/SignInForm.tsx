@@ -56,6 +56,9 @@ function CardShell({ children }: { children: React.ReactNode }) {
         </YStack>
         {children}
       </Card>
+      <Text fontSize="$1" color="$color9" text="center" mt="$3">
+        {branding.productLine}
+      </Text>
     </YStack>
   )
 }
