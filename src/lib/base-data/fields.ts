@@ -35,6 +35,10 @@ export interface BaseCollection {
   name?: string
   fields?: BaseField[]
   schema?: BaseField[]
+  /** `base` | `auth` | `view` — a `view` collection is read-only. */
+  type?: string
+  /** Internal Base collection (`_superusers`, `_mfas`, …) — hidden from the browser. */
+  system?: boolean
 }
 
 /**
@@ -84,17 +88,20 @@ const isRenderable = (f: BaseField): boolean =>
 /** Translate ONE Base field to a @hanzo/data `FieldDefinition`. */
 function toFieldDefinition(f: BaseField): FieldDefinition {
   const base = { name: f.name, label: humanize(f.name) }
+  // The only system field that survives `isRenderable` is `id` — server-owned, so
+  // it renders as a value everywhere and never enters edit mode (no id input).
+  const ro = f.system ? { readOnly: true as const } : {}
 
   if (f.type === 'select') {
     const options: SelectOption[] = valuesOf(f).map((v) => ({ value: v, label: v }))
-    return { ...base, type: maxSelectOf(f) > 1 ? 'multiSelect' : 'select', metadata: { options } }
+    return { ...base, type: maxSelectOf(f) > 1 ? 'multiSelect' : 'select', metadata: { options }, ...ro }
   }
   if (f.type === 'autodate') {
     // Server-assigned create/update timestamps are never user-editable.
     return { ...base, type: 'dateTime', readOnly: true }
   }
   // Unmapped (or future) types render as raw JSON — honest, never a wrong guess.
-  return { ...base, type: TYPE_MAP[f.type] ?? 'json' }
+  return { ...base, type: TYPE_MAP[f.type] ?? 'json', ...ro }
 }
 
 /**

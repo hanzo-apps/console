@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { normalizePrompt, normalizePrompts, normalizeMetricRows } from './prompts'
+import { normalizePrompt, normalizePrompts, normalizeMetricRows, normalizeCatalog, normalizeCatalogEntry } from './prompts'
 
 describe('normalizePrompt', () => {
   it('drops a record with no name/id/slug', () => {
@@ -69,5 +69,34 @@ describe('normalizeMetricRows', () => {
   it('never throws on junk', () => {
     expect(normalizeMetricRows(null)).toEqual([])
     expect(normalizeMetricRows(42)).toEqual([])
+  })
+})
+
+describe('normalizeCatalogEntry', () => {
+  it('drops an entry with no name or no body', () => {
+    expect(normalizeCatalogEntry({})).toBeNull()
+    expect(normalizeCatalogEntry({ name: 'a' })).toBeNull()
+    expect(normalizeCatalogEntry({ prompt: 'x' })).toBeNull()
+  })
+
+  it('reads the body from prompt, then content; defaults type to text', () => {
+    expect(normalizeCatalogEntry({ name: 'a', prompt: 'hi' })).toEqual({
+      name: 'a', prompt: 'hi', type: 'text', labels: undefined, tags: undefined,
+    })
+    expect(normalizeCatalogEntry({ name: 'b', content: 'yo', type: 'chat', tags: ['t'] })).toMatchObject({
+      name: 'b', prompt: 'yo', type: 'chat', tags: ['t'],
+    })
+  })
+})
+
+describe('normalizeCatalog', () => {
+  it('reads the data envelope and drops invalid entries', () => {
+    const out = normalizeCatalog({ data: [{ name: 'a', prompt: 'x' }, { name: 'b' }, { prompt: 'y' }] })
+    expect(out.map((e) => e.name)).toEqual(['a'])
+  })
+
+  it('never throws on junk', () => {
+    expect(normalizeCatalog(null)).toEqual([])
+    expect(normalizeCatalog(7)).toEqual([])
   })
 })
