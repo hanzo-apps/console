@@ -683,9 +683,9 @@ export const catalog: CatalogEntry[] = [
     // the provisioning surface (which allocates the s3 RESOURCE): a bucket
     // created here or there is browsable here, same org namespace.
     id: 's3',
-    label: 'Object Storage',
+    label: 'S3',
     icon: HardDrive,
-    description: 'Managed object storage — S3-compatible buckets and objects.',
+    description: 'Managed S3-compatible object storage — buckets and objects, scoped to your org.',
     gcp: 'Cloud Storage',
     category: 'Data',
     status: 'enabled',
