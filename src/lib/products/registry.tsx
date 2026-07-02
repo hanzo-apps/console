@@ -46,6 +46,9 @@ Product catalog — the single source of truth for the unified console.
  */
 import type { ComponentType } from 'react'
 import { Users,
+  Building2,
+  Accessibility,
+  LifeBuoy,
   Brain,
   Server,
   Bot,
@@ -185,6 +188,9 @@ import { GpusModule, GpusOverview } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
+import { CrmModule } from '~/components/products/CrmModule'
+import { CmsModule } from '~/components/products/CmsModule'
+import { AccessibilityModule } from '~/components/products/AccessibilityModule'
 import { TeamModule } from '~/components/products/TeamModule'
 import { ProfileModule } from '~/components/products/ProfileModule'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
@@ -1496,6 +1502,90 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/bot',
     kind: 'module',
     routes: [{ path: '', component: BotModule }],
+  },
+  {
+    // CRM — the first Hanzo Business-OS brick, over the native-Go cloud `/v1/crm`
+    // surface (cloud clients/crm on Base/SQLite: companies/contacts/opportunities,
+    // a port of Twenty's core model). Per-org through the user-bearer /cloud proxy.
+    id: 'crm',
+    label: 'CRM',
+    icon: Building2,
+    description: 'Companies, contacts, and opportunities — your Business-OS CRM, per org.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    docs: `${DOCS}/crm`,
+    kind: 'module',
+    // Overview ('') defaults to Companies; the three collections render via the
+    // `:tab` route the module targets (`/crm/{companies,contacts,opportunities}`).
+    routes: [
+      { path: '', component: CrmModule },
+      { path: ':tab', component: CrmModule },
+    ],
+    subpages: [
+      { slug: 'companies', label: 'Companies' },
+      { slug: 'contacts', label: 'Contacts' },
+      { slug: 'opportunities', label: 'Opportunities' },
+    ],
+  },
+  {
+    // Content — surfaces the REAL, live Content Studio (Payload headless CMS at
+    // cms.<brand>, confirmed live at cms.hanzo.ai/admin). IAM-SSO; white-label host.
+    // No fabricated rows — an honest in-console home that opens the Studio.
+    id: 'cms',
+    label: 'Content',
+    icon: FileText,
+    description: 'Headless CMS — pages, posts, and media in your Content Studio, with IAM SSO.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cms',
+    docs: `${DOCS}/cms`,
+    kind: 'module',
+    routes: [{ path: '', component: CmsModule }],
+  },
+  {
+    // ERP — accounting, inventory, and HR. The primitive is a one-click deploy
+    // (ERPNext-based hanzoai/erp); no per-org console surface yet, so this is an
+    // HONEST coming-soon (waitlist + API/CLI), never a fake product.
+    id: 'erp',
+    label: 'ERP',
+    icon: Boxes,
+    description: 'Accounting, inventory, and HR — your Business-OS ERP.',
+    category: 'Apps',
+    status: 'soon',
+    repo: 'hanzoai/erp',
+    docs: `${DOCS}/erp`,
+    kind: 'module',
+    routes: soonRoutes,
+  },
+  {
+    // Help Center — a customer helpdesk (tickets + knowledge base). One-click
+    // deploy (hanzoai/helpdesk); no per-org console surface yet → HONEST coming-soon.
+    id: 'helpdesk',
+    label: 'Help Center',
+    icon: LifeBuoy,
+    description: 'Customer support — tickets and a knowledge base for your users.',
+    category: 'Apps',
+    status: 'soon',
+    repo: 'hanzoai/helpdesk',
+    docs: `${DOCS}/helpdesk`,
+    kind: 'module',
+    routes: soonRoutes,
+  },
+  {
+    // Accessibility — a Wix-style WCAG checker for the site Dave is building. Runs
+    // Deque's axe-core against the current page 100% client-side (engine lazy-loaded
+    // into its own chunk); pure sort/summarize logic lives in ~/lib/a11y/scan.
+    id: 'accessibility',
+    label: 'Accessibility',
+    icon: Accessibility,
+    description: 'Scan the current page for WCAG accessibility issues — axe-core, in your browser.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/console',
+    docs: `${DOCS}/accessibility`,
+    kind: 'module',
+    routes: [{ path: '', component: AccessibilityModule }],
   },
   {
     id: 'marketplace',
