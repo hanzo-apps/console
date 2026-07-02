@@ -21,11 +21,13 @@ import { Building2, Check, ChevronsUpDown, Plus, Search } from '@hanzogui/lucide
 
 import { currentOrg, switchOrg, filterOrgs } from '~/lib/org-scope'
 import { IamAdminApi, type Organization } from '~/lib/api'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
 
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 export function OrgSwitcher() {
   const currentId = currentOrg()
+  const isGlobalAdmin = useIsGlobalAdmin()
   const [orgs, setOrgs] = useState<Organization[]>([])
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -35,6 +37,14 @@ export function OrgSwitcher() {
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
+    // The cross-tenant org list (`/admin/iam/get-organizations?owner=admin`) is
+    // server-gated to global admins; a tenant user only ever 403s it. Don't fire it
+    // for them — they simply see their current org (synthesized below) and can still
+    // "Create organization". Global admins get the full switchable list.
+    if (!isGlobalAdmin) {
+      setOrgs([])
+      return
+    }
     let live = true
     IamAdminApi.organizations()
       .then((p) => {
@@ -47,7 +57,7 @@ export function OrgSwitcher() {
     return () => {
       live = false
     }
-  }, [])
+  }, [isGlobalAdmin])
 
   // Always include the current org so the switcher is meaningful even when the
   // (admin-gated) list is empty for a tenant.

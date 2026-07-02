@@ -5,15 +5,18 @@
  *   1. default: the host-derived BRAND mark (inline SVG, currentColor) + wordmark.
  *      White-label by hostname — a lux/zoo/pars host NEVER renders the Hanzo mark.
  *   2. override: the selected org's own logo (IAM `organization.logo`) when set,
- *      resolved once per org per session (cached) and failing safe to the brand
- *      mark if IAM can't be read (e.g. a non-admin session 403s the gated proxy).
+ *      resolved once per org per session (cached). A tenant reads its OWN org via
+ *      the org-scoped `/org/iam` proxy (any member may); a global admin reads via
+ *      the cross-tenant `/admin/iam` proxy — so a tenant never fires the admin-gated
+ *      `get-organization` that only 403s. Either way it fails safe to the brand mark.
  */
 import { useEffect, useState } from 'react'
 import { Text, XStack } from '@hanzo/gui'
 
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
-import { IamAdminApi } from '~/lib/api'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { IamAdminApi, TeamApi } from '~/lib/api'
 import { getBrand } from '~/lib/branding/brands'
 
 /** Per-org logo cache for the session ('' = checked, none). */
@@ -40,6 +43,7 @@ function BrandMark({ size }: { size: number }) {
 
 export function BrandLogo({ size = 22, wordmark = true }: { size?: number; wordmark?: boolean }) {
   const { account } = useSession()
+  const isGlobalAdmin = useIsGlobalAdmin()
   const orgName = account?.organization || account?.owner || config.iamOrgName
   const [logo, setLogo] = useState<string>(() => orgLogoCache.get(orgName) ?? '')
 
@@ -49,7 +53,12 @@ export function BrandLogo({ size = 22, wordmark = true }: { size?: number; wordm
       return
     }
     let live = true
-    IamAdminApi.organization(orgName)
+    // A global admin reads any org via the cross-tenant `/admin/iam` proxy; a tenant
+    // reads its OWN org via the org-scoped `/org/iam` proxy (which authorizes any
+    // member). This keeps the tenant's own-org logo working without firing the
+    // admin-gated `get-organization` that would only 403 in the browser console.
+    const fetchOrg = isGlobalAdmin ? IamAdminApi.organization(orgName) : TeamApi.organization(orgName)
+    fetchOrg
       .then((o) => {
         const l = typeof o.logo === 'string' ? o.logo : ''
         orgLogoCache.set(orgName, l)
@@ -62,7 +71,7 @@ export function BrandLogo({ size = 22, wordmark = true }: { size?: number; wordm
     return () => {
       live = false
     }
-  }, [orgName])
+  }, [orgName, isGlobalAdmin])
 
   const wordmarkText = `${getBrand().brandName.replace(' Cloud', '')} Console`
 
