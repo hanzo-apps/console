@@ -148,6 +148,31 @@ export function buildBuilderUrl(
   return url.toString()
 }
 
+/**
+ * The result of kicking off a deploy — projectsvc's deployment/project view. A
+ * git deploy (a forked template carries a linked repo) returns 202 `queued`/
+ * `building` with no `liveUrl` yet; poll `TemplatesApi.status()` for `live` + the
+ * URL. An artifact/fast path can come back `live` immediately.
+ */
+export type DeployResult = {
+  status: string // queued | building | uploading | live | error
+  liveUrl?: string
+  message?: string
+}
+
+/** Normalize projectsvc's deployment (or project) view to a `DeployResult`. */
+export function normalizeDeployResult(raw: unknown): DeployResult {
+  const r = asRecord(raw)
+  return {
+    status: str(r.status) ?? 'building',
+    liveUrl: str(r.liveUrl),
+    message: str(r.message),
+  }
+}
+
+/** True once a project/deploy is serving (has a live URL or a terminal live status). */
+export const isLive = (status?: string, liveUrl?: string): boolean =>
+  !!liveUrl || (status ?? '').toLowerCase() === 'live'
 /** Group templates by category, categories alphabetized, preserving list order within each. */
 export function groupByCategory(templates: Template[]): [string, Template[]][] {
   const byCat = new Map<string, Template[]>()
@@ -184,4 +209,20 @@ export const TemplatesApi = {
       if (!p) throw new ApiError('Fork returned an unexpected project shape')
       return p
     }),
+
+  /**
+   * Deploy a forked project live (`POST /v1/projects/{slug}/deploy`). A forked
+   * template carries a linked repo (the gallery source), so we use the GIT deploy
+   * mode (`{source:'git'}`, Content-Type JSON): projectsvc records a build (202
+   * `queued`) and CI ships dist/ to S3, then flips the project `live` with a
+   * `liveUrl`. Returns the initial deploy status; poll `status()` for `live`.
+   */
+  deploy: (slug: string): Promise<DeployResult> =>
+    restPost<unknown>(originV1Url(`projects/${encodeURIComponent(slug)}/deploy`), {
+      source: 'git',
+    }).then(normalizeDeployResult),
+
+  /** One project's current state (`GET /v1/projects/{slug}`) — polls draft→building→live. */
+  status: (slug: string): Promise<ForkedProject | null> =>
+    restGet<unknown>(originV1Url(`projects/${encodeURIComponent(slug)}`)).then(normalizeForkedProject),
 }
