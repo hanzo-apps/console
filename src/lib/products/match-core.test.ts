@@ -174,19 +174,41 @@ describe('productSubpages — Overview + specifics + uniform base set', () => {
   })
 })
 
-describe('resolveProductView — route wins, known sub-pages stub, else 404 (ask 2)', () => {
+describe('resolveProductView — base sub-pages are the shared per-product view (ask 2)', () => {
   const view = (slug: string[]) => resolveProductView(CATALOG, MODULES, slug)
 
-  it('renders a real route (index and :tab) when one matches', () => {
+  it('renders a real route for the index and a declared :tab specific', () => {
     expect(view(['models']).kind).toBe('route')
-    expect(view(['models', 'routing']).kind).toBe('route') // :tab catches it
+    expect(view(['models', 'routing']).kind).toBe('route') // declared specific → :tab
   })
-  it('stubs an undeclared BASE sub-page on a single-screen product', () => {
+  it('routes an undeclared BASE sub-page to the shared per-product sub-page (single-screen)', () => {
     const v = view(['vpc', 'status'])
-    expect(v.kind).toBe('stub')
-    if (v.kind === 'stub') expect(v.subpage.slug).toBe('status')
+    expect(v.kind).toBe('subpage')
+    if (v.kind === 'subpage') expect(v.subpage.slug).toBe('status')
   })
-  it('stubs a DECLARED specific that has no route yet (Tasks › Queues)', () => {
+  it('a :tab route NEVER swallows a base slug — Metrics/Status is the real per-product view', () => {
+    // models declares only Routing; status/logs/metrics are NOT its specifics, so
+    // they render the shared per-product sub-page, not the module's default :tab.
+    expect(view(['models', 'status']).kind).toBe('subpage')
+    expect(view(['models', 'metrics']).kind).toBe('subpage')
+    expect(view(['models', 'logs']).kind).toBe('subpage')
+  })
+  it('a product that OWNS a base slug as a declared specific keeps its bespoke route', () => {
+    // e.g. Embeddings › Settings / Prompts › Metrics — the product handles it.
+    const emb = mod('emb', {
+      subpages: [{ slug: 'settings', label: 'Settings' }],
+      routes: [
+        { path: '', component: C },
+        { path: ':tab', component: C },
+      ],
+    })
+    const cat = [emb]
+    const mods = cat.map((e) => e as unknown as ProductModule)
+    expect(resolveProductView(cat, mods, ['emb', 'settings']).kind).toBe('route')
+    // …but an UNowned base slug on the same product is still the shared view.
+    expect(resolveProductView(cat, mods, ['emb', 'status']).kind).toBe('subpage')
+  })
+  it('stubs a DECLARED non-base specific that has no route yet (Tasks › Queues)', () => {
     const v = view(['tasks', 'queues'])
     expect(v.kind).toBe('stub')
     if (v.kind === 'stub') expect(v.subpage.label).toBe('Queues')
@@ -197,11 +219,15 @@ describe('resolveProductView — route wins, known sub-pages stub, else 404 (ask
   })
 })
 
-describe('subpageIsWired — mirrors the render (route vs. stub)', () => {
-  it('is wired for the index and a :tab specific, not for an unrouted sub-page', () => {
+describe('subpageIsWired — base sub-pages are always wired (real per-product view)', () => {
+  it('wires the index, a :tab specific, and EVERY base slug; not an unrouted non-base specific', () => {
     expect(subpageIsWired(MODULES, 'models', '')).toBe(true)
     expect(subpageIsWired(MODULES, 'models', 'routing')).toBe(true)
-    expect(subpageIsWired(MODULES, 'vpc', 'status')).toBe(false)
+    // Base slugs render the shared per-product sub-page → always wired (never dimmed).
+    expect(subpageIsWired(MODULES, 'vpc', 'status')).toBe(true)
+    expect(subpageIsWired(MODULES, 'vpc', 'metrics')).toBe(true)
+    expect(subpageIsWired(MODULES, 'models', 'settings')).toBe(true)
+    // A declared non-base specific with no route yet is still honestly not wired.
     expect(subpageIsWired(MODULES, 'tasks', 'queues')).toBe(false)
   })
 })
