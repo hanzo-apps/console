@@ -69,18 +69,33 @@ async function signIn(page: Page) {
   await page.waitForLoadState('domcontentloaded')
 }
 
+// Sign in ONCE and reuse the session for all 94 pages. A per-test login (94×)
+// trips IAM's "too many login attempts" rate-limit around page 35, which is a
+// SECURITY FEATURE working correctly — not a page failure. One shared context
+// signs in once, then every page reuses the cookie. Serial so they share it.
+test.describe.configure({ mode: 'serial' })
+
 test.describe('Hanzo Cloud Console — every page renders + screenshot', () => {
   test.skip(!PASSWORD, 'HANZO_PASSWORD not set — skipping authenticated screenshot pass')
 
-  // One shared signed-in context for the whole file (fast).
-  test.beforeEach(async ({ page }) => {
+  let ctx: import('@playwright/test').BrowserContext
+  let page: Page
+
+  test.beforeAll(async ({ browser }) => {
+    ctx = await browser.newContext()
+    page = await ctx.newPage()
     await signIn(page)
   })
 
+  test.afterAll(async () => {
+    await ctx?.close()
+  })
+
   for (const id of PAGES) {
-    test(`page: /${id}`, async ({ page }) => {
+    test(`page: /${id}`, async () => {
       const errors: string[] = []
-      page.on('pageerror', (e) => errors.push(String(e)))
+      const onErr = (e: Error) => errors.push(String(e))
+      page.on('pageerror', onErr)
 
       const res = await page.goto(`${BASE_URL}/${id}`, { waitUntil: 'domcontentloaded' })
       // Route must not 5xx.
@@ -98,6 +113,7 @@ test.describe('Hanzo Cloud Console — every page renders + screenshot', () => {
 
       await page.screenshot({ path: `e2e/screenshots/${id}.png`, fullPage: true })
 
+      page.off('pageerror', onErr)
       // Surface (don't fail on) any console page errors for triage.
       if (errors.length) console.log(`⚠ /${id} pageerror: ${errors.join(' | ').slice(0, 200)}`)
     })
