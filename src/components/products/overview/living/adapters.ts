@@ -18,6 +18,7 @@
  */
 import type { CloudUsageOverview } from '~/lib/api/usage'
 import type { AdminOverview } from '~/lib/api/admin-overview'
+import type { Margin } from '~/lib/api/costs'
 import type { PlatformApp } from '~/lib/api/platform'
 import type { ServerlessFunction, FunctionsMetrics, OverviewStats } from '~/lib/api/functions'
 import type { OverviewData, OverviewEvent, OverviewHealth, OverviewPoint } from './config'
@@ -79,6 +80,35 @@ export function fromAdminOverview(ov: AdminOverview): OverviewData {
   d.alerts = ov.alerts.map((a) => ({ id: a.id, severity: a.severity, title: a.title, detail: a.detail }))
   d.health = ov.health.map((h): OverviewHealth => ({ service: h.service, health: h.health, detail: h.detail }))
   return d
+}
+
+/**
+ * Map the vendor-COGS margin payload (commerce `/v1/costs/margin`) onto the COGS +
+ * margin slice of `OverviewData` — the keys the business board's COGS/margin tiles
+ * read (`cogsCents`, `marginCents`, `grossMarginPct`) plus the `cogsByVendor`
+ * distribution (the vendor donut). PURE, and MERGED onto an existing `OverviewData`
+ * so it composes with `fromAdminOverview`/`fromCloudUsage` (COGS beside revenue on
+ * ONE board). Fabricates nothing: no vendor lines → an empty donut; the tiles
+ * render honest em-dashes. Returns the same object it was given (mutated) for a DRY
+ * fold in the config loader.
+ */
+export function mergeCosts(d: OverviewData, m: Margin): OverviewData {
+  d.kpi.cogsCents = { value: m.cogsCents }
+  d.kpi.marginCents = { value: m.marginCents }
+  d.kpi.grossMarginPct = { value: m.grossMarginPct }
+  // Revenue may already be on the board (from the admin/usage source); only fill it
+  // from the margin payload when it's absent, so we never clobber a richer source.
+  if (d.kpi.revenue === undefined && m.revenueCents > 0) d.kpi.revenue = { value: m.revenueCents }
+  const slices = m.vendors
+    .filter((v) => v.amountCents > 0)
+    .map((v) => ({ label: v.vendor, value: v.amountCents, sub: v.source === 'estimated' ? `${v.service} · est.` : v.service }))
+  if (slices.length) d.distribution.cogsByVendor = slices
+  return d
+}
+
+/** Build a COGS-only `OverviewData` from a margin payload (when no other source is present). */
+export function fromCosts(m: Margin): OverviewData {
+  return mergeCosts(empty(), m)
 }
 
 /**

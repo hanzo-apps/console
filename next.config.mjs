@@ -78,6 +78,12 @@ const aiSurfaceRewrites = () => ({
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/v1/${h}/:path*` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}`, destination: `/admin/aggregate/${h}` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}/:path*`, destination: `/admin/aggregate/${h}/:path*` })),
+    // Vendor COGS (commerce /v1/costs) → the GLOBAL-ADMIN-GATED `app/costs` proxy
+    // (getAdminGate, fail-closed 403, THEN the commerce service token). Platform
+    // god-view; NOT the per-tenant `/billing` proxy. The client calls the clean
+    // same-origin `/v1/costs*`; the proxy re-validates the least-privilege head list.
+    { source: '/v1/costs', destination: '/costs/costs' },
+    { source: '/v1/costs/:path*', destination: '/costs/costs/:path*' },
   ],
 })
 

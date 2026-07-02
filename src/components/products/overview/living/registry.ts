@@ -25,14 +25,15 @@
  * mismatch renders an honest empty tile (never a crash), so over-declaring a tile a
  * slow backend hasn't filled yet is safe.
  */
-import { Activity, Building2, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, Layers, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
+import { Activity, Building2, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, Layers, Percent, PiggyBank, Receipt, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
 
 import { UsageApi } from '~/lib/api/usage'
 import { AdminApi } from '~/lib/api/admin-overview'
+import { CostsApi } from '~/lib/api/costs'
 import { PlatformApi } from '~/lib/api/platform'
 import { FunctionsApi, deriveOverview } from '~/lib/api/functions'
 import type { LivingOverviewConfig, OverviewData, OverviewRange } from './config'
-import { fromAdminOverview, fromCloudUsage, fromFunctions, healthFromApps } from './adapters'
+import { fromAdminOverview, fromCloudUsage, fromFunctions, healthFromApps, mergeCosts } from './adapters'
 
 /** The cloud-usage range key the commerce ledger adapter expects (identical set). */
 const usageRange = (r: OverviewRange): '24h' | '7d' | '30d' => r
@@ -134,42 +135,69 @@ const adminBusinessOverview: LivingOverviewConfig = {
       { tile: 'metric', key: 'orgs', label: 'Active orgs', icon: Building2 },
       { tile: 'metric', key: 'customers', label: 'Customers', icon: Users },
     ],
+    // COGS + MARGIN — what WE pay vendors (DO + the LLM providers we resell) beside
+    // revenue, and revenue − COGS. Honest-empty (em-dash) until /v1/costs flows.
+    [
+      { tile: 'metric', key: 'cogsCents', label: 'COGS', icon: Receipt, unit: 'cents' },
+      { tile: 'metric', key: 'marginCents', label: 'Margin', icon: PiggyBank, unit: 'cents' },
+      { tile: 'metric', key: 'grossMarginPct', label: 'Gross margin', icon: Percent, unit: 'pct' },
+    ],
     [
       { tile: 'timeseries', key: 'revenue', title: 'Revenue over time', kind: 'bar', unit: 'cents' },
       { tile: 'timeseries', key: 'spendCents', title: 'Usage cost over time', unit: 'cents' },
     ],
     [
       { tile: 'distribution', key: 'revenue', title: 'Revenue by product', centerLabel: 'total', unit: 'cents' },
-      { tile: 'distribution', key: 'plans', title: 'Subscription / plan mix', centerLabel: 'plans' },
+      { tile: 'distribution', key: 'cogsByVendor', title: 'COGS by vendor', centerLabel: 'total', unit: 'cents' },
     ],
     [
+      { tile: 'distribution', key: 'plans', title: 'Subscription / plan mix', centerLabel: 'plans' },
       { tile: 'distribution', key: 'topAgents', title: 'Top agents & bots by cost', centerLabel: 'total', unit: 'cents' },
-      { tile: 'alerts', title: 'Business alerts' },
     ],
     [
       { tile: 'activity', title: 'Live platform activity', empty: 'Platform activity appears here as it happens.' },
       { tile: 'health', title: 'Fleet health', empty: 'Service health appears once the operator reports.' },
     ],
+    [{ tile: 'alerts', title: 'Business alerts' }],
   ],
   load: async ({ range }) => {
+    // Vendor COGS + margin (commerce /v1/costs). Best-effort + orthogonal to the
+    // revenue source: a failure (/costs unrouted, COMMERCE_TOKEN unset → 501) leaves
+    // the COGS/margin tiles honest-empty while the rest of the board still renders.
+    const data = await loadBusinessBoard(range)
     try {
-      const ov = await AdminApi.overview({ range, allOrgs: true, activityLimit: 40 })
-      const data = fromAdminOverview(ov)
-      return data.health.length ? data : withHealth(data)
+      mergeCosts(data, await CostsApi.margin())
     } catch {
-      // Admin aggregate not routed here → the REAL usage ledger + operator health.
-      // Business-only tiles (mrr/revenue/orgs/customers/plans/topAgents) stay
-      // honest-empty; usage cost, activity, and health still render real data.
-      const usage = await UsageApi.overview({
-        range: usageRange(range),
-        activityType: 'all',
-        activityLimit: 40,
-        topModels: 6,
-        allOrgs: true,
-      })
-      return withHealth(fromCloudUsage(usage))
+      /* COGS not wired here → cogs/margin/grossMargin tiles show em-dashes */
     }
+    return data
   },
+}
+
+/**
+ * The revenue/usage half of the business board: the admin all-orgs aggregate when
+ * routed, else the REAL usage ledger + operator health. COGS is folded in by the
+ * caller so this stays the single revenue source (DRY). Never throws — always
+ * returns real data or honest-empty tiles.
+ */
+async function loadBusinessBoard(range: OverviewRange): Promise<OverviewData> {
+  try {
+    const ov = await AdminApi.overview({ range, allOrgs: true, activityLimit: 40 })
+    const data = fromAdminOverview(ov)
+    return data.health.length ? data : withHealth(data)
+  } catch {
+    // Admin aggregate not routed here → the REAL usage ledger + operator health.
+    // Business-only tiles (mrr/revenue/orgs/customers/plans/topAgents) stay
+    // honest-empty; usage cost, activity, and health still render real data.
+    const usage = await UsageApi.overview({
+      range: usageRange(range),
+      activityType: 'all',
+      activityLimit: 40,
+      topModels: 6,
+      allOrgs: true,
+    })
+    return withHealth(fromCloudUsage(usage))
+  }
 }
 
 /** The AI-usage living overview for a product scoped to the org's model spend. */

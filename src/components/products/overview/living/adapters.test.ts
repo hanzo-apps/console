@@ -4,7 +4,8 @@ import type { CloudUsageOverview } from '~/lib/api/usage'
 import type { AdminOverview } from '~/lib/api/admin-overview'
 import type { PlatformApp } from '~/lib/api/platform'
 import type { FunctionsMetrics, OverviewStats } from '~/lib/api/functions'
-import { fromCloudUsage, fromAdminOverview, fromFunctions, healthFromApps, sumSeriesLines } from './adapters'
+import type { Margin } from '~/lib/api/costs'
+import { fromCloudUsage, fromAdminOverview, fromCosts, mergeCosts, fromFunctions, healthFromApps, sumSeriesLines } from './adapters'
 
 /**
  * The adapters are the pure maps from each REAL source onto `OverviewData`. These
@@ -176,5 +177,62 @@ describe('healthFromApps — operator inventory → health rows', () => {
   })
   it('empty inventory → no rows (honest "not reporting")', () => {
     expect(healthFromApps([])).toEqual([])
+  })
+})
+
+describe('mergeCosts / fromCosts (vendor COGS → OverviewData)', () => {
+  const margin = (over: Partial<Margin> = {}): Margin => ({
+    period: '2026-07',
+    revenueCents: 100000,
+    cogsCents: 35000,
+    marginCents: 65000,
+    grossMarginPct: 65,
+    vendors: [
+      { vendor: 'digitalocean', service: 'compute', amountCents: 20000, source: 'actual' },
+      { vendor: 'openai', service: 'llm-inference', amountCents: 15000, source: 'estimated', note: 'metered' },
+      { vendor: 'cloudflare', service: 'cdn-dns', amountCents: 0, source: 'estimated' }, // pending → dropped
+    ],
+    ...over,
+  })
+
+  it('lands cogs/margin/grossMargin on the exact tile keys the config reads', () => {
+    const d = fromCosts(margin())
+    expect(d.kpi.cogsCents).toEqual({ value: 35000 })
+    expect(d.kpi.marginCents).toEqual({ value: 65000 })
+    expect(d.kpi.grossMarginPct).toEqual({ value: 65 })
+  })
+
+  it('builds the cogsByVendor donut, dropping zero-cost (pending) vendors and tagging estimates', () => {
+    const d = fromCosts(margin())
+    expect(d.distribution.cogsByVendor).toEqual([
+      { label: 'digitalocean', value: 20000, sub: 'compute' },
+      { label: 'openai', value: 15000, sub: 'llm-inference · est.' },
+    ])
+  })
+
+  it('MERGES onto an existing board without clobbering a richer revenue source', () => {
+    const base = fromAdminOverview({
+      range: '24h',
+      kpis: [{ key: 'revenue', value: 999999 }],
+      series: [],
+      distribution: [],
+      activity: [],
+      alerts: [],
+      health: [],
+    })
+    mergeCosts(base, margin())
+    expect(base.kpi.revenue).toEqual({ value: 999999 }) // admin revenue preserved, not overwritten
+    expect(base.kpi.cogsCents).toEqual({ value: 35000 }) // COGS folded in
+  })
+
+  it('fills revenue from the margin payload only when the board has none', () => {
+    const d = fromCosts(margin({ revenueCents: 42000 }))
+    expect(d.kpi.revenue).toEqual({ value: 42000 })
+  })
+
+  it('no vendor lines → no donut (honest empty), tiles still present at 0', () => {
+    const d = fromCosts(margin({ vendors: [], cogsCents: 0, marginCents: 100000 }))
+    expect(d.distribution.cogsByVendor).toBeUndefined()
+    expect(d.kpi.cogsCents).toEqual({ value: 0 })
   })
 })
