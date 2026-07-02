@@ -10,7 +10,7 @@ import {
   refreshGrant,
   sameSubject,
   seal,
-  sealTokens,
+  sealSession,
   sessionCookie,
   SessionError,
   SESSION_COOKIE,
@@ -32,15 +32,15 @@ function fakeJwt(payload: Record<string, unknown>): string {
 const Z_CLAIMS = { owner: 'hanzo', name: 'z', email: 'z@hanzo.ai', isAdmin: true, type: 'normal-user' }
 
 describe('AEAD seal/open', () => {
-  it('round-trips a sealed session', () => {
-    const s = { a: 'access-token', r: 'refresh-token', e: Date.now() + 60_000 }
+  it('round-trips a sealed session (refresh + exp + projected claims, NOT the raw token)', () => {
+    const s = { r: 'refresh-token', e: Date.now() + 60_000, c: { owner: 'hanzo', name: 'z' } }
     const sealed = seal(s)
-    expect(sealed).not.toContain('access-token') // opaque, not plaintext
+    expect(sealed).not.toContain('refresh-token') // opaque, not plaintext
     expect(open(sealed)).toEqual(s)
   })
 
   it('rejects tampered, truncated, and garbage ciphertext (fail-closed)', () => {
-    const sealed = seal({ a: 'a', r: 'r', e: Date.now() + 60_000 })
+    const sealed = seal({ r: 'r', e: Date.now() + 60_000, c: { name: 'z' } })
     expect(open(undefined)).toBeNull()
     expect(open('')).toBeNull()
     expect(open('not-base64url!!')).toBeNull()
@@ -85,16 +85,21 @@ describe('accessClaims', () => {
 })
 
 describe('consoleSession freshness', () => {
-  it('returns claims + lifetime for a fresh session', () => {
-    const sealed = seal({ a: fakeJwt(Z_CLAIMS), r: 'r', e: Date.now() + 3600_000 })
+  it('returns the stored claims + lifetime for a fresh session', () => {
+    const sealed = seal({ r: 'r', e: Date.now() + 3600_000, c: Z_CLAIMS })
     const sess = consoleSession(reqWithCookie(sealed))
     expect(sess?.claims.name).toBe('z')
+    expect(sess?.claims.isAdmin).toBe(true)
     expect(sess?.expiresInSec).toBeGreaterThan(3000)
   })
 
-  it('treats an at/near-expiry access token as absent (→ refresh)', () => {
-    const stale = seal({ a: fakeJwt(Z_CLAIMS), r: 'r', e: Date.now() + 10_000 }) // < 60s skew
+  it('treats an at/near-expiry session as absent (→ refresh)', () => {
+    const stale = seal({ r: 'r', e: Date.now() + 10_000, c: Z_CLAIMS }) // < 60s skew
     expect(consoleSession(reqWithCookie(stale))).toBeNull()
+  })
+
+  it('returns null for a nameless (anonymous) claim set', () => {
+    expect(consoleSession(reqWithCookie(seal({ r: 'r', e: Date.now() + 3600_000, c: {} })))).toBeNull()
   })
 
   it('returns null with no cookie or a tampered cookie', () => {
@@ -102,24 +107,33 @@ describe('consoleSession freshness', () => {
     expect(consoleSession(reqWithCookie('garbage'))).toBeNull()
   })
 
-  it('readConsoleSession surfaces the raw sealed token set', () => {
-    const sealed = seal({ a: 'ac', r: 'rt', e: 123 })
-    expect(readConsoleSession(reqWithCookie(sealed))).toEqual({ a: 'ac', r: 'rt', e: 123 })
+  it('readConsoleSession surfaces the raw sealed session (refresh token intact for revoke)', () => {
+    const s = { r: 'rt', e: 123, c: { name: 'z' } }
+    expect(readConsoleSession(reqWithCookie(seal(s)))).toEqual(s)
   })
 })
 
-describe('sealTokens', () => {
-  it('seals a token set and reports the access lifetime', () => {
-    const { sealed, expiresInMs } = sealTokens({ accessToken: 'a', refreshToken: 'r', expiresIn: 3600 })
-    expect(expiresInMs).toBe(3600_000)
-    const opened = open(sealed)
-    expect(opened?.a).toBe('a')
-    expect(opened?.r).toBe('r')
-    expect(opened?.e).toBeGreaterThan(Date.now())
+describe('sealSession', () => {
+  it('projects the access token to compact claims and seals refresh + exp (NOT the raw token)', () => {
+    const at = fakeJwt(Z_CLAIMS)
+    const r = sealSession({ accessToken: at, refreshToken: 'rt', expiresIn: 3600 })
+    expect(r?.expiresInMs).toBe(3600_000)
+    expect(r?.claims.name).toBe('z')
+    const opened = open(r!.sealed)
+    expect(opened?.r).toBe('rt')
+    expect(opened?.c.name).toBe('z')
+    // The huge raw access JWT is NOT in the cookie — the sealed blob is small + bounded.
+    expect(r!.sealed).not.toContain(at)
+    expect(Buffer.from(r!.sealed, 'base64url').length).toBeLessThan(2048)
   })
 
   it('defaults a missing expires_in to 1h (never a zero-lifetime session)', () => {
-    expect(sealTokens({ accessToken: 'a', refreshToken: 'r', expiresIn: 0 }).expiresInMs).toBe(3600_000)
+    expect(sealSession({ accessToken: fakeJwt(Z_CLAIMS), refreshToken: 'r', expiresIn: 0 })?.expiresInMs).toBe(3600_000)
+  })
+
+  it('returns null when the access token carries no usable identity', () => {
+    expect(sealSession({ accessToken: 'not-a-jwt', refreshToken: 'r', expiresIn: 3600 })).toBeNull()
+    expect(sealSession({ accessToken: fakeJwt({ owner: 'hanzo' }), refreshToken: 'r', expiresIn: 3600 })).toBeNull()
   })
 })
 
