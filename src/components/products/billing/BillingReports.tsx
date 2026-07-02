@@ -2,14 +2,17 @@
 
 /**
  * Cost reports — the GCP "Cost table / Reports" surface: spend grouped by a real
- * ledger dimension (model, and provider when the ledger carries it — NO invented
+ * ledger dimension (model always; provider, product, and agent when the ledger
+ * carries them — so Dave sees "which agent/product cost me $X", NO invented
  * project/SKU column), a filterable cost table, a daily-spend bar chart, and a
  * spend-share donut, all over a selectable range.
  *
  * REAL data only: the commerce usage ledger (`GET /v1/billing/usage` via the
  * per-tenant `/billing` proxy), windowed + grouped by the pure `withinRange` /
  * `groupSpend` / `dailySpend`. A load failure degrades to an honest notice; an
- * absent dimension is simply not offered — nothing is fabricated.
+ * absent dimension is simply not offered (`presentDimensions`) — the product/agent
+ * toggles appear the moment cloud tags spend with `metadata.{product,agent}` and
+ * nothing is fabricated until then.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
@@ -31,7 +34,7 @@ import {
 import { RangeTabs } from './RangeTabs'
 
 const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
-const DIM_LABEL: Record<SpendDimension, string> = { model: 'Model', provider: 'Provider' }
+const DIM_LABEL: Record<SpendDimension, string> = { model: 'Model', provider: 'Provider', product: 'Product', agent: 'Agent' }
 
 type Async<T> =
   | { phase: 'loading' }
@@ -98,7 +101,7 @@ export function BillingReports(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Cost reports"
-        subtitle="Spend grouped by service, over a selectable range — the same charged ledger the gateway debits."
+        subtitle="Spend by model, provider, product, or agent over a selectable range — the same charged ledger the gateway debits. Product and agent breakdowns appear once spend is tagged with them."
         actions={
           <XStack gap="$2" items="center">
             <RangeTabs value={range} onChange={setRange} />

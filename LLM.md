@@ -868,3 +868,52 @@ The umbrella label has **one source**: the console app version. `next.config.mjs
 injects `NEXT_PUBLIC_APP_VERSION` from `package.json`; `config.ts` derives
 `branding.release` (major.minor) + `branding.productLine` ("Hanzo Cloud 8.4"),
 shown on the sign-in screen. Never hardcode "8.4" a second time.
+
+## Billing usage visibility per agent/product + admin business board (v8.4.14, feat/billing-usage-admin)
+
+Two deliverables over the ONE `/v1` surface, all real data with honest empties, no
+fabrication. The metering-attribution wave: Dave sees "which agent/product cost me
+$X", and admin.hanzo.ai gets a SaaS business control board.
+
+- **Agent + product cost dimension (usage/billing visibility).** The commerce usage
+  ledger row (`UsageRecord`, `lib/api/aimetrics.ts`) now extracts `product` and
+  `agent` from `metadata.{product,agent}` (canonical contract — cloud emits agent
+  usage tagged with them; alt keys `surface`/`agentName`/`agentId` also read). Cost
+  Reports (`billing/logic.ts` `SpendDimension`) gains `product` and `agent`
+  breakdowns beside `model`/`provider`; `presentDimensions` OFFERS a dimension only
+  when ≥1 ledger row carries it, so the product/agent toggles appear the moment cloud
+  starts tagging spend and show nothing (never a fabricated column) until then.
+  `BillingReports.tsx` renders the new dimensions (provider stays a model-only
+  secondary column). Per-agent cost in the **Agents detail pane** (`agents/forms.tsx`
+  `AgentDetailView`) now reads the SAME charged ledger — a new pure `agentUsageFor`
+  (`aimetrics.ts`, grouped by `metadata.agent`, matched by agent id OR name) drives a
+  "Cost · charged ledger" section (cost/requests/tokens), NOT a hardcoded/registry
+  metric; honest "—" + note until spend is attributed. New DRY rollup `perAgent`
+  mirrors `perModel`.
+- **admin.hanzo.ai business board (global-admin only).** New living-overview config
+  `admin-business` (`overview/living/registry.ts`) rendered by the ONE `LivingOverview`
+  — MRR, revenue, usage cost, active orgs, customers; revenue/usage-cost trend;
+  revenue-by-product, plan mix, and top-agents-by-cost donuts; business alerts; live
+  platform activity; fleet health. Primary source `/v1/admin/overview` (all-orgs god
+  view via `allOrgs:true`), honest fallback to the real usage ledger + operator
+  health so the board is never blank; business-only tiles stay honest-empty on the
+  fallback. `admin-overview.ts` gains an optional named-`distributions` map
+  (revenue/plans/topAgents), only present when the backend sends it (empty payload
+  maps identically → no phantom tile); `fromAdminOverview` projects each named
+  distribution into `distribution[key]`. Registry catalog entry `business` (Observe,
+  `admin: true`) — hidden from every customer's nav/launcher/palette; `getAdminGate`
+  + `useIsGlobalAdmin` gate it and the aggregate is server-gated. Reuses the ONE
+  overview system — adding it was a config + adapter projection, no new overview UI.
+- **Mobile-responsive by construction.** All new/changed surfaces use @hanzo/gui v5
+  shorthands + `flexWrap="wrap"` rows with `flex`/`minW` tiles (LivingOverview rows,
+  BillingReports controls, Agent detail Fact rows) — the 5-KPI business row and the
+  two-donut rows wrap to stack on narrow viewports; no fixed grids.
+- **Unverified backend contracts (flagged, built honest to them):** `metadata.{product,
+  agent}` on commerce ledger rows, and the `/v1/admin/overview` `distributions`
+  (revenue/plans/topAgents) + `mrr`/`revenue`/`orgs`/`customers` KPI keys. Each
+  degrades to an honest empty tile / hidden dimension until the field flows.
+- Verification: `npm run typecheck` clean; `npm test` **841/841** (68 files; +7
+  aimetrics product/agent extract + perAgent/agentUsageFor, +5 billing-logic
+  product/agent groupSpend + presentDimensions gating, +4 admin-overview/adapters
+  named distributions); `next build` ✓ Compiled successfully (lint+types clean).
+  Authenticated visual e2e (business board as a global admin) is post-deploy.

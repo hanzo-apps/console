@@ -10,6 +10,8 @@ import {
   dayKey,
   dailySeries,
   perModel,
+  perAgent,
+  agentUsageFor,
   recent,
   fetchUsageRecords,
   type UsageRecord,
@@ -75,6 +77,81 @@ describe('normalizeRecord — maps the commerce ledger shape', () => {
     expect(r.cents).toBe(0)
     expect(r.model).toBe('')
     expect(r.at).toBeNull()
+  })
+
+  it('extracts the product + agent cost dimensions from metadata (canonical contract)', () => {
+    const r = normalizeRecord(
+      { transactionId: 't', amount: 5, createdAt: '2026-06-24T12:00:00Z', metadata: { product: 'agents', agent: 'hanzo-support-bot' } },
+      0,
+    )
+    expect(r.product).toBe('agents')
+    expect(r.agent).toBe('hanzo-support-bot')
+  })
+
+  it('honest-empty product/agent when the ledger row carries no tag', () => {
+    const r = normalizeRecord(raw(), 0)
+    expect(r.product).toBe('')
+    expect(r.agent).toBe('')
+  })
+
+  it('accepts the alternate metadata keys (surface / agentName / agentId)', () => {
+    const r = normalizeRecord({ amount: 1, metadata: { surface: 'chat', agentName: 'triage' } }, 0)
+    expect(r.product).toBe('chat')
+    expect(r.agent).toBe('triage')
+  })
+})
+
+// A typed post-parse record for the rollup tests (only the fields they read).
+const trec = (p: Partial<UsageRecord>): UsageRecord =>
+  normalizeRecord(
+    {
+      transactionId: p.id ?? 'r',
+      amount: p.cents ?? 0,
+      createdAt: p.at !== undefined && p.at !== null ? new Date(p.at).toISOString() : undefined,
+      metadata: { model: p.model ?? '', provider: p.provider ?? '', product: p.product ?? '', agent: p.agent ?? '', totalTokens: p.totalTokens ?? 0 },
+    },
+    0,
+  )
+
+describe('perAgent — spend rolled up per metadata.agent', () => {
+  const recs = [
+    trec({ agent: 'a1', cents: 100, totalTokens: 10 }),
+    trec({ agent: 'a1', cents: 250, totalTokens: 20 }),
+    trec({ agent: 'a2', cents: 400, totalTokens: 5 }),
+    trec({ agent: '', cents: 9999, totalTokens: 999 }), // untagged — dropped
+  ]
+
+  it('sums cents/requests/tokens per agent, sorted by spend desc, dropping untagged rows', () => {
+    const g = perAgent(recs)
+    expect(g.map((r) => r.agent)).toEqual(['a2', 'a1'])
+    expect(g[1].cents).toBe(350)
+    expect(g[1].requests).toBe(2)
+    expect(g[1].totalTokens).toBe(30)
+  })
+
+  it('honest-empty when no row carries an agent tag', () => {
+    expect(perAgent([trec({ cents: 500 })])).toEqual([])
+  })
+})
+
+describe('agentUsageFor — the charged-ledger rollup for ONE agent', () => {
+  const recs = [
+    trec({ agent: 'hanzo-bot', cents: 120, totalTokens: 12 }),
+    trec({ agent: 'hanzo-bot', cents: 80, totalTokens: 8 }),
+    trec({ agent: 'other', cents: 500, totalTokens: 50 }),
+  ]
+
+  it('matches by id OR name and sums the real charged spend', () => {
+    const u = agentUsageFor(recs, { id: 'hanzo-bot', name: 'Hanzo Bot' })
+    expect(u).not.toBeNull()
+    expect(u?.cents).toBe(200)
+    expect(u?.requests).toBe(2)
+    expect(u?.totalTokens).toBe(20)
+  })
+
+  it('returns null when the ledger carries no row for the agent (honest —)', () => {
+    expect(agentUsageFor(recs, { id: 'ghost' })).toBeNull()
+    expect(agentUsageFor(recs, {})).toBeNull()
   })
 })
 
