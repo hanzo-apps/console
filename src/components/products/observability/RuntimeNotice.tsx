@@ -14,22 +14,30 @@ import { BarChart3, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import { config } from '~/config'
+import { startReauth } from '~/lib/auth/iam'
 
-export type RuntimeStatus = 'not-initialized' | 'unavailable' | 'access' | 'error'
+export type RuntimeStatus = 'not-initialized' | 'unavailable' | 'access' | 'signin' | 'error'
 
-/** Map a failed o11y fetch to an honest runtime status. */
+/**
+ * Map a failed o11y fetch to an honest runtime status. 401 = the session lapsed
+ * (`signin` — re-auth fixes it); 403 = signed in but observability isn't enabled
+ * for this org yet (`access`). A signed-in user is NEVER told to "sign in" for a
+ * 403 — that reads like a bug ("I AM signed in").
+ */
 export function classifyRuntime(e: unknown): RuntimeStatus {
   const s = e instanceof ApiError ? e.status : 0
   if (s === 503) return 'not-initialized'
   if (s === 404) return 'unavailable'
-  if (s === 401 || s === 403) return 'access'
+  if (s === 401) return 'signin'
+  if (s === 403) return 'access'
   return 'error'
 }
 
 const TITLE: Record<RuntimeStatus, string> = {
   'not-initialized': 'Observability runtime initializing',
   unavailable: 'Not routed on this host',
-  access: 'Access required',
+  access: 'Observability not enabled yet',
+  signin: 'Your session expired',
   error: 'Could not reach observability',
 }
 
@@ -39,12 +47,15 @@ export function RuntimeNotice({ surface, error }: { surface: string; error: unkn
   const body: Record<RuntimeStatus, string> = {
     'not-initialized': `Observability runtime initializing — your ${surface} will appear here once it's enabled. The /v1/o11y routes are mounted, but the runtime (telemetry stores, query service) is not initialized on this deployment yet. This page shows live ${surface} the moment the runtime is online — it never shows placeholder data.`,
     unavailable: `The /v1/o11y/${surface} surface is not proxied on this host yet.`,
-    access: `Sign in with an account that can read observability ${surface}.`,
+    // 403 for a signed-in user — observability isn't provisioned for their org.
+    access: `Observability isn't enabled for your organization yet, so your ${surface} can't be read. It appears here automatically once it is — never placeholder data.`,
+    // 401 — the session itself lapsed.
+    signin: `Your session has expired or isn't recognized here. Sign in again to view your ${surface}.`,
     error: message,
   }
-  // While the trace runtime is initializing, AI Metrics already has real,
-  // per-org usage data (from the commerce billing ledger) — so we point there.
-  const showMetricsLink = status === 'not-initialized' || status === 'unavailable'
+  // While the trace runtime is initializing / not enabled, AI Metrics already has
+  // real, per-org usage data (from the commerce billing ledger) — so we point there.
+  const showMetricsLink = status === 'not-initialized' || status === 'unavailable' || status === 'access'
   const goToMetrics = () => {
     if (typeof window !== 'undefined') window.location.assign('/ai-metrics')
   }
@@ -59,7 +70,11 @@ export function RuntimeNotice({ surface, error }: { surface: string; error: unkn
       <Text fontSize="$3" color="$color11">
         {body[status]}
       </Text>
-      {showMetricsLink ? (
+      {status === 'signin' ? (
+        <Button size="$2" theme="light" self="flex-start" onPress={startReauth}>
+          Sign in again
+        </Button>
+      ) : showMetricsLink ? (
         <Button size="$2" self="flex-start" icon={<BarChart3 size={15} />} onPress={goToMetrics}>
           View AI Metrics
         </Button>

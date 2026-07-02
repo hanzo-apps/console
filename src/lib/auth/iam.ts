@@ -51,3 +51,47 @@ export const getProviderSigninUrl = (provider: string): string =>
 
 /** Full IAM signup URL. */
 export const getSignupUrl = (): string => iam().getSignupUrl()
+
+// ── Graceful re-auth: return the user to their task after re-signing in ────────
+// A mid-task session expiry (a proxy 401) should not dump the user on the home
+// page — we stash where they were and the callback lands them back there.
+
+const RETURN_TO_KEY = 'hz_return_to'
+
+/** Remember the current in-app location (path + query) for post-sign-in return. */
+export function stashReturnTo(): void {
+  if (typeof window === 'undefined') return
+  const { pathname, search } = window.location
+  // Never round-trip back to the auth pages themselves.
+  if (pathname.startsWith('/signin') || pathname.startsWith('/auth')) return
+  try {
+    window.sessionStorage.setItem(RETURN_TO_KEY, `${pathname}${search}`)
+  } catch {
+    /* sessionStorage may be unavailable (private mode) — best-effort only */
+  }
+}
+
+/** Consume the stashed return location (default `/`), clearing it. */
+export function takeReturnTo(): string {
+  if (typeof window === 'undefined') return '/'
+  try {
+    const to = window.sessionStorage.getItem(RETURN_TO_KEY)
+    window.sessionStorage.removeItem(RETURN_TO_KEY)
+    // Only same-origin in-app paths — never an attacker-supplied absolute URL.
+    if (to && to.startsWith('/') && !to.startsWith('//')) return to
+  } catch {
+    /* ignore */
+  }
+  return '/'
+}
+
+/**
+ * Start a graceful re-authentication: remember the current task location, then
+ * redirect to IAM. After sign-in the callback returns the user here. ONE entry
+ * point for "your session expired — sign in again" across the honest-state cards.
+ */
+export function startReauth(): void {
+  if (typeof window === 'undefined') return
+  stashReturnTo()
+  window.location.assign(getSigninUrl())
+}
