@@ -14,16 +14,16 @@ export const fmtDate = (v?: string | null): string => {
   return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString()
 }
 
-/** Latency in seconds as "450ms" / "1.23s"; em dash for missing. */
+/** Latency in seconds as "450ms" / "1.23s"; em dash for missing/non-finite/negative. */
 export const fmtLatency = (seconds?: number | null): string => {
-  if (seconds === undefined || seconds === null) return '—'
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '—'
   if (seconds < 1) return `${Math.round(seconds * 1000)}ms`
   return `${seconds.toFixed(2)}s`
 }
 
-/** Cost in USD as "$0.0123"; em dash for missing. */
+/** Cost in USD as "$0.0123"; em dash for missing/non-finite/negative. */
 export const fmtCost = (usd?: number | null): string => {
-  if (usd === undefined || usd === null) return '—'
+  if (usd == null || !Number.isFinite(usd) || usd < 0) return '—'
   if (usd === 0) return '$0'
   return usd < 0.01 ? `$${usd.toFixed(5)}` : `$${usd.toFixed(4)}`
 }
