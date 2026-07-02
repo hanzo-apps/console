@@ -89,6 +89,7 @@ import { Users,
   LineChart,
   Bell,
   CreditCard,
+  TrendingUp,
   Gauge,
   Tag,
   ArrowLeftRight,
@@ -203,6 +204,10 @@ import {
  * overviews all render from that single component — adding one is a config, not UI.
  */
 const OverviewDashboard = livingOverviewModule('overview')
+// admin.hanzo.ai business board — the SaaS control surface. GLOBAL-ADMIN ONLY
+// (the catalog entry is `admin: true`; its loader is an all-orgs god view and the
+// `/v1/admin/overview` aggregate is itself server-gated).
+const BusinessDashboard = livingOverviewModule('admin-business')
 const AiMetricsLiving = livingOverviewModule('ai-metrics')
 const FunctionsLiving = livingOverviewModule('functions')
 // GPUs Overview is role-aware (admin → living overview, customer → visor catalog);
@@ -394,6 +399,24 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: OverviewDashboard }],
+  },
+  {
+    // admin.hanzo.ai BUSINESS board — the SaaS control surface for running the
+    // business (MRR/revenue, usage & cost, active orgs/customers, top agents/bots
+    // by cost, plan mix, fleet health). GLOBAL-ADMIN ONLY (`admin: true` hides it
+    // from every customer's nav/launcher/palette; the loader is an all-orgs god
+    // view and `/v1/admin/overview` is server-gated). Reuses the ONE LivingOverview.
+    id: 'business',
+    label: 'Business',
+    icon: TrendingUp,
+    description: 'MRR, revenue, usage & cost, customers, and top agents across the whole platform.',
+    gcp: 'Cloud Billing overview',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: BusinessDashboard }],
   },
   // ── AI ───────────────────────────────────────────────────────────────
   {

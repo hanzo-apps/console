@@ -45,6 +45,19 @@ export type UsageRecord = {
   model: string
   /** Provider that served it (from metadata), e.g. `openai`. '' when unknown. */
   provider: string
+  /**
+   * The product surface the spend is attributed to (from `metadata.product`),
+   * e.g. `agents`, `chat`, `search`, `functions`. '' when the ledger row carries
+   * no product tag (a bare inference call). This is the CANONICAL cost dimension
+   * cloud emits alongside model/provider — honest-empty until data flows.
+   */
+  product: string
+  /**
+   * The agent/bot the spend is attributed to (from `metadata.agent`), e.g. the
+   * `<org>-<agent>` service-account name or an agent id. '' when the row is not an
+   * agent invocation. Lets the console answer "which agent cost me $X".
+   */
+  agent: string
   /** Prompt (input) tokens, if reported. */
   promptTokens: number
   /** Completion (output) tokens, if reported. */
@@ -141,6 +154,8 @@ export function normalizeRecord(r: Record<string, unknown>, i: number): UsageRec
     cents,
     model: str(meta.model),
     provider: str(meta.provider),
+    product: str(meta.product) || str(meta.surface),
+    agent: str(meta.agent) || str(meta.agentName) || str(meta.agentId),
     promptTokens: prompt,
     completionTokens: completion,
     totalTokens: total,
@@ -237,6 +252,51 @@ export function perModel(records: UsageRecord[]): ModelUsage[] {
     by.set(key, cur)
   }
   return Array.from(by.values()).sort((a, b) => b.cents - a.cents || b.requests - a.requests)
+}
+
+/** A per-agent spend rollup — requests, tokens, and cents for one agent. */
+export type AgentUsage = {
+  /** The agent identity from the ledger (`metadata.agent`). */
+  agent: string
+  requests: number
+  totalTokens: number
+  cents: number
+}
+
+/**
+ * Roll records up per agent (`metadata.agent`), sorted by spend (desc). Rows with
+ * NO agent tag are dropped — this answers "which agent cost me $X" from the SAME
+ * charged ledger, never a fabricated per-agent number. An org whose ledger carries
+ * no agent tags yet rolls up to `[]` (honest-empty until agent usage flows).
+ */
+export function perAgent(records: UsageRecord[]): AgentUsage[] {
+  const by = new Map<string, AgentUsage>()
+  for (const r of records) {
+    if (!r.agent) continue
+    const cur = by.get(r.agent) ?? { agent: r.agent, requests: 0, totalTokens: 0, cents: 0 }
+    cur.requests += 1
+    cur.totalTokens += r.totalTokens
+    cur.cents += r.cents
+    by.set(r.agent, cur)
+  }
+  return Array.from(by.values()).sort((a, b) => b.cents - a.cents || b.requests - a.requests)
+}
+
+/**
+ * The ledger rollup for ONE agent by identity — the cost/requests/tokens the SAME
+ * charged ledger attributes to it over the given records. `null` when the ledger
+ * carries no row for that agent (honest "—" in the detail pane, never a fabricated
+ * cost). `id` and `name` are BOTH matched, since the ledger may tag either.
+ */
+export function agentUsageFor(records: UsageRecord[], match: { id?: string; name?: string }): AgentUsage | null {
+  const wanted = new Set([match.id, match.name].filter((v): v is string => !!v))
+  if (!wanted.size) return null
+  const rows = records.filter((r) => r.agent && wanted.has(r.agent))
+  if (!rows.length) return null
+  return rows.reduce<AgentUsage>(
+    (acc, r) => ({ agent: acc.agent, requests: acc.requests + 1, totalTokens: acc.totalTokens + r.totalTokens, cents: acc.cents + r.cents }),
+    { agent: rows[0].agent, requests: 0, totalTokens: 0, cents: 0 },
+  )
 }
 
 /** The most recent `n` records (newest first). Undated records sort last. */

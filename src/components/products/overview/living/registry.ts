@@ -25,7 +25,7 @@
  * mismatch renders an honest empty tile (never a crash), so over-declaring a tile a
  * slow backend hasn't filled yet is safe.
  */
-import { Activity, Cpu, DollarSign, FunctionSquare, Gauge, Hash, Layers, Timer, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
+import { Activity, Building2, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, Layers, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
 
 import { UsageApi } from '~/lib/api/usage'
 import { AdminApi } from '~/lib/api/admin-overview'
@@ -103,6 +103,71 @@ const platformOverview: LivingOverviewConfig = {
       // Reuse the byModel breakdown as the "revenue"/spend donut on the fallback path.
       data.distribution.revenue = data.distribution.byModel ?? []
       return withHealth(data)
+    }
+  },
+}
+
+/**
+ * The admin.hanzo.ai BUSINESS overview — the SaaS control board for running the
+ * business: MRR/revenue, total usage & cost trend, active orgs/customers, top
+ * agents/bots by cost, subscription/plan mix, and fleet health. GLOBAL-ADMIN ONLY
+ * (gated by the registry `admin` flag + `useIsGlobalAdmin`; the `/v1/admin/overview`
+ * aggregate is itself server-gated). It is an all-orgs god view — the module always
+ * passes `allOrgs`, and the loader forwards `?org=all`.
+ *
+ * Primary source is the `/v1/admin/overview` aggregate (IAM + commerce + o11y). When
+ * that backend isn't routed on this host (404) it falls back to the REAL commerce
+ * usage ledger + operator health every deployment already serves, so the board is
+ * never blank — every business tile (revenue, orgs, plan mix, top agents) that the
+ * fallback can't source renders its HONEST empty state, NEVER a fabricated number.
+ */
+const adminBusinessOverview: LivingOverviewConfig = {
+  id: 'admin-business',
+  title: 'Business',
+  subtitle: 'MRR, revenue, usage & cost, customers, and top agents across the whole platform.',
+  live: { pollMs: 30000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'mrr', label: 'MRR', icon: TrendingUp, unit: 'cents' },
+      { tile: 'metric', key: 'revenue', label: 'Revenue', icon: DollarSign, unit: 'cents' },
+      { tile: 'metric', key: 'spendCents', label: 'Usage cost', icon: CreditCard, unit: 'cents' },
+      { tile: 'metric', key: 'orgs', label: 'Active orgs', icon: Building2 },
+      { tile: 'metric', key: 'customers', label: 'Customers', icon: Users },
+    ],
+    [
+      { tile: 'timeseries', key: 'revenue', title: 'Revenue over time', kind: 'bar', unit: 'cents' },
+      { tile: 'timeseries', key: 'spendCents', title: 'Usage cost over time', unit: 'cents' },
+    ],
+    [
+      { tile: 'distribution', key: 'revenue', title: 'Revenue by product', centerLabel: 'total', unit: 'cents' },
+      { tile: 'distribution', key: 'plans', title: 'Subscription / plan mix', centerLabel: 'plans' },
+    ],
+    [
+      { tile: 'distribution', key: 'topAgents', title: 'Top agents & bots by cost', centerLabel: 'total', unit: 'cents' },
+      { tile: 'alerts', title: 'Business alerts' },
+    ],
+    [
+      { tile: 'activity', title: 'Live platform activity', empty: 'Platform activity appears here as it happens.' },
+      { tile: 'health', title: 'Fleet health', empty: 'Service health appears once the operator reports.' },
+    ],
+  ],
+  load: async ({ range }) => {
+    try {
+      const ov = await AdminApi.overview({ range, allOrgs: true, activityLimit: 40 })
+      const data = fromAdminOverview(ov)
+      return data.health.length ? data : withHealth(data)
+    } catch {
+      // Admin aggregate not routed here → the REAL usage ledger + operator health.
+      // Business-only tiles (mrr/revenue/orgs/customers/plans/topAgents) stay
+      // honest-empty; usage cost, activity, and health still render real data.
+      const usage = await UsageApi.overview({
+        range: usageRange(range),
+        activityType: 'all',
+        activityLimit: 40,
+        topModels: 6,
+        allOrgs: true,
+      })
+      return withHealth(fromCloudUsage(usage))
     }
   },
 }
@@ -205,6 +270,7 @@ const computeOverview: LivingOverviewConfig = {
 /** The declared living overviews, by product id. Add a product = add one entry. */
 export const LIVING_OVERVIEWS: Record<string, LivingOverviewConfig> = {
   overview: platformOverview,
+  'admin-business': adminBusinessOverview,
   'ai-metrics': aiUsageOverview('ai-metrics', 'AI Metrics', 'Requests, tokens, spend, and per-model usage for your org.'),
   functions: functionsOverview,
   gpus: computeOverview,

@@ -37,9 +37,31 @@ describe('normalizeOverview — optional-safe mapping', () => {
 
   it('degrades an empty/partial payload to honest empties, never throws', () => {
     const ov = normalizeOverview({})
+    // No `distributions` key on an empty payload — the business tiles render honest empties.
     expect(ov).toEqual({ range: '24h', kpis: [], series: [], distribution: [], activity: [], alerts: [], health: [] })
     expect(normalizeOverview(null).kpis).toEqual([])
     expect(normalizeOverview(undefined).activity).toEqual([])
+  })
+
+  it('parses named business distributions (revenue / plans / topAgents by cost)', () => {
+    const ov = normalizeOverview({
+      distributions: {
+        revenue: [{ label: 'Inference', value: 4000, hint: 'gpt' }],
+        plans: [{ label: 'Pro', value: 12 }],
+        topAgents: [{ label: 'hanzo-support-bot', value: 900 }],
+        empty: [], // an empty list is dropped, never a phantom tile
+      },
+    })
+    expect(ov.distributions?.revenue).toEqual([{ label: 'Inference', value: 4000, hint: 'gpt' }])
+    expect(ov.distributions?.plans).toEqual([{ label: 'Pro', value: 12 }])
+    expect(ov.distributions?.topAgents[0].label).toBe('hanzo-support-bot')
+    expect(ov.distributions && 'empty' in ov.distributions).toBe(false)
+  })
+
+  it('omits distributions entirely when the map is absent or all-empty (honest)', () => {
+    expect(normalizeOverview({ distributions: {} }).distributions).toBeUndefined()
+    expect(normalizeOverview({ distributions: { plans: [] } }).distributions).toBeUndefined()
+    expect(normalizeOverview({ distributions: 'garbage' }).distributions).toBeUndefined()
   })
 
   it('coerces junk fields to safe types (no NaN, no undefined leaks)', () => {
