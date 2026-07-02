@@ -70,6 +70,23 @@ function guiPackages() {
 const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'crm']
 const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio']
 const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance']
+/**
+ * DEV-ONLY: proxy the client's direct-cloud `/v1/{iam,o11y}/*` calls (get-account,
+ * annotation-queues/users) to a real cloud backend so `npm run dev` renders the
+ * authenticated shell locally. Enabled ONLY when `DEV_CLOUD_ORIGIN` is set (never in
+ * the built image), so production is unchanged — there the console host's edge routes
+ * `/v1` to cloud-api. The request cookie is forwarded by the rewrite, so the local
+ * dev session resolves against the real cloud.
+ */
+const DEV_CLOUD_ORIGIN = process.env.DEV_CLOUD_ORIGIN?.replace(/\/+$/, '')
+const devCloudRewrites = () =>
+  DEV_CLOUD_ORIGIN
+    ? [
+        { source: '/v1/iam/:path*', destination: `${DEV_CLOUD_ORIGIN}/v1/iam/:path*` },
+        { source: '/v1/o11y/:path*', destination: `${DEV_CLOUD_ORIGIN}/v1/o11y/:path*` },
+      ]
+    : []
+
 const aiSurfaceRewrites = () => ({
   beforeFiles: [
     ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
@@ -78,6 +95,7 @@ const aiSurfaceRewrites = () => ({
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/v1/${h}/:path*` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}`, destination: `/admin/aggregate/${h}` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}/:path*`, destination: `/admin/aggregate/${h}/:path*` })),
+    ...devCloudRewrites(),
   ],
 })
 

@@ -50,50 +50,67 @@ export function DataTable<T>({
     )
   }
 
+  // Natural min-width of the table: the sum of the declared column widths, with a
+  // sensible floor for flex columns, plus row padding + inter-column gaps. On a
+  // narrow (mobile) viewport where this exceeds the container, the inner wrapper
+  // scrolls HORIZONTALLY instead of clipping the last columns (the old
+  // `overflow:hidden` cut the right edge off, e.g. the Status column). On desktop
+  // the flex columns still expand to fill, so wide screens are unchanged.
+  const minTableW = columns.reduce((sum, c) => sum + (c.width ?? FLEX_MIN_COL_W), 0) + (columns.length + 1) * 12
+
   return (
     <YStack borderWidth={1} borderColor="$borderColor" rounded="$4" overflow="hidden">
-      <XStack bg="$color2" py="$2.5" px="$3" gap="$3">
-        {columns.map((c) => (
-          <Text
-            key={c.key}
-            width={c.width}
-            flex={c.width ? undefined : 1}
-            fontSize="$2"
-            fontWeight="700"
-            color="$color11"
-          >
-            {c.header}
-          </Text>
-        ))}
-      </XStack>
-      <YStack>
-        {rows.map((row) => (
-          <XStack
-            key={rowKey(row)}
-            py="$2.5"
-            px="$3"
-            gap="$3"
-            borderTopWidth={1}
-            borderColor="$borderColor"
-            items="center"
-            hoverStyle={onRowPress ? { bg: '$color2' } : undefined}
-            cursor={onRowPress ? 'pointer' : undefined}
-            onPress={onRowPress ? () => onRowPress(row) : undefined}
-          >
+      <YStack style={{ overflowX: 'auto', overflowY: 'visible' }}>
+        <YStack minW={minTableW}>
+          <XStack bg="$color2" py="$2.5" px="$3" gap="$3">
             {columns.map((c) => (
-              <YStack key={c.key} width={c.width} flex={c.width ? undefined : 1}>
-                {c.render ? (
-                  c.render(row)
-                ) : (
-                  <Text fontSize="$3" numberOfLines={1}>
-                    {String((row as Record<string, unknown>)[c.key] ?? '')}
-                  </Text>
-                )}
-              </YStack>
+              <Text
+                key={c.key}
+                width={c.width}
+                flex={c.width ? undefined : 1}
+                minW={c.width ? undefined : FLEX_MIN_COL_W}
+                fontSize="$2"
+                fontWeight="700"
+                color="$color11"
+              >
+                {c.header}
+              </Text>
             ))}
           </XStack>
-        ))}
+          <YStack>
+            {rows.map((row) => (
+              <XStack
+                key={rowKey(row)}
+                py="$2.5"
+                px="$3"
+                gap="$3"
+                borderTopWidth={1}
+                borderColor="$borderColor"
+                items="center"
+                hoverStyle={onRowPress ? { bg: '$color2' } : undefined}
+                cursor={onRowPress ? 'pointer' : undefined}
+                onPress={onRowPress ? () => onRowPress(row) : undefined}
+              >
+                {columns.map((c) => (
+                  <YStack key={c.key} width={c.width} flex={c.width ? undefined : 1} minW={c.width ? undefined : FLEX_MIN_COL_W}>
+                    {c.render ? (
+                      c.render(row)
+                    ) : (
+                      <Text fontSize="$3" numberOfLines={1}>
+                        {String((row as Record<string, unknown>)[c.key] ?? '')}
+                      </Text>
+                    )}
+                  </YStack>
+                ))}
+              </XStack>
+            ))}
+          </YStack>
+        </YStack>
       </YStack>
     </YStack>
   )
 }
+
+/** Min width for a flex (no explicit `width`) column, so the table has a natural
+ *  size to scroll to on mobile instead of squishing/clipping its cells. */
+const FLEX_MIN_COL_W = 120
