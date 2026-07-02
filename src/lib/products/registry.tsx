@@ -184,6 +184,7 @@ import { GpusModule, GpusOverview } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
+import { CrmModule } from '~/components/products/CrmModule'
 import { TeamModule } from '~/components/products/TeamModule'
 import { ProfileModule } from '~/components/products/ProfileModule'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
@@ -1423,6 +1424,18 @@ export const catalog: CatalogEntry[] = [
   },
 
   // ── Apps ─────────────────────────────────────────────────────────────
+  {
+    id: 'crm',
+    label: 'CRM',
+    icon: Users,
+    description: 'Companies, contacts, and opportunities — native /v1/crm on Base, per-org.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/crm',
+    docs: `${DOCS}/crm`,
+    kind: 'module',
+    routes: [{ path: '', component: CrmModule }],
+  },
   {
     id: 'chat',
     label: 'Chat',
