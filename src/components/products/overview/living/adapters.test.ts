@@ -181,8 +181,21 @@ describe('healthFromApps — operator inventory → health rows', () => {
 })
 
 // A minimal-but-real Finance payload (the shape normalizeFinance produces).
-const finance = (over: Partial<Finance['cost']['digitalocean']> = {}, rev: Partial<Finance['revenue']> = {}, der: Partial<Finance['derived']> = {}): Finance => ({
+const finance = (
+  over: Partial<Finance['cost']['digitalocean']> = {},
+  rev: Partial<Finance['revenue']> = {},
+  der: Partial<Finance['derived']> = {},
+  costOver: Partial<Omit<Finance['cost'], 'digitalocean'>> = {},
+): Finance => ({
   cost: {
+    configured: true,
+    error: '',
+    period: '2026-07',
+    totalCents: 350_000, // $3,500 COGS: DO compute $3,000 + OpenAI $500
+    vendors: [
+      { vendor: 'digitalocean', service: 'compute', amountCents: 300_000, source: 'actual', note: '' },
+      { vendor: 'openai', service: 'llm-inference', amountCents: 50_000, source: 'actual', note: '' },
+    ],
     digitalocean: {
       configured: true,
       error: '',
@@ -198,6 +211,7 @@ const finance = (over: Partial<Finance['cost']['digitalocean']> = {}, rev: Parti
       ],
       ...over,
     },
+    ...costOver,
   },
   revenue: { configured: true, totalRevenueCents: 3_500_000, mrrCents: 500_000, creditsConsumedCents: 3_500_000, ...rev },
   derived: { grossMarginCents: 3_200_000, grossMarginPct: 91, runwayDays: 33.3, profitable: true, ...der },
@@ -205,14 +219,32 @@ const finance = (over: Partial<Finance['cost']['digitalocean']> = {}, rev: Parti
 })
 
 describe('fromFinance — /v1/admin/finance → OverviewData', () => {
-  it('maps DO cost, revenue, MRR, margin, and runway onto their KPI keys', () => {
+  it('maps COGS (all vendors), DO credit, revenue, MRR, margin, and runway onto their KPI keys', () => {
     const d = fromFinance(finance())
+    expect(d.kpi.spendCents.value).toBe(350_000) // COGS total (commerce), not DO MTD
     expect(d.kpi.creditRemaining.value).toBe(1_000_000)
-    expect(d.kpi.spendCents.value).toBe(300_000)
     expect(d.kpi.mrr.value).toBe(500_000)
     expect(d.kpi.revenue.value).toBe(3_500_000)
     expect(d.kpi.marginPct.value).toBe(91)
     expect(d.kpi.runwayDays.value).toBe(33.3)
+  })
+
+  it('projects per-vendor COGS onto the vendorCogs distribution (positive lines only)', () => {
+    const d = fromFinance(finance())
+    expect(d.distribution.vendorCogs).toEqual([
+      { label: 'digitalocean', value: 300_000, sub: 'compute' },
+      { label: 'openai', value: 50_000, sub: 'llm-inference' },
+    ])
+  })
+
+  it('drops zero/pending vendor lines from the donut (no padding)', () => {
+    const d = fromFinance(finance({}, {}, {}, {
+      vendors: [
+        { vendor: 'digitalocean', service: 'compute', amountCents: 300_000, source: 'actual', note: '' },
+        { vendor: 'cloudflare', service: 'cdn-dns', amountCents: 0, source: 'estimated', note: 'not wired' },
+      ],
+    }))
+    expect(d.distribution.vendorCogs).toEqual([{ label: 'digitalocean', value: 300_000, sub: 'compute' }])
   })
 
   it('builds the burn-down series from positive charges only, oldest→newest', () => {
@@ -230,16 +262,27 @@ describe('fromFinance — /v1/admin/finance → OverviewData', () => {
     expect(d.health[0]).toMatchObject({ service: 'Profitability', health: 'green' })
   })
 
-  it('is honest-empty for an unconfigured DO — no fabricated credit/spend/margin', () => {
+  it('DO treasury unconfigured → no credit/burn-down, but COGS + margin still flow from commerce', () => {
     const d = fromFinance(finance({ configured: false, creditRemainingCents: 0, monthToDateSpendCents: 0, history: [] }))
-    // No creditRemaining/spend KPI → the tiles render "—", not a fake $0.
+    // DO-only tiles blank out honestly.
     expect(d.kpi.creditRemaining).toBeUndefined()
-    expect(d.kpi.spendCents).toBeUndefined()
-    expect(d.kpi.marginPct).toBeUndefined() // margin needs both real cost AND revenue
-    // Revenue still surfaces (commerce is independent of DO).
+    expect(d.series.spendCents).toBeUndefined() // no DO charges → no fabricated burn-down
+    // COGS + margin are commerce's, decoupled from DO — a missing DO_API_TOKEN never blanks them.
+    expect(d.kpi.spendCents.value).toBe(350_000)
+    expect(d.kpi.marginPct.value).toBe(91)
+    expect(d.distribution.vendorCogs).toHaveLength(2)
     expect(d.kpi.revenue.value).toBe(3_500_000)
-    expect(d.series.spendCents).toBeUndefined() // no charges → no fabricated burn-down
-    expect(d.health[0].health).toBe('') // unknown verdict → "not connected"
+    expect(d.health[0].health).toBe('green') // COGS configured + profitable → real verdict
+  })
+
+  it('is honest-empty when commerce COGS is unconfigured — no fabricated spend/margin/donut', () => {
+    const d = fromFinance(finance({}, {}, {}, { configured: false, totalCents: 0, vendors: [] }))
+    expect(d.kpi.spendCents).toBeUndefined()
+    expect(d.kpi.marginPct).toBeUndefined()
+    expect(d.distribution.vendorCogs).toBeUndefined()
+    // DO treasury still surfaces (independent of commerce COGS).
+    expect(d.kpi.creditRemaining.value).toBe(1_000_000)
+    expect(d.health[0].health).toBe('') // COGS off → unknown verdict, never a fabricated green
   })
 
   it('omits the runway KPI when runway is null (no fabricated 0 days)', () => {
@@ -258,7 +301,7 @@ describe('financeHealth — profitability verdict (pure)', () => {
   it('red when burning faster than earning', () => {
     expect(financeHealth(finance({}, {}, { profitable: false, grossMarginPct: -50 })).health).toBe('red')
   })
-  it('unknown ("") when DO is unconfigured — never a fabricated green', () => {
-    expect(financeHealth(finance({ configured: false })).health).toBe('')
+  it('unknown ("") when commerce COGS is unconfigured — never a fabricated green', () => {
+    expect(financeHealth(finance({}, {}, {}, { configured: false })).health).toBe('')
   })
 })
