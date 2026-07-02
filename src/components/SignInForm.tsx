@@ -64,7 +64,7 @@ function CardShell({ children }: { children: React.ReactNode }) {
 }
 
 export function SignInForm() {
-  const { completeSignIn, signInWith } = useSession()
+  const { completeSignIn, signInWith, establishConsoleSession } = useSession()
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -80,6 +80,12 @@ export function SignInForm() {
       const res = await loginWithPassword(email.trim(), password)
       if (res.kind === 'code') {
         await completeSignIn(res.code, loginState())
+        // Upgrade to the console's OWN durable, silently-refreshed session (server-side
+        // password grant, gated by the casibase session we just established). Best-effort:
+        // it never throws, and a failure leaves the user signed in on the casibase session
+        // — so login is never blocked by this enhancement. MFA accounts don't reach here
+        // (they hand off to the hosted flow above), so this never bypasses MFA.
+        await establishConsoleSession(email.trim(), password)
         router.replace('/')
       } else if (res.kind === 'mfa') {
         setMfa(true)

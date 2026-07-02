@@ -24,6 +24,7 @@ import { brandFromHost } from '~/config'
 import { BRANDS, type Brand } from '~/lib/branding/brands'
 import { emailOnBrand, gateAllows } from './admin-policy'
 import { fetchWithTimeout } from './fetch-timeout'
+import { consoleClaims, type ConsoleClaims } from './session'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
 
@@ -117,10 +118,47 @@ export async function resolveAuthenticatedUser(req: NextRequest): Promise<Sessio
   return resolveSessionUser(req, { requireOwner: false })
 }
 
+/**
+ * Map console-OAuth-session claims (the `hz_session` access token) to a SessionUser.
+ * The console JWT carries the full user object, so this needs no IAM round-trip. An
+ * anonymous/nameless claim yields null. Shares the exact id/owner/admin semantics as
+ * the casibase branch below (ONE meaning of a principal, two credential sources).
+ */
+function sessionUserFromClaims(c: ConsoleClaims): SessionUser | null {
+  const owner = c.owner ?? ''
+  const name = c.name ?? ''
+  if (!name || c.type === 'anonymous-user') return null
+  // IAM's privileged ops parse `<owner>/<name>`; prefer it, fall back to sub/name.
+  const id = owner && name ? `${owner}/${name}` : (c.sub || name)
+  if (!id) return null
+  return {
+    owner,
+    name,
+    id,
+    accessKey: c.accessKey ?? '',
+    email: c.email ?? '',
+    emailVerified: Boolean(c.emailVerified),
+    isAdmin: Boolean(c.isAdmin),
+    isGlobalAdmin: Boolean(c.isGlobalAdmin) || isAdminOrg(owner),
+  }
+}
+
 async function resolveSessionUser(
   req: NextRequest,
   opts: { requireOwner: boolean },
 ): Promise<SessionUser | null> {
+  // Prefer the console's OWN OAuth session (durable + silently refreshed): a live,
+  // AEAD-sealed `hz_session` access token resolves the principal with no IAM
+  // round-trip. This is what makes the AuthGate + every BFF proxy independent of the
+  // casibase session cookie's lifetime (the fix for the mid-task bounce). When the
+  // access token is stale/absent the client refreshes it (proactively + on a 401);
+  // meanwhile we fall through to the casibase session so nothing is worse than today.
+  const cc = consoleClaims(req)
+  if (cc) {
+    const u = sessionUserFromClaims(cc)
+    if (u && (!opts.requireOwner || u.owner)) return u
+  }
+
   const cookie = req.headers.get('cookie')
   if (!cookie) return null
 

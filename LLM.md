@@ -1345,3 +1345,62 @@ record forms with no inputs (silent data loss) — plus two delete affordances; 
 - Verification: `tsc --noEmit` clean; `npm test` **970/970** (80 files; +5 memory
   normalizer); `next build` ✓ (15/15). Live re-verify (create a record with real
   values → persists non-blank; Memory Open+Delete; Datasets delete) post-deploy.
+
+## Silent token-refresh — durable console OAuth session, no mid-task logout (v8.4.29)
+
+Corrects v8.4.27's "5-min logout is a BACKEND concern, no client change" call. The
+console had ZERO `grant_type=refresh_token` and pinned the AuthGate + every BFF proxy
+to the cloud **casibase session cookie** (`cloud_session_id`) — a session it does not
+own and cannot refresh, so it can lapse out from under a working tab and bounce the
+user. IAM was already secure (7-day access + rotating/revocable 30-day refresh,
+`grant_type=refresh_token` live). v8.4.27's "refresh needs a browser-held refresh
+token (XSS)" was the wrong frame: the refresh is **server-side (BFF)**.
+
+Ground truth (verified live against hanzo.id + cloud, in-cluster): `hanzo-console` is
+a confidential client that supports `password` + `authorization_code` + `refresh_token`
+with `offline_access` (returns a rotating refresh token); its access token is a hanzo.id
+JWT `aud=hanzo-console` / `iss=https://hanzo.id`, which cloud's `SanitizeIdentity`
+accepts (deployed `GATEWAY_ALLOWED_AUDIENCES` includes `hanzo-console`). The casibase
+`cloud_session_id` is actually durable (1-yr GC, session-scoped cookie), and it is
+LOAD-BEARING for the casibase admin surfaces (providers/models/stores/chat) + a couple
+of session-only reads (get-account, get-cloud-usages) — so it is KEPT, not replaced.
+
+The fix is **additive, one session manager, zero regression** (worst case === v8.4.28):
+- **`src/lib/server/session.ts`** — THE token manager (server-only by construction:
+  `node:crypto` + `next/server`). Sealed (AES-256-GCM, key = HKDF(`IAM_MINT_CLIENT_SECRET`);
+  no-secret → per-process random key, never a constant) into ONE httpOnly+Secure+Lax,
+  30-day cookie `hz_session` holding `{access, refresh, exp}`. Grants: `passwordGrant`
+  / `refreshGrant` (client_secret_basic, `offline_access`). `consoleSession(req)` decodes
+  the access-token claims (AEAD-trusted — the sealed cookie IS the integrity anchor,
+  no JWKS round-trip; only `exp` re-checked, 60s skew). Never logs a token; projects
+  ONLY display/authz claims (Casdoor packs secret material into its JWT).
+- **`app/auth/session/route.ts`** — POST establishes the console session for the
+  signed-in user (server-side `passwordGrant`), **gated**: the caller must already be
+  authenticated (a valid casibase session, `resolveUser`) AND the grant must resolve to
+  the SAME principal (`sameSubject`) — so it can never run standalone with a stolen
+  password and never bypasses MFA (MFA logins hand off to the hosted flow and never
+  reach it). GET = the account from the console session (AuthGate reads this first).
+  DELETE = sign out (revoke + clear).
+- **`app/auth/refresh/route.ts`** — silent `grant_type=refresh_token`, rotation-aware
+  (persists the NEW refresh token). NEVER clears the cookie on failure (multi-tab
+  rotating-token race safety — a lost-race 401 must not nuke the winner's fresh cookie);
+  only sign-out clears.
+- **`resolveUser`** (identity.ts) prefers the console session (`consoleClaims`), falls
+  back to the casibase get-account. So the AuthGate + `/cloud` bearer-proxy both read the
+  ONE session manager (the coordinator's constraint), casibase as graceful fallback.
+- **Client**: `lib/auth/refresh.ts` = single-flight `refreshSession()` (rotating tokens
+  MUST NOT race). `session.tsx` arms a PROACTIVE timer at 80% of the access lifetime
+  (only when < 2h — short tokens post the IAM 1h-access hardening; long tokens rely on
+  reactive). `client.ts` `authedFetch` = REACTIVE (a 401 on any cloud/BFF call → refresh
+  once → retry). `account.ts` `session()` self-heals on load (console GET → on miss,
+  refresh once → retry → else casibase). `SignInForm` upgrades a password login to the
+  console session (best-effort; a failure leaves the user on casibase — login never
+  blocked). Social/MFA logins run on casibase (durable) unchanged.
+- Unblocks the IAM 1h-access hardening (iam#89, universe#290): once the access token is
+  1h, the proactive timer (48min) + reactive 401 keep the session warm — no bounce.
+- Verification: `tsc --noEmit` clean; `npm test` **999/999** (83 files; +18 session
+  seal/open/claims/grants, +4 refresh single-flight, +5 resolveUser precedence);
+  `next build` ✓ (`/auth/session` + `/auth/refresh` registered). Live: login as
+  z@hanzo.ai → `hz_session` set (httpOnly) → active past 5 min → no bounce; `/auth/refresh`
+  rotates. `NEXT_PUBLIC_*` unchanged (no client-id switch); server-only env reused
+  (`IAM_MINT_CLIENT_ID/SECRET`, `IAM_URL`) — no new secret to provision.
