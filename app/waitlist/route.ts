@@ -39,13 +39,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const body = (await req.json().catch(() => ({}))) as { waitlist?: string; email?: string }
   const waitlist = (body.waitlist ?? '').trim()
-  const email = (body.email ?? user.email ?? '').trim()
+  // BIND the recorded email to the SESSION: prefer the authenticated account email so
+  // a signed-in user can't enroll someone else (victim@othercorp) or forge "org X
+  // wants ERP". The client-supplied email is only a fallback for an account with no
+  // email on file. (RED review.)
+  const email = ((user.email && user.email.trim()) || (body.email ?? '').trim()).trim()
   if (!waitlist) return NextResponse.json({ error: 'Missing waitlist.' }, { status: 400 })
   if (!looksLikeEmail(email)) return NextResponse.json({ error: 'Enter a valid email.' }, { status: 400 })
 
-  const fwd =
-    req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? ''
-
+  // Do NOT forward the client-controllable X-Forwarded-For — it's forgeable (a caller
+  // could spoof a fresh source IP per request to defeat the backend's per-IP limit).
+  // The backend sees this server's connection IP; per-user abuse is already bounded by
+  // the session gate above. (RED review.)
   let res: Response
   try {
     res = await fetchWithTimeout(`${WAITLIST_URL}/v1/waitlist/join`, {
@@ -53,7 +58,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        ...(fwd ? { 'X-Forwarded-For': fwd } : {}),
       },
       body: JSON.stringify({ waitlist, email }),
       cache: 'no-store',

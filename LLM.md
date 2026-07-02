@@ -1218,3 +1218,31 @@ reimplemented.
   subpage-sources, +18 base-builder logic, +12 paas logic, +2 proxy-allow base,
   +8 match-core subpage routing); `next build` ✓ (all routes). Live visual e2e as
   Dave (maxpower) is post-deploy.
+
+## Embed entitlement gate — RED hardening of the CMS/ERP/Help embeds (v8.4.24)
+
+RED reviewed v8.4.22's embeds (0 critical; SSRF clamp, iframe SOP, no-credential-
+injection, honest normalizers all REFUTED) and flagged the console residuals: the
+embeds *asserted* a server-side `org==tenant` guarantee the shared single-tenant
+apps can't back, `/embed-status` handed the embed URL to any authenticated org, and
+Help embedded the shared desk for everyone. Fixed:
+- **Server-side entitlement gate.** `/embed-status` now resolves the caller's org
+  (token owner) and returns `entitled` per app. cms/erp/help are ALL brand-owned
+  single instances (`EMBED_OWNERSHIP` in `embed-probe.ts`), so a non-owning (customer)
+  org gets `entitled:false`, **no embed URL**, and no probe — the module shows the
+  provision panel. Only a brand-org member / global admin gets the embed. This is the
+  AUTHORITATIVE gate (the old client `account.owner===iamOrgName` check was cosmetic);
+  `brandOrgForHost` maps the SSRF-clamped brand domain → owning org. Client normalizer
+  fails closed (`entitled` strict-true; a stale server → provision panel, never a frame).
+- **Help is now brand-owned too** (was embed-for-all) — a customer never frames the
+  shared Frappe Helpdesk (removes the unverified cross-org ticket-visibility risk);
+  they get an honest "Help Center for your org" provision panel.
+- **Dropped the false isolation claims** in `EmbeddedApp`/`embed-hosts`/module
+  docstrings (the console gates WHO it frames; a shared app still owes its own per-org
+  isolation — the root CMS per-org tenancy is a separate CMS-side fix).
+- **Trimmed the iframe sandbox** (dropped `allow-top-navigation-by-user-activation`,
+  `allow-popups-to-escape-sandbox`, `clipboard-read`).
+- **`/waitlist` hardened**: the recorded email is bound to the session account (can't
+  enroll `victim@othercorp`); stopped forwarding the forgeable `X-Forwarded-For`.
+- Verification: `tsc` clean; `npm test` **+13** embed tests (entitlement + brand-org
+  map + fail-closed normalizer); `next build` ✓ (`/embed-status` + `/[...slug]`).
