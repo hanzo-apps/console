@@ -9,6 +9,8 @@ import {
   presentDimensions,
   dailySpend,
   shortDay,
+  capRows,
+  COST_ROW_CAP,
 } from './logic'
 
 /**
@@ -158,6 +160,36 @@ describe('presentDimensions — offer only dimensions the ledger carries', () =>
       'product',
       'agent',
     ])
+  })
+})
+
+describe('capRows — bound rendered rows under high cardinality (RED L2)', () => {
+  const many = (n: number) => Array.from({ length: n }, (_, i) => ({ i }))
+
+  it('passes rows through untouched below the cap', () => {
+    const rows = many(10)
+    const out = capRows(rows, false, COST_ROW_CAP)
+    expect(out.rows).toBe(rows)
+    expect(out.hidden).toBe(0)
+  })
+
+  it('caps to the limit and reports the hidden count', () => {
+    const out = capRows(many(5000), false, COST_ROW_CAP)
+    expect(out.rows).toHaveLength(COST_ROW_CAP)
+    expect(out.hidden).toBe(5000 - COST_ROW_CAP)
+  })
+
+  it('showAll reveals every row (never hides real data)', () => {
+    const rows = many(5000)
+    const out = capRows(rows, true, COST_ROW_CAP)
+    expect(out.rows).toHaveLength(5000)
+    expect(out.hidden).toBe(0)
+  })
+
+  it('keeps the top-by-spend prefix (rows are pre-sorted)', () => {
+    const out = capRows([{ i: 0 }, { i: 1 }, { i: 2 }], false, 2)
+    expect(out.rows.map((r) => r.i)).toEqual([0, 1])
+    expect(out.hidden).toBe(1)
   })
 })
 

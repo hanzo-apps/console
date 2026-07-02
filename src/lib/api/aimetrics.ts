@@ -282,21 +282,28 @@ export function perAgent(records: UsageRecord[]): AgentUsage[] {
   return Array.from(by.values()).sort((a, b) => b.cents - a.cents || b.requests - a.requests)
 }
 
-/**
- * The ledger rollup for ONE agent by identity — the cost/requests/tokens the SAME
- * charged ledger attributes to it over the given records. `null` when the ledger
- * carries no row for that agent (honest "—" in the detail pane, never a fabricated
- * cost). `id` and `name` are BOTH matched, since the ledger may tag either.
- */
-export function agentUsageFor(records: UsageRecord[], match: { id?: string; name?: string }): AgentUsage | null {
-  const wanted = new Set([match.id, match.name].filter((v): v is string => !!v))
-  if (!wanted.size) return null
-  const rows = records.filter((r) => r.agent && wanted.has(r.agent))
+/** Sum the ledger rows for one agent-tag value into an `AgentUsage` (null if none). */
+function rollupAgentRows(records: UsageRecord[], tag: string): AgentUsage | null {
+  const rows = records.filter((r) => r.agent === tag)
   if (!rows.length) return null
   return rows.reduce<AgentUsage>(
-    (acc, r) => ({ agent: acc.agent, requests: acc.requests + 1, totalTokens: acc.totalTokens + r.totalTokens, cents: acc.cents + r.cents }),
-    { agent: rows[0].agent, requests: 0, totalTokens: 0, cents: 0 },
+    (acc, r) => ({ agent: tag, requests: acc.requests + 1, totalTokens: acc.totalTokens + r.totalTokens, cents: acc.cents + r.cents }),
+    { agent: tag, requests: 0, totalTokens: 0, cents: 0 },
   )
+}
+
+/**
+ * The ledger rollup for ONE agent by identity — the cost/requests/tokens the SAME
+ * charged ledger attributes to it. The ledger tags a row with EITHER the agent id
+ * or its name, so we try the id FIRST and fall back to the name only when the id
+ * matched nothing — never a `Set([id,name])` union, which conflated two distinct
+ * agents when one's id equalled another's tag or two shared a name (RED L1). `null`
+ * when the ledger carries no row for either (honest "—", never a fabricated cost).
+ */
+export function agentUsageFor(records: UsageRecord[], match: { id?: string; name?: string }): AgentUsage | null {
+  const byId = match.id ? rollupAgentRows(records, match.id) : null
+  if (byId) return byId
+  return match.name ? rollupAgentRows(records, match.name) : null
 }
 
 /** The most recent `n` records (newest first). Undated records sort last. */

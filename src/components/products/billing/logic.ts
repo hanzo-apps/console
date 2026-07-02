@@ -118,6 +118,22 @@ export function filterGroups(groups: SpendGroup[], query: string): SpendGroup[] 
   return groups.filter((g) => `${g.label} ${g.provider}`.toLowerCase().includes(q))
 }
 
+/** Default cap on rendered cost-table rows — bounds DOM work under high cardinality. */
+export const COST_ROW_CAP = 100
+
+/**
+ * Cap the rendered rows to `limit` (top-by-spend, already sorted) unless `showAll`.
+ * A client-influenced dimension (agent/product tags are set at inference time) can
+ * have thousands of distinct values; rendering them all is a self-inflicted DoS
+ * (RED L2). The rows are the caller's OWN paid spend (not adversary-supplied
+ * cross-tenant data), so this is a render bound, not a trust boundary — the "hidden"
+ * count is surfaced honestly and `showAll` reveals every real row on demand. PURE.
+ */
+export function capRows<T>(rows: T[], showAll: boolean, limit = COST_ROW_CAP): { rows: T[]; hidden: number } {
+  if (showAll || rows.length <= limit) return { rows, hidden: 0 }
+  return { rows: rows.slice(0, limit), hidden: rows.length - limit }
+}
+
 /**
  * Which breakdown dimensions the ledger actually supports — a dimension is offered
  * only if ≥1 record carries a non-empty value for it. `model` is always present
