@@ -15,21 +15,25 @@ import { BarChart3, TriangleAlert } from '@hanzogui/lucide-icons-2'
 import { ApiError } from '~/lib/api'
 import { config } from '~/config'
 
-export type RuntimeStatus = 'not-initialized' | 'unavailable' | 'access' | 'error'
+export type RuntimeStatus = 'not-initialized' | 'unavailable' | 'auth' | 'access' | 'error'
 
 /** Map a failed o11y fetch to an honest runtime status. */
 export function classifyRuntime(e: unknown): RuntimeStatus {
   const s = e instanceof ApiError ? e.status : 0
   if (s === 503) return 'not-initialized'
   if (s === 404) return 'unavailable'
-  if (s === 401 || s === 403) return 'access'
+  // 401 = no session (sign in); 403 = signed in without permission. Never tell a
+  // signed-in user to "sign in".
+  if (s === 401) return 'auth'
+  if (s === 403) return 'access'
   return 'error'
 }
 
 const TITLE: Record<RuntimeStatus, string> = {
   'not-initialized': 'Observability runtime initializing',
   unavailable: 'Not routed on this host',
-  access: 'Access required',
+  auth: 'Sign in to continue',
+  access: 'You don’t have access to this',
   error: 'Could not reach observability',
 }
 
@@ -39,7 +43,8 @@ export function RuntimeNotice({ surface, error }: { surface: string; error: unkn
   const body: Record<RuntimeStatus, string> = {
     'not-initialized': `Observability runtime initializing — your ${surface} will appear here once it's enabled. The /v1/o11y routes are mounted, but the runtime (telemetry stores, query service) is not initialized on this deployment yet. This page shows live ${surface} the moment the runtime is online — it never shows placeholder data.`,
     unavailable: `The /v1/o11y/${surface} surface is not proxied on this host yet.`,
-    access: `Sign in with an account that can read observability ${surface}.`,
+    auth: `Your session has expired or you are signed out. Sign in again to read observability ${surface}.`,
+    access: `Your account doesn’t have permission to read observability ${surface}. It may be scoped to another role or organization.`,
     error: message,
   }
   // While the trace runtime is initializing, AI Metrics already has real,

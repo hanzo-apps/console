@@ -16,7 +16,7 @@ import { TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 
-export type BackendStateKind = 'not-initialized' | 'unavailable' | 'access' | 'billing' | 'error'
+export type BackendStateKind = 'not-initialized' | 'unavailable' | 'auth' | 'access' | 'billing' | 'error'
 
 export type BackendState = { kind: BackendStateKind; message: string }
 
@@ -27,14 +27,19 @@ export function classifyBackend(e: unknown): BackendState {
   if (status === 503) return { kind: 'not-initialized', message }
   if (status === 404 || status === 405) return { kind: 'unavailable', message }
   if (status === 402) return { kind: 'billing', message }
-  if (status === 401 || status === 403) return { kind: 'access', message }
+  // 401 = no valid session (sign in); 403 = signed in but the role can't read this
+  // (managed by Hanzo / insufficient permission). Never tell a signed-in user to
+  // "sign in" — that is the confusing "sign-in shown to a signed-in user" bug.
+  if (status === 401) return { kind: 'auth', message }
+  if (status === 403) return { kind: 'access', message }
   return { kind: 'error', message }
 }
 
 const TITLES: Record<BackendStateKind, string> = {
   'not-initialized': 'Backend not initialized',
   unavailable: 'Not available on this deployment yet',
-  access: 'Access required',
+  auth: 'Sign in to continue',
+  access: 'You don’t have access to this',
   billing: 'Add credits to continue',
   error: 'Could not reach the backend',
 }
@@ -44,7 +49,9 @@ const BODIES: Record<BackendStateKind, string> = {
     'The /v1 route is mounted but its runtime (or the console API key it proxies to) is not configured on this deployment yet. Real data appears here once it is — no placeholder data is shown.',
   unavailable:
     'This endpoint is not mounted at the gateway on this host yet. The view lights up automatically once the route is live.',
-  access: 'Sign in with an account that can read this data.',
+  auth: 'Your session has expired or you are signed out. Sign in again to read this data.',
+  access:
+    'Your account doesn’t have permission to view this. It may be managed by Hanzo, or scoped to another role or organization.',
   // Empty → the card shows the backend's own message (the honest "Insufficient
   // balance. Please add credits…" from the gateway billing gate).
   billing: '',

@@ -66,8 +66,19 @@ describe('AdminApi — request shapes + honest failure', () => {
     vi.restoreAllMocks()
   })
 
-  const okEnvelope = (data: unknown) =>
-    ({ ok: true, status: 200, json: async () => ({ status: 'ok', msg: '', data }) }) as unknown as Response
+  // Faithful JSON Response mock: the transport reads `res.text()` + `res.headers`
+  // (to detect a SPA-HTML fallthrough) before parsing, so a mock must carry both.
+  const jsonResponse = (status: number, ok: boolean, body: unknown) => {
+    const text = JSON.stringify(body)
+    return {
+      ok,
+      status,
+      headers: { get: (n: string) => (n.toLowerCase() === 'content-type' ? 'application/json' : null) },
+      text: async () => text,
+      json: async () => body,
+    } as unknown as Response
+  }
+  const okEnvelope = (data: unknown) => jsonResponse(200, true, { status: 'ok', msg: '', data })
 
   it('overview() hits /v1/admin/overview with range + activityLimit and normalizes', async () => {
     let called = ''
@@ -103,7 +114,7 @@ describe('AdminApi — request shapes + honest failure', () => {
   })
 
   it('propagates a 404 as a typed ApiError (admin backend not routed → honest state upstream)', async () => {
-    globalThis.fetch = vi.fn(async () => ({ ok: false, status: 404, json: async () => ({ status: 'error', msg: 'not found' }) }) as unknown as Response) as unknown as typeof fetch
+    globalThis.fetch = vi.fn(async () => jsonResponse(404, false, { status: 'error', msg: 'not found' })) as unknown as typeof fetch
     await expect(AdminApi.overview()).rejects.toMatchObject({ status: 404 })
   })
 })

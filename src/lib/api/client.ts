@@ -36,6 +36,31 @@ const acceptLanguage = (): string => {
 }
 
 /**
+ * True when a `/v1` response is the SPA shell, not an API payload.
+ *
+ * When a `/v1/<head>` route is NOT mounted on the backend of a given deployment
+ * (e.g. o11y before the datastore is wired), the request falls through to the
+ * Next.js catch-all and comes back as `200 text/html` with the app's index
+ * document. Parsing that as JSON throws a generic "invalid response" that
+ * `classifyBackend` shows as the scary "Could not reach the backend" — even
+ * though the truth is simply "this endpoint is not mounted here yet". Detecting
+ * the HTML shell lets both transports re-throw as a 404-class `ApiError`, which
+ * `classifyBackend` renders as the honest "Not available on this deployment yet"
+ * — never a fabricated row, never a false crash. A real API never replies with
+ * HTML, so this only ever catches the fallthrough.
+ */
+export const isSpaFallthrough = (res: { headers: { get(name: string): string | null } }, body: string): boolean => {
+  const ct = res.headers.get('content-type') ?? ''
+  if (ct.includes('text/html')) return true
+  const head = body.slice(0, 40).trimStart().toLowerCase()
+  return head.startsWith('<!doctype') || head.startsWith('<html')
+}
+
+/** Thrown for an unmounted `/v1` route (SPA-HTML fallthrough); classified `unavailable`. */
+const spaFallthroughError = (): ApiError =>
+  new ApiError('This endpoint is not mounted on this deployment yet.', 404)
+
+/**
  * Headers sent on every cloud call. Besides locale, we stamp `X-Org-Id` with the
  * ACTIVE org scope (`currentOrg()` — the brand org by default, or the org a global
  * admin switched to in the OrgSwitcher). The casibase endpoints scope by the
@@ -107,9 +132,14 @@ async function request<T>(
     throw new ApiError('Not authorized', res.status)
   }
 
+  const text = await res.text()
+  // An unmounted `/v1` route falls through to the SPA shell (200 text/html) — surface
+  // it as the honest "not available here yet", not a scary parse failure.
+  if (isSpaFallthrough(res, text)) throw spaFallthroughError()
+
   let json: ApiResponse<T>
   try {
-    json = (await res.json()) as ApiResponse<T>
+    json = JSON.parse(text) as ApiResponse<T>
   } catch {
     throw new ApiError(`Invalid response from server (HTTP ${res.status})`, res.status)
   }
@@ -242,6 +272,9 @@ async function restRequest<T>(
   if (res.status === 204) return undefined
 
   const text = await res.text()
+  // An unmounted `/v1` route falls through to the SPA shell (200 text/html) — surface
+  // it as the honest "not available here yet", not a scary parse failure.
+  if (isSpaFallthrough(res, text)) throw spaFallthroughError()
   let json: unknown
   if (text) {
     try {
