@@ -26,6 +26,12 @@ export const CLOUD_HEADS: readonly string[] = [
   'functions',
   'prompts',
   'agents',
+  // CRM (cloud clients/crm): /v1/crm/{summary,companies,contacts,opportunities}[/:id].
+  // Native-Go per-org CRM on Base/SQLite (companies/contacts/opportunities, a port of
+  // Twenty's core model). The handler resolves the org from the Bearer owner (X-Org-Id)
+  // and 403s a cookie-only call, so it routes through /cloud exactly like prompts/agents
+  // — the single `crm` head admits every sub-path (summary, the three collections, :id).
+  'crm',
   // Unified analytics (cloud clients/analytics): /v1/analytics/{overview,timeseries,
   // realtime,top/*,llm/*}. Read-only per-org warehouse (datastore/ClickHouse); the
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
