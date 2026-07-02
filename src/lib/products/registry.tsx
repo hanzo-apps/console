@@ -187,6 +187,7 @@ import { ContainersModule } from '~/components/products/ContainersModule'
 import { MachinesModule } from '~/components/products/MachinesModule'
 import { GpusModule, GpusOverview } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
+import { KubeflowModule } from '~/components/products/KubeflowModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
 import { CrmModule } from '~/components/products/CrmModule'
@@ -531,19 +532,22 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: FinetuningModule }],
   },
   {
-    // ML Pipelines (Kubeflow) — orchestrated training/eval DAGs. The console
-    // surface is on the roadmap; the honest "coming soon" page points at the API
-    // + CLI. Grouped with Fine-tuning under Training (the model-building axis).
+    // ML Pipelines (Kubeflow) — the read-only orchestration + control-plane view
+    // over the live cloud mlsvc bridge (hanzoai/cloud clients/ml), which fronts the
+    // Kubeflow-family CRDs as REST: Katib Experiments are the pipelines, trainer
+    // TrainJobs are the runs, and /v1/train/health is a real operator/CRD probe.
+    // Grouped with Fine-tuning under Training (the model-building axis); honest
+    // states until the Kubeflow control plane reports.
     id: 'kubeflow',
     label: 'ML Pipelines',
     icon: Blocks,
     description: 'Orchestrated training and evaluation pipelines (Kubeflow).',
     gcp: 'Vertex AI Pipelines',
     category: 'Training',
-    status: 'soon',
+    status: 'enabled',
     docs: `${DOCS}/pipelines`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: KubeflowModule }],
   },
   {
     // The embeddings product — generate, store, and search vector embeddings.
