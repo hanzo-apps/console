@@ -190,6 +190,8 @@ import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
 import { CrmModule } from '~/components/products/CrmModule'
 import { CmsModule } from '~/components/products/CmsModule'
+import { ErpModule } from '~/components/products/ErpModule'
+import { HelpModule } from '~/components/products/HelpModule'
 import { AccessibilityModule } from '~/components/products/AccessibilityModule'
 import { TeamModule } from '~/components/products/TeamModule'
 import { ProfileModule } from '~/components/products/ProfileModule'
@@ -1544,33 +1546,38 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: CmsModule }],
   },
   {
-    // ERP — accounting, inventory, and HR. The primitive is a one-click deploy
-    // (ERPNext-based hanzoai/erp); no per-org console surface yet, so this is an
-    // HONEST coming-soon (waitlist + API/CLI), never a fake product.
+    // ERP — accounting, inventory, sales, and HR on the canonical ERPNext (Frappe)
+    // backend, surfaced IN the console (ErpModule). No ERP instance is provisioned
+    // yet (erp.<brand> is 502), so the module probes reachability and shows an
+    // HONEST "Deploy ERP" panel with a real provisioning request; the SAME gate
+    // embeds the real desk once an instance is live. Never fabricated ERP data.
     id: 'erp',
     label: 'ERP',
     icon: Boxes,
     description: 'Accounting, inventory, and HR — your Business-OS ERP.',
     category: 'Apps',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/erp',
     docs: `${DOCS}/erp`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: ErpModule }],
   },
   {
-    // Help Center — a customer helpdesk (tickets + knowledge base). One-click
-    // deploy (hanzoai/helpdesk); no per-org console surface yet → HONEST coming-soon.
+    // Help Center — the live Hanzo Help Center (Frappe Helpdesk at help.<brand>,
+    // confirmed live at help.hanzo.ai), EMBEDDED in the console (HelpModule) over
+    // the brand IAM SSO ("Login with hanzo"). A shared brand support desk — the
+    // Helpdesk scopes each caller to their own tickets — so it's embedded for every
+    // signed-in user; honest "not available" if the host isn't reachable.
     id: 'helpdesk',
     label: 'Help Center',
     icon: LifeBuoy,
     description: 'Customer support — tickets and a knowledge base for your users.',
     category: 'Apps',
-    status: 'soon',
+    status: 'enabled',
     repo: 'hanzoai/helpdesk',
     docs: `${DOCS}/helpdesk`,
     kind: 'module',
-    routes: soonRoutes,
+    routes: [{ path: '', component: HelpModule }],
   },
   {
     // Accessibility — a Wix-style WCAG checker for the site Dave is building. Runs
