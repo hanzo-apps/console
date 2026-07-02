@@ -48,6 +48,7 @@ import type { ComponentType } from 'react'
 import { Users,
   Building2,
   Accessibility,
+  LifeBuoy,
   Brain,
   Server,
   Bot,
@@ -188,6 +189,7 @@ import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
 import { CrmModule } from '~/components/products/CrmModule'
+import { CmsModule } from '~/components/products/CmsModule'
 import { AccessibilityModule } from '~/components/products/AccessibilityModule'
 import { TeamModule } from '~/components/products/TeamModule'
 import { ProfileModule } from '~/components/products/ProfileModule'
@@ -1525,6 +1527,50 @@ export const catalog: CatalogEntry[] = [
       { slug: 'contacts', label: 'Contacts' },
       { slug: 'opportunities', label: 'Opportunities' },
     ],
+  },
+  {
+    // Content — surfaces the REAL, live Content Studio (Payload headless CMS at
+    // cms.<brand>, confirmed live at cms.hanzo.ai/admin). IAM-SSO; white-label host.
+    // No fabricated rows — an honest in-console home that opens the Studio.
+    id: 'cms',
+    label: 'Content',
+    icon: FileText,
+    description: 'Headless CMS — pages, posts, and media in your Content Studio, with IAM SSO.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cms',
+    docs: `${DOCS}/cms`,
+    kind: 'module',
+    routes: [{ path: '', component: CmsModule }],
+  },
+  {
+    // ERP — accounting, inventory, and HR. The primitive is a one-click deploy
+    // (ERPNext-based hanzoai/erp); no per-org console surface yet, so this is an
+    // HONEST coming-soon (waitlist + API/CLI), never a fake product.
+    id: 'erp',
+    label: 'ERP',
+    icon: Boxes,
+    description: 'Accounting, inventory, and HR — your Business-OS ERP.',
+    category: 'Apps',
+    status: 'soon',
+    repo: 'hanzoai/erp',
+    docs: `${DOCS}/erp`,
+    kind: 'module',
+    routes: soonRoutes,
+  },
+  {
+    // Help Center — a customer helpdesk (tickets + knowledge base). One-click
+    // deploy (hanzoai/helpdesk); no per-org console surface yet → HONEST coming-soon.
+    id: 'helpdesk',
+    label: 'Help Center',
+    icon: LifeBuoy,
+    description: 'Customer support — tickets and a knowledge base for your users.',
+    category: 'Apps',
+    status: 'soon',
+    repo: 'hanzoai/helpdesk',
+    docs: `${DOCS}/helpdesk`,
+    kind: 'module',
+    routes: soonRoutes,
   },
   {
     // Accessibility — a Wix-style WCAG checker for the site Dave is building. Runs

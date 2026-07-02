@@ -993,3 +993,59 @@ UI tab slug; the tab URLs fall through to the SPA (`app/(dashboard)/[...slug]`).
 - Verification: `tsc --noEmit` clean; `npm test` **874/874** (70 files); `next build`
   ✓ — route table shows `/billing/v1/[...path]`, `/billing/v1/topup/wallet`, and the
   `/[...slug]` catch-all that now serves the billing tabs. Live confirm post-deploy.
+
+## Business-OS suite — CRM + Content + ERP/Help Center + Accessibility, one consolidated PR (v8.4.17)
+
+Consolidates three OVERLAPPING Business-OS PRs — #38 `feat/console2-crm` (the
+original, superseded), #39 `crm-work` (CRM + Accessibility), #42
+`blue/business-apps-console` (CRM + Content + ERP/Help Center) — into ONE canonical
+superset. The three diverged on the shared CRM files (a "two ways to do one thing"
+violation); this is the single mergeable reconciliation. Five `category: 'Apps'`
+entries, all native modules over the ONE `/v1` surface (NO `/api/` prefix),
+org-scoped SERVER-SIDE.
+
+- **CRM** (`crm`, enabled) — companies/contacts/opportunities over the REAL cloud
+  `/v1/crm` (native-Go `clients/crm` on Base/SQLite, a port of Twenty's core model).
+  `lib/api/crm.ts` is same-origin, keyless, prefix-free (`originV1Url('crm/...')` →
+  `<origin>/v1/crm`, NOTHING before `/v1/`) — the EXACT Agents/Prompts/Evals form;
+  `next.config.mjs` `CLOUD_V1_HEADS` rewrites the `crm` head to the `/cloud`
+  user-bearer proxy (org from the token owner claim; a cookie-only call 403s), `crm`
+  allow-listed in `proxy-allow.ts` `CLOUD_HEADS`. `CrmModule` is one module, three
+  collections via the `:tab` route — each a real list + inline create form + per-row
+  delete, with `/v1/crm/summary` counts; honest loading / `BackendStateCard` /
+  empty states, never placeholder rows. Defensive normalizers (unit-tested).
+- **Content** (`cms`, enabled) — an honest in-console home for the live Content
+  Studio (Payload headless CMS at `cms.<brand>`, white-label host derived from the
+  console host); opens the Studio via IAM-SSO, NO fabricated content rows.
+- **ERP** (`erp`) + **Help Center** (`helpdesk`) — real cloud primitives with no
+  per-org console surface yet → HONEST `soon` (`routes: soonRoutes` → the shared
+  `ComingSoon` waitlist), never a fake product.
+- **Accessibility** (`accessibility`, enabled) — a Wix-style WCAG checker: Deque's
+  axe-core (`import('axe-core')`, its own chunk, lazy) runs against the CURRENT page
+  100% client-side (nothing leaves the tab; `resultTypes: ['violations']`). Pure
+  sort/summarize/WCAG-label logic in `lib/a11y/scan.ts` (unit-tested, defensive);
+  `AccessibilityModule` is only the panel (Scan button, per-severity cards, table).
+
+Reconciliation decisions (DRY, one way):
+- Kept **#39's `originV1Url` CRM data path** — it hits `/v1/crm` DIRECTLY (nothing
+  before `/v1/`), the majority pattern across agents/prompts/evals/templates/
+  analytics. #42's `cloudProxyV1Url` baked `/cloud` before `/v1/` — a divergent
+  second way (that helper stays for `functions.ts`, its existing owner; not used
+  for CRM). Both terminate at the same hardened `/cloud` bearer proxy.
+- Kept **#39's `CrmModule`** — a strict superset of #42's (adds per-row delete +
+  the `RowDelete` a11y-labelled control); everything else identical.
+- Folded in **#42's `CmsModule`** + the `cms`/`erp`/`helpdesk` registry entries.
+  Dropped #42's stray `gcp: 'Content'` on the cms entry (not a real GCP analog; the
+  sibling Apps entries omit it).
+- Regenerated `package-lock.json` for the new `axe-core` 4.12.1 dep (#39 had bumped
+  `package.json` only — the lockfile was out of sync).
+- #38/#39/#42 are superseded by this one PR (`feat/business-os-suite`).
+
+- Verification: `tsc --noEmit` clean (0 errors); `npm test` **887/887** (72 files;
+  +9 crm normalizer/route-contract + 4 a11y over main's 874); `next build` ✓
+  Compiled successfully (14/14 pages, the `/[...slug]` catch-all renders every
+  module). The crm route suite pins the same-origin `/v1/crm/{companies,summary,
+  contacts,opportunities}` contract (never a `/cloud`-prefixed URL, never a direct
+  cloud-origin call). Authenticated visual e2e (the `(dashboard)` modules) is gated
+  behind an IAM session → post-deploy; component-mount + the live axe-core scan were
+  Playwright-verified locally.
