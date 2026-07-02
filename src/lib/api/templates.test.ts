@@ -5,9 +5,23 @@ import {
   normalizeTemplates,
   normalizeForkedProject,
   groupByCategory,
+  customizePrompt,
+  buildBuilderUrl,
   TemplatesApi,
+  type Template,
 } from './templates'
 import { ApiError } from './client'
+
+const template = (over: Partial<Template> = {}): Template => ({
+  slug: 'brainwave',
+  title: 'Brainwave',
+  category: 'AI',
+  description: 'An AI landing page.',
+  framework: 'next',
+  features: [],
+  source: 'https://gallery.hanzo.ai/templates/brainwave',
+  ...over,
+})
 
 describe('normalizeTemplate', () => {
   it('drops a record with no slug/id or no title', () => {
@@ -56,6 +70,67 @@ describe('groupByCategory', () => {
     const groups = groupByCategory(ts)
     expect(groups.map(([c]) => c)).toEqual(['App', 'SaaS'])
     expect(groups[1][1].map((t) => t.slug)).toEqual(['a', 'c'])
+  })
+})
+
+describe('customizePrompt', () => {
+  it('seeds the template context (title, framework, description) + the user ask', () => {
+    expect(customizePrompt(template(), 'make it dark and add a pricing table')).toBe(
+      'Start from the Brainwave template (next). An AI landing page. Customize it: make it dark and add a pricing table',
+    )
+  })
+
+  it('defaults to just the template seed when no user text is given', () => {
+    expect(customizePrompt(template())).toBe(
+      'Start from the Brainwave template (next). An AI landing page. Customize it to my needs.',
+    )
+    // blank/whitespace user text is treated as absent
+    expect(customizePrompt(template(), '   ')).toBe(
+      'Start from the Brainwave template (next). An AI landing page. Customize it to my needs.',
+    )
+  })
+
+  it('degrades gracefully when framework/description are missing (no stray "()" or double spaces)', () => {
+    expect(customizePrompt(template({ framework: undefined, description: undefined }), 'add auth')).toBe(
+      'Start from the Brainwave template. Customize it: add auth',
+    )
+  })
+})
+
+describe('buildBuilderUrl', () => {
+  it('builds <appBase>/dev?template=<source>&prompt=<seed>&action=edit', () => {
+    const u = new URL(buildBuilderUrl(template(), 'add a blog', 'https://hanzo.app'))
+    expect(u.origin + u.pathname).toBe('https://hanzo.app/dev')
+    expect(u.searchParams.get('template')).toBe('https://gallery.hanzo.ai/templates/brainwave')
+    expect(u.searchParams.get('prompt')).toBe(
+      'Start from the Brainwave template (next). An AI landing page. Customize it: add a blog',
+    )
+    expect(u.searchParams.get('action')).toBe('edit')
+  })
+
+  it('defaults the base to https://hanzo.app and trims a trailing slash', () => {
+    expect(buildBuilderUrl(template())).toContain('https://hanzo.app/dev?')
+    expect(buildBuilderUrl(template(), '', 'https://hanzo.app/')).toContain('https://hanzo.app/dev?')
+  })
+
+  it('omits the template param when the starter has no gallery source', () => {
+    const u = new URL(buildBuilderUrl(template({ source: undefined })))
+    expect(u.searchParams.has('template')).toBe(false)
+    expect(u.searchParams.get('prompt')).toContain('Start from the Brainwave template')
+  })
+
+  it('is injection-safe: a hostile ask stays inside the single encoded prompt param', () => {
+    // Trying to smuggle extra params / break the query must not add params or
+    // change the action — it is one URL-encoded value.
+    const evil = 'x&action=deploy&template=https://evil.example/#'
+    const u = new URL(buildBuilderUrl(template(), evil))
+    expect(u.searchParams.get('action')).toBe('edit')
+    expect(u.searchParams.get('template')).toBe('https://gallery.hanzo.ai/templates/brainwave')
+    expect(u.searchParams.get('prompt')).toContain(evil)
+    // exactly the three params we set — no injected ones
+    expect([...u.searchParams.keys()].sort()).toEqual(['action', 'prompt', 'template'])
+    // the raw query encodes the ampersands from the ask (not literal separators)
+    expect(u.search).toContain('x%26action%3Ddeploy')
   })
 })
 

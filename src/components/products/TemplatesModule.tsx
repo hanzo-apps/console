@@ -6,21 +6,27 @@
  * `/v1/templates` catalog (`TemplatesApi` → `originV1Url('templates')` → the
  * console's own `/cloud` bearer proxy).
  *
- * Browse + filter by category + search; "Fork / deploy" creates a REAL project
- * in-console via `TemplatesApi.fork` → cloud `POST /v1/projects/fork` (the ONE
- * way to start a project from a template): projectsvc seeds an org-scoped Project
- * from the template (framework mapped, repo = gallery source) and the card shows
- * the new project. Every state is honest: loading, the backend-state card on
- * error, a true empty state, per-card forking/created/error — never a fabricated
- * card. If the fork route is absent (older backend → 404) it falls back to opening
- * the gallery source, so the button is never dead.
+ * Browse + filter by category + search. The primary CTA is "Open in builder"
+ * (the fork → customize loop): the card takes an optional free-text
+ * customization and deep-links to the hanzo.app builder pre-seeded with this
+ * starter (`buildBuilderUrl` → `<app>/dev?template=…&prompt=…&action=edit`), which
+ * auto-starts the first generation so the user lands on a customized first
+ * edition and can talk-and-edit → deploy. "Fork / deploy" (secondary) still
+ * creates a REAL project in-console via `TemplatesApi.fork` → cloud
+ * `POST /v1/projects/fork`: projectsvc seeds an org-scoped Project from the
+ * template (framework mapped, repo = gallery source). Every state is honest:
+ * loading, the backend-state card on error, a true empty state, per-card
+ * forking/created/error — never a fabricated card. If the fork route is absent
+ * (older backend → 404) it falls back to opening the gallery source, so the
+ * button is never dead.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
-import { ArrowUpRight, Check, LayoutTemplate, Loader, RefreshCw, Search, X } from '@hanzogui/lucide-icons-2'
+import { ArrowUpRight, Check, LayoutTemplate, Loader, RefreshCw, Search, Sparkles, X } from '@hanzogui/lucide-icons-2'
 
-import { TemplatesApi, groupByCategory, type ForkedProject, type Template } from '~/lib/api/templates'
+import { TemplatesApi, buildBuilderUrl, groupByCategory, type ForkedProject, type Template } from '~/lib/api/templates'
 import { ApiError } from '~/lib/api/client'
+import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
@@ -44,6 +50,16 @@ type ForkState =
 
 function TemplateCard({ t }: { t: Template }) {
   const [fork, setFork] = useState<ForkState>({ phase: 'idle' })
+  // Optional free-text customization the user types before opening the builder.
+  const [userText, setUserText] = useState('')
+
+  // Open in builder (the fork → customize loop): deep-links to the hanzo.app
+  // builder pre-seeded with this starter + the customization ask. The seed prompt
+  // carries the template context, so the builder auto-starts the first generation.
+  const openBuilder = useCallback(() => {
+    if (typeof window === 'undefined') return
+    window.open(buildBuilderUrl(t, userText, config.appUrl), '_blank', 'noopener,noreferrer')
+  }, [t, userText])
 
   const onFork = useCallback(() => {
     // No fork target and no source → nothing we can do (button is disabled below).
@@ -86,6 +102,32 @@ function TemplateCard({ t }: { t: Template }) {
         </XStack>
       ) : null}
 
+      {/* Fork → builder: type an optional customization, then open the builder
+          pre-seeded with this starter — it auto-starts the first generation. */}
+      <XStack
+        items="center"
+        gap="$2"
+        bg="$color2"
+        px="$3"
+        rounded="$3"
+        borderWidth={1}
+        borderColor="$borderColor"
+        mt="$1"
+      >
+        <Input
+          unstyled
+          placeholder="Customize (optional), e.g. add dark mode"
+          value={userText}
+          onChangeText={setUserText}
+          flex={1}
+          py="$2"
+          fontSize="$2"
+        />
+      </XStack>
+      <Button size="$2" self="flex-start" icon={<Sparkles size={14} />} onPress={openBuilder}>
+        Open in builder
+      </Button>
+
       {fork.phase === 'forked' ? (
         <YStack gap="$1" mt="$1">
           <XStack items="center" gap="$2">
@@ -113,7 +155,7 @@ function TemplateCard({ t }: { t: Template }) {
         <>
           <Button
             size="$2"
-            mt="$1"
+            chromeless
             self="flex-start"
             icon={fork.phase === 'forking' ? <Loader size={14} /> : <ArrowUpRight size={14} />}
             disabled={fork.phase === 'forking' || (!t.source && !t.slug)}
