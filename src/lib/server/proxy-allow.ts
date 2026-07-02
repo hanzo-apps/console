@@ -26,6 +26,12 @@ export const CLOUD_HEADS: readonly string[] = [
   'functions',
   'prompts',
   'agents',
+  // Unified analytics (cloud clients/analytics): /v1/analytics/{overview,timeseries,
+  // realtime,top/*,llm/*}. Read-only per-org warehouse (datastore/ClickHouse); the
+  // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
+  // call, so it routes through /cloud like prompts/agents. Multi-segment sub-paths
+  // (top/referrers, llm/overview) are admitted by the single `analytics` head.
+  'analytics',
   // Evals facade (cloud clients/eval): /v1/evals/{scores,datasets,dataset-items,
   // evaluators,runs}. Single-segment sub-paths under the one `evals` head; the
   // facade resolves the console project key pair from the request tenant (the
