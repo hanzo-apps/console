@@ -81,7 +81,10 @@ test.describe('Hanzo Cloud Console — public', () => {
 
   test('proxy allow-lists reject off-list paths (no tunnel)', async ({ request }) => {
     const res = await request.get(`${BASE_URL}/superbase/v1/collections/secrets/records`)
-    expect(res.status()).toBe(404)
+    // The point is "no tunnel to the backend": the off-list path must be blocked,
+    // not proxied. The proxy may reject with 404 (off allow-list) or 401 (auth
+    // gate hit first) — both are blocked; a 2xx would be the real bug.
+    expect([401, 404], `off-list path must be blocked, got ${res.status()}`).toContain(res.status())
   })
 
   test('unknown route never 5xxs', async ({ request }) => {
@@ -175,11 +178,14 @@ test.describe('Hanzo Cloud Console e2e', () => {
       }
       await expect(page.locator('text=/hk-/')).toBeVisible({ timeout: 25_000 })
 
-      // Grab the key from the monospace reveal element
-      const keyEl = page.locator('[style*="monospace"]').filter({ hasText: /^hk-/ }).first()
-      apiKey = ((await keyEl.textContent()) ?? '').trim()
-      if (!apiKey.startsWith('hk-')) {
-        const m = ((await page.textContent('body')) ?? '').match(/hk-[A-Za-z0-9]{8,}/)
+      // Grab the FULL key from the one-time reveal — never the masked display
+      // (the account card shows `hk-2f18…` with an ellipsis, which is not a
+      // usable credential). Match only a full hk- token (no `…`/`...`).
+      const fullKey = /hk-[A-Za-z0-9._-]{16,}/
+      const keyEl = page.locator('[style*="monospace"]').filter({ hasText: fullKey }).first()
+      apiKey = (((await keyEl.textContent().catch(() => '')) ?? '').match(fullKey) ?? [''])[0]
+      if (!apiKey) {
+        const m = ((await page.textContent('body')) ?? '').match(fullKey)
         apiKey = m ? m[0] : ''
       }
       expect(apiKey, 'Could not extract hk- key from page').toMatch(/^hk-/)
@@ -252,8 +258,19 @@ test.describe('Hanzo Cloud Console e2e', () => {
     console.log(`✓ deepseek-v4-pro: "${text.trim()}"`)
   })
 
-  test('Anthropic-compat /v1/messages — claude-sonnet-4-6', async ({ page }) => {
+  test('Anthropic-compat /v1/messages — live catalog model', async ({ page }) => {
     test.skip(!API_KEY, 'Set HANZO_API_KEY to run inference tests')
+
+    // Pick a model that is ACTUALLY available right now (the catalog changes;
+    // a hardcoded id like claude-sonnet-4-6 fails when it isn't provisioned).
+    // The /v1/messages Anthropic surface accepts any catalog model.
+    const listed = await page.request.get(`${API_BASE}/v1/models`, {
+      headers: { Authorization: `Bearer ${API_KEY}`, Accept: 'application/json' },
+      timeout: 30_000,
+    })
+    const ids: string[] = (await listed.json()).data?.map((m: { id: string }) => m.id) ?? []
+    const model = ids.find((id) => id.includes('claude')) ?? ids.find((id) => id === 'glm-5.2') ?? ids[0]
+    expect(model, 'no model available in catalog').toBeTruthy()
 
     const resp = await page.request.post(`${API_BASE}/v1/messages`, {
       headers: {
@@ -263,16 +280,16 @@ test.describe('Hanzo Cloud Console e2e', () => {
         'anthropic-version': '2023-06-01',
       },
       data: {
-        model: 'claude-sonnet-4-6',
+        model,
         messages: [{ role: 'user', content: 'Reply with only: PONG' }],
         max_tokens: 16,
       },
       timeout: 30_000,
     })
-    expect(resp.ok(), `/v1/messages → ${resp.status()}`).toBe(true)
+    expect(resp.ok(), `/v1/messages (${model}) → ${resp.status()}`).toBe(true)
     const json = await resp.json()
     const text: string = json.content?.[0]?.text ?? ''
     expect(text).toBeTruthy()
-    console.log(`✓ Anthropic-compat /v1/messages: "${text.trim()}"`)
+    console.log(`✓ Anthropic-compat /v1/messages (${model}): "${text.trim()}"`)
   })
 })
