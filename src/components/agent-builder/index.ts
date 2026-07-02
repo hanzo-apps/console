@@ -11,6 +11,9 @@
 export { AgentBuilder } from './AgentBuilder'
 export type {
   AgentSpec,
+  AgentConfig,
+  AgentCreateBody,
+  ReasoningEffort,
   AgentBuilderLoaders,
   BuilderOption,
   BuilderPrompt,
@@ -19,9 +22,14 @@ export type {
 } from './types'
 export {
   emptySpec,
+  defaultConfig,
   defaultModel,
   canSubmit,
+  normalizeList,
   normalizeTools,
+  normalizeKnowledge,
+  clampConfig,
+  pruneConfig,
   toCreateBody,
   promptBodyFromRow,
   promptOptions,

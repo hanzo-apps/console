@@ -7,11 +7,20 @@
  * A saved-prompt pick fills the system prompt; the tools list is de-duplicated and
  * blank-stripped. Everything here is a value transform — no side effects.
  */
-import type { AgentSpec, BuilderError, BuilderOption, BuilderPrompt } from './types'
+import type { AgentConfig, AgentCreateBody, AgentSpec, BuilderError, BuilderOption, BuilderPrompt } from './types'
 
 /** A fresh, empty spec (the New-Agent form's initial state). PURE. */
 export function emptySpec(): AgentSpec {
   return { name: '', model: '', description: '', systemPrompt: '', tools: [] }
+}
+
+/**
+ * The default generation config — the value the advanced controls bind to until
+ * the user changes something. Kept in ONE place so `pruneConfig` can drop knobs
+ * still at their default (a simple agent posts no `config`). PURE.
+ */
+export function defaultConfig(): AgentConfig {
+  return { temperature: 0.7, topP: 1, topK: 0, stream: true, thinking: false, useTools: true, webSearch: false }
 }
 
 /** The default Zen model to preselect when the catalog offers one. */
@@ -38,11 +47,11 @@ export function canSubmit(spec: AgentSpec): boolean {
   return spec.name.trim().length > 0
 }
 
-/** De-duplicate + blank-strip a tool list, preserving first-seen order. PURE. */
-export function normalizeTools(tools: string[]): string[] {
+/** De-duplicate + blank-strip a string list, preserving first-seen order. PURE. */
+export function normalizeList(items: string[]): string[] {
   const seen = new Set<string>()
   const out: string[] = []
-  for (const raw of tools) {
+  for (const raw of items) {
     const t = raw.trim()
     if (t && !seen.has(t)) {
       seen.add(t)
@@ -52,24 +61,77 @@ export function normalizeTools(tools: string[]): string[] {
   return out
 }
 
+/** De-duplicate + blank-strip a tool list, preserving first-seen order. PURE. */
+export function normalizeTools(tools: string[]): string[] {
+  return normalizeList(tools)
+}
+
+/** De-duplicate + blank-strip a knowledge-source list. PURE. */
+export function normalizeKnowledge(sources: string[]): string[] {
+  return normalizeList(sources)
+}
+
+/**
+ * Clamp a number into [min,max]. NaN (garbage) → min; ±∞ clamp to the nearest
+ * bound naturally (dragging a slider to the top lands on max, not min). PURE.
+ */
+function clampNum(v: number, min: number, max: number): number {
+  if (Number.isNaN(v)) return min
+  return Math.min(max, Math.max(min, v))
+}
+
+/**
+ * Clamp a config into valid ranges (temperature 0–2, topP 0–1, topK a
+ * non-negative integer) so a bad slider/typed value can never post an
+ * out-of-range generation param. PURE.
+ */
+export function clampConfig(c: AgentConfig): AgentConfig {
+  return {
+    ...c,
+    temperature: clampNum(c.temperature, 0, 2),
+    topP: clampNum(c.topP, 0, 1),
+    topK: Math.max(0, Math.floor(Number.isFinite(c.topK) ? c.topK : 0)),
+  }
+}
+
+/**
+ * Reduce a config to only the knobs that DIFFER from the default — so a simple
+ * agent (all defaults) yields `undefined` (no `config` key posted) while a
+ * power-user agent posts exactly what they changed. Clamps first. PURE.
+ */
+export function pruneConfig(c: AgentConfig): Partial<AgentConfig> | undefined {
+  const def = defaultConfig()
+  const cur = clampConfig(c)
+  const out: Partial<AgentConfig> = {}
+  ;(Object.keys(def) as (keyof AgentConfig)[]).forEach((k) => {
+    if (cur[k] !== def[k]) (out as Record<string, unknown>)[k] = cur[k]
+  })
+  if (cur.reasoningEffort) out.reasoningEffort = cur.reasoningEffort
+  return Object.keys(out).length ? out : undefined
+}
+
 /**
  * The clean create body for `POST /cloud/v1/agents`: name is trimmed (required);
  * every other field is trimmed and OMITTED when empty, and tools are normalized —
  * so the backend never stores a blank model/description/prompt or a `[]` tools
  * key it didn't need. PURE.
  */
-export function toCreateBody(spec: AgentSpec): AgentSpec | Record<string, unknown> {
+export function toCreateBody(spec: AgentSpec): AgentCreateBody {
   const name = spec.name.trim()
   const model = spec.model.trim()
   const description = spec.description.trim()
   const systemPrompt = spec.systemPrompt.trim()
   const tools = normalizeTools(spec.tools)
+  const knowledge = normalizeKnowledge(spec.knowledge ?? [])
+  const config = spec.config ? pruneConfig(spec.config) : undefined
   return {
     name,
     ...(model ? { model } : {}),
     ...(description ? { description } : {}),
     ...(systemPrompt ? { systemPrompt } : {}),
     ...(tools.length ? { tools } : {}),
+    ...(knowledge.length ? { knowledge } : {}),
+    ...(config ? { config } : {}),
   }
 }
 
