@@ -1,122 +1,64 @@
 'use client'
 
 /**
- * Logs — structured application and platform log lines (time, level, service,
- * message) collected by the platform.
+ * Logs — structured application and platform log lines.
  *
- * Reads the log stream from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/logs`), which injects the service token server-side. When the log
- * service isn't provisioned for the org the list load fails and the honest
- * not-configured / unavailable card renders instead of an empty grid — matching
- * every other infra module.
+ * HONEST STATE (verified against the live cluster): there is NO log-aggregation
+ * backend deployed on this cluster — no Loki, no VictoriaLogs, no queryable log API.
+ * The old source (`/paas/logs` → `platform.hanzo.ai/v1/logs`) does not exist (it
+ * 401s), so this surface could never show a real log line. Rather than a misleading
+ * "connected" empty grid or a broken error, this states the truth: structured log
+ * search needs a log store (VictoriaLogs) that isn't deployed yet, and points at
+ * the observability surfaces that DO have live data today (Status and Metrics, both
+ * backed by VictoriaMetrics). It fabricates nothing.
+ *
+ * When a log store is deployed, this module wires to it (a `/telemetry`-style
+ * read proxy → VictoriaLogs `/select/logsql/query`) and renders real lines — the
+ * one place that changes is the data source, not this honest contract.
  */
-import { useCallback, useEffect, useState } from 'react'
-import { Button, Text } from '@hanzo/gui'
-import { RefreshCw } from '@hanzogui/lucide-icons-2'
+import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { Activity, BarChart3, ScrollText } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
-
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
-
-type LogEntry = {
-  id: string
-  timestamp?: string
-  level?: string
-  service?: string
-  message?: string
-}
 
 export function LogsModule(_props: { params: Record<string, string> }) {
-  const [rows, setRows] = useState<LogEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<PlatformError | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const r = await restGet<{ logs?: LogEntry[] }>(paas('logs'))
-      setRows(r.logs ?? [])
-      setLoadError(null)
-    } catch (e) {
-      setLoadError(interpretPlatformError(e))
-      setRows([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const columns: Column<LogEntry>[] = [
-    {
-      key: 'timestamp',
-      header: 'Time',
-      width: 190,
-      render: (l) => (
-        <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
-          {l.timestamp ? new Date(l.timestamp).toLocaleString() : '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'level',
-      header: 'Level',
-      width: 90,
-      render: (l) => (
-        <Text fontSize="$3" color="$color11">
-          {l.level || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'service',
-      header: 'Service',
-      width: 150,
-      render: (l) => (
-        <Text fontSize="$3" color="$color11">
-          {l.service || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'message',
-      header: 'Message',
-      render: (l) => (
-        <Text fontSize="$3" color="$color11" numberOfLines={1}>
-          {l.message || '—'}
-        </Text>
-      ),
-    },
-  ]
-
+  const go = (path: string) => {
+    if (typeof window !== 'undefined') window.location.assign(path)
+  }
   return (
     <>
-      <PageHeader
-        title="Logs"
-        subtitle="Structured application and platform logs."
-        actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
-            Refresh
-          </Button>
-        }
-      />
+      <PageHeader title="Logs" subtitle="Structured application and platform logs." />
 
-      {loadError ? (
-        <PlatformStateCard error={loadError} onRetry={() => void load()} />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          rowKey={(r) => r.id}
-          empty="No logs to show."
-        />
-      )}
+      <Card borderWidth={1} borderColor="$borderColor" p="$5" gap="$3" maxWidth={680}>
+        <XStack gap="$2" items="center">
+          <ScrollText size={18} />
+          <Text fontSize="$5" fontWeight="800">
+            Log search is not connected yet
+          </Text>
+        </XStack>
+        <Text fontSize="$3" color="$color11">
+          Structured log search needs a log-aggregation store, and none is deployed on this cluster yet
+          (VictoriaLogs / Loki). Until one is, this page shows no lines rather than a fabricated or empty grid —
+          nothing here is placeholder data.
+        </Text>
+        <Text fontSize="$3" color="$color11">
+          Live platform observability IS available today from VictoriaMetrics:
+        </Text>
+        <XStack gap="$2" flexWrap="wrap">
+          <Button size="$3" theme="light" icon={<Activity size={15} />} onPress={() => go('/status')}>
+            View Status
+          </Button>
+          <Button size="$3" icon={<BarChart3 size={15} />} onPress={() => go('/metrics')}>
+            View Metrics
+          </Button>
+        </XStack>
+        <YStack pt="$2" borderTopWidth={1} borderColor="$borderColor" gap="$1">
+          <Text fontSize="$1" color="$color10">
+            To light up real logs: deploy VictoriaLogs and wire a read-only `/telemetry`-style proxy to its
+            `/select/logsql/query` API. This page then renders live lines with no other change.
+          </Text>
+        </YStack>
+      </Card>
     </>
   )
 }
