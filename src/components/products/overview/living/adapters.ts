@@ -92,8 +92,8 @@ export function fromAdminOverview(ov: AdminOverview): OverviewData {
  * the tile renders as "not connected" — never a fabricated green.
  */
 export function financeHealth(fin: Finance): OverviewHealth {
-  if (!fin.cost.digitalocean.configured) {
-    return { service: 'Profitability', health: '', detail: 'Connect DO_API_TOKEN to compute margin' }
+  if (!fin.cost.configured) {
+    return { service: 'Profitability', health: '', detail: 'Connect commerce /v1/costs to compute COGS + margin' }
   }
   const { profitable, grossMarginPct } = fin.derived
   if (!profitable) {
@@ -112,24 +112,39 @@ export function financeHealth(fin: Finance): OverviewHealth {
  */
 export function fromFinance(fin: Finance): OverviewData {
   const d = empty()
-  const doCost = fin.cost.digitalocean
+  const cost = fin.cost
+  const doCost = cost.digitalocean
 
-  // ── KPI tiles. Only surface DO cost KPIs when DO is configured, so an
-  // unconfigured DO renders "—" (an honest empty tile) rather than a fake $0 credit.
+  // ── KPI tiles.
+  // COGS (all vendors) is the headline spend AND the margin basis — from commerce
+  // /v1/costs. Only when configured, so an unreachable commerce renders "—".
+  if (cost.configured) {
+    d.kpi.spendCents = { value: cost.totalCents }
+  }
+  // DO promo-credit remaining is the orthogonal treasury view — only when DO is on.
   if (doCost.configured) {
     d.kpi.creditRemaining = { value: doCost.creditRemainingCents }
-    d.kpi.spendCents = { value: doCost.monthToDateSpendCents }
   }
   if (fin.revenue.configured) {
     d.kpi.mrr = { value: fin.revenue.mrrCents }
     d.kpi.revenue = { value: fin.revenue.totalRevenueCents }
   }
-  // Derived margin/runway are only meaningful when both sides are real.
-  if (doCost.configured && fin.revenue.configured) {
+  // Margin is meaningful when COGS (commerce) AND revenue are both real — it no
+  // longer depends on DO, so a missing DO_API_TOKEN never blanks the margin.
+  if (cost.configured && fin.revenue.configured) {
     d.kpi.marginPct = { value: fin.derived.grossMarginPct }
   }
   if (fin.derived.runwayDays !== null) {
     d.kpi.runwayDays = { value: fin.derived.runwayDays }
+  }
+
+  // ── COGS by vendor (donut): what we pay each vendor (DigitalOcean compute + each
+  // LLM provider we resell). Positive lines only — a 0/pending-estimated vendor is
+  // dropped so the donut isn't padded; an empty set renders the honest empty donut.
+  if (cost.configured) {
+    d.distribution.vendorCogs = cost.vendors
+      .filter((v) => v.amountCents > 0)
+      .map((v) => ({ label: v.vendor, value: v.amountCents, sub: v.service }))
   }
 
   // ── Credit burn-down series: the DO usage charges over time (Invoice entries),
