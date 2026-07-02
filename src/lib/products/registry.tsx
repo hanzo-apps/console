@@ -773,16 +773,21 @@ export const catalog: CatalogEntry[] = [
     id: 'base',
     label: 'Base',
     icon: Boxes,
-    description: 'Multi-tenant Hanzo Base — provision and manage tenant instances.',
+    description: 'Firebase-like backend — build content types and manage your data, per org.',
     gcp: 'Firebase',
     category: 'Data',
     status: 'enabled',
-    repo: 'hanzoai/superbase',
+    repo: 'hanzoai/base',
     docs: `${DOCS}/base`,
     kind: 'module',
+    // Supabase-style dashboard: content-types index · builder · per-type records.
+    // `new` precedes `:collection` so `/base/new` is the builder, not a collection
+    // named "new"; segment count disambiguates the record routes.
     routes: [
       { path: '', component: BaseModule },
       { path: 'new', component: BaseModule },
+      { path: ':collection', component: BaseModule },
+      { path: ':collection/:id', component: BaseModule },
     ],
   },
   {
