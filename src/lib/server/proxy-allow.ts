@@ -32,6 +32,10 @@ export const CLOUD_HEADS: readonly string[] = [
   // Bearer owner), so routing it through /cloud gives correct per-org scoping —
   // the same reason it must NOT be a cookie-only same-origin call (that 403s).
   'evals',
+  // Read-only starter-kit gallery (cloud clients/templates): /v1/templates[/:slug].
+  // Public reference content (no org scoping) but routed through /cloud like the
+  // rest of the surface so dev + prod share ONE path.
+  'templates',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */

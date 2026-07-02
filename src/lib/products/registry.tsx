@@ -116,6 +116,7 @@ import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
+import { TemplatesModule } from '~/components/products/TemplatesModule'
 import { PlansModule } from '~/components/products/PlansModule'
 import { BillingModule } from '~/components/products/BillingModule'
 import { WalletModule } from '~/components/products/WalletModule'
@@ -1470,6 +1471,18 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/ai-studio`,
     kind: 'module',
     routes: overviewRoutes('studio'),
+  },
+  {
+    id: 'templates',
+    label: 'Templates',
+    icon: Blocks,
+    description: 'Production-ready starter kits — fork a template and deploy.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/gallery',
+    docs: `${DOCS}/templates`,
+    kind: 'module',
+    routes: [{ path: '', component: TemplatesModule }],
   },
   {
     id: 'console',
