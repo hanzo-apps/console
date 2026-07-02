@@ -29,10 +29,11 @@ import { Activity, Building2, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge
 
 import { UsageApi } from '~/lib/api/usage'
 import { AdminApi } from '~/lib/api/admin-overview'
+import { FinanceApi } from '~/lib/api/finance'
 import { PlatformApi } from '~/lib/api/platform'
 import { FunctionsApi, deriveOverview } from '~/lib/api/functions'
 import type { LivingOverviewConfig, OverviewData, OverviewRange } from './config'
-import { fromAdminOverview, fromCloudUsage, fromFunctions, healthFromApps } from './adapters'
+import { fromAdminOverview, fromCloudUsage, fromFinance, fromFunctions, healthFromApps } from './adapters'
 
 /** The cloud-usage range key the commerce ledger adapter expects (identical set). */
 const usageRange = (r: OverviewRange): '24h' | '7d' | '30d' => r
@@ -172,6 +173,44 @@ const adminBusinessOverview: LivingOverviewConfig = {
   },
 }
 
+/**
+ * The admin.hanzo.ai FINANCE board — the SaaS profitability hero. GLOBAL-ADMIN ONLY
+ * (catalog entry `admin: true`; the `/v1/admin/finance` aggregate is server-gated by
+ * `getAdminGate` before anything is forwarded). It answers "are we making money?":
+ * how fast we're burning the ~$40k DigitalOcean promo credit (our primary venue),
+ * month-to-date spend, MRR, total revenue, gross margin %, runway, and a single
+ * health verdict (green profitable / yellow thin-margin / red burning-faster).
+ *
+ * TRUE by construction: every tile reads the real `/v1/admin/finance` aggregate.
+ * When DO_API_TOKEN is unset the cost tiles + margin + runway render honest "—"
+ * (never a fake $40k); when commerce is unreachable revenue/MRR render "—". There is
+ * NO fallback that fabricates numbers — a not-routed/denied backend surfaces the
+ * shared error/empty state, so the hero is always honest.
+ */
+const financeOverview: LivingOverviewConfig = {
+  id: 'finance',
+  title: 'Finance',
+  subtitle: 'DigitalOcean credit burn-down, spend, revenue, gross margin, and runway across the platform.',
+  ranged: false, // the finance aggregate is a point-in-time snapshot, not a windowed series
+  live: { pollMs: 60000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'creditRemaining', label: 'DO credit remaining', icon: CreditCard, unit: 'cents' },
+      { tile: 'metric', key: 'spendCents', label: 'Month-to-date spend', icon: DollarSign, unit: 'cents' },
+      { tile: 'metric', key: 'mrr', label: 'MRR', icon: TrendingUp, unit: 'cents' },
+      { tile: 'metric', key: 'revenue', label: 'Total revenue', icon: DollarSign, unit: 'cents' },
+      { tile: 'metric', key: 'marginPct', label: 'Gross margin', icon: Gauge, unit: 'pct' },
+      { tile: 'metric', key: 'runwayDays', label: 'Runway (days)', icon: Timer },
+    ],
+    [{ tile: 'timeseries', key: 'spendCents', title: 'DigitalOcean credit burn-down', kind: 'bar', unit: 'cents' }],
+    [{ tile: 'health', title: 'Profitability', empty: 'Connect DO_API_TOKEN to compute margin.' }, { tile: 'alerts', title: 'Finance alerts' }],
+  ],
+  // No try/catch fallback: finance is TRUE-by-construction. A denied (403)/not-routed
+  // (404) backend throws a typed ApiError the ONE LivingOverview renders as an honest
+  // error state — we never substitute a fabricated revenue/margin.
+  load: async () => fromFinance(await FinanceApi.finance()),
+}
+
 /** The AI-usage living overview for a product scoped to the org's model spend. */
 const aiUsageOverview = (id: string, title: string, subtitle: string): LivingOverviewConfig => ({
   id,
@@ -271,6 +310,7 @@ const computeOverview: LivingOverviewConfig = {
 export const LIVING_OVERVIEWS: Record<string, LivingOverviewConfig> = {
   overview: platformOverview,
   'admin-business': adminBusinessOverview,
+  finance: financeOverview,
   'ai-metrics': aiUsageOverview('ai-metrics', 'AI Metrics', 'Requests, tokens, spend, and per-model usage for your org.'),
   functions: functionsOverview,
   gpus: computeOverview,
