@@ -206,20 +206,23 @@ const adminBusinessOverview: LivingOverviewConfig = {
 const financeOverview: LivingOverviewConfig = {
   id: 'finance',
   title: 'Finance',
-  subtitle: 'DigitalOcean credit burn-down, spend, revenue, gross margin, and runway across the platform.',
+  subtitle: 'Vendor COGS (DigitalOcean + LLM providers), revenue, gross margin, DigitalOcean credit burn-down, and runway across the platform.',
   ranged: false, // the finance aggregate is a point-in-time snapshot, not a windowed series
   live: { pollMs: 60000, countUp: true },
   rows: [
     [
-      { tile: 'metric', key: 'creditRemaining', label: 'DO credit remaining', icon: CreditCard, unit: 'cents' },
-      { tile: 'metric', key: 'spendCents', label: 'Month-to-date spend', icon: DollarSign, unit: 'cents' },
-      { tile: 'metric', key: 'mrr', label: 'MRR', icon: TrendingUp, unit: 'cents' },
+      { tile: 'metric', key: 'spendCents', label: 'COGS (all vendors)', icon: DollarSign, unit: 'cents' },
       { tile: 'metric', key: 'revenue', label: 'Total revenue', icon: DollarSign, unit: 'cents' },
       { tile: 'metric', key: 'marginPct', label: 'Gross margin', icon: Gauge, unit: 'pct' },
+      { tile: 'metric', key: 'mrr', label: 'MRR', icon: TrendingUp, unit: 'cents' },
+      { tile: 'metric', key: 'creditRemaining', label: 'DO credit remaining', icon: CreditCard, unit: 'cents' },
       { tile: 'metric', key: 'runwayDays', label: 'Runway (days)', icon: Timer },
     ],
-    [{ tile: 'timeseries', key: 'spendCents', title: 'DigitalOcean credit burn-down', kind: 'bar', unit: 'cents' }],
-    [{ tile: 'health', title: 'Profitability', empty: 'Connect DO_API_TOKEN to compute margin.' }, { tile: 'alerts', title: 'Finance alerts' }],
+    [
+      { tile: 'distribution', key: 'vendorCogs', title: 'COGS by vendor', centerLabel: 'total', unit: 'cents' },
+      { tile: 'timeseries', key: 'spendCents', title: 'DigitalOcean credit burn-down', kind: 'bar', unit: 'cents' },
+    ],
+    [{ tile: 'health', title: 'Profitability', empty: 'Connect commerce /v1/costs to compute COGS + margin.' }, { tile: 'alerts', title: 'Finance alerts' }],
   ],
   // No try/catch fallback: finance is TRUE-by-construction. A denied (403)/not-routed
   // (404) backend throws a typed ApiError the ONE LivingOverview renders as an honest
