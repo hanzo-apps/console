@@ -22,10 +22,16 @@ import { restGet, restPost } from './client'
 import type { CloudBalance } from './wallet'
 import { normalizeUsageRecords, perModel, totalsOf } from './aimetrics'
 
-/** Same-origin URL for the `/billing/*` server proxy (NOT the `/v1` gateway). */
+/**
+ * Same-origin URL for the billing DATA proxy (`/billing/v1/*` → commerce; NOT the
+ * `/v1` gateway). The proxy is namespaced under `/billing/v1/` so it never shadows
+ * the billing UI tab URLs (`/billing/reports`, `/billing/invoices`, …), which fall
+ * through to the SPA — a route handler always wins over the catch-all page for a
+ * matching segment, so the data plane and the tab slugs must not share path space.
+ */
 const billingUrl = (path: string): string => {
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${origin}/billing/${path.replace(/^\/+/, '')}`
+  return `${origin}/billing/v1/${path.replace(/^\/+/, '')}`
 }
 
 /** One metered line — spend grouped by product/model over the window. */

@@ -68,11 +68,11 @@ export const WalletApi = {
     // commerce service token + scopes to the caller's OWN org server-side. The
     // `user` subject is server-resolved (the arg is ignored — the browser cannot
     // read another tenant's ledger), so only `currency` is forwarded.
-    restGet<CloudBalance>(`${appUrl('billing/balance')}?currency=${encodeURIComponent(currency)}`),
+    restGet<CloudBalance>(`${appUrl('billing/v1/balance')}?currency=${encodeURIComponent(currency)}`),
 
   /** Verify a sent HUSD transfer and credit the user's balance. */
   recordWalletTopup: (req: WalletTopupRequest): Promise<WalletTopupResult> =>
-    restPost<WalletTopupResult>(appUrl('billing/topup/wallet'), req),
+    restPost<WalletTopupResult>(appUrl('billing/v1/topup/wallet'), req),
 }
 
 export { ApiError }
