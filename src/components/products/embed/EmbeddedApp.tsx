@@ -7,10 +7,13 @@
  * so it reads as a console product, per-org, over the SAME IAM single-sign-on the
  * console already established.
  *
- * SSO, not an open frame: the embedded app runs its OWN IAM login (org == tenant,
- * enforced server-side by that app), so the frame shows only the caller's org —
- * the console never injects a credential and the iframe carries none. The user is
- * already signed in to the shared brand IAM, so the app's SSO completes silently.
+ * SSO, not an open frame: the embedded app runs its OWN IAM SSO, and the console
+ * gates the embed to the OWNING org SERVER-SIDE (`/embed-status` only returns an
+ * embed URL to a brand-org member / global admin — a customer org gets a provision
+ * panel, never this frame). The console injects NO credential and the iframe carries
+ * none. The user is already signed in to the shared brand IAM, so the app's SSO
+ * completes silently. (This gates who the CONSOLE frames; a shared single-tenant app
+ * still owes its own per-org isolation — see the module docstrings.)
  *
  * Honest by construction: an iframe can't report a cross-origin load failure to the
  * parent (same-origin policy), so this NEVER fabricates a "loaded" or "failed"
@@ -28,21 +31,15 @@ import { ArrowUpRight, RefreshCw } from '@hanzogui/lucide-icons-2'
 import { PageHeader } from '~/components/ui/PageHeader'
 
 /**
- * The iframe permission set for an embedded first-party app: run its own scripts,
- * treat its OWN origin as same-origin (needed for its session + XHR — this does
- * NOT grant access to the cross-origin console parent, which SOP still blocks),
- * submit forms (login), and open the odd popup (OAuth/consent, downloads). This is
- * exactly what the app can do when opened directly — no more.
+ * The MINIMAL iframe permission set for an embedded first-party app: run its own
+ * scripts, treat its OWN origin as same-origin (needed for its session + XHR — this
+ * does NOT grant access to the cross-origin console parent, which SOP still blocks),
+ * submit forms (login), open a popup (OAuth/consent), and download. Deliberately
+ * withheld: `allow-top-navigation-*` (the framed app must never redirect the console
+ * tab — SSO redirects happen INSIDE the frame) and `allow-popups-to-escape-sandbox`
+ * (a popup inherits the sandbox). Trimmed per RED review.
  */
-const SANDBOX = [
-  'allow-scripts',
-  'allow-same-origin',
-  'allow-forms',
-  'allow-popups',
-  'allow-popups-to-escape-sandbox',
-  'allow-downloads',
-  'allow-top-navigation-by-user-activation',
-].join(' ')
+const SANDBOX = ['allow-scripts', 'allow-same-origin', 'allow-forms', 'allow-popups', 'allow-downloads'].join(' ')
 
 export function EmbeddedApp({
   title,
@@ -133,7 +130,7 @@ export function EmbeddedApp({
           onLoad={() => setLoading(false)}
           sandbox={SANDBOX}
           referrerPolicy="no-referrer-when-downgrade"
-          allow="clipboard-read; clipboard-write; fullscreen"
+          allow="clipboard-write; fullscreen"
           style={{ border: 0, width: '100%', height: '100%', display: 'block' }}
         />
       </YStack>
