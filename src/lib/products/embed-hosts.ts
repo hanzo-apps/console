@@ -12,10 +12,12 @@
  * PURE + unit-tested (embed-hosts.test.ts) — no window access here; the caller
  * passes the current host (`currentHost()`), so it is SSR-safe and testable.
  *
- * Tenancy is NOT encoded in the host: these apps are shared per-brand instances
- * that scope content to the signed-in IAM ORG via their own SSO (org == tenant,
- * server-side) — the same per-org model the rest of the console uses. So the host
- * is per-BRAND, and the ORG comes from the shared IAM session inside the embed.
+ * Tenancy is NOT encoded in the host: these apps are SINGLE shared per-BRAND
+ * instances (verified — NOT per-customer-org). So the host is per-BRAND, and the
+ * console decides WHO may frame it via a server-side entitlement gate
+ * (`/embed-status` + `embed-probe.ts`: brand-org member / global admin only) — a
+ * customer org gets a provision panel, never a cross-tenant frame. This module only
+ * derives the per-brand host; it makes NO isolation claim about the backing app.
  */
 
 /** The brand domain used when the host can't be parsed (dev/localhost/IP). */

@@ -21,7 +21,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser } from '~/lib/server/identity'
-import { embedTarget, embedOrigin, isEmbedApp, isUp } from '~/lib/server/embed-probe'
+import { embedTarget, embedOrigin, isEmbedApp, isUp, brandOrgForHost, isEntitled } from '~/lib/server/embed-probe'
 
 export const runtime = 'nodejs'
 
@@ -35,6 +35,20 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
   const host = req.headers.get('host')
   const { origin, embedUrl } = embedTarget(appParam, host)
+
+  // SERVER-SIDE entitlement gate: these apps are single shared per-BRAND instances,
+  // so only the owning brand org (or a global admin) may frame them. The org is the
+  // TOKEN OWNER (server-resolved, never a browser claim). A non-entitled caller
+  // NEVER receives the embed URL and we don't even probe — the module shows the
+  // honest provision panel. This is the authoritative gate; the client check is only
+  // to avoid a flash.
+  const brandOrg = brandOrgForHost(host)
+  if (!isEntitled(appParam, user.owner, brandOrg, user.isGlobalAdmin)) {
+    return NextResponse.json(
+      { app: appParam, origin, embedUrl: '', reachable: false, entitled: false, phase: 'not-entitled' },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
 
   let up = false
   try {
@@ -53,7 +67,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   return NextResponse.json(
-    { app: appParam, origin, embedUrl, reachable: up, phase: up ? 'ready' : 'not-provisioned' },
+    { app: appParam, origin, embedUrl, reachable: up, entitled: true, phase: up ? 'ready' : 'not-provisioned' },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }

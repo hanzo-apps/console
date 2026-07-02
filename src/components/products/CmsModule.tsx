@@ -11,23 +11,20 @@
  * it opens signed-in with the same identity the console already holds; the console
  * injects no credential.
  *
- * Honest tenancy (verified, not aspirational): the Studio is today a SINGLE shared
- * per-BRAND instance (one org per brand — `HANZO_ORG=hanzo`), not a per-customer
- * instance. So it is embedded ONLY for a member of the brand org (or a global
- * admin); a CUSTOMER org (e.g. maxpower) does NOT get framed into the brand's
- * content — that would be cross-tenant. Instead it sees an honest "a Studio for
- * your org isn't provisioned yet" panel with a real provisioning request. When a
- * per-org Studio exists, the SAME reachability gate embeds it. White-label:
- * cms.<brand> is derived from the host, so a Lux/Zoo console frames ITS OWN Studio.
+ * Honest tenancy (verified — the modules encode reality, not a wish): the Studio is
+ * today a SINGLE shared per-BRAND instance (`HANZO_ORG=hanzo`), NOT per-customer-org.
+ * So entitlement is decided SERVER-SIDE by `/embed-status` (the token owner must be
+ * the brand org, or a global admin); a CUSTOMER org receives `entitled:false` and NO
+ * embed URL, and sees an honest "a Studio for your org isn't provisioned yet" panel —
+ * it is never framed into the brand's content. When a per-org Studio exists the SAME
+ * gate embeds it. White-label: cms.<brand> is derived from the host. Binds to the
+ * canonical Payload backend — it is not reimplemented here.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { FileText, Image as ImageIcon, Newspaper, Globe } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { useSession } from '~/lib/auth/session'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { EmbedApi, type EmbedStatus } from '~/lib/api/embed'
-import { studioOrigin, currentHost } from '~/lib/products/embed-hosts'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { Loader } from '~/components/ui/Loader'
@@ -44,14 +41,7 @@ const MANAGES: ProvisionFeature[] = [
 type Async = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: EmbedStatus }
 
 export function CmsModule() {
-  const { account } = useSession()
-  const isGlobalAdmin = useIsGlobalAdmin()
   const [state, setState] = useState<Async>({ phase: 'loading' })
-
-  // The Studio belongs to the BRAND org (single shared instance). Embed it only for
-  // a brand-org member or a global admin — never frame it for a customer org.
-  const ownsBrandStudio = Boolean(account && (account.owner === config.iamOrgName || isGlobalAdmin))
-  const fallbackOrigin = useMemo(() => studioOrigin(currentHost()), [])
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
@@ -73,9 +63,9 @@ export function CmsModule() {
 
   const status = state.data
 
-  // Customer org (or any org that doesn't own the brand Studio): honest provision
-  // panel — NEVER an embed of the brand's content.
-  if (!ownsBrandStudio) {
+  // Not entitled (a customer org): honest provision panel — NEVER an embed of the
+  // brand's shared content. The server already withheld the embed URL.
+  if (!status.entitled) {
     return (
       <ProvisionPanel
         title="Content"
@@ -98,13 +88,13 @@ export function CmsModule() {
     )
   }
 
-  // Brand-org member / global admin: embed the real Studio when it is reachable.
+  // Entitled (brand org / global admin) and the Studio is live → embed it.
   if (status.reachable) {
     return (
       <EmbeddedApp
         title="Content"
         subtitle="Your Content Studio — a headless CMS for pages, posts, and media, embedded with IAM single sign-on."
-        src={status.embedUrl || `${fallbackOrigin}/admin`}
+        src={status.embedUrl}
         openLabel="Open Studio"
         sourceLabel="hanzoai/cms"
         note="Your brand’s Content Studio, signed in with your Hanzo identity (IAM SSO)."
@@ -112,7 +102,7 @@ export function CmsModule() {
     )
   }
 
-  // Brand-org member but the Studio host isn't answering — honest "unavailable".
+  // Entitled but the Studio host isn't answering — honest "unavailable".
   return (
     <>
       <PageHeader title="Content" subtitle="Your Content Studio — a headless CMS for pages, posts, and media." />
