@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest'
 
 import type { CloudUsageOverview } from '~/lib/api/usage'
 import type { AdminOverview } from '~/lib/api/admin-overview'
+import type { Finance } from '~/lib/api/finance'
 import type { PlatformApp } from '~/lib/api/platform'
 import type { FunctionsMetrics, OverviewStats } from '~/lib/api/functions'
-import { fromCloudUsage, fromAdminOverview, fromFunctions, healthFromApps, sumSeriesLines } from './adapters'
+import { fromCloudUsage, fromAdminOverview, fromFinance, financeHealth, fromFunctions, healthFromApps, sumSeriesLines } from './adapters'
 
 /**
  * The adapters are the pure maps from each REAL source onto `OverviewData`. These
@@ -176,5 +177,88 @@ describe('healthFromApps — operator inventory → health rows', () => {
   })
   it('empty inventory → no rows (honest "not reporting")', () => {
     expect(healthFromApps([])).toEqual([])
+  })
+})
+
+// A minimal-but-real Finance payload (the shape normalizeFinance produces).
+const finance = (over: Partial<Finance['cost']['digitalocean']> = {}, rev: Partial<Finance['revenue']> = {}, der: Partial<Finance['derived']> = {}): Finance => ({
+  cost: {
+    digitalocean: {
+      configured: true,
+      error: '',
+      creditRemainingCents: 1_000_000, // $10,000 credit remaining
+      monthToDateSpendCents: 300_000, // $3,000 MTD spend
+      avgDailyBurnCents: 30_000,
+      accountBalanceCents: -1_000_000,
+      generatedAt: '2026-07-15T00:00:00Z',
+      history: [
+        { date: '2026-06-01T00:00:00Z', amountCents: 280_000, type: 'Invoice', description: 'June' },
+        { date: '2026-05-01T00:00:00Z', amountCents: -4_000_000, type: 'Credit', description: 'Promo credit' },
+        { date: '2026-04-01T00:00:00Z', amountCents: 150_000, type: 'Invoice', description: 'April' },
+      ],
+      ...over,
+    },
+  },
+  revenue: { configured: true, totalRevenueCents: 3_500_000, mrrCents: 500_000, creditsConsumedCents: 3_500_000, ...rev },
+  derived: { grossMarginCents: 3_200_000, grossMarginPct: 91, runwayDays: 33.3, profitable: true, ...der },
+  generatedAt: '2026-07-15T00:00:00Z',
+})
+
+describe('fromFinance — /v1/admin/finance → OverviewData', () => {
+  it('maps DO cost, revenue, MRR, margin, and runway onto their KPI keys', () => {
+    const d = fromFinance(finance())
+    expect(d.kpi.creditRemaining.value).toBe(1_000_000)
+    expect(d.kpi.spendCents.value).toBe(300_000)
+    expect(d.kpi.mrr.value).toBe(500_000)
+    expect(d.kpi.revenue.value).toBe(3_500_000)
+    expect(d.kpi.marginPct.value).toBe(91)
+    expect(d.kpi.runwayDays.value).toBe(33.3)
+  })
+
+  it('builds the burn-down series from positive charges only, oldest→newest', () => {
+    const d = fromFinance(finance())
+    // The -$40,000 Credit grant is excluded; the two Invoice charges are sorted by date.
+    expect(d.series.spendCents.points).toEqual([
+      { t: '2026-04-01T00:00:00Z', value: 150_000 },
+      { t: '2026-06-01T00:00:00Z', value: 280_000 },
+    ])
+  })
+
+  it('renders a single profitability health verdict', () => {
+    const d = fromFinance(finance())
+    expect(d.health).toHaveLength(1)
+    expect(d.health[0]).toMatchObject({ service: 'Profitability', health: 'green' })
+  })
+
+  it('is honest-empty for an unconfigured DO — no fabricated credit/spend/margin', () => {
+    const d = fromFinance(finance({ configured: false, creditRemainingCents: 0, monthToDateSpendCents: 0, history: [] }))
+    // No creditRemaining/spend KPI → the tiles render "—", not a fake $0.
+    expect(d.kpi.creditRemaining).toBeUndefined()
+    expect(d.kpi.spendCents).toBeUndefined()
+    expect(d.kpi.marginPct).toBeUndefined() // margin needs both real cost AND revenue
+    // Revenue still surfaces (commerce is independent of DO).
+    expect(d.kpi.revenue.value).toBe(3_500_000)
+    expect(d.series.spendCents).toBeUndefined() // no charges → no fabricated burn-down
+    expect(d.health[0].health).toBe('') // unknown verdict → "not connected"
+  })
+
+  it('omits the runway KPI when runway is null (no fabricated 0 days)', () => {
+    const d = fromFinance(finance({}, {}, { runwayDays: null }))
+    expect(d.kpi.runwayDays).toBeUndefined()
+  })
+})
+
+describe('financeHealth — profitability verdict (pure)', () => {
+  it('green when profitable with a healthy margin', () => {
+    expect(financeHealth(finance({}, {}, { profitable: true, grossMarginPct: 91 })).health).toBe('green')
+  })
+  it('yellow when profitable but thin (< 20%)', () => {
+    expect(financeHealth(finance({}, {}, { profitable: true, grossMarginPct: 12 })).health).toBe('yellow')
+  })
+  it('red when burning faster than earning', () => {
+    expect(financeHealth(finance({}, {}, { profitable: false, grossMarginPct: -50 })).health).toBe('red')
+  })
+  it('unknown ("") when DO is unconfigured — never a fabricated green', () => {
+    expect(financeHealth(finance({ configured: false })).health).toBe('')
   })
 })

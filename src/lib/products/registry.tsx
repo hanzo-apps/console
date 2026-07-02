@@ -208,6 +208,11 @@ const OverviewDashboard = livingOverviewModule('overview')
 // (the catalog entry is `admin: true`; its loader is an all-orgs god view and the
 // `/v1/admin/overview` aggregate is itself server-gated).
 const BusinessDashboard = livingOverviewModule('admin-business')
+// admin.hanzo.ai finance board — the SaaS profitability hero (DO credit burn-down,
+// spend, MRR, revenue, gross margin, runway). GLOBAL-ADMIN ONLY (`admin: true`; the
+// `/v1/admin/finance` aggregate is server-gated by getAdminGate). Financial data is
+// Hanzo-internal and must never reach a customer.
+const FinanceDashboard = livingOverviewModule('finance')
 const AiMetricsLiving = livingOverviewModule('ai-metrics')
 const FunctionsLiving = livingOverviewModule('functions')
 // GPUs Overview is role-aware (admin → living overview, customer → visor catalog);
@@ -417,6 +422,26 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: BusinessDashboard }],
+  },
+  {
+    // admin.hanzo.ai FINANCE board — the SaaS profitability hero: DigitalOcean
+    // credit burn-down (our primary ~$40k venue), month-to-date spend, MRR, total
+    // revenue, gross margin %, runway, and a health verdict. GLOBAL-ADMIN ONLY
+    // (`admin: true` hides it from every customer's nav/launcher/palette + the
+    // catch-all renders a managed notice for a non-admin; the `/v1/admin/finance`
+    // aggregate is server-gated by `getAdminGate`, so financial data never reaches a
+    // customer). Reuses the ONE LivingOverview — this is a config, not a new surface.
+    id: 'finance',
+    label: 'Finance',
+    icon: Coins,
+    description: 'DigitalOcean credit burn-down, spend, revenue, gross margin, and runway across the platform.',
+    gcp: 'Cloud Billing / FinOps',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: FinanceDashboard }],
   },
   // ── AI ───────────────────────────────────────────────────────────────
   {
