@@ -88,9 +88,26 @@ export function OrgGate({ children }: { children: ReactNode }) {
     setBannerDismissed(dismissed)
   }, [])
 
-  // Seed org scope from localStorage on sign-in (restores last selected org)
+  // Seed org scope on sign-in. A non-global admin can ONLY act in their OWN org —
+  // the server pins them there and every cross-tenant call 403s — so they are
+  // ALWAYS scoped to `owner`, ignoring a stale/switched org left in localStorage
+  // (e.g. a leftover `adnexus` from a prior global-admin switch, which would make
+  // the whole console 403 against a tenant they can't read). Only a global admin
+  // restores a previously-switched org.
   useEffect(() => {
     if (!owner || typeof window === 'undefined') return
+    if (!isGlobalAdmin) {
+      // Hard-pin to own org. If a stale cross-tenant scope was active, reset it and
+      // reload so every module refetches under the correct X-Org-Id. The reload is
+      // guarded on `currentOrg() !== owner`, so once the scope is right it never
+      // fires again — no loop.
+      localStorage.removeItem(LS_LAST_ORG)
+      if (currentOrg() !== owner) {
+        setCurrentOrg(owner)
+        window.location.reload()
+      }
+      return
+    }
     const lastOrg = localStorage.getItem(LS_LAST_ORG)
     if (currentOrg() === config.iamOrgName) {
       const target = (lastOrg && lastOrg !== config.iamOrgName) ? lastOrg : owner
@@ -99,7 +116,7 @@ export function OrgGate({ children }: { children: ReactNode }) {
     // Persist current org whenever it updates
     const cur = currentOrg()
     if (cur && cur !== config.iamOrgName) localStorage.setItem(LS_LAST_ORG, cur)
-  }, [owner])
+  }, [owner, isGlobalAdmin])
 
   const dismissBanner = () => {
     setBannerDismissed(true)
