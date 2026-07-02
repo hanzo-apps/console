@@ -86,14 +86,31 @@ const buildUrl = (path: string, query?: Query): string => {
   return url.toString()
 }
 
+/**
+ * Apply a query map to an already-built URL string (same encoding as `buildUrl`).
+ * Absolute URLs pass through `new URL`; a root-relative `/v1/...` (SSR, where there
+ * is no origin) is resolved against a throwaway base and returned relative again, so
+ * the caller keeps the same root-relative form (the rewrite still applies).
+ */
+const withQuery = (base: string, query?: Query): string => {
+  if (!query) return base
+  const relative = base.startsWith('/')
+  const url = new URL(base, relative ? 'http://_' : undefined)
+  for (const [k, v] of Object.entries(query)) {
+    if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
+  }
+  return relative ? `${url.pathname}${url.search}` : url.toString()
+}
+
 async function request<T>(
   method: 'GET' | 'POST',
   path: string,
-  opts: { query?: Query; body?: unknown } = {},
+  opts: { query?: Query; body?: unknown; absoluteUrl?: string } = {},
 ): Promise<ApiResponse<T>> {
   let res: Response
+  const url = opts.absoluteUrl ? withQuery(opts.absoluteUrl, opts.query) : buildUrl(path, opts.query)
   try {
-    res = await fetch(buildUrl(path, opts.query), {
+    res = await fetch(url, {
       method,
       credentials: 'include',
       headers: baseHeaders(opts.body !== undefined),
@@ -123,6 +140,20 @@ async function request<T>(
 /** GET that unwraps `data` and throws on a non-ok envelope. */
 export async function get<T>(path: string, query?: Query): Promise<T> {
   const r = await request<T>('GET', path, { query })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r.data
+}
+
+/**
+ * Envelope GET pinned to the console's OWN origin (`<origin>/v1/<path>`), so it
+ * always hits a same-origin rewrite → hardened server proxy, NEVER the direct-cloud
+ * `NEXT_PUBLIC_CLOUD_URL` override. Used by the admin AGGREGATE reads
+ * (`/v1/admin/{overview,usage,…}`), which MUST terminate at the global-admin-gated
+ * `app/admin/aggregate` proxy — a split-origin cloud URL would bypass that console
+ * gate. Same casibase envelope unwrap + `ApiError` as `get`.
+ */
+export async function originGet<T>(path: string, query?: Query): Promise<T> {
+  const r = await request<T>('GET', path, { query, absoluteUrl: originV1Url(path) })
   if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
   return r.data
 }
