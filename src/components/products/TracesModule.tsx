@@ -28,7 +28,7 @@ import { RuntimeNotice } from './observability/RuntimeNotice'
 import { Pager } from './observability/Pager'
 import { Badge, DetailRow, JsonCard, Tags } from './observability/parts'
 import { SpanTree } from './observability/SpanTree'
-import { elapsed, fmtCost, fmtDate, fmtLatency, scoreValue } from './observability/format'
+import { elapsed, fmtCost, fmtDate, fmtLatency, fmtTokens, scoreValue } from './observability/format'
 
 const PAGE_LIMIT = 50
 
@@ -78,6 +78,7 @@ function TraceListView({ onOpen }: { onOpen: (t: Trace) => void }) {
     { key: 'userId', header: 'User', width: 140, render: (t) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{t.userId || '—'}</Text> },
     { key: 'latency', header: 'Latency', width: 100, render: (t) => <Text fontSize="$3" color="$color11">{fmtLatency(t.latency)}</Text> },
     { key: 'totalCost', header: 'Cost', width: 100, render: (t) => <Text fontSize="$3" color="$color11">{fmtCost(t.totalCost)}</Text> },
+    { key: 'totalTokens', header: 'Tokens', width: 100, render: (t) => <Text fontSize="$3" color="$color11">{fmtTokens(t.totalTokens)}</Text> },
     {
       key: 'action',
       header: '',
