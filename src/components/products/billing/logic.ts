@@ -57,15 +57,34 @@ export function monthToDate(records: UsageRecord[], now: number): MonthForecast 
   return { spentCents, dayOfMonth, daysInMonth: total, projectedCents }
 }
 
-/** The dimension a cost breakdown groups by. The ledger carries model + provider
- *  only (no project/SKU column), so those are the honest dimensions — never invented. */
-export type SpendDimension = 'model' | 'provider'
+/**
+ * The dimension a cost breakdown groups by. The ledger carries `model`/`provider`
+ * on every inference row, and — when cloud tags the spend — `product` (the surface:
+ * agents/chat/search/…) and `agent` (the `<org>-<agent>` identity). So Dave can see
+ * "which agent cost me $X" and "which product cost me $X". A dimension is only ever
+ * OFFERED when ≥1 record carries it (`presentDimensions`), never invented.
+ */
+export type SpendDimension = 'model' | 'provider' | 'product' | 'agent'
 
-/** One grouped cost row — spend + volume for a model or provider. */
+/** The ledger field a dimension reads. */
+function dimValue(r: UsageRecord, by: SpendDimension): string {
+  switch (by) {
+    case 'model':
+      return r.model
+    case 'provider':
+      return r.provider
+    case 'product':
+      return r.product
+    case 'agent':
+      return r.agent
+  }
+}
+
+/** One grouped cost row — spend + volume for one dimension value. */
 export type SpendGroup = {
-  /** The dimension value (model id or provider name); 'unknown' when the ledger omits it. */
+  /** The dimension value (model/provider/product/agent); 'unknown' when the ledger omits it. */
   label: string
-  /** Provider (kept even when grouping by model, for a secondary column). */
+  /** Provider (kept even when grouping by another dimension, for a secondary column). */
   provider: string
   /** Spend for the group, USD cents. */
   cents: number
@@ -79,7 +98,7 @@ export type SpendGroup = {
 export function groupSpend(records: UsageRecord[], by: SpendDimension): SpendGroup[] {
   const map = new Map<string, SpendGroup>()
   for (const r of records) {
-    const raw = by === 'model' ? r.model : r.provider
+    const raw = dimValue(r, by)
     const key = raw || 'unknown'
     const cur =
       map.get(key) ?? { label: raw || 'unknown', provider: r.provider, cents: 0, requests: 0, tokens: 0 }
@@ -102,12 +121,18 @@ export function filterGroups(groups: SpendGroup[], query: string): SpendGroup[] 
 /**
  * Which breakdown dimensions the ledger actually supports — a dimension is offered
  * only if ≥1 record carries a non-empty value for it. `model` is always present
- * (every inference row has one, even if 'unknown'); `provider` appears only when the
- * ledger reports it. Omitting an absent dimension keeps the UI honest.
+ * (every inference row has one, even if 'unknown'); `provider`, `product`, and
+ * `agent` appear ONLY when the ledger reports them. Omitting an absent dimension
+ * keeps the UI honest — the agent/product breakdown lights up automatically the
+ * moment cloud starts tagging spend with `metadata.{product,agent}`, and shows
+ * nothing (never a fabricated column) until then. Display order: model, provider,
+ * product, agent.
  */
 export function presentDimensions(records: UsageRecord[]): SpendDimension[] {
   const dims: SpendDimension[] = ['model']
   if (records.some((r) => r.provider)) dims.push('provider')
+  if (records.some((r) => r.product)) dims.push('product')
+  if (records.some((r) => r.agent)) dims.push('agent')
   return dims
 }
 

@@ -64,7 +64,17 @@ export function fromAdminOverview(ov: AdminOverview): OverviewData {
     d.kpi[k.key] = kpi
   }
   for (const s of ov.series) d.series[s.key] = { interval: s.interval, points: s.points }
-  if (ov.distribution.length) d.distribution.revenue = ov.distribution.map((s) => ({ label: s.label, value: s.value, sub: s.hint }))
+  const toSlices = (slices: { label: string; value: number; hint?: string }[]) =>
+    slices.map((s) => ({ label: s.label, value: s.value, sub: s.hint }))
+  if (ov.distribution.length) d.distribution.revenue = toSlices(ov.distribution)
+  // Named business distributions (revenue by product, plan mix, top agents/bots by
+  // cost, …) — each keyed exactly as the backend named it, so the business board's
+  // tiles read them by that key. Never overwrites a slice the backend didn't send.
+  if (ov.distributions) {
+    for (const [key, slices] of Object.entries(ov.distributions)) {
+      if (slices.length) d.distribution[key] = toSlices(slices)
+    }
+  }
   d.activity = ov.activity.map((a): OverviewEvent => ({ id: a.id, time: a.time, title: a.title, subtitle: a.subtitle, status: a.status }))
   d.alerts = ov.alerts.map((a) => ({ id: a.id, severity: a.severity, title: a.title, detail: a.detail }))
   d.health = ov.health.map((h): OverviewHealth => ({ service: h.service, health: h.health, detail: h.detail }))
