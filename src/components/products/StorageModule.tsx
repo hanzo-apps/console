@@ -48,7 +48,7 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { FieldRow, FieldText } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
-import { classifyBackend, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
+import { classifyRead, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
 
 /** Human-readable byte size (folders and unknowns render "—"). */
 function fmtSize(o: S3Object): string {
@@ -103,7 +103,9 @@ function BucketList({ onOpen }: { onOpen: (bucket: string) => void }) {
       setError(null)
     } catch (e) {
       setBuckets([])
-      setError(classifyBackend(e))
+      // A read is never credit-gated — a 402 here means "no buckets yet", shown as
+      // the honest first-run empty state (not an "add credits" wall).
+      setError(classifyRead(e))
     } finally {
       setLoading(false)
     }
@@ -264,7 +266,8 @@ function ObjectBrowser({ bucket, onBack }: { bucket: string; onBack: () => void 
       setError(null)
     } catch (e) {
       setObjects([])
-      setError(classifyBackend(e))
+      // Listing objects is a read — a 402 is "empty", not a paywall.
+      setError(classifyRead(e))
     } finally {
       setLoading(false)
     }
