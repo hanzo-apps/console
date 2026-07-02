@@ -137,6 +137,7 @@ import { UsersModule } from '~/components/products/UsersModule'
 import { SessionsModule } from '~/components/products/SessionsModule'
 import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
+import { MetricsModule } from '~/components/products/MetricsModule'
 import { DnsModule } from '~/components/products/DnsModule'
 import { PlaygroundModule } from '~/components/products/PlaygroundModule'
 import { PromptCreateModule, PromptMetricsModule, PromptsModule } from '~/components/products/PromptsModule'
@@ -1232,13 +1233,13 @@ export const catalog: CatalogEntry[] = [
     id: 'metrics',
     label: 'Metrics',
     icon: BarChart3,
-    description: 'Product metrics, events, and sessions.',
+    description: 'Live platform service health and infrastructure metrics.',
     category: 'Observe',
     status: 'enabled',
-    repo: 'hanzoai/insights',
+    repo: 'hanzoai/o11y',
     docs: `${DOCS}/metrics`,
     kind: 'module',
-    routes: overviewRoutes('metrics'),
+    routes: [{ path: '', component: MetricsModule }],
   },
   {
     // Console-native traces — list + detail (observations, scores, I/O) on the
