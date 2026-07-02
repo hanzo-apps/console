@@ -163,6 +163,7 @@ import { NodesModule } from '~/components/products/NodesModule'
 import { TokensModule } from '~/components/products/TokensModule'
 import { SettlementModule } from '~/components/products/SettlementModule'
 import { AlertsModule } from '~/components/products/AlertsModule'
+import { AnalyticsModule } from '~/components/products/AnalyticsModule'
 import { LogsModule } from '~/components/products/LogsModule'
 import { PipelinesModule } from '~/components/products/PipelinesModule'
 import { ReleasesModule } from '~/components/products/ReleasesModule'
@@ -1193,6 +1194,30 @@ export const catalog: CatalogEntry[] = [
     // The reusable LivingOverview over the SAME real commerce usage ledger the old
     // AiMetricsModule read — now with count-up KPIs, live sparklines, and streaming.
     routes: [{ path: '', component: AiMetricsLiving }],
+  },
+  {
+    // Native Analytics — per-org web + commerce + LLM analytics over the unified
+    // ClickHouse warehouse (datastore), read through cloud-api /v1/analytics/* via
+    // the /cloud bearer proxy. Overview (hanzo.events + events_daily), Real-Time,
+    // and LLM (hanzo.cloud_usage) tabs — every metric a real query, honest-empty
+    // otherwise. See universe/docs/architecture/unified-analytics.md.
+    id: 'analytics',
+    label: 'Analytics',
+    icon: BarChart3,
+    description: 'Per-org web, commerce, and LLM analytics over the unified warehouse.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/analytics',
+    docs: `${DOCS}/analytics`,
+    kind: 'module',
+    routes: [
+      { path: '', component: AnalyticsModule },
+      { path: ':tab', component: AnalyticsModule },
+    ],
+    subpages: [
+      { slug: 'realtime', label: 'Real-Time' },
+      { slug: 'llm', label: 'LLM' },
+    ],
   },
   {
     id: 'dashboards',
