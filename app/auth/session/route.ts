@@ -23,14 +23,13 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { type Account } from '~/lib/api/types'
 import { resolveUser } from '~/lib/server/identity'
 import {
-  accessClaims,
   clearSessionCookie,
   consoleSession,
   passwordGrant,
   readConsoleSession,
   revokeRefreshToken,
   sameSubject,
-  sealTokens,
+  sealSession,
   sessionConfigured,
   sessionCookie,
   SessionError,
@@ -117,17 +116,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'grant failed' }, { status })
   }
 
+  const sealedSession = sealSession(tokens)
   // The grant MUST resolve to the same principal as the established session — the
   // console session is for the already-authenticated user, never a third party.
-  const gc = accessClaims(tokens.accessToken)
-  const grantId = gc && gc.owner && gc.name ? `${gc.owner}/${gc.name}` : ''
-  if (!gc || !grantId || !sameSubject(grantId, authed.id)) {
+  const grantId =
+    sealedSession && sealedSession.claims.owner && sealedSession.claims.name
+      ? `${sealedSession.claims.owner}/${sealedSession.claims.name}`
+      : ''
+  if (!sealedSession || !grantId || !sameSubject(grantId, authed.id)) {
     return NextResponse.json({ error: 'identity mismatch' }, { status: 401 })
   }
 
-  const { sealed, expiresInMs } = sealTokens(tokens)
-  const res = NextResponse.json({ account: accountOf(gc), expiresIn: Math.floor(expiresInMs / 1000) })
-  return withCookie(res, sessionCookie(sealed))
+  const res = NextResponse.json({
+    account: accountOf(sealedSession.claims),
+    expiresIn: Math.floor(sealedSession.expiresInMs / 1000),
+  })
+  return withCookie(res, sessionCookie(sealedSession.sealed))
 }
 
 /** DELETE — sign out: best-effort revoke the refresh token, then clear the cookie. */

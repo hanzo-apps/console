@@ -19,7 +19,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import {
   readConsoleSession,
   refreshGrant,
-  sealTokens,
+  sealSession,
   sessionCookie,
   SessionError,
   type CookieDirective,
@@ -71,7 +71,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // (fail-closed: never persist a session we cannot refresh again).
   if (!tokens.refreshToken) return fail()
 
-  const { sealed, expiresInMs } = sealTokens(tokens)
-  const res = NextResponse.json({ expiresIn: Math.floor(expiresInMs / 1000) })
-  return withCookie(res, sessionCookie(sealed))
+  const sealed = sealSession(tokens)
+  if (!sealed) return fail()
+  const res = NextResponse.json({ expiresIn: Math.floor(sealed.expiresInMs / 1000) })
+  return withCookie(res, sessionCookie(sealed.sealed))
 }
