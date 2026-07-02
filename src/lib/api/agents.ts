@@ -24,6 +24,7 @@
  * (`agents` / `data` / `items` / `rows`).
  */
 import { restGet, restPost, restDelete, originV1Url } from './client'
+import type { AgentConfig } from '~/components/agent-builder/types'
 
 /** Inventory facade base path (same-origin `/v1/agents`). */
 const BASE = 'agents'
@@ -515,6 +516,10 @@ export type NewAgentBody = {
   description?: string
   systemPrompt?: string
   tools?: string[]
+  /** Knowledge sources (vector-store / file ids); omitted when empty. */
+  knowledge?: string[]
+  /** Advanced generation config — only the knobs changed from default (pruned). */
+  config?: Partial<AgentConfig>
 }
 
 export const AgentsApi = {

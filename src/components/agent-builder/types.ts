@@ -12,6 +12,49 @@
  * `@hanzo/agent-builder`) rather than a console2 one-off.
  */
 
+/**
+ * Reasoning budget for models that expose one (maps to `reasoning_effort`). The
+ * canonical Hanzo/Claude effort ladder, faster→smarter:
+ *
+ *   low · medium · high · xhigh · max · ultracode
+ *
+ * `ultracode` is the top tier — "xhigh + workflows" — and may use excessive tokens
+ * (long responses / overthinking); use it sparingly for the hardest tasks. The
+ * gateway maps each level onto the target model's native effort/thinking budget.
+ * (Supersedes the old 3-level low/medium/high.)
+ */
+export type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultracode'
+
+/**
+ * The agent's generation config — the advanced knobs the hanzo.chat builder
+ * exposes, folded into the canonical contract so ONE builder covers both the
+ * simple (name·model·prompt·tools) and the power-user surface. Every field has a
+ * sane default (`defaultConfig`); `toCreateBody` prunes anything left at default,
+ * so a simple agent still posts a clean `{name,…}` with no `config` key.
+ *
+ * Field names mirror the cloud `/v1/agents` body (camelCase, like `systemPrompt`);
+ * they correspond 1:1 to hanzo.chat's `temperature/top_p/top_k/stream/thinking/
+ * use_tools/web_search_enabled/reasoning_effort`.
+ */
+export type AgentConfig = {
+  /** Sampling temperature, 0–2 (clamped). Higher = more random. */
+  temperature: number
+  /** Nucleus sampling, 0–1 (clamped). */
+  topP: number
+  /** Top-k sampling; 0 = disabled. Non-negative integer (clamped). */
+  topK: number
+  /** Stream tokens as they generate. */
+  stream: boolean
+  /** Expose the model's thinking/reasoning trace. */
+  thinking: boolean
+  /** Let the agent call its tools during a turn. */
+  useTools: boolean
+  /** Enable the built-in web-search tool. */
+  webSearch: boolean
+  /** Reasoning budget, when the model supports it (omitted = model default). */
+  reasoningEffort?: ReasoningEffort
+}
+
 /** The editable shape of an agent under construction (the form's state). */
 export type AgentSpec = {
   /** Org-unique handle (also the URL segment). Required. */
@@ -24,6 +67,17 @@ export type AgentSpec = {
   systemPrompt: string
   /** Tool ids the agent may call (live catalog and/or custom). */
   tools: string[]
+  /**
+   * Knowledge sources (vector-store / file ids) the agent retrieves from.
+   * Optional — absent until the user adds one; normalized + omitted when empty.
+   */
+  knowledge?: string[]
+  /**
+   * Advanced generation config. Optional — the builder binds it lazily
+   * (`spec.config ?? defaultConfig()`), and `toCreateBody` includes only the
+   * non-default knobs, so a simple agent never carries a `config` key.
+   */
+  config?: AgentConfig
 }
 
 /** One option in a live picker (model / prompt / tool). Mirrors the ComboBox option. */
@@ -51,9 +105,26 @@ export type BuilderPrompt = {
 }
 
 /**
+ * The pruned wire body the builder emits for a create — `toCreateBody(spec)`. Every
+ * field but `name` is optional and OMITTED when empty/default, so a simple agent
+ * posts a clean `{name,…}` and a power-user agent posts exactly the knobs they set.
+ * This is what the injected `createAgent` effect receives (NOT the raw form spec) —
+ * so a host serializes nothing itself; the shared pure logic already did.
+ */
+export type AgentCreateBody = {
+  name: string
+  model?: string
+  description?: string
+  systemPrompt?: string
+  tools?: string[]
+  knowledge?: string[]
+  config?: Partial<AgentConfig>
+}
+
+/**
  * The effects + data the builder needs, injected by the host surface. Every loader
  * is async and may reject; the builder renders honest loading/error states and
- * NEVER fabricates an option. All four are optional except `createAgent`:
+ * NEVER fabricates an option. All are optional except `createAgent`:
  *   - no `loadModels`  → the model field is a plain typeable input (still works).
  *   - no `loadPrompts` → the prompt selector is hidden (system prompt stays free-text).
  *   - no `loadTools`   → the tools field is typeable-only (no live options).
@@ -68,12 +139,12 @@ export type AgentBuilderLoaders = {
   /** The live tool catalog. Rejects → typeable-only tools. */
   loadTools?: () => Promise<BuilderOption[]>
   /**
-   * Create the agent from the finished spec. This is the ONE mutation — it MUST
-   * target the unified agent backend (`POST /cloud/v1/agents`), which resolves the
-   * org from the caller's bearer server-side. Rejects with the backend error
-   * (the builder classifies 404 as "not connected" honestly).
+   * Create the agent from the pruned body (`toCreateBody(spec)`). This is the ONE
+   * mutation — it MUST target the unified agent backend (`POST /v1/agents`), which
+   * resolves the org from the caller's bearer server-side. Rejects with the backend
+   * error (the builder classifies 404 as "not connected" honestly).
    */
-  createAgent: (spec: AgentSpec) => Promise<unknown>
+  createAgent: (body: AgentCreateBody) => Promise<unknown>
 }
 
 /** The reason a create failed, distinguished so the UI reacts correctly. */

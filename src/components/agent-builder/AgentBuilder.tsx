@@ -18,8 +18,13 @@
  *              a "Custom" option for free text — "the system prompt is selectable
  *              from saved prompts OR typed".
  *   - Tools  → a ComboBox with the live tool catalog, added as chips (typeable too).
+ *   - Advanced → the hanzo.chat power-user generation config (temperature · top-p ·
+ *              top-k · reasoning effort · use-tools · web-search · thinking · stream),
+ *              folded into the ONE builder. Hidden by default; any knob left at its
+ *              default is pruned, so opening it never changes a simple agent's body.
  * Every option set is REAL (from a loader) or the field degrades to typeable — never
- * a fabricated model/prompt/tool.
+ * a fabricated model/prompt/tool. This is the SUPERSET builder: console2's decoupled
+ * injected-loader seam + hanzo.chat's advanced config — one component, both surfaces.
  *
  * Deps: only `@hanzo/gui`, the shared `ComboBox`/`Field` UI primitives, and this
  * module's own `./types`/`./logic`. No `~/lib/api` — so it lifts cleanly into
@@ -30,18 +35,19 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Bot, Plus, Terminal, X } from '@hanzogui/lucide-icons-2'
 
 import { ComboBox, type ComboOption } from '~/components/ui/ComboBox'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
+import { FieldRow, FieldSelect, FieldSlider, FieldSwitch, FieldText, FieldTextArea } from '~/components/ui/Field'
 import { SelectMenu, type SelectOption } from '~/components/ui/SelectMenu'
 import {
   canSubmit,
   classifyBuilderError,
+  defaultConfig,
   defaultModel,
   emptySpec,
   promptBodyFromRow,
   promptOptions,
   toCreateBody,
 } from './logic'
-import type { AgentBuilderLoaders, AgentSpec, BuilderOption, BuilderPrompt } from './types'
+import type { AgentBuilderLoaders, AgentConfig, AgentSpec, BuilderOption, BuilderPrompt, ReasoningEffort } from './types'
 
 /** Async option-list state for the live pickers (model/tool). */
 type OptState =
@@ -76,6 +82,14 @@ export function AgentBuilder({
   const [promptPick, setPromptPick] = useState<string | null>(null)
 
   const set = <K extends keyof AgentSpec>(k: K, v: AgentSpec[K]) => setSpec((s) => ({ ...s, [k]: v }))
+
+  // Advanced generation config — bound lazily to `spec.config ?? defaultConfig()`;
+  // a knob left at its default is pruned by `toCreateBody`, so a simple agent still
+  // posts no `config`. Functional update = no stale-closure read.
+  const [advanced, setAdvanced] = useState(false)
+  const cfg = spec.config ?? defaultConfig()
+  const setCfg = <K extends keyof AgentConfig>(k: K, v: AgentConfig[K]) =>
+    setSpec((s) => ({ ...s, config: { ...(s.config ?? defaultConfig()), [k]: v } }))
 
   // Preselect a Zen default ONLY if the user hasn't typed a model yet — refs so the
   // loader doesn't re-run on every keystroke.
@@ -153,7 +167,7 @@ export function AgentBuilder({
     setError(null)
     setUnavailable(false)
     try {
-      await loaders.createAgent(toCreateBody(spec) as AgentSpec)
+      await loaders.createAgent(toCreateBody(spec))
       onCreated()
     } catch (e) {
       const c = classifyBuilderError(e)
@@ -253,6 +267,47 @@ export function AgentBuilder({
       <FieldRow label="Description">
         <FieldText value={spec.description} onChange={(v) => set('description', v)} placeholder="What this agent does" />
       </FieldRow>
+
+      {/* Advanced generation config — the hanzo.chat power-user knobs, folded into
+          the ONE builder. Hidden by default; every value that stays at its default
+          is pruned, so opening this never changes what a simple agent posts. */}
+      <YStack gap="$2">
+        <Button size="$2" chromeless self="flex-start" onPress={() => setAdvanced((a) => !a)}>
+          {advanced ? 'Hide advanced settings' : 'Advanced settings'}
+        </Button>
+        {advanced ? (
+          <YStack gap="$3" p="$3" rounded="$4" bg="$color2" borderWidth={1} borderColor="$borderColor">
+            <FieldRow label="Temperature">
+              <FieldSlider value={cfg.temperature} min={0} max={2} step={0.1} onChange={(v) => setCfg('temperature', v)} />
+            </FieldRow>
+            <FieldRow label="Top-p">
+              <FieldSlider value={cfg.topP} min={0} max={1} step={0.05} onChange={(v) => setCfg('topP', v)} />
+            </FieldRow>
+            <FieldRow label="Top-k">
+              <FieldSlider value={cfg.topK} min={0} max={100} step={1} onChange={(v) => setCfg('topK', v)} />
+            </FieldRow>
+            <FieldRow label="Reasoning effort">
+              <FieldSelect
+                value={cfg.reasoningEffort ?? 'default'}
+                options={['default', 'low', 'medium', 'high', 'xhigh', 'max', 'ultracode']}
+                onChange={(v) => setCfg('reasoningEffort', v === 'default' ? undefined : (v as ReasoningEffort))}
+              />
+            </FieldRow>
+            <FieldRow label="Use tools">
+              <FieldSwitch checked={cfg.useTools} onChange={(v) => setCfg('useTools', v)} />
+            </FieldRow>
+            <FieldRow label="Web search">
+              <FieldSwitch checked={cfg.webSearch} onChange={(v) => setCfg('webSearch', v)} />
+            </FieldRow>
+            <FieldRow label="Thinking">
+              <FieldSwitch checked={cfg.thinking} onChange={(v) => setCfg('thinking', v)} />
+            </FieldRow>
+            <FieldRow label="Stream">
+              <FieldSwitch checked={cfg.stream} onChange={(v) => setCfg('stream', v)} />
+            </FieldRow>
+          </YStack>
+        ) : null}
+      </YStack>
 
       {unavailable ? (
         <Card gap="$1.5" p="$3" rounded="$4" bg="$color2" borderWidth={1} borderColor="$borderColor">
