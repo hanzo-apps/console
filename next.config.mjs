@@ -69,7 +69,7 @@ function guiPackages() {
  */
 const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects']
 const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio']
-const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products']
+const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance']
 const aiSurfaceRewrites = () => ({
   beforeFiles: [
     ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),

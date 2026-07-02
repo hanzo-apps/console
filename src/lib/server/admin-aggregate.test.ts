@@ -21,6 +21,10 @@ describe('allowAdminSurface — least-privilege admin read surface', () => {
     expect(allowAdminSurface('admin/audit/')).toBe(true) // trailing slash tolerated
   })
 
+  it('admits the finance aggregate (the SaaS profitability read)', () => {
+    expect(allowAdminSurface('admin/finance')).toBe(true)
+  })
+
   it('REFUSES the tenant-scoped admin proxies (iam / kms) — never a tunnel', () => {
     expect(allowAdminSurface('admin/iam')).toBe(false)
     expect(allowAdminSurface('admin/iam/get-users')).toBe(false)
