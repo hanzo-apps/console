@@ -53,7 +53,7 @@ function guiPackages() {
  * enforces its own least-privilege allow-list (`proxy-allow.ts`), so a rewrite can
  * never widen what the proxy admits. `beforeFiles` so these win over any route.
  */
-const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals']
+const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics']
 const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio']
 const aiSurfaceRewrites = () => ({
   beforeFiles: [
