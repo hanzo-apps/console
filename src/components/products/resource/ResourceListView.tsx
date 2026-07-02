@@ -2,7 +2,7 @@
 
 /**
  * Managed-resource console — the polished list/home surface for one provisioning
- * kind (SQL, KV, Datastore, Object Storage, Vector, …). ONE renderer, tuned by
+ * kind (SQL, KV, Datastore, S3, Vector, …). ONE renderer, tuned by
  * the per-kind `ResourceSpec`:
  *
  *   ┌ PageHeader (product · Refresh · primary Create) ─────────────────────────┐

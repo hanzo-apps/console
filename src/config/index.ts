@@ -203,10 +203,25 @@ export const config: ConsoleConfig = new Proxy({} as ConsoleConfig, {
   get: (_t, key: string) => resolveConfig()[key as keyof ConsoleConfig],
 })
 
+// Shared product-release label. The console app's major.minor IS the umbrella
+// "Hanzo Cloud <release>" — one source (package.json → NEXT_PUBLIC_APP_VERSION),
+// never hardcoded twice. cloud ships its own Go v1.x build under the same
+// umbrella; only this label is unified, not the build versions.
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? ''
+const PRODUCT_RELEASE = APP_VERSION.split('.').slice(0, 2).join('.')
+
 /** Brand-aware shell branding. */
 export const branding = {
   get name(): string {
     return `${resolveConfig().brandName} Console`
   },
   short: 'Cloud Console',
+  /** Full console build version, e.g. "8.4.11". */
+  appVersion: APP_VERSION,
+  /** Shared product-release, e.g. "8.4" (console major.minor). */
+  release: PRODUCT_RELEASE,
+  /** Umbrella product-line label, e.g. "Hanzo Cloud 8.4". */
+  get productLine(): string {
+    return PRODUCT_RELEASE ? `${resolveConfig().brandName} ${PRODUCT_RELEASE}` : resolveConfig().brandName
+  },
 } as const

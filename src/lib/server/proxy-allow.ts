@@ -38,6 +38,10 @@ export const CLOUD_HEADS: readonly string[] = [
   // Bearer owner), so routing it through /cloud gives correct per-org scoping —
   // the same reason it must NOT be a cookie-only same-origin call (that 403s).
   'evals',
+  // Read-only starter-kit gallery (cloud clients/templates): /v1/templates[/:slug].
+  // Public reference content (no org scoping) but routed through /cloud like the
+  // rest of the surface so dev + prod share ONE path.
+  'templates',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
@@ -91,4 +95,23 @@ export const COMMERCE_HEADS: readonly string[] = [
 export function allowCommerceSurface(path: string): boolean {
   const head = v1Head(path)
   return head != null && COMMERCE_HEADS.includes(head)
+}
+
+/** Matches exactly `v1/collections/<name>/records` and `.../records/<id>` (one clean
+ *  segment each — `bearer-proxy` has already rejected empty/dot/encoded segments). */
+const BASE_RECORDS = /^v1\/collections\/[^/]+\/records(?:\/[^/]+)?$/
+
+/**
+ * True iff `path` targets the Hanzo Base DATA PLANE reachable through `/superbase`
+ * as the signed-in user: the collection schemas (`v1/collections`, read) and any
+ * collection's records (`v1/collections/<name>/records[/<id>]` — list/get/create/
+ * update/delete). Base authorizes each read/write per-user AND per-collection
+ * itself (each collection's ListRule/ViewRule/CreateRule/…), so this list is the
+ * boundary that keeps `/superbase` from tunneling Base's admin/settings/backup/log
+ * surfaces — it stays a data-plane proxy, never a general Base tunnel. Superset of
+ * the old tenants-only rule (the tenants manager still rides this same proxy).
+ */
+export function allowBaseSurface(path: string): boolean {
+  const rel = path.replace(/^\/+/, '')
+  return rel === 'v1/collections' || BASE_RECORDS.test(rel)
 }
