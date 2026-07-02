@@ -24,6 +24,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { getAdminGate, adminBearer, kmsBaseUrl, type AdminGate } from '~/lib/server/identity'
 import { orgFor as policyOrgFor } from '~/lib/server/admin-policy'
+import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
 
@@ -104,7 +105,7 @@ async function handle(req: NextRequest, segments: string[]): Promise<NextRespons
   }
 
   try {
-    const res = await fetch(target, init)
+    const res = await fetchWithTimeout(target, init)
     const text = await res.text()
     return new NextResponse(text, {
       status: res.status,

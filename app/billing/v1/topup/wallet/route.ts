@@ -23,6 +23,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 
+import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
+
 export const runtime = 'nodejs'
 
 const RPC_URL = (process.env.HANZO_RPC_URL ?? 'https://rpc.hanzo.network').replace(/\/+$/, '')
@@ -120,7 +122,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // ── 2. Record to commerce as an HUSD crypto payment ─────────────────────────
   try {
-    const recordRes = await fetch(`${COMMERCE_URL}/v1/billing/payment`, {
+    const recordRes = await fetchWithTimeout(`${COMMERCE_URL}/v1/billing/payment`, {
       method: 'POST',
       headers: authHeaders(req),
       cache: 'no-store',
@@ -148,7 +150,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // New balance (USD ledger) — best-effort; the credit already landed.
     let balance = 0
     try {
-      const balRes = await fetch(
+      const balRes = await fetchWithTimeout(
         `${COMMERCE_URL}/v1/billing/balance?user=${encodeURIComponent(body.userId ?? '')}&currency=usd`,
         { headers: authHeaders(req), cache: 'no-store' },
       )

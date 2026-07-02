@@ -28,6 +28,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser, adminBearer } from './identity'
+import { fetchWithTimeout } from './fetch-timeout'
 
 const trimR = (s: string) => s.replace(/\/+$/, '')
 const trimL = (s: string) => s.replace(/^\/+/, '')
@@ -256,7 +257,9 @@ export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyO
 
   try {
     // Fetch the NORMALIZED dest (exactly what we validated) — never the raw string.
-    const res = await fetch(dest, init)
+    // Bounded: the timeout is composed with `init.signal` (req.signal), so a silent
+    // upstream aborts instead of wedging the request (→ the 502 below).
+    const res = await fetchWithTimeout(dest, init)
     // Stream the upstream body straight through — correct for SSE, JSON, binary,
     // and empty (204). The upstream status flows verbatim so an honest 402/403/501
     // reaches the UI unchanged.
