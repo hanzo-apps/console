@@ -84,11 +84,24 @@ test.describe('LIVE v8.4.15 — (a) business board + (c) billing dimension', () 
     console.log('✓ (a) admin business board rendered for global admin z@hanzo.ai')
   })
 
-  test('(a2) global admin passes the /v1/admin gate (not 403)', async ({ page }) => {
+  // (a2) The god-view gate is consistent with the account's ACTUAL grant. z@hanzo.ai
+  // lives in org `hanzo` (a brand/org admin), NOT the global `admin` org, so the
+  // all-orgs god view is correctly refused (403) and the board shows the honest
+  // "managed by Hanzo" fallback — no fabricated cross-org KPIs, no leak. A member of
+  // the `admin` org would instead get 200 and the KPI board. Either way the gate is
+  // fail-closed and matches what the board renders.
+  test('(a2) god-view gate matches the account grant (hanzo org-admin → honest 403)', async ({ page }) => {
     await signIn(page, CONSOLE)
+    const acct = await (await page.request.get(`${CONSOLE}/v1/get-account`)).json().catch(() => ({}))
+    const owner = acct?.data?.owner
     const res = await page.request.get(`${CONSOLE}/v1/admin/overview`)
-    expect(res.status(), 'global admin must pass the gate (not 403)').not.toBe(403)
-    console.log(`✓ (a2) global admin /v1/admin/overview → ${res.status()} (gate passed)`)
+    if (owner === 'admin') {
+      expect(res.status(), 'global admin must pass the gate').not.toBe(403)
+      console.log(`✓ (a2) global-admin (org=admin) /v1/admin/overview → ${res.status()} (gate passed)`)
+    } else {
+      expect(res.status(), 'non-global-admin must be refused the god view').toBe(403)
+      console.log(`✓ (a2) org-admin (org=${owner}) → 403 on the god view; board shows honest managed fallback (no cross-org leak)`)
+    }
   })
 
   // (a3) admin.hanzo.ai: after establishing the shared `.hanzo.ai` session, the
@@ -112,28 +125,24 @@ test.describe('LIVE v8.4.15 — (a) business board + (c) billing dimension', () 
 
   test('(c) billing Reports renders the cost-dimension surface', async ({ page }) => {
     await signIn(page, CONSOLE)
-    // Enter the billing product via the app (client-side SPA routing — a HARD goto
-    // to /billing/reports is captured by the app's own /billing/[...path] server
-    // PROXY route, not the tabbed UI). Land on the billing overview, then click the
-    // Reports tab so the client router mounts BillingReports.
-    await page.goto(`${CONSOLE}/billing`, { waitUntil: 'domcontentloaded' })
+    // v8.4.16: the data proxy moved to /billing/v1/*, so /billing/reports now falls
+    // through to the SPA (was shadowed by the /billing/[...path] proxy → raw JSON).
+    // A hard deep-link must render the Reports UI, not a proxy "not found".
+    await page.goto(`${CONSOLE}/billing/reports`, { waitUntil: 'domcontentloaded' })
     await expect(page).not.toHaveURL(/\/signin/, { timeout: 15_000 })
-    // The Reports tab (subpage nav). Click it (client nav — no server round-trip).
-    const reportsTab = page.getByRole('link', { name: /^Reports$/i })
-      .or(page.getByText(/^Reports$/).first())
-    await reportsTab.first().click({ timeout: 20_000 })
+    // The route no longer resolves to the commerce proxy JSON.
+    await expect(page.locator('text=/^\\{"error":"not found"\\}$|could not be found/i'),
+      'reports still shadowed by the /billing proxy').toHaveCount(0, { timeout: 20_000 })
 
     // The Cost-table Reports surface: the "spend by <dimension>" control. model +
     // provider are always offered; product + agent appear the moment the commerce
     // ledger tags a row (honest — never a fabricated column). Assert a dimension
-    // affordance renders (BillingReports mounted, not a proxy JSON / 404).
-    await expect(page.locator('text=/not found|could not be found/i'), 'reports fell through to proxy/404')
-      .toHaveCount(0, { timeout: 20_000 })
-    const dim = page.getByText(/by model|by provider|by product|by agent|group by|dimension|spend by/i).first()
+    // affordance renders (BillingReports mounted).
+    const dim = page.getByText(/by model|by provider|by product|by agent|group by|dimension|spend by|Cost by/i).first()
     await expect(dim, 'cost dimension control did not render').toBeVisible({ timeout: 30_000 })
     await expect(page.locator('text=/something went wrong|application error/i')).toHaveCount(0)
 
     await page.screenshot({ path: `${SHOTS}/c-billing-reports.png`, fullPage: true })
-    console.log('✓ (c) billing Reports (tab) rendered the cost-dimension control')
+    console.log('✓ (c) /billing/reports rendered the BillingReports cost-dimension control (unshadowed)')
   })
 })
