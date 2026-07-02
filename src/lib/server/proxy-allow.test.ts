@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  allowBaseSurface,
   allowCloudSurface,
   allowVisorSurface,
   allowCommerceSurface,
@@ -90,5 +91,28 @@ describe('allowCommerceSurface', () => {
     expect(allowCommerceSurface('v1/namespace')).toBe(false)
     expect(allowCommerceSurface('_/commerce/tenants')).toBe(false)
     expect(allowCommerceSurface('product')).toBe(false) // must be a v1 path
+  })
+})
+
+describe('allowBaseSurface', () => {
+  it('admits the collection schema list and any collection records CRUD path', () => {
+    expect(allowBaseSurface('v1/collections')).toBe(true)
+    expect(allowBaseSurface('/v1/collections')).toBe(true) // tolerant of a leading slash
+    // list / create
+    expect(allowBaseSurface('v1/collections/tenants/records')).toBe(true)
+    expect(allowBaseSurface('v1/collections/contacts/records')).toBe(true)
+    // get / update / delete one record
+    expect(allowBaseSurface('v1/collections/contacts/records/abc123')).toBe(true)
+  })
+
+  it('REFUSES Base admin/management surfaces (not a general Base tunnel)', () => {
+    expect(allowBaseSurface('v1/collections/contacts')).toBe(false) // single-collection admin
+    expect(allowBaseSurface('v1/settings')).toBe(false)
+    expect(allowBaseSurface('v1/backups')).toBe(false)
+    expect(allowBaseSurface('v1/logs')).toBe(false)
+    expect(allowBaseSurface('v1/collections/contacts/records/abc/extra')).toBe(false) // too deep
+    expect(allowBaseSurface('v1')).toBe(false)
+    expect(allowBaseSurface('collections/contacts/records')).toBe(false) // must be a v1 path
+    expect(allowBaseSurface('')).toBe(false)
   })
 })
