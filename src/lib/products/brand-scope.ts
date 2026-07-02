@@ -46,6 +46,10 @@ export const BRAND_CATEGORIES: Record<BrandId, ProductCategory[] | null> = {
   lux: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
   zoo: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
   pars: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
+  // General Hanzo-cloud customers (not sovereign-chain brands) → the FULL AI-cloud
+  // catalog, exactly like `hanzo`. `null` = every category.
+  '7stars': null,
+  yotoda: null,
 }
 
 /** Categories a given brand's console surfaces, in display order (all for hanzo). */
@@ -153,6 +157,10 @@ export const BRAND_NODE_NETWORKS: Record<BrandId, NodeNetworkId[] | 'all'> = {
   lux: ['lux-mainnet', 'lux-testnet', 'lux-devnet'],
   zoo: ['zoo-mainnet'],
   pars: ['pars-mainnet'],
+  // General cloud tenants own NO chain — the Nodes surface reports on no networks
+  // for them (they'd otherwise see other brands' chains). Empty, not 'all'.
+  '7stars': [],
+  yotoda: [],
 }
 
 /** The node networks a given brand may see, in display order (all for hanzo). */
