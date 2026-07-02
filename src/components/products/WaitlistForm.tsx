@@ -23,7 +23,19 @@ type JoinResponse = {
   error?: string
 }
 
-export function WaitlistForm({ waitlist, label }: { waitlist: string; label: string }) {
+export function WaitlistForm({
+  waitlist,
+  label,
+  cta = 'Join waitlist',
+  busyCta = 'Joining…',
+}: {
+  waitlist: string
+  label: string
+  /** Button label (default "Join waitlist"; e.g. "Request ERP" for a provision CTA). */
+  cta?: string
+  /** Button label while submitting (default "Joining…"). */
+  busyCta?: string
+}) {
   const { account } = useSession()
   const [email, setEmail] = useState(account?.email ?? '')
   const [busy, setBusy] = useState(false)
@@ -122,7 +134,7 @@ export function WaitlistForm({ waitlist, label }: { waitlist: string; label: str
           icon={busy ? <Spinner color="$color1" /> : undefined}
           onPress={() => void submit()}
         >
-          {busy ? 'Joining…' : 'Join waitlist'}
+          {busy ? busyCta : cta}
         </Button>
       </XStack>
       {error ? (
