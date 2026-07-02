@@ -15,13 +15,23 @@ import { TriangleAlert, Lock } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
+import { startReauth } from '~/lib/auth/iam'
 import { getBrand } from '~/lib/branding/brands'
 
 /** Surface-specific overrides for the 404/unauthorized explanations. */
 export type HonestCopy = { notFound?: string; unauthorized?: string }
 
-/** Map an ApiError to an honest title + body. Defaults are generic and truthful. */
-export function honestError(err: ApiError, copy: HonestCopy = {}): { title: string; body: string } {
+/**
+ * Map an ApiError to an honest title + body. Defaults are generic and truthful.
+ *
+ * 401 and 403 are DISTINCT: a 401 means the session lapsed (re-auth fixes it →
+ * `reauth`), a 403 means the signed-in account isn't authorized for this surface.
+ * A signed-in user is NEVER told to "sign in" for a 403.
+ */
+export function honestError(
+  err: ApiError,
+  copy: HonestCopy = {},
+): { title: string; body: string; reauth?: boolean } {
   if (err.status === 404)
     return {
       title: 'Not available on this deployment',
@@ -34,12 +44,18 @@ export function honestError(err: ApiError, copy: HonestCopy = {}): { title: stri
       title: 'Service unavailable',
       body: 'The service is starting up or temporarily unavailable. Retry in a moment.',
     }
-  if (err.status === 401 || err.status === 403 || /sign ?in|login|unauthorized/i.test(err.message))
+  if (err.status === 401)
+    return {
+      title: 'Your session expired',
+      body: 'Your session has expired or isn’t recognized here. Sign in again to continue where you left off.',
+      reauth: true,
+    }
+  if (err.status === 403 || /sign ?in|login|unauthorized/i.test(err.message))
     return {
       title: 'Access required',
       body:
         copy.unauthorized ??
-        'This view requires an authorized session, enforced server-side. Sign in with an account that has access.',
+        "You're signed in, but this account isn't authorized for this — it's an admin-only surface, or it isn't enabled for your organization yet.",
     }
   return { title: 'Could not load', body: err.message }
 }
@@ -86,7 +102,7 @@ export function ErrorState({
   onRetry?: () => void
   copy?: HonestCopy
 }) {
-  const { title, body } = honestError(err, copy)
+  const { title, body, reauth } = honestError(err, copy)
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={620}>
       <XStack gap="$2" items="center">
@@ -98,7 +114,11 @@ export function ErrorState({
       <Text fontSize="$3" color="$color11">
         {body}
       </Text>
-      {onRetry ? (
+      {reauth ? (
+        <Button size="$2" theme="light" self="flex-start" onPress={startReauth}>
+          Sign in again
+        </Button>
+      ) : onRetry ? (
         <Button size="$2" self="flex-start" onPress={onRetry}>
           Retry
         </Button>

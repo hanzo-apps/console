@@ -29,6 +29,16 @@ describe('isChunkLoadError', () => {
   it('matches the Next/Turbopack dynamic-import failure messages', () => {
     expect(isChunkLoadError(new Error('Failed to fetch dynamically imported module: https://x/_next/static/chunks/playground.js'))).toBe(true)
     expect(isChunkLoadError(new Error('error loading dynamically imported module'))).toBe(true)
+    expect(isChunkLoadError(new Error('Importing a module script failed.'))).toBe(true)
+  })
+
+  it('matches the stale-chunk HTML-as-JS signature (a 404 chunk served the app shell)', () => {
+    // The most common "crash on refresh during a deploy" — the chunk URL 404s and
+    // falls through to the SPA HTML, which the browser then parses as JS.
+    expect(isChunkLoadError(new SyntaxError("Unexpected token '<'"))).toBe(true)
+    expect(isChunkLoadError(new SyntaxError('expected expression, got \'<\''))).toBe(true)
+    expect(isChunkLoadError(new Error('Unexpected token < in JSON at position 0'))).toBe(true)
+    expect(isChunkLoadError(new SyntaxError('Unexpected token \'<\', "<!DOCTYPE "... is not valid JSON'))).toBe(true)
   })
 
   it('is false for ordinary render errors', () => {
