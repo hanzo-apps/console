@@ -31,12 +31,12 @@ describe('ProjectApi.list — routes through the /org/iam Bearer proxy', () => {
     delete (globalThis as { window?: unknown }).window
   })
 
-  it('lists from /org/iam/get-organization-projects with the org param (not the cloud /v1/iam path)', async () => {
+  it('lists from same-origin /v1/iam/get-organization-projects with the org param', async () => {
     const out = await ProjectApi.list()
-    expect(fetched.some((u) => u.startsWith('/org/iam/get-organization-projects'))).toBe(true)
+    // Single-binary: the cloud binary proxies /v1/iam/* to the brand IAM and scopes
+    // by the validated session — the console calls it same-origin, no /org/iam BFF.
+    expect(fetched.some((u) => u.startsWith('/v1/iam/get-organization-projects'))).toBe(true)
     expect(fetched.some((u) => u.includes('organization='))).toBe(true)
-    // never the cloud /v1 path that 404s
-    expect(fetched.some((u) => u.includes('/v1/iam/'))).toBe(false)
     expect(out.map((p) => p.name)).toEqual(['demo'])
   })
 })

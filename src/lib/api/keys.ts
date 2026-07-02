@@ -19,7 +19,7 @@ export type KeyStatus = {
 async function keysReq<T>(method: 'GET' | 'POST' | 'DELETE'): Promise<T> {
   let res: Response
   try {
-    res = await fetch('/keys', {
+    res = await fetch('/v1/keys', {
       method,
       credentials: 'include',
       headers: { Accept: 'application/json' },

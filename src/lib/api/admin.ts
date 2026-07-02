@@ -117,9 +117,12 @@ export type AuditRecord = {
   [key: string]: unknown
 }
 
-// ── IAM admin (global; IAM envelope over /admin/iam/*) ────────────────────────
+// ── IAM admin (global; IAM envelope over same-origin /v1/iam/*) ───────────────
+// Same-origin now: the cloud binary proxies /v1/iam/* to the brand's IAM and
+// authorizes cross-tenant reads from the validated global-admin session (owner ==
+// admin org). No BFF origin.
 
-const admin = makeIamClient('/admin/iam')
+const admin = makeIamClient('/v1/iam')
 
 export const IamAdminApi = {
   /** Organizations are owned by the built-in `admin`; IAM scopes to the caller. */
@@ -186,7 +189,9 @@ export type KmsSecretValue = { value: string; version: number }
 export type KmsScope = { org?: string }
 export type KmsRef = KmsScope & { path: string; name: string; env?: string }
 
-const KMS_SECRETS = '/admin/kms/secrets'
+// The embedded KMS secrets plane is served in-process by the cloud binary at
+// same-origin /v1/kms (hanzoai/cloud clients/kms), no BFF admin proxy.
+const KMS_SECRETS = '/v1/kms/secrets'
 
 async function kmsReq<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', query?: Query, body?: unknown): Promise<T | undefined> {
   let res: Response

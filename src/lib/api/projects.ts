@@ -48,8 +48,8 @@ export const projectEnvironments = (p?: Project): string[] => {
   return [...STOCK_ENVIRONMENTS, ...custom]
 }
 
-/** The IAM member proxy — mints the user Bearer server-side, scopes to the caller's org. */
-const iam = makeIamClient('/org/iam')
+/** Same-origin IAM — cloud proxies /v1/iam/* to the brand IAM, scoped to the caller's org. */
+const iam = makeIamClient('/v1/iam')
 const org = () => currentOrg()
 
 export const ProjectApi = {

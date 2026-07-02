@@ -17,7 +17,7 @@ import { makeIamClient, DEFAULT_PAGE_SIZE, type Paged } from './iam-envelope'
 import { listQuery, type ListParams } from './types'
 import type { Organization, IamUser, Role } from './admin'
 
-const org = makeIamClient('/org/iam')
+const org = makeIamClient('/v1/iam')
 
 export const TeamApi = {
   /** Members of `orgName` (the caller's own org, or any for a global admin). */

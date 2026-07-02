@@ -40,7 +40,7 @@ export function WaitlistForm({ waitlist, label }: { waitlist: string; label: str
     setBusy(true)
     let res: Response
     try {
-      res = await fetch('/waitlist', {
+      res = await fetch('/v1/waitlist', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

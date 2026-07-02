@@ -70,8 +70,9 @@ export function OrgSwitcher() {
     setBusy(true)
     setErr(null)
     try {
-      const res = await fetch('/onboard', {
+      const res = await fetch('/v1/onboard', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       })

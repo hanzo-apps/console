@@ -112,10 +112,10 @@ export type ActivityInfo = {
   taskQueue?: string
 }
 
-/** Same-origin `/tasksd` proxy base (server route mints the Bearer + forwards).
- *  NB: the proxy lives at `/tasksd`, NOT `/tasks` — the `tasks` product page owns
- *  the `/tasks/*` SPA routes, so a proxy there would shadow `/tasks/queues` etc. */
-const tasksBase = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/tasksd` : '/tasksd')
+/** Same-origin `/v1/tasksd` base (cloud serves the workflow daemon surface here).
+ *  Kept under `/v1/tasksd`, NOT `/v1/tasks` — the `tasks` product page owns the
+ *  `/tasks/*` SPA routes, so sharing the head would shadow `/tasks/queues` etc. */
+const tasksBase = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/v1/tasksd` : '/v1/tasksd')
 const u = (path: string): string => `${tasksBase()}/${path.replace(/^\/+/, '')}`
 const enc = encodeURIComponent
 

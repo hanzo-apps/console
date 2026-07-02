@@ -19,8 +19,10 @@
  */
 import { restGet, restPost } from './client'
 
+// Same-origin `/v1` base — cloud serves the mlsvc train/experiments/models surface
+// at /v1/train/* and /v1/ml/* (hanzoai/cloud clients/ml).
 const trainingBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/training` : '/training'
+  typeof window !== 'undefined' ? `${window.location.origin}/v1` : '/v1'
 
 type Query = Record<string, string | number | boolean | undefined | null>
 

@@ -41,7 +41,7 @@ export function OrgOnboarding() {
     setBusy(which)
     let res: Response
     try {
-      res = await fetch('/onboard', {
+      res = await fetch('/v1/onboard', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

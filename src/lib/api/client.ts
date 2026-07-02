@@ -176,48 +176,34 @@ export const originV1Url = (path: string): string => {
 }
 
 /**
- * The console's OWN same-origin keyless AI proxy base (`<origin>/ai`). The gateway
- * model/inference endpoints REQUIRE an `Authorization: Bearer` token (a session
- * cookie is rejected — the "models missing" bug), so the browser never calls the
- * gateway directly: it calls this proxy with just the cookie and the server route
- * (`app/ai/[...path]`) resolves the user + forwards with a short-lived user token.
- * ONE place defines this origin — the model catalog and the playground both use it.
+ * The console's OWN origin — the ONE base every product API resolves against.
+ *
+ * SINGLE-BINARY CONTRACT: the console is a static SPA served by the hanzoai/cloud
+ * Go binary at `/`, and that SAME process serves `/v1`. So every surface — AI
+ * (models/chat/embeddings), managed data (vector/sql/kv/s3/…), serverless
+ * (functions/prompts/agents), commerce — is reached at same-origin `/v1/<head>`.
+ * The old cross-origin BFF bearer-proxies (`/ai`, `/cloud`, `/commerce`) are gone:
+ * the browser's first-party IAM session cookie (`iam_access_token`) is sent with
+ * every call, and cloud's identity middleware validates it and derives the org from
+ * the token's `owner` claim (hanzoai/cloud middleware_identity.go) — no server-side
+ * bearer mint, because there is no second origin to bridge. Empty string on the
+ * server (SSR/export prerender) yields a root-relative `/v1/<path>`.
  */
-export const aiBase = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/ai` : '/ai')
+const originBase = (): string => (typeof window !== 'undefined' ? window.location.origin : '')
 
-/** Build a `/v1/<path>` URL on the AI proxy (`<origin>/ai/v1/<path>`). */
+/** @deprecated same-origin now — retained as a named seam for the AI surface. */
+export const aiBase = originBase
+/** Build a same-origin `/v1/<path>` URL for the AI surface. */
 export const aiV1Url = (path: string): string => v1Url(path, aiBase())
 
-/**
- * The console's OWN same-origin cloud-api USER-BEARER proxy base (`<origin>/cloud`).
- * The managed-data (vector/sql/kv/s3/docdb/datastore/search) and serverless
- * (functions/prompts/agents) surfaces authorize on a Bearer JWT — the org comes
- * from the token's owner claim, so a cookie-only browser call 403s ("X-Org-Id
- * required"). The browser therefore calls this proxy with just the cookie and the
- * server route (`app/cloud/[...path]`) mints a short-lived user token + forwards it
- * as the Bearer (dodging the public-gateway 431 — in-cluster, bearer-only). ONE
- * place defines this origin; provisioning + functions (+ prompts/agents) use it.
- */
-export const cloudProxyBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/cloud` : '/cloud'
-
-/** Build a `/v1/<path>` URL on the cloud-api user-bearer proxy (`<origin>/cloud/v1/<path>`). */
+/** @deprecated same-origin now — retained as a named seam for the cloud data/serverless surface. */
+export const cloudProxyBase = originBase
+/** Build a same-origin `/v1/<path>` URL for the cloud data/serverless surface. */
 export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyBase())
 
-/**
- * The console's OWN same-origin commerce USER-BEARER proxy base (`<origin>/commerce`).
- * The commerce store surface (products/orders/customers/collections/variants/
- * discounts) authorizes on a Bearer JWT: commerce's EdgeAuth validates the token
- * and mints the org from its `owner` claim, so every read/write is org-scoped
- * server-side (a cookie-only browser call can't list). The browser calls this proxy
- * with just its cookie; the server route (`app/commerce/[...path]`) mints a
- * short-lived user token + forwards it as the Bearer. ONE place defines this origin
- * (the DRY twin of `cloudProxyBase`); every commerce-store module uses it.
- */
-export const commerceProxyBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/commerce` : '/commerce'
-
-/** Build a `/v1/<path>` URL on the commerce user-bearer proxy (`<origin>/commerce/v1/<path>`). */
+/** @deprecated same-origin now — retained as a named seam for the commerce surface. */
+export const commerceProxyBase = originBase
+/** Build a same-origin `/v1/<path>` URL for the commerce surface. */
 export const commerceProxyV1Url = (path: string): string => v1Url(path, commerceProxyBase())
 
 async function restRequest<T>(

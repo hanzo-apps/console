@@ -244,12 +244,13 @@ describe('FunctionsApi.list — hits the documented /v1/functions contract', () 
     delete (globalThis as { window?: unknown }).window
   })
 
-  it('fetches the inventory via the /cloud user-bearer proxy and normalizes it', async () => {
-    // The functions surface authorizes on the Bearer owner claim, so the browser
-    // calls the console's OWN /cloud proxy (which mints a user token server-side),
-    // NOT the cookie-only direct cloud path — that is the 403→real fix.
+  it('fetches the inventory via same-origin /v1/functions and normalizes it', async () => {
+    // Single-binary: the console is served by the cloud binary, so the functions
+    // surface is reached at same-origin /v1/functions. The first-party session
+    // cookie is sent with the call and cloud's identity middleware derives the org
+    // from the token owner claim — no cross-origin bearer mint, no /cloud proxy.
     const out = await FunctionsApi.list()
-    expect(fetched).toContain(`${ORIGIN}/cloud/v1/functions`)
+    expect(fetched).toContain(`${ORIGIN}/v1/functions`)
     expect(out.map((f) => f.name)).toEqual(['resize'])
   })
 })

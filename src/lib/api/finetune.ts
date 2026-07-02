@@ -13,9 +13,9 @@
  */
 import { restGet, restPost, ApiError } from './client'
 
-/** Base of the same-origin training proxy (`<origin>/training`). */
+/** Same-origin `/v1` base — cloud serves the mlsvc finetune surface at /v1/finetune/*. */
 const trainingBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/training` : '/training'
+  typeof window !== 'undefined' ? `${window.location.origin}/v1` : '/v1'
 
 type Query = Record<string, string | number | boolean | undefined | null>
 

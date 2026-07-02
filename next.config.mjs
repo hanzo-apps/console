@@ -36,39 +36,30 @@ function guiPackages() {
 }
 
 /**
- * Same-origin `/v1/*` for the AI product surface — ZERO client-visible prefix.
+ * STATIC EXPORT — the console ships as a static SPA that the hanzoai/cloud Go
+ * binary `go:embed`s and serves at `/` from the SAME process that serves `/v1`
+ * (see hanzoai/cloud webui.go). `next build` with `output: 'export'` emits `out/`;
+ * the Dockerfile `build:embed` stage copies it into the Go embed path.
  *
- * The CTO contract is "no prefix before /v1/ in any API call": the browser calls
- * its OWN origin at a clean `/v1/<head>/...`, never `/cloud/...` or `/ai/...`.
- * These rewrites map exactly the AI-surface heads to the console's already-hardened
- * server-side bearer proxies (`app/cloud`, `app/ai`) — so the URL the client builds
- * is `/v1/prompts` while the request still terminates at OUR Next origin, which
- * mints a short-lived user bearer and forwards it (the raw session cookie NEVER
- * reaches cloud-api, so cloud-api carries no cookie-CSRF surface). This gives the
- * one-endpoint-form goal WITHOUT weakening the bearer trust boundary.
- *
- * Scope is deliberately the CLOSED head list the AI clients use (prompts/agents/
- * evals via /cloud, models/chat/embeddings/rerank via /ai) — a blanket `/v1/:path*`
- * would shadow paths meant for other backends. Each destination handler still
- * enforces its own least-privilege allow-list (`proxy-allow.ts`), so a rewrite can
- * never widen what the proxy admits. `beforeFiles` so these win over any route.
+ * There is no Next server in this build — no BFF bearer-proxy routes, no rewrites.
+ * The browser calls its OWN origin at a clean `/v1/<head>/...` and that request is
+ * served DIRECTLY by the cloud binary, which validates the first-party IAM session
+ * cookie (`iam_access_token`) and derives the org from its `owner` claim
+ * (hanzoai/cloud middleware_identity.go). Same origin ⇒ the cookie is first-party,
+ * so no cross-origin bearer mint is needed — the whole point of the old BFF
+ * collapses by construction. All API base URLs resolve to same-origin `/v1`
+ * (src/lib/api/client.ts); CSRF is covered by the session cookie's SameSite plus
+ * the API's own mutating-request origin checks.
  */
-const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals']
-const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio']
-const aiSurfaceRewrites = () => ({
-  beforeFiles: [
-    ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
-    ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/cloud/v1/${h}/:path*` })),
-    ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/ai/v1/${h}` })),
-    ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/v1/${h}/:path*` })),
-  ],
-})
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Static SPA export — one artifact the Go binary embeds. No Node server ships.
+  output: 'export',
+  // A static export has no Next image-optimizer server; serve images as-is.
+  images: { unoptimized: true },
   transpilePackages: guiPackages(),
-  rewrites: aiSurfaceRewrites,
   experimental: {
     esmExternals: true,
   },
