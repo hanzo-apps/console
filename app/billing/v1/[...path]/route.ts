@@ -36,6 +36,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser } from '~/lib/server/identity'
 import { billingSubject, scopedBillingSearch, scopedBillingBody } from '~/lib/server/billing-scope'
+import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
 
@@ -101,7 +102,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     init.body = scopedBillingBody(await req.text(), subject)
   }
   try {
-    const res = await fetch(url, init)
+    const res = await fetchWithTimeout(url, init)
     const text = await res.text()
     return new NextResponse(text, {
       status: res.status,

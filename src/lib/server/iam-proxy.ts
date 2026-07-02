@@ -15,6 +15,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { adminBearer, iamBaseUrl, type IamGate } from './identity'
 import { ownerAllowed as policyOwnerAllowed, orgNameAllowed, orgWriteAllowed } from './admin-policy'
+import { fetchWithTimeout } from './fetch-timeout'
 
 const forbidden = () => NextResponse.json({ error: 'forbidden' }, { status: 403 })
 const notFound = () => NextResponse.json({ error: 'not found' }, { status: 404 })
@@ -161,7 +162,7 @@ export async function forwardIam(
   }
 
   try {
-    const res = await fetch(`${iamBaseUrl()}/v1/iam/${segment}${fwdSearch}`, init)
+    const res = await fetchWithTimeout(`${iamBaseUrl()}/v1/iam/${segment}${fwdSearch}`, init)
     const text = await res.text()
     return new NextResponse(text, {
       status: res.status,

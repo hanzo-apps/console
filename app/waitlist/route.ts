@@ -17,6 +17,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser } from '~/lib/server/identity'
+import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let res: Response
   try {
-    res = await fetch(`${WAITLIST_URL}/v1/waitlist/join`, {
+    res = await fetchWithTimeout(`${WAITLIST_URL}/v1/waitlist/join`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
