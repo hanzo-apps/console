@@ -1,8 +1,14 @@
 /**
- * Per-tenant billing proxy → commerce. The browser calls console2's OWN origin
- * (`/billing/...`); this server handler forwards to commerce's `/v1/billing/...`,
+ * Per-tenant billing DATA proxy → commerce. The browser calls console2's OWN origin
+ * (`/billing/v1/...`); this server handler forwards to commerce's `/v1/billing/...`,
  * injecting the commerce SERVICE token from server-only env (never `NEXT_PUBLIC_`,
  * never in the browser bundle) AND scoping every request to the caller's OWN org.
+ *
+ * Namespaced under `/billing/v1/` (NOT bare `/billing/`) so the data plane never
+ * shadows the billing UI tab URLs (`/billing/reports`, `/billing/invoices`, …): a
+ * route handler always wins over the catch-all page for a matching path segment, so
+ * the tab slugs and the data endpoints must live in disjoint path space. The tab
+ * URLs now fall through to the SPA (`app/(dashboard)/[...slug]`).
  *
  * Same trust boundary as the `/admin/iam` + `/admin/kms` proxies, but the authz is
  * PER-TENANT, not admin: any authenticated session may read/act on ITS OWN billing
