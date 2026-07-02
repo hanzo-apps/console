@@ -1294,3 +1294,54 @@ one fix per shared primitive, no per-module snowflakes.
 - Verification: `tsc --noEmit` clean; `npm test` **953/953** (79 files; +6 boundary
   HTML-as-JS chunk cases); `next build` ✓. Live re-verify (the 3 pages honest, S3
   read empty-not-paywall, #49's entitlement gate still holds) is post-deploy.
+
+## Record-form data-loss fix + Memory/Datasets delete + session-TTL flag (v8.4.27)
+
+Interaction-sweep punch-list (43/45 buttons already worked). The one SERIOUS bug —
+record forms with no inputs (silent data loss) — plus two delete affordances; the
+"5-min logout" is diagnosed as a BACKEND concern (not a client change).
+
+- **[BUG, data loss] Base/Records create+edit forms rendered ZERO inputs → blank
+  rows.** `@hanzo/data`'s `RecordForm` renders a label then `FieldInput` per field,
+  but `FieldInput` returns `null` when no Input is registered for the type (unlike
+  the read router `FieldDisplay`, which has a fallback). The input registry is
+  populated ONLY by an import SIDE EFFECT (`registerDefaults.ts` self-invokes), yet
+  the package ships `"sideEffects": false` — so production webpack tree-shaking (we
+  consume `@hanzo/data` via `transpilePackages`) PRUNES the registration. Registry
+  empty → every field input is `null` → the form shows labels with NO inputs, a user
+  can't type, and "Create" persists a BLANK record. (It worked in `next dev` — no
+  tree-shaking — which is why only post-deploy broke; matches "Base proved editable
+  locally".) **Fix (2 lines, DRY):** `Provider.tsx` imports and CALLS
+  `registerDefaultFields()` at module scope — a USED binding webpack cannot drop, so
+  the registry is populated app-wide (Base + Records + any future editable
+  `@hanzo/data` surface). Idempotent, no window/DOM (SSR-safe). Root-fix flagged for
+  the package: drop/scope its `sideEffects:false`.
+- **[BUG] Memory Open/Delete broke on `/memory/undefined`.** `MemoryApi` returned
+  raw rows with NO key normalization; the backend keys memories by `name` (like KMS
+  secrets / Base collections), so a row often had no `id` → `/memory/<undefined>` →
+  "this memory no longer exists", and delete/update mis-keyed. **Fix:** new
+  `normalizeMemory` derives a stable `id` from the first present of
+  `id/name/key/memoryId/memory_id/_id`, mapped in list/search/recall/remember/update
+  so the whole module (open link, rowKey, edit, delete) works whatever the backend
+  calls the key; `update`/`remove` send the key as BOTH `id` and `name` (robust
+  whichever the backend reads). Memory already HAD delete buttons (list row + detail)
+  — they now hit the right key. (+5 normalizer tests.)
+- **[minor] Datasets — row-level delete.** `EvalsApi.deleteDataset` was present but
+  unused; `DatasetsModule` now renders a per-row delete (confirm → real
+  `DELETE /v1/evals/datasets/:name`, org-scoped, removes the dataset + its items →
+  reload). One shared honest-delete pattern with Memory's name-keyed delete.
+- **[the 5-min logout] Diagnosed as a BACKEND/IAM concern — flagged, not a client
+  change.** The console session is an httpOnly cookie (`/v1/iam/signin`) + server-
+  minted short-lived bearers (`issue-user-token`); the browser holds NO access/
+  refresh token. So a client-side `grant_type=refresh_token` would REQUIRE putting a
+  refresh token in the browser — an XSS-stealable SECURITY REGRESSION of the httpOnly
+  model — and a keep-alive auto-reauth could redirect-loop on a hard session TTL. The
+  real fix is the session/token TTL + slide-on-activity (IAM/cloud config — the
+  coordinator's own iam#89 stages 1h-access), NOT console code. The correct console-
+  side mitigation already SHIPPED in v8.4.25 (P3): graceful re-auth that returns the
+  user to their exact task after re-signing in. Part of the observed "5-min logout"
+  was also the test harness's concurrent shared-session sign-outs (a test artifact).
+  Deliberately shipped no client token-handling.
+- Verification: `tsc --noEmit` clean; `npm test` **970/970** (80 files; +5 memory
+  normalizer); `next build` ✓ (15/15). Live re-verify (create a record with real
+  values → persists non-blank; Memory Open+Delete; Datasets delete) post-deploy.
