@@ -106,6 +106,26 @@ describe('fromAdminOverview — /v1/admin aggregate → OverviewData', () => {
     // The admin row carries its own `detail`; `cluster` is not a health-row field.
     expect(d.health[0]).toEqual({ service: 'gateway', health: 'green', detail: 'reconciled' })
   })
+
+  it('projects named business distributions (plans, topAgents) into distribution[key]', () => {
+    const d = fromAdminOverview({
+      ...admin(),
+      distributions: {
+        revenue: [{ label: 'Chat', value: 3000 }], // named revenue overrides the flat one
+        plans: [{ label: 'Pro', value: 12, hint: 'seats' }],
+        topAgents: [{ label: 'hanzo-support-bot', value: 900 }],
+      },
+    })
+    expect(d.distribution.revenue[0]).toEqual({ label: 'Chat', value: 3000, sub: undefined })
+    expect(d.distribution.plans).toEqual([{ label: 'Pro', value: 12, sub: 'seats' }])
+    expect(d.distribution.topAgents[0]).toEqual({ label: 'hanzo-support-bot', value: 900, sub: undefined })
+  })
+
+  it('leaves business distributions absent when the aggregate omits them (honest empty)', () => {
+    const d = fromAdminOverview(admin())
+    expect(d.distribution.plans).toBeUndefined()
+    expect(d.distribution.topAgents).toBeUndefined()
+  })
 })
 
 describe('sumSeriesLines / fromFunctions — Functions inventory + metrics', () => {

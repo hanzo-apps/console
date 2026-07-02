@@ -23,6 +23,8 @@ const rec = (p: Partial<UsageRecord>): UsageRecord => ({
   cents: p.cents ?? 0,
   model: p.model ?? '',
   provider: p.provider ?? '',
+  product: p.product ?? '',
+  agent: p.agent ?? '',
   promptTokens: p.promptTokens ?? 0,
   completionTokens: p.completionTokens ?? 0,
   totalTokens: p.totalTokens ?? 0,
@@ -93,9 +95,29 @@ describe('groupSpend — cost breakdown by a present dimension', () => {
     expect(g[0].cents).toBe(400)
   })
 
+  it('groups by product surface (which product cost me $X)', () => {
+    const g = groupSpend(
+      [rec({ product: 'agents', cents: 300 }), rec({ product: 'agents', cents: 100 }), rec({ product: 'chat', cents: 250 })],
+      'product',
+    )
+    expect(g.map((r) => r.label)).toEqual(['agents', 'chat'])
+    expect(g[0].cents).toBe(400)
+  })
+
+  it('groups by agent (which agent cost me $X)', () => {
+    const g = groupSpend(
+      [rec({ agent: 'hanzo-bot', cents: 90 }), rec({ agent: 'hanzo-bot', cents: 60 }), rec({ agent: 'triage', cents: 400 })],
+      'agent',
+    )
+    expect(g.map((r) => r.label)).toEqual(['triage', 'hanzo-bot'])
+    expect(g[1].cents).toBe(150)
+    expect(g[1].requests).toBe(2)
+  })
+
   it('labels a missing dimension "unknown" (never invented)', () => {
-    const g = groupSpend([rec({ cents: 10 })], 'model')
-    expect(g[0].label).toBe('unknown')
+    expect(groupSpend([rec({ cents: 10 })], 'model')[0].label).toBe('unknown')
+    expect(groupSpend([rec({ cents: 10 })], 'agent')[0].label).toBe('unknown')
+    expect(groupSpend([rec({ cents: 10 })], 'product')[0].label).toBe('unknown')
   })
 })
 
@@ -120,6 +142,22 @@ describe('presentDimensions — offer only dimensions the ledger carries', () =>
   it('model always, provider only when present', () => {
     expect(presentDimensions([rec({ model: 'x' })])).toEqual(['model'])
     expect(presentDimensions([rec({ model: 'x', provider: 'p' })])).toEqual(['model', 'provider'])
+  })
+
+  it('offers product/agent ONLY when the ledger tags them (honest until data flows)', () => {
+    // No product/agent tags yet → the toggles stay hidden.
+    expect(presentDimensions([rec({ model: 'x', provider: 'p' })])).toEqual(['model', 'provider'])
+    // Product tagged → product dimension appears (in display order).
+    expect(presentDimensions([rec({ model: 'x', product: 'agents' })])).toEqual(['model', 'product'])
+    // Agent tagged → agent dimension appears.
+    expect(presentDimensions([rec({ model: 'x', agent: 'bot' })])).toEqual(['model', 'agent'])
+    // All four, canonical display order.
+    expect(presentDimensions([rec({ model: 'x', provider: 'p', product: 'agents', agent: 'bot' })])).toEqual([
+      'model',
+      'provider',
+      'product',
+      'agent',
+    ])
   })
 })
 
