@@ -24,9 +24,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { ArrowLeft, BarChart3, Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
+import { ArrowLeft, BarChart3, Check, Download, Library, Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { PromptsApi, type Prompt, type PromptMetricRow } from '~/lib/api/prompts'
+import { PromptsApi, type Prompt, type PromptMetricRow, type CatalogEntry } from '~/lib/api/prompts'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
@@ -53,9 +53,84 @@ const csv = (s: string): string[] | undefined => {
   return xs.length ? xs : undefined
 }
 
+/**
+ * StarterLibrary — browse the read-only Hanzo starter catalog and import an
+ * entry into THIS org's prompts. Import is a normal create; the org store stays
+ * honestly empty until the user chooses. `existing` marks names the org already
+ * has so we never offer a duplicate import.
+ */
+function StarterLibrary({ existing, onImported }: { existing: Set<string>; onImported: () => void }) {
+  const [state, setState] = useState<Async<CatalogEntry[]>>({ phase: 'loading' })
+  const [busy, setBusy] = useState<string | null>(null)
+  const [done, setDone] = useState<Set<string>>(new Set())
+
+  const load = useCallback(() => {
+    setState({ phase: 'loading' })
+    PromptsApi.catalog()
+      .then((data) => setState({ phase: 'ready', data }))
+      .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const importOne = async (e: CatalogEntry) => {
+    setBusy(e.name)
+    try {
+      await PromptsApi.create({ name: e.name, type: e.type, prompt: e.prompt, labels: e.labels, tags: e.tags })
+      setDone((s) => new Set(s).add(e.name))
+      onImported()
+    } catch {
+      // Honest: leave the row un-imported; the list refresh will reflect reality.
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (state.phase === 'error') {
+    return <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/prompts/catalog" />
+  }
+  const entries = state.phase === 'ready' ? state.data : []
+
+  return (
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" mb="$3">
+      <XStack items="center" gap="$2">
+        <Library size={16} />
+        <Text fontSize="$5" fontWeight="700">Starter library</Text>
+        <Text fontSize="$2" color="$color10">
+          {state.phase === 'loading' ? 'Loading…' : `${entries.length} curated starters — import to your org`}
+        </Text>
+      </XStack>
+      <YStack maxH={360} overflow="scroll" gap="$1">
+        {entries.map((e) => {
+          const already = existing.has(e.name) || done.has(e.name)
+          return (
+            <XStack key={e.name} items="center" justify="space-between" gap="$3" py="$2" px="$2" rounded="$2" hoverStyle={{ bg: '$color2' }}>
+              <YStack flex={1} gap="$1">
+                <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{e.name}</Text>
+                <Text fontSize="$2" color="$color10" numberOfLines={1}>{list(e.tags)}</Text>
+              </YStack>
+              <Button
+                size="$2"
+                disabled={already || busy === e.name}
+                icon={already ? <Check size={14} /> : <Download size={14} />}
+                onPress={() => void importOne(e)}
+              >
+                {already ? 'Imported' : busy === e.name ? 'Importing…' : 'Import'}
+              </Button>
+            </XStack>
+          )
+        })}
+      </YStack>
+    </Card>
+  )
+}
+
 function PromptListView() {
   const router = useRouter()
   const [state, setState] = useState<Async<Prompt[]>>({ phase: 'loading' })
+  const [showCatalog, setShowCatalog] = useState(false)
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
@@ -67,6 +142,11 @@ function PromptListView() {
   useEffect(() => {
     load()
   }, [load])
+
+  const existing = useMemo(
+    () => new Set(state.phase === 'ready' ? state.data.map((p) => p.name) : []),
+    [state],
+  )
 
   const columns: Column<Prompt>[] = [
     {
@@ -116,6 +196,9 @@ function PromptListView() {
         subtitle="Versioned prompts with labels, history, and metrics."
         actions={
           <XStack gap="$2">
+            <Button size="$2" icon={<Library size={15} />} onPress={() => setShowCatalog((v) => !v)}>
+              Starter library
+            </Button>
             <Button size="$2" icon={<BarChart3 size={15} />} onPress={() => router.push('/prompts/metrics')}>
               Metrics
             </Button>
@@ -129,6 +212,8 @@ function PromptListView() {
         }
       />
 
+      {showCatalog ? <StarterLibrary existing={existing} onImported={load} /> : null}
+
       {state.phase === 'error' ? (
         <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/prompts" />
       ) : (
@@ -137,7 +222,7 @@ function PromptListView() {
           rows={state.phase === 'ready' ? state.data : []}
           loading={state.phase === 'loading'}
           rowKey={(p) => p.name}
-          empty="No prompts yet. Create your first prompt to version it with labels and history."
+          empty="No prompts yet. Create your own, or open the Starter library to import curated prompts."
           onRowPress={(p) => router.push(`/prompts/${encodeURIComponent(p.name)}`)}
         />
       )}
