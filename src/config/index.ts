@@ -16,11 +16,20 @@
  * cloudUrl/platformUrl are shared; billingUrl is PER BRAND (each brand's own
  * billing host, resolved like iamUrl) so a brand's console links to ITS billing
  * portal, scoped to ITS org by the brand JWT. No secrets.
+ *
+ * NOTE (white-label tenants without their own IAM issuer): `7stars` (7stars.dev)
+ * and `yotoda` (yotoda.tech) are general Hanzo-cloud customers seeded AS ORGS IN
+ * the hanzo IAM (`hanzo.id`) — there is NO separate `7stars.id`/`yotoda.id` issuer.
+ * So their `iamUrl` is `https://hanzo.id` (the issuer that actually holds the org),
+ * with the per-brand `iamOrgName` (`7stars`/`yotoda`) + `iamApp` (`7stars-cloud`/
+ * `yotoda-cloud`). Login resolves against hanzo.id, org-scoped by the JWT owner —
+ * matching how the orgs/apps were provisioned. (Contrast lux/zoo/pars, which each
+ * DO run their own issuer.)
  */
 
 const trimSlash = (s: string) => s.replace(/\/+$/, '')
 
-export type BrandId = 'hanzo' | 'lux' | 'zoo' | 'pars'
+export type BrandId = 'hanzo' | 'lux' | 'zoo' | 'pars' | '7stars' | 'yotoda'
 
 export type ConsoleConfig = {
   /** Resolved brand id (from hostname). */
@@ -101,6 +110,10 @@ const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: s
   lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.lux.cloud', docsUrl: 'https://docs.lux.network' },
   zoo: { brandName: 'Zoo Cloud', iamUrl: 'https://zoolabs.id', iamOrgName: 'zoo', iamApp: 'zoo-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.zoo.cloud', docsUrl: 'https://docs.zoo.ngo' },
   pars: { brandName: 'Pars Cloud', iamUrl: 'https://pars.id', iamOrgName: 'pars', iamApp: 'pars-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.pars.cloud', docsUrl: 'https://docs.pars.network' },
+  // White-label cloud tenants seeded as orgs IN the hanzo IAM (hanzo.id) — no own
+  // .id issuer, so iamUrl = https://hanzo.id with the per-brand org/app (see NOTE above).
+  '7stars': { brandName: '7Stars Cloud', iamUrl: 'https://hanzo.id', iamOrgName: '7stars', iamApp: '7stars-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.7stars.dev', docsUrl: 'https://docs.7stars.dev' },
+  yotoda: { brandName: 'Yotoda Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'yotoda', iamApp: 'yotoda-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.yotoda.tech', docsUrl: 'https://docs.yotoda.tech' },
 }
 
 /** Hostname suffix → brand. First match wins. */
@@ -116,6 +129,10 @@ const HOST_BRANDS: ReadonlyArray<{ suffix: string; brand: BrandId }> = [
   { suffix: 'hanzo.id', brand: 'hanzo' },
   { suffix: 'pars.cloud', brand: 'pars' },
   { suffix: 'pars.network', brand: 'pars' },
+  // White-label cloud tenants. One suffix each covers every subdomain
+  // (cloud.7stars.dev, console.7stars.dev, …) via the `endsWith('.'+suffix)` match.
+  { suffix: '7stars.dev', brand: '7stars' },
+  { suffix: 'yotoda.tech', brand: 'yotoda' },
 ]
 
 /** Resolve the brand id from a hostname (port/case-insensitive). Defaults to hanzo. */
