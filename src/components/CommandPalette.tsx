@@ -326,9 +326,12 @@ function PaletteDialog({
   const sub = (mode === 'catalog' ? query : query.slice(1)).trim()
 
   // The org list powers the "Switch to <org>" actions. Only an admin who can see
-  // more than one org gets switch actions; everyone else just gets the verbs.
+  // more than one org gets switch actions; everyone else just gets the verbs. The
+  // list comes from the cross-tenant `/admin/iam/get-organizations?owner=admin`
+  // aggregate, which is server-gated to global admins — so don't fire it for a tenant
+  // user (it only 403s); they just get the verbs, no switch actions.
   useEffect(() => {
-    if (!open) return
+    if (!open || !showAdmin) return
     let live = true
     IamAdminApi.organizations()
       .then((p) => {
@@ -340,7 +343,7 @@ function PaletteDialog({
     return () => {
       live = false
     }
-  }, [open])
+  }, [open, showAdmin])
 
   // Every command the palette can RUN (verbs + per-org switches). Composed from the
   // same pieces the chrome uses (router, launcher, theme, session, org scope) — no
