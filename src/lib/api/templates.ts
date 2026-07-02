@@ -13,7 +13,7 @@
  * Defensive normalizers (prompts.ts style): a field rename upstream degrades a
  * cell rather than throwing; the list reads from any common envelope key.
  */
-import { restGet, originV1Url } from './client'
+import { restGet, restPost, originV1Url, ApiError } from './client'
 
 const BASE = 'templates'
 
@@ -82,6 +82,34 @@ export function normalizeTemplates(payload: unknown): Template[] {
     .filter((t): t is Template => t !== null)
 }
 
+/**
+ * A project created by forking a template — the projectsvc `Project` view the
+ * fork endpoint returns (`POST /v1/projects/fork` → 201). We keep only the fields
+ * the console needs to route to / celebrate the new project; `liveUrl` is present
+ * once the project deploys (a fresh fork is `draft` with no `liveUrl` yet).
+ */
+export type ForkedProject = {
+  slug: string
+  name: string
+  framework: string
+  status: string
+  liveUrl?: string
+}
+
+/** Normalize the projectsvc Project payload to a `ForkedProject` (or null if unusable). */
+export function normalizeForkedProject(raw: unknown): ForkedProject | null {
+  const r = asRecord(raw)
+  const slug = str(r.slug)
+  if (!slug) return null
+  return {
+    slug,
+    name: str(r.name) ?? slug,
+    framework: str(r.framework) ?? 'static',
+    status: str(r.status) ?? 'draft',
+    liveUrl: str(r.liveUrl),
+  }
+}
+
 /** Group templates by category, categories alphabetized, preserving list order within each. */
 export function groupByCategory(templates: Template[]): [string, Template[]][] {
   const byCat = new Map<string, Template[]>()
@@ -100,4 +128,22 @@ export const TemplatesApi = {
   /** One template by slug (`GET /v1/templates/{slug}`) — raw payload. */
   get: (slug: string): Promise<unknown> =>
     restGet<unknown>(originV1Url(`${BASE}/${encodeURIComponent(slug)}`)),
+
+  /**
+   * Fork a starter template into a REAL project (`POST /v1/projects/fork`). The
+   * cloud projectsvc looks up the template by slug, maps its framework, and creates
+   * an org-scoped Project seeded from it (repo = the gallery source). Returns the
+   * new project so the UI can route to / celebrate it. Throws `ApiError` (with
+   * `.status`) on failure — the caller falls back to the gallery source on 404
+   * (older backend with no fork route).
+   */
+  fork: (slug: string, opts?: { name?: string }): Promise<ForkedProject> =>
+    restPost<unknown>(originV1Url('projects/fork'), {
+      slug,
+      ...(opts?.name ? { name: opts.name } : {}),
+    }).then((raw) => {
+      const p = normalizeForkedProject(raw)
+      if (!p) throw new ApiError('Fork returned an unexpected project shape')
+      return p
+    }),
 }
