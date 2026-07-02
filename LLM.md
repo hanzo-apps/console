@@ -206,10 +206,10 @@ data with honest empty/not-configured states. No lorem stats, no demo projects,
 no placeholder cards.
 
 Build: arcd self-hosted CI (`.github/workflows/build-image.yml`, push to `main` →
-`ghcr.io/hanzoai/console2:v<package.json version>`, SEMVER only). The
+`ghcr.io/hanzoai/console:v<package.json version>`, SEMVER only). The
 `hanzo-build-linux-amd64` ARC runner pool is the builder (online; not GHA-hosted).
 
-Deploy: console2 IS an operator `Service` CR now (`hanzo.ai/v1`, `hsvc console2`,
+Deploy: console IS an operator `Service` CR now (`hanzo.ai/v1`, `hsvc console`,
 ns `hanzo`) — declared in `universe/infra/k8s/operator/crs/console2-v1.yaml`.
 Bump `spec.image.tag`, `kubectl apply`, the operator reconciles. Verify live with
 headless Playwright on console2.hanzo.ai.
