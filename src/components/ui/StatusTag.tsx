@@ -18,9 +18,10 @@ const toneOf = (status: string): Tone => {
   if (s === 'green') return 'green'
   if (s === 'yellow') return 'yellow'
   if (s === 'red') return 'red'
-  if (['ready', 'active', 'running', 'available', 'ok'].includes(s)) return 'green'
-  if (['creating', 'provisioning', 'pending', 'updating', 'attaching'].includes(s)) return 'yellow'
-  if (['error', 'failed', 'degraded', 'down'].includes(s)) return 'red'
+  if (['ready', 'active', 'running', 'available', 'ok', 'live', 'succeeded'].includes(s)) return 'green'
+  if (['creating', 'provisioning', 'pending', 'updating', 'attaching', 'building', 'deploying', 'queued'].includes(s))
+    return 'yellow'
+  if (['error', 'failed', 'degraded', 'down', 'canceled'].includes(s)) return 'red'
   return 'neutral'
 }
 

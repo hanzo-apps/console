@@ -69,6 +69,17 @@ export {
   type AppsQuery,
 } from './platform'
 export {
+  PaasApi,
+  type PaasProject,
+  type PaasApp,
+  type PaasAppWithProject,
+  type PaasDeployment,
+  type PaasEnvVar,
+  type CreateProjectInput,
+  type CreateAppInput,
+  type DeployInput,
+} from './paas'
+export {
   IamAdminApi,
   KmsAdminApi,
   type Paged,

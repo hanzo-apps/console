@@ -32,6 +32,8 @@ export interface BaseField {
 
 /** A Base collection schema. `fields` is canonical; `schema` is the legacy key. */
 export interface BaseCollection {
+  /** Base collection id — the value a `relation` field targets (`collectionId`). */
+  id?: string
   name?: string
   fields?: BaseField[]
   schema?: BaseField[]
