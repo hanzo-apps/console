@@ -71,8 +71,15 @@ jobs:
       - name: Build & push (host builder — reuses base cache, no artifact upload)
         run: |
           set -euo pipefail
+          # Dual-tag during the console2 → console rename: the product/package is
+          # already @hanzo/console; this publishes the new ghcr.io/hanzoai/console
+          # image ALONGSIDE the legacy console2 one so the target exists BEFORE the
+          # operator/gateway cut over. Additive — nothing depends on `console` yet,
+          # so no rollout can break. Drop the console2 tag once the CR + gateway
+          # (k8s Service console2 → console) have moved in one coordinated deploy.
           docker buildx build \
             --platform linux/amd64 \
             --push \
             -t ghcr.io/hanzoai/console2:${{ steps.ver.outputs.tag }} \
+            -t ghcr.io/hanzoai/console:${{ steps.ver.outputs.tag }} \
             -f Dockerfile .
