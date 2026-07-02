@@ -12,6 +12,7 @@
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
 import { getScope } from '~/lib/scope'
+import { refreshSession } from '~/lib/auth/refresh'
 
 export type ApiResponse<T> = {
   status: 'ok' | 'error'
@@ -76,6 +77,22 @@ const baseHeaders = (hasBody: boolean): Record<string, string> => {
 
 type Query = Record<string, string | number | boolean | undefined | null>
 
+/**
+ * REACTIVE silent refresh — the ONE fetch every cloud/BFF call goes through. On a
+ * 401 (the console session's access token lapsed, or a BFF proxy's mint saw a stale
+ * token) it runs the single-flight `refreshSession()` ONCE and retries the request
+ * with the rotated session cookie. A durable-but-momentarily-stale session self-heals
+ * transparently instead of surfacing "Not authorized". The refresh itself is
+ * server-side (`/auth/refresh`); its own calls never reach here, so there is no
+ * recursion, and the retry is a plain fetch (at most one extra attempt).
+ */
+async function authedFetch(url: string, init: RequestInit): Promise<Response> {
+  const res = await fetch(url, init)
+  if (res.status !== 401 || typeof window === 'undefined') return res
+  if (!(await refreshSession())) return res // no console session / refresh failed → surface the 401
+  return fetch(url, init)
+}
+
 const buildUrl = (path: string, query?: Query): string => {
   const url = new URL(`${config.cloudUrl}/v1/${path.replace(/^\/+/, '')}`)
   if (query) {
@@ -110,7 +127,7 @@ async function request<T>(
   let res: Response
   const url = opts.absoluteUrl ? withQuery(opts.absoluteUrl, opts.query) : buildUrl(path, opts.query)
   try {
-    res = await fetch(url, {
+    res = await authedFetch(url, {
       method,
       credentials: 'include',
       headers: baseHeaders(opts.body !== undefined),
@@ -259,7 +276,7 @@ async function restRequest<T>(
 ): Promise<T | undefined> {
   let res: Response
   try {
-    res = await fetch(url, {
+    res = await authedFetch(url, {
       method,
       credentials: 'include',
       headers: { ...baseHeaders(body !== undefined), ...headers },
