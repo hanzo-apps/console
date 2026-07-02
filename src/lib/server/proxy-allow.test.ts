@@ -5,6 +5,7 @@ import {
   allowCloudSurface,
   allowVisorSurface,
   allowCommerceSurface,
+  allowTelemetrySurface,
   v1Head,
   CLOUD_HEADS,
   COMMERCE_HEADS,
@@ -128,5 +129,30 @@ describe('allowBaseSurface', () => {
     expect(allowBaseSurface('v1')).toBe(false)
     expect(allowBaseSurface('collections/contacts/records')).toBe(false) // must be a v1 path
     expect(allowBaseSurface('')).toBe(false)
+  })
+})
+
+describe('allowTelemetrySurface', () => {
+  it('admits the READ-only VictoriaMetrics query endpoints', () => {
+    expect(allowTelemetrySurface('api/v1/query')).toBe(true)
+    expect(allowTelemetrySurface('api/v1/query_range')).toBe(true)
+    expect(allowTelemetrySurface('api/v1/series')).toBe(true)
+    expect(allowTelemetrySurface('api/v1/labels')).toBe(true)
+    expect(allowTelemetrySurface('api/v1/label/job/values')).toBe(true)
+    expect(allowTelemetrySurface('api/v1/label/__name__/values')).toBe(true)
+    expect(allowTelemetrySurface('api/v1/status/tsdb')).toBe(true)
+    expect(allowTelemetrySurface('/api/v1/query')).toBe(true) // tolerant of a leading slash
+  })
+
+  it('REFUSES every write / import / admin / mutating path (read-only boundary)', () => {
+    expect(allowTelemetrySurface('api/v1/write')).toBe(false)
+    expect(allowTelemetrySurface('api/v1/import')).toBe(false)
+    expect(allowTelemetrySurface('api/v1/import/prometheus')).toBe(false)
+    expect(allowTelemetrySurface('api/v1/admin/tsdb/delete_series')).toBe(false)
+    expect(allowTelemetrySurface('-/reload')).toBe(false)
+    expect(allowTelemetrySurface('api/v1/label//values')).toBe(false) // empty label segment
+    expect(allowTelemetrySurface('api/v1/label/job/values/extra')).toBe(false) // too deep
+    expect(allowTelemetrySurface('metrics')).toBe(false)
+    expect(allowTelemetrySurface('')).toBe(false)
   })
 })

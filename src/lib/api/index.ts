@@ -204,3 +204,17 @@ export {
   type TraceDetail,
   type SessionDetail,
 } from './o11y'
+export {
+  TelemetryApi,
+  windowOf,
+  serviceNameOf,
+  toServiceHealth,
+  summarizeHealth,
+  parseInstant,
+  parseRange,
+  type Sample,
+  type Series,
+  type ServiceHealth,
+  type HealthSummary,
+  type RangeWindow,
+} from './telemetry'
