@@ -14,7 +14,7 @@
  * a clear "collection not found" note when the name is absent, and the table's
  * own loading + empty states. No demo rows, ever.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, TriangleAlert } from '@hanzogui/lucide-icons-2'
 import { DataTable, type FieldDefinition } from '@hanzo/data'
@@ -38,9 +38,11 @@ export interface CollectionTableProps {
   token?: string
   /** Optional row click handler (the host opens a detail view). */
   onRowPress?: (record: Record<string, unknown>) => void
+  /** Optional header action (e.g. a "New record" button), shown next to Refresh. */
+  action?: ReactNode
 }
 
-export function CollectionTable({ baseUrl, collection, token, onRowPress }: CollectionTableProps) {
+export function CollectionTable({ baseUrl, collection, token, onRowPress, action }: CollectionTableProps) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const api = useMemo(() => new BaseDataApi({ baseUrl, token }), [baseUrl, token])
 
@@ -48,8 +50,7 @@ export function CollectionTable({ baseUrl, collection, token, onRowPress }: Coll
     async (signal: { cancelled: boolean }) => {
       setState({ phase: 'loading' })
       try {
-        const collections = await api.listCollections()
-        const schema = collections.find((c) => c.name === collection)
+        const schema = await api.getCollection(collection)
         if (!schema) {
           if (!signal.cancelled) setState({ phase: 'missing' })
           return
@@ -108,9 +109,12 @@ export function CollectionTable({ baseUrl, collection, token, onRowPress }: Coll
         <Text fontSize="$5" fontWeight="700">
           {collection}
         </Text>
-        <Button size="$2" icon={<RefreshCw size={15} />} onPress={reload}>
-          Refresh
-        </Button>
+        <XStack items="center" gap="$2">
+          <Button size="$2" icon={<RefreshCw size={15} />} onPress={reload}>
+            Refresh
+          </Button>
+          {action}
+        </XStack>
       </XStack>
       <DataTable
         fields={ready?.fields ?? []}

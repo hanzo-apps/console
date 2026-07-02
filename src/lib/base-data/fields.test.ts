@@ -92,6 +92,17 @@ describe('baseCollectionToFields', () => {
     expect(fields.map((f) => f.name)).toEqual(['id', 'title'])
   })
 
+  it('marks the server-owned `id` field read-only, leaving user fields editable', () => {
+    const [id, title] = baseCollectionToFields(
+      collection([
+        { name: 'id', type: 'text', system: true },
+        { name: 'title', type: 'text' },
+      ]),
+    )
+    expect(id).toMatchObject({ name: 'id', type: 'text', readOnly: true })
+    expect(title.readOnly).toBeUndefined()
+  })
+
   it('reads the legacy `schema` key and legacy nested `options`', () => {
     const legacy: BaseCollection = {
       name: 'legacy',
