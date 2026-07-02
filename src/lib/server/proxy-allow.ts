@@ -42,6 +42,11 @@ export const CLOUD_HEADS: readonly string[] = [
   // Public reference content (no org scoping) but routed through /cloud like the
   // rest of the surface so dev + prod share ONE path.
   'templates',
+  // Buildable/deployable projects store (cloud clients/projectsvc): /v1/projects[/*],
+  // incl. POST /v1/projects/fork (fork a gallery template into a real project). The
+  // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
+  // call, so it routes through /cloud like the rest of the surface.
+  'projects',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
