@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Plus, RefreshCw, Database } from '@hanzogui/lucide-icons-2'
+import { Plus, RefreshCw, Database, Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { EvalsApi, type EvalDataset, type EvalDatasetItem, type EvalDatasetRun } from '~/lib/api'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -144,6 +144,34 @@ export function DatasetsModule(_props: { params: Record<string, string> }) {
       </Text>
     ) : null
 
+  // Delete a dataset + its items (real DELETE /v1/evals/datasets/:name, org-scoped).
+  const onDeleteDataset = async (d: EvalDataset) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Delete dataset "${d.name}" and all its items?`)) return
+    try {
+      await EvalsApi.deleteDataset(d.name)
+      setCreateMsg({ tone: 'ok', text: `Deleted dataset "${d.name}".` })
+      loadList()
+    } catch (e) {
+      setCreateMsg({ tone: 'err', text: `Could not delete "${d.name}": ${classifyBackend(e).message}` })
+    }
+  }
+
+  // The display columns + a row-level delete (the const `columns` can't reach a
+  // handler; the action column lives here where `onDeleteDataset` is in scope).
+  const datasetColumns: Column<EvalDataset>[] = [
+    ...columns,
+    {
+      key: 'action',
+      header: '',
+      width: 80,
+      render: (d) => (
+        <XStack justify="flex-end" flex={1}>
+          <Button size="$2" icon={<Trash2 size={14} />} onPress={() => void onDeleteDataset(d)} aria-label={`Delete ${d.name}`} />
+        </XStack>
+      ),
+    },
+  ]
+
   return (
     <>
       <PageHeader
@@ -169,7 +197,7 @@ export function DatasetsModule(_props: { params: Record<string, string> }) {
         <BackendStateCard state={list.error} onRetry={loadList} hint="endpoint · GET /v1/evals/datasets" />
       ) : (
         <DataTable
-          columns={columns}
+          columns={datasetColumns}
           rows={list.phase === 'ready' ? list.rows : []}
           loading={list.phase === 'loading'}
           rowKey={(d) => d.id ?? d.name}
