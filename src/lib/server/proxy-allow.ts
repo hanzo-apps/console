@@ -53,6 +53,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
   // call, so it routes through /cloud like the rest of the surface.
   'projects',
+  // PaaS control plane (cloud clients/platform): /v1/platform/{projects,projects/:p/
+  // apps,apps/:a/deploy,.../deployments,.../deployments/:id/logs,health}. Per-org
+  // container-app platform on Base/SQLite; SanitizeIdentity resolves the org from the
+  // Bearer owner and 403s a cookie-only call, so it routes through /cloud like the
+  // rest — the single `platform` head admits every project/app/deployment sub-path.
+  'platform',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
@@ -112,17 +118,31 @@ export function allowCommerceSurface(path: string): boolean {
  *  segment each — `bearer-proxy` has already rejected empty/dot/encoded segments). */
 const BASE_RECORDS = /^v1\/collections\/[^/]+\/records(?:\/[^/]+)?$/
 
+/** Matches a single content-type (collection) admin path `v1/collections/<name>` —
+ *  view / update / delete ONE collection. The content-type builder needs this. */
+const BASE_COLLECTION = /^v1\/collections\/[^/]+$/
+
 /**
- * True iff `path` targets the Hanzo Base DATA PLANE reachable through `/superbase`
- * as the signed-in user: the collection schemas (`v1/collections`, read) and any
- * collection's records (`v1/collections/<name>/records[/<id>]` — list/get/create/
- * update/delete). Base authorizes each read/write per-user AND per-collection
- * itself (each collection's ListRule/ViewRule/CreateRule/…), so this list is the
- * boundary that keeps `/superbase` from tunneling Base's admin/settings/backup/log
- * surfaces — it stays a data-plane proxy, never a general Base tunnel. Superset of
- * the old tenants-only rule (the tenants manager still rides this same proxy).
+ * True iff `path` targets the Hanzo Base COLLECTION surface reachable through
+ * `/superbase` as the signed-in user:
+ *  - `v1/collections` — list the schemas (read) AND create a content type (POST);
+ *  - `v1/collections/meta/scaffolds` — the base/auth/view field-template palette;
+ *  - `v1/collections/<name>` — view / update / delete ONE content type (the builder);
+ *  - `v1/collections/<name>/records[/<id>]` — that collection's records CRUD.
+ *
+ * Base authorizes every one of these itself: records by each collection's
+ * ListRule/ViewRule/CreateRule/…, and ALL collection mutation behind its own
+ * superuser gate (an org admin's minted token qualifies; a plain member gets an
+ * honest 403), scoped per-org by the `X-Org-Id` the proxy stamps from the JWT
+ * owner. This allow-list is the defense-in-depth boundary that keeps `/superbase`
+ * from tunneling Base's NON-collection admin (settings / backups / logs) — it
+ * stays a collections proxy, never a general Base tunnel.
  */
 export function allowBaseSurface(path: string): boolean {
   const rel = path.replace(/^\/+/, '')
-  return rel === 'v1/collections' || BASE_RECORDS.test(rel)
+  if (rel === 'v1/collections') return true
+  if (rel === 'v1/collections/meta/scaffolds') return true
+  if (BASE_RECORDS.test(rel)) return true
+  if (BASE_COLLECTION.test(rel)) return true
+  return false
 }

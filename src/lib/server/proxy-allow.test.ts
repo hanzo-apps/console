@@ -102,18 +102,25 @@ describe('allowCommerceSurface', () => {
 })
 
 describe('allowBaseSurface', () => {
-  it('admits the collection schema list and any collection records CRUD path', () => {
-    expect(allowBaseSurface('v1/collections')).toBe(true)
+  it('admits the collection schema list/create, the scaffolds palette, and records CRUD', () => {
+    expect(allowBaseSurface('v1/collections')).toBe(true) // list + create a content type
     expect(allowBaseSurface('/v1/collections')).toBe(true) // tolerant of a leading slash
-    // list / create
+    expect(allowBaseSurface('v1/collections/meta/scaffolds')).toBe(true) // field-template palette
+    // list / create records
     expect(allowBaseSurface('v1/collections/tenants/records')).toBe(true)
     expect(allowBaseSurface('v1/collections/contacts/records')).toBe(true)
     // get / update / delete one record
     expect(allowBaseSurface('v1/collections/contacts/records/abc123')).toBe(true)
   })
 
-  it('REFUSES Base admin/management surfaces (not a general Base tunnel)', () => {
-    expect(allowBaseSurface('v1/collections/contacts')).toBe(false) // single-collection admin
+  it('admits single content-type admin (view/update/delete a collection) — the builder needs it', () => {
+    // Base still gates every collection mutation behind its own superuser check,
+    // scoped per-org; this is the content-type-builder surface, not a data leak.
+    expect(allowBaseSurface('v1/collections/contacts')).toBe(true)
+    expect(allowBaseSurface('v1/collections/posts')).toBe(true)
+  })
+
+  it('REFUSES Base NON-collection admin surfaces (not a general Base tunnel)', () => {
     expect(allowBaseSurface('v1/settings')).toBe(false)
     expect(allowBaseSurface('v1/backups')).toBe(false)
     expect(allowBaseSurface('v1/logs')).toBe(false)

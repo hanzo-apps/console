@@ -138,39 +138,75 @@ export function destinationsFor(catalog: CatalogEntry[], showAdmin: boolean): De
   return out
 }
 
+/** True when a slug is one of the uniform base sub-pages (Settings/Status/Logs/Metrics). */
+export const isBaseSubpageSlug = (slug: string): boolean =>
+  slug !== '' && BASE_SUBPAGES.some((b) => b.slug === slug)
+
 /**
- * True when a sub-page renders a REAL module route (vs. an honest placeholder
- * stub). Derived from the ONE router (`resolveRoute`): `''` → the index, a
- * declared specific on a `:tab` module → the module, an unrouted declared
- * sub-page (module not merged yet) or an undeclared base slug on a single-screen
- * product → NOT wired (the catch-all renders the stub). One source of truth, so
- * the nav's "placeholder" hint and the actual render can never disagree.
+ * True when a sub-page renders REAL content (vs. an honest placeholder stub).
+ * Two sources of truth, unified:
+ *  - A uniform BASE sub-page (Settings/Status/Logs/Metrics) is ALWAYS wired — it
+ *    renders the shared per-product sub-page system (real health/logs/metrics/
+ *    settings scoped to the product, or an honest managed state), never a dead
+ *    stub. So the nav never dims it.
+ *  - Any other slug is wired iff the ONE router (`resolveRoute`) matches a real
+ *    route (`''` → index; a declared specific on a `:tab` module → the module).
+ * One source of truth, so the nav's hint and the actual render can never disagree.
  */
 export function subpageIsWired(modules: ProductModule[], id: string, slug: string): boolean {
+  if (isBaseSubpageSlug(slug)) return true
   return resolveRoute(modules, slug === '' ? [id] : [id, ...slug.split('/')]) !== null
 }
 
-/** What the catch-all renders for a product URL: a real route, an honest stub, or 404. */
+/**
+ * What the catch-all renders for a product URL: a real route, the shared
+ * per-product sub-page (real Status/Logs/Metrics/Settings), an honest stub for a
+ * declared-but-unwired specific, or 404.
+ */
 export type ProductView =
   | { kind: 'route'; matched: Matched }
+  | { kind: 'subpage'; entry: CatalogEntry; subpage: ProductSubpage }
   | { kind: 'stub'; entry: CatalogEntry; subpage: ProductSubpage }
   | { kind: 'notfound' }
 
 /**
- * Resolve a product URL to a view. A real route wins (unchanged behavior — ZERO
- * regression). When no route matches AND the trailing segment is a known
- * sub-page (a declared specific OR a uniform base slug) of a real module
- * product, render an HONEST stub instead of a 404 — so every declared sub-page
- * and every base sub-page resolves to something truthful, never a dead link and
- * never a fabricated surface.
+ * Resolve a product URL to a view.
+ *
+ * Precedence (one way, no snowflakes):
+ *  1. A uniform BASE sub-page (`/<product>/{settings|status|logs|metrics}`) that
+ *     the product does NOT own as a declared specific renders the shared
+ *     per-product sub-page system — REAL per-product health / logs / metrics /
+ *     settings, never a generic `:tab` fallback and never a dead stub. This wins
+ *     over a `:tab` route so a tabbed product's Status/Logs/Metrics is the real
+ *     scoped view, not the product's default tab.
+ *  2. A real route wins for everything else (index, declared specifics incl. a
+ *     product that OWNS a base slug like Embeddings › Settings or Prompts ›
+ *     Metrics — those stay their bespoke route).
+ *  3. A declared specific with no backing route yet → an honest placeholder stub.
+ *  4. Otherwise 404.
+ *
+ * So every product URL resolves to something truthful — a real route, a real
+ * per-product sub-page, or an honest placeholder — never a dead link, never a
+ * fabricated surface, never a generic page masquerading as per-product data.
  */
 export function resolveProductView(
   catalog: CatalogEntry[],
   modules: ProductModule[],
   slug: string[],
 ): ProductView {
+  if (slug.length === 2) {
+    const entry = catalog.find((e) => e.id === slug[0])
+    if (entry && entry.kind === 'module') {
+      const seg = slug[1]
+      const ownsAsSpecific = (entry.subpages ?? []).some((s) => s.slug === seg)
+      const base = BASE_SUBPAGES.find((s) => s.slug === seg)
+      if (base && !ownsAsSpecific) return { kind: 'subpage', entry, subpage: base }
+    }
+  }
+
   const matched = resolveRoute(modules, slug)
   if (matched) return { kind: 'route', matched }
+
   if (slug.length === 2) {
     const entry = catalog.find((e) => e.id === slug[0])
     if (entry && entry.kind === 'module') {
