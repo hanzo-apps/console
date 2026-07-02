@@ -28,6 +28,10 @@ export const fmtCost = (usd?: number | null): string => {
   return usd < 0.01 ? `$${usd.toFixed(5)}` : `$${usd.toFixed(4)}`
 }
 
+/** Token count as a grouped integer; em dash for missing/non-finite. */
+export const fmtTokens = (n?: number | null): string =>
+  typeof n === 'number' && Number.isFinite(n) ? Math.round(n).toLocaleString() : '—'
+
 /** Elapsed seconds between two ISO timestamps; null if either is missing. */
 export const elapsed = (start?: string | null, end?: string | null): number | null => {
   if (!start || !end) return null

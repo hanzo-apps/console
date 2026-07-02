@@ -21,6 +21,7 @@
  * topologies (direct cloud-api and gatewayed).
  */
 import { restGet, v1Url } from './client'
+import { EvalsApi, type EvalScoreConfig, type EvalSession } from './evals'
 
 /** Pagination metadata returned by every list endpoint. */
 export type O11yPageMeta = {
@@ -56,6 +57,8 @@ export type Trace = {
   latency?: number | null
   /** Total cost in USD. */
   totalCost?: number | null
+  /** Total tokens across the trace's observations (Langfuse "Usage" column). */
+  totalTokens?: number | null
   /** Observation ids on the trace (the detail endpoint returns full objects). */
   observations?: string[] | null
   /** Score ids on the trace (the detail endpoint returns full objects). */
@@ -162,8 +165,16 @@ export type AnnotationQueueItem = {
   updatedAt?: string
 }
 
-/** Full trace detail — the trace plus its observations and scores. */
-export type TraceDetail = Trace & { observations: Observation[]; scores: Score[] }
+/**
+ * Full trace detail — the trace plus its observations and scores. `observations`
+ * and `scores` are OMITTED from the base `Trace` (where they are id-arrays) before
+ * intersecting, so the detail carries the full objects without a bad `string[] &
+ * Observation[]` intersection.
+ */
+export type TraceDetail = Omit<Trace, 'observations' | 'scores'> & {
+  observations: Observation[]
+  scores: Score[]
+}
 
 /** Full session detail — the session plus its traces. */
 export type SessionDetail = Session & { traces: Trace[] }
@@ -193,18 +204,69 @@ const listUrl = (path: string, q: O11yListQuery): string => {
   return qs ? `${v1Url(path)}?${qs}` : v1Url(path)
 }
 
+/**
+ * Wrap a fully-fetched, bounded native list into the `O11yList` envelope the
+ * modules expect. The native `/v1/evals` reads are limit-bounded single pages, so
+ * there is exactly one page; nothing is fabricated.
+ */
+const asList = <T>(data: T[], q: O11yListQuery): O11yList<T> => ({
+  data,
+  meta: { page: q.page ?? 1, limit: q.limit ?? data.length, totalItems: data.length, totalPages: 1 },
+})
+
+/** Native session rollup → the thin canonical Session view-model. */
+const sessionOf = (s: EvalSession): Session => ({
+  id: s.id,
+  createdAt: s.firstAt ?? s.createdAt ?? '',
+  projectId: '',
+  environment: 'default',
+})
+
+/** Native score-config → the canonical ScoreConfig (categories become label/value options). */
+const scoreConfigOf = (c: EvalScoreConfig): ScoreConfig => ({
+  id: c.name,
+  projectId: '',
+  name: c.name,
+  dataType: c.dataType,
+  minValue: c.minValue ?? null,
+  maxValue: c.maxValue ?? null,
+  categories: (c.categories ?? []).map((label) => ({ label, value: 0 })),
+  isArchived: false,
+  createdAt: c.createdAt ?? '',
+  updatedAt: c.updatedAt ?? '',
+})
+
+/**
+ * The Observe READ client. Retargeted to the NATIVE `/v1/evals` surface (cloud
+ * clients/eval, store owned by hanzoai/ai) — the old `/v1/o11y` proxy is gone.
+ * Traces / trace-detail / sessions / scores / score-configs / observations all
+ * delegate to the one native `EvalsApi` (which maps the wire rows into these
+ * canonical view-models), wrapped in the `O11yList` envelope the modules render.
+ * Annotation-queues and users have no eval-domain equivalent, so they remain on
+ * `/v1/o11y` and surface honest states until that runtime is wired.
+ */
 export const O11yApi = {
-  traces: (q: O11yListQuery = {}) => restGet<O11yList<Trace>>(listUrl('o11y/traces', q)),
-  trace: (id: string) => restGet<TraceDetail>(v1Url(`o11y/traces/${encodeURIComponent(id)}`)),
+  traces: async (q: O11yListQuery = {}): Promise<O11yList<Trace>> =>
+    asList(await EvalsApi.listTraces({ limit: q.limit }), q),
+  trace: (id: string): Promise<TraceDetail> => EvalsApi.getTrace(id),
 
-  sessions: (q: O11yListQuery = {}) => restGet<O11yList<Session>>(listUrl('o11y/sessions', q)),
-  session: (id: string) => restGet<SessionDetail>(v1Url(`o11y/sessions/${encodeURIComponent(id)}`)),
+  sessions: async (q: O11yListQuery = {}): Promise<O11yList<Session>> =>
+    asList((await EvalsApi.listSessions({ limit: q.limit })).map(sessionOf), q),
+  session: async (id: string): Promise<SessionDetail> => {
+    const d = await EvalsApi.session(id)
+    return { ...sessionOf(d.session), traces: d.traces }
+  },
 
-  scores: (q: O11yListQuery = {}) => restGet<O11yList<Score>>(listUrl('o11y/scores', q)),
+  scores: async (q: O11yListQuery = {}): Promise<O11yList<Score>> =>
+    asList(await EvalsApi.listScoresTyped({ limit: q.limit }), q),
 
-  scoreConfigs: (q: O11yListQuery = {}) =>
-    restGet<O11yList<ScoreConfig>>(listUrl('o11y/score-configs', q)),
+  scoreConfigs: async (q: O11yListQuery = {}): Promise<O11yList<ScoreConfig>> =>
+    asList((await EvalsApi.listScoreConfigs()).map(scoreConfigOf), q),
 
+  observations: async (q: O11yListQuery = {}): Promise<O11yList<Observation>> =>
+    asList(await EvalsApi.listObservations({ limit: q.limit }), q),
+
+  // ── no eval-domain equivalent yet — honest states over /v1/o11y ──
   annotationQueues: (q: O11yListQuery = {}) =>
     restGet<O11yList<AnnotationQueue>>(listUrl('o11y/annotation-queues', q)),
 
@@ -213,9 +275,6 @@ export const O11yApi = {
 
   annotationQueueItems: (id: string, q: O11yListQuery = {}) =>
     restGet<O11yList<AnnotationQueueItem>>(listUrl(`o11y/annotation-queues/${encodeURIComponent(id)}/items`, q)),
-
-  observations: (q: O11yListQuery = {}) =>
-    restGet<O11yList<Observation>>(listUrl('o11y/observations', q)),
 
   users: (q: O11yListQuery = {}) => restGet<O11yList<O11yUser>>(listUrl('o11y/users', q)),
 }
