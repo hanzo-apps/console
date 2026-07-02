@@ -22,10 +22,12 @@ import {
   fmtDuration,
   fmtPct,
   fmtRelative,
+  fmtUsd,
   fmtVersion,
   type Agent,
   type AgentActivity,
 } from '~/lib/api/agents'
+import { fetchUsageRecords, agentUsageFor, type AgentUsage } from '~/lib/api/aimetrics'
 import { AgentBuilder } from '~/components/agent-builder'
 import { agentBuilderLoaders } from './loaders'
 import { StatusPill, ActivityFeed } from './parts'
@@ -57,11 +59,15 @@ export function NewAgentForm({ onCreated, onCancel }: { onCreated: () => void; o
 }
 
 /**
- * The per-agent detail view — REAL facts from the row, enriched best-effort with the
- * recent-activity feed from `GET /v1/agents/{id}` (silent honest-empty when unbound).
+ * The per-agent detail view — REAL facts from the row, the agent's REAL cost from
+ * the charged commerce ledger (grouped by `metadata.agent`, NOT a hardcoded/registry
+ * metric), and a best-effort recent-activity feed from `GET /v1/agents/{id}`.
  */
 export function AgentDetailView({ agent }: { agent: Agent }) {
   const [activity, setActivity] = useState<AgentActivity[] | null>(null)
+  // `undefined` = still loading; `null` = loaded, ledger carries no row for this
+  // agent (honest "—"); an `AgentUsage` = the real charged spend/requests/tokens.
+  const [ledger, setLedger] = useState<AgentUsage | null | undefined>(undefined)
 
   useEffect(() => {
     let live = true
@@ -72,10 +78,19 @@ export function AgentDetailView({ agent }: { agent: Agent }) {
       .catch(() => {
         if (live) setActivity([])
       })
+    // Per-agent cost comes from the SAME charged ledger the Cost page reads — never
+    // a fabricated or hardcoded number. A ledger failure degrades to honest "—".
+    fetchUsageRecords()
+      .then((records) => {
+        if (live) setLedger(agentUsageFor(records, { id: agent.id, name: agent.name }))
+      })
+      .catch(() => {
+        if (live) setLedger(null)
+      })
     return () => {
       live = false
     }
-  }, [agent.id])
+  }, [agent.id, agent.name])
 
   return (
     <YStack gap="$3">
@@ -103,6 +118,28 @@ export function AgentDetailView({ agent }: { agent: Agent }) {
         <Fact label="Created" value={fmtAbs(agent.createdAt)} />
         <Fact label="Updated" value={fmtAbs(agent.updatedAt)} />
         <Fact label="Agent ID" value={agent.id} />
+      </YStack>
+
+      <YStack gap="$2" pt="$1">
+        <Text fontSize="$3" fontWeight="700" color="$color12">
+          Cost · charged ledger
+        </Text>
+        {ledger === undefined ? (
+          <XStack py="$3" justify="center">
+            <Spinner size="small" color="$color11" />
+          </XStack>
+        ) : (
+          <YStack gap="$1">
+            <Fact label="Cost" value={fmtUsd(ledger?.cents)} />
+            <Fact label="Requests" value={fmtCompact(ledger?.requests)} />
+            <Fact label="Tokens" value={fmtCompact(ledger?.totalTokens)} />
+            {ledger === null ? (
+              <Text fontSize="$1" color="$color10" pt="$1">
+                No charged spend is attributed to this agent yet — cost appears once its usage is metered.
+              </Text>
+            ) : null}
+          </YStack>
+        )}
       </YStack>
 
       <YStack gap="$2" pt="$1">

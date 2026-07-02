@@ -32,6 +32,8 @@ function rec(over: Partial<UsageRecord> = {}): UsageRecord {
     cents: over.cents ?? 1,
     model: over.model ?? 'zen5-mini',
     provider: over.provider ?? 'do-ai',
+    product: over.product ?? '',
+    agent: over.agent ?? '',
     promptTokens: over.promptTokens ?? 100,
     completionTokens: over.completionTokens ?? 50,
     totalTokens: over.totalTokens ?? 150,
