@@ -32,7 +32,7 @@
  * Ported layout/flows from Langfuse (MIT) — see NOTICE. No Langfuse code is
  * copied; this is a clean client over the native `/v1/evals` contract.
  */
-import { restGet, restPost, restDelete, originV1Url } from './client'
+import { restGet, restPost, restDelete, originV1Url, ApiError } from './client'
 import type { Observation, Score, Trace, TraceDetail } from './o11y'
 
 // ── native wire shapes (exactly what cloud clients/eval returns) ─────────────
@@ -213,14 +213,21 @@ type TraceWire = {
   tags?: string[]
 }
 
+/**
+ * A finite, NON-NEGATIVE number, else null — the honest guard for latency / cost /
+ * tokens. A malformed response (`1e999` → Infinity, `-5`, `NaN`) becomes null so
+ * the UI renders an em dash and metric folds are never skewed by a bogus value.
+ */
+const nonNeg = (v: unknown): number | null =>
+  typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null
+
+/** Same guard, defaulting to 0 for the non-nullable usage token members. */
+const nonNeg0 = (v: unknown): number => nonNeg(v) ?? 0
+
 /** Map a native trace to the canonical Trace. Missing enrichment stays null (→ em dash). */
 export const toTrace = (t: TraceWire): Trace => {
-  const latency =
-    typeof t.latency === 'number'
-      ? t.latency
-      : typeof t.latencyMs === 'number'
-        ? t.latencyMs / 1000
-        : null
+  const ms = nonNeg(t.latencyMs)
+  const latency = nonNeg(t.latency) ?? (ms !== null ? ms / 1000 : null)
   return {
     id: t.id,
     timestamp: t.timestamp ?? '',
@@ -230,15 +237,20 @@ export const toTrace = (t: TraceWire): Trace => {
     environment: 'default',
     release: null,
     version: null,
-    tags: Array.isArray(t.tags) ? t.tags : t.runName ? [t.runName] : [],
+    // Coerce every tag to a string — a non-string tag would crash React rendering.
+    tags: Array.isArray(t.tags)
+      ? t.tags.filter((x): x is string => typeof x === 'string')
+      : t.runName
+        ? [t.runName]
+        : [],
     public: false,
     bookmarked: false,
     input: t.input,
     output: t.output,
     metadata: { dataset: t.datasetName, datasetItemId: t.datasetItemId, model: t.model, runName: t.runName },
     latency,
-    totalCost: typeof t.totalCost === 'number' ? t.totalCost : null,
-    totalTokens: typeof t.totalTokens === 'number' ? t.totalTokens : null,
+    totalCost: nonNeg(t.totalCost),
+    totalTokens: nonNeg(t.totalTokens),
   }
 }
 
@@ -265,29 +277,30 @@ type ObservationWire = {
 }
 
 /** Map a native observation to the canonical Observation (SpanTree/metrics ready). */
-export const toObservation = (o: ObservationWire): Observation => ({
-  id: o.id,
-  traceId: o.traceId ?? null,
-  parentObservationId: o.parentObservationId ?? o.parentId ?? null,
-  name: o.name ?? null,
-  type: (o.type ?? 'SPAN').toUpperCase(),
-  startTime: o.startTime ?? '',
-  endTime: o.endTime ?? null,
-  level: o.level ?? 'DEFAULT',
-  statusMessage: o.statusMessage ?? null,
-  model: o.model ?? null,
-  input: o.input,
-  output: o.output,
-  metadata: undefined,
-  usage: o.usage
-    ? { unit: o.usage.unit ?? null, input: o.usage.input ?? 0, output: o.usage.output ?? 0, total: o.usage.total ?? 0 }
-    : {
-        unit: 'TOKENS',
-        input: o.promptTokens ?? 0,
-        output: o.outputTokens ?? 0,
-        total: o.totalTokens ?? (o.promptTokens ?? 0) + (o.outputTokens ?? 0),
-      },
-})
+export const toObservation = (o: ObservationWire): Observation => {
+  // Token counts are finite + non-negative or 0 — a bogus usage number must never
+  // reach the waterfall or the token folds.
+  const input = nonNeg0(o.usage?.input ?? o.promptTokens)
+  const output = nonNeg0(o.usage?.output ?? o.outputTokens)
+  const total =
+    o.usage?.total != null ? nonNeg0(o.usage.total) : o.totalTokens != null ? nonNeg0(o.totalTokens) : input + output
+  return {
+    id: o.id,
+    traceId: o.traceId ?? null,
+    parentObservationId: o.parentObservationId ?? o.parentId ?? null,
+    name: o.name ?? null,
+    type: (o.type ?? 'SPAN').toUpperCase(),
+    startTime: o.startTime ?? '',
+    endTime: o.endTime ?? null,
+    level: o.level ?? 'DEFAULT',
+    statusMessage: o.statusMessage ?? null,
+    model: o.model ?? null,
+    input: o.input,
+    output: o.output,
+    metadata: undefined,
+    usage: { unit: o.usage ? (o.usage.unit ?? null) : 'TOKENS', input, output, total },
+  }
+}
 
 type ScoreWire = {
   id: string
@@ -306,7 +319,8 @@ type ScoreWire = {
 export const toScore = (s: ScoreWire): Score => ({
   id: s.id,
   name: s.name ?? '',
-  value: typeof s.value === 'number' ? s.value : 0,
+  // Scores may legitimately be negative, but never non-finite — NaN/Inf → 0.
+  value: typeof s.value === 'number' && Number.isFinite(s.value) ? s.value : 0,
   stringValue: s.stringValue ?? null,
   dataType: (s.dataType ?? 'NUMERIC').toUpperCase(),
   source: 'EVAL',
@@ -350,7 +364,10 @@ export const EvalsApi = {
     const res = await restGet<{ trace?: TraceWire; observations?: ObservationWire[]; scores?: ScoreWire[] } & TraceWire>(
       url(`traces/${encodeURIComponent(id)}`),
     )
+    // Never synthesize a hollow trace from a 200-empty — a missing trace is an
+    // honest not-found the module renders as a BackendStateCard.
     const base = res.trace ?? (res as TraceWire)
+    if (!base || !base.id) throw new ApiError('trace not found', 404)
     return {
       ...toTrace(base),
       observations: (res.observations ?? []).map(toObservation),
@@ -377,6 +394,7 @@ export const EvalsApi = {
       url(`sessions/${encodeURIComponent(id)}`),
     )
     const base: EvalSession = res.session ?? (res as EvalSession)
+    if (!base || !base.id) throw new ApiError('session not found', 404)
     return { session: base, traces: (res.traces ?? []).map(toTrace) }
   },
 
