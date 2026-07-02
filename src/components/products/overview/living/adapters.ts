@@ -18,6 +18,7 @@
  */
 import type { CloudUsageOverview } from '~/lib/api/usage'
 import type { AdminOverview } from '~/lib/api/admin-overview'
+import type { Finance } from '~/lib/api/finance'
 import type { PlatformApp } from '~/lib/api/platform'
 import type { ServerlessFunction, FunctionsMetrics, OverviewStats } from '~/lib/api/functions'
 import type { OverviewData, OverviewEvent, OverviewHealth, OverviewPoint } from './config'
@@ -78,6 +79,72 @@ export function fromAdminOverview(ov: AdminOverview): OverviewData {
   d.activity = ov.activity.map((a): OverviewEvent => ({ id: a.id, time: a.time, title: a.title, subtitle: a.subtitle, status: a.status }))
   d.alerts = ov.alerts.map((a) => ({ id: a.id, severity: a.severity, title: a.title, detail: a.detail }))
   d.health = ov.health.map((h): OverviewHealth => ({ service: h.service, health: h.health, detail: h.detail }))
+  return d
+}
+
+/**
+ * The finance board's single health verdict, from the derived profitability:
+ *   - green  → profitable (revenue ≥ cost) with a healthy margin.
+ *   - yellow → profitable but THIN (margin under 20%) — earning, but barely.
+ *   - red    → burning faster than earning (cost > revenue, negative margin).
+ * Pure so the health tile's color is unit-tested, not eyeballed. When DO cost is
+ * unconfigured we can't judge margin honestly, so the verdict is unknown (''), which
+ * the tile renders as "not connected" — never a fabricated green.
+ */
+export function financeHealth(fin: Finance): OverviewHealth {
+  if (!fin.cost.digitalocean.configured) {
+    return { service: 'Profitability', health: '', detail: 'Connect DO_API_TOKEN to compute margin' }
+  }
+  const { profitable, grossMarginPct } = fin.derived
+  if (!profitable) {
+    return { service: 'Profitability', health: 'red', detail: 'Burning faster than earning' }
+  }
+  if (grossMarginPct < 20) {
+    return { service: 'Profitability', health: 'yellow', detail: 'Thin margin (under 20%)' }
+  }
+  return { service: 'Profitability', health: 'green', detail: 'Profitable' }
+}
+
+/**
+ * Map the `/v1/admin/finance` aggregate onto `OverviewData`. Every tile reads its
+ * slice by key; a missing/unconfigured source degrades to an honest empty tile
+ * (em-dash / "not connected"), NEVER a fabricated credit, MRR, or margin.
+ */
+export function fromFinance(fin: Finance): OverviewData {
+  const d = empty()
+  const doCost = fin.cost.digitalocean
+
+  // ── KPI tiles. Only surface DO cost KPIs when DO is configured, so an
+  // unconfigured DO renders "—" (an honest empty tile) rather than a fake $0 credit.
+  if (doCost.configured) {
+    d.kpi.creditRemaining = { value: doCost.creditRemainingCents }
+    d.kpi.spendCents = { value: doCost.monthToDateSpendCents }
+  }
+  if (fin.revenue.configured) {
+    d.kpi.mrr = { value: fin.revenue.mrrCents }
+    d.kpi.revenue = { value: fin.revenue.totalRevenueCents }
+  }
+  // Derived margin/runway are only meaningful when both sides are real.
+  if (doCost.configured && fin.revenue.configured) {
+    d.kpi.marginPct = { value: fin.derived.grossMarginPct }
+  }
+  if (fin.derived.runwayDays !== null) {
+    d.kpi.runwayDays = { value: fin.derived.runwayDays }
+  }
+
+  // ── Credit burn-down series: the DO usage charges over time (Invoice entries),
+  // oldest→newest. Only usage-side (positive) charges shape the burn-down; credit
+  // grants (negative) are excluded so the series reads as "spend over time".
+  const charges = doCost.history
+    .filter((h) => h.amountCents > 0)
+    .slice()
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
+  if (charges.length) {
+    d.series.spendCents = { interval: 'day', points: charges.map((h) => ({ t: h.date, value: h.amountCents })) }
+  }
+
+  // ── Single health tile: the profitability verdict.
+  d.health = [financeHealth(fin)]
   return d
 }
 
