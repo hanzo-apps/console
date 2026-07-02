@@ -141,7 +141,7 @@ describe('agentUsageFor — the charged-ledger rollup for ONE agent', () => {
     trec({ agent: 'other', cents: 500, totalTokens: 50 }),
   ]
 
-  it('matches by id OR name and sums the real charged spend', () => {
+  it('matches by id and sums the real charged spend', () => {
     const u = agentUsageFor(recs, { id: 'hanzo-bot', name: 'Hanzo Bot' })
     expect(u).not.toBeNull()
     expect(u?.cents).toBe(200)
@@ -149,9 +149,32 @@ describe('agentUsageFor — the charged-ledger rollup for ONE agent', () => {
     expect(u?.totalTokens).toBe(20)
   })
 
+  it('falls back to the name ONLY when the id matched nothing', () => {
+    const u = agentUsageFor(recs, { id: 'no-such-id', name: 'other' })
+    expect(u?.cents).toBe(500)
+  })
+
   it('returns null when the ledger carries no row for the agent (honest —)', () => {
     expect(agentUsageFor(recs, { id: 'ghost' })).toBeNull()
     expect(agentUsageFor(recs, {})).toBeNull()
+  })
+
+  // RED L1: the old Set([id,name]) union conflated two distinct agents. Prefer id.
+  it('does NOT conflate two agents when one id equals another agent tag (RED L1)', () => {
+    const ledger = [
+      trec({ agent: 'support', cents: 300 }), // a DIFFERENT agent whose tag is 'support'
+      trec({ agent: 'billing', cents: 90 }), // the agent we actually want (tagged by name)
+    ]
+    // Agent whose id is 'billing' and whose display name happens to be 'support':
+    // must attribute ONLY its own 90c (id hit), never the other agent's 300c.
+    const u = agentUsageFor(ledger, { id: 'billing', name: 'support' })
+    expect(u?.cents).toBe(90)
+  })
+
+  it('does NOT merge two distinct agents that share nothing but a queried name/id (RED L1)', () => {
+    const ledger = [trec({ agent: 'alpha', cents: 120 }), trec({ agent: 'beta', cents: 400 })]
+    // id 'alpha' hits → 120c only; the union would have added beta's 400c.
+    expect(agentUsageFor(ledger, { id: 'alpha', name: 'beta' })?.cents).toBe(120)
   })
 })
 
