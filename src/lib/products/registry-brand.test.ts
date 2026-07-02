@@ -49,6 +49,25 @@ describe('per-brand catalog scope', () => {
     })
   }
 
+  for (const brand of ['7stars', 'yotoda'] as BrandId[]) {
+    describe(`${brand} = general Hanzo-cloud tenant (full catalog)`, () => {
+      it('sees every category (null scope, like hanzo)', () => {
+        expect(BRAND_CATEGORIES[brand]).toBeNull()
+        expect(categoriesForBrand(brand)).toEqual(categoryOrder)
+        for (const c of categoryOrder) expect(categoryInBrand(brand, c)).toBe(true)
+      })
+
+      it('surfaces the AI-cloud categories a sovereign brand hides', () => {
+        for (const c of AI_ONLY) expect(categoryInBrand(brand, c)).toBe(true)
+      })
+
+      it('owns NO chain → the Nodes surface reports on zero networks', () => {
+        expect(BRAND_NODE_NETWORKS[brand]).toEqual([])
+        expect(nodeNetworksForBrand(brand)).toEqual([])
+      })
+    })
+  }
+
   it('Bootnode Networks lives in Web3 → shows on lux/zoo, hidden nowhere web3', () => {
     // Networks is a Web3 entry (registry), so proving Web3 ∈ lux/zoo scope proves
     // the bootnode Networks module surfaces on the web3 consoles.
