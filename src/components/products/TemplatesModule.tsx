@@ -6,25 +6,35 @@
  * `/v1/templates` catalog (`TemplatesApi` → `originV1Url('templates')` → the
  * console's own `/cloud` bearer proxy).
  *
- * Browse + filter by category + search. The primary CTA is "Open in builder"
- * (the fork → customize loop): the card takes an optional free-text
- * customization and deep-links to the hanzo.app builder pre-seeded with this
- * starter (`buildBuilderUrl` → `<app>/dev?template=…&prompt=…&action=edit`), which
- * auto-starts the first generation so the user lands on a customized first
- * edition and can talk-and-edit → deploy. "Fork / deploy" (secondary) still
- * creates a REAL project in-console via `TemplatesApi.fork` → cloud
- * `POST /v1/projects/fork`: projectsvc seeds an org-scoped Project from the
- * template (framework mapped, repo = gallery source). Every state is honest:
- * loading, the backend-state card on error, a true empty state, per-card
- * forking/created/error — never a fabricated card. If the fork route is absent
- * (older backend → 404) it falls back to opening the gallery source, so the
- * button is never dead.
+ * Each card leads with a visual PREVIEW banner: the gallery screenshot
+ * (`t.preview`) when it loads, else a branded gradient tile (stable per category
+ * + a framework glyph) — honest by construction, never a broken image, and it
+ * auto-upgrades to the real shot the moment the gallery serves it.
+ *
+ * Two distinct, complementary paths off every card (both offered — one never
+ * clobbers the other):
+ *   - "Open in builder" (customize): the card takes an optional free-text
+ *     customization and deep-links to the hanzo.app builder pre-seeded with this
+ *     starter (`buildBuilderUrl` → `<app>/dev?template=…&prompt=…&action=edit`),
+ *     which auto-starts the first generation so the user lands on a customized
+ *     first edition and can talk-and-edit → deploy.
+ *   - "Fork / deploy" (ship as-is): `TemplatesApi.fork` → cloud
+ *     `POST /v1/projects/fork` seeds a REAL org-scoped Project (framework mapped,
+ *     repo = gallery source); the forked card then offers a one-click "Deploy"
+ *     (`POST /v1/projects/{slug}/deploy` {source:'git'}) → building on CI →
+ *     "Check status" → "Open site" (liveUrl). Each phase shows exactly ONE next
+ *     step, so "how to deploy" is never ambiguous.
+ *
+ * Every state is honest: loading, the backend-state card on error, a true empty
+ * state, per-card idle/forking/forked/deploying/live/error — never a fabricated
+ * card. If the fork route is absent (older backend → 404) it falls back to
+ * opening the gallery source, so the button is never dead.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
-import { ArrowUpRight, Check, LayoutTemplate, Loader, RefreshCw, Search, Sparkles, X } from '@hanzogui/lucide-icons-2'
+import { ArrowUpRight, Check, LayoutTemplate, Loader, RefreshCw, Rocket, Search, Sparkles, X } from '@hanzogui/lucide-icons-2'
 
-import { TemplatesApi, buildBuilderUrl, groupByCategory, type ForkedProject, type Template } from '~/lib/api/templates'
+import { TemplatesApi, buildBuilderUrl, groupByCategory, isLive, type ForkedProject, type Template } from '~/lib/api/templates'
 import { ApiError } from '~/lib/api/client'
 import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -39,17 +49,73 @@ const openSource = (url?: string) => {
   if (url && typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer')
 }
 
-// Per-card fork state: idle → forking → forked (success) | error. On a 404 (an
-// older backend without the fork route) we don't surface an error — we fall back
-// to the previous behavior (open the gallery source), so the button is never dead.
-type ForkState =
+// hueFor — a stable hue (0-359) derived from a label, so each category gets a
+// distinct, deterministic gradient for the fallback preview tile.
+function hueFor(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360
+  return h
+}
+
+// TemplatePreview — the card's visual banner. Renders the real gallery screenshot
+// (`t.preview`) when it loads; otherwise a branded gradient tile (stable per
+// category) with the framework + a template glyph. Honest by construction: an
+// absent/broken screenshot degrades to a designed placeholder — never a broken
+// image — and auto-upgrades to the real shot the moment the gallery serves it.
+function TemplatePreview({ t }: { t: Template }) {
+  const [broken, setBroken] = useState(false)
+  const show = !!t.preview && !broken
+  const hue = hueFor(t.category)
+  return (
+    <div
+      style={{
+        height: 132,
+        borderRadius: 10,
+        overflow: 'hidden',
+        border: '1px solid var(--borderColor)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: show
+          ? '#0b0b0c'
+          : `linear-gradient(135deg, hsl(${hue} 42% 24%), hsl(${(hue + 48) % 360} 46% 12%))`,
+      }}
+    >
+      {show ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={t.preview}
+          alt={`${t.title} preview`}
+          onError={() => setBroken(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: 12 }}>
+          <LayoutTemplate size={24} color="rgba(255,255,255,0.82)" />
+          {t.framework ? (
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)' }}>{t.framework}</span>
+          ) : null}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Per-card lifecycle: idle → forking → forked (draft) → deploying → live | error.
+// Forking creates a real draft Project; deploying ships it live via projectsvc
+// (git build on CI). Each phase shows exactly ONE clear next step, so "how to
+// deploy" is never ambiguous. On a 404 fork (older backend without the route) we
+// fall back to opening the gallery source, so the button is never dead.
+type CardPhase =
   | { phase: 'idle' }
   | { phase: 'forking' }
   | { phase: 'forked'; project: ForkedProject }
+  | { phase: 'deploying'; project: ForkedProject }
+  | { phase: 'live'; project: ForkedProject; liveUrl: string }
   | { phase: 'error'; message: string }
 
 function TemplateCard({ t }: { t: Template }) {
-  const [fork, setFork] = useState<ForkState>({ phase: 'idle' })
+  const [s, setS] = useState<CardPhase>({ phase: 'idle' })
   // Optional free-text customization the user types before opening the builder.
   const [userText, setUserText] = useState('')
 
@@ -62,21 +128,51 @@ function TemplateCard({ t }: { t: Template }) {
   }, [t, userText])
 
   const onFork = useCallback(() => {
-    // No fork target and no source → nothing we can do (button is disabled below).
-    setFork({ phase: 'forking' })
+    setS({ phase: 'forking' })
     TemplatesApi.fork(t.slug)
-      .then((project) => setFork({ phase: 'forked', project }))
+      .then((project) => {
+        if (isLive(project.status, project.liveUrl)) {
+          setS({ phase: 'live', project, liveUrl: project.liveUrl! })
+        } else {
+          setS({ phase: 'forked', project })
+        }
+      })
       .catch((e) => {
         // Honest fallback: a 404 means this backend has no fork route yet — open
         // the gallery source (the original behavior) instead of showing an error.
         if (e instanceof ApiError && e.status === 404 && t.source) {
           openSource(t.source)
-          setFork({ phase: 'idle' })
+          setS({ phase: 'idle' })
           return
         }
-        setFork({ phase: 'error', message: e instanceof Error ? e.message : 'Fork failed' })
+        setS({ phase: 'error', message: e instanceof Error ? e.message : 'Fork failed' })
       })
   }, [t.slug, t.source])
+
+  const onDeploy = useCallback((project: ForkedProject) => {
+    setS({ phase: 'deploying', project })
+    TemplatesApi.deploy(project.slug)
+      .then((result) => {
+        if (isLive(result.status, result.liveUrl)) {
+          setS({ phase: 'live', project, liveUrl: result.liveUrl! })
+        } else if (result.status === 'error') {
+          setS({ phase: 'error', message: result.message || 'Deploy failed' })
+        } else {
+          setS({ phase: 'deploying', project }) // building on CI; poll via "Check status"
+        }
+      })
+      .catch((e) => setS({ phase: 'error', message: e instanceof Error ? e.message : 'Deploy failed' }))
+  }, [])
+
+  const onCheck = useCallback((project: ForkedProject) => {
+    TemplatesApi.status(project.slug)
+      .then((p) => {
+        if (p && isLive(p.status, p.liveUrl)) setS({ phase: 'live', project, liveUrl: p.liveUrl! })
+      })
+      .catch(() => {
+        /* leave the deploying state — honest: still building */
+      })
+  }, [])
 
   return (
     <Card
@@ -87,6 +183,7 @@ function TemplateCard({ t }: { t: Template }) {
       width={320}
       hoverStyle={{ borderColor: '$color8' }}
     >
+      <TemplatePreview t={t} />
       <XStack items="center" justify="space-between" gap="$2">
         <Text fontSize="$4" fontWeight="700" numberOfLines={1}>{t.title}</Text>
         {t.framework ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{t.framework}</Text> : null}
@@ -128,28 +225,45 @@ function TemplateCard({ t }: { t: Template }) {
         Open in builder
       </Button>
 
-      {fork.phase === 'forked' ? (
+      {s.phase === 'live' ? (
+        <YStack gap="$1" mt="$1">
+          <XStack items="center" gap="$2">
+            <Check size={14} color="var(--green10)" />
+            <Text fontSize="$2" color="$color11" numberOfLines={1}>Live</Text>
+          </XStack>
+          <Button size="$2" self="flex-start" icon={<ArrowUpRight size={14} />} onPress={() => openSource(s.liveUrl)}>
+            Open site
+          </Button>
+        </YStack>
+      ) : s.phase === 'deploying' ? (
+        <YStack gap="$1" mt="$1">
+          <XStack items="center" gap="$2">
+            <Loader size={14} color="var(--color10)" />
+            <Text fontSize="$2" color="$color11" numberOfLines={1}>
+              Deploying “{s.project.name}” — building on CI…
+            </Text>
+          </XStack>
+          <XStack gap="$2" items="center" flexWrap="wrap">
+            <Button size="$2" self="flex-start" icon={<RefreshCw size={13} />} onPress={() => onCheck(s.project)}>
+              Check status
+            </Button>
+            <Text fontSize="$1" color="$color10">Goes live shortly.</Text>
+          </XStack>
+        </YStack>
+      ) : s.phase === 'forked' ? (
         <YStack gap="$1" mt="$1">
           <XStack items="center" gap="$2">
             <Check size={14} color="var(--green10)" />
             <Text fontSize="$2" color="$color11" numberOfLines={1}>
-              Project “{fork.project.name}” created
+              Project “{s.project.name}” created
             </Text>
           </XStack>
-          {fork.project.liveUrl ? (
-            <Button
-              size="$2"
-              self="flex-start"
-              icon={<ArrowUpRight size={14} />}
-              onPress={() => openSource(fork.project.liveUrl)}
-            >
-              Open site
+          <XStack gap="$2" items="center">
+            <Button size="$2" self="flex-start" icon={<Rocket size={14} />} onPress={() => onDeploy(s.project)}>
+              Deploy
             </Button>
-          ) : (
-            <Text fontSize="$1" color="$color10">
-              Draft ({fork.project.framework}) — deploy it to go live.
-            </Text>
-          )}
+            <Text fontSize="$1" color="$color10">Ship it live.</Text>
+          </XStack>
         </YStack>
       ) : (
         <>
@@ -157,14 +271,14 @@ function TemplateCard({ t }: { t: Template }) {
             size="$2"
             chromeless
             self="flex-start"
-            icon={fork.phase === 'forking' ? <Loader size={14} /> : <ArrowUpRight size={14} />}
-            disabled={fork.phase === 'forking' || (!t.source && !t.slug)}
+            icon={s.phase === 'forking' ? <Loader size={14} /> : <ArrowUpRight size={14} />}
+            disabled={s.phase === 'forking' || (!t.source && !t.slug)}
             onPress={onFork}
           >
-            {fork.phase === 'forking' ? 'Forking…' : 'Fork / deploy'}
+            {s.phase === 'forking' ? 'Forking…' : 'Fork / deploy'}
           </Button>
-          {fork.phase === 'error' ? (
-            <Text fontSize="$1" color="$red10" numberOfLines={2}>{fork.message}</Text>
+          {s.phase === 'error' ? (
+            <Text fontSize="$1" color="$red10" numberOfLines={2}>{s.message}</Text>
           ) : null}
         </>
       )}
