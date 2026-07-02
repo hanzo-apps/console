@@ -116,8 +116,43 @@ const PARS: Brand = {
     '<circle r="8" fill="currentColor"/>',
 }
 
+// 7Stars — white-label Hanzo-cloud tenant (7stars.dev). No bespoke mark yet, so
+// it falls back to the generic Hanzo blocky-H geometry (per the brand-asset
+// fallback); its OWN name/org/website/adminDomain still apply. adminDomain is a
+// security boundary (gateAllows requires an @7stars.dev admin email — matches the
+// seeded owner z@7stars.dev). Swap logoContent when a real mark ships.
+const SEVENSTARS: Brand = {
+  id: '7stars',
+  brandName: '7Stars',
+  orgName: '7Stars',
+  websiteUrl: 'https://7stars.dev',
+  adminDomain: '7stars.dev',
+  logoViewBox: HANZO.logoViewBox,
+  logoContent: HANZO.logoContent,
+}
+
+// Yotoda — white-label Hanzo-cloud tenant (yotoda.tech). Same generic-mark
+// fallback; own name/org/website/adminDomain (owner z@yotoda.tech → @yotoda.tech
+// admin gate).
+const YOTODA: Brand = {
+  id: 'yotoda',
+  brandName: 'Yotoda',
+  orgName: 'Yotoda',
+  websiteUrl: 'https://yotoda.tech',
+  adminDomain: 'yotoda.tech',
+  logoViewBox: HANZO.logoViewBox,
+  logoContent: HANZO.logoContent,
+}
+
 /** Every brand, keyed by id. The brand id is also the IAM org slug. */
-export const BRANDS: Record<BrandId, Brand> = { hanzo: HANZO, lux: LUX, zoo: ZOO, pars: PARS }
+export const BRANDS: Record<BrandId, Brand> = {
+  hanzo: HANZO,
+  lux: LUX,
+  zoo: ZOO,
+  pars: PARS,
+  '7stars': SEVENSTARS,
+  yotoda: YOTODA,
+}
 
 /**
  * Resolve the active brand. With an explicit `host` (server routes pass the
