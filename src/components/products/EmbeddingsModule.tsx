@@ -4,8 +4,9 @@
  * Embeddings — generate, store, and search vector embeddings at scale.
  *
  * One product, six honest surfaces over the REAL `hanzoai/ai` `/v1` backend:
- *   Overview     usage metrics (get-cloud-usages, "—" until it ships) + model mix
- *                + index health, all from real data.
+ *   Overview     the polished landing (hero + live metrics + interactive
+ *                POST /v1/embeddings code samples + resources rail) over the shared
+ *                ProductLanding kit, plus the real model mix + index health.
  *   Explore      top-K search over a collection (POST /v1/search).
  *   Collections  the org's knowledge stores (get-stores) as vector collections,
  *                each → the Qdrant/Search index `{owner}-{store}-docs`.
@@ -111,7 +112,13 @@ export function EmbeddingsModule({ params }: { params: Record<string, string> })
 
   const Tabs: Record<Tab, ComponentType> = {
     overview: () => (
-      <OverviewView owner={owner} onOpenCollection={openCollection} onNew={createCollection} onExplore={() => go('explore')} />
+      <OverviewView
+        owner={owner}
+        onOpenCollection={openCollection}
+        onNew={createCollection}
+        onExplore={() => go('explore')}
+        onGenerate={() => go('models')}
+      />
     ),
     explore: () => <ExploreView owner={owner} />,
     collections: () => <CollectionsView owner={owner} onOpen={openCollection} onNew={createCollection} />,
