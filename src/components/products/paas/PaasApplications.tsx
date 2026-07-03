@@ -5,8 +5,10 @@
  * (`/v1/platform/*` via the `/cloud` bearer proxy). Per-org by construction:
  * cloud resolves the org from the Bearer owner, so the caller only ever sees
  * THEIR projects/apps. Lists every app with its project, status, source, and live
- * URL; deploys a new app (git repo or image) into a project; and opens an app to
- * its deployment history + build status + a redeploy.
+ * URL; deploys a new app (git repo or image) and — the marquee — lets a customer
+ * WATCH it move Queued → Building → Deploying → Live on the animated RailwayDeploy
+ * pipeline (real deployment status, not decorative); and opens an app to its
+ * pipeline + deployment history + build status + a redeploy.
  *
  * Honest states, never fabricated rows: loading, sign-in (401), managed/forbidden
  * (403), PaaS-not-wired (404), empty ("deploy your first app"). Real data or an
@@ -25,6 +27,7 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { appUrl, appSource, orderDeployments, buildStatusOf, deploymentLabel, classifyPaasError } from './logic'
 import { DomainsPanel } from './DomainsPanel'
+import { RailwayDeploy } from './RailwayDeploy'
 
 const openUrl = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
@@ -185,7 +188,11 @@ function ErrorCard({ kind, message, onRetry }: { kind: ReturnType<typeof classif
 
 // ── New app (deploy) flow ─────────────────────────────────────────────────────
 
-type Deploying = { phase: 'idle' } | { phase: 'working'; step: string } | { phase: 'error'; message: string }
+type Deploying =
+  | { phase: 'idle' }
+  | { phase: 'working'; step: string }
+  | { phase: 'error'; message: string }
+  | { phase: 'watching'; project: string; app: string }
 const NEW_PROJECT = '➕ New project…'
 
 function NewAppForm({ projects, onCancel, onDeployed }: { projects: PaasProject[]; onCancel: () => void; onDeployed: () => void }) {
@@ -230,7 +237,8 @@ function NewAppForm({ projects, onCancel, onDeployed }: { projects: PaasProject[
 
       setState({ phase: 'working', step: 'Deploying…' })
       await PaasApi.deploy(projectSlug, app.slug || app.id, source === 'image' ? { tag: imageTag.trim() || 'latest' } : {})
-      onDeployed()
+      // Hand off to the live pipeline — watch it go Queued → Building → Deploying → Live.
+      setState({ phase: 'watching', project: projectSlug, app: app.slug || app.id })
     } catch (e) {
       const { kind, message } = classifyPaasError(e)
       setState({
@@ -243,6 +251,10 @@ function NewAppForm({ projects, onCancel, onDeployed }: { projects: PaasProject[
               : message || 'Deploy failed. Check the inputs and retry.',
       })
     }
+  }
+
+  if (state.phase === 'watching') {
+    return <DeployWatch project={state.project} app={state.app} onDone={onDeployed} />
   }
 
   const busy = state.phase === 'working'
@@ -314,7 +326,26 @@ function NewAppForm({ projects, onCancel, onDeployed }: { projects: PaasProject[
   )
 }
 
-// ── App detail (deployment history + build status + redeploy) ─────────────────
+/** The live pipeline hand-off — watch the just-deployed app reach Live in real time. */
+function DeployWatch({ project, app, onDone }: { project: string; app: string; onDone: () => void }) {
+  const [live, setLive] = useState(false)
+  return (
+    <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
+      <XStack items="center" justify="space-between" gap="$3">
+        <Text fontSize="$5" fontWeight="700">{live ? 'Your app is live' : 'Deploying your app'}</Text>
+        <PrimaryButton size="$2" onPress={onDone}>{live ? 'View apps' : 'Run in background'}</PrimaryButton>
+      </XStack>
+      <RailwayDeploy projectSlug={project} appSlug={app} status="queued" onLive={() => setLive(true)} />
+      <Text fontSize="$1" color="$color10">
+        {live
+          ? 'It appears in your apps list with its status, source, and live URL.'
+          : 'This tracks the live deployment status — Queued → Building → Deploying → Live.'}
+      </Text>
+    </Card>
+  )
+}
+
+// ── App detail (live pipeline + deployment history + build status + redeploy) ──
 
 type DetailState =
   | { phase: 'loading' }
@@ -326,6 +357,8 @@ function AppDetail({ app, onClose, onChanged }: { app: PaasAppWithProject; onClo
   const appSlug = app.slug || app.id
   const [state, setState] = useState<DetailState>({ phase: 'loading' })
   const [redeploy, setRedeploy] = useState<'idle' | 'working' | 'error'>('idle')
+  // Bumped on redeploy so the pipeline remounts and re-tracks from Queued.
+  const [nonce, setNonce] = useState(0)
 
   const load = useCallback(async () => {
     setState({ phase: 'loading' })
@@ -346,8 +379,7 @@ function AppDetail({ app, onClose, onChanged }: { app: PaasAppWithProject; onClo
     try {
       await PaasApi.deploy(projectSlug, appSlug, app.source === 'image' ? { tag: app.image?.tag } : {})
       setRedeploy('idle')
-      await load()
-      onChanged()
+      setNonce((k) => k + 1) // restart the pipeline animation from Queued
     } catch {
       setRedeploy('error')
     }
@@ -360,6 +392,17 @@ function AppDetail({ app, onClose, onChanged }: { app: PaasAppWithProject; onClo
         <Text fontSize="$4" fontWeight="800" numberOfLines={1}>{app.name || app.slug}</Text>
         <Button size="$1" chromeless onPress={onClose} aria-label="Close">✕</Button>
       </XStack>
+
+      {/* Live deployment pipeline — real status, animated Building → Deploying → Live. */}
+      <YStack pb="$2" borderBottomWidth={1} borderColor="$borderColor">
+        <RailwayDeploy
+          key={nonce}
+          projectSlug={projectSlug}
+          appSlug={appSlug}
+          status={nonce === 0 ? (app.status ?? app.phase) : 'queued'}
+          onLive={() => { void load(); onChanged() }}
+        />
+      </YStack>
 
       <YStack gap="$1.5">
         <Fact label="Project" value={app.project.name || app.project.slug} />

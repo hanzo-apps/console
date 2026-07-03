@@ -132,3 +132,52 @@ describe('normalizeCloudUsages — forward-compatible, degrades to absent', () =
     expect(u.dimensions).toEqual([{ label: '1024d', value: 800 }])
   })
 })
+
+import { embeddingsCodeSamples, defaultEmbeddingModel } from './logic'
+
+const col = (over: Partial<Collection> = {}): Collection => ({
+  owner: 'hanzo',
+  name: 'docs',
+  description: 'Docs',
+  model: '',
+  metric: 'cosine',
+  collection: 'hanzo-docs-docs',
+  status: 'Healthy',
+  ...over,
+})
+
+describe('defaultEmbeddingModel', () => {
+  it('prefers the org’s most-used collection model, else zen-embedding', () => {
+    expect(defaultEmbeddingModel([])).toBe('zen-embedding')
+    expect(defaultEmbeddingModel([col({ model: '' })])).toBe('zen-embedding')
+    expect(
+      defaultEmbeddingModel([
+        col({ model: 'zen5-embedding-4b' }),
+        col({ model: 'zen5-embedding-4b' }),
+        col({ model: 'text-embedding-3-small' }),
+      ]),
+    ).toBe('zen5-embedding-4b')
+  })
+})
+
+describe('embeddingsCodeSamples — the real POST /v1/embeddings call', () => {
+  const samples = embeddingsCodeSamples('https://api.hanzo.ai/v1', 'zen-embedding')
+
+  it('offers curl / python / ts / js tabs', () => {
+    expect(samples.map((s) => s.lang)).toEqual(['curl', 'python', 'ts', 'js'])
+  })
+
+  it('curl hits the real endpoint with the model and a bearer key', () => {
+    const curl = samples.find((s) => s.lang === 'curl')!.code
+    expect(curl).toContain('https://api.hanzo.ai/v1/embeddings')
+    expect(curl).toContain('"model": "zen-embedding"')
+    expect(curl).toContain('Authorization: Bearer')
+  })
+
+  it('every sample references the embeddings endpoint and the model', () => {
+    for (const s of samples) {
+      expect(s.code).toContain('zen-embedding')
+      expect(s.code.toLowerCase()).toContain('embeddings')
+    }
+  })
+})
