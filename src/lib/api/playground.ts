@@ -120,13 +120,15 @@ export const PlaygroundApi = {
    * asks the gateway to emit a final usage chunk so prompt/completion token
    * counts (and therefore cost) are REAL, not estimated. Credentials are the
    * session cookie only; the keyless `/ai` proxy mints the bearer the gateway
-   * requires and forwards the SSE bytes straight through.
+   * requires and forwards the SSE bytes straight through. Optional `headers` ride
+   * the same request — the retrieval/RAG switch (`X-Retrieval-Store`) is the only
+   * caller that sets them, so grounded chat streams over this ONE binding too.
    */
-  streamChat: (req: ChatStreamRequest, signal?: AbortSignal): Promise<Response> =>
+  streamChat: (req: ChatStreamRequest, signal?: AbortSignal, headers?: Record<string, string>): Promise<Response> =>
     fetch(originV1Url('chat/completions'), {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...headers },
       body: JSON.stringify({ ...req, stream: true, stream_options: { include_usage: true } }),
       signal,
       cache: 'no-store',
