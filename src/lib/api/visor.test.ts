@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { ApiError } from './client'
 import {
+  filterSizes,
   fmtSpec,
   interpretVisorError,
   normalizeGpuSize,
@@ -10,6 +11,7 @@ import {
   normalizeSize,
   prettyGpuModel,
   statusVerdict,
+  type VisorSize,
 } from './visor'
 
 describe('normalizeMachine', () => {
@@ -91,11 +93,36 @@ describe('compute catalog normalizers (real visor shapes)', () => {
     expect(s).toMatchObject({ slug: 's-2vcpu-2gb', vcpus: 2, memGb: 2, diskGb: 60, available: true, priceHourly: 0.03, priceMonthly: 18 })
   })
 
+  it('normalizeSize reads the region list (defaults to [], drops non-strings)', () => {
+    expect(normalizeSize({ slug: 'x', regions: ['nyc1', 'sfo3'] }).regions).toEqual(['nyc1', 'sfo3'])
+    expect(normalizeSize({ slug: 'y' }).regions).toEqual([])
+    expect(normalizeSize({ slug: 'z', regions: ['a', 5, null, 'b'] }).regions).toEqual(['a', 'b'])
+  })
+
   it('normalizeGpuSize reads the nested gpu object + VRAM unit', () => {
     const g = normalizeGpuSize({
       slug: 'gpu-l40sx1-48gb', vcpus: 8, memoryMb: 65536, diskGb: 500, available: true, priceHourly: 1.57,
       gpu: { count: 1, model: 'nvidia_l40s', vram: 48, vramUnit: 'gib' },
     })
     expect(g).toMatchObject({ slug: 'gpu-l40sx1-48gb', vcpus: 8, memGb: 64, model: 'L40S', gpuCount: 1, vramGb: 48, priceHourly: 1.57 })
+  })
+})
+
+describe('filterSizes', () => {
+  const mk = (slug: string, regions: string[] = []): VisorSize => ({ slug, available: true, regions })
+  const sizes = [mk('s-1vcpu-1gb', ['nyc1', 'sfo3']), mk('s-2vcpu-4gb', ['sfo3']), mk('c-4-8gb', [])]
+
+  it('filters by slug query (case-insensitive substring; blank = all)', () => {
+    expect(filterSizes(sizes, 'S-2').map((s) => s.slug)).toEqual(['s-2vcpu-4gb'])
+    expect(filterSizes(sizes, '   ').length).toBe(3)
+  })
+
+  it('filters by region, but never hides a size whose region list is unknown/empty', () => {
+    expect(filterSizes(sizes, '', 'nyc1').map((s) => s.slug)).toEqual(['s-1vcpu-1gb', 'c-4-8gb'])
+    expect(filterSizes(sizes, '', 'sfo3').map((s) => s.slug)).toEqual(['s-1vcpu-1gb', 's-2vcpu-4gb', 'c-4-8gb'])
+  })
+
+  it('combines query AND region', () => {
+    expect(filterSizes(sizes, 's-', 'sfo3').map((s) => s.slug)).toEqual(['s-1vcpu-1gb', 's-2vcpu-4gb'])
   })
 })

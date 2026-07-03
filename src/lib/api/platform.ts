@@ -206,9 +206,15 @@ export const PlatformApi = {
   deletePool: (clusterId: string, poolId: string): Promise<void> =>
     restDelete(clustersUrl(`/${enc(clusterId)}/pools/${enc(poolId)}`)),
 
-  /** Provision a fresh dedicated DOKS cluster for the org (`/paas` control plane). */
+  /**
+   * Provision a fresh dedicated DOKS cluster for the org
+   * (`POST /v1/org/{org}/cluster`). Served by Hanzo Cloud's EMBEDDED platform via
+   * the same-origin user-bearer `/cloud` proxy — org-scoped by the Bearer owner,
+   * the DigitalOcean credential lives server-side IN cloud, NOT a console `/paas`
+   * service token. (Same native-`/v1` path as `listClusters`.)
+   */
   provisionCluster: async (org: string, input: ProvisionClusterInput): Promise<Cluster> => {
-    const r = await restPost<{ cluster: Cluster }>(url(`org/${enc(org)}/cluster`), input)
+    const r = await restPost<{ cluster: Cluster }>(cloudProxyV1Url(`org/${enc(org)}/cluster`), input)
     return r.cluster
   },
 }
