@@ -38,6 +38,7 @@ import {
   groupByFamily,
   filterFamilies,
   totalModels,
+  displayLabel,
   DEFAULT_MODEL,
   type FamilyGroup,
 } from '~/lib/api/families'
@@ -216,7 +217,7 @@ function ModelRow({ m, onOpen }: { m: CatalogEntry; onOpen: () => void }) {
       <YStack flex={1} minW={0} gap={1}>
         <XStack items="center" gap="$2" flexWrap="wrap">
           <Text fontSize="$3" color="$color12" numberOfLines={1}>
-            {modelDisplayName(m)}
+            {displayLabel(m)}
           </Text>
           {isDefault ? <Pill label="Default" tone="brand" /> : null}
           {m.specs?.params ? (
