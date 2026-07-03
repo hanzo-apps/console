@@ -19,6 +19,8 @@
  */
 import { ApiError } from './client'
 import { PlaygroundApi, type ChatMessage } from './playground'
+import { invalidateBalance } from '~/lib/billing/live-balance'
+import { splitSSE, dataOf, parseChatData } from './stream'
 
 /** Cached model id list — resolved once per session for default-model selection. */
 let modelsCache: string[] | null = null
@@ -47,6 +49,69 @@ function answerOf(r: { choices?: { message?: { content?: string } }[]; error?: {
   return r.choices?.[0]?.message?.content ?? ''
 }
 
+/** Assemble the OpenAI message thread for a turn (system → history → user). */
+function buildThread(question: string, system?: string, history?: ChatMessage[]): ChatMessage[] {
+  const messages: ChatMessage[] = []
+  if (system?.trim()) messages.push({ role: 'system', content: system })
+  if (history?.length) messages.push(...history)
+  messages.push({ role: 'user', content: question })
+  return messages
+}
+
+/**
+ * Read a streaming chat-completion `Response` to completion, invoking `onDelta`
+ * with the CUMULATIVE text after each content chunk. Throws `ApiError` on a non-ok
+ * HTTP response or a mid-stream gateway error (carrying the gateway's message), and
+ * always releases the reader on every exit path (no held socket). Pure over its
+ * `Response`, so it is unit-tested with a fake SSE stream — no network.
+ */
+export async function readChatStream(res: Response, onDelta: (text: string) => void): Promise<string> {
+  if (!res.ok || !res.body) {
+    const text = await res.text().catch(() => '')
+    let msg = `Request failed (HTTP ${res.status})`
+    try {
+      const j = JSON.parse(text) as { error?: { message?: string }; msg?: string }
+      msg = j?.error?.message ?? j?.msg ?? msg
+    } catch {
+      /* non-JSON error body — keep the status message */
+    }
+    throw new ApiError(msg, res.status)
+  }
+
+  let content = ''
+  const consume = (data: string): void => {
+    const delta = parseChatData(data)
+    if (!delta) return
+    if (delta.error) throw new ApiError(delta.error, res.status)
+    if (delta.content) {
+      content += delta.content
+      onDelta(content)
+    }
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buf = ''
+  try {
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const split = splitSSE(buf)
+      buf = split.rest
+      for (const ev of split.events) {
+        const data = dataOf(ev)
+        if (data != null) consume(data)
+      }
+    }
+    const tail = dataOf(buf)
+    if (tail != null) consume(tail)
+  } finally {
+    await reader.cancel().catch(() => {})
+  }
+  return content
+}
+
 export type AiChatInput = {
   /** The user turn. */
   question: string
@@ -66,11 +131,11 @@ export const AiApi = {
 
   /** A plain completion. Returns the assistant text. */
   chat: async ({ question, system, history, model, temperature = 0 }: AiChatInput): Promise<string> => {
-    const messages: ChatMessage[] = []
-    if (system?.trim()) messages.push({ role: 'system', content: system })
-    if (history?.length) messages.push(...history)
-    messages.push({ role: 'user', content: question })
-    const r = await PlaygroundApi.chat({ model: await resolveModel(model), messages, temperature })
+    const r = await PlaygroundApi.chat({
+      model: await resolveModel(model),
+      messages: buildThread(question, system, history),
+      temperature,
+    })
     return answerOf(r)
   },
 
@@ -88,14 +153,34 @@ export const AiApi = {
     history,
     temperature = 0,
   }: AiChatInput & { store?: string }): Promise<string> => {
-    const messages: ChatMessage[] = []
-    if (system?.trim()) messages.push({ role: 'system', content: system })
-    if (history?.length) messages.push(...history)
-    messages.push({ role: 'user', content: question })
     const r = await PlaygroundApi.chat(
-      { model: await resolveModel(model), messages, temperature },
+      { model: await resolveModel(model), messages: buildThread(question, system, history), temperature },
       { 'X-Retrieval': '1', 'X-Retrieval-Store': store },
     )
     return answerOf(r)
+  },
+
+  /**
+   * The STREAMING twin of `ragChat` — the same grounded completion, but rendered
+   * token-by-token: `onDelta` fires with the cumulative text as each chunk arrives
+   * (like the playground compare board). Resolves with the final text; throws
+   * `ApiError` on failure or a mid-stream gateway error so the caller shows an
+   * honest state. `signal` lets the caller cancel (unmount / new chat).
+   */
+  ragChatStream: async (
+    { question, store = 'docs', model, system, history, temperature = 0 }: AiChatInput & { store?: string },
+    onDelta: (text: string) => void,
+    signal?: AbortSignal,
+  ): Promise<string> => {
+    const res = await PlaygroundApi.streamChat(
+      { model: await resolveModel(model), messages: buildThread(question, system, history), temperature },
+      signal,
+      { 'X-Retrieval': '1', 'X-Retrieval-Store': store },
+    )
+    const text = await readChatStream(res, onDelta)
+    // A streamed completion just debited cloud credit — nudge the shared live
+    // balance so every wallet surface reflects the spend without a reload.
+    invalidateBalance()
+    return text
   },
 }
