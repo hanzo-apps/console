@@ -18,21 +18,14 @@
  * On a 404/501/401 the caller renders the shared `BackendStateCard` — never
  * fabricated spend, balance, or card data.
  */
-import { restGet, restPost } from './client'
+import { restGet, restPost, originV1Url } from './client'
 import type { CloudBalance } from './wallet'
 import { normalizeUsageRecords, perModel, totalsOf } from './aimetrics'
 
-/**
- * Same-origin URL for the billing DATA proxy (`/billing/v1/*` → commerce; NOT the
- * `/v1` gateway). The proxy is namespaced under `/billing/v1/` so it never shadows
- * the billing UI tab URLs (`/billing/reports`, `/billing/invoices`, …), which fall
- * through to the SPA — a route handler always wins over the catch-all page for a
- * matching segment, so the data plane and the tab slugs must not share path space.
- */
-const billingUrl = (path: string): string => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${origin}/billing/v1/${path.replace(/^\/+/, '')}`
-}
+// Billing DATA calls use the canonical `/v1/billing/*` (nothing before /v1/); one
+// builder for every module (`originV1Url`). `next.config` rewrites that head to the
+// same-origin commerce proxy (service token + server-pinned org) — the client never
+// hand-rolls a service-prefixed path, so a non-canonical billing URL can't exist.
 
 /** One metered line — spend grouped by product/model over the window. */
 export type UsageLine = {
@@ -331,7 +324,7 @@ export type TopupResult = {
 export const BillingApi = {
   /** Cloud credit balance (USD cents) — same proxy as the Wallet/sidebar. */
   balance: (currency = 'usd'): Promise<CloudBalance> =>
-    restGet<CloudBalance>(`${billingUrl('balance')}?currency=${encodeURIComponent(currency)}`),
+    restGet<CloudBalance>(`${originV1Url('billing/balance')}?currency=${encodeURIComponent(currency)}`),
 
   /** Metered spend over an optional window (commerce defaults the period). */
   usage: (params?: { start?: string; end?: string }): Promise<Usage> => {
@@ -339,19 +332,19 @@ export const BillingApi = {
     if (params?.start) qs.set('start', params.start)
     if (params?.end) qs.set('end', params.end)
     const q = qs.toString()
-    return restGet<unknown>(`${billingUrl('usage')}${q ? `?${q}` : ''}`).then(normalizeUsage)
+    return restGet<unknown>(`${originV1Url('billing/usage')}${q ? `?${q}` : ''}`).then(normalizeUsage)
   },
 
   /** The tenant's invoice history (most recent first, as commerce returns it). */
-  invoices: (): Promise<Invoice[]> => restGet<unknown>(billingUrl('invoices')).then(normalizeInvoices),
+  invoices: (): Promise<Invoice[]> => restGet<unknown>(originV1Url('billing/invoices')).then(normalizeInvoices),
 
   /** The org's subscriptions (plan, status, renewal) — read-only. */
   subscriptions: (): Promise<Subscription[]> =>
-    restGet<unknown>(billingUrl('subscriptions')).then(normalizeSubscriptions),
+    restGet<unknown>(originV1Url('billing/subscriptions')).then(normalizeSubscriptions),
 
   /** The org's saved payment methods (masked brand + last4 only) — read-only. */
   paymentMethods: (): Promise<PaymentMethod[]> =>
-    restGet<unknown>(billingUrl('payment-methods')).then(normalizePaymentMethods),
+    restGet<unknown>(originV1Url('billing/payment-methods')).then(normalizePaymentMethods),
 
   /**
    * The org's spend alerts / budgets (`GET /v1/billing/spend-alerts`). The proxy
@@ -359,7 +352,7 @@ export const BillingApi = {
    * only the caller's budgets.
    */
   spendAlerts: (): Promise<SpendAlert[]> =>
-    restGet<unknown>(billingUrl('spend-alerts')).then(normalizeSpendAlerts),
+    restGet<unknown>(originV1Url('billing/spend-alerts')).then(normalizeSpendAlerts),
 
   /**
    * Create a spend alert / budget (`POST /v1/billing/spend-alerts`). The subject is
@@ -368,7 +361,7 @@ export const BillingApi = {
    * another tenant. Returns the created alert.
    */
   createSpendAlert: (input: { title: string; thresholdCents: number; currency?: string }): Promise<SpendAlert> =>
-    restPost<unknown>(billingUrl('spend-alerts'), {
+    restPost<unknown>(originV1Url('billing/spend-alerts'), {
       title: input.title,
       threshold: Math.round(input.thresholdCents),
       currency: (input.currency ?? 'usd').toLowerCase(),
@@ -381,7 +374,7 @@ export const BillingApi = {
    * through its single SQUARE_ENVIRONMENT authority, so the app id the browser
    * tokenizes with always matches the account commerce will charge.
    */
-  paymentConfig: (): Promise<PaymentConfig> => restGet<PaymentConfig>(billingUrl('payment-config')),
+  paymentConfig: (): Promise<PaymentConfig> => restGet<PaymentConfig>(originV1Url('billing/payment-config')),
 
   /**
    * Charge a Square Web Payments nonce and credit the org's CANONICAL balance
@@ -394,7 +387,7 @@ export const BillingApi = {
    * the first result rather than double-charging. Returns the new balance (cents).
    */
   topupWithCard: (input: { sourceId: string; amountCents: number; currency?: string }): Promise<TopupResult> =>
-    restPost<TopupResult>(billingUrl('topup/token'), {
+    restPost<TopupResult>(originV1Url('billing/topup/token'), {
       sourceId: input.sourceId,
       amountCents: Math.round(input.amountCents),
       currency: (input.currency ?? 'usd').toLowerCase(),

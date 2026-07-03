@@ -22,16 +22,11 @@
  * series/breakdowns (honest-empty), and a proxy failure throws a typed `ApiError`
  * the caller renders as an honest state — never placeholder spend.
  */
-import { ApiError, restGet } from './client'
+import { ApiError, restGet, originV1Url } from './client'
 import type { CloudBalance } from './wallet'
 
-/** Same-origin URL for the billing DATA proxy (`/billing/v1/*` → commerce; NOT the
- *  `/v1` gateway). Namespaced under `/billing/v1/` so it never shadows the billing
- *  UI tab URLs (`/billing/reports`, …), which fall through to the SPA. */
-const billingUrl = (path: string): string => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${origin}/billing/v1/${path.replace(/^\/+/, '')}`
-}
+// Billing usage/balance use the canonical `/v1/billing/*` (one builder, `originV1Url`);
+// `next.config` rewrites it to the same-origin commerce billing proxy.
 
 /**
  * One usage record as commerce returns it under `usage[]`. All fields are
@@ -317,12 +312,12 @@ export function recent(records: UsageRecord[], n: number): UsageRecord[] {
 
 /** Fetch the org's raw usage records through the per-tenant `/billing/usage` proxy. */
 export async function fetchUsageRecords(): Promise<UsageRecord[]> {
-  return restGet<unknown>(billingUrl('usage')).then(normalizeUsageRecords)
+  return restGet<unknown>(originV1Url('billing/usage')).then(normalizeUsageRecords)
 }
 
 /** Fetch the org's cloud-credit balance (USD cents) through the same proxy. */
 export async function fetchBalance(currency = 'usd'): Promise<CloudBalance> {
-  return restGet<CloudBalance>(`${billingUrl('balance')}?currency=${encodeURIComponent(currency)}`)
+  return restGet<CloudBalance>(`${originV1Url('billing/balance')}?currency=${encodeURIComponent(currency)}`)
 }
 
 export { ApiError }

@@ -4,7 +4,7 @@
  * Settlement — outbound payouts (settlement of balances to a bank account or card),
  * tracked by the commerce billing ledger.
  *
- * Reads the payout ledger from commerce via the same-origin `/billing/v1` proxy
+ * Reads the payout ledger from commerce via the same-origin commerce billing proxy
  * (`GET /v1/billing/payouts` → commerce `ListPayouts`), which injects the commerce
  * service token server-side and scopes every read to the caller's OWN org namespace
  * (server-resolved `X-Org-Id`, never client-supplied). The endpoint returns a bare
@@ -18,15 +18,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { restGet, originV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
-/** Same-origin commerce billing DATA proxy (app/billing/v1/[...path]) — injects the
- *  commerce service token + pins the caller's own org server-side. */
-const billing = (path: string) => `/billing/v1/${path.replace(/^\/+/, '')}`
+/** Canonical billing DATA path (`/v1/billing/*`, nothing before /v1/); `next.config`
+ *  rewrites it to the same-origin commerce proxy (service token + server-pinned org). */
+const billing = (path: string) => originV1Url(`billing/${path.replace(/^\/+/, '')}`)
 
 /** One payout as commerce's `ListPayouts` returns it (`payoutResponse`). */
 type Payout = {
