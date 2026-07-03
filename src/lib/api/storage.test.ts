@@ -126,37 +126,37 @@ describe('StorageApi transport (same-origin /cloud proxy)', () => {
 
   it('buckets() GETs /v1/s3/buckets', async () => {
     await StorageApi.buckets()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/s3/buckets`)
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/s3/buckets`)
   })
 
   it('objects() encodes the prefix as a query param', async () => {
     stubJson({ objects: [] })
     await StorageApi.objects('photos', 'a/b/')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/s3/buckets/photos/objects?prefix=a%2Fb%2F`)
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/s3/buckets/photos/objects?prefix=a%2Fb%2F`)
   })
 
   it('objects() with no prefix omits the query', async () => {
     stubJson({ objects: [] })
     await StorageApi.objects('photos')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/s3/buckets/photos/objects`)
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/s3/buckets/photos/objects`)
   })
 
   it('presignDownload() preserves nested key slashes in the path', async () => {
     stubJson({ url: 'https://s3.hanzo.ai/x', method: 'GET' })
     await StorageApi.presignDownload('photos', 'a/b/c.png')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/s3/buckets/photos/objects/a/b/c.png`)
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/s3/buckets/photos/objects/a/b/c.png`)
   })
 
   it('deleteObject() targets the object path (204 resolves)', async () => {
     stubJson(null, 204)
     await StorageApi.deleteObject('photos', 'a/b/c.png')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/s3/buckets/photos/objects/a/b/c.png`)
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/s3/buckets/photos/objects/a/b/c.png`)
   })
 
   it('createBucket() POSTs the name to /v1/s3/buckets', async () => {
     stubJson({ name: 'new-bucket' }, 201)
     const b = await StorageApi.createBucket('new-bucket')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/s3/buckets`)
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/s3/buckets`)
     expect(b?.name).toBe('new-bucket')
   })
 })
