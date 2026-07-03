@@ -7,7 +7,7 @@
  * app" thesis; the generic @hanzo/data DocType renderer drives it.
  *
  * Every call goes through the console's OWN user-bearer `/cloud` proxy
- * (`originV1Url('framework/...')`, the same per-tenant path CRM/Prompts/Agents
+ * (`cloudProxyV1Url('framework/...')`, the same per-tenant path CRM/Prompts/Agents
  * use, allow-listed as the `framework` head): the server mints a short-lived
  * user-bound IAM token and the engine resolves the org from the token's `owner`
  * claim (principal.Tenant), so every read/write is org-scoped SERVER-SIDE and no
@@ -19,7 +19,7 @@
  * on read. Payloads are read defensively from `{ data }` (or a bare array), so a
  * shape drift degrades a list rather than throwing.
  */
-import { restGet, restPost, restPut, restDelete, originV1Url } from '~/lib/api/client'
+import { restGet, restPost, restPut, restDelete, cloudProxyV1Url } from '~/lib/api/client'
 import type {
   DocType,
   FrameworkDoc,
@@ -63,7 +63,7 @@ export function listQuery(q?: ListQuery): string {
   return s ? `?${s}` : ''
 }
 
-const url = (path: string): string => originV1Url(`${BASE}/${path}`)
+const url = (path: string): string => cloudProxyV1Url(`${BASE}/${path}`)
 
 export const FrameworkApi = {
   /** The DocType registry (schemas) — the collection definitions of every app lane. */
