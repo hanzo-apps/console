@@ -25,6 +25,21 @@ function deps(doFetch: ResilientDeps['doFetch'], over: Partial<ResilientDeps> = 
 }
 
 describe('resilientFetch — transient-retry so backend rolls are invisible', () => {
+  it('calls doFetch as a BARE function (this=undefined) — a global-fetch-like doFetch does NOT throw "Illegal invocation"', async () => {
+    // REGRESSION (v8.4.33 P0): the browser global `fetch` throws "Illegal invocation" when
+    // its `this` isn't the global. If resilientFetch calls `deps.doFetch(url,init)` (a METHOD
+    // call → this=deps), a raw global fetch as doFetch breaks EVERY request. Simulate it:
+    const globalOnlyFetch = function (this: unknown) {
+      if (this !== undefined && this !== globalThis) {
+        throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation")
+      }
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    }
+    // resilientFetch must invoke it bare (this=undefined) → no throw.
+    const res = await resilientFetch('/v1/x', { method: 'GET' }, deps(globalOnlyFetch as unknown as ResilientDeps['doFetch']))
+    expect(res.status).toBe(200)
+  })
+
   it('a GET that hits a transient 503 then 200 SELF-HEALS (the Models-catalog case)', async () => {
     // Exactly Dave/maxpower: /v1/models lands mid-roll → 503 → retry → 200.
     const fetchFn = scriptedFetch([503, 200])
