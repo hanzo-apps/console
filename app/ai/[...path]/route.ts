@@ -36,6 +36,8 @@ const ALLOWED = new Set([
   'v1/embeddings',
   'v1/rerank',
   'v1/audio/speech', // text-to-speech (JSON in → audio bytes out) for the Playground Audio tab
+  'v1/images/generations', // text-to-image (JSON in → image url/b64 out) for the Playground Image tab
+  'v1/videos/generations', // text-to-video (JSON in → base64 MP4 out) for the Playground Video tab
 ])
 
 type Ctx = { params: Promise<{ path: string[] }> }
