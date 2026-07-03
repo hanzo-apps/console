@@ -241,7 +241,7 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
       {tab === '' ? catalogGate(renderOverview()) : null}
       {tab === 'gpus' ? catalogGate(renderGpus()) : null}
       {tab === 'clusters' ? <ClustersTab data={computeData} /> : null}
-      {tab === 'pools' ? <CustomerPoolsTab clusters={clusters} onRetry={reload} /> : null}
+      {tab === 'pools' ? <CustomerPoolsTab clusters={clusters} /> : null}
       {tab === 'pricing' ? catalogGate(<CustomerPricingTab catalog={catalog} />) : null}
       {tab === 'alerts' ? <AlertsTab data={computeData} /> : null}
       {tab === 'settings' ? (
