@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   categoriesForBrand,
   categoryInBrand,
+  entryInBrandScope,
   BRAND_CATEGORIES,
   categoryOrder,
   categorySlug,
@@ -64,6 +65,45 @@ describe('per-brand catalog scope', () => {
       if (cats === null) continue
       for (const c of cats) expect(categoryOrder).toContain(c)
     }
+  })
+})
+
+// Proves the per-ENTRY brand scope — the orthogonal companion to the per-category
+// scope. A brand-agnostic entry (no `brands`) shows everywhere its category admits;
+// a brand-specific entry (e.g. a Lux/Zoo chain-app launch tile) shows ONLY for its
+// brands. Pure predicate, so this proves the no-cross-leak rule without a hostname.
+describe('per-entry brand scope', () => {
+  const ALL: BrandId[] = ['hanzo', 'lux', 'zoo', 'pars']
+
+  it('an OMITTED brands list shows on EVERY brand (default = agnostic)', () => {
+    for (const brand of ALL) expect(entryInBrandScope(brand, undefined)).toBe(true)
+  })
+
+  it('an EMPTY brands list is the empty inclusion set — hidden everywhere (fail-closed)', () => {
+    for (const brand of ALL) expect(entryInBrandScope(brand, [])).toBe(false)
+  })
+
+  it('a Lux chain-app tile shows ONLY on lux, hidden on every other brand', () => {
+    expect(entryInBrandScope('lux', ['lux'])).toBe(true)
+    for (const brand of ['hanzo', 'zoo', 'pars'] as BrandId[]) {
+      expect(entryInBrandScope(brand, ['lux'])).toBe(false)
+    }
+  })
+
+  it('a Zoo chain-app tile shows ONLY on zoo — no Lux↔Zoo cross-leak', () => {
+    expect(entryInBrandScope('zoo', ['zoo'])).toBe(true)
+    for (const brand of ['hanzo', 'lux', 'pars'] as BrandId[]) {
+      expect(entryInBrandScope(brand, ['zoo'])).toBe(false)
+    }
+    // the two suites never appear on each other's console
+    expect(entryInBrandScope('zoo', ['lux'])).toBe(false)
+    expect(entryInBrandScope('lux', ['zoo'])).toBe(false)
+  })
+
+  it('multi-brand scope admits each listed brand and only those', () => {
+    expect(entryInBrandScope('hanzo', ['hanzo', 'lux'])).toBe(true)
+    expect(entryInBrandScope('lux', ['hanzo', 'lux'])).toBe(true)
+    expect(entryInBrandScope('zoo', ['hanzo', 'lux'])).toBe(false)
   })
 })
 
