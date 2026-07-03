@@ -72,6 +72,7 @@ import {
   type ProductSubpage,
 } from '~/lib/products/registry'
 import { productSubpages, subpageWired } from '~/lib/products/match'
+import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
 import { usePins, useProductColors } from '~/lib/products/pins'
 import { categoryColorHex } from '~/lib/products/colors'
@@ -222,7 +223,11 @@ function NavRow({
       />
     )
   }
-  const hint = entry.admin ? <Lock size={12} opacity={0.45} /> : undefined
+  const hint = entry.admin ? (
+    <Lock size={12} opacity={0.45} />
+  ) : entry.kind === 'external' ? (
+    <ExternalLink size={12} opacity={0.45} />
+  ) : undefined
   return (
     <XStack items="center" gap="$1">
       <Button
@@ -351,7 +356,7 @@ function Level2Nav({
                 return (
                   <Button
                     key={s.id}
-                    onPress={() => onGo(`/${s.id}`)}
+                    onPress={() => openProduct(s, onGo)}
                     justify="flex-start"
                     chromeless
                     icon={<SibIcon size={16} color={asColor(colorOf(s.id))} />}
@@ -407,6 +412,13 @@ function SidebarNav({
     onNavigate()
   }
   const open = (entry: CatalogEntry) => {
+    // An external launch tile opens its deployed app in a new tab (no route, no
+    // sub-nav to expand) — the ONE opener handles the kind; close the drawer after.
+    if (entry.kind === 'external') {
+      openProduct(entry, go)
+      onNavigate()
+      return
+    }
     setFilter('')
     setOpenId(entry.id)
     router.push(`/${entry.id}`)
