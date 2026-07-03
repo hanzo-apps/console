@@ -124,6 +124,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // through /cloud like the rest. One head per console page — Indexer / Oracles.
   'indexers',
   'oracles',
+  // Enablement registry USER surface (cloud clients/pricing): /v1/enablement[/optin|optout].
+  // Any authenticated user's effective feature/model view + self-service beta opt-in;
+  // the handler scopes to the SANITIZED caller org (X-Org-Id from the Bearer owner) and
+  // refuses a non-beta item, so it routes through /cloud like the rest (a cookie-only
+  // call 403s). Distinct from the global-admin /v1/admin/enablement (the aggregate proxy).
+  'enablement',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
