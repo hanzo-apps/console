@@ -255,6 +255,54 @@ const aiUsageOverview = (id: string, title: string, subtitle: string): LivingOve
     ),
 })
 
+/**
+ * The Open Edition (run-for-pay) living overview — the customer's view of what
+ * their open-source workloads cost. It reads the SAME real commerce usage ledger
+ * (`/billing/v1/usage`) as every other usage board, but scoped to the
+ * run-for-pay product tag (`metadata.product = 'open-edition'`) via the ledger's
+ * own client-side `product` filter — so the totals, spend-over-time, per-model
+ * spend, and activity are all the org's REAL open-edition charges, never a mock.
+ *
+ * `spendCents` here IS the served-revenue figure `R` the pricing spec produces
+ * (cost + 25% resell margin) and the settlement spec splits — the price already
+ * billed as a commerce `Withdraw`. An org with no open-edition workloads yet rolls
+ * up honest-empty (em-dashes + "no run-for-pay usage"), never a fabricated number.
+ * Canonical model: docs/architecture/run-for-pay-pricing.md (price) +
+ * run-for-pay-and-contributor-revenue.md (settlement).
+ */
+const openEditionOverview: LivingOverviewConfig = {
+  id: 'open-edition',
+  title: 'Open Edition',
+  subtitle: 'Run open-source workloads for pay — tokens run, spend billed (cost + 25%), and per-model usage for your org.',
+  live: { pollMs: 20000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'tokens', label: 'Tokens run', icon: Hash },
+      { tile: 'metric', key: 'requests', label: 'Requests', icon: Activity },
+      { tile: 'metric', key: 'spendCents', label: 'Spend billed', icon: DollarSign, unit: 'cents', caption: 'cost + 25% margin' },
+      { tile: 'metric', key: 'models', label: 'OSS models', icon: Layers },
+    ],
+    [
+      { tile: 'timeseries', key: 'spendCents', title: 'Spend over time', kind: 'bar', unit: 'cents' },
+      { tile: 'distribution', key: 'byModel', title: 'Spend by model', centerLabel: 'total', unit: 'cents' },
+    ],
+    [{ tile: 'activity', title: 'Recent run-for-pay usage', empty: 'No run-for-pay (open-edition) usage in this range yet.' }],
+  ],
+  // Same real ledger, scoped to the run-for-pay product tag client-side (never
+  // widens scope): a product with no attributed rows rolls up honest-empty.
+  load: async ({ range, allOrgs }) =>
+    fromCloudUsage(
+      await UsageApi.overview({
+        range: usageRange(range),
+        activityType: 'all',
+        activityLimit: 40,
+        topModels: 6,
+        allOrgs,
+        product: 'open-edition',
+      }),
+    ),
+}
+
 /** The Functions product living overview — real inventory + metrics. */
 const functionsOverview: LivingOverviewConfig = {
   id: 'functions',
@@ -331,6 +379,7 @@ export const LIVING_OVERVIEWS: Record<string, LivingOverviewConfig> = {
   'admin-business': adminBusinessOverview,
   finance: financeOverview,
   'ai-metrics': aiUsageOverview('ai-metrics', 'AI Metrics', 'Requests, tokens, spend, and per-model usage for your org.'),
+  'open-edition': openEditionOverview,
   functions: functionsOverview,
   gpus: computeOverview,
 }
