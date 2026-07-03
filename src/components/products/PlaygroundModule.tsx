@@ -18,20 +18,24 @@
 import { useState } from 'react'
 import type { ComponentType } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { MessageSquare, FileText, Binary, AudioLines, ScanEye } from '@hanzogui/lucide-icons-2'
+import { MessageSquare, FileText, Binary, AudioLines, ScanEye, Image as ImageIcon, Clapperboard } from '@hanzogui/lucide-icons-2'
 
 import { PageHeader } from '~/components/ui/PageHeader'
 import { ChatPlayground } from './playground/ChatPlayground'
 import { EmbeddingsPlayground } from './playground/EmbeddingsPlayground'
 import { AudioPlayground } from './playground/AudioPlayground'
+import { ImagePlayground } from './playground/ImagePlayground'
+import { VideoPlayground } from './playground/VideoPlayground'
 import { VisionPlayground } from './playground/VisionPlayground'
 
-type Tab = 'chat' | 'completions' | 'embeddings' | 'audio' | 'vision'
+type Tab = 'chat' | 'completions' | 'embeddings' | 'image' | 'video' | 'audio' | 'vision'
 
 const TABS: { id: Tab; label: string; Icon: ComponentType<{ size?: number }> }[] = [
   { id: 'chat', label: 'Chat', Icon: MessageSquare },
   { id: 'completions', label: 'Completions', Icon: FileText },
   { id: 'embeddings', label: 'Embeddings', Icon: Binary },
+  { id: 'image', label: 'Image', Icon: ImageIcon },
+  { id: 'video', label: 'Video', Icon: Clapperboard },
   { id: 'audio', label: 'Audio', Icon: AudioLines },
   { id: 'vision', label: 'Vision', Icon: ScanEye },
 ]
@@ -79,6 +83,10 @@ export function PlaygroundModule(_props: { params: Record<string, string> }) {
         <ChatPlayground key="chat" mode={tab} />
       ) : tab === 'embeddings' ? (
         <EmbeddingsPlayground />
+      ) : tab === 'image' ? (
+        <ImagePlayground />
+      ) : tab === 'video' ? (
+        <VideoPlayground />
       ) : tab === 'audio' ? (
         <AudioPlayground />
       ) : (
