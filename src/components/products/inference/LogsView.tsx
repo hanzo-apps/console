@@ -11,13 +11,15 @@
  */
 import { useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { FileText, RefreshCw } from '@hanzogui/lucide-icons-2'
+import { ChevronRight, FileText, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
+import { useDetailPane } from '~/components/DetailPane'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { useInferenceData } from './data'
 import { SectionCard, Segmented, StatusDot, type Option } from './parts'
+import { openLogDetail } from './panes'
 import { distinctLevels, distinctModels, logsFromRecords, type LogLine } from './logic'
 
 const LIMIT = 200
@@ -38,6 +40,7 @@ function LevelTag({ level }: { level: string }) {
 
 export function LogsView() {
   const { records, hasLedger, loading, reload } = useInferenceData()
+  const pane = useDetailPane()
   const [endpoint, setEndpoint] = useState('all')
   const [level, setLevel] = useState('all')
 
@@ -79,6 +82,7 @@ export function LogsView() {
         </Text>
       ),
     },
+    { key: 'open', header: '', width: 28, render: () => <ChevronRight size={15} color="$color9" /> },
   ]
 
   return (
@@ -109,7 +113,7 @@ export function LogsView() {
       ) : (
         <SectionCard
           title="Inference activity"
-          subtitle="Recorded requests from your organization's usage ledger. Full request/response logs stream from observability when connected."
+          subtitle="Recorded requests from your organization's usage ledger — select a row to see the full call detail. Full request/response text streams from observability when connected."
           actions={
             <XStack gap="$3" items="center" flexWrap="wrap">
               {endpointOpts.length > 1 ? <Segmented options={endpointOpts} value={endpoint} onChange={setEndpoint} /> : null}
@@ -117,7 +121,14 @@ export function LogsView() {
             </XStack>
           }
         >
-          <DataTable columns={columns} rows={rows} loading={loading} rowKey={(l) => l.id} empty="No inference activity in your organization yet." />
+          <DataTable
+            columns={columns}
+            rows={rows}
+            loading={loading}
+            rowKey={(l) => l.id}
+            onRowPress={(l) => openLogDetail(pane, { line: l })}
+            empty="No inference activity in your organization yet."
+          />
         </SectionCard>
       )}
     </YStack>
