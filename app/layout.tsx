@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const { brandName } = resolveConfig(host)
   return {
     title: `${brandName} Console`,
-    description: 'Unified admin console for Hanzo Cloud and all cloud products.',
+    description: 'Unified admin console for your cloud and all products.',
   }
 }
 
