@@ -45,6 +45,15 @@ export const CLOUD_HEADS: readonly string[] = [
   // call, so it routes through /cloud exactly like prompts/agents — the single `crm`
   // head admits every sub-path (summary, the three collections, their :id detail).
   'crm',
+  // Integrations (cloud clients/integrations): /v1/integrations[/:provider[/connect|
+  // /disconnect]]. The generic, provider-agnostic OAuth connector framework (Slack =
+  // reference impl, GitHub = registered seam). connect/list/disconnect resolve the org
+  // from the Bearer owner (principal.Tenant) and 403 a cookie-only call, so they route
+  // through /cloud exactly like crm/agents — the single `integrations` head admits the
+  // list + per-provider detail + the connect/disconnect POST actions. (The provider
+  // `callback` is Slack-initiated, state-authed, and hits cloud DIRECTLY at api.hanzo.ai
+  // — never through this proxy — so it is out of scope here.)
+  'integrations',
   // Unified analytics (cloud clients/analytics): /v1/analytics/{overview,timeseries,
   // realtime,top/*,llm/*}. Read-only per-org warehouse (datastore/ClickHouse); the
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only

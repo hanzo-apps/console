@@ -259,3 +259,13 @@ export {
   type LogRow,
   type TraceSpan,
 } from './apm'
+// Integrations connector framework. The value + its types are exported under
+// `Integration*`-prefixed names so the connector `Provider` never collides with the
+// AI-model `Provider` (from ./types). The pure normalizers stay importable directly
+// from './integrations' (the unit test uses that path).
+export { IntegrationsApi } from './integrations'
+export type {
+  Provider as IntegrationProvider,
+  Connection as IntegrationConnection,
+  ConnectResult as IntegrationConnectResult,
+} from './integrations'
