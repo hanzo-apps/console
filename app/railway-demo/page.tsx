@@ -1,9 +1,10 @@
 'use client'
 
 /**
- * TEMPORARY visual-proof page (not shipped) — renders the ProductLanding kit + the
- * RailwayDeploy pipeline in its lifecycle states OFFLINE (static status props, no
- * backend), so the design can be screenshotted from `next dev` without an auth session.
+ * Design-reference route — renders the ProductLanding kit + the RailwayDeploy pipeline
+ * in its lifecycle states OFFLINE (static status props, no backend, no auth), so the
+ * landing/pipeline design can be reviewed and screenshotted from `next dev` without a
+ * live session. Data-free by construction; not linked from the product nav.
  */
 import { Boxes, DollarSign, FileText, Gauge, Layers, Plus, Search, Sparkles } from '@hanzogui/lucide-icons-2'
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -52,7 +53,7 @@ function RailCard({ title, status }: { title: string; status: string }) {
 
 export default function RailwayDemoPage() {
   return (
-    <YStack gap="$6" p="$5" maxWidth={1180} self="center" width="100%">
+    <YStack gap="$6" p="$5" maxW={1180} self="center" width="100%">
       <Text fontSize="$9" fontWeight="900">RailwayDeploy pipeline</Text>
       <XStack gap="$4" flexWrap="wrap">
         <RailCard title="Building (in progress)" status="building" />
