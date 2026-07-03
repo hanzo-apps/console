@@ -125,6 +125,8 @@ export type VisorSize = {
   available: boolean
   priceHourly?: number
   priceMonthly?: number
+  /** Region slugs this size can launch in (from the catalog); `[]` when the upstream omits it. */
+  regions: string[]
 }
 /** One GPU machine size — the accelerator model/count + VRAM + real price. */
 export type VisorGpuSize = VisorSize & { model?: string; gpuCount?: number; vramGb?: number }
@@ -164,6 +166,7 @@ export function normalizeRegion(raw: unknown): VisorRegion {
 
 export function normalizeSize(raw: unknown): VisorSize {
   const r = rec(raw)
+  const regions = Array.isArray(r.regions) ? (r.regions as unknown[]).filter((x): x is string => typeof x === 'string') : []
   return {
     slug: str(r.slug) ?? str(r.id) ?? '—',
     vcpus: num(r.vcpus) ?? num(r.vcpu) ?? num(r.cpu),
@@ -172,6 +175,7 @@ export function normalizeSize(raw: unknown): VisorSize {
     available: bool(r.available),
     priceHourly: num(r.priceHourly) ?? num(r.hourly),
     priceMonthly: num(r.priceMonthly) ?? num(r.monthly),
+    regions,
   }
 }
 
@@ -186,6 +190,21 @@ export function normalizeGpuSize(raw: unknown): VisorGpuSize {
     gpuCount: num(gpu.count),
     vramGb: vram != null ? (unit.startsWith('m') ? Math.round(vram / 1024) : vram) : undefined,
   }
+}
+
+/**
+ * Filter a size catalog by a free-text query (matched against the slug) AND an
+ * optional region slug. A size is kept when it lists that region — OR when its
+ * region list is empty/unknown (never hide a launchable size just because the
+ * catalog didn't report its regions). Pure; the launch surfaces + tests share it.
+ */
+export function filterSizes<T extends VisorSize>(sizes: T[], query: string, region?: string): T[] {
+  const q = query.trim().toLowerCase()
+  return sizes.filter((s) => {
+    if (q && !s.slug.toLowerCase().includes(q)) return false
+    if (region && s.regions.length > 0 && !s.regions.includes(region)) return false
+    return true
+  })
 }
 
 /** What the user launches — a size/GPU slug in a region, with a name. */
