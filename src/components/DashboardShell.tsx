@@ -76,7 +76,6 @@ import { productSubpages, subpageWired } from '~/lib/products/match'
 import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
 import { usePins, useProductColors } from '~/lib/products/pins'
-import { categoryColorHex } from '~/lib/products/colors'
 import { categoryIsOpen, toggleCategory, NAV_OPEN_PREF, EMPTY_OPEN, type CategoryOpen } from '~/lib/products/nav-accordion'
 import { usePreferences } from '~/lib/products/preferences'
 import { useSession } from '~/lib/auth/session'
@@ -98,6 +97,9 @@ import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 
 const EXPANDED_W = 264
 const COLLAPSED_W = 64
+/** Content column cap — wide desktops read comfortably (generous gutters) instead of
+ *  stretching full-bleed; narrower viewports fall back to full width. */
+const CONTENT_MAX = 1680
 /** Collapsed-rail icon size — large enough to be a comfortable hit target. */
 const ICON = 20
 
@@ -193,7 +195,7 @@ function FixedRow({
   return (
     <Button
       onPress={onPress}
-      bg={active ? '$color5' : 'transparent'}
+      bg={active ? '$color4' : 'transparent'}
       style={accentBarStyle(!!active, accent)}
       justify={collapsed ? 'center' : 'flex-start'}
       px={collapsed ? '$0' : '$2.5'}
@@ -235,7 +237,7 @@ function NavRow({
     return (
       <Button
         onPress={onOpen}
-        bg={active ? '$color5' : 'transparent'}
+        bg={active ? '$color4' : 'transparent'}
         style={accentBarStyle(active, accent)}
         justify="center"
         px="$0"
@@ -256,7 +258,7 @@ function NavRow({
       <Button
         flex={1}
         onPress={onOpen}
-        bg={active ? '$color5' : 'transparent'}
+        bg={active ? '$color4' : 'transparent'}
         style={accentBarStyle(active, accent)}
         justify="flex-start"
         icon={<ProductIcon icon={Icon} color={color} size={18} />}
@@ -322,7 +324,7 @@ function Level2Nav({
       <XStack items="center" gap="$1" height={30}>
         <Button size="$2" chromeless icon={<ArrowLeft size={18} />} onPress={onBack} aria-label="Back to products" />
         <XStack onPress={onBack} cursor="pointer" items="center" hoverStyle={{ opacity: 0.7 }}>
-          <Text fontSize="$1" color={asColor(categoryColorHex(entry.category))} fontWeight="800" textTransform="uppercase" letterSpacing={0.4}>
+          <Text fontSize="$1" color="$color10" fontWeight="800" textTransform="uppercase" letterSpacing={0.4}>
             {entry.category}
           </Text>
         </XStack>
@@ -344,7 +346,7 @@ function Level2Nav({
               <Button
                 key={sp.slug || 'overview'}
                 onPress={() => onGo(sp.slug ? `/${entry.id}/${sp.slug}` : `/${entry.id}`)}
-                bg={active ? '$color5' : 'transparent'}
+                bg={active ? '$color4' : 'transparent'}
                 justify="flex-start"
                 icon={<SubIcon size={17} />}
                 iconAfter={!wired ? <Circle size={7} opacity={0.5} /> : undefined}
@@ -420,14 +422,14 @@ function CategorySection({
   children: ReactNode
 }) {
   const sectionId = `nav-cat-${categorySlug(category)}`
-  const tint = asColor(categoryColorHex(category))
   return (
-    <YStack gap="$1">
+    <YStack gap="$1.5">
       <Button
         chromeless
         size="$2"
-        height={30}
-        px="$2"
+        height={34}
+        px="$2.5"
+        rounded="$3"
         justify="flex-start"
         onPress={onToggle}
         hoverStyle={{ bg: '$color3' }}
@@ -436,17 +438,18 @@ function CategorySection({
         aria-controls={sectionId}
         aria-label={`${category}, ${open ? 'collapse' : 'expand'} section, ${count} items`}
       >
-        <XStack flex={1} items="center" gap="$1.5">
+        <XStack flex={1} items="center" gap="$2">
           {/* The OBVIOUS clicker — a chevron that rotates ▸→▾ on expand. Wrapped in a
               plain span so the CSS transition (`.hz-chevron`) applies (the Gui icon
-              takes style props, not className). */}
+              takes style props, not className). Calm, neutral tint — the section header
+              is quiet gray (Linear-style); per-product COLOR lives on the icons within. */}
           <span
             className="hz-chevron"
             style={{ display: 'inline-flex', transform: open ? 'rotate(90deg)' : undefined }}
           >
-            <ChevronRight size={13} color={tint} />
+            <ChevronRight size={13} color="$color8" />
           </span>
-          <Text fontSize="$1" color={tint} fontWeight="700" textTransform="uppercase" letterSpacing={0.3}>
+          <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
             {category}
           </Text>
           <XStack flex={1} />
@@ -457,7 +460,7 @@ function CategorySection({
       </Button>
       <div className="hz-acc" data-open={open ? 'true' : 'false'} id={sectionId} inert={!open}>
         <div className="hz-acc-inner">
-          <YStack gap="$1" pb="$1">
+          <YStack gap="$1.5" pb="$2">
             {children}
           </YStack>
         </div>
@@ -607,7 +610,7 @@ function SidebarNav({
                 <Button
                   key={sp.slug || 'overview'}
                   onPress={() => go(sp.slug ? `/${BILLING_CENTER_ID}/${sp.slug}` : `/${BILLING_CENTER_ID}`)}
-                  bg={active ? '$color5' : 'transparent'}
+                  bg={active ? '$color4' : 'transparent'}
                   justify={collapsed ? 'center' : 'flex-start'}
                   px={collapsed ? '$0' : '$2.5'}
                   height={collapsed ? 44 : undefined}
@@ -640,7 +643,7 @@ function SidebarNav({
           />
         </YStack>
         <ScrollView flex={1}>
-          <YStack gap="$3">
+          <YStack gap="$3.5">
             <YStack gap="$1">
               <FixedRow icon={House} label="Overview" active={pathname === '/'} collapsed onPress={() => go('/')} />
               <FixedRow icon={BookOpen} label="Docs" external collapsed onPress={openDocs} />
@@ -739,7 +742,7 @@ function SidebarNav({
           aria-hidden={showLevel2}
         >
           <ScrollView flex={1}>
-            <YStack gap="$3">
+            <YStack gap="$3.5">
               {!filtering ? (
                 <YStack gap="$1">
                   <FixedRow icon={House} label="Overview" active={pathname === '/'} collapsed={false} onPress={() => go('/')} />
@@ -924,8 +927,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         display="none"
         $lg={{ display: 'flex' }}
         width={collapsed ? COLLAPSED_W : EXPANDED_W}
-        p="$3"
-        gap="$2"
+        p={collapsed ? '$2' : '$3.5'}
+        gap="$2.5"
         borderRightWidth={1}
         borderColor="$borderColor"
         bg="$color1"
@@ -944,6 +947,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           items="center"
           gap="$2"
           $md={{ px: '$4', gap: '$3' }}
+          $xl={{ px: '$6' }}
           borderBottomWidth={1}
           borderColor="$borderColor"
         >
@@ -1007,15 +1011,24 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </XStack>
 
         {pathname !== '/' ? (
-          <XStack px="$3" $md={{ px: '$4' }} py="$2.5" borderBottomWidth={1} borderColor="$borderColor">
-            <Breadcrumbs />
+          // Full-width divider; the breadcrumb content aligns to the same centered
+          // max-width column as the page body (tidy on big-desktop, no drift).
+          <XStack borderBottomWidth={1} borderColor="$borderColor" justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
+            <XStack width="100%" maxW={CONTENT_MAX} py="$2.5">
+              <Breadcrumbs />
+            </XStack>
           </XStack>
         ) : null}
 
+        {/* Content — a centered, capped column so wide desktops read comfortably
+            (generous gutters, not stretched full-bleed) while narrow viewports use
+            the full width. Padding + section rhythm scale up at xl. */}
         <ScrollView flex={1}>
-          <YStack flex={1} p="$3" $md={{ p: '$4' }} gap="$4">
-            {children}
-          </YStack>
+          <XStack justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
+            <YStack width="100%" maxW={CONTENT_MAX} py="$3" $md={{ py: '$4' }} $xl={{ py: '$5', gap: '$5' }} gap="$4">
+              {children}
+            </YStack>
+          </XStack>
         </ScrollView>
       </YStack>
 
