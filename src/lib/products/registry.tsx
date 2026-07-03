@@ -1385,11 +1385,12 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AiMetricsLiving }],
   },
   {
-    // Native Analytics — per-org web + commerce + LLM analytics over the unified
+    // Native Analytics — per-org LLM + web + commerce analytics over the unified
     // ClickHouse warehouse (datastore), read through cloud-api /v1/analytics/* via
-    // the /cloud bearer proxy. Overview (hanzo.events + events_daily), Real-Time,
-    // and LLM (hanzo.cloud_usage) tabs — every metric a real query, honest-empty
-    // otherwise. See universe/docs/architecture/unified-analytics.md.
+    // the /cloud bearer proxy (the FOUR real routes: overview/timeseries/top/health).
+    // Overview (LLM lens REAL from hanzo.cloud_usage; web/commerce honest-empty until
+    // the events collector emits) + LLM (top models) — every metric a real query,
+    // never fabricated. See universe/docs/architecture/unified-analytics.md.
     id: 'analytics',
     label: 'Analytics',
     icon: BarChart3,
@@ -1403,10 +1404,7 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: AnalyticsModule },
       { path: ':tab', component: AnalyticsModule },
     ],
-    subpages: [
-      { slug: 'realtime', label: 'Real-Time' },
-      { slug: 'llm', label: 'LLM' },
-    ],
+    subpages: [{ slug: 'llm', label: 'LLM' }],
   },
   {
     id: 'dashboards',
@@ -1760,36 +1758,54 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
-    // Content — surfaces the REAL, live Content Studio (Payload headless CMS at
-    // cms.<brand>, confirmed live at cms.hanzo.ai/admin). IAM-SSO; white-label host.
-    // No fabricated rows — an honest in-console home that opens the Studio.
+    // Content — the Payload headless CMS (cms.<brand>, live at cms.hanzo.ai/admin)
+    // surfaced NATIVELY: Collections + Media/DAM are read live over Payload's REST API
+    // via the /cms user-bearer proxy (per-org, tenant-isolated by the owner claim), and
+    // the Studio tab EMBEDS the real admin (SSO iframe) for the owning brand org. No
+    // fabricated rows — real per-org content, honest-empty, or the shared state card.
     id: 'cms',
     label: 'Content',
     icon: FileText,
-    description: 'Headless CMS — pages, posts, and media in your Content Studio, with IAM SSO.',
+    description: 'Headless CMS — pages, media, and the full Studio, per org, with IAM SSO.',
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/cms',
     docs: `${DOCS}/cms`,
     kind: 'module',
-    routes: [{ path: '', component: CmsModule }],
+    routes: [
+      { path: '', component: CmsModule },
+      { path: ':tab', component: CmsModule },
+    ],
+    subpages: [
+      { slug: 'media', label: 'Media' },
+      { slug: 'studio', label: 'Studio' },
+    ],
   },
   {
-    // ERP — accounting, inventory, sales, and HR on the canonical ERPNext (Frappe)
-    // backend, surfaced IN the console (ErpModule). No ERP instance is provisioned
-    // yet (erp.<brand> is 502), so the module probes reachability and shows an
-    // HONEST "Deploy ERP" panel with a real provisioning request; the SAME gate
-    // embeds the real desk once an instance is live. Never fabricated ERP data.
+    // ERP — the canonical ERPNext (Frappe) suite surfaced IN the console (ErpModule),
+    // entitlement-gated to the owning brand org (Frappe is single-tenant). Overview
+    // drives a REAL /v1/platform deploy with live status; Accounting/Items/Sales are
+    // NATIVE summary views over Frappe REST (honest "deploy ERP" until an instance is
+    // live); Desk embeds the real desk once erp.<brand> is reachable. Never fabricated.
     id: 'erp',
     label: 'ERP',
     icon: Boxes,
-    description: 'Accounting, inventory, and HR — your Business-OS ERP.',
+    description: 'Accounting, inventory, sales, and HR — your Business-OS ERP on ERPNext.',
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/erp',
     docs: `${DOCS}/erp`,
     kind: 'module',
-    routes: [{ path: '', component: ErpModule }],
+    routes: [
+      { path: '', component: ErpModule },
+      { path: ':tab', component: ErpModule },
+    ],
+    subpages: [
+      { slug: 'accounting', label: 'Accounting' },
+      { slug: 'items', label: 'Items' },
+      { slug: 'sales', label: 'Sales Orders' },
+      { slug: 'desk', label: 'Desk' },
+    ],
   },
   {
     // Help Center — the live Hanzo Help Center (Frappe Helpdesk at help.<brand>,

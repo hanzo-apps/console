@@ -142,6 +142,42 @@ export function allowCommerceSurface(path: string): boolean {
   return head != null && COMMERCE_HEADS.includes(head)
 }
 
+/**
+ * Payload CMS (`cms.<brand>`) READ surfaces reachable through `/cms` as the signed-in
+ * user. The console forwards the caller's own IAM Bearer; Payload's `hanzoIAMStrategy`
+ * verifies it (JWKS, issuer hanzo.id) and its multi-tenant plugin scopes `pages`/`media`
+ * to the token's `owner` claim — so a merchant only ever reads their OWN org's content
+ * (isolation is BACKEND-enforced, per-tenant). This list is the defense-in-depth
+ * boundary: it admits ONLY the two tenant-scoped collections (list) + the per-file media
+ * bytes route, and DELIBERATELY refuses `api/users` and `api/tenants` — the two Payload
+ * collections that are auth-gated but NOT tenant-row-scoped (listing them would leak the
+ * cross-org user/tenant registry). Read-only by construction; the module never mutates.
+ */
+const CMS_MEDIA_FILE = /^api\/media\/file\/[^/]+$/
+export function allowCmsSurface(path: string): boolean {
+  const rel = path.replace(/^\/+/, '')
+  if (rel === 'api/pages') return true // Collections list (tenant-scoped)
+  if (rel === 'api/media') return true // Media/DAM list (tenant-scoped)
+  if (CMS_MEDIA_FILE.test(rel)) return true // media bytes (tenant-scoped by Payload)
+  return false
+}
+
+/**
+ * Frappe/ERPNext (`erp.<brand>`) READ surface reachable through `/erp`. ERP is a SINGLE
+ * shared per-brand Frappe instance (NOT per-org row-scoped), so the `/erp` route also
+ * entitlement-gates to the owning brand org / a global admin — this list is the path
+ * least-privilege boundary on top of that: it admits ONLY Frappe's `GET
+ * /api/resource/<DocType>` list reads (the Accounting/Items/Sales summaries), never a
+ * single-doc mutate, a `/api/method/*` whitelisted method (arbitrary server call), the
+ * desk, or login. Read-only by construction. A DocType with a space ("Sales Order") is
+ * one clean path segment; `bearer-proxy`'s `pathIsClean` still rejects dot-segments.
+ */
+const ERP_RESOURCE = /^api\/resource\/[^/]+$/
+export function allowErpSurface(path: string): boolean {
+  const rel = path.replace(/^\/+/, '')
+  return ERP_RESOURCE.test(rel)
+}
+
 /** Matches exactly `v1/collections/<name>/records` and `.../records/<id>` (one clean
  *  segment each — `bearer-proxy` has already rejected empty/dot/encoded segments). */
 const BASE_RECORDS = /^v1\/collections\/[^/]+\/records(?:\/[^/]+)?$/

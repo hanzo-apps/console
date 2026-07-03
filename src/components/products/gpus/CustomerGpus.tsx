@@ -178,7 +178,14 @@ export function CustomerGpus() {
       {header}
 
       <XStack flexWrap="wrap" gap="$3" items="stretch">
-        <StatCard label="GPU types" value={String(models)} sub="available to launch" />
+        {/* Count the launchable CONFIGS (= the GPU catalog table + the Launch drawer),
+            with the distinct-model count in the sub — both real, from the one live visor
+            catalog, so the KPI, the catalog table, and the drawer all agree. */}
+        <StatCard
+          label="Accelerators"
+          value={String(available.length)}
+          sub={models ? `${models} GPU model${models === 1 ? '' : 's'} · available to launch` : 'available to launch'}
+        />
         <StatCard label="From" value={cheapest != null ? fmtHourly(cheapest) : DASH} sub="cheapest accelerator" />
         <StatCard label="Your GPU machines" value={String(machines.length)} sub={machines.length ? 'running' : 'none yet'} />
       </XStack>
