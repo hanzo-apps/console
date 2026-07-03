@@ -1470,7 +1470,32 @@ noun was wrong: bots and machines are distinct compute kinds, not one "fleet").
   the honest empty state today (no emitter). Not merged to main / no version bump — the
   merge/release step bumps `package.json` + tags the image.
 
-## Native ERP / CMS / Analytics + real Commerce over canonical backends (v8.4.32)
+## Native ERP / CMS / Analytics + real Commerce + resilient fetch (v8.4.33)
+
+(v8.4.32 built the native-apps set below off b647d98; v8.4.33 is the deployed superset —
+same native apps PLUS the shared-fetch transient-retry, one build.)
+
+- **Resilient shared fetch — backend rolls are INVISIBLE to customers.** Root cause of a
+  real "Could not load — Upstream service is unavailable" (Dave/maxpower on the Models
+  catalog): cloud is single-replica `Recreate`, so a deploy-roll has a brief downtime
+  window; a read that lands in it got a 502/503/504 and the console dumped the user on a
+  scary manual-Retry card. Fixed in the ONE shared fetch (`client.ts` `authedFetch` →
+  the pure, injectable `resilientFetch`) that BOTH the casibase-envelope (`request`) and
+  plain-REST (`restRequest`) paths flow through — so it covers EVERY client fetch (Models,
+  Overview, Billing, CRM, CMS, ERP, commerce, analytics, agents, prompts, …). A TRANSIENT
+  upstream error (502/503/504 or a network connection error) on an IDEMPOTENT read
+  (GET/HEAD) auto-retries with a short exponential backoff (`RETRY_BACKOFF_MS`
+  300→900→2000ms, up to 3 retries) BEFORE surfacing the honest "Could not load" card — so
+  a momentary roll self-heals and the card shows ONLY on a persistent outage. A genuine
+  4xx (401/403/404/402) is NOT retried (honest state immediately, per the existing
+  mapping); a MUTATION (POST/PUT/PATCH/DELETE) is NOT auto-retried (a 5xx'd write may have
+  applied — re-sending could double-create; the user retries manually); a caller-aborted
+  request is honored, never retried. The 401 silent-refresh (v8.4.29) is preserved as the
+  second orthogonal resilience, guarded against a refresh loop. +13 tests
+  (`client-retry.test.ts`): the exact Models-catalog 503→200 self-heal, budget-exhaust →
+  honest error, network-retry, 4xx/mutation no-retry, abort honored, 401 refresh no-loop.
+
+## Native ERP / CMS / Analytics + real Commerce over canonical backends (v8.4.32 → shipped in v8.4.33)
 
 Maximize NATIVE app coverage in the console — get ERP, Content (CMS), Analytics, and
 Commerce to the same "native-in-console, per-org, one canonical way" bar CRM already
