@@ -15,7 +15,7 @@ import type { CatalogEntry } from '~/lib/products/registry'
 const entry = (id: string, label: string): CatalogEntry =>
   ({ id, label, description: '', category: 'AI', status: 'enabled', kind: 'module', routes: [] }) as unknown as CatalogEntry
 
-describe('metricsProductFilter', () => {
+describe('metricsProductFilter (thin accessor over the ONE scope decision)', () => {
   it('raw model-serving surfaces read the WHOLE inference ledger (null filter)', () => {
     for (const id of ['inference', 'models', 'api', 'gateway']) {
       expect(metricsProductFilter(id)).toBeNull()
@@ -34,10 +34,17 @@ describe('productMetricsConfig', () => {
     const cfg = productMetricsConfig(entry('agents', 'Agents'))
     expect(cfg.id).toBe('metrics:agents')
     expect(cfg.title).toBe('Metrics')
-    expect(cfg.subtitle).toContain('Agents')
+    // A product-scoped surface is framed as "attributed to <label>".
+    expect(cfg.subtitle).toContain('attributed to Agents')
     // 4 KPI tiles: requests, tokens, spend, P95 latency
     expect(cfg.rows[0].map((t) => (t.tile === 'metric' ? t.key : t.tile))).toEqual(['requests', 'tokens', 'spendCents', 'latencyP95'])
     // 3 breakdowns: top-models-by-tokens, requests-by-status, spend-by-model
     expect(cfg.rows[2].map((t) => (t.tile === 'distribution' ? t.key : t.tile))).toEqual(['byModelTokens', 'byStatus', 'byModel'])
+  })
+
+  it('frames a raw model-serving surface honestly as org-wide inference (not a fabricated slice)', () => {
+    const cfg = productMetricsConfig(entry('gateway', 'Gateway'))
+    expect(cfg.subtitle).toContain('Org-wide inference')
+    expect(cfg.subtitle).toContain('Gateway')
   })
 })
