@@ -84,6 +84,41 @@ body {
   }
 }
 
+/* Sidebar category accordion — a collapsible level-1 section. The body animates
+   its HEIGHT via grid-template-rows 0fr↔1fr (no magic max-height — the row
+   resolves to the real content height) plus a short opacity fade; the header
+   chevron rotates ▸→▾. Collapsed content stays in the DOM (so both directions
+   animate) but is `inert` (out of tab order + a11y tree). One place defines the
+   easing; the shell toggles `data-open`. */
+.hz-acc {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hz-acc[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+.hz-acc-inner {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+.hz-acc[data-open='true'] .hz-acc-inner {
+  opacity: 1;
+}
+.hz-chevron {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hz-acc,
+  .hz-acc-inner,
+  .hz-chevron {
+    transition: none;
+  }
+}
+
 /* LivingOverview motion — the "videogame-like" living dashboard. The count-up +
    live sparkline are driven in JS (rAF, gated by prefers-reduced-motion in the
    hooks); these are the pure-CSS bits: a loading shimmer, a live-feed pulse, and
