@@ -2,40 +2,40 @@
  * Console OAuth session — THE ONE durable, refreshable token manager (server-only).
  *
  * WHY. The console's signed-in identity historically rested SOLELY on the cloud
- * casibase session cookie (`cloud_session_id`). That cookie is authoritative for
- * the casibase admin surfaces (providers/models/stores/chat/…), but it is a
- * *session* cookie the console does not own and cannot refresh — so it can lapse
- * out from under a working tab (browser-session end, an anonymous-session clobber,
- * or a shortened backend TTL) and bounce the user to /signin mid-task. There was
- * no `grant_type=refresh_token` anywhere in the console: nothing kept a token warm.
+ * casibase session cookie (`cloud_session_id`) — a session the console does not own
+ * and cannot refresh, so it can lapse out from under a working tab and bounce the
+ * user to /signin mid-task. There was no `grant_type=refresh_token` anywhere: nothing
+ * kept a token warm.
  *
  * THE FIX (this module). On login the console ALSO obtains its OWN OAuth token set
- * for the signed-in user — a first-party confidential-client (`hanzo-console`)
- * grant WITH `offline_access`, so IAM returns an access token AND a rotating,
- * revocable refresh token. Both are sealed (AES-256-GCM) into ONE httpOnly cookie
- * the console owns (`hz_session`), NEVER exposed to the browser JS and NEVER put in
- * a URL. This session is the PREFERRED identity source for the AuthGate (via
- * /auth/session) and the /cloud bearer-proxy (via resolveUser), and it is silently
- * refreshed (proactively before expiry + reactively on a 401) via
- * `grant_type=refresh_token`. The casibase cookie stays exactly as-is underneath —
- * it keeps authorizing the admin surfaces and is the graceful FALLBACK when no
- * console session is present (social/MFA logins). Nothing regresses; the user is
- * never bounced while a valid refresh token (or the casibase session) exists.
+ * for the signed-in user — a first-party confidential-client (`hanzo-console`) grant
+ * WITH `offline_access`, so IAM returns an access token AND a rotating, revocable
+ * refresh token. This is the PREFERRED identity source for the AuthGate (via
+ * /auth/session) and the /cloud bearer-proxy (via resolveUser), silently refreshed
+ * (proactively before expiry + reactively on a 401) via `grant_type=refresh_token`.
+ * The casibase cookie stays exactly as-is underneath as the graceful FALLBACK.
  *
- * SECURITY POSTURE (unchanged, hardened).
- *   - The refresh token NEVER reaches the browser: it lives only inside the sealed
- *     httpOnly cookie and is read only by these server routes. The refresh call is
- *     server-side (BFF), exactly as required.
- *   - The seal is authenticated (AES-256-GCM): a browser cannot forge or read the
- *     cookie's contents, so the access token inside it is trustworthy without a
- *     second JWKS round-trip — the AEAD seal IS the trust boundary. We still honor
- *     the token's own `exp` (a stale access token is treated as absent → refresh).
- *   - The IAM access token is an opaque, sensitive credential (Casdoor packs the
- *     whole user object — including secret material — into its JWT). It is NEVER
- *     logged, NEVER returned to the client, and only the display/authorization
- *     claims are read out of it.
- *   - Rotation-aware: IAM rotates the refresh token on every refresh (one-time
- *     use). We always persist the NEW refresh token; a replay of the old one 400s.
+ * TWO COOKIES, by necessity (Casdoor tokens are ~3.6 KB full-user JWTs):
+ *   - `hz_session` (Path=/, ~1 KB): the SEALED IDENTITY — {access-token expiry +
+ *     the small projected claims the console reads}. resolveUser + every BFF proxy +
+ *     /auth/session GET read this; it is small, so it rides every request with no
+ *     header bloat and never trips a gateway header limit.
+ *   - `hz_rt` (Path=/auth, chunked hz_rt0/hz_rt1/…): the SEALED REFRESH TOKEN. Scoped
+ *     to /auth so the big blob is sent ONLY to /auth/refresh|session (never to /v1 or
+ *     the BFF), and chunked because a sealed 3.6 KB token exceeds the browser 4 KB
+ *     per-cookie cap. Both are sealed (AES-256-GCM) — a browser can neither read them
+ *     (httpOnly) nor forge/inject them (AEAD), so a forged refresh cookie is refused.
+ *
+ * SECURITY POSTURE.
+ *   - The refresh token NEVER reaches the browser's JS (httpOnly) and the refresh call
+ *     is server-side (BFF). Sealed at rest in the cookie; rotation-aware (IAM rotates
+ *     the refresh token one-time-use — we always persist the NEW one; a replay 400s).
+ *   - The IAM access token (a Casdoor JWT that packs secret material — password hash,
+ *     TOTP secret) is NEVER stored in a cookie, NEVER logged, NEVER returned to the
+ *     client: `sealSession` projects it to the small display/authz claim set and
+ *     discards the raw token.
+ *   - The AEAD seal IS the integrity anchor: the sealed identity's claims are
+ *     trustworthy without a JWKS round-trip (only `exp` is re-checked).
  */
 // Server-only by construction: `node:crypto` + `next/server` cannot be bundled into a
 // client chunk, so this module (and the tokens it seals) never reaches the browser.
@@ -61,10 +61,18 @@ const SCOPE = 'openid profile email offline_access'
 /** True when the confidential client is wired (routes 501/skip cleanly otherwise). */
 export const sessionConfigured = (): boolean => Boolean(CLIENT_ID && CLIENT_SECRET)
 
-// ── Cookie ────────────────────────────────────────────────────────────────────
+// ── Cookies ─────────────────────────────────────────────────────────────────────
 
-/** The console session cookie name (distinct from casibase's `cloud_session_id`). */
+/** Small sealed IDENTITY cookie (Path=/, read by resolveUser + every BFF proxy). */
 export const SESSION_COOKIE = 'hz_session'
+/** Sealed REFRESH-token cookie family (Path=/auth, chunked). */
+export const REFRESH_COOKIE = 'hz_rt'
+/** The refresh cookie is scoped here so the big blob rides ONLY the /auth routes. */
+const REFRESH_PATH = '/auth'
+/** Max refresh chunks we ever write/read/clear. 4 × ~3.6 KB ≫ any real token. */
+const MAX_REFRESH_CHUNKS = 4
+/** Value bytes per chunk — comfortably under the browser ~4 KB per-cookie cap. */
+const CHUNK_BYTES = 3600
 /** Persist for the refresh-token lifetime (IAM: 30 days) so the session survives a
  *  browser restart — a *persistent* cookie, unlike the session-scoped casibase one. */
 const COOKIE_MAX_AGE_S = 30 * 24 * 60 * 60
@@ -79,20 +87,41 @@ export type CookieDirective = {
   maxAge: number
 }
 
-const baseCookie = (value: string, maxAge: number): CookieDirective => ({
-  name: SESSION_COOKIE,
+const cookie = (name: string, value: string, path: string, maxAge: number): CookieDirective => ({
+  name,
   value,
   httpOnly: true,
   secure: true,
   sameSite: 'lax',
-  path: '/',
+  path,
   maxAge,
 })
 
-/** The Set-Cookie directive that stores a sealed session. */
-export const sessionCookie = (sealed: string): CookieDirective => baseCookie(sealed, COOKIE_MAX_AGE_S)
-/** The Set-Cookie directive that clears the session (maxAge 0, empty value). */
-export const clearSessionCookie = (): CookieDirective => baseCookie('', 0)
+/** Split a sealed string into ≤CHUNK_BYTES pieces (Casdoor tokens exceed one cookie). */
+function chunk(s: string): string[] {
+  const out: string[] = []
+  for (let i = 0; i < s.length; i += CHUNK_BYTES) out.push(s.slice(i, i + CHUNK_BYTES))
+  return out.length ? out : ['']
+}
+
+/** The Set-Cookie directives that store an identity + a (chunked) refresh token. */
+export function setCookies(sealedIdentity: string, sealedRefresh: string): CookieDirective[] {
+  const parts = chunk(sealedRefresh)
+  const dirs: CookieDirective[] = [cookie(SESSION_COOKIE, sealedIdentity, '/', COOKIE_MAX_AGE_S)]
+  for (let i = 0; i < MAX_REFRESH_CHUNKS; i++) {
+    // Write present chunks; blank+expire any stale higher chunk from a prior larger token.
+    const present = i < parts.length
+    dirs.push(cookie(`${REFRESH_COOKIE}${i}`, present ? parts[i] : '', REFRESH_PATH, present ? COOKIE_MAX_AGE_S : 0))
+  }
+  return dirs
+}
+
+/** The Set-Cookie directives that CLEAR every session cookie (sign-out). */
+export function clearCookies(): CookieDirective[] {
+  const dirs: CookieDirective[] = [cookie(SESSION_COOKIE, '', '/', 0)]
+  for (let i = 0; i < MAX_REFRESH_CHUNKS; i++) dirs.push(cookie(`${REFRESH_COOKIE}${i}`, '', REFRESH_PATH, 0))
+  return dirs
+}
 
 // ── AEAD seal (AES-256-GCM) ─────────────────────────────────────────────────────
 
@@ -109,40 +138,25 @@ function sealKey(): Buffer {
   // misconfigured deploy) fall back to a per-PROCESS random key, NEVER a hardcoded
   // constant: a known key would let a browser forge a session blob. A random key is
   // unforgeable and, since establishment is also gated on `sessionConfigured()`, the
-  // feature is simply inert there — no console session is created OR trusted. When the
-  // secret IS present, HKDF derives a stable key shared across replicas.
+  // feature is simply inert there. When the secret IS present, HKDF derives a stable
+  // key shared across replicas.
   cachedKey = ikm
     ? Buffer.from(hkdfSync('sha256', Buffer.from(ikm), Buffer.alloc(0), Buffer.from('hz-console-session-v1'), 32))
     : randomBytes(32)
   return cachedKey
 }
 
-/** What we persist in the cookie. Deliberately NOT the raw access token: a Casdoor
- *  access JWT packs the WHOLE user object (~5-10 KB — password hash, TOTP secret,
- *  every profile/social field), which blows past the browser's ~4 KB per-cookie limit
- *  AND needlessly seals secret material. Instead we seal the rotating refresh token,
- *  the access expiry, and the SMALL projected claims (`accessClaims`) the console
- *  actually reads — a compact, bounded cookie (~1 KB) that a browser accepts. */
-export type SealedSession = {
-  /** IAM refresh token (rotating, one-time-use). */
-  r: string
-  /** access_token expiry, ms epoch (when to refresh). */
-  e: number
-  /** Projected identity/authz claims (display fields only; never secret material). */
-  c: ConsoleClaims
-}
-
-/** Seal a session into a compact base64url(iv|tag|ciphertext) string. */
-export function seal(s: SealedSession): string {
+/** Seal a JSON-serializable value into a compact base64url(iv|tag|ciphertext) string. */
+export function seal(value: unknown): string {
   const iv = randomBytes(12)
   const cipher = createCipheriv('aes-256-gcm', sealKey(), iv)
-  const ct = Buffer.concat([cipher.update(JSON.stringify(s), 'utf8'), cipher.final()])
+  const ct = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()])
   const tag = cipher.getAuthTag()
   return Buffer.concat([iv, tag, ct]).toString('base64url')
 }
 
 /** Open a sealed string; null on any tamper/format/decrypt failure (fail-closed). */
-export function open(sealed: string | undefined | null): SealedSession | null {
+export function open<T>(sealed: string | undefined | null): T | null {
   if (!sealed) return null
   let raw: Buffer
   try {
@@ -158,23 +172,16 @@ export function open(sealed: string | undefined | null): SealedSession | null {
     const decipher = createDecipheriv('aes-256-gcm', sealKey(), iv)
     decipher.setAuthTag(tag)
     const pt = Buffer.concat([decipher.update(ct), decipher.final()]).toString('utf8')
-    const obj = JSON.parse(pt) as SealedSession
-    if (typeof obj?.r !== 'string' || typeof obj?.e !== 'number' || !obj?.c || typeof obj.c !== 'object') return null
-    return obj
+    return JSON.parse(pt) as T
   } catch {
     return null
   }
 }
 
-/** Read + open the console session from a request's cookies (null when absent/invalid). */
-export function readConsoleSession(req: NextRequest): SealedSession | null {
-  return open(req.cookies.get(SESSION_COOKIE)?.value)
-}
-
-// ── Access-token claims (AEAD-trusted; only `exp` is re-checked) ─────────────────
+// ── Identity + refresh (what the cookies carry) ──────────────────────────────────
 
 /** The console-JWT claims the console reads. Casdoor packs the full user object; we
- *  extract ONLY display/authorization fields — never the secret material it also carries. */
+ *  extract ONLY display/authz fields — never the secret material it also carries. */
 export type ConsoleClaims = {
   owner?: string
   name?: string
@@ -190,15 +197,17 @@ export type ConsoleClaims = {
   properties?: Record<string, string>
 }
 
+/** The sealed IDENTITY cookie payload: access-token expiry + projected claims. */
+type Identity = { e: number; c: ConsoleClaims }
+
 /** Access-token skew: treat a token expiring within this window as already stale so
  *  a refresh happens before any downstream sees an expired credential. */
 const ACCESS_SKEW_MS = 60_000
 
 /** Decode + project a JWT payload to the claims the console reads, WITHOUT signature
  *  verification. Safe ONLY for a token whose authenticity is already established — a
- *  freshly-minted grant token (`accessClaims`) or the AEAD-sealed session
- *  (`consoleClaims`). Returns null on a malformed token; Casdoor packs the full user
- *  object, so we project ONLY the display/authorization fields, never secret material. */
+ *  freshly-minted grant token here. Returns null on a malformed token; projects ONLY
+ *  display/authz fields, never secret material. */
 export function accessClaims(jwt: string): ConsoleClaims | null {
   const parts = jwt.split('.')
   if (parts.length < 2) return null
@@ -226,14 +235,33 @@ export function accessClaims(jwt: string): ConsoleClaims | null {
   }
 }
 
+/** Read the sealed identity cookie (null when absent/tampered). */
+function readIdentity(req: NextRequest): Identity | null {
+  const id = open<Identity>(req.cookies.get(SESSION_COOKIE)?.value)
+  if (!id || typeof id.e !== 'number' || !id.c || typeof id.c !== 'object') return null
+  return id
+}
+
+/** Read + reassemble + open the chunked refresh cookie (null when absent/tampered). */
+export function readRefreshToken(req: NextRequest): string | null {
+  let joined = ''
+  for (let i = 0; i < MAX_REFRESH_CHUNKS; i++) {
+    const part = req.cookies.get(`${REFRESH_COOKIE}${i}`)?.value
+    if (!part) break
+    joined += part
+  }
+  if (!joined) return null
+  const obj = open<{ t: string }>(joined)
+  return obj && typeof obj.t === 'string' ? obj.t : null
+}
+
 /** The live console session for a request — its claims + remaining access lifetime
- *  (seconds) — or null when there is none (absent cookie, tampered seal, or an access
- *  token at/near expiry). ONE place owns the freshness check. */
+ *  (seconds) — or null when there is none (absent/tampered cookie, or an access token
+ *  at/near expiry). ONE place owns the freshness check. */
 export function consoleSession(req: NextRequest): { claims: ConsoleClaims; expiresInSec: number } | null {
-  const s = readConsoleSession(req)
-  if (!s || s.e <= Date.now() + ACCESS_SKEW_MS) return null // absent/stale → caller refreshes
-  if (!s.c.name) return null
-  return { claims: s.c, expiresInSec: Math.max(0, Math.floor((s.e - Date.now()) / 1000)) }
+  const id = readIdentity(req)
+  if (!id || id.e <= Date.now() + ACCESS_SKEW_MS || !id.c.name) return null
+  return { claims: id.c, expiresInSec: Math.max(0, Math.floor((id.e - Date.now()) / 1000)) }
 }
 
 /** The unexpired console claims for a request, or null when there is no live session. */
@@ -247,6 +275,16 @@ export type Tokens = { accessToken: string; refreshToken: string; expiresIn: num
 
 function basicAuth(): string {
   return 'Basic ' + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
+}
+
+/** A grant/seal failure with the HTTP status a route should surface. */
+export class SessionError extends Error {
+  readonly status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'SessionError'
+    this.status = status
+  }
 }
 
 /** POST the token endpoint with a form body, client_secret_basic auth. Throws a
@@ -283,19 +321,8 @@ async function tokenRequest(form: Record<string, string>): Promise<Tokens> {
   }
 }
 
-/** A grant/seal failure with the HTTP status a route should surface. */
-export class SessionError extends Error {
-  readonly status: number
-  constructor(message: string, status: number) {
-    super(message)
-    this.name = 'SessionError'
-    this.status = status
-  }
-}
-
 /** Resource-Owner-Password grant for the FIRST-PARTY user (gated by the caller's
- *  already-established casibase session — see the /auth/session route — so it can
- *  only mint a console session for an already-authenticated, MFA-cleared user). */
+ *  already-established casibase session — see the /auth/session route). */
 export function passwordGrant(username: string, password: string): Promise<Tokens> {
   return tokenRequest({ grant_type: 'password', client_id: CLIENT_ID, username, password })
 }
@@ -306,21 +333,24 @@ export function refreshGrant(refreshToken: string): Promise<Tokens> {
 }
 
 /**
- * Seal a fresh token set into a cookie-ready value. Projects the access token to the
- * small claim set (`accessClaims`) and seals ONLY {refresh, exp, claims} — a compact,
- * browser-safe cookie. Returns the claims too (the routes use them for the account +
- * the identity-match check). null when the access token has no usable identity.
+ * Turn a fresh token set into the cookie material. Projects the access token to the
+ * small claim set (sealed into the identity cookie) and seals the rotating refresh
+ * token separately (chunked into the /auth-scoped cookie). Returns the two sealed
+ * strings + the claims + lifetime; null when the access token has no usable identity.
  */
-export function sealSession(t: Tokens): { sealed: string; expiresInMs: number; claims: ConsoleClaims } | null {
+export function sealSession(
+  t: Tokens,
+): { identity: string; refresh: string; claims: ConsoleClaims; expiresInMs: number } | null {
   const claims = accessClaims(t.accessToken)
   if (!claims || !claims.name) return null
   const expiresInMs = (t.expiresIn > 0 ? t.expiresIn : 3600) * 1000
-  const sealed = seal({ r: t.refreshToken, e: Date.now() + expiresInMs, c: claims })
-  return { sealed, expiresInMs, claims }
+  const identity = seal({ e: Date.now() + expiresInMs, c: claims } satisfies Identity)
+  const refresh = seal({ t: t.refreshToken })
+  return { identity, refresh, claims, expiresInMs }
 }
 
 /** Best-effort revoke of a refresh token on sign-out. Never throws (fail-open on the
- *  network — the cookie is cleared regardless; the token also expires on its own). */
+ *  network — the cookies are cleared regardless; the token also expires on its own). */
 export async function revokeRefreshToken(refreshToken: string): Promise<void> {
   if (!refreshToken || !sessionConfigured()) return
   try {
@@ -335,7 +365,7 @@ export async function revokeRefreshToken(refreshToken: string): Promise<void> {
       cache: 'no-store',
     })
   } catch {
-    /* fail-open: the cookie is cleared and the token expires regardless */
+    /* fail-open: the cookies are cleared and the token expires regardless */
   }
 }
 
