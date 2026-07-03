@@ -177,7 +177,7 @@ import { AlertsModule } from '~/components/products/AlertsModule'
 // Admin operator compute boards (cross-tenant, admin-only) — kind='bot'|'machine'
 // lenses over the datastore. Aliased to avoid the clash with the per-org customer
 // `MachinesModule` (Compute › Machines, over visor `/vm/v1/machines`).
-import { BotsModule, MachinesModule as AdminMachinesModule } from '~/components/products/ComputeModule'
+import { BotsModule, MachinesModule as AdminMachinesModule, ClustersModule as AdminClustersModule, FunctionsModule as AdminFunctionsModule } from '~/components/products/ComputeModule'
 import { AnalyticsModule } from '~/components/products/AnalyticsModule'
 import { LogsModule } from '~/components/products/LogsModule'
 import { PipelinesModule } from '~/components/products/PipelinesModule'
@@ -528,6 +528,43 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AdminMachinesModule }],
+  },
+  {
+    // admin.hanzo.ai CLUSTERS board — the operator view of every DOKS cluster visor
+    // manages across EVERY org (kind='cluster'), grouped org → app → project. Node
+    // pools (kind='nodepool') carry the compute cost and nest here as the emitter
+    // lands. Distinct from the customer `clusters` product (per-org DOKS ops). GLOBAL-
+    // ADMIN ONLY, same datastore aggregate (`?kind=cluster`). Honest-empty until
+    // visor's cluster/nodepool emitters + the cloud read land.
+    id: 'cluster-fleet',
+    label: 'Clusters',
+    icon: Network,
+    description: 'Every DOKS cluster visor manages across every org — grouped org → app → project.',
+    gcp: 'Fleet analytics · clusters',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: AdminClustersModule }],
+  },
+  {
+    // admin.hanzo.ai FUNCTIONS board — the operator view of serverless functions
+    // across EVERY org (kind='function'), grouped org → app → project. Distinct from
+    // the customer `functions` product. GLOBAL-ADMIN ONLY, same datastore aggregate
+    // (`?kind=function`). Honest-empty until a functions runtime emits compute events
+    // (hanzo/functions is upstream Fission with no tenant attribution today).
+    id: 'function-fleet',
+    label: 'Functions',
+    icon: FunctionSquare,
+    description: 'Every serverless function invoked across every org — grouped org → app → project.',
+    gcp: 'Fleet analytics · functions',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: AdminFunctionsModule }],
   },
   // ── AI ───────────────────────────────────────────────────────────────
   {
