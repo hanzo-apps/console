@@ -8,10 +8,10 @@
  * single raw Prompt card. All state comes from `useComposer`; running is the
  * parent's job.
  */
-import { useRef } from 'react'
-import type { ChangeEvent } from 'react'
-import { Button, Card, Popover, Text, XStack, YStack } from '@hanzo/gui'
-import { Copy, Trash2, Plus, Upload, Braces, Play, Square, ChevronDown, X, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
+import { useRef, useState } from 'react'
+import type { ChangeEvent, DragEvent } from 'react'
+import { Button, Card, Image, Popover, Text, XStack, YStack } from '@hanzo/gui'
+import { Copy, Trash2, Plus, Upload, Braces, Play, Square, ChevronDown, X, SlidersHorizontal, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { MessageCard } from './MessageCard'
 import { ModelPicker } from './ModelPicker'
@@ -30,6 +30,23 @@ function copyText(text: string): void {
   if (typeof navigator !== 'undefined' && navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
 }
 
+/** Read every image File to a data URL (in parallel), skipping non-images. */
+function readImages(files: File[]): Promise<{ name: string; dataUrl: string }[]> {
+  return Promise.all(
+    files
+      .filter((f) => f.type.startsWith('image/'))
+      .map(
+        (f) =>
+          new Promise<{ name: string; dataUrl: string }>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve({ name: f.name, dataUrl: String(reader.result) })
+            reader.onerror = () => reject(reader.error)
+            reader.readAsDataURL(f)
+          }),
+      ),
+  )
+}
+
 export function Composer({
   composer,
   mode,
@@ -40,6 +57,7 @@ export function Composer({
   onStop,
   curl,
   json,
+  validation,
   settingsOpen,
   onToggleSettings,
   onOpenSettingsSheet,
@@ -53,6 +71,9 @@ export function Composer({
   onStop: () => void
   curl: string
   json: string
+  /** The honest reason Run can't proceed (empty message, no model) — shown PROMINENTLY
+   *  right by the Run button so hitting Run is never a silent no-op. */
+  validation?: string | null
   /** Whether the desktop settings side-pane is shown (chevron reflects it). */
   settingsOpen: boolean
   /** Toggle the desktop inline settings side-pane. */
@@ -61,19 +82,39 @@ export function Composer({
   onOpenSettingsSheet: () => void
 }) {
   const fileRef = useRef<HTMLInputElement | null>(null)
+  const [dragging, setDragging] = useState(false)
 
+  // Pick MULTIPLE images in one dialog → append them all (accumulate across dialogs).
   const onFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (f) {
-      const reader = new FileReader()
-      reader.onload = () => composer.setAttachment({ name: f.name, dataUrl: String(reader.result) })
-      reader.readAsDataURL(f)
-    }
+    void readImages(Array.from(e.target.files ?? [])).then((imgs) => composer.addAttachments(imgs)).catch(() => {})
     e.target.value = ''
   }
 
+  // Drag-drop of one or several images onto the composer → append them all.
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setDragging(false)
+    if (running) return
+    const files = Array.from(e.dataTransfer?.files ?? [])
+    if (files.length) void readImages(files).then((imgs) => composer.addAttachments(imgs)).catch(() => {})
+  }
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (running) return
+    e.preventDefault()
+    if (!dragging) setDragging(true)
+  }
+
   return (
-    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" bg="$color1">
+    <Card
+      p="$4"
+      gap="$3"
+      borderWidth={1}
+      borderColor={dragging ? '$color8' : '$borderColor'}
+      bg="$color1"
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+      onDragLeave={() => setDragging(false)}
+    >
       {/* Model chip row */}
       <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
         <ModelPicker
@@ -158,24 +199,63 @@ export function Composer({
         </>
       )}
 
-      {/* Attachment chip */}
-      {composer.attachment ? (
+      {/* Attached images — a thumbnail strip with a count and a per-image remove (×). */}
+      {composer.attachments.length ? (
+        <YStack gap="$1.5" self="stretch">
+          <Text fontSize="$1" color="$color10">
+            {composer.attachments.length} image{composer.attachments.length === 1 ? '' : 's'} attached
+          </Text>
+          <XStack gap="$2" flexWrap="wrap">
+            {composer.attachments.map((a) => (
+              <YStack
+                key={a.id}
+                width={64}
+                height={64}
+                rounded="$3"
+                overflow="hidden"
+                borderWidth={1}
+                borderColor="$borderColor"
+                bg="$color2"
+                position="relative"
+              >
+                <Image source={{ uri: a.dataUrl }} width={64} height={64} resizeMode="cover" alt={a.name} />
+                <Button
+                  size="$1"
+                  circular
+                  position="absolute"
+                  t={2}
+                  r={2}
+                  bg="$color1"
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  icon={<X size={11} />}
+                  disabled={running}
+                  aria-label={`Remove ${a.name}`}
+                  onPress={() => composer.removeAttachment(a.id)}
+                />
+              </YStack>
+            ))}
+          </XStack>
+        </YStack>
+      ) : null}
+
+      {/* The honest block reason — prominent, right above Run, so Run is never a silent no-op. */}
+      {validation ? (
         <XStack
-          self="flex-start"
           items="center"
           gap="$2"
-          px="$2.5"
-          py="$1.5"
+          px="$3"
+          py="$2"
           rounded="$3"
-          bg="$color2"
+          self="stretch"
+          bg="$red2"
           borderWidth={1}
-          borderColor="$borderColor"
+          borderColor="$red6"
         >
-          <Upload size={13} color="$color10" />
-          <Text fontSize="$1" color="$color11" numberOfLines={1} maxW={200}>
-            {composer.attachment.name}
+          <TriangleAlert size={15} color="$red10" />
+          <Text fontSize="$2" fontWeight="600" color="$red11">
+            {validation}
           </Text>
-          <Button size="$1" chromeless icon={<X size={12} />} onPress={() => composer.setAttachment(null)} />
         </XStack>
       ) : null}
 
@@ -254,8 +334,9 @@ export function Composer({
         </XStack>
       </XStack>
 
-      {/* Hidden file input for Upload (image → vision content part on Run). */}
-      <input ref={fileRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
+      {/* Hidden file input for Upload — `multiple` so several images pick at once (image
+          → vision content part on Run). Drag-drop onto the card also accumulates. */}
+      <input ref={fileRef} type="file" accept="image/*" multiple onChange={onFile} style={{ display: 'none' }} />
     </Card>
   )
 }

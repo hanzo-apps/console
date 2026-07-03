@@ -24,7 +24,7 @@ import { Card, Image, Text, XStack, YStack } from '@hanzo/gui'
 import { FileText, Image as ImageIcon, LayoutGrid, Newspaper, Globe } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { CmsApi, cmsMediaFileUrl, type CmsMedia, type CmsPage } from '~/lib/api/cms'
+import { CmsApi, cmsMediaSrc, type CmsMedia, type CmsPage } from '~/lib/api/cms'
 import { EmbedApi, type EmbedStatus } from '~/lib/api/embed'
 import { fmtAbs } from '~/lib/api/functions'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -169,7 +169,7 @@ function MediaTab() {
 
 function MediaCard({ media }: { media: CmsMedia }) {
   const isImage = (media.mimeType ?? '').startsWith('image/')
-  const src = media.filename ? cmsMediaFileUrl(media.filename) : ''
+  const src = cmsMediaSrc(media)
   return (
     <Card width={210} p="$0" gap="$0" borderWidth={1} borderColor="$borderColor" overflow="hidden">
       <YStack height={140} bg="$color3" items="center" justify="center" overflow="hidden">
