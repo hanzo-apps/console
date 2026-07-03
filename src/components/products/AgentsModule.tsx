@@ -197,13 +197,19 @@ export function AgentsModule(_props: { params: Record<string, string> }) {
               icon={<Trash2 size={15} />}
               onPress={() => {
                 if (typeof window !== 'undefined' && !window.confirm(`Delete agent “${a.name}”? This cannot be undone.`)) return
-                void AgentsApi.remove(a.id)
+                // Keyed by NAME — the backend's `DELETE /v1/agents/:name` handle. Passing
+                // the display `id` (`agent_…`) 404s, which is what made this button a
+                // silent no-op.
+                void AgentsApi.remove(a.name)
                   .then(() => {
                     setAgents((rows) => rows.filter((r) => r.id !== a.id))
                     detail.close()
                   })
-                  .catch(() => {
-                    /* keep the pane open; the row stays until a real delete succeeds */
+                  .catch((e) => {
+                    // Never a silent failure: surface why the delete didn't take (the row stays).
+                    if (typeof window !== 'undefined') {
+                      window.alert(`Couldn’t delete “${a.name}”: ${e instanceof Error ? e.message : 'request failed'}`)
+                    }
                   })
               }}
             >

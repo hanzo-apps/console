@@ -30,6 +30,15 @@ import type { AgentConfig } from '~/components/agent-builder/types'
 const BASE = 'agents'
 const enc = encodeURIComponent
 
+/**
+ * Path for a SINGLE-agent route. The backend keys `GET|PATCH|DELETE /v1/agents/:name`
+ * on the agent's org-unique NAME (its URL handle) — NOT the display `id` (`agent_…`).
+ * Passing the id 404s ("agent not found"), which is exactly what silently broke the
+ * detail-pane activity + the Delete button. Derived from the name in ONE place so the
+ * contract can't drift again.
+ */
+const agentPath = (name: string): string => `${BASE}/${enc(name)}`
+
 // ── Coercion helpers (defensive, functions.ts style) ────────────────────────
 const num = (v: unknown): number | undefined =>
   typeof v === 'number' && Number.isFinite(v)
@@ -526,9 +535,10 @@ export const AgentsApi = {
   /** The agent registry (`GET /v1/agents`). Honest-empty/error until bound. */
   list: (): Promise<Agent[]> => restGet<unknown>(originV1Url(BASE)).then(normalizeAgents),
 
-  /** One agent's detail (`GET /v1/agents/{id}`) — facts + recent activity. */
-  get: (id: string): Promise<AgentDetail | null> =>
-    restGet<unknown>(originV1Url(`${BASE}/${enc(id)}`)).then(normalizeAgentDetail),
+  /** One agent's detail (`GET /v1/agents/:name`) — facts + recent activity. Keyed by
+   *  the agent's NAME (its backend handle), never the display `id`. */
+  get: (name: string): Promise<AgentDetail | null> =>
+    restGet<unknown>(originV1Url(agentPath(name))).then(normalizeAgentDetail),
 
   /** Invocations-over-time series + resource rollup (`GET /v1/agents/metrics?range=`). */
   metrics: (range: MetricsRange): Promise<AgentsMetrics> =>
@@ -541,6 +551,7 @@ export const AgentsApi = {
   /** Create an agent (`POST /v1/agents`) — only called when the backend is live. */
   create: (body: NewAgentBody): Promise<unknown> => restPost<unknown>(originV1Url(BASE), body),
 
-  /** Delete an agent (`DELETE /v1/agents/{id}`) — only called when the backend is live. */
-  remove: (id: string): Promise<void> => restDelete(originV1Url(`${BASE}/${enc(id)}`)),
+  /** Delete an agent (`DELETE /v1/agents/:name`) — keyed by the agent's NAME, never the
+   *  display `id`. Only called when the backend is live. */
+  remove: (name: string): Promise<void> => restDelete(originV1Url(agentPath(name))),
 }
