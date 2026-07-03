@@ -190,10 +190,10 @@ import { AccessibilityModule } from '~/components/products/AccessibilityModule'
 import { TeamModule } from '~/components/products/TeamModule'
 import { ProfileModule } from '~/components/products/ProfileModule'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
+import { OrgIntegrationsModule } from '~/components/products/OrgIntegrationsModule'
 import {
   DashboardsModule,
   ExperimentsModule,
-  IntegrationsModule,
   ReferralsModule,
   ScoreAnalyticsModule,
 } from '~/components/products/ConsoleFeatureModule'
@@ -1350,19 +1350,22 @@ export const catalog: CatalogEntry[] = [
     routes: overviewRoutes('api'),
   },
   {
+    // The customer-facing "connect your tools" page. A logged-in org connects
+    // Slack / GitHub (and any provider the cloud connector framework registers) via
+    // a Connect button that runs the ORG-AUTHED OAuth flow through the canonical /v1
+    // client — the slug stays `/integrations` because it is the backend callback's
+    // redirect target (?connected=<id> / ?error=<id>). Single route (no `:tab`): the
+    // old read-only DataTable surface is superseded by this Connect grid.
     id: 'integrations',
     label: 'Integrations',
     icon: Cable,
-    description: 'Blob storage, Slack, Mixpanel, and Insights connections.',
-    category: 'Dev',
+    description: 'Connect Slack, GitHub, and more so Hanzo AI can work across your tools.',
+    category: 'Settings',
     status: 'enabled',
-    repo: 'hanzoai/console',
+    repo: 'hanzoai/cloud',
     docs: `${DOCS}/integrations`,
     kind: 'module',
-    routes: [
-      { path: '', component: IntegrationsModule },
-      { path: ':tab', component: IntegrationsModule },
-    ],
+    routes: [{ path: '', component: OrgIntegrationsModule }],
   },
   {
     // Native console playground — REAL model run over the OpenAI-compatible
