@@ -121,6 +121,8 @@ describe('allowBaseSurface', () => {
     expect(allowBaseSurface('v1/collections/contacts/records')).toBe(true)
     // get / update / delete one record
     expect(allowBaseSurface('v1/collections/contacts/records/abc123')).toBe(true)
+    // the Bases manager: get / configure / delete ONE Base (a tenants record by id)
+    expect(allowBaseSurface('v1/collections/tenants/records/yj1om5gz64endii')).toBe(true)
   })
 
   it('admits single content-type admin (view/update/delete a collection) — the builder needs it', () => {
