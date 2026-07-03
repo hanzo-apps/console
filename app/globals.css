@@ -26,10 +26,27 @@ body {
   --backgroundPress: #050505;
   --backgroundHover: #171717;
   --backgroundFocus: #171717;
+  /* Surface depth ladder (Linear/Vercel-caliber): the true-black canvas is #000,
+     resting panels sit a hair above at #050505 ($color1), the next surface at
+     #0a0a0a ($color2), and interactive/elevated states step to #171717
+     ($color3/$color4). Overriding only the darkest surface tokens gives cards
+     real depth over the black without touching the text-contrast scale
+     ($color10–$color12). ONE ladder, shared with hanzo.chat/hanzo.app. */
+  --color1: #050505;
+  --color2: #0a0a0a;
+  --color3: #171717;
+  --color4: #1f1f1f;
 }
 :root.t_dark body,
 .t_dark body {
   background-color: #000000;
+}
+
+/* Tabular numerals — metrics, prices, contexts and IDs align on a fixed advance
+   width so columns of numbers read cleanly (the dashboard-grade detail). */
+.hz-tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 * {
