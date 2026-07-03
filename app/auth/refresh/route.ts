@@ -18,6 +18,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { readRefreshToken, refreshGrant, sealSession, setCookies, SessionError, type CookieDirective } from '~/lib/server/session'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 
 export const runtime = 'nodejs'
 
@@ -38,6 +39,11 @@ function withCookies(res: NextResponse, dirs: CookieDirective[]): NextResponse {
 const fail = () => NextResponse.json({ error: 'refresh failed' }, { status: 401 })
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // CSRF: uniform same-origin gate on every mutating BFF route (the hz_rt cookie is
+  // already SameSite=lax + Path=/auth, so this is belt-and-suspenders).
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
   const rt = readRefreshToken(req)
   if (!rt) return fail()
 

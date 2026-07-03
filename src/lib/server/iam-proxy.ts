@@ -15,6 +15,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { adminBearer, iamBaseUrl, type IamGate } from './identity'
 import { ownerAllowed as policyOwnerAllowed, orgNameAllowed, orgWriteAllowed } from './admin-policy'
+import { csrfRefusal } from './bearer-proxy'
 import { fetchWithTimeout } from './fetch-timeout'
 
 const forbidden = () => NextResponse.json({ error: 'forbidden' }, { status: 403 })
@@ -92,6 +93,14 @@ export async function forwardIam(
   opts: IamForwardOpts,
 ): Promise<NextResponse> {
   const { segment, method, allowed } = opts
+
+  // CSRF: this proxy authenticates from the first-party session cookie (auto-sent
+  // cross-site), so a MUTATING IAM op (add/update/delete user, org settings, project)
+  // must be same-origin. Fail closed BEFORE the allow-list, gate, or body read — a
+  // cross-site POST can never mutate IAM on the victim's behalf. Safe reads pass.
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
   if (!allowed.has(segment)) return notFound()
 
   // Writes: the org proxy requires an org admin (global admins always pass).

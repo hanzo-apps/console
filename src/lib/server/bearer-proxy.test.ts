@@ -9,7 +9,7 @@ vi.mock('./identity', () => ({
   adminBearer: vi.fn(async () => 'test-bearer'),
 }))
 
-import { errorBody, upstreamHeaders, pathIsClean, sameOriginOK, forwardWithUserBearer } from './bearer-proxy'
+import { errorBody, upstreamHeaders, pathIsClean, sameOriginOK, csrfRefusal, forwardWithUserBearer } from './bearer-proxy'
 import { allowCloudSurface } from './proxy-allow'
 import { allowAdminSurface } from './admin-aggregate'
 
@@ -112,6 +112,47 @@ describe('sameOriginOK (CSRF guard on the cookie-authenticated proxy — RED)', 
 /** A minimal NextRequest stand-in — the header rebuild only reads `headers.get`. */
 const reqWith = (headers: Record<string, string>): NextRequest =>
   ({ headers: new Headers(headers) }) as unknown as NextRequest
+
+describe('csrfRefusal (the ONE guard every hand-rolled cookie-auth route calls — RED)', () => {
+  const HOST = 'console.hanzo.ai'
+  const req = (method: string, headers: Record<string, string> = {}): NextRequest =>
+    ({ method, headers: new Headers({ host: HOST, ...headers }) }) as unknown as NextRequest
+
+  it('returns null (no refusal) for safe methods, even cross-origin', () => {
+    expect(csrfRefusal(req('GET', { origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' }))).toBeNull()
+    expect(csrfRefusal(req('HEAD'))).toBeNull()
+    expect(csrfRefusal(req('OPTIONS'))).toBeNull()
+  })
+
+  it('returns null for a same-origin mutation (Origin host == Host, or Sec-Fetch-Site same-origin)', () => {
+    expect(csrfRefusal(req('POST', { origin: `https://${HOST}` }))).toBeNull()
+    expect(csrfRefusal(req('DELETE', { 'sec-fetch-site': 'same-origin' }))).toBeNull()
+    expect(csrfRefusal(req('PATCH', { referer: `https://${HOST}/kms` }))).toBeNull()
+  })
+
+  it('REFUSES a cross-origin mutation with a fail-closed 403 forbidden envelope', async () => {
+    const res = csrfRefusal(req('POST', { origin: 'https://evil.example' }))
+    expect(res).not.toBeNull()
+    expect(res!.status).toBe(403)
+    expect(await res!.json()).toEqual({ error: 'Cross-origin request refused.' })
+  })
+
+  it('REFUSES when Sec-Fetch-Site is cross-site even if Origin looks same-origin', () => {
+    expect(csrfRefusal(req('POST', { origin: `https://${HOST}`, 'sec-fetch-site': 'cross-site' }))?.status).toBe(403)
+  })
+
+  it('fails CLOSED on a mutation with no Origin/Referer/Sec-Fetch-Site (403)', () => {
+    expect(csrfRefusal(req('POST'))?.status).toBe(403)
+    expect(csrfRefusal(req('DELETE'))?.status).toBe(403)
+  })
+
+  it('shapes the refusal for the requesting client (casibase/openai)', async () => {
+    const c = csrfRefusal(req('POST', { origin: 'https://evil.example' }), 'casibase')
+    expect(await c!.json()).toEqual({ status: 'error', msg: 'Cross-origin request refused.' })
+    const o = csrfRefusal(req('POST', { origin: 'https://evil.example' }), 'openai')
+    expect((await o!.json()).error.message).toBe('Cross-origin request refused.')
+  })
+})
 
 describe('errorBody', () => {
   it('shapes the AI/OpenAI envelope with a code', () => {
