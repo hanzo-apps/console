@@ -1469,3 +1469,70 @@ noun was wrong: bots and machines are distinct compute kinds, not one "fleet").
   ok. Authenticated visual e2e (both boards as a global admin) is post-deploy; renders
   the honest empty state today (no emitter). Not merged to main / no version bump — the
   merge/release step bumps `package.json` + tags the image.
+
+## Native ERP / CMS / Analytics + real Commerce over canonical backends (v8.4.32)
+
+Maximize NATIVE app coverage in the console — get ERP, Content (CMS), Analytics, and
+Commerce to the same "native-in-console, per-org, one canonical way" bar CRM already
+meets. Every surface binds to its REAL backend (contracts verified against the source
+repos + live probes); no surface fabricates data. Per-app isolation matches each
+backend's real tenancy model (RED-checkable).
+
+- **Analytics — rebound to the FOUR routes the backend actually mounts.** The module
+  had called NINE `/v1/analytics/*` endpoints; `cloud clients/analytics` mounts only
+  `overview | timeseries | top | health` (analytics.go:95-98) with DIFFERENT response
+  shapes — so 5 tabs 404'd and 2 mis-parsed. `analytics.ts` + `AnalyticsModule.tsx`
+  rewritten to the real structs (`clients/analytics/query.go`): the **LLM lens is REAL
+  live per-org data** (`hanzo.cloud_usage`, prod ClickHouse `datastore.hanzo.svc:9000`),
+  charted over time; the **web + commerce lenses render honest-empty via the backend
+  `available` flag** (`hanzo.events`, until a collector emits) — never fabricated zeros.
+  Dropped the fabricated **Real-Time tab** (no realtime backend exists). Tabs: Overview
+  (LLM KPIs + spend-over-time + honest web/commerce lenses) + LLM (top models table +
+  donut). Range grammar `24h|7d|30d`. Responses are BARE JSON (not the casibase
+  envelope) → plain `restGet`.
+- **Content (CMS) — native Collections + Media/DAM ALONGSIDE the Studio embed.** New
+  `/cms` user-bearer proxy (`app/cms/[...path]`) forwards the caller's minted IAM Bearer
+  to `cms.<brand>` (SSRF-clamped via `clampedBrandDomain`); Payload's `hanzoIAMStrategy`
+  verifies it (JWKS, issuer hanzo.id, audience unchecked) and its multi-tenant plugin
+  scopes `pages`/`media` to the token `owner` claim → **each org reads ONLY its own
+  content (per-org isolation BACKEND-enforced)**. `allowCmsSurface` admits ONLY the two
+  tenant-scoped collections (list) + the per-file media bytes route, and REFUSES
+  `api/users`/`api/tenants` (the non-tenant-scoped registry). `CmsModule` is now tabbed:
+  **Collections** (native pages) + **Media** (native DAM grid; `<img>` bytes stream
+  through `/cms/api/media/file/<f>`, never the cross-origin auth-required `media.url`) +
+  **Studio** (the entitlement-gated admin embed, unchanged). `cms.ts` `CmsApi`.
+- **ERP — real deploy + native Frappe summaries + desk embed, entitlement-gated.** ERP
+  is a SINGLE shared per-brand Frappe instance (`erp.<brand>` is 502 today, no per-org
+  provisioning), so the module + the new `/erp` proxy are **entitlement-gated to the
+  owning brand org / a global admin** (a customer org gets the honest provision panel —
+  never the brand's ERP data; Frappe is single-tenant). Overview drives a **REAL
+  `/v1/platform` deploy** (`ErpApi.deploy` → idempotent create-project + create-app
+  {source:image, `frappe/erpnext:v15.62.0`} + deploy, live status from `PaasApi`).
+  Accounting / Items / Sales are **NATIVE Frappe REST summary views** (`/erp/api/
+  resource/<DocType>`, real erpnext-v15 field sets) — honest "deploy ERP" until an
+  instance answers, real rows the moment it does. `/erp` proxy: SSRF-clamped, read-only
+  `api/resource/<DocType>` allow-list (`allowErpSurface`), Frappe `token key:secret`
+  auth via server-only `ERP_API_TOKEN` (Frappe rejects an IAM Bearer). Desk embeds the
+  real desk once reachable. `erp.ts` `ErpApi`.
+- **Commerce — Products full CRUD + real store settings.** Products is now create +
+  list + **delete** over `/v1/product` (validator needs name+sku+slug — auto-slugified);
+  Store settings reads the org's REAL storefront (`/v1/store/current`,
+  `CommerceApi.currentStore`). Orders/Customers/Inventory/Promotions stay real per-org
+  reads on the shared `CommerceResource`. All via the `/commerce` bearer proxy (org from
+  the token owner; per-org SQLite). Kind-names verified live (product/order/user=
+  customers/variant=inventory/discount=promotions/store — `customer`/`inventory`/
+  `checkout` are 404, the console correctly avoids them). hanzoai/commerce is the ONE
+  authority (Go, per-org SQLite) — NOT Medusa.
+- **GPUs KPI reconciled** (drive-by): the customer GPU KPI counted distinct MODELS (6)
+  but the catalog table + Launch drawer list all CONFIGS (9). KPI now shows the
+  launchable-config count (matches both) with the model count in the sub — both real
+  from the one live visor catalog.
+- **Isolation model (RED):** CMS is genuinely per-org (Payload isolates by owner claim →
+  every org reads its own, no entitlement gate needed, registry collections refused);
+  ERP + Help are single-tenant Frappe → brand-org/global-admin entitlement gate (a
+  customer never reads brand data); Commerce is per-org (commerce EdgeAuth owner scope).
+- Verification: `tsc --noEmit` clean; `vitest` **1050/1050** (88 files; +22 new:
+  7 analytics, 6 cms, 5 erp normalizers, +2 cms/+2 erp proxy-allow); `next build` ✓
+  (`/cms` + `/erp` routes registered). Built off origin/main HEAD (rebased onto the
+  ServiceMesh/Edge lane), one patch above main → **v8.4.32**. Live visual e2e +
+  per-org RED isolation checks are post-deploy.
