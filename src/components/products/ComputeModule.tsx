@@ -2,11 +2,13 @@
 
 /**
  * Compute operator boards — the SaaS operator view of compute across EVERY org,
- * grouped org → app → project, split into two `kind` lenses over ONE datastore
+ * grouped org → app → project, split into `kind` lenses over ONE datastore
  * table by `ComputeBoard({ kind })`:
  *
- *   - <BotsModule/>     kind='bot'     — machines running the @hanzo/bot agent (booted, connected).
- *   - <MachinesModule/> kind='machine' — raw VMs visor can also open.
+ *   - <BotsModule/>      kind='bot'      — machines running the @hanzo/bot agent (booted, connected).
+ *   - <MachinesModule/>  kind='machine'  — raw VMs visor can also open.
+ *   - <ClustersModule/>  kind='cluster'  — DOKS clusters visor manages (node pools carry the cost, nest here).
+ *   - <FunctionsModule/> kind='function' — serverless functions (honest-empty until the runtime emits).
  *
  * GLOBAL-ADMIN ONLY (both catalog entries are `admin: true`, hidden from every
  * customer surface; the `/v1/admin/compute` aggregate is server-gated by
@@ -24,7 +26,7 @@
  */
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { Bot, Boxes, Building2, ChevronDown, ChevronRight, Coins, Cpu, RefreshCw } from '@hanzogui/lucide-icons-2'
+import { Bot, Boxes, Building2, ChevronDown, ChevronRight, Coins, Cpu, FunctionSquare, Layers, Network, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import { AdminComputeApi, type ComputeFleets, type ComputeKind, type Rollup, type SizeCount } from '~/lib/api/admin-compute'
@@ -68,6 +70,33 @@ const KIND_UI: Record<ComputeKind, KindUi> = {
     emptyTitle: 'No machines opened yet',
     emptyDescription:
       'No machines have reported to the datastore for this window. As orgs provision compute, their machines and spend appear here grouped by org → app → project.',
+  },
+  cluster: {
+    title: 'Clusters',
+    subtitle: 'Every DOKS cluster visor manages across the platform — grouped org → app → project.',
+    unit: 'clusters',
+    Icon: Network,
+    emptyTitle: 'No clusters registered yet',
+    emptyDescription:
+      'No Kubernetes clusters have reported to the datastore for this window. As orgs register DOKS clusters, they and their node pools appear here grouped by org → app → project.',
+  },
+  nodepool: {
+    title: 'Node Pools',
+    subtitle: 'Every DOKS node pool visor manages across the platform — grouped org → app → project.',
+    unit: 'pools',
+    Icon: Layers,
+    emptyTitle: 'No node pools yet',
+    emptyDescription:
+      'No node pools have reported to the datastore for this window. As orgs create DOKS node pools, they and their hourly cost appear here grouped by org → app → project.',
+  },
+  function: {
+    title: 'Functions',
+    subtitle: 'Every serverless function invoked across the platform — grouped org → app → project.',
+    unit: 'functions',
+    Icon: FunctionSquare,
+    emptyTitle: 'No function activity yet',
+    emptyDescription:
+      'No functions have reported to the datastore for this window. Functions appear here once a functions runtime emits compute events, grouped by org → app → project.',
   },
 }
 
@@ -305,4 +334,14 @@ export function BotsModule(_props: { params: Record<string, string> }) {
 /** The Machines operator board (kind='machine'). */
 export function MachinesModule(_props: { params: Record<string, string> }) {
   return <ComputeBoard kind="machine" />
+}
+
+/** The Clusters operator board (kind='cluster'). Node pools (kind='nodepool') carry the compute cost and nest here as visor's emitter lands. */
+export function ClustersModule(_props: { params: Record<string, string> }) {
+  return <ComputeBoard kind="cluster" />
+}
+
+/** The Functions operator board (kind='function'). Honest-empty until a functions runtime emits compute events. */
+export function FunctionsModule(_props: { params: Record<string, string> }) {
+  return <ComputeBoard kind="function" />
 }
