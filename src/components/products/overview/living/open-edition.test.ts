@@ -25,7 +25,7 @@ vi.mock('@hanzogui/lucide-icons-2', () => {
 // Capture the params the loader passes to the ledger API without any network. The
 // factory returns a controllable fake so we can assert BOTH the scope (product tag)
 // and that real fetched data flows through to the normalized OverviewData.
-const overviewMock = vi.fn<[UsageOverviewParams | undefined], Promise<CloudUsageOverview>>()
+const overviewMock = vi.fn<(p?: UsageOverviewParams) => Promise<CloudUsageOverview>>()
 vi.mock('~/lib/api/usage', () => ({
   UsageApi: { overview: (p?: UsageOverviewParams) => overviewMock(p) },
 }))

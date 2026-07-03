@@ -116,6 +116,36 @@ export interface DeployInput {
   tag?: string
 }
 
+/** One DNS record a customer must publish to prove ownership / route a custom domain. */
+export interface PaasDomainRecord {
+  /** TXT | CNAME. */
+  type: string
+  name: string
+  value: string
+}
+
+/**
+ * A domain attached to an app (`domainView`). The default `<app>.<org>.hanzo.app`
+ * and org-subtree hosts are active immediately; a BYO custom host is `pending`
+ * (carrying the DNS `records` to publish) until verified. `status` is honest,
+ * derived from the operator CR: live | provisioning | pending_deploy | pending.
+ */
+export interface PaasDomain {
+  host: string
+  /** default | subtree | custom. */
+  kind: 'default' | 'subtree' | 'custom' | (string & {})
+  /** live | provisioning | pending_deploy | pending. */
+  status: 'live' | 'provisioning' | 'pending_deploy' | 'pending' | (string & {})
+  url: string
+  verified: boolean
+  /** The canonical, never-removable default host. */
+  primary?: boolean
+  /** DNS records to publish (present on a pending custom domain). */
+  records?: PaasDomainRecord[]
+  detail?: string
+  createdAt?: number
+}
+
 /** Pull a list from a bare array OR a `{ <key>: [...] }` wrapper (defensive). */
 function asArray<T>(payload: unknown, key: string): T[] {
   if (Array.isArray(payload)) return payload as T[]
@@ -180,6 +210,20 @@ export const PaasApi = {
     restGet<unknown>(cloudProxyV1Url(deploysPath(project, app, id))).then((p) => asObject<PaasDeployment>(p, 'deployment')),
   deploymentLogs: (project: string, app: string, id: string): Promise<string> =>
     restGet<{ logs?: string }>(cloudProxyV1Url(`${deploysPath(project, app, id)}/logs`)).then((r) => r?.logs ?? ''),
+
+  // ── Domains (default + org-subtree hosts + verified BYO custom domains) ──────
+  listDomains: (project: string, app: string): Promise<PaasDomain[]> =>
+    restGet<unknown>(cloudProxyV1Url(`${appsPath(project, app)}/domains`)).then((p) => asArray<PaasDomain>(p, 'domains')),
+  /** Attach a host: an org-subtree host goes active; a custom host returns pending + its DNS challenge. */
+  addDomain: (project: string, app: string, host: string): Promise<PaasDomain> =>
+    restPost<unknown>(cloudProxyV1Url(`${appsPath(project, app)}/domains`), { host }).then((p) => asObject<PaasDomain>(p, 'domain')),
+  /** Resolve the DNS challenge for a pending custom domain; on success it goes live with TLS. */
+  verifyDomain: (project: string, app: string, host: string): Promise<PaasDomain> =>
+    restPost<unknown>(cloudProxyV1Url(`${appsPath(project, app)}/domains/${enc(host)}/verify`), {}).then((p) =>
+      asObject<PaasDomain>(p, 'domain'),
+    ),
+  removeDomain: (project: string, app: string, host: string): Promise<void> =>
+    restDelete(cloudProxyV1Url(`${appsPath(project, app)}/domains/${enc(host)}`)),
 
   /**
    * The org's ENTIRE app fleet with project context — the aggregate the
