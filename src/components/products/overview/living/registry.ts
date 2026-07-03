@@ -25,15 +25,16 @@
  * mismatch renders an honest empty tile (never a crash), so over-declaring a tile a
  * slow backend hasn't filled yet is safe.
  */
-import { Activity, Building2, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, Layers, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
+import { Activity, Boxes, Building2, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, HeartPulse, Layers, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
 
 import { UsageApi } from '~/lib/api/usage'
-import { AdminApi } from '~/lib/api/admin-overview'
+import { AdminApi, type AdminOverview } from '~/lib/api/admin-overview'
 import { FinanceApi } from '~/lib/api/finance'
 import { PlatformApi } from '~/lib/api/platform'
 import { FunctionsApi, deriveOverview } from '~/lib/api/functions'
+import type { CloudUsageOverview } from '~/lib/api/usage'
 import type { LivingOverviewConfig, OverviewData, OverviewRange } from './config'
-import { fromAdminOverview, fromCloudUsage, fromFinance, fromFunctions, healthFromApps } from './adapters'
+import { fromAdminOverview, fromCloudUsage, fromFinance, fromFunctions, fromOverlord, healthFromApps } from './adapters'
 
 /** The cloud-usage range key the commerce ledger adapter expects (identical set). */
 const usageRange = (r: OverviewRange): '24h' | '7d' | '30d' => r
@@ -121,6 +122,97 @@ const platformOverview: LivingOverviewConfig = {
     // Skip the admin-gated apps probe for tenant users (→ honest empty health)
     // so it doesn't 403; global admins whose aggregate just failed still probe.
     return withHealth(data, isGlobalAdmin)
+  },
+}
+
+/**
+ * The admin.hanzo.ai OVERLORD overview — the god-view of EVERYTHING. This is the
+ * top-level admin dashboard the CTO asked for: a single board that answers, across
+ * the WHOLE platform (all orgs, not one tenant), "is every product healthy, how many
+ * orgs/tenants, and what is the platform-wide usage/spend + top models". GLOBAL-ADMIN
+ * ONLY (catalog entry `admin: true` hides it from every customer; the loader is an
+ * all-orgs god view and `/v1/admin/overview` is itself server-gated by getAdminGate).
+ *
+ * Distinct from the sibling admin boards — Business (MRR/revenue), Finance (margin/
+ * runway), Bots/Machines (fleet). The Overlord's CENTERPIECE is the platform-wide
+ * PRODUCT HEALTH board (every Hanzo product up/down from the REAL operator inventory)
+ * plus platform tenancy + usage/revenue. It reuses the ONE `LivingOverview` — adding
+ * it was a config + a pure adapter (`fromOverlord`), no new overview UI.
+ *
+ * THREE real sources, composed by `fromOverlord`, honest by construction:
+ *   - operator inventory (`PlatformApi.apps()`) → the product-health board + product
+ *     counts (products / healthy / needs-attention) + distinct-org count. ALWAYS real
+ *     when the inventory is reachable — so the god-view is meaningful even with no
+ *     aggregate and no ledger.
+ *   - `/v1/admin/overview` (all-orgs) → usage/spend KPIs + timeseries + top-models +
+ *     live activity + alerts, when routed.
+ *   - the real commerce usage ledger (all-orgs) → the HONEST FALLBACK for the usage/
+ *     spend KPIs + activity when the aggregate isn't routed, so the board is never
+ *     blank. Business-only figures (MRR/revenue) are NOT shown here (that's the
+ *     Business board) — the Overlord is the operational god-view, not the P&L.
+ */
+const overlordOverview: LivingOverviewConfig = {
+  id: 'overlord',
+  title: 'Overlord',
+  subtitle: 'God-view of the whole platform — every product’s health, tenants, and usage across all orgs.',
+  live: { pollMs: 20000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'products', label: 'Products', icon: Boxes },
+      { tile: 'metric', key: 'healthy', label: 'Healthy', icon: HeartPulse },
+      { tile: 'metric', key: 'attention', label: 'Needs attention', icon: TriangleAlert },
+      { tile: 'metric', key: 'orgs', label: 'Active orgs', icon: Building2 },
+    ],
+    [
+      { tile: 'metric', key: 'requests', label: 'Requests', icon: Activity },
+      { tile: 'metric', key: 'tokens', label: 'Inference tokens', icon: Hash },
+      { tile: 'metric', key: 'spendCents', label: 'Usage cost', icon: DollarSign, unit: 'cents' },
+      { tile: 'metric', key: 'models', label: 'Active models', icon: Layers },
+    ],
+    [
+      { tile: 'timeseries', key: 'requests', title: 'Requests over time' },
+      { tile: 'timeseries', key: 'spendCents', title: 'Usage cost over time', kind: 'bar', unit: 'cents' },
+    ],
+    [
+      { tile: 'distribution', key: 'productHealth', title: 'Product health', centerLabel: 'products' },
+      { tile: 'distribution', key: 'revenue', title: 'Spend by product', centerLabel: 'total', unit: 'cents' },
+    ],
+    [
+      { tile: 'health', title: 'Every product — live health', empty: 'Product health appears once the operator inventory is reachable.' },
+      { tile: 'alerts', title: 'Platform alerts' },
+    ],
+    [{ tile: 'activity', title: 'Live platform activity', empty: 'Platform activity appears here as it happens.' }],
+  ],
+  // God-view: ALWAYS all-orgs. Probe the three real sources independently so a
+  // missing aggregate / ledger never blanks the board — the product-health board
+  // (from the operator inventory) is the always-real centerpiece.
+  load: async ({ range }) => {
+    // 1) Operator inventory — the platform-wide product health board (+ org count).
+    let apps: Awaited<ReturnType<typeof PlatformApi.apps>> = []
+    try {
+      apps = await PlatformApi.apps()
+    } catch {
+      /* honest empty product board — the health tile shows "not reporting" */
+    }
+    // 2) The all-orgs admin aggregate (usage/spend/top-models/activity), when routed.
+    let admin: AdminOverview | null = null
+    try {
+      admin = await AdminApi.overview({ range, allOrgs: true, activityLimit: 40 })
+    } catch {
+      /* aggregate not routed here → fall back to the real usage ledger below */
+    }
+    // 3) The real commerce usage ledger (all-orgs) — the honest fallback for the
+    // usage/spend KPIs + activity when the aggregate is absent. Skip the ledger call
+    // entirely when the aggregate already gave us usage data (don't double-fetch).
+    let usage: CloudUsageOverview | null = null
+    if (!admin) {
+      try {
+        usage = await UsageApi.overview({ range: usageRange(range), activityType: 'all', activityLimit: 40, topModels: 6, allOrgs: true })
+      } catch {
+        /* no ledger either → usage KPIs render honest em-dashes; product board still real */
+      }
+    }
+    return fromOverlord(apps, admin, usage)
   },
 }
 
@@ -376,6 +468,7 @@ const computeOverview: LivingOverviewConfig = {
 /** The declared living overviews, by product id. Add a product = add one entry. */
 export const LIVING_OVERVIEWS: Record<string, LivingOverviewConfig> = {
   overview: platformOverview,
+  overlord: overlordOverview,
   'admin-business': adminBusinessOverview,
   finance: financeOverview,
   'ai-metrics': aiUsageOverview('ai-metrics', 'AI Metrics', 'Requests, tokens, spend, and per-model usage for your org.'),
