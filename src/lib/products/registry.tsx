@@ -47,6 +47,7 @@ Product catalog — the single source of truth for the unified console.
 import type { ComponentType } from 'react'
 import { Users,
   Building2,
+  AppWindow,
   Accessibility,
   LifeBuoy,
   Brain,
@@ -165,6 +166,7 @@ import { MemoryModule } from '~/components/products/MemoryModule'
 import { TasksModule } from '~/components/products/TasksModule'
 import { AttestationsModule } from '~/components/products/AttestationsModule'
 import { ProjectsModule } from '~/components/products/ProjectsModule'
+import { AppsModule } from '~/components/products/AppsModule'
 import { OraclesModule } from '~/components/products/OraclesModule'
 import { IndexerModule } from '~/components/products/IndexerModule'
 import { NetworksModule } from '~/components/products/NetworksModule'
@@ -1207,6 +1209,31 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: ProjectsModule }],
+  },
+  {
+    // Apps — the org's BUILDABLE SITES (cloud clients/projectsvc, /v1/projects): the
+    // projects hanzo.app publishes when a user ships a site from the conversational
+    // builder. Closes the console→app round-trip — every published site lists here
+    // with its live URL + deploy history, and each row deep-links back into hanzo.app
+    // (`/dev?project=<slug>`) for more editing. DISTINCT from the IAM `projects` entry
+    // above (the org's resource SCOPE for o11y/keys/datasets) and from Compute
+    // `Applications` (PaaS container apps) — this is the hanzo.app sites store only.
+    id: 'apps',
+    label: 'Apps',
+    icon: AppWindow,
+    description: 'The sites you build and publish in hanzo.app — live URL, deploy history, and one-click editing.',
+    gcp: 'Firebase Hosting',
+    category: 'Platform',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    docs: `${DOCS}/apps`,
+    kind: 'module',
+    // Overview ('') lists the org's sites; the `:slug` route opens a site's detail
+    // rail (real deployment history) — the same routed-detail shape Chat uses.
+    routes: [
+      { path: '', component: AppsModule },
+      { path: ':slug', component: AppsModule },
+    ],
   },
   {
     id: 'environments',
