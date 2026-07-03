@@ -328,66 +328,11 @@ export function DashboardsModule({ params }: { params: Record<string, string> })
   )
 }
 
-const integrationSurfaces: Surface[] = [
-  {
-    id: 'blob-storage',
-    label: 'Blob Storage',
-    endpoint: 'integrations/blob-storage',
-    empty: 'No blob storage integrations returned.',
-    columns: [
-      { key: 'id', header: 'ID', width: 180 },
-      { key: 'bucketName', header: 'Bucket' },
-      { key: 'prefix', header: 'Prefix', width: 180 },
-      { key: 'updatedAt', header: 'Updated', width: 190 },
-    ],
-  },
-  {
-    id: 'slack',
-    label: 'Slack',
-    endpoint: 'integrations/slack',
-    empty: 'No Slack integrations returned.',
-    columns: [
-      { key: 'teamName', header: 'Workspace' },
-      { key: 'channelName', header: 'Channel' },
-      { key: 'status', header: 'Status', width: 120 },
-      { key: 'updatedAt', header: 'Updated', width: 190 },
-    ],
-  },
-  {
-    id: 'mixpanel',
-    label: 'Mixpanel',
-    endpoint: 'integrations/mixpanel',
-    empty: 'No Mixpanel integrations returned.',
-    columns: [
-      { key: 'projectName', header: 'Project' },
-      { key: 'status', header: 'Status', width: 120 },
-      { key: 'lastSyncAt', header: 'Last sync', width: 190 },
-    ],
-  },
-  {
-    id: 'insights',
-    label: 'Insights',
-    endpoint: 'integrations/insights',
-    empty: 'No Insights integrations returned.',
-    columns: [
-      { key: 'name', header: 'Name' },
-      { key: 'status', header: 'Status', width: 120 },
-      { key: 'updatedAt', header: 'Updated', width: 190 },
-    ],
-  },
-]
-
-export function IntegrationsModule({ params }: { params: Record<string, string> }) {
-  return (
-    <TabbedFeatureModule
-      title="Integrations"
-      subtitle="External services connected to observability and project settings."
-      basePath="integrations"
-      active={params.tab}
-      surfaces={integrationSurfaces}
-    />
-  )
-}
+// NOTE: the old read-only Integrations DataTable (blob-storage / Slack / Mixpanel /
+// Insights surfaces) is superseded by the customer-facing Connect grid in
+// `OrgIntegrationsModule` — the registry's `integrations` entry routes there now, so
+// there is exactly ONE integrations surface. Its `integrationSurfaces` + module were
+// removed here to avoid a second, dead one.
 
 const referralSurfaces: Surface[] = [
   {
