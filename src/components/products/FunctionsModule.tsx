@@ -19,9 +19,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack } from '@hanzo/gui'
-import { BookOpen, Plus, Terminal } from '@hanzogui/lucide-icons-2'
+import { BookOpen, Plus, RefreshCw, Terminal } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
+import { useReloadOnFocus } from '~/lib/use-reload-on-focus'
 import { FunctionsApi, type ServerlessFunction } from '~/lib/api/functions'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { classifyBackend, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
@@ -70,6 +71,10 @@ function useInventory() {
     void reload()
   }, [reload])
 
+  // Refetch when the operator returns to the tab, so a function deployed out-of-band
+  // (the API / CLI / another tab) appears without a manual reload.
+  useReloadOnFocus(reload)
+
   return { functions, loading, error, live, reload, setFunctions }
 }
 
@@ -100,6 +105,9 @@ export function FunctionsModule({ params }: { params: Record<string, string> }) 
         subtitle="Event-driven serverless functions, deployed and invoked by the platform."
         actions={
           <>
+            <Button size="$3" chromeless icon={<RefreshCw size={15} />} onPress={() => void inv.reload()}>
+              Refresh
+            </Button>
             <Button size="$3" chromeless icon={<Terminal size={15} />} onPress={() => openExternal(docsHref)}>
               CLI
             </Button>
