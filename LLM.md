@@ -214,6 +214,36 @@ ns `hanzo`) — declared in `universe/infra/k8s/operator/crs/console2-v1.yaml`.
 Bump `spec.image.tag`, `kubectl apply`, the operator reconciles. Verify live with
 headless Playwright on console2.hanzo.ai.
 
+## Live E2E product-bug fixes (v8.4.54)
+
+Five "advertised-but-broken" surfaces the live E2E suite flagged, fixed honestly
+in the client (no fabrication):
+
+- **Vector module rendered nothing.** `GET /cloud/v1/vector` 200'd but the module
+  blanked while SQL/KV rendered — the vector provisioning backend 200s a WRAPPED
+  body (not a bare `Resource[]`), so the list view's `for…of` threw during render
+  behind the error boundary. Fix: `normalizeResourceList` in `lib/api/provisioning.ts`
+  validates + unwraps the list at the TRANSPORT boundary (bare array, or a
+  `{data|items|results|resources|collections|list|rows}` wrapper incl. one level of
+  nesting like Qdrant `result.collections`), honest `[]` fallback — ONE place, every
+  kind. Don't add per-kind unwrap in the view.
+- **`/chat` reply now STREAMS.** The composer already POSTed a working completion;
+  it now renders token-by-token via `AiApi.ragChatStream` (grounded RAG headers ride
+  `PlaygroundApi.streamChat`). The SSE parser's canonical home moved to
+  `lib/api/stream.ts` (ONE definition, re-exported from `playground/stream.ts`);
+  the error card's Retry now re-runs the last user turn (was a no-op — input is
+  cleared on send).
+- **Functions list self-freshens.** `useReloadOnFocus` (`lib/use-reload-on-focus.ts`,
+  pure `armReloadOnFocus` core + tests) refetches on window focus / tab-visible, so
+  an API/CLI-deployed function appears without a manual reload; plus a header Refresh.
+- **Sign-out redirects deterministically.** `session.tsx` `signOut` now hard-navigates
+  to `/signin` after `DELETE /auth/session` (AuthGate's reactive redirect could be
+  pre-empted by an in-flight session re-hydrate, stranding the user on `/`).
+- **CRM summary rollup lag = BACKEND.** The console already refetches
+  `/v1/crm/summary` after every create/delete (`onChanged → loadSummary`). The +1 lag
+  is the cloud-api materialized rollup (eventual consistency); flagged for the backend
+  — NOT faked client-side (no optimistic increment).
+
 ## Live verification + backend wiring (v0.1.8)
 
 > v0.1.7 was a parallel CTO branch (`fix/paas-live-data`) that wired only
