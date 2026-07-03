@@ -5,8 +5,9 @@
  * Square) is a separate concern served by `billing.ts` over the `/billing` proxy — the
  * two never mix.
  *
- * Every call goes through the console's OWN same-origin user-bearer `/commerce` proxy
- * (`commerceProxyV1Url('product')` → `<origin>/commerce/v1/product`): the server route
+ * Every call is the CANONICAL, prefix-free `/v1/commerce/<resource>` (`cUrl('product')` →
+ * `<origin>/v1/commerce/product`); `next.config` rewrites `/v1/commerce/*` to the console's
+ * OWN same-origin user-bearer `/commerce` proxy (the billing twin): the server route
  * mints a short-lived user-bound IAM token and commerce resolves the org from the
  * token's `owner` claim, so every read/write is org-scoped SERVER-SIDE — a merchant
  * only ever sees their OWN org's store. No credential reaches the browser and the org
@@ -20,9 +21,18 @@
  * uses (`models` / `data` / `items`). Nothing is fabricated — an empty store renders an
  * honest empty state, never placeholder rows.
  */
-import { restGet, restPost, restDelete, commerceProxyV1Url } from './client'
+import { restGet, restPost, restDelete, originV1Url } from './client'
 
 const enc = encodeURIComponent
+
+/**
+ * The one commerce URL builder: the CANONICAL, prefix-free `/v1/commerce/<resource>`
+ * (nothing before `/v1/`). `next.config` rewrites `/v1/commerce/*` to the same-origin
+ * user-bearer `/commerce` proxy (which mints the user token; commerce scopes the org
+ * from the Bearer owner) — the billing twin of `/v1/billing/*`. Callers pass the bare
+ * REST model (`product` / `store/current`); this namespaces it once, in one place.
+ */
+const cUrl = (resource: string): string => originV1Url(`commerce/${resource}`)
 
 // ── Coercion helpers (defensive, agents.ts style) ───────────────────────────
 const num = (v: unknown): number | undefined =>
@@ -235,7 +245,7 @@ async function fetchList<T>(
   if (params?.q) qs.set('q', params.q)
   if (params?.sort) qs.set('sort', params.sort)
   const suffix = qs.toString() ? `?${qs}` : ''
-  const payload = await restGet<unknown>(`${commerceProxyV1Url(kind)}${suffix}`)
+  const payload = await restGet<unknown>(`${cUrl(kind)}${suffix}`)
   const rows = arrayUnder(payload, ['models', 'data', 'items', 'rows']).map(normalize)
   const count = num(asRecord(payload).count) ?? rows.length
   return { rows, count }
@@ -257,12 +267,12 @@ export const CommerceApi = {
    * still works). Org-scoped server-side.
    */
   currentStore: () =>
-    restGet<unknown>(commerceProxyV1Url('store/current')).then((p) => normalizeStore(asRecord(p).store ?? p)),
+    restGet<unknown>(cUrl('store/current')).then((p) => normalizeStore(asRecord(p).store ?? p)),
 
   /** Create a product (name/sku/slug required by commerce's validator). */
   createProduct: (body: { name: string; sku: string; slug: string; description?: string; available?: boolean }) =>
-    restPost<unknown>(commerceProxyV1Url('product'), { available: true, ...body }).then(normalizeProduct),
+    restPost<unknown>(cUrl('product'), { available: true, ...body }).then(normalizeProduct),
 
   /** Delete a product by id. */
-  deleteProduct: (id: string) => restDelete(commerceProxyV1Url(`product/${enc(id)}`)),
+  deleteProduct: (id: string) => restDelete(cUrl(`product/${enc(id)}`)),
 }

@@ -8,13 +8,13 @@
  *   - envelope (`{status,msg,data}`): get-stores, get-cloud-usages, get-files,
  *     add-store, docs/ingest, index            → `get`/`post`
  *   - raw JSON: search (`{hits}`), search/stats (`{documentCount,…}`)  → `restGet`/`restPost`
- *   - OpenAI gateway (Bearer-only): embeddings  → the keyless `/ai` proxy (`aiV1Url`)
+ *   - OpenAI gateway (Bearer-only): embeddings  → the keyless `/ai` proxy (`originV1Url`)
  *
  * Every call throws `ApiError` (with status) on failure so callers render an
  * honest state — collections list real/empty, and absent fields ("—") and absent
  * endpoints (404 → BackendStateCard) are never papered over with fabricated data.
  */
-import { get, post, restGet, restPost, v1Url, aiV1Url } from './client'
+import { get, post, restGet, restPost, v1Url, originV1Url } from './client'
 import { config } from '~/config'
 import { StoreApi } from './stores'
 import { CloudModelApi, type CatalogModel } from './models-catalog'
@@ -193,7 +193,7 @@ export const EmbeddingsApi = {
 
   /** Generate an embedding vector via the keyless `/ai` proxy (Bearer added server-side). */
   generate: (model: string, input: string): Promise<EmbeddingResult> =>
-    restPost<EmbeddingResult>(aiV1Url('embeddings'), { model, input }),
+    restPost<EmbeddingResult>(originV1Url('embeddings'), { model, input }),
 
   /** Ingest pasted text into a collection (source=upload — the balance-free path, inline). */
   ingestText: (store: string, name: string, content: string): Promise<IngestStats> =>

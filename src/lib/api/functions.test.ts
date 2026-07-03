@@ -244,12 +244,12 @@ describe('FunctionsApi.list — hits the documented /v1/functions contract', () 
     delete (globalThis as { window?: unknown }).window
   })
 
-  it('fetches the inventory via the /cloud user-bearer proxy and normalizes it', async () => {
-    // The functions surface authorizes on the Bearer owner claim, so the browser
-    // calls the console's OWN /cloud proxy (which mints a user token server-side),
-    // NOT the cookie-only direct cloud path — that is the 403→real fix.
+  it('fetches the inventory at the canonical /v1/functions and normalizes it', async () => {
+    // The functions surface authorizes on the Bearer owner claim; the browser calls the
+    // CANONICAL, prefix-free /v1/functions (next.config rewrites it to the console's OWN
+    // /cloud user-bearer proxy, which mints a user token server-side) — NOT a /<svc>/v1/ path.
     const out = await FunctionsApi.list()
-    expect(fetched).toContain(`${ORIGIN}/cloud/v1/functions`)
+    expect(fetched).toContain(`${ORIGIN}/v1/functions`)
     expect(out.map((f) => f.name)).toEqual(['resize'])
   })
 })
