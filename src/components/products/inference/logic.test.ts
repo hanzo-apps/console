@@ -18,6 +18,7 @@ import {
   fmtUsd,
   fromCatalogModel,
   fromMlEndpoint,
+  logDetailFacts,
   logsFromRecords,
   mergeEndpoints,
   paginate,
@@ -239,10 +240,67 @@ describe('logsFromRecords', () => {
     expect(zen.map((l) => l.id)).toEqual(['a', 'c'])
   })
 
+  it('carries the FULL underlying record so the row-detail drawer needs no second lookup', () => {
+    const [first] = logsFromRecords(records, { endpoint: 'all', level: 'all' }, 10)
+    expect(first.record.id).toBe('a')
+    expect(first.record.model).toBe('zen-3-32b')
+    expect(first.record.status).toBe('success')
+  })
+
   it('distinctModels / distinctLevels are real options only; empty ledger → []', () => {
     expect(distinctModels(records)).toEqual(['embed-8b', 'zen-3-32b'])
     expect(distinctLevels(records)).toEqual(['error', 'success'])
     expect(logsFromRecords([], { endpoint: 'all', level: 'all' }, 10)).toEqual([])
+  })
+})
+
+describe('logDetailFacts', () => {
+  const fmt = {
+    usd: (c: number) => (c === 0 ? '$0' : `$${(c / 100).toFixed(2)}`),
+    count: (n: number) => n.toLocaleString(),
+    time: (ms: number | null) => (ms == null ? '—' : `t=${ms}`),
+  }
+
+  it('projects EVERY real recorded field, formatting injected, honest em-dash for absent', () => {
+    const r = rec({ id: 'tx1', model: 'zen-3-32b', provider: 'hanzo', status: 'success', cents: 250, promptTokens: 80, completionTokens: 20, totalTokens: 100, stream: true, premium: true, at: 1000, requestId: 'req-9' })
+    const facts = logDetailFacts(r, fmt)
+    const by = Object.fromEntries(facts.map((f) => [f.label, f.value]))
+    expect(by.Endpoint).toBe('zen-3-32b')
+    expect(by.Provider).toBe('hanzo')
+    expect(by.Status).toBe('success')
+    expect(by.Cost).toBe('$2.50')
+    expect(by['Total tokens']).toBe('100')
+    expect(by['Prompt tokens']).toBe('80')
+    expect(by['Completion tokens']).toBe('20')
+    expect(by.Streamed).toBe('Yes')
+    expect(by.Tier).toBe('Premium')
+    expect(by['Request ID']).toBe('req-9')
+    expect(by['Transaction ID']).toBe('tx1')
+    expect(by.Time).toBe('t=1000')
+  })
+
+  it('shows honest "—" / defaults for missing data and OMITS untagged product/agent', () => {
+    // `at: null` is set explicitly (the `rec` helper's `?? NOW` can't express null).
+    const r: UsageRecord = { ...rec({ id: 'tx2', model: '', provider: '', status: '', cents: 0, totalTokens: 0 }), at: null }
+    const by = Object.fromEntries(logDetailFacts(r, fmt).map((f) => [f.label, f.value]))
+    expect(by.Endpoint).toBe('—')
+    expect(by.Provider).toBe('—')
+    expect(by.Status).toBe('unknown')
+    expect(by['Total tokens']).toBe('—')
+    expect(by.Streamed).toBe('No')
+    expect(by.Tier).toBe('Standard')
+    expect(by.Time).toBe('—')
+    // product/agent/requestId are only present when the ledger tagged them
+    expect('Product' in by).toBe(false)
+    expect('Agent' in by).toBe(false)
+    expect('Request ID' in by).toBe(false)
+  })
+
+  it('surfaces product + agent attribution only when the ledger tagged the row', () => {
+    const r = rec({ id: 'tx3', product: 'agents', agent: 'maxpower-support' })
+    const by = Object.fromEntries(logDetailFacts(r, fmt).map((f) => [f.label, f.value]))
+    expect(by.Product).toBe('agents')
+    expect(by.Agent).toBe('maxpower-support')
   })
 })
 
