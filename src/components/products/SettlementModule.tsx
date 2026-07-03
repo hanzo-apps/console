@@ -1,14 +1,18 @@
 'use client'
 
 /**
- * Settlement — batch settlement of on-chain transfers and payouts (amount,
- * counterparty, status) tracked by the platform.
+ * Settlement — outbound payouts (settlement of balances to a bank account or card),
+ * tracked by the commerce billing ledger.
  *
- * Reads the settlement ledger from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/settlement`), which injects the service token server-side. When the
- * settlement service isn't provisioned for the org the list load fails and the
- * honest not-configured / unavailable card renders instead of an empty grid —
- * matching every other infra module.
+ * Reads the payout ledger from commerce via the same-origin `/billing/v1` proxy
+ * (`GET /v1/billing/payouts` → commerce `ListPayouts`), which injects the commerce
+ * service token server-side and scopes every read to the caller's OWN org namespace
+ * (server-resolved `X-Org-Id`, never client-supplied). The endpoint returns a bare
+ * array of payout objects `[{ id, amount, currency, status, destinationType,
+ * destinationId, created, ... }]`; amount is in minor units (cents). When the org has
+ * no payouts the list is honest-empty; when commerce is unreachable / unconfigured
+ * (COMMERCE_TOKEN unset → 501) the honest not-configured / unavailable card renders
+ * instead of a fake grid — matching every other infra module.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
@@ -20,27 +24,41 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
+/** Same-origin commerce billing DATA proxy (app/billing/v1/[...path]) — injects the
+ *  commerce service token + pins the caller's own org server-side. */
+const billing = (path: string) => `/billing/v1/${path.replace(/^\/+/, '')}`
 
-type Settlement = {
+/** One payout as commerce's `ListPayouts` returns it (`payoutResponse`). */
+type Payout = {
   id: string
-  type?: string
-  amount?: string
-  counterparty?: string
+  amount?: number // minor units (cents)
+  currency?: string
   status?: string
-  createdAt?: string
+  destinationType?: string // "bank_account" | "card"
+  destinationId?: string
+  created?: string // RFC3339
+  description?: string
+}
+
+/** Cents + currency → a human money string (e.g. `1234` usd → "$12.34"). */
+const fmtAmount = (cents?: number, currency?: string): string => {
+  if (typeof cents !== 'number') return '—'
+  const cur = (currency || 'usd').toUpperCase()
+  const value = (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `${value} ${cur}`
 }
 
 export function SettlementModule(_props: { params: Record<string, string> }) {
-  const [rows, setRows] = useState<Settlement[]>([])
+  const [rows, setRows] = useState<Payout[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<PlatformError | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ settlements?: Settlement[] }>(paas('settlement'))
-      setRows(r.settlements ?? [])
+      // `ListPayouts` returns a BARE array (not the `{ payouts: [...] }` envelope).
+      const r = await restGet<Payout[]>(billing('payouts'))
+      setRows(Array.isArray(r) ? r : [])
       setLoadError(null)
     } catch (e) {
       setLoadError(interpretPlatformError(e))
@@ -54,7 +72,7 @@ export function SettlementModule(_props: { params: Record<string, string> }) {
     void load()
   }, [load])
 
-  const columns: Column<Settlement>[] = [
+  const columns: Column<Payout>[] = [
     {
       key: 'id',
       header: 'ID',
@@ -65,32 +83,32 @@ export function SettlementModule(_props: { params: Record<string, string> }) {
       ),
     },
     {
-      key: 'type',
+      key: 'destinationType',
       header: 'Type',
       width: 140,
       render: (s) => (
         <Text fontSize="$3" color="$color11">
-          {s.type || '—'}
+          {s.destinationType || '—'}
         </Text>
       ),
     },
     {
       key: 'amount',
       header: 'Amount',
-      width: 140,
+      width: 150,
       render: (s) => (
         <Text fontSize="$3" color="$color11">
-          {s.amount || '—'}
+          {fmtAmount(s.amount, s.currency)}
         </Text>
       ),
     },
     {
-      key: 'counterparty',
-      header: 'Counterparty',
-      width: 200,
+      key: 'destinationId',
+      header: 'Destination',
+      width: 220,
       render: (s) => (
         <Text fontSize="$3" color="$color11" numberOfLines={1}>
-          {s.counterparty || '—'}
+          {s.destinationId || '—'}
         </Text>
       ),
     },
@@ -101,12 +119,12 @@ export function SettlementModule(_props: { params: Record<string, string> }) {
       render: (s) => <StatusTag status={s.status ?? 'unknown'} />,
     },
     {
-      key: 'createdAt',
+      key: 'created',
       header: 'Created',
       width: 190,
       render: (s) => (
         <Text fontSize="$3" color="$color11">
-          {s.createdAt ? new Date(s.createdAt).toLocaleString() : '—'}
+          {s.created ? new Date(s.created).toLocaleString() : '—'}
         </Text>
       ),
     },
@@ -116,7 +134,7 @@ export function SettlementModule(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Settlement"
-        subtitle="Batch settlement of on-chain transfers and payouts."
+        subtitle="Outbound payouts — settlement of balances to bank or card."
         actions={
           <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
             Refresh
@@ -132,7 +150,7 @@ export function SettlementModule(_props: { params: Record<string, string> }) {
           rows={rows}
           loading={loading}
           rowKey={(s) => s.id}
-          empty="No settlement runs yet."
+          empty="No payouts yet."
         />
       )}
     </>
