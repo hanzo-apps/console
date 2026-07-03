@@ -35,10 +35,17 @@ import {
   personalOrgFromEmail,
   validateSignup,
 } from '~/lib/server/onboarding'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // Same-origin gate: this route creates accounts from the open internet with no
+  // captcha/rate-limit yet, so refuse cross-origin scripted signups (a mild anti-abuse
+  // measure; the console's own signup form is same-origin).
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
   if (!mintConfigured()) {
     return NextResponse.json(
       { error: 'Account creation is not configured on this deployment (IAM client unset).' },
