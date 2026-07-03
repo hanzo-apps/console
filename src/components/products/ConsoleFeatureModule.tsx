@@ -15,7 +15,8 @@ import { useRouter } from 'next/navigation'
 import { Button, Text, XStack } from '@hanzo/gui'
 import { ExternalLink, RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet, v1Url } from '~/lib/api/client'
+import { restGet, v1Url, cloudProxyV1Url } from '~/lib/api/client'
+import { allowCloudSurface } from '~/lib/server/proxy-allow'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -131,12 +132,23 @@ const stableKey = (row: Record<string, unknown>, index: number): string => {
 const withIds = (rows: Record<string, unknown>[]): SurfaceRow[] =>
   rows.map((row, index) => ({ ...row, __rowId: stableKey(row, index) }))
 
+/**
+ * Where a surface reads from. An allow-listed cloud head (`o11y/*` for
+ * Dashboards/Widgets/Score Analytics, `evals/*` for Experiments) MUST ride the
+ * user-bearer `/cloud` proxy — the cloud runtime scopes by the minted bearer's owner
+ * claim and 403s a direct cookie-only call in prod. A forward-compat surface with no
+ * real backend yet (integrations / referrals / zero-trust) stays on the direct-cloud
+ * `v1Url`, so its honest error card is unchanged.
+ */
+const surfaceUrl = (endpoint: string): string =>
+  allowCloudSurface(`v1/${endpoint.replace(/^\/+/, '')}`) ? cloudProxyV1Url(endpoint) : v1Url(endpoint)
+
 export function ForwardSurface({ surface }: { surface: Surface }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
-    restGet<unknown>(v1Url(surface.endpoint))
+    restGet<unknown>(surfaceUrl(surface.endpoint))
       .then((payload) => setState({ phase: 'ready', rows: extractRows(payload) }))
       .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [surface.endpoint])
