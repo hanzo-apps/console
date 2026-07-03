@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import {
+  AgentsApi,
   canonicalStatus,
   normalizeAgent,
   normalizeAgents,
@@ -253,5 +254,58 @@ describe('formatters', () => {
     expect(fmtRelative('2026-06-10T00:00:00Z', now)).toBe('just now')
     expect(fmtRelative('2026-06-09T00:00:00Z', now)).toBe('1d ago')
     expect(fmtRelative(undefined, now)).toBe('—')
+  })
+})
+
+/**
+ * The single-agent routes (`GET`/`DELETE /v1/agents/:name`) are keyed on the agent's
+ * org-unique NAME — its backend handle — NOT the display `id` (`agent_…`). Passing the
+ * id 404s ("agent not found"), which is exactly what left the detail-pane activity empty
+ * and made the Delete button a silent no-op. These pin that `get`/`remove` build the
+ * name path (and URL-encode it), so that regression can't return.
+ */
+describe('AgentsApi — single-agent routes are name-keyed', () => {
+  const ORIGIN = 'https://console.hanzo.ai'
+  let calls: { url: string; method: string }[] = []
+
+  beforeEach(() => {
+    calls = []
+    ;(globalThis as { window?: unknown }).window = {
+      location: { origin: ORIGIN, hostname: 'console.hanzo.ai' },
+    }
+    vi.stubGlobal('fetch', (url: string, init?: { method?: string }) => {
+      calls.push({ url, method: (init?.method ?? 'GET').toUpperCase() })
+      return Promise.resolve(
+        new Response(JSON.stringify({ id: 'agent_8c25', name: 'des', model: 'zen', status: 'ready' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (globalThis as { window?: unknown }).window
+  })
+
+  it('get(name) fetches /v1/agents/:name (the NAME handle, not the agent_ id)', async () => {
+    await AgentsApi.get('des')
+    expect(calls).toHaveLength(1)
+    expect(calls[0].method).toBe('GET')
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/agents/des`)
+    // The `agent_…` display id must NEVER be the path segment — that is the 404 bug.
+    expect(calls[0].url).not.toContain('agent_')
+  })
+
+  it('remove(name) DELETEs /v1/agents/:name', async () => {
+    await AgentsApi.remove('des')
+    expect(calls).toHaveLength(1)
+    expect(calls[0].method).toBe('DELETE')
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/agents/des`)
+  })
+
+  it('URL-encodes a name with reserved characters', async () => {
+    await AgentsApi.get('a b/c')
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/agents/a%20b%2Fc`)
   })
 })
