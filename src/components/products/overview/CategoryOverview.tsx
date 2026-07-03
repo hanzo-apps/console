@@ -44,6 +44,7 @@ import {
   type ProductCategory,
   type ProductIcon,
 } from '~/lib/products/registry'
+import { openProduct } from '~/lib/products/open'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { useProductColors } from '~/lib/products/pins'
 import { categoryColorHex } from '~/lib/products/colors'
@@ -195,7 +196,7 @@ export function CategoryOverview({ params }: { params: Record<string, string> })
                     theme={i === 0 ? 'light' : undefined}
                     chromeless={i !== 0}
                     icon={<FIcon size={16} />}
-                    onPress={() => push(`/${e.id}`)}
+                    onPress={() => openProduct(e, push)}
                   >
                     {e.label}
                   </Button>
@@ -231,7 +232,7 @@ export function CategoryOverview({ params }: { params: Record<string, string> })
               key={entry.id}
               entry={entry}
               color={colorOf(entry.id)}
-              onOpen={() => push(`/${entry.id}`)}
+              onOpen={() => openProduct(entry, push)}
               onLearnMore={() => push(`/discover/${entry.id}`)}
             />
           ))}
