@@ -18,6 +18,7 @@
  * Every value here is server-only env (sourced from KMS via the deployment's
  * secret refs) — NEVER `NEXT_PUBLIC_`, never in the browser bundle.
  */
+import { randomUUID } from 'node:crypto'
 import { type NextRequest } from 'next/server'
 
 import { brandFromHost } from '~/config'
@@ -423,6 +424,52 @@ export async function createOrganization(opts: {
     isProfilePublic: false,
   }
   await iamPostBody('/v1/iam/add-organization', {}, org)
+}
+
+/**
+ * Create a brand-new account as the ADMIN of an org (self-serve signup). The org
+ * (`opts.org`) must already exist — the caller mints it via `createOrganization`
+ * first, so the new user's own personal org carries proper password/locale policy.
+ *
+ * Password hashing is IAM-side and non-negotiable: we send the plaintext `password`
+ * with NO `passwordType`, so casibase's `AddUser` runs `UpdateUserPassword`, which
+ * hashes with the org's policy (argon2id, cloned from the brand org) and explicitly
+ * REFUSES to store plaintext. We pass an explicit `id` (UUID) so AddUser skips the
+ * signup-application lookup a fresh personal org has no default app for.
+ */
+export async function createUser(opts: {
+  org: string
+  username: string
+  email: string
+  password: string
+  displayName: string
+  /** The brand app the account signs up through (hygiene; login is by email). */
+  signupApplication: string
+}): Promise<void> {
+  const now = new Date().toISOString()
+  await iamPostBody('/v1/iam/add-user', {}, {
+    owner: opts.org,
+    name: opts.username,
+    id: randomUUID(),
+    type: 'normal-user',
+    // Plaintext in — IAM hashes it (argon2id) and never persists it as-is. Do NOT
+    // set passwordType, or AddUser skips hashing and stores the value verbatim.
+    password: opts.password,
+    displayName: opts.displayName,
+    email: opts.email,
+    emailVerified: false,
+    phone: '',
+    countryCode: '',
+    signupApplication: opts.signupApplication,
+    createdTime: now,
+    updatedTime: now,
+    isAdmin: true,
+    isForbidden: false,
+    isDeleted: false,
+    avatar: '',
+    score: 0,
+    ranking: 0,
+  })
 }
 
 /**

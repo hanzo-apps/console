@@ -6,6 +6,11 @@ import {
   slugifyOrg,
   validateOrgName,
   MAX_ORG_SLUG,
+  MIN_PASSWORD,
+  validateSignup,
+  deriveUsername,
+  displayNameFromEmail,
+  personalOrgFromEmail,
 } from './onboarding'
 
 describe('slugifyOrg', () => {
@@ -67,5 +72,74 @@ describe('isReservedOrg / validateOrgName', () => {
     const r = validateOrgName('Max Power LLC')
     expect(r.ok).toBe(true)
     if (r.ok) expect(r.slug).toBe('max-power-llc')
+  })
+})
+
+describe('validateSignup', () => {
+  it('normalizes (trim + lowercase) a valid email', () => {
+    const r = validateSignup('  Dave@Example.COM ', 'hunter2!!')
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.email).toBe('dave@example.com')
+      expect(r.password).toBe('hunter2!!')
+    }
+  })
+
+  it('rejects a malformed email', () => {
+    for (const bad of ['', 'nope', 'a@b', 'a b@c.com', 'x@y', '@x.com']) {
+      expect(validateSignup(bad, 'longenoughpw').ok).toBe(false)
+    }
+  })
+
+  it('enforces the minimum password length', () => {
+    const short = validateSignup('a@b.com', 'x'.repeat(MIN_PASSWORD - 1))
+    expect(short.ok).toBe(false)
+    expect(validateSignup('a@b.com', 'x'.repeat(MIN_PASSWORD)).ok).toBe(true)
+  })
+})
+
+describe('deriveUsername / displayNameFromEmail', () => {
+  it('derives a readable username from the email local part', () => {
+    expect(deriveUsername('dave.lorenzini@example.com')).toBe('dave-lorenzini')
+    expect(deriveUsername('***@x.com')).toBe('user') // local part has no usable chars → fallback
+  })
+
+  it('humanizes a display name', () => {
+    expect(displayNameFromEmail('dave.lorenzini@example.com')).toBe('Dave Lorenzini')
+    expect(displayNameFromEmail('acme_corp@x.com')).toBe('Acme Corp')
+  })
+})
+
+describe('personalOrgFromEmail', () => {
+  const digestA = 'aaaaaaaabbbbbbbb'
+  const digestB = 'ccccccccdddddddd'
+
+  it('is deterministic per email (same email → same slug)', () => {
+    expect(personalOrgFromEmail('dave@x.com', digestA)).toBe(personalOrgFromEmail('dave@x.com', digestA))
+  })
+
+  it('is injective across emails: same local part, different domains do NOT collide', () => {
+    // different emails hash to different digests → different slugs
+    const a = personalOrgFromEmail('alice@x.com', digestA)
+    const b = personalOrgFromEmail('alice@y.com', digestB)
+    expect(a).not.toBe(b)
+    expect(a.startsWith('alice-')).toBe(true)
+    expect(b.startsWith('alice-')).toBe(true)
+  })
+
+  it('carries an 8-hex suffix and is never a reserved org', () => {
+    const slug = personalOrgFromEmail('hanzo@x.com', 'deadbeefcafef00d')
+    expect(slug).toBe('hanzo-deadbeef')
+    expect(isReservedOrg(slug)).toBe(false) // the suffix defuses the reserved 'hanzo'
+  })
+
+  it('stays within MAX_ORG_SLUG for a long local part', () => {
+    const slug = personalOrgFromEmail(`${'x'.repeat(120)}@x.com`, 'abcdef0123456789')
+    expect(slug.length).toBeLessThanOrEqual(MAX_ORG_SLUG)
+    expect(slug.endsWith('-abcdef01')).toBe(true)
+  })
+
+  it('falls back to a "user" base when the local part has no usable chars', () => {
+    expect(personalOrgFromEmail('***@x.com', '12345678')).toBe('user-12345678')
   })
 })
