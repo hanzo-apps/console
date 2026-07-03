@@ -11,7 +11,7 @@
  * sends cookie credentials only. One client, parameterized by `kind` — the
  * ResourceModule factory binds a kind and gets a working admin surface.
  */
-import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
+import { restGet, restPost, restDelete, originV1Url } from './client'
 
 /** Wire kind = the REST path segment the provisioning service serves. */
 export type ResourceKind =
@@ -54,7 +54,7 @@ export type ResourceCreated = Resource & {
  * or one level of nesting (e.g. a Qdrant-style `{ result: { collections: [...] } }`).
  * A non-array body reaching the list view's `for…of` / `.length` throws DURING
  * render and blanks the whole module behind the error boundary — the observed
- * Vector regression (`GET /cloud/v1/vector` 200, but the API returns a wrapped
+ * Vector regression (`GET /v1/vector` 200, but the API returns a wrapped
  * shape, so nothing renders while SQL/KV — which return bare arrays — render fine).
  *
  * So we validate + unwrap at the transport boundary (ONE place, every kind) and
@@ -85,14 +85,14 @@ export function normalizeResourceList(body: unknown): Resource[] {
 
 export const ProvisioningApi = {
   list: async (kind: ResourceKind): Promise<Resource[]> =>
-    normalizeResourceList(await restGet<unknown>(cloudProxyV1Url(kind))),
+    normalizeResourceList(await restGet<unknown>(originV1Url(kind))),
 
   get: (kind: ResourceKind, name: string) =>
-    restGet<Resource>(cloudProxyV1Url(`${kind}/${encodeURIComponent(name)}`)),
+    restGet<Resource>(originV1Url(`${kind}/${encodeURIComponent(name)}`)),
 
   create: (kind: ResourceKind, name: string) =>
-    restPost<ResourceCreated>(cloudProxyV1Url(kind), { name }),
+    restPost<ResourceCreated>(originV1Url(kind), { name }),
 
   remove: (kind: ResourceKind, name: string) =>
-    restDelete(cloudProxyV1Url(`${kind}/${encodeURIComponent(name)}`)),
+    restDelete(originV1Url(`${kind}/${encodeURIComponent(name)}`)),
 }
