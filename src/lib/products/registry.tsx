@@ -2018,47 +2018,46 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
-    // ERP — the canonical ERPNext (Frappe) suite surfaced IN the console (ErpModule),
-    // entitlement-gated to the owning brand org (Frappe is single-tenant). Overview
-    // drives a REAL /v1/platform deploy with live status; Accounting/Items/Sales are
-    // NATIVE summary views over Frappe REST (honest "deploy ERP" until an instance is
-    // live); Desk embeds the real desk once erp.<brand> is reachable. Never fabricated.
+    // ERP — a NATIVE ERP on the Hanzo Framework DocType engine (/v1/framework/*), NOT
+    // an iframe. A master/transaction is a framework DocType (module "erp"); posting
+    // (stock ledger, balanced GL) is a native-Go hook on the engine (clients/erp).
+    // Rendered by the generic metadata-driven DocType renderer (src/components/doctype/*),
+    // per-org — the SAME renderer as CMS, with zero ERP-specific UI code.
     id: 'erp',
     label: 'ERP',
     icon: Boxes,
-    description: 'Accounting, inventory, sales, and HR — your Business-OS ERP on ERPNext.',
+    description: 'Native ERP on the Hanzo Framework — items, sales, purchasing, accounting, and HR as DocTypes, per organization.',
     category: 'Apps',
     status: 'enabled',
-    repo: 'hanzoai/erp',
+    repo: 'hanzoai/cloud',
     docs: `${DOCS}/erp`,
     kind: 'module',
     routes: [
       { path: '', component: ErpModule },
-      { path: ':tab', component: ErpModule },
-    ],
-    subpages: [
-      { slug: 'accounting', label: 'Accounting' },
-      { slug: 'items', label: 'Items' },
-      { slug: 'sales', label: 'Sales Orders' },
-      { slug: 'desk', label: 'Desk' },
+      { path: 'collections/:doctype', component: ErpModule },
+      { path: 'collections/:doctype/:name', component: ErpModule },
     ],
   },
   {
-    // Help Center — the live Hanzo Help Center (Frappe Helpdesk at help.<brand>,
-    // confirmed live at help.hanzo.ai), EMBEDDED in the console (HelpModule) over
-    // the brand IAM SSO ("Login with hanzo"). A shared brand support desk — the
-    // Helpdesk scopes each caller to their own tickets — so it's embedded for every
-    // signed-in user; honest "not available" if the host isn't reachable.
+    // Help Center — a NATIVE support desk on the Hanzo Framework DocType engine
+    // (/v1/framework/*), NOT an iframe. A ticket is a framework document (module
+    // "help"); its lifecycle is a status field; agents/teams/SLAs are DocTypes
+    // (clients/help — pure fixtures, no hooks). Rendered by the generic
+    // metadata-driven DocType renderer, per-org — the SAME renderer as CMS/ERP.
     id: 'helpdesk',
     label: 'Help Center',
     icon: LifeBuoy,
-    description: 'Customer support — tickets and a knowledge base for your users.',
+    description: 'Native support desk on the Hanzo Framework — tickets, agents, teams, and SLAs as DocTypes, per organization.',
     category: 'Apps',
     status: 'enabled',
-    repo: 'hanzoai/helpdesk',
+    repo: 'hanzoai/cloud',
     docs: `${DOCS}/helpdesk`,
     kind: 'module',
-    routes: [{ path: '', component: HelpModule }],
+    routes: [
+      { path: '', component: HelpModule },
+      { path: 'collections/:doctype', component: HelpModule },
+      { path: 'collections/:doctype/:name', component: HelpModule },
+    ],
   },
   {
     // Accessibility — a Wix-style WCAG checker for the site Dave is building. Runs
