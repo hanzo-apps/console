@@ -9,7 +9,7 @@
  *
  * TRANSPORT — metadata operations (list buckets/objects, create/delete bucket,
  * delete object, mint a presigned URL) go through the same-origin `/cloud`
- * user-bearer proxy (`originV1Url` → `next.config` rewrites `/v1/s3` to `/cloud`,
+ * user-bearer proxy (`cloudProxyV1Url` → the same-origin `/cloud` bearer proxy,
  * which mints a short-lived user
  * token; `s3` is allow-listed in proxy-allow.ts). Plain REST (raw JSON / 201 /
  * 204), like the provisioning + functions facades.
@@ -25,7 +25,7 @@
  * rather than throwing. Nothing is fabricated — an unreachable/unconfigured
  * backend surfaces through `classifyBackend` as an honest state.
  */
-import { restGet, restPost, restDelete, originV1Url } from './client'
+import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
 
 /** File-manager base path — canonical `/v1/s3` (rewritten to the same-origin `/cloud`
  *  proxy → cloud-api). */
@@ -131,15 +131,15 @@ export function normalizePresigned(payload: unknown): Presigned | null {
 
 export const StorageApi = {
   /** List the caller's buckets (`GET /v1/s3/buckets`). Honest-empty on 200 with no rows. */
-  buckets: (): Promise<Bucket[]> => restGet<unknown>(originV1Url(`${BASE}/buckets`)).then(normalizeBuckets),
+  buckets: (): Promise<Bucket[]> => restGet<unknown>(cloudProxyV1Url(`${BASE}/buckets`)).then(normalizeBuckets),
 
   /** Create a bucket (`POST /v1/s3/buckets`). */
   createBucket: (name: string): Promise<Bucket | null> =>
-    restPost<unknown>(originV1Url(`${BASE}/buckets`), { name }).then(normalizeBucket),
+    restPost<unknown>(cloudProxyV1Url(`${BASE}/buckets`), { name }).then(normalizeBucket),
 
   /** Delete an EMPTY bucket (`DELETE /v1/s3/buckets/:bucket`). */
   deleteBucket: (bucket: string): Promise<void> =>
-    restDelete(originV1Url(`${BASE}/buckets/${enc(bucket)}`)),
+    restDelete(cloudProxyV1Url(`${BASE}/buckets/${enc(bucket)}`)),
 
   /**
    * List one folder level (`GET /v1/s3/buckets/:bucket/objects?prefix=`). Folder-
@@ -148,7 +148,7 @@ export const StorageApi = {
    */
   objects: (bucket: string, prefix = ''): Promise<S3Object[]> =>
     restGet<unknown>(
-      originV1Url(`${BASE}/buckets/${enc(bucket)}/objects${prefix ? `?prefix=${enc(prefix)}` : ''}`),
+      cloudProxyV1Url(`${BASE}/buckets/${enc(bucket)}/objects${prefix ? `?prefix=${enc(prefix)}` : ''}`),
     ).then(normalizeObjects),
 
   /**
@@ -156,20 +156,20 @@ export const StorageApi = {
    * The caller then PUTs the file bytes DIRECTLY to `url` (see `uploadTo`).
    */
   presignUpload: (bucket: string, key: string): Promise<Presigned | null> =>
-    restPost<unknown>(originV1Url(`${BASE}/buckets/${enc(bucket)}/objects`), { key }).then(normalizePresigned),
+    restPost<unknown>(cloudProxyV1Url(`${BASE}/buckets/${enc(bucket)}/objects`), { key }).then(normalizePresigned),
 
   /**
    * Mint a presigned GET URL for a download
    * (`GET /v1/s3/buckets/:bucket/objects/<key>`). The caller opens `url` directly.
    */
   presignDownload: (bucket: string, key: string): Promise<Presigned | null> =>
-    restGet<unknown>(originV1Url(`${BASE}/buckets/${enc(bucket)}/objects/${encodeKey(key)}`)).then(
+    restGet<unknown>(cloudProxyV1Url(`${BASE}/buckets/${enc(bucket)}/objects/${encodeKey(key)}`)).then(
       normalizePresigned,
     ),
 
   /** Delete one object (`DELETE /v1/s3/buckets/:bucket/objects/<key>`). */
   deleteObject: (bucket: string, key: string): Promise<void> =>
-    restDelete(originV1Url(`${BASE}/buckets/${enc(bucket)}/objects/${encodeKey(key)}`)),
+    restDelete(cloudProxyV1Url(`${BASE}/buckets/${enc(bucket)}/objects/${encodeKey(key)}`)),
 }
 
 /**
