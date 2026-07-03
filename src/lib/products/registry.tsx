@@ -768,6 +768,24 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AgentsModule }],
   },
   {
+    // Hanzo Auto — visual workflow automation (~400 MCP servers), the n8n/Zapier
+    // surface. A standalone app at auto.hanzo.ai on shared Hanzo IAM, so the tile
+    // opens it already-signed-in. External launch (it owns its own full UI);
+    // hanzo-scoped so the auto.hanzo.ai URL never leaks onto a Lux/Zoo console.
+    id: 'auto',
+    label: 'Automation',
+    icon: Workflow,
+    description: 'Visual AI workflow automation — connect 400+ MCP tools and agents.',
+    gcp: 'Application Integration',
+    category: 'AI',
+    status: 'enabled',
+    brands: ['hanzo'],
+    repo: 'hanzoai/auto',
+    docs: `${DOCS}/auto`,
+    kind: 'external',
+    href: 'https://auto.hanzo.ai',
+  },
+  {
     id: 'inference',
     label: 'Inference',
     icon: Zap,
