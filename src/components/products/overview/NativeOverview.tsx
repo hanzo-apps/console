@@ -131,8 +131,8 @@ function HealthBand({ service, label }: { service: string; label: string }) {
           </Text>
         </XStack>
         <Text fontSize="$2" color="$color10">
-          The control plane has no running {label} service for your organization yet. Provision it,
-          then its health and workloads appear here.
+          The control plane&apos;s operator inventory reports no running {label} service for your
+          organization. Its health lights up here automatically once one is reported — no status is fabricated.
         </Text>
       </Card>
     )

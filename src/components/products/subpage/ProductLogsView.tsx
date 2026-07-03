@@ -17,7 +17,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack } from '@hanzo/gui'
-import { FileText, RefreshCw } from '@hanzogui/lucide-icons-2'
+import { CheckCircle2, FileText, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import type { CatalogEntry } from '~/lib/products/registry'
 import { restGet } from '~/lib/api/client'
@@ -115,6 +115,20 @@ export function ProductLogsView({ entry }: { entry: CatalogEntry }) {
           <Text fontSize="$3" color="$color11">
             {entry.label} is a managed capability with no discrete service log stream. Logs appear here
             automatically if it ever runs as its own service — nothing is fabricated.
+          </Text>
+        </Card>
+      ) : loadError && loadError.kind === 'forbidden' ? (
+        // Reached the control plane, but the log stream is managed/admin-scoped on this
+        // deployment — a Logs-specific honest state, never a scary error and never fake lines.
+        <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={640}>
+          <XStack gap="$2" items="center">
+            <CheckCircle2 size={16} color="$green10" />
+            <Text fontSize="$4" fontWeight="700">Logs · managed by Hanzo</Text>
+          </XStack>
+          <Text fontSize="$3" color="$color11">
+            {entry.label} runs on managed Hanzo Cloud. Its log stream is handled by the control plane and
+            isn&apos;t routed to the console on this deployment — no fabricated lines are shown. If {entry.label}{' '}
+            ever streams logs to the console, they appear here automatically.
           </Text>
         </Card>
       ) : loadError ? (

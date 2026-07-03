@@ -1776,3 +1776,63 @@ edits).
   lane) → one patch above → **v8.4.43**. Idiom: @hanzo/gui v5 shorthands; sidebar/header
   untouched. Live Q&A verification (bubble + full chat + ⌘K, incl. an honest "no such
   feature" answer) is the post-deploy gate.
+
+## Shared per-product Status/Logs/Metrics/Settings — correct, per-product, DRY (v8.4.45)
+
+The uniform base sub-pages (Overview · Status · Logs · Metrics · Settings) are made
+REAL, correct, and per-product across EVERY product, driven by ONE metadata-driven
+system — no bespoke-per-product pages, no fabrication. Only the shared subpage system
+(`components/products/subpage/*`), the native-overview specs (`overview/*`), and the
+living-overview metrics config (`overview/living/*`) + per-product metadata are touched.
+
+- **Metrics scoped PER PRODUCT + one metadata source (DRY).** The Metrics dashboard
+  already filtered the usage ledger by `metadata.product === <id>` (`usage-adapter.
+  buildCloudUsageOverview`), but the "which products are the inference surface" decision
+  was DUPLICATED — a DEAD `MetricsFeed`/`O11Y_METRICS_PRODUCTS` set in `subpage/sources.ts`
+  (ignored by the view) AND the live `RAW_INFERENCE_PRODUCTS` in `product-metrics.ts`.
+  Consolidated to ONE place: `sources.ts` `metricsScopeFor(id)` →
+  `{ product, scope }` — `INFERENCE_SURFACE_PRODUCTS = {inference,models,api,gateway}`
+  read the WHOLE inference ledger (`product:null`, `scope:'inference-all'`), every OTHER
+  product filters by its own tag (`product:id`, `scope:'product'`, honest-empty until
+  attributed — NEVER the org total). `product-metrics.ts` + `ProductMetricsView` consume
+  it. **Audit-proofing:** the 4 inference-surface products (whose ledger genuinely IS the
+  whole inference ledger — every call flows through them) now carry an explicit honest
+  banner ("This is your org's whole inference ledger — every model call flows through
+  <label>. Higher-level products show only their own attributed usage.") + a scope-aware
+  subtitle, so the whole-ledger view is TRUTHFULLY LABELED, never masquerading as a narrow
+  per-product slice or an org-aggregate leak.
+- **Status/Logs service accuracy (grounded in the live `/v1/apps`).** Probed the real
+  operator inventory (108 apps): the derived service name (`repoBase(repo) ?? id`) was
+  WRONG for a few products, so Status/Logs showed a false "not deployed" for services that
+  ARE running. Added a verified `SERVICE_OVERRIDE` in `sources.ts` — `models` (repo
+  `hanzoai/ai` derived `ai`; the real operator app is `models`), `bot`→`bot-gateway`,
+  `helpdesk`→`help` — each maps to a service that genuinely appears in `/v1/apps`, so
+  Status lights up REAL health. Fixed the stale `console` spec health service
+  (`console2`→`console`, the canonical operator app). gateway/dns/kms/metrics/s3 are
+  raw-deployed (NOT operator apps) → they correctly show an honest "not reporting", and the
+  Status/Overview "no service" copy was made neutral+honest ("operator inventory reports no
+  running <label>… may be a shared managed service reported elsewhere… no status is
+  fabricated") instead of a misleading "Provision it". Platform `/v1/logs` rejects even the
+  service token, so Logs resolves to a Logs-specific honest "managed by Hanzo" card (never
+  fabricated lines).
+- **Settings is product-specific + REAL (not a dead generic form).** `settingsConfigFor
+  (entry)` (`sources.ts`) surfaces each product's real configuration — REUSING the product's
+  native-overview spec facts+actions verbatim where one exists (DRY, one content source:
+  gateway/api/cli/… Base URL/Auth/endpoint + Create-API-key), else a category-appropriate
+  honest config (AI → `api.hanzo.ai/v1` + Bearer + Manage-API-keys; data resources →
+  connection pointer + the product's own page; Security → managed; default → the product's
+  own page). `ProductSettingsView` renders a NEW **Configuration** card (real facts +
+  real in-console links) above About/Deployment/Org — every value real or an honest "—".
+- **Overview customized for ALL.** The 12 native-overview products all carry rich bespoke
+  `OVERVIEW_SPECS` (verified by `resolve.test`); `defaultSpec` stays honest (real
+  category/repo facts, NO fabricated actions/health). The `console` spec health repointed to
+  the real app. Products with their own overview module (Inference/Models/Functions/GPUs/
+  Vector/…) are untouched (other lanes) — their Status/Logs/Metrics/Settings ARE this shared
+  system.
+- DRY + honest by construction; strictly @hanzo/gui v5 shorthands, mobile-responsive
+  (flexWrap rows). Did NOT touch `AgentsModule`/`agents/*` or `assistant/*`.
+- Verification: `tsc --noEmit` clean; `vitest` **1140/1140** (94 files; +10: metricsScopeFor
+  scope/consolidation, SERVICE_OVERRIDE, settingsConfigFor reuse+category defaults, honest
+  inference-surface framing); `next build` ✓ (all routes). Rebased on origin/main (v8.4.44)
+  → **v8.4.45**. Live authenticated spot-check (Models/Inference/Functions/GPUs/Vector/
+  Gateway/IAM/Commerce) is the post-deploy gate.
