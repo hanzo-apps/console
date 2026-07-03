@@ -33,6 +33,14 @@ export interface CollectionsBrowserProps {
   subtitle: string
   /** Open a collection's records. */
   onOpen: (doctype: string) => void
+  /**
+   * Lane-appropriate copy for the first-run (pre-install) empty state. Optional and
+   * defaulted to the CMS wording, so this component stays generic over the lane: a
+   * CMS caller renders identically, while ERP/Help pass their own description +
+   * bullets. Additive only — no behavior/permission/proxy change.
+   */
+  setupDescription?: string
+  setupBullets?: string[]
 }
 
 type LoadState =
@@ -40,7 +48,7 @@ type LoadState =
   | { phase: 'error'; error: BackendState }
   | { phase: 'ready'; collections: DocType[]; registered: boolean }
 
-export function CollectionsBrowser({ client, module, label, subtitle, onOpen }: CollectionsBrowserProps) {
+export function CollectionsBrowser({ client, module, label, subtitle, onOpen, setupDescription, setupBullets }: CollectionsBrowserProps) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -150,8 +158,8 @@ export function CollectionsBrowser({ client, module, label, subtitle, onOpen }: 
         <EmptyState
           icon={Boxes}
           title={`Set up ${label}`}
-          description={`${label} is a set of content collections — Pages, Posts, Articles, Media, and Navigation — as DocTypes on the Hanzo Framework, per organization.`}
-          bullets={[
+          description={setupDescription ?? `${label} is a set of content collections — Pages, Posts, Articles, Media, and Navigation — as DocTypes on the Hanzo Framework, per organization.`}
+          bullets={setupBullets ?? [
             'Installs the default collections into your organization',
             'Content is documents on the framework — versioned, permissioned, per-org',
             'Add your own collections and fields any time',
