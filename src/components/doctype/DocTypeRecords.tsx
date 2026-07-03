@@ -22,7 +22,7 @@ import { RecordsView, type FieldDefinition, type SelectOption } from '@hanzo/dat
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import type { FrameworkClient } from '~/lib/framework/client'
 import type { DocType, FrameworkDoc } from '~/lib/framework/types'
-import { docTypeToFields, toRecord, enrichLinks, savePayload, isMediaDoctype } from '~/lib/framework/fields'
+import { docTypeToFields, toRecord, enrichLinks, savePayload, isMediaDoctype, hasProjectField, PROJECT_FIELD } from '~/lib/framework/fields'
 import { loadLinkOptions, makeFieldOptions } from './data'
 import { MediaGrid } from './MediaGrid'
 
@@ -39,10 +39,12 @@ export interface DocTypeRecordsProps {
   onOpen: (name: string) => void
   /** Start creating a document. */
   onCreate: () => void
+  /** Active project scope — filters the list when the collection has a `project` field. */
+  project?: string
   title?: ReactNode
 }
 
-export function DocTypeRecords({ client, doctype, onOpen, onCreate, title }: DocTypeRecordsProps) {
+export function DocTypeRecords({ client, doctype, onOpen, onCreate, project, title }: DocTypeRecordsProps) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const [mutationError, setMutationError] = useState<string | null>(null)
 
@@ -52,7 +54,11 @@ export function DocTypeRecords({ client, doctype, onOpen, onCreate, title }: Doc
       try {
         const dt = await client.doctypes.get(doctype)
         const linkOptions = await loadLinkOptions(client, dt)
-        const docs = await client.records.list(doctype, { limit: 200 })
+        // Scope the list to the selected project ONLY when the collection declares
+        // a `project` field (the engine 400s a filter on an unknown field). No
+        // project selected, or a collection without the field → org-level list.
+        const filters = project && hasProjectField(dt) ? { [PROJECT_FIELD]: project } : undefined
+        const docs = await client.records.list(doctype, { limit: 200, ...(filters ? { filters } : {}) })
         if (signal.cancelled) return
         const records = docs.map((d) => enrichLinks(toRecord(d, dt), dt, linkOptions))
         setState({ phase: 'ready', dt, fields: docTypeToFields(dt), docs, records, linkOptions })
@@ -60,7 +66,7 @@ export function DocTypeRecords({ client, doctype, onOpen, onCreate, title }: Doc
         if (!signal.cancelled) setState({ phase: 'error', error: classifyBackend(e) })
       }
     },
-    [client, doctype],
+    [client, doctype, project],
   )
 
   useEffect(() => {
@@ -103,9 +109,10 @@ export function DocTypeRecords({ client, doctype, onOpen, onCreate, title }: Doc
 
   const refresh = <Button size="$2" icon={<RefreshCw size={15} />} onPress={reload}>Refresh</Button>
 
-  // A media/asset library (a required Attach) gets the gallery instead of the table.
+  // A media/asset library (a required Attach) gets the DAM gallery instead of the
+  // table — real upload to the org's S3 + presigned-on-view thumbnails.
   if (state.phase === 'ready' && isMediaDoctype(state.dt)) {
-    return <MediaGrid dt={state.dt} docs={state.docs} onOpen={onOpen} onCreate={onCreate} toolbarExtra={refresh} />
+    return <MediaGrid client={client} dt={state.dt} docs={state.docs} onOpen={onOpen} onChanged={reload} toolbarExtra={refresh} />
   }
 
   const ready = state.phase === 'ready' ? state : undefined
