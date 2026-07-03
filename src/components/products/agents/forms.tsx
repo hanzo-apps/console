@@ -10,7 +10,7 @@
  * (model catalog → `/v1/models`, saved prompts → `/v1/prompts`, create →
  * `/v1/agents`); the builder owns the form, the LIVE model + prompt dropdowns, and
  * the honest states. The detail view renders the agent's REAL facts (+ best-effort
- * recent activity from `GET /v1/agents/{id}`), never fabricated telemetry.
+ * recent activity from `GET /v1/agents/:name`), never fabricated telemetry.
  */
 import { useEffect, useState } from 'react'
 import { Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -61,7 +61,7 @@ export function NewAgentForm({ onCreated, onCancel }: { onCreated: () => void; o
 /**
  * The per-agent detail view — REAL facts from the row, the agent's REAL cost from
  * the charged commerce ledger (grouped by `metadata.agent`, NOT a hardcoded/registry
- * metric), and a best-effort recent-activity feed from `GET /v1/agents/{id}`.
+ * metric), and a best-effort recent-activity feed from `GET /v1/agents/:name`.
  */
 export function AgentDetailView({ agent }: { agent: Agent }) {
   const [activity, setActivity] = useState<AgentActivity[] | null>(null)
@@ -71,7 +71,10 @@ export function AgentDetailView({ agent }: { agent: Agent }) {
 
   useEffect(() => {
     let live = true
-    AgentsApi.get(agent.id)
+    // Single-agent routes are keyed by the agent's NAME (its backend handle), not the
+    // display `id` (`agent_…`) — passing the id 404s, which left this pane's activity
+    // permanently empty.
+    AgentsApi.get(agent.name)
       .then((d) => {
         if (live) setActivity(d?.recentActivity ?? [])
       })
