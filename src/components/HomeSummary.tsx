@@ -108,7 +108,7 @@ export function HomeSummary() {
           Manage balance, usage, and invoices.
         </Text>
         <XStack gap="$2">
-          <Button size="$2" iconAfter={<ArrowRight size={14} />} onPress={() => router.push('/cost')}>
+          <Button size="$2" iconAfter={<ArrowRight size={14} />} onPress={() => router.push('/billing')}>
             View cost
           </Button>
           <Button
