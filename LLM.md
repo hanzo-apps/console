@@ -1561,3 +1561,59 @@ backend's real tenancy model (RED-checkable).
   (`/cms` + `/erp` routes registered). Built off origin/main HEAD (rebased onto the
   ServiceMesh/Edge lane), one patch above main → **v8.4.32**. Live visual e2e +
   per-org RED isolation checks are post-deploy.
+
+## P0 fetch-binding fix + live-shape corrections + Playground multi-image/image-only (v8.4.34)
+
+v8.4.33 shipped a REGRESSION my mocked tests hid; live verification (RENDERING the app,
+not just probing APIs) caught it. This patch fixes it, corrects two live-shape bugs the
+same live pass surfaced, folds in RED's LOW-1, and lands the two Playground fixes.
+
+- **[P0 — CRITICAL, the whole API layer] "Illegal invocation" on every fetch.** The
+  v8.4.33 `resilientFetch` refactor called `deps.doFetch(url,init)` — a METHOD call → the
+  browser global `fetch` ran with `this=deps` and threw *"Failed to execute 'fetch' on
+  'Window': Illegal invocation"* on EVERY cloud/BFF call (Analytics/Models/CRM/CMS/… all
+  "Could not reach the backend"). The `client-retry` unit tests passed because they injected
+  a MOCK `doFetch` (a plain fn with no `this` requirement) — the exact class of bug a mock
+  hides. Fix (`client.ts`): destructure `const doFetch = deps.doFetch` + call it BARE
+  (`doFetch(url,init)`, this=undefined) — works for a raw global `fetch` AND a wrapped one.
+  **New regression test** simulates a global-only fetch (throws unless `this` is the global)
+  and asserts resilientFetch invokes it bare — would have RED-failed the v8.4.33 wiring.
+  Rolled the live console back to v8.4.31 the moment it was caught (function restored in ~1
+  min), fixed forward here. LESSON: a shared-fetch refactor MUST be verified by RENDERING a
+  data page live, not only by unit tests with a mocked fetch.
+- **[live-shape] CMS numeric ids + prefixed media url.** Live prod pages/media use Payload's
+  SQLite INTEGER ids (`{"id":3}`) — `normalizePage/Media` read them as strings so ids became
+  `''` (rowKey collisions). Fixed with a number-aware `idStr`. And the media bytes url carries
+  a `?prefix=<tenant>` query my filename-reconstruction dropped → new `cmsMediaSrc` proxies the
+  doc's REAL `url` (path+query) through `/cms` (never the cross-origin host). +5 cms tests.
+- **[live-shape] Commerce store settings.** `/v1/store/current` wraps the record as
+  `{ store: {...} }` (verified live) — `currentStore` now unwraps `.store` before normalizing
+  (a bare object still works), so the Store-settings page shows the real name/currency.
+- **[RED LOW-1] `/erp` allow-list pinned to the 3 UI DocTypes.** Was any `api/resource/
+  <DocType>`; now EXACTLY `{Account, Item, "Sales Order"}` (`ERP_DOCTYPES`), so an entitled
+  brand member can't `GET /api/resource/User`/`Salary Slip`/`OAuth Bearer Token` through the
+  shared `ERP_API_TOKEN` (a brand-internal over-read once ERP ships). RED verdict on v8.4.33:
+  **0 critical/high/med, 1 low (this), 2 info; cross-tenant isolation SOUND across CMS/ERP/
+  Help/Analytics — SHIP.** (INFO-1 host-from-config + INFO-2 audience-scoped bearer are
+  deploy-config follow-ups, non-leaking.)
+- **[Playground] Multi-image upload.** The composer held a SINGLE `attachment`; now
+  `attachments: Attachment[]` (`useComposer`) with `addAttachments` (APPEND — a multi-select
+  dialog OR successive uploads/drag-drops accumulate, never replace) + per-image
+  `removeAttachment`. `Composer.tsx`: the file input is `multiple`, `onFile` reads EVERY
+  selected image to a data URL in parallel, drag-drop of several is wired, and a thumbnail
+  strip shows each image with a count + an individual remove (×). `compose.ts` `imageUrl` →
+  `imageUrls[]`; `buildRunMessages` pushes ONE `image_url` part per image on the last user
+  turn (OpenAI multimodal allows several).
+- **[Playground] "Run does nothing" (image-only) + visible block reasons.** `validateRun`
+  now counts an attached image as user content — an IMAGE-ONLY vision prompt is valid (content
+  = just the image parts) and Run proceeds; it blocks ONLY a genuinely-empty message (no text
+  AND no image) with a clear "Enter a message or attach an image to run." And that reason now
+  renders PROMINENTLY (a red bordered notice with an icon) right above the Run button inside
+  the Composer — hitting Run is never a silent no-op. (`VisionPlayground` — a separate
+  URL-input surface — is untouched.) +10 compose tests (multi-image, image-only, blank-image
+  filter, the new validation messages).
+- Verification: `tsc --noEmit` clean; `vitest` **1076/1076** (89 files); `next build` ✓.
+  Built off origin/main (my v8.4.33 work + the machines lane #57 already in main; one patch
+  above → **v8.4.34**, tagged for a cancel-immune build). LIVE re-verify (a data page RENDERS
+  real data — not just an API 200 — + attach 2-3 images → multi-image vision run + image-only
+  Run works + block reason visible) is the required post-deploy gate this time.

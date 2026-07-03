@@ -32,6 +32,22 @@ const cmsApiUrl = (path: string): string => `${cmsBase()}/api/${path.replace(/^\
 export const cmsMediaFileUrl = (filename: string): string =>
   filename ? `${cmsBase()}/api/media/file/${filename}` : ''
 
+/**
+ * The console-proxied `<img>` src for a media asset. PREFERS the doc's real `url` — it
+ * carries the `?prefix=<tenant>` query the multi-tenant storage needs to resolve the bytes
+ * (dropping it 404s / mis-resolves) — routed through the OWN-origin `/cms` proxy (take the
+ * `/api/...` path+query from a relative OR absolute url; never load the cross-origin,
+ * auth-required cms host directly). Falls back to reconstructing from the filename.
+ */
+export const cmsMediaSrc = (media: { url?: string; filename?: string }): string => {
+  const u = media.url
+  if (u) {
+    const apiIdx = u.indexOf('/api/')
+    if (apiIdx >= 0) return `${cmsBase()}${u.slice(apiIdx)}`
+  }
+  return media.filename ? cmsMediaFileUrl(media.filename) : ''
+}
+
 // ── Defensive coercion ───────────────────────────────────────────────────────
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 const num = (v: unknown): number | undefined =>
@@ -75,13 +91,22 @@ export type CmsMedia = {
   width?: number
   height?: number
   alt?: string
+  /** Payload's bytes URL (`/api/media/file/<f>?prefix=<tenant>`) — proxy via `cmsMediaSrc`. */
+  url?: string
   createdAt?: string
 }
 
 // ── Normalizers (pure — exported for unit tests) ─────────────────────────────
 
+/** Stable string id — Payload on SQLite uses INTEGER ids (`{"id":3}`), so coerce a number
+ *  (or string) to a string; falls back to '' only when truly absent. */
+const idStr = (r: Record<string, unknown>): string => {
+  const v = r.id ?? r._id
+  return typeof v === 'number' && Number.isFinite(v) ? String(v) : (str(v) ?? '')
+}
+
 export const normalizePage = (raw: Record<string, unknown>): CmsPage => ({
-  id: pick(raw, ['id', '_id']) ?? '',
+  id: idStr(raw),
   title: pick(raw, ['title', 'name', 'slug']) ?? '(untitled)',
   slug: pick(raw, ['slug']),
   status: pick(raw, ['_status', 'status']),
@@ -90,13 +115,14 @@ export const normalizePage = (raw: Record<string, unknown>): CmsPage => ({
 })
 
 export const normalizeMedia = (raw: Record<string, unknown>): CmsMedia => ({
-  id: pick(raw, ['id', '_id']) ?? '',
+  id: idStr(raw),
   filename: pick(raw, ['filename', 'name']),
   mimeType: pick(raw, ['mimeType', 'mime_type']),
   filesize: num(raw.filesize),
   width: num(raw.width),
   height: num(raw.height),
   alt: pick(raw, ['alt']),
+  url: pick(raw, ['url']),
   createdAt: pick(raw, ['createdAt', 'created_at']),
 })
 

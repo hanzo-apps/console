@@ -251,11 +251,13 @@ export const CommerceApi = {
   stores: (p?: ListParams) => fetchList('store', normalizeStore, { limit: 100, ...p }),
 
   /**
-   * The org's default storefront settings (`GET /v1/store/current` — commerce returns
-   * the first store, or a synthesized minimal `{id:'default',...}` when none exists), as
-   * the bare store object (NOT the `{count,models}` list envelope). Org-scoped server-side.
+   * The org's default storefront settings (`GET /v1/store/current` — commerce returns the
+   * first store, or a synthesized minimal one when none exists). Commerce wraps it as
+   * `{ store: {...} }` (verified live), so unwrap `.store` before normalizing (a bare object
+   * still works). Org-scoped server-side.
    */
-  currentStore: () => restGet<unknown>(commerceProxyV1Url('store/current')).then(normalizeStore),
+  currentStore: () =>
+    restGet<unknown>(commerceProxyV1Url('store/current')).then((p) => normalizeStore(asRecord(p).store ?? p)),
 
   /** Create a product (name/sku/slug required by commerce's validator). */
   createProduct: (body: { name: string; sku: string; slug: string; description?: string; available?: boolean }) =>

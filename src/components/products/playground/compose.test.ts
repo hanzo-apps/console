@@ -35,7 +35,7 @@ describe('buildRunMessages — chat', () => {
   })
 
   it('attaches an uploaded image to the last user turn as content parts', () => {
-    const msgs = buildRunMessages({ ...base, messages: [{ role: 'user', content: 'what is this?' }], imageUrl: 'data:img' })
+    const msgs = buildRunMessages({ ...base, messages: [{ role: 'user', content: 'what is this?' }], imageUrls: ['data:img'] })
     expect(msgs).toEqual([
       {
         role: 'user',
@@ -45,6 +45,43 @@ describe('buildRunMessages — chat', () => {
         ],
       },
     ])
+  })
+
+  it('attaches MULTIPLE images as separate image_url parts on the last user turn', () => {
+    const msgs = buildRunMessages({
+      ...base,
+      messages: [{ role: 'user', content: 'compare these' }],
+      imageUrls: ['data:a', 'data:b', 'data:c'],
+    })
+    expect(msgs).toEqual([
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'compare these' },
+          { type: 'image_url', image_url: { url: 'data:a' } },
+          { type: 'image_url', image_url: { url: 'data:b' } },
+          { type: 'image_url', image_url: { url: 'data:c' } },
+        ],
+      },
+    ])
+  })
+
+  it('sends an IMAGE-ONLY user message (no text) — content is just the image parts', () => {
+    const msgs = buildRunMessages({ ...base, messages: [{ role: 'user', content: '' }], imageUrls: ['data:a', 'data:b'] })
+    expect(msgs).toEqual([
+      {
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: 'data:a' } },
+          { type: 'image_url', image_url: { url: 'data:b' } },
+        ],
+      },
+    ])
+  })
+
+  it('ignores blank/empty image urls', () => {
+    const msgs = buildRunMessages({ ...base, messages: [{ role: 'user', content: 'hi' }], imageUrls: ['', '  '] })
+    expect(msgs).toEqual([{ role: 'user', content: 'hi' }]) // no image parts, plain text
   })
 })
 
@@ -68,10 +105,22 @@ describe('validateRun', () => {
   it('requires a model', () => {
     expect(validateRun({ ...base, model: '' })).toBe('Choose a model.')
   })
-  it('requires a user message', () => {
-    expect(validateRun({ ...base, model: 'zen', messages: [{ role: 'user', content: '' }] })).toBe('Enter a user message.')
+  it('blocks a genuinely-empty message (no text AND no image) with a clear reason', () => {
+    expect(validateRun({ ...base, model: 'zen', messages: [{ role: 'user', content: '' }] })).toBe(
+      'Enter a message or attach an image to run.',
+    )
   })
-  it('passes a valid run', () => {
+  it('an ATTACHED IMAGE counts as user content — an image-only prompt is valid (Run proceeds)', () => {
+    expect(
+      validateRun({ ...base, model: 'zen', messages: [{ role: 'user', content: '' }], imageUrls: ['data:a'] }),
+    ).toBeNull()
+  })
+  it('passes a valid text run', () => {
     expect(validateRun({ ...base, model: 'zen' })).toBeNull()
+  })
+  it('completions: blocks a blank prompt with its own message', () => {
+    expect(
+      validateRun({ mode: 'completions', system: '', messages: [{ role: 'user', content: '  ' }], vars: {}, model: 'zen' }),
+    ).toBe('Enter a prompt to run.')
   })
 })
