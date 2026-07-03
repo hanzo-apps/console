@@ -93,6 +93,20 @@ export const CLOUD_HEADS: readonly string[] = [
   'networks',
   'mesh',
   'edge',
+  // Fine-grained authorization (hanzoai/authz, order 70): the org's access-control
+  // policy set (/v1/authz/policies) plus check/health. The subsystem picks the
+  // per-org enforcer from the Bearer-derived X-Org-Id — a cookie-only call has none —
+  // so it routes through /cloud like the rest (GET policies needs only the org; the
+  // POST/DELETE writes additionally require an admin role). One head admits the
+  // policies list + the check sub-path. Backs the console's Authz page.
+  'authz',
+  // Observability (hanzoai/o11y — SigNoz runtime): the cloud binary mounts /v1/o11y/*
+  // and reverse-proxies it to the o11y Deployment (o11y.hanzo.svc), which rewrites
+  // /v1/o11y/* → its internal /api/* routes. The console's Alerts page reads
+  // /v1/o11y/v1/rules (alert rule states); cloud's principal gate refuses any bearer-
+  // less call, so it routes through /cloud like the rest. The single `o11y` head
+  // admits every o11y sub-path (rules, alerts, services, query_range, …).
+  'o11y',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
