@@ -18,7 +18,7 @@
  *    HUSD transfer on-chain, then records it to commerce as a `husd` crypto
  *    payment and returns the credited amount + new balance.
  */
-import { ApiError, restGet, restPost } from './client'
+import { ApiError, restGet, restPost, v1Url } from './client'
 
 /** Money balance in USD cents (commerce shape). */
 export type CloudBalance = {
@@ -70,9 +70,14 @@ export const WalletApi = {
     // read another tenant's ledger), so only `currency` is forwarded.
     restGet<CloudBalance>(`${appUrl('billing/v1/balance')}?currency=${encodeURIComponent(currency)}`),
 
-  /** Verify a sent HUSD transfer and credit the user's balance. */
+  /**
+   * Verify a sent HUSD transfer and credit the user's balance, via the cloud
+   * console subsystem's same-origin `/v1/console/topup/wallet` (task #41). The
+   * server reads the receipt on-chain, credits the VALIDATED caller's own org for
+   * the on-chain amount (never a client number), and records it to commerce.
+   */
   recordWalletTopup: (req: WalletTopupRequest): Promise<WalletTopupResult> =>
-    restPost<WalletTopupResult>(appUrl('billing/v1/topup/wallet'), req),
+    restPost<WalletTopupResult>(v1Url('console/topup/wallet'), req),
 }
 
 export { ApiError }

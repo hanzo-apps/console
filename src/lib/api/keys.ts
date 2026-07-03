@@ -1,13 +1,15 @@
 /**
- * Cloud API key client — the per-user `hk-` credential, via the console's OWN
- * same-origin `/keys` server route (NOT the cloud `/v1` backend). The server
- * resolves the user from the session cookie and mints/revokes through IAM as the
- * confidential console client; the browser only ever sends its cookie.
+ * Cloud API key client — the per-user `hk-` credential, via the unified backend's
+ * same-origin `/v1/console/keys` route (the cloud console subsystem; task #41). The
+ * server resolves the user from the VALIDATED principal (gateway-injected identity)
+ * and mints/revokes through IAM as the confidential `hanzo-console` client; the
+ * browser only ever sends its cookie. Same handler in both topologies — served
+ * directly by the go:embed one-binary, and via the gateway in the split deploy.
  *
  * The secret is returned ONLY by `create()` (show once). `status()` reports
  * existence + the public prefix, never secret material.
  */
-import { ApiError } from './client'
+import { ApiError, v1Url } from './client'
 
 export type KeyStatus = {
   hasKey: boolean
@@ -19,7 +21,7 @@ export type KeyStatus = {
 async function keysReq<T>(method: 'GET' | 'POST' | 'DELETE'): Promise<T> {
   let res: Response
   try {
-    res = await fetch('/keys', {
+    res = await fetch(v1Url('console/keys'), {
       method,
       credentials: 'include',
       headers: { Accept: 'application/json' },

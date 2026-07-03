@@ -21,6 +21,7 @@ import { Building2, Check, ChevronsUpDown, Plus, Search } from '@hanzogui/lucide
 
 import { currentOrg, switchOrg, filterOrgs } from '~/lib/org-scope'
 import { IamAdminApi, type Organization } from '~/lib/api'
+import { v1Url } from '~/lib/api/client'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -80,8 +81,9 @@ export function OrgSwitcher() {
     setBusy(true)
     setErr(null)
     try {
-      const res = await fetch('/onboard', {
+      const res = await fetch(v1Url('console/onboard'), {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       })
