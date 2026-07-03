@@ -11,6 +11,7 @@ vi.mock('./identity', () => ({
 
 import { errorBody, upstreamHeaders, pathIsClean, sameOriginOK, forwardWithUserBearer } from './bearer-proxy'
 import { allowCloudSurface } from './proxy-allow'
+import { allowAdminSurface } from './admin-aggregate'
 
 describe('pathIsClean (traversal / encoded-slash guard — RED HIGH)', () => {
   it('admits real resource paths', () => {
@@ -268,5 +269,109 @@ describe('forwardWithUserBearer — rewrite-fed traversal fails closed (RED LOW-
     // The upstream URL is exactly the normalized allow-listed path (no traversal residue).
     const calledUrl = String((fetchMock.mock.calls[0] as unknown[])[0])
     expect(calledUrl).toBe('http://cloud-api.hanzo.svc.cluster.local:8000/v1/agents')
+  })
+})
+
+/**
+ * The admin AGGREGATE proxy (`app/admin/aggregate/[...path]`) forwards to cloud under
+ * `/v1/admin/*` — every admin route in cloud (`clients/admin` + hanzoai/ai's
+ * `/v1/admin/providers*`) is served there, and `forwardWithUserBearer` forwards the
+ * path VERBATIM. This suite pins THROUGH the real function (mocked fetch + identity)
+ * that:
+ *   1. the forwarded upstream path is exactly `v1/admin/<head>` (the integration-path
+ *      fix — the pre-fix bare `admin/<head>` landed on a non-existent cloud route and
+ *      404'd, silently breaking the provider dashboard's list/toggle/primary calls);
+ *   2. GET (list) and POST (`providers/{toggle,primary}`) both forward;
+ *   3. a traversal via the head (`providers/../iam`, encoded, matrix-param) 404s and
+ *      NEVER fetches upstream (the two-layer pathIsClean + allow-list defense holds on
+ *      the new `v1/admin/...` shape);
+ *   4. `iam`/`kms` are refused (no general-tunnel), so the shared allow-list can't be
+ *      widened via this aggregate proxy.
+ */
+describe('forwardWithUserBearer — admin aggregate targets /v1/admin/* (integration-path fix)', () => {
+  const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }))
+  const CLOUD = 'http://cloud-api.hanzo.svc.cluster.local:8000'
+
+  const req = (method: string, headers: Record<string, string> = {}, search = ''): NextRequest =>
+    ({
+      method,
+      headers: new Headers({ host: 'admin.hanzo.ai', origin: 'https://admin.hanzo.ai', ...headers }),
+      nextUrl: { search },
+      signal: undefined,
+      text: async () => '',
+    }) as unknown as NextRequest
+
+  // Mirrors app/admin/aggregate/[...path]/route.ts: it rebuilds `v1/admin/<tail>` from
+  // the rewrite's catch-all and forwards with allowAdminSurface as the least-privilege
+  // gate. `head` is the raw catch-all tail (what params.path.join('/') yields).
+  const forwardAdmin = (head: string, method = 'GET') =>
+    forwardWithUserBearer(req(method), {
+      target: CLOUD,
+      path: `v1/admin/${head}`.replace(/\/+$/, ''),
+      allow: allowAdminSurface,
+      errorShape: 'casibase',
+      unauthorizedMessage: 'Sign in as an administrator.',
+    })
+
+  beforeEach(() => {
+    fetchMock.mockClear()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('forwards the providers LIST to cloud /v1/admin/providers (not bare /admin/providers)', async () => {
+    const res = await forwardAdmin('providers')
+    expect(res.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const calledUrl = String((fetchMock.mock.calls[0] as unknown[])[0])
+    expect(calledUrl).toBe(`${CLOUD}/v1/admin/providers`)
+    // The old bug forwarded here — assert we no longer do.
+    expect(calledUrl).not.toBe(`${CLOUD}/admin/providers`)
+  })
+
+  it('forwards the other read heads (overview/finance/compute) under /v1/admin/*', async () => {
+    for (const head of ['overview', 'finance', 'compute', 'usage', 'orgs', 'audit', 'products']) {
+      fetchMock.mockClear()
+      const res = await forwardAdmin(head)
+      expect(res.status).toBe(200)
+      expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toBe(`${CLOUD}/v1/admin/${head}`)
+    }
+  })
+
+  it('forwards the provider POST mutations (toggle / primary) under /v1/admin/providers/*', async () => {
+    for (const sub of ['toggle', 'primary']) {
+      fetchMock.mockClear()
+      const res = await forwardAdmin(`providers/${sub}`, 'POST')
+      expect(res.status).toBe(200)
+      expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toBe(`${CLOUD}/v1/admin/providers/${sub}`)
+    }
+  })
+
+  it('404s a traversal via the head (providers/../iam) and NEVER fetches upstream', async () => {
+    for (const evil of ['providers/../iam', 'providers/%2e%2e/iam', 'providers%2f..%2fiam', 'providers/..;/iam']) {
+      fetchMock.mockClear()
+      const res = await forwardAdmin(evil)
+      expect(res.status).toBe(404)
+      expect(fetchMock).not.toHaveBeenCalled()
+    }
+  })
+
+  it('404s iam / kms reached directly through the aggregate proxy (not a tunnel)', async () => {
+    for (const head of ['iam', 'iam/get-users', 'kms', 'kms/list']) {
+      fetchMock.mockClear()
+      const res = await forwardAdmin(head)
+      expect(res.status).toBe(404)
+      expect(fetchMock).not.toHaveBeenCalled()
+    }
+  })
+
+  it('refuses a cross-origin POST (CSRF) to a provider mutation before any fetch', async () => {
+    fetchMock.mockClear()
+    const res = await forwardWithUserBearer(
+      req('POST', { origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' }),
+      { target: CLOUD, path: 'v1/admin/providers/toggle', allow: allowAdminSurface, errorShape: 'casibase' },
+    )
+    expect(res.status).toBe(403)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

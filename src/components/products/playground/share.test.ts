@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { encodeShare, decodeShare, type ShareState } from './share'
+import { encodeShare, decodeShare, playgroundPathForModel, SHARE_PARAM, type ShareState } from './share'
 import { DEFAULT_SETTINGS } from './types'
 
 const state: ShareState = {
@@ -37,5 +37,24 @@ describe('encode/decode — round-trip the composer state', () => {
   it('coerces an unknown role to user', () => {
     const token = encodeURIComponent(JSON.stringify({ model: 'x', messages: [{ role: 'system', content: 'q' }] }))
     expect(decodeShare(token)?.messages[0].role).toBe('user')
+  })
+})
+
+describe('playgroundPathForModel — deep-link the Playground onto a model', () => {
+  it('builds /playground?p=… that decodes back to just that model', () => {
+    const path = playgroundPathForModel('zen-omni')
+    expect(path.startsWith(`/playground?${SHARE_PARAM}=`)).toBe(true)
+    const token = path.slice(path.indexOf('=') + 1)
+    const decoded = decodeShare(token)
+    expect(decoded?.model).toBe('zen-omni')
+    expect(decoded?.mode).toBe('chat')
+    expect(decoded?.messages).toEqual([])
+    expect(decoded?.settings).toEqual(DEFAULT_SETTINGS)
+  })
+
+  it('URI-encodes a model id with slashes/spaces so the query is valid', () => {
+    const path = playgroundPathForModel('anthropic/claude 3')
+    const token = path.slice(path.indexOf('=') + 1)
+    expect(decodeShare(token)?.model).toBe('anthropic/claude 3')
   })
 })

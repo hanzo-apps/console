@@ -107,6 +107,15 @@ export const CLOUD_HEADS: readonly string[] = [
   // less call, so it routes through /cloud like the rest. The single `o11y` head
   // admits every o11y sub-path (rules, alerts, services, query_range, …).
   'o11y',
+  // Web Search (cloud clients/websearch, order 141): /v1/websearch/{search,v1/scrape}.
+  // Self-hosted SearXNG meta-search + Crawl4AI scrape. The `search` proxy has no
+  // principal gate (its optional X-API-Key admits a missing key), so a signed-in
+  // user's minted bearer is accepted/ignored and the query proxies straight to
+  // SearXNG — routing it through /cloud gives the console a keyless, prefix-free
+  // `/v1/websearch/search`. (Scrape 503s without the shared crawl key — not a user
+  // token — so the console never drives a live scrape; it documents it only.) One
+  // head admits both the search + the versioned scrape sub-path.
+  'websearch',
   // Chain data (graph-backed, luxfi/indexer + luxfi/graph): the deployment's chain
   // indexing status (/v1/indexers — chain/network/height/health) and on-chain
   // price/data oracle feeds (/v1/oracles — O-Chain PriceFeed registry). The cloud

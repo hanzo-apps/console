@@ -33,6 +33,7 @@ import {
   type CatalogEntry,
 } from '~/lib/api/aicatalog'
 import { categorize, featured, applyFilters, marketStats, listingTitle } from './marketplace/logic'
+import { playgroundPathForModel } from './playground/share'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { ErrorState, asApiError } from '~/components/ui/States'
@@ -221,9 +222,10 @@ export function MarketplaceModule(_props: { params: Record<string, string> }) {
   )
   const stats = useMemo(() => marketStats(listings), [listings])
 
-  // Open a listing in the Playground (available) or the Model Catalog detail.
+  // Open a listing in the Playground PRESELECTED on this model (available now) or the
+  // Model Catalog (catalog-only). Same deep-link helper the catalog's "Try" uses (DRY).
   const open = (m: CatalogEntry) => {
-    if (m.available) router.push('/playground')
+    if (m.available) router.push(playgroundPathForModel(m.id ?? m.name))
     else router.push('/models')
   }
 
