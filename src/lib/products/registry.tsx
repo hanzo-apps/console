@@ -188,6 +188,7 @@ import { EnvironmentsModule } from '~/components/products/EnvironmentsModule'
 import { HsmModule } from '~/components/products/HsmModule'
 import { AuthzModule } from '~/components/products/AuthzModule'
 import { ServiceMeshModule } from '~/components/products/ServiceMeshModule'
+import { ServiceMapModule } from '~/components/products/ServiceMapModule'
 import { LoadBalancerModule } from '~/components/products/LoadBalancerModule'
 import { VpcModule } from '~/components/products/VpcModule'
 import { EdgeModule } from '~/components/products/EdgeModule'
@@ -1439,6 +1440,18 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: TracesModule },
       { path: ':id', component: TracesModule },
     ],
+  },
+  {
+    id: 'service-map',
+    label: 'Service Map',
+    icon: Waypoints,
+    description: 'Per-service RED metrics and the live dependency graph.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/apm`,
+    kind: 'module',
+    routes: [{ path: '', component: ServiceMapModule }],
   },
   {
     // Native — the org's AI usage at a glance: requests, tokens, spend, and
