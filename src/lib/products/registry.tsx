@@ -170,6 +170,10 @@ import { NodesModule } from '~/components/products/NodesModule'
 import { TokensModule } from '~/components/products/TokensModule'
 import { SettlementModule } from '~/components/products/SettlementModule'
 import { AlertsModule } from '~/components/products/AlertsModule'
+// Admin operator compute boards (cross-tenant, admin-only) — kind='bot'|'machine'
+// lenses over the datastore. Aliased to avoid the clash with the per-org customer
+// `MachinesModule` (Compute › Machines, over visor `/vm/v1/machines`).
+import { BotsModule, MachinesModule as AdminMachinesModule } from '~/components/products/ComputeModule'
 import { AnalyticsModule } from '~/components/products/AnalyticsModule'
 import { LogsModule } from '~/components/products/LogsModule'
 import { PipelinesModule } from '~/components/products/PipelinesModule'
@@ -452,6 +456,44 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FinanceDashboard }],
+  },
+  {
+    // admin.hanzo.ai BOTS board — the SaaS operator view of every @hanzo/bot agent
+    // booted across the platform (kind='bot'), and its spend, grouped
+    // org → app → project. GLOBAL-ADMIN ONLY (`admin: true` hides it from every
+    // customer's nav/launcher/palette; the `/v1/admin/compute` datastore aggregate is
+    // server-gated by `getAdminGate`). Reads ONLY the unified datastore (ClickHouse) —
+    // one cross-tenant GROUP BY, never a per-tenant fan-out (the tenant-data-hierarchy
+    // invariant). Honest-empty until the compute-events emitter lands.
+    id: 'bots',
+    label: 'Bots',
+    icon: Bot,
+    description: 'Every @hanzo/bot agent booted across the platform, and its spend — grouped org → app → project.',
+    gcp: 'Fleet analytics · bots',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: BotsModule }],
+  },
+  {
+    // admin.hanzo.ai MACHINES board — the operator view of raw compute (kind='machine')
+    // visor opens across EVERY org, and its spend, grouped org → app → project. The
+    // CROSS-TENANT operator lens (id `vms` — the per-org customer `machines` entry is a
+    // different, non-admin surface over visor `/vm/v1/machines`). GLOBAL-ADMIN ONLY,
+    // same datastore aggregate as Bots (`?kind=machine`). Honest-empty until wired.
+    id: 'vms',
+    label: 'Machines',
+    icon: Boxes,
+    description: 'Raw compute machines visor opens across every org, and their spend — grouped org → app → project.',
+    gcp: 'Fleet analytics · machines',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: AdminMachinesModule }],
   },
   // ── AI ───────────────────────────────────────────────────────────────
   {
