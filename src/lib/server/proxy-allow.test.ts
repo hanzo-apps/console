@@ -55,6 +55,12 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/prompts/support-triage')).toBe(true)
   })
 
+  it('admits the websearch surface (search + versioned scrape), one head', () => {
+    expect(CLOUD_HEADS).toContain('websearch')
+    expect(allowCloudSurface('v1/websearch/search')).toBe(true)
+    expect(allowCloudSurface('v1/websearch/v1/scrape')).toBe(true)
+  })
+
   it('admits the projects store incl. the template fork route', () => {
     expect(CLOUD_HEADS).toContain('projects')
     expect(allowCloudSurface('v1/projects')).toBe(true)

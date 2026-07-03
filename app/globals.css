@@ -7,39 +7,14 @@ body,
 body {
   margin: 0;
   background-color: var(--background, #000000);
-  color: var(--color, #f5f5f5);
+  color: var(--color, #ededf1);
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-}
-
-/* True-black brand — ONE consistent black across hanzo.ai (marketing,
-   --background:#000), hanzo.chat (OLED .dark theme), and this console. The
-   @hanzo/gui (Tamagui) dark theme ships as `.t_dark`; override its base
-   `--background` token to pure #000 so the app shell, page bodies, and every
-   surface that reads `$background`/`var(--background)` render true-black.
-   Panels sit a hair above pure black for depth (#050505), elevated cards a
-   step higher (#171717) — matches the marketing black + the chat OLED look. */
-:root.t_dark,
-.t_dark {
-  --background: #000000;
-  --backgroundStrong: #000000;
-  --backgroundPress: #050505;
-  --backgroundHover: #171717;
-  --backgroundFocus: #171717;
-  /* Surface depth ladder (Linear/Vercel-caliber): the true-black canvas is #000,
-     resting panels sit a hair above at #050505 ($color1), the next surface at
-     #0a0a0a ($color2), and interactive/elevated states step to #171717
-     ($color3/$color4). Overriding only the darkest surface tokens gives cards
-     real depth over the black without touching the text-contrast scale
-     ($color10–$color12). ONE ladder, shared with hanzo.chat/hanzo.app. */
-  --color1: #050505;
-  --color2: #0a0a0a;
-  --color3: #171717;
-  --color4: #1f1f1f;
-}
-:root.t_dark body,
-.t_dark body {
-  background-color: #000000;
+  /* Calm type rendering — crisp, low-glare, comfortable rhythm for a full workday. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: 1.5;
 }
 
 /* Tabular numerals — metrics, prices, contexts and IDs align on a fixed advance
@@ -51,6 +26,69 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+/* ── Console dark theme — TRUE-BLACK canvas + calm text/borders. The ONE place the
+   console's dark/light palette is set. Overrides the generated @hanzo/gui (Tamagui)
+   theme variables; the `html:root.t_*` selector is one step more specific than the
+   library's runtime `:root.t_*` block so it wins regardless of stylesheet insertion
+   order. DRY: every surface, border and text color in the app reads from these
+   tokens, so this one block sets the whole product.
+
+   Design intent (dark): a TRUE-BLACK #000 canvas (matches hanzo.ai marketing +
+   hanzo.chat OLED) with a Linear/Vercel-caliber surface-depth ladder above it —
+   resting panels #050505, the next surface #0a0a0a, interactive/elevated #171717 →
+   #1f1f1f — so cards read with real depth, never flat voids. Above the surface
+   ladder the CALM neutral scale (color5–12) gives premium, low-glare off-white text
+   and quiet hairline borders (never harsh pure #fff on pure #000). Neutral grey,
+   monochrome-first; text contrast stays WCAG-AA+ on every surface. */
+html:root.t_dark {
+  --background: #000000;
+  --backgroundStrong: #000000;
+  --backgroundHover: #171717;
+  --backgroundPress: #050505;
+  --backgroundFocus: #171717;
+
+  /* Surface depth ladder over the true-black canvas — panels/cards step up from
+     #050505 so they separate cleanly without heavy borders (Linear-grade depth). */
+  --color1: #050505;
+  --color2: #0a0a0a;
+  --color3: #171717;
+  --color4: #1f1f1f;
+  --color5: hsl(220 6% 16%);
+  --color6: hsl(220 6% 22%);
+  --color7: hsl(220 6% 30%);
+  --color8: hsl(219 6% 42%);
+  --color9: hsl(220 6% 55%);
+  --color10: hsl(219 7% 68%);
+  --color11: hsl(214 9% 83%);
+  --color12: hsl(210 12% 95%);
+  --color: hsl(210 12% 95%);
+
+  /* Gentle hairlines — present enough to define, quiet enough to disappear on black. */
+  --borderColor: hsl(220 8% 15%);
+  --borderColorHover: hsl(220 7% 23%);
+  --borderColorPress: hsl(220 8% 13%);
+  --borderColorFocus: hsl(220 7% 23%);
+}
+
+/* Light theme — the calm parallel: a warm off-white base (not stark #fff), soft
+   ink text (not pure black), and quiet hairlines. Lighter touch than dark, since
+   the console defaults to dark, but kept consistent for the theme toggle. */
+html:root.t_light {
+  --background: hsl(220 20% 99%);
+  --color1: hsl(220 24% 100%);
+  --color2: hsl(220 20% 98%);
+  --color3: hsl(220 18% 95.5%);
+  --color4: hsl(220 16% 92.5%);
+  --color5: hsl(220 15% 89%);
+  --color9: hsl(220 9% 46%);
+  --color10: hsl(220 10% 38%);
+  --color11: hsl(220 14% 22%);
+  --color12: hsl(220 22% 12%);
+  --color: hsl(220 22% 12%);
+  --borderColor: hsl(220 16% 90%);
+  --borderColorHover: hsl(220 14% 82%);
 }
 
 /* Motion — a single fade-up entrance (matches the hanzo.ai marketing feel:

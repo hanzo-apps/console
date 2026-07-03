@@ -117,12 +117,14 @@ import { Users,
 import { config, type BrandId } from '~/config'
 import { type ProductCategory, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
+import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
+import { SearchModule } from '~/components/products/SearchModule'
 import { TemplatesModule } from '~/components/products/TemplatesModule'
 import { PlansModule } from '~/components/products/PlansModule'
 import { BillingModule } from '~/components/products/BillingModule'
@@ -187,6 +189,7 @@ import { EnvironmentsModule } from '~/components/products/EnvironmentsModule'
 import { HsmModule } from '~/components/products/HsmModule'
 import { AuthzModule } from '~/components/products/AuthzModule'
 import { ServiceMeshModule } from '~/components/products/ServiceMeshModule'
+import { ServiceMapModule } from '~/components/products/ServiceMapModule'
 import { LoadBalancerModule } from '~/components/products/LoadBalancerModule'
 import { VpcModule } from '~/components/products/VpcModule'
 import { EdgeModule } from '~/components/products/EdgeModule'
@@ -222,6 +225,11 @@ import {
  * overviews all render from that single component — adding one is a config, not UI.
  */
 const OverviewDashboard = livingOverviewModule('overview')
+// admin.hanzo.ai OVERLORD board — the god-view of EVERYTHING (platform-wide product
+// health + tenants + usage across ALL orgs). GLOBAL-ADMIN ONLY (`admin: true` hides
+// it from every customer; its loader is an all-orgs god view and `/v1/admin/overview`
+// is server-gated). The operational god-view — distinct from Business (P&L).
+const OverlordDashboard = livingOverviewModule('overlord')
 // admin.hanzo.ai business board — the SaaS control surface. GLOBAL-ADMIN ONLY
 // (the catalog entry is `admin: true`; its loader is an all-orgs god view and the
 // `/v1/admin/overview` aggregate is itself server-gated).
@@ -455,6 +463,27 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: OverviewDashboard }],
   },
   {
+    // admin.hanzo.ai OVERLORD board — the top-level god-view of EVERYTHING: every
+    // Hanzo product's live health across the WHOLE platform (all orgs), tenant count,
+    // and platform-wide usage/spend/top-models. GLOBAL-ADMIN ONLY (`admin: true` hides
+    // it from every customer's nav/launcher/palette; the loader is an all-orgs god view
+    // over the operator inventory + the server-gated `/v1/admin/overview` aggregate,
+    // with an honest fallback to the real usage ledger — never blank, never fabricated).
+    // The operational god-view; Business/Finance are the P&L lenses. Reuses the ONE
+    // LivingOverview — this entry is a config, not a new surface.
+    id: 'overlord',
+    label: 'Overlord',
+    icon: Radio,
+    description: 'God-view of the whole platform — every product’s health, tenants, and usage across all orgs.',
+    gcp: 'Cloud console (org-wide)',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: OverlordDashboard }],
+  },
+  {
     // admin.hanzo.ai BUSINESS board — the SaaS control surface for running the
     // business (MRR/revenue, usage & cost, active orgs/customers, top agents/bots
     // by cost, plan mix, fleet health). GLOBAL-ADMIN ONLY (`admin: true` hides it
@@ -609,6 +638,31 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: ProvidersModule },
       { path: ':name', component: ProvidersModule },
     ],
+  },
+  {
+    // admin.hanzo.ai AI-PROVIDER control board — the platform-wide management table
+    // for the shared-gateway upstream providers (do-ai, openrouter, fireworks,
+    // openai-direct, zen): enable/disable each, set the single primary, and see model
+    // count + key-present + derived health. GLOBAL-ADMIN ONLY (`admin: true` hides it
+    // from every customer's nav/launcher/palette; the catch-all renders a managed
+    // notice for a non-admin, and `/v1/admin/providers` is server-gated by
+    // `getAdminGate`). DISTINCT from the customer `providers` entry above (the model
+    // catalog browser + BYOK per-org CRUD) — this one flips backend Provider State/
+    // IsDefault that applies to every org (and gates OpenRouter out of the pricing
+    // catalog via the DO-first ENABLE_OPENROUTER integration).
+    id: 'provider-admin',
+    label: 'AI Providers',
+    icon: Server,
+    description: 'Enable, disable, and set the primary upstream AI provider for the shared gateway.',
+    // No `gcp` analog — like the sibling customer `providers` entry above, provider
+    // routing administration is Hanzo-specific with no clean single GCP product
+    // equivalent (matching the sibling keeps the catalog metadata consistent).
+    category: 'AI',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/ai',
+    kind: 'module',
+    routes: [{ path: '', component: ProviderAdminModule }],
   },
   {
     id: 'agents',
@@ -1414,6 +1468,18 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
+    id: 'service-map',
+    label: 'Service Map',
+    icon: Waypoints,
+    description: 'Per-service RED metrics and the live dependency graph.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/apm`,
+    kind: 'module',
+    routes: [{ path: '', component: ServiceMapModule }],
+  },
+  {
     // Native — the org's AI usage at a glance: requests, tokens, spend, and
     // balance over a 24h/7d/30d window, a per-day chart, a per-model breakdown,
     // and recent activity. REAL per-org data from the commerce usage ledger
@@ -1931,15 +1997,63 @@ export const catalog: CatalogEntry[] = [
     routes: resourceRoutes({ kind: 'search', productLabel: 'Hanzo Search', connectionHint: 'Use the Search host + key from the connection string.' }),
   },
   {
+    // Web Search — the LIVE self-hosted web-search product (SearXNG meta-search +
+    // Crawl4AI scrape), served by cloud at `/v1/websearch/*`. A tabbed control panel:
+    // live health (a real search probe — no health endpoint), a live Try-Search box
+    // over `/v1/websearch/search`, the API reference (both endpoints + curl + how to
+    // use it in Chat), the deployed engine set (read-only), and the honest deployed
+    // config. Self-hosted, no third-party keys; usage is honestly "not metered yet".
+    id: 'websearch',
+    label: 'Web Search',
+    icon: Search,
+    description: 'Search and crawl the web for your agents — self-hosted, no third-party keys.',
+    gcp: 'Programmable Search / Vertex AI Search',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    docs: `${DOCS}/crawl`,
+    kind: 'module',
+    // `:tab` sub-routes (Overview/Try Search/API/Engines/Config) resolve inside the
+    // module, exactly like Functions/GPUs/Models — one route entry, tabbed content.
+    // The declared specifics are NON-base slugs so they never collide with the shared
+    // Settings/Status/Logs/Metrics base sub-pages (which render real deployment facts).
+    routes: [
+      { path: '', component: SearchModule },
+      { path: ':tab', component: SearchModule },
+    ],
+    subpages: [
+      { slug: 'search', label: 'Try Search' },
+      { slug: 'api', label: 'API' },
+      { slug: 'engines', label: 'Engines' },
+      { slug: 'config', label: 'Config' },
+    ],
+  },
+  {
+    // Crawl — the web-to-markdown extraction half of the self-hosted web-search
+    // product (Crawl4AI). It is served by the SAME `/v1/websearch/*` subsystem as Web
+    // Search, so the Crawl entry renders the SAME `SearchModule` (its API tab documents
+    // the scrape endpoint) — one module for the one product, cross-linked, never a
+    // duplicate surface. (Was a native-overview stub; upgraded to the real panel.)
     id: 'crawl',
     label: 'Crawl',
     icon: Globe,
-    description: 'Crawl and extract the web for your agents.',
+    description: 'Crawl and extract the web to clean markdown for your agents — self-hosted (Crawl4AI).',
+    gcp: 'Web crawl',
     category: 'Apps',
     status: 'enabled',
+    repo: 'hanzoai/cloud',
     docs: `${DOCS}/crawl`,
     kind: 'module',
-    routes: overviewRoutes('crawl'),
+    routes: [
+      { path: '', component: SearchModule },
+      { path: ':tab', component: SearchModule },
+    ],
+    subpages: [
+      { slug: 'search', label: 'Try Search' },
+      { slug: 'api', label: 'API' },
+      { slug: 'engines', label: 'Engines' },
+      { slug: 'config', label: 'Config' },
+    ],
   },
   {
     id: 'studio',

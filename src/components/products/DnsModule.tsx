@@ -149,7 +149,7 @@ export function DnsModule(_props: { params: Record<string, string> }) {
           fields={ZONE_FIELDS}
           records={zones as Array<Record<string, unknown>>}
           loading={loading}
-          onRowPress={(row) => openZone(row as Zone)}
+          onOpen={(row) => openZone(row as Zone)}
           empty="No DNS zones yet. Create one with the hanzodns API or CLI."
         />
       )}
