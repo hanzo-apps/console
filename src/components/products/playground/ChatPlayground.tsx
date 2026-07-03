@@ -13,7 +13,7 @@
  * returns no token counts, never a fabricated number.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Text, XStack, YStack } from '@hanzo/gui'
+import { XStack, YStack } from '@hanzo/gui'
 
 import { BackendStateCard } from '~/components/ui/BackendState'
 import { useSession } from '~/lib/auth/session'
@@ -89,13 +89,13 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
           system: composer.system,
           messages: turns,
           vars: composer.vars,
-          imageUrl: composer.attachment?.dataUrl,
+          imageUrls: composer.attachments.map((a) => a.dataUrl),
         }),
         paramsOf(composer.settings),
       ),
     // turns is derived from composer.messages; depend on the underlying values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [composer.model, composer.system, composer.messages, composer.vars, composer.attachment, composer.settings, mode],
+    [composer.model, composer.system, composer.messages, composer.vars, composer.attachments, composer.settings, mode],
   )
   const curl = useMemo(() => toCurl(requestBody), [requestBody])
   const json = useMemo(() => toJson(requestBody), [requestBody])
@@ -109,7 +109,7 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
       system: composer.system,
       messages: turns,
       vars: composer.vars,
-      imageUrl: composer.attachment?.dataUrl,
+      imageUrls: composer.attachments.map((a) => a.dataUrl),
     })
     if (err) {
       setValidation(err)
@@ -121,7 +121,7 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
       system: composer.system,
       messages: turns,
       vars: composer.vars,
-      imageUrl: composer.attachment?.dataUrl,
+      imageUrls: composer.attachments.map((a) => a.dataUrl),
     })
     const result = await run.run({ model: composer.model, messages, ...paramsOf(composer.settings) })
     const cost = costOf(result.usage, pricing)
@@ -189,12 +189,8 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
         <HeaderActions composer={composer} mode={mode} curl={curl} json={json} onSaved={setSaved} />
       </XStack>
 
-      {validation ? (
-        <Text fontSize="$3" color="$red10">
-          {validation}
-        </Text>
-      ) : null}
-
+      {/* The block reason now renders PROMINENTLY inside the Composer, right by Run
+          (never a silent no-op) — no duplicate small line here. */}
       {models.phase === 'error' && models.error ? (
         <BackendStateCard
           state={models.error}
@@ -221,6 +217,7 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
                 onStop={run.cancel}
                 curl={curl}
                 json={json}
+                validation={validation}
                 settingsOpen={settingsOpen}
                 onToggleSettings={() => setSettingsOpen((s) => !s)}
                 onOpenSettingsSheet={() => setSettingsSheet(true)}

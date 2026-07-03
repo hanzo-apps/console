@@ -127,11 +127,17 @@ export interface ResilientDeps {
  */
 export async function resilientFetch(url: string, init: RequestInit, deps: ResilientDeps): Promise<Response> {
   const idempotent = isIdempotentMethod(init.method)
+  // Destructure to a LOCAL so the invocation below is a BARE call (`doFetch(...)`,
+  // this=undefined) — NOT a method call (`deps.doFetch(...)`, this=deps). The browser's
+  // global `fetch` throws "Illegal invocation" when its `this` is anything but the global,
+  // so calling it as a property of `deps` would break EVERY request. A bare call works for
+  // a raw global `fetch` AND for a wrapped/mock one (regression-tested).
+  const doFetch = deps.doFetch
   let refreshed = false
   for (let attempt = 0; ; attempt++) {
     let res: Response
     try {
-      res = await deps.doFetch(url, init)
+      res = await doFetch(url, init)
     } catch (e) {
       // Network-level failure (connection refused / reset / DNS) during a roll → retry
       // an idempotent read, unless the CALLER aborted or the budget is exhausted.
