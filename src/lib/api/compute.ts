@@ -9,12 +9,12 @@
  * or an honest not-configured / unavailable / empty state.
  *
  * THREE real sources, in honest priority:
- *  1. GPU inventory — `GET /paas/gpus` (platform control plane, same-origin `/paas`
- *     proxy → platform.hanzo.ai/v1/gpus, service-token injected server-side). Per-GPU
- *     rows + live telemetry. Returns 501 when the PaaS token is unset (the current
- *     state — disabled in the console CR) → the caller renders the honest
- *     not-configured card, never an empty grid.
- *  2. Cluster inventory — `PlatformApi.listClusters(org)` (the org's DOKS). GPU-bearing
+ *  1. GPU inventory — `GET /v1/gpus` (the unified cloud binary, via the same-origin
+ *     user-bearer `/cloud` proxy → cloud-api /v1/gpus, org resolved from the Bearer
+ *     owner). Per-GPU rows + live telemetry (`/v1/gpus/alerts`, `/v1/gpus/pools`).
+ *     A not-yet-served route (404) → the caller renders the honest not-configured /
+ *     unavailable card, never an empty grid.
+ *  2. Cluster inventory — `PlatformApi.listClusters()` (the org's DOKS). GPU-bearing
  *     clusters are detected from the node-size slug; per-model GPU COUNTS are derived
  *     from real `nodeCount × GPUs-per-node`. Counts/clusters only — NEVER synthetic
  *     per-GPU rows (we have no UUIDs/temps for a node we only know the size of).
@@ -24,20 +24,17 @@
  *     the commerce usage total (`BillingApi.usage`) and finally to `—`.
  *
  * Per-GPU telemetry time-series (utilization-over-time, temps), pools, and alerts
- * have NO backend yet; those surfaces stay honestly empty until a provider/agent
- * connects. ALL calls are org-scoped: `/paas/*` by the server token's tenant and the
- * `/v1` ledger by the `X-Org-Id` (`currentOrg()`) `client.ts` stamps.
+ * stay honestly empty until a provider/agent connects them upstream. ALL calls are
+ * org-scoped server-side: `/cloud/v1/*` by the minted Bearer's owner claim, and the
+ * `/v1` usage ledger by the `X-Org-Id` (`currentOrg()`) `client.ts` stamps.
  *
  * Reuses (does NOT duplicate) `PlatformApi.listClusters` / `clustersFromApps` from
  * `./platform` — this file adds the GPU read surface + the pure derivation/format
  * helpers, kept here (not braided into `platform.ts`) so the concurrent Machines work
  * on `platform.ts` and this stay orthogonal.
  */
-import { get, restGet } from './client'
+import { get, restGet, cloudProxyV1Url } from './client'
 import type { Cluster } from './platform'
-
-/** Same-origin PaaS proxy path (server route injects the service token). */
-const paas = (path: string): string => `/paas/${path.replace(/^\/+/, '')}`
 
 // ── Wire types ───────────────────────────────────────────────────────────────
 
@@ -451,23 +448,23 @@ export const GPU_NODE_SIZES = [
 ] as const
 
 export const ComputeApi = {
-  /** Per-GPU inventory + telemetry from the platform (`GET /paas/gpus`). */
+  /** Per-GPU inventory + telemetry from the native cloud (`GET /v1/gpus`). */
   gpus: async (): Promise<Gpu[]> => {
-    const r = await restGet<unknown>(paas('gpus'))
+    const r = await restGet<unknown>(cloudProxyV1Url('gpus'))
     const arr = Array.isArray(r) ? r : rec(r).gpus
     return (Array.isArray(arr) ? arr : []).map((g) => normalizeGpu(g))
   },
 
-  /** GPU alerts from the platform (`GET /paas/gpus/alerts`). */
+  /** GPU alerts from the native cloud (`GET /v1/gpus/alerts`). */
   alerts: async (): Promise<GpuAlert[]> => {
-    const r = await restGet<unknown>(paas('gpus/alerts'))
+    const r = await restGet<unknown>(cloudProxyV1Url('gpus/alerts'))
     const arr = Array.isArray(r) ? r : rec(r).alerts
     return (Array.isArray(arr) ? arr : []).map((a, i) => normalizeAlert(a, i))
   },
 
-  /** GPU scheduling pools from the platform (`GET /paas/gpus/pools`). */
+  /** GPU scheduling pools from the native cloud (`GET /v1/gpus/pools`). */
   pools: async (): Promise<GpuPool[]> => {
-    const r = await restGet<unknown>(paas('gpus/pools'))
+    const r = await restGet<unknown>(cloudProxyV1Url('gpus/pools'))
     const arr = Array.isArray(r) ? r : rec(r).pools
     return (Array.isArray(arr) ? arr : []).map((p, i) => normalizePool(p, i))
   },

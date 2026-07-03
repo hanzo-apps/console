@@ -1,19 +1,20 @@
 'use client'
 
 /**
- * Customer machines — a tenant's OWN compute, read from visor via the user-bearer
- * `/vm` proxy (`VisorApi.machines()`). This is what a non-admin (a customer like a
- * demo user) sees under Compute › Machines: their real machines, or a graceful
- * "launch one" / "managed compute" state — NEVER the infra "PAAS_SERVICE_TOKEN not
- * set" message (that is only ever an admin concern; the admin fleet view lives in
- * `MachinesModule`).
+ * Customer machines — a tenant's OWN compute, read from the native `/v1/machines`
+ * surface via the user-bearer `/cloud` proxy (`VisorApi.machines()`, visor-backed,
+ * org resolved from the Bearer owner). This is what a non-admin (a customer like a
+ * demo user) sees under Compute › Machines: their real machines with a launch flow
+ * (`LaunchDrawer`) and a terminate action (`DELETE /v1/machines/:id`), or a graceful
+ * "launch one" / "managed compute" state — NEVER an infra "not configured" message
+ * (that is only ever an admin concern; the admin fleet view lives in `MachinesModule`).
  *
  * A row opens the ONE right-side `DetailPane` (item detail slides out from the
  * right, full-screen on mobile) — no full-page nav.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, Rocket, Server } from '@hanzogui/lucide-icons-2'
+import { RefreshCw, Rocket, Server, Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import {
@@ -108,6 +109,22 @@ export function CustomerMachines() {
   }, [load])
 
   const machineColor = productColorHex('machines')
+
+  // Terminate (destroy) a machine — real DELETE /v1/machines/:id, stops metering. Honest
+  // confirm; on success the row is dropped and the list reloaded; a failure surfaces the
+  // real backend message (no fabricated success).
+  const terminate = async (m: VisorMachine) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Terminate "${m.name || m.id}"? This destroys the machine and stops billing.`)) return
+    try {
+      await VisorApi.terminate(m.id)
+      detail.close()
+      setRows((r) => r.filter((x) => x.id !== m.id))
+      void load()
+    } catch (e) {
+      if (typeof window !== 'undefined') window.alert(`Could not terminate "${m.name || m.id}": ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   const openDetail = (m: VisorMachine) =>
     detail.open({
       title: m.name || m.id,
@@ -119,6 +136,9 @@ export function CustomerMachines() {
         <>
           <Button flex={1} icon={<RefreshCw size={15} />} onPress={() => void load()}>
             Refresh
+          </Button>
+          <Button flex={1} theme="red" icon={<Trash2 size={15} />} onPress={() => void terminate(m)}>
+            Terminate
           </Button>
         </>
       ),

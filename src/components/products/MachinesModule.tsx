@@ -3,26 +3,26 @@
 /**
  * Machines — your compute machines and capacity across regions.
  *
- * HONEST BACKEND (verified against the live control plane, platform.hanzo.ai):
- * there is NO `/v1/machines` (or nodes/droplets/compute) route — the full `/v1`
- * surface is `apps`, `org/{org}/cluster`, and `org/{org}/.../container`. So the
- * real compute inventory is the org's DOKS clusters (`GET /v1/org/{org}/cluster`,
- * via the same-origin `/paas` proxy that injects the service token server-side),
- * and a MACHINE is one node of a real cluster pool. `machines/logic.ts` projects
- * nodes from clusters; every field is a real cluster/pool value, a deterministic
- * function of one (vCPU/RAM from the size slug; monthly cost ESTIMATE from the
- * platform's own price table), or an explicit "—" for facts the control plane
- * does not expose (per-node CPU%/MEM%/GPU/uptime/IP). Nothing is fabricated.
+ * Routes by role. A CUSTOMER reads THEIR OWN machines from the native `/v1/machines`
+ * surface (`CustomerMachines`, visor-backed via the user-bearer `/cloud` proxy) — real
+ * data, a launch flow, and a terminate action. A GLOBAL ADMIN sees the operator FLEET
+ * view here (`AdminMachines`): a MACHINE is one node of a real cluster pool, projected
+ * from the org's dedicated DOKS clusters (`GET /v1/clusters`, the native cloud surface,
+ * org-scoped by the Bearer owner). `machines/logic.ts` projects nodes from clusters;
+ * every field is a real cluster/pool value, a deterministic function of one (vCPU/RAM
+ * from the size slug; monthly cost ESTIMATE from the price table), or an explicit "—"
+ * for facts the control plane does not expose (per-node CPU%/MEM%/GPU/uptime/IP).
+ * Nothing is fabricated.
  *
- * States are honest and mirror the other platform modules: loading, NOT-CONFIGURED
- * (501 when `PAAS_SERVICE_TOKEN` is unset / 401·403 on a mis-wired token — the
- * legitimate first state today), backend-unavailable (404), error, and a genuine
- * empty (load succeeded, zero clusters). Per-node Reboot/Terminate have no real
- * endpoint (the control plane exposes no per-node mutation), so they are disabled
- * with an explanatory tooltip — never wired to a destructive cluster-level call.
+ * States are honest and mirror the other modules: loading, forbidden (a non-admin
+ * caller of the fleet view → a "managed by Hanzo" state), backend-unavailable (404),
+ * error, and a genuine empty (load succeeded, zero clusters). Per-node Reboot/Terminate
+ * on the fleet view have no cluster-level endpoint, so they are disabled with a tooltip;
+ * capacity is changed on the node pool from Clusters. (Per-machine terminate for a
+ * customer's own machine lives on the customer view, wired to DELETE /v1/machines/:id.)
  *
- * Org scope is `currentOrg()` (brand org by default; a global admin's switch is
- * honored and re-resolved server-side by the `/paas` proxy's admin policy).
+ * Org scope is `currentOrg()` (brand org by default; the native surfaces resolve the
+ * org from the Bearer owner server-side).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -249,7 +249,7 @@ function AdminMachines(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await PlatformApi.listClusters(currentOrg())
+      const data = await PlatformApi.listClusters()
       setClusters(data ?? [])
       setLoadError(null)
     } catch (e) {
@@ -718,15 +718,15 @@ function AdminMachines(_props: { params: Record<string, string> }) {
         <Text fontSize="$5" fontWeight="800">Settings</Text>
         <YStack gap="$2">
           <Fact label="Org scope" value={currentOrg()} />
-          <Fact label="Control plane" value="platform.hanzo.ai (via /paas proxy)" />
-          <Fact label="Inventory source" value="GET /v1/org/{org}/cluster → node pools" />
+          <Fact label="Backend" value="cloud-api (via /cloud user-bearer proxy)" />
+          <Fact label="Inventory source" value="GET /v1/clusters → node pools" />
           <Fact label="Connection" value={stateLabel} />
           <Fact label="Clusters" value={String(clusters.length)} />
           <Fact label="Machines" value={String(machines.length)} />
         </YStack>
         {!configured ? (
           <Text fontSize="$2" color="$color11">
-            The PaaS service token (PAAS_SERVICE_TOKEN, from KMS) is not set on this deployment yet, so no real machines can be read. Once it is, this page populates from your clusters — no placeholder data is shown.
+            The cluster inventory could not be read from the cloud backend on this deployment yet. Once it responds, this page populates from your clusters — no placeholder data is shown.
           </Text>
         ) : null}
         <XStack>
