@@ -10,7 +10,9 @@
  *   Explore      top-K search over a collection (POST /v1/search).
  *   Collections  the org's knowledge stores (get-stores) as vector collections,
  *                each → the Qdrant/Search index `{owner}-{store}-docs`.
- *   Jobs         per-file index status (get-files) + a real upload ingest.
+ *   Ingest       one surface, three real sources (text · GitHub repo · website) →
+ *                POST /v1/docs/ingest; repos/crawls run as durable hanzoai/tasks
+ *                workflows (tracked in Tasks), plus the store's real indexed files.
  *   Models       the gateway's embedding models (/v1/models) + generate (/v1/embeddings).
  *   Settings     org embedding defaults + the wiring this page depends on.
  *
@@ -27,11 +29,11 @@ import {
   Boxes,
   Brain,
   LayoutDashboard,
-  ListChecks,
   Plus,
   Search,
   Sparkles,
   SlidersHorizontal,
+  Upload,
 } from '@hanzogui/lucide-icons-2'
 
 import { EmbeddingsApi } from '~/lib/api/embeddings'
@@ -44,7 +46,7 @@ import { newStore } from './stores/logic'
 import { OverviewView } from './embeddings/OverviewView'
 import { CollectionsView } from './embeddings/CollectionsView'
 import { ExploreView } from './embeddings/ExploreView'
-import { JobsView } from './embeddings/JobsView'
+import { IngestView } from './embeddings/IngestView'
 import { ModelsView } from './embeddings/ModelsView'
 import { SettingsView } from './embeddings/SettingsView'
 
@@ -52,7 +54,7 @@ const TABS = [
   ['overview', 'Overview', LayoutDashboard],
   ['explore', 'Explore', Search],
   ['collections', 'Collections', Boxes],
-  ['jobs', 'Jobs', ListChecks],
+  ['ingest', 'Ingest', Upload],
   ['models', 'Models', Brain],
   ['settings', 'Settings', SlidersHorizontal],
 ] as const
@@ -122,7 +124,7 @@ export function EmbeddingsModule({ params }: { params: Record<string, string> })
     ),
     explore: () => <ExploreView owner={owner} />,
     collections: () => <CollectionsView owner={owner} onOpen={openCollection} onNew={createCollection} />,
-    jobs: () => <JobsView owner={owner} />,
+    ingest: () => <IngestView owner={owner} />,
     models: () => <ModelsView />,
     settings: () => <SettingsView owner={owner} />,
   }

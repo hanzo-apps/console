@@ -113,6 +113,13 @@ export type IngestStats = {
   filesSkipped?: number
   documentsIndexed?: number
   errors?: string[]
+  /**
+   * Set when a long source (github/crawl/s3) was enqueued as a durable hanzoai/tasks
+   * workflow instead of run inline — progress is tracked in the ONE Tasks product by
+   * this workflow id (there is no bespoke job entity).
+   */
+  async?: boolean
+  workflowId?: string
 }
 
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
@@ -188,9 +195,33 @@ export const EmbeddingsApi = {
   generate: (model: string, input: string): Promise<EmbeddingResult> =>
     restPost<EmbeddingResult>(aiV1Url('embeddings'), { model, input }),
 
-  /** Ingest pasted text into a collection (source=upload — the balance-free path). */
+  /** Ingest pasted text into a collection (source=upload — the balance-free path, inline). */
   ingestText: (store: string, name: string, content: string): Promise<IngestStats> =>
     post<IngestStats>('docs/ingest', { store, source: 'upload', files: [{ name, content }] }).then((r) => r.data),
+
+  /**
+   * Ingest a GitHub repo (source=github) — the backend clones it, code-aware-chunks
+   * every text/code blob (whole funcs/types per chunk), embeds + indexes into the store.
+   * A long source runs as a durable tasks workflow → the result carries `async` +
+   * `workflowId` (tracked in the Tasks product), never a bespoke job. `repo` = "owner/name".
+   */
+  ingestGitHub: (store: string, repo: string, ref?: string): Promise<IngestStats> =>
+    post<IngestStats>('docs/ingest', {
+      store,
+      source: 'github',
+      github: { repo: repo.trim(), ...(ref?.trim() ? { ref: ref.trim() } : {}) },
+    }).then((r) => r.data),
+
+  /**
+   * Ingest a crawled web page/site (source=crawl) — the backend fetches the URL (up to
+   * `depth` links), extracts, chunks, embeds + indexes. Durable workflow like github.
+   */
+  ingestCrawl: (store: string, url: string, depth?: number): Promise<IngestStats> =>
+    post<IngestStats>('docs/ingest', {
+      store,
+      source: 'crawl',
+      crawl: { url: url.trim(), ...(depth && depth > 0 ? { depth } : {}) },
+    }).then((r) => r.data),
 
   /** Create a collection (the store). Reuses the same add-store the Stores admin uses. */
   addStore: (store: Store) => StoreApi.add(store),
