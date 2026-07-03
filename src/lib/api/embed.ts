@@ -9,7 +9,7 @@
  * server-side probe that decides which — it returns the exact server-vetted URL to
  * embed and a reachability boolean, and never fabricates an app.
  */
-import { restGet } from './client'
+import { restGet, v1Url } from './client'
 
 export type EmbedAppId = 'cms' | 'erp' | 'help'
 export type EmbedPhase = 'ready' | 'not-provisioned' | 'not-entitled' | (string & {})
@@ -49,5 +49,10 @@ export function normalizeEmbedStatus(app: EmbedAppId, raw: unknown): EmbedStatus
 
 export const EmbedApi = {
   status: (app: EmbedAppId): Promise<EmbedStatus> =>
-    restGet<unknown>(`/embed-status?app=${encodeURIComponent(app)}`).then((r) => normalizeEmbedStatus(app, r)),
+    // Same-origin `/v1/console/embed-status` — the cloud console subsystem's probe
+    // (task #41). Entitlement + reachability are decided server-side; a non-entitled
+    // caller never receives the embed URL.
+    restGet<unknown>(v1Url(`console/embed-status?app=${encodeURIComponent(app)}`)).then((r) =>
+      normalizeEmbedStatus(app, r),
+    ),
 }
