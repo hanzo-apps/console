@@ -132,7 +132,7 @@ function ManagedCard({ entry, hasService }: { entry: CatalogEntry; hasService: b
       </XStack>
       <Text fontSize="$3" color="$color11">
         {hasService
-          ? `The control plane has no running ${entry.label} service for your organization yet. Provision it, then its live health and workloads appear here — nothing is fabricated.`
+          ? `The control plane's operator inventory reports no running ${entry.label} service for your organization. It may be a shared managed service reported elsewhere, or not provisioned here — its live health and workloads light up automatically once one is reported. No status is fabricated.`
           : `${entry.label} is a managed Hanzo Cloud capability with no discrete service to report health for. It is available through the API; there is no fabricated status shown.`}
       </Text>
     </Card>
