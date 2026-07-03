@@ -1,27 +1,5 @@
 /**
- *   {
-      id: 'observations',
-      label: 'Observations',
-      icon: Activity,
-      description: 'Spans, generations, and events inside traces.',
-      category: 'Observe',
-      status: 'enabled',
-      repo: 'hanzoai/o11y',
-      kind: 'module',
-      routes: [{ path: '', component: ObservationsModule }],
-    },
-  {
-      id: 'users',
-      label: 'Users',
-      icon: Users,
-      description: 'Per-user analytics — trace volume, tokens, and cost.',
-      category: 'Observe',
-      status: 'enabled',
-      repo: 'hanzoai/o11y',
-      kind: 'module',
-      routes: [{ path: '', component: UsersModule }],
-    },
-Product catalog — the single source of truth for the unified console.
+ * Product catalog — the single source of truth for the unified console.
  *
  * ONE list (`catalog`) describes every Hanzo product, whether it is an
  * in-console admin module (owns routes, rendered here) or an external surface
@@ -1573,6 +1551,34 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: TracesModule },
       { path: ':id', component: TracesModule },
     ],
+  },
+  {
+    // Native — the flat, cross-trace view of the spans/generations/events inside
+    // traces, on the REAL /v1/evals observation surface (O11yApi.observations).
+    id: 'observations',
+    label: 'Observations',
+    icon: Activity,
+    description: 'Spans, generations, and events inside traces.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/observations`,
+    kind: 'module',
+    routes: [{ path: '', component: ObservationsModule }],
+  },
+  {
+    // Native — per-user analytics (trace volume, tokens, cost) aggregated from traces
+    // carrying a userId, over the /cloud bearer proxy (O11yApi.users).
+    id: 'users',
+    label: 'Users',
+    icon: Users,
+    description: 'Per-user analytics — trace volume, tokens, and cost.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/users`,
+    kind: 'module',
+    routes: [{ path: '', component: UsersModule }],
   },
   {
     id: 'service-map',
