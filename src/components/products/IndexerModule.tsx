@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet, cloudProxyV1Url } from '~/lib/api/client'
+import { restGet, originV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
@@ -38,7 +38,7 @@ export function IndexerModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ indexers?: Indexer[] }>(cloudProxyV1Url('indexers'))
+      const r = await restGet<{ indexers?: Indexer[] }>(originV1Url('indexers'))
       setRows(r.indexers ?? [])
       setLoadError(null)
     } catch (e) {
