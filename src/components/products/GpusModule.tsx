@@ -24,7 +24,6 @@ import { Plus, Upload } from '@hanzogui/lucide-icons-2'
 import { PlatformApi, type Cluster } from '~/lib/api'
 import { BillingApi, type Usage } from '~/lib/api/billing'
 import { ComputeApi, type Gpu, type GpuAlert, type UsageLedger } from '~/lib/api/compute'
-import { currentOrg } from '~/lib/org-scope'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
@@ -69,7 +68,7 @@ function useComputeData(): ComputeData {
     ComputeApi.gpus()
       .then((data) => setGpus({ phase: 'ready', data }))
       .catch((e) => setGpus({ phase: 'error', error: interpretPlatformError(e) }))
-    PlatformApi.listClusters(currentOrg())
+    PlatformApi.listClusters()
       .then((data) => setClusters({ phase: 'ready', data }))
       .catch((e) => setClusters({ phase: 'error', error: interpretPlatformError(e) }))
     ComputeApi.alerts()

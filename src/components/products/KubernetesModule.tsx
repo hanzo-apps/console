@@ -116,14 +116,14 @@ export function KubernetesModule(_props: { params: Record<string, string> }) {
 
   const load = useCallback(() => {
     setClusters({ phase: 'loading' })
-    PlatformApi.listClusters(org)
+    PlatformApi.listClusters()
       .then((data) => setClusters({ phase: 'ready', data }))
       .catch((e) => setClusters({ phase: 'error', error: interpretPlatformError(e) }))
     // Apps inventory is enrichment (the running-workload count) — never blocks the page.
     PlatformApi.apps()
       .then(setApps)
       .catch(() => setApps([]))
-  }, [org])
+  }, [])
 
   useEffect(() => load(), [load])
 

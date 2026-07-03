@@ -59,6 +59,34 @@ export const CLOUD_HEADS: readonly string[] = [
   // Bearer owner and 403s a cookie-only call, so it routes through /cloud like the
   // rest — the single `platform` head admits every project/app/deployment sub-path.
   'platform',
+  // ── Native cloud infra surfaces (the unified cloud binary now serves these
+  // per-org at /v1/*, previously the admin `/paas` control plane). Each resolves the
+  // org from the Bearer owner (X-Org-Id) and 403s a cookie-only call, so it routes
+  // through /cloud exactly like the rest; one head admits every sub-path.
+  //
+  // Compute (visor-backed): machines inventory + launch/quote/terminate
+  // (/v1/machines[/launch|/:id]); GPU inventory + alerts + pools (/v1/gpus[/alerts|
+  // /pools]); dedicated clusters + node-pool add/scale/delete (/v1/clusters[/:cid/
+  // pools[/:pid[/scale]]]).
+  'machines',
+  'gpus',
+  'clusters',
+  // DO-native: virtual private clouds and managed load balancers — FULL CRUD
+  // (/v1/vpcs[/:id], /v1/load-balancers[/:id]).
+  'vpcs',
+  'load-balancers',
+  // Platform aggregates (read-only, derived): deploy targets, CI pipelines, image/
+  // binary builds, and versioned releases (/v1/{environments,pipelines,builds,releases}).
+  'environments',
+  'pipelines',
+  'builds',
+  'releases',
+  // Networking (zt-backed, Hanzo Zero Trust / OpenZiti fabric): the org's overlay
+  // networks (/v1/networks[/:id]), mesh services (/v1/mesh/services), and edge nodes
+  // (/v1/edge/nodes). One head per console page — Networks / ServiceMesh / Edge.
+  'networks',
+  'mesh',
+  'edge',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */

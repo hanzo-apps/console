@@ -10,15 +10,17 @@
  * is the default target, not a row here, so an org with no dedicated cluster sees
  * an honest empty list.
  *
- * Talks to the Hanzo PaaS via the same-origin `/paas` proxy (`GET|POST
- * /v1/org/{org}/cluster`). Tenancy is the brand org (`config.iamOrgName`). Built
- * on the shared GUI primitives, matching every other module.
+ * Cluster inventory + node-pool lifecycle (list, add-pool, scale-pool, delete-pool)
+ * read/write the native cloud `/v1/clusters*` surface (org-scoped by the Bearer
+ * owner); provisioning a brand-new dedicated cluster stays on the `/paas` control
+ * plane (`POST /v1/org/{org}/cluster`, brand-admin gated). Tenancy is the brand org
+ * (`config.iamOrgName`). Built on the shared GUI primitives, matching every module.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
+import { Plus, RefreshCw, Trash2 } from '@hanzogui/lucide-icons-2'
 
-import { ApiError, PlatformApi, DOKS_REGIONS, DOKS_NODE_SIZES, type Cluster } from '~/lib/api'
+import { ApiError, PlatformApi, DOKS_REGIONS, DOKS_NODE_SIZES, type Cluster, type NodePool } from '~/lib/api'
 import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
@@ -38,6 +40,13 @@ const clampCount = (v: string): number => {
   return Math.min(n, 100)
 }
 
+/** Node-count options for the pool scale / add selects. */
+const COUNT_OPTIONS = ['1', '2', '3', '4', '5', '6', '8', '10']
+
+/** Stable id for a cluster / node pool across the platform's field aliases. */
+const clusterId = (c: Cluster): string => c.doksClusterId ?? c.id ?? c.name
+const poolId = (p: NodePool): string => p.poolId ?? p.doPoolId ?? p.name ?? ''
+
 export function ClustersModule(_props: { params: Record<string, string> }) {
   const org = config.iamOrgName
   const [rows, setRows] = useState<Cluster[]>([])
@@ -56,7 +65,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await PlatformApi.listClusters(org)
+      const data = await PlatformApi.listClusters()
       setRows(data ?? [])
       setLoadError(null)
     } catch (e) {
@@ -64,7 +73,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
     } finally {
       setLoading(false)
     }
-  }, [org])
+  }, [])
 
   useEffect(() => {
     void load()
@@ -85,6 +94,48 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
     } finally {
       setProvisioning(false)
     }
+  }
+
+  // ── Node-pool management (add / scale / delete against /v1/clusters/:cid/pools) ──
+  const [poolClusterId, setPoolClusterId] = useState<string>('')
+  const [addSize, setAddSize] = useState<string>(DOKS_NODE_SIZES[0])
+  const [addCount, setAddCount] = useState(1)
+  const [scaleCounts, setScaleCounts] = useState<Record<string, number>>({})
+  const [poolBusy, setPoolBusy] = useState(false)
+  const [poolMsg, setPoolMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+
+  // The cluster whose pools are being managed (defaults to the first cluster).
+  const selectedCluster = useMemo(
+    () => rows.find((c) => clusterId(c) === poolClusterId) ?? rows[0] ?? null,
+    [rows, poolClusterId],
+  )
+
+  const runPool = async (fn: () => Promise<void>, ok: string) => {
+    setPoolBusy(true)
+    setPoolMsg(null)
+    try {
+      await fn()
+      setPoolMsg({ tone: 'ok', text: ok })
+      await load()
+    } catch (e) {
+      setPoolMsg({ tone: 'err', text: e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Pool operation failed' })
+    } finally {
+      setPoolBusy(false)
+    }
+  }
+
+  const onAddPool = (c: Cluster) =>
+    void runPool(() => PlatformApi.addPool(clusterId(c), { size: addSize, count: addCount }), 'Node pool added.')
+
+  const onScalePool = (c: Cluster, p: NodePool) =>
+    void runPool(
+      () => PlatformApi.scalePool(clusterId(c), poolId(p), scaleCounts[poolId(p)] ?? p.count ?? 1),
+      'Node pool scaled.',
+    )
+
+  const onDeletePool = (c: Cluster, p: NodePool) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Delete node pool "${p.name || poolId(p)}"? Its machines are destroyed.`)) return
+    void runPool(() => PlatformApi.deletePool(clusterId(c), poolId(p)), 'Node pool removed.')
   }
 
   const columns: Column<Cluster>[] = [
@@ -163,6 +214,84 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
               your deploy target. Billed by DigitalOcean.
             </Text>
           </Card>
+
+          {/* Node pools — add / scale / delete on a dedicated cluster. */}
+          {selectedCluster ? (
+            <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxWidth={620}>
+              <Text fontSize="$5" fontWeight="700">
+                Node pools
+              </Text>
+              {rows.length > 1 ? (
+                <FieldRow label="Cluster">
+                  <FieldSelect
+                    value={clusterId(selectedCluster)}
+                    options={rows.map(clusterId)}
+                    onChange={setPoolClusterId}
+                  />
+                </FieldRow>
+              ) : null}
+
+              {selectedCluster.nodePools && selectedCluster.nodePools.length ? (
+                <YStack gap="$2">
+                  {selectedCluster.nodePools.map((p) => (
+                    <XStack key={poolId(p)} gap="$2" items="center" flexWrap="wrap">
+                      <YStack flex={1} minW={160}>
+                        <Text fontSize="$3" fontWeight="600" numberOfLines={1}>
+                          {p.name || poolId(p) || '—'}
+                        </Text>
+                        <Text fontSize="$1" color="$color10">
+                          {(p.size ?? '—')} · {p.count ?? 0} node{(p.count ?? 0) === 1 ? '' : 's'}
+                        </Text>
+                      </YStack>
+                      <FieldSelect
+                        value={String(scaleCounts[poolId(p)] ?? p.count ?? 1)}
+                        options={COUNT_OPTIONS}
+                        onChange={(v) => setScaleCounts((s) => ({ ...s, [poolId(p)]: clampCount(v) }))}
+                      />
+                      <Button size="$2" disabled={poolBusy} onPress={() => onScalePool(selectedCluster, p)}>
+                        Scale
+                      </Button>
+                      <Button
+                        size="$2"
+                        chromeless
+                        theme="red"
+                        icon={<Trash2 size={14} />}
+                        disabled={poolBusy}
+                        onPress={() => onDeletePool(selectedCluster, p)}
+                        aria-label={`Delete pool ${p.name || poolId(p)}`}
+                      />
+                    </XStack>
+                  ))}
+                </YStack>
+              ) : (
+                <Text fontSize="$2" color="$color10">
+                  This cluster reports no node pools.
+                </Text>
+              )}
+
+              <YStack gap="$2" borderTopWidth={1} borderColor="$borderColor" pt="$3">
+                <Text fontSize="$3" fontWeight="700">
+                  Add node pool
+                </Text>
+                <FieldRow label="Size">
+                  <FieldSelect value={addSize} options={[...DOKS_NODE_SIZES]} onChange={setAddSize} />
+                </FieldRow>
+                <FieldRow label="Nodes">
+                  <FieldSelect value={String(addCount)} options={COUNT_OPTIONS} onChange={(v) => setAddCount(clampCount(v))} />
+                </FieldRow>
+                <XStack gap="$3" items="center">
+                  <Button self="flex-start" icon={<Plus size={16} />} disabled={poolBusy} onPress={() => onAddPool(selectedCluster)}>
+                    {poolBusy ? 'Working…' : 'Add pool'}
+                  </Button>
+                  {poolMsg ? (
+                    <Text fontSize="$2" color={poolMsg.tone === 'ok' ? '$color11' : '$red10'}>
+                      {poolMsg.text}
+                    </Text>
+                  ) : null}
+                </XStack>
+              </YStack>
+            </Card>
+          ) : null}
         </>
       )}
     </>
