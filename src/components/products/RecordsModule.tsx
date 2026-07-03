@@ -21,12 +21,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { ChevronRight, Plus, Table, TriangleAlert } from '@hanzogui/lucide-icons-2'
+import { ArrowLeft, ChevronRight, Table, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { CollectionTable } from '~/components/base-data/CollectionTable'
+import { CollectionView } from '~/components/base-data/CollectionView'
 import { RecordDetailView } from '~/components/base-data/RecordDetailView'
 import { BaseDataApi } from '~/lib/base-data/api'
 import { baseCollectionToFields, type BaseCollection } from '~/lib/base-data/fields'
@@ -66,31 +65,24 @@ export function RecordsModule({ params }: { params: Record<string, string> }) {
     )
   }
 
-  // One collection's records — the list.
+  // One collection's records — the Twenty-grade table ⇆ board view.
   if (collection) {
     return (
-      <YStack gap="$4">
-        <PageHeader
-          title={collection}
-          subtitle="Records in this Base collection — click a row to view or edit."
-          actions={
-            <Button size="$3" onPress={nav.toIndex}>
-              All collections
-            </Button>
-          }
-        />
-        <CollectionTable
-          baseUrl={BASE_PROXY}
+      <YStack gap="$3">
+        <XStack items="center">
+          <Button size="$2" icon={<ArrowLeft size={15} />} onPress={nav.toIndex}>
+            All collections
+          </Button>
+        </XStack>
+        <CollectionView
+          api={api}
           collection={collection}
-          onRowPress={(r) => {
+          title={collection}
+          onOpen={(r) => {
             const id = (r as { id?: string }).id
             if (id) nav.toRecord(collection, id)
           }}
-          action={
-            <PrimaryButton size="$2" icon={<Plus size={15} />} onPress={() => nav.toNew(collection)}>
-              New record
-            </PrimaryButton>
-          }
+          onCreate={() => nav.toNew(collection)}
         />
       </YStack>
     )
