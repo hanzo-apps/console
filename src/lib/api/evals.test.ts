@@ -1,5 +1,5 @@
 /**
- * Pure-logic tests for the native /v1/evals adapters (wire → canonical Langfuse
+ * Pure-logic tests for the native /v1/evals adapters (wire → canonical Observe
  * view-models). These fold the real backend shapes into the types the shared
  * observability primitives (SpanTree waterfall, metrics, formatters) consume;
  * every missing enrichment must map to null/0 (honest em dash), never a
