@@ -84,25 +84,28 @@ export function normalizeMachine(raw: unknown, i = 0): VisorMachine {
 }
 
 /** What a customer compute view should show, derived from an upstream failure. */
-export type VisorErrorKind = 'unauthorized' | 'unavailable'
+export type VisorErrorKind = 'unauthorized' | 'forbidden' | 'error'
 export type VisorError = { kind: VisorErrorKind; message: string }
 
 /**
- * Map an error to a CUSTOMER-appropriate state. 401/403 → sign-in; anything else
- * (404 not-routed, 501/502/503, network) → "managed compute / not available here",
- * NEVER an infra-token message (that is only ever an admin concern).
+ * Map an upstream failure to a CUSTOMER-appropriate LOAD state — never the empty
+ * "launch your first machine" state, which is reserved for a real 200-with-zero-
+ * items (an error masquerading as "you have none" is a lie, however friendly). A
+ * 401 is a sign-in prompt; a 403 is an honest permission state; any other non-200
+ * (404 not-routed, 5xx, network) is an honest transient error the caller retries.
+ * None leak infra-token jargon (that is only ever an admin concern).
  */
 export function interpretVisorError(e: unknown): VisorError {
   const status = e instanceof ApiError ? e.status : undefined
-  // 401 = no session → a genuine sign-in prompt. 403 = visor authenticated the caller
-  // but the per-org machine list isn't provisioned for them (a signed-in customer with
-  // no dedicated compute) — that is a CONNECTED "no machines yet / managed" state, NOT a
-  // sign-in wall (showing "sign in" to a signed-in user reads as broken). Everything else
-  // (404 / 5xx / network) is likewise a customer-managed state, never an infra error.
   if (status === 401) return { kind: 'unauthorized', message: 'Sign in to view your machines.' }
+  if (status === 403)
+    return {
+      kind: 'forbidden',
+      message: 'Your account does not have access to Machines. Ask an organization admin to enable dedicated compute.',
+    }
   return {
-    kind: 'unavailable',
-    message: 'Managed compute — dedicated machines appear here once you launch one.',
+    kind: 'error',
+    message: 'Could not load your machines — a temporary error, not an empty list. Try again in a moment.',
   }
 }
 
