@@ -99,12 +99,45 @@ const aiSurfaceRewrites = () => ({
   ],
 })
 
+/**
+ * EMBED MODE (the "True 1-binary FE" target — task #41).
+ *
+ * `npm run build:embed` sets CONSOLE_EMBED=1 and produces a STATIC EXPORT (`out/`)
+ * that the hanzoai/cloud Go binary go:embeds and serves at its own web root. In this
+ * mode the console SPA is same-origin with the cloud `/v1` API (config.cloudUrl
+ * defaults to window.location.origin), so:
+ *
+ *   - `output: 'export'` — emit a pure static bundle, no Node server.
+ *   - NO `rewrites` — a static export cannot run rewrites, and it does not need
+ *     them: the clean `/v1/<head>` calls the SPA already builds now terminate
+ *     DIRECTLY at the embedded cloud's mounted subsystems (prompts/agents/evals/…,
+ *     models/chat/embeddings/…, admin/*), which is exactly what the rewrites used
+ *     to forward to via the Next BFF. The BFF proxy routes (app/cloud, app/ai,
+ *     app/commerce, …) are the server, and in one-binary the cloud binary IS the
+ *     server — so they are simply absent from the export (see below).
+ *   - `images.unoptimized` — the export has no Image Optimization server.
+ *
+ * PRECONDITION for a clean `output:'export'`: the app/ tree must contain NO dynamic
+ * server route handlers (a static export has no server runtime to run them).
+ * Those handlers are the BFF proxies + the two standalone routes; the latter
+ * (keys/onboard) are ported to cloud `/v1/console/*`, and the proxies collapse to
+ * the cloud `/v1/*` the SPA calls directly. The embed build therefore runs against
+ * a tree with every app route handler removed (the build:embed script prunes the
+ * "route" files into a scratch stash so the server build on `main` is untouched).
+ *
+ * The normal `npm run build` is UNCHANGED (server build with rewrites) so nothing
+ * regresses for the standalone console deployment during the transition.
+ */
+const EMBED = process.env.CONSOLE_EMBED === '1'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   env: { NEXT_PUBLIC_APP_VERSION: pkgVersion },
   transpilePackages: guiPackages(),
-  rewrites: aiSurfaceRewrites,
+  ...(EMBED
+    ? { output: 'export', images: { unoptimized: true } }
+    : { rewrites: aiSurfaceRewrites }),
   experimental: {
     esmExternals: true,
   },
