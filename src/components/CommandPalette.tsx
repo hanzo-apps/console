@@ -65,7 +65,8 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { AiApi, IamAdminApi, type Organization } from '~/lib/api'
-import { visibleCatalog, findEntry, type CatalogEntry } from '~/lib/products/registry'
+import { findEntry, type CatalogEntry } from '~/lib/products/registry'
+import { commandBarSystemPrompt, hanzoAssistantSystemPrompt } from '~/lib/assistant'
 import { searchDestinations, type Destination } from '~/lib/products/search'
 import { useProductColors } from '~/lib/products/pins'
 import { asColor } from '~/components/ui/color'
@@ -115,22 +116,6 @@ export function useCommandPalette(): PaletteApi {
   const ctx = useContext(Ctx)
   if (!ctx) throw new Error('useCommandPalette must be used within <CommandPaletteProvider>')
   return ctx
-}
-
-/** System prompt for `>` mode: lets the model map a request to ONE product id.
- *  A customer's prompt omits admin-only surfaces so the AI never suggests them. */
-function navSystemPrompt(showAdmin: boolean): string {
-  const products = visibleCatalog(showAdmin)
-  const list = products.map((e) => `${e.id} — ${e.label} — ${e.category}`).join('\n')
-  return [
-    'You are the command bar for the Hanzo Cloud Console.',
-    'The user wants to find or open a product, or asks a question.',
-    'Products (id — label — category):',
-    list,
-    '',
-    'If the request clearly refers to ONE product above, reply with exactly: NAV <id>',
-    'using an id from the list and nothing else. Otherwise answer concisely in plain text.',
-  ].join('\n')
 }
 
 type RunState =
@@ -428,13 +413,20 @@ function PaletteDialog({
     setRun({ status: 'loading' })
     try {
       if (mode === 'ai') {
-        const ans = (await AiApi.chat({ question: sub, system: navSystemPrompt(showAdmin) })).trim()
+        // Same grounded expert prompt as the chat, plus the nav contract: a clear
+        // "open X" jumps to the product; anything else gets a real, accurate answer.
+        const ans = (await AiApi.chat({ question: sub, system: commandBarSystemPrompt({ showAdmin }) })).trim()
         const m = ans.match(/^NAV\s+([a-z0-9-]+)/i)
         const entry = m ? findEntry(m[1]) : undefined
         if (entry) setRun({ status: 'nav', entry })
         else setRun({ status: 'text', text: ans })
       } else {
-        const ans = await AiApi.ragChat({ question: sub, store: 'docs' })
+        // Docs mode: retrieval grounded in the same expert context.
+        const ans = await AiApi.ragChat({
+          question: sub,
+          store: 'docs',
+          system: hanzoAssistantSystemPrompt({ showAdmin }),
+        })
         setRun({ status: 'text', text: ans })
       }
     } catch (e) {
