@@ -17,7 +17,7 @@ import { useEffect } from 'react'
 import { TeamApi } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
-import { applyAccent, applyOrgAccent } from '~/lib/theme/accent'
+import { setOrgAccent } from '~/lib/theme/accent'
 
 export function OrgAccentProvider() {
   const { account } = useSession()
@@ -27,17 +27,17 @@ export function OrgAccentProvider() {
 
   useEffect(() => {
     if (!owner) {
-      applyAccent(null) // signed out → default monochrome accent
+      setOrgAccent(null) // signed out → default monochrome accent
       return
     }
     let cancelled = false
     TeamApi.organization(currentOrg())
       .then((org) => {
-        if (!cancelled) applyOrgAccent(org.themeData)
+        if (!cancelled) setOrgAccent(org.themeData)
       })
       .catch(() => {
         // Org theme unreadable on this host → keep the default accent (no fabrication).
-        if (!cancelled) applyAccent(null)
+        if (!cancelled) setOrgAccent(null)
       })
     return () => {
       cancelled = true

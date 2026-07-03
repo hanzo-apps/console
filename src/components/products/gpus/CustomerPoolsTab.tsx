@@ -17,7 +17,6 @@ import type { Cluster } from '~/lib/api'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { EmptyState } from '~/components/ui/EmptyState'
-import { PlatformStateCard } from '../platform/state'
 import { gpuPoolsFromClusters } from './customer-logic'
 import type { Async } from './state'
 
@@ -29,7 +28,11 @@ const columns: Column<GpuPool>[] = [
   { key: 'status', header: 'Cluster', width: 130, render: (p) => <StatusTag status={p.status ?? 'unknown'} /> },
 ]
 
-export function CustomerPoolsTab({ clusters, onRetry }: { clusters: Async<Cluster[]>; onRetry: () => void }) {
+export function CustomerPoolsTab({ clusters }: { clusters: Async<Cluster[]> }) {
+  // Pools are DERIVED from the org's own clusters; a pool is a GPU node pool of a real
+  // cluster. When the org has no reachable GPU clusters (none provisioned, or the native
+  // clusters endpoint isn't live on this deployment), there are no pools to show — an
+  // honest empty, distinct from the Clusters tab and never a fabricated pool.
   const pools = useMemo(
     () => (clusters.phase === 'ready' ? gpuPoolsFromClusters(clusters.data) : []),
     [clusters],
@@ -38,18 +41,12 @@ export function CustomerPoolsTab({ clusters, onRetry }: { clusters: Async<Cluste
   if (clusters.phase === 'loading') {
     return <XStack p="$4" gap="$2" items="center"><Spinner /><Text color="$color11">Loading pools…</Text></XStack>
   }
-  if (clusters.phase === 'error' && clusters.error.kind !== 'error') {
-    return <PlatformStateCard error={clusters.error} onRetry={onRetry} />
-  }
-  if (clusters.phase === 'error') {
-    return <EmptyState icon={Layers} title="No node pools yet" description="Node pools group the GPU capacity of your dedicated clusters. Provision a GPU cluster to create one; until then your workloads run on shared Hanzo Cloud." />
-  }
   if (pools.length === 0) {
     return (
       <EmptyState
         icon={Layers}
         title="No GPU node pools yet"
-        description="A node pool is a set of identical GPU nodes inside one of your dedicated clusters. Provision a GPU cluster (Clusters tab) to add a pool; until then your workloads run on shared Hanzo Cloud — no pool to manage."
+        description="A node pool is a set of identical GPU nodes inside one of your dedicated GPU clusters. Provision a GPU cluster (Clusters tab) to add a pool; until then your workloads run on shared Hanzo Cloud — no pool to manage."
         bullets={['Pools come from your own GPU clusters (real per-org data).', 'Each pool shows its accelerator model and node-count-derived GPU total.']}
       />
     )
