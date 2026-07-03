@@ -14,8 +14,12 @@ import { collectVars } from './variables'
 import type { ComposerMsg } from './compose'
 import type { ShareState } from './share'
 
-/** An uploaded image attached to the next run (data URL kept in memory only). */
-export type Attachment = { name: string; dataUrl: string }
+/** An uploaded image attached to the next run (data URL kept in memory only). `id` is a
+ *  stable key so the thumbnail strip survives adds/removes and each image is individually
+ *  removable. */
+export type Attachment = { id: string; name: string; dataUrl: string }
+let attSeq = 1
+const nextAttId = (): string => `att${attSeq++}`
 
 /** A composer turn with a stable id (so React keys survive edits/reorders). */
 export type ComposerMessage = ComposerMsg & { id: string }
@@ -32,7 +36,8 @@ export type Composer = {
   messages: ComposerMessage[]
   settings: Settings
   vars: Record<string, string>
-  attachment: Attachment | null
+  /** Images attached to the next run (multiple — a vision message can carry several). */
+  attachments: Attachment[]
   /** Variable names referenced across system + messages (first-seen order). */
   varNames: string[]
   setModel: (m: string) => void
@@ -43,7 +48,9 @@ export type Composer = {
   removeMessage: (id: string) => void
   setSettings: (patch: Partial<Settings>) => void
   setVar: (k: string, v: string) => void
-  setAttachment: (a: Attachment | null) => void
+  /** APPEND images (a multi-select dialog OR successive uploads accumulate, never replace). */
+  addAttachments: (list: { name: string; dataUrl: string }[]) => void
+  removeAttachment: (id: string) => void
   loadConfig: (cfg: { model?: string; system: string; user: string }) => void
   loadShare: (s: ShareState) => void
   clear: () => void
@@ -60,10 +67,17 @@ export function useComposer(): Composer {
   const [messages, setMessages] = useState<ComposerMessage[]>(freshMessages)
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS)
   const [vars, setVars] = useState<Record<string, string>>({})
-  const [attachment, setAttachment] = useState<Attachment | null>(null)
+  const [attachments, setAttachments] = useState<Attachment[]>([])
 
   const setSettings = useCallback((patch: Partial<Settings>) => setSettingsState((s) => ({ ...s, ...patch })), [])
   const setVar = useCallback((k: string, v: string) => setVars((m) => ({ ...m, [k]: v })), [])
+  const addAttachments = useCallback((list: { name: string; dataUrl: string }[]) => {
+    if (!list.length) return
+    setAttachments((prev) => [...prev, ...list.map((a) => ({ id: nextAttId(), name: a.name, dataUrl: a.dataUrl }))])
+  }, [])
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id))
+  }, [])
 
   const addMessage = useCallback(() => {
     setMessages((ms) => {
@@ -91,7 +105,7 @@ export function useComposer(): Composer {
     if (cfg.model) setModel(cfg.model)
     setSystem(cfg.system)
     setMessages([{ id: nextId(), role: 'user', content: cfg.user }])
-    setAttachment(null)
+    setAttachments([])
   }, [])
 
   const loadShare = useCallback((s: ShareState) => {
@@ -103,14 +117,14 @@ export function useComposer(): Composer {
         : freshMessages(),
     )
     setSettingsState(s.settings)
-    setAttachment(null)
+    setAttachments([])
   }, [])
 
   const clear = useCallback(() => {
     setSystem('')
     setMessages(freshMessages())
     setVars({})
-    setAttachment(null)
+    setAttachments([])
   }, [])
 
   const varNames = useMemo(
@@ -135,7 +149,7 @@ export function useComposer(): Composer {
     messages,
     settings,
     vars,
-    attachment,
+    attachments,
     varNames,
     setModel,
     setSystem,
@@ -145,7 +159,8 @@ export function useComposer(): Composer {
     removeMessage,
     setSettings,
     setVar,
-    setAttachment,
+    addAttachments,
+    removeAttachment,
     loadConfig,
     loadShare,
     clear,

@@ -166,16 +166,20 @@ export function allowCmsSurface(path: string): boolean {
  * Frappe/ERPNext (`erp.<brand>`) READ surface reachable through `/erp`. ERP is a SINGLE
  * shared per-brand Frappe instance (NOT per-org row-scoped), so the `/erp` route also
  * entitlement-gates to the owning brand org / a global admin — this list is the path
- * least-privilege boundary on top of that: it admits ONLY Frappe's `GET
- * /api/resource/<DocType>` list reads (the Accounting/Items/Sales summaries), never a
- * single-doc mutate, a `/api/method/*` whitelisted method (arbitrary server call), the
- * desk, or login. Read-only by construction. A DocType with a space ("Sales Order") is
- * one clean path segment; `bearer-proxy`'s `pathIsClean` still rejects dot-segments.
+ * least-privilege boundary on top of that.
+ *
+ * Pinned to EXACTLY the three DocTypes the native summary views read (Accounting/Items/
+ * Sales), NOT "any DocType" (RED LOW-1): an entitled brand member must not be able to
+ * `GET /api/resource/User` / `Salary Slip` / `OAuth Bearer Token` through the shared
+ * `ERP_API_TOKEN` — a brand-internal over-read the moment ERP ships with a broad token.
+ * Read-only: only `GET /api/resource/<one of these>` (list); never a single-doc read,
+ * `/api/method/*`, the desk, or login. A DocType with a space ("Sales Order") arrives as
+ * one decoded segment; `bearer-proxy`'s `pathIsClean` still rejects encoded traversal.
  */
-const ERP_RESOURCE = /^api\/resource\/[^/]+$/
+export const ERP_DOCTYPES: ReadonlySet<string> = new Set(['Account', 'Item', 'Sales Order'])
 export function allowErpSurface(path: string): boolean {
-  const rel = path.replace(/^\/+/, '')
-  return ERP_RESOURCE.test(rel)
+  const m = path.replace(/^\/+/, '').match(/^api\/resource\/(.+)$/)
+  return m != null && ERP_DOCTYPES.has(m[1])
 }
 
 /** Matches exactly `v1/collections/<name>/records` and `.../records/<id>` (one clean

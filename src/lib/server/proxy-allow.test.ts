@@ -153,12 +153,19 @@ describe('allowCmsSurface — Payload read boundary (per-org, no registry leak)'
   })
 })
 
-describe('allowErpSurface — Frappe read boundary (resource lists only)', () => {
-  it('admits GET /api/resource/<DocType> lists (incl. a spaced DocType)', () => {
+describe('allowErpSurface — Frappe read boundary (the 3 UI DocTypes ONLY)', () => {
+  it('admits GET /api/resource/{Account,Item,Sales Order} — the exact summary DocTypes', () => {
     expect(allowErpSurface('api/resource/Account')).toBe(true)
     expect(allowErpSurface('api/resource/Item')).toBe(true)
     expect(allowErpSurface('api/resource/Sales Order')).toBe(true) // DocType with a space
-    expect(allowErpSurface('/api/resource/Bin')).toBe(true) // tolerant of a leading slash
+    expect(allowErpSurface('/api/resource/Account')).toBe(true) // tolerant of a leading slash
+  })
+
+  it('REFUSES any OTHER DocType (RED LOW-1: no brand-internal over-read via a broad token)', () => {
+    expect(allowErpSurface('api/resource/User')).toBe(false) // employee/user registry
+    expect(allowErpSurface('api/resource/Salary Slip')).toBe(false) // HR/payroll
+    expect(allowErpSurface('api/resource/OAuth Bearer Token')).toBe(false) // secrets
+    expect(allowErpSurface('api/resource/Bin')).toBe(false) // not a UI summary DocType
   })
 
   it('REFUSES single-doc, methods, the desk, login, and any deeper path', () => {
