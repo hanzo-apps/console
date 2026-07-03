@@ -3,35 +3,33 @@
  *
  *   POST   establish the console session for the SIGNED-IN user (first-party
  *          confidential-client password grant WITH offline_access → access +
- *          rotating refresh token, sealed into the httpOnly `hz_session` cookie).
+ *          rotating refresh token, sealed into the httpOnly cookies).
  *   GET    the current account resolved from that session (what the AuthGate reads
  *          FIRST — durable + silently refreshed, so it survives the casibase
  *          session's own lifetime and never bounces the user mid-task).
- *   DELETE sign out — best-effort revoke the refresh token + clear the cookie.
+ *   DELETE sign out — best-effort revoke the refresh token + clear the cookies.
  *
  * SECURITY. POST is GATED: it mints a console session ONLY for a caller who is
- * ALREADY authenticated (a valid casibase/console session, i.e. they completed the
- * full login incl. any MFA), AND only when the password grant resolves to the SAME
- * principal — so it can never be driven standalone with a stolen password, and it
- * never bypasses MFA (an MFA account never reaches this call; it finishes on the
- * hosted flow and falls back to the casibase session). The refresh token is written
- * only inside the sealed httpOnly cookie — never returned to the browser, never
- * logged, never in a URL.
+ * ALREADY authenticated (a valid casibase/console session — the full login incl. any
+ * MFA), AND only when the password grant resolves to the SAME principal — so it can
+ * never be driven standalone with a stolen password, and never bypasses MFA (an MFA
+ * account never reaches this call). Tokens live only inside the sealed httpOnly
+ * cookies — never returned to the browser, never logged, never in a URL.
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { type Account } from '~/lib/api/types'
 import { resolveUser } from '~/lib/server/identity'
 import {
-  clearSessionCookie,
+  clearCookies,
   consoleSession,
   passwordGrant,
-  readConsoleSession,
+  readRefreshToken,
   revokeRefreshToken,
   sameSubject,
   sealSession,
   sessionConfigured,
-  sessionCookie,
+  setCookies,
   SessionError,
   type ConsoleClaims,
   type CookieDirective,
@@ -57,21 +55,22 @@ function accountOf(c: ConsoleClaims): Account {
   }
 }
 
-/** Apply a cookie directive to a NextResponse. */
-function withCookie(res: NextResponse, d: CookieDirective): NextResponse {
-  res.cookies.set(d.name, d.value, {
-    httpOnly: d.httpOnly,
-    secure: d.secure,
-    sameSite: d.sameSite,
-    path: d.path,
-    maxAge: d.maxAge,
-  })
+/** Apply cookie directives to a NextResponse. */
+function withCookies(res: NextResponse, dirs: CookieDirective[]): NextResponse {
+  for (const d of dirs) {
+    res.cookies.set(d.name, d.value, {
+      httpOnly: d.httpOnly,
+      secure: d.secure,
+      sameSite: d.sameSite,
+      path: d.path,
+      maxAge: d.maxAge,
+    })
+  }
   return res
 }
 
 /** GET — the account + remaining access lifetime from the live console session, or
- *  401 when there is none (the client then falls back to the casibase session). The
- *  `expiresIn` lets the client (re)arm its proactive refresh timer after a reload. */
+ *  401 when there is none (the client then falls back to the casibase session). */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const sess = consoleSession(req)
   if (!sess || !sess.claims.name) {
@@ -84,7 +83,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!sessionConfigured()) {
     // No confidential client wired: the console still runs on the casibase session;
-    // just report "not configured" so the client silently skips the console session.
+    // report "not configured" so the client silently skips the console session.
     return NextResponse.json({ error: 'session not configured' }, { status: 501 })
   }
 
@@ -116,27 +115,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'grant failed' }, { status })
   }
 
-  const sealedSession = sealSession(tokens)
+  const sealed = sealSession(tokens)
   // The grant MUST resolve to the same principal as the established session — the
   // console session is for the already-authenticated user, never a third party.
   const grantId =
-    sealedSession && sealedSession.claims.owner && sealedSession.claims.name
-      ? `${sealedSession.claims.owner}/${sealedSession.claims.name}`
-      : ''
-  if (!sealedSession || !grantId || !sameSubject(grantId, authed.id)) {
+    sealed && sealed.claims.owner && sealed.claims.name ? `${sealed.claims.owner}/${sealed.claims.name}` : ''
+  if (!sealed || !grantId || !sameSubject(grantId, authed.id)) {
     return NextResponse.json({ error: 'identity mismatch' }, { status: 401 })
   }
 
   const res = NextResponse.json({
-    account: accountOf(sealedSession.claims),
-    expiresIn: Math.floor(sealedSession.expiresInMs / 1000),
+    account: accountOf(sealed.claims),
+    expiresIn: Math.floor(sealed.expiresInMs / 1000),
   })
-  return withCookie(res, sessionCookie(sealedSession.sealed))
+  return withCookies(res, setCookies(sealed.identity, sealed.refresh))
 }
 
-/** DELETE — sign out: best-effort revoke the refresh token, then clear the cookie. */
+/** DELETE — sign out: best-effort revoke the refresh token, then clear the cookies. */
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
-  const s = readConsoleSession(req)
-  if (s?.r) await revokeRefreshToken(s.r)
-  return withCookie(NextResponse.json({ ok: true }), clearSessionCookie())
+  const rt = readRefreshToken(req)
+  if (rt) await revokeRefreshToken(rt)
+  return withCookies(NextResponse.json({ ok: true }), clearCookies())
 }

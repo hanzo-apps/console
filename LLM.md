@@ -1367,18 +1367,22 @@ of session-only reads (get-account, get-cloud-usages) — so it is KEPT, not rep
 
 The fix is **additive, one session manager, zero regression** (worst case === v8.4.28):
 - **`src/lib/server/session.ts`** — THE token manager (server-only by construction:
-  `node:crypto` + `next/server`). Sealed (AES-256-GCM, key = HKDF(`IAM_MINT_CLIENT_SECRET`);
-  no-secret → per-process random key, never a constant) into ONE httpOnly+Secure+Lax,
-  30-day cookie `hz_session` holding `{refresh, exp, PROJECTED claims}` — NOT the raw
-  ~10 KB Casdoor access JWT. A Casdoor access token packs the WHOLE user object (password
-  hash, TOTP secret, every profile/social field), which exceeds the browser's ~4 KB
-  per-cookie cap (a browser would silently REJECT it — a bug curl doesn't surface) AND
-  needlessly seals secret material; `sealSession` projects it to the small display/authz
-  claim set (`accessClaims`) so the cookie is a bounded ~1 KB. Grants: `passwordGrant`
-  / `refreshGrant` (client_secret_basic, `offline_access`); the raw access token is used
-  only transiently to build the claims, then discarded. `consoleSession(req)` reads the
-  stored claims (AEAD-trusted — the sealed cookie IS the integrity anchor, no JWKS
-  round-trip; only `exp` re-checked, 60s skew). Never logs a token.
+  `node:crypto` + `next/server`). Sealed AES-256-GCM (key = HKDF(`IAM_MINT_CLIENT_SECRET`);
+  no-secret → per-process random key, never a constant). Casdoor tokens are ~3.6 KB
+  full-user JWTs (86 claims incl. password hash / TOTP secret) — the ACCESS token and
+  the REFRESH token are BOTH that big — so a single cookie is impossible (browser ~4 KB
+  per-cookie cap; a real browser silently REJECTS an oversized cookie — a bug curl never
+  surfaces). Hence TWO httpOnly+Secure+Lax, 30-day cookies:
+    - `hz_session` (Path=/, ~1 KB): the sealed IDENTITY — `{access-exp, PROJECTED
+      claims}`. `sealSession` projects the access JWT to the small display/authz claim
+      set (`accessClaims`) and discards the raw token (never stored/logged — no secret
+      material). resolveUser + every BFF proxy + /auth/session GET read this; small, so
+      it rides every request with no header bloat / gateway-431 risk.
+    - `hz_rt` (Path=/auth, chunked `hz_rt0/hz_rt1`): the sealed REFRESH token, scoped to
+      /auth so the big blob is sent ONLY to /auth/refresh|session (never /v1 or the BFF),
+      and CHUNKED (`setCookies`/`readRefreshToken`) because sealed 3.6 KB > one cookie.
+  `consoleSession(req)` reads the identity claims (AEAD-trusted — the seal IS the
+  integrity anchor, no JWKS round-trip; only `exp` re-checked, 60s skew).
 - **`app/auth/session/route.ts`** — POST establishes the console session for the
   signed-in user (server-side `passwordGrant`), **gated**: the caller must already be
   authenticated (a valid casibase session, `resolveUser`) AND the grant must resolve to
@@ -1406,9 +1410,11 @@ The fix is **additive, one session manager, zero regression** (worst case === v8
 - Verification: `tsc --noEmit` clean; `npm test` **1001/1001** (83 files; +20 session
   seal/open/claims/grants/sealSession, +4 refresh single-flight, +5 resolveUser
   precedence); `next build` ✓ (`/auth/session` + `/auth/refresh` registered). Live-verified
-  as z@hanzo.ai (curl, prod): establish → 200 + `hz_session` Set-Cookie (HttpOnly; Secure;
-  SameSite=Lax; Max-Age=2592000; ~1.3 KB — browser-safe); GET /auth/session with
-  `hz_session` ALONE → 200 (account hanzo/z, isAdmin) — self-sufficient; POST /auth/refresh
-  → 200 + ROTATED cookie; replay of the OLD refresh token → 401 (one-time-use enforced).
+  as z@hanzo.ai (curl + Playwright, prod): establish → 200 + `hz_session` (Path=/,
+  ~1 KB, browser-safe) + chunked `hz_rt0/1` (Path=/auth) — all httpOnly; Secure; SameSite=Lax;
+  Max-Age=2592000; GET /auth/session with `hz_session` ALONE → 200 (account hanzo/z, isAdmin)
+  — self-sufficient; POST /auth/refresh → 200 + ROTATED refresh; replay of the OLD refresh
+  token → 401 (one-time-use enforced). Browser: login stores the cookies, stays authenticated
+  past 5 min (navigate + idle), no /signin bounce.
   `NEXT_PUBLIC_*` unchanged (no client-id switch); server-only env reused
   (`IAM_MINT_CLIENT_ID/SECRET`, `IAM_URL`) — no new secret to provision.
