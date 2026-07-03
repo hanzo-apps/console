@@ -40,6 +40,8 @@ export type Family = {
   id: string
   /** Display label — exactly as chat's picker groups them. */
   label: string
+  /** Provider name `ProviderLogo` renders for the family header mark. */
+  logo: string
   /**
    * True when a catalog model belongs to this family. `id` is the lowercased
    * stable id/name; `provider` is the lowercased provider string ('' when the
@@ -59,17 +61,18 @@ export const FAMILIES: Family[] = [
   {
     id: 'zen',
     label: 'Zen',
+    logo: 'zen',
     // The catalog's Zen records carry no provider, so the id/name prefix is
     // authoritative; the live `/v1/models` set additionally tags them "hanzo".
     match: (id, p) => p === 'hanzo' || p === 'zen' || /^zen\d/.test(id),
   },
-  { id: 'qwen', label: 'Qwen', match: (_id, p) => p === 'qwen' },
-  { id: 'llama', label: 'Meta Llama', match: (_id, p) => p === 'meta' || p === 'meta llama' },
-  { id: 'deepseek', label: 'DeepSeek', match: (_id, p) => p === 'deepseek' },
-  { id: 'mistral', label: 'Mistral', match: (_id, p) => p === 'mistral' || p === 'mistral ai' },
+  { id: 'qwen', label: 'Qwen', logo: 'Qwen', match: (_id, p) => p === 'qwen' },
+  { id: 'llama', label: 'Meta Llama', logo: 'Meta', match: (_id, p) => p === 'meta' || p === 'meta llama' },
+  { id: 'deepseek', label: 'DeepSeek', logo: 'DeepSeek', match: (_id, p) => p === 'deepseek' },
+  { id: 'mistral', label: 'Mistral', logo: 'Mistral', match: (_id, p) => p === 'mistral' || p === 'mistral ai' },
   // Named slices of a broader provider — the id carries the family, not the provider.
-  { id: 'gemma', label: 'Google Gemma', match: (id, p) => p === 'google' && has(id, 'gemma') },
-  { id: 'gptoss', label: 'OpenAI GPT-OSS', match: (id, p) => p === 'openai' && has(id, 'gpt-oss') },
+  { id: 'gemma', label: 'Google Gemma', logo: 'Google', match: (id, p) => p === 'google' && has(id, 'gemma') },
+  { id: 'gptoss', label: 'OpenAI GPT-OSS', logo: 'OpenAI', match: (id, p) => p === 'openai' && has(id, 'gpt-oss') },
 ]
 
 /** The family a model belongs to (first match in display order), or null. PURE. */
@@ -113,6 +116,7 @@ export function isFreeAlias(m: CatalogEntry): boolean {
 export type FamilyGroup = {
   id: string
   label: string
+  logo: string
   models: CatalogEntry[]
   /** How many of the family's models are servable right now (live). */
   available: number
@@ -150,7 +154,7 @@ export function groupByFamily(catalog: CatalogEntry[]): FamilyGroup[] {
     const models = buckets.get(f.id)
     if (!models || models.length === 0) continue
     const sorted = sortMembers(models)
-    out.push({ id: f.id, label: f.label, models: sorted, available: sorted.filter((m) => m.available).length })
+    out.push({ id: f.id, label: f.label, logo: f.logo, models: sorted, available: sorted.filter((m) => m.available).length })
   }
   return out
 }
