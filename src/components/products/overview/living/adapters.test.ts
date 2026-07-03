@@ -5,7 +5,9 @@ import type { AdminOverview } from '~/lib/api/admin-overview'
 import type { Finance } from '~/lib/api/finance'
 import type { PlatformApp } from '~/lib/api/platform'
 import type { FunctionsMetrics, OverviewStats } from '~/lib/api/functions'
-import { fromCloudUsage, fromAdminOverview, fromFinance, financeHealth, fromFunctions, healthFromApps, healthTally, orgsFromApps, fromOverlord, sumSeriesLines } from './adapters'
+import type { EconomySnapshot } from '~/lib/api/economy'
+import type { MakerStatus } from '~/lib/api/trading'
+import { fromCloudUsage, fromAdminOverview, fromFinance, financeHealth, fromFunctions, fromLuxIndexer, healthFromApps, healthTally, orgsFromApps, fromOverlord, sumSeriesLines } from './adapters'
 
 /**
  * The adapters are the pure maps from each REAL source onto `OverviewData`. These
@@ -407,5 +409,89 @@ describe('financeHealth — profitability verdict (pure)', () => {
   })
   it('unknown ("") when commerce COGS is unconfigured — never a fabricated green', () => {
     expect(financeHealth(finance({}, {}, {}, { configured: false })).health).toBe('')
+  })
+})
+
+// ── fromLuxIndexer — the Lux Economy / Markets adapter ────────────────────────
+
+const snapshot = (over: Partial<EconomySnapshot> = {}): EconomySnapshot => ({
+  network: 'lux-testnet',
+  status: 'reporting',
+  markets: [
+    { id: 'a', symbol: 'LETH/LUX', volume24h: 400, tradeCount: 3, openOrders: 10, bookDepth: 26.375, bestBid: 0.003996, bestAsk: 0.004004, spreadBps: 2, lastPrice: 0.004 },
+    { id: 'b', symbol: 'LBTC/LUX', volume24h: 100, tradeCount: 1, openOrders: 5, bookDepth: 12 },
+    { id: 'c', symbol: 'LSOL/LUX' }, // no aggregates — honest absent
+  ],
+  trades: [
+    { id: '172:0', symbol: 'LETH/LUX', price: 0.004, size: 10, side: 'buy', timeMs: 1700000001000 },
+    { id: '171:2', symbol: 'LBTC/LUX', price: 1.1, size: 3, side: 'sell', timeMs: 1700000000000 },
+  ],
+  dayData: [],
+  ...over,
+})
+
+describe('fromLuxIndexer — DEX indexer snapshot → OverviewData (honest, CLOB-real)', () => {
+  it('sums the REAL market aggregates onto KPIs', () => {
+    const d = fromLuxIndexer(snapshot())
+    expect(d.kpi.markets.value).toBe(3)
+    expect(d.kpi.volume24h.value).toBe(500) // 400 + 100 (c has none)
+    expect(d.kpi.trades.value).toBe(4)
+    expect(d.kpi.bookDepth.value).toBeCloseTo(38.375, 3)
+    expect(d.kpi.openOrders.value).toBe(15)
+  })
+
+  it('builds volume/trades/depth donuts from positive slices only', () => {
+    const d = fromLuxIndexer(snapshot())
+    expect(d.distribution.volumeByMarket.map((s) => s.label)).toEqual(['LETH/LUX', 'LBTC/LUX'])
+    expect(d.distribution.tradesByMarket.length).toBe(2)
+    expect(d.distribution.depthByMarket.length).toBe(2)
+  })
+
+  it('maps recent fills to the activity feed, newest-first with side status', () => {
+    const d = fromLuxIndexer(snapshot())
+    expect(d.activity.map((a) => a.id)).toEqual(['172:0', '171:2'])
+    expect(d.activity[0].status).toBe('success') // buy
+    expect(d.activity[1].status).toBe('warn') // sell
+    expect(d.activityTotal).toBe(2)
+  })
+
+  it('NEVER fabricates a series — day history empty until MarketDayData is produced', () => {
+    const d = fromLuxIndexer(snapshot({ dayData: [] }))
+    expect(d.series.volume24h).toBeUndefined()
+    expect(d.series.tvl).toBeUndefined()
+  })
+
+  it('builds the volume/tvl series when day data IS present', () => {
+    const d = fromLuxIndexer(
+      snapshot({
+        dayData: [
+          { date: 1700000000, volumeUSD: 1000, tvlUSD: 50000 },
+          { date: 1700086400, volumeUSD: 2000 },
+        ],
+      }),
+    )
+    expect(d.series.volume24h?.points.map((p) => p.value)).toEqual([1000, 2000])
+    // tvl only where present → one point (honest, not padded)
+    expect(d.series.tvl?.points.length).toBe(1)
+  })
+
+  it('honest-empty + alert when the indexer is not reporting (never fabricated)', () => {
+    const d = fromLuxIndexer({ network: 'lux-testnet', status: 'not-reporting', error: 'connect ECONNREFUSED', markets: [], trades: [], dayData: [] })
+    expect(d.kpi).toEqual({})
+    expect(d.distribution).toEqual({})
+    expect(d.alerts[0].detail).toContain('ECONNREFUSED')
+  })
+
+  it('adds a maker-health row when the maker metrics are reachable', () => {
+    const maker: MakerStatus = { status: 'reporting', requotes: 42, symbols: [{ symbol: 'LETH/LUX', pegErrorBps: 3.2 }] }
+    const d = fromLuxIndexer(snapshot(), maker)
+    expect(d.health[0].service).toBe('Market maker')
+    expect(d.health[0].health).toBe('green')
+    expect(d.kpi.makerPegBps.value).toBeCloseTo(3.2, 1)
+  })
+
+  it('no maker-health row when the maker is not reporting', () => {
+    const d = fromLuxIndexer(snapshot(), { status: 'not-reporting', symbols: [] })
+    expect(d.health).toEqual([])
   })
 })
