@@ -253,6 +253,21 @@ export async function originGet<T>(path: string, query?: Query): Promise<T> {
   return r.data
 }
 
+/**
+ * Envelope POST pinned to the console's OWN origin (`<origin>/v1/<path>`) — the
+ * mutating twin of `originGet`. The admin AGGREGATE mutations (`/v1/admin/providers/
+ * {toggle,primary}`) MUST terminate at the global-admin-gated `app/admin/aggregate`
+ * proxy, which applies the same-origin CSRF check, so pinning the ORIGIN (not
+ * `config.cloudUrl`) is load-bearing: a split-origin `NEXT_PUBLIC_CLOUD_URL` could
+ * otherwise route the write around the console gate. Same casibase envelope unwrap +
+ * `ApiError` as `post`; the browser sends its session cookie only — no credential.
+ */
+export async function originPost<T>(path: string, body?: unknown, query?: Query): Promise<T> {
+  const r = await request<T>('POST', path, { query, body, absoluteUrl: originV1Url(path) })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r.data
+}
+
 /** GET that returns the full envelope (for list endpoints needing `data2` total). */
 export async function getList<T>(path: string, query?: Query): Promise<{ rows: T; total: number }> {
   const r = await request<T>('GET', path, { query })
