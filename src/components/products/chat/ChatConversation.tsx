@@ -4,11 +4,12 @@
  * Interactive chat — a real round-trip conversation with the model gateway.
  *
  * This is the working Chat surface (the prior module was a read-only history
- * viewer). It composes the ONE AI binding (`AiApi.chat` → the keyless `/ai`
- * proxy → /v1/chat/completions) with a turn-by-turn thread: append the user
- * turn, send the full history, append the assistant reply. Nothing is faked —
- * every reply is a real completion, and a failure renders an honest state
- * (including the 402 "add credits" billing gate), never fabricated text.
+ * viewer). It composes the ONE AI binding (`AiApi.ragChatStream` → the keyless
+ * `/ai` proxy → streaming /v1/chat/completions) with a turn-by-turn thread: append
+ * the user turn, send the full history, then STREAM the assistant reply token-by-
+ * token (like the playground). Nothing is faked — every reply is a real completion,
+ * and a failure renders an honest state (including the 402 "add credits" billing
+ * gate), never fabricated text.
  *
  * Presentation: assistant turns read as open text with a sparkle avatar + name +
  * time (no boxed card); the user turn is a compact accent bubble; both render
@@ -140,6 +141,7 @@ export function ChatConversation({
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<BackendState | null>(null)
   const inputRef = useRef<{ focus?: () => void } | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   // The ONE grounded assistant prompt (product catalog + curated overview), scoped
   // so a global admin sees admin surfaces and a customer never does. Built once per
@@ -168,35 +170,71 @@ export function ChatConversation({
     }
   }, [messages, sending])
 
+  /**
+   * Stream one assistant reply for `q` over the given prior `history`. An empty
+   * assistant turn is appended up front (rendered as "Thinking…" until the first
+   * token), then each chunk GROWS that trailing turn — deterministic, pure state
+   * updaters only (no closure flag → strict-mode safe). Grounded via the shared
+   * expert prompt + docs retrieval (best-effort server-side — the gateway answers
+   * plainly if the store isn't indexed). Shared by `send` (a new turn) and `retry`
+   * (re-run the last turn). A failure drops the empty turn and renders an honest
+   * error card, never fabricated text.
+   */
+  const streamReply = async (q: string, history: ChatMessage[]) => {
+    setSending(true)
+    setError(null)
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+    setMessages((m) => [...m, { role: 'assistant', content: '', time: turnTime() }])
+    try {
+      const final = await AiApi.ragChatStream(
+        { question: q, history, system, store: ASSISTANT_DOCS_STORE, model: model || undefined, temperature: 0.7 },
+        (text) =>
+          setMessages((m) => {
+            const next = m.slice()
+            next[next.length - 1] = { ...next[next.length - 1], content: text }
+            return next
+          }),
+        ctrl.signal,
+      )
+      // Fill an empty completion with an honest marker (the turn stays, never blank).
+      setMessages((m) => {
+        const last = m[m.length - 1]
+        if (!last || last.role !== 'assistant' || last.content) return m
+        const next = m.slice()
+        next[next.length - 1] = { ...last, content: final || '(empty response)' }
+        return next
+      })
+    } catch (e) {
+      // Drop the still-empty assistant turn; surface the error card (unless aborted).
+      setMessages((m) => {
+        const last = m[m.length - 1]
+        return last && last.role === 'assistant' && !last.content ? m.slice(0, -1) : m
+      })
+      if (!ctrl.signal.aborted) setError(classifyBackend(e))
+    } finally {
+      if (abortRef.current === ctrl) abortRef.current = null
+      setSending(false)
+    }
+  }
+
   const send = async () => {
     const q = input.trim()
     if (!q || sending) return
     const history = messages.map(({ role, content }) => ({ role, content }))
     setMessages((m) => [...m, { role: 'user', content: q, time: turnTime() }])
     setInput('')
-    setSending(true)
-    setError(null)
-    try {
-      // Grounded: the shared expert system prompt + docs retrieval. Retrieval is
-      // best-effort server-side — if the docs store isn't indexed for this org the
-      // gateway just answers plainly, so the assistant is expert either way.
-      const reply = await AiApi.ragChat({
-        question: q,
-        history,
-        system,
-        store: ASSISTANT_DOCS_STORE,
-        model: model || undefined,
-        temperature: 0.7,
-      })
-      setMessages((m) => [
-        ...m,
-        { role: 'assistant', content: reply || '(empty response)', time: turnTime() },
-      ])
-    } catch (e) {
-      setError(classifyBackend(e))
-    } finally {
-      setSending(false)
-    }
+    await streamReply(q, history)
+  }
+
+  /** Re-run the last user turn (the error-card retry) — resend, don't duplicate it. */
+  const retry = () => {
+    if (sending) return
+    const idx = messages.map((m) => m.role).lastIndexOf('user')
+    if (idx < 0) return
+    const q = messages[idx].content
+    const history = messages.slice(0, idx).map(({ role, content }) => ({ role, content }))
+    void streamReply(q, history)
   }
 
   /** Drop a code-fence skeleton into the composer and focus it (presentation aid). */
@@ -212,10 +250,14 @@ export function ChatConversation({
   }
 
   const newChat = () => {
+    abortRef.current?.abort()
     setMessages([])
     setError(null)
     setInput('')
   }
+
+  // Cancel any in-flight stream when the conversation unmounts (leak-free).
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const empty = messages.length === 0 && !error
 
@@ -281,21 +323,24 @@ export function ChatConversation({
             </YStack>
           ) : (
             <YStack gap="$5" py="$2">
-              {messages.map((m, i) => (
-                <Bubble key={i} role={m.role} content={m.content} time={m.time} />
-              ))}
-              {sending ? (
-                <XStack gap="$3" items="center">
-                  <SparkleAvatar />
-                  <XStack gap="$2" items="center">
-                    <Spinner color="$color11" />
-                    <Text color="$color11" fontSize="$3">
-                      Thinking…
-                    </Text>
+              {/* The trailing assistant turn is empty until its first token — render it
+                  as "Thinking…" then let the growing bubble stream the reply in place. */}
+              {messages.map((m, i) =>
+                m.role === 'assistant' && !m.content ? (
+                  <XStack key={i} gap="$3" items="center">
+                    <SparkleAvatar />
+                    <XStack gap="$2" items="center">
+                      <Spinner color="$color11" />
+                      <Text color="$color11" fontSize="$3">
+                        Thinking…
+                      </Text>
+                    </XStack>
                   </XStack>
-                </XStack>
-              ) : null}
-              {error ? <BackendStateCard state={error} onRetry={() => void send()} /> : null}
+                ) : (
+                  <Bubble key={i} role={m.role} content={m.content} time={m.time} />
+                ),
+              )}
+              {error ? <BackendStateCard state={error} onRetry={retry} /> : null}
               {/* scroll sentinel (id, not ref — avoids tamagui element typing) */}
               <YStack id="chat-bottom" height={1} />
             </YStack>
