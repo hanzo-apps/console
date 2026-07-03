@@ -121,6 +121,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     await AccountApi.signout()
     setAccount(null)
+    // Redirect DETERMINISTICALLY to /signin. AuthGate's reactive redirect (on
+    // account → null) can be pre-empted by an in-flight session read re-hydrating
+    // the account, leaving the user stranded on `/` even though the server session
+    // is dead. A hard navigation is the single source of truth for "signed out →
+    // /signin" and also clears all in-memory state (org scope, caches, balances) —
+    // the same `window.location.assign` the sign-IN path uses.
+    if (typeof window !== 'undefined') window.location.assign('/signin')
   }, [])
 
   return (
