@@ -1,24 +1,25 @@
 'use client'
 
 /**
- * Base — the Firebase-like Hanzo Base backend, presented as a Supabase-style
- * dashboard: model your content types (collections) and manage your data, all on
- * your organization's per-org Base.
+ * Base — manage your organization's Hanzo Base instances.
  *
- * This module is a thin route adapter; the whole surface lives in the reusable
- * `BaseDashboard` (content-types index + the content-type builder + the
- * schema-driven record browse/edit). There is ONE Base binding — console2's OWN
- * `/superbase` proxy, which mints the user's IAM bearer and stamps `X-Org-Id`
- * from the JWT owner, so everything is scoped to this org's Base. We do not
- * reimplement Base; we drive its real `/v1/collections` API through the proxy.
+ * Hanzo Base is a realtime backend (hanzoai/base): content types, records, and
+ * auth, per Base. This module is a thin route adapter; the whole surface — the
+ * Bases list, the New Base create flow, and per-Base configuration — lives in the
+ * reusable `BasesManager`. There is ONE Base binding: console2's OWN `/superbase`
+ * proxy, which mints the user's IAM bearer and stamps `X-Org-Id` from the JWT
+ * owner, so every read/write is scoped to this org. Each Base is a row in the
+ * SuperBase orchestrator's `tenants` collection; we drive its real API, we do not
+ * re-implement Base. (A Base's own data — collections + records — is the sibling
+ * `Records` product.)
  *
- * Routes (declared in the registry, resolved by segment count):
- *   /base · /base/new · /base/:collection · /base/:collection/:id
+ * Routes (declared in the registry, resolved by segment):
+ *   /base · /base/new · /base/:base
  */
-import { BaseDashboard } from './base/BaseDashboard'
+import { BasesManager } from './base/BasesManager'
 
 export function BaseModule({ params }: { params: Record<string, string> }) {
-  return <BaseDashboard params={params} />
+  return <BasesManager params={params} />
 }
 
 export default BaseModule
