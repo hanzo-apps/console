@@ -69,6 +69,7 @@ import {
   categorySlug,
   BILLING_CENTER_ID,
   type CatalogEntry,
+  type ProductCategory,
   type ProductSubpage,
 } from '~/lib/products/registry'
 import { productSubpages, subpageWired } from '~/lib/products/match'
@@ -76,6 +77,7 @@ import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
 import { usePins, useProductColors } from '~/lib/products/pins'
 import { categoryColorHex } from '~/lib/products/colors'
+import { categoryIsOpen, toggleCategory, NAV_OPEN_PREF, EMPTY_OPEN, type CategoryOpen } from '~/lib/products/nav-accordion'
 import { usePreferences } from '~/lib/products/preferences'
 import { useSession } from '~/lib/auth/session'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
@@ -126,6 +128,16 @@ function activeModuleId(pathname: string): string | null {
   if (!seg) return null
   const e = findEntry(seg)
   return e && e.kind === 'module' ? e.id : null
+}
+
+/** The CATEGORY of the product the path points at, or null (home / unknown) — the
+ *  section the accordion keeps auto-expanded so the current page is always visible.
+ *  Unlike `activeModuleId` this spans every kind (module/external/soon all carry a
+ *  category), so navigating to any product reveals its section. */
+function activeCategory(pathname: string): string | null {
+  const seg = pathname.split('/').filter(Boolean)[0]
+  if (!seg) return null
+  return findEntry(seg)?.category ?? null
 }
 
 /** The active sub-page slug within a product ('' = Overview), or '' when elsewhere. */
@@ -375,6 +387,73 @@ function Level2Nav({
   )
 }
 
+/** A collapsible level-1 CATEGORY section — the ONE way the expanded sidebar
+ *  groups products under a topic. The header is a clickable button with an OBVIOUS
+ *  rotating chevron (▸ collapsed, ▾ expanded), keyboard-toggleable and
+ *  `aria-expanded`; its product rows (`children`) reveal in order when open. The
+ *  body animates height + opacity via `.hz-acc` (grid-rows, reduced-motion-guarded)
+ *  and is `inert` when collapsed, so hidden rows leave the tab order. The category
+ *  label keeps its per-category accent color + a count of what's inside. */
+function CategorySection({
+  category,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  category: ProductCategory
+  count: number
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  const sectionId = `nav-cat-${categorySlug(category)}`
+  const tint = asColor(categoryColorHex(category))
+  return (
+    <YStack gap="$1">
+      <Button
+        chromeless
+        size="$2"
+        height={30}
+        px="$2"
+        justify="flex-start"
+        onPress={onToggle}
+        hoverStyle={{ bg: '$color3' }}
+        focusStyle={{ bg: '$color3' }}
+        aria-expanded={open}
+        aria-controls={sectionId}
+        aria-label={`${category}, ${open ? 'collapse' : 'expand'} section, ${count} items`}
+      >
+        <XStack flex={1} items="center" gap="$1.5">
+          {/* The OBVIOUS clicker — a chevron that rotates ▸→▾ on expand. Wrapped in a
+              plain span so the CSS transition (`.hz-chevron`) applies (the Gui icon
+              takes style props, not className). */}
+          <span
+            className="hz-chevron"
+            style={{ display: 'inline-flex', transform: open ? 'rotate(90deg)' : undefined }}
+          >
+            <ChevronRight size={13} color={tint} />
+          </span>
+          <Text fontSize="$1" color={tint} fontWeight="700" textTransform="uppercase" letterSpacing={0.3}>
+            {category}
+          </Text>
+          <XStack flex={1} />
+          <Text fontSize={10} fontWeight="700" color="$color9">
+            {count}
+          </Text>
+        </XStack>
+      </Button>
+      <div className="hz-acc" data-open={open ? 'true' : 'false'} id={sectionId} inert={!open}>
+        <div className="hz-acc-inner">
+          <YStack gap="$1" pb="$1">
+            {children}
+          </YStack>
+        </div>
+      </div>
+    </YStack>
+  )
+}
+
 /**
  * The nav body — shared by the persistent desktop sidebar and the mobile drawer.
  * `onNavigate` lets the drawer close on a leaf selection (desktop passes a no-op).
@@ -393,6 +472,15 @@ function SidebarNav({
   const detail = useDetailPane()
   const showAdmin = useIsGlobalAdmin()
   const [filter, setFilter] = useState('')
+
+  // Collapsible-category accordion state — the user's explicit per-category open
+  // choices, persisted per-user (account-backed + localStorage cache) so a
+  // reload/navigation keeps them. The active route's category stays open (see
+  // `categoryIsOpen`), so the current page is always visible.
+  const prefs = usePreferences()
+  const navOpen = prefs.get<CategoryOpen>(NAV_OPEN_PREF, EMPTY_OPEN)
+  const activeCat = activeCategory(pathname)
+  const toggleSection = (category: string) => prefs.set(NAV_OPEN_PREF, toggleCategory(navOpen, category))
 
   // The open product's sub-nav (level 2) FOLLOWS the route.
   const activeId = activeModuleId(pathname)
@@ -688,21 +776,13 @@ function SidebarNav({
               ) : null}
 
               {groups.map((group) => (
-                <YStack key={group.category} gap="$1">
-                  <XStack
-                    items="center"
-                    justify="space-between"
-                    px="$2"
-                    cursor="pointer"
-                    hoverStyle={{ opacity: 0.7 }}
-                    onPress={() => go(`/category/${categorySlug(group.category)}`)}
-                    aria-label={`${group.category} overview`}
-                  >
-                    <Text fontSize="$1" color={asColor(categoryColorHex(group.category))} fontWeight="700" textTransform="uppercase">
-                      {group.category}
-                    </Text>
-                    <ChevronRight size={12} opacity={0.4} />
-                  </XStack>
+                <CategorySection
+                  key={group.category}
+                  category={group.category}
+                  count={group.entries.length}
+                  open={categoryIsOpen(navOpen, group.category, { activeCategory: activeCat, filtering })}
+                  onToggle={() => toggleSection(group.category)}
+                >
                   {group.entries.map((entry) => (
                     <NavRow
                       key={entry.id}
@@ -715,7 +795,7 @@ function SidebarNav({
                       onToggle={() => toggle(entry.id)}
                     />
                   ))}
-                </YStack>
+                </CategorySection>
               ))}
 
               {filtering && groups.length === 0 ? (
