@@ -24,8 +24,11 @@ import {
   PHASE_DOT,
   endpointDailyRequests,
   fmtCount,
+  fmtUsd,
+  logDetailFacts,
   perModelMap,
   type Endpoint,
+  type LogLine,
 } from './logic'
 
 /** A label/value fact row. */
@@ -134,6 +137,78 @@ export function openEndpointDetail(
           Docs
         </Button>
       </XStack>
+    ),
+  })
+}
+
+/** A recorded-status pill (dot + label), green success / red error / neutral other. */
+function LevelBadge({ level }: { level: string }) {
+  const l = level.toLowerCase()
+  const color = l === 'error' || l === 'failed' || l === 'fail' ? '#ff5d8f' : l === 'success' || l === 'ok' ? '#23c562' : '#64748b'
+  return (
+    <XStack items="center" gap="$1.5">
+      <StatusDot color={color} size={8} />
+      <Text fontSize="$3" fontWeight="600" color="$color12">
+        {level || 'unknown'}
+      </Text>
+    </XStack>
+  )
+}
+
+/**
+ * The log-row detail body — what actually happened for ONE recorded inference call.
+ * Every value is REAL from the usage-ledger record (`logDetailFacts`); the full
+ * prompt/response TEXT is not on the ledger row, so it is honestly stated as streaming
+ * from observability once connected — never fabricated.
+ */
+function LogDetailBody({ line }: { line: LogLine }) {
+  const facts = logDetailFacts(line.record, { usd: fmtUsd, count: fmtCount, time: (ms) => (ms != null ? new Date(ms).toLocaleString() : '—') })
+  return (
+    <ScrollView>
+      <YStack gap="$4" p="$1">
+        <YStack gap="$1.5">
+          <Text fontSize="$2" color="$color10">Summary</Text>
+          <Text fontSize="$3" color="$color11">{line.message}</Text>
+        </YStack>
+
+        <YStack>
+          <XStack justify="space-between" items="center" gap="$3" py="$2" borderBottomWidth={1} borderColor="$borderColor">
+            <Text fontSize="$2" color="$color10">Outcome</Text>
+            <LevelBadge level={line.level} />
+          </XStack>
+          {facts
+            .filter((f) => f.label !== 'Status')
+            .map((f) => (
+              <Fact key={f.label} label={f.label} value={f.value} />
+            ))}
+        </YStack>
+
+        <YStack gap="$2">
+          <Text fontSize="$3" fontWeight="700" color="$color12">Request &amp; response</Text>
+          <YStack bg="$color1" borderWidth={1} borderColor="$borderColor" rounded="$4" p="$3" gap="$1.5">
+            <Text fontSize="$2" color="$color11">
+              This row is the org’s REAL usage-ledger entry for the call above. The full prompt and response text
+              streams here from observability once its trace runtime is connected — until then it is not shown
+              rather than fabricated.
+            </Text>
+          </YStack>
+        </YStack>
+      </YStack>
+    </ScrollView>
+  )
+}
+
+/** Open the log-row detail slide-over — the real recorded facts for one inference call. */
+export function openLogDetail(pane: DetailPaneApi, args: { line: LogLine }) {
+  const { line } = args
+  pane.open({
+    title: line.endpoint,
+    subtitle: line.at ? new Date(line.at).toLocaleString() : 'Recorded inference call',
+    content: <LogDetailBody line={line} />,
+    footer: (
+      <PrimaryButton chromeless onPress={() => pane.close()}>
+        Close
+      </PrimaryButton>
     ),
   })
 }
