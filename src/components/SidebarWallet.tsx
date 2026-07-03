@@ -20,7 +20,6 @@ import { useRouter } from 'next/navigation'
 import { Avatar, Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ChevronRight, LogOut, Wallet } from '@hanzogui/lucide-icons-2'
 
-import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
 
@@ -32,13 +31,6 @@ function initials(name: string): string {
   if (parts.length === 0) return '?'
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
-/** Open the brand billing portal (billing.hanzo.ai) for add-credit / checkout. */
-function openTopUp(): void {
-  if (typeof window !== 'undefined') {
-    window.open(`${config.billingUrl}/topup`, '_blank', 'noopener')
-  }
 }
 
 /** The account avatar — IAM photo when present, initials circle otherwise. */
@@ -72,6 +64,9 @@ export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
   const balanceText = cents === null ? '—' : fmtUsd(cents)
   const openProfile = () => router.push('/profile')
   const openCost = () => router.push('/billing')
+  // In-console card top-up (Square) — the /billing/credits page. Replaces the old
+  // window.open to the external billing.hanzo.ai portal.
+  const openTopUp = () => router.push('/billing/credits')
 
   if (collapsed) {
     // Three stacked affordances: identity (→ Profile), top-up, sign out.
