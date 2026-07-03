@@ -247,6 +247,14 @@ const FunctionsLiving = livingOverviewModule('functions')
 // the living-overview construction lives in GpusModule (GpusOverview) so this route
 // is a plain component reference like every other.
 import { ZeroTrustModule } from '~/components/products/ZeroTrustModule'
+// Operator cockpit — the admin.hanzo.ai fleet management surfaces (admin: true) +
+// the customer beta-features opt-in. Aliased to avoid name collisions with the
+// per-tenant Commerce Customers / per-org Analytics products.
+import { CustomersModule as FleetCustomersModule } from '~/components/products/admin/CustomersModule'
+import { RevenueModule as FleetRevenueModule } from '~/components/products/admin/RevenueModule'
+import { AnalyticsModule as RetentionModule } from '~/components/products/admin/AnalyticsModule'
+import { EnablementModule as AdminEnablementModule } from '~/components/products/admin/EnablementModule'
+import { BetaFeaturesModule } from '~/components/products/BetaFeaturesModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -521,6 +529,87 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FinanceDashboard }],
+  },
+  {
+    // admin.hanzo.ai CUSTOMERS board — the operator cockpit: the live fleet customer
+    // list (incl. new self-serve signups), one-customer detail, and the AUDITED
+    // management actions (grant credit, suspend/reactivate). GLOBAL-ADMIN ONLY
+    // (`admin: true`; the `/v1/admin/customers*` aggregate is server-gated by
+    // getAdminGate). Real commerce + IAM data; NO card data, no API-key values.
+    id: 'fleet-customers',
+    label: 'Customers',
+    icon: Users,
+    description: 'Every organization on the platform — balances, usage, keys, access. Grant credit, suspend, reactivate.',
+    gcp: 'Cloud Billing accounts',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: FleetCustomersModule }],
+  },
+  {
+    // admin.hanzo.ai REVENUE board — the fleet money lens (balances, spend, MRR,
+    // ARPU, per-customer). GLOBAL-ADMIN ONLY; orthogonal to Finance (COGS/margin).
+    id: 'fleet-revenue',
+    label: 'Revenue',
+    icon: Coins,
+    description: 'Balances held, realized spend, MRR, ARPU, and per-customer revenue across the fleet.',
+    gcp: 'Cloud Billing revenue',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: FleetRevenueModule }],
+  },
+  {
+    // admin.hanzo.ai ANALYTICS board — native SaaS analytics: cohort retention,
+    // growth, churn, DAU/WAU/MAU, revenue/ARPU. GLOBAL-ADMIN ONLY. Real (IAM
+    // signups + commerce usage ledger); honest-empty via a `computed` map, never a
+    // fabricated curve.
+    id: 'retention',
+    label: 'Analytics',
+    icon: LineChart,
+    description: 'Cohort retention, growth, churn, active customers, and revenue analytics across the customer base.',
+    gcp: 'Analytics · SaaS',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: RetentionModule }],
+  },
+  {
+    // admin.hanzo.ai ENABLEMENT board (#30/#31) — set models/providers/features
+    // off · beta · ga across the fleet, grant betas to orgs. GLOBAL-ADMIN ONLY; the
+    // per-org self-service opt-in is the customer Beta-features surface below.
+    id: 'enablement',
+    label: 'Enablement',
+    icon: SlidersHorizontal,
+    description: 'Turn models, providers, and features off · beta · ga across the fleet, and grant betas to orgs.',
+    gcp: 'Feature management',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: AdminEnablementModule }],
+  },
+  {
+    // Customer BETA FEATURES — the self-service opt-in (NOT admin). Any signed-in
+    // user enables/disables the betas their org can access; scoped server-side to
+    // the caller's validated org (can't bypass off, can't touch global state).
+    id: 'beta-features',
+    label: 'Beta features',
+    icon: Activity,
+    description: 'Enable early-access models and features for your organization.',
+    gcp: 'Preview features',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: BetaFeaturesModule }],
   },
   {
     // admin.hanzo.ai BOTS board — the SaaS operator view of every @hanzo/bot agent
