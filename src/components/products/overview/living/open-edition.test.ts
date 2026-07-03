@@ -18,7 +18,7 @@ import type { CloudUsageOverview, UsageOverviewParams } from '~/lib/api/usage'
  * values the renderer, not this test, interprets).
  */
 vi.mock('@hanzogui/lucide-icons-2', () => {
-  const names = ['Activity', 'Building2', 'Cpu', 'CreditCard', 'DollarSign', 'FunctionSquare', 'Gauge', 'Hash', 'Layers', 'Timer', 'TrendingUp', 'TriangleAlert', 'Users']
+  const names = ['Activity', 'Boxes', 'Building2', 'Cpu', 'CreditCard', 'DollarSign', 'FunctionSquare', 'Gauge', 'Hash', 'HeartPulse', 'Layers', 'Timer', 'TrendingUp', 'TriangleAlert', 'Users']
   return Object.fromEntries(names.map((n) => [n, `icon:${n}`]))
 })
 
