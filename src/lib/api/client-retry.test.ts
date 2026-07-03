@@ -43,21 +43,21 @@ describe('resilientFetch — transient-retry so backend rolls are invisible', ()
   it('a GET that hits a transient 503 then 200 SELF-HEALS (the Models-catalog case)', async () => {
     // Exactly Dave/maxpower: /v1/models lands mid-roll → 503 → retry → 200.
     const fetchFn = scriptedFetch([503, 200])
-    const res = await resilientFetch('/ai/v1/models', { method: 'GET' }, deps(fetchFn))
+    const res = await resilientFetch('/v1/models', { method: 'GET' }, deps(fetchFn))
     expect(res.status).toBe(200)
     expect(fetchFn).toHaveBeenCalledTimes(2) // one retry, then success — user never sees an error
   })
 
   it('retries up to the backoff budget, then returns the last transient status (honest error card)', async () => {
     const fetchFn = scriptedFetch([503, 503, 503, 503, 503])
-    const res = await resilientFetch('/cloud/v1/agents', { method: 'GET' }, deps(fetchFn))
+    const res = await resilientFetch('/v1/agents', { method: 'GET' }, deps(fetchFn))
     expect(res.status).toBe(503) // persistent outage → the caller shows "Could not load"
     expect(fetchFn).toHaveBeenCalledTimes(RETRY_BACKOFF_MS.length + 1) // initial + 3 retries
   })
 
   it('retries a NETWORK error (connection refused during a roll) then succeeds', async () => {
     const fetchFn = scriptedFetch(['network', 'network', 200])
-    const res = await resilientFetch('/cloud/v1/analytics/overview', { method: 'GET' }, deps(fetchFn))
+    const res = await resilientFetch('/v1/analytics/overview', { method: 'GET' }, deps(fetchFn))
     expect(res.status).toBe(200)
     expect(fetchFn).toHaveBeenCalledTimes(3)
   })
@@ -65,7 +65,7 @@ describe('resilientFetch — transient-retry so backend rolls are invisible', ()
   it('does NOT retry a genuine 4xx (403/404) — honest state immediately, one fetch', async () => {
     for (const status of [403, 404, 402]) {
       const fetchFn = scriptedFetch([status])
-      const res = await resilientFetch('/cloud/v1/prompts', { method: 'GET' }, deps(fetchFn))
+      const res = await resilientFetch('/v1/prompts', { method: 'GET' }, deps(fetchFn))
       expect(res.status).toBe(status)
       expect(fetchFn).toHaveBeenCalledTimes(1)
     }
@@ -73,14 +73,14 @@ describe('resilientFetch — transient-retry so backend rolls are invisible', ()
 
   it('does NOT auto-retry a MUTATION (POST) on 503 — a 5xx write may have applied', async () => {
     const fetchFn = scriptedFetch([503, 200])
-    const res = await resilientFetch('/commerce/v1/product', { method: 'POST' }, deps(fetchFn))
+    const res = await resilientFetch('/v1/commerce/product', { method: 'POST' }, deps(fetchFn))
     expect(res.status).toBe(503) // returned as-is; the user retries the create manually
     expect(fetchFn).toHaveBeenCalledTimes(1)
   })
 
   it('does NOT retry a MUTATION network error either (idempotent-only)', async () => {
     const fetchFn = scriptedFetch(['network'])
-    await expect(resilientFetch('/commerce/v1/product', { method: 'DELETE' }, deps(fetchFn))).rejects.toThrow()
+    await expect(resilientFetch('/v1/commerce/product', { method: 'DELETE' }, deps(fetchFn))).rejects.toThrow()
     expect(fetchFn).toHaveBeenCalledTimes(1)
   })
 
@@ -89,7 +89,7 @@ describe('resilientFetch — transient-retry so backend rolls are invisible', ()
     ctrl.abort()
     const fetchFn = scriptedFetch(['network'])
     await expect(
-      resilientFetch('/cloud/v1/agents', { method: 'GET', signal: ctrl.signal }, deps(fetchFn)),
+      resilientFetch('/v1/agents', { method: 'GET', signal: ctrl.signal }, deps(fetchFn)),
     ).rejects.toThrow()
     expect(fetchFn).toHaveBeenCalledTimes(1)
   })
@@ -97,7 +97,7 @@ describe('resilientFetch — transient-retry so backend rolls are invisible', ()
   it('401 → one silent refresh then retry with the rotated cookie (self-heals a session lapse)', async () => {
     const fetchFn = scriptedFetch([401, 200])
     const refresh = vi.fn(async () => true)
-    const res = await resilientFetch('/cloud/v1/agents', { method: 'GET' }, deps(fetchFn, { refresh }))
+    const res = await resilientFetch('/v1/agents', { method: 'GET' }, deps(fetchFn, { refresh }))
     expect(res.status).toBe(200)
     expect(refresh).toHaveBeenCalledTimes(1)
     expect(fetchFn).toHaveBeenCalledTimes(2)
@@ -106,7 +106,7 @@ describe('resilientFetch — transient-retry so backend rolls are invisible', ()
   it('401 refresh does NOT loop — a second 401 after a failed refresh surfaces honestly', async () => {
     const fetchFn = scriptedFetch([401, 401])
     const refresh = vi.fn(async () => false) // no console session
-    const res = await resilientFetch('/cloud/v1/agents', { method: 'GET' }, deps(fetchFn, { refresh }))
+    const res = await resilientFetch('/v1/agents', { method: 'GET' }, deps(fetchFn, { refresh }))
     expect(res.status).toBe(401)
     expect(refresh).toHaveBeenCalledTimes(1)
     expect(fetchFn).toHaveBeenCalledTimes(1)

@@ -10,6 +10,12 @@ import { ProvisioningApi } from './provisioning'
 import { StorageApi } from './storage'
 import { BillingApi } from './billing'
 import { PlatformApi } from './platform'
+import { fetchPlans } from './aicatalog'
+import { ApmApi } from './apm'
+import { CommerceApi } from './commerce'
+import { EmbeddingsApi } from './embeddings'
+import { FunctionsApi } from './functions'
+import { PaasApi } from './paas'
 
 const ORIGIN = 'https://console.hanzo.ai'
 
@@ -124,5 +130,66 @@ describe('baseHeaders — org + project + actor on every call', () => {
     expect(h['X-Project-Id']).toBeUndefined()
     expect(h['X-Actor-Id']).toBeUndefined()
     expect(h['X-Org-Id']).toBeTruthy()
+  })
+})
+
+// The three centralized proxy helpers were DELETED (aiV1Url / cloudProxyV1Url /
+// commerceProxyV1Url): every remaining data-product client now builds the CANONICAL,
+// prefix-free `/v1/<resource>` through the ONE `originV1Url` (apm/commerce namespace their
+// surface AFTER `/v1/`, the billing twin — never before it). next.config rewrites each head
+// to its hardened same-origin BFF proxy, so the browser URL stays prefix-free. This locks
+// the six clients PR #79 left on `/<svc>/v1/` (aicatalog/apm/commerce/embeddings/functions/paas).
+describe('canonical /v1 — the last six data-product clients (no prefix before /v1/)', () => {
+  it('aicatalog fetchPlans -> /v1/plans (AI catalog head -> /ai)', async () => {
+    stub({ plans: [] })
+    await fetchPlans()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/plans`)
+  })
+  it('embeddings EmbeddingsApi.generate -> /v1/embeddings (AI head -> /ai)', async () => {
+    stub({})
+    await EmbeddingsApi.generate('text-embedding-3-small', 'hi')
+    expect(lastUrl).toBe(`${ORIGIN}/v1/embeddings`)
+  })
+  it('apm ApmApi.dashboards -> /v1/o11y/v1/dashboards (cloud o11y -> /cloud)', async () => {
+    stub([])
+    await ApmApi.dashboards()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/o11y/v1/dashboards`)
+  })
+  it('functions FunctionsApi.list -> /v1/functions (cloud product head -> /cloud)', async () => {
+    stub({ functions: [] })
+    await FunctionsApi.list()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/functions`)
+  })
+  it('paas PaasApi.listProjects -> /v1/platform/projects (cloud platform head -> /cloud)', async () => {
+    stub({ projects: [] })
+    await PaasApi.listProjects()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/platform/projects`)
+  })
+  it('commerce CommerceApi.currentStore -> /v1/commerce/store/current (namespaced -> /commerce)', async () => {
+    stub({ store: {} })
+    await CommerceApi.currentStore()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/commerce/store/current`)
+  })
+
+  it('none of the six emits a /<svc>/v1/ prefix', async () => {
+    const bad = /\/(cloud|vm|ai|billing|org|commerce)\/v1\//
+    stub({ plans: [] })
+    await fetchPlans()
+    expect(lastUrl).not.toMatch(bad)
+    stub({})
+    await EmbeddingsApi.generate('m', 'x')
+    expect(lastUrl).not.toMatch(bad)
+    stub([])
+    await ApmApi.dashboards()
+    expect(lastUrl).not.toMatch(bad)
+    stub({ functions: [] })
+    await FunctionsApi.list()
+    expect(lastUrl).not.toMatch(bad)
+    stub({ projects: [] })
+    await PaasApi.listProjects()
+    expect(lastUrl).not.toMatch(bad)
+    stub({ store: {} })
+    await CommerceApi.currentStore()
+    expect(lastUrl).not.toMatch(bad)
   })
 })

@@ -68,7 +68,10 @@ function guiPackages() {
  * scoping, and are reached by the client's explicit `/admin/*` origin path.
  */
 const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'platform', 'crm', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch', 'enablement']
-const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos']
+// `pricing` (the rich model+provider CATALOG at `/v1/pricing/models`) and `plans` (the
+// subscription tiers/entitlements) are AI-gateway-served like models/chat and are in the
+// `/ai` proxy ALLOWED set (app/ai/[...path]), so they route to `/ai` too.
+const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos', 'pricing', 'plans']
 // The admin aggregate heads rewritten to the GLOBAL-ADMIN-GATED proxy. `providers`
 // is the AI-provider control board — its GET (the list) AND its POST mutations
 // (`providers/toggle`, `providers/primary`) both match the `/:path*` rewrite below,
@@ -101,6 +104,11 @@ const CLOUD_INFRA_V1_HEADS = ['machines', 'gpus', 'clusters', 'org', 'sql', 'vec
 // (app/vm). The GPU-accelerator catalog is the DISTINCT head `/v1/gpu-sizes` so it
 // never collides with the cloud-api GPU INVENTORY at `/v1/gpus`.
 const VM_V1_HEADS = ['regions', 'sizes']
+// Serverless + build/deploy + framework product heads the data-product clients
+// (functions.ts, framework/client.ts) and the platform-aggregate modules
+// (Builds/Environments/Pipelines/Releases) call at a clean `/v1/<head>`; each routes to
+// the user-bearer `/cloud` proxy and is allow-listed in proxy-allow.ts CLOUD_HEADS.
+const CLOUD_PRODUCT_V1_HEADS = ['functions', 'framework', 'environments', 'pipelines', 'builds', 'releases']
 
 const aiSurfaceRewrites = () => ({
   beforeFiles: [
@@ -114,12 +122,17 @@ const aiSurfaceRewrites = () => ({
     // clean `/v1/<head>` → the user-bearer `/cloud` proxy (org from the Bearer owner).
     ...CLOUD_INFRA_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
     ...CLOUD_INFRA_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/cloud/v1/${h}/:path*` })),
+    ...CLOUD_PRODUCT_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
+    ...CLOUD_PRODUCT_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/cloud/v1/${h}/:path*` })),
     // Public compute catalog → the visor `/vm` proxy.
     ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/vm/v1/${h}` })),
     ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/vm/v1/${h}/:path*` })),
     { source: `/v1/gpu-sizes`, destination: `/vm/v1/gpus` },
     // Per-tenant billing DATA → the service-token commerce proxy (app/billing/v1).
     { source: `/v1/billing/:path*`, destination: `/billing/v1/:path*` },
+    // Commerce store DATA → the user-bearer commerce proxy (app/commerce). Namespaced like
+    // billing so the generic store heads (product/order/user/store/…) never collide at /v1.
+    { source: `/v1/commerce/:path*`, destination: `/commerce/v1/:path*` },
     ...devCloudRewrites(),
   ],
 })
