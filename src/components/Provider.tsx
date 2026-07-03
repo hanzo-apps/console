@@ -7,11 +7,12 @@
 import { useMemo, type ReactNode } from 'react'
 import { GuiProvider } from '@hanzo/gui'
 import { NextThemeProvider, useRootTheme } from '@hanzogui/next-theme'
-import { registerDefaultFields } from '@hanzo/data'
+import { registerDefaultFields, registerField } from '@hanzo/data'
 
 import config from '../../gui.config'
 import { SessionProvider } from '~/lib/auth/session'
 import { OrgAccentProvider } from './OrgAccentProvider'
+import { RichTextDisplay, RichTextInput } from './fields/RichTextField'
 
 // @hanzo/data populates its field-INPUT registry via an import SIDE EFFECT, but the
 // package ships `"sideEffects": false`, so production tree-shaking (we consume it via
@@ -22,6 +23,14 @@ import { OrgAccentProvider } from './OrgAccentProvider'
 // Idempotent (guarded internally), no window/DOM — safe at module scope (SSR + client).
 // ONE place, DRY — fixes every editable @hanzo/data surface, current and future.
 registerDefaultFields()
+
+// Upgrade the `richText` field from @hanzo/data's plain-textarea fallback to the
+// native Lexical WYSIWYG (bold/italic/headings/lists/links/quote + read-mode HTML).
+// `registerField` OVERRIDES the default in place — one dispatch point, so every
+// `richText` field (a CMS Article/Page body, any DocType/collection field typed
+// RichText) renders the real editor. Lexical is a console concern, not a data-layer
+// one, so it's registered here rather than forking @hanzo/data.
+registerField('richText', { Display: RichTextDisplay, Input: RichTextInput })
 
 function Themed({ children }: { children: ReactNode }) {
   // `dark` fallback so the server render and the client's initial state agree
