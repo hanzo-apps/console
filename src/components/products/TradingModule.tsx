@@ -432,7 +432,7 @@ export function TradingModule(props: { params: Record<string, string> }) {
             records={fleetRows}
             loading={loading}
             empty="No trading bots deployed."
-            onRowPress={(row) => setView(String((row as { slug?: string }).slug ?? ''))}
+            onOpen={(row) => setView(String((row as { slug?: string }).slug ?? ''))}
           />
         </>
       )}
