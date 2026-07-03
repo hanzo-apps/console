@@ -13,6 +13,8 @@
 import { useRouter } from 'next/navigation'
 import { Button, XStack } from '@hanzo/gui'
 
+import { useAccent } from '~/lib/theme/accent'
+
 /** The GPU sub-tabs, in order. `id` matches the registry `:tab` segment; `path` is the
  *  absolute console route the tab navigates to. Overview is the empty `id`. */
 export const GPU_TABS = [
@@ -35,21 +37,27 @@ export const gpuTabId = (tab?: string): string => (GPU_TABS.some((t) => t.id ===
  */
 export function GpuTabBar({ active }: { active: string }) {
   const router = useRouter()
+  const { accent, contrast } = useAccent()
   return (
     <XStack gap="$1" flexWrap="wrap">
-      {GPU_TABS.map((t) => (
-        <Button
-          key={t.id || 'overview'}
-          size="$2"
-          bg={t.id === active ? '$color5' : 'transparent'}
-          className={t.id === active ? 'hz-accent-fill' : undefined}
-          borderWidth={1}
-          borderColor="$borderColor"
-          onPress={() => router.push(t.path)}
-        >
-          {t.label}
-        </Button>
-      ))}
+      {GPU_TABS.map((t) => {
+        const isActive = t.id === active
+        return (
+          <Button
+            key={t.id || 'overview'}
+            size="$2"
+            bg={isActive ? '$color5' : 'transparent'}
+            // Custom org accent recolors the ACTIVE tab (Tamagui-native inline bg + text
+            // color the label inherits); default monochrome when no accent.
+            style={isActive && accent ? { backgroundColor: accent, color: contrast } : undefined}
+            borderWidth={1}
+            borderColor="$borderColor"
+            onPress={() => router.push(t.path)}
+          >
+            {t.label}
+          </Button>
+        )
+      })}
     </XStack>
   )
 }
