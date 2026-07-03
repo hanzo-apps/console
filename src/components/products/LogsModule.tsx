@@ -1,26 +1,30 @@
 'use client'
 
 /**
- * Logs — the org's REAL recent request activity (per-org, per-request).
+ * Logs — two real lenses, one product, honest states throughout.
  *
- * Wired to the commerce usage ledger (`GET /v1/billing/usage` via the per-tenant
- * `/billing` proxy) — the ONE real per-request source the console has today: every
- * billed API/model call is one row (time · endpoint · status · summary). We render
- * those as log lines via the shared `logsFromRecords`, filterable by endpoint and
- * level. Honest states throughout: loading, error, and an honest empty ("no request
- * activity yet") — never a fabricated or permanently-empty grid.
+ *  1. APPLICATION logs (default) — full-text application/platform logs from the
+ *     Hanzo o11y (SigNoz) runtime, read through the same-origin `/cloud` bearer
+ *     proxy as `POST /v1/o11y/api/v3/query_range` (a `list`-panel `noop` builder
+ *     query over `dataSource: logs`, newest first — `O11ySignozApi.logs`). Real
+ *     log lines (time · severity · service · message), org-scoped by the minted
+ *     bearer, filterable by severity + service. Honest states: loading, the
+ *     shared o11y `RuntimeNotice` on 503/404/401/403, and an honest "connected ·
+ *     no application logs in this window" empty state (never a fabricated grid).
+ *     This replaces the old "no clean logs-list route" placeholder: the real read
+ *     IS the composite `query_range`, which this lens now issues.
  *
- * NOT wired (honest backend gap): full-text APPLICATION/platform log search over
- * o11y. The Hanzo o11y log store is deployed but exposes no clean logs-list read
- * route — `/v1/o11y/v1/logs` is a stub returning `{"results":[]}` and the only real
- * read is a composite `POST /v1/o11y/v4/query_range` builder query. When a simple
- * logs-list route (or a `/telemetry`-style read proxy fronting it) lands, this page
- * gains an application-log tab with no other change. Until then it shows the real
- * per-org REQUEST log above, which is genuinely useful and never fabricated.
+ *  2. REQUEST activity — the org's billed API/model calls from the commerce usage
+ *     ledger (`GET /v1/billing/usage` via `/billing`), one row per request. The
+ *     ONE per-request source that is always real for the org, filterable by
+ *     endpoint + level. Unchanged from before; kept as the guaranteed-real lens.
+ *
+ * The two are ORTHOGONAL sources (o11y OTLP logs vs the billing ledger) surfaced
+ * as two lenses of the one Logs product — nothing is fabricated in either.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, ScrollText } from '@hanzogui/lucide-icons-2'
+import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { BarChart3, RefreshCw, ScrollText, Server } from '@hanzogui/lucide-icons-2'
 
 import { asApiError, ErrorState } from '~/components/ui/States'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -29,16 +33,15 @@ import { SelectMenu, type SelectOption } from '~/components/ui/SelectMenu'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { fetchUsageRecords, type UsageRecord } from '~/lib/api/aimetrics'
 import { logsFromRecords, type LogLine } from '~/components/products/inference/logic'
+import { ApmApi, apmWindow, type LogRow } from '~/lib/api/apm'
 import type { ApiError } from '~/lib/api'
+import { RuntimeNotice } from './observability/RuntimeNotice'
 
 const LOG_LIMIT = 250
 
-type State =
-  | { phase: 'loading' }
-  | { phase: 'error'; err: ApiError }
-  | { phase: 'ready'; records: UsageRecord[] }
+// ── shared bits ──────────────────────────────────────────────────────────────
 
-/** Honest local time label; em-dash when the ledger row carries no parseable time. */
+/** Honest local time label; em-dash when the row carries no parseable time. */
 function fmtTime(at: number | null): string {
   if (at === null) return '—'
   const d = new Date(at)
@@ -48,17 +51,170 @@ function fmtTime(at: number | null): string {
 }
 
 /** Distinct, sorted values for a filter dropdown (blank values dropped). */
-function distinct(records: UsageRecord[], pick: (r: UsageRecord) => string): SelectOption<string>[] {
+function distinctOf<T>(rows: T[], pick: (r: T) => string): SelectOption<string>[] {
   const seen = new Set<string>()
-  for (const r of records) {
+  for (const r of rows) {
     const v = pick(r)
     if (v) seen.add(v)
   }
   return [...seen].sort().map((v) => ({ key: v, label: v }))
 }
 
-export function LogsModule(_props: { params: Record<string, string> }) {
-  const [state, setState] = useState<State>({ phase: 'loading' })
+type Lens = 'application' | 'requests'
+
+/** Small segmented control shared by the lens + range toggles. */
+function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T
+  options: { key: T; label: string }[]
+  onChange: (v: T) => void
+}) {
+  return (
+    <XStack gap="$1" flexWrap="wrap">
+      {options.map((o) => (
+        <Button
+          key={o.key}
+          size="$2"
+          bg={o.key === value ? '$color5' : 'transparent'}
+          borderWidth={1}
+          borderColor="$borderColor"
+          onPress={() => onChange(o.key)}
+        >
+          {o.label}
+        </Button>
+      ))}
+    </XStack>
+  )
+}
+
+// ── Application logs lens (o11y / SigNoz) ─────────────────────────────────────
+
+const RANGES: { key: string; label: string; seconds: number }[] = [
+  { key: '15m', label: '15m', seconds: 900 },
+  { key: '1h', label: '1h', seconds: 3600 },
+  { key: '6h', label: '6h', seconds: 21_600 },
+  { key: '24h', label: '24h', seconds: 86_400 },
+]
+
+type AppState =
+  | { phase: 'loading' }
+  | { phase: 'error'; err: ApiError }
+  | { phase: 'ready'; lines: LogRow[] }
+
+function ApplicationLogsLens() {
+  const [state, setState] = useState<AppState>({ phase: 'loading' })
+  const [rangeIdx, setRangeIdx] = useState(1) // default 1h
+  const [severity, setSeverity] = useState<string | null>(null)
+  const [service, setService] = useState<string | null>(null)
+
+  const load = useCallback(async (idx: number) => {
+    setState({ phase: 'loading' })
+    try {
+      const lines = await ApmApi.logs(apmWindow(RANGES[idx].seconds), 500)
+      setState({ phase: 'ready', lines })
+    } catch (e) {
+      setState({ phase: 'error', err: asApiError(e) })
+    }
+  }, [])
+
+  useEffect(() => {
+    void load(rangeIdx)
+  }, [load, rangeIdx])
+
+  const all = state.phase === 'ready' ? state.lines : []
+  const severityOptions = useMemo(() => distinctOf(all, (l) => l.severity), [all])
+  const serviceOptions = useMemo(() => distinctOf(all, (l) => l.service), [all])
+  const lines = useMemo(
+    () => all.filter((l) => (!severity || l.severity === severity) && (!service || l.service === service)),
+    [all, severity, service],
+  )
+
+  const columns: Column<LogRow>[] = [
+    { key: 'time', header: 'Time', width: 200, render: (l) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{l.timestamp ? new Date(l.timestamp).toLocaleString() : '—'}</Text> },
+    { key: 'severity', header: 'Severity', width: 110, render: (l) => (l.severity ? <StatusTag status={l.severity} /> : <Text fontSize="$2" color="$color10">—</Text>) },
+    { key: 'service', header: 'Service', width: 170, render: (l) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{l.service || '—'}</Text> },
+    { key: 'body', header: 'Message', render: (l) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{l.body || '—'}</Text> },
+  ]
+
+  if (state.phase === 'error') {
+    return <RuntimeNotice surface="logs" error={state.err} />
+  }
+
+  const rangeLabel = RANGES[rangeIdx].label
+  return (
+    <YStack gap="$3">
+      <XStack gap="$3" items="center" flexWrap="wrap" justify="space-between">
+        <XStack gap="$2" items="center" flexWrap="wrap">
+          <ScrollText size={16} />
+          <Text fontSize="$2" color="$color10">Range</Text>
+          <Segmented value={RANGES[rangeIdx].key} options={RANGES} onChange={(k) => setRangeIdx(RANGES.findIndex((r) => r.key === k))} />
+        </XStack>
+        <XStack gap="$2" items="center" flexWrap="wrap">
+          <SelectMenu options={severityOptions} value={severity} onChange={setSeverity} allLabel="All severities" />
+          <SelectMenu options={serviceOptions} value={service} onChange={setService} allLabel="All services" />
+        </XStack>
+      </XStack>
+
+      {state.phase === 'ready' && all.length === 0 ? (
+        <NoApplicationLogs range={rangeLabel} />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={lines}
+          loading={state.phase === 'loading'}
+          rowKey={(l) => l.id}
+          empty="No log lines match the current filters."
+        />
+      )}
+
+      <Text fontSize="$1" color="$color10">
+        Application/platform logs from the Hanzo o11y runtime (OTLP → SigNoz), org-scoped. Emitted by
+        services that ship OpenTelemetry logs; if a service isn&apos;t instrumented yet it won&apos;t appear here.
+      </Text>
+    </YStack>
+  )
+}
+
+/** Honest "connected · no logs in window" state — o11y answered, the window is
+ *  empty (no OTLP logs ingested for this org yet). Never a fabricated grid. */
+function NoApplicationLogs({ range }: { range: string }) {
+  const go = (path: string) => {
+    if (typeof window !== 'undefined') window.location.assign(path)
+  }
+  return (
+    <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={680}>
+      <XStack gap="$2" items="center">
+        <Server size={16} />
+        <Text fontSize="$4" fontWeight="700">
+          Connected · no application logs in the last {range}
+        </Text>
+      </XStack>
+      <Text fontSize="$3" color="$color11">
+        The o11y log runtime answered, but no OpenTelemetry logs were ingested for your organization in
+        this window. This is a real empty result, not placeholder data — lines appear here as your
+        services ship OTLP logs to o11y. Try a wider range, or view your request activity (always real).
+      </Text>
+      <XStack gap="$2" flexWrap="wrap">
+        <Button size="$2" theme="light" icon={<BarChart3 size={15} />} onPress={() => go('/ai-metrics')}>
+          View AI Metrics
+        </Button>
+      </XStack>
+    </Card>
+  )
+}
+
+// ── Request activity lens (commerce usage ledger) ────────────────────────────
+
+type ReqState =
+  | { phase: 'loading' }
+  | { phase: 'error'; err: ApiError }
+  | { phase: 'ready'; records: UsageRecord[] }
+
+function RequestActivityLens() {
+  const [state, setState] = useState<ReqState>({ phase: 'loading' })
   const [endpoint, setEndpoint] = useState<string | null>(null)
   const [level, setLevel] = useState<string | null>(null)
 
@@ -77,8 +233,8 @@ export function LogsModule(_props: { params: Record<string, string> }) {
   }, [load])
 
   const records = state.phase === 'ready' ? state.records : []
-  const endpointOptions = useMemo(() => distinct(records, (r) => r.model), [records])
-  const levelOptions = useMemo(() => distinct(records, (r) => r.status), [records])
+  const endpointOptions = useMemo(() => distinctOf(records, (r) => r.model), [records])
+  const levelOptions = useMemo(() => distinctOf(records, (r) => r.status), [records])
   const lines = useMemo(
     () => logsFromRecords(records, { endpoint: endpoint ?? 'all', level: level ?? 'all' }, LOG_LIMIT),
     [records, endpoint, level],
@@ -91,48 +247,68 @@ export function LogsModule(_props: { params: Record<string, string> }) {
     { key: 'message', header: 'Message', render: (r) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{r.message}</Text> },
   ]
 
+  if (state.phase === 'error') {
+    return <ErrorState err={state.err} onRetry={() => void load()} />
+  }
+
+  return (
+    <YStack gap="$3">
+      <XStack gap="$2" items="center" flexWrap="wrap">
+        <ScrollText size={16} />
+        <Text fontSize="$2" color="$color10">Filter</Text>
+        <SelectMenu options={endpointOptions} value={endpoint} onChange={setEndpoint} allLabel="All endpoints" />
+        <SelectMenu options={levelOptions} value={level} onChange={setLevel} allLabel="All levels" />
+      </XStack>
+
+      <DataTable
+        columns={columns}
+        rows={lines}
+        loading={state.phase === 'loading'}
+        rowKey={(r) => r.id}
+        empty="No request activity yet. Requests appear here as your org calls the API."
+      />
+
+      <Text fontSize="$1" color="$color10">
+        Per-org request log from your usage ledger — one row per billed API/model call.
+      </Text>
+    </YStack>
+  )
+}
+
+// ── the product ──────────────────────────────────────────────────────────────
+
+const LENSES: { key: Lens; label: string }[] = [
+  { key: 'application', label: 'Application logs' },
+  { key: 'requests', label: 'Request activity' },
+]
+
+export function LogsModule(_props: { params: Record<string, string> }) {
+  const [lens, setLens] = useState<Lens>('application')
+  const [nonce, setNonce] = useState(0) // remount the active lens to refresh it
+
   return (
     <>
       <PageHeader
         title="Logs"
-        subtitle="Your organization's recent API and model requests."
+        subtitle={
+          lens === 'application'
+            ? 'Application and platform logs from the o11y runtime.'
+            : "Your organization's recent API and model requests."
+        }
         actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
-            Refresh
-          </Button>
+          <XStack gap="$2" items="center" flexWrap="wrap">
+            <Segmented value={lens} options={LENSES} onChange={setLens} />
+            <Button icon={<RefreshCw size={16} />} onPress={() => setNonce((n) => n + 1)}>
+              Refresh
+            </Button>
+          </XStack>
         }
       />
 
-      {state.phase === 'error' ? (
-        <ErrorState err={state.err} onRetry={() => void load()} />
+      {lens === 'application' ? (
+        <ApplicationLogsLens key={`app-${nonce}`} />
       ) : (
-        <YStack gap="$3">
-          <XStack gap="$2" items="center" flexWrap="wrap">
-            <ScrollText size={16} />
-            <Text fontSize="$2" color="$color10">Filter</Text>
-            <SelectMenu
-              options={endpointOptions}
-              value={endpoint}
-              onChange={setEndpoint}
-              allLabel="All endpoints"
-            />
-            <SelectMenu options={levelOptions} value={level} onChange={setLevel} allLabel="All levels" />
-          </XStack>
-
-          <DataTable
-            columns={columns}
-            rows={lines}
-            loading={state.phase === 'loading'}
-            rowKey={(r) => r.id}
-            empty="No request activity yet. Requests appear here as your org calls the API."
-          />
-
-          <Text fontSize="$1" color="$color10">
-            Per-org request log from your usage ledger. Full-text application/platform log search
-            (o11y) is a separate surface — it lands here as an application-log tab once the o11y
-            logs-list read route is wired.
-          </Text>
-        </YStack>
+        <RequestActivityLens key={`req-${nonce}`} />
       )}
     </>
   )
