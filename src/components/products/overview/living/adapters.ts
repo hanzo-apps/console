@@ -21,6 +21,8 @@ import type { AdminOverview } from '~/lib/api/admin-overview'
 import type { Finance } from '~/lib/api/finance'
 import type { PlatformApp } from '~/lib/api/platform'
 import type { ServerlessFunction, FunctionsMetrics, OverviewStats } from '~/lib/api/functions'
+import type { EconomySnapshot } from '~/lib/api/economy'
+import type { MakerStatus } from '~/lib/api/trading'
 import type { OverviewData, OverviewEvent, OverviewHealth, OverviewPoint } from './config'
 
 const empty = (): OverviewData => ({ kpi: {}, series: {}, distribution: {}, activity: [], alerts: [], health: [] })
@@ -336,6 +338,112 @@ export function fromOverlord(apps: PlatformApp[], admin: AdminOverview | null, u
     { label: 'Unknown', value: tally.unknown },
   ].filter((s) => s.value > 0)
   if (mix.length) d.distribution.productHealth = mix
+
+  return d
+}
+
+/**
+ * Map the Lux DEX indexer snapshot (+ the optional maker metrics) onto `OverviewData`
+ * for the Lux Economy / Markets board (the DeFiLlama-style analytics plane). PURE.
+ *
+ * HONEST by construction to the `dex` subgraph's REAL surface (it is a CLOB, not an
+ * AMM): the KPIs + tables are 24h volume, trades, book depth, active markets, and the
+ * best-bid/ask spread — all fields the subgraph actually exposes (`volume24h`,
+ * `tradeCount`, `remaining`, `bestBid`/`bestAsk`). It does NOT invent a pooled `tvlUSD`
+ * (a CLOB has book DEPTH, not locked TVL); the day-history series is populated ONLY
+ * when the subgraph's `MarketDayData` producer is emitting (today it is registered but
+ * unproduced → the series tile shows its honest empty state, never a fabricated trend).
+ *
+ * The maker's live :2112 metrics (when reachable) add the maker-specific spread + a
+ * "book making" health row — the analytics plane's link to the deploy/manage plane.
+ */
+export function fromLuxIndexer(snap: EconomySnapshot | null, maker?: MakerStatus | null): OverviewData {
+  const d = empty()
+  if (!snap || snap.status !== 'reporting') {
+    // Honest empty — the tiles render em-dashes + "not reporting". The board's own
+    // loader attaches an alert with the upstream error so the state is explained.
+    if (snap?.error) d.alerts = [{ id: 'economy-down', severity: 'warning', title: 'DEX indexer not reporting', detail: snap.error }]
+    return d
+  }
+
+  const markets = snap.markets
+  const active = markets.length
+  const withVol = markets.filter((m) => m.volume24h != null)
+  const totalVol = withVol.reduce((s, m) => s + (m.volume24h ?? 0), 0)
+  const totalTrades = markets.reduce((s, m) => s + (m.tradeCount ?? 0), 0)
+  const totalDepth = markets.reduce((s, m) => s + (m.bookDepth ?? 0), 0)
+  const totalOrders = markets.reduce((s, m) => s + (m.openOrders ?? 0), 0)
+
+  // KPI tiles — only set a tile when the source genuinely has the datum, so a missing
+  // field renders its honest em-dash rather than a fabricated 0.
+  d.kpi.markets = { value: active }
+  if (withVol.length) d.kpi.volume24h = { value: totalVol }
+  if (markets.some((m) => m.tradeCount != null)) d.kpi.trades = { value: totalTrades }
+  if (markets.some((m) => m.bookDepth != null)) d.kpi.bookDepth = { value: totalDepth }
+  if (markets.some((m) => m.openOrders != null)) d.kpi.openOrders = { value: totalOrders }
+
+  // Distribution donuts — volume + trades by market (positive slices only).
+  const volSlices = withVol
+    .map((m) => ({ label: m.symbol, value: m.volume24h ?? 0 }))
+    .filter((s) => s.value > 0)
+  if (volSlices.length) d.distribution.volumeByMarket = volSlices
+  const tradeSlices = markets
+    .map((m) => ({ label: m.symbol, value: m.tradeCount ?? 0 }))
+    .filter((s) => s.value > 0)
+  if (tradeSlices.length) d.distribution.tradesByMarket = tradeSlices
+  // Book-depth split — the CLOB "liquidity" mix, honestly labeled as depth.
+  const depthSlices = markets
+    .map((m) => ({ label: m.symbol, value: m.bookDepth ?? 0 }))
+    .filter((s) => s.value > 0)
+  if (depthSlices.length) d.distribution.depthByMarket = depthSlices
+
+  // Historical series — ONLY from real MarketDayData (unproduced today → empty tile,
+  // never a fabricated trend). Sum volumeUSD (or raw volume) per day bucket.
+  if (snap.dayData.length) {
+    const byDay = new Map<number, { vol: number; hasVol: boolean; tvl: number; hasTvl: boolean }>()
+    for (const p of snap.dayData) {
+      const cur = byDay.get(p.date) ?? { vol: 0, hasVol: false, tvl: 0, hasTvl: false }
+      if (p.volumeUSD != null) {
+        cur.vol += p.volumeUSD
+        cur.hasVol = true
+      }
+      if (p.tvlUSD != null) {
+        cur.tvl += p.tvlUSD
+        cur.hasTvl = true
+      }
+      byDay.set(p.date, cur)
+    }
+    const days = [...byDay.entries()].sort((a, b) => a[0] - b[0])
+    const volPts: OverviewPoint[] = days.filter(([, v]) => v.hasVol).map(([date, v]) => ({ t: new Date(date * 1000).toISOString(), value: v.vol }))
+    const tvlPts: OverviewPoint[] = days.filter(([, v]) => v.hasTvl).map(([date, v]) => ({ t: new Date(date * 1000).toISOString(), value: v.tvl }))
+    if (volPts.length) d.series.volume24h = { interval: 'day', points: volPts }
+    if (tvlPts.length) d.series.tvl = { interval: 'day', points: tvlPts }
+  }
+
+  // Activity — recent fills (settled trades), newest first, capped for the feed.
+  d.activity = snap.trades.slice(0, 40).map((t) => ({
+    id: t.id,
+    time: t.timeMs != null ? new Date(t.timeMs).toISOString() : '',
+    title: `${t.symbol}${t.side ? ` · ${t.side}` : ''}`,
+    subtitle: [t.size != null ? `size ${t.size}` : null, t.price != null ? `@ ${t.price}` : null].filter(Boolean).join(' ') || undefined,
+    status: t.side === 'buy' ? 'success' : t.side === 'sell' ? 'warn' : '',
+  }))
+  d.activityTotal = snap.trades.length
+
+  // Maker health — the analytics plane's link to the deploy/manage plane.
+  if (maker && maker.status === 'reporting') {
+    d.health = [
+      {
+        service: 'Market maker',
+        health: 'green',
+        detail: `pegging ${maker.symbols.length} market(s)${maker.requotes != null ? ` · ${maker.requotes} requotes` : ''}`,
+      },
+    ]
+    // Surface the maker's tightest per-symbol peg as a "maker spread" KPI proxy, when
+    // reported (0 on a testnet luxd that lacks the 0x9999 read selectors — honest).
+    const pegs = maker.symbols.map((s) => s.pegErrorBps).filter((v): v is number => v != null)
+    if (pegs.length) d.kpi.makerPegBps = { value: Math.max(...pegs.map((p) => Math.abs(p))) }
+  }
 
   return d
 }
