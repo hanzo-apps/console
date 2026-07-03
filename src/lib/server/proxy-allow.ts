@@ -26,6 +26,13 @@ export const CLOUD_HEADS: readonly string[] = [
   'functions',
   'prompts',
   'agents',
+  // Framework (cloud clients/framework): /v1/framework/{doctypes,roles,modules,:doctype}[/…].
+  // The metadata-driven DocType engine — the FOUNDATION CMS/ERP/CRM/Helpdesk are "just
+  // DocTypes" on. Per-org on Base/SQLite; the engine derives the org from the Bearer owner
+  // (principal.Tenant) and 403s a cookie-only or forged-header call, so it routes through
+  // /cloud exactly like prompts/agents — the single `framework` head admits every sub-path
+  // (doctypes, roles, modules install, and the generic /:doctype document CRUD).
+  'framework',
   // ML serving (cloud clients/ml): /v1/ml/{models,health}[/:name[/predict]] — the org's
   // deployed KServe InferenceServices. The handler resolves the org from the Bearer owner
   // and lands every request in a PER-ORG namespace ("ml-"<org>); a cookie-only call 403s,
