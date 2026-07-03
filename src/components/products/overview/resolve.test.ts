@@ -7,9 +7,11 @@ import { defaultSpec, resolveSpec } from './resolve'
 /**
  * Native-overview resolution — pure logic only (no runtime registry import, which
  * would pull the whole GUI component tree into the node test env, the reason every
- * other suite imports the registry types-only). The "no external link-out" shape
- * invariant is enforced at COMPILE time instead: `CatalogEntry` has no `external`
- * kind and no `href` field, so `tsc --noEmit` is the proof those can't exist.
+ * other suite imports the registry types-only). Native overviews are the `module`
+ * shape's surface: every HANZO product opens IN the console, so no Hanzo control
+ * plane bounces to another domain. (The separate `external` kind is only for the
+ * deployed Lux/Zoo chain-app LAUNCH tiles — standalone apps at their own domains,
+ * not Hanzo products — which own no overview and never reach `resolveSpec`.)
  *
  * These pin: (1) registered specs resolve and are non-empty, (2) the derived
  * default is honest (never fabricates health, carries real catalog facts), and
