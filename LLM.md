@@ -1884,3 +1884,59 @@ field remains, flagged separately as a cross-console migration/discovery feature
   the v3 single-function-type form `vi.fn<(p?: UsageOverviewParams) => Promise<…>>()`.
 - Verification: `tsc --noEmit` clean; `vitest` **1163/1163** (96 files); `next build` ✓.
   Rebased on origin/main (v8.4.45) → **v8.4.46**.
+
+## Observe · Logs + trace-search wired to the live o11y (SigNoz) runtime (v8.4.62)
+
+Fills the LAST o11y query gap the console had. o11y (SigNoz) was already consumed
+by **Service Map** (RED metrics + dependency graph, `ApmApi.services/dependencies/
+topOperations`) and **Alerts** (`o11y/v1/rules`) over the same-origin `/cloud`
+bearer proxy (`cloudProxyV1Url('o11y/…')` → cloud reverse-proxies `/v1/o11y/*` →
+the o11y runtime's `/api/*`). The two SigNoz signals `apm.ts` was MISSING —
+application **LOGS** and **trace search** — are both the composite `POST /api/v3/
+query_range` (the deployed `GET /api/v1/logs` is a hardcoded stub returning
+`{"results":[]}`; `query_range` is the one true read the SigNoz explorer itself
+issues). Added there (DRY — ONE o11y client), NOT a second o11y path.
+
+- **`lib/api/apm.ts` gains `logs()` + `traceSearch()`** over `POST o11y/v3/
+  query_range` with the exact `list`-panel `noop` builder query (`listQueryPayload`,
+  verified against the SigNoz frontend payload + the server `BuilderQuery` struct,
+  so the runtime never 400s), plus pure, defensive parsers: `parseListRows` (reads
+  `data.result[].list` AND the `data.newResult.data.result[].list` mirror), `toIso`
+  (collapses SigNoz ns/us/ms/s epochs → ISO), `normalizeLogRow`/`normalizeLogs`
+  ({id,timestamp,severity,service,body}) and `normalizeTraceSpan`/`normalizeSpans`
+  ({id,traceId,name,service,durationNano,status}). Time = epoch MS (`ApmWindow.
+  startMs/endMs`), the v3 unit. Every column-name variant tolerated; empty result →
+  honest empty list (never a throw), garbage → [].
+- **`LogsModule` is now two real lenses, one product.** DEFAULT **Application logs**
+  = live o11y logs via `ApmApi.logs(apmWindow(range), 500)` — real lines
+  (time · severity · service · message), org-scoped by the minted bearer, range
+  toggle (15m/1h/6h/24h) + severity/service filters. Honest states: loading, the
+  shared o11y `RuntimeNotice` on 503/404/401/403, and an honest "Connected · no
+  application logs in the last <range>" empty card (o11y answered, no OTLP logs
+  ingested for the org yet — says WHY, points at AI Metrics; never a fabricated
+  grid). Second lens **Request activity** = the prior commerce-usage-ledger
+  per-request log, kept intact as the always-real fallback. So Logs NEVER regresses
+  and GAINS real platform-log search.
+- **Traces/Observations/Metrics unchanged (correct-domain decision).** Traces +
+  Observations stay on `/v1/evals` — the LLM/agent trace + generation domain
+  (cost/tokens/scores), which raw OTel spans lack; repointing them would regress.
+  Metrics stays on VictoriaMetrics (real infra metrics). `ApmApi.traceSearch`
+  exposes the o11y APM span-search signal for a future APM-traces view without
+  fabricating one. Alerts left as-is (same established `o11y/v1/*` convention).
+- **One canonical Observe surface** — the registry already routes every Observe
+  product to a native module (no `o11y.hanzo.ai` link-outs); o11y.hanzo.ai is the
+  raw SigNoz backend, console is the product UI. Unchanged.
+- **Reachability (flagged, honest):** the o11y wiring uses the IDENTICAL transport +
+  path convention as the already-shipped ServiceMap/Alerts clients, so it lights up
+  with real data exactly when they do — iff the cloud→o11y `/v1/o11y/*` reverse-proxy
+  resolves end-to-end (the deployed 0.2.0 pod serves bare `/api/*`; the pod's
+  `global::external_url` must be `/v1/o11y` for the verbatim forward to strip to
+  `/api/*`) AND OTLP logs are ingested for the org. Until then the lens shows the
+  honest o11y `RuntimeNotice`/empty state, never fabricated data — and Request
+  activity stays real. Not a regression I introduced; shared with ServiceMap/Alerts.
+- Verification: `tsc --noEmit` clean (0 errors); `vitest` **1373/1373** (112 files;
+  +13 apm: listQueryPayload shape/clamp, parseListRows both locations + garbage,
+  toIso ns/us/ms/s/ISO, normalizeLogRow/normalizeLogs, normalizeTraceSpan/
+  normalizeSpans); `next build` ✓ Compiled successfully (the `/[...slug]` catch-all
+  that renders LogsModule). Authenticated visual e2e is post-deploy (the (dashboard)
+  group is behind AuthGate). Rebased on origin/main (v8.4.61) → **v8.4.62**.
