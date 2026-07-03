@@ -145,8 +145,10 @@ export function CustomerMachines() {
     })
 
   // The REAL launch flow — the shared drawer (a machine is a `cpu` size); on success
-  // the new machine is prepended and the list reloaded. Replaces the old docs link.
-  const openLaunch = () =>
+  // the new machine is prepended and the list reloaded. An optional `preset` (from a
+  // catalog size/region the customer tapped) preselects the drawer so a tap in the
+  // catalog is one step from launch.
+  const openLaunch = (preset?: { size?: string; region?: string }) =>
     detail.open({
       title: 'Launch a machine',
       subtitle: 'Pick a size and region',
@@ -156,6 +158,8 @@ export function CustomerMachines() {
       content: (
         <LaunchDrawer
           kind="cpu"
+          initialSize={preset?.size}
+          initialRegion={preset?.region}
           onClose={detail.close}
           onLaunched={(m) => {
             detail.close()
@@ -216,7 +220,7 @@ export function CustomerMachines() {
               Refresh
             </Text>
           </Button>
-          <Button size="$3" theme="light" icon={<Rocket size={15} />} onPress={openLaunch}>
+          <Button size="$3" theme="light" icon={<Rocket size={15} />} onPress={() => openLaunch()}>
             Launch
           </Button>
         </XStack>
@@ -263,11 +267,11 @@ export function CustomerMachines() {
           icon={Server}
           title="Launch your first machine"
           description="Dedicated compute machines run your workloads across regions. Launch one and it appears here — with real capacity, region, and cost. Managed on Hanzo Cloud."
-          bullets={['Pick a region and size from the live catalog below.', 'Machines, cores, memory, and cost are read from your real machines — nothing is fabricated.']}
-          primary={{ label: 'Launch a machine', onPress: openLaunch }}
+          bullets={['Tap a size in the live catalog below to launch it.', 'Machines, cores, memory, and cost are read from your real machines — nothing is fabricated.']}
+          primary={{ label: 'Launch a machine', onPress: () => openLaunch() }}
           secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
         />
-        <MachineCatalog />
+        <MachineCatalog onLaunch={openLaunch} />
       </>
     )
   }
