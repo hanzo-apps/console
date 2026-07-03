@@ -15,6 +15,8 @@ import {
   autonameSource,
   humanize,
   enrichLinks,
+  hasProjectField,
+  PROJECT_FIELD,
 } from './fields'
 
 const page: DocType = {
@@ -26,6 +28,8 @@ const page: DocType = {
     { fieldname: 'title', fieldtype: 'Data', label: 'Title', reqd: true, inListView: true },
     { fieldname: 'slug', fieldtype: 'Data', reqd: true, inListView: true },
     { fieldname: 'body', fieldtype: 'Text' },
+    { fieldname: 'richbody', fieldtype: 'RichText', label: 'Rich Body' },
+    { fieldname: 'project', fieldtype: 'Data', label: 'Project' },
     { fieldname: 'status', fieldtype: 'Select', options: 'Draft\nPublished', default: 'Draft', inListView: true },
     { fieldname: 'author', fieldtype: 'Link', options: 'Author' },
     { fieldname: 'featured_image', fieldtype: 'Attach' },
@@ -49,6 +53,8 @@ describe('docTypeToFields — DocType metadata → @hanzo/data FieldDefinition[]
     expect(byName.active.type).toBe('boolean')
     expect(byName.when.type).toBe('dateTime')
     expect(byName.secret.type).toBe('text')
+    // RichText → the @hanzo/data richText renderer (the Lexical WYSIWYG).
+    expect(byName.richbody.type).toBe('richText')
   })
 
   it('carries select options, the currency code, and the relation target', () => {
@@ -198,5 +204,20 @@ describe('enrichLinks — relation shows a human label', () => {
   })
   it('leaves an empty Link untouched', () => {
     expect(enrichLinks({ author: '' }, page, {}).author).toBe('')
+  })
+})
+
+describe('project scope helpers', () => {
+  it('hasProjectField detects the conventional project field', () => {
+    expect(PROJECT_FIELD).toBe('project')
+    expect(hasProjectField(page)).toBe(true)
+    const noProject: DocType = { name: 'Widget', fields: [{ fieldname: 'code', fieldtype: 'Data' }] }
+    expect(hasProjectField(noProject)).toBe(false)
+  })
+
+  it('a RichText body round-trips as a plain string through savePayload', () => {
+    const lex = '{"root":{"children":[],"type":"root"}}'
+    // richbody isn't readOnly, so it's written back verbatim (string passthrough).
+    expect(savePayload({ richbody: lex }, page).richbody).toBe(lex)
   })
 })

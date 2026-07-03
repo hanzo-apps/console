@@ -20,6 +20,7 @@ export type Fieldtype =
   | 'Text'
   | 'SmallText'
   | 'LongText'
+  | 'RichText'
   | 'Select'
   | 'Link'
   | 'Table'
