@@ -45,6 +45,7 @@ import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FadeIn } from '~/components/ui/FadeIn'
 import { ErrorState, asApiError } from '~/components/ui/States'
+import { playgroundPathForModel } from './playground/share'
 import type { ApiError } from '~/lib/api'
 
 /** Tabular-numeral className — fixed-advance digits for the numeric columns. */
@@ -96,8 +97,9 @@ function PlanBadge({ plan }: { plan: Plan }) {
 function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]; onBack: () => void }) {
   const router = useRouter()
   const tierPlans = plansForTier(m.tier, plans)
+  const mid = modelId(m)
   const copyId = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) void navigator.clipboard.writeText(modelId(m))
+    if (typeof navigator !== 'undefined' && navigator.clipboard) void navigator.clipboard.writeText(mid)
   }
   return (
     <YStack gap="$4">
@@ -129,13 +131,14 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
       </YStack>
 
       <XStack gap="$2" flexWrap="wrap">
-        <Button size="$3" icon={<Play size={15} />} onPress={() => router.push('/playground')}>
-          Open in Playground
+        {/* Primary: open the Playground PRESELECTED on this model (deep-links ?p=…). */}
+        <Button size="$3" theme="light" icon={<Play size={15} />} onPress={() => router.push(playgroundPathForModel(mid))}>
+          Try in Playground
         </Button>
         <Button
           size="$3"
           icon={<Settings2 size={15} />}
-          onPress={() => router.push(`/models/routing/${encodeURIComponent(modelId(m))}`)}
+          onPress={() => router.push(`/models/routing/${encodeURIComponent(mid)}`)}
         >
           Configure routing
         </Button>

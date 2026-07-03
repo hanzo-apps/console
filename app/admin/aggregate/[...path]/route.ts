@@ -1,28 +1,39 @@
 /**
  * Server-gated GLOBAL admin aggregate proxy — the cross-tenant business/platform
- * reads (`/v1/admin/{overview,usage,orgs,audit,products}`).
+ * reads (`/v1/admin/{overview,usage,orgs,audit,products,finance,compute,providers}`)
+ * AND the few GLOBAL-admin mutations that ride the same god-view gate
+ * (`POST /v1/admin/providers/{toggle,primary}` — flip shared-gateway provider
+ * routing that affects every org).
  *
  * The admin business board is an ALL-ORGS god view (`?org=all`) over IAM + commerce
  * + o11y. So — unlike the per-tenant `/cloud` proxy, which authorizes on the bearer
  * `owner` claim and is safe for any authenticated user — this MUST be gated to a
  * GLOBAL admin BEFORE anything is forwarded: a tenant customer (even one who is
  * `isAdmin` of their own org) must NOT read another org's revenue/spend/customers,
- * and must NOT be able to trigger the `org=all` aggregate at all.
+ * must NOT trigger the `org=all` aggregate at all, and must NOT flip a shared
+ * provider's enabled/primary state.
  *
  * Defense in depth (RED H1 — the cloud-side gate for `/v1/admin/*` is a separate
  * backend contract we cannot see or test from this repo): `getAdminGate` enforces the
  * SAME policy the IAM/KMS admin proxies use — a VERIFIED `@<brand.adminDomain>` email
  * AND an IAM global-admin flag, fail-closed (→ 403) on any miss. Only then does the
  * shared `forwardWithUserBearer` mint a short-lived user bearer and forward to
- * cloud-api, applying the usual path-traversal + same-origin-CSRF hardening. The
+ * cloud-api, applying the usual path-traversal + same-origin-CSRF hardening. On a
+ * mutating method (POST), that CSRF gate (Sec-Fetch-Site ≠ cross-site AND Origin/
+ * Referer host == Host, fail-closed 403 BEFORE resolving the user) means a
+ * cross-site page can never flip a provider on the victim admin's behalf. The
  * browser holds no cloud credential and cannot reach this endpoint without passing
  * the gate; the client-side `admin: true` nav gate + `AdminManagedNotice` is UI-only
  * defense-in-depth, never the boundary.
  *
- * Least privilege: only the admin READ heads are reachable (GET), NOT `iam`/`kms`
+ * Least privilege: only the admin aggregate heads are reachable, NOT `iam`/`kms`
  * (those keep their own gated proxies with their own tenant-scoping semantics) — this
- * is not a general cloud-api tunnel. `next.config.mjs` rewrites `/v1/admin/<head>`
- * (head ∈ ALLOWED) here; the client calls the clean same-origin `/v1/admin/*` form.
+ * is not a general cloud-api tunnel. `allowAdminSurface` admits `v1/admin/<head>[/...]`
+ * (the exact forwarded upstream shape), so `providers` covers the GET list and the
+ * `providers/{toggle,primary}` POSTs and nothing else. `next.config.mjs` rewrites
+ * `/v1/admin/<head>[/...]` here for BOTH GET and POST (dropping the `/v1/` into the
+ * internal Next route path); this handler re-adds `v1/` for the upstream cloud call,
+ * and the client calls the clean same-origin `/v1/admin/*` form (unchanged).
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
@@ -48,8 +59,16 @@ async function handle(req: NextRequest, ctx: Ctx): Promise<NextResponse> {
   if (!gate) return forbidden()
 
   // The rewrite feeds the tail after `/v1/admin/` (e.g. `overview`, `audit`); rebuild
-  // the cloud path. `forwardWithUserBearer` re-validates via `allow` + `pathIsClean`.
-  const path = `admin/${(await ctx.params).path.join('/')}`.replace(/\/+$/, '')
+  // the FULL cloud path, which is `/v1/admin/<head>` — cloud serves every admin route
+  // under `/v1/admin/*` (the beego `/v1/*` glob in hanzoai/ai + cloud's own
+  // `clients/admin` `app.Get("/v1/admin/…")`), and `forwardWithUserBearer` forwards to
+  // `target/path` VERBATIM (no `/v1` prepend), so the `v1/` MUST be part of the path
+  // here or the request lands on a non-existent bare `/admin/*` and 404s. The rewrite
+  // destination (`app/admin/aggregate/<head>`) is the internal Next route, not the
+  // upstream — it deliberately carries no `v1/`; this handler adds it.
+  // `forwardWithUserBearer` re-validates the exact forwarded path via `allow`
+  // (`allowAdminSurface`, keyed on the `v1/admin/<head>` shape) + `pathIsClean`.
+  const path = `v1/admin/${(await ctx.params).path.join('/')}`.replace(/\/+$/, '')
   return forwardWithUserBearer(req, {
     target: CLOUD_API_URL,
     path,
@@ -62,5 +81,17 @@ async function handle(req: NextRequest, ctx: Ctx): Promise<NextResponse> {
 }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
+  return handle(req, ctx)
+}
+
+/**
+ * POST — the GLOBAL-admin mutations that ride the same god-view gate
+ * (`/v1/admin/providers/{toggle,primary}`). Identical path through `getAdminGate`
+ * (fail-closed 403) → `forwardWithUserBearer`, which applies the same-origin CSRF
+ * check to this mutating method BEFORE resolving the user, streams the JSON body
+ * through, and re-validates the path against `allowAdminSurface` (so a POST can only
+ * ever reach an allowed head — never `iam`/`kms`, never a traversal).
+ */
+export async function POST(req: NextRequest, ctx: Ctx) {
   return handle(req, ctx)
 }
