@@ -1,27 +1,5 @@
 /**
- *   {
-      id: 'observations',
-      label: 'Observations',
-      icon: Activity,
-      description: 'Spans, generations, and events inside traces.',
-      category: 'Observe',
-      status: 'enabled',
-      repo: 'hanzoai/o11y',
-      kind: 'module',
-      routes: [{ path: '', component: ObservationsModule }],
-    },
-  {
-      id: 'users',
-      label: 'Users',
-      icon: Users,
-      description: 'Per-user analytics — trace volume, tokens, and cost.',
-      category: 'Observe',
-      status: 'enabled',
-      repo: 'hanzoai/o11y',
-      kind: 'module',
-      routes: [{ path: '', component: UsersModule }],
-    },
-Product catalog — the single source of truth for the unified console.
+ * Product catalog — the single source of truth for the unified console.
  *
  * ONE list (`catalog`) describes every Hanzo product, whether it is an
  * in-console admin module (owns routes, rendered here) or an external surface
@@ -2479,6 +2457,32 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: AnnotationQueuesModule },
       { path: ':id', component: AnnotationQueuesModule },
     ],
+  },
+  {
+    // Observations — spans / generations / events inside traces. Was accidentally
+    // trapped in this file's opening JSDoc (the `/**` never closed before it), so it
+    // never registered despite `ObservationsModule` existing + fetching real data.
+    id: 'observations',
+    label: 'Observations',
+    icon: Activity,
+    description: 'Spans, generations, and events inside traces.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    kind: 'module',
+    routes: [{ path: '', component: ObservationsModule }],
+  },
+  {
+    // Per-user analytics — same JSDoc-trap fix as Observations; `UsersModule` exists.
+    id: 'users',
+    label: 'Users',
+    icon: Users,
+    description: 'Per-user analytics — trace volume, tokens, and cost.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    kind: 'module',
+    routes: [{ path: '', component: UsersModule }],
   },
   // ── Appended modules (grouped by `category`, not array position — no entry
   //    above is reordered). Memory + Tasks unify the user's memory and durable
