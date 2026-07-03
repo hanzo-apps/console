@@ -7,6 +7,9 @@
  * SAME figure the Launch drawer quotes and charges (one pricing source). Nothing is
  * indicative or fabricated: an empty catalog renders an honest "catalog unavailable"
  * state, and a price the backend omits renders "—".
+ *
+ * INTERACTIVE (not a rate card): with `onLaunch`, tapping a row opens the shared launch
+ * drawer preselected on that accelerator — the price you see is the price you launch.
  */
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Cpu, Server, Tag } from '@hanzogui/lucide-icons-2'
@@ -15,7 +18,7 @@ import { fmtHourly, fmtMonthly, DASH, type VisorGpuSize } from '~/lib/api/visor'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { sortByHourly } from './customer-logic'
 
-export function CustomerPricingTab({ catalog }: { catalog: VisorGpuSize[] }) {
+export function CustomerPricingTab({ catalog, onLaunch }: { catalog: VisorGpuSize[]; onLaunch?: (c: VisorGpuSize) => void }) {
   const rows = sortByHourly(catalog.filter((c) => c.available))
 
   const columns: Column<VisorGpuSize>[] = [
@@ -59,14 +62,14 @@ export function CustomerPricingTab({ catalog }: { catalog: VisorGpuSize[] }) {
         </XStack>
         <Text fontSize="$3" color="$color11">
           On-demand accelerators, billed hourly to your Hanzo Cloud balance. Rates below are live from the
-          catalog; monthly is the 730-hour equivalent of the hourly rate. Launch any of them from the GPUs tab.
+          catalog; monthly is the 730-hour equivalent of the hourly rate.{onLaunch ? ' Tap any accelerator to launch it.' : ' Launch any of them from the GPUs tab.'}
         </Text>
       </Card>
 
       {rows.length ? (
         <YStack gap="$2">
-          <DataTable columns={columns} rows={rows} rowKey={(c) => c.slug} empty="No GPU sizes available." />
-          <Text fontSize="$1" color="$color10">Live per-accelerator hourly rate · visor catalog. No indicative numbers — every rate is the one you are charged.</Text>
+          <DataTable columns={columns} rows={rows} rowKey={(c) => c.slug} onRowPress={onLaunch} empty="No GPU sizes available." />
+          <Text fontSize="$1" color="$color10">Live per-accelerator hourly rate · visor catalog. No indicative numbers — every rate is the one you are charged{onLaunch ? ' — tap a row to launch it' : ''}.</Text>
         </YStack>
       ) : (
         <Card borderWidth={1} borderColor="$borderColor" borderStyle="dashed" p="$5" items="center" gap="$2">
