@@ -175,6 +175,26 @@ export function sameOriginOK(method: string, s: OriginSignals): boolean {
   return site === 'same-origin'
 }
 
+/**
+ * THE ONE CSRF refusal for a cookie-authenticated route — null when the request is
+ * same-origin (or a safe method), else a fail-closed 403. `forwardWithUserBearer`
+ * applies this inline; every HAND-ROLLED cookie-auth route that mutates (POST/PUT/
+ * PATCH/DELETE) must call it at its top too, so the ONE same-origin policy guards
+ * the WHOLE BFF — not just the bearer proxies. Reads only request HEADERS (never the
+ * body), so it composes safely before any `req.text()`/`req.json()`. `shape` picks the
+ * error envelope the route's client expects (default `plain`). Fail-closed by
+ * construction: on a mutating request with no trustworthy same-origin signal it 403s.
+ */
+export function csrfRefusal(req: NextRequest, shape: ErrorShape = 'plain'): NextResponse | null {
+  const ok = sameOriginOK(req.method, {
+    host: req.headers.get('host') ?? '',
+    origin: req.headers.get('origin'),
+    referer: req.headers.get('referer'),
+    secFetchSite: req.headers.get('sec-fetch-site'),
+  })
+  return ok ? null : NextResponse.json(errorBody(shape, 'Cross-origin request refused.', 'forbidden'), { status: 403 })
+}
+
 export function pathIsClean(path: string): boolean {
   if (!path) return false
   // Reject empty (`//`), `.`/`..` dot-segments, ANY surviving percent-escape (`%XX`),
@@ -217,17 +237,10 @@ export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyO
   // cross-site), so a MUTATING request must be same-origin (Sec-Fetch-Site not
   // cross-site AND Origin/Referer host == Host). Fail closed with a 403 BEFORE
   // resolving the user, so a cross-site POST can never create/delete/run anything on
-  // the victim's behalf. Safe methods pass.
-  if (
-    !sameOriginOK(req.method, {
-      host: req.headers.get('host') ?? '',
-      origin: req.headers.get('origin'),
-      referer: req.headers.get('referer'),
-      secFetchSite: req.headers.get('sec-fetch-site'),
-    })
-  ) {
-    return NextResponse.json(errorBody(shape, 'Cross-origin request refused.', 'forbidden'), { status: 403 })
-  }
+  // the victim's behalf. Safe methods pass. ONE guard (`csrfRefusal`) — the same one
+  // every hand-rolled cookie-auth route now calls.
+  const csrf = csrfRefusal(req, shape)
+  if (csrf) return csrf
 
   const user = await resolveUser(req)
   if (!user) {
