@@ -4,7 +4,7 @@
  * unit-testable. The board (`PaasApplications.tsx`) is a thin shell over these.
  */
 import { ApiError } from '~/lib/api/client'
-import type { PaasApp, PaasDeployment } from '~/lib/api/paas'
+import type { PaasApp, PaasDeployment, PaasDomain } from '~/lib/api/paas'
 
 /** The app's primary live URL — the first domain, made absolute (https). Null when none. */
 export function appUrl(app: Pick<PaasApp, 'domains'>): string | null {
@@ -49,6 +49,44 @@ export function buildStatusOf(d: PaasDeployment): string | null {
 export function deploymentLabel(d: PaasDeployment): string {
   if (typeof d.version === 'number') return `v${d.version}`
   return d.id ? d.id.slice(0, 8) : '—'
+}
+
+// ── domains ────────────────────────────────────────────────────────────────
+
+/** A pending custom domain is one awaiting DNS ownership verification. */
+export function isPendingCustom(d: Pick<PaasDomain, 'kind' | 'verified'>): boolean {
+  return d.kind === 'custom' && !d.verified
+}
+
+/** The default host is canonical and permanent — it can never be removed. */
+export function canRemoveDomain(d: Pick<PaasDomain, 'kind' | 'primary'>): boolean {
+  return d.kind !== 'default' && !d.primary
+}
+
+/** A human, honest per-domain status label (drives the pill text + tone). */
+export function domainStatusLabel(d: Pick<PaasDomain, 'status' | 'kind'>): string {
+  switch (d.status) {
+    case 'live':
+      return 'live'
+    case 'provisioning':
+      return 'provisioning'
+    case 'pending_deploy':
+      return 'awaiting deploy'
+    case 'pending':
+      return d.kind === 'custom' ? 'unverified' : 'pending'
+    default:
+      return d.status || 'unknown'
+  }
+}
+
+/**
+ * Order domains for display: the primary/default host first, then subtree hosts,
+ * then custom hosts, each group alphabetical. Pure + stable.
+ */
+export function orderDomains(domains: PaasDomain[]): PaasDomain[] {
+  const rank = (d: PaasDomain): number =>
+    d.primary || d.kind === 'default' ? 0 : d.kind === 'subtree' ? 1 : 2
+  return [...domains].sort((a, b) => rank(a) - rank(b) || a.host.localeCompare(b.host))
 }
 
 export type PaasErrorKind = 'signin' | 'forbidden' | 'unavailable' | 'error'
