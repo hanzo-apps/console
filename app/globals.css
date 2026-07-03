@@ -184,3 +184,25 @@ body {
     animation: none;
   }
 }
+
+/* ── Org custom accent ─────────────────────────────────────────────────────────
+   When an org enables a custom brand color (Settings → Branding), `applyAccent`
+   (src/lib/theme/accent.ts) sets `--hz-accent` + a readable `--hz-accent-contrast`
+   and flags `data-hz-accent="on"` on <html>. A fixed set of genuine accent surfaces
+   opt in via one of two classes and read that ONE variable — so the whole accent
+   recolors from a single override point and reverts cleanly when the attribute is
+   absent (the default monochrome console). `!important` beats Tamagui's dynamic
+   inline/atomic styles; the rules are inert until the attribute is present. */
+:root[data-hz-accent='on'] .hz-accent-fill {
+  background-color: var(--hz-accent) !important;
+  border-color: var(--hz-accent) !important;
+}
+:root[data-hz-accent='on'] .hz-accent-fill,
+:root[data-hz-accent='on'] .hz-accent-fill * {
+  color: var(--hz-accent-contrast) !important;
+}
+/* Active sidebar nav: an accent left-bar only — keeps the colored product glyph +
+   label legible (no forced background/child colors that would break them). */
+:root[data-hz-accent='on'] .hz-accent-bar {
+  box-shadow: inset 3px 0 0 0 var(--hz-accent) !important;
+}

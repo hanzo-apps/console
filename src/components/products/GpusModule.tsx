@@ -18,7 +18,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, XStack } from '@hanzo/gui'
+import { XStack } from '@hanzo/gui'
 import { Plus, Upload } from '@hanzogui/lucide-icons-2'
 
 import { PlatformApi, type Cluster } from '~/lib/api'
@@ -30,6 +30,7 @@ import { classifyBackend, type BackendState } from '~/components/ui/BackendState
 import { interpretPlatformError } from './platform/state'
 import { livingOverviewModule } from './overview/living/LivingOverviewModule'
 import { CustomerGpus } from './gpus/CustomerGpus'
+import { GpuTabBar, gpuTabId } from './gpus/tabs'
 import { HintButton } from './gpus/charts'
 import { OverviewTab } from './gpus/OverviewTab'
 import { GpusTab } from './gpus/GpusTab'
@@ -39,16 +40,6 @@ import { PricingTab } from './gpus/PricingTab'
 import { AlertsTab } from './gpus/AlertsTab'
 import { SettingsTab } from './gpus/SettingsTab'
 import type { Async, ComputeData } from './gpus/state'
-
-const TABS = [
-  { id: '', label: 'Overview', path: '/gpus' },
-  { id: 'gpus', label: 'GPUs', path: '/gpus/gpus' },
-  { id: 'clusters', label: 'Clusters', path: '/gpus/clusters' },
-  { id: 'pools', label: 'Pools', path: '/gpus/pools' },
-  { id: 'pricing', label: 'Pricing', path: '/gpus/pricing' },
-  { id: 'alerts', label: 'Alerts', path: '/gpus/alerts' },
-  { id: 'settings', label: 'Settings', path: '/gpus/settings' },
-] as const
 
 /** Load every real source once; tabs read the typed state and stay presentational. */
 function useComputeData(): ComputeData {
@@ -97,20 +88,20 @@ function useComputeData(): ComputeData {
  * rules-of-hooks hazard.
  */
 export function GpusModule(props: { params: Record<string, string> }) {
-  return useIsGlobalAdmin() ? <AdminGpus {...props} /> : <CustomerGpus />
+  return useIsGlobalAdmin() ? <AdminGpus {...props} /> : <CustomerGpus {...props} />
 }
 
 /** The GPUs Overview route (`/gpus`): the platform living overview for admins, the
- *  visor catalog for a customer. Kept here so the registry stays a plain data file. */
+ *  tabbed visor catalog for a customer. Kept here so the registry stays a plain data file. */
 const GpusLiving = livingOverviewModule('gpus')
 export function GpusOverview(props: { params: Record<string, string> }) {
-  return useIsGlobalAdmin() ? <GpusLiving {...props} /> : <CustomerGpus />
+  return useIsGlobalAdmin() ? <GpusLiving {...props} /> : <CustomerGpus {...props} />
 }
 
 function AdminGpus({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const data = useComputeData()
-  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+  const tab = gpuTabId(params.tab)
 
   // Navigate to a GPU subtab (bare id) or an absolute console path (leading '/').
   const onNav = useCallback(
@@ -138,20 +129,7 @@ function AdminGpus({ params }: { params: Record<string, string> }) {
         }
       />
 
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id || 'overview'}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(t.path)}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <GpuTabBar active={tab} />
 
       {tab === '' ? (
         <OverviewTab data={data} onNav={onNav} />
