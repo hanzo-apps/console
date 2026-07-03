@@ -1836,3 +1836,21 @@ living-overview metrics config (`overview/living/*`) + per-product metadata are 
   inference-surface framing); `next build` ✓ (all routes). Rebased on origin/main (v8.4.44)
   → **v8.4.45**. Live authenticated spot-check (Models/Inference/Functions/GPUs/Vector/
   Gateway/IAM/Commerce) is the post-deploy gate.
+
+## Base copy follow-up — last competitor name out of the assistant prompt (v8.4.46)
+
+A whole-repo sweep after v8.4.42 caught the ONE remaining user-facing competitor
+reference to Base: the built-in AI assistant's system prompt (`src/lib/assistant/
+prompt-content.ts`) described Base as "a **Firebase-style** backend" (introduced by
+the v8.4.43 grounded-assistant lane). Rewritten in Hanzo's own voice — "a realtime
+backend — spin up per-org Bases with content types, records, and auth" — so the
+assistant never names a competitor when describing Base. The console is now fully
+free of Supabase/Firebase user-facing copy (the systematic `gcp:` GCP-equivalence
+field remains, flagged separately as a cross-console migration/discovery feature).
+
+- Drive-by (restores main to green): `overview/living/open-edition.test.ts` (the #60
+  Open Edition lane) used the OLD vitest `vi.fn<[Args], Return>()` two-type-arg form,
+  which the pinned vitest v3.2.4 rejects — main's `tsc --noEmit` was RED. Migrated to
+  the v3 single-function-type form `vi.fn<(p?: UsageOverviewParams) => Promise<…>>()`.
+- Verification: `tsc --noEmit` clean; `vitest` **1163/1163** (96 files); `next build` ✓.
+  Rebased on origin/main (v8.4.45) → **v8.4.46**.
