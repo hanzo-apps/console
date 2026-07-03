@@ -44,10 +44,16 @@ function spec(it: Item): string {
 
 export function LaunchDrawer({
   kind,
+  initialSize,
+  initialRegion,
   onLaunched,
   onClose,
 }: {
   kind: 'cpu' | 'gpu'
+  /** Preselect a size slug (e.g. the row a customer tapped in the catalog). */
+  initialSize?: string
+  /** Preselect a region slug. */
+  initialRegion?: string
   onLaunched: (m: VisorMachine) => void
   onClose: () => void
 }) {
@@ -55,8 +61,8 @@ export function LaunchDrawer({
   const [regions, setRegions] = useState<VisorRegion[]>([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
-  const [sel, setSel] = useState<string>('') // selected size slug
-  const [region, setRegion] = useState<string>('')
+  const [sel, setSel] = useState<string>(initialSize ?? '') // selected size slug
+  const [region, setRegion] = useState<string>(initialRegion ?? '')
   const [name, setName] = useState('')
   const [phase, setPhase] = useState<'idle' | 'launching'>('idle')
   const [error, setError] = useState<{ msg: string; credits: boolean } | null>(null)
@@ -69,13 +75,13 @@ export function LaunchDrawer({
       setItems(cat)
       const regs = r.status === 'fulfilled' ? r.value.filter((x) => x.available) : []
       setRegions(regs)
-      setRegion((cur) => cur || regs[0]?.slug || '')
+      setRegion((cur) => cur || initialRegion || regs[0]?.slug || '')
       setLoading(false)
     })
     return () => {
       live = false
     }
-  }, [kind])
+  }, [kind, initialRegion])
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
