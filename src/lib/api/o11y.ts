@@ -13,7 +13,7 @@
  *
  * Tenancy: every call rides the shared `restGet` transport, whose `baseHeaders`
  * (lib/api/client.ts) stamp `X-Org-Id` (`currentOrg()`) on EVERY request and add
- * `X-Project-Id` ONLY when a project is selected. So these Langfuse-derived views
+ * `X-Project-Id` ONLY when a project is selected. So these Observe-derived views
  * are ORGANISATION-WIDE by default — no project is required on login — and narrow
  * to a project the moment one is picked in the scope switcher. The backend scopes
  * on the org either way: where a gateway re-injects `X-Org-Id` from the validated
@@ -57,7 +57,7 @@ export type Trace = {
   latency?: number | null
   /** Total cost in USD. */
   totalCost?: number | null
-  /** Total tokens across the trace's observations (Langfuse "Usage" column). */
+  /** Total tokens across the trace's observations (the "Usage" column). */
   totalTokens?: number | null
   /** Observation ids on the trace (the detail endpoint returns full objects). */
   observations?: string[] | null
