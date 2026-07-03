@@ -67,7 +67,7 @@ function guiPackages() {
  * NOT rewritten here: they keep their own gated proxies with their own tenant
  * scoping, and are reached by the client's explicit `/admin/*` origin path.
  */
-const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'crm', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'authz', 'o11y']
+const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'crm', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y']
 const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio']
 const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute']
 /**

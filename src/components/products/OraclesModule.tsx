@@ -4,23 +4,21 @@
  * Oracles — price and data oracles feeding on-chain contracts (push/pull feeds,
  * aggregated values, source provenance) tracked by the platform.
  *
- * Reads the oracle registry from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/oracles`), which injects the service token server-side. When the
- * oracle service isn't provisioned for the org the list load fails and the
- * honest not-configured / unavailable card renders instead of an empty grid —
- * matching every other infra module.
+ * Reads the oracle registry from the cloud API via the same-origin `/cloud`
+ * user-bearer proxy (`GET /v1/oracles`), which mints + forwards the caller's IAM
+ * bearer server-side. When the oracle feed source isn't reachable the list load
+ * fails and the honest not-configured / unavailable card renders instead of an empty
+ * grid — matching every other infra module.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { restGet, cloudProxyV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
-
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
 
 type Oracle = {
   id: string
@@ -40,7 +38,7 @@ export function OraclesModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ oracles?: Oracle[] }>(paas('oracles'))
+      const r = await restGet<{ oracles?: Oracle[] }>(cloudProxyV1Url('oracles'))
       setRows(r.oracles ?? [])
       setLoadError(null)
     } catch (e) {
