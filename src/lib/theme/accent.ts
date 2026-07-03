@@ -1,25 +1,32 @@
+'use client'
+
 /**
  * Org accent theme — the ONE place that turns an organization's saved brand color
  * (`themeData.colorPrimary`, when `themeData.isEnabled`) into the LIVE console accent.
  *
  * The console is monochrome by default; an org opts into a custom accent in Settings →
  * Branding. Saving persists the color on the org record (that half already works). This
- * module is the missing APPLY half: `applyAccent` writes the resolved color to a single
- * root CSS custom property (`--hz-accent` + a readable `--hz-accent-contrast`) and flags
- * `data-hz-accent="on"` on `<html>`. A small, fixed set of genuine accent surfaces
- * (the primary button, the active nav item, the GPU tab bar) read that ONE variable —
- * so the whole accent recolors from a single override point, DRY, and reverts cleanly
- * when the org disables its theme (or the hex is invalid).
+ * module is the missing APPLY half: a tiny external store holds the resolved accent
+ * (hex + a readable contrast, or null); `setOrgAccent` updates it on load AND on save
+ * (one mechanism, two callers), and `useAccent()` lets the genuine accent surfaces (the
+ * primary button, the active tabs, the active nav item) read it and recolor with real
+ * `@hanzo/gui` props — reverting cleanly to the default monochrome when the org disables
+ * its theme (or the hex is invalid). React-prop driven (Tamagui's own styling path), NOT
+ * a CSS class — Tamagui does not forward `className` to a Button's DOM node.
  *
- * Pure + SSR-safe: the resolve/contrast helpers are pure (unit-tested); `applyAccent`
- * no-ops when there is no `document` (server render).
+ * Pure + SSR-safe: the resolve/contrast helpers are pure (unit-tested); the store starts
+ * from a stable default snapshot so the server render and first client paint agree.
  */
+import { useSyncExternalStore } from 'react'
 
 /** An org's persisted theme block (mirrors IAM `themeData`; only the fields we apply). */
 export type OrgThemeData = {
   colorPrimary?: string
   isEnabled?: boolean
 }
+
+/** The live accent — a resolved hex + a readable text color for content on it, or null. */
+export type Accent = { accent: string | null; contrast: string }
 
 /** True for a 3- or 6-digit CSS hex color (`#RGB` / `#RRGGBB`). */
 export function isHexColor(v: string | undefined | null): boolean {
@@ -59,31 +66,44 @@ export function contrastText(hex: string): '#000000' | '#ffffff' {
   return luminance > 0.5 ? '#000000' : '#ffffff'
 }
 
-/** The root CSS custom properties + attribute the accent surfaces read. */
-const VAR_ACCENT = '--hz-accent'
-const VAR_CONTRAST = '--hz-accent-contrast'
-const ATTR = 'data-hz-accent'
+/** Resolve a theme block to the `Accent` value it should apply (accent+contrast or null). PURE. */
+export function accentFor(theme: OrgThemeData | null | undefined): Accent {
+  const hex = resolveAccent(theme)
+  return { accent: hex, contrast: hex ? contrastText(hex) : '#ffffff' }
+}
+
+// ── The live accent store (an external store React subscribes to) ─────────────
+
+/** The default (no custom accent) — a STABLE reference so SSR + first paint agree. */
+const DEFAULT: Accent = { accent: null, contrast: '#ffffff' }
+
+let current: Accent = DEFAULT
+const listeners = new Set<() => void>()
 
 /**
- * Apply (or clear) the org accent on the document root. `hex` = a valid accent color to
- * turn the accent ON; `null` = revert to the default monochrome accent. SSR-safe (no-op
- * without a `document`). This is the SINGLE override point the whole console reads.
+ * Set the live accent from an org theme block. Called on load (from the fetched org) AND
+ * immediately on save — the SINGLE mechanism, so the accent survives reload and updates
+ * without one. A no-op when the resolved accent is unchanged (keeps the snapshot stable).
  */
-export function applyAccent(hex: string | null): void {
-  if (typeof document === 'undefined') return
-  const root = document.documentElement
-  if (hex && isHexColor(hex)) {
-    root.style.setProperty(VAR_ACCENT, hex.trim())
-    root.style.setProperty(VAR_CONTRAST, contrastText(hex))
-    root.setAttribute(ATTR, 'on')
-  } else {
-    root.style.removeProperty(VAR_ACCENT)
-    root.style.removeProperty(VAR_CONTRAST)
-    root.removeAttribute(ATTR)
+export function setOrgAccent(theme: OrgThemeData | null | undefined): void {
+  const next = accentFor(theme)
+  if (next.accent === current.accent) return
+  current = next.accent ? next : DEFAULT
+  for (const l of listeners) l()
+}
+
+function subscribe(cb: () => void): () => void {
+  listeners.add(cb)
+  return () => {
+    listeners.delete(cb)
   }
 }
 
-/** Resolve an org theme block and apply it in one call (used on load AND on save). */
-export function applyOrgAccent(theme: OrgThemeData | null | undefined): void {
-  applyAccent(resolveAccent(theme))
+/** The live accent (subscribes to the store). Returns the default until an org theme is applied. */
+export function useAccent(): Accent {
+  return useSyncExternalStore(
+    subscribe,
+    () => current,
+    () => DEFAULT,
+  )
 }

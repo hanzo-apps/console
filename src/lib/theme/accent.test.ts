@@ -1,13 +1,25 @@
 import { describe, it, expect } from 'vitest'
 
-import { isHexColor, resolveAccent, contrastText } from './accent'
+import { isHexColor, resolveAccent, contrastText, accentFor } from './accent'
 
 /**
  * The apply half of the org-theme fix: resolve the REAL persisted color to an accent
  * (or null when the theme is off / invalid — honest, no fabricated accent), and pick a
- * readable text color for content on that accent. Pure; the DOM `applyAccent` is
- * exercised live.
+ * readable text color for content on that accent. Pure; the live `useAccent` store +
+ * the recolored surfaces are exercised in the browser.
  */
+
+describe('accentFor — the Accent value a theme block should apply', () => {
+  it('resolves an enabled valid color to {accent, contrast}', () => {
+    expect(accentFor({ colorPrimary: '#5E6AD2', isEnabled: true })).toEqual({ accent: '#5E6AD2', contrast: '#ffffff' })
+    expect(accentFor({ colorPrimary: '#f5d90a', isEnabled: true })).toEqual({ accent: '#f5d90a', contrast: '#000000' })
+  })
+  it('is the honest default (no accent) when disabled / invalid / missing', () => {
+    expect(accentFor({ colorPrimary: '#5E6AD2', isEnabled: false })).toEqual({ accent: null, contrast: '#ffffff' })
+    expect(accentFor({ colorPrimary: 'nope', isEnabled: true })).toEqual({ accent: null, contrast: '#ffffff' })
+    expect(accentFor(null)).toEqual({ accent: null, contrast: '#ffffff' })
+  })
+})
 
 describe('isHexColor', () => {
   it('accepts 3- and 6-digit hex (case-insensitive, trims)', () => {
