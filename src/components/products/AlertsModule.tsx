@@ -17,7 +17,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet, cloudProxyV1Url } from '~/lib/api/client'
+import { restGet, originV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
@@ -74,7 +74,7 @@ export function AlertsModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<O11yRulesResponse>(cloudProxyV1Url('o11y/v1/rules'))
+      const r = await restGet<O11yRulesResponse>(originV1Url('o11y/v1/rules'))
       setRows((r?.data?.rules ?? []).map(toAlert))
       setLoadError(null)
     } catch (e) {
