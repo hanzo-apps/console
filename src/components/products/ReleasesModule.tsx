@@ -3,22 +3,21 @@
 /**
  * Releases — versioned deploys recorded per environment.
  *
- * Reads the release history from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/releases`), which injects the service token server-side. When the
- * releases service isn't provisioned the load fails and the honest
- * not-configured / unavailable card renders instead of an empty grid.
+ * Reads the release history from the unified cloud binary via the same-origin
+ * user-bearer `/cloud` proxy (`GET /v1/releases`), org resolved from the Bearer
+ * owner. This is a derived, read-only aggregate; when the backend doesn't serve it
+ * the load fails and the honest not-configured / unavailable card renders instead of
+ * an empty grid.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { restGet, cloudProxyV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
-
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
 
 type Release = {
   id: string
@@ -37,7 +36,7 @@ export function ReleasesModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ releases?: Release[] }>(paas('releases'))
+      const r = await restGet<{ releases?: Release[] }>(cloudProxyV1Url('releases'))
       setRows(r.releases ?? [])
       setLoadError(null)
     } catch (e) {

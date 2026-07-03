@@ -1,24 +1,28 @@
 /**
- * Platform API — the Hanzo PaaS control plane (platform.hanzo.ai).
+ * Platform API — Hanzo cluster inventory + PaaS control plane.
  *
- * ONE transport: every call goes through console2's own same-origin `/paas/*`
- * proxy (app/paas/[...path]/route.ts), which injects the service token from
- * server-only env (sourced via KMS) and forwards to `platform.hanzo.ai/v1/*`. So
- * the token never reaches the browser, there is no CORS, and when the token is
- * unset the proxy returns an honest 501 the UI renders as "not configured" — it
- * never fabricates data.
+ * TWO transports, cleanly split by authority:
+ *   - Cluster INVENTORY + node-pool lifecycle (list / get / add-pool / scale-pool /
+ *     delete-pool) go through the unified cloud binary at `/v1/clusters*`, via the
+ *     same-origin user-bearer `/cloud` proxy (app/cloud/[...path]/route.ts → cloud-api,
+ *     org resolved from the Bearer owner). This is the native, per-org surface every
+ *     cluster consumer reads — one source of truth.
+ *   - The apps inventory and cluster PROVISIONING (spin up a whole new DOKS cluster)
+ *     stay on the `/paas` control plane (app/paas/[...path]/route.ts), which injects the
+ *     platform SERVICE token from server-only env (KMS) and is brand-admin gated — the
+ *     right authority for a god-mode, multi-tenant operation. When the token is unset the
+ *     proxy returns an honest 501 the UI renders as "not configured"; nothing is fabricated.
  *
- * Two REAL surfaces the platform serves (verified against the live control
- * plane, both service-token gated):
- *   - GET /v1/apps                 → the apps inventory: every (org, app, env)
- *     with declared/running/latest tag, drift, health, cluster, namespace. This
- *     is the canonical "what is running" board (docs/APPS_LIFECYCLE.md). It is
- *     the single source the Status and Kubernetes (workloads) modules read.
- *   - GET|POST /v1/org/{org}/cluster → the org's DEDICATED Hanzo K8S (DOKS)
- *     clusters: list, and provision a new one. Honest empty when the org has no
- *     dedicated cluster (the shared Hanzo Cloud is the default target, not a row).
+ * REAL surfaces:
+ *   - GET /v1/apps                 → the apps inventory (Status + Kubernetes modules).
+ *   - GET /v1/clusters[/:id]       → the org's DEDICATED Hanzo K8S (DOKS) clusters, with
+ *     their node pools. Honest empty when the org has none (shared Hanzo Cloud is default).
+ *   - POST   /v1/clusters/:cid/pools            → add a node pool.
+ *   - POST   /v1/clusters/:cid/pools/:pid/scale → scale a pool's node count.
+ *   - DELETE /v1/clusters/:cid/pools/:pid       → remove a node pool.
+ *   - POST /v1/org/{org}/cluster   → provision a fresh dedicated cluster (`/paas`).
  */
-import { restGet, restPost } from './client'
+import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
 
 /** Where a cluster lives: shared multi-tenant Hanzo Cloud, or a BYO/managed DOKS. */
 export type ClusterKind = 'shared' | 'byo' | (string & {})
@@ -89,6 +93,18 @@ export type ProvisionClusterInput = {
   ha?: boolean
 }
 
+/** Add a node pool to an existing cluster (`POST /v1/clusters/:cid/pools`). */
+export type AddPoolInput = {
+  /** DigitalOcean size slug (e.g. `s-4vcpu-8gb`, `gpu-h100x1-80gb`). */
+  size: string
+  /** Number of nodes in the new pool. */
+  count: number
+  name?: string
+  minNodes?: number
+  maxNodes?: number
+  autoScale?: boolean
+}
+
 /** Health of an app/workload as the inventory reports it. */
 export type AppHealth = 'green' | 'yellow' | 'red' | (string & {})
 
@@ -142,33 +158,55 @@ const qs = (q: AppsQuery): string => {
   return s ? `?${s}` : ''
 }
 
+/** Pull a `Cluster[]` from `{clusters:[…]}`, `{data:[…]}`, or a bare array (defensive). */
+const clustersOf = (payload: unknown): Cluster[] => {
+  if (Array.isArray(payload)) return payload as Cluster[]
+  if (payload && typeof payload === 'object') {
+    const o = payload as Record<string, unknown>
+    if (Array.isArray(o.clusters)) return o.clusters as Cluster[]
+    if (Array.isArray(o.data)) return o.data as Cluster[]
+  }
+  return []
+}
+
+/** Same-origin native-cloud path for the clusters surface (`/cloud/v1/clusters…`). */
+const clustersUrl = (path = ''): string => cloudProxyV1Url(`clusters${path}`)
+
 export const PlatformApi = {
-  /** The apps inventory — the real "what is running" board across all clusters. */
+  /** The apps inventory — the real "what is running" board across all clusters (`/paas`). */
   apps: async (query: AppsQuery = {}): Promise<PlatformApp[]> => {
     const r = await restGet<{ apps?: PlatformApp[] }>(url(`apps${qs(query)}`))
     return r?.apps ?? []
   },
 
   /**
-   * The org's dedicated DOKS clusters (honest empty when none provisioned).
-   * Each cluster carries its `nodePools` (size + count) — the real source of the
-   * org's compute MACHINES (the Machines page projects nodes from these pools;
-   * there is no separate `/v1/machines` route on the control plane).
+   * The signed-in org's dedicated DOKS clusters (`GET /v1/clusters`, org-scoped by the
+   * Bearer owner; honest empty when none provisioned). Each cluster carries its
+   * `nodePools` (size + count) — the real source of the org's compute MACHINES (the
+   * Machines page projects nodes from these pools).
    */
-  listClusters: async (org: string): Promise<Cluster[]> => {
-    const r = await restGet<{ clusters?: Cluster[] }>(url(`org/${enc(org)}/cluster`))
-    return r?.clusters ?? []
-  },
+  listClusters: async (): Promise<Cluster[]> => clustersOf(await restGet<unknown>(clustersUrl())),
 
   /** One cluster by id (with node pools; kubeconfig redacted). Null when absent. */
-  getCluster: async (org: string, clusterId: string): Promise<Cluster | null> => {
-    const r = await restGet<{ cluster?: Cluster }>(
-      url(`org/${enc(org)}/cluster/${enc(clusterId)}`),
-    )
-    return r?.cluster ?? null
+  getCluster: async (clusterId: string): Promise<Cluster | null> => {
+    const r = await restGet<{ cluster?: Cluster } | Cluster>(clustersUrl(`/${enc(clusterId)}`))
+    if (r && typeof r === 'object' && 'cluster' in r) return (r as { cluster?: Cluster }).cluster ?? null
+    return (r as Cluster) ?? null
   },
 
-  /** Provision a fresh dedicated DOKS cluster for the org. */
+  /** Add a node pool to a cluster (`POST /v1/clusters/:cid/pools`). */
+  addPool: (clusterId: string, input: AddPoolInput): Promise<void> =>
+    restPost<unknown>(clustersUrl(`/${enc(clusterId)}/pools`), input).then(() => undefined),
+
+  /** Scale a node pool's count (`POST /v1/clusters/:cid/pools/:pid/scale`). */
+  scalePool: (clusterId: string, poolId: string, count: number): Promise<void> =>
+    restPost<unknown>(clustersUrl(`/${enc(clusterId)}/pools/${enc(poolId)}/scale`), { count }).then(() => undefined),
+
+  /** Remove a node pool (`DELETE /v1/clusters/:cid/pools/:pid`). */
+  deletePool: (clusterId: string, poolId: string): Promise<void> =>
+    restDelete(clustersUrl(`/${enc(clusterId)}/pools/${enc(poolId)}`)),
+
+  /** Provision a fresh dedicated DOKS cluster for the org (`/paas` control plane). */
   provisionCluster: async (org: string, input: ProvisionClusterInput): Promise<Cluster> => {
     const r = await restPost<{ cluster: Cluster }>(url(`org/${enc(org)}/cluster`), input)
     return r.cluster
