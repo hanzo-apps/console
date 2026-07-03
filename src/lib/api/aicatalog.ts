@@ -47,7 +47,12 @@ export type RichModel = {
 }
 
 type PricingCatalog = { models?: RichModel[]; total?: number; updated?: string }
-type LiveModels = { data?: Array<{ id: string }> }
+/** The live routing set — the SAME rich shape as the catalog, each entry servable now. */
+type LiveModels = { data?: RichModel[] }
+
+/** The live routing/availability key for a model: id (third-party) else name (Zen). */
+const liveKey = (m: { id?: string | null; name?: string }): string =>
+  (m.id ?? m.name ?? '').trim().toLowerCase()
 
 /** A catalog model joined with its live-availability flag. */
 export type CatalogEntry = RichModel & { available: boolean }
@@ -105,13 +110,26 @@ export async function fetchCatalog(): Promise<CatalogEntry[]> {
     restGet<PricingCatalog>(aiV1Url('pricing/models')),
     restGet<LiveModels>(aiV1Url('models')).catch(() => ({ data: [] }) as LiveModels),
   ])
-  const liveSet = new Set((live.data ?? []).map((m) => m.id.toLowerCase()))
-  return (cat.models ?? []).map((m) => ({
+  const liveArr = live.data ?? []
+  const liveSet = new Set(liveArr.map(liveKey).filter(Boolean))
+  const catModels = cat.models ?? []
+  const catKeys = new Set(catModels.map((m) => modelId(m).toLowerCase()))
+  const entries: CatalogEntry[] = catModels.map((m) => ({
     ...m,
     // Cross-reference by the stable id (third-party) AND the display name (Zen),
     // so both record shapes resolve their live-availability correctly.
     available: liveSet.has(modelId(m).toLowerCase()) || liveSet.has((m.name ?? '').toLowerCase()),
   }))
+  // Merge live-only models the pricing bundle doesn't carry — notably the CURRENT
+  // Zen set (zen5-flash/coder/nano-*) the older bundle omits. They are servable now,
+  // so they list as Available under their family. Deduped by both id and name.
+  for (const lm of liveArr) {
+    const key = liveKey(lm)
+    const nameKey = (lm.name ?? '').trim().toLowerCase()
+    if (!key || catKeys.has(key) || (nameKey && catKeys.has(nameKey))) continue
+    entries.push({ ...lm, available: true })
+  }
+  return entries
 }
 
 /** Group a catalog into provider cards, sorted by model count (desc). */
