@@ -1,21 +1,24 @@
 'use client'
 
 /**
- * Model Catalog — the real, rich model catalog on @hanzo/gui.
+ * Model Catalog — the unified, family-grouped model browser, identical in grouping
+ * to hanzo.chat's picker: the house-brand **Zen** first, then the third-party
+ * families the same api.hanzo.ai gateway serves (Qwen · Meta Llama · DeepSeek ·
+ * Mistral · Google Gemma · OpenAI GPT-OSS). ONE console home for choosing a model,
+ * the same set of families a user sees in chat.
  *
- * Source: the unified `/v1/pricing/models` catalog via `aicatalog.fetchCatalog`
- * (through the `/ai` proxy, so the user bearer is attached). Every column is a
- * REAL field — provider logo + name + params (specs), modality (derived from the
- * id), context (joined across the `context`/`contextWindow` shapes), per-Mtok
- * input/output pricing, the TRUE provider (qwen→Qwen, glm→Zhipu, our own → "Zen"),
- * and a live Available status (servable now) vs catalog-only. Search + filter by
- * type/provider/pricing are client-side over the loaded catalog. Honest
- * loading/error/empty; nothing fabricated.
+ * Source: the live catalog via `aicatalog.fetchCatalog` (the rich
+ * `/v1/pricing/models` joined with `/v1/models` for availability, through the
+ * authenticated `/ai` proxy). `groupByFamily` (pure, unit-tested) buckets it into
+ * the curated families — current-gen chat models only (no sunset zen4/qwen2, no
+ * embeddings/tts/asr/image/guard), empty families dropped. Every value shown is a
+ * REAL catalog field: context, per-Mtok pricing, live availability. Click a model
+ * for full specs/pricing/features. Honest loading/error/empty; nothing fabricated.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, ArrowLeft, Play, Settings2, Copy, Search, SlidersHorizontal, X, Boxes } from '@hanzogui/lucide-icons-2'
+import { RefreshCw, ArrowLeft, Play, Settings2, Copy, Search, X, Boxes, ChevronDown, ChevronRight } from '@hanzogui/lucide-icons-2'
 
 import {
   fetchCatalog,
@@ -23,116 +26,37 @@ import {
   plansForTier,
   displayProvider,
   modelType,
-  modelTypes,
   modelContext,
   modelDisplayName,
-  matchesQuery,
-  priceBucket,
-  PRICE_BUCKETS,
+  modelId,
   fmtPrice,
   fmtContext,
   type CatalogEntry,
   type Plan,
-  type PriceBucket,
 } from '~/lib/api/aicatalog'
+import {
+  groupByFamily,
+  filterFamilies,
+  totalModels,
+  DEFAULT_MODEL,
+  type FamilyGroup,
+} from '~/lib/api/families'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import type { ApiError } from '~/lib/api'
 
-const Pill = ({ label, tone = 'muted' }: { label: string; tone?: 'muted' | 'live' }) => (
+const Pill = ({ label, tone = 'muted' }: { label: string; tone?: 'muted' | 'live' | 'brand' }) => (
   <Text
     fontSize="$1"
     px="$2"
     py="$1"
     rounded="$2"
-    bg={tone === 'live' ? '$green3' : '$color3'}
-    color={tone === 'live' ? '$green11' : '$color11'}
+    bg={tone === 'live' ? '$green3' : tone === 'brand' ? '$color12' : '$color3'}
+    color={tone === 'live' ? '$green11' : tone === 'brand' ? '$color1' : '$color11'}
   >
     {label}
   </Text>
-)
-
-const columns: Column<CatalogEntry>[] = [
-  {
-    key: 'name',
-    header: 'Model',
-    render: (m) => (
-      <XStack items="center" gap="$2.5" flex={1}>
-        <ProviderLogo provider={m.provider ?? 'Other'} size={26} />
-        <YStack gap={1} flex={1}>
-          <XStack items="center" gap="$2">
-            <Text fontSize="$3" color="$color12" numberOfLines={1}>
-              {modelDisplayName(m)}
-            </Text>
-            {m.specs?.params ? (
-              <Text fontSize="$1" color="$color10">
-                {m.specs.params}
-              </Text>
-            ) : null}
-          </XStack>
-          {m.description ? (
-            <Text fontSize="$1" color="$color10" numberOfLines={1}>
-              {m.description}
-            </Text>
-          ) : null}
-        </YStack>
-      </XStack>
-    ),
-  },
-  {
-    key: 'type',
-    header: 'Type',
-    width: 100,
-    render: (m) => <Pill label={modelType(m)} />,
-  },
-  {
-    key: 'context',
-    header: 'Context',
-    width: 90,
-    render: (m) => <Text fontSize="$3" color="$color11">{fmtContext(modelContext(m))}</Text>,
-  },
-  {
-    key: 'pricing',
-    header: 'Price $/M',
-    width: 104,
-    render: (m) => (
-      <YStack gap={1}>
-        <Text fontSize="$3" color="$color12">{fmtPrice(m.pricing?.input)}</Text>
-        <Text fontSize="$1" color="$color10">{fmtPrice(m.pricing?.output)} out</Text>
-      </YStack>
-    ),
-  },
-  {
-    key: 'provider',
-    header: 'Provider',
-    width: 150,
-    render: (m) => (
-      <XStack items="center" gap="$2">
-        <ProviderLogo provider={m.provider ?? 'Other'} size={20} />
-        <Text fontSize="$3" color="$color11" numberOfLines={1}>{displayProvider(m.provider)}</Text>
-      </XStack>
-    ),
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    width: 116,
-    render: (m) =>
-      m.available ? <Pill label="● Available" tone="live" /> : <Pill label="Catalog" />,
-  },
-]
-
-const Stat = ({ label, value }: { label: string; value: string }) => (
-  <YStack flex={1} gap={2} px="$3" py="$2.5">
-    <Text fontSize="$6" fontWeight="700" color="$color12">
-      {value}
-    </Text>
-    <Text fontSize="$1" color="$color10">
-      {label}
-    </Text>
-  </YStack>
 )
 
 /** A labelled fact cell for the detail grid. */
@@ -169,7 +93,7 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
   const router = useRouter()
   const tierPlans = plansForTier(m.tier, plans)
   const copyId = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) void navigator.clipboard.writeText(m.id ?? m.name)
+    if (typeof navigator !== 'undefined' && navigator.clipboard) void navigator.clipboard.writeText(modelId(m))
   }
   return (
     <YStack gap="$4">
@@ -207,7 +131,7 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
         <Button
           size="$3"
           icon={<Settings2 size={15} />}
-          onPress={() => router.push(`/models/routing/${encodeURIComponent(m.id ?? m.name)}`)}
+          onPress={() => router.push(`/models/routing/${encodeURIComponent(modelId(m))}`)}
         >
           Configure routing
         </Button>
@@ -267,50 +191,120 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
   )
 }
 
-/** A labelled row of selectable pills (one active at a time, or none). */
-function FilterPills<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string
-  options: { key: T; label: string }[]
-  value: T | null
-  onChange: (v: T | null) => void
-}) {
-  if (options.length === 0) return null
+/** One model row inside a family section — click for the full detail. */
+function ModelRow({ m, onOpen }: { m: CatalogEntry; onOpen: () => void }) {
+  const isDefault = modelId(m).toLowerCase() === DEFAULT_MODEL
   return (
-    <YStack gap="$1.5">
-      <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
-        {label}
+    <XStack
+      items="center"
+      gap="$2.5"
+      px="$3"
+      py="$2.5"
+      rounded="$3"
+      cursor="pointer"
+      hoverStyle={{ bg: '$color3' }}
+      onPress={onOpen}
+    >
+      <ProviderLogo provider={m.provider ?? 'Zen'} size={26} />
+      <YStack flex={1} minW={0} gap={1}>
+        <XStack items="center" gap="$2" flexWrap="wrap">
+          <Text fontSize="$3" color="$color12" numberOfLines={1}>
+            {modelDisplayName(m)}
+          </Text>
+          {isDefault ? <Pill label="Default" tone="brand" /> : null}
+          {m.specs?.params ? (
+            <Text fontSize="$1" color="$color10">
+              {m.specs.params}
+            </Text>
+          ) : null}
+        </XStack>
+        {m.description ? (
+          <Text fontSize="$1" color="$color10" numberOfLines={1}>
+            {m.description}
+          </Text>
+        ) : null}
+      </YStack>
+      <Text fontSize="$2" color="$color11" width={72} text="right">
+        {fmtContext(modelContext(m))}
       </Text>
-      <XStack gap="$1" flexWrap="wrap">
-        <Button
-          size="$2"
-          bg={value === null ? '$color5' : 'transparent'}
-          borderWidth={1}
-          borderColor="$borderColor"
-          onPress={() => onChange(null)}
-        >
-          All
-        </Button>
-        {options.map((o) => (
-          <Button
-            key={o.key}
-            size="$2"
-            bg={value === o.key ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => onChange(o.key)}
-          >
-            {o.label}
-          </Button>
-        ))}
+      <Text fontSize="$2" color="$color12" width={80} text="right">
+        {fmtPrice(m.pricing?.input)}/M
+      </Text>
+      <XStack width={96} justify="flex-end">
+        {m.available ? <Pill label="● Live" tone="live" /> : <Pill label="Catalog" />}
       </XStack>
+    </XStack>
+  )
+}
+
+const PER_FAMILY_CAP = 8
+
+/** One collapsible family section — header + nested model rows. */
+function FamilySection({
+  group,
+  onOpen,
+}: {
+  group: FamilyGroup
+  onOpen: (m: CatalogEntry) => void
+}) {
+  const [open, setOpen] = useState(true)
+  const [showAll, setShowAll] = useState(false)
+  const rows = showAll ? group.models : group.models.slice(0, PER_FAMILY_CAP)
+  const hidden = group.models.length - rows.length
+  return (
+    <YStack rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color1" overflow="hidden">
+      <XStack
+        items="center"
+        gap="$3"
+        px="$3.5"
+        py="$3"
+        cursor="pointer"
+        hoverStyle={{ bg: '$color2' }}
+        onPress={() => setOpen((v) => !v)}
+      >
+        <ProviderLogo provider={group.logo} size={30} />
+        <YStack flex={1} minW={0} gap={1}>
+          <Text fontSize="$5" fontWeight="800" color="$color12" numberOfLines={1}>
+            {group.label}
+          </Text>
+          <Text fontSize="$1" color="$color10">
+            {group.models.length} model{group.models.length === 1 ? '' : 's'}
+            {group.available > 0 ? ` · ${group.available} live` : ''}
+          </Text>
+        </YStack>
+        {open ? <ChevronDown size={18} color="$color10" /> : <ChevronRight size={18} color="$color10" />}
+      </XStack>
+
+      {open ? (
+        <YStack px="$1.5" pb="$2" borderTopWidth={1} borderColor="$borderColor">
+          {rows.map((mo) => (
+            <ModelRow key={modelId(mo)} m={mo} onOpen={() => onOpen(mo)} />
+          ))}
+          {hidden > 0 ? (
+            <Button size="$2" chromeless self="flex-start" mt="$1" ml="$2" onPress={() => setShowAll(true)}>
+              Show {hidden} more
+            </Button>
+          ) : showAll && group.models.length > PER_FAMILY_CAP ? (
+            <Button size="$2" chromeless self="flex-start" mt="$1" ml="$2" onPress={() => setShowAll(false)}>
+              Show less
+            </Button>
+          ) : null}
+        </YStack>
+      ) : null}
     </YStack>
   )
 }
+
+const Stat = ({ label, value }: { label: string; value: string }) => (
+  <YStack flex={1} gap={2} px="$3" py="$2.5" minW={120}>
+    <Text fontSize="$6" fontWeight="700" color="$color12">
+      {value}
+    </Text>
+    <Text fontSize="$1" color="$color10">
+      {label}
+    </Text>
+  </YStack>
+)
 
 type LoadState =
   | { phase: 'loading' }
@@ -322,13 +316,7 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const [plans, setPlans] = useState<Plan[]>([])
   const [selected, setSelected] = useState<CatalogEntry | null>(null)
-
-  // Filters (client-side over the loaded catalog).
   const [query, setQuery] = useState('')
-  const [provider, setProvider] = useState<string | null>(null)
-  const [type, setType] = useState<string | null>(null)
-  const [price, setPrice] = useState<PriceBucket | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
 
   const run = useCallback(() => {
     setState({ phase: 'loading' })
@@ -344,49 +332,14 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
   }, [run])
 
   const models = state.phase === 'ready' ? state.models : []
-
-  // Filter options derived from the loaded catalog.
-  const providers = useMemo(() => {
-    const set = new Set<string>()
-    for (const m of models) set.add(displayProvider(m.provider))
-    return Array.from(set)
-      .sort((a, b) => (a === 'Zen' ? -1 : b === 'Zen' ? 1 : a.localeCompare(b)))
-      .map((p) => ({ key: p, label: p }))
-  }, [models])
-
-  const types = useMemo(() => modelTypes(models).map((t) => ({ key: t, label: t })), [models])
-
-  const rows = useMemo(
-    () =>
-      models.filter(
-        (m) =>
-          matchesQuery(m, query) &&
-          (provider ? displayProvider(m.provider) === provider : true) &&
-          (type ? modelType(m) === type : true) &&
-          (price ? priceBucket(m) === price : true),
-      ),
-    [models, query, provider, type, price],
-  )
-
-  const activeFilters = (provider ? 1 : 0) + (type ? 1 : 0) + (price ? 1 : 0)
-  const clearAll = () => {
-    setProvider(null)
-    setType(null)
-    setPrice(null)
-  }
+  const groups = useMemo(() => groupByFamily(models), [models])
+  const visible = useMemo(() => filterFamilies(groups, query), [groups, query])
 
   const stats = useMemo(() => {
-    const ctxs = rows.map((m) => modelContext(m)).filter((x): x is number => typeof x === 'number')
-    const ins = rows.map((m) => m.pricing?.input).filter((x): x is number => typeof x === 'number')
-    const provCount = new Set(rows.map((m) => displayProvider(m.provider))).size
-    const avgIn = ins.length ? ins.reduce((a, b) => a + b, 0) / ins.length : null
-    return {
-      total: String(rows.length),
-      ctx: ctxs.length ? `${fmtContext(Math.min(...ctxs))} – ${fmtContext(Math.max(...ctxs))}` : '—',
-      avg: avgIn != null ? `$${avgIn.toFixed(2)}` : '—',
-      providers: String(provCount),
-    }
-  }, [rows])
+    const shown = totalModels(visible)
+    const live = visible.reduce((n, g) => n + g.available, 0)
+    return { families: String(visible.length), total: String(shown), live: String(live) }
+  }, [visible])
 
   // Click-through detail — full specs/pricing/features + config actions.
   if (selected) {
@@ -396,8 +349,8 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
   return (
     <>
       <PageHeader
-        title="Model Catalog"
-        subtitle="Explore and deploy the best open AI models. All models are routeable and usage-based."
+        title="Models"
+        subtitle="The same models you get in Hanzo Chat — the house-brand Zen family plus the open third-party families, all on one gateway."
         actions={
           <XStack gap="$2" items="center" flexWrap="wrap">
             <Button size="$2" chromeless icon={<Boxes size={15} />} onPress={() => router.push('/providers')}>
@@ -421,74 +374,54 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
         />
       ) : (
         <>
-          {/* Search + Filters affordance */}
-          <XStack gap="$2" items="center" flexWrap="wrap">
-            <XStack
+          {/* Search across all families */}
+          <XStack
+            items="center"
+            gap="$2"
+            px="$2.5"
+            py="$1.5"
+            rounded="$3"
+            borderWidth={1}
+            borderColor="$borderColor"
+            bg="$color1"
+          >
+            <Search size={14} opacity={0.6} />
+            <Input
               flex={1}
-              minW={240}
-              items="center"
-              gap="$2"
-              px="$2.5"
-              py="$1.5"
-              rounded="$3"
-              borderWidth={1}
-              borderColor="$borderColor"
-              bg="$color1"
-            >
-              <Search size={14} opacity={0.6} />
-              <Input
-                flex={1}
-                size="$2"
-                borderWidth={0}
-                bg="transparent"
-                placeholder="Search models, providers, descriptions…"
-                value={query}
-                onChangeText={setQuery}
-                autoCapitalize="none"
-              />
-              {query ? (
-                <Button size="$1" chromeless circular icon={<X size={13} />} onPress={() => setQuery('')} />
-              ) : null}
-            </XStack>
-            <Button
               size="$2"
-              icon={<SlidersHorizontal size={15} />}
-              bg={showFilters || activeFilters > 0 ? '$color5' : 'transparent'}
-              borderWidth={1}
-              borderColor="$borderColor"
-              onPress={() => setShowFilters((v) => !v)}
-            >
-              Filters{activeFilters > 0 ? ` · ${activeFilters}` : ''}
-            </Button>
+              borderWidth={0}
+              bg="transparent"
+              placeholder="Search models across every family…"
+              value={query}
+              onChangeText={setQuery}
+              autoCapitalize="none"
+            />
+            {query ? (
+              <Button size="$1" chromeless circular icon={<X size={13} />} onPress={() => setQuery('')} />
+            ) : null}
           </XStack>
 
-          {showFilters ? (
-            <YStack gap="$3" p="$3" rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color1">
-              <FilterPills label="Provider" options={providers} value={provider} onChange={setProvider} />
-              <FilterPills label="Type" options={types} value={type} onChange={setType} />
-              <FilterPills label="Pricing" options={PRICE_BUCKETS} value={price} onChange={setPrice} />
-              {activeFilters > 0 ? (
-                <Button size="$2" chromeless self="flex-start" icon={<X size={14} />} onPress={clearAll}>
-                  Clear filters
-                </Button>
-              ) : null}
+          {state.phase === 'loading' ? (
+            <YStack p="$6" items="center">
+              <Text fontSize="$3" color="$color10">
+                Loading the model catalog…
+              </Text>
             </YStack>
-          ) : null}
+          ) : visible.length === 0 ? (
+            <YStack p="$6" items="center">
+              <Text fontSize="$3" color="$color10">
+                {query ? `No models match “${query}”.` : 'No chat models available on this deployment yet.'}
+              </Text>
+            </YStack>
+          ) : (
+            <YStack gap="$2.5">
+              {visible.map((g) => (
+                <FamilySection key={g.id} group={g} onOpen={setSelected} />
+              ))}
+            </YStack>
+          )}
 
-          <DataTable
-            columns={columns}
-            rows={rows}
-            loading={state.phase === 'loading'}
-            rowKey={(m) => m.id ?? m.name}
-            onRowPress={(m) => setSelected(m)}
-            empty={
-              query || activeFilters > 0
-                ? 'No models match your search and filters.'
-                : 'No models available on this deployment yet.'
-            }
-          />
-
-          {state.phase === 'ready' && rows.length > 0 ? (
+          {state.phase === 'ready' && visible.length > 0 ? (
             <XStack
               rounded="$4"
               borderWidth={1}
@@ -497,10 +430,9 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
               mt="$2"
               flexWrap="wrap"
             >
-              <Stat label="Total models" value={stats.total} />
-              <Stat label="Context range" value={stats.ctx} />
-              <Stat label="Avg. input / Mtok" value={stats.avg} />
-              <Stat label="Providers" value={stats.providers} />
+              <Stat label="Families" value={stats.families} />
+              <Stat label="Models" value={stats.total} />
+              <Stat label="Available now" value={stats.live} />
             </XStack>
           ) : null}
         </>
