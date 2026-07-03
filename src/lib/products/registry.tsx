@@ -109,6 +109,8 @@ import { Users,
   IdCard,
   Blocks,
   Store,
+  Compass,
+  Droplet,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId } from '~/config'
@@ -304,10 +306,12 @@ export {
   BRAND_CATEGORIES,
   categoriesForBrand,
   categoryInBrand,
+  entryInBrandScope,
   categorySlug,
   categoryFromSlug,
   CATEGORY_SUMMARY,
 } from './brand-scope'
+import { entryInBrandScope } from './brand-scope'
 
 /**
  * Enablement state — honest, two values only:
@@ -316,10 +320,11 @@ export {
  *  - `soon`     : the primitive ships but has no console surface yet; the entry
  *                 opens an honest "coming soon" page pointing at the API/CLI.
  *
- * There is NO `external` state: every product is a native in-console route. A
- * product the console does not yet deep-manage still opens to a real in-console
- * overview (`overviewRoutes(id)` → NativeOverview) with live health + inline docs,
- * never a bounce to another domain.
+ * `external` is NOT a status — it is a `kind` (the shape discriminant on
+ * `CatalogEntry`), orthogonal to enablement: a launch tile for a deployed external
+ * app (the Lux/Zoo chain-app suite) is `status: 'enabled'` (it's live) with
+ * `kind: 'external'` (it opens in a new tab). Enablement stays two honest values;
+ * how a live entry OPENS (native route vs. external launch) is the kind, not this.
  */
 export type ProductStatus = 'enabled' | 'soon'
 
@@ -345,6 +350,16 @@ type CatalogBase = {
   /** Admin-gated surface (shown with a lock hint; access enforced server-side). */
   admin?: boolean
   /**
+   * Per-brand scope — the brands whose console shows this entry (`entryInBrandScope`).
+   * OMIT for a brand-agnostic entry (the default: shown on every brand its category
+   * admits — every in-console product). SET it only for a brand-specific entry that
+   * must not cross-leak inside a shared category — e.g. the Lux chain-app launch
+   * tiles are `['hanzo', 'lux']` and the Zoo ones `['hanzo', 'zoo']`, so both sit in
+   * the shared Web3 category yet lux.cloud shows only Lux and zoo.cloud only Zoo
+   * (hanzo, the umbrella, shows the full suite).
+   */
+  brands?: BrandId[]
+  /**
    * The product's SPECIFIC level-2 sub-pages (beyond Overview + the uniform base
    * set, which `productSubpages` auto-adds). Only meaningful for `module` kinds.
    * Omit for a single-screen product — it still gets Overview + the base set.
@@ -353,14 +368,31 @@ type CatalogBase = {
 }
 
 /**
- * A catalog entry is always an in-console module that owns its routes — there is
- * ONE way to open anything (a native route), no external-tab variant. A product
- * with no bespoke admin surface still owns a route: a native overview
- * (`routes: overviewRoutes(id)`). `kind: 'module'` is retained as the single
- * discriminant so every existing exhaustive `kind === 'module'` guard still
- * compiles and the field stays explicit.
+ * A catalog entry is one of two honest shapes, discriminated on `kind`:
+ *
+ *  - `module`   : an in-console surface that OWNS its routes. Every Hanzo Cloud
+ *                 product is this — a bespoke admin surface OR a native overview
+ *                 (`routes: overviewRoutes(id)`). A Hanzo product the console
+ *                 doesn't yet deep-manage still opens IN the console (a real page
+ *                 with live health + inline docs), never a bounce to another
+ *                 domain. This is the ONLY shape for anything Hanzo runs.
+ *
+ *  - `external` : a LAUNCH TILE for a standalone app that genuinely lives at its
+ *                 own domain and is owned by another product — the deployed Lux /
+ *                 Zoo chain-app suite (Explorer, Exchange, Bridge, Faucet, Safe,
+ *                 DEX, Wallet). These are NOT Hanzo control-plane products and are
+ *                 NOT rebuilt here; the tile opens `href` in a new tab. It owns no
+ *                 route, no sub-pages, and no overview — `openProduct` launches it,
+ *                 and every `kind !== 'module'` guard (productSubpages,
+ *                 resolveProductView, destinationsFor, isAdminView, productModules)
+ *                 fails closed so it never manufactures a dead in-console route.
+ *
+ * Both share `CatalogBase`, so the nav / launcher / ⌘K / category pages render and
+ * open either uniformly. The discriminant keeps consumers exhaustive.
  */
-export type CatalogEntry = CatalogBase & { kind: 'module'; routes: ProductRoute[] }
+export type CatalogEntry =
+  | (CatalogBase & { kind: 'module'; routes: ProductRoute[] })
+  | (CatalogBase & { kind: 'external'; href: string })
 
 // docs.hanzo.ai serves the Fumadocs site under the /docs base path
 // (docs.hanzo.ai/docs/<slug>), so product deep links must include it — a bare
@@ -1530,6 +1562,124 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AttestationsModule }],
   },
 
+  // ── Web3 · Chain apps — launch tiles for the DEPLOYED Lux / Zoo dApp suite.
+  //    These are standalone web3 apps that live at their OWN domains (owned by
+  //    the Lux / Zoo products, not Hanzo control planes), so they are `external`
+  //    launch tiles — `openProduct` opens `href` in a new tab, never a rebuilt
+  //    in-console surface. Per-brand `brands` keeps them from cross-leaking: the
+  //    Lux tiles show only on lux.cloud, the Zoo tiles only on zoo.cloud.
+  //    Every href is a real, verified deployment — no fabricated URLs.
+  {
+    id: 'lux-explorer',
+    label: 'Explorer',
+    icon: Compass,
+    description: 'Lux Network block explorer — search transactions, addresses, and contracts.',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['lux'],
+    kind: 'external',
+    href: 'https://explore.lux.network',
+  },
+  {
+    id: 'lux-exchange',
+    label: 'Exchange',
+    icon: ArrowLeftRight,
+    description: 'Trade digital assets on the Lux exchange.',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['lux'],
+    kind: 'external',
+    href: 'https://lux.exchange',
+  },
+  {
+    id: 'lux-bridge',
+    label: 'Bridge',
+    icon: Waypoints,
+    description: 'Bridge assets across chains on the Lux Network.',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['lux'],
+    kind: 'external',
+    href: 'https://bridge.lux.network',
+  },
+  {
+    id: 'lux-faucet',
+    label: 'Faucet',
+    icon: Droplet,
+    description: 'Claim testnet tokens for building on Lux.',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['lux'],
+    kind: 'external',
+    href: 'https://faucet.lux.network',
+  },
+  {
+    id: 'lux-safe',
+    label: 'Safe',
+    icon: Shield,
+    description: 'Multisig smart-contract wallet on Lux (Safe).',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['lux'],
+    kind: 'external',
+    href: 'https://safe.lux.finance',
+  },
+  {
+    id: 'lux-dex',
+    label: 'DEX',
+    icon: Coins,
+    description: 'Swap tokens on the Lux on-chain decentralized exchange.',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['lux'],
+    kind: 'external',
+    href: 'https://dex.lux.network',
+  },
+  {
+    id: 'lux-wallet',
+    label: 'Wallet',
+    icon: Wallet,
+    description: 'Manage your assets across the Lux C, P, and X chains.',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['lux'],
+    kind: 'external',
+    href: 'https://wallet.lux.network',
+  },
+  {
+    id: 'zoo-explorer',
+    label: 'Explorer',
+    icon: Compass,
+    description: 'Zoo Network block explorer — search transactions, addresses, and contracts.',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['zoo'],
+    kind: 'external',
+    href: 'https://explore.zoo.network',
+  },
+  {
+    id: 'zoo-exchange',
+    label: 'Exchange',
+    icon: ArrowLeftRight,
+    description: 'Trade digital assets on the Zoo exchange.',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['zoo'],
+    kind: 'external',
+    href: 'https://zoo.exchange',
+  },
+  {
+    id: 'zoo-bridge',
+    label: 'Bridge',
+    icon: Waypoints,
+    description: 'Bridge assets across chains on the Zoo Network.',
+    category: 'Web3',
+    status: 'enabled',
+    brands: ['zoo'],
+    kind: 'external',
+    href: 'https://bridge.zoo.ngo',
+  },
+
   // ── Apps ─────────────────────────────────────────────────────────────
   {
     id: 'chat',
@@ -2097,8 +2247,10 @@ export const isAdminEntry = (e: CatalogEntry): boolean => e.admin === true
 /** Categories the CURRENT brand's console surfaces (all, for hanzo). */
 export const brandCategoryOrder = (): ProductCategory[] => categoriesForBrand(config.brand)
 
-/** True when an entry belongs to the CURRENT brand's console. */
-export const inBrand = (e: CatalogEntry): boolean => categoryInBrand(config.brand, e.category)
+/** True when an entry belongs to the CURRENT brand's console — its category is in
+ *  the brand's scope AND the entry's own per-brand scope (if any) admits the brand. */
+export const inBrand = (e: CatalogEntry): boolean =>
+  categoryInBrand(config.brand, e.category) && entryInBrandScope(config.brand, e.brands)
 
 /**
  * The catalog a given user may SEE. A global admin sees everything; a customer

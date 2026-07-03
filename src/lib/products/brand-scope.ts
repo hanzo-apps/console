@@ -60,6 +60,23 @@ export const categoryInBrand = (brand: BrandId, category: ProductCategory): bool
   return allowed === null || allowed.includes(category)
 }
 
+/**
+ * Per-ENTRY brand scope — the orthogonal companion to the per-CATEGORY scope
+ * above. Category scope decides which SECTIONS a brand shows; this decides
+ * whether one specific entry shows, WITHIN a section its brand already admits.
+ * It exists because a single category can hold brand-specific tiles that must
+ * NOT cross-leak: the Web3 category holds BOTH the Lux and the Zoo chain-app
+ * launch tiles, but lux.cloud must show only Lux and zoo.cloud only Zoo.
+ *
+ * An entry with no `brands` list is brand-agnostic (shows on every brand its
+ * category admits — the default for all in-console products). An entry that
+ * DOES declare `brands` shows only for those brands. Pure + dependency-free
+ * (BrandId is type-only), like `nodeNetworksForBrand` — a value, not a place —
+ * so it's unit-testable without a hostname or the React registry.
+ */
+export const entryInBrandScope = (brand: BrandId, brands?: readonly BrandId[]): boolean =>
+  !brands || brands.includes(brand)
+
 // ── Category landing pages ───────────────────────────────────────────────────
 // A category is a GROUPING of products (not a product), so it gets its own
 // stable landing route `/category/<slug>` — the slug<->category mapping and the
