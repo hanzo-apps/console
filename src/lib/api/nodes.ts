@@ -186,6 +186,48 @@ export interface RawPeer {
   [k: string]: unknown
 }
 
+/** Raw blockchain as `platform.getBlockchains` returns it. */
+export interface RawBlockchain {
+  id?: string
+  name?: string
+  /** The network (subnet) the chain belongs to — the primary network for all our chains. */
+  netID?: string
+  subnetID?: string
+  vmID?: string
+  [k: string]: unknown
+}
+
+/** One primary-network chain — the identity a chains table renders. PURE view-model. */
+export interface ChainInfo {
+  /** blockchainID (base58check). */
+  id: string
+  /** Human name as luxd reports it (e.g. "X-Chain", "T-Chain"). */
+  name: string
+  /** The VM the chain runs (vmID), when known. */
+  vmID?: string
+}
+
+/**
+ * Normalize `platform.getBlockchains` → the chain list for a network. PURE.
+ *
+ * The P-Chain (the platform chain the call itself runs against) is NOT returned by
+ * getBlockchains, so it is prepended as the first, always-present chain — the
+ * primary network's coordinating chain. Everything else is exactly what luxd
+ * reports (no fabrication): the letter chains (X C D Q A B T Z G K …) in the order
+ * the node returns them. A chain with no id is dropped (can't be addressed).
+ */
+export function normalizeChains(blockchains: RawBlockchain[] | undefined): ChainInfo[] {
+  const P: ChainInfo = { id: '11111111111111111111111111111111LpoYY', name: 'P-Chain' }
+  const rest = (blockchains ?? [])
+    .filter((b): b is RawBlockchain & { id: string } => typeof b.id === 'string' && b.id.length > 0)
+    .map((b) => ({
+      id: b.id,
+      name: typeof b.name === 'string' && b.name ? b.name : b.id,
+      vmID: typeof b.vmID === 'string' ? b.vmID : undefined,
+    }))
+  return [P, ...rest]
+}
+
 /**
  * luxd uptime string → integer percent, or undefined when absent/unparseable.
  * luxd reports uptime as a 0..1 fraction ("0.9950"); some builds report 0..100.
@@ -305,6 +347,12 @@ export interface NetworkInventory {
   validators: number
   peers: number
   nodes: NodeRow[]
+  /**
+   * The network's primary-network chains (`platform.getBlockchains`, P-Chain
+   * prepended). Present only when `reporting`; empty when the network's RPC did
+   * not answer the getBlockchains call (honest — never a fabricated chain set).
+   */
+  chains: ChainInfo[]
 }
 
 /**

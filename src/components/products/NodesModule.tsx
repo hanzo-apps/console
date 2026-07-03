@@ -40,6 +40,14 @@ const FIELDS: FieldDefinition[] = [
   { name: 'height', label: 'Height', type: 'text', width: 120 },
 ]
 
+/** Columns for the chains grid — the network's primary-network chains. */
+const CHAIN_FIELDS: FieldDefinition[] = [
+  { name: 'network', label: 'Network', type: 'text', width: 130 },
+  { name: 'name', label: 'Chain', type: 'text', width: 120 },
+  { name: 'id', label: 'Blockchain ID', type: 'text', width: 380 },
+  { name: 'vmID', label: 'VM', type: 'text', width: 300 },
+]
+
 /** A reporting network's block height, shared by every node on it (real, honest). */
 type DisplayRow = Record<string, unknown>
 
@@ -60,11 +68,57 @@ function toRows(inv: NetworkInventory[], filter: 'all' | NodeNetworkId): Display
     )
 }
 
-/** Summary card for one network — label, health, counts, height (all real). */
+/** Flatten reporting networks → one row per chain (real `platform.getBlockchains`). */
+function toChainRows(inv: NetworkInventory[], filter: 'all' | NodeNetworkId): DisplayRow[] {
+  return inv
+    .filter((n) => n.status === 'reporting' && (filter === 'all' || n.id === filter))
+    .flatMap((n) =>
+      n.chains.map((c) => ({
+        network: n.label,
+        name: c.name,
+        id: c.id,
+        vmID: c.vmID ?? '—',
+      })),
+    )
+}
+
+/** A short chain label (e.g. "T-Chain" → "T"), for the compact chain chips. */
+function chainShort(name: string): string {
+  const m = /^([A-Za-z])-Chain$/.exec(name)
+  return m ? m[1] : name
+}
+
+/** Compact, real chain chips for a network — the primary-network chains luxd reports. */
+function ChainChips({ chains }: { chains: NetworkInventory['chains'] }) {
+  if (!chains.length) return null
+  return (
+    <YStack gap="$1.5">
+      <Text fontSize="$1" color="$color10">Chains ({chains.length})</Text>
+      <XStack gap="$1.5" flexWrap="wrap">
+        {chains.map((c) => (
+          <XStack
+            key={c.id}
+            bg="$color4"
+            borderWidth={1}
+            borderColor="$borderColor"
+            rounded="$3"
+            px="$2"
+            py="$0.5"
+            items="center"
+          >
+            <Text fontSize="$2" fontWeight="700">{chainShort(c.name)}</Text>
+          </XStack>
+        ))}
+      </XStack>
+    </YStack>
+  )
+}
+
+/** Summary card for one network — label, health, counts, height, chains (all real). */
 function NetworkCard({ n }: { n: NetworkInventory }) {
   const reporting = n.status === 'reporting'
   return (
-    <Card borderWidth={1} borderColor="$borderColor" p="$3" gap="$2" minW={220} flex={1}>
+    <Card borderWidth={1} borderColor="$borderColor" p="$3" gap="$2" minW={240} flex={1}>
       <XStack justify="space-between" items="center" gap="$2">
         <Text fontSize="$4" fontWeight="700">
           {n.label}
@@ -72,20 +126,27 @@ function NetworkCard({ n }: { n: NetworkInventory }) {
         <StatusTag status={reporting ? 'active' : 'down'} />
       </XStack>
       {reporting ? (
-        <XStack gap="$4" flexWrap="wrap">
-          <YStack>
-            <Text fontSize="$1" color="$color10">Validators</Text>
-            <Text fontSize="$5" fontWeight="800">{n.validators.toLocaleString()}</Text>
-          </YStack>
-          <YStack>
-            <Text fontSize="$1" color="$color10">Peers</Text>
-            <Text fontSize="$5" fontWeight="800">{n.peers.toLocaleString()}</Text>
-          </YStack>
-          <YStack>
-            <Text fontSize="$1" color="$color10">Height</Text>
-            <Text fontSize="$5" fontWeight="800">{fmtHeight(n.height)}</Text>
-          </YStack>
-        </XStack>
+        <YStack gap="$3">
+          <XStack gap="$4" flexWrap="wrap">
+            <YStack>
+              <Text fontSize="$1" color="$color10">Chains</Text>
+              <Text fontSize="$5" fontWeight="800">{n.chains.length ? n.chains.length.toLocaleString() : '—'}</Text>
+            </YStack>
+            <YStack>
+              <Text fontSize="$1" color="$color10">Validators</Text>
+              <Text fontSize="$5" fontWeight="800">{n.validators.toLocaleString()}</Text>
+            </YStack>
+            <YStack>
+              <Text fontSize="$1" color="$color10">Peers</Text>
+              <Text fontSize="$5" fontWeight="800">{n.peers.toLocaleString()}</Text>
+            </YStack>
+            <YStack>
+              <Text fontSize="$1" color="$color10">Height</Text>
+              <Text fontSize="$5" fontWeight="800">{fmtHeight(n.height)}</Text>
+            </YStack>
+          </XStack>
+          <ChainChips chains={n.chains} />
+        </YStack>
       ) : (
         <Text fontSize="$2" color="$color10">
           Not reporting{n.error ? ` — ${n.error}` : ''}
@@ -120,14 +181,15 @@ export function NodesModule(_props: { params: Record<string, string> }) {
 
   const reporting = useMemo(() => inv.filter((n) => n.status === 'reporting'), [inv])
   const rows = useMemo(() => toRows(inv, filter), [inv, filter])
+  const chainRows = useMemo(() => toChainRows(inv, filter), [inv, filter])
   const noneReachable = !loading && !state && inv.length > 0 && reporting.length === 0
   const nodesIcon = findEntry('nodes')?.icon
 
   return (
     <YStack gap="$4">
       <PageHeader
-        title="Nodes"
-        subtitle="Blockchain node infrastructure — validators and peers across networks. Height is the network P-chain height; uptime is as reported by the queried node."
+        title="Networks & Nodes"
+        subtitle="Lux blockchain networks — their primary-network chains, validators, and peers. Chains are the live set the P-chain reports; height is the network P-chain height; uptime is as reported by the queried node."
         actions={<Button size="$3" onPress={load} disabled={loading}>Refresh</Button>}
       />
 
@@ -174,12 +236,31 @@ export function NodesModule(_props: { params: Record<string, string> }) {
               description="None of the networks configured for this brand answered their luxd RPC. This view lights up automatically once a network is reachable — no placeholder nodes are shown."
             />
           ) : (
-            <DataTable
-              fields={FIELDS}
-              records={rows}
-              loading={loading}
-              empty="No nodes reported for the selected network(s)."
-            />
+            <>
+              {chainRows.length > 0 && (
+                <YStack gap="$2">
+                  <Text fontSize="$5" fontWeight="700">Chains</Text>
+                  <Text fontSize="$2" color="$color10">
+                    The primary-network chains each reporting network runs (live from the P-chain).
+                  </Text>
+                  <DataTable
+                    fields={CHAIN_FIELDS}
+                    records={chainRows}
+                    loading={loading}
+                    empty="No chains reported for the selected network(s)."
+                  />
+                </YStack>
+              )}
+              <YStack gap="$2">
+                <Text fontSize="$5" fontWeight="700">Validators & peers</Text>
+                <DataTable
+                  fields={FIELDS}
+                  records={rows}
+                  loading={loading}
+                  empty="No nodes reported for the selected network(s)."
+                />
+              </YStack>
+            </>
           )}
         </>
       )}
