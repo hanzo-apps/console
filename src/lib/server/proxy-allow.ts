@@ -107,6 +107,14 @@ export const CLOUD_HEADS: readonly string[] = [
   // less call, so it routes through /cloud like the rest. The single `o11y` head
   // admits every o11y sub-path (rules, alerts, services, query_range, …).
   'o11y',
+  // Chain data (graph-backed, luxfi/indexer + luxfi/graph): the deployment's chain
+  // indexing status (/v1/indexers — chain/network/height/health) and on-chain
+  // price/data oracle feeds (/v1/oracles — O-Chain PriceFeed registry). The cloud
+  // `graph` subsystem principal-gates every read (a cookie-only call 403s) and scopes
+  // per brand (each brand's cloud is wired to its own indexer/graph), so it routes
+  // through /cloud like the rest. One head per console page — Indexer / Oracles.
+  'indexers',
+  'oracles',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
