@@ -21,6 +21,7 @@ import { Building2, ArrowRight, Sparkles } from '@hanzogui/lucide-icons-2'
 
 import { useSession } from '~/lib/auth/session'
 import { slugifyOrg, validateOrgName } from '~/lib/server/onboarding'
+import { v1Url } from '~/lib/api/client'
 import { FadeIn } from '~/components/ui/FadeIn'
 
 type Phase = 'form' | 'done'
@@ -41,7 +42,7 @@ export function OrgOnboarding() {
     setBusy(which)
     let res: Response
     try {
-      res = await fetch('/onboard', {
+      res = await fetch(v1Url('console/onboard'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
