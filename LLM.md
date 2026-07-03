@@ -1718,3 +1718,61 @@ holds e.g. "Acme CRM Test", slug `acme-crm-test`, spec `{replicas:3,storage:10Gi
   tests); `next build` ✓. Live: the tenants API path is proven reachable (returned the
   real "Acme CRM Test" Base); the authenticated UI create+screenshot is the post-deploy
   gate. Rebased on origin/main (v8.4.41) → **v8.4.42**.
+
+## Built-in assistant is a grounded Hanzo-suite expert across every chat surface (v8.4.43)
+
+The console's built-in chat was a generic model chat — only ⌘K had a system prompt,
+and that was a NAV-only mapping, not a knowledgeable assistant. This wave makes the
+assistant a genuine expert on the WHOLE Hanzo suite, GROUNDED in real sources (the
+product registry + docs RAG), never hallucinated — one shared prompt across all three
+chat surfaces. Touches ONLY the assistant/chat surfaces (no registry/agents/overview
+edits).
+
+- **ONE grounded system prompt, DECOMPLECTED (`src/lib/assistant/`).** Split into a
+  PURE builder (`prompt-content.ts` — no registry/React/config imports, unit-tested in
+  isolation per the repo convention that `registry.tsx` is types-only in vitest because
+  of its icon ESM) and a THIN registry-bound wrapper (`system-prompt.ts`). The prompt
+  has three parts: (1) a curated, accurate **"what Hanzo is" overview** (Hanzo Cloud =
+  build/ship AI software; the real product families — Zen models, Compute/GPUs,
+  Data = Base+Vector+KV+SQL+…, Security = IAM+KMS, Dev, Platform/PaaS, Observe, Web3,
+  Apps incl CRM/CMS/ERP/Chat, Commerce; the app surfaces beyond the console — hanzo.app
+  web builder, Chat, Desktop, Extension; pay-as-you-go per-token pricing + real balances;
+  how to navigate/deep-link) — written to what EXISTS, nothing invented; (2) the FULL
+  product catalog **generated FROM the live registry** via `visibleCatalogByCategory`
+  (the SAME gate the nav uses) — every product's label, one-line description, GCP analog,
+  and in-console deep-link (`/id`), grouped by category with the registry's own
+  `CATEGORY_SUMMARY` headers — so it is complete, stays current on its own, is
+  white-labeled per brand (`config.brandName`), and **omits admin-only surfaces for a
+  customer** (never suggests a locked page); (3) a behavior contract: concise, accurate,
+  deep-link real pages, defer to the live catalog for models/prices, and — critically —
+  answer HONESTLY ("Hanzo doesn't have a video editor") rather than invent a product,
+  feature, endpoint, price, or model. No secrets in the prompt (public catalog + product
+  facts only).
+- **Wired into ALL 3 chat surfaces (DRY, one source).** `ChatConversation` (which backs
+  BOTH the floating bubble `FloatingChat` and the full `/chat` page) builds the prompt
+  admin-scoped (`useIsGlobalAdmin`) and sends via `AiApi.ragChat` — so every turn is the
+  expert prompt + docs retrieval. `CommandPalette` `>` "Ask AI" now uses
+  `commandBarSystemPrompt` (the SAME expert prompt + the `NAV <id>` contract appended, so
+  ⌘K both jumps to a product on a clear intent AND answers knowledgeably otherwise —
+  replacing the old nav-only prompt); the `?` docs mode is grounded with the same expert
+  system prompt too. The catalog is derived ONCE (the command-bar variant is just base +
+  nav directive). Suggested-prompt chips reseeded to the assistant's real domain
+  ("How do I launch a GPU?", "What is Hanzo Base?", "How does pricing work?", "What AI
+  models are available?").
+- **Docs RAG grounding (best-effort, honest).** The chat requests `X-Retrieval` +
+  `X-Retrieval-Store: docs` (`ASSISTANT_DOCS_STORE`, ONE store name shared with the ⌘K
+  `?` mode). Server-side (`ai/controllers/chat_retrieval.go`) retrieval is relevance-based
+  top-4 semantic search scoped to the caller's org and **degrades to a plain answer on any
+  failure / empty store** — so the assistant is fully versed from the registry-derived
+  prompt whether or not a docs store is indexed for the org. `AiApi.ragChat` extended with
+  optional `history` (2-line, backward-compatible — the assistant's own binding) so the
+  grounded chat keeps multi-turn context. Whether the `docs` store returns real
+  docs.hanzo.ai content is a per-org indexing question verified post-deploy; if empty it's
+  a RAG follow-up, not a regression.
+- Verification: `tsc --noEmit` clean; `npm test` **1142/1142** (95 files; +10
+  prompt-content builder tests: overview facts + brand white-label + entry/opensAt
+  formatting + catalog generation + honest-boundary + NAV-superset + no-secrets);
+  `next build` ✓ Compiled successfully. Rebased on origin/main (v8.4.42, the Bases-manager
+  lane) → one patch above → **v8.4.43**. Idiom: @hanzo/gui v5 shorthands; sidebar/header
+  untouched. Live Q&A verification (bubble + full chat + ⌘K, incl. an honest "no such
+  feature" answer) is the post-deploy gate.

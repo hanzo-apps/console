@@ -16,11 +16,14 @@
  * welcome with clickable suggested prompts, and the composer is a single rounded,
  * elevated input with a code-insert and send affordance + a muted hint row.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ScrollView, Spinner, Text, TextArea, XStack, YStack } from '@hanzo/gui'
 import { Send, Sparkles, Plus, History, Braces } from '@hanzogui/lucide-icons-2'
 
 import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
+import { hanzoAssistantSystemPrompt, ASSISTANT_DOCS_STORE } from '~/lib/assistant'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { Markdown } from './markdown'
@@ -113,11 +116,13 @@ function PromptChip({ label, onPress }: { label: string; onPress: () => void }) 
   )
 }
 
+// Seeded to the assistant's real domain — each is answerable from the grounded
+// Hanzo knowledge (the product catalog + docs), so the first tap shows real expertise.
 const SUGGESTED_PROMPTS = [
-  'Summarize the latest in open-source LLMs',
-  'Write a Python function to parse JSON safely',
-  'Explain vector databases like I am five',
-  'Draft a product update for our changelog',
+  'How do I launch a GPU?',
+  'What is Hanzo Base, and how is it different from Vector?',
+  'How does pricing work?',
+  'What AI models are available?',
 ]
 
 export function ChatConversation({
@@ -135,6 +140,12 @@ export function ChatConversation({
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<BackendState | null>(null)
   const inputRef = useRef<{ focus?: () => void } | null>(null)
+
+  // The ONE grounded assistant prompt (product catalog + curated overview), scoped
+  // so a global admin sees admin surfaces and a customer never does. Built once per
+  // admin state — the same prompt backs the floating bubble and the full Chat page.
+  const showAdmin = useIsGlobalAdmin()
+  const system = useMemo(() => hanzoAssistantSystemPrompt({ showAdmin }), [showAdmin])
 
   // Default to a Zen model once the catalog loads (Hanzo-first), else the first.
   useEffect(() => {
@@ -166,9 +177,14 @@ export function ChatConversation({
     setSending(true)
     setError(null)
     try {
-      const reply = await AiApi.chat({
+      // Grounded: the shared expert system prompt + docs retrieval. Retrieval is
+      // best-effort server-side — if the docs store isn't indexed for this org the
+      // gateway just answers plainly, so the assistant is expert either way.
+      const reply = await AiApi.ragChat({
         question: q,
         history,
+        system,
+        store: ASSISTANT_DOCS_STORE,
         model: model || undefined,
         temperature: 0.7,
       })
@@ -252,8 +268,9 @@ export function ChatConversation({
                   How can I help?
                 </Text>
                 <Text fontSize="$3" color="$color11" text="center" lineHeight={22}>
-                  Ask anything — responses come from the live {model || 'Zen'} gateway, billed to
-                  your organization.
+                  Ask about {config.brandName} — models, GPUs, data, deploys, billing — or anything
+                  else. Answers come from the live {model || 'Zen'} gateway, billed to your
+                  organization.
                 </Text>
               </YStack>
               <YStack gap="$2.5" items="center" self="stretch" maxW={620} mx="auto" width="100%">
