@@ -76,18 +76,21 @@ export const AiApi = {
 
   /**
    * A completion grounded in a knowledge store (`docs` by default) via the
-   * built-in retrieval path. Returns the assistant text; any links it cites are
-   * the model's own, surfaced by the caller.
+   * built-in retrieval path — optionally multi-turn (prior `history` is prepended,
+   * so the grounded assistant keeps conversation context). Returns the assistant
+   * text; any links it cites are the model's own, surfaced by the caller.
    */
   ragChat: async ({
     question,
     store = 'docs',
     model,
     system,
+    history,
     temperature = 0,
   }: AiChatInput & { store?: string }): Promise<string> => {
     const messages: ChatMessage[] = []
     if (system?.trim()) messages.push({ role: 'system', content: system })
+    if (history?.length) messages.push(...history)
     messages.push({ role: 'user', content: question })
     const r = await PlaygroundApi.chat(
       { model: await resolveModel(model), messages, temperature },
