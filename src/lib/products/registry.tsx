@@ -859,28 +859,27 @@ export const catalog: CatalogEntry[] = [
     routes: resourceRoutes({ kind: 'datastore', productLabel: 'Hanzo Datastore', connectionHint: 'Connect over the Datastore HTTP/native protocol using the connection string.' }),
   },
   {
-    // Embeds the @hanzo/superbase-dashboard screens (the SAME ones that run
-    // standalone at base.hanzo.ai). `''` is the tenants list (+ detail drawer);
-    // `new` is the create form. Data flows through console2's `/superbase/*`
-    // proxy (per-user IAM bearer minted server-side).
+    // Manage the org's Hanzo Base instances ("Bases"). Each Base is a row in the
+    // SuperBase orchestrator's `tenants` collection — its own realtime backend on
+    // `<slug>.base.hanzo.ai`. All calls go through console2's `/superbase/*` proxy
+    // (per-user IAM bearer minted server-side, org stamped from the JWT owner).
     id: 'base',
     label: 'Base',
     icon: Boxes,
-    description: 'Firebase-like backend — build content types and manage your data, per org.',
-    gcp: 'Firebase',
+    description: 'Realtime backends for your org — spin up a Base with content types, records, and auth.',
     category: 'Data',
     status: 'enabled',
     repo: 'hanzoai/base',
     docs: `${DOCS}/base`,
     kind: 'module',
-    // Supabase-style dashboard: content-types index · builder · per-type records.
-    // `new` precedes `:collection` so `/base/new` is the builder, not a collection
-    // named "new"; segment count disambiguates the record routes.
+    // Bases manager: `''` lists your Bases, `new` creates one, `:base` configures
+    // one (`:base` = its record id). `new` precedes `:base` so `/base/new` is the
+    // create flow, not a Base whose id is "new" (that slug is reserved). A Base's
+    // own data — collections + records — is the sibling `Records` product.
     routes: [
       { path: '', component: BaseModule },
       { path: 'new', component: BaseModule },
-      { path: ':collection', component: BaseModule },
-      { path: ':collection/:id', component: BaseModule },
+      { path: ':base', component: BaseModule },
     ],
   },
   {

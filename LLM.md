@@ -1665,3 +1665,56 @@ content + the SHARED sub-page Metrics view changed. Strictly @hanzo/gui v5 short
   +ml proxy-allow); `next build` ✓ (the `/[...slug]` catch-all renders Inference + `:tab`).
   Rebased on origin/main (v8.4.36, the nav-accordion + gpus lanes) → one patch above → **v8.4.37**.
   Live visual verification is the post-deploy gate.
+
+## Base = the Bases manager (multi-base) + no competitor copy (v8.4.42)
+
+Two Base fixes: the user was "stuck with a single base" and the copy named a
+competitor. ROOT CAUSE (live-verified as maxpower): the `base` product was a
+"Supabase-style content-type dashboard" pointed at `/superbase/v1/collections` —
+which is the SuperBase ORCHESTRATOR's OWN Base (base.hanzo.ai). So the "content
+types" it listed were the orchestrator's control-plane collections
+(`contacts`/`tenants`/`users`, with `_orgs`/`_superusers` filtered out) — one
+shared Base, no way to make another. The REAL Bases registry is the `tenants`
+collection (each row = a Base instance on its own `<slug>.base.hanzo.ai`; live it
+holds e.g. "Acme CRM Test", slug `acme-crm-test`, spec `{replicas:3,storage:10Gi}`).
+
+- **Base is now the Bases INSTANCE manager (the multi-base fix).** `BasesManager`
+  (`components/products/base/BasesManager.tsx`) over the real tenants API: `''` =
+  the org's Bases list + **New Base**, `new` = create (name → auto-slug + a size
+  preset → `POST /v1/collections/tenants/records`), `:base` = configure one
+  (edit name/size, live provisioning status, open its subdomain, delete). ONE Base
+  binding — console2's `/superbase` proxy (mints the user IAM bearer, stamps
+  `X-Org-Id` from the JWT owner — derive-once). `lib/base-data/tenants.ts`
+  (`BaseTenantsApi` + `normalizeBase`, reuses the one `BaseDataApi` record client)
+  + pure `base/bases-logic.ts` (slugify, validateBase, `SIZE_PRESETS`, `statusOf`,
+  `baseHref`). Honest states everywhere (loading / `BackendStateCard` / empty
+  "Create your first Base" / superuser+402 create gates → clear message). Registry
+  routes `''|new|:base`; the shared subpage slugs (status/logs/metrics/settings)
+  still take precedence over `:base` (match-core), so the sub-nav is unchanged.
+- **Clean split from Records.** Base = manage Base INSTANCES; the sibling `Records`
+  product browses a Base's DATA (collections + records) — the two no longer overlap.
+  The superseded content-type dashboard (`BaseDashboard`/`CollectionBuilder`/
+  `base/logic.ts` + tests) is removed (it was the confusing orchestrator-collections
+  surface).
+- **No competitor copy.** Dropped every "Supabase"/"Supabase-style"/"Firebase-like"
+  string from the Base UI + docstrings and rewrote in Hanzo's own voice
+  (`BaseModule` docstring, the registry `base` description, the new manager copy).
+  Also removed `gcp: 'Firebase'` from the Base entry (it rendered "Equivalent to
+  Firebase" on the Base surfaces). FLAGGED, not changed: the systematic `gcp:`
+  field is a 29-entry cross-console GCP-equivalence feature (Vertex AI / Cloud Run /
+  Cloud Storage / Firestore / "Firebase Hosting" on `apps` / …) used as a
+  migration + search aid — stripping it globally is a separate product-wide call.
+- **Backend flags (per-org isolation is a superbase concern, not console).** The
+  `tenants` ListRule is `owner_iam_user = @request.auth.id` (per-user, not
+  org-scoped) and the console's minted token appears over-privileged on
+  base.hanzo.ai (a signed-in probe saw a foreign tenant + `_superusers`/`_orgs`).
+  So true per-org isolation of the Bases list needs a backend fix (org-scoped
+  ListRule + a non-superuser service identity + owner stamping). Separately,
+  per-tenant DATA routing isn't wired (`/superbase` reaches the orchestrator, not
+  `<slug>.base.hanzo.ai`), so a Base's own collections are managed in Records / its
+  own dashboard once provisioned — the manager never fabricates per-tenant data.
+- Verification: `tsc --noEmit` clean; `vitest` **1134/1134** (94 files; +14 bases-logic
+  incl. normalizeBase, +1 proxy-allow tenants-by-id, −the deleted content-type logic
+  tests); `next build` ✓. Live: the tenants API path is proven reachable (returned the
+  real "Acme CRM Test" Base); the authenticated UI create+screenshot is the post-deploy
+  gate. Rebased on origin/main (v8.4.41) → **v8.4.42**.
