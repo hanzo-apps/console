@@ -29,7 +29,7 @@
  * Pure + unit-tested — no IO, no host coupling. The view layer (ModelCatalogModule)
  * just renders `groupByFamily(catalog)`.
  */
-import { modelId, modelType, type CatalogEntry } from './aicatalog'
+import { modelId, modelType, modelDisplayName, type CatalogEntry } from './aicatalog'
 
 /** The default model surfaced first in the house Zen family (chat's default). */
 export const DEFAULT_MODEL = 'zen5-mini'
@@ -90,10 +90,19 @@ export function familyOf(m: CatalogEntry): Family | null {
  * PURE.
  */
 export function isChatModel(m: CatalogEntry): boolean {
+  const id = modelId(m).toLowerCase()
+  // Meta-routers (`router:general`, …) are a ROUTING policy, not a model you pick —
+  // they belong in the Routing tab, and carry no display name (would render blank).
+  if (/^router[:\-]/.test(id)) return false
   const kind = modelType(m) // Text | Vision | Image | Audio | Embedding | Rerank | Agent
   if (kind !== 'Text' && kind !== 'Vision') return false
-  const id = `${modelId(m)} ${m.name ?? ''}`.toLowerCase()
-  return !has(id, 'guard', 'moderation', 'safeguard')
+  const hay = `${id} ${(m.name ?? '').toLowerCase()}`
+  return !has(hay, 'guard', 'moderation', 'safeguard')
+}
+
+/** The always-non-empty display label for a model row: name, else the raw id. PURE. */
+export function displayLabel(m: CatalogEntry): string {
+  return modelDisplayName(m) || modelId(m)
 }
 
 /**
