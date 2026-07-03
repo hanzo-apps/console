@@ -4,9 +4,9 @@
  * Indexer — chain indexers tracking block and event indexing status per network
  * (current height, lag behind chain head, health) reported by the platform.
  *
- * Reads the indexer registry from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/indexers`), which injects the service token server-side. When the
- * indexer service isn't provisioned for the org the list load fails and the
+ * Reads the indexer registry from the cloud API via the same-origin `/cloud`
+ * user-bearer proxy (`GET /v1/indexers`), which mints + forwards the caller's IAM
+ * bearer server-side. When the indexer isn't reachable the list load fails and the
  * honest not-configured / unavailable card renders instead of an empty grid —
  * matching every other infra module.
  */
@@ -14,13 +14,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { restGet, cloudProxyV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
-
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
 
 type Indexer = {
   id: string
@@ -40,7 +38,7 @@ export function IndexerModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ indexers?: Indexer[] }>(paas('indexers'))
+      const r = await restGet<{ indexers?: Indexer[] }>(cloudProxyV1Url('indexers'))
       setRows(r.indexers ?? [])
       setLoadError(null)
     } catch (e) {
