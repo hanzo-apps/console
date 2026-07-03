@@ -12,7 +12,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { AlertTriangle, BookOpen, Check, Cpu, CreditCard, Rocket, Search, Server } from '@hanzogui/lucide-icons-2'
+import { AlertTriangle, BookOpen, Check, Cpu, CreditCard, Dices, Rocket, Search, Server } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { ApiError } from '~/lib/api/client'
@@ -25,6 +25,7 @@ import {
   type VisorRegion,
   type VisorSize,
 } from '~/lib/api/visor'
+import { randomName } from '~/lib/naming'
 import { FieldSelect } from '~/components/ui/Field'
 
 /** A catalog row unified over CPU sizes and GPU sizes (GPU carries model/count/VRAM). */
@@ -63,7 +64,9 @@ export function LaunchDrawer({
   const [q, setQ] = useState('')
   const [sel, setSel] = useState<string>(initialSize ?? '') // selected size slug
   const [region, setRegion] = useState<string>(initialRegion ?? '')
-  const [name, setName] = useState('')
+  // Pre-fill a fun `adjective-animal` name (dark-llama, cosmic-axolotl) so launch is
+  // click-and-go; the 🎲 button and a post-launch re-roll keep the rapid-launch flow fresh.
+  const [name, setName] = useState(randomName)
   const [phase, setPhase] = useState<'idle' | 'launching'>('idle')
   const [error, setError] = useState<{ msg: string; credits: boolean } | null>(null)
 
@@ -100,6 +103,9 @@ export function LaunchDrawer({
     try {
       const input: LaunchInput = { size: selected.slug, region, name: name.trim() }
       const m = await VisorApi.launch(input)
+      // Re-roll a fresh fun name so repeat-clicking Launch keeps rapid-launching with a
+      // new name each time (the drawer instance persists across the pane's close/reopen).
+      setName(randomName())
       onLaunched(m)
     } catch (e) {
       const status = e instanceof ApiError ? e.status : undefined
@@ -126,10 +132,13 @@ export function LaunchDrawer({
           : 'Launch a dedicated compute machine. Pick a size and region — you pay the per-hour rate, metered to your Hanzo balance.'}
       </Text>
 
-      {/* Name */}
+      {/* Name — pre-filled with a fun random name; 🎲 re-rolls, still fully editable */}
       <YStack gap="$1.5">
         <Text fontSize="$2" color="$color11" fontWeight="600">Name</Text>
-        <Input value={name} onChangeText={setName} placeholder={kind === 'gpu' ? 'my-gpu-box' : 'my-machine'} autoCapitalize="none" />
+        <XStack items="center" gap="$2">
+          <Input flex={1} value={name} onChangeText={setName} placeholder={kind === 'gpu' ? 'my-gpu-box' : 'my-machine'} autoCapitalize="none" />
+          <Button size="$3" chromeless icon={<Dices size={16} />} onPress={() => setName(randomName())} aria-label="Random name" />
+        </XStack>
       </YStack>
 
       {/* Type picker — the COMPLETE live catalog, searchable */}
