@@ -1,26 +1,27 @@
 'use client'
 
 /**
- * Alerts — alert rules (conditions, severities, recent firings) evaluated by the
- * platform.
+ * Alerts — alert rules (conditions, severities, current state) evaluated by the
+ * platform observability engine.
  *
- * Reads the alert rules from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/alerts`), which injects the service token server-side. When the
- * alerting service isn't provisioned for the org the list load fails and the
- * honest not-configured / unavailable card renders instead of an empty grid —
- * matching every other infra module.
+ * Reads the REAL alert rules from Hanzo o11y through the same-origin user-bearer
+ * `/cloud` proxy: `GET /v1/o11y/v1/rules` (cloud rewrites `/v1/o11y/*` → the o11y
+ * runtime's `/api/v1/rules`, `listRules` → `ListRuleStates`). The o11y envelope is
+ * `{status,data:{rules:[…]}}` where each rule is a flattened `GettableRule`
+ * (`alert`, `state`, `labels.severity`, `description`, …) — normalized here to the
+ * console's flat Alert row. When o11y isn't reachable / authorized the load fails and
+ * the honest not-configured / unavailable card renders instead of an empty grid —
+ * matching every other infra module. Nothing is fabricated.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { restGet, cloudProxyV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
-
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
 
 type Alert = {
   id: string
@@ -31,6 +32,40 @@ type Alert = {
   lastFired?: string
 }
 
+/** One rule as o11y's `GettableRule` serializes it (PostableRule fields flattened). */
+type O11yRule = {
+  id?: string
+  /** Evaluated state: inactive | pending | recovering | firing | nodata | disabled. */
+  state?: string
+  /** Alert name (`PostableRule.alert`). */
+  alert?: string
+  description?: string
+  ruleType?: string
+  disabled?: boolean
+  labels?: Record<string, string>
+}
+
+/** o11y wraps every read as `{status:"success", data:…}`. */
+type O11yRulesResponse = { status?: string; data?: { rules?: O11yRule[] } }
+
+/**
+ * Flatten one o11y rule to the console Alert row. Honest mapping only:
+ *  - `status` is the real evaluated `state` (or `disabled` when the rule is off);
+ *  - `condition` is the rule's own `description` (o11y's `condition` field is a
+ *    composite query object, not a display string — we never stringify it into a
+ *    fake human condition);
+ *  - `lastFired` is left empty: the rule-list endpoint carries no last-fired
+ *    timestamp (that lives in the per-rule history timeline), so we show "—" rather
+ *    than mislabel `updateAt` (rule edit time) as a firing time.
+ */
+const toAlert = (r: O11yRule): Alert => ({
+  id: r.id || r.alert || '',
+  name: r.alert,
+  severity: r.labels?.severity,
+  status: r.disabled ? 'disabled' : r.state,
+  condition: r.description,
+})
+
 export function AlertsModule(_props: { params: Record<string, string> }) {
   const [rows, setRows] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,8 +74,8 @@ export function AlertsModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ alerts?: Alert[] }>(paas('alerts'))
-      setRows(r.alerts ?? [])
+      const r = await restGet<O11yRulesResponse>(cloudProxyV1Url('o11y/v1/rules'))
+      setRows((r?.data?.rules ?? []).map(toAlert))
       setLoadError(null)
     } catch (e) {
       setLoadError(interpretPlatformError(e))
