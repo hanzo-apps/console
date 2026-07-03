@@ -241,3 +241,101 @@ export function healthFromApps(apps: PlatformApp[]): OverviewHealth[] {
   }
   return Array.from(byApp.values()).sort((x, y) => x.service.localeCompare(y.service))
 }
+
+/** Counts of product/service health rows by verdict — the Overlord product board. */
+export type HealthTally = { total: number; healthy: number; degraded: number; down: number; unknown: number }
+
+/**
+ * Tally a set of health rows by verdict — the platform-wide "how many products are
+ * up/down" count for the Overlord god-view KPIs. `green` → healthy, `yellow` →
+ * degraded, `red` → down, anything else (incl. '') → unknown. Pure, so the
+ * product-count KPIs are unit-tested, not eyeballed. An empty inventory → all zeros
+ * (the tile renders an honest em-dash, never a fabricated "all healthy").
+ */
+export function healthTally(rows: OverviewHealth[]): HealthTally {
+  const t: HealthTally = { total: 0, healthy: 0, degraded: 0, down: 0, unknown: 0 }
+  for (const r of rows) {
+    t.total += 1
+    const v = String(r.health).toLowerCase()
+    if (v === 'green') t.healthy += 1
+    else if (v === 'yellow') t.degraded += 1
+    else if (v === 'red') t.down += 1
+    else t.unknown += 1
+  }
+  return t
+}
+
+/** Distinct non-empty orgs represented in the operator inventory (platform tenancy). */
+export function orgsFromApps(apps: PlatformApp[]): string[] {
+  const set = new Set<string>()
+  for (const a of apps) if (a.org) set.add(a.org)
+  return Array.from(set).sort()
+}
+
+/**
+ * The Overlord (admin.hanzo.ai) god-view of EVERYTHING — the platform-wide overview
+ * that composes THREE real sources into one board, so the top of admin.hanzo.ai
+ * answers "is the whole platform healthy, how many orgs, and what is it costing/
+ * earning" in one glance:
+ *
+ *   - `apps` (operator inventory, `PlatformApi.apps()`): the platform-wide PRODUCT
+ *     HEALTH board — every deployed Hanzo product/service and its real up/down
+ *     verdict, plus the distinct-org count. This is the centerpiece the CTO asked
+ *     for (products + live health across ALL orgs).
+ *   - `admin` (the `/v1/admin/overview` all-orgs aggregate) when routed: platform
+ *     usage/spend KPIs + timeseries + top-models distribution + live activity +
+ *     alerts. OPTIONAL — null when the aggregate isn't routed on this host.
+ *   - `usage` (the real commerce usage ledger, all-orgs) as the HONEST FALLBACK
+ *     source for the usage/spend KPIs + activity when the admin aggregate is absent,
+ *     so the board is never blank. OPTIONAL — null when even that can't be read.
+ *
+ * Every tile degrades to its honest empty state when its slice has no real data —
+ * NEVER a fabricated product, health verdict, org count, or spend figure. The
+ * product-health board (from `apps`) is the one slice that is always real when the
+ * operator inventory is reachable, so the god-view is meaningful even with no
+ * aggregate + no ledger.
+ */
+export function fromOverlord(apps: PlatformApp[], admin: AdminOverview | null, usage: CloudUsageOverview | null): OverviewData {
+  // Start from whichever richer source is available for the usage/spend KPIs +
+  // series + activity + alerts (admin aggregate preferred, else the ledger, else
+  // an empty shell). The product-health board is layered on top from `apps`.
+  const d = admin ? fromAdminOverview(admin) : usage ? fromCloudUsage(usage) : empty()
+
+  // ── Platform-wide product health (the centerpiece) — always from the live
+  // operator inventory. This OVERRIDES any aggregate-provided health with the
+  // real, complete per-app board (the aggregate's health list is a summary; the
+  // inventory is authoritative + full).
+  const health = healthFromApps(apps)
+  if (health.length) d.health = health
+  const tally = healthTally(d.health)
+
+  // ── Product-count KPIs derived from the health tally — "how many products, how
+  // many up/down". Only when the inventory reported something; otherwise the tiles
+  // read honest em-dashes rather than a fabricated "0 products / all healthy".
+  if (tally.total > 0) {
+    d.kpi.products = { value: tally.total }
+    d.kpi.healthy = { value: tally.healthy }
+    // Degraded + down together = the count that needs attention.
+    d.kpi.attention = { value: tally.degraded + tally.down }
+  }
+
+  // ── Active orgs — prefer the aggregate's own `orgs` KPI (a real tenant count
+  // across the whole platform, incl. orgs with no running app); fall back to the
+  // distinct orgs present in the operator inventory. Never fabricated.
+  if (d.kpi.orgs === undefined) {
+    const orgs = orgsFromApps(apps)
+    if (orgs.length) d.kpi.orgs = { value: orgs.length }
+  }
+
+  // ── The product-health board doubles as a distribution donut (by verdict) so the
+  // god-view shows the healthy/degraded/down mix at a glance. Positive slices only.
+  const mix = [
+    { label: 'Healthy', value: tally.healthy },
+    { label: 'Degraded', value: tally.degraded },
+    { label: 'Down', value: tally.down },
+    { label: 'Unknown', value: tally.unknown },
+  ].filter((s) => s.value > 0)
+  if (mix.length) d.distribution.productHealth = mix
+
+  return d
+}
