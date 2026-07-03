@@ -4,15 +4,16 @@
  * CollectionsBrowser — the app-lane home: the DocTypes of a `module` (a CMS
  * "collection" IS a framework DocType tagged with the lane's module). It lists
  * them as cards, offers a first-run "Set up" that installs the lane's fixtures
- * (POST /v1/framework/modules/:module/install), and a "New collection" that
- * defines a fresh content DocType. Everything is per-org and honest — an org with
- * the lane not yet installed sees the setup CTA, never a fabricated collection.
+ * (POST /v1/framework/modules/:module/install), and a "New collection" that opens
+ * the dynamic content-type builder (name + typed fields, on-page). Everything is
+ * per-org and honest — an org with the lane not yet installed sees the setup CTA,
+ * never a fabricated collection.
  *
  * This is generic over `module`, so CMS (`cms`), ERP (`erp`), and Helpdesk
  * (`help`) all reuse it — the ONE collections home for every lane.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
+import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Boxes, Plus, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -22,7 +23,8 @@ import { Loader } from '~/components/ui/Loader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import type { FrameworkClient } from '~/lib/framework/client'
 import type { DocType } from '~/lib/framework/types'
-import { moduleDoctypes, isValidDoctypeName } from '~/lib/framework/fields'
+import { moduleDoctypes } from '~/lib/framework/fields'
+import { CollectionBuilder } from './CollectionBuilder'
 
 export interface CollectionsBrowserProps {
   client: FrameworkClient
@@ -52,7 +54,6 @@ export function CollectionsBrowser({ client, module, label, subtitle, onOpen, se
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [newName, setNewName] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
 
   const load = useCallback(
@@ -93,26 +94,6 @@ export function CollectionsBrowser({ client, module, label, subtitle, onOpen, se
     }
   }, [client, module, reload])
 
-  const create = useCallback(async () => {
-    const name = newName.trim()
-    if (!isValidDoctypeName(name)) {
-      setActionError('Use a name with letters, digits, dashes or underscores — no spaces.')
-      return
-    }
-    setBusy(true)
-    setActionError(null)
-    try {
-      await client.doctypes.create(contentCollection(name, module))
-      setCreating(false)
-      setNewName('')
-      onOpen(name)
-    } catch (e) {
-      setActionError(classifyBackend(e).message)
-    } finally {
-      setBusy(false)
-    }
-  }, [client, module, newName, onOpen])
-
   if (state.phase === 'loading') return <Loader label={`Loading ${label}…`} />
   if (state.phase === 'error') {
     return (
@@ -130,8 +111,8 @@ export function CollectionsBrowser({ client, module, label, subtitle, onOpen, se
         title={label}
         subtitle={subtitle}
         actions={
-          collections.length ? (
-            <PrimaryButton size="$2" icon={<Plus size={15} />} onPress={() => { setCreating((c) => !c); setActionError(null) }}>New collection</PrimaryButton>
+          collections.length && !creating ? (
+            <PrimaryButton size="$2" icon={<Plus size={15} />} onPress={() => { setCreating(true); setActionError(null) }}>New collection</PrimaryButton>
           ) : undefined
         }
       />
@@ -143,18 +124,17 @@ export function CollectionsBrowser({ client, module, label, subtitle, onOpen, se
       ) : null}
 
       {creating ? (
-        <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" mb="$3" maxWidth={620}>
-          <Text fontSize="$4" fontWeight="700">New collection</Text>
-          <Text fontSize="$2" color="$color10">A content type on the framework (title, slug, body, status). Add fields later in Settings.</Text>
-          <XStack gap="$2" flexWrap="wrap">
-            <Input flex={1} minW={220} placeholder="e.g. Recipe or LandingPage" value={newName} onChangeText={setNewName} disabled={busy} />
-            <PrimaryButton size="$2" disabled={busy} onPress={create}>{busy ? 'Creating…' : 'Create'}</PrimaryButton>
-            <Button size="$2" disabled={busy} onPress={() => { setCreating(false); setNewName('') }}>Cancel</Button>
-          </XStack>
-        </Card>
+        <YStack mb="$3">
+          <CollectionBuilder
+            client={client}
+            module={module}
+            onSaved={(name) => { setCreating(false); onOpen(name) }}
+            onCancel={() => setCreating(false)}
+          />
+        </YStack>
       ) : null}
 
-      {collections.length === 0 ? (
+      {collections.length === 0 && !creating ? (
         <EmptyState
           icon={Boxes}
           title={`Set up ${label}`}
@@ -165,8 +145,9 @@ export function CollectionsBrowser({ client, module, label, subtitle, onOpen, se
             'Add your own collections and fields any time',
           ]}
           primary={state.registered ? { label: busy ? 'Setting up…' : `Set up ${label}`, onPress: install } : undefined}
+          secondary={{ label: 'New collection', onPress: () => setCreating(true) }}
         />
-      ) : (
+      ) : !creating ? (
         <XStack gap="$3" flexWrap="wrap">
           {collections.map((dt) => (
             <YStack
@@ -192,29 +173,9 @@ export function CollectionsBrowser({ client, module, label, subtitle, onOpen, se
             </YStack>
           ))}
         </XStack>
-      )}
+      ) : null}
     </>
   )
-}
-
-/**
- * The DocType a "New collection" creates: a minimal, immediately-usable content
- * type (title, URL slug, rich body, publish status) tagged with the lane module.
- * Secure by default — the engine seeds a System-Manager grant; the owner widens.
- */
-function contentCollection(name: string, module: string): DocType {
-  return {
-    name,
-    module,
-    autoname: 'field:slug',
-    titleField: 'title',
-    fields: [
-      { fieldname: 'title', fieldtype: 'Data', label: 'Title', reqd: true, inListView: true },
-      { fieldname: 'slug', fieldtype: 'Data', label: 'Slug', reqd: true, inListView: true },
-      { fieldname: 'body', fieldtype: 'Text', label: 'Body' },
-      { fieldname: 'status', fieldtype: 'Select', label: 'Status', options: 'Draft\nPublished', default: 'Draft', inListView: true },
-    ],
-  }
 }
 
 export default CollectionsBrowser
