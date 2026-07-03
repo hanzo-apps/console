@@ -1617,3 +1617,51 @@ same live pass surfaced, folds in RED's LOW-1, and lands the two Playground fixe
   above → **v8.4.34**, tagged for a cancel-immune build). LIVE re-verify (a data page RENDERS
   real data — not just an API 200 — + attach 2-3 images → multi-image vision run + image-only
   Run works + block reason visible) is the required post-deploy gate this time.
+
+## Inference endpoints dashboard + Status/Logs + shared per-product Metrics (v8.4.37)
+
+The Inference page is redesigned to the "endpoints dashboard" mockup — wired to REAL
+data everywhere, honest "—"/empty where a metric isn't exposed, NEVER the mockup's
+placeholder figures (32.4K / 128ms / 99.95% / $1,286.42 / zen-3-32b rows are DESIGN
+PLACEHOLDERS and appear nowhere). Sidebar + topbar untouched; only the Inference module
+content + the SHARED sub-page Metrics view changed. Strictly @hanzo/gui v5 shorthands.
+
+- **Real endpoints source (two, merged).** `src/lib/api/inference.ts` `InferenceApi`
+  reads the org's DEPLOYED KServe InferenceServices from cloud `GET /v1/ml/models`
+  (cloud `clients/ml`, per-org namespace `ml-<org>`) through the hardened `/cloud`
+  user-bearer proxy — NEW `ml` head in `proxy-allow.ts` `CLOUD_HEADS` + `next.config.mjs`
+  `CLOUD_V1_HEADS` (same-origin `/v1/ml/*` → `/cloud/v1/ml/*`, bearer minted, cookie-only
+  403s). These are folded (`mergeEndpoints`, deployed wins) with the MANAGED model-serving
+  catalog (`/v1/models` via the `/ai` proxy). The managed catalog is the POPULATED base
+  (per-endpoint metrics match the ledger by model id); the deployed source is best-effort
+  (403/404 when ML isn't routed just omits those rows). Honest empty ("No endpoints yet ·
+  Deploy your first endpoint") when both are empty.
+- **Per-endpoint metrics — REAL or honest "—".** Requests (24h) + trend sparkline = the REAL
+  commerce usage ledger (`aimetrics` `perModelMap`/`endpointDailyRequests`) matched by model
+  id (no rows → real 0; ledger absent → "—"). P95/uptime have NO per-endpoint source →
+  honest "—". KServe status → honest phase via `deriveMlPhase` (reads `status.conditions`).
+- **Layout.** Header + PURPLE "Deploy Endpoint" CTA → a REAL `POST /v1/ml/models` deploy form
+  over the shared `DetailPane`. Hero "Connected to Hanzo Cloud" (honest managed copy + pure-SVG
+  purple accent, white-labeled by `config.brandName`). Two-column: LEFT `EndpointsPanel`
+  (search + status/type/sort over REAL options + list⇄grid + rich rows + pagination; row →
+  detail pane); RIGHT rail (stacks on narrow) = Usage Overview (REAL `usageWindow` ledger totals
+  + prior-period deltas + sparklines) + Quick Actions + Need help (REAL routes + mailto — no
+  dead links).
+- **Status + Logs = Inference-OWNED `:tab` views** (declared SPECIFIC subpages → router renders
+  THESE not the shared sub-page; Metrics + Settings stay shared). Status = per-endpoint health
+  board + "Connected to <brand>" real tally (uptime/P95 "—"). Logs = REAL recorded inference
+  activity (ledger = one row per billed call: time · endpoint · level · message), filter by
+  endpoint + level; honest "not connected"/"no activity" — never fabricated log lines.
+- **Shared per-product Metrics → rich LivingOverview (DRY, EVERY product benefits).**
+  `ProductMetricsView` renders the ONE `LivingOverview` over `productMetricsConfig` (4 KPIs
+  Requests/Tokens/Spend/P95 with deltas+sparklines, usage+spend over time, 3 breakdown donuts
+  top-models-by-tokens/requests-by-status/spend-by-model, recent-usage feed) — REAL commerce
+  ledger scoped by `metadata.product`. inference/models/api/gateway read the WHOLE ledger (it
+  IS entirely inference calls); every other product filters by tag (honest-empty until
+  attributed). P95 honest "—" until o11y. Added `byStatus` + `product` filter to the usage
+  adapter; projected `byModelTokens`+`byStatus` in `fromCloudUsage` (additive).
+- Verification: `tsc --noEmit` clean; `vitest` **1130/1130** (94 files; +28: 20 inference logic,
+  3 product-metrics, +byStatus/product-filter usage-adapter, +byModelTokens/byStatus adapters,
+  +ml proxy-allow); `next build` ✓ (the `/[...slug]` catch-all renders Inference + `:tab`).
+  Rebased on origin/main (v8.4.36, the nav-accordion + gpus lanes) → one patch above → **v8.4.37**.
+  Live visual verification is the post-deploy gate.

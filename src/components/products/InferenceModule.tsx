@@ -1,144 +1,74 @@
 'use client'
 
 /**
- * Inference — deployed model-serving endpoints (replicas, request volume, rollout
- * status) served by the platform.
+ * Inference — the endpoints dashboard for managed model-serving on Hanzo Cloud.
  *
- * Reads the endpoint inventory from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/inference/endpoints`), which injects the service token server-side.
- * When the inference service isn't provisioned for the org the list load fails and
- * the honest not-configured / unavailable card renders instead of an empty grid —
- * matching every other infra module.
+ * ONE module, routed by the `:tab` param (declared as specific sub-pages in the
+ * registry so `/inference/status` + `/inference/logs` render these rich, endpoint-
+ * oriented views instead of the generic shared sub-page):
+ *   - ''       → the dashboard: header + the "Connected to Hanzo Cloud" hero + the
+ *                endpoints panel (left) + Usage Overview / Quick Actions / Need help
+ *                (right rail, stacks below on narrow viewports).
+ *   - 'status' → the per-endpoint health board (StatusBoard).
+ *   - 'logs'   → the recorded inference activity stream (LogsView).
+ * (`/inference/metrics` + `/inference/settings` stay on the SHARED per-product sub-page
+ * system — Metrics is the rich per-product LivingOverview dashboard.)
+ *
+ * Every number is REAL (the managed model catalog + the org's deployed KServe
+ * InferenceServices for endpoints, the commerce usage ledger for requests/tokens/spend)
+ * or an honest "—" / empty state — never the mockup's placeholder figures.
  */
-import { useCallback, useEffect, useState } from 'react'
-import { Button, Text } from '@hanzo/gui'
-import { RefreshCw, Zap } from '@hanzogui/lucide-icons-2'
+import { useRouter } from 'next/navigation'
+import { XStack, YStack } from '@hanzo/gui'
+import { Plus } from '@hanzogui/lucide-icons-2'
 
-import { restGet } from '~/lib/api/client'
+import { useDetailPane } from '~/components/DetailPane'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { useInferenceData } from './inference/data'
+import { AccentButton } from './inference/parts'
+import { HeroCard } from './inference/HeroCard'
+import { EndpointsPanel } from './inference/EndpointsPanel'
+import { RightRail } from './inference/RightRail'
+import { StatusBoard } from './inference/StatusBoard'
+import { LogsView } from './inference/LogsView'
+import { openDeployPane } from './inference/panes'
 
-const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
-
-type InferenceEndpoint = {
-  id: string
-  name?: string
-  model?: string
-  status?: string
-  replicas?: number
-  requests?: number
+export function InferenceModule({ params }: { params: Record<string, string> }) {
+  const tab = params.tab ?? ''
+  if (tab === 'status') return <StatusBoard />
+  if (tab === 'logs') return <LogsView />
+  return <Dashboard />
 }
 
-export function InferenceModule(_props: { params: Record<string, string> }) {
-  const [rows, setRows] = useState<InferenceEndpoint[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<PlatformError | null>(null)
+function Dashboard() {
+  const router = useRouter()
+  const pane = useDetailPane()
+  const data = useInferenceData()
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const r = await restGet<{ endpoints?: InferenceEndpoint[] }>(paas('inference/endpoints'))
-      setRows(r.endpoints ?? [])
-      setLoadError(null)
-    } catch (e) {
-      setLoadError(interpretPlatformError(e))
-      setRows([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const columns: Column<InferenceEndpoint>[] = [
-    {
-      key: 'name',
-      header: 'Name',
-      render: (e) => (
-        <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
-          {e.name || e.id}
-        </Text>
-      ),
-    },
-    {
-      key: 'model',
-      header: 'Model',
-      width: 180,
-      render: (e) => (
-        <Text fontSize="$3" color="$color11">
-          {e.model || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'replicas',
-      header: 'Replicas',
-      width: 100,
-      render: (e) => (
-        <Text fontSize="$3" color="$color11">
-          {e.replicas ?? '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'requests',
-      header: 'Requests',
-      width: 120,
-      render: (e) => (
-        <Text fontSize="$3" color="$color11">
-          {e.requests ?? '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: 120,
-      render: (e) => <StatusTag status={e.status ?? 'unknown'} />,
-    },
-  ]
+  const nav = (path: string) => {
+    pane.close()
+    router.push(path)
+  }
+  const onDeploy = () => openDeployPane(pane, { onDeployed: data.reload, nav })
 
   return (
-    <>
+    <YStack gap="$4">
       <PageHeader
         title="Inference"
-        subtitle="Deployed model-serving endpoints."
+        subtitle="Deploy, scale, and monitor model-serving endpoints across Hanzo Cloud."
         actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
-            Refresh
-          </Button>
+          <AccentButton icon={<Plus size={16} />} onPress={onDeploy}>
+            Deploy Endpoint
+          </AccentButton>
         }
       />
-
-      {loadError ? (
-        <PlatformStateCard error={loadError} onRetry={() => void load()} />
-      ) : !loading && rows.length === 0 ? (
-        <EmptyState
-          icon={Zap}
-          title="Serve a model"
-          description="Inference endpoints turn a model into a scalable, autoscaling HTTP API — online for low-latency requests or batch for large jobs, billed only for what you use."
-          bullets={[
-            'Pick a Zen model or bring your own checkpoint',
-            'Deploy an endpoint with the hanzo CLI or SDK',
-            'Replicas, request volume, and rollout status appear here',
-          ]}
-          primary={{ label: 'Create an endpoint', href: 'https://docs.hanzo.ai/inference' }}
-          secondary={{ label: 'Browse models', onPress: () => { if (typeof window !== 'undefined') window.location.assign('/models') } }}
-        />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          rowKey={(e) => e.id}
-          empty="No inference endpoints yet."
-        />
-      )}
-    </>
+      <HeroCard />
+      <XStack gap="$4" flexWrap="wrap" items="flex-start">
+        <YStack flex={2} minW={480} gap="$4">
+          <EndpointsPanel data={data} />
+        </YStack>
+        <RightRail data={data} onDeploy={onDeploy} nav={nav} />
+      </XStack>
+    </YStack>
   )
 }
