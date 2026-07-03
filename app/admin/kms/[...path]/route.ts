@@ -24,6 +24,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { getAdminGate, adminBearer, kmsBaseUrl, type AdminGate } from '~/lib/server/identity'
 import { orgFor as policyOrgFor } from '~/lib/server/admin-policy'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
@@ -46,6 +47,13 @@ function orgFor(gate: AdminGate, req: NextRequest): string {
 }
 
 async function handle(req: NextRequest, segments: string[]): Promise<NextResponse> {
+  // CSRF: a cross-site page carrying the admin's auto-sent cookie must never be able
+  // to create / rotate / delete a KMS secret. Refuse a cross-origin MUTATION before
+  // the admin gate or any body read (safe GET reveals pass). Defense in depth on top
+  // of the session cookie's own SameSite attribute.
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
   const gate = await getAdminGate(req)
   if (!gate) return forbidden()
   if (segments.length !== 1 || segments[0] !== 'secrets') return notFound()

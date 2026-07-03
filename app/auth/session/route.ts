@@ -19,6 +19,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { type Account } from '~/lib/api/types'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 import { resolveUser } from '~/lib/server/identity'
 import {
   clearCookies,
@@ -81,6 +82,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 /** POST { username, password } — establish the console session for the signed-in user. */
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // CSRF: refuse a cross-origin login (login-CSRF fixes the victim into an attacker's
+  // session) before touching credentials.
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
   if (!sessionConfigured()) {
     // No confidential client wired: the console still runs on the casibase session;
     // report "not configured" so the client silently skips the console session.
@@ -133,6 +139,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 /** DELETE — sign out: best-effort revoke the refresh token, then clear the cookies. */
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
+  // CSRF: refuse a cross-origin forced sign-out.
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
   const rt = readRefreshToken(req)
   if (rt) await revokeRefreshToken(rt)
   return withCookies(NextResponse.json({ ok: true }), clearCookies())

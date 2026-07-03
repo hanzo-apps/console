@@ -36,6 +36,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser } from '~/lib/server/identity'
 import { billingSubject, scopedBillingSearch, scopedBillingBody } from '~/lib/server/billing-scope'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
@@ -48,6 +49,11 @@ function commerceBaseUrl(): string {
 }
 
 async function forward(req: NextRequest, path: string[]): Promise<NextResponse> {
+  // CSRF: a mutating billing write (spend-alert/budget) authenticates from the
+  // auto-sent cookie, so refuse a cross-origin one before any work (safe reads pass).
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
   // Per-tenant authz: any valid session may see ITS OWN billing (no admin gate).
   const user = await resolveUser(req)
   if (!user) {
