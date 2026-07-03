@@ -15,7 +15,7 @@
  *   Invoices      — invoice history + download (`/v1/billing/invoices`).
  *   Subscriptions — the org's plans/status/renewal (reuses `SubscriptionsModule`).
  *   Payment       — saved, masked payment methods (reuses `PaymentMethodsModule`).
- *   Credits       — cloud credits + on-chain HUSD top-up (reuses `WalletModule`).
+ *   Credits       — card top-up (Square) with a link to HUSD crypto (`BillingCredits`).
  *
  * Composition over duplication: the last three tabs REUSE the existing modules
  * verbatim (each self-headed), so consolidating the old scattered Cost /
@@ -31,7 +31,7 @@ import { BillingBudgets } from './billing/BillingBudgets'
 import { BillingInvoices } from './billing/BillingInvoices'
 import { SubscriptionsModule } from './SubscriptionsModule'
 import { PaymentMethodsModule } from './PaymentMethodsModule'
-import { WalletModule } from './WalletModule'
+import { BillingCredits } from './billing/BillingCredits'
 
 /** The billing-center tabs, in display order. `id` matches the registry sub-page slug. */
 const TABS: { id: string; label: string }[] = [
@@ -80,7 +80,7 @@ export function BillingModule({ params }: { params: Record<string, string> }) {
       ) : tab === 'payment-methods' ? (
         <PaymentMethodsModule params={params} />
       ) : tab === 'credits' ? (
-        <WalletModule params={params} />
+        <BillingCredits params={params} />
       ) : (
         <BillingOverview params={params} />
       )}

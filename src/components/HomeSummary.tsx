@@ -15,7 +15,6 @@ import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowRight, CreditCard, TrendingUp } from '@hanzogui/lucide-icons-2'
 
-import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { BillingApi } from '~/lib/api/billing'
 
@@ -111,13 +110,7 @@ export function HomeSummary() {
           <Button size="$2" iconAfter={<ArrowRight size={14} />} onPress={() => router.push('/billing')}>
             View cost
           </Button>
-          <Button
-            size="$2"
-            chromeless
-            onPress={() => {
-              if (typeof window !== 'undefined') window.open(`${config.billingUrl}/topup`, '_blank', 'noopener')
-            }}
-          >
+          <Button size="$2" chromeless onPress={() => router.push('/billing/credits')}>
             Add credits
           </Button>
         </XStack>
