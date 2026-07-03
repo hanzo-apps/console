@@ -14,7 +14,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, Rocket, Server, Trash2 } from '@hanzogui/lucide-icons-2'
+import { AlertTriangle, Lock, RefreshCw, Rocket, Server, Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import {
@@ -239,8 +239,7 @@ export function CustomerMachines() {
     )
   }
 
-  // Only a genuine 401 (no session) is a sign-in prompt — everything else is a
-  // signed-in customer with no dedicated machines yet, which is a CONNECTED state.
+  // A genuine 401 (no session) is a sign-in prompt.
   if (error?.kind === 'unauthorized') {
     return (
       <>
@@ -255,11 +254,30 @@ export function CustomerMachines() {
     )
   }
 
-  // No machines (visor 403 = not provisioned for dedicated compute, or a real empty
-  // list): a CONNECTED "launch your first" state that ALWAYS shows the real region +
-  // size catalog with live pricing below (proving the backend) — never "sign in" to a
-  // signed-in user, never a blank spinner.
-  if (error || rows.length === 0) {
+  // A permission (403) or transport failure (404 / 5xx / network) is NOT "you have
+  // none" — surface it honestly. Rendering the empty "launch your first" state here
+  // would mask a load/permission error as an empty list, contradicting the very
+  // "nothing is fabricated" promise. A transient error offers Retry; a 403 does not.
+  if (error) {
+    const forbidden = error.kind === 'forbidden'
+    return (
+      <>
+        {header}
+        <EmptyState
+          icon={forbidden ? Lock : AlertTriangle}
+          title={forbidden ? 'Machines are not enabled for your account' : 'Could not load your machines'}
+          description={error.message}
+          primary={forbidden ? undefined : { label: 'Retry', onPress: () => void load() }}
+          secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
+        />
+      </>
+    )
+  }
+
+  // A real 200 with zero machines: the CONNECTED "launch your first" state that shows
+  // the live region + size catalog with real pricing below (proving the backend). Only
+  // ever reached on a genuine empty list — never on an error.
+  if (rows.length === 0) {
     return (
       <>
         {header}

@@ -37,22 +37,27 @@ describe('normalizeMachine', () => {
   })
 })
 
-describe('interpretVisorError — customer-appropriate, never infra jargon', () => {
+describe('interpretVisorError — an error is an error, never the empty state', () => {
   it('only a genuine 401 (no session) is a sign-in prompt', () => {
     expect(interpretVisorError(new ApiError('no', 401)).kind).toBe('unauthorized')
   })
 
-  it('403 (signed-in customer, no dedicated compute) → CONNECTED managed state, NOT sign-in', () => {
+  it('403 → an honest permission state (NOT sign-in, NOT the empty "launch" state)', () => {
     const v = interpretVisorError(new ApiError('no', 403))
-    expect(v.kind).toBe('unavailable')
+    expect(v.kind).toBe('forbidden')
     // Must NOT tell a signed-in user to sign in (that reads as broken).
     expect(v.message.toLowerCase()).not.toContain('sign in')
   })
 
-  it('403 / 404 / 501 / network → managed-compute, with NO infra-token wording', () => {
-    for (const e of [new ApiError('x', 403), new ApiError('x', 404), new ApiError('x', 501), new ApiError('x', 503), new Error('network')]) {
+  it('404 / 5xx / network → an honest transient error (retryable), never "you have none"', () => {
+    for (const e of [new ApiError('x', 404), new ApiError('x', 500), new ApiError('x', 501), new ApiError('x', 503), new Error('network')]) {
+      expect(interpretVisorError(e).kind).toBe('error')
+    }
+  })
+
+  it('no state leaks infra-token / not-configured jargon to a customer', () => {
+    for (const e of [new ApiError('x', 401), new ApiError('x', 403), new ApiError('x', 404), new ApiError('x', 503), new Error('network')]) {
       const v = interpretVisorError(e)
-      expect(v.kind).toBe('unavailable')
       expect(v.message.toLowerCase()).not.toContain('paas')
       expect(v.message.toLowerCase()).not.toContain('token')
       expect(v.message.toLowerCase()).not.toContain('not configured')
