@@ -6,14 +6,79 @@ body,
 
 body {
   margin: 0;
-  background-color: var(--background, #0a0a0a);
-  color: var(--color, #f5f5f5);
+  background-color: var(--background, #0b0c0e);
+  color: var(--color, #ededf1);
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Calm type rendering — crisp, low-glare, comfortable rhythm for a full workday. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: 1.5;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* ── Calm theme refinement — the ONE place the console's dark/light palette is
+   softened for a quiet, spacious, low-glare feel. These override the generated
+   @hanzo/gui (Tamagui) theme variables; the `html:root.t_*` selector is one step
+   more specific than the library's runtime `:root.t_*` block so it wins regardless
+   of stylesheet insertion order. DRY: every surface, border and text color in the app
+   reads from these tokens, so calming them here calms the whole product.
+
+   Design intent (dark): a soft cool charcoal instead of harsh pure black; gentle
+   surface STEPS so cards read as calm panels with subtle elevation (not flat voids);
+   off-white primary text (no glare from pure #fff); low-contrast hairline borders;
+   a restrained active step. A whisper of cool hue (~222°, very low saturation) reads
+   as premium and easy, never tinted. Text contrast stays WCAG-AA+ on every surface. */
+html:root.t_dark {
+  --background: hsl(222 12% 8.5%);
+  --backgroundHover: hsl(222 12% 11%);
+  --backgroundPress: hsl(222 12% 7%);
+  --backgroundFocus: hsl(222 12% 11%);
+
+  /* Surface steps — sidebar (color1) sits below content (background) for depth;
+     cards (color2) sit just above it so panels separate calmly without heavy borders. */
+  --color1: hsl(222 13% 6.5%);
+  --color2: hsl(222 12% 10.5%);
+  --color3: hsl(222 11% 13.5%);
+  --color4: hsl(221 10% 16.5%);
+  --color5: hsl(221 9% 20%);
+  --color6: hsl(220 8% 26%);
+  --color7: hsl(220 7% 34%);
+  --color8: hsl(219 7% 44%);
+  --color9: hsl(220 7% 56%);
+  --color10: hsl(219 8% 68%);
+  --color11: hsl(214 10% 82%);
+  --color12: hsl(210 12% 93%);
+  --color: hsl(210 12% 93%);
+
+  /* Gentle hairlines — present enough to define, quiet enough to disappear. */
+  --borderColor: hsl(220 10% 15.5%);
+  --borderColorHover: hsl(220 9% 23%);
+  --borderColorPress: hsl(220 10% 14%);
+  --borderColorFocus: hsl(220 9% 23%);
+}
+
+/* Light theme — the calm parallel: a warm off-white base (not stark #fff), soft
+   ink text (not pure black), and quiet hairlines. Lighter touch than dark, since
+   the console defaults to dark, but kept consistent for the theme toggle. */
+html:root.t_light {
+  --background: hsl(220 20% 99%);
+  --color1: hsl(220 24% 100%);
+  --color2: hsl(220 20% 98%);
+  --color3: hsl(220 18% 95.5%);
+  --color4: hsl(220 16% 92.5%);
+  --color5: hsl(220 15% 89%);
+  --color9: hsl(220 9% 46%);
+  --color10: hsl(220 10% 38%);
+  --color11: hsl(220 14% 22%);
+  --color12: hsl(220 22% 12%);
+  --color: hsl(220 22% 12%);
+  --borderColor: hsl(220 16% 90%);
+  --borderColorHover: hsl(220 14% 82%);
 }
 
 /* Motion — a single fade-up entrance (matches the hanzo.ai marketing feel:
