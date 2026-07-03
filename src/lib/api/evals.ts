@@ -6,7 +6,7 @@
  * This is the ONE client for the console's Observe surface: datasets, dataset
  * items, evaluators, score-configs, scores, traces (+ the trace-detail
  * span/observation tree), observations, sessions, dataset runs / experiments,
- * and the dashboard metrics. It is the faithful port target of Langfuse's
+ * and the dashboard metrics. It is the faithful port target of the upstream
  * observability screens, reskinned to @hanzo/gui.
  *
  * TRANSPORT: every call is SAME-ORIGIN with NO prefix (`originV1Url('evals/…')`
@@ -18,7 +18,7 @@
  * `proxy-allow.ts`, so the proxy admits `v1/evals/*` and nothing else.
  *
  * SHAPES: list endpoints return `{ data: [...] }`. Trace / Observation / Score /
- * Session are mapped into the canonical Langfuse-derived view-model types
+ * Session are mapped into the canonical Observe-derived view-model types
  * (`./o11y`), so the shared observability primitives (SpanTree waterfall,
  * metrics folds, formatters) render either surface unchanged.
  *
@@ -29,7 +29,7 @@
  * `ApiError` the module turns into an honest BackendStateCard — never a fabricated
  * row.
  *
- * Ported layout/flows from Langfuse (MIT) — see NOTICE. No Langfuse code is
+ * Ported layout/flows from the upstream observability product (MIT) — see NOTICE. No third-party code is
  * copied; this is a clean client over the native `/v1/evals` contract.
  */
 import { restGet, restPost, restDelete, originV1Url, ApiError } from './client'
@@ -193,7 +193,7 @@ const url = (path: string, query?: Record<string, string | number | undefined>):
   return u.toString()
 }
 
-// ── adapters: native wire → canonical Langfuse view-models ───────────────────
+// ── adapters: native wire → canonical Observe view-models ───────────────────
 
 type TraceWire = {
   id: string

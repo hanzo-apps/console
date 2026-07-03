@@ -2,7 +2,7 @@
 
 Unified admin console for **Hanzo Cloud** and all cloud products. Our code,
 BSD-3-Clause, built on **@hanzo/gui** (the Tamagui-based cross-platform UI).
-NOT a Langfuse fork, NOT casibase — it is a clean client over the unified `/v1`
+NOT an observability-console fork, NOT casibase — it is a clean client over the unified `/v1`
 backend (`hanzoai/cloud`, the casibase API at https://cloud.hanzo.ai/v1/*).
 
 ## Base: Next.js 15 (app router) + @hanzo/gui
@@ -426,7 +426,7 @@ console2 destination: experiments, dashboard/widgets, integrations
 (blob-storage, Slack, Mixpanel, Insights), referrals, zero-trust, prompt
 detail/create/metrics, dataset items/runs, annotation queue detail/items, and
 score analytics. These are now represented in console2 without copying the old
-Langfuse internals.
+observability-console internals.
 
 - `ConsoleFeatureModule.tsx` is the shared forward-compatible shell: each moved
   surface declares its exact `/v1` endpoint, renders real rows when the endpoint
