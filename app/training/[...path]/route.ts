@@ -22,6 +22,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser } from '~/lib/server/identity'
+import { orgFor } from '~/lib/server/admin-policy'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
@@ -56,6 +58,11 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     return NextResponse.json({ status: 'error', msg: 'Not found' }, { status: 404 })
   }
 
+  // CSRF: `POST /train/jobs` mutates (and bills) from the auto-sent cookie — refuse a
+  // cross-origin one before any work (safe reads pass).
+  const csrf = csrfRefusal(req, 'casibase')
+  if (csrf) return csrf
+
   const user = await resolveUser(req)
   if (!user) {
     return NextResponse.json(
@@ -70,9 +77,11 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     cookie,
     Accept: 'application/json',
     'Content-Type': 'application/json',
-    // The backend re-validates org from the session; forward the active scope so a
-    // global admin's switched org is honored and a brand admin is pinned to theirs.
-    'X-Org-Id': req.headers.get('X-Org-Id') ?? user.owner,
+    // Org is SERVER-RESOLVED, not the raw browser header: a global admin's switched
+    // org (?/X-Org-Id) is honored, a non-global caller is PINNED to their own — so a
+    // brand admin can't drive another tenant's training jobs even if the backend
+    // trusted the forwarded header. Matches the /paas + /admin/kms orgFor pin.
+    'X-Org-Id': orgFor({ isGlobalAdmin: user.isGlobalAdmin, orgScope: user.owner }, req.headers.get('X-Org-Id')),
   }
   const projectId = req.headers.get('X-Project-Id')
   const environment = req.headers.get('X-Environment')
