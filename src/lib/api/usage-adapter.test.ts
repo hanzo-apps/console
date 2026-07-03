@@ -8,6 +8,7 @@ import {
   delta,
   buildSeries,
   buildByModel,
+  buildByStatus,
   buildActivity,
   buildCloudUsageOverview,
   type AdapterParams,
@@ -56,6 +57,7 @@ const params = (over: Partial<AdapterParams> = {}): AdapterParams => ({
   activityOffset: over.activityOffset ?? 0,
   now: over.now ?? NOW,
   allOrgs: over.allOrgs,
+  product: over.product,
 })
 
 describe('windowFor — range → [from,to] + interval', () => {
@@ -225,5 +227,48 @@ describe('buildCloudUsageOverview — end-to-end assembly', () => {
     expect(ov.byModel.items[0].model).toBe('gpt') // 5c > 3c
     expect(ov.activity.total).toBe(2)
     expect(ov.scope.allOrgs).toBe(false)
+  })
+
+  it('includes a real requests-by-status breakdown', () => {
+    const all = [
+      rec({ id: 'a', at: NOW - HOUR, status: 'success' }),
+      rec({ id: 'b', at: NOW - 2 * HOUR, status: 'success' }),
+      rec({ id: 'c', at: NOW - 3 * HOUR, status: 'error' }),
+    ]
+    const ov = buildCloudUsageOverview(all, params({ range: '24h', now: NOW }))
+    expect(ov.byStatus).toEqual([
+      { status: 'success', requests: 2, pct: 67 },
+      { status: 'error', requests: 1, pct: 33 },
+    ])
+  })
+
+  it('filters to ONE product before rolling up (per-product Metrics), honest-empty when none', () => {
+    const all = [
+      rec({ id: 'ag1', at: NOW - HOUR, cents: 10, product: 'agents' }),
+      rec({ id: 'ch1', at: NOW - HOUR, cents: 4, product: 'chat' }),
+      rec({ id: 'bare', at: NOW - HOUR, cents: 7, product: '' }),
+    ]
+    // product: 'agents' → only the agent-tagged row is counted
+    const agents = buildCloudUsageOverview(all, params({ range: '24h', now: NOW, product: 'agents' }))
+    expect(agents.totals.spendCents).toBe(10)
+    expect(agents.totals.requests).toBe(1)
+    // a product with no attributed rows → honest zero totals (never the whole ledger)
+    const none = buildCloudUsageOverview(all, params({ range: '24h', now: NOW, product: 'search' }))
+    expect(none.totals.spendCents).toBe(0)
+    expect(none.totals.requests).toBe(0)
+    // null product (the raw-inference surfaces) → the WHOLE ledger (all inference)
+    const whole = buildCloudUsageOverview(all, params({ range: '24h', now: NOW, product: null }))
+    expect(whole.totals.spendCents).toBe(21) // 10 + 4 + 7
+  })
+})
+
+describe('buildByStatus', () => {
+  it('groups requests by recorded status, blank → success, sorted desc; empty → []', () => {
+    expect(buildByStatus([])).toEqual([])
+    const rows = [rec({ status: 'error' }), rec({ status: '' }), rec({ status: '' }), rec({ status: '' })]
+    expect(buildByStatus(rows)).toEqual([
+      { status: 'success', requests: 3, pct: 75 },
+      { status: 'error', requests: 1, pct: 25 },
+    ])
   })
 })
