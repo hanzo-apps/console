@@ -24,12 +24,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0a0a0a',
+  themeColor: '#000000',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="t_dark" style={{ backgroundColor: '#0a0a0a', colorScheme: 'dark' }} suppressHydrationWarning>
+    <html lang="en" className="t_dark" style={{ backgroundColor: '#000000', colorScheme: 'dark' }} suppressHydrationWarning>
       <body style={{ margin: 0 }}>
         <ChunkGuard />
         <Provider>{children}</Provider>
