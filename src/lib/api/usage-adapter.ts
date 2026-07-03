@@ -23,6 +23,7 @@ import type {
   CloudUsageDelta,
   CloudUsageOverview,
   CloudUsageSeriesPoint,
+  CloudUsageStatusSlice,
   CloudUsageTotals,
   UsageRange,
 } from './usage'
@@ -48,6 +49,8 @@ export type AdapterParams = {
   now: number
   /** Preserved from the caller; the per-tenant proxy is always own-org scoped. */
   allOrgs?: boolean
+  /** Attribute to ONE product (`metadata.product`) before rolling up; null = whole ledger. */
+  product?: string | null
 }
 
 /** Parse an RFC3339 string or unix-seconds/ms number to epoch ms; null when unusable. */
@@ -188,6 +191,24 @@ export function buildByModel(records: UsageRecord[], topN: number): CloudUsageBy
   return { items, other, totalCents }
 }
 
+/**
+ * Requests grouped by recorded status (`success`/`error`/…), sorted by request count
+ * desc. A blank status is bucketed as `success` (a completed billed inference the
+ * gateway didn't tag) — honest, since every billed row is a completed call. Empty
+ * records → `[]` (the status donut renders its honest empty state).
+ */
+export function buildByStatus(records: UsageRecord[]): CloudUsageStatusSlice[] {
+  const by = new Map<string, number>()
+  for (const r of records) {
+    const status = r.status || 'success'
+    by.set(status, (by.get(status) ?? 0) + 1)
+  }
+  const total = records.length
+  return Array.from(by.entries())
+    .map(([status, requests]) => ({ status, requests, pct: pctOf(requests, total) }))
+    .sort((a, b) => b.requests - a.requests)
+}
+
 /** Map one usage record to an activity row (every billed row is a completed inference). */
 function toActivityRow(r: UsageRecord): CloudUsageActivityRow {
   return {
@@ -227,7 +248,12 @@ export function buildActivity(
 }
 
 /** Assemble the full `CloudUsageOverview` the dashboard renders, purely from records. */
-export function buildCloudUsageOverview(all: UsageRecord[], p: AdapterParams): CloudUsageOverview {
+export function buildCloudUsageOverview(records: UsageRecord[], p: AdapterParams): CloudUsageOverview {
+  // Per-product attribution: keep only rows tagged with this product (`metadata.product`)
+  // before any windowing/rollup, so totals + deltas + breakdowns are all product-scoped.
+  // null → the whole ledger (which is entirely inference calls). Filtering is client-side
+  // over the already-fetched records, so it never widens scope.
+  const all = p.product ? records.filter((r) => r.product === p.product) : records
   const { from, to, interval } = windowFor(p)
   const current = inWindow(all, from, to)
   const span = to - from
@@ -252,6 +278,7 @@ export function buildCloudUsageOverview(all: UsageRecord[], p: AdapterParams): C
     deltas,
     series: buildSeries(current, from, to, interval),
     byModel: buildByModel(current, p.topModels),
+    byStatus: buildByStatus(current),
     activity: buildActivity(current, p.activityType, p.activityLimit, p.activityOffset),
   }
 }

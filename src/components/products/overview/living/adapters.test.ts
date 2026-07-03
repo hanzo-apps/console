@@ -41,6 +41,10 @@ const usage = (): CloudUsageOverview => ({
     other: null,
     totalCents: 340,
   },
+  byStatus: [
+    { status: 'success', requests: 11, pct: 92 },
+    { status: 'error', requests: 1, pct: 8 },
+  ],
   activity: {
     items: [
       { time: '2026-06-30T11:00:00Z', model: 'zen5', provider: 'do-ai', type: 'inference', status: 'success', tokens: 1000, promptTokens: 600, completionTokens: 400, costCents: 240, stream: true, premium: false, requestId: 'rq1', org: 'acme', user: 'u' },
@@ -70,15 +74,28 @@ describe('fromCloudUsage — commerce ledger → OverviewData', () => {
     expect(d.activity[0]).toMatchObject({ id: 'rq1', title: 'Inference · zen5', status: 'success' })
     expect(d.activityTotal).toBe(1)
   })
+  it('maps the Metrics-dashboard breakdowns: top models by tokens + requests by status', () => {
+    const d = fromCloudUsage(usage())
+    // tokens donut = the SAME per-model rollup valued on tokens (not spend)
+    expect(d.distribution.byModelTokens[0]).toEqual({ label: 'zen5', value: 1000, sub: 'do-ai' })
+    // status donut = real requests-by-status, title-cased for the legend
+    expect(d.distribution.byStatus).toEqual([
+      { label: 'Success', value: 11 },
+      { label: 'Error', value: 1 },
+    ])
+  })
   it('is honest-empty for an org with no usage', () => {
     const zero = usage()
     zero.totals = { tokens: 0, promptTokens: 0, completionTokens: 0, requests: 0, spendCents: 0, models: 0, providers: 0 }
     zero.series = []
     zero.byModel = { items: [], other: null, totalCents: 0 }
+    zero.byStatus = []
     zero.activity = { items: [], limit: 40, offset: 0, total: 0, type: 'all' }
     const d = fromCloudUsage(zero)
     expect(d.kpi.tokens.value).toBe(0)
     expect(d.distribution.byModel).toEqual([])
+    expect(d.distribution.byModelTokens).toEqual([])
+    expect(d.distribution.byStatus).toEqual([])
     expect(d.activity).toEqual([])
   })
 })

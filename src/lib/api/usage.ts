@@ -69,6 +69,14 @@ export type CloudUsageByModel = {
   totalCents: number
 }
 
+export type CloudUsageStatusSlice = {
+  /** The recorded gateway/provider status for the call (e.g. `success`, `error`). */
+  status: string
+  requests: number
+  /** Share of total requests, 0..100. */
+  pct: number
+}
+
 export type CloudUsageActivityRow = {
   /** RFC3339 (UTC). */
   time: string
@@ -113,6 +121,8 @@ export type CloudUsageOverview = {
   deltas: Record<string, CloudUsageDelta>
   series: CloudUsageSeriesPoint[]
   byModel: CloudUsageByModel
+  /** Requests grouped by recorded status (Success/Error/…) — the real status breakdown. */
+  byStatus: CloudUsageStatusSlice[]
   activity: CloudUsageActivity
 }
 
@@ -135,6 +145,13 @@ export type UsageOverviewParams = {
   allOrgs?: boolean
   /** Global-admin explicit org target (forwards ?org=<slug>); ignored for tenants. */
   org?: string
+  /**
+   * Attribute the ledger to ONE product (`metadata.product`) before rolling it up —
+   * the per-product Metrics dashboard. `null`/undefined = the whole ledger (which is
+   * entirely inference calls). Filtering is client-side over the same fetched records,
+   * so it never widens scope; a product with no attributed rows rolls up honest-empty.
+   */
+  product?: string | null
 }
 
 export const UsageApi = {
@@ -157,6 +174,7 @@ export const UsageApi = {
       activityOffset: p.activityOffset ?? 0,
       now: Date.now(),
       allOrgs: p.allOrgs,
+      product: p.product ?? null,
     })
   },
 }

@@ -593,8 +593,20 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Vertex AI Prediction',
     category: 'AI',
     status: 'enabled',
+    repo: 'hanzoai/cloud',
     kind: 'module',
-    routes: [{ path: '', component: InferenceModule }],
+    // Inference OWNS its Status + Logs as rich, endpoint-oriented views (the `:tab`
+    // route) — declaring them as SPECIFIC sub-pages makes the router render THESE
+    // instead of the generic shared sub-page for those slugs. Metrics + Settings stay
+    // on the shared per-product system (Metrics = the rich per-product LivingOverview).
+    routes: [
+      { path: '', component: InferenceModule },
+      { path: ':tab', component: InferenceModule },
+    ],
+    subpages: [
+      { slug: 'status', label: 'Status' },
+      { slug: 'logs', label: 'Logs' },
+    ],
   },
   {
     id: 'finetuning',
