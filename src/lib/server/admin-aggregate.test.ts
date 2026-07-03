@@ -25,6 +25,11 @@ describe('allowAdminSurface — least-privilege admin read surface', () => {
     expect(allowAdminSurface('admin/finance')).toBe(true)
   })
 
+  it('admits the compute aggregate (the datastore fleets/bots/spend read)', () => {
+    expect(allowAdminSurface('admin/compute')).toBe(true)
+    expect(allowAdminSurface('admin/compute/by-org')).toBe(true)
+  })
+
   it('REFUSES the tenant-scoped admin proxies (iam / kms) — never a tunnel', () => {
     expect(allowAdminSurface('admin/iam')).toBe(false)
     expect(allowAdminSurface('admin/iam/get-users')).toBe(false)

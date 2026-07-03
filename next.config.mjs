@@ -69,7 +69,7 @@ function guiPackages() {
  */
 const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'crm']
 const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio']
-const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance']
+const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute']
 /**
  * DEV-ONLY: proxy the client's direct-cloud `/v1/{iam,o11y}/*` calls (get-account,
  * annotation-queues/users) to a real cloud backend so `npm run dev` renders the
