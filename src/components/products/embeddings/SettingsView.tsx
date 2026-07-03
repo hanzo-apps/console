@@ -84,7 +84,7 @@ export function SettingsView({ owner }: { owner: string }) {
           size="$2"
           iconAfter={<ExternalLink size={14} />}
           onPress={() => {
-            if (typeof window !== 'undefined') window.open(`${config.docsUrl}/embeddings`, '_blank', 'noopener')
+            if (typeof window !== 'undefined') window.open(`${config.docsUrl}/docs/embeddings`, '_blank', 'noopener')
           }}
         >
           Embeddings documentation
