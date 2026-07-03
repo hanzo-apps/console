@@ -5,7 +5,7 @@ import type { AdminOverview } from '~/lib/api/admin-overview'
 import type { Finance } from '~/lib/api/finance'
 import type { PlatformApp } from '~/lib/api/platform'
 import type { FunctionsMetrics, OverviewStats } from '~/lib/api/functions'
-import { fromCloudUsage, fromAdminOverview, fromFinance, financeHealth, fromFunctions, healthFromApps, sumSeriesLines } from './adapters'
+import { fromCloudUsage, fromAdminOverview, fromFinance, financeHealth, fromFunctions, healthFromApps, healthTally, orgsFromApps, fromOverlord, sumSeriesLines } from './adapters'
 
 /**
  * The adapters are the pure maps from each REAL source onto `OverviewData`. These
@@ -194,6 +194,93 @@ describe('healthFromApps — operator inventory → health rows', () => {
   })
   it('empty inventory → no rows (honest "not reporting")', () => {
     expect(healthFromApps([])).toEqual([])
+  })
+})
+
+describe('healthTally / orgsFromApps / fromOverlord — the Overlord god-view', () => {
+  const app = (over: Partial<PlatformApp>): PlatformApp => ({ id: over.app ?? 'x', org: over.org ?? 'acme', app: over.app ?? 'x', env: 'main', health: over.health ?? 'green', cluster: over.cluster ?? 'nyc1', ...over })
+
+  it('healthTally counts by verdict; unknown catches "" and unexpected strings', () => {
+    const t = healthTally([
+      { service: 'a', health: 'green' },
+      { service: 'b', health: 'green' },
+      { service: 'c', health: 'yellow' },
+      { service: 'd', health: 'red' },
+      { service: 'e', health: '' },
+      { service: 'f', health: 'weird' },
+    ])
+    expect(t).toEqual({ total: 6, healthy: 2, degraded: 1, down: 1, unknown: 2 })
+  })
+
+  it('healthTally of empty → all zeros (honest em-dash, never a fabricated all-healthy)', () => {
+    expect(healthTally([])).toEqual({ total: 0, healthy: 0, degraded: 0, down: 0, unknown: 0 })
+  })
+
+  it('orgsFromApps returns distinct non-empty orgs, sorted', () => {
+    expect(orgsFromApps([app({ org: 'zoo' }), app({ org: 'acme' }), app({ org: 'zoo' }), app({ org: '' })])).toEqual(['acme', 'zoo'])
+  })
+
+  it('fromOverlord builds the product board + counts from the operator inventory (no aggregate, no ledger)', () => {
+    const apps = [
+      app({ app: 'gateway', org: 'hanzo', health: 'green' }),
+      app({ app: 'iam', org: 'hanzo', health: 'green' }),
+      app({ app: 'commerce', org: 'acme', health: 'yellow' }),
+      app({ app: 'ml', org: 'acme', health: 'red' }),
+    ]
+    const d = fromOverlord(apps, null, null)
+    // Product-count KPIs derived from the real health tally.
+    expect(d.kpi.products?.value).toBe(4)
+    expect(d.kpi.healthy?.value).toBe(2)
+    expect(d.kpi.attention?.value).toBe(2) // degraded (1) + down (1)
+    // Active orgs from the distinct inventory orgs.
+    expect(d.kpi.orgs?.value).toBe(2)
+    // Full product-health board present.
+    expect(d.health.map((h) => h.service).sort()).toEqual(['commerce', 'gateway', 'iam', 'ml'])
+    // Health-mix donut, positive slices only (no "Unknown" here).
+    expect(d.distribution.productHealth).toEqual([
+      { label: 'Healthy', value: 2 },
+      { label: 'Degraded', value: 1 },
+      { label: 'Down', value: 1 },
+    ])
+    // No aggregate + no ledger → the usage KPIs are honestly absent (em-dash), not 0.
+    expect(d.kpi.spendCents).toBeUndefined()
+    expect(d.kpi.requests).toBeUndefined()
+  })
+
+  it('fromOverlord layers the admin aggregate usage/spend on top, keeping the real product board', () => {
+    const ov: AdminOverview = {
+      range: '24h',
+      kpis: [{ key: 'spendCents', value: 5000, unit: 'cents' }, { key: 'requests', value: 42 }, { key: 'orgs', value: 9 }],
+      series: [{ key: 'requests', interval: 'hour', points: [{ t: 't1', value: 10 }, { t: 't2', value: 32 }] }],
+      distribution: [{ label: 'Inference', value: 5000 }],
+      activity: [{ id: 'e1', time: 't', kind: 'inference', title: 'call', status: 'success' }],
+      alerts: [],
+      health: [{ service: 'stale', health: 'green' }],
+    }
+    const apps = [app({ app: 'gateway', org: 'hanzo', health: 'green' }), app({ app: 'ml', org: 'acme', health: 'red' })]
+    const d = fromOverlord(apps, ov, null)
+    // Usage/spend from the aggregate.
+    expect(d.kpi.spendCents?.value).toBe(5000)
+    expect(d.kpi.requests?.value).toBe(42)
+    // The aggregate's own org count wins over the inventory-derived count.
+    expect(d.kpi.orgs?.value).toBe(9)
+    // The operator inventory's FULL board overrides the aggregate's summary health.
+    expect(d.health.map((h) => h.service).sort()).toEqual(['gateway', 'ml'])
+    // Product-count KPIs still derived from the real inventory (2 products, 1 down).
+    expect(d.kpi.products?.value).toBe(2)
+    expect(d.kpi.attention?.value).toBe(1)
+    // Spend-by-product donut carried from the aggregate distribution.
+    expect(d.distribution.revenue).toEqual([{ label: 'Inference', value: 5000, sub: undefined }])
+  })
+
+  it('fromOverlord with no inventory but a ledger → usage real, product board honest-empty', () => {
+    const d = fromOverlord([], null, usage())
+    // Usage KPIs from the ledger fallback.
+    expect(d.kpi.spendCents?.value).toBe(340)
+    // No inventory → no product-count KPIs (honest em-dash) + empty health board.
+    expect(d.kpi.products).toBeUndefined()
+    expect(d.health).toEqual([])
+    expect(d.distribution.productHealth).toBeUndefined()
   })
 })
 

@@ -26,6 +26,18 @@ export function encodeShare(s: ShareState): string {
   return encodeURIComponent(JSON.stringify(s))
 }
 
+/**
+ * The ONE way to deep-link into the Playground preselected on a model — a
+ * `/playground?p=…` path carrying a minimal share state (just the model; empty
+ * prompt/messages, default settings). Any surface that offers "try this model in the
+ * playground" (the model catalog, the marketplace) uses this so the target model
+ * always arrives selected. PURE (no window/router); the caller navigates the path.
+ */
+export function playgroundPathForModel(modelId: string): string {
+  const state: ShareState = { mode: 'chat', model: modelId, system: '', messages: [], settings: DEFAULT_SETTINGS }
+  return `/playground?${SHARE_PARAM}=${encodeShare(state)}`
+}
+
 /** Decode a `?p=` token back into a composer state, or `null` when invalid. */
 export function decodeShare(token: string): ShareState | null {
   if (!token) return null
