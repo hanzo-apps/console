@@ -232,6 +232,7 @@ const BusinessDashboard = livingOverviewModule('admin-business')
 // Hanzo-internal and must never reach a customer.
 const FinanceDashboard = livingOverviewModule('finance')
 const AiMetricsLiving = livingOverviewModule('ai-metrics')
+const OpenEditionLiving = livingOverviewModule('open-edition')
 const FunctionsLiving = livingOverviewModule('functions')
 // GPUs Overview is role-aware (admin → living overview, customer → visor catalog);
 // the living-overview construction lives in GpusModule (GpusOverview) so this route
@@ -1395,6 +1396,23 @@ export const catalog: CatalogEntry[] = [
     // The reusable LivingOverview over the SAME real commerce usage ledger the old
     // AiMetricsModule read — now with count-up KPIs, live sparklines, and streaming.
     routes: [{ path: '', component: AiMetricsLiving }],
+  },
+  {
+    // Open Edition (run-for-pay): the customer's view of their open-source
+    // workload spend, over the SAME real commerce usage ledger scoped to the
+    // run-for-pay product tag. Spend billed = cost + 25% (the served revenue R).
+    // Canonical: docs/architecture/run-for-pay-pricing.md.
+    id: 'open-edition',
+    label: 'Open Edition',
+    icon: TrendingUp,
+    description: 'Run open-source workloads for pay — spend billed at cost + 25%, tokens, and per-model usage.',
+    gcp: 'Marketplace / pay-as-you-go',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    docs: `${DOCS}/billing`,
+    kind: 'module',
+    routes: [{ path: '', component: OpenEditionLiving }],
   },
   {
     // Native Analytics — per-org LLM + web + commerce analytics over the unified
