@@ -81,6 +81,7 @@ import { categoryIsOpen, toggleCategory, NAV_OPEN_PREF, EMPTY_OPEN, type Categor
 import { usePreferences } from '~/lib/products/preferences'
 import { useSession } from '~/lib/auth/session'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useAccent } from '~/lib/theme/accent'
 import { SidebarWallet } from '~/components/SidebarWallet'
 import { CommandSearchBox, useCommandPalette } from '~/components/CommandPalette'
 import { useAppLauncher } from '~/components/AppLauncher'
@@ -166,6 +167,12 @@ function ColorDot({ color, onPress, label }: { color: string; onPress: () => voi
   )
 }
 
+/** Inline accent-bar style for the ACTIVE nav item when a custom org accent is set — a
+ *  left bar in the org's color (keeps the product glyph + label legible; no forced
+ *  background/text). Default monochrome (undefined) when no accent. */
+const accentBarStyle = (active: boolean, accent: string | null): { boxShadow: string } | undefined =>
+  active && accent ? { boxShadow: `inset 3px 0 0 0 ${accent}` } : undefined
+
 /** A fixed (non-catalog) sidebar link: Overview, Docs. */
 function FixedRow({
   icon: Icon,
@@ -182,11 +189,12 @@ function FixedRow({
   collapsed: boolean
   onPress: () => void
 }) {
+  const { accent } = useAccent()
   return (
     <Button
       onPress={onPress}
       bg={active ? '$color5' : 'transparent'}
-      className={active ? 'hz-accent-bar' : undefined}
+      style={accentBarStyle(!!active, accent)}
       justify={collapsed ? 'center' : 'flex-start'}
       px={collapsed ? '$0' : '$2.5'}
       icon={<Icon size={ICON} />}
@@ -222,12 +230,13 @@ function NavRow({
   onCustomize?: () => void
 }) {
   const Icon = entry.icon
+  const { accent } = useAccent()
   if (collapsed) {
     return (
       <Button
         onPress={onOpen}
         bg={active ? '$color5' : 'transparent'}
-        className={active ? 'hz-accent-bar' : undefined}
+        style={accentBarStyle(active, accent)}
         justify="center"
         px="$0"
         height={44}
@@ -248,7 +257,7 @@ function NavRow({
         flex={1}
         onPress={onOpen}
         bg={active ? '$color5' : 'transparent'}
-        className={active ? 'hz-accent-bar' : undefined}
+        style={accentBarStyle(active, accent)}
         justify="flex-start"
         icon={<ProductIcon icon={Icon} color={color} size={18} />}
         iconAfter={hint}
