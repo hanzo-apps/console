@@ -310,6 +310,24 @@ function normalizeSpendAlerts(payload: unknown): SpendAlert[] {
   }))
 }
 
+/** Public Square Web Payments config for the tenant's card form. No secrets. */
+export type PaymentConfig = {
+  provider: string
+  applicationId: string
+  locationId: string
+  /** 'sandbox' | 'production' — drives which SDK + tokenizer the browser uses. */
+  environment: string
+  /** True when this deployment charges real cards. */
+  live: boolean
+}
+
+/** Result of a successful card top-up — the new canonical balance in USD cents. */
+export type TopupResult = {
+  transactionId: string
+  balanceCents: number
+  status: string
+}
+
 export const BillingApi = {
   /** Cloud credit balance (USD cents) — same proxy as the Wallet/sidebar. */
   balance: (currency = 'usd'): Promise<CloudBalance> =>
@@ -355,4 +373,30 @@ export const BillingApi = {
       threshold: Math.round(input.thresholdCents),
       currency: (input.currency ?? 'usd').toLowerCase(),
     }).then((r) => normalizeSpendAlerts([r])[0]),
+
+  /**
+   * PUBLIC Square Web Payments config for THIS org (`GET /v1/billing/payment-config`):
+   * the application id + location id + environment the browser SDK tokenizes a card
+   * with. Every field is public (no secret). Commerce resolves sandbox-vs-production
+   * through its single SQUARE_ENVIRONMENT authority, so the app id the browser
+   * tokenizes with always matches the account commerce will charge.
+   */
+  paymentConfig: (): Promise<PaymentConfig> => restGet<PaymentConfig>(billingUrl('payment-config')),
+
+  /**
+   * Charge a Square Web Payments nonce and credit the org's CANONICAL balance
+   * (`POST /v1/billing/topup/token`) — the same per-org ledger the gateway gates
+   * AI usage on. The browser sends only the single-use `sourceId` (never card
+   * data) + the amount in USD cents; the proxy pins the billing subject
+   * server-side, and commerce credits the exact key the gateway reads/debits.
+   *
+   * Idempotent by the single-use nonce: a retry with the same `sourceId` replays
+   * the first result rather than double-charging. Returns the new balance (cents).
+   */
+  topupWithCard: (input: { sourceId: string; amountCents: number; currency?: string }): Promise<TopupResult> =>
+    restPost<TopupResult>(billingUrl('topup/token'), {
+      sourceId: input.sourceId,
+      amountCents: Math.round(input.amountCents),
+      currency: (input.currency ?? 'usd').toLowerCase(),
+    }),
 }
