@@ -25,16 +25,18 @@
  * mismatch renders an honest empty tile (never a crash), so over-declaring a tile a
  * slow backend hasn't filled yet is safe.
  */
-import { Activity, Boxes, Building2, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, HeartPulse, Layers, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
+import { Activity, ArrowLeftRight, BarChart3, Boxes, Building2, Coins, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, HeartPulse, Layers, LineChart, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
 
 import { UsageApi } from '~/lib/api/usage'
 import { AdminApi, type AdminOverview } from '~/lib/api/admin-overview'
 import { FinanceApi } from '~/lib/api/finance'
 import { PlatformApi } from '~/lib/api/platform'
 import { FunctionsApi, deriveOverview } from '~/lib/api/functions'
+import { EconomyApi } from '~/lib/api/economy'
+import { TradingApi } from '~/lib/api/trading'
 import type { CloudUsageOverview } from '~/lib/api/usage'
 import type { LivingOverviewConfig, OverviewData, OverviewRange } from './config'
-import { fromAdminOverview, fromCloudUsage, fromFinance, fromFunctions, fromOverlord, healthFromApps } from './adapters'
+import { fromAdminOverview, fromCloudUsage, fromFinance, fromFunctions, fromLuxIndexer, fromOverlord, healthFromApps } from './adapters'
 
 /** The cloud-usage range key the commerce ledger adapter expects (identical set). */
 const usageRange = (r: OverviewRange): '24h' | '7d' | '30d' => r
@@ -465,6 +467,73 @@ const computeOverview: LivingOverviewConfig = {
   },
 }
 
+/**
+ * The Lux Economy / Markets living overview — the DeFiLlama-style analytics board
+ * for the Lux DEX. Reads the `dex` subgraph (markets/fills/day-data) via the
+ * session-gated, brand-scoped `/economy` proxy, and the maker's :2112 metrics via
+ * `/trading`, and composes them with `fromLuxIndexer`. HONEST to the CLOB reality:
+ * the KPIs + donuts are 24h volume / trades / book depth / active markets / best-
+ * bid-ask spread (fields the subgraph really exposes); pooled USD TVL is NOT
+ * fabricated (a CLOB has depth, not locked TVL), and the historical series is empty
+ * until the subgraph's MarketDayData producer emits — every tile shows its honest
+ * empty state, never a made-up trend. This is the analytics/management plane; the
+ * markets TABLE itself lives in the MarketsModule (this board is the KPI overview).
+ */
+const luxEconomyOverview: LivingOverviewConfig = {
+  id: 'lux-economy',
+  title: 'Markets',
+  subtitle: 'The Lux DEX economy — 24h volume, trades, book depth, and per-market activity across the live L*/LUX markets.',
+  // A CLOB book summary + accrued 24h figures are point-in-time (not a windowed
+  // series today), so no range selector until MarketDayData is produced.
+  ranged: false,
+  live: { pollMs: 15000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'markets', label: 'Active markets', icon: Boxes },
+      { tile: 'metric', key: 'volume24h', label: '24h volume', icon: BarChart3 },
+      { tile: 'metric', key: 'trades', label: '24h trades', icon: ArrowLeftRight },
+      { tile: 'metric', key: 'bookDepth', label: 'Book depth', icon: Coins },
+      { tile: 'metric', key: 'openOrders', label: 'Open orders', icon: Layers },
+    ],
+    [
+      { tile: 'timeseries', key: 'volume24h', title: 'Volume over time', kind: 'bar' },
+      { tile: 'distribution', key: 'volumeByMarket', title: 'Volume by market', centerLabel: 'markets' },
+    ],
+    [
+      { tile: 'distribution', key: 'tradesByMarket', title: 'Trades by market', centerLabel: 'trades' },
+      { tile: 'distribution', key: 'depthByMarket', title: 'Book depth by market', centerLabel: 'depth' },
+    ],
+    [
+      { tile: 'activity', title: 'Recent trades', empty: 'Trades appear here as the DEX settles fills.' },
+      { tile: 'health', title: 'Market maker', empty: 'Maker health appears once the maker’s metrics are reachable.' },
+    ],
+    [{ tile: 'alerts', title: 'Indexer status' }],
+  ],
+  // Read the DEX indexer for the market economy, and (best-effort) the maker metrics
+  // for the maker-health row. Each source degrades independently: an unreachable
+  // graph → honest empty board + an "not reporting" alert; an unreachable maker →
+  // just no maker-health row. NEVER throws a fabricated figure into a tile.
+  load: async () => {
+    // The DEX indexer — the primary source. On failure, surface an honest not-
+    // reporting snapshot (fromLuxIndexer turns it into an empty board + an alert).
+    let snap: Awaited<ReturnType<typeof EconomyApi.overview>> | null = null
+    try {
+      snap = await EconomyApi.overview()
+    } catch (e) {
+      snap = { network: 'lux-testnet', status: 'not-reporting', error: e instanceof Error ? e.message : String(e), markets: [], trades: [], dayData: [] }
+    }
+    // The maker metrics — best-effort, for the maker-health row. The /trading proxy
+    // is brand-scoped and picks the brand's network, so any valid network id works.
+    let maker: Awaited<ReturnType<typeof TradingApi.makerStatus>> | null = null
+    try {
+      maker = await TradingApi.makerStatus('lux-testnet')
+    } catch {
+      /* no maker metrics → the board renders without the maker-health row */
+    }
+    return fromLuxIndexer(snap, maker)
+  },
+}
+
 /** The declared living overviews, by product id. Add a product = add one entry. */
 export const LIVING_OVERVIEWS: Record<string, LivingOverviewConfig> = {
   overview: platformOverview,
@@ -475,6 +544,7 @@ export const LIVING_OVERVIEWS: Record<string, LivingOverviewConfig> = {
   'open-edition': openEditionOverview,
   functions: functionsOverview,
   gpus: computeOverview,
+  'lux-economy': luxEconomyOverview,
 }
 
 /** The living-overview config for a product id, if one is declared. */
