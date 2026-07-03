@@ -46,8 +46,46 @@ export type ResourceCreated = Resource & {
   password?: string
 }
 
+/**
+ * Normalize a provisioning LIST response to a `Resource[]`.
+ *
+ * The contract is a bare JSON array, but a managed backend can 200 with a wrapper
+ * object instead — a bare `{data|items|results|resources|collections|list|rows: […]}`,
+ * or one level of nesting (e.g. a Qdrant-style `{ result: { collections: [...] } }`).
+ * A non-array body reaching the list view's `for…of` / `.length` throws DURING
+ * render and blanks the whole module behind the error boundary — the observed
+ * Vector regression (`GET /cloud/v1/vector` 200, but the API returns a wrapped
+ * shape, so nothing renders while SQL/KV — which return bare arrays — render fine).
+ *
+ * So we validate + unwrap at the transport boundary (ONE place, every kind) and
+ * fall back to an honest empty list — never fabricated, never a crash. Non-object
+ * elements are dropped defensively so a malformed row degrades a cell, not the page.
+ */
+const LIST_KEYS = ['data', 'items', 'results', 'result', 'resources', 'collections', 'list', 'rows']
+
+function extractArray(body: unknown, depth: number): unknown[] {
+  if (Array.isArray(body)) return body
+  if (!body || typeof body !== 'object' || depth > 2) return []
+  const obj = body as Record<string, unknown>
+  for (const k of LIST_KEYS) {
+    if (!(k in obj)) continue
+    const v = obj[k]
+    if (Array.isArray(v)) return v
+    const nested = extractArray(v, depth + 1) // one level down (e.g. result.collections)
+    if (nested.length) return nested
+  }
+  return []
+}
+
+export function normalizeResourceList(body: unknown): Resource[] {
+  return extractArray(body, 0).filter(
+    (r): r is Resource => !!r && typeof r === 'object' && !Array.isArray(r),
+  )
+}
+
 export const ProvisioningApi = {
-  list: (kind: ResourceKind) => restGet<Resource[]>(cloudProxyV1Url(kind)),
+  list: async (kind: ResourceKind): Promise<Resource[]> =>
+    normalizeResourceList(await restGet<unknown>(cloudProxyV1Url(kind))),
 
   get: (kind: ResourceKind, name: string) =>
     restGet<Resource>(cloudProxyV1Url(`${kind}/${encodeURIComponent(name)}`)),
