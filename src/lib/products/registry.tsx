@@ -175,6 +175,7 @@ import { IndexerModule } from '~/components/products/IndexerModule'
 import { NetworksModule } from '~/components/products/NetworksModule'
 import { NodesModule } from '~/components/products/NodesModule'
 import { TradingModule } from '~/components/products/TradingModule'
+import { MarketsModule } from '~/components/products/MarketsModule'
 import { TokensModule } from '~/components/products/TokensModule'
 import { SettlementModule } from '~/components/products/SettlementModule'
 import { AlertsModule } from '~/components/products/AlertsModule'
@@ -1768,6 +1769,24 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: TradingModule },
       { path: ':name', component: TradingModule },
     ],
+  },
+  {
+    // Markets — the Lux DEX economy dashboard (the DeFiLlama-style analytics plane).
+    // The reusable LivingOverview KPI board (active markets, 24h volume/trades, book
+    // depth, per-market donuts, recent trades, maker health) + the per-market table,
+    // both over the `dex` subgraph via the session-gated, brand-scoped /economy proxy.
+    // Honest to the CLOB reality (book depth, not pooled USD TVL); honest-empty until
+    // the indexer reports. The analytics twin of the Trading (deploy/manage) module.
+    id: 'markets',
+    label: 'Markets',
+    icon: BarChart3,
+    description: 'The Lux DEX economy — TVL/depth, 24h volume, fees, per-market price and liquidity, and recent trades from the on-chain indexer.',
+    category: 'Web3',
+    status: 'enabled',
+    repo: 'luxfi/graph',
+    docs: `${DOCS}/markets`,
+    kind: 'module',
+    routes: [{ path: '', component: MarketsModule }],
   },
   {
     id: 'settlement',
