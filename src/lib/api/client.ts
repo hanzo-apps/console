@@ -323,6 +323,23 @@ export const originV1Url = (path: string): string => {
   return typeof window !== 'undefined' ? `${window.location.origin}/v1/${clean}` : `/v1/${clean}`
 }
 
+/**
+ * The console's OWN same-origin cloud-api USER-BEARER proxy base (`<origin>/cloud`).
+ *
+ * Some cloud heads (framework, s3) are NOT rewritten from a bare `/v1/<head>` to the
+ * `/cloud` proxy on the live ingress — a bare `/v1/framework`/`/v1/s3` reaches
+ * hanzoai/gateway directly with no principal and 403s ("valid principal required").
+ * So the clients for those heads (framework/client.ts, storage.ts) address the
+ * `/cloud` proxy EXPLICITLY: `app/cloud/[...path]` mints a short-lived user-bound
+ * token from the session and forwards to cloud-api with the org resolved from the
+ * token owner. `cloud` heads are allow-listed in proxy-allow.ts (defense in depth).
+ */
+export const cloudProxyBase = (): string =>
+  typeof window !== 'undefined' ? `${window.location.origin}/cloud` : '/cloud'
+
+/** Build a `/v1/<path>` URL on the cloud-api user-bearer proxy (`<origin>/cloud/v1/<path>`). */
+export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyBase())
+
 async function restRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   url: string,
