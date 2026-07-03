@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest'
 // opaque `icon` values — the consistency checks assert they are TRUTHY, not what
 // they render. Listed explicitly because vitest validates named exports on a mock.
 vi.mock('@hanzogui/lucide-icons-2', () => {
-  const names = ['Activity', 'Boxes', 'Building2', 'Cpu', 'CreditCard', 'DollarSign', 'FunctionSquare', 'Gauge', 'Hash', 'HeartPulse', 'Layers', 'Timer', 'TrendingUp', 'TriangleAlert', 'Users']
+  const names = ['Activity', 'ArrowLeftRight', 'BarChart3', 'Coins', 'LineChart', 'Boxes', 'Building2', 'Cpu', 'CreditCard', 'DollarSign', 'FunctionSquare', 'Gauge', 'Hash', 'HeartPulse', 'Layers', 'Timer', 'TrendingUp', 'TriangleAlert', 'Users']
   return Object.fromEntries(names.map((n) => [n, `icon:${n}`]))
 })
 
