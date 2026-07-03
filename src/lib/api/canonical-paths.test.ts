@@ -10,6 +10,10 @@ import { ProvisioningApi } from './provisioning'
 import { StorageApi } from './storage'
 import { BillingApi } from './billing'
 import { PlatformApi } from './platform'
+import { FunctionsApi } from './functions'
+import { CommerceApi } from './commerce'
+import { O11yApi } from './o11y'
+import { PaasApi } from './paas'
 
 const ORIGIN = 'https://console.hanzo.ai'
 
@@ -95,6 +99,46 @@ describe('canonical /v1 client paths (no service prefix before /v1/)', () => {
     stub({ machines: [] })
     await VisorApi.machines()
     expect(lastUrl).not.toMatch(/\/(cloud|vm|ai|billing|org)\/v1\//)
+  })
+})
+
+// The BFF-catch-all sweep (task #41): the LAST data-product clients that still built a
+// service-prefixed `/cloud|/ai|/commerce/v1/…` path now build the canonical `/v1/<head>`
+// too, so the static embed reaches them directly (no rewrite, no route handler) and the
+// server build rewrites the head to its hardened BFF proxy — one URL form, both topologies.
+describe('canonical /v1 client paths — the #41 residual sweep (functions/commerce/o11y/paas)', () => {
+  it('FunctionsApi.list -> /v1/functions (was /cloud/v1/functions)', async () => {
+    stub([])
+    await FunctionsApi.list()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/functions`)
+  })
+  it('CommerceApi.currentStore -> /v1/store/current (was /commerce/v1/store/current)', async () => {
+    stub({ store: {} })
+    await CommerceApi.currentStore()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/store/current`)
+  })
+  it('O11yApi.annotationQueues -> /v1/o11y/annotation-queues (was /cloud/v1/o11y/…)', async () => {
+    stub({ data: [], meta: {} })
+    await O11yApi.annotationQueues()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/o11y/annotation-queues`)
+  })
+  it('PaasApi.listProjects -> /v1/platform/projects (was /cloud/v1/platform/…)', async () => {
+    stub({ projects: [] })
+    await PaasApi.listProjects()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/platform/projects`)
+  })
+  it('none of the swept clients emit a /<svc>/v1/ path', async () => {
+    for (const call of [
+      () => FunctionsApi.list(),
+      () => CommerceApi.currentStore(),
+      () => O11yApi.annotationQueues(),
+      () => PaasApi.listProjects(),
+    ]) {
+      stub({ store: {}, projects: [], data: [], meta: {} })
+      await call()
+      expect(lastUrl).toMatch(new RegExp(`^${ORIGIN}/v1/`))
+      expect(lastUrl).not.toMatch(/\/(cloud|vm|ai|commerce|billing|org)\/v1\//)
+    }
   })
 })
 

@@ -323,50 +323,15 @@ export const originV1Url = (path: string): string => {
   return typeof window !== 'undefined' ? `${window.location.origin}/v1/${clean}` : `/v1/${clean}`
 }
 
-/**
- * The console's OWN same-origin keyless AI proxy base (`<origin>/ai`). The gateway
- * model/inference endpoints REQUIRE an `Authorization: Bearer` token (a session
- * cookie is rejected — the "models missing" bug), so the browser never calls the
- * gateway directly: it calls this proxy with just the cookie and the server route
- * (`app/ai/[...path]`) resolves the user + forwards with a short-lived user token.
- * ONE place defines this origin — the model catalog and the playground both use it.
- */
-export const aiBase = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/ai` : '/ai')
-
-/** Build a `/v1/<path>` URL on the AI proxy (`<origin>/ai/v1/<path>`). */
-export const aiV1Url = (path: string): string => v1Url(path, aiBase())
-
-/**
- * The console's OWN same-origin cloud-api USER-BEARER proxy base (`<origin>/cloud`).
- * The managed-data (vector/sql/kv/s3/docdb/datastore/search) and serverless
- * (functions/prompts/agents) surfaces authorize on a Bearer JWT — the org comes
- * from the token's owner claim, so a cookie-only browser call 403s ("X-Org-Id
- * required"). The browser therefore calls this proxy with just the cookie and the
- * server route (`app/cloud/[...path]`) mints a short-lived user token + forwards it
- * as the Bearer (dodging the public-gateway 431 — in-cluster, bearer-only). ONE
- * place defines this origin; provisioning + functions (+ prompts/agents) use it.
- */
-export const cloudProxyBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/cloud` : '/cloud'
-
-/** Build a `/v1/<path>` URL on the cloud-api user-bearer proxy (`<origin>/cloud/v1/<path>`). */
-export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyBase())
-
-/**
- * The console's OWN same-origin commerce USER-BEARER proxy base (`<origin>/commerce`).
- * The commerce store surface (products/orders/customers/collections/variants/
- * discounts) authorizes on a Bearer JWT: commerce's EdgeAuth validates the token
- * and mints the org from its `owner` claim, so every read/write is org-scoped
- * server-side (a cookie-only browser call can't list). The browser calls this proxy
- * with just its cookie; the server route (`app/commerce/[...path]`) mints a
- * short-lived user token + forwards it as the Bearer. ONE place defines this origin
- * (the DRY twin of `cloudProxyBase`); every commerce-store module uses it.
- */
-export const commerceProxyBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/commerce` : '/commerce'
-
-/** Build a `/v1/<path>` URL on the commerce user-bearer proxy (`<origin>/commerce/v1/<path>`). */
-export const commerceProxyV1Url = (path: string): string => v1Url(path, commerceProxyBase())
+// NOTE — the prefixed BFF-base builders (`aiBase`/`aiV1Url`, `cloudProxyBase`/
+// `cloudProxyV1Url`, `commerceProxyBase`/`commerceProxyV1Url`) are GONE. Every client
+// now builds the ONE canonical `originV1Url` (`<origin>/v1/<head>`, nothing before
+// /v1/). `next.config.mjs` rewrites each head to its hardened same-origin BFF proxy
+// (`/ai`, `/cloud`, `/commerce`, `/billing`) in the SERVER build; in the static EMBED
+// build there are no rewrites and no route handlers, so the same `/v1/<head>` URL
+// terminates DIRECTLY at the one-binary cloud. One URL form, both topologies — a
+// non-canonical (service-prefixed) API path is now architecturally impossible
+// (enforced by canonical-paths.test.ts).
 
 async function restRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',

@@ -6,7 +6,7 @@
  * two never mix.
  *
  * Every call goes through the console's OWN same-origin user-bearer `/commerce` proxy
- * (`commerceProxyV1Url('product')` → `<origin>/commerce/v1/product`): the server route
+ * (`originV1Url('product')` → `<origin>/commerce/v1/product`): the server route
  * mints a short-lived user-bound IAM token and commerce resolves the org from the
  * token's `owner` claim, so every read/write is org-scoped SERVER-SIDE — a merchant
  * only ever sees their OWN org's store. No credential reaches the browser and the org
@@ -20,7 +20,7 @@
  * uses (`models` / `data` / `items`). Nothing is fabricated — an empty store renders an
  * honest empty state, never placeholder rows.
  */
-import { restGet, restPost, restDelete, commerceProxyV1Url } from './client'
+import { restGet, restPost, restDelete, originV1Url } from './client'
 
 const enc = encodeURIComponent
 
@@ -235,7 +235,7 @@ async function fetchList<T>(
   if (params?.q) qs.set('q', params.q)
   if (params?.sort) qs.set('sort', params.sort)
   const suffix = qs.toString() ? `?${qs}` : ''
-  const payload = await restGet<unknown>(`${commerceProxyV1Url(kind)}${suffix}`)
+  const payload = await restGet<unknown>(`${originV1Url(kind)}${suffix}`)
   const rows = arrayUnder(payload, ['models', 'data', 'items', 'rows']).map(normalize)
   const count = num(asRecord(payload).count) ?? rows.length
   return { rows, count }
@@ -257,12 +257,12 @@ export const CommerceApi = {
    * still works). Org-scoped server-side.
    */
   currentStore: () =>
-    restGet<unknown>(commerceProxyV1Url('store/current')).then((p) => normalizeStore(asRecord(p).store ?? p)),
+    restGet<unknown>(originV1Url('store/current')).then((p) => normalizeStore(asRecord(p).store ?? p)),
 
   /** Create a product (name/sku/slug required by commerce's validator). */
   createProduct: (body: { name: string; sku: string; slug: string; description?: string; available?: boolean }) =>
-    restPost<unknown>(commerceProxyV1Url('product'), { available: true, ...body }).then(normalizeProduct),
+    restPost<unknown>(originV1Url('product'), { available: true, ...body }).then(normalizeProduct),
 
   /** Delete a product by id. */
-  deleteProduct: (id: string) => restDelete(commerceProxyV1Url(`product/${enc(id)}`)),
+  deleteProduct: (id: string) => restDelete(originV1Url(`product/${enc(id)}`)),
 }

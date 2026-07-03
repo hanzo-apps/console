@@ -14,7 +14,7 @@ import { Button, Spinner, Text, XStack } from '@hanzo/gui'
 import { RefreshCw, Radio } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { restGet, cloudProxyV1Url } from '~/lib/api/client'
+import { restGet, originV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
@@ -38,7 +38,7 @@ export function EdgeModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ nodes?: EdgeNode[] }>(cloudProxyV1Url('edge/nodes'))
+      const r = await restGet<{ nodes?: EdgeNode[] }>(originV1Url('edge/nodes'))
       setRows(r.nodes ?? [])
       setLoadError(null)
     } catch (e) {

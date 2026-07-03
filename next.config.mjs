@@ -67,8 +67,8 @@ function guiPackages() {
  * NOT rewritten here: they keep their own gated proxies with their own tenant
  * scoping, and are reached by the client's explicit `/admin/*` origin path.
  */
-const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'platform', 'crm', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch', 'enablement']
-const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos']
+const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'platform', 'crm', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch', 'enablement', 'functions', 'pipelines', 'releases', 'builds', 'environments']
+const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos', 'pricing', 'plans']
 // The admin aggregate heads rewritten to the GLOBAL-ADMIN-GATED proxy. `providers`
 // is the AI-provider control board — its GET (the list) AND its POST mutations
 // (`providers/toggle`, `providers/primary`) both match the `/:path*` rewrite below,
@@ -101,6 +101,12 @@ const CLOUD_INFRA_V1_HEADS = ['machines', 'gpus', 'clusters', 'org', 'sql', 'vec
 // (app/vm). The GPU-accelerator catalog is the DISTINCT head `/v1/gpu-sizes` so it
 // never collides with the cloud-api GPU INVENTORY at `/v1/gpus`.
 const VM_V1_HEADS = ['regions', 'sizes']
+// Commerce STORE heads the merchant dashboard reads/writes at a clean `/v1/<head>`
+// (nothing before /v1/) → the same-origin user-bearer `/commerce` proxy (app/commerce),
+// which mints a per-user token and forwards to the commerce binary (org from the Bearer
+// owner). The CLOSED list mirrors proxy-allow.ts COMMERCE_HEADS (defense in depth). The
+// money surface (billing/checkout/tenants) is DELIBERATELY absent — it rides `/v1/billing`.
+const COMMERCE_V1_HEADS = ['product', 'variant', 'collection', 'order', 'user', 'discount', 'coupon', 'saleschannel', 'stocklocation', 'store']
 
 const aiSurfaceRewrites = () => ({
   beforeFiles: [
@@ -118,6 +124,9 @@ const aiSurfaceRewrites = () => ({
     ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/vm/v1/${h}` })),
     ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/vm/v1/${h}/:path*` })),
     { source: `/v1/gpu-sizes`, destination: `/vm/v1/gpus` },
+    // Commerce STORE clients — clean `/v1/<head>` → the user-bearer `/commerce` proxy.
+    ...COMMERCE_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/commerce/v1/${h}` })),
+    ...COMMERCE_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/commerce/v1/${h}/:path*` })),
     // Per-tenant billing DATA → the service-token commerce proxy (app/billing/v1).
     { source: `/v1/billing/:path*`, destination: `/billing/v1/:path*` },
     ...devCloudRewrites(),

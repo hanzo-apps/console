@@ -2,7 +2,7 @@
  * APM / Infrastructure / Exceptions / Dashboards API — the SigNoz-flagship
  * observability surface, over the REAL Hanzo o11y (SigNoz) runtime.
  *
- * Transport: the same-origin user-bearer `/cloud` proxy (`cloudProxyV1Url`) — the
+ * Transport: the same-origin user-bearer `/cloud` proxy (`originV1Url`) — the
  * browser sends only its session cookie, the server route mints a short-lived IAM
  * bearer and forwards it, and cloud-api reverse-proxies `/v1/o11y/*` to the o11y
  * Deployment, which internally rewrites `/v1/o11y/*` → its `/api/*` controllers.
@@ -27,7 +27,7 @@
  * fields degrade to 0 / '' / [], never a throw), so the pure normalizers unit-test
  * without a live backend.
  */
-import { restGet, restPost, cloudProxyV1Url } from './client'
+import { restGet, restPost, originV1Url } from './client'
 
 // ── Time windows ──────────────────────────────────────────────────────────────
 
@@ -501,7 +501,7 @@ export function normalizeSpans(body: unknown): TraceSpan[] {
 
 // ── Transport ─────────────────────────────────────────────────────────────────
 
-const u = (path: string): string => cloudProxyV1Url(`o11y/${path}`)
+const u = (path: string): string => originV1Url(`o11y/${path}`)
 
 /** The APM POST body — a start/end window + optional tags filter (SigNoz shape). */
 type ApmBody = { start: string; end: string; tags?: unknown[]; service?: string }

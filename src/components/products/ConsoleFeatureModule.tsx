@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation'
 import { Button, Text, XStack } from '@hanzo/gui'
 import { ExternalLink, RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet, v1Url, cloudProxyV1Url } from '~/lib/api/client'
+import { restGet, v1Url, originV1Url } from '~/lib/api/client'
 import { allowCloudSurface } from '~/lib/server/proxy-allow'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { DataTable, type Column } from '~/components/ui/DataTable'
@@ -141,7 +141,7 @@ const withIds = (rows: Record<string, unknown>[]): SurfaceRow[] =>
  * `v1Url`, so its honest error card is unchanged.
  */
 const surfaceUrl = (endpoint: string): string =>
-  allowCloudSurface(`v1/${endpoint.replace(/^\/+/, '')}`) ? cloudProxyV1Url(endpoint) : v1Url(endpoint)
+  allowCloudSurface(`v1/${endpoint.replace(/^\/+/, '')}`) ? originV1Url(endpoint) : v1Url(endpoint)
 
 export function ForwardSurface({ surface }: { surface: Surface }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })

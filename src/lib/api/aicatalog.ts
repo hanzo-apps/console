@@ -21,7 +21,7 @@
  * `modelDisplayName`) join both shapes so every model renders its real context,
  * cross-references availability by the right key, and shows a clean row name.
  */
-import { restGet, aiV1Url } from './client'
+import { restGet, originV1Url } from './client'
 
 /** A model as the rich pricing catalog publishes it. All fields optional-safe. */
 export type RichModel = {
@@ -107,8 +107,8 @@ export function modelDisplayName(m: RichModel): string {
 /** Fetch the rich catalog + the live set; join availability. Throws on catalog failure. */
 export async function fetchCatalog(): Promise<CatalogEntry[]> {
   const [cat, live] = await Promise.all([
-    restGet<PricingCatalog>(aiV1Url('pricing/models')),
-    restGet<LiveModels>(aiV1Url('models')).catch(() => ({ data: [] }) as LiveModels),
+    restGet<PricingCatalog>(originV1Url('pricing/models')),
+    restGet<LiveModels>(('models')).catch(() => ({ data: [] }) as LiveModels),
   ])
   const liveArr = live.data ?? []
   const liveSet = new Set(liveArr.map(liveKey).filter(Boolean))
@@ -295,7 +295,7 @@ export type Plan = {
  */
 export async function fetchPlans(): Promise<Plan[]> {
   try {
-    const r = await restGet<{ plans?: Plan[] } | Plan[]>(aiV1Url('plans'))
+    const r = await restGet<{ plans?: Plan[] } | Plan[]>(originV1Url('plans'))
     if (Array.isArray(r)) return r
     return Array.isArray(r?.plans) ? r.plans : []
   } catch {

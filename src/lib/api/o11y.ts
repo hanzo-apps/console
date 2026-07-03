@@ -20,7 +20,7 @@
  * session it simply overwrites the stamped value, so sending it is correct in both
  * topologies (direct cloud-api and gatewayed).
  */
-import { restGet, cloudProxyV1Url } from './client'
+import { restGet, originV1Url } from './client'
 import { EvalsApi, type EvalScoreConfig, type EvalSession } from './evals'
 
 /** Pagination metadata returned by every list endpoint. */
@@ -201,7 +201,7 @@ const listUrl = (path: string, q: O11yListQuery): string => {
   if (q.page) params.set('page', String(q.page))
   if (q.limit) params.set('limit', String(q.limit))
   const qs = params.toString()
-  return qs ? `${cloudProxyV1Url(path)}?${qs}` : cloudProxyV1Url(path)
+  return qs ? `${originV1Url(path)}?${qs}` : originV1Url(path)
 }
 
 /**
@@ -268,14 +268,14 @@ export const O11yApi = {
 
   // ── no eval-domain equivalent yet — honest states over the /cloud bearer proxy ──
   // These ride the same user-bearer `/cloud` proxy every other cloud read uses
-  // (`cloudProxyV1Url` → `<origin>/cloud/v1/o11y/*`): the o11y runtime scopes by the
+  // (`originV1Url` → `<origin>/cloud/v1/o11y/*`): the o11y runtime scopes by the
   // minted bearer's owner claim and 403s a direct cookie-only call, so a direct-cloud
   // read (`v1Url`) would fail in prod. The o11y head is allow-listed in proxy-allow.ts.
   annotationQueues: (q: O11yListQuery = {}) =>
     restGet<O11yList<AnnotationQueue>>(listUrl('o11y/annotation-queues', q)),
 
   annotationQueue: (id: string) =>
-    restGet<AnnotationQueueDetail>(cloudProxyV1Url(`o11y/annotation-queues/${encodeURIComponent(id)}`)),
+    restGet<AnnotationQueueDetail>(originV1Url(`o11y/annotation-queues/${encodeURIComponent(id)}`)),
 
   annotationQueueItems: (id: string, q: O11yListQuery = {}) =>
     restGet<O11yList<AnnotationQueueItem>>(listUrl(`o11y/annotation-queues/${encodeURIComponent(id)}/items`, q)),
