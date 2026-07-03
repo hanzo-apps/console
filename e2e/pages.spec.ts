@@ -52,7 +52,7 @@ const PAGES: string[] = [
   // Subscriptions / Payment-methods are now tabs of /billing, not top-level routes).
   'billing', 'billing/reports', 'billing/budgets', 'billing/invoices',
   'billing/subscriptions', 'billing/payment-methods', 'billing/credits',
-  'ai-metrics', 'metrics', 'settlement', 'wallet', 'plans', 'referrals', 'marketplace',
+  'ai-metrics', 'open-edition', 'metrics', 'settlement', 'wallet', 'plans', 'referrals', 'marketplace',
   // Ops / tooling
   'logs', 'alerts', 'o11y', 'gateway', 'tasks', 'integrations', 'registry', 'audit',
   'sdks', 'cli', 'ide', 'studio', 'desktop', 'bot', 'profile', 'settings',
