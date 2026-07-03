@@ -63,6 +63,7 @@ export {
   type NodePool,
   type ClusterKind,
   type ProvisionClusterInput,
+  type AddPoolInput,
   type PlatformApp,
   type AppHealth,
   type AppDriftFlag,
