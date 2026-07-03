@@ -77,20 +77,92 @@ const baseHeaders = (hasBody: boolean): Record<string, string> => {
 
 type Query = Record<string, string | number | boolean | undefined | null>
 
+/** Upstream statuses that mean "the backend was momentarily unreachable" (a gateway/
+ *  proxy 502, a rolling backend 503, a timeout 504) — the TRANSIENT class, safe to
+ *  retry. A genuine 4xx (401/403/404/402) is NOT here: it is an honest answer, surfaced
+ *  immediately. */
+const TRANSIENT_STATUS = new Set([502, 503, 504])
+/** Backoff schedule for the transient-retry loop: up to 3 retries after the first try
+ *  (~300ms → 900ms → 2s). Worst-case added latency before the honest error card is ~3.2s. */
+export const RETRY_BACKOFF_MS = [300, 900, 2000]
+/** Only idempotent reads auto-retry — a POST/PUT/PATCH/DELETE that 5xx'd might have
+ *  applied, so re-sending it could double-create; the user retries a mutation manually. */
+export const isIdempotentMethod = (method?: string): boolean => {
+  const m = (method ?? 'GET').toUpperCase()
+  return m === 'GET' || m === 'HEAD'
+}
+/** True iff a `status` is the transient (retryable) class. */
+export const isTransientStatus = (status: number): boolean => TRANSIENT_STATUS.has(status)
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Injected dependencies for `resilientFetch` — real ones in `authedFetch`, fakes in tests. */
+export interface ResilientDeps {
+  doFetch: (url: string, init: RequestInit) => Promise<Response>
+  /** Single-flight server-side session refresh (returns true if it rotated the cookie). */
+  refresh: () => Promise<boolean>
+  sleep: (ms: number) => Promise<void>
+  /** Whether a 401 refresh may be attempted (browser only — no console session on the server). */
+  canRefresh: boolean
+}
+
 /**
- * REACTIVE silent refresh — the ONE fetch every cloud/BFF call goes through. On a
- * 401 (the console session's access token lapsed, or a BFF proxy's mint saw a stale
- * token) it runs the single-flight `refreshSession()` ONCE and retries the request
- * with the rotated session cookie. A durable-but-momentarily-stale session self-heals
- * transparently instead of surfacing "Not authorized". The refresh itself is
- * server-side (`/auth/refresh`); its own calls never reach here, so there is no
- * recursion, and the retry is a plain fetch (at most one extra attempt).
+ * The resilient fetch orchestration (pure over its injected deps) — two orthogonal
+ * resiliences so a momentary backend hiccup is INVISIBLE to the user, while a genuine
+ * failure is honest:
+ *
+ *  1. TRANSIENT-RETRY (backend rolls). A single-replica `Recreate` backend has a brief
+ *     downtime window on every deploy; a read that lands in it gets a 502/503/504 or a
+ *     connection error. Rather than dump the user on a scary "Could not load" card, an
+ *     idempotent read (GET/HEAD) is retried with a short exponential backoff
+ *     (`RETRY_BACKOFF_MS`). So a deploy blip self-heals and the error card shows ONLY on
+ *     a persistent outage (after the retries exhaust). Mutations are NOT auto-retried
+ *     (a 5xx'd POST might have applied — re-sending could double-create). A genuine 4xx
+ *     (403/404/402) is returned immediately for the caller's honest state.
+ *  2. REACTIVE silent refresh (session lapse). On a 401 it runs `refresh()` ONCE and
+ *     retries with the rotated session cookie, so a durable-but-momentarily-stale console
+ *     session self-heals instead of surfacing "Not authorized".
+ *
+ * A caller-aborted request (its own `init.signal`) is never retried — it is honored.
  */
+export async function resilientFetch(url: string, init: RequestInit, deps: ResilientDeps): Promise<Response> {
+  const idempotent = isIdempotentMethod(init.method)
+  let refreshed = false
+  for (let attempt = 0; ; attempt++) {
+    let res: Response
+    try {
+      res = await deps.doFetch(url, init)
+    } catch (e) {
+      // Network-level failure (connection refused / reset / DNS) during a roll → retry
+      // an idempotent read, unless the CALLER aborted or the budget is exhausted.
+      if (!idempotent || init.signal?.aborted || attempt >= RETRY_BACKOFF_MS.length) throw e
+      await deps.sleep(RETRY_BACKOFF_MS[attempt])
+      continue
+    }
+    // 401 → one silent server-side refresh, then retry once with the rotated cookie.
+    if (res.status === 401 && !refreshed && deps.canRefresh) {
+      refreshed = true
+      if (await deps.refresh()) continue
+      return res // no console session / refresh failed → surface the 401
+    }
+    // Transient upstream (a backend roll) → retry an idempotent read with backoff.
+    if (idempotent && isTransientStatus(res.status) && attempt < RETRY_BACKOFF_MS.length) {
+      await deps.sleep(RETRY_BACKOFF_MS[attempt])
+      continue
+    }
+    return res
+  }
+}
+
+/** The ONE fetch every cloud/BFF call goes through — `resilientFetch` wired to the real
+ *  `fetch` + server-side `refreshSession` (browser-only). */
 async function authedFetch(url: string, init: RequestInit): Promise<Response> {
-  const res = await fetch(url, init)
-  if (res.status !== 401 || typeof window === 'undefined') return res
-  if (!(await refreshSession())) return res // no console session / refresh failed → surface the 401
-  return fetch(url, init)
+  return resilientFetch(url, init, {
+    doFetch: fetch,
+    refresh: refreshSession,
+    sleep,
+    canRefresh: typeof window !== 'undefined',
+  })
 }
 
 const buildUrl = (path: string, query?: Query): string => {
