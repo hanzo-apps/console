@@ -8,53 +8,74 @@ import { allowAdminSurface, ADMIN_AGGREGATE_HEADS } from './admin-aggregate'
  * first; this predicate is the least-privilege SURFACE gate that then keeps the
  * proxy from becoming a general cloud-api tunnel. It must admit ONLY the admin
  * read heads and NEVER `iam`/`kms` (which have their own tenant-scoped proxies).
+ *
+ * The gate validates the EXACT forwarded upstream shape — `v1/admin/<head>` — because
+ * cloud serves every admin route under `/v1/admin/*` and `route.ts` rebuilds the path
+ * with the `v1/` prefix (`forwardWithUserBearer` forwards it VERBATIM). The bare
+ * `admin/<head>` form (the pre-fix, wrong path that 404'd at cloud) is NOT admitted.
  */
-describe('allowAdminSurface — least-privilege admin read surface', () => {
-  it('admits every declared aggregate read head', () => {
+describe('allowAdminSurface — least-privilege admin read surface (v1/admin/<head>)', () => {
+  it('admits every declared aggregate read head under v1/admin/', () => {
     for (const h of ADMIN_AGGREGATE_HEADS) {
-      expect(allowAdminSurface(`admin/${h}`)).toBe(true)
+      expect(allowAdminSurface(`v1/admin/${h}`)).toBe(true)
     }
   })
 
   it('admits a sub-path under an allowed head', () => {
-    expect(allowAdminSurface('admin/usage/by-org')).toBe(true)
-    expect(allowAdminSurface('admin/audit/')).toBe(true) // trailing slash tolerated
+    expect(allowAdminSurface('v1/admin/usage/by-org')).toBe(true)
+    expect(allowAdminSurface('v1/admin/audit/')).toBe(true) // trailing slash tolerated
   })
 
   it('admits the finance aggregate (the SaaS profitability read)', () => {
-    expect(allowAdminSurface('admin/finance')).toBe(true)
+    expect(allowAdminSurface('v1/admin/finance')).toBe(true)
   })
 
   it('admits the compute aggregate (the datastore fleets/bots/spend read)', () => {
-    expect(allowAdminSurface('admin/compute')).toBe(true)
-    expect(allowAdminSurface('admin/compute/by-org')).toBe(true)
+    expect(allowAdminSurface('v1/admin/compute')).toBe(true)
+    expect(allowAdminSurface('v1/admin/compute/by-org')).toBe(true)
   })
 
   it('admits the providers control board — the list AND the two mutation sub-paths', () => {
-    expect(allowAdminSurface('admin/providers')).toBe(true)
+    expect(allowAdminSurface('v1/admin/providers')).toBe(true)
     // The POST mutations (toggle enable/disable, set primary) ride the same head.
-    expect(allowAdminSurface('admin/providers/toggle')).toBe(true)
-    expect(allowAdminSurface('admin/providers/primary')).toBe(true)
+    expect(allowAdminSurface('v1/admin/providers/toggle')).toBe(true)
+    expect(allowAdminSurface('v1/admin/providers/primary')).toBe(true)
   })
 
   it('REFUSES the tenant-scoped admin proxies (iam / kms) — never a tunnel', () => {
-    expect(allowAdminSurface('admin/iam')).toBe(false)
-    expect(allowAdminSurface('admin/iam/get-users')).toBe(false)
-    expect(allowAdminSurface('admin/kms')).toBe(false)
-    expect(allowAdminSurface('admin/kms/list')).toBe(false)
+    expect(allowAdminSurface('v1/admin/iam')).toBe(false)
+    expect(allowAdminSurface('v1/admin/iam/get-users')).toBe(false)
+    expect(allowAdminSurface('v1/admin/kms')).toBe(false)
+    expect(allowAdminSurface('v1/admin/kms/list')).toBe(false)
   })
 
-  it('REFUSES a bare admin, an unknown head, and anything outside admin/', () => {
-    expect(allowAdminSurface('admin')).toBe(false)
-    expect(allowAdminSurface('admin/')).toBe(false)
-    expect(allowAdminSurface('admin/secrets')).toBe(false)
-    expect(allowAdminSurface('iam/get-users')).toBe(false)
+  it('REFUSES the normalized traversal target (v1/admin/iam reached via ../ collapse)', () => {
+    // pathIsClean rejects the raw `v1/admin/providers/../iam` at layer 1 (literal `..`);
+    // this is the belt-and-suspenders layer-2 refusal of the WHATWG-normalized form.
+    expect(allowAdminSurface('v1/admin/iam')).toBe(false)
+    expect(allowAdminSurface('v1/admin/kms')).toBe(false)
+  })
+
+  it('REFUSES a bare v1/admin, an unknown head, and anything outside v1/admin/', () => {
+    expect(allowAdminSurface('v1/admin')).toBe(false)
+    expect(allowAdminSurface('v1/admin/')).toBe(false)
+    expect(allowAdminSurface('v1/admin/secrets')).toBe(false)
+    expect(allowAdminSurface('v1/iam/get-users')).toBe(false)
     expect(allowAdminSurface('v1/agents')).toBe(false)
     expect(allowAdminSurface('')).toBe(false)
   })
 
+  it('REFUSES the pre-fix bare admin/<head> shape (never reaches a real cloud route)', () => {
+    // The old (buggy) path built `admin/providers` and 404'd at cloud. The gate now
+    // keys strictly on `v1/admin/<head>`, so the bare form is refused — no second,
+    // ambiguous accepted shape (one way only).
+    expect(allowAdminSurface('admin/providers')).toBe(false)
+    expect(allowAdminSurface('admin/overview')).toBe(false)
+    expect(allowAdminSurface('admin/iam')).toBe(false)
+  })
+
   it('is not fooled by a leading slash on the normalized path', () => {
-    expect(allowAdminSurface('/admin/overview')).toBe(true)
-    expect(allowAdminSurface('/admin/iam')).toBe(false)
+    expect(allowAdminSurface('/v1/admin/overview')).toBe(true)
+    expect(allowAdminSurface('/v1/admin/iam')).toBe(false)
   })
 })

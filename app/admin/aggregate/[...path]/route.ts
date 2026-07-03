@@ -28,10 +28,12 @@
  *
  * Least privilege: only the admin aggregate heads are reachable, NOT `iam`/`kms`
  * (those keep their own gated proxies with their own tenant-scoping semantics) — this
- * is not a general cloud-api tunnel. `allowAdminSurface` admits `admin/<head>[/...]`,
- * so `providers` covers the GET list and the `providers/{toggle,primary}` POSTs and
- * nothing else. `next.config.mjs` rewrites `/v1/admin/<head>[/...]` here for BOTH GET
- * and POST; the client calls the clean same-origin `/v1/admin/*` form.
+ * is not a general cloud-api tunnel. `allowAdminSurface` admits `v1/admin/<head>[/...]`
+ * (the exact forwarded upstream shape), so `providers` covers the GET list and the
+ * `providers/{toggle,primary}` POSTs and nothing else. `next.config.mjs` rewrites
+ * `/v1/admin/<head>[/...]` here for BOTH GET and POST (dropping the `/v1/` into the
+ * internal Next route path); this handler re-adds `v1/` for the upstream cloud call,
+ * and the client calls the clean same-origin `/v1/admin/*` form (unchanged).
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
@@ -57,8 +59,16 @@ async function handle(req: NextRequest, ctx: Ctx): Promise<NextResponse> {
   if (!gate) return forbidden()
 
   // The rewrite feeds the tail after `/v1/admin/` (e.g. `overview`, `audit`); rebuild
-  // the cloud path. `forwardWithUserBearer` re-validates via `allow` + `pathIsClean`.
-  const path = `admin/${(await ctx.params).path.join('/')}`.replace(/\/+$/, '')
+  // the FULL cloud path, which is `/v1/admin/<head>` — cloud serves every admin route
+  // under `/v1/admin/*` (the beego `/v1/*` glob in hanzoai/ai + cloud's own
+  // `clients/admin` `app.Get("/v1/admin/…")`), and `forwardWithUserBearer` forwards to
+  // `target/path` VERBATIM (no `/v1` prepend), so the `v1/` MUST be part of the path
+  // here or the request lands on a non-existent bare `/admin/*` and 404s. The rewrite
+  // destination (`app/admin/aggregate/<head>`) is the internal Next route, not the
+  // upstream — it deliberately carries no `v1/`; this handler adds it.
+  // `forwardWithUserBearer` re-validates the exact forwarded path via `allow`
+  // (`allowAdminSurface`, keyed on the `v1/admin/<head>` shape) + `pathIsClean`.
+  const path = `v1/admin/${(await ctx.params).path.join('/')}`.replace(/\/+$/, '')
   return forwardWithUserBearer(req, {
     target: CLOUD_API_URL,
     path,

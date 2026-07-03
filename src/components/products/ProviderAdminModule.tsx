@@ -82,13 +82,10 @@ export function ProviderAdminModule(_props: { params: Record<string, string> }) 
   const toggle = useCallback(
     async (p: AdminProvider) => {
       setBusy(p.name)
-      // Optimistic: flip this row's enabled immediately, reconcile with the server's
-      // returned row. On failure, refetch so the board reflects real backend state.
-      setState((s) =>
-        s.phase === 'ready'
-          ? { phase: 'ready', rows: s.rows.map((r) => (r.name === p.name ? { ...r, enabled: !r.enabled } : r)) }
-          : s,
-      )
+      // NO optimistic flip: the enabled state changes ONLY when the server confirms
+      // (2xx → the returned row). This board flips SHARED-gateway routing for every
+      // org, so a slow 403 must never briefly render an unauthorized "on" state — the
+      // row stays as-is (its switch disabled via `busy`) until the write is confirmed.
       try {
         const updated = await ProviderAdminApi.toggle(p.name, !p.enabled)
         setState((s) =>
@@ -97,7 +94,7 @@ export function ProviderAdminModule(_props: { params: Record<string, string> }) 
             : s,
         )
       } catch {
-        run() // authoritative refetch — never leave the optimistic flip if the write failed
+        run() // authoritative refetch — the board reflects real backend state on any failure
       } finally {
         setBusy(null)
       }
