@@ -95,3 +95,12 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 export async function POST(req: NextRequest, ctx: Ctx) {
   return handle(req, ctx)
 }
+
+/**
+ * PUT — the GLOBAL-admin enablement set (`PUT /v1/admin/enablement`, flip an item
+ * off|beta|ga + grant orgs). Same gate + same CSRF/traversal hardening as POST;
+ * `allowAdminSurface` admits only `v1/admin/enablement`, nothing else.
+ */
+export async function PUT(req: NextRequest, ctx: Ctx) {
+  return handle(req, ctx)
+}
