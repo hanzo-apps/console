@@ -1,5 +1,5 @@
 /**
- * APM / Infrastructure / Exceptions / Dashboards API — the SigNoz-flagship
+ * APM / Infrastructure / Exceptions / Dashboards / Logs API — the SigNoz-flagship
  * observability surface, over the REAL Hanzo o11y (SigNoz) runtime.
  *
  * Transport: the same-origin user-bearer `/cloud` proxy (`cloudProxyV1Url`) — the
@@ -355,6 +355,148 @@ export function normalizeDashboards(body: unknown): Dashboard[] {
   return rows.map(normalizeDashboard).filter((d) => d.uuid !== '')
 }
 
+// ── Application logs (SigNoz v4 query_range) ──────────────────────────────────
+//
+// Full-text application/platform log search is a REAL read: the o11y log store
+// (ClickHouse via SigNoz) has no clean logs-list route, so the canonical read is a
+// composite `POST /v1/o11y/v4/query_range` builder query against the `logs` data
+// source. `logsQueryRangeBody` builds that payload (a list panel, newest-first,
+// optional body-contains filter); `normalizeLogs` maps the v4 list result into a
+// flat, defensively-parsed `LogRow[]`.
+
+/** One application/platform log line, normalized from a SigNoz v4 list result. */
+export type LogRow = {
+  /** Event time as an epoch-millisecond number (0 when unparseable). */
+  timestampMs: number
+  /** Severity text (INFO / WARN / ERROR / …), uppercased; '' when absent. */
+  severity: string
+  /** The log line body / message. */
+  body: string
+  /** Emitting service (from resource attributes); '' when absent. */
+  service: string
+  /** Stable row id (SigNoz log id) when present, else a time-derived key. */
+  id: string
+}
+
+/** OpenTelemetry severity-number → level text (used when `severity_text` is absent). */
+const severityFromNumber = (n: unknown): string => {
+  const v = num(n)
+  if (v >= 21) return 'FATAL'
+  if (v >= 17) return 'ERROR'
+  if (v >= 13) return 'WARN'
+  if (v >= 9) return 'INFO'
+  if (v >= 5) return 'DEBUG'
+  if (v >= 1) return 'TRACE'
+  return ''
+}
+
+/** Normalize a SigNoz epoch (ns/us/ms/s, number or numeric string) or ISO time → ms. */
+const toMs = (v: unknown): number => {
+  if (typeof v === 'string') {
+    if (/^\d+$/.test(v)) return epochToMs(Number(v))
+    const t = Date.parse(v)
+    return Number.isNaN(t) ? 0 : t
+  }
+  if (typeof v === 'number' && Number.isFinite(v)) return epochToMs(v)
+  return 0
+}
+const epochToMs = (n: number): number => {
+  if (n >= 1e18) return Math.floor(n / 1e6) // nanoseconds
+  if (n >= 1e15) return Math.floor(n / 1e3) // microseconds
+  if (n >= 1e12) return n // milliseconds
+  if (n >= 1e9) return n * 1000 // seconds
+  return n
+}
+
+/** Pull the emitting service name out of a log row's resource/attribute maps. */
+const logService = (d: Record<string, unknown>): string => {
+  const fromMap = (m: unknown): string => {
+    const o = (m ?? {}) as Record<string, unknown>
+    const v = o['service.name'] ?? o['service_name']
+    return typeof v === 'string' ? v : ''
+  }
+  return fromMap(d.resources_string) || fromMap(d.attributes_string) || str(d['service.name']) || str(d.service)
+}
+
+/**
+ * Normalize one SigNoz v4 list item → LogRow. A list item is `{ timestamp, data:{…} }`
+ * (the flattened row lives under `data`); a flat row (`{ timestamp, body, … }`) is
+ * tolerated too. Absent fields degrade to '' / 0, never a throw.
+ */
+export function normalizeLog(r: unknown): LogRow {
+  const o = (r ?? {}) as Record<string, unknown>
+  const d = (o.data && typeof o.data === 'object' ? o.data : o) as Record<string, unknown>
+  const ts = toMs(o.timestamp ?? d.timestamp)
+  const severity = str(d.severity_text ?? d.severity ?? d.level) || severityFromNumber(d.severity_number)
+  return {
+    timestampMs: ts,
+    severity: severity.toUpperCase(),
+    body: str(d.body ?? d.message ?? o.body),
+    service: logService(d),
+    id: str(d.id ?? o.id) || String(ts),
+  }
+}
+
+/**
+ * Normalize the v4 query_range LIST response → LogRow[]. SigNoz answers
+ * `{ data: { result: [{ list: [...] }] } }`; we flatten `list` across every result
+ * group. A bare array of rows is tolerated. Rows with no body AND no severity drop.
+ */
+export function normalizeLogs(body: unknown): LogRow[] {
+  const data = (body as { data?: unknown })?.data ?? body
+  const result = (data as { result?: unknown })?.result
+  const items: unknown[] = []
+  if (Array.isArray(result)) {
+    for (const g of result) {
+      const list = (g as { list?: unknown })?.list
+      if (Array.isArray(list)) items.push(...list)
+    }
+  }
+  if (items.length === 0 && Array.isArray(data)) items.push(...data)
+  return items.map(normalizeLog).filter((l) => l.body !== '' || l.severity !== '')
+}
+
+/** Options for a logs list read: a start/end (epoch-ms) window, row cap, optional filter. */
+export type LogsQuery = { start: number; end: number; limit?: number; query?: string }
+
+/**
+ * Build the SigNoz v4 `query_range` payload for a logs LIST — a `logs`-data-source
+ * builder query (noop aggregate, `panelType: 'list'`, newest-first by timestamp),
+ * optionally filtered to bodies CONTAINING `query`. Times are epoch milliseconds.
+ */
+export function logsQueryRangeBody(q: LogsQuery): Record<string, unknown> {
+  const limit = q.limit ?? 200
+  const items = q.query
+    ? [{ key: { key: 'body', dataType: 'string', type: '', isColumn: true }, op: 'contains', value: q.query }]
+    : []
+  return {
+    start: q.start,
+    end: q.end,
+    step: 60,
+    compositeQuery: {
+      queryType: 'builder',
+      panelType: 'list',
+      builderQueries: {
+        A: {
+          dataSource: 'logs',
+          queryName: 'A',
+          aggregateOperator: 'noop',
+          aggregateAttribute: {},
+          filters: { op: 'AND', items },
+          expression: 'A',
+          disabled: false,
+          stepInterval: 60,
+          having: [],
+          limit,
+          orderBy: [{ columnName: 'timestamp', order: 'desc' }],
+          offset: 0,
+          pageSize: limit,
+        },
+      },
+    },
+  }
+}
+
 // ── Transport ─────────────────────────────────────────────────────────────────
 
 const u = (path: string): string => cloudProxyV1Url(`o11y/${path}`)
@@ -366,6 +508,9 @@ type InfraBody = { start: number; end: number; filters: { op: 'AND'; items: [] }
 
 const apmBody = (w: ApmWindow, extra?: Partial<ApmBody>): ApmBody => ({ start: w.startNs, end: w.endNs, tags: [], ...extra })
 const infraBody = (w: ApmWindow): InfraBody => ({ start: w.startMs, end: w.endMs, filters: { op: 'AND', items: [] } })
+
+/** POST a raw SigNoz v4 query_range body → its raw response (`POST /v1/o11y/v4/query_range`). */
+const queryRange = (body: unknown): Promise<unknown> => restPost<unknown>(u('v4/query_range'), body)
 
 export const ApmApi = {
   // ── Service map / APM ──
@@ -398,4 +543,10 @@ export const ApmApi = {
   // ── Dashboards ──
   dashboards: async (): Promise<Dashboard[]> => normalizeDashboards(await restGet<unknown>(u('v1/dashboards'))),
   dashboard: (uuid: string): Promise<unknown> => restGet<unknown>(u(`v1/dashboards/${encodeURIComponent(uuid)}`)),
+
+  // ── Application logs ──
+  /** The raw SigNoz v4 query_range escape hatch (build the body yourself). */
+  queryRange,
+  /** Read the org's recent application/platform logs → parsed `LogRow[]` (newest first). */
+  logs: async (q: LogsQuery): Promise<LogRow[]> => normalizeLogs(await queryRange(logsQueryRangeBody(q))),
 }

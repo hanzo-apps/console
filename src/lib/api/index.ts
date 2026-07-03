@@ -234,6 +234,9 @@ export {
   normalizeExceptions,
   normalizeDashboard,
   normalizeDashboards,
+  normalizeLog,
+  normalizeLogs,
+  logsQueryRangeBody,
   type ApmWindow,
   type ServiceRow,
   type DependencyEdge,
@@ -244,4 +247,6 @@ export {
   type InfraList,
   type ExceptionGroup,
   type Dashboard,
+  type LogRow,
+  type LogsQuery,
 } from './apm'

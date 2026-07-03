@@ -14,6 +14,9 @@ import {
   normalizeExceptions,
   normalizeDashboard,
   normalizeDashboards,
+  normalizeLog,
+  normalizeLogs,
+  logsQueryRangeBody,
 } from './apm'
 
 describe('apmWindow', () => {
@@ -220,5 +223,99 @@ describe('normalizeDashboard / normalizeDashboards', () => {
   it('reads a {status,data:[…]} list and drops uuid-less rows', () => {
     const out = normalizeDashboards({ status: 'success', data: [{ uuid: 'a', data: { title: 'A' } }, { data: { title: 'no uuid' } }] })
     expect(out.map((d) => d.uuid)).toEqual(['a'])
+  })
+})
+
+describe('logsQueryRangeBody', () => {
+  it('builds a SigNoz v4 logs LIST query (newest-first, limit, no filter)', () => {
+    const b = logsQueryRangeBody({ start: 1000, end: 2000, limit: 50 }) as Record<string, unknown>
+    expect(b.start).toBe(1000)
+    expect(b.end).toBe(2000)
+    const cq = b.compositeQuery as Record<string, unknown>
+    expect(cq.queryType).toBe('builder')
+    expect(cq.panelType).toBe('list')
+    const A = (cq.builderQueries as Record<string, Record<string, unknown>>).A
+    expect(A.dataSource).toBe('logs')
+    expect(A.aggregateOperator).toBe('noop')
+    expect(A.limit).toBe(50)
+    expect(A.pageSize).toBe(50)
+    expect(A.orderBy).toEqual([{ columnName: 'timestamp', order: 'desc' }])
+    expect((A.filters as { items: unknown[] }).items).toEqual([])
+  })
+
+  it('adds a body-contains filter when a query is given, and defaults the limit', () => {
+    const b = logsQueryRangeBody({ start: 1, end: 2, query: 'timeout' }) as Record<string, unknown>
+    const A = ((b.compositeQuery as Record<string, unknown>).builderQueries as Record<string, Record<string, unknown>>).A
+    expect(A.limit).toBe(200) // default
+    const items = (A.filters as { items: Array<Record<string, unknown>> }).items
+    expect(items).toHaveLength(1)
+    expect(items[0].op).toBe('contains')
+    expect(items[0].value).toBe('timeout')
+    expect((items[0].key as { key: string }).key).toBe('body')
+  })
+})
+
+describe('normalizeLog', () => {
+  it('maps a SigNoz v4 list item (data.{body,severity_text,resources_string})', () => {
+    const l = normalizeLog({
+      timestamp: '2026-07-01T10:00:00Z',
+      data: {
+        id: 'log-1',
+        body: 'connection reset by peer',
+        severity_text: 'error',
+        resources_string: { 'service.name': 'cloud-api', 'k8s.pod.name': 'cloud-api-abc' },
+      },
+    })
+    expect(l.id).toBe('log-1')
+    expect(l.body).toBe('connection reset by peer')
+    expect(l.severity).toBe('ERROR') // uppercased
+    expect(l.service).toBe('cloud-api')
+    expect(l.timestampMs).toBe(Date.parse('2026-07-01T10:00:00Z'))
+  })
+
+  it('derives severity from the OTel severity_number when no text, and normalizes ns epochs', () => {
+    const l = normalizeLog({ timestamp: 1_767_000_000_000_000_000, data: { body: 'x', severity_number: 17, attributes_string: { 'service.name': 'gateway' } } })
+    expect(l.severity).toBe('ERROR') // 17 → ERROR
+    expect(l.service).toBe('gateway')
+    // ns → ms (÷1e6)
+    expect(l.timestampMs).toBe(Math.floor(1_767_000_000_000_000_000 / 1e6))
+  })
+
+  it('tolerates a flat row and degrades missing fields, never throws', () => {
+    const flat = normalizeLog({ timestamp: 0, body: 'flat message', severity: 'warn', service: 'ai' })
+    expect(flat.body).toBe('flat message')
+    expect(flat.severity).toBe('WARN')
+    expect(flat.service).toBe('ai')
+    const empty = normalizeLog(undefined)
+    expect(empty).toEqual({ timestampMs: 0, severity: '', body: '', service: '', id: '0' })
+  })
+})
+
+describe('normalizeLogs', () => {
+  it('flattens data.result[].list[] and drops empty rows', () => {
+    const out = normalizeLogs({
+      status: 'success',
+      data: {
+        resultType: 'list',
+        result: [
+          {
+            queryName: 'A',
+            list: [
+              { timestamp: '2026-07-01T10:00:00Z', data: { body: 'a', severity_text: 'info', resources_string: { 'service.name': 's1' } } },
+              { timestamp: '2026-07-01T10:01:00Z', data: { body: '', severity_number: 0 } }, // no body, no severity → dropped
+              { timestamp: '2026-07-01T10:02:00Z', data: { body: 'c', severity_text: 'debug' } },
+            ],
+          },
+        ],
+      },
+    })
+    expect(out.map((l) => l.body)).toEqual(['a', 'c'])
+    expect(out[0].service).toBe('s1')
+  })
+
+  it('tolerates a bare array of rows and garbage → []', () => {
+    expect(normalizeLogs([{ body: 'x', severity_text: 'info' }]).map((l) => l.body)).toEqual(['x'])
+    expect(normalizeLogs(null)).toEqual([])
+    expect(normalizeLogs('nope')).toEqual([])
   })
 })
