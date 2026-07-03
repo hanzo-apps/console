@@ -39,6 +39,7 @@ import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
+import { playgroundPathForModel } from './playground/share'
 import type { ApiError } from '~/lib/api'
 
 const Pill = ({ label, tone = 'muted' }: { label: string; tone?: 'muted' | 'live' }) => (
@@ -168,8 +169,9 @@ function PlanBadge({ plan }: { plan: Plan }) {
 function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]; onBack: () => void }) {
   const router = useRouter()
   const tierPlans = plansForTier(m.tier, plans)
+  const modelId = m.id ?? m.name
   const copyId = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) void navigator.clipboard.writeText(m.id ?? m.name)
+    if (typeof navigator !== 'undefined' && navigator.clipboard) void navigator.clipboard.writeText(modelId)
   }
   return (
     <YStack gap="$4">
@@ -201,13 +203,14 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
       </YStack>
 
       <XStack gap="$2" flexWrap="wrap">
-        <Button size="$3" icon={<Play size={15} />} onPress={() => router.push('/playground')}>
-          Open in Playground
+        {/* Primary: open the Playground PRESELECTED on this model (deep-links ?p=…). */}
+        <Button size="$3" theme="light" icon={<Play size={15} />} onPress={() => router.push(playgroundPathForModel(modelId))}>
+          Try in Playground
         </Button>
         <Button
           size="$3"
           icon={<Settings2 size={15} />}
-          onPress={() => router.push(`/models/routing/${encodeURIComponent(m.id ?? m.name)}`)}
+          onPress={() => router.push(`/models/routing/${encodeURIComponent(modelId)}`)}
         >
           Configure routing
         </Button>

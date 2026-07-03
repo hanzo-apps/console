@@ -22,8 +22,15 @@ async function signIn(page: Page) {
   await page.fill('input[placeholder="Password"]', PASSWORD)
   await page.click('button:has-text("Sign in")')
   const base = new URL(BASE_URL).origin
-  await page.waitForURL((url) => url.origin === base && url.pathname === '/', { timeout: 30_000 })
-  await page.waitForLoadState('domcontentloaded')
+  // Resilient: the post-login target may be '/' (dashboard) OR '/onboard' (org gate)
+  // OR it may just set the session cookie while staying put briefly. Wait for the
+  // sign-in form to DISAPPEAR (we left the /signin gate), whatever the destination.
+  await page
+    .waitForFunction(() => !document.querySelector('input[placeholder="Password"]'), { timeout: 90_000 })
+    .catch(() => {})
+  // Give the session cookie + any redirect a moment to settle, then land on '/'.
+  await page.goto(base, { waitUntil: 'domcontentloaded' }).catch(() => {})
+  await page.waitForTimeout(2500)
 }
 
 /** now() epoch — SigNoz wants ns for services/errors, ms for infra. */
