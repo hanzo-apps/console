@@ -26,6 +26,12 @@ export const CLOUD_HEADS: readonly string[] = [
   'functions',
   'prompts',
   'agents',
+  // ML serving (cloud clients/ml): /v1/ml/{models,health}[/:name[/predict]] — the org's
+  // deployed KServe InferenceServices. The handler resolves the org from the Bearer owner
+  // and lands every request in a PER-ORG namespace ("ml-"<org>); a cookie-only call 403s,
+  // so it routes through /cloud exactly like agents/functions. One head admits the models
+  // list/get + the create/predict sub-paths (the Inference product's endpoints source).
+  'ml',
   // CRM (cloud clients/crm): /v1/crm/{summary,companies,contacts,opportunities}[/:id].
   // Native-Go per-org CRM on Base/SQLite (companies/contacts/opportunities). The
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
