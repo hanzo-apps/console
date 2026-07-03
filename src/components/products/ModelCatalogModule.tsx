@@ -37,6 +37,7 @@ import {
 import {
   groupByFamily,
   filterFamilies,
+  familyOf,
   totalModels,
   displayLabel,
   DEFAULT_MODEL,
@@ -112,7 +113,8 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
 
       <YStack gap="$2">
         <XStack items="center" gap="$3" flexWrap="wrap">
-          <ProviderLogo provider={m.provider ?? 'Other'} size={40} />
+          {/* Family brand so the detail matches the catalog row (Zen → ensō). */}
+          <ProviderLogo provider={familyOf(m)?.logo ?? m.provider ?? 'Other'} size={40} />
           <Text fontSize="$8" fontWeight="800" color="$color12">
             {modelDisplayName(m)}
           </Text>
@@ -200,7 +202,7 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
 }
 
 /** One model row inside a family section — click for the full detail. */
-function ModelRow({ m, onOpen }: { m: CatalogEntry; onOpen: () => void }) {
+function ModelRow({ m, brand, onOpen }: { m: CatalogEntry; brand: string; onOpen: () => void }) {
   const isDefault = modelId(m).toLowerCase() === DEFAULT_MODEL
   return (
     <XStack
@@ -213,7 +215,8 @@ function ModelRow({ m, onOpen }: { m: CatalogEntry; onOpen: () => void }) {
       hoverStyle={{ bg: '$color3' }}
       onPress={onOpen}
     >
-      <ProviderLogo provider={m.provider ?? 'Zen'} size={26} />
+      {/* Family brand — every model in a family shares its header mark (Zen → ensō). */}
+      <ProviderLogo provider={brand} size={26} />
       <YStack flex={1} minW={0} gap={1}>
         <XStack items="center" gap="$2" flexWrap="wrap">
           <Text fontSize="$3" color="$color12" numberOfLines={1}>
@@ -232,13 +235,14 @@ function ModelRow({ m, onOpen }: { m: CatalogEntry; onOpen: () => void }) {
           </Text>
         ) : null}
       </YStack>
-      <Text className={TNUM} fontSize="$2" color="$color11" width={72} text="right">
+      {/* Context column: hidden on phones (mobile-first) so rows never overflow. */}
+      <Text className={TNUM} fontSize="$2" color="$color11" width={72} text="right" display="none" $md={{ display: 'flex' }}>
         {fmtContext(modelContext(m))}
       </Text>
-      <Text className={TNUM} fontSize="$2" color="$color12" width={80} text="right">
+      <Text className={TNUM} fontSize="$2" color="$color12" width={72} $md={{ width: 80 }} text="right">
         {fmtPrice(m.pricing?.input)}/M
       </Text>
-      <XStack width={96} justify="flex-end">
+      <XStack width={72} $md={{ width: 96 }} justify="flex-end">
         {m.available ? <Pill label="● Live" tone="live" /> : <Pill label="Catalog" />}
       </XStack>
     </XStack>
@@ -286,7 +290,7 @@ function FamilySection({
       {open ? (
         <YStack px="$1.5" pb="$2" borderTopWidth={1} borderColor="$borderColor">
           {rows.map((mo) => (
-            <ModelRow key={modelId(mo)} m={mo} onOpen={() => onOpen(mo)} />
+            <ModelRow key={modelId(mo)} m={mo} brand={group.logo} onOpen={() => onOpen(mo)} />
           ))}
           {hidden > 0 ? (
             <Button size="$2" chromeless self="flex-start" mt="$1" ml="$2" onPress={() => setShowAll(true)}>

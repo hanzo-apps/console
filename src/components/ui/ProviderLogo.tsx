@@ -1,36 +1,26 @@
 'use client'
 
 /**
- * ProviderLogo — a small provider/model avatar resolved from a provider NAME
- * alone (no external logo URLs, no network). Self-contained and prop-driven so
- * it lifts cleanly into `@hanzo/ui` for hanzo.ai / @hanzo/dev / the desktop app.
+ * ProviderLogo — a small provider/model brand avatar resolved from a provider or
+ * family NAME alone (no external logo URLs, no network). Self-contained and
+ * prop-driven so it lifts cleanly into `@hanzo/ui` for hanzo.ai / @hanzo/dev /
+ * the desktop app.
  *
- * Resolution order:
- *   1. First-party — Zen renders the real ensō mark, Hanzo the real block-H mark
- *      (same geometry as @zenlm/logo / @hanzo/logo), knocked out of a filled
- *      rounded tile so our own models read distinctly and on-brand.
- *   2. A known provider → its mapped @hanzogui/lucide-icons-2 glyph.
- *   3. Otherwise → a stable initials chip (1–2 letters from the name).
- *
- * Honest by construction: we never claim an official brand logo we don't ship —
- * unknown providers get clean initials, not a guessed icon. Colors are @hanzo/gui
- * theme tokens so the mark themes with the shell.
+ * The pure brand resolution lives in ./brand (unit tested). This is the render
+ * layer, three steps:
+ *   1. Normalize the string → a canonical brand key (`normalizeBrand`).
+ *   2. First-party — **Zen** always renders the ensō (every zen* model, and the
+ *      "hanzo"/"zen" providers the Zen records carry), **Hanzo** the block-H —
+ *      knocked out of a filled tile so our own models read on-brand.
+ *   3. Known third-party family → its brand-colored tile with a crisp monogram
+ *      (scannable by colour); truly-unknown → a neutral initials chip.
  */
 import { Text, XStack, useTheme } from '@hanzo/gui'
-import { Boxes, Server, Globe, Cpu } from '@hanzogui/lucide-icons-2'
+import { Server } from '@hanzogui/lucide-icons-2'
 
-type IconCmp = typeof Globe
+import { normalizeBrand, BRANDS, providerInitials } from './brand'
 
-/** Curated, extendable provider→glyph map (lowercased keys). Brand-neutral avatars. */
-const KNOWN: Record<string, IconCmp> = {
-  openrouter: Globe,
-  nvidia: Cpu,
-}
-
-const isFirstParty = (provider: string): boolean => {
-  const p = provider.trim().toLowerCase()
-  return p === 'hanzo' || p === 'zen'
-}
+export { providerInitials } from './brand'
 
 /** The Zen ensō mark — identical geometry to @zenlm/logo (svg/zen-enso.svg). */
 function EnsoMark({ size, color }: { size: number; color: string }) {
@@ -59,67 +49,68 @@ function HanzoHMark({ size, color }: { size: number; color: string }) {
   )
 }
 
-/** 1–2 uppercase initials from a provider name: words→first letters, else first 2 chars. */
-export function providerInitials(provider: string): string {
-  const name = provider.trim()
-  if (!name) return '•'
-  const words = name.split(/[\s/_-]+/).filter(Boolean)
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
-  return name.slice(0, 2).toUpperCase()
-}
-
-export function ProviderLogo({ provider, size = 24 }: { provider: string; size?: number }) {
-  const theme = useTheme()
-  const radius = Math.round(size * 0.28)
-  const iconSize = Math.round(size * 0.56)
-
-  // First-party (Zen/Hanzo) — the real brand mark knocked out of a filled tile.
-  if (isFirstParty(provider)) {
-    const fg = theme.color1?.get() ?? '#000000' // cut-out mark: the tile's contrast color
-    const markSize = Math.round(size * 0.66)
-    const isZen = provider.trim().toLowerCase() === 'zen'
-    return (
-      <XStack width={size} height={size} items="center" justify="center" rounded={radius} bg="$color12">
-        {isZen ? <EnsoMark size={markSize} color={fg} /> : <HanzoHMark size={Math.round(size * 0.56)} color={fg} />}
-      </XStack>
-    )
-  }
-
-  // A known provider with a curated, brand-neutral glyph.
-  const Known = KNOWN[provider.trim().toLowerCase()]
-  if (Known) {
-    return (
-      <XStack
-        width={size}
-        height={size}
-        items="center"
-        justify="center"
-        rounded={radius}
-        bg="$color3"
-        borderWidth={1}
-        borderColor="$borderColor"
-      >
-        <Known size={iconSize} color="$color11" />
-      </XStack>
-    )
-  }
-
-  // Otherwise — a clean, stable initials chip (no fabricated brand logo).
+/**
+ * A filled square tile — the shared frame for every mark (keeps sizing DRY).
+ * `bg`/`borderColor` are RAW css colours (theme tokens are resolved to values by
+ * the caller via `useTheme`), applied through `style` so a brand hex and a themed
+ * colour take the exact same, type-clean path.
+ */
+function Tile({ size, bg, borderColor, children }: { size: number; bg: string; borderColor?: string; children: React.ReactNode }) {
   return (
     <XStack
       width={size}
       height={size}
       items="center"
       justify="center"
-      rounded={radius}
-      bg="$color3"
-      borderWidth={1}
-      borderColor="$borderColor"
+      rounded={Math.round(size * 0.28)}
+      style={{ flexShrink: 0, backgroundColor: bg, ...(borderColor ? { borderWidth: 1, borderColor } : {}) }}
     >
-      <Text fontSize={Math.round(size * 0.4)} fontWeight="800" color="$color11">
+      {children}
+    </XStack>
+  )
+}
+
+export function ProviderLogo({ provider, size = 24 }: { provider: string; size?: number }) {
+  const theme = useTheme()
+  const brand = normalizeBrand(provider)
+
+  // First-party — the real brand mark knocked out of a filled tile.
+  if (brand === 'zen' || brand === 'hanzo') {
+    const tileBg = theme.color12?.get() ?? '#111111'
+    const fg = theme.color1?.get() ?? '#ffffff' // cut-out mark: the tile's contrast color
+    return (
+      <Tile size={size} bg={tileBg}>
+        {brand === 'zen'
+          ? <EnsoMark size={Math.round(size * 0.66)} color={fg} />
+          : <HanzoHMark size={Math.round(size * 0.56)} color={fg} />}
+      </Tile>
+    )
+  }
+
+  // Known third-party family — brand-colored tile + crisp white monogram.
+  if (brand) {
+    const { bg, label } = BRANDS[brand]
+    // Shrink the glyph a touch as the monogram gets longer so 2–3 chars still fit.
+    const fontScale = label.length >= 3 ? 0.34 : label.length === 2 ? 0.4 : 0.46
+    return (
+      <Tile size={size} bg={bg}>
+        <Text fontSize={Math.round(size * fontScale)} fontWeight="800" color="#ffffff" style={{ letterSpacing: -0.5 }}>
+          {label}
+        </Text>
+      </Tile>
+    )
+  }
+
+  // Unknown provider — a clean, stable neutral initials chip (no fabricated brand).
+  const neutralBg = theme.color3?.get() ?? '#e5e5e5'
+  const neutralBorder = theme.borderColor?.get() ?? 'rgba(0,0,0,0.1)'
+  const neutralFg = theme.color11?.get() ?? '#555555'
+  return (
+    <Tile size={size} bg={neutralBg} borderColor={neutralBorder}>
+      <Text fontSize={Math.round(size * 0.4)} fontWeight="800" style={{ color: neutralFg }}>
         {providerInitials(provider)}
       </Text>
-    </XStack>
+    </Tile>
   )
 }
 
@@ -134,4 +125,4 @@ export function GenericLogo({ size = 24 }: { size?: number }) {
 
 // Boxes is re-exported as the conventional "custom model" mark for callers that
 // render a non-provider tile next to ProviderLogo (keeps the icon source single).
-export { Boxes as CustomModelMark }
+export { Boxes as CustomModelMark } from '@hanzogui/lucide-icons-2'
