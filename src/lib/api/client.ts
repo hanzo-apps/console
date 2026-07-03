@@ -11,6 +11,7 @@
  */
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
+import { currentActor } from '~/lib/actor-scope'
 import { getScope } from '~/lib/scope'
 import { refreshSession } from '~/lib/auth/refresh'
 
@@ -57,6 +58,7 @@ const baseHeaders = (hasBody: boolean): Record<string, string> => {
   // that compose here, so this ONE stamp makes EVERY module (o11y, api-keys,
   // deploys, …) org + project + environment scoped with no per-module change.
   const s = getScope()
+  const actor = currentActor()
   return {
     'Accept-Language': acceptLanguage(),
     // ONE canonical org header. Both the provisioning sub-service and the casibase
@@ -70,6 +72,11 @@ const baseHeaders = (hasBody: boolean): Record<string, string> => {
     // Project sub-scope — the canonical `X-Project-Id` (evalsvc reads it; other
     // svcs as project scoping lands). Sent only when a project is selected.
     ...(s.project ? { 'X-Project-Id': s.project } : {}),
+    // Actor sub-identity — the signed-in USER (`<owner>/<name>`), so org + project +
+    // USER all pass on EVERY call. Present only when a session is resolved (absent
+    // pre-sign-in / SSR); the gateway treats it as advisory, identity being
+    // authoritative from the validated JWT — exactly like `X-Org-Id`.
+    ...(actor ? { 'X-Actor-Id': actor } : {}),
     'X-Environment': s.environment,
     ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
   }
