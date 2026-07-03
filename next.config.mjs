@@ -67,7 +67,7 @@ function guiPackages() {
  * NOT rewritten here: they keep their own gated proxies with their own tenant
  * scoping, and are reached by the client's explicit `/admin/*` origin path.
  */
-const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'crm', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch']
+const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'platform', 'crm', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch']
 const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio']
 // The admin aggregate heads rewritten to the GLOBAL-ADMIN-GATED proxy. `providers`
 // is the AI-provider control board — its GET (the list) AND its POST mutations
