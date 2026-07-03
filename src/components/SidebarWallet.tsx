@@ -8,8 +8,8 @@
  * Identity (avatar + display name) comes from the signed-in IAM account. Three
  * destinations, one way each:
  * - The user row → the **Profile** page (`/profile`): account, security, keys.
- * - The balance row → the in-console **Cost** module (`/cost`): balance, usage,
- *   invoices — the org's own data, scoped to the active org.
+ * - The balance row → the in-console **Billing** module (`/billing`): balance,
+ *   usage, invoices — the org's own data, scoped to the active org.
  * - **Top up** → the brand billing portal (billing.hanzo.ai) — payment is never
  *   rebuilt here. **Sign out** sits directly beneath it.
  *
@@ -71,7 +71,7 @@ export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
   const avatar = typeof account?.avatar === 'string' ? account.avatar : undefined
   const balanceText = cents === null ? '—' : fmtUsd(cents)
   const openProfile = () => router.push('/profile')
-  const openCost = () => router.push('/cost')
+  const openCost = () => router.push('/billing')
 
   if (collapsed) {
     // Three stacked affordances: identity (→ Profile), top-up, sign out.
