@@ -5,35 +5,31 @@
  * read), scoped to the product. No product writes Metrics UI — it inherits this config,
  * rendered by the ONE `LivingOverview`. Reuses the tile set + `ui/Charts` verbatim.
  *
- * Honest per-product attribution: a product with a real `metadata.product` tag filters
- * to its own rows (honest-empty until cloud attributes spend to it); the raw model-
- * serving surfaces (inference/models/api/gateway) read the FULL ledger, which is
- * entirely inference calls — so "Inference metrics = the whole ledger" is exact, never
- * a misattribution. P95 latency has no ledger source, so its tile renders an honest "—"
- * until o11y trace latency is wired in (flagged, never fabricated).
+ * Honest per-product attribution (the ONE decision lives in `subpage/sources.ts` →
+ * `metricsScopeFor`, so there is exactly one "which products are the inference surface"
+ * set): a `product`-scoped surface filters the ledger to its own `metadata.product` tag
+ * (honest-empty until cloud attributes spend to it) and NEVER shows the org aggregate
+ * under its name; the raw model-serving surface (inference/models/api/gateway) reads the
+ * FULL ledger — which is entirely inference calls flowing through it — and the subtitle +
+ * the view's banner frame it as org-wide inference, not a fabricated per-product slice.
+ * P95 latency has no ledger source, so its tile renders an honest "—" until o11y trace
+ * latency is wired in (flagged, never fabricated).
  */
 import { Activity, DollarSign, Hash, Timer } from '@hanzogui/lucide-icons-2'
 
 import type { CatalogEntry } from '~/lib/products/registry'
 import { UsageApi } from '~/lib/api/usage'
+import { metricsScopeFor } from '~/components/products/subpage/sources'
 import type { LivingOverviewConfig, OverviewRange } from './config'
 import { fromCloudUsage } from './adapters'
 
 const usageRange = (r: OverviewRange): '24h' | '7d' | '30d' => r
 
-/**
- * Products whose usage IS the org's raw model-inference total. The commerce ledger is
- * ENTIRELY inference calls (every row is type "inference"), so these surfaces read the
- * FULL ledger, unfiltered. Every OTHER product filters by its own `metadata.product`
- * tag (honest-empty until attributed) — never showing the whole ledger under one
- * product's name.
- */
-const RAW_INFERENCE_PRODUCTS = new Set<string>(['inference', 'models', 'api', 'gateway'])
-
-/** The per-product Metrics ledger filter: null (the whole inference ledger) for a raw
- *  model-serving surface, else the product's own `metadata.product` tag. */
+/** The per-product Metrics ledger filter — the `metadata.product` tag, or null (whole
+ *  inference ledger) for a raw model-serving surface. Thin accessor over the ONE
+ *  decision in `subpage/sources.ts`; kept for callers that want just the filter value. */
 export function metricsProductFilter(id: string): string | null {
-  return RAW_INFERENCE_PRODUCTS.has(id) ? null : id
+  return metricsScopeFor(id).product
 }
 
 /**
@@ -43,11 +39,15 @@ export function metricsProductFilter(id: string): string | null {
  * tokens, requests by status, spend by model — all real donuts), and a recent-usage feed.
  */
 export function productMetricsConfig(entry: CatalogEntry): LivingOverviewConfig {
-  const product = metricsProductFilter(entry.id)
+  const { product, scope } = metricsScopeFor(entry.id)
+  const subtitle =
+    scope === 'inference-all'
+      ? `Org-wide inference — every model call flows through ${entry.label}, per organization.`
+      : `Usage and spend attributed to ${entry.label}, per organization.`
   return {
     id: `metrics:${entry.id}`,
     title: 'Metrics',
-    subtitle: `Usage and spend attributed to ${entry.label}, per organization.`,
+    subtitle,
     live: { pollMs: 20000, countUp: true },
     rows: [
       [

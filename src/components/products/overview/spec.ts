@@ -389,7 +389,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
   console: {
     summary:
       'The unified cloud console — this application. One place to see, manage, and bill every Hanzo Cloud product: AI, compute, data, network, security, deploys, observability, and more, all scoped to your organization.',
-    health: { kind: 'platform-app', service: 'console2' },
+    health: { kind: 'platform-app', service: 'console' },
     facts: [
       { label: 'Products', value: 'All of Hanzo Cloud' },
       { label: 'Scope', value: 'Your organization' },
