@@ -26,7 +26,7 @@
 import { originGet } from './client'
 
 /** A compute unit's kind: a raw machine, or a machine running the @hanzo/bot agent. */
-export type ComputeKind = 'bot' | 'machine'
+export type ComputeKind = 'bot' | 'machine' | 'cluster' | 'nodepool' | 'function'
 
 /** A raw compute event row — the datastore's coordinated 9-column shape. */
 export type ComputeEvent = {
@@ -85,7 +85,14 @@ const pick = (r: Record<string, unknown>, ...keys: string[]): unknown => {
   for (const k of keys) if (r[k] !== undefined && r[k] !== null) return r[k]
   return undefined
 }
-const asKind = (v: unknown): ComputeKind => (str(v).trim().toLowerCase() === 'bot' ? 'bot' : 'machine')
+/** The recognized compute spectrum; anything else falls back to `machine`
+ *  (mirror of visor's Go `CanonicalKind`) so an unknown kind never pollutes a
+ *  sibling board via `keepKind`. */
+const KIND_SET = new Set<ComputeKind>(['bot', 'machine', 'cluster', 'nodepool', 'function'])
+const asKind = (v: unknown): ComputeKind => {
+  const k = str(v).trim().toLowerCase()
+  return (KIND_SET as Set<string>).has(k) ? (k as ComputeKind) : 'machine'
+}
 
 /** Events whose LATEST occurrence means the unit is no longer running. */
 const TERMINAL = new Set([
