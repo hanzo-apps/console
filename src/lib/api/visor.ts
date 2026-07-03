@@ -1,12 +1,19 @@
 /**
- * Visor — the CUSTOMER compute surface (a tenant's own machines), via the
- * same-origin user-bearer proxy `app/vm/[...path]/route.ts` → `visor.hanzo.svc/v1/*`.
+ * Visor — the CUSTOMER compute surface (a tenant's own machines).
+ *
+ * TWO transports, one file, cleanly split:
+ *  - Machines INVENTORY + lifecycle (list / launch / quote / terminate) now go
+ *    through the unified cloud binary at `/v1/machines*`, via the same-origin
+ *    user-bearer `/cloud` proxy (`app/cloud/[...path]/route.ts` → cloud-api, org
+ *    resolved from the Bearer owner). This is the visor-backed native cloud surface.
+ *  - The public compute CATALOG (regions / sizes / GPU accelerators, un-scoped) still
+ *    reads visor directly via the `/vm` proxy (`app/vm/[...path]/route.ts` →
+ *    `visor.hanzo.svc/v1/*`): it powers the launch picker and can't share the
+ *    `/v1/gpus` head (that is the GPU INVENTORY surface, a different shape).
  *
  * This is deliberately NOT the `/paas` platform control plane (a god-mode SERVICE
- * token, admin-only, which 501s "PAAS_SERVICE_TOKEN not set" until wired). Compute
- * is a TENANT action: any signed-in org user may list their OWN machines, and
- * visor scopes them from the forwarded user JWT. So a customer (like a demo user)
- * reads real machines here with only their session cookie — never the infra token,
+ * token, admin-only). Compute is a TENANT action: any signed-in org user may list +
+ * launch their OWN machines with just their session cookie — never the infra token,
  * never the infra "not configured" message.
  *
  * Honest by construction: every field is normalized defensively (an upstream field
@@ -14,9 +21,11 @@
  * machines yet" state, and a not-routed/unavailable upstream degrades to a
  * customer-appropriate "managed compute" state — NOT an infra error.
  */
-import { restGet, restPost, ApiError } from './client'
+import { restGet, restPost, restDelete, ApiError, cloudProxyV1Url } from './client'
 
+/** Public compute CATALOG (regions / sizes / GPU accelerators) — visor `/vm` proxy. */
 const vm = (path: string): string => `/vm/v1/${path.replace(/^\/+/, '')}`
+const enc = encodeURIComponent
 
 /** One customer machine as visor reports it. Missing fields render `—`. */
 export type VisorMachine = {
@@ -200,9 +209,9 @@ function unwrapEnvelope(r: unknown): Record<string, unknown> {
 }
 
 export const VisorApi = {
-  /** The signed-in org's own machines (user-scoped by visor). */
+  /** The signed-in org's own machines (`GET /v1/machines`, org-scoped by the Bearer owner). */
   machines: async (): Promise<VisorMachine[]> => {
-    const r = await restGet<unknown>(vm('machines'))
+    const r = await restGet<unknown>(cloudProxyV1Url('machines'))
     return arrayUnder(r, ['machines', 'instances', 'data', 'items', 'rows', 'droplets']).map((m, i) => normalizeMachine(m, i))
   },
 
@@ -230,7 +239,7 @@ export const VisorApi = {
    * SAME figure the real launch charges and the catalog shows (one pricing source).
    */
   quote: async (input: LaunchInput): Promise<LaunchQuote> => {
-    const r = await restPost<unknown>(vm('machines/launch'), {
+    const r = await restPost<unknown>(cloudProxyV1Url('machines/launch'), {
       size: input.size, instanceType: input.size, region: input.region, name: input.name || 'quote', dryRun: true,
     })
     const d = unwrapEnvelope(r)
@@ -249,11 +258,15 @@ export const VisorApi = {
    *  new machine is billed to the org's Hanzo balance; a 402 (or "insufficient balance")
    *  surfaces to the caller as an honest "add credits" — never a fabricated success. */
   launch: async (input: LaunchInput): Promise<VisorMachine> => {
-    const r = await restPost<unknown>(vm('machines/launch'), {
+    const r = await restPost<unknown>(cloudProxyV1Url('machines/launch'), {
       size: input.size, instanceType: input.size, region: input.region, name: input.name, dryRun: false,
     })
     return normalizeMachine(unwrapEnvelope(r))
   },
+
+  /** Terminate (destroy) a machine (`DELETE /v1/machines/:id`). Stops metering; the
+   *  backend authorizes the delete against the Bearer owner's org. Resolves on 2xx/204. */
+  terminate: (id: string): Promise<void> => restDelete(cloudProxyV1Url(`machines/${enc(id)}`)),
 }
 
 // ── Formatters (cells) ───────────────────────────────────────────────────────

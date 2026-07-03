@@ -6,7 +6,7 @@
  * right-side `DetailPane`. It loads the COMPLETE live catalog from visor
  * (`/vm/v1/sizes` for machines, `/vm/v1/gpus` for GPUs) + the real regions, shows OUR
  * market price ($/hr + $/mo — the same visor `HanzoPrice` the launch charges), and on
- * Launch calls `POST /vm/v1/machines/launch` (per-org, Bearer-auth'd through the BFF).
+ * Launch calls the native `POST /v1/machines/launch` (visor-backed, per-org, Bearer-auth'd through the `/cloud` proxy).
  * The new machine flows back to the caller's list via `onLaunched`. Errors are honest:
  * a 402 / "insufficient balance" becomes an "add credits" prompt; nothing is fabricated.
  */
