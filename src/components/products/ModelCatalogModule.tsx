@@ -43,8 +43,12 @@ import {
 } from '~/lib/api/families'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { FadeIn } from '~/components/ui/FadeIn'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import type { ApiError } from '~/lib/api'
+
+/** Tabular-numeral className — fixed-advance digits for the numeric columns. */
+const TNUM = 'hz-tnum'
 
 const Pill = ({ label, tone = 'muted' }: { label: string; tone?: 'muted' | 'live' | 'brand' }) => (
   <Text
@@ -224,10 +228,10 @@ function ModelRow({ m, onOpen }: { m: CatalogEntry; onOpen: () => void }) {
           </Text>
         ) : null}
       </YStack>
-      <Text fontSize="$2" color="$color11" width={72} text="right">
+      <Text className={TNUM} fontSize="$2" color="$color11" width={72} text="right">
         {fmtContext(modelContext(m))}
       </Text>
-      <Text fontSize="$2" color="$color12" width={80} text="right">
+      <Text className={TNUM} fontSize="$2" color="$color12" width={80} text="right">
         {fmtPrice(m.pricing?.input)}/M
       </Text>
       <XStack width={96} justify="flex-end">
@@ -267,7 +271,7 @@ function FamilySection({
           <Text fontSize="$5" fontWeight="800" color="$color12" numberOfLines={1}>
             {group.label}
           </Text>
-          <Text fontSize="$1" color="$color10">
+          <Text className={TNUM} fontSize="$1" color="$color10">
             {group.models.length} model{group.models.length === 1 ? '' : 's'}
             {group.available > 0 ? ` · ${group.available} live` : ''}
           </Text>
@@ -295,16 +299,59 @@ function FamilySection({
   )
 }
 
-const Stat = ({ label, value }: { label: string; value: string }) => (
-  <YStack flex={1} gap={2} px="$3" py="$2.5" minW={120}>
-    <Text fontSize="$6" fontWeight="700" color="$color12">
+const Stat = ({ label, value, divider }: { label: string; value: string; divider?: boolean }) => (
+  <YStack
+    flex={1}
+    gap={2}
+    px="$4"
+    py="$3"
+    minW={120}
+    borderLeftWidth={divider ? 1 : 0}
+    borderColor="$borderColor"
+  >
+    <Text className={TNUM} fontSize="$7" fontWeight="800" color="$color12" letterSpacing={-0.5}>
       {value}
     </Text>
-    <Text fontSize="$1" color="$color10">
+    <Text fontSize="$1" color="$color10" textTransform="uppercase" letterSpacing={0.4}>
       {label}
     </Text>
   </YStack>
 )
+
+/** A single shimmer bar (honest loading — never fabricated content). */
+const Shimmer = ({ w, h = 12, r = 6 }: { w: number | string; h?: number; r?: number }) => (
+  <div className="hz-skeleton" style={{ width: w, height: h, borderRadius: r }} />
+)
+
+/** Skeleton family cards — the designed loading state (Linear-grade, no spinner). */
+function CatalogSkeleton() {
+  return (
+    <YStack gap="$2.5">
+      {[0, 1, 2].map((s) => (
+        <YStack key={s} rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color1" overflow="hidden">
+          <XStack items="center" gap="$3" px="$3.5" py="$3">
+            <div className="hz-skeleton" style={{ width: 30, height: 30, borderRadius: 8 }} />
+            <YStack gap="$1.5">
+              <Shimmer w={120} h={14} />
+              <Shimmer w={72} h={9} />
+            </YStack>
+          </XStack>
+          <YStack px="$3.5" py="$2.5" gap="$3" borderTopWidth={1} borderColor="$borderColor">
+            {[0, 1, 2].map((r) => (
+              <XStack key={r} items="center" gap="$2.5">
+                <div className="hz-skeleton" style={{ width: 26, height: 26, borderRadius: 7 }} />
+                <Shimmer w={180 - r * 24} h={12} />
+                <YStack flex={1} />
+                <Shimmer w={54} h={10} />
+                <Shimmer w={60} h={10} />
+              </XStack>
+            ))}
+          </YStack>
+        </YStack>
+      ))}
+    </YStack>
+  )
+}
 
 type LoadState =
   | { phase: 'loading' }
@@ -402,21 +449,20 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
           </XStack>
 
           {state.phase === 'loading' ? (
-            <YStack p="$6" items="center">
-              <Text fontSize="$3" color="$color10">
-                Loading the model catalog…
-              </Text>
-            </YStack>
+            <CatalogSkeleton />
           ) : visible.length === 0 ? (
-            <YStack p="$6" items="center">
-              <Text fontSize="$3" color="$color10">
+            <YStack p="$8" items="center" gap="$2">
+              <Boxes size={26} color="$color9" />
+              <Text fontSize="$3" color="$color10" text="center" maxW={320}>
                 {query ? `No models match “${query}”.` : 'No chat models available on this deployment yet.'}
               </Text>
             </YStack>
           ) : (
             <YStack gap="$2.5">
-              {visible.map((g) => (
-                <FamilySection key={g.id} group={g} onOpen={setSelected} />
+              {visible.map((g, i) => (
+                <FadeIn key={g.id} index={i} step={40}>
+                  <FamilySection group={g} onOpen={setSelected} />
+                </FadeIn>
               ))}
             </YStack>
           )}
@@ -431,8 +477,8 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
               flexWrap="wrap"
             >
               <Stat label="Families" value={stats.families} />
-              <Stat label="Models" value={stats.total} />
-              <Stat label="Available now" value={stats.live} />
+              <Stat label="Models" value={stats.total} divider />
+              <Stat label="Available now" value={stats.live} divider />
             </XStack>
           ) : null}
         </>
