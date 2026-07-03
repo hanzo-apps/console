@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { ApiError } from '~/lib/api/client'
-import type { PaasDeployment } from '~/lib/api/paas'
+import type { PaasDeployment, PaasDomain } from '~/lib/api/paas'
 import {
   appUrl,
   appSource,
@@ -10,6 +10,10 @@ import {
   buildStatusOf,
   deploymentLabel,
   classifyPaasError,
+  isPendingCustom,
+  canRemoveDomain,
+  domainStatusLabel,
+  orderDomains,
 } from './logic'
 
 describe('appUrl', () => {
@@ -51,6 +55,45 @@ describe('deployments — builds derive from git-source', () => {
   it('labels a deployment by version or short id', () => {
     expect(deploymentLabel(dep({ version: 5 }))).toBe('v5')
     expect(deploymentLabel(dep({ id: 'abcdef123456' }))).toBe('abcdef12')
+  })
+})
+
+describe('domains', () => {
+  const dom = (over: Partial<PaasDomain>): PaasDomain => ({ host: 'h', kind: 'custom', status: 'pending', url: 'https://h', verified: false, ...over })
+
+  it('flags a pending custom domain (needs DNS verification)', () => {
+    expect(isPendingCustom(dom({ kind: 'custom', verified: false }))).toBe(true)
+    expect(isPendingCustom(dom({ kind: 'custom', verified: true }))).toBe(false)
+    expect(isPendingCustom(dom({ kind: 'subtree', verified: false }))).toBe(false)
+  })
+
+  it('never allows removing the default host', () => {
+    expect(canRemoveDomain(dom({ kind: 'default', primary: true }))).toBe(false)
+    expect(canRemoveDomain(dom({ kind: 'subtree' }))).toBe(true)
+    expect(canRemoveDomain(dom({ kind: 'custom' }))).toBe(true)
+  })
+
+  it('renders an honest status label', () => {
+    expect(domainStatusLabel(dom({ status: 'live' }))).toBe('live')
+    expect(domainStatusLabel(dom({ status: 'provisioning' }))).toBe('provisioning')
+    expect(domainStatusLabel(dom({ status: 'pending_deploy' }))).toBe('awaiting deploy')
+    expect(domainStatusLabel(dom({ status: 'pending', kind: 'custom' }))).toBe('unverified')
+    expect(domainStatusLabel(dom({ status: 'pending', kind: 'subtree' }))).toBe('pending')
+  })
+
+  it('orders default first, then subtree, then custom, each alphabetical', () => {
+    const out = orderDomains([
+      dom({ host: 'z.custom.com', kind: 'custom' }),
+      dom({ host: 'api.maxpower.hanzo.app', kind: 'subtree' }),
+      dom({ host: 'default.maxpower.hanzo.app', kind: 'default', primary: true }),
+      dom({ host: 'a.custom.com', kind: 'custom' }),
+    ])
+    expect(out.map((d) => d.host)).toEqual([
+      'default.maxpower.hanzo.app',
+      'api.maxpower.hanzo.app',
+      'a.custom.com',
+      'z.custom.com',
+    ])
   })
 })
 
