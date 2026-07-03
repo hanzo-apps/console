@@ -14,8 +14,8 @@ export function PageHeader({
   actions?: ReactNode
 }) {
   return (
-    <XStack justify="space-between" items="flex-start" gap="$4">
-      <YStack gap="$1">
+    <XStack justify="space-between" items="flex-start" gap="$4" flexWrap="wrap">
+      <YStack gap="$1" flex={1} minW={0}>
         <Text fontSize="$7" fontWeight="800">
           {title}
         </Text>
