@@ -196,25 +196,34 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
   )
 
   // The REAL launch flow — the shared drawer (kind=gpu). On success, reload so the new
-  // GPU machine appears under "Your GPU machines".
-  const launch = () =>
-    detail.open({
-      title: 'Launch a GPU',
-      subtitle: 'Pick an accelerator and region',
-      icon: Rocket,
-      iconColor: productColorHex('gpus'),
-      size: 520,
-      content: (
-        <LaunchDrawer
-          kind="gpu"
-          onClose={detail.close}
-          onLaunched={() => {
-            detail.close()
-            reload()
-          }}
-        />
-      ),
-    })
+  // GPU machine appears under "Your GPU machines". `initialSize` preselects the
+  // accelerator a customer tapped in the catalog/pricing tables (tap-to-launch); the
+  // header/empty-state "Launch a GPU" opens it with no preselection.
+  const launch = useCallback(
+    (initialSize?: string) =>
+      detail.open({
+        title: initialSize ? 'Launch this GPU' : 'Launch a GPU',
+        subtitle: initialSize ? `${initialSize} · pick a region and go` : 'Pick an accelerator and region',
+        icon: Rocket,
+        iconColor: productColorHex('gpus'),
+        size: 520,
+        content: (
+          <LaunchDrawer
+            kind="gpu"
+            initialSize={initialSize}
+            onClose={detail.close}
+            onLaunched={() => {
+              detail.close()
+              reload()
+            }}
+          />
+        ),
+      }),
+    [detail, reload],
+  )
+
+  /** Tap a catalog/pricing row → launch that exact accelerator (its size slug). */
+  const launchGpu = useCallback((c: VisorGpuSize) => launch(c.slug), [launch])
 
   const header = (
     <PageHeader
@@ -223,7 +232,7 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
       actions={
         <XStack gap="$2">
           <Button size="$3" chromeless icon={<RefreshCw size={15} />} onPress={reload} aria-label="Refresh" />
-          <Button size="$3" theme="light" icon={<Rocket size={15} />} onPress={launch}>Launch GPU</Button>
+          <Button size="$3" theme="light" icon={<Rocket size={15} />} onPress={() => launch()}>Launch GPU</Button>
         </XStack>
       }
     />
@@ -242,14 +251,14 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
       {tab === 'gpus' ? catalogGate(renderGpus()) : null}
       {tab === 'clusters' ? <ClustersTab data={computeData} /> : null}
       {tab === 'pools' ? <CustomerPoolsTab clusters={clusters} /> : null}
-      {tab === 'pricing' ? catalogGate(<CustomerPricingTab catalog={catalog} />) : null}
+      {tab === 'pricing' ? catalogGate(<CustomerPricingTab catalog={catalog} onLaunch={launchGpu} />) : null}
       {tab === 'alerts' ? <AlertsTab data={computeData} /> : null}
       {tab === 'settings' ? (
         <CustomerSettingsTab
           accelerators={available.length}
           machines={machines.length}
           clusters={clusters.phase === 'ready' ? clusters.data.length : 0}
-          onLaunch={launch}
+          onLaunch={() => launch()}
         />
       ) : null}
     </>
@@ -285,19 +294,19 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
             <Rocket size={20} />
             <Text fontSize="$3" fontWeight="700">Launch your first GPU</Text>
             <Text fontSize="$2" color="$color11" text="center" maxW={440}>
-              You have no GPU machines yet. Pick an accelerator below and launch one in seconds — billed hourly to your Hanzo Cloud balance.
+              You have no GPU machines yet. Tap an accelerator below to launch one in seconds — billed hourly to your Hanzo Cloud balance.
             </Text>
-            <Button size="$2" theme="light" icon={<Rocket size={15} />} onPress={launch}>Launch a GPU</Button>
+            <Button size="$2" theme="light" icon={<Rocket size={15} />} onPress={() => launch()}>Launch a GPU</Button>
           </Card>
         )}
 
         <YStack gap="$2">
           <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
             <Text fontSize="$4" fontWeight="800" color="$color12">Popular accelerators</Text>
-            <Text fontSize="$1" color="$color10">live catalog · visor</Text>
+            <Text fontSize="$1" color="$color10">live catalog · visor · tap to launch</Text>
           </XStack>
           {topGpus.length ? (
-            <DataTable columns={catalogColumns} rows={topGpus} rowKey={(c) => c.slug} empty="No GPU sizes available." />
+            <DataTable columns={catalogColumns} rows={topGpus} rowKey={(c) => c.slug} onRowPress={launchGpu} empty="No GPU sizes available." />
           ) : (
             <Text fontSize="$2" color="$color10">The accelerator catalog isn’t reachable right now — nothing is fabricated.</Text>
           )}
