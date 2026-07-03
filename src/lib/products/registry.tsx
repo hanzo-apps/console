@@ -1997,27 +1997,24 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
-    // Content — the Payload headless CMS (cms.<brand>, live at cms.hanzo.ai/admin)
-    // surfaced NATIVELY: Collections + Media/DAM are read live over Payload's REST API
-    // via the /cms user-bearer proxy (per-org, tenant-isolated by the owner claim), and
-    // the Studio tab EMBEDS the real admin (SSO iframe) for the owning brand org. No
-    // fabricated rows — real per-org content, honest-empty, or the shared state card.
+    // Content — a NATIVE CMS on the Hanzo Framework DocType engine (/v1/framework/*),
+    // NOT an iframe. A collection is a framework DocType (module "cms"); a content entry
+    // is a framework document; publishing is a status field. Rendered by the generic,
+    // metadata-driven DocType renderer (src/components/doctype/*) over the ONE framework
+    // client — the DRY foundation ERP/Helpdesk reuse. Per-org, honest-empty by construction.
     id: 'cms',
     label: 'Content',
     icon: FileText,
-    description: 'Headless CMS — pages, media, and the full Studio, per org, with IAM SSO.',
+    description: 'Native CMS — pages, posts, articles, media, and navigation as DocTypes on the Hanzo Framework, per organization.',
     category: 'Apps',
     status: 'enabled',
-    repo: 'hanzoai/cms',
+    repo: 'hanzoai/cloud',
     docs: `${DOCS}/cms`,
     kind: 'module',
     routes: [
       { path: '', component: CmsModule },
-      { path: ':tab', component: CmsModule },
-    ],
-    subpages: [
-      { slug: 'media', label: 'Media' },
-      { slug: 'studio', label: 'Studio' },
+      { path: 'collections/:doctype', component: CmsModule },
+      { path: 'collections/:doctype/:name', component: CmsModule },
     ],
   },
   {
