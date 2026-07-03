@@ -5,6 +5,8 @@ import {
   allowCloudSurface,
   allowVisorSurface,
   allowCommerceSurface,
+  allowCmsSurface,
+  allowErpSurface,
   allowTelemetrySurface,
   v1Head,
   CLOUD_HEADS,
@@ -129,6 +131,43 @@ describe('allowBaseSurface', () => {
     expect(allowBaseSurface('v1')).toBe(false)
     expect(allowBaseSurface('collections/contacts/records')).toBe(false) // must be a v1 path
     expect(allowBaseSurface('')).toBe(false)
+  })
+})
+
+describe('allowCmsSurface — Payload read boundary (per-org, no registry leak)', () => {
+  it('admits the two tenant-scoped collection lists + the media bytes route', () => {
+    expect(allowCmsSurface('api/pages')).toBe(true)
+    expect(allowCmsSurface('api/media')).toBe(true)
+    expect(allowCmsSurface('api/media/file/photo.jpg')).toBe(true)
+    expect(allowCmsSurface('/api/pages')).toBe(true) // tolerant of a leading slash
+  })
+
+  it('REFUSES the non-tenant-scoped registry collections + any other path (no cross-org leak)', () => {
+    expect(allowCmsSurface('api/users')).toBe(false) // NOT tenant-row-scoped → would leak users
+    expect(allowCmsSurface('api/tenants')).toBe(false) // NOT tenant-row-scoped → would leak the org registry
+    expect(allowCmsSurface('api/pages/some-id')).toBe(false) // single-doc GET not needed
+    expect(allowCmsSurface('api/media/file/a/b')).toBe(false) // too deep
+    expect(allowCmsSurface('api/globals/nav')).toBe(false)
+    expect(allowCmsSurface('admin')).toBe(false)
+    expect(allowCmsSurface('')).toBe(false)
+  })
+})
+
+describe('allowErpSurface — Frappe read boundary (resource lists only)', () => {
+  it('admits GET /api/resource/<DocType> lists (incl. a spaced DocType)', () => {
+    expect(allowErpSurface('api/resource/Account')).toBe(true)
+    expect(allowErpSurface('api/resource/Item')).toBe(true)
+    expect(allowErpSurface('api/resource/Sales Order')).toBe(true) // DocType with a space
+    expect(allowErpSurface('/api/resource/Bin')).toBe(true) // tolerant of a leading slash
+  })
+
+  it('REFUSES single-doc, methods, the desk, login, and any deeper path', () => {
+    expect(allowErpSurface('api/resource/Item/WIDGET-1')).toBe(false) // single-doc (mutate surface)
+    expect(allowErpSurface('api/method/frappe.client.get_list')).toBe(false) // arbitrary method
+    expect(allowErpSurface('api/method/frappe.auth')).toBe(false)
+    expect(allowErpSurface('app')).toBe(false) // the desk
+    expect(allowErpSurface('login')).toBe(false)
+    expect(allowErpSurface('')).toBe(false)
   })
 })
 
