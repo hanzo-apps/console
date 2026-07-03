@@ -19,7 +19,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ScrollView, Spinner, Text, TextArea, XStack, YStack } from '@hanzo/gui'
-import { Send, Sparkles, Plus, History, Braces } from '@hanzogui/lucide-icons-2'
+import { Send, Sparkles, Plus, History, Braces, Brain, ChevronDown, ChevronRight } from '@hanzogui/lucide-icons-2'
 
 import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
 import { hanzoAssistantSystemPrompt, ASSISTANT_DOCS_STORE } from '~/lib/assistant'
@@ -28,6 +28,7 @@ import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { Markdown } from './markdown'
+import { splitThinking } from './thinking'
 
 /** The sparkle medallion that marks an assistant turn (and the welcome screen). */
 function SparkleAvatar({ size = 28 }: { size?: number }) {
@@ -49,7 +50,41 @@ function SparkleAvatar({ size = 28 }: { size?: number }) {
 const turnTime = () =>
   new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
-function Bubble({ role, content, time }: ChatMessage & { time?: string }) {
+/** A collapsed-by-default disclosure for a turn's reasoning trace (nothing when empty). */
+function ThinkingDisclosure({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  if (!text) return null
+  const Chevron = open ? ChevronDown : ChevronRight
+  return (
+    <YStack gap="$1.5">
+      <XStack
+        onPress={() => setOpen((o) => !o)}
+        cursor="pointer"
+        items="center"
+        gap="$1.5"
+        self="flex-start"
+        px="$2"
+        py="$1"
+        rounded="$4"
+        hoverStyle={{ bg: '$color3' }}
+        aria-label={open ? 'Hide thinking' : 'Show thinking'}
+      >
+        <Chevron size={13} color="$color10" />
+        <Brain size={13} color="$color10" />
+        <Text fontSize="$1" color="$color10">
+          {open ? 'Hide thinking' : 'Show thinking'}
+        </Text>
+      </XStack>
+      {open ? (
+        <YStack borderLeftWidth={2} borderColor="$borderColor" pl="$3" opacity={0.8}>
+          <Markdown content={text} size="$2" />
+        </YStack>
+      ) : null}
+    </YStack>
+  )
+}
+
+function Bubble({ role, content, time, thinking }: ChatMessage & { time?: string; thinking?: string }) {
   const isUser = role === 'user'
   if (isUser) {
     // Right-aligned accent bubble — compact, rounded, comfortable padding.
@@ -85,6 +120,7 @@ function Bubble({ role, content, time }: ChatMessage & { time?: string }) {
             </Text>
           ) : null}
         </XStack>
+        {thinking ? <ThinkingDisclosure text={thinking} /> : null}
         <Markdown content={content} />
       </YStack>
     </XStack>
@@ -323,23 +359,30 @@ export function ChatConversation({
             </YStack>
           ) : (
             <YStack gap="$5" py="$2">
-              {/* The trailing assistant turn is empty until its first token — render it
-                  as "Thinking…" then let the growing bubble stream the reply in place. */}
-              {messages.map((m, i) =>
-                m.role === 'assistant' && !m.content ? (
-                  <XStack key={i} gap="$3" items="center">
-                    <SparkleAvatar />
-                    <XStack gap="$2" items="center">
-                      <Spinner color="$color11" />
-                      <Text color="$color11" fontSize="$3">
-                        Thinking…
-                      </Text>
+              {/* A user turn renders verbatim. An assistant turn is split into its final
+                  answer and any `<think>` reasoning: with no answer yet (pre-first-token
+                  or still mid-reasoning) it shows "Thinking…"; otherwise the bubble shows
+                  the answer with the reasoning tucked behind a disclosure — never leaked. */}
+              {messages.map((m, i) => {
+                if (m.role !== 'assistant') {
+                  return <Bubble key={i} role={m.role} content={m.content} time={m.time} />
+                }
+                const { answer, thinking } = splitThinking(m.content)
+                if (!answer) {
+                  return (
+                    <XStack key={i} gap="$3" items="center">
+                      <SparkleAvatar />
+                      <XStack gap="$2" items="center">
+                        <Spinner color="$color11" />
+                        <Text color="$color11" fontSize="$3">
+                          Thinking…
+                        </Text>
+                      </XStack>
                     </XStack>
-                  </XStack>
-                ) : (
-                  <Bubble key={i} role={m.role} content={m.content} time={m.time} />
-                ),
-              )}
+                  )
+                }
+                return <Bubble key={i} role="assistant" content={answer} thinking={thinking} time={m.time} />
+              })}
               {error ? <BackendStateCard state={error} onRetry={retry} /> : null}
               {/* scroll sentinel (id, not ref — avoids tamagui element typing) */}
               <YStack id="chat-bottom" height={1} />
@@ -376,16 +419,18 @@ export function ChatConversation({
               px="$1"
               py="$1"
               focusStyle={{ borderWidth: 0, outlineWidth: 0 }}
-              onKeyPress={(e) => {
+              // `onKeyDown` reaches the DOM textarea (Enter's newline default fires on
+              // keydown, so only preventDefault here stops it); `onKeyPress` is swallowed
+              // by the input and never fires. Enter sends; Shift+Enter is a newline; a key
+              // mid-IME-composition is never a send.
+              onKeyDown={(e) => {
                 const ev = e as unknown as {
                   key?: string
                   shiftKey?: boolean
                   preventDefault?: () => void
-                  nativeEvent?: { key?: string; shiftKey?: boolean }
+                  nativeEvent?: { isComposing?: boolean }
                 }
-                const key = ev.key ?? ev.nativeEvent?.key
-                const shift = ev.shiftKey ?? ev.nativeEvent?.shiftKey
-                if (key === 'Enter' && !shift) {
+                if (ev.key === 'Enter' && !ev.shiftKey && !ev.nativeEvent?.isComposing) {
                   ev.preventDefault?.()
                   void send()
                 }

@@ -277,13 +277,16 @@ function RequestActivityLens() {
 
 // ── the product ──────────────────────────────────────────────────────────────
 
+// Request activity (the org's billed API/model calls) is the guaranteed-real lens for
+// every org, so it leads and is the default. Application logs (OTLP → SigNoz) only
+// populate once a service ships instrumentation, so it must not be the landing tab.
 const LENSES: { key: Lens; label: string }[] = [
-  { key: 'application', label: 'Application logs' },
   { key: 'requests', label: 'Request activity' },
+  { key: 'application', label: 'Application logs' },
 ]
 
 export function LogsModule(_props: { params: Record<string, string> }) {
-  const [lens, setLens] = useState<Lens>('application')
+  const [lens, setLens] = useState<Lens>('requests')
   const [nonce, setNonce] = useState(0) // remount the active lens to refresh it
 
   return (
