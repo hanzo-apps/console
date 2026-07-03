@@ -22,7 +22,6 @@ import { RefreshCw, Terminal, ScrollText, Plus, FolderPlus } from '@hanzogui/luc
 
 import { PlatformApi, clustersFromApps, type Cluster, type PlatformApp } from '~/lib/api'
 import { clusterCapacity, fmtVcpu, fmtRam } from '~/lib/api/nodes'
-import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FieldSelect } from '~/components/ui/Field'
 import { StatusTag } from '~/components/ui/StatusTag'
@@ -121,7 +120,7 @@ export function ContainersModule({ params }: { params: Record<string, string> })
         setApps([])
         setError(interpretPlatformError(e))
       })
-    PlatformApi.listClusters(currentOrg()).then(setClusters).catch(() => setClusters([]))
+    PlatformApi.listClusters().then(setClusters).catch(() => setClusters([]))
   }, [])
 
   useEffect(() => load(), [load])
