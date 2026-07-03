@@ -389,6 +389,12 @@ export type LogLine = {
   level: string
   /** The recorded note, or a composed real summary. */
   message: string
+  /**
+   * The FULL underlying ledger record for this call, so the row-detail drawer can show
+   * everything the ledger actually recorded (tokens, cost, provider, request id, …)
+   * without a second lookup. It IS the real per-call log — never fabricated.
+   */
+  record: UsageRecord
 }
 
 /** Distinct recorded status values present (drives the Level filter — real options only). */
@@ -419,7 +425,42 @@ export function logsFromRecords(records: UsageRecord[], filter: { endpoint: stri
     endpoint: r.model || '—',
     level: r.status || '',
     message: r.notes || composeMessage(r),
+    record: r,
   }))
+}
+
+/** A single label/value fact for the log-row detail drawer (value already formatted). */
+export type LogFact = { label: string; value: string }
+
+/**
+ * Project ONE ledger record into the ordered fact list the log-row detail drawer
+ * renders — every field the ledger actually recorded for that inference call. PURE:
+ * money/token/date formatting is injected (the view owns the shared formatters), so a
+ * missing datum passes through as the em dash the caller supplies — never fabricated.
+ */
+export function logDetailFacts(
+  r: UsageRecord,
+  fmt: { usd: (cents: number) => string; count: (n: number) => string; time: (ms: number | null) => string },
+): LogFact[] {
+  const dash = '—'
+  const facts: LogFact[] = [
+    { label: 'Endpoint', value: r.model || dash },
+    { label: 'Provider', value: r.provider || dash },
+    { label: 'Status', value: r.status || 'unknown' },
+    { label: 'Cost', value: fmt.usd(r.cents) },
+    { label: 'Total tokens', value: r.totalTokens ? fmt.count(r.totalTokens) : dash },
+    { label: 'Prompt tokens', value: r.promptTokens ? fmt.count(r.promptTokens) : dash },
+    { label: 'Completion tokens', value: r.completionTokens ? fmt.count(r.completionTokens) : dash },
+    { label: 'Streamed', value: r.stream ? 'Yes' : 'No' },
+    { label: 'Tier', value: r.premium ? 'Premium' : 'Standard' },
+  ]
+  // Only surface product / agent attribution when the ledger actually tagged it.
+  if (r.product) facts.push({ label: 'Product', value: r.product })
+  if (r.agent) facts.push({ label: 'Agent', value: r.agent })
+  if (r.requestId) facts.push({ label: 'Request ID', value: r.requestId })
+  facts.push({ label: 'Transaction ID', value: r.id })
+  facts.push({ label: 'Time', value: fmt.time(r.at) })
+  return facts
 }
 
 /** An honest one-line summary from a ledger row when it carries no note. */
