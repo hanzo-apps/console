@@ -20,6 +20,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { AccountApi, type Account } from '~/lib/api'
 import { getProviderSigninUrl, getSigninUrl, stashReturnTo } from './iam'
 import { refreshSession } from './refresh'
+import { setCurrentActor } from '~/lib/actor-scope'
 
 type SessionState = {
   account: Account | null
@@ -48,6 +49,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reloadRef = useRef<() => void>(() => {})
 
+  // Set the account AND keep the synchronous actor id (read by the API client's
+  // baseHeaders) in lockstep — one source of auth truth for org (org-scope) + user.
+  const applyAccount = useCallback((a: Account | null) => {
+    setAccount(a)
+    setCurrentActor(a && a.owner && a.name ? `${a.owner}/${a.name}` : '')
+  }, [])
+
   /** (Re)arm the proactive refresh timer for the given remaining lifetime. */
   const armRefresh = useCallback((expiresIn: number | null) => {
     if (timerRef.current) {
@@ -68,7 +76,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     try {
       const { account: acct, expiresIn } = await AccountApi.session()
-      setAccount(acct)
+      applyAccount(acct)
       armRefresh(acct ? expiresIn : null)
     } finally {
       setLoading(false)
@@ -100,14 +108,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const completeSignIn = useCallback(async (code: string, state: string) => {
     const res = await AccountApi.signin(code, state)
-    setAccount(res.data ?? (await AccountApi.current()))
+    applyAccount(res.data ?? (await AccountApi.current()))
   }, [])
 
   const establishConsoleSession = useCallback(
     async (username: string, password: string) => {
       const r = await AccountApi.establishSession(username, password)
       if (r?.account) {
-        setAccount(r.account)
+        applyAccount(r.account)
         armRefresh(r.expiresIn)
       }
     },
@@ -120,7 +128,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       timerRef.current = null
     }
     await AccountApi.signout()
-    setAccount(null)
+    applyAccount(null)
     // Redirect DETERMINISTICALLY to /signin. AuthGate's reactive redirect (on
     // account → null) can be pre-empted by an in-flight session read re-hydrating
     // the account, leaving the user stranded on `/` even though the server session
