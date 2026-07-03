@@ -11,7 +11,7 @@
  */
 
 /** The admin READ heads the aggregate proxy forwards. */
-export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance'] as const
+export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute'] as const
 
 const ALLOWED = new Set<string>(ADMIN_AGGREGATE_HEADS)
 
