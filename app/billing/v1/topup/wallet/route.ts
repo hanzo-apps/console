@@ -23,6 +23,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 
+import { resolveUser } from '~/lib/server/identity'
+import { billingSubject } from '~/lib/server/billing-scope'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
@@ -36,9 +39,11 @@ const CHAIN_ID = Number(process.env.HANZO_CHAIN_ID ?? '36900')
 const ERC20_TRANSFER_ABI = ['event Transfer(address indexed from, address indexed to, uint256 value)']
 const isAddr = (a: string): boolean => /^0x[0-9a-fA-F]{40}$/.test(a)
 
-/** Forward the caller's identity (session cookie / bearer) to commerce. */
-function authHeaders(req: NextRequest): Record<string, string> {
-  const h: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json' }
+/** Forward the caller's identity to commerce, scoped to the server-resolved org. The
+ *  cookie/bearer authenticates the caller at commerce; X-Org-Id namespaces the ledger
+ *  (matching the /billing proxy) so the credit lands in the caller's OWN tenant. */
+function authHeaders(req: NextRequest, org: string): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Org-Id': org }
   const cookie = req.headers.get('cookie')
   if (cookie) h.Cookie = cookie
   const auth = req.headers.get('authorization')
@@ -47,6 +52,18 @@ function authHeaders(req: NextRequest): Record<string, string> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // CSRF: crediting a wallet is a money mutation authenticated from the auto-sent
+  // cookie — refuse a cross-origin request before any on-chain/commerce work.
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
+  // Authenticated + server-resolved subject: the credit lands on the CALLER's own
+  // billing subject, NEVER a client-supplied `userId` (which would let a caller credit
+  // an arbitrary account). Same subject the /billing proxy + gateway use.
+  const user = await resolveUser(req)
+  if (!user) return NextResponse.json({ error: 'Sign in to top up your wallet.' }, { status: 401 })
+  const subject = billingSubject(user.owner.trim(), user.name)
+
   // Greenfield gate: no HUSD contract / treasury ⇒ honest "not configured".
   if (!isAddr(HUSD_ADDRESS) || !isAddr(TREASURY)) {
     return NextResponse.json(
@@ -55,7 +72,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
-  let body: { txHash?: string; fromAddress?: string; userId?: string }
+  let body: { txHash?: string; fromAddress?: string }
   try {
     body = await req.json()
   } catch {
@@ -122,9 +139,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // ── 2. Record to commerce as an HUSD crypto payment ─────────────────────────
   try {
+    // Commerce MUST dedupe on (network, txHash) so a replayed hash can't double-credit
+    // — both are sent below; the console cannot enforce idempotency without shared
+    // state, so it is a commerce-side invariant (RED handoff).
     const recordRes = await fetchWithTimeout(`${COMMERCE_URL}/v1/billing/payment`, {
       method: 'POST',
-      headers: authHeaders(req),
+      headers: authHeaders(req, user.owner),
       cache: 'no-store',
       body: JSON.stringify({
         method: 'crypto',
@@ -135,7 +155,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         txHash,
         fromAddress: verifiedFrom!,
         toAddress: TREASURY,
-        userId: body.userId,
+        // Server-resolved subject — never a client-supplied userId.
+        userId: subject,
       }),
     })
     if (!recordRes.ok) {
@@ -151,8 +172,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     let balance = 0
     try {
       const balRes = await fetchWithTimeout(
-        `${COMMERCE_URL}/v1/billing/balance?user=${encodeURIComponent(body.userId ?? '')}&currency=usd`,
-        { headers: authHeaders(req), cache: 'no-store' },
+        `${COMMERCE_URL}/v1/billing/balance?user=${encodeURIComponent(subject)}&currency=usd`,
+        { headers: authHeaders(req, user.owner), cache: 'no-store' },
       )
       if (balRes.ok) balance = ((await balRes.json()) as { balance?: number }).balance ?? 0
     } catch {

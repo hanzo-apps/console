@@ -16,6 +16,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser, mintUserKey, revokeUserKey, mintConfigured, getUserKey } from '~/lib/server/identity'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 
 export const runtime = 'nodejs'
 
@@ -47,6 +48,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
   const user = await resolveUser(req)
   if (!user) return unauthorized()
   if (!mintConfigured()) return notConfigured()
@@ -62,6 +65,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
   const user = await resolveUser(req)
   if (!user) return unauthorized()
   if (!mintConfigured()) return notConfigured()

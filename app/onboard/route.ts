@@ -37,6 +37,7 @@ import {
   MAX_ORG_SLUG,
   MIN_ORG_SLUG,
 } from '~/lib/server/onboarding'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 
 export const runtime = 'nodejs'
 
@@ -59,6 +60,11 @@ async function freeSlug(base: string): Promise<string | null> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // CSRF: creating + JOINING an org mutates IAM membership from the auto-sent cookie —
+  // refuse a cross-origin request before any work.
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
   const user = await resolveAuthenticatedUser(req)
   if (!user) return NextResponse.json({ error: 'Sign in to create an organization.' }, { status: 401 })
   if (!mintConfigured()) {

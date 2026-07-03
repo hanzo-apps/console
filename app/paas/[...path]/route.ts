@@ -28,6 +28,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { getAdminGate } from '~/lib/server/identity'
 import { orgFor as policyOrgFor } from '~/lib/server/admin-policy'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
@@ -36,7 +37,14 @@ const PLATFORM_URL = (process.env.PLATFORM_URL ?? 'https://platform.hanzo.ai').r
 const TOKEN = process.env.PAAS_SERVICE_TOKEN ?? ''
 
 async function forward(req: NextRequest, path: string[]): Promise<NextResponse> {
-  // Brand-admin gate FIRST — the service token below is control-plane god-mode.
+  // CSRF FIRST — the service token below is control-plane god-mode, so a cross-site
+  // page carrying the admin's auto-sent cookie must never drive a deploy/scale/delete.
+  // Refuse a cross-origin MUTATION before the admin gate or any body read (safe reads
+  // pass). Defense in depth on top of the session cookie's own SameSite attribute.
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
+  // Brand-admin gate — the service token below is control-plane god-mode.
   const gate = await getAdminGate(req)
   if (!gate) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })

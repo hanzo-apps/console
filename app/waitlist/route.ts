@@ -17,6 +17,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { resolveUser } from '~/lib/server/identity'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
 import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
@@ -27,6 +28,9 @@ const WAITLIST_URL = (process.env.WAITLIST_URL ?? '').replace(/\/+$/, '')
 const looksLikeEmail = (s: string): boolean => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s)
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
   const user = await resolveUser(req)
   if (!user) return NextResponse.json({ error: 'Sign in to join the waitlist.' }, { status: 401 })
 
