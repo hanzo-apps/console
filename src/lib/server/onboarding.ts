@@ -78,3 +78,69 @@ export function validateOrgName(input: string): OrgNameResult {
   }
   return { ok: true, slug }
 }
+
+// ── Email self-serve signup (HIP-0111) — PURE helpers ─────────────────────────
+// The `/auth/signup` BFF creates a brand-new IAM user PLUS their own personal org
+// (as admin) in one shot, then the client signs them in. IAM users always belong
+// to an org (AddUser rejects owner==""), so a "create account, then onboard" split
+// isn't possible against Casdoor — the org is minted here. These helpers are the
+// pure naming/validation policy; the route owns the IAM calls + the crypto digest.
+
+/** Minimum password length. Above the cloned org policy (AtLeast6), a safe floor. */
+export const MIN_PASSWORD = 8
+/** Pragmatic email shape check — a single `@`, a dot in the domain, no spaces. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export type SignupResult =
+  | { ok: true; email: string; password: string }
+  | { ok: false; error: string }
+
+/**
+ * Validate a self-serve signup. Normalizes the email (trim + lowercase) so the
+ * per-email org slug + the stored account are deterministic. Password is length-
+ * only here (IAM hashes it argon2id server-side); complexity is the org policy's.
+ */
+export function validateSignup(emailInput: string, password: string): SignupResult {
+  const email = (emailInput ?? '').trim().toLowerCase()
+  if (!EMAIL_RE.test(email)) return { ok: false, error: 'Enter a valid email address.' }
+  if ((password ?? '').length < MIN_PASSWORD) {
+    return { ok: false, error: `Use a password of at least ${MIN_PASSWORD} characters.` }
+  }
+  return { ok: true, email, password }
+}
+
+/**
+ * A username for the new account — the slugified email local part. Casibase's
+ * AddUser regenerates a random name on a collision and login is by email, so this
+ * is only a readable default, never a uniqueness key.
+ */
+export function deriveUsername(email: string): string {
+  return personalOrgSlug(email) || 'user'
+}
+
+/** A friendly display name for the account/org from an email ("dave@x.com" → "Dave"). */
+export function displayNameFromEmail(email: string): string {
+  const local = (email.includes('@') ? email.slice(0, email.indexOf('@')) : email)
+    .replace(/[._-]+/g, ' ')
+    .trim()
+  return local ? local.replace(/\b\w/g, (c) => c.toUpperCase()) : 'Workspace'
+}
+
+/**
+ * The signup's personal-org slug: the email local part + a short digest of the
+ * FULL email. Two properties this buys us WITHOUT a global user-lookup endpoint
+ * (which this IAM doesn't expose — email uniqueness is per-org):
+ *   - DETERMINISTIC per email → a repeat signup with the same email resolves to
+ *     the SAME slug, so `getOrganization(slug)` catches an existing account (409).
+ *   - INJECTIVE across emails → two different emails (even same local part on
+ *     different domains) get different slugs, so they never false-collide.
+ * The digest suffix also guarantees the slug is never a reserved org name.
+ * `digestHex` is a hex sha-256 of the normalized email, supplied by the route
+ * (crypto stays at the edge; this stays pure + testable).
+ */
+export function personalOrgFromEmail(email: string, digestHex: string): string {
+  const base = personalOrgSlug(email) || 'user'
+  const suffix = (digestHex || '').slice(0, 8) || '0'
+  // Leave room for `-` + 8 hex under the max, then trim any trailing `-`.
+  return `${base.slice(0, MAX_ORG_SLUG - 9).replace(/-+$/g, '')}-${suffix}`
+}

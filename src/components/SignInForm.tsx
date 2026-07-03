@@ -1,12 +1,19 @@
 'use client'
 
 /**
- * Sign-in card — multi-tenant credential entry (HIP-0111).
+ * Sign-in / create-account card — multi-tenant credential entry (HIP-0111).
  *
  * The console resolves a user's ORG from their email (not the brand's own org),
  * so a customer in any org signs in here with email + password: we POST the
  * canonical IAM login with `organization: ""` (see `lib/auth/iam-login`), get an
  * OAuth code, and complete the SAME `/v1/iam/signin` exchange the redirect flow uses.
+ *
+ * CREATE ACCOUNT (self-serve email signup): a net-new stranger toggles to signup,
+ * which POSTs `/auth/signup` — the BFF mints an account + its own org (as admin) —
+ * then this form signs them in with the same credentials via the identical login
+ * path, so they land in the console as the admin of their new workspace. Social
+ * signup for a brand-new user needs the IAM app's signup enabled (separate); email
+ * signup is the guaranteed path.
  *
  * Social buttons start IAM's hosted provider flow (IAM owns each provider's
  * OAuth — client id, scope, callback). Accounts that require two-factor finish
@@ -25,6 +32,9 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { useSession } from '~/lib/auth/session'
 import { getSigninUrl } from '~/lib/auth/iam'
 import { loginState, loginWithPassword } from '~/lib/auth/iam-login'
+import { signUp } from '~/lib/auth/signup'
+
+type Mode = 'signin' | 'signup'
 
 /** Monochrome Google "G" — filled with the current text color so it tracks the
  * console's black/white chrome. */
@@ -39,7 +49,7 @@ function GoogleMark({ size = 18 }: { size?: number }) {
   )
 }
 
-function CardShell({ children }: { children: React.ReactNode }) {
+function CardShell({ subtitle, children }: { subtitle: string; children: React.ReactNode }) {
   return (
     <YStack flex={1} minH="100vh" items="center" justify="center" p="$4">
       <Card p="$5" gap="$4" width={380} borderWidth={1} borderColor="$borderColor" bg="$color1">
@@ -49,8 +59,8 @@ function CardShell({ children }: { children: React.ReactNode }) {
             <Text fontSize="$7" fontWeight="800">
               {branding.name}
             </Text>
-            <Text fontSize="$3" color="$color11">
-              Sign in to manage your cloud.
+            <Text fontSize="$3" color="$color11" text="center">
+              {subtitle}
             </Text>
           </YStack>
         </YStack>
@@ -66,44 +76,83 @@ function CardShell({ children }: { children: React.ReactNode }) {
 export function SignInForm() {
   const { completeSignIn, signInWith, establishConsoleSession } = useSession()
   const router = useRouter()
+  const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mfa, setMfa] = useState(false)
 
-  async function submit() {
+  // The ONE credential login path — shared by sign-in and by post-signup auto-login.
+  async function logInWithCredentials(): Promise<void> {
+    const res = await loginWithPassword(email.trim(), password)
+    if (res.kind === 'code') {
+      await completeSignIn(res.code, loginState())
+      // Upgrade to the console's OWN durable, silently-refreshed session (server-side
+      // password grant, gated by the casibase session we just established). Best-effort:
+      // it never throws, and a failure leaves the user signed in on the casibase session
+      // — so login is never blocked by this enhancement. MFA accounts don't reach here
+      // (they hand off to the hosted flow), so this never bypasses MFA.
+      await establishConsoleSession(email.trim(), password)
+      router.replace('/')
+    } else if (res.kind === 'mfa') {
+      setMfa(true)
+    } else {
+      setError(res.message)
+      setBusy(false)
+    }
+  }
+
+  async function submitSignIn() {
     if (busy || !email || !password) return
     setBusy(true)
     setError(null)
     try {
-      const res = await loginWithPassword(email.trim(), password)
-      if (res.kind === 'code') {
-        await completeSignIn(res.code, loginState())
-        // Upgrade to the console's OWN durable, silently-refreshed session (server-side
-        // password grant, gated by the casibase session we just established). Best-effort:
-        // it never throws, and a failure leaves the user signed in on the casibase session
-        // — so login is never blocked by this enhancement. MFA accounts don't reach here
-        // (they hand off to the hosted flow above), so this never bypasses MFA.
-        await establishConsoleSession(email.trim(), password)
-        router.replace('/')
-      } else if (res.kind === 'mfa') {
-        setMfa(true)
-      } else {
-        setError(res.message)
-        setBusy(false)
-      }
+      await logInWithCredentials()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Sign-in failed.')
       setBusy(false)
     }
   }
 
+  async function submitSignUp() {
+    if (busy || !email || !password) return
+    setBusy(true)
+    setError(null)
+    try {
+      const r = await signUp(email.trim(), password)
+      if (r.kind === 'exists') {
+        setError('An account with this email already exists — sign in below.')
+        setMode('signin')
+        setBusy(false)
+        return
+      }
+      if (r.kind === 'error') {
+        setError(r.message)
+        setBusy(false)
+        return
+      }
+      // Account + org created — sign in with the same credentials so the new admin
+      // lands straight in their workspace (fresh accounts have no MFA to satisfy).
+      await logInWithCredentials()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not create your account.')
+      setBusy(false)
+    }
+  }
+
+  const submit = () => (mode === 'signup' ? submitSignUp() : submitSignIn())
+
+  function switchMode(next: Mode) {
+    setMode(next)
+    setError(null)
+  }
+
   // Two-factor accounts finish on IAM's same-site hosted page (cross-site cookie
   // limitation). Honest hand-off — not a faked inline step.
   if (mfa) {
     return (
-      <CardShell>
+      <CardShell subtitle="Sign in to manage your cloud.">
         <YStack gap="$3" items="center">
           <Text fontSize="$5" fontWeight="700">
             Two-factor required
@@ -123,8 +172,10 @@ export function SignInForm() {
     )
   }
 
+  const signup = mode === 'signup'
+
   return (
-    <CardShell>
+    <CardShell subtitle={signup ? `Create your ${branding.name} account.` : 'Sign in to manage your cloud.'}>
       <YStack gap="$2.5">
         <Button size="$4" icon={<Github size={18} />} onPress={() => signInWith('provider-github')}>
           Continue with GitHub
@@ -158,7 +209,7 @@ export function SignInForm() {
           // web input type explicitly so the password is masked (RNW passthrough).
           secureTextEntry
           {...{ type: 'password' }}
-          autoComplete="current-password"
+          autoComplete={signup ? 'new-password' : 'current-password'}
           value={password}
           onChangeText={setPassword}
           disabled={busy}
@@ -177,19 +228,36 @@ export function SignInForm() {
           icon={busy ? <Spinner size="small" /> : undefined}
           onPress={submit}
         >
-          {busy ? 'Signing in…' : 'Sign in'}
+          {busy ? (signup ? 'Creating account…' : 'Signing in…') : signup ? 'Create account' : 'Sign in'}
         </PrimaryButton>
 
-        <Text fontSize="$2" color="$color10" text="center">
-          Trouble signing in?{' '}
-          <Anchor
-            fontSize="$2"
-            color="$color11"
-            onPress={() => window.location.assign(getSigninUrl())}
-          >
-            Use a passkey or recovery
-          </Anchor>
-        </Text>
+        {signup ? (
+          <Text fontSize="$2" color="$color10" text="center">
+            Already have an account?{' '}
+            <Anchor fontSize="$2" color="$color11" onPress={() => switchMode('signin')}>
+              Sign in
+            </Anchor>
+          </Text>
+        ) : (
+          <>
+            <Text fontSize="$2" color="$color10" text="center">
+              New to {branding.name}?{' '}
+              <Anchor fontSize="$2" color="$color11" onPress={() => switchMode('signup')}>
+                Create an account
+              </Anchor>
+            </Text>
+            <Text fontSize="$2" color="$color10" text="center">
+              Trouble signing in?{' '}
+              <Anchor
+                fontSize="$2"
+                color="$color11"
+                onPress={() => window.location.assign(getSigninUrl())}
+              >
+                Use a passkey or recovery
+              </Anchor>
+            </Text>
+          </>
+        )}
       </YStack>
     </CardShell>
   )

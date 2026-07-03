@@ -1,18 +1,24 @@
 'use client'
 
 /**
- * Metrics — live platform infrastructure metrics, from REAL VictoriaMetrics data.
+ * Metrics — role-aware, so a customer NEVER sees platform infra health or internal
+ * `*.hanzo.svc` topology (an operator concern), and a global admin still gets it.
  *
- * ONE honest source: VictoriaMetrics (Prometheus-compatible) through the same-origin
- * read-only `/telemetry` proxy. This is the INFRASTRUCTURE metrics dashboard — the
- * health of every Hanzo platform service (`up{}`), a healthy-services trend
- * (`sum(up)` over the window), and the current up/down breakdown. It is distinct
- * from AI Metrics (per-org LLM usage from the commerce ledger, a separate surface).
+ *   - CUSTOMER (incl. a tenant org owner) → their OWN per-org usage: requests,
+ *     tokens, spend, latency, per-model — the REAL commerce usage ledger via the
+ *     shared LivingOverview (`ai-metrics`). This is what "Metrics" means to them.
+ *   - GLOBAL (cross-tenant) admin → the platform INFRASTRUCTURE health board below
+ *     (VictoriaMetrics `up{}` service health + up/down breakdown). This exposes
+ *     internal service instances and is deliberately gated to admins who run the
+ *     cluster — never rendered for a customer, so no false "Down" or leaked
+ *     `*.svc` hostnames reach a cold customer.
  *
- * Every KPI, series, and bar is a pure fold over what VictoriaMetrics returned
- * (`lib/api/telemetry.ts`) — an empty result rolls up to honest zeros / empty
- * charts, never fabricated data. When the telemetry store is not configured (501)
- * or unreachable (401/5xx) it shows an honest state, never placeholder metrics.
+ * The infra board's ONE honest source is VictoriaMetrics (Prometheus-compatible)
+ * through the same-origin read-only `/telemetry` proxy: the health of every Hanzo
+ * platform service (`up{}`), a healthy-services trend (`sum(up)`), and the current
+ * up/down breakdown. Every KPI/series/bar is a pure fold over what VictoriaMetrics
+ * returned — empty rolls up to honest zeros, never fabricated data; not-configured
+ * (501) / unreachable (401/5xx) shows an honest state.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -27,10 +33,17 @@ import {
   type Series,
   type ServiceHealth,
 } from '~/lib/api'
+import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard, Panel } from '~/components/ui/Metric'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
 import { Donut, type DonutSegment } from '~/components/ui/Donut'
+import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
+
+// The customer-facing Metrics view = the org's OWN usage board (requests/tokens/
+// spend/per-model over the real commerce ledger). Same reusable LivingOverview the
+// AI Metrics product renders — DRY, real per-org data, honest empty until usage.
+const CustomerUsage = livingOverviewModule('ai-metrics')
 
 /** Selectable lookback windows (label → seconds). */
 const RANGES: { label: string; seconds: number }[] = [
@@ -57,7 +70,16 @@ function toPoints(series: Series[], seconds: number): ChartPoint[] {
   })
 }
 
-export function MetricsModule(_props: { params: Record<string, string> }) {
+export function MetricsModule(props: { params: Record<string, string> }) {
+  const isGlobalAdmin = useIsGlobalAdmin()
+  // A customer (or a tenant org owner) sees their own per-org usage — never the
+  // platform infra-health board or internal `*.svc` topology.
+  if (!isGlobalAdmin) return <CustomerUsage params={props.params} />
+  return <InfraMetrics />
+}
+
+/** Global-admin-only platform infrastructure health, from real VictoriaMetrics `up{}`. */
+function InfraMetrics() {
   const [state, setState] = useState<State>({ phase: 'loading' })
   const [rangeIdx, setRangeIdx] = useState(2) // default 24h
 
