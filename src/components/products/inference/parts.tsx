@@ -181,14 +181,17 @@ export function MetricStat({
   icon?: ReactNode
 }) {
   return (
-    <YStack gap="$1.5" flex={1} minW={130}>
+    // NOTE: no `flex={1}` — these stack vertically inside the Usage Overview card, and
+    // a flex child with flex-basis:0 collapses to zero height in an auto-height column,
+    // which made the label overlap the value. Content-sized rows keep them separated.
+    <YStack gap="$1.5" minW={130}>
       <XStack items="center" justify="space-between" gap="$2">
         <Text fontSize="$2" color="$color10">
           {label}
         </Text>
         {icon ?? null}
       </XStack>
-      <Text fontSize="$7" fontWeight="800" color="$color12">
+      <Text fontSize="$7" fontWeight="800" color="$color12" numberOfLines={1}>
         {value}
       </Text>
       {delta !== undefined || (series && series.length) ? (
