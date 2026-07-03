@@ -92,6 +92,16 @@ const devCloudRewrites = () =>
       ]
     : []
 
+// Native cloud INFRA + managed-data heads the data-product clients call at a clean
+// `/v1/<head>` (nothing before /v1/); each is rewritten to the same-origin user-
+// bearer `/cloud` proxy (app/cloud) — which mints a per-user token and forwards to
+// cloud-api — and is allow-listed in proxy-allow.ts CLOUD_HEADS (defense in depth).
+const CLOUD_INFRA_V1_HEADS = ['machines', 'gpus', 'clusters', 'org', 'sql', 'vector', 'datastore', 'kv', 'search', 's3', 'docdb']
+// Public compute CATALOG (regions / CPU sizes) → the same-origin visor `/vm` proxy
+// (app/vm). The GPU-accelerator catalog is the DISTINCT head `/v1/gpu-sizes` so it
+// never collides with the cloud-api GPU INVENTORY at `/v1/gpus`.
+const VM_V1_HEADS = ['regions', 'sizes']
+
 const aiSurfaceRewrites = () => ({
   beforeFiles: [
     ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
@@ -100,6 +110,16 @@ const aiSurfaceRewrites = () => ({
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/v1/${h}/:path*` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}`, destination: `/admin/aggregate/${h}` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}/:path*`, destination: `/admin/aggregate/${h}/:path*` })),
+    // Data-product clients (compute / visor / platform / provisioning / storage) —
+    // clean `/v1/<head>` → the user-bearer `/cloud` proxy (org from the Bearer owner).
+    ...CLOUD_INFRA_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
+    ...CLOUD_INFRA_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/cloud/v1/${h}/:path*` })),
+    // Public compute catalog → the visor `/vm` proxy.
+    ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/vm/v1/${h}` })),
+    ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/vm/v1/${h}/:path*` })),
+    { source: `/v1/gpu-sizes`, destination: `/vm/v1/gpus` },
+    // Per-tenant billing DATA → the service-token commerce proxy (app/billing/v1).
+    { source: `/v1/billing/:path*`, destination: `/billing/v1/:path*` },
     ...devCloudRewrites(),
   ],
 })

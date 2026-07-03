@@ -296,9 +296,9 @@ describe('fetchUsageRecords — through the per-tenant /billing proxy', () => {
     delete (globalThis as { window?: unknown }).window
   })
 
-  it('hits the same-origin /billing/v1/usage proxy (never commerce directly)', async () => {
+  it('hits the same-origin /v1/billing/usage proxy (never commerce directly)', async () => {
     const recs = await fetchUsageRecords()
-    expect(fetched[0]).toBe(`${ORIGIN}/billing/v1/usage`)
+    expect(fetched[0]).toBe(`${ORIGIN}/v1/billing/usage`)
     expect(recs).toHaveLength(1)
     expect(recs[0].model).toBe('gpt-4o-mini')
   })
