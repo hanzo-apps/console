@@ -174,6 +174,7 @@ import { OraclesModule } from '~/components/products/OraclesModule'
 import { IndexerModule } from '~/components/products/IndexerModule'
 import { NetworksModule } from '~/components/products/NetworksModule'
 import { NodesModule } from '~/components/products/NodesModule'
+import { TradingModule } from '~/components/products/TradingModule'
 import { TokensModule } from '~/components/products/TokensModule'
 import { SettlementModule } from '~/components/products/SettlementModule'
 import { AlertsModule } from '~/components/products/AlertsModule'
@@ -1747,6 +1748,27 @@ export const catalog: CatalogEntry[] = [
   },
 
   // ── Web3 ─────────────────────────────────────────────────────────────
+  {
+    // Trading — deploy + manage the Lux DEX trading bots (the market-maker + the
+    // trader) as native cloud apps. Lists the org's deployed bots, shows each one's
+    // LIVE quote quality (the maker's :2112 metrics) + the DEX order book, and
+    // controls them (deploy from a config form → the PaaS BuildKit, start/stop,
+    // redeploy, logs). Data is brand-scoped in the /trading proxy (lux.cloud sees
+    // only Lux networks). The bots are ordinary PaaS git apps — one deploy path.
+    id: 'trading',
+    label: 'Trading',
+    icon: LineChart,
+    description: 'Deploy and manage the Lux DEX market-maker and trader bots — live quote quality, order book, and controls.',
+    category: 'Web3',
+    status: 'enabled',
+    repo: 'luxfi/maker',
+    docs: `${DOCS}/trading`,
+    kind: 'module',
+    routes: [
+      { path: '', component: TradingModule },
+      { path: ':name', component: TradingModule },
+    ],
+  },
   {
     id: 'settlement',
     label: 'Settlement',
