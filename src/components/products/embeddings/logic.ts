@@ -202,3 +202,85 @@ export function emptyUsages(): CloudUsages {
   const m: UsageMetric = {}
   return { vectors: m, storageBytes: m, queries: m, latencyMs: m, costCents: m, models: [], dimensions: [] }
 }
+
+// ── Landing code samples (the real POST /v1/embeddings call) ─────────────────
+
+/** The default embedding model to show in code samples — the org's most-used, else Zen. */
+export function defaultEmbeddingModel(collections: Collection[]): string {
+  const top = modelShares(collections).find((s) => s.label && s.label !== 'Unset')
+  return top?.label || 'zen-embedding'
+}
+
+/**
+ * The REAL `POST /v1/embeddings` call, rendered in curl / Python / TS / JS for the
+ * interactive code block. `apiBase` is the brand API base (e.g. https://api.hanzo.ai/v1).
+ * The shape is structurally the landing kit's `CodeSample` (assignable without a runtime
+ * import, so this stays pure + node-testable).
+ */
+export function embeddingsCodeSamples(
+  apiBase: string,
+  model: string,
+): { lang: 'curl' | 'python' | 'ts' | 'js'; label: string; code: string }[] {
+  const input = 'The quick brown fox jumps over the lazy dog'
+  return [
+    {
+      lang: 'curl',
+      label: 'cURL',
+      code: [
+        `curl ${apiBase}/embeddings \\`,
+        `  -H "Authorization: Bearer $HANZO_API_KEY" \\`,
+        `  -H "Content-Type: application/json" \\`,
+        `  -d '{`,
+        `    "model": "${model}",`,
+        `    "input": "${input}"`,
+        `  }'`,
+      ].join('\n'),
+    },
+    {
+      lang: 'python',
+      label: 'Python',
+      code: [
+        `from openai import OpenAI`,
+        ``,
+        `client = OpenAI(base_url="${apiBase}", api_key="YOUR_HANZO_API_KEY")`,
+        ``,
+        `resp = client.embeddings.create(`,
+        `    model="${model}",`,
+        `    input="${input}",`,
+        `)`,
+        `print(resp.data[0].embedding[:8])`,
+      ].join('\n'),
+    },
+    {
+      lang: 'ts',
+      label: 'TypeScript',
+      code: [
+        `import OpenAI from "openai"`,
+        ``,
+        `const client = new OpenAI({ baseURL: "${apiBase}", apiKey: process.env.HANZO_API_KEY })`,
+        ``,
+        `const resp = await client.embeddings.create({`,
+        `  model: "${model}",`,
+        `  input: "${input}",`,
+        `})`,
+        `console.log(resp.data[0].embedding.slice(0, 8))`,
+      ].join('\n'),
+    },
+    {
+      lang: 'js',
+      label: 'JavaScript',
+      code: [
+        `const res = await fetch("${apiBase}/embeddings", {`,
+        `  method: "POST",`,
+        `  headers: {`,
+        `    Authorization: \`Bearer \${process.env.HANZO_API_KEY}\`,`,
+        `    "Content-Type": "application/json",`,
+        `  },`,
+        `  body: JSON.stringify({ model: "${model}", input: "${input}" }),`,
+        `})`,
+        `const { data } = await res.json()`,
+        `console.log(data[0].embedding.slice(0, 8))`,
+      ].join('\n'),
+    },
+  ]
+}
