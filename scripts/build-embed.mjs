@@ -25,8 +25,20 @@
  *     [] + dynamicParams=false) that renders the original client body, which we move
  *     beside it as `_body.tsx` (a leading-underscore dir/file is not a route).
  *
- * Steps: stash route handlers → overlay dynamic pages → `CONSOLE_EMBED=1 next build`
- * (emits out/) → restore everything.
+ *  3) NO request-time dynamic API in the ROOT LAYOUT. `output: 'export'` prerenders
+ *     EVERY page THROUGH app/layout.tsx, so a request-time read there — the root
+ *     `generateMetadata` calling `headers()` for a per-host <title> — throws in the
+ *     Server Components render for ALL pages (it surfaces on /_not-found and aborts
+ *     the export). The embed is same-origin and resolves brand CLIENT-side from
+ *     window.location, so the SSR title can safely fall back to the build-time
+ *     default; the browser re-renders the correct brand. So we NEUTRALIZE the
+ *     layout's `next/headers` read for the export (drop the import, host → undefined)
+ *     and restore the pristine layout after. Without this, the export FAILS and the
+ *     cloud image degrades to the committed fallback shell (the 1-binary console
+ *     silently ships as a stub).
+ *
+ * Steps: stash route handlers → overlay dynamic pages → neutralize root-layout
+ * dynamic APIs → `CONSOLE_EMBED=1 next build` (emits out/) → restore everything.
  */
 import { execFileSync } from 'node:child_process'
 import {
@@ -34,6 +46,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   renameSync,
   rmSync,
   statSync,
@@ -111,11 +124,36 @@ export default function Page(props: any) {
 `
 }
 
+/**
+ * Rewrite the root layout to be export-clean: `output: 'export'` prerenders EVERY
+ * page through app/layout.tsx, so a request-time dynamic API there (next/headers'
+ * `headers()`) throws in the Server Components render for ALL pages and aborts the
+ * export (it surfaces on /_not-found). The root `generateMetadata` reads the Host
+ * header only to brand the SSR <title>; in the same-origin embed the brand is
+ * resolved CLIENT-side from window.location, so we drop the `next/headers` import
+ * and resolve the host to `undefined` (→ the build-time default brand; the browser
+ * re-renders the correct brand). Returns the pristine source (to restore in the
+ * finally), or null when the layout has no request-time read to neutralize.
+ */
+function neutralizeLayout(file) {
+  if (!existsSync(file)) return null
+  const src = readFileSync(file, 'utf8')
+  if (!/from ['"]next\/headers['"]/.test(src)) return null
+  const patched = src
+    .replace(/^\s*import\s*\{[^}]*\}\s*from\s*['"]next\/headers['"];?[^\n]*\n/m, '')
+    .replace(/\(await\s+headers\(\)\)\.get\([^)]*\)\s*\?\?\s*undefined/g, 'undefined')
+    .replace(/\(await\s+headers\(\)\)\.get\([^)]*\)/g, 'undefined')
+  writeFileSync(file, patched, 'utf8')
+  return src
+}
+
 const routes = existsSync(appDir) ? findFiles(appDir, /^route\.(ts|tsx|js)$/) : []
 const dynamicPages = existsSync(appDir) ? findFiles(appDir, /^page\.tsx$/).filter(isDynamicPage) : []
 
 const stashedRoutes = []
 const wrappedPages = [] // { page, body }
+const layoutFile = join(appDir, 'layout.tsx')
+let layoutPristine = null // pristine app/layout.tsx source while neutralized for the export
 
 if (existsSync(stashDir)) rmSync(stashDir, { recursive: true, force: true })
 
@@ -140,8 +178,14 @@ try {
     wrappedPages.push({ page, body })
   }
 
+  // 3) Neutralize the root layout's request-time dynamic APIs (next/headers) so the
+  //    export prerender doesn't throw for every page through the layout.
+  layoutPristine = neutralizeLayout(layoutFile)
+
   console.log(
-    `[build:embed] stashed ${stashedRoutes.length} route handler(s), wrapped ${wrappedPages.length} dynamic page(s); building static export…`,
+    `[build:embed] stashed ${stashedRoutes.length} route handler(s), wrapped ${wrappedPages.length} dynamic page(s)${
+      layoutPristine ? ', neutralized root-layout headers()' : ''
+    }; building static export…`,
   )
 
   // The project pins Next 15 (webpack is its default builder; the custom `webpack()`
@@ -158,7 +202,9 @@ try {
   }
   console.log('[build:embed] static export ready at out/')
 } finally {
-  // ALWAYS restore: remove wrappers + _body, put the original page back; un-stash routes.
+  // ALWAYS restore: put the pristine root layout back; remove wrappers + _body, put
+  // the original page back; un-stash routes.
+  if (layoutPristine != null) writeFileSync(layoutFile, layoutPristine, 'utf8')
   for (const { page, body } of wrappedPages) {
     if (existsSync(body)) rmSync(body, { force: true })
     const rel = relative(appDir, page)
