@@ -23,7 +23,7 @@ import { BackendStateCard, classifyBackend, type BackendState } from '~/componen
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import type { FrameworkClient } from '~/lib/framework/client'
 import type { DocType, FrameworkDoc } from '~/lib/framework/types'
-import { docTypeToFields, toRecord, enrichLinks, savePayload, newDraft, statusField, titleOf } from '~/lib/framework/fields'
+import { docTypeToFields, toRecord, enrichLinks, savePayload, newDraft, statusField, titleOf, hasProjectField, PROJECT_FIELD } from '~/lib/framework/fields'
 import { loadLinkOptions, makeFieldOptions } from './data'
 
 export interface DocTypeDetailProps {
@@ -31,6 +31,8 @@ export interface DocTypeDetailProps {
   doctype: string
   /** Document name, or `'new'` to open the create form. */
   name: string
+  /** Active project scope — stamped onto a NEW record when the collection has a `project` field. */
+  project?: string
   onBack: () => void
   /** Land on a document (after create). */
   onView: (name: string) => void
@@ -41,7 +43,7 @@ type LoadState =
   | { phase: 'error'; error: BackendState }
   | { phase: 'ready'; dt: DocType; record: Record<string, unknown> | null; linkOptions: Record<string, SelectOption[]> }
 
-export function DocTypeDetail({ client, doctype, name, onBack, onView }: DocTypeDetailProps) {
+export function DocTypeDetail({ client, doctype, name, project, onBack, onView }: DocTypeDetailProps) {
   const isNew = name === 'new'
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const [editing, setEditing] = useState(isNew)
@@ -60,7 +62,12 @@ export function DocTypeDetail({ client, doctype, name, onBack, onView }: DocType
         if (signal.cancelled) return
         const record = doc ? enrichLinks(toRecord(doc, dt), dt, linkOptions) : null
         setState({ phase: 'ready', dt, record, linkOptions })
-        setDraft(record ? { ...record } : newDraft(dt))
+        // A NEW record inherits the active project scope (when the collection has a
+        // `project` field), so content created under a selected project is tagged
+        // with it and shows up in that project's filtered list.
+        const seed = newDraft(dt)
+        if (record == null && project && hasProjectField(dt)) seed[PROJECT_FIELD] = project
+        setDraft(record ? { ...record } : seed)
         setEditing(isNew)
         setSaveError(null)
         setConfirmingDelete(false)
@@ -68,7 +75,7 @@ export function DocTypeDetail({ client, doctype, name, onBack, onView }: DocType
         if (!signal.cancelled) setState({ phase: 'error', error: classifyBackend(e) })
       }
     },
-    [client, doctype, name, isNew],
+    [client, doctype, name, isNew, project],
   )
 
   useEffect(() => {

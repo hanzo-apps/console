@@ -19,6 +19,7 @@
 import { useRouter } from 'next/navigation'
 
 import { FrameworkApi } from '~/lib/framework/client'
+import { useScope } from '~/lib/scope-context'
 import { CollectionsBrowser } from '~/components/doctype/CollectionsBrowser'
 import { DocTypeRecords } from '~/components/doctype/DocTypeRecords'
 import { DocTypeDetail } from '~/components/doctype/DocTypeDetail'
@@ -30,6 +31,13 @@ export function CmsModule({ params = {} }: { params?: Record<string, string> }) 
   const router = useRouter()
   const client = FrameworkApi
   const { doctype, name } = params
+  // Project as SCOPE (not a separate CMS instance): the console's org→project
+  // ScopeSwitcher drives which content is shown. A selected project filters the
+  // records list and is stamped onto new records — but ONLY on collections that
+  // actually declare a `project` field (honest; collections without it are
+  // org-level and unaffected). One engine, project is a filter.
+  const { scope } = useScope()
+  const project = scope.project
 
   const openCollection = (dt: string) => router.push(`/cms/collections/${enc(dt)}`)
   const openRecord = (dt: string, n: string) => router.push(`/cms/collections/${enc(dt)}/${enc(n)}`)
@@ -41,6 +49,7 @@ export function CmsModule({ params = {} }: { params?: Record<string, string> }) 
         client={client}
         doctype={doctype}
         name={name}
+        project={project}
         onBack={() => openCollection(doctype)}
         onView={(n) => openRecord(doctype, n)}
       />
@@ -54,6 +63,7 @@ export function CmsModule({ params = {} }: { params?: Record<string, string> }) 
       <DocTypeRecords
         client={client}
         doctype={doctype}
+        project={project}
         onOpen={(n) => openRecord(doctype, n)}
         onCreate={() => openRecord(doctype, 'new')}
       />

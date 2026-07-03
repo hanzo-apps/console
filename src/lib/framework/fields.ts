@@ -24,6 +24,7 @@ const TYPE_MAP: Record<DocField['fieldtype'], FieldType> = {
   SmallText: 'text',
   Text: 'longText',
   LongText: 'longText',
+  RichText: 'richText',
   Int: 'number',
   Float: 'number',
   Currency: 'currency',
@@ -140,6 +141,14 @@ export function mediaFileField(dt: DocType): string {
 /** DocTypes belonging to an app lane (module) — a CMS "collection" is one of these. */
 export function moduleDoctypes(dts: DocType[], module: string): DocType[] {
   return dts.filter((dt) => (dt.module ?? '') === module)
+}
+
+/** The conventional field a collection uses to scope documents to a project. */
+export const PROJECT_FIELD = 'project'
+
+/** True when a DocType declares the `project` scope field (→ project filtering works). */
+export function hasProjectField(dt: DocType): boolean {
+  return (dt.fields ?? []).some((f) => f.fieldname === PROJECT_FIELD)
 }
 
 /** A record's human title — the DocType's titleField, else its name. */

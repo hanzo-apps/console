@@ -1940,3 +1940,58 @@ issues). Added there (DRY — ONE o11y client), NOT a second o11y path.
   normalizeSpans); `next build` ✓ Compiled successfully (the `/[...slug]` catch-all
   that renders LogsModule). Authenticated visual e2e is post-deploy (the (dashboard)
   group is behind AuthGate). Rebased on origin/main (v8.4.61) → **v8.4.62**.
+
+## Native CMS — complete over the Framework DocType engine, Payload-parity WYSIWYG (v8.4.67)
+
+The CMS is finished and native: every `/cms/*` URL renders the DocType renderer over
+`/v1/framework/*` (no iframe, no raw JSON, no 404). ROOT CAUSE of the live
+`console.hanzo.ai/cms/collections/Article` → `{"error":"Not found"}` bug: the
+deployed image (v8.4.65) lacked the wired CMS sub-routes, so the catch-all resolved
+`['cms','collections','Article']` to `notfound` and a Next RSC navigation to
+`notFound()` serves a JSON 404. The routes were already declared correctly on the
+CMS branch (`collections/:doctype`, `collections/:doctype/:name` → `CmsModule`);
+this release completes + ships them.
+
+- **Rich-text = Payload Lexical, native.** `@hanzo/data`'s field registry already has
+  a `richText` type stubbed to a plain textarea. A fresh, thin Lexical WYSIWYG
+  (`src/components/fields/RichTextEditor.tsx` + `RichTextField.tsx`, built on core
+  `lexical@0.46.0` + `@lexical/{react,rich-text,list,link,html,selection,utils}` —
+  the same primitives Payload's MIT `richtext-lexical` uses, NOT its Payload-coupled
+  field) is registered over `richText` in `Provider.tsx` (right after
+  `registerDefaultFields()` — `registerField('richText', …)` overrides in place, no
+  fork). Toolbar: bold/italic/underline, H1/H2/H3 + paragraph + quote, bullet/number
+  lists, links, undo/redo. Stored value = the Lexical `EditorState` JSON string; read
+  view renders it to sanitized HTML via `$generateHtmlFromNodes`. Pure serialization
+  (`richtext-serialize.ts`) round-trips + defensively migrates a legacy plain-`Text`
+  body (wrapped in one paragraph, never throws). A DocType field typed `RichText`
+  (`types.ts` `Fieldtype` + `fields.ts` `TYPE_MAP` → `richText`) renders it.
+- **RichText fieldtype in cloud** (v1.786.52+): `clients/framework` accepts a
+  `RichText` fieldtype (const + validated allow-set + `coerceField` string
+  passthrough — 5 lines, schemaless blob, round-trips verbatim), and the seeded CMS
+  `body` (Article/Page/Post) is now `RichText`. Cloud change shipped via cloud `main`
+  → arcd release build.
+- **Content-type builder** (`CollectionBuilder.tsx` + pure `builder-logic.ts`): "New
+  collection" defines a DocType's name + typed fields ON-PAGE — add/remove/reorder/
+  require/show-in-list, every framework fieldtype (Text/RichText/LongText/Number/
+  Decimal/Currency/Checkbox/Date/Datetime/Select/Relation/Attachment/Table/JSON) with
+  the extra inputs each needs (Select options, Relation target). Auto-derives
+  autoname/titleField from slug+title.
+- **Media = real DAM** (`MediaGrid.tsx` + `media-upload.ts`): drag/drop or pick →
+  uploads to the org's own S3 (`cms-media` bucket, via the SAME `/v1/s3` SeaweedFS
+  presigned-PUT the Storage product uses) → creates a Media doc with the STABLE
+  object key (`s3://…`, since object URLs are 5-min TTL) → thumbnails presigned
+  on-view. Delete removes doc + object. Per-org by the bearer.
+- **Publish flow**: `DocTypeDetail` Publish/Unpublish (the `status` Select), plus
+  Submit/Cancel for submittable types.
+- **Project scope (one engine, project as filter)**: the console's org→project
+  `ScopeSwitcher` drives the CMS — a selected project filters the records list
+  (`?filters={"project":…}`) and is stamped onto new records, but ONLY on collections
+  that declare a `project` field (honest; the engine 400s a filter on an unknown
+  field). Seeded content + builder starters include an optional `project` Data field.
+  NO per-project/per-org CMS instances.
+- Verification: `tsc` clean, `vitest` **1418 pass** (+ richtext-serialize/builder-
+  logic/media-upload/fields project+richText/framework RichText round-trip), `next
+  build` ✓ 14/14. Live e2e as Dave post-deploy. Cruft: the old minimal name-only
+  "New collection" form + `contentCollection` helper are replaced by the builder;
+  the dead `src/lib/api/cms.ts` (old /v1/cms iframe client) was already removed.
+  Rebased on origin/main → **v8.4.67**.
