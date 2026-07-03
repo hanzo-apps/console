@@ -843,7 +843,7 @@ export const catalog: CatalogEntry[] = [
     subpages: [
       { slug: 'explore', label: 'Explore' },
       { slug: 'collections', label: 'Collections' },
-      { slug: 'jobs', label: 'Jobs' },
+      { slug: 'ingest', label: 'Ingest' },
       { slug: 'models', label: 'Models' },
       { slug: 'settings', label: 'Settings' },
     ],
