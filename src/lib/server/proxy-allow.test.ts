@@ -62,6 +62,13 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/projects/my-site')).toBe(true)
   })
 
+  it('admits the ML serving surface (the Inference endpoints source), per-org via the Bearer', () => {
+    expect(CLOUD_HEADS).toContain('ml')
+    expect(allowCloudSurface('v1/ml/models')).toBe(true)
+    expect(allowCloudSurface('v1/ml/models/my-llama')).toBe(true)
+    expect(allowCloudSurface('v1/ml/health')).toBe(true)
+  })
+
   it('REFUSES privileged / unlisted cloud-api surfaces (not a general tunnel)', () => {
     expect(allowCloudSurface('v1/iam/get-users')).toBe(false)
     expect(allowCloudSurface('v1/admin/overview')).toBe(false)

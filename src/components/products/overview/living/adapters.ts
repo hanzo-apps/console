@@ -25,6 +25,9 @@ import type { OverviewData, OverviewEvent, OverviewHealth, OverviewPoint } from 
 
 const empty = (): OverviewData => ({ kpi: {}, series: {}, distribution: {}, activity: [], alerts: [], health: [] })
 
+/** Title-case a recorded status for the status donut legend (`success` → `Success`). */
+const labelStatus = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Unknown')
+
 /** Map the commerce usage overview (the platform/AI-usage source) onto `OverviewData`. */
 export function fromCloudUsage(ov: CloudUsageOverview): OverviewData {
   const d = empty()
@@ -41,6 +44,17 @@ export function fromCloudUsage(ov: CloudUsageOverview): OverviewData {
     ...ov.byModel.items.map((m) => ({ label: m.model, value: m.spendCents, sub: m.provider })),
     ...(ov.byModel.other ? [{ label: `Other (${ov.byModel.other.modelCount})`, value: ov.byModel.other.spendCents, sub: 'remaining models' }] : []),
   ]
+
+  // Top models by TOKENS (the same real per-model rollup, valued on tokens instead of
+  // spend) — the Metrics dashboard's "Top Models by Usage" donut. Zero-token models
+  // drop out at the tile (positive-only), so an all-untokenized ledger → honest empty.
+  d.distribution.byModelTokens = [
+    ...ov.byModel.items.map((m) => ({ label: m.model, value: m.tokens, sub: m.provider })),
+    ...(ov.byModel.other ? [{ label: `Other (${ov.byModel.other.modelCount})`, value: ov.byModel.other.tokens, sub: 'remaining models' }] : []),
+  ]
+
+  // Requests by recorded status (Success/Error/…) — the Metrics dashboard's status donut.
+  d.distribution.byStatus = ov.byStatus.map((s) => ({ label: labelStatus(s.status), value: s.requests }))
 
   d.activity = ov.activity.items.map(
     (r): OverviewEvent => ({
