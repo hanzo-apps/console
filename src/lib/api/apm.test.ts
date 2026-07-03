@@ -14,6 +14,13 @@ import {
   normalizeExceptions,
   normalizeDashboard,
   normalizeDashboards,
+  listQueryPayload,
+  parseListRows,
+  toIso,
+  normalizeLogRow,
+  normalizeLogs,
+  normalizeTraceSpan,
+  normalizeSpans,
 } from './apm'
 
 describe('apmWindow', () => {
@@ -220,5 +227,142 @@ describe('normalizeDashboard / normalizeDashboards', () => {
   it('reads a {status,data:[…]} list and drops uuid-less rows', () => {
     const out = normalizeDashboards({ status: 'success', data: [{ uuid: 'a', data: { title: 'A' } }, { data: { title: 'no uuid' } }] })
     expect(out.map((d) => d.uuid)).toEqual(['a'])
+  })
+})
+
+describe('listQueryPayload (SigNoz v3 query_range LIST)', () => {
+  const w = apmWindow(3600)
+
+  it('builds a noop list builder query over the given dataSource with ms bounds', () => {
+    const p = listQueryPayload('logs', w, 100) as {
+      start: number
+      end: number
+      compositeQuery: { queryType: string; panelType: string; builderQueries: Record<string, Record<string, unknown>> }
+    }
+    expect(p.start).toBe(w.startMs)
+    expect(p.end).toBe(w.endMs)
+    expect(p.compositeQuery.queryType).toBe('builder')
+    expect(p.compositeQuery.panelType).toBe('list')
+    const A = p.compositeQuery.builderQueries.A
+    expect(A.dataSource).toBe('logs')
+    expect(A.aggregateOperator).toBe('noop')
+    expect(A.expression).toBe('A')
+    expect(A.pageSize).toBe(100)
+    // newest-first
+    expect(A.orderBy).toEqual([{ columnName: 'timestamp', order: 'desc' }])
+  })
+
+  it('carries dataSource=traces for a span search', () => {
+    const p = listQueryPayload('traces', w, 50) as { compositeQuery: { builderQueries: { A: { dataSource: string } } } }
+    expect(p.compositeQuery.builderQueries.A.dataSource).toBe('traces')
+  })
+
+  it('clamps pageSize into [1,1000] and floors it', () => {
+    const big = listQueryPayload('logs', w, 99999) as { compositeQuery: { builderQueries: { A: { pageSize: number } } } }
+    const zero = listQueryPayload('logs', w, 0) as { compositeQuery: { builderQueries: { A: { pageSize: number } } } }
+    const frac = listQueryPayload('logs', w, 12.9) as { compositeQuery: { builderQueries: { A: { pageSize: number } } } }
+    expect(big.compositeQuery.builderQueries.A.pageSize).toBe(1000)
+    expect(zero.compositeQuery.builderQueries.A.pageSize).toBe(1)
+    expect(frac.compositeQuery.builderQueries.A.pageSize).toBe(12)
+  })
+})
+
+describe('parseListRows', () => {
+  it('reads rows from data.result[].list', () => {
+    const body = { data: { result: [{ list: [{ timestamp: '1', data: { body: 'a' } }, { timestamp: '2', data: { body: 'b' } }] }] } }
+    expect(parseListRows(body)).toHaveLength(2)
+  })
+  it('reads rows from the nested data.newResult.data.result[].list mirror', () => {
+    const body = { data: { newResult: { data: { result: [{ list: [{ timestamp: '1', data: {} }] }] } } } }
+    expect(parseListRows(body)).toHaveLength(1)
+  })
+  it('returns [] for empty/garbage/missing shapes (never throws)', () => {
+    expect(parseListRows(null)).toEqual([])
+    expect(parseListRows({})).toEqual([])
+    expect(parseListRows({ data: { result: null } })).toEqual([])
+    expect(parseListRows({ data: { result: [{ list: null }] } })).toEqual([])
+    expect(parseListRows('nope')).toEqual([])
+  })
+})
+
+describe('toIso', () => {
+  const iso = '2026-07-03T00:00:00.000Z'
+  const ms = Date.parse(iso)
+  it('passes an ISO string through unchanged', () => {
+    expect(toIso(iso)).toBe(iso)
+  })
+  it('treats a plain ms number as ms', () => {
+    expect(toIso(ms)).toBe(iso)
+  })
+  it('collapses nanosecond epochs to ms', () => {
+    expect(toIso(String(ms * 1_000_000))).toBe(iso)
+    expect(toIso(ms * 1_000_000)).toBe(iso)
+  })
+  it('promotes a seconds epoch to ms', () => {
+    expect(toIso(Math.floor(ms / 1000))).toBe(iso)
+  })
+  it('returns empty for null/blank/NaN', () => {
+    expect(toIso(undefined)).toBe('')
+    expect(toIso(null)).toBe('')
+    expect(toIso('')).toBe('')
+    expect(toIso('not-a-date')).toBe('not-a-date') // non-numeric string is treated as ISO passthrough
+  })
+})
+
+describe('normalizeLogRow / normalizeLogs', () => {
+  it('projects a SigNoz log row into {id,timestamp,severity,service,body}', () => {
+    const isoT = '2026-07-03T00:00:00.000Z'
+    const ns = String(Date.parse(isoT) * 1_000_000) // ns epoch as SigNoz emits
+    const row = {
+      timestamp: ns,
+      data: { id: 'log-1', severity_text: 'ERROR', 'service.name': 'iam', body: 'boom' },
+    }
+    const l = normalizeLogRow(row, 0)
+    expect(l.id).toBe('log-1')
+    expect(l.severity).toBe('error') // lowercased
+    expect(l.service).toBe('iam')
+    expect(l.body).toBe('boom')
+    expect(l.timestamp).toBe(isoT)
+  })
+  it('tolerates column-name variants and synthesizes an id when absent', () => {
+    const l = normalizeLogRow({ timestamp: 5, data: { level: 'warn', serviceName: 'cloud', message: 'hi' } }, 3)
+    expect(l.severity).toBe('warn')
+    expect(l.service).toBe('cloud')
+    expect(l.body).toBe('hi')
+    expect(l.id).toBe('5-3') // ts-idx fallback
+  })
+  it('maps a full query_range logs response, newest-first order preserved', () => {
+    const body = {
+      data: { result: [{ list: [{ timestamp: '2', data: { body: 'newer' } }, { timestamp: '1', data: { body: 'older' } }] }] },
+    }
+    const rows = normalizeLogs(body)
+    expect(rows.map((r) => r.body)).toEqual(['newer', 'older'])
+  })
+  it('empty result → empty list (honest empty, not a throw)', () => {
+    expect(normalizeLogs({ data: { result: [] } })).toEqual([])
+  })
+})
+
+describe('normalizeTraceSpan / normalizeSpans', () => {
+  it('projects a span row into {id,traceId,name,service,durationNano,status}', () => {
+    const row = {
+      timestamp: 1751500800000,
+      data: { spanID: 's1', traceID: 't1', name: 'GET /v1/chat', serviceName: 'gateway', durationNano: 12345, statusCode: '200' },
+    }
+    const s = normalizeTraceSpan(row, 0)
+    expect(s.id).toBe('s1')
+    expect(s.traceId).toBe('t1')
+    expect(s.name).toBe('GET /v1/chat')
+    expect(s.service).toBe('gateway')
+    expect(s.durationNano).toBe(12345)
+    expect(s.status).toBe('200')
+  })
+  it('durationNano is null when absent/blank (honest —, not 0)', () => {
+    expect(normalizeTraceSpan({ data: { spanID: 's' } }, 0).durationNano).toBeNull()
+    expect(normalizeTraceSpan({ data: { spanID: 's', durationNano: '' } }, 0).durationNano).toBeNull()
+  })
+  it('maps a full query_range traces response', () => {
+    const body = { data: { result: [{ list: [{ timestamp: '1', data: { traceID: 't', name: 'op' } }] }] } }
+    expect(normalizeSpans(body)).toHaveLength(1)
   })
 })

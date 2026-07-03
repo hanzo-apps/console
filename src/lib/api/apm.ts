@@ -355,6 +355,150 @@ export function normalizeDashboards(body: unknown): Dashboard[] {
   return rows.map(normalizeDashboard).filter((d) => d.uuid !== '')
 }
 
+// ── Logs + Traces (SigNoz composite query_range) ──────────────────────────────
+//
+// The universal `POST /api/v3/query_range` builder query. A `list`-panel `noop`
+// query over `dataSource: logs | traces` returns RAW rows (recent log lines /
+// spans), newest first — the one true logs/traces read (`/api/v1/logs` is a stub
+// that returns `{"results":[]}`; query_range is what the SigNoz logs/traces
+// explorer actually issues). Time is epoch MILLISECONDS (v3) = `ApmWindow.startMs
+// /endMs`. Every helper is pure (JSON in, view-model out) so it unit-tests
+// without a live runtime.
+
+/** The telemetry signal a builder query reads. */
+export type SignozDataSource = 'logs' | 'traces' | 'metrics'
+
+/**
+ * The exact v3 `query_range` LIST payload — ONE `noop` builder query keyed `A`,
+ * newest-first, paged by `offset`/`pageSize`. Mirrors what SigNoz's own explorer
+ * sends (verified against the frontend + the server `BuilderQuery` struct), so the
+ * runtime never 400s on shape.
+ */
+export function listQueryPayload(dataSource: SignozDataSource, w: ApmWindow, limit: number): Record<string, unknown> {
+  const pageSize = Math.max(1, Math.min(1000, Math.floor(limit)))
+  return {
+    start: w.startMs,
+    end: w.endMs,
+    step: 60,
+    compositeQuery: {
+      queryType: 'builder',
+      panelType: 'list',
+      builderQueries: {
+        A: {
+          queryName: 'A',
+          dataSource,
+          aggregateOperator: 'noop',
+          aggregateAttribute: {},
+          expression: 'A',
+          disabled: false,
+          stepInterval: 60,
+          filters: { items: [], op: 'AND' },
+          groupBy: [],
+          having: [],
+          orderBy: [{ columnName: 'timestamp', order: 'desc' }],
+          limit: null,
+          offset: 0,
+          pageSize,
+        },
+      },
+    },
+  }
+}
+
+/** A `list`-panel query returns rows under `data.result[].list` (newer runtimes
+ *  mirror them under `data.newResult.data.result[].list`); each is `{timestamp,data}`. */
+type ListRow = { timestamp?: string | number; data?: Record<string, unknown> | null }
+
+/** Pull the flat list rows out of either result location, never throwing on shape. */
+export function parseListRows(body: unknown): ListRow[] {
+  const r = (body ?? {}) as { data?: { result?: unknown; newResult?: { data?: { result?: unknown } } } }
+  const direct = r?.data?.result
+  const nested = r?.data?.newResult?.data?.result
+  const results = (Array.isArray(direct) ? direct : Array.isArray(nested) ? nested : []) as { list?: unknown }[]
+  const out: ListRow[] = []
+  for (const res of results) {
+    if (Array.isArray(res?.list)) out.push(...(res.list as ListRow[]).filter((x): x is ListRow => x != null))
+  }
+  return out
+}
+
+/** Read the first present key from a flattened SigNoz row `data` map. */
+function pick(data: Record<string, unknown> | null | undefined, keys: string[]): string {
+  if (!data) return ''
+  for (const k of keys) {
+    const v = data[k]
+    if (v !== undefined && v !== null && v !== '') return str(v)
+  }
+  return ''
+}
+
+/** Normalize the epoch value SigNoz returns (ns/us/ms/s, or an ISO string) → ISO. */
+export function toIso(ts: string | number | undefined | null): string {
+  if (ts == null || ts === '') return ''
+  if (typeof ts === 'string' && !/^\d+$/.test(ts)) return ts // already ISO
+  let ms = typeof ts === 'number' ? ts : Number(ts)
+  if (!Number.isFinite(ms)) return ''
+  while (ms > 1e14) ms = Math.floor(ms / 1000) // ns/us → ms by magnitude
+  if (ms > 0 && ms < 1e11) ms = ms * 1000 // seconds → ms
+  const d = new Date(ms)
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString()
+}
+
+/** One application/platform log line, projected from a logs list row. */
+export type LogRow = { id: string; timestamp: string; severity: string; service: string; body: string }
+
+/** Normalize one logs list row → LogRow (tolerant of column-name variants). */
+export function normalizeLogRow(row: ListRow, idx: number): LogRow {
+  const d = row.data ?? {}
+  return {
+    id: pick(d, ['id', 'log_id']) || `${str(row.timestamp)}-${idx}`,
+    timestamp: toIso(row.timestamp) || toIso(pick(d, ['timestamp'])),
+    severity: pick(d, ['severity_text', 'severityText', 'level', 'severity']).toLowerCase(),
+    service: pick(d, ['service.name', 'service_name', 'serviceName']),
+    body: pick(d, ['body', 'message', 'log', 'msg']),
+  }
+}
+
+/** Normalize a logs `query_range` response → LogRow[] (newest first). */
+export function normalizeLogs(body: unknown): LogRow[] {
+  return parseListRows(body).map(normalizeLogRow)
+}
+
+/** One trace/span row from a `dataSource: traces` list query. */
+export type TraceSpan = {
+  id: string
+  timestamp: string
+  traceId: string
+  name: string
+  service: string
+  /** Duration in nanoseconds (SigNoz unit), or null when absent. */
+  durationNano: number | null
+  status: string
+}
+
+/** Normalize one traces list row → TraceSpan. */
+export function normalizeTraceSpan(row: ListRow, idx: number): TraceSpan {
+  const d = row.data ?? {}
+  const traceId = pick(d, ['traceID', 'traceId', 'trace_id'])
+  const spanId = pick(d, ['spanID', 'spanId', 'span_id'])
+  const durRaw = d?.['durationNano'] ?? d?.['duration_nano'] ?? d?.['durationNs']
+  const durNum = Number(durRaw)
+  return {
+    id: spanId || traceId || `${str(row.timestamp)}-${idx}`,
+    timestamp: toIso(row.timestamp) || toIso(pick(d, ['timestamp'])),
+    traceId,
+    name: pick(d, ['name', 'operationName', 'operation']),
+    service: pick(d, ['serviceName', 'service.name', 'service_name']),
+    durationNano: durRaw != null && durRaw !== '' && Number.isFinite(durNum) ? durNum : null,
+    status: pick(d, ['statusCode', 'status_code', 'httpCode', 'responseStatusCode']),
+  }
+}
+
+/** Normalize a traces `query_range` response → TraceSpan[] (newest first). */
+export function normalizeSpans(body: unknown): TraceSpan[] {
+  return parseListRows(body).map(normalizeTraceSpan)
+}
+
 // ── Transport ─────────────────────────────────────────────────────────────────
 
 const u = (path: string): string => cloudProxyV1Url(`o11y/${path}`)
@@ -398,4 +542,10 @@ export const ApmApi = {
   // ── Dashboards ──
   dashboards: async (): Promise<Dashboard[]> => normalizeDashboards(await restGet<unknown>(u('v1/dashboards'))),
   dashboard: (uuid: string): Promise<unknown> => restGet<unknown>(u(`v1/dashboards/${encodeURIComponent(uuid)}`)),
+
+  // ── Logs + Traces (composite query_range; `/api/v1/logs` is a stub) ──
+  logs: async (w: ApmWindow, limit = 200): Promise<LogRow[]> =>
+    normalizeLogs(await restPost<unknown>(u('v3/query_range'), listQueryPayload('logs', w, limit))),
+  traceSearch: async (w: ApmWindow, limit = 200): Promise<TraceSpan[]> =>
+    normalizeSpans(await restPost<unknown>(u('v3/query_range'), listQueryPayload('traces', w, limit))),
 }
