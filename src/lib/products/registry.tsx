@@ -120,6 +120,7 @@ import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
+import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
@@ -877,6 +878,23 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: ApplicationsModule },
       { path: ':name', component: ApplicationsModule },
     ],
+  },
+  {
+    // The USER-facing per-org PaaS over cloud's native /v1/platform control plane
+    // (hanzoai/cloud clients/platform): your own container apps — deploy, source-
+    // tagged logs, KMS-sealed env (secret-masked), and verified custom domains.
+    // Org-scoped by the Bearer owner via the /cloud proxy. DISTINCT from the admin
+    // `applications` fleet board (/v1/apps) and internal-admin platform.hanzo.ai.
+    id: 'app-platform',
+    label: 'App Platform',
+    icon: Rocket,
+    description: 'Deploy and manage your container apps — projects, deploys, logs, secrets, domains.',
+    gcp: 'App Engine',
+    category: 'Compute',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: PlatformAppsModule }],
   },
 
   // ── Data — Hanzo Cloud as an open Google Cloud. Each is a ZAP-native Hanzo
