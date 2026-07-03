@@ -9,6 +9,7 @@ import {
   groupByFamily,
   filterFamilies,
   totalModels,
+  displayLabel,
   DEFAULT_MODEL,
 } from './families'
 import type { CatalogEntry } from './aicatalog'
@@ -92,6 +93,23 @@ describe('filters — current-gen chat only', () => {
   it('flags free-tier duplicate aliases', () => {
     expect(isFreeAlias(gemmaFree)).toBe(true)
     expect(isFreeAlias(gemma3)).toBe(false)
+  })
+  it('excludes meta-routers (routing policy, not a pickable model)', () => {
+    const router = m({ id: 'router:general', name: '', provider: 'Hanzo', available: true })
+    expect(isChatModel(router)).toBe(false)
+    // …so a nameless router never leaks into the Zen family as a blank row.
+    expect(groupByFamily([zen5mini, router]).find((g) => g.id === 'zen')!.models.map((x) => x.name)).toEqual([
+      'zen5-mini',
+    ])
+  })
+})
+
+describe('displayLabel — never blank', () => {
+  it('falls back to the id when the model has no display name', () => {
+    const noName = m({ id: 'zen5-flash', name: '', available: true })
+    expect(displayLabel(noName)).toBe('zen5-flash')
+    expect(displayLabel(zen5mini)).toBe('zen5-mini')
+    expect(displayLabel(gemma3)).toBe('Gemma 3 27B') // "Google: " provider prefix stripped
   })
 })
 
