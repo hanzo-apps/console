@@ -186,6 +186,7 @@ function FixedRow({
     <Button
       onPress={onPress}
       bg={active ? '$color5' : 'transparent'}
+      className={active ? 'hz-accent-bar' : undefined}
       justify={collapsed ? 'center' : 'flex-start'}
       px={collapsed ? '$0' : '$2.5'}
       icon={<Icon size={ICON} />}
@@ -226,6 +227,7 @@ function NavRow({
       <Button
         onPress={onOpen}
         bg={active ? '$color5' : 'transparent'}
+        className={active ? 'hz-accent-bar' : undefined}
         justify="center"
         px="$0"
         height={44}
@@ -246,6 +248,7 @@ function NavRow({
         flex={1}
         onPress={onOpen}
         bg={active ? '$color5' : 'transparent'}
+        className={active ? 'hz-accent-bar' : undefined}
         justify="flex-start"
         icon={<ProductIcon icon={Icon} color={color} size={18} />}
         iconAfter={hint}

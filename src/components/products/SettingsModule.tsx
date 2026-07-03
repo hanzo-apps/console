@@ -19,6 +19,7 @@ import { Check, ExternalLink, Lock, Users } from '@hanzogui/lucide-icons-2'
 import { ApiError, TeamApi, type Organization } from '~/lib/api'
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
+import { applyOrgAccent } from '~/lib/theme/accent'
 import { useSession } from '~/lib/auth/session'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -224,6 +225,10 @@ function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: b
     }
     try {
       await TeamApi.updateOrganization(next)
+      // Apply the accent to the live console IMMEDIATELY (no reload) from the value we
+      // just persisted — the same `applyOrgAccent` the root provider calls on load, so
+      // the accent survives reload too. Disabling the theme (or an invalid hex) clears it.
+      applyOrgAccent(next.themeData)
       setSave({ phase: 'saved' })
       onSaved()
     } catch (e) {
@@ -360,6 +365,7 @@ export function SettingsModule({ params }: { params: Record<string, string> }) {
             key={t.id || 'general'}
             size="$2"
             bg={t.id === tab ? '$color5' : 'transparent'}
+            className={t.id === tab ? 'hz-accent-fill' : undefined}
             borderWidth={1}
             borderColor="$borderColor"
             onPress={() => router.push(t.id ? `/settings/${t.id}` : '/settings')}
