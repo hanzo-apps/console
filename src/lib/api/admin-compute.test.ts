@@ -187,3 +187,38 @@ describe('normalizeCompute — optional-safe, kind-filtered, over both backend s
     }
   })
 })
+
+
+describe("the widened kind spectrum — cluster / nodepool / function are first-class", () => {
+  it("folds a cluster leaf under kind=cluster and keeps it off the machine board", () => {
+    const raw = {
+      leaves: [
+        { org: "acme", app: "", project: "", kind: "cluster", count: 2, active: 2, spendCents: 0 },
+        { org: "acme", app: "web", project: "prod", kind: "machine", count: 5, active: 5, spendCents: 100 },
+      ],
+    }
+    expect(normalizeCompute(raw, "cluster").totals).toEqual({ count: 2, active: 2, spendCents: 0 })
+    expect(normalizeCompute(raw, "machine").totals).toEqual({ count: 5, active: 5, spendCents: 100 })
+  })
+
+  it("folds nodepool events with their CostPerHour price under kind=nodepool", () => {
+    const tree = normalizeCompute(
+      { events: [ev({ kind: "nodepool", machineId: "pool-1", event: "running", priceCents: 24 })] },
+      "nodepool",
+    )
+    expect(tree.kind).toBe("nodepool")
+    expect(tree.totals.spendCents).toBe(24)
+    expect(tree.orgs[0].apps[0].projects[0].count).toBe(1)
+  })
+
+  it("keeps a function leaf under kind=function and honest-empty elsewhere", () => {
+    const raw = { leaves: [{ org: "acme", app: "", project: "", kind: "function", count: 3, active: 1, spendCents: 7 }] }
+    expect(normalizeCompute(raw, "function").totals).toEqual({ count: 3, active: 1, spendCents: 7 })
+    expect(normalizeCompute(raw, "machine").orgs).toEqual([])
+  })
+
+  it("normalizes an out-of-spectrum kind to machine (open column, safe fallback)", () => {
+    const tree = normalizeCompute({ leaves: [{ org: "acme", kind: "quantum-toaster", count: 1, spendCents: 0 }] }, "machine")
+    expect(tree.totals.count).toBe(1)
+  })
+})
