@@ -1418,3 +1418,54 @@ The fix is **additive, one session manager, zero regression** (worst case === v8
   past 5 min (navigate + idle), no /signin bounce.
   `NEXT_PUBLIC_*` unchanged (no client-id switch); server-only env reused
   (`IAM_MINT_CLIENT_ID/SECRET`, `IAM_URL`) — no new secret to provision.
+
+## Bots + Machines — two `kind` compute-analytics operator boards over the datastore (feat/console2-admin-fleets)
+
+Two GLOBAL-ADMIN boards on admin.hanzo.ai (Observe, beside Business + Finance) —
+**Bots** and **Machines** — two lenses over ONE datastore table, split on `kind`:
+a **bot** is a machine running the @hanzo/bot agent (booted, gateway-connected); a
+**machine** is raw compute visor opens. Each surfaces per-org/app/project count,
+active, and spend, grouped org → app → project. Reads ONLY the datastore aggregate
+(one cross-tenant GROUP BY, never a per-tenant SQLite fan-out — the
+tenant-data-hierarchy invariant). Supersedes the initial single "Fleets" board (the
+noun was wrong: bots and machines are distinct compute kinds, not one "fleet").
+
+- **One admin aggregate head, zero new plumbing.** `compute` added to the existing
+  global-admin-gated surface: `ADMIN_AGGREGATE_HEADS` (`lib/server/admin-aggregate.ts`)
+  + `ADMIN_V1_HEADS` (`next.config.mjs`). The client calls same-origin
+  `/v1/admin/compute?kind=bot|machine`; `next.config.mjs` rewrites it to
+  `app/admin/aggregate/[...path]`, which runs `getAdminGate` (fail-closed 403,
+  global-admin only) BEFORE forwarding a minted user bearer. Same RED-H1 gate as
+  Business/Finance — no new proxy/trust boundary.
+- **`lib/api/admin-compute.ts` — kind-parameterized client + pure tree.** OPTIONAL-SAFE
+  over BOTH shapes: pre-aggregated `{ leaves }` (the cheap ClickHouse GROUP BY) OR raw
+  `{ events }` (the coordinated 9-column datastore row: `org, app, project, kind, event,
+  machine_id, size, price_cents, ts`), which pure `foldEvents` folds client-side.
+  `normalizeCompute(raw, kind)` filters to the requested kind (defensive — the endpoint
+  filters too); Rollup = `{ count, active, spendCents }` (count = distinct units of that
+  kind, active = latest event non-terminal). Pure `buildTree` rolls up app + org, sorts
+  by spend desc; snake_case + camel tolerated; garbage → empty tree, zero totals.
+- **`ComputeModule.tsx` — ONE board, two exports.** `ComputeBoard({ kind })` renders
+  totals KPIs (count/active/spend) + a collapsible org → app → project tree with
+  per-leaf size chips + last activity; `BotsModule` / `MachinesModule` are thin
+  `kind='bot'|'machine'` wrappers (Bots and Machines are the same board). Honest states:
+  loading, operator-access-required (403), not-routed (404), error, empty. Both catalog
+  entries `admin: true` (hidden from every customer). Registry ids `bots` + `vms`
+  (the admin machines lens; the per-org customer `machines` entry — visor
+  `/vm/v1/machines` — is a different, non-admin surface, so its id is kept and the admin
+  one imports `MachinesModule as AdminMachinesModule`).
+- **Backend SHIPPED (paired PR).** cloud-api `GET /v1/admin/compute`
+  (`clients/admin/compute.go`, `app.Get(..., s.guard(s.compute))`) aggregates
+  `hanzo.compute_events(org, app, project, kind, event, machine_id, size, price_cents,
+  ts)` grouped by `(org, app, project, kind)` over the shared `aiobject.DatastoreQuery`
+  (the `clients/analytics` transport; stays **v1.x.x**). `?kind`/`?org` filter,
+  `?range=24h|7d|30d` bounds; two-level roll-up (inner `argMax(event,ts)` per machine →
+  outer count/active/sum). Honest-empty when the warehouse/table isn't wired yet (the
+  visor/commerce emitter is still pending) — the board renders the honest empty state
+  until events flow. (hanzoai/cloud PR #62.)
+- Verification: `tsc --noEmit` clean; `npm test` **1012/1012** (84 files; +12
+  admin-compute fold/tree/normalize/kind-filter, +1 admin-aggregate compute head);
+  `next build` ✓. cloud: `gofmt` clean, `go build ./...` green, `go test ./clients/admin`
+  ok. Authenticated visual e2e (both boards as a global admin) is post-deploy; renders
+  the honest empty state today (no emitter). Not merged to main / no version bump — the
+  merge/release step bumps `package.json` + tags the image.
