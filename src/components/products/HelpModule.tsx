@@ -1,116 +1,81 @@
 'use client'
 
 /**
- * Help Center — the live Hanzo Help Center (a Frappe Helpdesk, deployed at
- * help.<brand> and confirmed live at help.hanzo.ai) rendered IN the console.
+ * Help Center — NATIVE over the live Hanzo Framework DocType engine (/v1/framework/*),
+ * NO iframe. A ticket IS a framework document tagged with module "help"; its lifecycle
+ * (Open → Pending → Resolved → Closed) IS a status field; agents, teams, SLAs, and
+ * canned responses are framework documents (clients/help). This module is a THIN host:
+ * it routes between the SAME generic, metadata-driven DocType surfaces CMS and ERP use
+ * — the collections browser, the records list, and the record detail/editor — with
+ * ZERO per-doctype UI code. The Help Center is the purest DRY proof: it is fixtures
+ * only (no Go hooks, no console UI), yet it renders a full support desk.
  *
- * Not a link-out: for the org that OWNS it, the Help Center is EMBEDDED (SSO iframe)
- * inside the console shell, so submitting a ticket or reading the knowledge base
- * never leaves console.<brand>. It is wired to the brand IAM as a Frappe social login
- * ("Login with hanzo", client_id `<brand>-helpdesk`), so it opens signed-in with the
- * same identity the console holds.
- *
- * Honest tenancy (verified): the Help Center is today a SINGLE shared per-BRAND
- * Frappe Helpdesk (`HANZO_ORG=hanzo`), NOT per-customer-org. Ticket confidentiality
- * on a shared desk rests on the Helpdesk's own role mapping, which the console can't
- * verify — so rather than trust that blind, entitlement is decided SERVER-SIDE by
- * `/embed-status` (brand org / global admin only). A CUSTOMER org receives
- * `entitled:false` and NO embed URL, and sees an honest "a Help Center for your org
- * isn't provisioned yet" panel — it is never framed into the brand's support desk.
- * When a per-org Help Center exists the SAME gate embeds it. Binds to the canonical
- * Frappe Helpdesk — not reimplemented here.
+ * Per-org and honest by construction: the engine resolves the org from the validated
+ * bearer (via the `/cloud` proxy) and enforces per-DocType permissions, so each org
+ * sees + edits ONLY its own tickets/agents, and an un-set-up org sees the "Set up Help
+ * Center" install CTA — never a fabricated ticket and never the old shared-desk iframe.
  */
-import { useCallback, useEffect, useState } from 'react'
-import { LifeBuoy, BookOpen, Inbox, Clock } from '@hanzogui/lucide-icons-2'
+import { useRouter } from 'next/navigation'
 
-import { config } from '~/config'
-import { EmbedApi, type EmbedStatus } from '~/lib/api/embed'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { Loader } from '~/components/ui/Loader'
-import { EmbeddedApp } from './embed/EmbeddedApp'
-import { ProvisionPanel, type ProvisionFeature } from './embed/ProvisionPanel'
+import { FrameworkApi } from '~/lib/framework/client'
+import { CollectionsBrowser } from '~/components/doctype/CollectionsBrowser'
+import { DocTypeRecords } from '~/components/doctype/DocTypeRecords'
+import { DocTypeDetail } from '~/components/doctype/DocTypeDetail'
 
-const MANAGES: ProvisionFeature[] = [
-  { icon: Inbox, label: 'Tickets', body: 'A shared inbox for customer requests, with assignment, status, and replies.' },
-  { icon: BookOpen, label: 'Knowledge Base', body: 'Public help articles your customers can search before they file a ticket.' },
-  { icon: Clock, label: 'SLAs', body: 'Response and resolution targets, with escalation when they’re at risk.' },
-  { icon: LifeBuoy, label: 'Portal', body: 'A branded self-service portal where users track their own requests.' },
-]
+const MODULE = 'help'
+const enc = encodeURIComponent
 
-type Async = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: EmbedStatus }
+export function HelpModule({ params = {} }: { params?: Record<string, string> }) {
+  const router = useRouter()
+  const client = FrameworkApi
+  const { doctype, name } = params
 
-export function HelpModule() {
-  const [state, setState] = useState<Async>({ phase: 'loading' })
+  // The registry id for this lane is 'helpdesk' (the URL prefix); the framework
+  // module tag is 'help'. Keep the route prefix aligned to the registry id.
+  const openCollection = (dt: string) => router.push(`/helpdesk/collections/${enc(dt)}`)
+  const openRecord = (dt: string, n: string) => router.push(`/helpdesk/collections/${enc(dt)}/${enc(n)}`)
 
-  const load = useCallback(() => {
-    setState({ phase: 'loading' })
-    EmbedApi.status('help')
-      .then((data) => setState({ phase: 'ready', data }))
-      .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
-  }, [])
-  useEffect(() => { load() }, [load])
-
-  if (state.phase === 'loading') return <Loader label="Loading Help Center…" />
-  if (state.phase === 'error') {
+  // /helpdesk/collections/:doctype/:name → the record detail / create form.
+  if (doctype && name) {
     return (
-      <>
-        <PageHeader title="Help Center" subtitle="Support tickets and a knowledge base for your users." />
-        <BackendStateCard state={state.error} onRetry={load} hint="probe · GET /embed-status?app=help" />
-      </>
-    )
-  }
-
-  const status = state.data
-
-  // Not entitled (a customer org): honest provision panel — NEVER an embed of the
-  // brand's shared support desk (which would risk cross-org ticket visibility).
-  if (!status.entitled) {
-    return (
-      <ProvisionPanel
-        title="Help Center"
-        subtitle="A customer helpdesk — tickets and a knowledge base for your users, with IAM single sign-on."
-        heroTitle="Help Center for your organization"
-        heroBody={
-          'The Help Center is a Frappe Helpdesk — a shared ticket inbox, SLAs, and a searchable ' +
-          'knowledge base for your users. Today it runs as a shared per-brand desk, so a dedicated ' +
-          'Help Center for your organization isn’t provisioned yet — request one and it will appear ' +
-          'here, embedded and signed in with your Hanzo identity.'
-        }
-        features={MANAGES}
-        intakeSlug="helpdesk"
-        intakeLabel="Help Center"
-        cta="Request Help Center"
-        docsHref={config.docsUrl ? `${config.docsUrl}/docs/helpdesk` : undefined}
-        sourceLabel="hanzoai/helpdesk · Frappe Helpdesk"
-        note="Binds to the canonical Frappe Helpdesk — the Help Center is not reimplemented in the console."
+      <DocTypeDetail
+        client={client}
+        doctype={doctype}
+        name={name}
+        onBack={() => openCollection(doctype)}
+        onView={(n) => openRecord(doctype, n)}
       />
     )
   }
 
-  // Entitled (brand org / global admin) and the desk is live → embed it.
-  if (status.reachable) {
+  // /helpdesk/collections/:doctype → the records list (Tickets/Agents/Teams/…).
+  if (doctype) {
     return (
-      <EmbeddedApp
-        title="Help Center"
-        subtitle="Support tickets and a knowledge base — embedded with IAM single sign-on."
-        src={status.embedUrl}
-        openLabel="Open Help Center"
-        sourceLabel="hanzoai/helpdesk"
-        note="Your brand’s Help Center, signed in with your Hanzo identity (IAM SSO)."
+      <DocTypeRecords
+        client={client}
+        doctype={doctype}
+        onOpen={(n) => openRecord(doctype, n)}
+        onCreate={() => openRecord(doctype, 'new')}
       />
     )
   }
 
-  // Entitled but the desk isn't answering — honest "unavailable".
+  // /helpdesk → the DocType browser, with the setup CTA that installs the Help lane.
   return (
-    <>
-      <PageHeader title="Help Center" subtitle="Support tickets and a knowledge base for your users." />
-      <BackendStateCard
-        state={{ kind: 'unavailable', message: `The Help Center (${status.origin}) is not reachable right now.` }}
-        onRetry={load}
-        hint={`host · ${status.origin}`}
-      />
-    </>
+    <CollectionsBrowser
+      client={client}
+      module={MODULE}
+      label="Help Center"
+      subtitle="A native, metadata-driven support desk on the Hanzo Framework — tickets, agents, teams, SLAs, and canned responses as DocTypes, per organization. The ticket lifecycle is a status field on the engine; no separate helpdesk to run."
+      setupDescription="The Help Center is your support desk — tickets, agents, teams, SLAs, and canned responses — as DocTypes on the Hanzo Framework, per organization. A ticket's lifecycle (Open → Pending → Resolved → Closed) is a status field."
+      setupBullets={[
+        'Installs the helpdesk DocTypes into your organization',
+        'Tickets move through their status workflow on the framework — assigned to agents and teams',
+        'Every ticket is a document on the framework — versioned, permissioned, per-org',
+      ]}
+      onOpen={openCollection}
+    />
   )
 }
+
+export default HelpModule
