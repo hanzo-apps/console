@@ -85,6 +85,20 @@ export type EmbeddingsResponse = {
 /** Request body for a text-to-speech run. */
 export type SpeechRequest = { model: string; input: string; voice?: string; response_format?: string }
 
+/** Request body for a text-to-image run. */
+export type ImageRequest = { model: string; prompt: string; n?: number; size?: string }
+/** The OpenAI images response (a hosted URL or inline base64 per image). */
+export type ImageResponse = { created?: number; data?: { url?: string; b64_json?: string }[]; error?: { message?: string } }
+
+/** Request body for a text-to-video run. */
+export type VideoRequest = { model: string; prompt: string; n?: number; size?: string; seconds?: number }
+/** The OpenAI-shaped videos response (base64 MP4 + mime, or a hosted URL). */
+export type VideoResponse = {
+  created?: number
+  data?: { url?: string; b64_json?: string; mime_type?: string }[]
+  error?: { message?: string }
+}
+
 export const PlaygroundApi = {
   /**
    * List model ids the gateway accepts. Returns a de-duplicated, sorted id list;
@@ -137,6 +151,30 @@ export const PlaygroundApi = {
   /** Run an embeddings request; returns the raw OpenAI embeddings response. */
   embeddings: (req: EmbeddingsRequest): Promise<EmbeddingsResponse> =>
     restPost<EmbeddingsResponse>(originV1Url('embeddings'), req),
+
+  /**
+   * Generate an image (text → image). Returns the raw OpenAI images response
+   * (each element carries a hosted `url` or inline `b64_json`); throws `ApiError`
+   * on an unreachable/unauthorized gateway so the caller renders an honest state.
+   * Image generation debits per-image cloud credit (gateway meters it), so we
+   * nudge the shared live balance after the run.
+   */
+  images: async (req: ImageRequest): Promise<ImageResponse> => {
+    const res = await restPost<ImageResponse>(originV1Url('images/generations'), req)
+    invalidateBalance()
+    return res
+  },
+
+  /**
+   * Generate a video (text → video). Returns the OpenAI-shaped videos response
+   * (base64 MP4 + mime, or a hosted url). Video is minutes-long and premium-
+   * billed; the gateway meters it, so we nudge the shared live balance after.
+   */
+  videos: async (req: VideoRequest): Promise<VideoResponse> => {
+    const res = await restPost<VideoResponse>(originV1Url('videos/generations'), req)
+    invalidateBalance()
+    return res
+  },
 
   /**
    * Synthesize speech (text → audio). Returns the audio bytes as a Blob (the
