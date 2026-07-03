@@ -23,8 +23,10 @@ import { nodeNetworksForBrand, type NodeNetworkId } from '~/lib/products/brand-s
 import {
   NODE_NETWORK_META,
   combineInventory,
+  normalizeChains,
   parseHeight,
   type NetworkInventory,
+  type RawBlockchain,
   type RawPeer,
   type RawValidator,
 } from '~/lib/api/nodes'
@@ -85,21 +87,31 @@ async function probe(net: NodeNetworkId): Promise<NetworkInventory> {
     validators: 0,
     peers: 0,
     nodes: [],
+    chains: [],
   }
 
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
   try {
-    const [valR, peerR, verR, hgtR] = await Promise.allSettled([
+    const [valR, peerR, verR, hgtR, chainR] = await Promise.allSettled([
       rpc<{ validators?: RawValidator[] }>(host, '/ext/bc/P', 'platform.getCurrentValidators', ctrl.signal),
       rpc<{ numPeers?: string; peers?: RawPeer[] }>(host, '/ext/info', 'info.peers', ctrl.signal),
       rpc<{ version?: string }>(host, '/ext/info', 'info.getNodeVersion', ctrl.signal),
       rpc<{ height?: string }>(host, '/ext/bc/P', 'platform.getHeight', ctrl.signal),
+      rpc<{ blockchains?: RawBlockchain[] }>(host, '/ext/bc/P', 'platform.getBlockchains', ctrl.signal),
     ])
 
-    const reachable = valR.status === 'fulfilled' || peerR.status === 'fulfilled'
+    const reachable =
+      valR.status === 'fulfilled' || peerR.status === 'fulfilled' || chainR.status === 'fulfilled'
     if (!reachable) {
-      const reason = valR.status === 'rejected' ? valR.reason : peerR.status === 'rejected' ? peerR.reason : null
+      const reason =
+        valR.status === 'rejected'
+          ? valR.reason
+          : peerR.status === 'rejected'
+            ? peerR.reason
+            : chainR.status === 'rejected'
+              ? chainR.reason
+              : null
       base.error = reason instanceof Error ? reason.message : 'unreachable'
       return base
     }
@@ -114,6 +126,9 @@ async function probe(net: NodeNetworkId): Promise<NetworkInventory> {
     base.peers = nodes.filter((n) => n.role === 'peer').length
     if (verR.status === 'fulfilled') base.version = verR.value?.version
     if (hgtR.status === 'fulfilled') base.height = parseHeight(hgtR.value?.height)
+    // Chains are best-effort: a network can report validators/peers yet not answer
+    // getBlockchains — then the chains list is honestly empty (no fabricated chains).
+    if (chainR.status === 'fulfilled') base.chains = normalizeChains(chainR.value?.blockchains)
     return base
   } catch (e) {
     base.error = e instanceof Error ? e.message : String(e)

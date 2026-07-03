@@ -10,6 +10,7 @@ import {
   normalizeValidators,
   normalizePeers,
   combineInventory,
+  normalizeChains,
   parseUptimePct,
   parseHeight,
   fmtUptime,
@@ -17,6 +18,7 @@ import {
   fmtWeight,
   type RawValidator,
   type RawPeer,
+  type RawBlockchain,
 } from './nodes'
 import type { Cluster } from './platform'
 
@@ -259,6 +261,37 @@ describe('combineInventory — dedupe validators+peers by nodeID', () => {
   })
   it('honest empty when a reachable network has zero of everything (pars: 0 peers)', () => {
     expect(combineInventory([], [], 'pars-mainnet')).toEqual([])
+  })
+})
+
+describe('normalizeChains — platform.getBlockchains → chain list (P prepended)', () => {
+  // The real live devnet wire shape (the T-model letter chains).
+  const WIRE: RawBlockchain[] = [
+    { id: 'LxQUnwVkZWcfsGigw3qC1EmFWiZK4d9HwxYcYazxadw5pTDyX', name: 'K-Chain', netID: '11111111111111111111111111111111LpoYY', vmID: 'pJJCSV7hHYVY6TUZwR8qUPAfuhX8JLb2C1AzNSezrYNbgau8M' },
+    { id: '2H16HhzqZHrUqvoGh59u8ReMeLuyTBJrkf61JnRVp4ZxuAtQ1F', name: 'G-Chain', netID: '11111111111111111111111111111111LpoYY', vmID: 'nZQm4Dmg1rjX18rb8maL9gamYyXPf1xCvF7ymWzxp6a1nSQTt' },
+    { id: '25kZyebvQGwtRVS7uiRJcECoEbKf53URfFA4P176QptMj9o8Ti', name: 'A-Chain', netID: '11111111111111111111111111111111LpoYY', vmID: 'juFxSrbCM4wszxddKepj1GWwmrn9YgN1g4n3VUWPpRo9JjERA' },
+  ]
+
+  it('prepends the P-Chain and preserves the reported chains in order', () => {
+    const chains = normalizeChains(WIRE)
+    expect(chains).toHaveLength(4) // P + 3
+    expect(chains[0].name).toBe('P-Chain')
+    expect(chains[0].id).toBe('11111111111111111111111111111111LpoYY')
+    expect(chains.map((c) => c.name)).toEqual(['P-Chain', 'K-Chain', 'G-Chain', 'A-Chain'])
+    expect(chains[1].vmID).toBe('pJJCSV7hHYVY6TUZwR8qUPAfuhX8JLb2C1AzNSezrYNbgau8M')
+  })
+
+  it('undefined/empty input → just the P-Chain (never fabricated chains)', () => {
+    expect(normalizeChains(undefined).map((c) => c.name)).toEqual(['P-Chain'])
+    expect(normalizeChains([]).map((c) => c.name)).toEqual(['P-Chain'])
+  })
+
+  it('drops a chain with no id (can not be addressed); falls back name→id when name absent', () => {
+    const chains = normalizeChains([
+      { name: 'X-Chain' }, // no id → dropped
+      { id: 'abc123' }, // no name → name falls back to id
+    ] as RawBlockchain[])
+    expect(chains.map((c) => c.name)).toEqual(['P-Chain', 'abc123'])
   })
 })
 
