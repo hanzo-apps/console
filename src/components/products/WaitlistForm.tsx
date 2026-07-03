@@ -14,6 +14,7 @@ import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { CircleCheck, Mail } from '@hanzogui/lucide-icons-2'
 
 import { useSession } from '~/lib/auth/session'
+import { v1Url } from '~/lib/api/client'
 
 type JoinResponse = {
   ok?: boolean
@@ -52,7 +53,7 @@ export function WaitlistForm({
     setBusy(true)
     let res: Response
     try {
-      res = await fetch('/waitlist', {
+      res = await fetch(v1Url('console/waitlist'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
