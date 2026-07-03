@@ -117,6 +117,7 @@ import { Users,
 import { config, type BrandId } from '~/config'
 import { type ProductCategory, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
+import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
@@ -609,6 +610,31 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: ProvidersModule },
       { path: ':name', component: ProvidersModule },
     ],
+  },
+  {
+    // admin.hanzo.ai AI-PROVIDER control board — the platform-wide management table
+    // for the shared-gateway upstream providers (do-ai, openrouter, fireworks,
+    // openai-direct, zen): enable/disable each, set the single primary, and see model
+    // count + key-present + derived health. GLOBAL-ADMIN ONLY (`admin: true` hides it
+    // from every customer's nav/launcher/palette; the catch-all renders a managed
+    // notice for a non-admin, and `/v1/admin/providers` is server-gated by
+    // `getAdminGate`). DISTINCT from the customer `providers` entry above (the model
+    // catalog browser + BYOK per-org CRUD) — this one flips backend Provider State/
+    // IsDefault that applies to every org (and gates OpenRouter out of the pricing
+    // catalog via the DO-first ENABLE_OPENROUTER integration).
+    id: 'provider-admin',
+    label: 'AI Providers',
+    icon: Server,
+    description: 'Enable, disable, and set the primary upstream AI provider for the shared gateway.',
+    // No `gcp` analog — like the sibling customer `providers` entry above, provider
+    // routing administration is Hanzo-specific with no clean single GCP product
+    // equivalent (matching the sibling keeps the catalog metadata consistent).
+    category: 'AI',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/ai',
+    kind: 'module',
+    routes: [{ path: '', component: ProviderAdminModule }],
   },
   {
     id: 'agents',

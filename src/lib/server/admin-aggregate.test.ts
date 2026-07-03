@@ -30,6 +30,13 @@ describe('allowAdminSurface — least-privilege admin read surface', () => {
     expect(allowAdminSurface('admin/compute/by-org')).toBe(true)
   })
 
+  it('admits the providers control board — the list AND the two mutation sub-paths', () => {
+    expect(allowAdminSurface('admin/providers')).toBe(true)
+    // The POST mutations (toggle enable/disable, set primary) ride the same head.
+    expect(allowAdminSurface('admin/providers/toggle')).toBe(true)
+    expect(allowAdminSurface('admin/providers/primary')).toBe(true)
+  })
+
   it('REFUSES the tenant-scoped admin proxies (iam / kms) — never a tunnel', () => {
     expect(allowAdminSurface('admin/iam')).toBe(false)
     expect(allowAdminSurface('admin/iam/get-users')).toBe(false)
