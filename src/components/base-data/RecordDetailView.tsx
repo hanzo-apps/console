@@ -244,7 +244,7 @@ export function RecordDetailView({ api, collection, recordId, onBack, onView }: 
         {editing ? (
           <RecordForm fields={fields} values={draft} onChange={onChange} />
         ) : record ? (
-          <RecordDetail fields={fields} record={record} />
+          <RecordDetail title={title} fields={fields} record={record} />
         ) : null}
       </Card>
     </YStack>

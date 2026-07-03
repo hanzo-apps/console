@@ -3,24 +3,26 @@
 /**
  * CRM — the first Hanzo Business-OS brick, over the REAL cloud `/v1/crm` surface
  * (cloud `clients/crm`: a native-Go, per-org CRM on Base/SQLite — companies,
- * contacts, opportunities, a port of Twenty's core model). Every read/write is
- * same-origin and keyless (`CrmApi` → `originV1Url('crm/...')` → `<origin>/v1/crm`);
- * `next.config.mjs` rewrites the `crm` head to the console's OWN user-bearer
- * `/cloud` proxy, which mints a short-lived user token and forwards it, so the
- * backend resolves the org from the token owner claim — every row is org-scoped
- * SERVER-SIDE and no credential reaches the browser. This is the EXACT per-tenant
- * path Agents/Evals/Prompts use.
+ * contacts, opportunities). Every read/write is same-origin and keyless (`CrmApi`
+ * → `<origin>/v1/crm`, rewritten to the console's user-bearer `/cloud` proxy), so
+ * every row is org-scoped SERVER-SIDE and no credential reaches the browser.
  *
- * One module, three collections selected by the `:tab` route (`/crm/:tab`, default
- * companies — the same routed-tab shape as Evals/Gpus/Functions). Each collection
- * is a real list + an inline create form + per-row delete; a header shows the
- * per-org `/v1/crm/summary` counts. Every state is honest: loading, the shared
- * BackendStateCard on 401/403/404/503, and a true empty state — never placeholder rows.
+ * CRM = BASE VIEWS. Each collection is rendered by the SAME @hanzo/data
+ * `RecordsView` (table ⇆ board, filter, sort, group, detail) that powers the
+ * generic Base records surface — the live `/v1/crm` entities are expressed as
+ * `FieldDefinition[]` schemas + pure record mappers (`crm/collections`). This is
+ * the demonstration that a CRM is just a curated set of views on the Base
+ * object/field/record engine: opportunities get a stage PIPELINE board; contacts
+ * and opportunities resolve their company relation to a named chip. The live
+ * create + delete flow stays (per-org POST / DELETE); delete is bulk via row
+ * selection. Views are read-only over live data (no `/v1/crm` update endpoint yet)
+ * — honest by construction; every state is loading / BackendStateCard / empty.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Building2, Plus, RefreshCw, Users, Target, Trash2 } from '@hanzogui/lucide-icons-2'
+import { Building2, Plus, RefreshCw, Target, Trash2, Users } from '@hanzogui/lucide-icons-2'
+import { RecordsView, RecordDetail, type FieldDefinition, type SelectOption } from '@hanzo/data'
 
 import {
   CrmApi,
@@ -31,9 +33,13 @@ import {
   type Summary,
 } from '~/lib/api/crm'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import {
+  COMPANY_FIELDS, CONTACT_FIELDS, OPPORTUNITY_FIELDS,
+  companyRecord, contactRecord, opportunityRecord,
+  companyOptions, companyNameLookup,
+} from './crm/collections'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -47,39 +53,6 @@ const TABS: { id: Tab; label: string; icon: typeof Building2 }[] = [
   { id: 'opportunities', label: 'Opportunities', icon: Target },
 ]
 
-const fmtTime = (s?: number) => (s ? new Date(s * 1000).toLocaleString() : '-')
-const fmtMoney = (amount: number, currency: string) =>
-  amount ? `${(amount / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'USD' })}` : '-'
-const dash = (s: string) => (s.trim() ? s : '-')
-
-/**
- * Per-row delete — confirms, then runs the parent-supplied `onDelete` (which does
- * `CrmApi.<collection>.remove(id)` + reload + summary refresh, and surfaces a
- * backend failure through the view's own error state). Keeps its own `working`
- * guard so a row can't be double-deleted; labelled for assistive tech.
- */
-function RowDelete({ label, onDelete }: { label: string; onDelete: () => Promise<void> }) {
-  const [working, setWorking] = useState(false)
-  return (
-    <Button
-      size="$2"
-      chromeless
-      aria-label={label}
-      disabled={working}
-      icon={<Trash2 size={15} />}
-      onPress={async () => {
-        if (typeof window !== 'undefined' && !window.confirm(`${label}? This cannot be undone.`)) return
-        setWorking(true)
-        try {
-          await onDelete()
-        } finally {
-          setWorking(false)
-        }
-      }}
-    />
-  )
-}
-
 /** The per-org summary bar (real `/v1/crm/summary` counts). */
 function SummaryBar({ summary }: { summary: Summary | null }) {
   const cells: { label: string; value: number | string }[] = [
@@ -90,12 +63,85 @@ function SummaryBar({ summary }: { summary: Summary | null }) {
   return (
     <XStack gap="$3" mb="$3" flexWrap="wrap">
       {cells.map((c) => (
-        <Card key={c.label} p="$3" minWidth={160} borderWidth={1} borderColor="$borderColor">
+        <Card key={c.label} p="$3" minW={160} borderWidth={1} borderColor="$borderColor">
           <Text fontSize="$2" color="$color10">{c.label}</Text>
           <Text fontSize="$7" fontWeight="800">{c.value}</Text>
         </Card>
       ))}
     </XStack>
+  )
+}
+
+/** Bulk-delete affordance in the RecordsView selection bar — confirms, then removes each id. */
+function BulkDelete({ ids, onDelete }: { ids: string[]; onDelete: (ids: string[]) => Promise<void> }) {
+  const [working, setWorking] = useState(false)
+  return (
+    <Button
+      size="$2"
+      theme="red"
+      icon={<Trash2 size={15} />}
+      disabled={working}
+      onPress={async () => {
+        if (typeof window !== 'undefined' && !window.confirm(`Delete ${ids.length} record${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return
+        setWorking(true)
+        try { await onDelete(ids) } finally { setWorking(false) }
+      }}
+    >
+      {working ? 'Deleting…' : `Delete ${ids.length}`}
+    </Button>
+  )
+}
+
+/** A read-only record detail drawer over the @hanzo/data RecordDetail panel. */
+function RecordDrawer({ title, fields, record, onClose }: { title: string; fields: FieldDefinition[]; record: Record<string, unknown>; onClose: () => void }) {
+  return (
+    <Card mt="$3" p="$4" gap="$2" borderWidth={1} borderColor="$borderColor" maxW={640}>
+      <XStack items="center" justify="space-between" mb="$2">
+        <Text fontSize="$4" fontWeight="700">Details</Text>
+        <Button size="$2" chromeless onPress={onClose}>Close</Button>
+      </XStack>
+      <RecordDetail title={title} fields={fields} record={record} />
+    </Card>
+  )
+}
+
+/** One collection panel: @hanzo/data RecordsView over mapped live rows + bulk delete + detail drawer. */
+function CollectionPanel({
+  state, fields, records, onReload, onCreate, createLabel, onDelete, empty, hint, boardDisabled, fieldOptions, drawerTitle,
+}: {
+  state: Async<unknown>
+  fields: FieldDefinition[]
+  records: Record<string, unknown>[]
+  onReload: () => void
+  onCreate: () => void
+  createLabel: string
+  onDelete: (ids: string[]) => Promise<void>
+  empty: string
+  hint: string
+  boardDisabled?: boolean
+  fieldOptions?: (f: FieldDefinition) => SelectOption[] | undefined
+  drawerTitle: (r: Record<string, unknown>) => string
+}) {
+  const [open, setOpen] = useState<Record<string, unknown> | null>(null)
+  if (state.phase === 'error') return <BackendStateCard state={state.error} onRetry={onReload} hint={hint} />
+  return (
+    <>
+      <RecordsView
+        fields={fields}
+        records={records}
+        loading={state.phase === 'loading'}
+        editable={false}
+        boardDisabled={boardDisabled}
+        onOpen={setOpen}
+        onCreate={onCreate}
+        createLabel={createLabel}
+        bulkActions={(ids) => <BulkDelete ids={ids} onDelete={onDelete} />}
+        fieldOptions={fieldOptions}
+        toolbarExtra={<Button size="$2" icon={<RefreshCw size={15} />} onPress={onReload}>Refresh</Button>}
+        empty={empty}
+      />
+      {open ? <RecordDrawer title={drawerTitle(open)} fields={fields} record={open} onClose={() => setOpen(null)} /> : null}
+    </>
   )
 }
 
@@ -107,43 +153,26 @@ function CompaniesView({ onChanged }: { onChanged: () => void }) {
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
-    CrmApi.companies
-      .list()
-      .then((data) => setState({ phase: 'ready', data }))
-      .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
+    CrmApi.companies.list().then((data) => setState({ phase: 'ready', data })).catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [])
   useEffect(() => { load() }, [load])
 
-  const del = (id: string) => async () => {
-    try { await CrmApi.companies.remove(id); load(); onChanged() }
+  const records = useMemo(() => (state.phase === 'ready' ? state.data.map(companyRecord) : []), [state])
+  const del = useCallback(async (ids: string[]) => {
+    try { await Promise.all(ids.map((id) => CrmApi.companies.remove(id))); load(); onChanged() }
     catch (e) { setState({ phase: 'error', error: classifyBackend(e) }) }
-  }
-
-  const columns: Column<Company>[] = [
-    { key: 'name', header: 'Name', render: (r) => <Text fontSize="$3" fontWeight="600">{dash(r.name)}</Text> },
-    { key: 'domainName', header: 'Domain', render: (r) => <Text fontSize="$3" color="$color11">{dash(r.domainName)}</Text> },
-    { key: 'employees', header: 'Employees', width: 110, render: (r) => <Text fontSize="$3" color="$color11">{r.employees || '-'}</Text> },
-    { key: 'arr', header: 'ARR', width: 130, render: (r) => <Text fontSize="$3" color="$color11">{fmtMoney(r.arr, r.currency)}</Text> },
-    { key: 'country', header: 'Country', width: 120, render: (r) => <Text fontSize="$3" color="$color11">{dash(r.country)}</Text> },
-    { key: 'createdAt', header: 'Created', width: 190, render: (r) => <Text fontSize="$3" color="$color10">{fmtTime(r.createdAt)}</Text> },
-    { key: 'actions', header: '', width: 64, render: (r) => <RowDelete label={`Delete ${dash(r.name)}`} onDelete={del(r.id)} /> },
-  ]
+  }, [load, onChanged])
 
   return (
     <>
-      <Toolbar onNew={() => setCreating((v) => !v)} onRefresh={load} newLabel="New company" />
       {creating ? <CompanyForm onDone={() => { setCreating(false); load(); onChanged() }} /> : null}
-      {state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/crm/companies" />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={state.phase === 'ready' ? state.data : []}
-          loading={state.phase === 'loading'}
-          rowKey={(r) => r.id}
-          empty="No companies yet. Create your first company to start your CRM."
-        />
-      )}
+      <CollectionPanel
+        state={state} fields={COMPANY_FIELDS} records={records} onReload={load}
+        onCreate={() => setCreating((v) => !v)} createLabel="New company" onDelete={del}
+        empty="No companies yet. Create your first company to start your CRM."
+        hint="endpoint · GET /v1/crm/companies" boardDisabled
+        drawerTitle={(r) => String(r.name ?? 'Company')}
+      />
     </>
   )
 }
@@ -160,18 +189,13 @@ function CompanyForm({ onDone }: { onDone: () => void }) {
     if (!name.trim()) { setError({ kind: 'error', message: 'Name is required.' }); return }
     setWorking(true); setError(null)
     try {
-      await CrmApi.companies.create({
-        name: name.trim(),
-        domainName: domainName.trim(),
-        employees: employees.trim() ? Number(employees) : 0,
-        country: country.trim(),
-      })
+      await CrmApi.companies.create({ name: name.trim(), domainName: domainName.trim(), employees: employees.trim() ? Number(employees) : 0, country: country.trim() })
       onDone()
     } catch (e) { setError(classifyBackend(e)) } finally { setWorking(false) }
   }
 
   return (
-    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxWidth={760} mb="$3">
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxW={760} mb="$3">
       {error ? <BackendStateCard state={error} hint="endpoint · POST /v1/crm/companies" /> : null}
       <FieldRow label="Name"><FieldText value={name} onChange={setName} placeholder="Acme Inc" /></FieldRow>
       <FieldRow label="Domain"><FieldText value={domainName} onChange={setDomain} placeholder="acme.com" /></FieldRow>
@@ -186,48 +210,34 @@ function CompanyForm({ onDone }: { onDone: () => void }) {
 
 // ── Contacts ─────────────────────────────────────────────────────────────────
 
-function ContactsView({ onChanged }: { onChanged: () => void }) {
+function ContactsView({ companies, onChanged }: { companies: Company[]; onChanged: () => void }) {
   const [state, setState] = useState<Async<Contact[]>>({ phase: 'loading' })
   const [creating, setCreating] = useState(false)
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
-    CrmApi.contacts
-      .list()
-      .then((data) => setState({ phase: 'ready', data }))
-      .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
+    CrmApi.contacts.list().then((data) => setState({ phase: 'ready', data })).catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [])
   useEffect(() => { load() }, [load])
 
-  const del = (id: string) => async () => {
-    try { await CrmApi.contacts.remove(id); load(); onChanged() }
+  const nameOf = useMemo(() => companyNameLookup(companies), [companies])
+  const records = useMemo(() => (state.phase === 'ready' ? state.data.map((c) => contactRecord(c, nameOf)) : []), [state, nameOf])
+  const fieldOptions = useCallback((f: FieldDefinition) => (f.name === 'company' ? companyOptions(companies) : undefined), [companies])
+  const del = useCallback(async (ids: string[]) => {
+    try { await Promise.all(ids.map((id) => CrmApi.contacts.remove(id))); load(); onChanged() }
     catch (e) { setState({ phase: 'error', error: classifyBackend(e) }) }
-  }
-
-  const columns: Column<Contact>[] = [
-    { key: 'name', header: 'Name', render: (r) => <Text fontSize="$3" fontWeight="600">{dash(`${r.firstName} ${r.lastName}`.trim())}</Text> },
-    { key: 'email', header: 'Email', render: (r) => <Text fontSize="$3" color="$color11">{dash(r.email)}</Text> },
-    { key: 'jobTitle', header: 'Title', render: (r) => <Text fontSize="$3" color="$color11">{dash(r.jobTitle)}</Text> },
-    { key: 'phone', header: 'Phone', width: 150, render: (r) => <Text fontSize="$3" color="$color11">{dash(r.phone)}</Text> },
-    { key: 'createdAt', header: 'Created', width: 190, render: (r) => <Text fontSize="$3" color="$color10">{fmtTime(r.createdAt)}</Text> },
-    { key: 'actions', header: '', width: 64, render: (r) => <RowDelete label={`Delete ${dash(`${r.firstName} ${r.lastName}`.trim() || r.email)}`} onDelete={del(r.id)} /> },
-  ]
+  }, [load, onChanged])
 
   return (
     <>
-      <Toolbar onNew={() => setCreating((v) => !v)} onRefresh={load} newLabel="New contact" />
       {creating ? <ContactForm onDone={() => { setCreating(false); load(); onChanged() }} /> : null}
-      {state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/crm/contacts" />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={state.phase === 'ready' ? state.data : []}
-          loading={state.phase === 'loading'}
-          rowKey={(r) => r.id}
-          empty="No contacts yet. Add your first contact."
-        />
-      )}
+      <CollectionPanel
+        state={state} fields={CONTACT_FIELDS} records={records} onReload={load}
+        onCreate={() => setCreating((v) => !v)} createLabel="New contact" onDelete={del}
+        empty="No contacts yet. Add your first contact."
+        hint="endpoint · GET /v1/crm/contacts" boardDisabled fieldOptions={fieldOptions}
+        drawerTitle={(r) => String(r.name ?? 'Contact')}
+      />
     </>
   )
 }
@@ -247,16 +257,13 @@ function ContactForm({ onDone }: { onDone: () => void }) {
     }
     setWorking(true); setError(null)
     try {
-      await CrmApi.contacts.create({
-        firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(),
-        jobTitle: jobTitle.trim(), phone: phone.trim(),
-      })
+      await CrmApi.contacts.create({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), jobTitle: jobTitle.trim(), phone: phone.trim() })
       onDone()
     } catch (e) { setError(classifyBackend(e)) } finally { setWorking(false) }
   }
 
   return (
-    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxWidth={760} mb="$3">
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxW={760} mb="$3">
       {error ? <BackendStateCard state={error} hint="endpoint · POST /v1/crm/contacts" /> : null}
       <FieldRow label="First name"><FieldText value={firstName} onChange={setFirst} placeholder="Ada" /></FieldRow>
       <FieldRow label="Last name"><FieldText value={lastName} onChange={setLast} placeholder="Lovelace" /></FieldRow>
@@ -272,47 +279,34 @@ function ContactForm({ onDone }: { onDone: () => void }) {
 
 // ── Opportunities ────────────────────────────────────────────────────────────
 
-function OpportunitiesView({ onChanged }: { onChanged: () => void }) {
+function OpportunitiesView({ companies, onChanged }: { companies: Company[]; onChanged: () => void }) {
   const [state, setState] = useState<Async<Opportunity[]>>({ phase: 'loading' })
   const [creating, setCreating] = useState(false)
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
-    CrmApi.opportunities
-      .list()
-      .then((data) => setState({ phase: 'ready', data }))
-      .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
+    CrmApi.opportunities.list().then((data) => setState({ phase: 'ready', data })).catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [])
   useEffect(() => { load() }, [load])
 
-  const del = (id: string) => async () => {
-    try { await CrmApi.opportunities.remove(id); load(); onChanged() }
+  const nameOf = useMemo(() => companyNameLookup(companies), [companies])
+  const records = useMemo(() => (state.phase === 'ready' ? state.data.map((o) => opportunityRecord(o, nameOf)) : []), [state, nameOf])
+  const fieldOptions = useCallback((f: FieldDefinition) => (f.name === 'company' ? companyOptions(companies) : undefined), [companies])
+  const del = useCallback(async (ids: string[]) => {
+    try { await Promise.all(ids.map((id) => CrmApi.opportunities.remove(id))); load(); onChanged() }
     catch (e) { setState({ phase: 'error', error: classifyBackend(e) }) }
-  }
-
-  const columns: Column<Opportunity>[] = [
-    { key: 'name', header: 'Name', render: (r) => <Text fontSize="$3" fontWeight="600">{dash(r.name)}</Text> },
-    { key: 'stage', header: 'Stage', width: 130, render: (r) => <Text fontSize="$3" color="$color11">{r.stage}</Text> },
-    { key: 'amount', header: 'Amount', width: 140, render: (r) => <Text fontSize="$3" color="$color11">{fmtMoney(r.amount, r.currency)}</Text> },
-    { key: 'createdAt', header: 'Created', width: 190, render: (r) => <Text fontSize="$3" color="$color10">{fmtTime(r.createdAt)}</Text> },
-    { key: 'actions', header: '', width: 64, render: (r) => <RowDelete label={`Delete ${dash(r.name)}`} onDelete={del(r.id)} /> },
-  ]
+  }, [load, onChanged])
 
   return (
     <>
-      <Toolbar onNew={() => setCreating((v) => !v)} onRefresh={load} newLabel="New opportunity" />
       {creating ? <OpportunityForm onDone={() => { setCreating(false); load(); onChanged() }} /> : null}
-      {state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/crm/opportunities" />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={state.phase === 'ready' ? state.data : []}
-          loading={state.phase === 'loading'}
-          rowKey={(r) => r.id}
-          empty="No opportunities yet. Create your first deal."
-        />
-      )}
+      <CollectionPanel
+        state={state} fields={OPPORTUNITY_FIELDS} records={records} onReload={load}
+        onCreate={() => setCreating((v) => !v)} createLabel="New opportunity" onDelete={del}
+        empty="No opportunities yet. Create your first deal — then switch to the Board for the stage pipeline."
+        hint="endpoint · GET /v1/crm/opportunities" fieldOptions={fieldOptions}
+        drawerTitle={(r) => String(r.name ?? 'Opportunity')}
+      />
     </>
   )
 }
@@ -329,16 +323,13 @@ function OpportunityForm({ onDone }: { onDone: () => void }) {
     setWorking(true); setError(null)
     try {
       // Amount is entered in whole currency units; the backend stores minor units (cents).
-      await CrmApi.opportunities.create({
-        name: name.trim(), stage,
-        amount: amount.trim() ? Math.round(Number(amount) * 100) : 0,
-      })
+      await CrmApi.opportunities.create({ name: name.trim(), stage, amount: amount.trim() ? Math.round(Number(amount) * 100) : 0 })
       onDone()
     } catch (e) { setError(classifyBackend(e)) } finally { setWorking(false) }
   }
 
   return (
-    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxWidth={760} mb="$3">
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxW={760} mb="$3">
       {error ? <BackendStateCard state={error} hint="endpoint · POST /v1/crm/opportunities" /> : null}
       <FieldRow label="Name"><FieldText value={name} onChange={setName} placeholder="Acme — enterprise plan" /></FieldRow>
       <FieldRow label="Stage"><FieldSelect value={stage} options={[...STAGES]} onChange={setStage} /></FieldRow>
@@ -350,28 +341,17 @@ function OpportunityForm({ onDone }: { onDone: () => void }) {
   )
 }
 
-// ── Shared toolbar ───────────────────────────────────────────────────────────
-
-function Toolbar({ onNew, onRefresh, newLabel }: { onNew: () => void; onRefresh: () => void; newLabel: string }) {
-  return (
-    <XStack gap="$2" mb="$3">
-      <Button size="$2" icon={<Plus size={15} />} onPress={onNew}>{newLabel}</Button>
-      <Button size="$2" icon={<RefreshCw size={15} />} onPress={onRefresh}>Refresh</Button>
-    </XStack>
-  )
-}
-
 // ── Module ───────────────────────────────────────────────────────────────────
 
 export function CrmModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
-  const active: Tab = (['companies', 'contacts', 'opportunities'] as Tab[]).includes(params.tab as Tab)
-    ? (params.tab as Tab)
-    : 'companies'
+  const active: Tab = (['companies', 'contacts', 'opportunities'] as Tab[]).includes(params.tab as Tab) ? (params.tab as Tab) : 'companies'
   const [summary, setSummary] = useState<Summary | null>(null)
+  const [companies, setCompanies] = useState<Company[]>([])
 
   const loadSummary = useCallback(() => {
     CrmApi.summary().then(setSummary).catch(() => setSummary(null))
+    CrmApi.companies.list().then(setCompanies).catch(() => setCompanies([]))
   }, [])
   useEffect(() => { loadSummary() }, [loadSummary])
 
@@ -395,13 +375,15 @@ export function CrmModule({ params }: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="CRM"
-        subtitle="Companies, contacts, and opportunities — your Hanzo Business-OS CRM, per org."
+        subtitle="Companies, contacts, and opportunities — a curated set of Base views. Switch Table ⇆ Board, filter, sort, group."
         actions={<XStack gap="$2">{nav}</XStack>}
       />
       <SummaryBar summary={summary} />
       {active === 'companies' ? <CompaniesView onChanged={loadSummary} /> : null}
-      {active === 'contacts' ? <ContactsView onChanged={loadSummary} /> : null}
-      {active === 'opportunities' ? <OpportunitiesView onChanged={loadSummary} /> : null}
+      {active === 'contacts' ? <ContactsView companies={companies} onChanged={loadSummary} /> : null}
+      {active === 'opportunities' ? <OpportunitiesView companies={companies} onChanged={loadSummary} /> : null}
     </>
   )
 }
+
+export default CrmModule
