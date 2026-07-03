@@ -24,6 +24,7 @@ import { StatusTag } from '~/components/ui/StatusTag'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { appUrl, appSource, orderDeployments, buildStatusOf, deploymentLabel, classifyPaasError } from './logic'
+import { DomainsPanel } from './DomainsPanel'
 
 const openUrl = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
@@ -379,6 +380,8 @@ function AppDetail({ app, onClose, onChanged }: { app: PaasAppWithProject; onClo
         ) : null}
       </XStack>
       {redeploy === 'error' ? <Text fontSize="$2" color="$red10">Redeploy failed. Retry.</Text> : null}
+
+      <DomainsPanel projectSlug={projectSlug} appSlug={appSlug} />
 
       <YStack gap="$2" pt="$1" borderTopWidth={1} borderColor="$borderColor">
         <Text fontSize="$3" fontWeight="700">Deployments</Text>
