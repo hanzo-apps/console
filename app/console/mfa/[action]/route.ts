@@ -1,0 +1,87 @@
+/**
+ * /console/mfa/<action> — console-native two-factor (TOTP) enrollment BFF.
+ *
+ * WHY console-native: the console delegated 2FA to hanzo.id's account page, but the
+ * custom hanzo.id login worker doesn't establish a Casdoor account session, so a
+ * user who signed in through it lands on an account page that can't manage MFA
+ * (setup returns "Unauthorized operation"). This closes that gap: the user enrolls
+ * 2FA IN the console. We forward each IAM MFA op as the caller's OWN user bearer
+ * (the authz filter authenticates the JWT and Casbin authorizes self-service MFA),
+ * with owner/name PINNED to the resolved session user — so a caller can only ever
+ * manage THEIR OWN 2FA, never another account's.
+ *
+ * Actions (POST): initiate · verify · enable · disable — the standard TOTP flow.
+ */
+import { type NextRequest, NextResponse } from 'next/server'
+
+import { resolveUser, adminBearer, iamBaseUrl } from '~/lib/server/identity'
+import { csrfRefusal } from '~/lib/server/bearer-proxy'
+import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
+
+export const runtime = 'nodejs'
+
+const TOTP = 'app' // Casdoor TotpType
+
+/** IAM endpoint + the form fields each action sends (owner/name are pinned server-side). */
+const ACTIONS: Record<string, { path: string; fields: (u: { owner: string; name: string }, b: Body) => Record<string, string> }> = {
+  initiate: {
+    path: '/v1/iam/mfa/setup/initiate',
+    fields: (u) => ({ owner: u.owner, name: u.name, mfaType: TOTP }),
+  },
+  verify: {
+    path: '/v1/iam/mfa/setup/verify',
+    fields: (_u, b) => ({ mfaType: TOTP, passcode: b.passcode ?? '', secret: b.secret ?? '' }),
+  },
+  enable: {
+    path: '/v1/iam/mfa/setup/enable',
+    fields: (u, b) => ({ owner: u.owner, name: u.name, mfaType: TOTP, secret: b.secret ?? '', recoveryCodes: b.recoveryCodes ?? '' }),
+  },
+  disable: {
+    path: '/v1/iam/delete-mfa',
+    fields: (u) => ({ owner: u.owner, name: u.name }),
+  },
+}
+
+type Body = { passcode?: string; secret?: string; recoveryCodes?: string }
+
+export async function POST(req: NextRequest, ctx: { params: Promise<{ action: string }> }): Promise<NextResponse> {
+  const csrf = csrfRefusal(req)
+  if (csrf) return csrf
+
+  const { action } = await ctx.params
+  const spec = ACTIONS[action]
+  if (!spec) return NextResponse.json({ error: 'unknown action' }, { status: 404 })
+
+  const user = await resolveUser(req)
+  if (!user) return NextResponse.json({ error: 'not authenticated' }, { status: 401 })
+
+  const body = (await req.json().catch(() => ({}))) as Body
+
+  let bearer: string
+  try {
+    bearer = await adminBearer(user)
+  } catch {
+    return NextResponse.json({ status: 'error', msg: 'Could not authorize the request.' }, { status: 502 })
+  }
+
+  const form = new URLSearchParams(spec.fields({ owner: user.owner, name: user.name }, body))
+  try {
+    const res = await fetchWithTimeout(`${iamBaseUrl()}${spec.path}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${bearer}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json',
+      },
+      body: form.toString(),
+      cache: 'no-store',
+    })
+    const text = await res.text()
+    return new NextResponse(text, {
+      status: res.status,
+      headers: { 'Content-Type': res.headers.get('content-type') ?? 'application/json' },
+    })
+  } catch {
+    return NextResponse.json({ status: 'error', msg: 'Identity service is unavailable.' }, { status: 502 })
+  }
+}
