@@ -20,20 +20,14 @@
  * Honest states throughout: config-unavailable, decline, in-flight (button locked
  * to prevent a double-charge), success. Crypto (HUSD) stays a secondary option.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { CreditCard, ShieldCheck, Check, ArrowRight, Coins, FlaskConical } from '@hanzogui/lucide-icons-2'
 
 import { BillingApi, type PaymentConfig } from '~/lib/api/billing'
-import {
-  loadSquareSdk,
-  isLiveSquareEnv,
-  dollarsToCents,
-  validateTopupCents,
-  PRESET_TOPUP_USD,
-  type SquareCard,
-} from '~/lib/billing/square'
+import { isLiveSquareEnv, dollarsToCents, validateTopupCents, PRESET_TOPUP_USD } from '~/lib/billing/square'
+import { useSquareCard } from '~/lib/billing/use-square-card'
 import { useCloudBalance, spendableCents, invalidateBalance } from '~/lib/billing/live-balance'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
@@ -44,8 +38,6 @@ type ConfigState =
   | { phase: 'loading' }
   | { phase: 'error'; error: BackendState }
   | { phase: 'ready'; cfg: PaymentConfig }
-
-type CardPhase = 'idle' | 'mounting' | 'ready' | 'error'
 
 type Submit =
   | { state: 'idle' }
@@ -58,13 +50,8 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
   const { phase: balPhase, balance: bal } = useCloudBalance()
 
   const [cfg, setCfg] = useState<ConfigState>({ phase: 'loading' })
-  const [cardPhase, setCardPhase] = useState<CardPhase>('idle')
-  const [cardError, setCardError] = useState<string>('')
   const [amount, setAmount] = useState<string>('25')
   const [submit, setSubmit] = useState<Submit>({ state: 'idle' })
-
-  const cardRef = useRef<HTMLDivElement | null>(null)
-  const cardInstance = useRef<SquareCard | null>(null)
 
   const cents = dollarsToCents(amount)
   const amountError = cents === null ? null : validateTopupCents(cents)
@@ -80,79 +67,36 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
     }
   }, [])
 
-  // 2) Once config is ready AND the org actually has a Square application, load
-  //    the SDK and mount the card field into our container.
+  // 2) Once config is ready AND the org has a Square application, the shared card
+  //    hook loads the SDK and mounts the PCI-scoped iframe into `card.containerRef`
+  //    (the SAME capability the Add-payment-method surface uses).
   const ready = cfg.phase === 'ready' ? cfg.cfg : null
   const configured = !!ready && !!ready.applicationId && !!ready.locationId
-
-  useEffect(() => {
-    if (!configured || !ready) return
-    let disposed = false
-    setCardPhase('mounting')
-    setCardError('')
-    loadSquareSdk(ready.environment)
-      .then(async (sdk) => {
-        if (disposed) return
-        const payments = sdk.payments(ready.applicationId, ready.locationId)
-        const card = await payments.card({
-          // Legible on the console's dark surface; Square renders the actual
-          // (PCI-scoped) inputs inside its own iframe.
-          style: { input: { color: '#e8e8e8' }, '.input-container': { borderColor: '#3a3a3a' } },
-        })
-        if (disposed) {
-          await card.destroy().catch(() => {})
-          return
-        }
-        const mount = cardRef.current
-        if (!mount) return
-        await card.attach(mount)
-        if (disposed) {
-          await card.destroy().catch(() => {})
-          return
-        }
-        cardInstance.current = card
-        setCardPhase('ready')
-      })
-      .catch((e: unknown) => {
-        if (disposed) return
-        setCardError(e instanceof Error ? e.message : 'Could not load the card form.')
-        setCardPhase('error')
-      })
-    return () => {
-      disposed = true
-      const c = cardInstance.current
-      cardInstance.current = null
-      if (c) void c.destroy().catch(() => {})
-    }
-  }, [configured, ready])
+  const card = useSquareCard(configured ? ready : null)
+  const cardPhase = card.phase
 
   const pay = useCallback(async () => {
-    const card = cardInstance.current
-    if (!card || cents === null || amountError || submit.state === 'submitting') return
+    if (!card.ready || cents === null || amountError || submit.state === 'submitting') return
     setSubmit({ state: 'submitting' })
     try {
-      const result = await card.tokenize()
-      if (result.status !== 'OK' || !result.token) {
-        const msg = result.errors?.map((x) => x.message).filter(Boolean).join('; ') || 'Card details are incomplete.'
-        setSubmit({ state: 'error', message: msg })
-        return
-      }
+      // Tokenize IN Square's iframe → an opaque single-use nonce (never a PAN).
+      const token = await card.tokenize()
       // Charge the nonce → credit the canonical balance. The nonce is single-use,
       // so a retry with it replays rather than double-charging.
-      const res = await BillingApi.topupWithCard({ sourceId: result.token, amountCents: cents })
+      const res = await BillingApi.topupWithCard({ sourceId: token, amountCents: cents })
       invalidateBalance() // refresh the shared balance on every surface
       setSubmit({ state: 'done', addedCents: cents, balanceCents: res.balanceCents })
     } catch (e) {
       const message = e instanceof Error ? e.message : 'The charge could not be completed.'
       setSubmit({ state: 'error', message })
     }
-  }, [cents, amountError, submit.state])
+  }, [card, cents, amountError, submit.state])
 
   const reset = useCallback(() => {
     setSubmit({ state: 'idle' })
   }, [])
 
-  const canPay = cardPhase === 'ready' && cents !== null && !amountError && submit.state !== 'submitting'
+  const canPay = card.ready && cents !== null && !amountError && submit.state !== 'submitting'
 
   return (
     <>
@@ -274,7 +218,7 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
               Card
             </Text>
             <Card p="$3" borderWidth={1} borderColor="$borderColor" bg="$color1">
-              <div ref={cardRef} id="hz-card-container" style={{ minHeight: 42 }} />
+              <div ref={card.containerRef} id="hz-card-container" style={{ minHeight: 42 }} />
               {cardPhase === 'mounting' ? (
                 <Text fontSize="$2" color="$color10">
                   Loading secure card field…
@@ -282,7 +226,7 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
               ) : null}
               {cardPhase === 'error' ? (
                 <Text fontSize="$2" color="$red10">
-                  {cardError || 'Could not load the card form.'}
+                  {card.error || 'Could not load the card form.'}
                 </Text>
               ) : null}
             </Card>
