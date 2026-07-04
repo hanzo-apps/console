@@ -35,6 +35,9 @@ import {
   invalidateBalance,
   subscribeBalance,
   spendableCents,
+  backoffDelay,
+  POLL_MS,
+  BACKOFF_CAP_MS,
   __resetBalanceStore,
 } from './live-balance'
 
@@ -145,5 +148,66 @@ describe('invalidateBalance', () => {
     unsub()
     expect(seen).toContain(9974)
     expect(seen).toContain(10974)
+  })
+})
+
+/**
+ * Resilience to a transient backend blip (a 502/503/504 while commerce rolls). These
+ * prove the fix for the live capstone defect — billing hammered `billing/v1/balance`
+ * hundreds of times against a down endpoint with no relief. The breaker turns a
+ * minutes-long outage into a handful of spaced attempts (exponential backoff + jitter,
+ * capped), gates the AUTOMATIC triggers while it's open, resets on the first success,
+ * and never blocks a USER-initiated retry.
+ */
+describe('backoff + circuit breaker on repeated 5xx', () => {
+  it('backoffDelay grows exponentially, is jitter-bounded, and caps', () => {
+    // Deterministic floor (rand→0): the base doubles each consecutive failure.
+    const floor = (n: number) => backoffDelay(n, () => 0)
+    expect(floor(1)).toBe(1_000) // 2s exp, equal-jitter floor = 1s
+    expect(floor(2)).toBe(2_000)
+    expect(floor(3)).toBe(4_000)
+    expect(floor(1)).toBeLessThan(floor(2))
+    expect(floor(2)).toBeLessThan(floor(3))
+    expect(floor(3)).toBeLessThan(floor(4))
+    // Healthy (0 failures) ⇒ the steady poll cadence, never a backoff step.
+    expect(backoffDelay(0)).toBe(POLL_MS)
+    // Capped: even a huge failure streak (any jitter draw) never exceeds the ceiling.
+    expect(backoffDelay(100, () => 0)).toBeLessThanOrEqual(BACKOFF_CAP_MS)
+    expect(backoffDelay(100, () => 0.999999)).toBeLessThanOrEqual(BACKOFF_CAP_MS)
+    // Jitter stays within [exp/2, exp] — spreads retries without exceeding the step.
+    const d = backoffDelay(3, () => 0.5)
+    expect(d).toBeGreaterThanOrEqual(4_000)
+    expect(d).toBeLessThanOrEqual(8_000)
+  })
+
+  it('gates automatic refetches after a 5xx — a bounded call count, not hundreds', async () => {
+    cloudBalance.mockRejectedValue(new ApiError('bad gateway', 502))
+    await refreshBalance() // attempt 1 → fails → breaker opens, error surfaced
+    expect(getBalanceSnapshot().phase).toBe('error')
+    expect(cloudBalance).toHaveBeenCalledTimes(1)
+    // Simulate the storm: hundreds of automatic mount/poll/focus refetches during the
+    // outage window. The old poll made ~4 upstream calls EACH (client transient-retry);
+    // now every automatic call is gated by the still-open backoff ⇒ ZERO extra fetches.
+    for (let i = 0; i < 300; i++) await refreshBalance() // mount/poll (force:false)
+    for (let i = 0; i < 300; i++) await refreshBalance({ force: true }) // focus (force, still gated)
+    expect(cloudBalance).toHaveBeenCalledTimes(1)
+    expect(getBalanceSnapshot().phase).toBe('error') // stays honest, no infinite spinner
+  })
+
+  it('a user retry bypasses the breaker, and a success resets it to the healthy cadence', async () => {
+    cloudBalance.mockRejectedValue(new ApiError('bad gateway', 502))
+    await refreshBalance()
+    expect(cloudBalance).toHaveBeenCalledTimes(1)
+    expect(getBalanceSnapshot().phase).toBe('error')
+    // User clicks Refresh (invalidateBalance → bypassBackoff) and the backend recovered.
+    cloudBalance.mockResolvedValue(bal(500))
+    invalidateBalance()
+    await tick()
+    expect(cloudBalance).toHaveBeenCalledTimes(2)
+    expect(getBalanceSnapshot().phase).toBe('ready')
+    expect(spendableCents(getBalanceSnapshot().balance)).toBe(500)
+    // Breaker reset ⇒ an automatic forced poll refetches immediately again (no gate).
+    await refreshBalance({ force: true })
+    expect(cloudBalance).toHaveBeenCalledTimes(3)
   })
 })
