@@ -111,6 +111,14 @@ function cloudUrl(): string {
 // this org — not the brand's own — which is why `resolveConfig` switches BOTH the
 // app and the org on an admin host. Literal is IAM_ADMIN_ORG=admin.
 const ADMIN_ORG = 'admin'
+// DEPRECATED — DATA-DRIVEN MIGRATION (white-label follow-up). This hardcoded
+// BRANDS + HOST_BRANDS map is the "add a brand = edit code + redeploy" hardcode the
+// white-label system removes. The canonical source of a brand is the TENANT RECORD
+// (organization + webServerSettings.{host,logoUrl,faviconUrl} + domain bindings),
+// resolved at RUNTIME by host via GET /v1/brand?host=. New brands = a tenant record
+// (the Tenants board creates it), NOT a row here. NOT swapped yet: NEXT_PUBLIC_IAM_*
+// + the OAuth issuer bake in at build time, so a blind swap breaks sign-in. Treat
+// these rows as the SEED for the tenant records until every host has one, then delete.
 const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string; adminApp: string; billingUrl: string; docsUrl: string }> = {
   hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.hanzo.ai', docsUrl: 'https://docs.hanzo.ai' },
   lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.lux.cloud', docsUrl: 'https://docs.lux.network' },
