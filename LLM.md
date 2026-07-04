@@ -1995,3 +1995,27 @@ this release completes + ships them.
   "New collection" form + `contentCollection` helper are replaced by the builder;
   the dead `src/lib/api/cms.ts` (old /v1/cms iframe client) was already removed.
   Rebased on origin/main → **v8.4.67**.
+
+## CMS routing fix — framework/s3 clients use the /cloud proxy (v8.4.70)
+
+The v8.4.67 CMS shipped but every framework call 403'd for a real user whose org HAS
+the cms module — the "Not enabled" card. ROOT CAUSE: the framework + storage clients
+addressed a bare `/v1/framework` / `/v1/s3`, but console.hanzo.ai's INGRESS routes
+`/v1/*` to hanzoai/gateway (bypassing Next), so the next.config `/v1/<head> → /cloud`
+rewrite never runs and the gateway 403s (no principal). FIX (v8.4.70): the
+framework/client.ts + api/storage.ts build URLs with `cloudProxyV1Url` →
+`/cloud/v1/...` (re-added to api/client.ts; the /v1-canonicalization had deleted it).
+The `/cloud` route reaches app/cloud's bearer proxy, which mints a user-bound token
+and forwards with the org from the token owner. Fixes CMS + ERP + Help (all use
+FrameworkApi) + the S3 product + the CMS media DAM in ONE class-fix. VERIFIED LIVE as
+Dave (maxpower): all 6 collections render, the content-type builder + Lexical WYSIWYG
+work, a record was created→published (status=Published, body=Lexical JSON), read-mode
+renders the rich HTML. Needs cloud with the RichText fieldtype (v1.786.56; see prior
+section — the release path had minted phantom tags, retagged the boot-verified
+sha-d529c6f).
+
+KNOWN INFRA GAP (not CMS): the media DAM's S3 object PUT returns 500 InternalError
+from s3.hanzo.ai (MinIO/SeaweedFS backend) — bucket-create + presign + Media-doc-create
+all work (200/201), only the object WRITE fails, backend-wide (a fresh bucket 500s
+too). The DAM code is correct up to the storage boundary; the S3 write path is a
+separate infra defect.
