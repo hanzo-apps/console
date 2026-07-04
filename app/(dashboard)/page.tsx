@@ -22,6 +22,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FadeIn } from '~/components/ui/FadeIn'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
+import { ResourceOverview } from '~/components/products/overview/ResourceOverview'
 
 // The home centerpiece is the reusable LivingOverview (count-up KPIs, live
 // sparklines, streaming activity) — the SAME component every product overview uses.
@@ -155,6 +156,7 @@ export default function DashboardHome() {
     <YStack gap="$7">
       <GetApiKeyCta onOpen={() => push('/api-keys')} />
       <OverviewDashboard params={{}} />
+      <ResourceOverview />
       <YStack gap="$4">
         <PageHeader
           title="Explore products"

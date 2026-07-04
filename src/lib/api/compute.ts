@@ -47,10 +47,16 @@ export type Gpu = {
   id: string
   uuid?: string
   name?: string
-  /** Accelerator model, e.g. `H100`, `A100`, `RTX 4090`, `L40S`. */
+  /** Accelerator model, e.g. `H100`, `A100`, `RTX 4090`, `L40S`, `GB10`. */
   model?: string
   cluster?: string
   region?: string
+  /**
+   * Where this GPU lives, as the unioned inventory reports it: `visor`/`doks`
+   * (Hanzo Cloud) or `byo` (a bring-your-own worker / on-prem node, e.g. a
+   * DGX Spark GB10). Absent on older responses; drives the cloud-vs-BYO badge.
+   */
+  provider?: string
   /** Lifecycle/health string, e.g. `online`, `offline`, `degraded`. */
   status?: string
   health?: string
@@ -116,6 +122,28 @@ const num = (v: unknown): number | undefined =>
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 const rec = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {})
 
+/**
+ * GB from a numeric value OR a unit-suffixed string. On-prem/BYO agents report
+ * a GPU's memory as a plain string (`"128GB"`, `"80 GiB"`, `"131072MB"`) rather
+ * than the numeric `memoryTotalGb` DOKS inventory carries — this tolerates both
+ * so a bring-your-own GPU shows its VRAM instead of `—`. Returns `undefined` for
+ * anything unparseable (never a fabricated 0). PURE.
+ */
+const gbOf = (v: unknown): number | undefined => {
+  const n = num(v)
+  if (n !== undefined) return n
+  const s = str(v)
+  if (!s) return undefined
+  const m = /([\d.]+)\s*(tib|tb|t|gib|gb|g|mib|mb|m)?/i.exec(s.trim())
+  if (!m) return undefined
+  const val = Number(m[1])
+  if (!Number.isFinite(val)) return undefined
+  const unit = (m[2] ?? 'g').toLowerCase()
+  if (unit.startsWith('t')) return Math.round(val * 1024)
+  if (unit.startsWith('m')) return Math.round(val / 1024)
+  return val
+}
+
 /** Pull the first array found under any of the common envelope keys (else `[]`). */
 const arrayUnder = (payload: unknown, keys: string[]): Record<string, unknown>[] => {
   if (Array.isArray(payload)) return payload as Record<string, unknown>[]
@@ -144,11 +172,12 @@ export function normalizeGpu(raw: unknown): Gpu {
     model: str(r.model) ?? str(r.gpuModel) ?? str(r.product) ?? str(r.type),
     cluster: str(r.cluster) ?? str(r.clusterName) ?? str(r.node) ?? str(r.nodeName),
     region: str(r.region) ?? str(r.zone),
+    provider: str(r.provider) ?? str(r.origin) ?? str(r.source),
     status: str(r.status) ?? str(r.state),
     health: str(r.health),
     utilization: num(r.utilization) ?? num(r.util) ?? num(r.gpuUtil) ?? num(r.gpuUtilization),
     memoryUtil: num(r.memoryUtil) ?? num(r.memUtil) ?? num(r.memoryUtilization),
-    memoryTotalGb: num(r.memoryTotalGb) ?? num(r.memoryGb) ?? num(r.vramGb),
+    memoryTotalGb: num(r.memoryTotalGb) ?? num(r.memoryGb) ?? num(r.vramGb) ?? gbOf(r.memory) ?? gbOf(r.vram),
     temperature: num(r.temperature) ?? num(r.temp) ?? num(r.tempC),
     power: num(r.power) ?? num(r.powerW) ?? num(r.powerDraw),
     uptimeSeconds: num(r.uptimeSeconds) ?? num(r.uptime),
