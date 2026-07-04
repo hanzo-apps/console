@@ -55,25 +55,21 @@ afterEach(() => {
 
 // Most refactored clients hit a CANONICAL `/v1/<resource>` (nothing before /v1/): the
 // console host's ingress routes `/v1/*` to the gateway (cloud-api), which SERVES those
-// heads on the session/header path (provisioning reads the stamped X-Org-Id; billing +
-// the AI heads validate the session), so the browser URL stays prefix-free.
+// heads on the session/header path (the AI heads validate the session), so the browser
+// URL stays prefix-free.
 //
 // The EXCEPTIONS are heads the bare `/v1/*` → gateway path can NOT satisfy: the VISOR
 // catalog (regions/sizes/gpus — cloud-api serves no visor catalog route) and the
-// bearer-scoped compute + s3 + framework surfaces (cloud-api needs an org from a minted
-// BEARER, which the gateway strips from the cookie-only path → 403). Those clients
-// address their `/vm` or `/cloud` user-bearer proxy EXPLICITLY — see the dedicated block
-// below. This is the SAME ingress reality that the framework/s3 fix (v8.4.70) documented.
+// bearer-scoped compute + s3 + framework + PROVISIONING (sql/vector/kv/…) surfaces
+// (cloud-api needs an org from a minted BEARER, which the gateway strips from the
+// cookie-only path → 403 "X-Org-Id required"). Those clients address their `/vm` or
+// `/cloud` user-bearer proxy EXPLICITLY — see the dedicated block below. This is the
+// SAME ingress reality that the framework/s3 fix (v8.4.70) documented.
 describe('canonical /v1 client paths (no service prefix before /v1/)', () => {
   it('ComputeApi.gpus (inventory) -> /v1/gpus', async () => {
     stub({ gpus: [] })
     await ComputeApi.gpus()
     expect(lastUrl).toBe(`${ORIGIN}/v1/gpus`)
-  })
-  it('ProvisioningApi.list(sql) -> /v1/sql', async () => {
-    stub([])
-    await ProvisioningApi.list('sql')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/sql`)
   })
   it('PlatformApi.listClusters -> /v1/clusters', async () => {
     stub({ clusters: [] })
@@ -82,8 +78,8 @@ describe('canonical /v1 client paths (no service prefix before /v1/)', () => {
   })
 
   it('a prefix-free client never emits a /<svc>/v1/ path', async () => {
-    stub([])
-    await ProvisioningApi.list('sql')
+    stub({ gpus: [] })
+    await ComputeApi.gpus()
     expect(lastUrl).not.toMatch(/\/(cloud|vm|ai|billing|org)\/v1\//)
   })
 })
@@ -178,17 +174,19 @@ describe('canonical /v1 — the last six data-product clients (no prefix before 
   })
 })
 
-// s3 + framework + billing are the DELIBERATE exceptions to the prefix-free rule
-// above. The live console ingress does NOT rewrite a bare `/v1/s3` / `/v1/framework`
-// / `/v1/billing` to the console app — those heads reach the gateway-fronted cloud
-// binary directly, which 403s a cookie-only browser request with no bearer (s3/
-// framework: "valid principal required"; billing: "sign in to view billing"). So the
-// clients address the console's OWN proxy EXPLICITLY: s3/framework via the `/cloud`
-// user-bearer proxy (`cloudProxyV1Url`), billing via the per-tenant `/billing/v1/*`
-// service-token proxy (`billingProxyV1Url`) — both routed to their Next handler
-// regardless of the `/v1/*` ingress config. This block PINS that exception so a
-// future "canonicalization" can't repoint them to a bare `/v1/` that 403s live.
-describe('proxy exceptions — s3/framework via /cloud/v1, billing via /billing/v1 (ingress does not rewrite their heads)', () => {
+// s3 + framework + provisioning (sql/vector/kv/datastore/docdb/search) + billing are the
+// DELIBERATE exceptions to the prefix-free rule above. The live console ingress does NOT
+// rewrite a bare `/v1/s3` / `/v1/framework` / `/v1/<data-kind>` / `/v1/billing` to the
+// console app — those heads reach the gateway-fronted cloud binary directly, which 403s a
+// cookie-only browser request with no bearer (s3/framework: "valid principal required";
+// provisioning: "X-Org-Id required"; billing: "sign in to view billing"). A signed-in user
+// then saw a FALSE "Not enabled for your account" on Vector/SQL/KV/… So the clients address
+// the console's OWN proxy EXPLICITLY: s3/framework/provisioning via the `/cloud` user-bearer
+// proxy (`cloudProxyV1Url`), billing via the per-tenant `/billing/v1/*` service-token proxy
+// (`billingProxyV1Url`) — both routed to their Next handler regardless of the `/v1/*` ingress
+// config. This block PINS that exception so a future "canonicalization" can't repoint them to
+// a bare `/v1/` that 403s live.
+describe('proxy exceptions — s3/framework/provisioning via /cloud/v1, billing via /billing/v1 (ingress does not rewrite their heads)', () => {
   it('StorageApi.buckets -> /cloud/v1/s3/buckets (NOT bare /v1/s3)', async () => {
     stub({ buckets: [] })
     await StorageApi.buckets()
@@ -199,6 +197,18 @@ describe('proxy exceptions — s3/framework via /cloud/v1, billing via /billing/
     stub({ data: [] })
     await FrameworkApi.doctypes.list()
     expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/framework/doctypes`)
+  })
+
+  it('ProvisioningApi.list(vector) -> /cloud/v1/vector (NOT bare /v1/vector → gateway 403)', async () => {
+    stub([])
+    await ProvisioningApi.list('vector')
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/vector`)
+  })
+
+  it('ProvisioningApi.list(sql) -> /cloud/v1/sql (bearer-scoped, NOT bare /v1/sql)', async () => {
+    stub([])
+    await ProvisioningApi.list('sql')
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/sql`)
   })
 
   it('BillingApi.balance -> /billing/v1/balance (NOT bare /v1/billing)', async () => {
