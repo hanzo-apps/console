@@ -861,8 +861,11 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
   const launcher = useAppLauncher()
   return (
     <SlideOver open={open} onClose={() => onOpenChange(false)} side="right" size={320} ariaLabel="Navigation">
-      <YStack flex={1} minH={0} p="$3" gap="$2.5">
-        <XStack gap="$2">
+      {/* `hz-touch-target` raises every control in the drawer to a ≥44px tap target
+          on phones/tablets (see globals.css); the desktop sidebar is a separate
+          mount and stays dense. */}
+      <YStack flex={1} minH={0} p="$3" gap="$2.5" className="hz-touch-target">
+        <XStack gap="$2" items="center">
           <XStack
             flex={1}
             onPress={() => {
@@ -873,7 +876,7 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
             items="center"
             gap="$2"
             px="$3"
-            height={40}
+            height={44}
             bg="$color2"
             borderWidth={1}
             borderColor="$borderColor"
@@ -896,6 +899,18 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
             borderWidth={1}
             borderColor="$borderColor"
             aria-label="Apps"
+          />
+          {/* Explicit close — right-aligned INSIDE the drawer header, so it is always
+              reachable on a 390px phone (backdrop/Escape still close too). */}
+          <Button
+            size="$3"
+            chromeless
+            minW={44}
+            icon={<X size={20} />}
+            onPress={() => onOpenChange(false)}
+            borderWidth={1}
+            borderColor="$borderColor"
+            aria-label="Close navigation"
           />
         </XStack>
         <SidebarNav collapsed={false} onNavigate={() => onOpenChange(false)} />
@@ -962,11 +977,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           />
 
-          {/* Hamburger — opens the RIGHT nav drawer. Shown only below lg. */}
+          {/* Hamburger — opens the RIGHT nav drawer. Shown only below lg; ≥44×44
+              touch target (WCAG 2.5.5). Hidden at lg+, so no desktop impact. */}
           <Button
             size="$3"
             chromeless
             $lg={{ display: 'none' }}
+            minW={44}
+            minH={44}
             icon={<Menu size={ICON} />}
             onPress={() => setDrawerOpen(true)}
             aria-label="Open navigation"
