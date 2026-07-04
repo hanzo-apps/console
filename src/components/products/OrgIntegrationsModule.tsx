@@ -117,7 +117,7 @@ function ProviderCard({
 
 export function OrgIntegrationsModule(_props: { params: Record<string, string> }) {
   const router = useRouter()
-  const search = useSearchParams()
+  const search = useSearchParams() ?? new URLSearchParams()
   const toast = useToast()
 
   const [providers, setProviders] = useState<Provider[]>([])
