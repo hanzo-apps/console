@@ -77,6 +77,7 @@ import { Users,
   ArrowLeftRight,
   Wallet,
   Coins,
+  Gift,
   MessageSquare,
   Search,
   KeySquare,
@@ -237,6 +238,9 @@ import { CustomersModule as FleetCustomersModule } from '~/components/products/a
 import { RevenueModule as FleetRevenueModule } from '~/components/products/admin/RevenueModule'
 import { AnalyticsModule as RetentionModule } from '~/components/products/admin/AnalyticsModule'
 import { EnablementModule as AdminEnablementModule } from '~/components/products/admin/EnablementModule'
+// Aliased to avoid collisions with the customer `projects` product + a bare Grants name.
+import { GrantsModule as FleetGrantsModule } from '~/components/products/admin/GrantsModule'
+import { ProjectsModule as FleetProjectsModule } from '~/components/products/admin/ProjectsModule'
 import { BetaFeaturesModule } from '~/components/products/BetaFeaturesModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
@@ -558,6 +562,40 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FleetRevenueModule }],
+  },
+  {
+    // admin.hanzo.ai GRANTS board — the fleet credit-grant ledger + issuance (comps,
+    // welcome/starter, support). GLOBAL-ADMIN ONLY (`admin: true` hides it from every
+    // customer; the `/v1/admin/grants` aggregate is server-gated by getAdminGate). The
+    // grant `source` is Trial (non-cash comp) or Prepaid (real money). Real commerce data.
+    id: 'fleet-grants',
+    label: 'Grants',
+    icon: Gift,
+    description: 'Every credit grant issued across the platform — comps, welcome/starter, support. Issue new grants.',
+    gcp: 'Cloud Billing credits',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: FleetGrantsModule }],
+  },
+  {
+    // admin.hanzo.ai PROJECTS board — the cross-org "what is deployed" view: every org's
+    // apps across all clusters (health, cluster, live URL, drift). READ-ONLY. GLOBAL-ADMIN
+    // ONLY (`admin: true`). A lens over the EXISTING global apps inventory (PlatformApi.apps
+    // → /v1/apps) — no new backend surface, nothing fabricated. Drill by org via the filter.
+    id: 'fleet-projects',
+    label: 'Projects',
+    icon: FolderGit2,
+    description: 'Every org’s deployed apps across all clusters — health, cluster, and live URL. Read-only.',
+    gcp: 'Cloud Deploy (fleet)',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: FleetProjectsModule }],
   },
   {
     // admin.hanzo.ai ANALYTICS board — native SaaS analytics: cohort retention,
