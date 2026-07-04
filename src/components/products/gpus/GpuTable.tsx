@@ -11,7 +11,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Input, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
-import { MoreHorizontal, Search } from '@hanzogui/lucide-icons-2'
+import { Search } from '@hanzogui/lucide-icons-2'
 
 import {
   filterGpus,
@@ -41,7 +41,6 @@ const COLS = [
   { key: 'power', header: 'Power', width: 78 },
   { key: 'uptime', header: 'Uptime', width: 84 },
   { key: 'location', header: 'Location', width: 96 },
-  { key: 'menu', header: '', width: 44 },
 ] as const
 const TOTAL = COLS.reduce((a, c) => a + c.width, 0)
 
@@ -213,11 +212,6 @@ export function GpuTable({ gpus, pageSize = 10 }: { gpus: Gpu[]; pageSize?: numb
                   <Text fontSize="$3" color="$color11" numberOfLines={1}>
                     {g.location || '—'}
                   </Text>
-                </Cell>
-                <Cell width={COLS[10].width}>
-                  <HintButton icon={<MoreHorizontal size={15} />} disabled hint="Per-GPU actions connect with a GPU provider">
-                    {''}
-                  </HintButton>
                 </Cell>
               </XStack>
             ))

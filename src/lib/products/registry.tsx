@@ -130,7 +130,6 @@ import { PromptCreateModule, PromptMetricsModule, PromptsModule } from '~/compon
 import { EvalsModule } from '~/components/products/EvalsModule'
 import { DatasetItemsModule, DatasetRunsModule, DatasetsModule } from '~/components/products/DatasetsModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
-import { ComingSoon } from '~/components/products/ComingSoon'
 import { overviewFor } from '~/components/products/overview/NativeOverview'
 import { CategoryOverview } from '~/components/products/overview/CategoryOverview'
 import {
@@ -317,19 +316,19 @@ export {
 import { entryInBrandScope } from './brand-scope'
 
 /**
- * Enablement state — honest, two values only:
- *  - `enabled`  : an in-console module that works now (opens straight in, whether
- *                 a bespoke admin surface or a native product overview).
- *  - `soon`     : the primitive ships but has no console surface yet; the entry
- *                 opens an honest "coming soon" page pointing at the API/CLI.
+ * Enablement state — one honest value: every catalog entry is live. An entry
+ * either opens straight in (a bespoke admin surface or a native product overview)
+ * or, for a deployed external app, launches its own domain — but it is always
+ * usable. There is no "coming soon" state: an unfinished primitive is simply not
+ * listed, never shown as a dead placeholder.
  *
  * `external` is NOT a status — it is a `kind` (the shape discriminant on
  * `CatalogEntry`), orthogonal to enablement: a launch tile for a deployed external
  * app (the Lux/Zoo chain-app suite) is `status: 'enabled'` (it's live) with
- * `kind: 'external'` (it opens in a new tab). Enablement stays two honest values;
- * how a live entry OPENS (native route vs. external launch) is the kind, not this.
+ * `kind: 'external'` (it opens in a new tab). How a live entry OPENS (native route
+ * vs. external launch) is the kind, not this.
  */
-export type ProductStatus = 'enabled' | 'soon'
+export type ProductStatus = 'enabled'
 
 type CatalogBase = {
   /** Stable id and base path segment, e.g. 'vector'. */
@@ -344,7 +343,7 @@ type CatalogBase = {
   gcp?: string
   /** Category grouping. */
   category: ProductCategory
-  /** Enablement state — drives the nav badge + Open vs coming soon. */
+  /** Enablement state — always 'enabled'; every listed entry is live. */
   status: ProductStatus
   /** Source repo for the product, e.g. 'hanzoai/vector'. Only set where it exists. */
   repo?: string
@@ -417,13 +416,6 @@ const ext = {
   ide: `${DOCS}/code`,
   desktop: `${DOCS}/desktop`,
 } as const
-
-/**
- * The shared "coming soon" surface for a `soon` entry — an honest page that
- * resolves itself from the path and points at the API/CLI. ONE component for
- * every `soon` leaf (DRY), so a soon entry is just `routes: soonRoutes`.
- */
-const soonRoutes: ProductRoute[] = [{ path: '', component: ComingSoon }]
 
 /**
  * The native product overview for a product that has no bespoke admin surface yet.
@@ -1010,8 +1002,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     // Real, enabled deploy surface — kept under Compute as the running-app
-    // primitive (deployed application services). The canonical Cloud-Run-style
-    // "Containers" product is separate and still on the roadmap (soon, above).
+    // primitive (deployed application services). The Cloud-Run-style "Containers"
+    // product is a separate enabled entry (above) over the same PaaS backend.
     id: 'applications',
     label: 'Applications',
     icon: Box,
