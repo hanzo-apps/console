@@ -1,16 +1,19 @@
 /**
  * Visor — the CUSTOMER compute surface (a tenant's own machines).
  *
- * TWO transports, one file, cleanly split:
- *  - Machines INVENTORY + lifecycle (list / launch / quote / terminate) now go
- *    through the unified cloud binary at `/v1/machines*`, via the same-origin
- *    user-bearer `/cloud` proxy (`app/cloud/[...path]/route.ts` → cloud-api, org
- *    resolved from the Bearer owner). This is the visor-backed native cloud surface.
+ * TWO transports, one file, cleanly split — each addresses its server proxy
+ * EXPLICITLY (never a bare `/v1/<head>`: the console host's ingress routes `/v1/*`
+ * straight to the gateway → cloud-api, bypassing Next's rewrites, so a bare head 403s;
+ * same class as the framework/s3 `/cloud` fix, v8.4.70):
+ *  - Machines INVENTORY + lifecycle (list / launch / quote / terminate) go through
+ *    the unified cloud binary at `/cloud/v1/machines*`, via the same-origin user-bearer
+ *    `/cloud` proxy (`app/cloud/[...path]/route.ts` → cloud-api, org resolved from the
+ *    Bearer owner). This is the visor-backed native cloud surface.
  *  - The public compute CATALOG (regions / CPU sizes / GPU accelerators, un-scoped)
- *    reads the canonical `/v1/{regions,sizes,gpu-sizes}` heads, which `next.config`
- *    rewrites to the visor `/vm` proxy (`app/vm/[...path]/route.ts` → visor). The GPU
- *    accelerator catalog is `/v1/gpu-sizes` — a DISTINCT head, because the bare
- *    `/v1/gpus` is the GPU INVENTORY surface (cloud-api, a different shape).
+ *    reads visor DIRECTLY through the `/vm` proxy (`app/vm/[...path]/route.ts` → visor)
+ *    at `/vm/v1/{regions,sizes,gpus}`. Visor's `/v1/gpus` is the accelerator CATALOG
+ *    (models + VRAM + price); the cloud-api `/v1/gpus` is the GPU INVENTORY surface (a
+ *    different, per-org shape) — so the catalog MUST read visor, never cloud-api.
  *
  * This is deliberately NOT the `/paas` platform control plane (a god-mode SERVICE
  * token, admin-only). Compute is a TENANT action: any signed-in org user may list +
@@ -22,7 +25,7 @@
  * machines yet" state, and a not-routed/unavailable upstream degrades to a
  * customer-appropriate "managed compute" state — NOT an infra error.
  */
-import { restGet, restPost, restDelete, ApiError, originV1Url } from './client'
+import { restGet, restPost, restDelete, ApiError, cloudProxyV1Url, vmProxyV1Url } from './client'
 
 const enc = encodeURIComponent
 
@@ -230,37 +233,37 @@ function unwrapEnvelope(r: unknown): Record<string, unknown> {
 }
 
 export const VisorApi = {
-  /** The signed-in org's own machines (`GET /v1/machines`, org-scoped by the Bearer owner). */
+  /** The signed-in org's own machines (`/cloud/v1/machines`, org-scoped by the Bearer owner). */
   machines: async (): Promise<VisorMachine[]> => {
-    const r = await restGet<unknown>(originV1Url('machines'))
+    const r = await restGet<unknown>(cloudProxyV1Url('machines'))
     return arrayUnder(r, ['machines', 'instances', 'data', 'items', 'rows', 'droplets']).map((m, i) => normalizeMachine(m, i))
   },
 
-  /** The real region catalog (`GET /v1/regions`). */
+  /** The real region catalog (`/vm/v1/regions` → visor). */
   regions: async (): Promise<VisorRegion[]> => {
-    const r = await restGet<unknown>(originV1Url('regions'))
+    const r = await restGet<unknown>(vmProxyV1Url('regions'))
     return arrayUnder(r, ['regions', 'data', 'items', 'rows']).map(normalizeRegion)
   },
 
-  /** The real standard (CPU) size catalog with pricing (`GET /v1/sizes`). */
+  /** The real standard (CPU) size catalog with pricing (`/vm/v1/sizes` → visor). */
   sizes: async (): Promise<VisorSize[]> => {
-    const r = await restGet<unknown>(originV1Url('sizes'))
+    const r = await restGet<unknown>(vmProxyV1Url('sizes'))
     return arrayUnder(r, ['sizes', 'data', 'items', 'rows']).map(normalizeSize)
   },
 
-  /** The real GPU accelerator catalog with pricing (`GET /v1/gpu-sizes` -> visor). */
+  /** The real GPU accelerator catalog with pricing (`/vm/v1/gpus` → visor). */
   gpus: async (): Promise<VisorGpuSize[]> => {
-    const r = await restGet<unknown>(originV1Url('gpu-sizes'))
+    const r = await restGet<unknown>(vmProxyV1Url('gpus'))
     return arrayUnder(r, ['gpus', 'data', 'items', 'rows']).map(normalizeGpuSize)
   },
 
   /**
-   * The authoritative launch QUOTE for a size in a region (`POST /v1/machines/launch`
+   * The authoritative launch QUOTE for a size in a region (`/cloud/v1/machines/launch`
    * with `dryRun:true` — NO spend). Returns OUR market price (visor `HanzoPrice`), the
    * SAME figure the real launch charges and the catalog shows (one pricing source).
    */
   quote: async (input: LaunchInput): Promise<LaunchQuote> => {
-    const r = await restPost<unknown>(originV1Url('machines/launch'), {
+    const r = await restPost<unknown>(cloudProxyV1Url('machines/launch'), {
       size: input.size, instanceType: input.size, region: input.region, name: input.name || 'quote', dryRun: true,
     })
     const d = unwrapEnvelope(r)
@@ -275,19 +278,21 @@ export const VisorApi = {
     }
   },
 
-  /** Launch a metered, per-org machine (`POST /v1/machines/launch`, dryRun:false). The
-   *  new machine is billed to the org's Hanzo balance; a 402 (or "insufficient balance")
-   *  surfaces to the caller as an honest "add credits" — never a fabricated success. */
+  /** Launch a metered, per-org machine (`/cloud/v1/machines/launch`, dryRun:false).
+   *  A CPU machine is metered to the org's Hanzo balance; a GPU launch is prepay-only,
+   *  card-funded, with a 24-hour minimum charged upfront (see `LaunchDrawer` — the GPU
+   *  gate is card-on-file + sufficient prepaid balance). A 402 (or "insufficient
+   *  balance"/"payment method required") surfaces honestly — never a fabricated success. */
   launch: async (input: LaunchInput): Promise<VisorMachine> => {
-    const r = await restPost<unknown>(originV1Url('machines/launch'), {
+    const r = await restPost<unknown>(cloudProxyV1Url('machines/launch'), {
       size: input.size, instanceType: input.size, region: input.region, name: input.name, dryRun: false,
     })
     return normalizeMachine(unwrapEnvelope(r))
   },
 
-  /** Terminate (destroy) a machine (`DELETE /v1/machines/:id`). Stops metering; the
+  /** Terminate (destroy) a machine (`DELETE /cloud/v1/machines/:id`). Stops metering; the
    *  backend authorizes the delete against the Bearer owner's org. Resolves on 2xx/204. */
-  terminate: (id: string): Promise<void> => restDelete(originV1Url(`machines/${enc(id)}`)),
+  terminate: (id: string): Promise<void> => restDelete(cloudProxyV1Url(`machines/${enc(id)}`)),
 }
 
 // ── Formatters (cells) ───────────────────────────────────────────────────────

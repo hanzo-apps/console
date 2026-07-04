@@ -340,6 +340,26 @@ export const cloudProxyBase = (): string =>
 /** Build a `/v1/<path>` URL on the cloud-api user-bearer proxy (`<origin>/cloud/v1/<path>`). */
 export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyBase())
 
+/**
+ * The console's OWN same-origin VISOR user-bearer proxy base (`<origin>/vm`).
+ *
+ * The public compute CATALOG (regions / CPU sizes / GPU accelerators) is served by
+ * VISOR (`visor.hanzo.svc`), not cloud-api — a DISTINCT backend with a distinct shape.
+ * A bare `/v1/<head>` from the browser is NOT reachable: the console host's ingress
+ * routes `/v1/*` straight to hanzoai/gateway (→ cloud-api), BYPASSING Next — so the
+ * `next.config` `/v1/{regions,sizes,gpu-sizes} → /vm` rewrite never runs and cloud-api
+ * 403s (no visor catalog route there). Same class as the framework/s3 `/cloud` fix
+ * (v8.4.70). So the visor catalog client addresses this `/vm` proxy EXPLICITLY:
+ * `app/vm/[...path]` mints a short-lived user-bound token from the session and forwards
+ * to visor (`allowVisorSurface`). Visor's catalog is un-scoped (any signed-in user), so
+ * the minted bearer is accepted and the real DO region/size/GPU catalog loads.
+ */
+export const vmProxyBase = (): string =>
+  typeof window !== 'undefined' ? `${window.location.origin}/vm` : '/vm'
+
+/** Build a `/v1/<path>` URL on the visor user-bearer proxy (`<origin>/vm/v1/<path>`). */
+export const vmProxyV1Url = (path: string): string => v1Url(path, vmProxyBase())
+
 async function restRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   url: string,
