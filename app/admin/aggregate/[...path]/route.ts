@@ -37,6 +37,7 @@
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
+import { cloudAudience } from '~/config'
 import { getAdminGate } from '~/lib/server/identity'
 import { forwardWithUserBearer } from '~/lib/server/bearer-proxy'
 import { allowAdminSurface } from '~/lib/server/admin-aggregate'
@@ -73,6 +74,14 @@ async function handle(req: NextRequest, ctx: Ctx): Promise<NextResponse> {
     target: CLOUD_API_URL,
     path,
     allow: allowAdminSurface,
+    // Scope the minted user bearer to the brand's cloud audience (`<brand>-cloud`).
+    // The operator is a member of the reserved `admin` org, whose OWN app is
+    // `admin-console` — NOT in cloud's audience allowlist — so a default-audience
+    // bearer is rejected (anonymous → 403 on every /v1/admin/*). With the cloud
+    // audience, cloud validates the token and, seeing owner=admin + isAdmin=true,
+    // sets X-User-IsAdmin=true. Host-aware so a lux/zoo admin host scopes to its own
+    // brand cloud audience. (Tenant proxies are unchanged — they omit this.)
+    audience: cloudAudience(req.headers.get('host')),
     // The AdminApi client unwraps the casibase `{status,msg,data}` envelope, so this
     // proxy's own 401/404 must speak the same shape (an honest state, never a throw).
     errorShape: 'casibase',
