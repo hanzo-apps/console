@@ -644,21 +644,14 @@ function MetricsTab({
   )
 }
 
-// ── Tool tab (Query / Browser / Explore — honestly deferred) ──────────────────
+// ── Tool tab (Query / Browser / Explore — connect via your own client) ────────
 
 function ToolTab({ label, blurb, snippet }: { label: string; blurb: string; snippet?: ReturnType<typeof quickstart>[number] }) {
   return (
-    <SectionCard
-      title={label}
-      actions={
-        <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color3" color="$color11">
-          Coming soon
-        </Text>
-      }
-    >
+    <SectionCard title={label}>
       <Text fontSize="$3" color="$color11">
-        {blurb}. An in-console {label.toLowerCase()} is on the way. Today, connect with your own client using the
-        connection string — it works against the managed endpoint unchanged.
+        {blurb}. Connect with your own client using the connection string below — it works against the managed
+        endpoint unchanged, so your existing tools and drivers just work.
       </Text>
       {snippet ? <SnippetBlock snippet={snippet} /> : null}
     </SectionCard>
