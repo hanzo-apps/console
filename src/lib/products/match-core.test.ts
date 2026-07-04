@@ -8,6 +8,8 @@ import {
   subpageIsWired,
   isAdminView,
   destinationsFor,
+  canonicalSlug,
+  SLUG_ALIASES,
   BASE_SUBPAGES,
 } from './match-core'
 import type { CatalogEntry, ProductModule } from './registry'
@@ -140,13 +142,24 @@ const tasks = mod('tasks', {
   ],
 })
 const providers = mod('providers', { admin: true })
+// The real ML Pipelines module, id === the canonical `ml-pipelines` slug — the
+// alias target for `mlpipelines`/`kubeflow`.
+const mlPipelines = mod('ml-pipelines', { label: 'ML Pipelines', category: 'Training' })
+// An EXTERNAL product (Automation → auto.hanzo.ai): owns no in-console route; a
+// direct URL to it (or its `automation` alias) resolves to `external`, not 404.
+const auto = mod('auto', {
+  label: 'Automation',
+  kind: 'external',
+  href: 'https://auto.hanzo.ai',
+  routes: undefined,
+} as never)
 // A defensive edge case: an entry that VIOLATES the module contract (kind is not
 // 'module'). The catalog type is module-only now, but the match-core guards
 // (`kind !== 'module'`) still fail closed for any malformed entry that slips
 // through at runtime — this fixture proves the guard holds.
 const nonModule = mod('bogus', { kind: 'other', routes: undefined } as never)
 
-const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, nonModule]
+const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, mlPipelines, auto, nonModule]
 const MODULES = CATALOG.filter((e) => e.kind === 'module').map((e) => e as unknown as ProductModule)
 
 describe('productSubpages — Overview + specifics + uniform base set', () => {
@@ -216,6 +229,57 @@ describe('resolveProductView — base sub-pages are the shared per-product view 
   it('404s an unknown product or an unknown deep path', () => {
     expect(view(['nope']).kind).toBe('notfound')
     expect(view(['vpc', 'nope', 'deep']).kind).toBe('notfound')
+  })
+})
+
+// ── Slug aliases + external resolution — no nav item 404s ─────────────────────
+
+describe('canonicalSlug — conventional URLs map to the canonical entry id', () => {
+  it('rewrites only the head segment, preserving the rest', () => {
+    expect(canonicalSlug(['automation'])).toEqual(['auto'])
+    expect(canonicalSlug(['automations'])).toEqual(['auto'])
+    expect(canonicalSlug(['mlpipelines'])).toEqual(['ml-pipelines'])
+    expect(canonicalSlug(['kubeflow', 'status'])).toEqual(['ml-pipelines', 'status'])
+  })
+  it('is identity for a non-aliased or empty slug', () => {
+    expect(canonicalSlug(['models', 'routing'])).toEqual(['models', 'routing'])
+    expect(canonicalSlug([])).toEqual([])
+  })
+  it('the alias table maps only to real canonical ids', () => {
+    // Every alias target must be a resolvable entry — never a dangling id.
+    for (const target of Object.values(SLUG_ALIASES)) {
+      expect(CATALOG.some((e) => e.id === target)).toBe(true)
+    }
+  })
+})
+
+describe('resolveProductView — aliases + external resolve (never a 404 nav item)', () => {
+  const view = (slug: string[]) => resolveProductView(CATALOG, MODULES, slug)
+
+  it('a direct URL to an external product resolves to `external`, not 404', () => {
+    const v = view(['auto'])
+    expect(v.kind).toBe('external')
+    if (v.kind === 'external') expect(v.entry.href).toBe('https://auto.hanzo.ai')
+  })
+  it('the Automation aliases (/automation, /automations) resolve to the external launch', () => {
+    expect(view(['automation']).kind).toBe('external')
+    expect(view(['automations']).kind).toBe('external')
+    const v = view(['automation'])
+    if (v.kind === 'external') expect(v.entry.id).toBe('auto')
+  })
+  it('ML Pipelines resolves at its canonical slug AND its aliases (mlpipelines/kubeflow)', () => {
+    expect(view(['ml-pipelines']).kind).toBe('route')
+    expect(view(['mlpipelines']).kind).toBe('route')
+    expect(view(['kubeflow']).kind).toBe('route')
+    // The alias resolves to the SAME real module, its index route.
+    const v = view(['kubeflow'])
+    if (v.kind === 'route') expect(v.matched.module.id).toBe('ml-pipelines')
+  })
+  it('an aliased base sub-page still routes to the shared per-product view', () => {
+    // /kubeflow/status → ml-pipelines/status → the shared per-product sub-page.
+    const v = view(['kubeflow', 'status'])
+    expect(v.kind).toBe('subpage')
+    if (v.kind === 'subpage') expect(v.entry.id).toBe('ml-pipelines')
   })
 })
 
