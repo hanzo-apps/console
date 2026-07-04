@@ -2287,3 +2287,24 @@ route contract is proven by the live re-crawl (authoritative gate), not a unit
 test. Rebased on origin/main (v8.4.85, the o11y-logs lane) → **v8.4.86**. Live
 re-crawl (every Containers/Fine-tuning/Tasks tab resolves; zero customer 404s) is
 the post-deploy gate.
+
+## Drop dead Docs buttons — 6 products with no docs page (v8.4.87)
+
+Follow-up to v8.4.86's docs-link audit, coordinated with the docs lane. The
+product registry set `docs: `${DOCS}/<slug>`` (→ `docs.hanzo.ai/docs/<slug>`) for
+every product, but 6 of those slugs have NO page on docs.hanzo.ai and no honest
+target (a redirect would mislead) — each "Docs" button 404'd. Verified all six
+return HTTP 404 live (`curl -o/dev/null -w%{http_code}`): accessibility, crm, erp,
+templates, markets, trading. Removed the `docs:` field from those 6 registry
+entries. The consumers read `entry.docs ?? config.docsUrl`, so the button now
+falls back to the docs root (a real page) instead of a dead deep link — zero 404.
+The docs lane owns the OTHER previously-missing slugs (analytics, auto, cms,
+helpdesk, apm, apps, nodes + bare /crawl /functions /kms) via docs-side redirects,
+so those `docs:` fields stay. No other change; the 66 remaining `${DOCS}/<slug>`
+deep links are unchanged.
+
+Verification: `tsc --noEmit` clean; `vitest` green (no test asserts these `docs:`
+fields — the `spec.docs` in resolve.test is the NativeOverview inline-docs spec, a
+different field). Rebased on origin/main (v8.4.86) → **v8.4.87**. Live re-verify:
+the 6 product overviews no longer render a dead Docs deep link (button dropped /
+roots to docs.hanzo.ai), zero customer 404s — post-deploy gate.
