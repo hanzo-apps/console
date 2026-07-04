@@ -297,11 +297,25 @@ export async function getUserKey(user: SessionUser): Promise<{ accessKey: string
   return { accessKey: u?.accessKey ?? '', updatedAt: u?.updatedTime ?? '' }
 }
 
-/** Issue a short-lived, user-bound IAM JWT for the AI proxy to forward. */
-export async function issueUserToken(user: SessionUser): Promise<{ accessToken: string; expiresIn: number }> {
-  const data = await iamCall<{ accessToken?: string; expiresIn?: number }>('/v1/iam/issue-user-token', {
-    id: user.id,
-  })
+/**
+ * Issue a short-lived, user-bound IAM JWT for a BFF proxy to forward.
+ *
+ * `audience` (RFC 8707 resource) binds the token to the resource server that will
+ * consume it (e.g. the cloud API `aud=<brand>-cloud`), so that server's audience
+ * allowlist accepts it INDEPENDENT of which app the target user calls home. This is
+ * the keystone of the admin path: the reserved-admin operator's own app is
+ * `admin-console`, which cloud does NOT trust — passing the cloud audience makes the
+ * forwarded bearer (owner=admin, isAdmin=true) validate. Omitted → IAM defaults the
+ * `aud` to the target user's own app (correct for a same-app consumer, and unchanged
+ * for the tenant proxies).
+ */
+export async function issueUserToken(
+  user: SessionUser,
+  audience?: string,
+): Promise<{ accessToken: string; expiresIn: number }> {
+  const query: Record<string, string> = { id: user.id }
+  if (audience) query.aud = audience
+  const data = await iamCall<{ accessToken?: string; expiresIn?: number }>('/v1/iam/issue-user-token', query)
   if (!data.accessToken) throw new Error('IAM did not return a token')
   return { accessToken: data.accessToken, expiresIn: data.expiresIn ?? 0 }
 }
@@ -557,21 +571,26 @@ export async function getOrgGate(req: NextRequest): Promise<IamGate | null> {
 }
 
 // ── Admin bearer-token cache ─────────────────────────────────────────────────
-// The admin proxies forward as the user (not the confidential client) so IAM/KMS
-// enforce tenant isolation from the verified `owner` claim. issue-user-token is
-// an IAM round-trip; cache the JWT per user until ~60s before expiry (same shape
-// as the AI proxy) so a console session reuses one token across admin calls.
+// The BFF proxies forward as the user (not the confidential client) so the backend
+// enforces tenant isolation from the verified `owner` claim. issue-user-token is an
+// IAM round-trip; cache the JWT until ~60s before expiry (same shape as the AI proxy)
+// so a console session reuses one token across calls. Keyed by (user, audience): a
+// token minted for one resource server's audience must NOT be handed to a proxy that
+// needs a different one — the admin-aggregate scopes its bearer to the cloud audience
+// while the tenant proxies mint the default (target-app) audience, and both coexist.
 type CachedToken = { token: string; expMs: number }
 const adminTokenCache = new Map<string, CachedToken>()
 const ADMIN_TOKEN_SKEW_MS = 60_000
 const ADMIN_TOKEN_FALLBACK_TTL_MS = 5 * 60_000
 
-/** A short-lived, user-bound IAM bearer for the admin proxies (cached per user). */
-export async function adminBearer(user: SessionUser): Promise<string> {
-  const hit = adminTokenCache.get(user.id)
+/** A short-lived, user-bound IAM bearer for a BFF proxy, optionally scoped to a
+ *  resource-server `audience` (RFC 8707). Cached per (user, audience). */
+export async function adminBearer(user: SessionUser, audience?: string): Promise<string> {
+  const key = `${user.id} ${audience ?? ''}`
+  const hit = adminTokenCache.get(key)
   if (hit && hit.expMs > Date.now()) return hit.token
-  const { accessToken, expiresIn } = await issueUserToken(user)
+  const { accessToken, expiresIn } = await issueUserToken(user, audience)
   const ttl = expiresIn > 0 ? expiresIn * 1000 : ADMIN_TOKEN_FALLBACK_TTL_MS
-  adminTokenCache.set(user.id, { token: accessToken, expMs: Date.now() + ttl - ADMIN_TOKEN_SKEW_MS })
+  adminTokenCache.set(key, { token: accessToken, expMs: Date.now() + ttl - ADMIN_TOKEN_SKEW_MS })
   return accessToken
 }

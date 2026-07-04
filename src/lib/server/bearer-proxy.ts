@@ -67,6 +67,13 @@ export type BearerProxyOpts = {
    *  Org is ALWAYS the token owner (never browser-supplied); these are sub-scopes the
    *  backend re-validates under that org. Default false (AI/tasks/base don't scope). */
   forwardScope?: boolean
+  /** RFC 8707 resource audience to scope the minted user bearer to (the `aud` claim).
+   *  Set it to the value the TARGET resource server's audience allowlist accepts (e.g.
+   *  the cloud API's `<brand>-cloud`) so the forwarded token validates regardless of
+   *  which app the caller calls home — the admin-aggregate proxy needs this because the
+   *  reserved-admin operator's own app (`admin-console`) is not in cloud's allowlist.
+   *  Omitted → the mint uses IAM's default (target-app) audience, unchanged for tenants. */
+  audience?: string
   /** Envelope shape for this proxy's own 401/404/502. Default `plain`. */
   errorShape?: ErrorShape
   /** 401 body message (not signed in). */
@@ -252,7 +259,7 @@ export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyO
 
   let bearer: string
   try {
-    bearer = await adminBearer(user)
+    bearer = await adminBearer(user, opts.audience)
   } catch (e) {
     // Redact the exception (it carries internal IAM host/port) — log server-side only.
     console.error('bearer-proxy: could not mint user bearer:', msgOf(e))
