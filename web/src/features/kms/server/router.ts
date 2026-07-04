@@ -9,6 +9,11 @@ import {
 import { env } from "@/src/env.mjs";
 import { kmsGet, kmsPost, kmsPatch, kmsDelete } from "./kmsClient";
 import {
+  listOrgSecrets,
+  putOrgSecret,
+  deleteOrgSecret,
+} from "./secretsAdapter";
+import {
   CreateKmsSecretInput,
   UpdateKmsSecretInput,
   DeleteKmsSecretInput,
@@ -17,10 +22,28 @@ import {
   DeleteKmsKeyInput,
   EncryptInput,
   DecryptInput,
+  type KmsSecret,
 } from "../types";
 
 /**
- * Resolve the KMS workspace/project ID for the current org.
+ * The `:org` path segment for the unified Hanzo Cloud KMS secrets surface
+ * (`/v1/kms/orgs/:org/secrets`) is simply the console's CURRENT org. The cloud
+ * guard namespaces every record under /orgs/:org and enforces the caller may
+ * only touch its own org (or any org for a global admin); the console's service
+ * bearer carries that identity, and this org — already membership-checked by
+ * protectedProjectProcedure — selects the tenant namespace. One source of truth
+ * for tenancy: the session's validated org.
+ */
+function resolveKmsOrg(ctx: {
+  session: ProjectAuthedContext["session"];
+}): string {
+  return ctx.session.orgId;
+}
+
+/**
+ * LEGACY (Infisical). Resolve the KMS workspace/project ID for the current org,
+ * used only by the CMEK encryption-keys + environments surfaces that the unified
+ * KMS does not yet expose (see the Encryption Keys / Environments sections).
  *
  * Multi-tenant: each org can store its own KMS project ID in
  * Organization.metadata.kmsProjectId.  Falls back to the global
@@ -56,7 +79,12 @@ function resolveKmsProjectId(ctx: {
 }
 
 export const kmsRouter = createTRPCRouter({
-  // ── Secrets ──────────────────────────────────────────────────────
+  // ── Secrets (unified Hanzo Cloud KMS: /v1/kms/orgs/:org/secrets) ──
+  //
+  // Backed by the embedded luxfi/kms SecretStore via cloud/clients/kmssvc, NOT
+  // the legacy Infisical /v3/secrets API. Shape mapping + transport live in ONE
+  // place — ./secretsAdapter — so these procedures only carry authz + the org
+  // namespace; create and update are the same upsert on the unified store.
 
   listSecrets: protectedProjectProcedure
     .input(
@@ -74,14 +102,14 @@ export const kmsRouter = createTRPCRouter({
       });
 
       try {
-        return await kmsGet<{ secrets: unknown[] }>("/api/v3/secrets/raw", {
-          workspaceId: resolveKmsProjectId(ctx),
-          environment: input.environment,
-          secretPath: input.secretPath,
-        });
+        return await listOrgSecrets(
+          resolveKmsOrg(ctx),
+          input.environment,
+          input.secretPath,
+        );
       } catch {
         // KMS not configured for this org / unreachable → honest empty state.
-        return { secrets: [] as unknown[] };
+        return { secrets: [] as KmsSecret[] };
       }
     }),
 
@@ -94,15 +122,14 @@ export const kmsRouter = createTRPCRouter({
         scope: "kmsSecrets:CUD",
       });
 
-      return kmsPost("/api/v3/secrets/raw", {
-        workspaceId: resolveKmsProjectId(ctx),
-        environment: input.environment,
-        secretPath: input.secretPath,
-        secretName: input.secretName,
-        secretValue: input.secretValue,
-        secretComment: input.secretComment,
-        type: input.type,
-      });
+      await putOrgSecret(
+        resolveKmsOrg(ctx),
+        input.environment,
+        input.secretPath,
+        input.secretName,
+        input.secretValue,
+      );
+      return { stored: true };
     }),
 
   updateSecret: protectedProjectProcedure
@@ -114,16 +141,14 @@ export const kmsRouter = createTRPCRouter({
         scope: "kmsSecrets:CUD",
       });
 
-      return kmsPatch(
-        `/api/v3/secrets/raw/${encodeURIComponent(input.secretName)}`,
-        {
-          workspaceId: resolveKmsProjectId(ctx),
-          environment: input.environment,
-          secretPath: input.secretPath,
-          secretValue: input.secretValue,
-          secretComment: input.secretComment,
-        },
+      await putOrgSecret(
+        resolveKmsOrg(ctx),
+        input.environment,
+        input.secretPath,
+        input.secretName,
+        input.secretValue,
       );
+      return { stored: true };
     }),
 
   deleteSecret: protectedProjectProcedure
@@ -135,17 +160,23 @@ export const kmsRouter = createTRPCRouter({
         scope: "kmsSecrets:CUD",
       });
 
-      return kmsDelete(
-        `/api/v3/secrets/raw/${encodeURIComponent(input.secretName)}`,
-        {
-          workspaceId: resolveKmsProjectId(ctx),
-          environment: input.environment,
-          secretPath: input.secretPath,
-        },
+      await deleteOrgSecret(
+        resolveKmsOrg(ctx),
+        input.environment,
+        input.secretPath,
+        input.secretName,
       );
+      return { deleted: true };
     }),
 
   // ── Environments ─────────────────────────────────────────────────
+  //
+  // LEGACY (Infisical /api/v1/workspace/.../environments). The unified KMS
+  // models an env as a free-form label on each secret (no environment registry
+  // to enumerate), so there is no unified endpoint to migrate this to. Left on
+  // the legacy path; degrades to an empty list (the SecretsTable then offers the
+  // dev/staging/prod defaults). Revisit if/when the unified KMS grows an env
+  // registry.
 
   listEnvironments: protectedProjectProcedure
     .input(z.object({ projectId: z.string() }))
@@ -166,6 +197,12 @@ export const kmsRouter = createTRPCRouter({
     }),
 
   // ── Encryption Keys (CMEK) ──────────────────────────────────────
+  //
+  // LEGACY (Infisical /api/v1/kms/keys + /encrypt + /decrypt). The unified
+  // Hanzo Cloud KMS exposes only org-scoped SECRETS today (list/read/upsert/
+  // delete); it does not yet expose customer-managed encryption keys or the
+  // encrypt/decrypt oracle. Left on the legacy path unchanged; reads degrade to
+  // an empty list. Migrate once the unified KMS surfaces a CMEK API.
 
   listKeys: protectedProjectProcedure
     .input(z.object({ projectId: z.string() }))
