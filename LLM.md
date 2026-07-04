@@ -1449,6 +1449,39 @@ The fix is **additive, one session manager, zero regression** (worst case === v8
   `NEXT_PUBLIC_*` unchanged (no client-id switch); server-only env reused
   (`IAM_MINT_CLIENT_ID/SECRET`, `IAM_URL`) — no new secret to provision.
 
+## admin.<brand> login — BOTH legs use admin-console (PKCE, no secret) (v8.4.76)
+
+admin.hanzo.ai authenticates into the reserved `admin` org via the PUBLIC `admin-console`
+app. TWO legs, and BOTH must speak admin-console or IAM rejects the token as "the token is
+for wrong application (client_id)":
+
+- **Leg 1 (authorize) — already fixed (v8.4.75).** `iam-login.ts` POSTs `hanzo.id/v1/iam/login?clientId=admin-console`
+  with `{application:"admin-console", organization:"admin"}` on an admin host → 200, a code minted for admin-console.
+- **Leg 2 (redeem) — the fix here.** The redeem used to POST the console's OWN origin
+  `/v1/iam/signin`, which the ingress routes to the CLOUD backend (casibase); casibase
+  redeems with ITS confidential `hanzo-cloud` client → mismatch. Now the console redeems
+  the code ITSELF: on an admin host `iam-login.ts` authorizes with **PKCE** (S256
+  `codeChallenge` in the login body — casdoor stores it with the code), and
+  `completeSignIn` posts `{code, codeVerifier}` to the new BFF **`app/auth/signin`**, which
+  runs `pkceCodeGrant(client_id=admin-console, code, code_verifier)` with **NO client secret**.
+  Verified in IAM source (`object/token_oauth.go` GetAuthorizationCodeToken 880-896): an
+  empty secret + a matching S256 verifier is admitted for a confidential app (RFC 7636
+  public-client path). Probed live: admin-console has `authorization_code`+`refresh_token`
+  grant types and accepts the empty-secret exchange. Tenant hosts are UNCHANGED (no
+  challenge; the cloud backend redeems with `hanzo-cloud`).
+
+- **`durableSessionClientId(host)`** (session.ts) is the ONE host→client decision:
+  admin host → `admin-console` (public — pkceCodeGrant + secretless refreshGrant), else null
+  → the confidential `hanzo-console` path. `/auth/refresh` uses it so an admin session
+  refreshes with admin-console (casdoor skips the secret check when it's empty, token.go 469).
+- The admin session rests on `hz_session` (the code grant returns access + refresh, minted
+  at authorize time), which `resolveUser`/`getAdminGate` read FIRST — so the admin console
+  works without the casibase cookie. `accountOf` + `applyCookies` extracted to session.ts
+  (shared by /auth/session, /auth/refresh, /auth/signin — one writer). `createPkce` (Web
+  Crypto S256) is the one PKCE source.
+- Verification: `tsc --noEmit` clean; `npm test` **1578/1578**; `next build` ✓ (`/auth/signin`
+  registered). No new secret to provision (PKCE is secretless).
+
 ## Bots + Machines — two `kind` compute-analytics operator boards over the datastore (feat/console2-admin-fleets)
 
 Two GLOBAL-ADMIN boards on admin.hanzo.ai (Observe, beside Business + Finance) —

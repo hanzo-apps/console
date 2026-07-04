@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { loginState, loginWithPassword } from './iam-login'
@@ -28,7 +30,12 @@ describe('iam-login: host-correct OAuth params', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const res = await loginWithPassword('z@hanzo.ai', 'pw')
-    expect(res).toEqual({ kind: 'code', code: 'CODE123' })
+    expect(res.kind).toBe('code')
+    if (res.kind !== 'code') throw new Error('expected a code')
+    expect(res.code).toBe('CODE123')
+    // Admin login carries the PKCE verifier the BFF needs to redeem the code (no secret).
+    expect(typeof res.verifier).toBe('string')
+    expect((res.verifier ?? '').length).toBeGreaterThan(20)
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     const u = new URL(String(url))
@@ -37,9 +44,18 @@ describe('iam-login: host-correct OAuth params', () => {
     // redirectUri is computed from the live window origin — host-correct.
     expect(u.searchParams.get('redirectUri')).toBe('https://admin.hanzo.ai/auth/callback')
 
-    const body = JSON.parse(String(init.body)) as { application: string; organization: string }
+    const body = JSON.parse(String(init.body)) as {
+      application: string
+      organization: string
+      codeChallenge?: string
+      codeChallengeMethod?: string
+    }
     expect(body.application).toBe('admin-console')
     expect(body.organization).toBe('admin')
+    // PKCE (S256): the challenge sent is EXACTLY base64url(SHA-256(verifier)) — what IAM
+    // recomputes to authenticate the secretless admin-console redemption.
+    expect(body.codeChallengeMethod).toBe('S256')
+    expect(body.codeChallenge).toBe(createHash('sha256').update(res.verifier ?? '').digest('base64url'))
   })
 
   it('a tenant host is UNCHANGED — brand app, EMPTY org (resolve across orgs by email)', async () => {
@@ -47,13 +63,16 @@ describe('iam-login: host-correct OAuth params', () => {
     const fetchMock = okCode()
     vi.stubGlobal('fetch', fetchMock)
 
-    await loginWithPassword('dave@maxpower.com', 'pw')
+    const res = await loginWithPassword('dave@maxpower.com', 'pw')
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(new URL(String(url)).searchParams.get('clientId')).toBe('hanzo-cloud')
-    const body = JSON.parse(String(init.body)) as { application: string; organization: string }
+    const body = JSON.parse(String(init.body)) as { application: string; organization: string; codeChallenge?: string }
     expect(body.application).toBe('hanzo-cloud')
     expect(body.organization).toBe('')
+    // No PKCE on a tenant host — the cloud backend redeems its code with a confidential client.
+    expect(body.codeChallenge).toBeUndefined()
+    expect(res.kind === 'code' && res.verifier).toBeFalsy()
   })
 
   it('loginState carries the app name (the /v1/iam/signin exchange state)', () => {

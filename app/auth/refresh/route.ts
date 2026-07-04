@@ -17,23 +17,10 @@
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { readRefreshToken, refreshGrant, sealSession, setCookies, SessionError, type CookieDirective } from '~/lib/server/session'
+import { applyCookies, durableSessionClientId, readRefreshToken, refreshGrant, sealSession, setCookies, SessionError } from '~/lib/server/session'
 import { csrfRefusal } from '~/lib/server/bearer-proxy'
 
 export const runtime = 'nodejs'
-
-function withCookies(res: NextResponse, dirs: CookieDirective[]): NextResponse {
-  for (const d of dirs) {
-    res.cookies.set(d.name, d.value, {
-      httpOnly: d.httpOnly,
-      secure: d.secure,
-      sameSite: d.sameSite,
-      path: d.path,
-      maxAge: d.maxAge,
-    })
-  }
-  return res
-}
 
 /** 401 WITHOUT clearing the cookies (see the multi-tab note above). */
 const fail = () => NextResponse.json({ error: 'refresh failed' }, { status: 401 })
@@ -47,9 +34,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const rt = readRefreshToken(req)
   if (!rt) return fail()
 
+  // Host-aware rotation: an admin host's session was minted by the PUBLIC admin-console
+  // client, so it must refresh with that same client (no secret); every other host
+  // refreshes the confidential hanzo-console session.
+  const publicClientId = durableSessionClientId(req.headers.get('x-forwarded-host') ?? req.headers.get('host'))
+
   let tokens
   try {
-    tokens = await refreshGrant(rt)
+    tokens = await refreshGrant(rt, publicClientId ?? undefined)
   } catch (e) {
     // A 502 (endpoint unreachable) is transient — surface it distinctly so the client
     // can retry, and never touch the cookies.
@@ -65,5 +57,5 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const sealed = sealSession(tokens)
   if (!sealed) return fail()
   const res = NextResponse.json({ expiresIn: Math.floor(sealed.expiresInMs / 1000) })
-  return withCookies(res, setCookies(sealed.identity, sealed.refresh))
+  return applyCookies(res, setCookies(sealed.identity, sealed.refresh))
 }

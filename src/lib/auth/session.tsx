@@ -18,6 +18,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { AccountApi, type Account } from '~/lib/api'
+import { isAdminHost } from '~/config'
 import { getProviderSigninUrl, getSigninUrl, stashReturnTo } from './iam'
 import { refreshSession } from './refresh'
 import { setCurrentActor } from '~/lib/actor-scope'
@@ -27,7 +28,7 @@ type SessionState = {
   loading: boolean
   signIn: () => void
   signInWith: (provider: string) => void
-  completeSignIn: (code: string, state: string) => Promise<void>
+  completeSignIn: (code: string, state: string, verifier?: string) => Promise<void>
   /** Upgrade a password login to the durable, refreshable console session. */
   establishConsoleSession: (username: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -106,10 +107,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     window.location.assign(getProviderSigninUrl(provider))
   }, [])
 
-  const completeSignIn = useCallback(async (code: string, state: string) => {
+  const completeSignIn = useCallback(async (code: string, state: string, verifier?: string) => {
+    // Admin host: the code was minted for the PUBLIC admin-console client, so redeem it
+    // through the console's OWN BFF (PKCE, no secret) into the durable hz_session — the
+    // cloud backend would redeem with the wrong (hanzo-cloud) client. Every other host
+    // keeps the cloud-backend `/v1/iam/signin` exchange.
+    if (verifier && isAdminHost(window.location.hostname)) {
+      const r = await AccountApi.consoleSignin(code, verifier)
+      applyAccount(r.account)
+      return
+    }
     const res = await AccountApi.signin(code, state)
     applyAccount(res.data ?? (await AccountApi.current()))
-  }, [])
+  }, [applyAccount])
 
   const establishConsoleSession = useCallback(
     async (username: string, password: string) => {
