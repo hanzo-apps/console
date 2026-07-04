@@ -22,7 +22,7 @@
  * - Desktop/laptop (≥lg): the persistent sidebar is always on (collapsible from
  *   the header); the topbar shows the full inline controls.
  * - Phone/tablet (<lg): the sidebar is HIDDEN and reached via a hamburger that
- *   opens the SAME two-level nav as a RIGHT-side drawer (with ⌘K search + Apps at
+ *   opens the SAME two-level nav as a LEFT-side drawer (with ⌘K search + Apps at
  *   the top); the topbar condenses into a right-side account drawer.
  *
  * Off-canvas surfaces (nav drawer, account menu, item DetailPane) all ride the
@@ -601,6 +601,9 @@ function SidebarNav({
     setFilter('')
     setOpenId(entry.id)
     router.push(`/${entry.id}`)
+    // Close the drawer on a product tap (mobile) — the route changed, so the
+    // off-canvas nav dismisses. Desktop passes a no-op onNavigate (stays open).
+    onNavigate()
   }
   const openDocs = () => {
     if (typeof window !== 'undefined') window.open(config.docsUrl, '_blank', 'noopener')
@@ -922,13 +925,15 @@ function SidebarNav({
   )
 }
 
-/** Mobile/tablet nav drawer — the same SidebarNav, slid in from the RIGHT, with a
- *  ⌘K search + Apps launcher at the top (the command surface, reachable on mobile). */
+/** Mobile/tablet nav drawer — the same SidebarNav, slid in from the LEFT (the
+ *  hamburger is top-left and this is a left-nav, so the drawer enters from that
+ *  edge; the account/profile drawer stays on the right), with a ⌘K search + Apps
+ *  launcher at the top (the command surface, reachable on mobile). */
 function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const palette = useCommandPalette()
   const launcher = useAppLauncher()
   return (
-    <SlideOver open={open} onClose={() => onOpenChange(false)} side="right" size={320} ariaLabel="Navigation">
+    <SlideOver open={open} onClose={() => onOpenChange(false)} side="left" size={320} ariaLabel="Navigation">
       {/* `hz-touch-target` raises every control in the drawer to a ≥44px tap target
           on phones/tablets (see globals.css); the desktop sidebar is a separate
           mount and stays dense. */}
