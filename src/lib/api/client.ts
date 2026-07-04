@@ -382,7 +382,7 @@ export const vmProxyBase = (): string =>
 export const vmProxyV1Url = (path: string): string => v1Url(path, vmProxyBase())
 
 async function restRequest<T>(
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   url: string,
   body?: unknown,
   headers?: Record<string, string>,
@@ -442,6 +442,10 @@ export const restPost = <T>(url: string, body?: unknown, headers?: Record<string
 /** REST PUT a JSON body on a full URL, with optional extra request headers. */
 export const restPut = <T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<T> =>
   restRequest<T>('PUT', url, body, headers) as Promise<T>
+
+/** REST PATCH a JSON body on a full URL, with optional extra request headers. */
+export const restPatch = <T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<T> =>
+  restRequest<T>('PATCH', url, body, headers) as Promise<T>
 
 /** REST DELETE on a full URL; resolves on 204. */
 export const restDelete = (url: string): Promise<void> =>
