@@ -18,10 +18,14 @@ import { Copy, Check, KeyRound, RefreshCw, Trash2, TriangleAlert, Plus } from '@
 
 import { ApiError, KeysApi, type KeyStatus } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
+import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { ErrorState } from '~/components/ui/States'
 
-const DOCS_API = 'https://docs.hanzo.ai/api'
+// The docs site serves everything under the `/docs` base path (a bare
+// `docs.hanzo.ai/<slug>` 404s), so the API reference is `/docs/api` — white-labeled
+// off the brand's docs host.
+const DOCS_API = `${config.docsUrl}/docs/api`
 
 /** Honest date label for the key's last mint/rotate; empty string when unknown. */
 function fmtKeyDate(iso?: string): string {
