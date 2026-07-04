@@ -294,7 +294,7 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
             <Rocket size={20} />
             <Text fontSize="$3" fontWeight="700">Launch your first GPU</Text>
             <Text fontSize="$2" color="$color11" text="center" maxW={440}>
-              You have no GPU machines yet. Tap an accelerator below to launch one in seconds — billed hourly to your Hanzo Cloud balance.
+              You have no GPU machines yet. Tap an accelerator below to launch one in seconds — GPUs are prepay-only, charged to your payment card with a 24-hour minimum.
             </Text>
             <Button size="$2" theme="light" icon={<Rocket size={15} />} onPress={() => launch()}>Launch a GPU</Button>
           </Card>
