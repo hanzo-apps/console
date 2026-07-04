@@ -466,6 +466,27 @@ html:root.t_light {
   will-change: transform, opacity;
 }
 
+/* Popover MENU entrance — OPACITY-ONLY (never transform). floating-ui positions an
+   anchored menu with an inline `transform: translate(x,y)`, and a CSS-animation that
+   also drives `transform` (like hz-pop-in) OVERRIDES that inline value for the
+   animation's duration — detaching the menu from its trigger. So anchored menus
+   (SelectMenu / ComboBox Popover.Content) fade in with NO transform, keeping the
+   floating-ui anchor exact. The transform-based hz-pop-in stays for the centered
+   Dialog surfaces (CommandPalette / AppLauncher / FloatingChat), which are NOT
+   floating-ui-positioned. Reduced-motion → snap. */
+@keyframes hz-menu-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.hz-menu-in {
+  animation: hz-menu-in 140ms ease-out both;
+  will-change: opacity;
+}
+
 /* Scrim fade — the dimmed backdrop behind a dialog/palette eases in (Tamagui mounts
    the overlay instantly otherwise). */
 @keyframes hz-scrim-in {
@@ -502,6 +523,7 @@ html:root.t_light {
 
 @media (prefers-reduced-motion: reduce) {
   .hz-pop-in,
+  .hz-menu-in,
   .hz-scrim-in {
     animation: none;
   }
