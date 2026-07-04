@@ -799,7 +799,13 @@ export const catalog: CatalogEntry[] = [
     category: 'Training',
     status: 'enabled',
     kind: 'module',
-    routes: [{ path: '', component: FinetuningModule }],
+    // The module renders its Jobs/Datasets/Checkpoints/Models tabs as REAL
+    // sub-routes (`/finetuning/:tab`); declare the `:tab` route so the tab bar
+    // resolves instead of 404ing.
+    routes: [
+      { path: '', component: FinetuningModule },
+      { path: ':tab', component: FinetuningModule },
+    ],
   },
   {
     // ML Pipelines (Kubeflow) — the read-only orchestration + control-plane view
@@ -917,7 +923,13 @@ export const catalog: CatalogEntry[] = [
     category: 'Compute',
     status: 'enabled',
     kind: 'module',
-    routes: [{ path: '', component: ContainersModule }],
+    // The module renders its Workloads/Pods/Containers/Images/Namespaces/Events
+    // tabs as REAL sub-routes (`/containers/:tab`); declare the `:tab` route so the
+    // tab bar resolves instead of 404ing.
+    routes: [
+      { path: '', component: ContainersModule },
+      { path: ':tab', component: ContainersModule },
+    ],
   },
   {
     id: 'functions',
@@ -2570,8 +2582,12 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/tasks',
     docs: `${DOCS}/tasks`,
     kind: 'module',
+    // The module renders its Workflows/Schedules/Queues/Workers tabs as REAL
+    // single-segment sub-routes (`/tasks/:tab`); the two-segment `:ns/:wid` route is
+    // the workflow detail. Both are unambiguous (matched by exact segment count).
     routes: [
       { path: '', component: TasksModule },
+      { path: ':tab', component: TasksModule },
       { path: ':ns/:wid', component: TasksModule },
     ],
     subpages: [{ slug: 'queues', label: 'Queues' }],
