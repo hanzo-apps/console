@@ -45,18 +45,6 @@ import {
 /** Monospace family for code/env/log text (CSS `style` — not a Gui shorthand prop). */
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
-/** Load every app the caller's org owns, flattened across its projects. */
-async function loadApps(): Promise<PlatformApp[]> {
-  const projects = await PlatformAppsApi.listProjects()
-  const perProject = await Promise.all(
-    projects.map(async (p) => {
-      const apps = await PlatformAppsApi.listApps(p.slug)
-      return apps.map((a) => ({ ...a, projectSlug: p.slug }))
-    }),
-  )
-  return perProject.flat().sort((a, b) => b.updatedAt - a.updatedAt)
-}
-
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <Card p="$3" gap="$1" borderWidth={1} borderColor="$borderColor" minW={120} flex={1}>
@@ -80,7 +68,7 @@ export function PlatformAppsModule(_props: { params: Record<string, string> }) {
     setLoading(true)
     setError(null)
     try {
-      setApps(await loadApps())
+      setApps(await PlatformAppsApi.listAllApps())
     } catch (e) {
       setError(classifyBackend(e))
     } finally {
