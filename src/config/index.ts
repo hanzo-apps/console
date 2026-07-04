@@ -181,6 +181,25 @@ export function isAdminHost(host?: string | null): boolean {
 }
 
 /**
+ * The JWT `aud` (RFC 8707 resource) the cloud API accepts for `host`'s brand: the
+ * brand's cloud client id (`<brand>-cloud`, HIP-0111 `client_id == app == aud`). It
+ * is read straight off the brand's `iamApp` — the ONE source — so it stays correct
+ * even on an admin host, where the LOGIN app switches to `admin-console` (org admin)
+ * but the RESOURCE a forwarded bearer is presented to is still the brand cloud API.
+ *
+ * cloud's `SanitizeIdentity` ALWAYS trusts this audience: its BrandAudiences union
+ * bakes in every `<brand>-cloud`, un-removable by a `CLOUD_JWT_AUDIENCES` override —
+ * whereas an admin-org login app (`admin-console`) is NOT in the allowlist. So a
+ * user bearer minted for the reserved admin org (`issue-user-token`, whose default
+ * `aud` is the target's OWN app = `admin-console`) is REJECTED by cloud unless we
+ * scope it to this resource. The admin-aggregate BFF passes it as the mint audience
+ * so the operator's forwarded bearer (owner=admin, isAdmin=true) actually validates.
+ */
+export function cloudAudience(host?: string | null): string {
+  return BRANDS[brandFromHost(host)].iamApp
+}
+
+/**
  * True on a brand's dedicated billing host (billing.<brand>, e.g. billing.hanzo.ai
  * / billing.lux.cloud / billing.zoo.cloud). Such a host runs the SAME console image
  * but in billing-only shell mode (nav filtered to the Billing Center, default route
