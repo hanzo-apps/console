@@ -124,16 +124,16 @@ export function EdgeModule(_props: { params: Record<string, string> }) {
         // A genuine transient failure (not "no backend") → the honest retry card.
         <PlatformStateCard error={loadError} onRetry={() => void load()} />
       ) : (
-        // No edge backend on this deployment (403/404/501) OR a real empty list →
-        // an honest "coming soon / managed" state, never a fabricated node grid.
+        // Live edge fabric with no nodes tagged to this org yet → an honest empty
+        // state (managed by Hanzo), never a fabricated node grid.
         <EmptyState
           icon={Radio}
-          title="Edge is coming soon"
-          description="Globally-distributed edge compute — run functions and containers close to your users. It’s managed by Hanzo; today your workloads run on shared Hanzo Cloud regions."
+          title="No edge nodes yet"
+          description="Globally-distributed edge compute — run functions and containers close to your users, managed by Hanzo. Nodes tagged to your org appear here as your edge fabric comes online; until then your workloads run on the shared Hanzo Cloud regions."
           bullets={[
             'Deploy once — served from the edge location nearest each request',
             'Backed by the same functions + containers you already run',
-            'Nodes and traffic show up here as the edge fleet comes online',
+            'Nodes and traffic appear here as your edge fabric comes online',
           ]}
           primary={{ label: 'Edge docs', href: `${config.docsUrl}/edge` }}
           secondary={{ label: 'Containers', onPress: () => { if (typeof window !== 'undefined') window.location.assign('/containers') } }}
