@@ -35,6 +35,9 @@ import {
   invalidateBalance,
   subscribeBalance,
   spendableCents,
+  trialCents,
+  prepaidCents,
+  balanceSplitLabel,
   backoffDelay,
   POLL_MS,
   BACKOFF_CAP_MS,
@@ -54,6 +57,34 @@ describe('spendableCents', () => {
     expect(spendableCents(bal(9974))).toBe(9974)
     expect(spendableCents({ available: undefined as unknown as number, balance: 500, holds: 0 })).toBe(500)
     expect(spendableCents(null)).toBeNull()
+  })
+})
+
+describe('trial / prepaid split (the distinct bucket view)', () => {
+  it('reads trialBalance/prepaidAvailable, falling back to the credit* / prepaidBalance aliases', () => {
+    expect(trialCents({ ...bal(1700), trialBalance: 500 })).toBe(500)
+    expect(trialCents({ ...bal(1700), creditsRemaining: 500 })).toBe(500) // alias fallback
+    expect(prepaidCents({ ...bal(1700), prepaidAvailable: 1200 })).toBe(1200)
+    expect(prepaidCents({ ...bal(1700), prepaidBalance: 1200 })).toBe(1200) // alias fallback
+  })
+
+  it('is null when the bucket is absent (legacy commerce build) — caller shows the total only', () => {
+    expect(trialCents(bal(1700))).toBeNull()
+    expect(prepaidCents(bal(1700))).toBeNull()
+    expect(trialCents(null)).toBeNull()
+  })
+
+  it('balanceSplitLabel renders "$5.00 trial + $12.00 credits" when the buckets are reported', () => {
+    expect(balanceSplitLabel({ ...bal(1700), trialBalance: 500, prepaidAvailable: 1200 })).toBe('$5.00 trial + $12.00 credits')
+  })
+
+  it('balanceSplitLabel shows a present bucket with the other as 0 (they land together)', () => {
+    expect(balanceSplitLabel({ ...bal(500), trialBalance: 500 })).toBe('$5.00 trial + $0.00 credits')
+  })
+
+  it('balanceSplitLabel is null when NEITHER bucket is reported (no fabricated split)', () => {
+    expect(balanceSplitLabel(bal(1700))).toBeNull()
+    expect(balanceSplitLabel(null)).toBeNull()
   })
 })
 

@@ -29,7 +29,7 @@ import {
 
 import { AccountApi, type Account } from '~/lib/api'
 import { WalletApi } from '~/lib/api/wallet'
-import { useCloudBalance, invalidateBalance, spendableCents } from '~/lib/billing/live-balance'
+import { useCloudBalance, invalidateBalance, spendableCents, balanceSplitLabel } from '~/lib/billing/live-balance'
 import * as evm from '~/lib/wallet/hanzo-evm'
 import { PageHeader } from '~/components/ui/PageHeader'
 
@@ -177,6 +177,10 @@ export function WalletModule(_props: { params: Record<string, string> }) {
               <Text fontSize="$9" fontWeight="900">
                 {usd(cloudCents ?? cloudBalance.available)}
               </Text>
+              {/* Distinct trial (non-cash) + prepaid (real money) split, when reported. */}
+              {balanceSplitLabel(cloudBalance) ? (
+                <Text fontSize="$2" color="$color12">{balanceSplitLabel(cloudBalance)}</Text>
+              ) : null}
               <Text fontSize="$2" color="$color11">
                 available · {usd(cloudBalance.balance)} total · {usd(cloudBalance.holds)} on hold
               </Text>
