@@ -21,10 +21,10 @@ import { FadeIn } from '~/components/ui/FadeIn'
 
 /** Truthful, per-base-slug guidance; a declared specific falls back to a generic. */
 const BASE_BLURB: Record<string, string> = {
-  settings: 'Configuration for this product appears here once its settings surface is wired.',
-  status: 'Live health and availability for this product appears here once its status feed is wired.',
-  logs: 'Structured logs for this product stream here once its log source is wired.',
-  metrics: 'Usage and performance metrics for this product render here once its metrics feed is wired.',
+  settings: 'Configuration for this product renders here from its settings surface; that surface is not wired on this deployment.',
+  status: 'Live health and availability for this product renders here from its status feed; that feed is not wired on this deployment.',
+  logs: 'Structured logs for this product stream here from its log source; that source is not wired on this deployment.',
+  metrics: 'Usage and performance metrics for this product render here from its metrics feed; that feed is not wired on this deployment.',
 }
 
 export function ProductSubpageStub({
@@ -37,7 +37,7 @@ export function ProductSubpageStub({
   const router = useRouter()
   const blurb =
     BASE_BLURB[subpage.slug] ??
-    `${subpage.label} for ${entry.label} is on the roadmap — it appears here automatically once the backend is wired.`
+    `${subpage.label} for ${entry.label} reads from its backend and renders here; on this deployment that source is not wired, so nothing is shown rather than fabricated.`
   const docs = entry.docs ?? config.docsUrl
 
   return (
@@ -46,7 +46,7 @@ export function ProductSubpageStub({
       <FadeIn style={{ width: '100%' }}>
         <EmptyState
           icon={entry.icon}
-          title={`${subpage.label} isn’t available yet`}
+          title={`${subpage.label} · not wired on this deployment`}
           description={blurb}
           bullets={[
             'Nothing is fabricated — this page stays empty until the real backend is connected.',

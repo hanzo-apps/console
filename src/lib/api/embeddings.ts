@@ -3,18 +3,20 @@
  *
  * It composes existing clients (no parallel transport): collections are knowledge
  * STORES (`StoreApi`), models are the gateway catalog (`CloudModelApi`), and the
- * remaining calls reach the cloud `/v1` directly. Each call uses the transport its
- * endpoint actually speaks:
+ * remaining calls reach the cloud `/v1` through the console's OWN `/cloud` user-bearer
+ * proxy (the live ingress does not rewrite bare `/v1/*`). Each call uses the transport
+ * its endpoint speaks:
  *   - envelope (`{status,msg,data}`): get-stores, get-cloud-usages, get-files,
- *     add-store, docs/ingest, index            → `get`/`post`
- *   - raw JSON: search (`{hits}`), search/stats (`{documentCount,…}`)  → `restGet`/`restPost`
+ *     add-store, docs/ingest, index            → `cloudGet`/`cloudPost` (→ /cloud)
+ *   - raw JSON: search (`{hits}`), search/stats (`{documentCount,…}`) → `restGet`/`restPost`
+ *     on `cloudProxyV1Url` (→ /cloud)
  *   - OpenAI gateway (Bearer-only): embeddings  → the keyless `/ai` proxy (`originV1Url`)
  *
  * Every call throws `ApiError` (with status) on failure so callers render an
  * honest state — collections list real/empty, and absent fields ("—") and absent
  * endpoints (404 → BackendStateCard) are never papered over with fabricated data.
  */
-import { get, post, restGet, restPost, cloudProxyV1Url, originV1Url } from './client'
+import { cloudGet, cloudPost, restGet, restPost, cloudProxyV1Url, originV1Url } from './client'
 import { config } from '~/config'
 import { StoreApi } from './stores'
 import { CloudModelApi, type CatalogModel } from './models-catalog'
@@ -140,7 +142,7 @@ export const EmbeddingsApi = {
    * `feat/cloud-usage-read-api` ships — callers catch and degrade to "—".
    */
   cloudUsages: async (days = 7): Promise<CloudUsages> => {
-    const data = await get<unknown>('get-cloud-usages', { category: 'embeddings', days })
+    const data = await cloudGet<unknown>('get-cloud-usages', { category: 'embeddings', days })
     return normalizeCloudUsages(data)
   },
 
@@ -170,7 +172,7 @@ export const EmbeddingsApi = {
 
   /** Per-file index status across the org's stores (the Jobs surface). */
   files: async (owner: string): Promise<FileRow[]> => {
-    const raw = await get<unknown[]>('get-files', { owner })
+    const raw = await cloudGet<unknown[]>('get-files', { owner })
     return (raw ?? []).map((r) => {
       const f = (r ?? {}) as Record<string, unknown>
       return {
@@ -197,7 +199,7 @@ export const EmbeddingsApi = {
 
   /** Ingest pasted text into a collection (source=upload — the balance-free path, inline). */
   ingestText: (store: string, name: string, content: string): Promise<IngestStats> =>
-    post<IngestStats>('docs/ingest', { store, source: 'upload', files: [{ name, content }] }).then((r) => r.data),
+    cloudPost<IngestStats>('docs/ingest', { store, source: 'upload', files: [{ name, content }] }).then((r) => r.data),
 
   /**
    * Ingest a GitHub repo (source=github) — the backend clones it, code-aware-chunks
@@ -206,7 +208,7 @@ export const EmbeddingsApi = {
    * `workflowId` (tracked in the Tasks product), never a bespoke job. `repo` = "owner/name".
    */
   ingestGitHub: (store: string, repo: string, ref?: string): Promise<IngestStats> =>
-    post<IngestStats>('docs/ingest', {
+    cloudPost<IngestStats>('docs/ingest', {
       store,
       source: 'github',
       github: { repo: repo.trim(), ...(ref?.trim() ? { ref: ref.trim() } : {}) },
@@ -217,7 +219,7 @@ export const EmbeddingsApi = {
    * `depth` links), extracts, chunks, embeds + indexes. Durable workflow like github.
    */
   ingestCrawl: (store: string, url: string, depth?: number): Promise<IngestStats> =>
-    post<IngestStats>('docs/ingest', {
+    cloudPost<IngestStats>('docs/ingest', {
       store,
       source: 'crawl',
       crawl: { url: url.trim(), ...(depth && depth > 0 ? { depth } : {}) },

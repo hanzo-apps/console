@@ -14,6 +14,7 @@ import { PlatformApi } from './platform'
 import { fetchPlans } from './aicatalog'
 import { ApmApi } from './apm'
 import { CommerceApi } from './commerce'
+import { StoreApi } from './stores'
 import { EmbeddingsApi } from './embeddings'
 import { FunctionsApi } from './functions'
 import { PaasApi } from './paas'
@@ -141,13 +142,12 @@ describe('canonical /v1 — session-scoped data-product clients (no prefix befor
     await ApmApi.dashboards()
     expect(lastUrl).toBe(`${ORIGIN}/v1/o11y/v1/dashboards`)
   })
-  it('commerce CommerceApi.currentStore -> /v1/commerce/store/current (namespaced -> /commerce)', async () => {
-    stub({ store: {} })
-    await CommerceApi.currentStore()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/commerce/store/current`)
-  })
+  // Functions + PaaS are NOT bare-/v1/ clients — they address the `/cloud` bearer proxy
+  // (pinned in the "cloud bearer-scoped heads via /cloud" block above). Commerce is NOT a
+  // bare-/v1/ client either — it addresses the `/commerce` proxy EXPLICITLY (pinned in the
+  // proxy-exceptions block below). The live ingress does not rewrite their heads.
 
-  it('none of the session-scoped clients emits a /<svc>/v1/ prefix', async () => {
+  it('none of the (bare-/v1/) three emits a /<svc>/v1/ prefix', async () => {
     const bad = /\/(cloud|vm|ai|billing|org|commerce)\/v1\//
     stub({ plans: [] })
     await fetchPlans()
@@ -158,25 +158,23 @@ describe('canonical /v1 — session-scoped data-product clients (no prefix befor
     stub([])
     await ApmApi.dashboards()
     expect(lastUrl).not.toMatch(bad)
-    stub({ store: {} })
-    await CommerceApi.currentStore()
-    expect(lastUrl).not.toMatch(bad)
   })
 })
 
-// s3 + framework + provisioning (sql/vector/kv/datastore/docdb/search) + billing are the
-// DELIBERATE exceptions to the prefix-free rule above. The live console ingress does NOT
-// rewrite a bare `/v1/s3` / `/v1/framework` / `/v1/<data-kind>` / `/v1/billing` to the
-// console app — those heads reach the gateway-fronted cloud binary directly, which 403s a
-// cookie-only browser request with no bearer (s3/framework: "valid principal required";
-// provisioning: "X-Org-Id required"; billing: "sign in to view billing"). A signed-in user
-// then saw a FALSE "Not enabled for your account" on Vector/SQL/KV/… So the clients address
-// the console's OWN proxy EXPLICITLY: s3/framework/provisioning via the `/cloud` user-bearer
-// proxy (`cloudProxyV1Url`), billing via the per-tenant `/billing/v1/*` service-token proxy
-// (`billingProxyV1Url`) — both routed to their Next handler regardless of the `/v1/*` ingress
-// config. This block PINS that exception so a future "canonicalization" can't repoint them to
-// a bare `/v1/` that 403s live.
-describe('proxy exceptions — s3/framework/provisioning via /cloud/v1, billing via /billing/v1 (ingress does not rewrite their heads)', () => {
+// s3 + framework + provisioning (sql/vector/kv/datastore/docdb/search) + billing + COMMERCE
+// + the casibase STORE-ADMIN heads (get-stores/…) are the DELIBERATE exceptions to the
+// prefix-free rule above. The live console ingress does NOT rewrite a bare `/v1/<head>` to the
+// console app — those heads reach the gateway-fronted cloud binary directly, which rejects a
+// cookie-only browser request (s3/framework: "valid principal required"; provisioning:
+// "X-Org-Id required"; billing: "sign in to view billing"; commerce: 403 → a FALSE "Not
+// enabled for your account"; get-stores: 401 → a FALSE "session expired"). So the clients
+// address the console's OWN proxy EXPLICITLY: s3/framework/provisioning/stores via the
+// `/cloud` user-bearer proxy (`cloudProxyV1Url` / `cloudGet`), commerce via the `/commerce`
+// user-bearer proxy (`commerceProxyV1Url`), billing via the per-tenant `/billing/v1/*`
+// service-token proxy (`billingProxyV1Url`) — all routed to their Next handler regardless of
+// the `/v1/*` ingress config. This block PINS that exception so a future "canonicalization"
+// can't repoint them to a bare `/v1/` that fails live.
+describe('proxy exceptions — s3/framework/provisioning/stores via /cloud/v1, commerce via /commerce/v1, billing via /billing/v1 (ingress does not rewrite their heads)', () => {
   it('StorageApi.buckets -> /cloud/v1/s3/buckets (NOT bare /v1/s3)', async () => {
     stub({ buckets: [] })
     await StorageApi.buckets()
@@ -205,6 +203,18 @@ describe('proxy exceptions — s3/framework/provisioning via /cloud/v1, billing 
     stub({ balance: 0, holds: 0, available: 0 })
     await BillingApi.balance()
     expect(lastUrl).toBe(`${ORIGIN}/billing/v1/balance?currency=usd`)
+  })
+
+  it('CommerceApi.currentStore -> /commerce/v1/store/current (NOT bare /v1/commerce → gateway 403 "Not enabled")', async () => {
+    stub({ store: {} })
+    await CommerceApi.currentStore()
+    expect(lastUrl).toBe(`${ORIGIN}/commerce/v1/store/current`)
+  })
+
+  it('StoreApi.list (embeddings collections) -> /cloud/v1/get-stores (NOT bare /v1/get-stores → 401 false "session expired")', async () => {
+    stub({ status: 'ok', msg: '', data: [] })
+    await StoreApi.list('acme')
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/get-stores?owner=acme`)
   })
 })
 
