@@ -34,10 +34,10 @@ export type QuickLinkTargets = Record<QuickLinkKind, string>
  * Products with no per-product billing/usage/metrics quick links: the money
  * surfaces themselves (linking Billing→Billing is circular), pure account/org
  * administration (no metered usage of their own), and the aggregate god-view
- * dashboards (they ARE the rollup, not a single product). Admin-gated entries,
- * `soon` products, and non-module (`external`) entries are excluded separately in
- * `showsQuickLinks`, so this set only names the enabled, customer-visible products
- * that still shouldn't carry the band.
+ * dashboards (they ARE the rollup, not a single product). Admin-gated entries and
+ * non-module (`external`) entries are excluded separately in `showsQuickLinks`, so
+ * this set only names the customer-visible products that still shouldn't carry the
+ * band.
  */
 export const QUICK_LINKS_EXCLUDE = new Set<string>([
   // The billing / plan money surfaces themselves.
@@ -59,9 +59,8 @@ export const QUICK_LINKS_EXCLUDE = new Set<string>([
 
 /**
  * Whether a product's Overview should render the Billing/Usage/Metrics quick-links
- * band. Only enabled, customer-visible, in-console product modules qualify — an
- * `external` launch, a `soon` placeholder, an admin god-view, or a money/account
- * surface does not.
+ * band. Only customer-visible, in-console product modules qualify — an `external`
+ * launch, an admin god-view, or a money/account surface does not.
  */
 export function showsQuickLinks(entry: CatalogEntry): boolean {
   if (entry.kind !== 'module') return false

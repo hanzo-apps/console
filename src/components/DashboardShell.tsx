@@ -135,7 +135,7 @@ function activeModuleId(pathname: string): string | null {
 
 /** The CATEGORY of the product the path points at, or null (home / unknown) — the
  *  section the accordion keeps auto-expanded so the current page is always visible.
- *  Unlike `activeModuleId` this spans every kind (module/external/soon all carry a
+ *  Unlike `activeModuleId` this spans every kind (module + external both carry a
  *  category), so navigating to any product reveals its section. */
 function activeCategory(pathname: string): string | null {
   const seg = pathname.split('/').filter(Boolean)[0]
@@ -267,13 +267,6 @@ function NavRow({
       >
         {entry.label}
       </Button>
-      {entry.status === 'soon' && (
-        <YStack px="$1.5" py={1} rounded="$10" bg="$color4">
-          <Text fontSize={9} fontWeight="800" letterSpacing={0.5}>
-            SOON
-          </Text>
-        </YStack>
-      )}
       {onCustomize ? (
         <ColorDot color={color} onPress={onCustomize} label={`Customize ${entry.label}`} />
       ) : onToggle ? (

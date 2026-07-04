@@ -278,10 +278,21 @@ export function WalletModule(_props: { params: Record<string, string> }) {
         </XStack>
 
         {!evm.topupConfigured() ? (
-          <Text fontSize="$3" color="$color11">
-            HUSD top-up is coming soon. Once HUSD is deployed on Hanzo Mainnet you can fund your cloud
-            credit directly from your wallet here.
-          </Text>
+          <YStack gap="$3" maxW={460}>
+            <Text fontSize="$3" color="$color11">
+              On-chain HUSD top-up runs once HUSD is live on Hanzo Mainnet — your HUSD balance already shows
+              above when a wallet is connected. To add cloud credit today, top up with a card on Billing.
+            </Text>
+            <XStack>
+              <Button
+                theme="light"
+                icon={<CreditCard size={15} />}
+                onPress={() => { if (typeof window !== 'undefined') window.location.assign('/billing') }}
+              >
+                Add credit on Billing
+              </Button>
+            </XStack>
+          </YStack>
         ) : !conn ? (
           <Text fontSize="$3" color="$color11">
             Connect your wallet above to top up.
