@@ -33,7 +33,7 @@
  * helpers, kept here (not braided into `platform.ts`) so the concurrent Machines work
  * on `platform.ts` and this stay orthogonal.
  */
-import { get, restGet, originV1Url } from './client'
+import { cloudGet, restGet, originV1Url } from './client'
 import type { Cluster } from './platform'
 
 // ── Wire types ───────────────────────────────────────────────────────────────
@@ -471,12 +471,13 @@ export const ComputeApi = {
 
   /**
    * Metered usage over the last `days` from the cloud usage ledger
-   * (`GET /v1/get-cloud-usages` — the reader over `hanzo.cloud_usage`). Org-scoped by
-   * the `X-Org-Id` header `client.ts` stamps. Throws (→ honest state) when the reader
-   * is not yet registered (404) or access is required (401/403).
+   * (`GET /v1/get-cloud-usages` — the reader over `hanzo.cloud_usage`). Routed through
+   * the `/cloud` user-bearer proxy (org resolved from the Bearer owner) — a bare
+   * `/v1/get-cloud-usages` is cookie-only and 401s on the live ingress. Throws (→ honest
+   * state) when the reader is not yet registered (404).
    */
   usageLedger: async (days = 7): Promise<UsageLedger> => {
-    const data = await get<unknown>('get-cloud-usages', { days })
+    const data = await cloudGet<unknown>('get-cloud-usages', { days })
     return normalizeLedger(data)
   },
 }

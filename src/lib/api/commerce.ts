@@ -21,18 +21,21 @@
  * uses (`models` / `data` / `items`). Nothing is fabricated — an empty store renders an
  * honest empty state, never placeholder rows.
  */
-import { restGet, restPost, restDelete, originV1Url } from './client'
+import { restGet, restPost, restDelete, commerceProxyV1Url } from './client'
 
 const enc = encodeURIComponent
 
 /**
- * The one commerce URL builder: the CANONICAL, prefix-free `/v1/commerce/<resource>`
- * (nothing before `/v1/`). `next.config` rewrites `/v1/commerce/*` to the same-origin
- * user-bearer `/commerce` proxy (which mints the user token; commerce scopes the org
- * from the Bearer owner) — the billing twin of `/v1/billing/*`. Callers pass the bare
- * REST model (`product` / `store/current`); this namespaces it once, in one place.
+ * The one commerce URL builder: the console's OWN same-origin user-bearer `/commerce`
+ * proxy, addressed EXPLICITLY (`<origin>/commerce/v1/<resource>`) — NOT a bare
+ * `/v1/commerce/*` that relies on a `next.config` rewrite. On the live console ingress
+ * `/v1/*` is routed straight to the gateway-fronted cloud binary (it does NOT reach the
+ * Next server), so that rewrite never runs and the bare call 403s → a FALSE "Not enabled
+ * for your account". The `/commerce` route handler mints a short-lived user token and
+ * commerce scopes the org from the Bearer owner (the billing twin of `/billing/v1/*`).
+ * Callers pass the bare REST model (`product` / `store/current`); this namespaces it once.
  */
-const cUrl = (resource: string): string => originV1Url(`commerce/${resource}`)
+const cUrl = (resource: string): string => commerceProxyV1Url(resource)
 
 // ── Coercion helpers (defensive, agents.ts style) ───────────────────────────
 const num = (v: unknown): number | undefined =>

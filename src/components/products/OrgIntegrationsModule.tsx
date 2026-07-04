@@ -16,8 +16,9 @@
  * `/integrations?connected=<id>&account=<label>` (or `?error=<id>&reason=<msg>`); this
  * module reads that query on mount and shows an honest success/error toast + refetches.
  * Every state is honest — loading spinner, `BackendStateCard` on failure, empty state
- * when the framework returns no providers; an `available:false` provider renders the
- * Connect button DISABLED with a subtle "Not yet available" (never a dead-end).
+ * when the framework returns no providers. Only providers whose OAuth is configured
+ * on this deployment (`available`) or already connected are listed, so every card
+ * has a live Connect/Disconnect action — no dead-end.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -91,11 +92,6 @@ function ProviderCard({
       ) : null}
 
       <XStack items="center" justify="flex-end" gap="$2" mt="$1">
-        {!p.available && !p.connected ? (
-          <Text fontSize="$1" color="$color10">
-            Not yet available
-          </Text>
-        ) : null}
         {p.connected ? (
           <Button size="$3" onPress={() => onDisconnect(p)} disabled={busy} icon={busy ? undefined : <Plug size={15} />}>
             {busy ? <Spinner size="small" color="$color11" /> : 'Disconnect'}
@@ -236,8 +232,8 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
   }
 
   // Only connectors whose OAuth is configured on this deployment (available) or
-  // already connected are shown — a not-yet-configured provider never renders a
-  // dead "Not yet available" card. Nothing fabricated; real ones appear as they wire.
+  // already connected are shown — an unconfigured provider is omitted, so every card
+  // has a live Connect/Disconnect action (no dead-end). Nothing fabricated.
   const visible = providers.filter((p) => p.available || p.connected)
 
   // ── Honest empty (no connectable providers on this deployment) ───────────────
