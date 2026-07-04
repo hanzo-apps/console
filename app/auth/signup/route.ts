@@ -28,7 +28,8 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { brandFromHost } from '~/config'
 import { BRANDS } from '~/lib/branding/brands'
-import { createOrganization, createUser, getOrganization, grantWelcomeCredit, mintConfigured } from '~/lib/server/identity'
+import { createOrganization, createUser, getOrganization, mintConfigured } from '~/lib/server/identity'
+import { grantWelcomeCredit } from '~/lib/server/billing-grant'
 import {
   deriveUsername,
   displayNameFromEmail,
@@ -91,10 +92,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // Best-effort $5 welcome grant so the new account can chat immediately (the
-  // onboarding paywall fix). NEVER blocks signup: `grantWelcomeCredit` swallows its
-  // own errors, and the grant is idempotent — the self-heal on first authenticated
-  // load re-lands it if this attempt didn't take.
-  await grantWelcomeCredit(orgSlug, username)
+  // onboarding paywall fix). Uses the commerce SERVICE-token `grant-starter` path
+  // (the new personal-org user can't be resolved by the confidential console client,
+  // so a user-bound bearer would fail). NEVER blocks signup: `grantWelcomeCredit`
+  // swallows its own errors, and the grant is idempotent — the read-path self-heal
+  // (`/billing/v1/me/welcome` on first authenticated load) re-lands it if this missed.
+  await grantWelcomeCredit(orgSlug)
 
   return NextResponse.json({ ok: true, org: orgSlug })
 }

@@ -48,13 +48,6 @@ const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud.hanzo.svc.
  * secrets, and the module is designed for exactly that state.
  */
 const KMS_URL = trim(process.env.KMS_URL ?? 'http://cloud.hanzo.svc:8000')
-/**
- * The gated/priced model gateway (api.hanzo.ai) — the SAME target the `/ai` proxy
- * forwards to. Commerce's `/v1/billing/*` (incl. the idempotent welcome-grant) is
- * mounted behind it, so a user-bound bearer + `X-Org-Id` grants the new account its
- * one-time $5 trial credit there. Shares `AI_GATEWAY_URL` so there is ONE gateway env.
- */
-const GATEWAY_URL = trim(process.env.AI_GATEWAY_URL ?? 'https://api.hanzo.ai')
 /** Confidential client used for app-on-behalf mint/issue/revoke. */
 const MINT_CLIENT_ID = process.env.IAM_MINT_CLIENT_ID ?? ''
 const MINT_CLIENT_SECRET = process.env.IAM_MINT_CLIENT_SECRET ?? ''
@@ -325,53 +318,6 @@ export async function issueUserToken(
   const data = await iamCall<{ accessToken?: string; expiresIn?: number }>('/v1/iam/issue-user-token', query)
   if (!data.accessToken) throw new Error('IAM did not return a token')
   return { accessToken: data.accessToken, expiresIn: data.expiresIn ?? 0 }
-}
-
-/**
- * Best-effort $5 WELCOME GRANT for a freshly created (org, user) — the onboarding
- * paywall fix: a new signup can chat immediately instead of hitting a $0 balance.
- *
- * Mints a short-lived, user-bound bearer for the new account (same primitive the
- * `/ai` proxy uses) and POSTs the IDEMPOTENT commerce welcome-grant behind the
- * gateway (`/v1/billing/me/welcome`, `X-Org-Id` scoping the subject). NEVER throws
- * and never blocks signup: the endpoint grants $5 at most once per subject, so a
- * transient failure here is harmless — the self-heal on first authenticated load
- * (or a later login) re-lands it. Returns true only when the grant call returned ok.
- *
- * No-op (returns false) when the confidential client is unwired — a deployment that
- * cannot mint a bearer simply relies on the self-heal path.
- */
-export async function grantWelcomeCredit(org: string, user: string): Promise<boolean> {
-  if (!mintConfigured()) return false
-  // issue-user-token parses `<owner>/<name>` — the only field it reads. The rest of
-  // the SessionUser is filled honestly for the just-created org admin.
-  const newUser: SessionUser = {
-    owner: org,
-    name: user,
-    id: `${org}/${user}`,
-    accessKey: '',
-    email: '',
-    emailVerified: false,
-    isAdmin: true,
-    isGlobalAdmin: false,
-  }
-  try {
-    const { accessToken } = await issueUserToken(newUser)
-    const res = await fetchWithTimeout(`${GATEWAY_URL}/v1/billing/me/welcome`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'X-Org-Id': org,
-        Accept: 'application/json',
-      },
-      cache: 'no-store',
-    })
-    return res.ok
-  } catch (e) {
-    // Redact the exception (internal IAM/gateway host) — log server-side only.
-    console.error('welcome-grant: could not grant welcome credit for', org, e instanceof Error ? e.message : String(e))
-    return false
-  }
 }
 
 // ── Org onboarding (create org + move the caller into it) ─────────────────────
