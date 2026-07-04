@@ -10,8 +10,10 @@ vi.mock('./identity', () => ({
 }))
 
 import { errorBody, upstreamHeaders, pathIsClean, sameOriginOK, csrfRefusal, forwardWithUserBearer } from './bearer-proxy'
+import { adminBearer } from './identity'
 import { allowCloudSurface } from './proxy-allow'
 import { allowAdminSurface } from './admin-aggregate'
+import { cloudAudience } from '~/config'
 
 describe('pathIsClean (traversal / encoded-slash guard — RED HIGH)', () => {
   it('admits real resource paths', () => {
@@ -368,6 +370,33 @@ describe('forwardWithUserBearer — admin aggregate targets /v1/admin/* (integra
     expect(calledUrl).toBe(`${CLOUD}/v1/admin/providers`)
     // The old bug forwarded here — assert we no longer do.
     expect(calledUrl).not.toBe(`${CLOUD}/admin/providers`)
+  })
+
+  // The /v1/admin/* 403 fix: the route scopes the minted user bearer to the brand
+  // cloud audience (`<brand>-cloud`). The reserved-admin operator's own app is
+  // `admin-console`, which cloud's audience allowlist does NOT trust — so a
+  // default-audience bearer was rejected (anonymous → 403). With the cloud audience,
+  // cloud validates the token and (owner=admin + isAdmin=true) grants admin.
+  it('scopes the minted user bearer to the brand cloud audience on an admin host', async () => {
+    const mintedFor = vi.mocked(adminBearer)
+    mintedFor.mockClear()
+    // Mirror the route EXACTLY: forward with audience = cloudAudience(host).
+    await forwardWithUserBearer(req('GET'), {
+      target: CLOUD,
+      path: 'v1/admin/overview',
+      allow: allowAdminSurface,
+      errorShape: 'casibase',
+      audience: cloudAudience('admin.hanzo.ai'),
+    })
+    // adminBearer is asked to mint a token scoped to hanzo-cloud (NOT admin-console).
+    expect(mintedFor).toHaveBeenCalledWith(expect.objectContaining({ id: 'maxpower/dave' }), 'hanzo-cloud')
+  })
+
+  it('a proxy that omits audience mints the default (target-app) bearer — tenants unchanged', async () => {
+    const mintedFor = vi.mocked(adminBearer)
+    mintedFor.mockClear()
+    await forwardWithUserBearer(req('GET'), { target: CLOUD, path: 'v1/admin/overview', allow: allowAdminSurface })
+    expect(mintedFor).toHaveBeenCalledWith(expect.objectContaining({ id: 'maxpower/dave' }), undefined)
   })
 
   it('forwards the other read heads (overview/finance/compute) under /v1/admin/*', async () => {
