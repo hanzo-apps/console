@@ -58,6 +58,34 @@ export function entryMatches(e: CatalogEntry, query: string): boolean {
   return `${e.label} ${e.id} ${e.category} ${e.gcp ?? ''} ${e.description}`.toLowerCase().includes(q)
 }
 
+// ── Slug aliases (conventional URL → canonical entry id) ─────────────────────
+
+/**
+ * Conventional / intuitive slugs that a user (or an external doc, bookmark, or a
+ * hand-typed URL) reasonably expects, mapped to the canonical catalog `id`. The
+ * nav/launcher/⌘K always open the canonical id, so these aliases exist ONLY to
+ * keep a directly-navigated URL from 404ing — the ONE place aliasing is defined
+ * (DRY), consumed only by `resolveProductView`.
+ *
+ * `automation`/`automations` → `auto` (the external Hanzo Auto product), and
+ * `mlpipelines`/`kubeflow` → `ml-pipelines` (the old engine-named slug stays live
+ * for any existing bookmark after the id rename). An alias only resolves to
+ * SOMETHING truthful — a real module route or an external launch — never a fake.
+ */
+export const SLUG_ALIASES: Record<string, string> = {
+  automation: 'auto',
+  automations: 'auto',
+  mlpipelines: 'ml-pipelines',
+  kubeflow: 'ml-pipelines',
+}
+
+/** Canonicalize the FIRST slug segment through `SLUG_ALIASES` (identity if none). */
+export function canonicalSlug(slug: string[]): string[] {
+  const [head, ...rest] = slug
+  const canon = head ? SLUG_ALIASES[head] : undefined
+  return canon ? [canon, ...rest] : slug
+}
+
 // ── Sub-pages (the level-2 nav contract) ─────────────────────────────────────
 
 /** The product index — the implicit Overview sub-page (never declared). */
@@ -167,6 +195,12 @@ export type ProductView =
   | { kind: 'route'; matched: Matched }
   | { kind: 'subpage'; entry: CatalogEntry; subpage: ProductSubpage }
   | { kind: 'stub'; entry: CatalogEntry; subpage: ProductSubpage }
+  // A directly-navigated URL that resolves (possibly via an alias) to an EXTERNAL
+  // entry — a real Hanzo product on its own domain (e.g. Automation → auto.hanzo.ai).
+  // External entries own no in-console route, so the catch-all launches `href`
+  // instead of 404ing. The nav/launcher never produce this (they `openProduct`
+  // directly); it's only for a hand-typed/bookmarked URL.
+  | { kind: 'external'; entry: Extract<CatalogEntry, { kind: 'external' }> }
   | { kind: 'notfound' }
 
 /**
@@ -192,8 +226,20 @@ export type ProductView =
 export function resolveProductView(
   catalog: CatalogEntry[],
   modules: ProductModule[],
-  slug: string[],
+  slugIn: string[],
 ): ProductView {
+  // Canonicalize a conventional/aliased slug (e.g. `/automation` → `auto`,
+  // `/kubeflow` → `ml-pipelines`) up front, so aliasing lives in exactly one place
+  // and every branch below reasons over the canonical id — no dead alias URL.
+  const slug = canonicalSlug(slugIn)
+
+  // A bare `/<external-product>` (its canonical id, or an alias like `/automation`)
+  // resolves to the external launch — a real product on its own domain, not a 404.
+  if (slug.length === 1) {
+    const entry = catalog.find((e) => e.id === slug[0])
+    if (entry && entry.kind === 'external') return { kind: 'external', entry }
+  }
+
   if (slug.length === 2) {
     const entry = catalog.find((e) => e.id === slug[0])
     if (entry && entry.kind === 'module') {
