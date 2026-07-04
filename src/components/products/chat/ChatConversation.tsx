@@ -298,7 +298,17 @@ export function ChatConversation({
   const empty = messages.length === 0 && !error
 
   return (
-    <YStack flex={1} gap="$4" minH={compact ? 0 : 480}>
+    // Full-page mode caps the conversation column (~820px, centered) so lines stay
+    // readable on ultra-wide displays instead of running edge-to-edge; compact mode
+    // (the floating bubble) owns its own width.
+    <YStack
+      flex={1}
+      gap="$4"
+      minH={compact ? 0 : 480}
+      width="100%"
+      maxW={compact ? undefined : 820}
+      mx={compact ? undefined : 'auto'}
+    >
       {compact ? (
         <XStack items="center" justify="flex-end" gap="$2">
           <Button size="$2" icon={<History size={15} />} onPress={onShowHistory}>
@@ -391,6 +401,11 @@ export function ChatConversation({
         </ScrollView>
       </YStack>
 
+      {/* Composer dock — sticky to the viewport bottom on phones/tablets (see
+          `.hz-chat-dock`) so the input is always reachable as the conversation
+          scrolls beneath; static in the capped column from lg up. The floating
+          bubble (compact) fills a bounded flex container, so it stays in flow. */}
+      <YStack className={compact ? undefined : 'hz-chat-dock'} bg="$background" pt="$2" gap="$2">
       {/* Composer — one rounded, elevated input with code-insert + send. */}
       <YStack
         bg="$color2"
@@ -451,6 +466,8 @@ export function ChatConversation({
             <Button
               size="$3"
               circular
+              minW={44}
+              minH={44}
               bg="$color5"
               icon={<Send size={16} />}
               disabled={sending || !input.trim()}
@@ -462,11 +479,12 @@ export function ChatConversation({
           </XStack>
         </XStack>
       </YStack>
-      <XStack justify="center" px="$2">
-        <Text fontSize="$1" color="$color10" text="center">
-          Enter to send · Shift+Enter for a new line
-        </Text>
-      </XStack>
+        <XStack justify="center" px="$2">
+          <Text fontSize="$1" color="$color10" text="center">
+            Enter to send · Shift+Enter for a new line
+          </Text>
+        </XStack>
+      </YStack>
     </YStack>
   )
 }

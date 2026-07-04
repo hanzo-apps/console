@@ -376,3 +376,32 @@ html:root.t_light {
     transition: none;
   }
 }
+
+/* ── Touch targets — WCAG 2.5.5 (AAA) / Apple HIG ≥44px ──────────────────────
+   On phones/tablets (<lg) every control inside the mobile nav drawer must be at
+   least 44px tall to tap reliably. Scoped to `.hz-touch-target` (set on the drawer
+   root only), so the dense DESKTOP sidebar — a separate mount at lg+ that never
+   wears this class — keeps its Linear-grade density. A Gui <Button> renders a real
+   <button>, so this one rule reaches every nav row / control within the drawer.
+   One class, every touch surface (DRY). */
+@media (max-width: 1023.98px) {
+  .hz-touch-target button,
+  .hz-touch-target [role='button'] {
+    min-height: 44px;
+  }
+}
+
+/* ── Chat composer dock — pinned to the viewport bottom on phones/tablets ─────
+   The full-page chat scrolls inside the shell's content scroller; without this the
+   composer sits at the end of a tall welcome/thread and first paints BELOW the fold.
+   Made sticky it rides the bottom edge of the scrollport (the conversation scrolls
+   under it), so the input is always reachable. From lg up the capped, centered
+   column already keeps it in view, so it stays in normal flow. The element carries
+   an opaque background so content scrolls cleanly beneath. */
+@media (max-width: 1023.98px) {
+  .hz-chat-dock {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+  }
+}
