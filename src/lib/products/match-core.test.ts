@@ -158,8 +158,18 @@ const auto = mod('auto', {
 // (`kind !== 'module'`) still fail closed for any malformed entry that slips
 // through at runtime — this fixture proves the guard holds.
 const nonModule = mod('bogus', { kind: 'other', routes: undefined } as never)
+// The canonical targets of the human-slug aliases (traces→o11y, deploy→app-platform,
+// plans-pricing→plans, wallets→wallet, fine-tuning→finetuning, web-search→websearch).
+// Present so the alias table's "every target is a real id" invariant is provable and
+// a direct alias URL resolves to the real module (never a 404). `models` already exists.
+const o11y = mod('o11y', { label: 'Traces', category: 'Observe' })
+const appPlatform = mod('app-platform', { label: 'App Platform', category: 'Platform' })
+const plans = mod('plans', { label: 'Plans', category: 'Settings' })
+const wallet = mod('wallet', { label: 'Wallet', category: 'Web3' })
+const finetuning = mod('finetuning', { label: 'Fine-tuning', category: 'Training' })
+const websearch = mod('websearch', { label: 'Web Search', category: 'AI' })
 
-const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, mlPipelines, auto, nonModule]
+const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, mlPipelines, auto, o11y, appPlatform, plans, wallet, finetuning, websearch, nonModule]
 const MODULES = CATALOG.filter((e) => e.kind === 'module').map((e) => e as unknown as ProductModule)
 
 describe('productSubpages — Overview + specifics + uniform base set', () => {
@@ -241,6 +251,18 @@ describe('canonicalSlug — conventional URLs map to the canonical entry id', ()
     expect(canonicalSlug(['mlpipelines'])).toEqual(['ml-pipelines'])
     expect(canonicalSlug(['kubeflow', 'status'])).toEqual(['ml-pipelines', 'status'])
   })
+  it('maps the human product slugs the console/e2e/bookmarks use to the canonical id', () => {
+    // These six were the biggest "blank" source: a human slug ≠ registry id → 404.
+    expect(canonicalSlug(['traces'])).toEqual(['o11y'])
+    expect(canonicalSlug(['deploy'])).toEqual(['app-platform'])
+    expect(canonicalSlug(['plans-pricing'])).toEqual(['plans'])
+    expect(canonicalSlug(['wallets'])).toEqual(['wallet'])
+    expect(canonicalSlug(['model-catalog'])).toEqual(['models'])
+    expect(canonicalSlug(['fine-tuning'])).toEqual(['finetuning'])
+    expect(canonicalSlug(['web-search'])).toEqual(['websearch'])
+    // A trailing segment is preserved through the alias (e.g. /traces/logs).
+    expect(canonicalSlug(['traces', 'logs'])).toEqual(['o11y', 'logs'])
+  })
   it('is identity for a non-aliased or empty slug', () => {
     expect(canonicalSlug(['models', 'routing'])).toEqual(['models', 'routing'])
     expect(canonicalSlug([])).toEqual([])
@@ -274,6 +296,22 @@ describe('resolveProductView — aliases + external resolve (never a 404 nav ite
     // The alias resolves to the SAME real module, its index route.
     const v = view(['kubeflow'])
     if (v.kind === 'route') expect(v.matched.module.id).toBe('ml-pipelines')
+  })
+  it('every human product slug resolves to its real module (never a 404 blank)', () => {
+    const cases: [string, string][] = [
+      ['traces', 'o11y'],
+      ['deploy', 'app-platform'],
+      ['plans-pricing', 'plans'],
+      ['wallets', 'wallet'],
+      ['model-catalog', 'models'],
+      ['fine-tuning', 'finetuning'],
+      ['web-search', 'websearch'],
+    ]
+    for (const [slug, id] of cases) {
+      const v = view([slug])
+      expect(v.kind, `/${slug} must resolve`).toBe('route')
+      if (v.kind === 'route') expect(v.matched.module.id).toBe(id)
+    }
   })
   it('an aliased base sub-page still routes to the shared per-product view', () => {
     // /kubeflow/status → ml-pipelines/status → the shared per-product sub-page.
