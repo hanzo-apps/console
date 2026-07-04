@@ -87,13 +87,15 @@ export function SignInForm() {
   async function logInWithCredentials(): Promise<void> {
     const res = await loginWithPassword(email.trim(), password)
     if (res.kind === 'code') {
-      await completeSignIn(res.code, loginState())
-      // Upgrade to the console's OWN durable, silently-refreshed session (server-side
-      // password grant, gated by the casibase session we just established). Best-effort:
-      // it never throws, and a failure leaves the user signed in on the casibase session
-      // — so login is never blocked by this enhancement. MFA accounts don't reach here
-      // (they hand off to the hosted flow), so this never bypasses MFA.
-      await establishConsoleSession(email.trim(), password)
+      await completeSignIn(res.code, loginState(), res.verifier)
+      // `res.verifier` is present ONLY on an admin host, where completeSignIn already
+      // established the console's OWN durable session (the BFF PKCE redemption). A tenant
+      // login upgrades its casibase session to the durable console session here (server-
+      // side password grant, gated by that session). Best-effort: it never throws, and a
+      // failure leaves the user signed in on the casibase session — so login is never
+      // blocked. MFA accounts don't reach here (they hand off to the hosted flow), so
+      // this never bypasses MFA.
+      if (!res.verifier) await establishConsoleSession(email.trim(), password)
       router.replace('/')
     } else if (res.kind === 'mfa') {
       setMfa(true)
