@@ -28,6 +28,7 @@ import {
 import { BillingApi } from '~/lib/api/billing'
 import { randomName } from '~/lib/naming'
 import { FieldSelect } from '~/components/ui/Field'
+import { FundingNote } from './FundingNote'
 
 /** A catalog row unified over CPU sizes and GPU sizes (GPU carries model/count/VRAM). */
 type Item = VisorSize & Partial<Pick<VisorGpuSize, 'model' | 'gpuCount' | 'vramGb'>>
@@ -89,6 +90,9 @@ export function LaunchDrawer({
   // card-gated (treated as satisfied). FAIL CLOSED: if the payment-methods read errors
   // we treat it as "no card" so a GPU launch is BLOCKED (never a silent credit fallback).
   const [hasCard, setHasCard] = useState<boolean | null>(kind === 'gpu' ? null : true)
+  // The org's spendable CREDIT balance (cents) — funds a CPU/non-GPU launch. `null`
+  // until known; the funding note then omits the figure but still says "on credits".
+  const [creditCents, setCreditCents] = useState<number | null>(null)
 
   useEffect(() => {
     let live = true
@@ -107,6 +111,12 @@ export function LaunchDrawer({
       BillingApi.paymentMethods()
         .then((pms) => { if (live) setHasCard(pms.length > 0) })
         .catch(() => { if (live) setHasCard(false) })
+    } else {
+      // CPU/non-GPU → surface the CREDIT balance it funds against (spendable now). A
+      // failure just omits the figure (the note still says "launches on your credit").
+      BillingApi.balance()
+        .then((b) => { if (live) setCreditCents(b.available) })
+        .catch(() => { if (live) setCreditCents(null) })
     }
     return () => {
       live = false
@@ -174,9 +184,16 @@ export function LaunchDrawer({
     <YStack gap="$3">
       <Text fontSize="$2" color="$color11">
         {isGpu
-          ? 'Launch a dedicated GPU machine. GPUs are prepay-only, charged to your payment card — the 24-hour minimum is charged upfront, then you pay the per-hour rate. Granted credits can’t be used for GPUs.'
-          : 'Launch a dedicated compute machine. Pick a size and region — you pay the per-hour rate, metered to your Hanzo balance.'}
+          ? 'Launch a dedicated GPU machine — pick an accelerator and region.'
+          : 'Launch a dedicated compute machine — pick a size and region.'}
       </Text>
+
+      {/* Funding source — the CLEAR CPU-credit vs GPU-prepay-card distinction. A CPU
+          machine launches on the credit balance (no card); a GPU is prepay-only,
+          charged to the card with a 24-hour minimum (and surfaces the add-card CTA
+          when none is on file — the honest first gate; the server also enforces it). */}
+      <FundingNote kind={kind} creditCents={creditCents} hasCard={hasCard} compact />
+
 
       {/* Name — pre-filled with a fun random name; 🎲 re-rolls, still fully editable */}
       <YStack gap="$1.5">
@@ -271,23 +288,6 @@ export function LaunchDrawer({
           <Text fontSize="$2" color="$color10">Select a {isGpu ? 'GPU type' : 'size'} to see the price.</Text>
         )}
       </Card>
-
-      {/* GPU card-on-file gate — no confirmed card ⇒ launch is BLOCKED with an honest
-          add-card/prepay CTA (never a silent credit fallback, never a fabricated launch). */}
-      {isGpu && hasCard === false ? (
-        <XStack items="flex-start" gap="$2" p="$3" rounded="$4" borderWidth={1} borderColor="$yellow6" bg="$yellow2">
-          <CreditCard size={15} color="$yellow10" />
-          <YStack flex={1} gap="$1.5">
-            <Text fontSize="$2" fontWeight="700" color="$color12">Add a payment card to launch GPUs</Text>
-            <Text fontSize="$1" color="$color11">
-              GPUs are prepay-only and require a payment card on file. Add a card and prepay the 24-hour minimum{upfront24h != null ? ` (${usd(upfront24h)})` : ''} to launch — granted credits can’t be used for GPUs.
-            </Text>
-            <Button size="$2" self="flex-start" theme="light" icon={<CreditCard size={14} />} onPress={() => goTo('/billing/credits')}>
-              Add a payment card &amp; prepay
-            </Button>
-          </YStack>
-        </XStack>
-      ) : null}
 
       {error ? (
         <XStack items="flex-start" gap="$2" p="$3" rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color2">
