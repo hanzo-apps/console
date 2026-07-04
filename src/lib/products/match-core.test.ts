@@ -236,6 +236,31 @@ describe('resolveProductView — base sub-pages are the shared per-product view 
     expect(v.kind).toBe('stub')
     if (v.kind === 'stub') expect(v.subpage.label).toBe('Queues')
   })
+  // ANTI-DRIFT (the "zero coming-soon" guarantee for sub-pages): the ONLY way a product's
+  // nav lands the not-wired ProductSubpageStub is a DECLARED specific with no backing route.
+  // The real catalog avoids that by giving every subpage-declaring product a `:tab` (or
+  // slug-specific) route. This pins the rule via `subpageIsWired`: a declared specific WITH a
+  // `:tab` route is wired → resolves to `route`, never the stub. A product declaring a
+  // specific it does NOT route is the bug this catches (and Tasks›Queues above shows the stub).
+  it('a declared specific WITH a :tab route is wired (route, never the coming-soon stub)', () => {
+    const wired = mod('wired', {
+      subpages: [{ slug: 'analytics', label: 'Analytics' }],
+      routes: [
+        { path: '', component: C },
+        { path: ':tab', component: C },
+      ],
+    })
+    const cat = [wired]
+    const mods = cat.map((e) => e as unknown as ProductModule)
+    expect(subpageIsWired(mods, 'wired', 'analytics')).toBe(true)
+    expect(resolveProductView(cat, mods, ['wired', 'analytics']).kind).toBe('route')
+    // The negative: the same product WITHOUT a route for the specific is NOT wired → stubs.
+    const unwired = mod('unwired', { subpages: [{ slug: 'analytics', label: 'Analytics' }] })
+    const ucat = [unwired]
+    const umods = ucat.map((e) => e as unknown as ProductModule)
+    expect(subpageIsWired(umods, 'unwired', 'analytics')).toBe(false)
+    expect(resolveProductView(ucat, umods, ['unwired', 'analytics']).kind).toBe('stub')
+  })
   it('404s an unknown product or an unknown deep path', () => {
     expect(view(['nope']).kind).toBe('notfound')
     expect(view(['vpc', 'nope', 'deep']).kind).toBe('notfound')

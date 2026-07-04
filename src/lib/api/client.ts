@@ -275,6 +275,31 @@ export async function originPost<T>(path: string, body?: unknown, query?: Query)
   return r.data
 }
 
+/**
+ * Envelope GET routed through the console's OWN `/cloud` user-bearer proxy
+ * (`<origin>/cloud/v1/<path>`) — the casibase-envelope twin of `originGet` for the
+ * cloud-api STORE-ADMIN surfaces (`get-stores` / `get-store` / `get-store-names` /
+ * `get-cloud-usages` / `get-files`). These heads REQUIRE a Bearer, and on the live
+ * console ingress `/v1/*` reaches the gateway-fronted cloud binary directly (the
+ * `next.config` rewrite never runs), so a bare `/v1/get-stores` is cookie-only and
+ * 401s → a FALSE "session expired" for a signed-in user. Addressing `/cloud`
+ * explicitly mints a short-lived user token and forwards it (org from the Bearer
+ * owner). Same casibase envelope unwrap + `ApiError` as `get`. The head must be
+ * allow-listed in `proxy-allow.ts` (`allowCommerceSurface`'s cloud twin).
+ */
+export async function cloudGet<T>(path: string, query?: Query): Promise<T> {
+  const r = await request<T>('GET', path, { query, absoluteUrl: cloudProxyV1Url(path) })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r.data
+}
+
+/** Envelope POST routed through the `/cloud` user-bearer proxy — the mutating twin of `cloudGet`. */
+export async function cloudPost<T = string>(path: string, body?: unknown, query?: Query): Promise<ApiResponse<T>> {
+  const r = await request<T>('POST', path, { query, body, absoluteUrl: cloudProxyV1Url(path) })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r
+}
+
 /** GET that returns the full envelope (for list endpoints needing `data2` total). */
 export async function getList<T>(path: string, query?: Query): Promise<{ rows: T; total: number }> {
   const r = await request<T>('GET', path, { query })
@@ -380,6 +405,26 @@ export const vmProxyBase = (): string =>
 
 /** Build a `/v1/<path>` URL on the visor user-bearer proxy (`<origin>/vm/v1/<path>`). */
 export const vmProxyV1Url = (path: string): string => v1Url(path, vmProxyBase())
+
+/**
+ * The console's OWN same-origin COMMERCE user-bearer proxy base (`<origin>/commerce`).
+ *
+ * The store/merchant admin surface (product/order/user/variant/collection/discount/
+ * store…) is served by commerce (`commerce.hanzo.svc`) and REQUIRES a Bearer — a
+ * cookie-only browser call is rejected. Same class as the framework/s3/billing `/cloud`
+ * and `/billing` fixes: on the live console ingress `/v1/*` is routed straight to the
+ * gateway-fronted cloud binary (it does NOT reach the Next server), so the `next.config`
+ * `/v1/commerce/* → /commerce/v1/*` rewrite never runs and the bare call reaches the
+ * gateway, which 403s ("Not enabled for your account"). So the commerce store clients
+ * address this `/commerce` proxy EXPLICITLY: `app/commerce/[...path]` mints a short-lived
+ * user-bound token from the session and forwards to commerce with the org resolved from
+ * the token owner (`allowCommerceSurface`) — tenant isolation unchanged, no rewrite reliance.
+ */
+export const commerceProxyBase = (): string =>
+  typeof window !== 'undefined' ? `${window.location.origin}/commerce` : '/commerce'
+
+/** Build a `/v1/<path>` URL on the commerce user-bearer proxy (`<origin>/commerce/v1/<path>`). */
+export const commerceProxyV1Url = (path: string): string => v1Url(path, commerceProxyBase())
 
 async function restRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
