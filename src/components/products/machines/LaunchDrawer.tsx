@@ -25,6 +25,7 @@ import {
   type VisorRegion,
   type VisorSize,
 } from '~/lib/api/visor'
+import { BillingApi } from '~/lib/api/billing'
 import { randomName } from '~/lib/naming'
 import { FieldSelect } from '~/components/ui/Field'
 
@@ -33,6 +34,21 @@ type Item = VisorSize & Partial<Pick<VisorGpuSize, 'model' | 'gpuCount' | 'vramG
 
 const hr = (n?: number) => (n == null ? DASH : `$${n < 1 ? n.toFixed(3) : n.toFixed(2)}/hr`)
 const mo = (n?: number) => (n == null ? DASH : `$${Math.round(n).toLocaleString()}/mo`)
+const usd = (n?: number) => (n == null ? DASH : `$${n.toFixed(2)}`)
+
+/**
+ * GPU billing policy (real money, NOT credits) — surfaced here and ENFORCED
+ * server-side (cloud-api launch + commerce charge), so the UI can never bypass it:
+ *  - PREPAY ONLY: a GPU draws against the org's card-funded PREPAID balance, never
+ *    the granted/promo CREDIT balance (which stays for non-GPU DO compute).
+ *  - CARD REQUIRED: no payment card on file ⇒ launch is BLOCKED with an add-card CTA.
+ *  - 24-HOUR MINIMUM: launching commits to ≥24h — the first 24h (hourly × 24) is
+ *    charged upfront. Anti-abuse; the Quote shows this floor as the "charged now".
+ * CPU machines are unaffected — they stay metered to the Hanzo credit balance.
+ */
+const GPU_MIN_HOURS = 24
+/** Navigate to a same-origin console route (add-card/prepay, add-credits). */
+const goTo = (p: string) => { if (typeof window !== 'undefined') window.location.assign(p) }
 
 function spec(it: Item): string {
   const host = [it.vcpus != null ? `${it.vcpus} vCPU` : null, it.memGb != null ? `${it.memGb} GB` : null].filter(Boolean).join(' · ')
@@ -68,7 +84,11 @@ export function LaunchDrawer({
   // click-and-go; the 🎲 button and a post-launch re-roll keep the rapid-launch flow fresh.
   const [name, setName] = useState(randomName)
   const [phase, setPhase] = useState<'idle' | 'launching'>('idle')
-  const [error, setError] = useState<{ msg: string; credits: boolean } | null>(null)
+  const [error, setError] = useState<{ msg: string; needsPay: boolean } | null>(null)
+  // Card-on-file gate — GPUs ONLY. `null` = still checking; a CPU machine is never
+  // card-gated (treated as satisfied). FAIL CLOSED: if the payment-methods read errors
+  // we treat it as "no card" so a GPU launch is BLOCKED (never a silent credit fallback).
+  const [hasCard, setHasCard] = useState<boolean | null>(kind === 'gpu' ? null : true)
 
   useEffect(() => {
     let live = true
@@ -81,6 +101,13 @@ export function LaunchDrawer({
       setRegion((cur) => cur || initialRegion || regs[0]?.slug || '')
       setLoading(false)
     })
+    // GPUs require a real payment card on file (prepay-only). Resolve it in parallel so
+    // it never blocks the catalog; a failure fails closed to "no card" (gate blocks).
+    if (kind === 'gpu') {
+      BillingApi.paymentMethods()
+        .then((pms) => { if (live) setHasCard(pms.length > 0) })
+        .catch(() => { if (live) setHasCard(false) })
+    }
     return () => {
       live = false
     }
@@ -94,7 +121,18 @@ export function LaunchDrawer({
 
   const selected = useMemo(() => items.find((it) => it.slug === sel) ?? null, [items, sel])
   const regionOptions = regions.length ? regions.map((r) => r.slug) : ['nyc1']
-  const canLaunch = !!selected && !!region && name.trim().length > 0 && phase === 'idle'
+  const isGpu = kind === 'gpu'
+  // The upfront 24-hour-minimum charge for a GPU (hourly × 24), shown in the Quote and
+  // on the Launch button as "charged now". Undefined until a priced GPU is selected.
+  const upfront24h = useMemo(
+    () => (isGpu && selected?.priceHourly != null ? selected.priceHourly * GPU_MIN_HOURS : undefined),
+    [isGpu, selected],
+  )
+  // GPU launches additionally require a confirmed card on file (prepay-only). The
+  // server also enforces prepay + the 24h minimum, so this is the honest first gate,
+  // never the sole authority.
+  const cardOk = !isGpu || hasCard === true
+  const canLaunch = !!selected && !!region && name.trim().length > 0 && phase === 'idle' && cardOk
 
   const launch = async () => {
     if (!canLaunch || !selected) return
@@ -110,8 +148,16 @@ export function LaunchDrawer({
     } catch (e) {
       const status = e instanceof ApiError ? e.status : undefined
       const msg = e instanceof Error ? e.message : String(e)
-      const credits = status === 402 || /insufficient|balance|credit|payment/i.test(msg)
-      setError({ msg: credits ? 'Insufficient balance — add credits to launch this machine.' : msg, credits })
+      // 402 or any payment-shaped message ⇒ a money gate, not a hard error. For a GPU
+      // that means "prepay-only, add a card / prepay the 24h minimum"; for CPU it's the
+      // classic "add credits". Never fabricate a launch — surface the honest CTA.
+      const needsPay = status === 402 || /insufficient|balance|credit|payment|prepay|card|method/i.test(msg)
+      const friendly = !needsPay
+        ? msg
+        : isGpu
+          ? 'GPUs are prepay-only — add a payment card and prepay the 24-hour minimum to launch.'
+          : 'Insufficient balance — add credits to launch this machine.'
+      setError({ msg: friendly, needsPay })
       setPhase('idle')
     }
   }
@@ -127,8 +173,8 @@ export function LaunchDrawer({
   return (
     <YStack gap="$3">
       <Text fontSize="$2" color="$color11">
-        {kind === 'gpu'
-          ? 'Launch a dedicated GPU machine. Pick an accelerator and region — you pay the per-hour rate, metered to your Hanzo balance.'
+        {isGpu
+          ? 'Launch a dedicated GPU machine. GPUs are prepay-only, charged to your payment card — the 24-hour minimum is charged upfront, then you pay the per-hour rate. Granted credits can’t be used for GPUs.'
           : 'Launch a dedicated compute machine. Pick a size and region — you pay the per-hour rate, metered to your Hanzo balance.'}
       </Text>
 
@@ -191,35 +237,73 @@ export function LaunchDrawer({
         <FieldSelect value={region} options={regionOptions} onChange={setRegion} />
       </YStack>
 
-      {/* Quote — OUR market price (== catalog == launch charge) */}
+      {/* Quote — OUR market price (== catalog == launch charge). For a GPU the headline
+          figure is the 24-hour-minimum charged upfront to the card (prepay), NOT a
+          monthly estimate; for CPU it stays the per-org metered monthly/hourly. */}
       <Card borderWidth={1} borderColor="$borderColor" p="$3" gap="$1.5" bg="$color1">
         <XStack items="center" justify="space-between">
           <Text fontSize="$2" color="$color11">Quote</Text>
-          <Text fontSize="$1" color="$color10">per-org metered</Text>
+          <Text fontSize="$1" color="$color10">{isGpu ? 'Prepay only · 24-hour minimum' : 'per-org metered'}</Text>
         </XStack>
         {selected ? (
-          <>
-            <XStack items="baseline" gap="$2">
-              <Text fontSize="$8" fontWeight="900" color="$color12">{mo(selected.priceMonthly)}</Text>
-              <Text fontSize="$3" color="$color11">{hr(selected.priceHourly)}</Text>
-            </XStack>
-            <Text fontSize="$1" color="$color10" numberOfLines={2}>{spec(selected)}{region ? ` · ${region}` : ''}</Text>
-            <Text fontSize="$1" color="$color10">Launching debits your Hanzo balance at the hourly rate until you destroy it.</Text>
-          </>
+          isGpu ? (
+            <>
+              <XStack items="baseline" gap="$2">
+                <Text fontSize="$8" fontWeight="900" color="$color12">{usd(upfront24h)}</Text>
+                <Text fontSize="$3" color="$color11">charged now · {hr(selected.priceHourly)}</Text>
+              </XStack>
+              <Text fontSize="$1" color="$color10" numberOfLines={2}>{spec(selected)}{region ? ` · ${region}` : ''}</Text>
+              <Text fontSize="$1" color="$color10">
+                24-hour minimum ({hr(selected.priceHourly)} × 24) is charged upfront to your card. After 24h you pay the hourly rate until you destroy it. Credits can’t be used for GPUs.
+              </Text>
+            </>
+          ) : (
+            <>
+              <XStack items="baseline" gap="$2">
+                <Text fontSize="$8" fontWeight="900" color="$color12">{mo(selected.priceMonthly)}</Text>
+                <Text fontSize="$3" color="$color11">{hr(selected.priceHourly)}</Text>
+              </XStack>
+              <Text fontSize="$1" color="$color10" numberOfLines={2}>{spec(selected)}{region ? ` · ${region}` : ''}</Text>
+              <Text fontSize="$1" color="$color10">Launching debits your Hanzo balance at the hourly rate until you destroy it.</Text>
+            </>
+          )
         ) : (
-          <Text fontSize="$2" color="$color10">Select a {kind === 'gpu' ? 'GPU type' : 'size'} to see the price.</Text>
+          <Text fontSize="$2" color="$color10">Select a {isGpu ? 'GPU type' : 'size'} to see the price.</Text>
         )}
       </Card>
 
+      {/* GPU card-on-file gate — no confirmed card ⇒ launch is BLOCKED with an honest
+          add-card/prepay CTA (never a silent credit fallback, never a fabricated launch). */}
+      {isGpu && hasCard === false ? (
+        <XStack items="flex-start" gap="$2" p="$3" rounded="$4" borderWidth={1} borderColor="$yellow6" bg="$yellow2">
+          <CreditCard size={15} color="$yellow10" />
+          <YStack flex={1} gap="$1.5">
+            <Text fontSize="$2" fontWeight="700" color="$color12">Add a payment card to launch GPUs</Text>
+            <Text fontSize="$1" color="$color11">
+              GPUs are prepay-only and require a payment card on file. Add a card and prepay the 24-hour minimum{upfront24h != null ? ` (${usd(upfront24h)})` : ''} to launch — granted credits can’t be used for GPUs.
+            </Text>
+            <Button size="$2" self="flex-start" theme="light" icon={<CreditCard size={14} />} onPress={() => goTo('/billing/credits')}>
+              Add a payment card &amp; prepay
+            </Button>
+          </YStack>
+        </XStack>
+      ) : null}
+
       {error ? (
         <XStack items="flex-start" gap="$2" p="$3" rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color2">
-          {error.credits ? <CreditCard size={15} color="$yellow10" /> : <AlertTriangle size={15} color="$red10" />}
+          {error.needsPay ? <CreditCard size={15} color="$yellow10" /> : <AlertTriangle size={15} color="$red10" />}
           <YStack flex={1} gap="$1.5">
             <Text fontSize="$2" color="$color11">{error.msg}</Text>
-            {error.credits ? (
-              <Button size="$2" self="flex-start" theme="light" icon={<CreditCard size={14} />} onPress={() => { if (typeof window !== 'undefined') window.location.assign('/wallet') }}>
-                Add credits
-              </Button>
+            {error.needsPay ? (
+              isGpu ? (
+                <Button size="$2" self="flex-start" theme="light" icon={<CreditCard size={14} />} onPress={() => goTo('/billing/credits')}>
+                  Add a payment card &amp; prepay
+                </Button>
+              ) : (
+                <Button size="$2" self="flex-start" theme="light" icon={<CreditCard size={14} />} onPress={() => goTo('/wallet')}>
+                  Add credits
+                </Button>
+              )
             ) : null}
           </YStack>
         </XStack>
@@ -233,7 +317,11 @@ export function LaunchDrawer({
         <YStack flex={1} />
         <Button chromeless onPress={onClose} disabled={phase === 'launching'}>Cancel</Button>
         <Button theme="light" icon={phase === 'launching' ? undefined : <Rocket size={15} />} disabled={!canLaunch} onPress={() => void launch()}>
-          {phase === 'launching' ? <Spinner size="small" /> : `Launch${selected ? ` · ${mo(selected.priceMonthly)}` : ''}`}
+          {phase === 'launching'
+            ? <Spinner size="small" />
+            : isGpu
+              ? `Launch${upfront24h != null ? ` · ${usd(upfront24h)} now` : ''}`
+              : `Launch${selected ? ` · ${mo(selected.priceMonthly)}` : ''}`}
         </Button>
       </XStack>
     </YStack>
