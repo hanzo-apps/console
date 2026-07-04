@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Boxes, Cpu, HardDrive, Network, Plus, RefreshCw, Server, Activity, Upload, ChevronRight } from '@hanzogui/lucide-icons-2'
+import { Boxes, Cpu, HardDrive, Network, Plus, RefreshCw, Server, Activity, ChevronRight } from '@hanzogui/lucide-icons-2'
 
 import {
   ApiError,
@@ -35,7 +35,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { FieldRow, FieldSelect } from '~/components/ui/Field'
-import { MetricCard, HintButton } from '~/components/ui/Metric'
+import { MetricCard } from '~/components/ui/Metric'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: PlatformError } | { phase: 'ready'; data: T }
@@ -213,9 +213,6 @@ export function KubernetesModule(_props: { params: Record<string, string> }) {
         actions={
           <XStack gap="$2" flexWrap="wrap">
             <Button icon={<RefreshCw size={16} />} onPress={load}>Refresh</Button>
-            <HintButton icon={<Upload size={15} />} disabled hint="Importing an existing cluster needs BYO kubeconfig support — coming soon">
-              Import cluster
-            </HintButton>
             <Button theme="light" icon={<Plus size={16} />} onPress={() => setCreating((v) => !v)}>Create cluster</Button>
           </XStack>
         }
