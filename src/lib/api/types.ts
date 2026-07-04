@@ -69,24 +69,6 @@ export type ModelRoute = Owned & {
 }
 
 /**
- * An application (`/v1/*-application`).
- *
- * A deployable app from a template, into a k8s namespace, with a deploy lifecycle
- * (`status`: "Not Deployed" -> deployed). Keyed by `owner/name`.
- */
-export type Application = Owned & {
-  category?: string
-  description?: string
-  template?: string
-  namespace?: string
-  parameters?: string
-  status?: string
-  state?: string
-  isDefault?: boolean
-  [key: string]: unknown
-}
-
-/**
  * A knowledge store (`/v1/*-store`).
  *
  * The RAG/chat surface config: storage + model + embedding providers, chunking
