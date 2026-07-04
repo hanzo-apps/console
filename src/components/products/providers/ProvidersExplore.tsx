@@ -7,9 +7,10 @@
  * context reach, cheapest input price, a "Verified" badge for our first-party
  * Zen models, and a few model chips. Search + filter (type/context/pricing/
  * verified) + sort are client-side over the loaded catalog. Three action cards
- * lead to the real flows. The My Providers / Custom Models / BYO Weights tabs are
- * honest: they point at the real add/deploy/upload flow rather than fabricating
- * inventory. Honest loading/error/empty — never a fabricated provider.
+ * lead to the real flows. The My Providers / Custom Models tabs are honest: they
+ * point at the real add/deploy flow (route to any provider, your own credentials,
+ * or a self-hosted endpoint/weights) rather than fabricating inventory. Honest
+ * loading/error/empty — never a fabricated provider.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
@@ -54,7 +55,7 @@ import { ErrorState, asApiError } from '~/components/ui/States'
 import { Loader } from '~/components/ui/Loader'
 import type { ApiError } from '~/lib/api'
 
-type Tab = 'explore' | 'mine' | 'custom' | 'byo'
+type Tab = 'explore' | 'mine' | 'custom'
 type SortKey = 'models' | 'name' | 'price' | 'context'
 
 // 'models' (most models) is the default, represented by the dropdown's "All" row
@@ -70,7 +71,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'explore', label: 'Explore' },
   { key: 'mine', label: 'My Providers' },
   { key: 'custom', label: 'Custom Models' },
-  { key: 'byo', label: 'BYO Weights' },
 ]
 
 function ActionCard({
@@ -270,14 +270,12 @@ function HonestTab({
   body,
   cta,
   onPress,
-  soon,
 }: {
   icon: ReactNode
   title: string
   body: string
   cta: string
   onPress: () => void
-  soon?: boolean
 }) {
   return (
     <YStack
@@ -304,11 +302,6 @@ function HonestTab({
         <Text fontSize="$6" fontWeight="800" color="$color12">
           {title}
         </Text>
-        {soon ? (
-          <Text fontSize="$1" px="$2" py="$0.5" rounded="$10" bg="$color4" color="$color11" fontWeight="700">
-            Coming soon
-          </Text>
-        ) : null}
       </XStack>
       <Text fontSize="$3" color="$color10" text="center">
         {body}
@@ -573,22 +566,13 @@ export function ProvidersExplore({ onAddCustom }: { onAddCustom: () => void }) {
           cta="Add custom provider"
           onPress={onAddCustom}
         />
-      ) : tab === 'custom' ? (
+      ) : (
         <HonestTab
           icon={<Code2 size={22} />}
           title="Custom models"
-          body="Deploy a model from any provider with your own configuration and credentials. Custom model deployment is managed from the Add custom flow."
+          body="Route to any provider — or your own self-hosted endpoint and weights — with your own configuration and credentials. Custom model deployment is managed from the Add custom flow."
           cta="Create custom model"
           onPress={onAddCustom}
-        />
-      ) : (
-        <HonestTab
-          icon={<Upload size={22} />}
-          title="Bring your own weights"
-          body="Upload your own model weights and serve them securely on Hanzo. Self-serve weight upload is on the way — start a custom deployment to get set up."
-          cta="Start a custom deployment"
-          onPress={onAddCustom}
-          soon
         />
       )}
     </>

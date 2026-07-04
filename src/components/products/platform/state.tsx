@@ -40,7 +40,7 @@ export function interpretPlatformError(e: unknown): PlatformError {
 const TITLES: Record<PlatformErrorKind, string> = {
   'not-configured': 'PaaS control plane not configured',
   forbidden: 'Connected · managed by Hanzo',
-  unavailable: 'Backend not yet available',
+  unavailable: 'Endpoint not served here',
   error: 'Could not reach the platform',
 }
 
@@ -50,7 +50,7 @@ const BODIES: Record<PlatformErrorKind, string> = {
   forbidden:
     'Your workloads run on managed Hanzo Cloud — no cluster to operate. The full control-plane fleet view (clusters, nodes, raw workloads) is an admin surface; deploy and scale through Functions, Agents, and the platform.',
   unavailable:
-    'The platform backend does not serve this endpoint yet (it ships separately). This view lights up automatically once the endpoint is live.',
+    'The platform backend on this deployment does not serve this endpoint (it ships as a separate service). This view reads live data wherever the endpoint is served; nothing is fabricated here.',
   error: '',
 }
 

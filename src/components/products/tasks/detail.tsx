@@ -5,8 +5,9 @@
  * the REAL detail + durable history (`TasksApi.workflow` / `TasksApi.history`) and
  * derives a step graph from the actual history events — never a fabricated DAG.
  * Sub-tabs mirror the Temporal console: Overview / Timeline / Graph / Events /
- * Activities light up from real data; Logs / Signals / Queries are honest "coming
- * soon" where the engine exposes no distinct feed yet.
+ * Activities render from real data; Logs / Signals / Queries state honestly that the
+ * engine folds them into Events/Timeline (no distinct per-workflow feed) — never a
+ * fabricated one.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -178,8 +179,9 @@ export function WorkflowDetailPanel({ ns, wid, runId, onClose }: { ns: string; w
         <DataTable columns={EVENT_COLUMNS} rows={activityEvents} rowKey={(e) => String(e.eventId ?? Math.random())} empty="No activity events in this run." />
       ) : (
         <YStack p="$4" items="center" borderWidth={1} borderColor="$borderColor" borderStyle="dashed" rounded="$3">
-          <Text fontSize="$2" color="$color10" text="center" maxW={340}>
-            {sub} for a single workflow isn’t a distinct feed on the engine yet — it lights up here when the API exposes it.
+          <Text fontSize="$2" color="$color10" text="center" maxW={360}>
+            The engine does not expose {sub} as a distinct per-workflow feed — it’s folded into Events and Timeline
+            above. This tab reads {sub} live wherever the API serves it; nothing is fabricated here.
           </Text>
         </YStack>
       )}

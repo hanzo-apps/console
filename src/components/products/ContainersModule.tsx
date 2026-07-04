@@ -12,13 +12,13 @@
  *    kind through the shared, tolerant `PaasResourceTab` (honest states when a
  *    kind isn't served on this deployment yet).
  *  - The right rail is the picked cluster's detail (k8s version, region, nodes,
- *    PROVISIONED CPU/RAM from its node pools) + Quick Actions (real routes or
- *    honest "coming soon"). Nothing is fabricated.
+ *    PROVISIONED CPU/RAM from its node pools) + Quick Actions (real routes — Create
+ *    Deployment → /pipelines, View Logs). Nothing is fabricated.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, Terminal, ScrollText, Plus, FolderPlus } from '@hanzogui/lucide-icons-2'
+import { RefreshCw, ScrollText, Plus } from '@hanzogui/lucide-icons-2'
 
 import { PlatformApi, clustersFromApps, type Cluster, type PlatformApp } from '~/lib/api'
 import { clusterCapacity, fmtVcpu, fmtRam } from '~/lib/api/nodes'
@@ -88,10 +88,8 @@ function ClusterSidebar({
       <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor">
         <Text fontSize="$4" fontWeight="700">Quick actions</Text>
         <YStack gap="$2">
-          <HintButton icon={<Plus size={15} />} disabled hint="Deploy a workload via Builds → Pipelines — in-console create coming soon">Create Deployment</HintButton>
-          <HintButton icon={<FolderPlus size={15} />} disabled hint="Namespace create through the control plane is coming soon">Create Namespace</HintButton>
+          <HintButton icon={<Plus size={15} />} onPress={() => { if (typeof window !== 'undefined') window.location.assign('/pipelines') }}>Create Deployment</HintButton>
           <HintButton icon={<ScrollText size={15} />} onPress={onLogs}>View Logs</HintButton>
-          <HintButton icon={<Terminal size={15} />} disabled hint="In-browser shell needs cluster exec — coming soon">Shell Access</HintButton>
         </YStack>
       </Card>
     </YStack>
