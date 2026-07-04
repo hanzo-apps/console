@@ -12,12 +12,27 @@ import { Button, Text, XStack } from '@hanzo/gui'
 import { RefreshCw, Download } from '@hanzogui/lucide-icons-2'
 
 import { BillingApi, type Invoice } from '~/lib/api/billing'
+import { billingProxyV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
 const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
+
+/**
+ * The same-origin proxy URL for an invoice's PDF (`/billing/v1/invoices/:id/pdf`).
+ * Built from the invoice `id` the list already returns — NOT a server `url` field —
+ * so the download rides the tenant-scoped proxy (session-auth + server-injected
+ * service token + `X-Org-Id`), and a user can only ever pull their OWN org's invoice.
+ * Opening it in a new tab sends the first-party session cookie (same-origin GET), so
+ * the proxy authenticates the caller; commerce 404s a foreign id (defense in depth).
+ */
+const invoicePdfUrl = (id: string): string => billingProxyV1Url(`invoices/${encodeURIComponent(id)}/pdf`)
+
+function openInvoicePdf(id: string): void {
+  if (typeof window !== 'undefined') window.open(invoicePdfUrl(id), '_blank', 'noopener')
+}
 const fmtDate = (s?: string): string => {
   if (!s) return '—'
   const d = new Date(s)
@@ -49,22 +64,20 @@ export function BillingInvoices(_props: { params: Record<string, string> }) {
     { key: 'status', header: 'Status', width: 130, render: (r) => (r.status ? <StatusTag status={r.status} /> : <Text fontSize="$3" color="$color10">—</Text>) },
     { key: 'cents', header: 'Amount', width: 120, render: (r) => <Text fontSize="$3" color="$color12">{usd(r.cents)}</Text> },
     {
-      key: 'url',
+      key: 'pdf',
       header: '',
       width: 120,
-      render: (r) =>
-        r.url ? (
-          <Button
-            size="$2"
-            chromeless
-            icon={<Download size={14} />}
-            onPress={() => { if (typeof window !== 'undefined') window.open(r.url, '_blank', 'noopener') }}
-          >
-            Download
-          </Button>
-        ) : (
-          <Text fontSize="$2" color="$color10">—</Text>
-        ),
+      render: (r) => (
+        <Button
+          size="$2"
+          chromeless
+          icon={<Download size={14} />}
+          onPress={() => openInvoicePdf(r.id)}
+          aria-label={`Download invoice ${r.id}`}
+        >
+          Download
+        </Button>
+      ),
     },
   ]
 
