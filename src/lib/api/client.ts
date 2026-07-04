@@ -341,6 +341,27 @@ export const cloudProxyBase = (): string =>
 export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyBase())
 
 /**
+ * The console's OWN same-origin per-tenant billing proxy — the DIRECT route-handler
+ * address (`<origin>/billing/v1/<path>`), NOT a bare `/v1/billing/*`.
+ *
+ * Billing is the SAME class as framework/s3 above (v8.4.70): on the live console
+ * ingress `/v1/*` is routed to the gateway-fronted cloud binary (it does NOT reach
+ * the Next server, so the `/v1/billing → /billing/v1` rewrite never runs), and the
+ * cloud gateway rejects a cookie-only browser request with no bearer — a bare
+ * `/v1/billing/usage` 403s ("sign in to view billing"). So the billing clients must
+ * address the proxy route handler EXPLICITLY, exactly like `cloudProxyV1Url` does
+ * for `/cloud`. `app/billing/v1/[...path]` injects the commerce SERVICE token and
+ * pins the caller's OWN billing subject server-side (proven live: it returns the
+ * org's real balance/usage), so tenant isolation is unchanged. On the server (SSR)
+ * there is no `window`, so this yields a root-relative `/billing/v1/<path>`.
+ */
+export const billingProxyBase = (): string =>
+  typeof window !== 'undefined' ? `${window.location.origin}/billing` : '/billing'
+
+/** Build a `/v1/<path>` URL on the per-tenant billing proxy (`<origin>/billing/v1/<path>`). */
+export const billingProxyV1Url = (path: string): string => v1Url(path, billingProxyBase())
+
+/**
  * The console's OWN same-origin VISOR user-bearer proxy base (`<origin>/vm`).
  *
  * The public compute CATALOG (regions / CPU sizes / GPU accelerators) is served by
