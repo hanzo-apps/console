@@ -349,10 +349,28 @@ export type TopupResult = {
   status: string
 }
 
+/**
+ * Result of the idempotent welcome-grant (`POST /v1/billing/me/welcome`): `granted`
+ * true the FIRST time (with the `amount` in cents, e.g. 500), false thereafter (with
+ * a `reason` like `already_granted`). Optional-safe so a shape drift degrades to
+ * "not granted" rather than throwing.
+ */
+export type WelcomeResult = { granted: boolean; amount?: number; reason?: string }
+
 export const BillingApi = {
   /** Cloud credit balance (USD cents) — same proxy as the Wallet/sidebar. */
   balance: (currency = 'usd'): Promise<CloudBalance> =>
     restGet<CloudBalance>(`${billingProxyV1Url('balance')}?currency=${encodeURIComponent(currency)}`),
+
+  /**
+   * Claim the org's ONE-TIME $5 welcome trial credit (idempotent). Routes through the
+   * per-tenant billing proxy → commerce `POST /v1/billing/me/welcome`, which grants
+   * once per subject (`{granted:true, amount:500}` the first time, `{granted:false,
+   * reason:"already_granted"}` after) — the SELF-HEAL for social-login and pre-existing
+   * $0 accounts the signup-time grant never reached. The proxy pins the caller's OWN
+   * subject server-side, so a browser can only ever claim its own org's grant.
+   */
+  welcome: (): Promise<WelcomeResult> => restPost<WelcomeResult>(billingProxyV1Url('me/welcome')),
 
   /** Metered spend over an optional window (commerce defaults the period). */
   usage: (params?: { start?: string; end?: string }): Promise<Usage> => {
