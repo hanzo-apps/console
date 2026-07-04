@@ -46,7 +46,7 @@ async function billing(page: Page, path: string): Promise<{ status: number; ids:
       const body = await res.json()
       const rows = Array.isArray(body)
         ? body
-        : (body?.subscriptions ?? body?.paymentMethods ?? body?.payment_methods ?? body?.data ?? [])
+        : (body?.subscriptions ?? body?.paymentMethods ?? body?.payment_methods ?? body?.invoices ?? body?.data ?? [])
       ids = (Array.isArray(rows) ? rows : [])
         .map((r: { id?: unknown }) => (typeof r?.id === 'string' ? r.id : ''))
         .filter(Boolean)
@@ -72,7 +72,10 @@ test.describe('billing is isolated per tenant through the proxy', () => {
     await signIn(pageA, A.email, A.password)
     await signIn(pageB, B.email, B.password)
 
-    for (const path of ['subscriptions', 'payment-methods']) {
+    // `invoices` is included because its row ids drive the per-invoice PDF URL
+    // (`/billing/v1/invoices/:id/pdf`) — proving the invoice list is tenant-isolated
+    // proves a user can only ever build a PDF URL for their OWN org's invoices.
+    for (const path of ['subscriptions', 'payment-methods', 'invoices']) {
       const a = await billing(pageA, path)
       const b = await billing(pageB, path)
 

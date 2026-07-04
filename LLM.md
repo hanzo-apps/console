@@ -2308,3 +2308,55 @@ fields — the `spec.docs` in resolve.test is the NativeOverview inline-docs spe
 different field). Rebased on origin/main (v8.4.86) → **v8.4.87**. Live re-verify:
 the 6 product overviews no longer render a dead Docs deep link (button dropped /
 roots to docs.hanzo.ai), zero customer 404s — post-deploy gate.
+
+## Billing surface completed — in-console payment methods + subscription manage + invoice PDF (feat/billing-surface-complete)
+
+The Billing Center's three remaining external-portal punts are now IN-CONSOLE, over
+the ONE per-tenant `/billing/v1/*` commerce proxy — no new backend, PCI posture
+unchanged, tenant scoping server-authoritative.
+
+- **Payment Methods — in-console ADD + REMOVE** (`PaymentMethodsModule.tsx`). "Add
+  card" opens an inline panel that mounts Square's OWN card iframe and tokenizes the
+  card IN THE BROWSER; only the opaque single-use nonce is POSTed
+  (`BillingApi.createPaymentMethod({type,token}` → `POST /v1/billing/payment-methods`).
+  The RAW PAN never touches our code/servers/logs (SAQ-A) — a `billing.test.ts` leak
+  test asserts the request body carries ONLY the nonce (no PAN/CVV/card). Per-row
+  Remove (confirm → `BillingApi.removePaymentMethod(id)` → `DELETE
+  /v1/billing/payment-methods/:id`) — the proxy learned DELETE (task F). Sandbox badge
+  + decline/error states mirror `BillingCredits`. Set-default was DELIBERATELY NOT
+  built: the endpoint bakes the CUSTOMER id in the path (`customers/:id/…`), which the
+  browser doesn't hold and the proxy can't subject-scope on a path segment — building
+  it would risk a cross-tenant write, so it's fail-secure-skipped (flagged for RED).
+- **Subscriptions — in-console CANCEL / REACTIVATE** (`SubscriptionsModule.tsx`).
+  Per-row Cancel opens an explicit "at period end" vs "now" choice → `cancelSubscription
+  (id, atPeriodEnd)` → `POST /v1/billing/subscriptions/:id/cancel {atPeriodEnd}`;
+  Reactivate (shown only when `cancelAtPeriodEnd`) → `POST …/reactivate`. The row
+  reflects `cancelAtPeriodEnd` (amber "Cancels <date>") / `canceledAt` ("Canceled
+  <date>") — new normalizer fields (snake+camel). The `:id` always comes from the
+  caller's OWN scoped list; commerce re-authorizes it against the server-pinned subject.
+- **Invoice PDF download + proxy binary passthrough** (`BillingInvoices.tsx` +
+  `billing-proxy.ts`). Download builds the URL from the invoice `id`
+  (`billingProxyV1Url('invoices/'+id+'/pdf')`), NOT a server `url` field, and opens it
+  same-origin (session cookie → tenant-scoped). THE PROXY was extracted from the route
+  into the tested `~/lib/server/billing-proxy.ts` (`forwardBilling`, the `bearer-proxy`
+  pattern) and hardened: (a) GET+POST+**DELETE**; (b) a non-JSON/text upstream (e.g.
+  `application/pdf`) is passed through as RAW BYTES with `Content-Type` +
+  `Content-Disposition` forwarded — reading it as `text()` corrupts it; (c) an empty
+  body → `null` (204 detach safe). ALL security intact: session-auth 401, CSRF refusal
+  on cross-origin mutations, path-segment validation, service-Bearer injection,
+  `X-Org-Id` from the validated session, `scopedBillingSearch` pinning the FULL
+  subject-key set on the query (PDF GET stays tenant-scoped exactly like every GET).
+- **DRY**: the ~40-line Square card mount+tokenize was extracted into ONE reusable
+  `useSquareCard` hook (`src/lib/billing/use-square-card.ts`); `BillingCredits` (Add
+  credits) + `PaymentMethodsModule` (Add a card) both use it — one PCI card capability,
+  two callers. Mobile-responsive throughout (flexWrap rows, `maxW` forms, matching the
+  responsive pass).
+- **New `BillingApi`**: `createPaymentMethod`, `removePaymentMethod`,
+  `cancelSubscription`, `reactivateSubscription` (+ `oneRecord` mutation-response
+  unwrap; `Subscription.cancelAtPeriodEnd`/`canceledAt`).
+- Verification: `tsc --noEmit` clean; `vitest` **1689/1689** (132 files; +11 billing
+  API mutation tests incl. the PCI no-PAN leak test, +11 new `billing-proxy` tests:
+  isTextualContentType, the PDF byte-identical passthrough, DELETE proxying, tenant
+  scoping per verb, CSRF/401/501 gates); e2e `billing-isolation.spec.ts` extended to
+  also assert invoice-list isolation (the PDF-id source). Authenticated visual e2e
+  (add/remove a sandbox card, cancel/reactivate, download a PDF) is the post-deploy gate.
