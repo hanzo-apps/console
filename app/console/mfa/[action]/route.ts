@@ -22,23 +22,32 @@ export const runtime = 'nodejs'
 
 const TOTP = 'app' // Casdoor TotpType
 
-/** IAM endpoint + the form fields each action sends (owner/name are pinned server-side). */
-const ACTIONS: Record<string, { path: string; fields: (u: { owner: string; name: string }, b: Body) => Record<string, string> }> = {
+/**
+ * IAM endpoint + the params each action sends. owner/name are ALWAYS included and
+ * pinned to the resolved session user for TWO reasons: (1) the handler targets that
+ * user, and (2) the IAM authz filter derives the request OBJECT from `owner`/`name`
+ * (query) and grants self-access when it equals the bearer subject — the SAME rule
+ * that lets `get-users?owner=<me>` through. We send these as the QUERY STRING with an
+ * EMPTY body: the authz filter's object-derivation reads a form body as JSON, so a
+ * form-encoded body yields an empty object (→ no self-match → denied); with the
+ * params in the query and no body it reads owner/name and the self grant applies.
+ */
+const ACTIONS: Record<string, { path: string; params: (u: { owner: string; name: string }, b: Body) => Record<string, string> }> = {
   initiate: {
     path: '/v1/iam/mfa/setup/initiate',
-    fields: (u) => ({ owner: u.owner, name: u.name, mfaType: TOTP }),
+    params: (u) => ({ owner: u.owner, name: u.name, mfaType: TOTP }),
   },
   verify: {
     path: '/v1/iam/mfa/setup/verify',
-    fields: (_u, b) => ({ mfaType: TOTP, passcode: b.passcode ?? '', secret: b.secret ?? '' }),
+    params: (u, b) => ({ owner: u.owner, name: u.name, mfaType: TOTP, passcode: b.passcode ?? '', secret: b.secret ?? '' }),
   },
   enable: {
     path: '/v1/iam/mfa/setup/enable',
-    fields: (u, b) => ({ owner: u.owner, name: u.name, mfaType: TOTP, secret: b.secret ?? '', recoveryCodes: b.recoveryCodes ?? '' }),
+    params: (u, b) => ({ owner: u.owner, name: u.name, mfaType: TOTP, secret: b.secret ?? '', recoveryCodes: b.recoveryCodes ?? '' }),
   },
   disable: {
     path: '/v1/iam/delete-mfa',
-    fields: (u) => ({ owner: u.owner, name: u.name }),
+    params: (u) => ({ owner: u.owner, name: u.name }),
   },
 }
 
@@ -64,16 +73,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ action: st
     return NextResponse.json({ status: 'error', msg: 'Could not authorize the request.' }, { status: 502 })
   }
 
-  const form = new URLSearchParams(spec.fields({ owner: user.owner, name: user.name }, body))
+  // Params ride the QUERY STRING (see ACTIONS doc) with an EMPTY body so the IAM
+  // authz filter derives owner/name for the self-access grant.
+  const qs = new URLSearchParams(spec.params({ owner: user.owner, name: user.name }, body)).toString()
   try {
-    const res = await fetchWithTimeout(`${iamBaseUrl()}${spec.path}`, {
+    const res = await fetchWithTimeout(`${iamBaseUrl()}${spec.path}?${qs}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${bearer}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
         Accept: 'application/json',
       },
-      body: form.toString(),
       cache: 'no-store',
     })
     const text = await res.text()
