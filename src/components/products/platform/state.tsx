@@ -3,9 +3,10 @@
 /**
  * Honest platform states — ONE place that maps a `/paas` proxy / platform error
  * to a truthful explanation, shared by every platform module (Clusters,
- * Kubernetes). No fabricated data: a 501 means the proxy has no service token
- * yet, a 404 means the platform backend doesn't serve that surface yet, anything
- * else is the real error.
+ * Kubernetes, Edge). No fabricated data: a 501 means the proxy has no service
+ * token yet, a 503 means the route is mounted but its runtime/dependency isn't
+ * configured on this deployment, a 404 means the backend doesn't serve that
+ * surface yet, anything else is the real (transient) reach error.
  */
 import { Button, Card, Text, XStack } from '@hanzo/gui'
 import { CheckCircle2, TriangleAlert } from '@hanzogui/lucide-icons-2'
@@ -27,6 +28,12 @@ export function interpretPlatformError(e: unknown): PlatformError {
   if (status === 501) return { kind: 'not-configured', message }
   if (status === 401 || status === 403) return { kind: 'forbidden', message }
   if (status === 404) return { kind: 'unavailable', message }
+  // 503 = the route is mounted but its runtime/dependency is not configured on
+  // THIS deployment (e.g. zt networking fail-closed until ZT_CLIENT_* is set).
+  // That's a deployment-state truth, not a transient reach failure — show the
+  // clean "not available yet" card, NEVER the raw backend message (which can name
+  // internal env/config the customer should never see).
+  if (status === 503) return { kind: 'unavailable', message }
   return { kind: 'error', message }
 }
 
