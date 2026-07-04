@@ -8,6 +8,7 @@ import { VisorApi } from './visor'
 import { ComputeApi } from './compute'
 import { ProvisioningApi } from './provisioning'
 import { StorageApi } from './storage'
+import { FrameworkApi } from '~/lib/framework/client'
 import { BillingApi } from './billing'
 import { PlatformApi } from './platform'
 import { fetchPlans } from './aicatalog'
@@ -54,7 +55,9 @@ afterEach(() => {
 
 // Every refactored client must hit a CANONICAL `/v1/<resource>` (nothing before
 // /v1/) — never `/<svc>/v1/...`. The next.config rewrites route each head to its
-// hardened same-origin BFF proxy, so the browser URL stays prefix-free.
+// hardened same-origin BFF proxy, so the browser URL stays prefix-free. (s3 +
+// framework are the two DOCUMENTED exceptions — see the dedicated block below —
+// because the live ingress does not rewrite their heads to the console app.)
 describe('canonical /v1 client paths (no service prefix before /v1/)', () => {
   it('VisorApi.machines -> /v1/machines', async () => {
     stub({ machines: [] })
@@ -80,11 +83,6 @@ describe('canonical /v1 client paths (no service prefix before /v1/)', () => {
     stub([])
     await ProvisioningApi.list('sql')
     expect(lastUrl).toBe(`${ORIGIN}/v1/sql`)
-  })
-  it('StorageApi.buckets -> /v1/s3/buckets', async () => {
-    stub({ buckets: [] })
-    await StorageApi.buckets()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/s3/buckets`)
   })
   it('BillingApi.balance -> /v1/billing/balance', async () => {
     stub({ balanceCents: 0 })
@@ -191,5 +189,27 @@ describe('canonical /v1 — the last six data-product clients (no prefix before 
     stub({ store: {} })
     await CommerceApi.currentStore()
     expect(lastUrl).not.toMatch(bad)
+  })
+})
+
+// s3 + framework are the DELIBERATE exceptions to the prefix-free rule above. The
+// live Traefik ingress does NOT rewrite a bare `/v1/s3` / `/v1/framework` to the
+// console app — those heads reach hanzoai/gateway directly with no principal and
+// 403 ("valid principal required"). So both clients address the `/cloud` user-bearer
+// proxy EXPLICITLY (`cloudProxyV1Url` → `<origin>/cloud/v1/<head>`), which IS routed
+// to `app/cloud/[...path]` regardless of the `/v1/*` ingress config (see the
+// `cloudProxyV1Url` docstring in client.ts). This block PINS that exception so a
+// future "canonicalization" can't repoint them to a bare `/v1/` that 403s live.
+describe('cloud-proxy exceptions — s3 + framework address /cloud/v1 explicitly (ingress does not rewrite their heads)', () => {
+  it('StorageApi.buckets -> /cloud/v1/s3/buckets (NOT bare /v1/s3)', async () => {
+    stub({ buckets: [] })
+    await StorageApi.buckets()
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/s3/buckets`)
+  })
+
+  it('FrameworkApi.doctypes.list -> /cloud/v1/framework/doctypes (NOT bare /v1/framework)', async () => {
+    stub({ data: [] })
+    await FrameworkApi.doctypes.list()
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/framework/doctypes`)
   })
 })

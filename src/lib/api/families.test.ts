@@ -13,6 +13,7 @@ import {
   DEFAULT_MODEL,
 } from './families'
 import type { CatalogEntry } from './aicatalog'
+import { normalizeBrand, BRANDS } from '~/components/ui/brand'
 
 /**
  * The family taxonomy must reproduce hanzo.chat's picker EXACTLY: Zen first, then
@@ -178,5 +179,53 @@ describe('FAMILIES registry', () => {
     expect(FAMILIES.map((f) => f.label)).toEqual([
       'Zen', 'Qwen', 'Meta Llama', 'DeepSeek', 'Mistral', 'Google Gemma', 'OpenAI GPT-OSS',
     ])
+  })
+})
+
+/**
+ * The families ↔ brand contract — the permanent guard against the "provider icon
+ * blank/default" bug (the CTO's Qwen/Llama/DeepSeek report). The model browser
+ * renders `<ProviderLogo provider={family.logo}>` for every family header AND row,
+ * and ProviderLogo resolves that string through the ONE brand resolver
+ * (`normalizeBrand` → `BRANDS`); a family whose `logo` doesn't resolve falls to the
+ * neutral (blank) chip. So EVERY curated family's `logo` MUST resolve to a real
+ * treatment: first-party marks (zen ensō / hanzo block-H) or a third-party `BRANDS`
+ * entry with a hex colour + monogram — exactly the OpenAI/Anthropic/Google pattern.
+ * Keyed off the EXACT live `/v1/pricing/models` provider strings
+ * (~/work/hanzo/pricing/data/pricing.json: "Qwen"/"Meta"/"DeepSeek"), so grouping,
+ * colour, and icon stay in lockstep and this class of bug can never recur.
+ */
+describe('families ↔ brand — every family renders a real colour + icon (never blank)', () => {
+  const HEX = /^#[0-9a-fA-F]{6}$/
+
+  it('every curated family logo resolves through the ONE brand resolver', () => {
+    for (const f of FAMILIES) {
+      expect(normalizeBrand(f.logo), `family "${f.id}" logo "${f.logo}" must resolve`).not.toBeNull()
+    }
+  })
+
+  it('every third-party family has a real hex colour + monogram (OpenAI/Anthropic/Google pattern)', () => {
+    for (const f of FAMILIES) {
+      const key = normalizeBrand(f.logo)
+      if (key === null || key === 'zen' || key === 'hanzo') continue // first-party SVG marks — no BRANDS row
+      expect(BRANDS[key].bg, `BRANDS[${key}].bg`).toMatch(HEX)
+      expect(BRANDS[key].label.length, `BRANDS[${key}].label`).toBeGreaterThan(0)
+    }
+  })
+
+  // The three the CTO flagged, end-to-end off the EXACT live provider strings:
+  // live provider → curated family → resolved brand colour + icon.
+  it.each([
+    ['Qwen', 'qwen', 'qwen', '#615CED', 'Q'],
+    ['Meta', 'llama', 'meta', '#0866FF', 'Me'],
+    ['DeepSeek', 'deepseek', 'deepseek', '#4D6BFE', 'DS'],
+  ] as const)('a live "%s" model groups into "%s" and renders its brand colour + icon', (provider, famId, brandKey, hex, label) => {
+    const model = m({ id: `${provider.toLowerCase()}/x`, name: `${provider}: X`, provider, available: true })
+    expect(familyOf(model)?.id).toBe(famId)
+    const key = normalizeBrand(familyOf(model)!.logo)
+    expect(key).toBe(brandKey)
+    if (key === null || key === 'zen' || key === 'hanzo') throw new Error('unreachable — asserted above')
+    expect(BRANDS[key].bg).toBe(hex)
+    expect(BRANDS[key].label).toBe(label)
   })
 })
