@@ -2,8 +2,8 @@
 
 /**
  * GPUs · Settings — the org scope this surface acts in, and where GPU capacity comes
- * from. Connecting a provider has no backend yet, so that action is honestly disabled
- * with a tooltip; provider credentials live in KMS (a real in-console surface).
+ * from. A provider is added by storing its credentials in KMS (a real in-console
+ * surface); no separate connector step.
  */
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { KeyRound, Server } from '@hanzogui/lucide-icons-2'
@@ -37,17 +37,10 @@ export function SettingsTab({ onNav }: { onNav: (to: string) => void }) {
           <Text fontSize="$5" fontWeight="800">Compute providers</Text>
         </XStack>
         <Text fontSize="$3" color="$color11">
-          Hanzo Cloud GPUs resell capacity over DigitalOcean (primary) and AWS (secondary). Connecting a provider
-          lights up live inventory, telemetry, pricing, and alerts across this surface.
+          Hanzo Cloud GPUs resell capacity over DigitalOcean (primary) and AWS (secondary). Add a provider by
+          storing its credentials in KMS — live inventory, telemetry, pricing, and alerts light up across this
+          surface once the credentials resolve.
         </Text>
-        <XStack gap="$2" flexWrap="wrap">
-          <HintButton icon={<Server size={15} />} theme="light" disabled hint="The compute-provider connector is not available yet">
-            Connect DigitalOcean
-          </HintButton>
-          <HintButton icon={<Server size={15} />} disabled hint="The compute-provider connector is not available yet">
-            Connect AWS
-          </HintButton>
-        </XStack>
         <XStack>
           <HintButton icon={<KeyRound size={15} />} onPress={() => onNav('/secrets')}>
             Manage provider credentials in KMS
