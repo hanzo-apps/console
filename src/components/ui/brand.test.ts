@@ -1,20 +1,21 @@
 /**
  * ProviderLogo brand resolution — the guardrail for the catalog's logos.
  *
- * Two bugs this locks down:
- *   1. Zen models tagged provider "hanzo" rendered the block-H instead of the
- *      ensō → within one Zen family the mark flip-flopped. Directive: Zen is
- *      ALWAYS the Zen (ensō) brand.
- *   2. Every third-party family (Qwen/OpenAI/DeepSeek/Meta/Mistral/Google) fell
- *      through to a gray initials chip ("QW"). Each curated family logo key must
- *      resolve to a real brand tile — no family shows the neutral fallback.
+ * Locks down:
+ *   1. Zen is ALWAYS the house brand (rendered as the Hanzo mark), whether a model
+ *      is tagged provider "hanzo"/"zen" or has a zen* id — never an upstream family
+ *      glyph (brand policy). `normalizeBrand` funnels every Zen signal to `zen`.
+ *   2. Every third-party family (Qwen/OpenAI/DeepSeek/Meta/Mistral/Google) resolves
+ *      to a real brand (never the gray initials fallback) AND has its OWN distinct
+ *      mark (`BRAND_MARK`) — no two families read as the same glyph.
  */
 import { describe, it, expect } from 'vitest'
 import { normalizeBrand } from './brand'
+import { BRAND_MARK } from './brand-marks'
 import { FAMILIES } from '~/lib/api/families'
 
 describe('normalizeBrand', () => {
-  it('resolves every Zen signal to the zen brand (always ensō)', () => {
+  it('resolves every Zen signal to the zen brand (the house/Hanzo mark)', () => {
     for (const s of ['zen', 'Zen', 'zenlm', 'zen3-vl', 'zen5-mini', 'zen5-coder', 'zen5-flash']) {
       expect(normalizeBrand(s)).toBe('zen')
     }
@@ -27,6 +28,19 @@ describe('normalizeBrand', () => {
   it('maps every curated family logo key to a real brand (never the gray fallback)', () => {
     for (const f of FAMILIES) {
       expect(normalizeBrand(f.logo), `family ${f.id} logo=${f.logo}`).not.toBeNull()
+    }
+  })
+
+  it('gives every third-party family its OWN distinct mark (Zen uses the Hanzo mark)', () => {
+    const bodies = new Set<string>()
+    for (const f of FAMILIES) {
+      const brand = normalizeBrand(f.logo)
+      if (brand === 'zen' || brand === 'hanzo') continue // first-party → Hanzo block-H
+      const mark = brand ? BRAND_MARK[brand] : undefined
+      expect(mark, `family ${f.id} (brand ${brand}) must have a curated mark`).toBeDefined()
+      // No two families share the same glyph body → every family is visually distinct.
+      expect(bodies.has(mark!.body), `family ${f.id} mark must be unique`).toBe(false)
+      bodies.add(mark!.body)
     }
   })
 

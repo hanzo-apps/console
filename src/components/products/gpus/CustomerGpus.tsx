@@ -40,6 +40,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { useDetailPane } from '~/components/DetailPane'
 import { productColorHex } from '~/lib/products/colors'
 import { LaunchDrawer } from '../machines/LaunchDrawer'
+import { FundingNote } from '../machines/FundingNote'
 import { interpretPlatformError } from '../platform/state'
 import { GpuTabBar, gpuTabId } from './tabs'
 import { ClustersTab } from './ClustersTab'
@@ -270,6 +271,10 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
     const topGpus = sortByHourly(available).slice(0, 5)
     return (
       <YStack gap="$4">
+        {/* Funding — GPUs are prepay-only, charged to the card (24h minimum), NEVER
+            the credit balance that funds CPU machines. Makes the distinction explicit. */}
+        <FundingNote kind="gpu" />
+
         <XStack flexWrap="wrap" gap="$3" items="stretch">
           <StatCard
             label="Accelerators"

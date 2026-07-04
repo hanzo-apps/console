@@ -9,25 +9,36 @@
  * The pure brand resolution lives in ./brand (unit tested). This is the render
  * layer, three steps:
  *   1. Normalize the string → a canonical brand key (`normalizeBrand`).
- *   2. First-party — **Zen** always renders the ensō (every zen* model, and the
- *      "hanzo"/"zen" providers the Zen records carry), **Hanzo** the block-H —
- *      knocked out of a filled tile so our own models read on-brand.
- *   3. Known third-party family → its brand-colored tile with a crisp monogram
- *      (scannable by colour); truly-unknown → a neutral initials chip.
+ *   2. First-party — **Zen** (the house brand) and **Hanzo** both render the Hanzo
+ *      block-H, knocked out of a filled tile so our own models read on-brand. Per
+ *      the repo brand policy Zen NEVER carries an upstream family glyph.
+ *   3. Known third-party family → its brand-colored tile with its OWN distinct,
+ *      recognizable mark (`BRAND_MARK`), or a crisp monogram when no mark is curated
+ *      (still scannable by colour); truly-unknown → a neutral initials chip.
  */
 import { Text, XStack, useTheme } from '@hanzo/gui'
 import { Server } from '@hanzogui/lucide-icons-2'
 
 import { normalizeBrand, BRANDS, providerInitials } from './brand'
+import { BRAND_MARK, type BrandMark } from './brand-marks'
 
 export { providerInitials } from './brand'
 
-/** The Zen ensō mark — identical geometry to @zenlm/logo (svg/zen-enso.svg). */
-function EnsoMark({ size, color }: { size: number; color: string }) {
+/**
+ * A curated per-family mark — the inner SVG is a build-time-trusted constant
+ * (`brand-marks.ts`), never user input, so inlining it is safe (same pattern as
+ * `BrandLogo`). `currentColor` in the body → the caller controls the fill.
+ */
+function BrandGlyph({ mark, size, color }: { mark: BrandMark; size: number; color: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
-      <path d="M66.22 83.26 A37 37 0 1 1 85.57 60.20" fill="none" stroke={color} strokeWidth={11} strokeLinecap="round" />
-    </svg>
+    <svg
+      width={size}
+      height={size}
+      viewBox={mark.viewBox}
+      aria-hidden="true"
+      style={{ color, display: 'block' }}
+      dangerouslySetInnerHTML={{ __html: mark.body }}
+    />
   )
 }
 
@@ -124,22 +135,31 @@ export function ProviderLogo({ provider, size = 24 }: { provider: string; size?:
     )
   }
 
-  // First-party — the real brand mark knocked out of a filled tile.
+  // First-party — Zen (the house brand) and Hanzo both render the block-H mark,
+  // knocked out of a filled tile so our own models read on-brand. Zen NEVER shows an
+  // upstream family glyph (brand policy) — it IS the Hanzo mark.
   if (brand === 'zen' || brand === 'hanzo') {
     const tileBg = theme.color12?.get() ?? '#111111'
     const fg = theme.color1?.get() ?? '#ffffff' // cut-out mark: the tile's contrast color
     return (
       <Tile size={size} bg={tileBg}>
-        {brand === 'zen'
-          ? <EnsoMark size={Math.round(size * 0.66)} color={fg} />
-          : <HanzoHMark size={Math.round(size * 0.56)} color={fg} />}
+        <HanzoHMark size={Math.round(size * 0.56)} color={fg} />
       </Tile>
     )
   }
 
-  // Known third-party family — brand-colored tile + crisp white monogram.
+  // Known third-party family — brand-colored tile with its OWN distinct mark (a
+  // recognizable monochrome glyph), or a crisp white monogram when no mark is curated.
   if (brand) {
     const { bg, label } = BRANDS[brand]
+    const mark = BRAND_MARK[brand]
+    if (mark) {
+      return (
+        <Tile size={size} bg={bg}>
+          <BrandGlyph mark={mark} size={Math.round(size * 0.66)} color="#ffffff" />
+        </Tile>
+      )
+    }
     // Shrink the glyph a touch as the monogram gets longer so 2–3 chars still fit.
     const fontScale = label.length >= 3 ? 0.34 : label.length === 2 ? 0.4 : 0.46
     return (
