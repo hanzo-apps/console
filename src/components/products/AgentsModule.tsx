@@ -83,7 +83,7 @@ import { AgentDetailView, NewAgentForm } from './agents/forms'
 
 const PAGE_SIZE = 8
 const DASH = '—'
-const DOCS = `${config.docsUrl}/agents`
+const DOCS = `${config.docsUrl}/docs/agents`
 
 type StatusTab = AgentStatus | 'all'
 
