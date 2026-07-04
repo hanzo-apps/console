@@ -136,10 +136,10 @@ export async function currentAddress(): Promise<string | null> {
 
 /**
  * Read an address's HUSD balance (base units). Throws when HUSD is unconfigured
- * (caller shows the honest "coming" state) or the network is unreachable.
+ * (caller shows the honest not-live state) or the network is unreachable.
  */
 export async function readHusdBalance(address: string): Promise<bigint> {
-  if (!husdConfigured()) throw new Error('HUSD is not yet available on Hanzo Mainnet.')
+  if (!husdConfigured()) throw new Error('HUSD is not live on Hanzo Mainnet.')
   const eth = injected()
   // Prefer the wallet's provider (it holds the working Hanzo RPC); fall back to
   // the configured public RPC for read-only.
@@ -153,7 +153,7 @@ export async function readHusdBalance(address: string): Promise<bigint> {
  * accepted by the wallet (not yet mined). Throws when HUSD is unconfigured.
  */
 export async function sendHusd(to: string, amount: string): Promise<string> {
-  if (!husdConfigured()) throw new Error('HUSD is not yet available on Hanzo Mainnet.')
+  if (!husdConfigured()) throw new Error('HUSD is not live on Hanzo Mainnet.')
   const eth = injected()
   if (!eth) throw new Error('No browser wallet detected.')
   await ensureHanzoNetwork(eth)

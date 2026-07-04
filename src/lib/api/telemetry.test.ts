@@ -5,6 +5,7 @@ import {
   parseRange,
   serviceNameOf,
   toServiceHealth,
+  redactInstance,
   summarizeHealth,
   windowOf,
   type Sample,
@@ -86,6 +87,48 @@ describe('toServiceHealth', () => {
     const rows = toServiceHealth([{ metric: { instance: 'x:9000' }, value: 1, ts: 1 }])
     expect(rows[0].job).toBe('x:9000')
     expect(rows[0].up).toBe(true)
+  })
+
+  it('redacts every internal scrape instance in the board (no host:port reaches the row)', () => {
+    const rows = toServiceHealth([
+      { metric: { job: 'visor-health', instance: 'visor.hanzo.svc:19000' }, value: 1, ts: 1 },
+      { metric: { job: 'vm-health', instance: 'localhost:8428' }, value: 1, ts: 1 },
+      { metric: { job: 'metrics-health', instance: '127.0.0.1:8429' }, value: 0, ts: 1 },
+    ])
+    // Every internal instance is dropped to '' — the row still exists (health preserved).
+    for (const r of rows) expect(r.instance).toBe('')
+    expect(rows).toHaveLength(3)
+    expect(summarizeHealth(rows)).toEqual({ total: 3, healthy: 2, down: 1 })
+  })
+})
+
+describe('redactInstance — internal host:port never reaches a customer status board', () => {
+  it('drops the exact internal addresses the audit found', () => {
+    expect(redactInstance('visor.hanzo.svc:19000')).toBe('')
+    expect(redactInstance('localhost:8428')).toBe('')
+    expect(redactInstance('127.0.0.1:8429')).toBe('')
+  })
+  it('drops in-cluster, loopback, private-IP, IPv6, and bare-port instances', () => {
+    for (const internal of [
+      'iam.hanzo.svc:80',
+      'cloud-api.hanzo.svc.cluster.local:8000',
+      'agents:8080', // unqualified in-cluster name
+      'localhost',
+      '10.1.2.3:9000',
+      '192.168.0.5:9100',
+      '172.16.4.4:9090',
+      '169.254.1.1:80',
+      '[::1]:8428',
+      'fe80::1:9000',
+      '',
+    ]) {
+      expect(redactInstance(internal)).toBe('')
+    }
+  })
+  it('keeps a public FQDN, port stripped (customer-safe)', () => {
+    expect(redactInstance('iam.hanzo.ai:443')).toBe('iam.hanzo.ai')
+    expect(redactInstance('https://api.hanzo.ai:8000/health')).toBe('api.hanzo.ai')
+    expect(redactInstance('status.lux.network')).toBe('status.lux.network')
   })
 })
 
