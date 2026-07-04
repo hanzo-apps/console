@@ -25,16 +25,17 @@ import { RefreshCw, Search, X, Play, ArrowRight, ShieldCheck, Store } from '@han
 import {
   fetchCatalog,
   displayProvider,
+  modelId,
   modelType,
   modelContext,
   fmtPrice,
   fmtContext,
-  isZen,
   type CatalogEntry,
 } from '~/lib/api/aicatalog'
 import { categorize, featured, applyFilters, marketStats, listingTitle } from './marketplace/logic'
 import { playgroundPathForModel } from './playground/share'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
+import { brandForModel, brandLabel } from '~/components/ui/brand'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Loader } from '~/components/ui/Loader'
@@ -104,6 +105,13 @@ function CategoryTile({
 
 /** One marketplace listing card — a real model with vendor, pricing, context, CTA. */
 function ListingCard({ m, onOpen }: { m: CatalogEntry; onOpen: () => void }) {
+  // Resolve the listing's brand ONCE from the model identity (id/name) — so the logo,
+  // the vendor label, and the house "Verified" badge always agree, and a gateway-served
+  // third-party model (tagged provider "hanzo") reads as its TRUE vendor, never the house.
+  const id = modelId(m)
+  const brand = brandForModel(id, m.provider ?? '')
+  const house = brand === 'zen' || brand === 'hanzo'
+  const providerLabel = brand && !house ? brandLabel(brand) : displayProvider(m.provider)
   return (
     <YStack
       width={300}
@@ -116,16 +124,16 @@ function ListingCard({ m, onOpen }: { m: CatalogEntry; onOpen: () => void }) {
       hoverStyle={{ borderColor: '$color8' }}
     >
       <XStack items="center" gap="$2.5">
-        <ProviderLogo provider={m.provider ?? 'Other'} size={30} />
+        <ProviderLogo provider={m.provider ?? 'Other'} model={id} size={30} />
         <YStack flex={1}>
           <Text fontSize="$4" fontWeight="700" color="$color12" numberOfLines={1}>
             {listingTitle(m)}
           </Text>
           <Text fontSize="$1" color="$color10" numberOfLines={1}>
-            {displayProvider(m.provider)}
+            {providerLabel}
           </Text>
         </YStack>
-        {isZen(m) ? <VerifiedBadge /> : null}
+        {house ? <VerifiedBadge /> : null}
       </XStack>
 
       {m.description ? (
