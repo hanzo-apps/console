@@ -2421,10 +2421,11 @@ search}` all 403 while their `/cloud/v1/*` twins 200.
   per-org data / honest-empty, every fixed Docs button 200s, saved chats open,
   Crawl tabs stay under /crawl) is the post-deploy gate.
 
-## Integration release — @hanzo/ui design-system polish (#58) + billing surface completed (#29) (v8.4.100)
+## Integration release — @hanzo/ui design-system polish (#58) + billing surface completed (#29) (v8.4.101)
 
 Integration-lead pass over the open feature branches: only the two GENUINELY-NEW,
-canonical branches were merged onto origin/main (v8.4.99). Every other listed
+canonical branches were merged (onto a fast-moving origin/main — d052760/v8.4.99 at
+merge time, re-integrated up through abb87e5/v8.4.100 before landing at v8.4.101). Every other listed
 branch was reviewed and SKIPPED as already-superseded by main's own advancement
 (verified by merge-tree/`git cherry`/file presence, never a guess) — merging them
 would have regressed main or introduced a second way to do a thing already done:
@@ -2479,8 +2480,9 @@ ships). `backup/*` untouched per policy.
 - Verification (this integration, in an isolated worktree off origin/main v8.4.99):
   `tsc --noEmit` clean; `vitest` **all green** (132 → 133+ files, ~1697+ tests after
   console-ui-58, billing suites fold in); merged with only an append-only LLM.md doc
-  conflict (resolved: main's superset kept, this note appended). Bumped v8.4.99 →
-  **v8.4.100** (patch — never major). CI builds the `console` image at
+  conflict (resolved: main's superset kept, this note appended). Landed at
+  **v8.4.101** (patch — never major; v8.4.100 was taken by a concurrent push, so the
+  next free patch was used). CI builds the `console` image at
   `:v<package.json version>`; live re-verify (sign-in + key surfaces render) is the
   post-deploy gate. The universe CR bump is owned by the universe agent (not touched
-  here to avoid a race) — the new console semver is **v8.4.100**.
+  here to avoid a race) — the new console semver is **v8.4.101**.
