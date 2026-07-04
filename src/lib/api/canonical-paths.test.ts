@@ -53,27 +53,18 @@ afterEach(() => {
   delete (globalThis as { window?: unknown }).window
 })
 
-// Every refactored client must hit a CANONICAL `/v1/<resource>` (nothing before
-// /v1/) — never `/<svc>/v1/...`. The next.config rewrites route each head to its
-// hardened same-origin BFF proxy, so the browser URL stays prefix-free. (s3 +
-// framework are the two DOCUMENTED exceptions — see the dedicated block below —
-// because the live ingress does not rewrite their heads to the console app.)
+// Most refactored clients hit a CANONICAL `/v1/<resource>` (nothing before /v1/): the
+// console host's ingress routes `/v1/*` to the gateway (cloud-api), which SERVES those
+// heads on the session/header path (provisioning reads the stamped X-Org-Id; billing +
+// the AI heads validate the session), so the browser URL stays prefix-free.
+//
+// The EXCEPTIONS are heads the bare `/v1/*` → gateway path can NOT satisfy: the VISOR
+// catalog (regions/sizes/gpus — cloud-api serves no visor catalog route) and the
+// bearer-scoped compute + s3 + framework surfaces (cloud-api needs an org from a minted
+// BEARER, which the gateway strips from the cookie-only path → 403). Those clients
+// address their `/vm` or `/cloud` user-bearer proxy EXPLICITLY — see the dedicated block
+// below. This is the SAME ingress reality that the framework/s3 fix (v8.4.70) documented.
 describe('canonical /v1 client paths (no service prefix before /v1/)', () => {
-  it('VisorApi.machines -> /v1/machines', async () => {
-    stub({ machines: [] })
-    await VisorApi.machines()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/machines`)
-  })
-  it('VisorApi.regions -> /v1/regions', async () => {
-    stub({ regions: [] })
-    await VisorApi.regions()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/regions`)
-  })
-  it('VisorApi.gpus (catalog) -> /v1/gpu-sizes (distinct from the inventory head)', async () => {
-    stub({ gpus: [] })
-    await VisorApi.gpus()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/gpu-sizes`)
-  })
   it('ComputeApi.gpus (inventory) -> /v1/gpus', async () => {
     stub({ gpus: [] })
     await ComputeApi.gpus()
@@ -95,9 +86,9 @@ describe('canonical /v1 client paths (no service prefix before /v1/)', () => {
     expect(lastUrl).toBe(`${ORIGIN}/v1/clusters`)
   })
 
-  it('never emits a /<svc>/v1/ path', async () => {
-    stub({ machines: [] })
-    await VisorApi.machines()
+  it('a prefix-free client never emits a /<svc>/v1/ path', async () => {
+    stub([])
+    await ProvisioningApi.list('sql')
     expect(lastUrl).not.toMatch(/\/(cloud|vm|ai|billing|org)\/v1\//)
   })
 })
@@ -211,5 +202,36 @@ describe('cloud-proxy exceptions — s3 + framework address /cloud/v1 explicitly
     stub({ data: [] })
     await FrameworkApi.doctypes.list()
     expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/framework/doctypes`)
+  })
+})
+
+// The VISOR CATALOG + MACHINES are the compute analog of the s3/framework exception —
+// PINNED here because a bare `/v1/*` from the browser hits the gateway (→ cloud-api),
+// which serves NO visor catalog route (`/v1/gpu-sizes` 404s) and needs a minted bearer
+// for machines (`/v1/machines` 403 "X-Org-Id required"). That was the ROOT CAUSE of the
+// live "Accelerators 0 available to launch" bug — the catalog was hitting cloud-api, not
+// visor. The catalog reads visor DIRECTLY via `/vm`; machines/launch/terminate go through
+// the `/cloud` user-bearer proxy (org from the Bearer owner). Do NOT "canonicalize" these
+// back to a bare `/v1/` — that reintroduces the empty-catalog bug.
+describe('compute-proxy exceptions — visor catalog via /vm, machines via /cloud (ingress does not serve their bare heads)', () => {
+  it('VisorApi.gpus (accelerator CATALOG) -> /vm/v1/gpus (visor, NOT cloud-api /v1/gpu-sizes)', async () => {
+    stub({ data: [] })
+    await VisorApi.gpus()
+    expect(lastUrl).toBe(`${ORIGIN}/vm/v1/gpus`)
+  })
+  it('VisorApi.regions -> /vm/v1/regions', async () => {
+    stub({ data: [] })
+    await VisorApi.regions()
+    expect(lastUrl).toBe(`${ORIGIN}/vm/v1/regions`)
+  })
+  it('VisorApi.sizes -> /vm/v1/sizes', async () => {
+    stub({ data: [] })
+    await VisorApi.sizes()
+    expect(lastUrl).toBe(`${ORIGIN}/vm/v1/sizes`)
+  })
+  it('VisorApi.machines -> /cloud/v1/machines (bearer-scoped, NOT bare /v1/machines)', async () => {
+    stub({ machines: [] })
+    await VisorApi.machines()
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/machines`)
   })
 })

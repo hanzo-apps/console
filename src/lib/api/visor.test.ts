@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiError } from './client'
+import { ApiError, cloudProxyV1Url, vmProxyV1Url } from './client'
 import {
   filterSizes,
   fmtSpec,
@@ -11,6 +11,7 @@ import {
   normalizeSize,
   prettyGpuModel,
   statusVerdict,
+  VisorApi,
   type VisorSize,
 } from './visor'
 
@@ -110,6 +111,62 @@ describe('compute catalog normalizers (real visor shapes)', () => {
       gpu: { count: 1, model: 'nvidia_l40s', vram: 48, vramUnit: 'gib' },
     })
     expect(g).toMatchObject({ slug: 'gpu-l40sx1-48gb', vcpus: 8, memGb: 64, model: 'L40S', gpuCount: 1, vramGb: 48, priceHourly: 1.57 })
+  })
+})
+
+describe('VisorApi routes each call to the correct server proxy (Problem-1 regression)', () => {
+  // ROOT CAUSE of "Accelerators 0 available to launch": the console host's ingress
+  // routes a bare `/v1/*` straight to the gateway (→ cloud-api), BYPASSING Next's
+  // rewrites — so `/v1/gpu-sizes` hit cloud-api (no visor catalog route there) → empty.
+  // The catalog MUST address the `/vm` (visor) proxy and machines the `/cloud` proxy
+  // EXPLICITLY. This test mocks fetch and pins the exact URL each call hits — the guard
+  // that would have caught the ingress-bypass bug (mirrors the v8.4.34 wiring lesson).
+  const seen: { url: string; method: string; body?: string }[] = []
+  const stubFetch = (body: unknown) =>
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      const method = (init?.method ?? 'GET').toUpperCase()
+      seen.push({ url: String(url), method, body: init?.body as string | undefined })
+      if (method === 'DELETE') return { status: 204, ok: true, text: async () => '', json: async () => ({}) } as unknown as Response
+      return { status: 200, ok: true, text: async () => JSON.stringify(body), json: async () => body } as unknown as Response
+    }))
+  afterEach(() => { seen.length = 0; vi.unstubAllGlobals() })
+
+  it('catalog (gpus / regions / sizes) reads the VISOR /vm proxy — never a bare /v1', async () => {
+    stubFetch({ data: [] })
+    await VisorApi.gpus()
+    await VisorApi.regions()
+    await VisorApi.sizes()
+    expect(seen.map((s) => s.url)).toEqual([vmProxyV1Url('gpus'), vmProxyV1Url('regions'), vmProxyV1Url('sizes')])
+    for (const s of seen) expect(s.url).toContain('/vm/v1/')
+  })
+
+  it('machines list uses the /cloud user-bearer proxy (org from the Bearer owner)', async () => {
+    stubFetch({ machines: [] })
+    await VisorApi.machines()
+    expect(seen[0].url).toBe(cloudProxyV1Url('machines'))
+    expect(seen[0].url).toContain('/cloud/v1/machines')
+  })
+
+  it('launch POSTs a real (dryRun:false) launch to /cloud/v1/machines/launch', async () => {
+    stubFetch({ status: 'ok', data: { id: 'm1' } })
+    await VisorApi.launch({ size: 'gpu-h100x1-80gb', region: 'nyc1', name: 'box' })
+    expect(seen[0].url).toBe(cloudProxyV1Url('machines/launch'))
+    expect(seen[0].method).toBe('POST')
+    expect(JSON.parse(seen[0].body as string)).toMatchObject({ size: 'gpu-h100x1-80gb', dryRun: false })
+  })
+
+  it('quote POSTs a dryRun:true (no-spend) launch to /cloud/v1/machines/launch', async () => {
+    stubFetch({ status: 'ok', data: { priceHourly: 2.5 } })
+    await VisorApi.quote({ size: 'gpu-h100x1-80gb', region: 'nyc1', name: 'q' })
+    expect(seen[0].url).toBe(cloudProxyV1Url('machines/launch'))
+    expect(JSON.parse(seen[0].body as string)).toMatchObject({ dryRun: true })
+  })
+
+  it('terminate DELETEs the machine on the /cloud proxy', async () => {
+    stubFetch({})
+    await VisorApi.terminate('abc-123')
+    expect(seen[0].url).toBe(cloudProxyV1Url('machines/abc-123'))
+    expect(seen[0].method).toBe('DELETE')
   })
 })
 
