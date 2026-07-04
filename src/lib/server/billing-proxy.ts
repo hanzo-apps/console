@@ -51,8 +51,16 @@ import { fetchWithTimeout } from './fetch-timeout'
 /** The upstream prefix every billing request MUST stay under — the tenant boundary. */
 const BILLING_PREFIX = '/v1/billing/'
 
-function commerceBaseUrl(): string {
+/** Commerce base URL (in-cluster ClusterIP). Exported so the server-to-server
+ *  billing-grant helper hits the SAME backend (DRY — one commerce address). */
+export function commerceBaseUrl(): string {
   return (process.env.COMMERCE_URL ?? 'http://commerce.hanzo.svc:8001').replace(/\/+$/, '')
+}
+
+/** The commerce SERVICE token from server-only env ('' when unset → honest 501).
+ *  Shared by `forwardBilling` and the signup-time `grant-starter` call (DRY). */
+export function commerceServiceToken(): string {
+  return process.env.COMMERCE_TOKEN ?? process.env.COMMERCE_SERVICE_TOKEN ?? ''
 }
 
 /**
@@ -168,7 +176,7 @@ export async function forwardBilling(req: NextRequest, path: string[]): Promise<
     return NextResponse.json({ error: 'Invalid billing path.' }, { status: 400 })
   }
 
-  const token = process.env.COMMERCE_TOKEN ?? process.env.COMMERCE_SERVICE_TOKEN ?? ''
+  const token = commerceServiceToken()
   if (!token) {
     return NextResponse.json({ error: 'Billing is not configured (COMMERCE_TOKEN missing).' }, { status: 501 })
   }

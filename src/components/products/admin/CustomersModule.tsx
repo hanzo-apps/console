@@ -12,12 +12,12 @@
  * server-side. NO card data is ever shown (the backend never sends it); an API key's
  * PRESENCE is shown, never its value.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { type CSSProperties, useCallback, useEffect, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, Ban, Building2, CheckCircle2, CreditCard, RefreshCw, Users } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
-import { AdminCockpitApi, type CustomerDetail, type CustomerRow } from '~/lib/api/admin-cockpit'
+import { AdminCockpitApi, type CustomerDetail, type CustomerRow, type GrantSource } from '~/lib/api/admin-cockpit'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
@@ -36,11 +36,109 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+const INPUT_BASE: CSSProperties = {
+  background: 'transparent',
+  border: '1px solid var(--borderColor)',
+  borderRadius: 8,
+  padding: '8px 10px',
+  color: 'var(--color12)',
+}
+
+/** What a grant submit carries — amount (cents), the source bucket, optional reason. */
+export type GrantInput = { amountCents: number; source: GrantSource; reason?: string }
+
+/**
+ * The ONE grant-credit form — reused by the per-ROW quick action (list) and the
+ * customer DETAIL view, so both open the same audited flow. Owns its own inputs
+ * (amount / source / reason) and validates locally; the parent owns the API call,
+ * the busy flag, and the success/error notice. A `source` toggle (Trial | Prepaid)
+ * defaults to Trial — comps are non-cash credit; Prepaid is real money.
+ */
+function GrantCreditPanel({
+  display,
+  busy,
+  onCancel,
+  onSubmit,
+}: {
+  display: string
+  busy: boolean
+  onCancel: () => void
+  onSubmit: (input: GrantInput) => void
+}) {
+  const [amount, setAmount] = useState('')
+  const [reason, setReason] = useState('')
+  const [source, setSource] = useState<GrantSource>('trial')
+  const [localErr, setLocalErr] = useState<string | null>(null)
+
+  const submit = () => {
+    const dollars = parseFloat(amount)
+    if (!Number.isFinite(dollars) || dollars <= 0) {
+      setLocalErr('Enter a positive amount.')
+      return
+    }
+    setLocalErr(null)
+    onSubmit({ amountCents: Math.round(dollars * 100), source, reason: reason.trim() || undefined })
+  }
+
+  return (
+    <YStack p="$4" gap="$3" rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color2">
+      <Text fontSize="$4" color="$color12">Grant credit to {display}</Text>
+      <Text fontSize="$1" color="$color10">
+        A real commerce deposit into this org’s wallet. Trial = non-cash comp (welcome / starter / support);
+        Prepaid = real money. Spend draws trial-first. Audited.
+      </Text>
+      <YStack gap="$1">
+        <Text fontSize="$1" color="$color10">Source</Text>
+        <XStack gap="$2">
+          {(['trial', 'prepaid'] as const).map((s) => (
+            <Button
+              key={s}
+              size="$2"
+              bg={source === s ? '$color5' : 'transparent'}
+              borderWidth={1}
+              borderColor="$borderColor"
+              disabled={busy}
+              onPress={() => setSource(s)}
+            >
+              {s === 'trial' ? 'Trial credit' : 'Prepaid'}
+            </Button>
+          ))}
+        </XStack>
+      </YStack>
+      <XStack gap="$3" items="flex-end" flexWrap="wrap">
+        <YStack gap="$1">
+          <Text fontSize="$1" color="$color10">Amount (USD)</Text>
+          <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25.00" inputMode="decimal"
+            style={{ ...INPUT_BASE, width: 120 }} />
+        </YStack>
+        <YStack gap="$1" flex={1} minW={200}>
+          <Text fontSize="$1" color="$color10">Reason</Text>
+          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="support comp"
+            style={{ ...INPUT_BASE, width: '100%' }} />
+        </YStack>
+        <XStack gap="$2">
+          <Button size="$3" chromeless disabled={busy} onPress={onCancel}>Cancel</Button>
+          <Button size="$3" disabled={busy} onPress={submit}>{busy ? 'Granting…' : 'Grant'}</Button>
+        </XStack>
+      </XStack>
+      {localErr ? <Text fontSize="$2" color="$red11">{localErr}</Text> : null}
+    </YStack>
+  )
+}
+
+/** Human summary of a completed grant for the notice banner. */
+const grantNotice = (source: GrantSource, res: { grantedCents: number; balanceCents: number; transactionId: string }): string =>
+  `Granted ${usd(res.grantedCents)} ${source === 'trial' ? 'trial credit' : 'prepaid'} · new balance ${usd(res.balanceCents)} · tx ${res.transactionId}`
+
 export function CustomersModule() {
   const [rows, setRows] = useState<CustomerRow[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<ApiError | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
+  // Per-row quick-grant: the customer whose grant panel is open (null = closed).
+  const [grantFor, setGrantFor] = useState<CustomerRow | null>(null)
+  const [grantBusy, setGrantBusy] = useState(false)
+  const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -57,6 +155,22 @@ export function CustomersModule() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const submitGrant = useCallback(async (input: GrantInput) => {
+    if (!grantFor) return
+    setGrantBusy(true)
+    setNotice(null)
+    try {
+      const res = await AdminCockpitApi.grantCredit(grantFor.org, input)
+      setNotice({ ok: true, msg: grantNotice(input.source, res) })
+      setGrantFor(null)
+      await load()
+    } catch (e) {
+      setNotice({ ok: false, msg: asApiError(e).message })
+    } finally {
+      setGrantBusy(false)
+    }
+  }, [grantFor, load])
 
   if (selected) return <CustomerDetailView org={selected} onBack={() => { setSelected(null); void load() }} />
 
@@ -81,6 +195,18 @@ export function CustomersModule() {
     { key: 'spendCents', header: 'Spend', render: (r) => <Text fontSize="$2" color="$color11">{usd(r.spendCents)}</Text> },
     { key: 'mrrCents', header: 'MRR', render: (r) => <Text fontSize="$2" color="$color11">{r.mrrCents ? usd(r.mrrCents) : '—'}</Text> },
     { key: 'lastActive', header: 'Last active', render: (r) => <Text fontSize="$1" color="$color10">{shortDate(r.lastActive)}</Text> },
+    // Per-ROW quick action — opens the SAME grant flow for this org without leaving the
+    // list. `stopPropagation` so the button click doesn't also open the row's detail view.
+    { key: 'grant', header: '', width: 96, align: 'right', render: (r) => (
+      <Button
+        size="$2"
+        chromeless
+        icon={<CreditCard size={14} />}
+        onPress={(e) => { e.stopPropagation?.(); setNotice(null); setGrantFor(r) }}
+      >
+        Grant
+      </Button>
+    ) },
   ]
 
   return (
@@ -95,6 +221,22 @@ export function CustomersModule() {
         <MetricCard icon={<CreditCard size={16} />} label="Total balances" value={usd(totalBal)} caption="prepaid credit held" />
         <MetricCard icon={<Building2 size={16} />} label="Total spend" value={usd(totalSpend)} caption="realized usage" />
       </XStack>
+
+      {notice && (
+        <XStack p="$3" rounded="$4" bg={notice.ok ? '$green3' : '$red3'}>
+          <Text fontSize="$2" color={notice.ok ? '$green11' : '$red11'}>{notice.msg}</Text>
+        </XStack>
+      )}
+
+      {grantFor && (
+        <GrantCreditPanel
+          display={grantFor.display}
+          busy={grantBusy}
+          onCancel={() => setGrantFor(null)}
+          onSubmit={submitGrant}
+        />
+      )}
+
       <DataTable<CustomerRow>
         columns={columns}
         rows={rows}
@@ -116,8 +258,6 @@ function CustomerDetailView({ org, onBack }: { org: string; onBack: () => void }
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null)
   const [showCredit, setShowCredit] = useState(false)
-  const [amount, setAmount] = useState('')
-  const [reason, setReason] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -135,22 +275,20 @@ function CustomerDetailView({ org, onBack }: { org: string; onBack: () => void }
     void load()
   }, [load])
 
-  const grant = useCallback(async () => {
-    const dollars = parseFloat(amount)
-    if (!Number.isFinite(dollars) || dollars <= 0) { setNotice({ ok: false, msg: 'Enter a positive amount.' }); return }
+  const grant = useCallback(async (input: GrantInput) => {
     setBusy(true)
     setNotice(null)
     try {
-      const res = await AdminCockpitApi.grantCredit(org, { amountCents: Math.round(dollars * 100), reason: reason.trim() || undefined })
-      setNotice({ ok: true, msg: `Granted ${usd(res.grantedCents)} · new balance ${usd(res.balanceCents)} · tx ${res.transactionId}` })
-      setShowCredit(false); setAmount(''); setReason('')
+      const res = await AdminCockpitApi.grantCredit(org, input)
+      setNotice({ ok: true, msg: grantNotice(input.source, res) })
+      setShowCredit(false)
       await load()
     } catch (e) {
       setNotice({ ok: false, msg: asApiError(e).message })
     } finally {
       setBusy(false)
     }
-  }, [amount, reason, org, load])
+  }, [org, load])
 
   const toggleSuspend = useCallback(async (suspend: boolean) => {
     setBusy(true)
@@ -214,23 +352,7 @@ function CustomerDetailView({ org, onBack }: { org: string; onBack: () => void }
       )}
 
       {showCredit && (
-        <YStack p="$4" gap="$3" rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color2">
-          <Text fontSize="$4" color="$color12">Grant credit to {d.display}</Text>
-          <Text fontSize="$1" color="$color10">A real commerce deposit into this org’s wallet (refund / comp / support). Audited.</Text>
-          <XStack gap="$3" items="center" flexWrap="wrap">
-            <YStack gap="$1">
-              <Text fontSize="$1" color="$color10">Amount (USD)</Text>
-              <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25.00" inputMode="decimal"
-                style={{ background: 'transparent', border: '1px solid var(--borderColor)', borderRadius: 8, padding: '8px 10px', color: 'var(--color12)', width: 120 }} />
-            </YStack>
-            <YStack gap="$1" flex={1} minW={200}>
-              <Text fontSize="$1" color="$color10">Reason</Text>
-              <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="support comp"
-                style={{ background: 'transparent', border: '1px solid var(--borderColor)', borderRadius: 8, padding: '8px 10px', color: 'var(--color12)', width: '100%' }} />
-            </YStack>
-            <Button size="$3" disabled={busy} onPress={grant}>{busy ? 'Granting…' : 'Grant'}</Button>
-          </XStack>
-        </YStack>
+        <GrantCreditPanel display={d.display} busy={busy} onCancel={() => setShowCredit(false)} onSubmit={grant} />
       )}
 
       <XStack gap="$3" flexWrap="wrap">
