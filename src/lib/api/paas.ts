@@ -5,7 +5,7 @@
  * Service CRs.
  *
  * Transport mirrors `functions.ts`: the `/cloud` bearer proxy via
- * `originV1Url` — the browser sends only its session cookie, the proxy mints a
+ * `cloudProxyV1Url` — the browser sends only its session cookie, the proxy mints a
  * short-lived user IAM Bearer and forwards it; cloud's `SanitizeIdentity` resolves
  * the org from the Bearer OWNER claim and pins every read/write to it, so the
  * caller only ever sees THEIR org's projects/apps (backend-enforced; the console
@@ -13,7 +13,7 @@
  * casibase `{status,msg,data}` envelope — so we use the `rest*` transport and
  * normalize defensively (a bare array OR a `{projects|apps|deployments:[…]}` wrap).
  */
-import { restGet, restPost, restDelete, originV1Url } from './client'
+import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
 
 const BASE = 'platform'
 const enc = encodeURIComponent
@@ -178,52 +178,52 @@ const deploysPath = (p: string, a: string, id?: string) =>
 export const PaasApi = {
   // ── Projects ──────────────────────────────────────────────────────────────
   listProjects: (): Promise<PaasProject[]> =>
-    restGet<unknown>(originV1Url(projectsPath())).then((p) => asArray<PaasProject>(p, 'projects')),
+    restGet<unknown>(cloudProxyV1Url(projectsPath())).then((p) => asArray<PaasProject>(p, 'projects')),
   getProject: (project: string): Promise<PaasProject> =>
-    restGet<unknown>(originV1Url(projectsPath(project))).then((p) => asObject<PaasProject>(p, 'project')),
+    restGet<unknown>(cloudProxyV1Url(projectsPath(project))).then((p) => asObject<PaasProject>(p, 'project')),
   createProject: (input: CreateProjectInput): Promise<PaasProject> =>
-    restPost<unknown>(originV1Url(projectsPath()), input).then((p) => asObject<PaasProject>(p, 'project')),
-  deleteProject: (project: string): Promise<void> => restDelete(originV1Url(projectsPath(project))),
+    restPost<unknown>(cloudProxyV1Url(projectsPath()), input).then((p) => asObject<PaasProject>(p, 'project')),
+  deleteProject: (project: string): Promise<void> => restDelete(cloudProxyV1Url(projectsPath(project))),
 
   // ── Apps ──────────────────────────────────────────────────────────────────
   listApps: (project: string): Promise<PaasApp[]> =>
-    restGet<unknown>(originV1Url(appsPath(project))).then((p) => asArray<PaasApp>(p, 'apps')),
+    restGet<unknown>(cloudProxyV1Url(appsPath(project))).then((p) => asArray<PaasApp>(p, 'apps')),
   getApp: (project: string, app: string): Promise<PaasApp> =>
-    restGet<unknown>(originV1Url(appsPath(project, app))).then((p) => asObject<PaasApp>(p, 'app')),
+    restGet<unknown>(cloudProxyV1Url(appsPath(project, app))).then((p) => asObject<PaasApp>(p, 'app')),
   createApp: (project: string, input: CreateAppInput): Promise<PaasApp> =>
-    restPost<unknown>(originV1Url(appsPath(project)), input).then((p) => asObject<PaasApp>(p, 'app')),
+    restPost<unknown>(cloudProxyV1Url(appsPath(project)), input).then((p) => asObject<PaasApp>(p, 'app')),
   deleteApp: (project: string, app: string): Promise<void> =>
-    restDelete(originV1Url(appsPath(project, app))),
+    restDelete(cloudProxyV1Url(appsPath(project, app))),
   deploy: (project: string, app: string, input: DeployInput = {}): Promise<PaasDeployment> =>
-    restPost<unknown>(originV1Url(`${appsPath(project, app)}/deploy`), input).then((p) =>
+    restPost<unknown>(cloudProxyV1Url(`${appsPath(project, app)}/deploy`), input).then((p) =>
       asObject<PaasDeployment>(p, 'deployment'),
     ),
   stop: (project: string, app: string): Promise<PaasApp> =>
-    restPost<unknown>(originV1Url(`${appsPath(project, app)}/stop`), {}).then((p) => asObject<PaasApp>(p, 'app')),
+    restPost<unknown>(cloudProxyV1Url(`${appsPath(project, app)}/stop`), {}).then((p) => asObject<PaasApp>(p, 'app')),
   start: (project: string, app: string): Promise<PaasApp> =>
-    restPost<unknown>(originV1Url(`${appsPath(project, app)}/start`), {}).then((p) => asObject<PaasApp>(p, 'app')),
+    restPost<unknown>(cloudProxyV1Url(`${appsPath(project, app)}/start`), {}).then((p) => asObject<PaasApp>(p, 'app')),
 
   // ── Deployments (history = releases; builds derive from git-source deployments) ──
   listDeployments: (project: string, app: string): Promise<PaasDeployment[]> =>
-    restGet<unknown>(originV1Url(deploysPath(project, app))).then((p) => asArray<PaasDeployment>(p, 'deployments')),
+    restGet<unknown>(cloudProxyV1Url(deploysPath(project, app))).then((p) => asArray<PaasDeployment>(p, 'deployments')),
   getDeployment: (project: string, app: string, id: string): Promise<PaasDeployment> =>
-    restGet<unknown>(originV1Url(deploysPath(project, app, id))).then((p) => asObject<PaasDeployment>(p, 'deployment')),
+    restGet<unknown>(cloudProxyV1Url(deploysPath(project, app, id))).then((p) => asObject<PaasDeployment>(p, 'deployment')),
   deploymentLogs: (project: string, app: string, id: string): Promise<string> =>
-    restGet<{ logs?: string }>(originV1Url(`${deploysPath(project, app, id)}/logs`)).then((r) => r?.logs ?? ''),
+    restGet<{ logs?: string }>(cloudProxyV1Url(`${deploysPath(project, app, id)}/logs`)).then((r) => r?.logs ?? ''),
 
   // ── Domains (default + org-subtree hosts + verified BYO custom domains) ──────
   listDomains: (project: string, app: string): Promise<PaasDomain[]> =>
-    restGet<unknown>(originV1Url(`${appsPath(project, app)}/domains`)).then((p) => asArray<PaasDomain>(p, 'domains')),
+    restGet<unknown>(cloudProxyV1Url(`${appsPath(project, app)}/domains`)).then((p) => asArray<PaasDomain>(p, 'domains')),
   /** Attach a host: an org-subtree host goes active; a custom host returns pending + its DNS challenge. */
   addDomain: (project: string, app: string, host: string): Promise<PaasDomain> =>
-    restPost<unknown>(originV1Url(`${appsPath(project, app)}/domains`), { host }).then((p) => asObject<PaasDomain>(p, 'domain')),
+    restPost<unknown>(cloudProxyV1Url(`${appsPath(project, app)}/domains`), { host }).then((p) => asObject<PaasDomain>(p, 'domain')),
   /** Resolve the DNS challenge for a pending custom domain; on success it goes live with TLS. */
   verifyDomain: (project: string, app: string, host: string): Promise<PaasDomain> =>
-    restPost<unknown>(originV1Url(`${appsPath(project, app)}/domains/${enc(host)}/verify`), {}).then((p) =>
+    restPost<unknown>(cloudProxyV1Url(`${appsPath(project, app)}/domains/${enc(host)}/verify`), {}).then((p) =>
       asObject<PaasDomain>(p, 'domain'),
     ),
   removeDomain: (project: string, app: string, host: string): Promise<void> =>
-    restDelete(originV1Url(`${appsPath(project, app)}/domains/${enc(host)}`)),
+    restDelete(cloudProxyV1Url(`${appsPath(project, app)}/domains/${enc(host)}`)),
 
   /**
    * The org's ENTIRE app fleet with project context — the aggregate the
