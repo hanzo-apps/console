@@ -15,6 +15,8 @@ import {
   regionLabel,
   ageFrom,
   clusterNodeCount,
+  fundingModel,
+  fmtCredit,
 } from './logic'
 
 /**
@@ -193,5 +195,66 @@ describe('presentation helpers', () => {
         cluster({ nodePools: [{ count: 3 }, { count: 2 }] }),
       ),
     ).toBe(5)
+  })
+})
+
+/**
+ * Funding model — the CPU-credit vs GPU-prepay-card distinction the customer sees.
+ * It must ALWAYS match what the server enforces: a CPU machine is credit-funded (no
+ * card), a GPU is card-prepay only (never credits) and blocks without a card.
+ */
+describe('fundingModel', () => {
+  it('fmtCredit renders whole dollars with thousands separators', () => {
+    expect(fmtCredit(2_046_235)).toBe('$20,462') // Dave/maxpower's ~$20,462 credit
+    expect(fmtCredit(0)).toBe('$0')
+    expect(fmtCredit(99)).toBe('$1') // rounds to the nearest dollar
+  })
+
+  it('CPU is credit-funded (no card), and shows the available balance when known', () => {
+    const f = fundingModel('cpu', { creditCents: 2_046_235 })
+    expect(f.source).toBe('credit')
+    expect(f.needsFunds).toBe(false)
+    expect(f.headline).toMatch(/credit/i)
+    expect(f.detail).toContain('$20,462 available')
+    expect(f.detail).toMatch(/no card/i)
+    expect(f.cta).toEqual({ label: 'Add credits', href: '/wallet' })
+  })
+
+  it('CPU stays honest (still "on credits", no figure) when the balance is unknown', () => {
+    const f = fundingModel('cpu', { creditCents: null })
+    expect(f.source).toBe('credit')
+    expect(f.needsFunds).toBe(false)
+    expect(f.detail).not.toContain('available')
+    expect(f.detail).toMatch(/charged to credits/i)
+  })
+
+  it('CPU with an empty credit balance needs funds → add credits', () => {
+    const f = fundingModel('cpu', { creditCents: 0 })
+    expect(f.source).toBe('credit')
+    expect(f.needsFunds).toBe(true)
+    expect(f.cta.href).toBe('/wallet')
+  })
+
+  it('GPU is prepay-card only (never credits) with a 24-hour minimum', () => {
+    const f = fundingModel('gpu', { hasCard: true })
+    expect(f.source).toBe('card')
+    expect(f.needsFunds).toBe(false)
+    expect(f.headline).toMatch(/prepay/i)
+    expect(f.headline).toMatch(/card/i)
+    expect(f.detail).toMatch(/24-hour minimum/i)
+    expect(f.detail).toMatch(/credits can’t be used/i)
+  })
+
+  it('GPU without a card on file needs funds → add a card', () => {
+    const f = fundingModel('gpu', { hasCard: false })
+    expect(f.source).toBe('card')
+    expect(f.needsFunds).toBe(true)
+    expect(f.cta).toEqual({ label: 'Add a payment card & prepay', href: '/billing/credits' })
+  })
+
+  it('GPU never claims the credit balance funds it, even with credit present', () => {
+    const f = fundingModel('gpu', { hasCard: true, creditCents: 5_000_000 })
+    expect(f.source).toBe('card')
+    expect(f.detail).not.toContain('available')
   })
 })

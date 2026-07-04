@@ -22,8 +22,9 @@ export type BrandKey =
 export function normalizeBrand(raw: string): BrandKey | null {
   const p = raw.trim().toLowerCase()
   if (!p) return null
-  // First-party. A zen* model id or the zen/zenlm provider → Zen (ensō). Bare
-  // "hanzo" (the company/gateway provider, non-model surfaces) → the block-H.
+  // First-party. A zen* model id or the zen/zenlm provider → Zen (the house brand,
+  // rendered as the Hanzo mark). Bare "hanzo" (the company/gateway provider) → the
+  // same block-H. Zen NEVER resolves to an upstream family (brand policy).
   if (p === 'zen' || p === 'zenlm' || /^zen[\d-]/.test(p)) return 'zen'
   if (p === 'hanzo') return 'hanzo'
   // Third-party families (match provider strings AND their model-name tells).
