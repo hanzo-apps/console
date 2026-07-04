@@ -99,6 +99,7 @@ import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
+import { MapModule } from '~/components/products/map/MapModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
@@ -909,6 +910,24 @@ export const catalog: CatalogEntry[] = [
   },
 
   // ── Compute ──────────────────────────────────────────────────────────
+  {
+    // The "see everything running" view — the org's whole deployment landscape
+    // (apps + managed data + domains) as a live, pannable node canvas. Composed
+    // from the SAME real reads the lists use (PaasApi /v1/platform + Provisioning
+    // /v1/<kind>); leads Compute because it is the primary at-a-glance surface,
+    // not a buried subpage. Honest edges only (domain→app routes; app→resource
+    // where an env value exposes the link) — see components/products/map/graph.ts.
+    id: 'map',
+    label: 'Map',
+    icon: Network,
+    description: 'Every app, database, and domain in your org on one live canvas.',
+    category: 'Compute',
+    status: 'enabled',
+    repo: 'hanzoai/console',
+    docs: `${DOCS}/console`,
+    kind: 'module',
+    routes: [{ path: '', component: MapModule }],
+  },
   {
     id: 'gpus',
     label: 'GPUs',
