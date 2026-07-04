@@ -2019,3 +2019,39 @@ from s3.hanzo.ai (MinIO/SeaweedFS backend) — bucket-create + presign + Media-d
 all work (200/201), only the object WRITE fails, backend-wide (a fresh bucket 500s
 too). The DAM code is correct up to the storage boundary; the S3 write path is a
 separate infra defect.
+
+## Restore main to green + lock two contracts — overview/models ship (v8.4.72)
+
+Two live CTO reports (overview blank/errored when authed; Qwen/Llama/DeepSeek model
+icons blank). BOTH were the STALE deployed image: main couldn't ship because the
+v8.4.70 build was broken — `framework/client.ts` + `storage.ts` imported the
+`cloudProxyV1Url` that PR #81 had DELETED (`tsc` TS2305 "no exported member"), and
+`next build` type-checks (no `ignoreBuildErrors`), so CI produced no new image. The
+overview's own code is sound (`UsageApi.overview` → `/v1/billing/usage`; the
+`LivingOverview` driver degrades to an honest `ErrorState`, never a hard blank), and
+the brand entries already landed in `6dfa9c059` (Qwen `#615CED`, Meta `#0866FF`,
+DeepSeek `#4D6BFE`; `families.ts` maps them; live pricing.json providers are clean) —
+they just couldn't deploy.
+
+- **Build fix = concurrent `c458efa8f`** (deferred to; it has prod-ingress
+  knowledge): re-add `cloudProxyV1Url` — the PROD-CORRECT variant. The live Traefik
+  ingress does NOT rewrite bare `/v1/s3` / `/v1/framework` to the console app (they
+  reach hanzoai/gateway with no principal → 403), so those two heads MUST address the
+  `/cloud` user-bearer proxy EXPLICITLY. (A naive repoint to bare `/v1/` — the
+  "canonical" form — would 403 live; NOT done.)
+- **But that left `vitest` RED** (its own oversight): `canonical-paths.test.ts` still
+  asserted the OLD prefix-free `StorageApi.buckets → /v1/s3/buckets` (#81), which now
+  returns `/cloud/v1/s3/buckets`. Reconciled: dropped the stale prefix-free `s3`
+  assertion; added a DOCUMENTED `cloud-proxy exceptions` block pinning
+  `StorageApi.buckets → /cloud/v1/s3/buckets` + `FrameworkApi.doctypes.list →
+  /cloud/v1/framework/doctypes`, so a future "canonicalization" can't repoint them to
+  a bare `/v1/` that 403s in prod.
+- **families ↔ brand lock (the models guard):** every curated family's `logo`
+  (rendered by `<ProviderLogo>` on every header + row) MUST resolve through the ONE
+  `normalizeBrand`→`BRANDS` resolver to a real colour + icon — keyed off the EXACT
+  live pricing.json provider strings ("Qwen"/"Meta"/"DeepSeek"). This is the permanent
+  guard for the CTO's "icons blank" report; the entries exist, this locks them so the
+  class can't recur (a family added with an unresolvable logo now fails the suite).
+- Test-only diff (2 files, +75/−6) — the runtime fixes are already on main; this cuts
+  the green release. Verification: `tsc --noEmit` 0; `vitest` **1507/1507** (121
+  files); `next build` ✓ 14/14. Rebased on origin/main (v8.4.71) → **v8.4.72**.
