@@ -75,6 +75,22 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/ml/health')).toBe(true)
   })
 
+  it('admits the casibase store-admin heads the console uses (Embeddings · Collections)', () => {
+    for (const head of ['get-stores', 'get-store', 'add-store', 'update-store', 'delete-store', 'refresh-store-vectors']) {
+      expect(CLOUD_HEADS).toContain(head)
+      expect(allowCloudSurface(`v1/${head}`)).toBe(true)
+    }
+  })
+
+  it('LEAST PRIVILEGE: does NOT tunnel the cross-tenant / unused store heads', () => {
+    // get-global-stores is a cross-tenant read the console never invokes; get-store-names
+    // is unused. Neither is allow-listed, so /cloud refuses them (not a general tunnel).
+    expect(CLOUD_HEADS).not.toContain('get-global-stores')
+    expect(CLOUD_HEADS).not.toContain('get-store-names')
+    expect(allowCloudSurface('v1/get-global-stores')).toBe(false)
+    expect(allowCloudSurface('v1/get-store-names')).toBe(false)
+  })
+
   it('REFUSES privileged / unlisted cloud-api surfaces (not a general tunnel)', () => {
     expect(allowCloudSurface('v1/iam/get-users')).toBe(false)
     expect(allowCloudSurface('v1/admin/overview')).toBe(false)
