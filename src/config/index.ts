@@ -105,6 +105,12 @@ function cloudUrl(): string {
 // org, so there is ONE admin login app (`admin-console`); enabling a new brand's
 // admin host = add its /auth/callback to that app's redirectUris. Non-admin
 // hosts keep the brand's normal `iamApp`.
+//
+// The reserved global-admin ORG. It is ONE org across every brand (ONE
+// `admin-console` app is registered in it), so an admin host authenticates INTO
+// this org — not the brand's own — which is why `resolveConfig` switches BOTH the
+// app and the org on an admin host. Literal is IAM_ADMIN_ORG=admin.
+const ADMIN_ORG = 'admin'
 const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string; adminApp: string; billingUrl: string; docsUrl: string }> = {
   hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.hanzo.ai', docsUrl: 'https://docs.hanzo.ai' },
   lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.lux.cloud', docsUrl: 'https://docs.lux.network' },
@@ -197,16 +203,21 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
   if (cached) return cached
   const brand = brandFromHost(host)
   const b = BRANDS[brand]
-  // On an admin host, the login client is the admin-org app; otherwise the
-  // brand's normal cloud app. iamAppName and iamClientId travel together (same
-  // app). An explicit NEXT_PUBLIC_* override still wins (unchanged precedence).
-  const app = isAdminHost(host) ? b.adminApp : b.iamApp
+  // On an admin host the login targets the reserved global-admin org's app
+  // (`admin-console` @ org `admin`) so IAM mints the global-admin identity
+  // (owner=admin); every normal host keeps the brand's own app + org. The app AND
+  // the org travel together — both switch on an admin host (iamAppName/iamClientId
+  // are the same app). An explicit NEXT_PUBLIC_* override still wins for every
+  // field (unchanged precedence).
+  const admin = isAdminHost(host)
+  const app = admin ? b.adminApp : b.iamApp
+  const org = admin ? ADMIN_ORG : b.iamOrgName
   const resolved: ConsoleConfig = {
     brand,
     brandName: b.brandName,
     cloudUrl: cloudUrl(),
     iamUrl: trimSlash(process.env.NEXT_PUBLIC_IAM_URL ?? b.iamUrl),
-    iamOrgName: process.env.NEXT_PUBLIC_IAM_ORG_NAME ?? b.iamOrgName,
+    iamOrgName: process.env.NEXT_PUBLIC_IAM_ORG_NAME ?? org,
     iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? app,
     iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? app,
     billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? b.billingUrl),
