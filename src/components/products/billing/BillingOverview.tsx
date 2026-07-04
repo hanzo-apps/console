@@ -19,14 +19,20 @@ import { CreditCard, TrendingUp, RefreshCw, Plus, ArrowRight, CalendarClock } fr
 
 import { fetchUsageRecords, type UsageRecord, type RangeKey } from '~/lib/api/aimetrics'
 import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
+import { useTimedOut } from '~/lib/use-timed-out'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { BarChart } from '~/components/ui/Charts'
-import { monthToDate, dailySpend, groupSpend } from './logic'
+import { monthToDate, dailySpend, groupSpend, tileView, TILE_LOAD_TIMEOUT_MS } from './logic'
 import { RangeTabs } from './RangeTabs'
 
 const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 const MONTH = new Date().toLocaleDateString(undefined, { month: 'long' })
+/** Honest fallback when a usage load outlives its budget (a hung request, not a thrown error). */
+const TIMEOUT_STATE: BackendState = {
+  kind: 'error',
+  message: 'The billing service is taking too long to respond — retrying.',
+}
 
 type Async<T> =
   | { phase: 'loading' }
@@ -81,6 +87,15 @@ export function BillingOverview(_props: { params: Record<string, string> }) {
     load()
   }, [load])
 
+  // Bounded loading — the fix for "billing spins on Loading… forever through a
+  // transient 502". If the balance or the usage fetch is still pending past the
+  // budget (a deploy-window blip that leaves the request hung), the tiles stop
+  // spinning and show the honest fallback, matching the Dashboard/Machines "—".
+  const balTimedOut = useTimedOut(balPhase === 'loading' || balPhase === 'idle', TILE_LOAD_TIMEOUT_MS)
+  const usageTimedOut = useTimedOut(usage.phase === 'loading', TILE_LOAD_TIMEOUT_MS)
+  const usageView = tileView(usage.phase, usageTimedOut)
+  const balFailed = balPhase === 'error' || balTimedOut
+
   const now = Date.now()
   const records = usage.phase === 'ready' ? usage.data : []
   const forecast = monthToDate(records, now)
@@ -118,8 +133,16 @@ export function BillingOverview(_props: { params: Record<string, string> }) {
               <Text fontSize="$3" color="$color11">Sign in to view your balance.</Text>
             ) : balPhase === 'unconfigured' ? (
               <Text fontSize="$3" color="$color11">Not available on this deployment yet.</Text>
-            ) : balPhase === 'error' ? (
-              <Text fontSize="$3" color="$color11">Unavailable: {balError}</Text>
+            ) : balFailed ? (
+              // Transient blip OR a load that outlived its budget — stop spinning,
+              // show a "—" with the honest reason. The store keeps retrying with
+              // backoff; the header Refresh button forces an immediate retry.
+              <>
+                <Text fontSize="$6" fontWeight="900" color="$color10">—</Text>
+                <Text fontSize="$2" color="$color11">
+                  Unavailable — retrying{balError ? ` · ${balError}` : ''}
+                </Text>
+              </>
             ) : (
               <Text fontSize="$3" color="$color11">Loading…</Text>
             )
@@ -134,26 +157,27 @@ export function BillingOverview(_props: { params: Record<string, string> }) {
           icon={<TrendingUp size={16} />}
           title={`Spend in ${MONTH}`}
           value={
-            usage.phase === 'ready' ? (
+            usageView === 'ready' ? (
               <Text fontSize="$9" fontWeight="900">{usd(forecast.spentCents)}</Text>
-            ) : usage.phase === 'error' ? (
+            ) : usageView === 'failed' ? (
               <Text fontSize="$3" color="$color11">Appears once metering is reported.</Text>
             ) : (
               <Text fontSize="$3" color="$color11">Loading…</Text>
             )
           }
-          caption={usage.phase === 'ready' ? `month-to-date · day ${forecast.dayOfMonth} of ${forecast.daysInMonth}` : undefined}
+          caption={usageView === 'ready' ? `month-to-date · day ${forecast.dayOfMonth} of ${forecast.daysInMonth}` : undefined}
         />
         <BigCard
           icon={<CalendarClock size={16} />}
           title="Projected (linear)"
           value={
-            usage.phase === 'ready' && forecast.projectedCents != null ? (
+            usageView === 'ready' && forecast.projectedCents != null ? (
               <Text fontSize="$9" fontWeight="900">{usd(forecast.projectedCents)}</Text>
-            ) : usage.phase === 'ready' ? (
-              <Text fontSize="$6" fontWeight="900" color="$color10">—</Text>
-            ) : (
+            ) : usageView === 'pending' ? (
               <Text fontSize="$3" color="$color11">Loading…</Text>
+            ) : (
+              // ready-but-no-basis OR a failed/timed-out load: an honest "—", never a spinner forever.
+              <Text fontSize="$6" fontWeight="900" color="$color10">—</Text>
             )
           }
           caption={`estimated ${MONTH} total at the current run-rate — not a guarantee`}
@@ -168,11 +192,15 @@ export function BillingOverview(_props: { params: Record<string, string> }) {
           </Text>
           <RangeTabs value={range} onChange={setRange} />
         </XStack>
-        {usage.phase === 'error' ? (
-          <BackendStateCard state={usage.error} onRetry={load} hint="endpoint · GET /v1/billing/usage" />
+        {usageView === 'failed' ? (
+          <BackendStateCard
+            state={usage.phase === 'error' ? usage.error : TIMEOUT_STATE}
+            onRetry={load}
+            hint="endpoint · GET /v1/billing/usage"
+          />
         ) : (
           <Card p="$4" borderWidth={1} borderColor="$borderColor">
-            {usage.phase === 'ready' ? (
+            {usageView === 'ready' ? (
               <BarChart data={trend} formatValue={(v) => `$${v.toFixed(2)}`} />
             ) : (
               <Text fontSize="$3" color="$color11">Loading…</Text>
