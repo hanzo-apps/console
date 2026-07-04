@@ -1419,6 +1419,24 @@ export const catalog: CatalogEntry[] = [
     routes: overviewRoutes('api'),
   },
   {
+    // Hanzo Git — the self-hosted Gitea code host at git.hanzo.ai (source of truth,
+    // mirror, and code search for all Hanzo repos). A standalone app that owns its
+    // own full UI (repos, PRs, code search) on shared Hanzo IAM, so the tile opens it
+    // already-signed-in. External launch (never a rebuilt in-console surface); like
+    // Automation it is `brands: ['hanzo']` so the git.hanzo.ai URL never leaks onto a
+    // Lux/Zoo console. No `docs`/`repo` field: git.hanzo.ai IS the code host, and it
+    // has no docs.hanzo.ai page (a dead deep link is worse than none).
+    id: 'git',
+    label: 'Git',
+    icon: GitBranch,
+    description: 'Hosted Git — mirror, browse, and search all Hanzo code.',
+    category: 'Dev',
+    status: 'enabled',
+    brands: ['hanzo'],
+    kind: 'external',
+    href: 'https://git.hanzo.ai',
+  },
+  {
     // The customer-facing "connect your tools" page. A logged-in org connects
     // Slack / GitHub (and any provider the cloud connector framework registers) via
     // a Connect button that runs the ORG-AUTHED OAuth flow through the canonical /v1
