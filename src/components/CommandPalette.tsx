@@ -485,13 +485,13 @@ function PaletteDialog({
   return (
     <Dialog modal open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay key="palette-overlay" bg="rgba(0,0,0,0.5)" />
+        <Dialog.Overlay key="palette-overlay" className="hz-scrim-in" bg="rgba(0,0,0,0.5)" />
         {/* Full-screen on mobile (fills the viewport, reachable from the mobile
-            menu); a floating 640 box at lg+. */}
+            menu); a floating 640 box at lg+ on Material paper (real depth). */}
         <Dialog.Content
           key="palette-content"
+          className="hz-paper hz-pop-in"
           bordered
-          elevate
           width="100vw"
           height="100dvh"
           maxW="100vw"

@@ -129,6 +129,18 @@ html:root.t_dark {
   --borderColorHover: hsl(220 7% 23%);
   --borderColorPress: hsl(220 8% 13%);
   --borderColorFocus: hsl(220 7% 23%);
+
+  /* Elevation ladder (Material-inspired: ambient + key light). On the true-black
+     canvas a cast shadow alone is nearly invisible, so each level pairs a deep
+     shadow with a faint top highlight + a hairline ring (set on .hz-paper) so a
+     sheet lifts cleanly off black. Brand-neutral — color stays token-driven. */
+  --hz-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.6), 0 1px 1px rgba(0, 0, 0, 0.5);
+  --hz-elevation-2: 0 3px 8px rgba(0, 0, 0, 0.62), 0 1px 3px rgba(0, 0, 0, 0.5);
+  --hz-elevation-3: 0 8px 24px rgba(0, 0, 0, 0.64), 0 2px 6px rgba(0, 0, 0, 0.5);
+  --hz-elevation-4: 0 16px 40px rgba(0, 0, 0, 0.68), 0 6px 14px rgba(0, 0, 0, 0.55);
+  --hz-elevation-5: 0 28px 64px rgba(0, 0, 0, 0.72), 0 12px 24px rgba(0, 0, 0, 0.6);
+  --hz-ring: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --hz-paper-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Light theme — the calm parallel: a warm off-white base (not stark #fff), soft
@@ -148,6 +160,16 @@ html:root.t_light {
   --color: hsl(220 22% 12%);
   --borderColor: hsl(220 16% 90%);
   --borderColorHover: hsl(220 14% 82%);
+
+  /* Elevation ladder — light theme: soft, cool-grey Material shadows on the warm
+     off-white base (the calm parallel of the dark ladder above). */
+  --hz-elevation-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
+  --hz-elevation-2: 0 3px 8px rgba(16, 24, 40, 0.08), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --hz-elevation-3: 0 10px 24px rgba(16, 24, 40, 0.1), 0 3px 8px rgba(16, 24, 40, 0.07);
+  --hz-elevation-4: 0 18px 40px rgba(16, 24, 40, 0.13), 0 6px 14px rgba(16, 24, 40, 0.08);
+  --hz-elevation-5: 0 28px 60px rgba(16, 24, 40, 0.16), 0 12px 24px rgba(16, 24, 40, 0.1);
+  --hz-ring: 0 0 0 1px rgba(16, 24, 40, 0.05);
+  --hz-paper-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
 }
 
 /* Motion — a single fade-up entrance (matches the hanzo.ai marketing feel:
@@ -403,5 +425,114 @@ html:root.t_light {
     position: sticky;
     bottom: 0;
     z-index: 5;
+  }
+}
+
+/* ── Material paper / 3D elevation ─────────────────────────────────────────────
+   A real depth system for the console's overlay surfaces (drawer, command palette,
+   menus, dialog, support bubble). Layered box-shadow (ambient + key light) read
+   from the per-theme --hz-elevation-* tokens (light AND dark aware). Brand-neutral:
+   the shadow is monochrome and color stays token-driven, so lux/zoo/pars theme
+   cleanly. One place defines the ladder; an overlay wears a class. `className`
+   forwards to the DOM node on web, so a Gui surface can wear these. */
+.hz-elevation-1 { box-shadow: var(--hz-elevation-1); }
+.hz-elevation-2 { box-shadow: var(--hz-elevation-2); }
+.hz-elevation-3 { box-shadow: var(--hz-elevation-3); }
+.hz-elevation-4 { box-shadow: var(--hz-elevation-4); }
+.hz-elevation-5 { box-shadow: var(--hz-elevation-5); }
+
+/* Paper = an elevated sheet: hairline ring + top highlight + a mid cast shadow, so
+   a menu/palette/dialog reads as a physical sheet floating above the page. */
+.hz-paper { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-3); }
+.hz-paper-4 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-4); }
+.hz-paper-5 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-5); }
+
+/* Overlay entrance — a fast, physical scale-fade from the origin (menus, palette,
+   dialog, support sheet). 180ms ease-out enter; the overlay's own unmount handles
+   exit. Reduced-motion → snap (no transform). */
+@keyframes hz-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.hz-pop-in {
+  animation: hz-pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: var(--hz-pop-origin, center);
+  will-change: transform, opacity;
+}
+
+/* Popover MENU entrance — OPACITY-ONLY (never transform). floating-ui positions an
+   anchored menu with an inline `transform: translate(x,y)`, and a CSS-animation that
+   also drives `transform` (like hz-pop-in) OVERRIDES that inline value for the
+   animation's duration — detaching the menu from its trigger. So anchored menus
+   (SelectMenu / ComboBox Popover.Content) fade in with NO transform, keeping the
+   floating-ui anchor exact. The transform-based hz-pop-in stays for the centered
+   Dialog surfaces (CommandPalette / AppLauncher / FloatingChat), which are NOT
+   floating-ui-positioned. Reduced-motion → snap. */
+@keyframes hz-menu-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.hz-menu-in {
+  animation: hz-menu-in 140ms ease-out both;
+  will-change: opacity;
+}
+
+/* Scrim fade — the dimmed backdrop behind a dialog/palette eases in (Tamagui mounts
+   the overlay instantly otherwise). */
+@keyframes hz-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.hz-scrim-in {
+  animation: hz-scrim-in 160ms ease-out both;
+}
+
+/* Support bubble — a gentle hover lift on the elevated brand-H bubble. */
+.hz-lift {
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+.hz-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Hover-paper — a subtle elevation lift on hover for a small affordance (the sidebar
+   brand-H container). Only the H wears this, never the whole row. */
+.hz-hover-paper {
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 140ms ease;
+}
+.hz-hover-paper:hover {
+  box-shadow: var(--hz-elevation-2);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hz-pop-in,
+  .hz-menu-in,
+  .hz-scrim-in {
+    animation: none;
+  }
+  .hz-lift,
+  .hz-hover-paper {
+    transition: none;
+  }
+  .hz-lift:hover,
+  .hz-hover-paper:hover {
+    transform: none;
   }
 }

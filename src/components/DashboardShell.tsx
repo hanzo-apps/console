@@ -22,7 +22,7 @@
  * - Desktop/laptop (≥lg): the persistent sidebar is always on (collapsible from
  *   the header); the topbar shows the full inline controls.
  * - Phone/tablet (<lg): the sidebar is HIDDEN and reached via a hamburger that
- *   opens the SAME two-level nav as a RIGHT-side drawer (with ⌘K search + Apps at
+ *   opens the SAME two-level nav as a LEFT-side drawer (with ⌘K search + Apps at
  *   the top); the topbar condenses into a right-side account drawer.
  *
  * Off-canvas surfaces (nav drawer, account menu, item DetailPane) all ride the
@@ -76,6 +76,7 @@ import { productSubpages, subpageWired } from '~/lib/products/match'
 import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
 import { usePins, useProductColors } from '~/lib/products/pins'
+import { orderEntries } from '~/lib/products/order'
 import { categoryIsOpen, toggleCategory, NAV_OPEN_PREF, EMPTY_OPEN, type CategoryOpen } from '~/lib/products/nav-accordion'
 import { usePreferences } from '~/lib/products/preferences'
 import { useSession } from '~/lib/auth/session'
@@ -91,7 +92,8 @@ import { asColor } from '~/components/ui/color'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
-import { BrandLogo } from '~/components/ui/BrandLogo'
+import { BrandLogo, BrandMark, useOrgLogo, useOrgName } from '~/components/ui/BrandLogo'
+import { getBrand } from '~/lib/branding/brands'
 import { OrgSwitcher } from '~/components/OrgSwitcher'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 
@@ -307,7 +309,8 @@ function Level2Nav({
   const activeSlug = activeSubpageSlug(pathname, entry.id)
   const siblings = useMemo(() => {
     const group = visibleCatalogByCategory(showAdmin).find((g) => g.category === entry.category)
-    return (group?.entries ?? []).filter((e) => e.id !== entry.id)
+    // Alphabetical (the current product is excluded), matching the level-1 ordering.
+    return orderEntries((group?.entries ?? []).filter((e) => e.id !== entry.id))
   }, [entry.category, entry.id, showAdmin])
 
   return (
@@ -463,6 +466,86 @@ function CategorySection({
 }
 
 /**
+ * Sidebar org-brand header — the org identity block, top-left of the sidebar. Shows
+ * the current org's avatar (IAM `organization.logo`) + name; with no org logo the
+ * fallback is the host-derived brand mark (Hanzo 'H' on hanzo.ai, WHITE-LABELED per
+ * brand — lux/zoo/pars never show the Hanzo mark), wrapped in a subtle hover-container
+ * (paper lift) — ONLY the mark, never the whole row. Clicking the row opens Overview.
+ * Collapsed = just the icon, centered. The topbar keeps its own OrgSwitcher (this is
+ * the identity; that is the switch). Reused by the desktop sidebar AND the mobile
+ * drawer (both mount SidebarNav), so one definition, many mounts (DRY).
+ */
+function SidebarBrandHeader({ collapsed, onPress }: { collapsed: boolean; onPress: () => void }) {
+  const logo = useOrgLogo()
+  const orgName = useOrgName()
+  const label = orgName ? orgName[0].toUpperCase() + orgName.slice(1) : orgName
+  const brandName = getBrand().brandName
+
+  // Org avatar: the org's own logo when set, else the brand mark in a hover-container
+  // (the ONLY element that lifts on hover — per the directive, not the whole row).
+  const avatar = logo ? (
+    // Arbitrary org logo URL — raw <img> (next/image needs a per-tenant remote allowlist).
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logo}
+      alt=""
+      style={{
+        height: collapsed ? 28 : 26,
+        width: collapsed ? 28 : 26,
+        borderRadius: 7,
+        objectFit: 'contain',
+        display: 'block',
+        flexShrink: 0,
+      }}
+    />
+  ) : (
+    <XStack
+      className="hz-hover-paper"
+      width={collapsed ? 40 : 32}
+      height={collapsed ? 40 : 32}
+      items="center"
+      justify="center"
+      rounded="$3"
+      hoverStyle={{ bg: '$color3' }}
+    >
+      <BrandMark size={collapsed ? 22 : 20} />
+    </XStack>
+  )
+
+  if (collapsed) {
+    return (
+      <YStack items="center" mb="$1">
+        <XStack onPress={onPress} cursor="pointer" aria-label={`${label} · Overview`}>
+          {avatar}
+        </XStack>
+      </YStack>
+    )
+  }
+
+  return (
+    <XStack
+      items="center"
+      gap="$2.5"
+      height={44}
+      mb="$1"
+      onPress={onPress}
+      cursor="pointer"
+      aria-label={`${label} · Overview`}
+    >
+      {avatar}
+      <YStack flex={1} minW={0}>
+        <Text fontSize="$4" fontWeight="800" color="$color12" numberOfLines={1}>
+          {label}
+        </Text>
+        <Text fontSize="$1" color="$color10" numberOfLines={1}>
+          {brandName}
+        </Text>
+      </YStack>
+    </XStack>
+  )
+}
+
+/**
  * The nav body — shared by the persistent desktop sidebar and the mobile drawer.
  * `onNavigate` lets the drawer close on a leaf selection (desktop passes a no-op).
  */
@@ -518,6 +601,9 @@ function SidebarNav({
     setFilter('')
     setOpenId(entry.id)
     router.push(`/${entry.id}`)
+    // Close the drawer on a product tap (mobile) — the route changed, so the
+    // off-canvas nav dismisses. Desktop passes a no-op onNavigate (stays open).
+    onNavigate()
   }
   const openDocs = () => {
     if (typeof window !== 'undefined') window.open(config.docsUrl, '_blank', 'noopener')
@@ -560,12 +646,16 @@ function SidebarNav({
   )
   const pinnedIds = useMemo(() => pinnedGroups.flatMap((g) => g.entries.map((e) => e.id)), [pinnedGroups])
 
+  // Within-scope ordering is CONTINUOUS ALPHABETICAL with the SELECTED product pinned
+  // first (emphasized + kept visible), per directive #58 §2.2 — via the ONE shared
+  // `orderEntries` helper (reused by the AppLauncher). Categories stay in their
+  // canonical order; only the items inside each are alphabetized + selected-first.
   const groups = useMemo(
     () =>
       visibleCatalogByCategory(showAdmin)
-        .map((g) => ({ category: g.category, entries: g.entries.filter((e) => entryMatches(e, q)) }))
+        .map((g) => ({ category: g.category, entries: orderEntries(g.entries.filter((e) => entryMatches(e, q)), activeId) }))
         .filter((g) => g.entries.length > 0),
-    [q, showAdmin],
+    [q, showAdmin, activeId],
   )
 
   // ── Billing-only shell — the nav IS the Billing Center's tabs ─────────────
@@ -626,15 +716,7 @@ function SidebarNav({
   if (collapsed) {
     return (
       <>
-        <YStack items="center" mb="$1">
-          <Button
-            size="$3"
-            chromeless
-            onPress={() => go('/')}
-            icon={<BrandLogo size={22} wordmark={false} />}
-            aria-label="Overview"
-          />
-        </YStack>
+        <SidebarBrandHeader collapsed onPress={() => go('/')} />
         <ScrollView flex={1}>
           <YStack gap="$3.5">
             <YStack gap="$1">
@@ -680,14 +762,10 @@ function SidebarNav({
     )
   }
 
-  // ── Expanded: constant H-mark header + two-level slide + wallet footer ──
+  // ── Expanded: org-brand header + two-level slide + wallet footer ──
   return (
     <>
-      <XStack items="center" height={36} mb="$1">
-        <Button flex={1} chromeless justify="flex-start" px="$1" onPress={() => go('/')} aria-label="Overview">
-          <BrandLogo size={22} wordmark={false} />
-        </Button>
-      </XStack>
+      <SidebarBrandHeader collapsed={false} onPress={() => go('/')} />
 
       {/* Product filter — a PERSISTENT header above the two-level slide, so a user
           deep in a product (level 2) can filter + jump straight to another product
@@ -847,13 +925,15 @@ function SidebarNav({
   )
 }
 
-/** Mobile/tablet nav drawer — the same SidebarNav, slid in from the RIGHT, with a
- *  ⌘K search + Apps launcher at the top (the command surface, reachable on mobile). */
+/** Mobile/tablet nav drawer — the same SidebarNav, slid in from the LEFT (the
+ *  hamburger is top-left and this is a left-nav, so the drawer enters from that
+ *  edge; the account/profile drawer stays on the right), with a ⌘K search + Apps
+ *  launcher at the top (the command surface, reachable on mobile). */
 function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const palette = useCommandPalette()
   const launcher = useAppLauncher()
   return (
-    <SlideOver open={open} onClose={() => onOpenChange(false)} side="right" size={320} ariaLabel="Navigation">
+    <SlideOver open={open} onClose={() => onOpenChange(false)} side="left" size={320} ariaLabel="Navigation">
       {/* `hz-touch-target` raises every control in the drawer to a ≥44px tap target
           on phones/tablets (see globals.css); the desktop sidebar is a separate
           mount and stays dense. */}

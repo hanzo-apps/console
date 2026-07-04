@@ -158,7 +158,9 @@ export function SlideOver({
         borderLeftWidth={side === 'right' ? 1 : 0}
         borderRightWidth={side === 'left' ? 1 : 0}
         borderColor="$borderColor"
-        className="hz-slide"
+        // Material paper depth — the drawer reads as a sheet lifted above the dimmed
+        // list behind it (real layered shadow, theme-aware), not a flat panel.
+        className="hz-slide hz-elevation-4"
         style={{ transform: open ? 'translateX(0)' : offscreen, height: '100dvh' }}
       >
         {title !== undefined ? (
