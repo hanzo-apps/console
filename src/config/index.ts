@@ -105,6 +105,24 @@ function cloudUrl(): string {
 // org, so there is ONE admin login app (`admin-console`); enabling a new brand's
 // admin host = add its /auth/callback to that app's redirectUris. Non-admin
 // hosts keep the brand's normal `iamApp`.
+//
+// DEPRECATED — DATA-DRIVEN MIGRATION (white-label follow-up). This hardcoded
+// `BRANDS` + `HOST_BRANDS` map is the exact "add a brand = edit code + redeploy"
+// hardcode the white-label system removes. The canonical source of a brand is the
+// TENANT RECORD (`organization` + `webServerSettings.{host,logoUrl,faviconUrl}` +
+// the domain bindings), resolved at RUNTIME by host — see
+// `TenantsApi.brandConfig(host)` + the `TenantBrandConfig` type. A new white-label
+// brand must appear by CREATING A TENANT RECORD (the Tenants board does this: org +
+// brand write + domain bind), NOT by adding a row here.
+//
+// The swap is NOT done in this pass because it is a build-time-inlined boundary
+// (every `NEXT_PUBLIC_IAM_*` bakes into the image; the OAuth issuer/client is
+// resolved from this map at auth time), so a wrong change breaks sign-in and the
+// build. The REQUIRED follow-up: (1) the platform serves `GET /v1/brand?host=<h>`
+// from the tenant records (the missing endpoint); (2) `resolveConfig` reads
+// `TenantsApi.brandConfig(host)` first and falls back to this map ONLY for the four
+// legacy brands until every host has a record; (3) this map is then deleted. Until
+// then, treat these rows as the SEED for those tenant records, never the canonical path.
 const BRANDS: Record<BrandId, { brandName: string; iamUrl: string; iamOrgName: string; iamApp: string; adminApp: string; billingUrl: string; docsUrl: string }> = {
   hanzo: { brandName: 'Hanzo Cloud', iamUrl: 'https://hanzo.id', iamOrgName: 'hanzo', iamApp: 'hanzo-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.hanzo.ai', docsUrl: 'https://docs.hanzo.ai' },
   lux: { brandName: 'Lux Cloud', iamUrl: 'https://lux.id', iamOrgName: 'lux', iamApp: 'lux-cloud', adminApp: 'admin-console', billingUrl: 'https://billing.lux.cloud', docsUrl: 'https://docs.lux.network' },
