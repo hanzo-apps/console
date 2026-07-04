@@ -189,8 +189,9 @@ describe('FAMILIES registry', () => {
  * and ProviderLogo resolves that string through the ONE brand resolver
  * (`normalizeBrand` → `BRANDS`); a family whose `logo` doesn't resolve falls to the
  * neutral (blank) chip. So EVERY curated family's `logo` MUST resolve to a real
- * treatment: first-party marks (zen ensō / hanzo block-H) or a third-party `BRANDS`
- * entry with a hex colour + monogram — exactly the OpenAI/Anthropic/Google pattern.
+ * treatment: the first-party Hanzo block-H (zen/hanzo) or a third-party `BRANDS`
+ * entry (hex colour) with its OWN distinct `BRAND_MARK` glyph — exactly the
+ * OpenAI/DeepSeek/Meta/Mistral/Google/Qwen pattern.
  * Keyed off the EXACT live `/v1/pricing/models` provider strings
  * (~/work/hanzo/pricing/data/pricing.json: "Qwen"/"Meta"/"DeepSeek"), so grouping,
  * colour, and icon stay in lockstep and this class of bug can never recur.
