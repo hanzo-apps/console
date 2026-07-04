@@ -38,6 +38,8 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/next.config.mjs ./next.config.mjs
+# next.config.mjs imports this at load time (build AND standalone runtime); copy it or the server ERR_MODULE_NOT_FOUND-crashes on boot.
+COPY --from=build /app/src/config/build-id.mjs ./src/config/build-id.mjs
 USER app
 EXPOSE 4000
 CMD ["node", "node_modules/next/dist/bin/next", "start", "-p", "4000"]
