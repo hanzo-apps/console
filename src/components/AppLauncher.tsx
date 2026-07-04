@@ -17,11 +17,12 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Dialog, Input, ScrollView, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
 import { Lock, Search } from '@hanzogui/lucide-icons-2'
 
-import { visibleCatalogByCategory, type CatalogEntry } from '~/lib/products/registry'
+import { findEntry, visibleCatalogByCategory, type CatalogEntry } from '~/lib/products/registry'
+import { orderEntries } from '~/lib/products/order'
 import { searchCatalog } from '~/lib/products/search'
 import { useProductColors } from '~/lib/products/pins'
 import { asColor } from '~/components/ui/color'
@@ -38,7 +39,7 @@ export function useAppLauncher(): LauncherApi {
   return ctx
 }
 
-function Tile({ entry, color, onPress }: { entry: CatalogEntry; color: string; onPress: () => void }) {
+function Tile({ entry, color, active, onPress }: { entry: CatalogEntry; color: string; active?: boolean; onPress: () => void }) {
   const Icon = entry.icon
   return (
     <YStack
@@ -51,6 +52,9 @@ function Tile({ entry, color, onPress }: { entry: CatalogEntry; color: string; o
       items="center"
       justify="center"
       rounded="$6"
+      bg={active ? '$color3' : 'transparent'}
+      borderWidth={1}
+      borderColor={active ? '$color6' : 'transparent'}
       hoverStyle={{ bg: '$color3' }}
     >
       <XStack
@@ -78,11 +82,29 @@ function Tile({ entry, color, onPress }: { entry: CatalogEntry; color: string; o
 
 function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const router = useRouter()
+  const pathname = usePathname() ?? ''
   const showAdmin = useIsGlobalAdmin()
   const { colorOf } = useProductColors()
   const [query, setQuery] = useState('')
 
-  const groups = useMemo(() => visibleCatalogByCategory(showAdmin), [showAdmin])
+  // The active product (from the current route) — pinned first + emphasized in the
+  // browse grid, per directive #58 §2.2.
+  const activeId = useMemo(() => {
+    const seg = pathname.split('/').filter(Boolean)[0]
+    return seg ? (findEntry(seg)?.id ?? null) : null
+  }, [pathname])
+
+  // Browse (no query): each category's apps are CONTINUOUS ALPHABETICAL with the
+  // selected app pinned first — the SAME `orderEntries` rule the sidebar uses (DRY).
+  const groups = useMemo(
+    () =>
+      visibleCatalogByCategory(showAdmin).map((g) => ({
+        category: g.category,
+        entries: orderEntries(g.entries, activeId),
+      })),
+    [showAdmin, activeId],
+  )
+  // While filtering, keep the relevance ranking (a search is not alphabetical).
   const filtered = useMemo(
     () => (query.trim() ? searchCatalog(query).filter((e) => showAdmin || !e.admin) : null),
     [query, showAdmin],
@@ -99,11 +121,11 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
   return (
     <Dialog modal open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay key="launcher-overlay" bg="rgba(0,0,0,0.6)" />
+        <Dialog.Overlay key="launcher-overlay" className="hz-scrim-in" bg="rgba(0,0,0,0.6)" />
         <Dialog.Content
           key="launcher-content"
+          className="hz-paper hz-pop-in"
           bordered
-          elevate
           width="92vw"
           height="88vh"
           maxW={1180}
@@ -153,7 +175,7 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                 ) : (
                   <XStack flexWrap="wrap" gap="$2">
                     {filtered.map((entry) => (
-                      <Tile key={entry.id} entry={entry} color={colorOf(entry.id)} onPress={() => activate(entry)} />
+                      <Tile key={entry.id} entry={entry} color={colorOf(entry.id)} active={entry.id === activeId} onPress={() => activate(entry)} />
                     ))}
                   </XStack>
                 )
@@ -165,7 +187,7 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                     </Text>
                     <XStack flexWrap="wrap" gap="$2">
                       {group.entries.map((entry) => (
-                        <Tile key={entry.id} entry={entry} color={colorOf(entry.id)} onPress={() => activate(entry)} />
+                        <Tile key={entry.id} entry={entry} color={colorOf(entry.id)} active={entry.id === activeId} onPress={() => activate(entry)} />
                       ))}
                     </XStack>
                   </YStack>
