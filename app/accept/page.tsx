@@ -198,7 +198,11 @@ function AcceptFlow() {
               if (err) setErr(null)
             }}
             placeholder={`At least ${MIN_PASSWORD} characters`}
+            // secureTextEntry alone does not mask in this @hanzo/gui build; set the
+            // web input type explicitly (RNW passthrough) — same as SignInForm.
             secureTextEntry
+            {...{ type: 'password' }}
+            autoComplete="new-password"
             onSubmitEditing={() => void submit()}
           />
         </YStack>
