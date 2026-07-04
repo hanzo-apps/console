@@ -35,6 +35,11 @@ describe('allowAdminSurface — least-privilege admin read surface (v1/admin/<he
     expect(allowAdminSurface('v1/admin/compute/by-org')).toBe(true)
   })
 
+  it('admits the fleet o11y aggregate (the cross-org datastore observability read)', () => {
+    expect(allowAdminSurface('v1/admin/o11y')).toBe(true)
+    expect(ADMIN_AGGREGATE_HEADS).toContain('o11y')
+  })
+
   it('admits the providers control board — the list AND the two mutation sub-paths', () => {
     expect(allowAdminSurface('v1/admin/providers')).toBe(true)
     // The POST mutations (toggle enable/disable, set primary) ride the same head.

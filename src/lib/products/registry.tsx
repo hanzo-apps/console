@@ -102,6 +102,7 @@ import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
+import { AdminO11yModule } from '~/components/products/AdminO11yModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
 import { SearchModule } from '~/components/products/SearchModule'
 import { TemplatesModule } from '~/components/products/TemplatesModule'
@@ -511,6 +512,26 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FinanceDashboard }],
+  },
+  {
+    // admin.hanzo.ai FLEET OBSERVABILITY board — the cross-org o11y god view:
+    // fleet requests/tokens/cost/latency/errors + log volume, usage & log
+    // timeseries, and top orgs/models/services leaderboards, all aggregated across
+    // EVERY tenant from the ONE datastore. GLOBAL-ADMIN ONLY (`admin: true` hides it
+    // from every customer's nav/launcher/palette; the `/v1/admin/o11y` aggregate is
+    // server-gated by getAdminGate, so cross-tenant telemetry never reaches a
+    // customer). The un-org-scoped twin of the per-org console o11y.
+    id: 'fleet-o11y',
+    label: 'Fleet Observability',
+    icon: Activity,
+    description: 'Cross-org requests, tokens, cost, latency, errors, logs and traces across the whole platform.',
+    gcp: 'Cloud Monitoring (fleet)',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: AdminO11yModule }],
   },
   {
     // admin.hanzo.ai CUSTOMERS board — the operator cockpit: the live fleet customer
