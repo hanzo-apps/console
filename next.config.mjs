@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
+import { resolveBuildId, readGitSha } from './src/config/build-id.mjs'
+
 /**
  * Hanzo Cloud Console — Next.js config.
  *
@@ -77,7 +79,7 @@ const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images'
 // (`providers/toggle`, `providers/primary`) both match the `/:path*` rewrite below,
 // which is method-agnostic (Next matches on the URL), so POST is covered without a
 // second entry. Keep this in sync with `admin-aggregate.ts` ADMIN_AGGREGATE_HEADS.
-const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'providers', 'customers', 'revenue', 'analytics', 'enablement']
+const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement']
 /**
  * DEV-ONLY: proxy the client's direct-cloud `/v1/{iam,o11y}/*` calls (get-account,
  * annotation-queues/users) to a real cloud backend so `npm run dev` renders the
@@ -171,6 +173,11 @@ const EMBED = process.env.CONSOLE_EMBED === '1'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Deterministic per-commit build id (see src/config/build-id.mjs): pins ONE id
+  // across every replica of a release so a rolling deploy never serves one build's
+  // HTML against another build's /_next/static/<BUILD_ID>/ path — the chunk-404 the
+  // live audit hit. SOURCE_COMMIT (CI build-arg) -> git HEAD -> package version.
+  generateBuildId: () => resolveBuildId({ env: process.env, gitSha: readGitSha(__dirname), version: pkgVersion }),
   env: { NEXT_PUBLIC_APP_VERSION: pkgVersion },
   transpilePackages: guiPackages(),
   ...(EMBED

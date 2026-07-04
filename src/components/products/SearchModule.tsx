@@ -19,7 +19,7 @@
  * Strictly @hanzo/gui v5 shorthands.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { BookOpen, ExternalLink, Globe, Search as SearchIcon } from '@hanzogui/lucide-icons-2'
 
@@ -326,8 +326,14 @@ function ConfigTab({ health }: { health: SearchHealth }) {
 
 export function SearchModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
+  const pathname = usePathname()
+  // ONE module renders both the `/websearch` and `/crawl` products, so the base path
+  // (and every tab/CTA push) must derive from the CURRENT route — a hardcoded
+  // `/websearch` navigated the Crawl page's tabs away to Web Search.
+  const base = `/${pathname.split('/').filter(Boolean)[0] || 'websearch'}`
   const tab = resolveTab(params.tab)
-  const docsHref = config.docsUrl + '/crawl'
+  // Only Crawl has a docs page (`/docs/crawl`); Web Search has none → the docs root.
+  const docsHref = base === '/crawl' ? `${config.docsUrl}/docs/crawl` : `${config.docsUrl}/docs`
 
   // A single live probe drives the health verdict shown on Overview + Settings. It
   // is a REAL search (there is no health endpoint); a Try-Search run also updates it.
@@ -362,7 +368,7 @@ export function SearchModule({ params }: { params: Record<string, string> }) {
             <Button size="$3" chromeless icon={<BookOpen size={15} />} onPress={() => openExternal(docsHref)}>
               Documentation
             </Button>
-            <Button size="$3" theme="light" icon={<SearchIcon size={15} />} onPress={() => router.push('/websearch/search')}>
+            <Button size="$3" theme="light" icon={<SearchIcon size={15} />} onPress={() => router.push(`${base}/search`)}>
               Try a search
             </Button>
           </>
@@ -389,7 +395,7 @@ export function SearchModule({ params }: { params: Record<string, string> }) {
             bg={t.id === tab ? '$color5' : 'transparent'}
             borderWidth={1}
             borderColor="$borderColor"
-            onPress={() => router.push(t.id ? `/websearch/${t.id}` : '/websearch')}
+            onPress={() => router.push(t.id ? `${base}/${t.id}` : base)}
           >
             {t.label}
           </Button>

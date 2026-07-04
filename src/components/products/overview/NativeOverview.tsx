@@ -43,6 +43,8 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import type { OverviewAction, OverviewSpec } from './spec'
 import { resolveSpec } from './resolve'
+import { o11yServiceFor } from '~/components/products/subpage/sources'
+import { ProductObservability } from '~/components/products/observability/ProductObservability'
 
 /** Map a spec action's icon name to a real Lucide icon (kept out of the data layer). */
 const ACTION_ICON: Record<NonNullable<OverviewAction['icon']>, IconType> = {
@@ -311,6 +313,11 @@ export function NativeOverview({ entry }: { entry: CatalogEntry }) {
           </YStack>
         </Card>
       ) : null}
+
+      {/* Native per-product o11y — this product's live metrics/logs/traces from the
+          ONE datastore, filtered to its OTel service. One reusable panel; every
+          product overview surfaces its own signals (honest-empty until it emits). */}
+      <ProductObservability service={o11yServiceFor(entry)} label={entry.label} />
     </>
   )
 }
