@@ -156,13 +156,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // knowledge STORES that back Embeddings · Collections and store settings. Each is a
   // Bearer-required, org-scoped (owner from the token) casibase-envelope call, so a
   // cookie-only `/v1/get-stores` 401s → a FALSE "session expired" for a signed-in user.
-  // Routing through /cloud mints the user token like the rest. One head per casibase verb
-  // (the heads are literal, not `v1/<head>/...` sub-paths). Read: list/get/names/global;
-  // mutate: add/update/delete/refresh-vectors.
+  // Routing through /cloud mints the user token like the rest. LEAST PRIVILEGE: only the
+  // heads the console actually calls — read (list/get), mutate (add/update/delete/refresh).
+  // Deliberately NOT `get-global-stores` (a cross-tenant read the console never invokes)
+  // nor `get-store-names` (unused) — do not widen the tunnel past what's used.
   'get-stores',
   'get-store',
-  'get-store-names',
-  'get-global-stores',
   'add-store',
   'update-store',
   'delete-store',
