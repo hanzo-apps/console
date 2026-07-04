@@ -133,7 +133,7 @@ export function openEndpointDetail(
         <Button size="$3" onPress={() => nav('/inference/metrics')}>Metrics</Button>
         <Button size="$3" onPress={() => nav('/inference/status')}>Status</Button>
         <Button size="$3" onPress={() => nav('/inference/logs')}>Logs</Button>
-        <Button size="$3" chromeless icon={<BookOpen size={15} />} onPress={() => openExternal(`${config.docsUrl}/inference`)}>
+        <Button size="$3" chromeless icon={<BookOpen size={15} />} onPress={() => openExternal(`${config.docsUrl}/docs/gateway`)}>
           Docs
         </Button>
       </XStack>
