@@ -40,8 +40,10 @@
 // Server-only by construction: `node:crypto` + `next/server` cannot be bundled into a
 // client chunk, so this module (and the tokens it seals) never reaches the browser.
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes, timingSafeEqual } from 'node:crypto'
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
+import { isAdminHost, resolveConfig } from '~/config'
+import { type Account } from '~/lib/api/types'
 import { fetchWithTimeout } from './fetch-timeout'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
@@ -287,21 +289,24 @@ export class SessionError extends Error {
   }
 }
 
-/** POST the token endpoint with a form body, client_secret_basic auth. Throws a
- *  redacted error on a non-ok / error-envelope response (the caller maps to 401/502).
- *  Never logs the body — it carries tokens. */
-async function tokenRequest(form: Record<string, string>): Promise<Tokens> {
-  const body = new URLSearchParams({ ...form, scope: SCOPE }).toString()
+/** POST the token endpoint with a form body. `confidential` (default) sends
+ *  client_secret_basic — the first-party `hanzo-console` client. A PUBLIC grant sends
+ *  NO Authorization header: it authenticates by `client_id` + `code_verifier`/
+ *  `refresh_token` (RFC 7636/6749), so the public `admin-console` app is redeemed and
+ *  refreshed WITHOUT provisioning its secret. Throws a redacted error on a non-ok /
+ *  error-envelope response (the caller maps to 401/502). Never logs the body — tokens. */
+async function tokenRequest(form: Record<string, string>, confidential = true): Promise<Tokens> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    Accept: 'application/json',
+  }
+  if (confidential) headers.Authorization = basicAuth()
   let res: Response
   try {
     res = await fetchWithTimeout(TOKEN_ENDPOINT, {
       method: 'POST',
-      headers: {
-        Authorization: basicAuth(),
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json',
-      },
-      body,
+      headers,
+      body: new URLSearchParams(form).toString(),
       cache: 'no-store',
     })
   } catch {
@@ -322,14 +327,48 @@ async function tokenRequest(form: Record<string, string>): Promise<Tokens> {
 }
 
 /** Resource-Owner-Password grant for the FIRST-PARTY user (gated by the caller's
- *  already-established casibase session — see the /auth/session route). */
+ *  already-established casibase session — see the /auth/session route). Confidential. */
 export function passwordGrant(username: string, password: string): Promise<Tokens> {
-  return tokenRequest({ grant_type: 'password', client_id: CLIENT_ID, username, password })
+  return tokenRequest({ grant_type: 'password', client_id: CLIENT_ID, username, password, scope: SCOPE })
 }
 
-/** Refresh grant — rotates the refresh token (IAM returns a NEW one; persist it). */
-export function refreshGrant(refreshToken: string): Promise<Tokens> {
-  return tokenRequest({ grant_type: 'refresh_token', client_id: CLIENT_ID, refresh_token: refreshToken })
+/**
+ * Refresh grant — rotates the refresh token (IAM returns a NEW one; persist it).
+ * `publicClientId` set (admin hosts) refreshes the PUBLIC `admin-console` session with
+ * client_id only — no secret, since that is the app that MINTED the token; absent (tenant
+ * hosts) refreshes the confidential `hanzo-console` session with client_secret_basic.
+ */
+export function refreshGrant(refreshToken: string, publicClientId?: string): Promise<Tokens> {
+  return publicClientId
+    ? tokenRequest({ grant_type: 'refresh_token', client_id: publicClientId, refresh_token: refreshToken, scope: SCOPE }, false)
+    : tokenRequest({ grant_type: 'refresh_token', client_id: CLIENT_ID, refresh_token: refreshToken, scope: SCOPE })
+}
+
+/**
+ * PUBLIC authorization-code + PKCE grant (RFC 7636). No client secret: the
+ * `codeVerifier` authenticates the exchange, so the PUBLIC `admin-console` app — the
+ * client the admin credential login minted the code for — is redeemed WITHOUT its
+ * secret. IAM verifies S256(codeVerifier) == the stored code_challenge and, the secret
+ * being empty, admits the exchange. `clientId` is host-resolved by the caller
+ * (`durableSessionClientId`), the ONE place host→client lives. Admin hosts only; tenant
+ * hosts redeem via the cloud backend's confidential client.
+ */
+export function pkceCodeGrant(opts: {
+  clientId: string
+  code: string
+  codeVerifier: string
+  redirectUri: string
+}): Promise<Tokens> {
+  return tokenRequest(
+    {
+      grant_type: 'authorization_code',
+      client_id: opts.clientId,
+      code: opts.code,
+      code_verifier: opts.codeVerifier,
+      redirect_uri: opts.redirectUri,
+    },
+    false,
+  )
 }
 
 /**
@@ -375,4 +414,51 @@ export function sameSubject(a: string, b: string): boolean {
   const ab = Buffer.from(a)
   const bb = Buffer.from(b)
   return ab.length === bb.length && timingSafeEqual(ab, bb)
+}
+
+
+// ── Host-aware durable-session client + shared route helpers ─────────────────────
+
+/**
+ * Which OAuth client the console's DURABLE session uses on `host`. An admin host
+ * (admin.<brand>) rests on the PUBLIC `admin-console` app — redeemed (`pkceCodeGrant`)
+ * and refreshed (`refreshGrant`) with NO secret, matching how the code was authorized —
+ * so this returns its client id. Every other host uses the confidential `hanzo-console`
+ * client (returns null → the basic-auth path). ONE host→client decision, shared by the
+ * /auth/signin redemption and the /auth/refresh rotation.
+ */
+export function durableSessionClientId(host?: string | null): string | null {
+  return isAdminHost(host) ? resolveConfig(host ?? undefined).iamClientId : null
+}
+
+/** Project session claims to the client-facing Account (display + admin fields only —
+ *  never the secret material Casdoor also packs). `owner === 'admin'` implies global
+ *  admin. Shared by /auth/session (GET) and /auth/signin. */
+export function accountOf(c: ConsoleClaims): Account {
+  return {
+    owner: c.owner ?? '',
+    name: c.name ?? '',
+    type: c.type,
+    displayName: c.displayName,
+    email: c.email,
+    avatar: c.avatar,
+    isAdmin: c.isAdmin,
+    isGlobalAdmin: c.isGlobalAdmin || c.owner === 'admin',
+    properties: c.properties,
+  }
+}
+
+/** Apply cookie directives to a NextResponse — the ONE writer shared by every auth
+ *  route that mints or clears the session cookies. */
+export function applyCookies(res: NextResponse, dirs: CookieDirective[]): NextResponse {
+  for (const d of dirs) {
+    res.cookies.set(d.name, d.value, {
+      httpOnly: d.httpOnly,
+      secure: d.secure,
+      sameSite: d.sameSite,
+      path: d.path,
+      maxAge: d.maxAge,
+    })
+  }
+  return res
 }

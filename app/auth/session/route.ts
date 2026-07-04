@@ -18,10 +18,11 @@
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { type Account } from '~/lib/api/types'
 import { csrfRefusal } from '~/lib/server/bearer-proxy'
 import { resolveUser } from '~/lib/server/identity'
 import {
+  accountOf,
+  applyCookies,
   clearCookies,
   consoleSession,
   passwordGrant,
@@ -32,43 +33,9 @@ import {
   sessionConfigured,
   setCookies,
   SessionError,
-  type ConsoleClaims,
-  type CookieDirective,
 } from '~/lib/server/session'
 
 export const runtime = 'nodejs'
-
-/** Build the client-facing Account from console claims (display + admin fields only;
- *  never the secret material Casdoor also packs into the token). `isGlobalAdmin` is
- *  carried so the client nav/org gates (`isGlobalAdminAccount`) match the casibase
- *  path; `owner === 'admin'` also implies it. */
-function accountOf(c: ConsoleClaims): Account {
-  return {
-    owner: c.owner ?? '',
-    name: c.name ?? '',
-    type: c.type,
-    displayName: c.displayName,
-    email: c.email,
-    avatar: c.avatar,
-    isAdmin: c.isAdmin,
-    isGlobalAdmin: c.isGlobalAdmin || c.owner === 'admin',
-    properties: c.properties,
-  }
-}
-
-/** Apply cookie directives to a NextResponse. */
-function withCookies(res: NextResponse, dirs: CookieDirective[]): NextResponse {
-  for (const d of dirs) {
-    res.cookies.set(d.name, d.value, {
-      httpOnly: d.httpOnly,
-      secure: d.secure,
-      sameSite: d.sameSite,
-      path: d.path,
-      maxAge: d.maxAge,
-    })
-  }
-  return res
-}
 
 /** GET — the account + remaining access lifetime from the live console session, or
  *  401 when there is none (the client then falls back to the casibase session). */
@@ -134,7 +101,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     account: accountOf(sealed.claims),
     expiresIn: Math.floor(sealed.expiresInMs / 1000),
   })
-  return withCookies(res, setCookies(sealed.identity, sealed.refresh))
+  return applyCookies(res, setCookies(sealed.identity, sealed.refresh))
 }
 
 /** DELETE — sign out: best-effort revoke the refresh token, then clear the cookies. */
@@ -145,5 +112,5 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 
   const rt = readRefreshToken(req)
   if (rt) await revokeRefreshToken(rt)
-  return withCookies(NextResponse.json({ ok: true }), clearCookies())
+  return applyCookies(NextResponse.json({ ok: true }), clearCookies())
 }
