@@ -39,6 +39,9 @@ export type ModelOption = {
   available: boolean
   /** Editorially promoted/featured in the catalog — drives the default pick. */
   featured: boolean
+  /** Premium (requires a PAID balance) — the gateway 402s these for a trial-only
+   *  ($5 welcome) balance, so the auto-default skips them. Absent ⇒ non-premium. */
+  premium?: boolean
 }
 
 type State =
@@ -72,6 +75,7 @@ export function useModels(): ModelsCatalog {
             outputPrice: typeof m.pricing?.output === 'number' ? m.pricing.output : null,
             available: m.available,
             featured: !!m.featured,
+            premium: !!m.premium,
           }))
           .filter((o) => o.id.length > 0)
         setState({ phase: 'ready', options })

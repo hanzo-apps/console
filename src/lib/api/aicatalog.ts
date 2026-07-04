@@ -44,6 +44,12 @@ export type RichModel = {
   isFree?: boolean
   /** Editorially highlighted in the catalog. */
   featured?: boolean
+  /**
+   * Premium model — requires a PAID (prepaid) balance. The gateway 402s a
+   * premium model for a trial-only ($5 welcome) balance, so the playground default
+   * must avoid these (see default-model.ts). Absent ⇒ non-premium (servable on trial).
+   */
+  premium?: boolean
 }
 
 type PricingCatalog = { models?: RichModel[]; total?: number; updated?: string }

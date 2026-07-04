@@ -28,7 +28,7 @@ import { CreditCard, ShieldCheck, Check, ArrowRight, Coins, FlaskConical } from 
 import { BillingApi, type PaymentConfig } from '~/lib/api/billing'
 import { isLiveSquareEnv, dollarsToCents, validateTopupCents, PRESET_TOPUP_USD } from '~/lib/billing/square'
 import { useSquareCard } from '~/lib/billing/use-square-card'
-import { useCloudBalance, spendableCents, invalidateBalance } from '~/lib/billing/live-balance'
+import { useCloudBalance, spendableCents, invalidateBalance, balanceSplitLabel } from '~/lib/billing/live-balance'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
@@ -116,6 +116,10 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
         <Text fontSize="$8" fontWeight="900" color="$color12">
           {balPhase === 'ready' && bal ? usd(spendableCents(bal) ?? bal.available) : '—'}
         </Text>
+        {/* Distinct trial (non-cash) + prepaid (real money) split, when commerce reports it. */}
+        {balPhase === 'ready' && bal && balanceSplitLabel(bal) ? (
+          <Text fontSize="$3" color="$color11">{balanceSplitLabel(bal)}</Text>
+        ) : null}
       </Card>
 
       {cfg.phase === 'loading' ? (

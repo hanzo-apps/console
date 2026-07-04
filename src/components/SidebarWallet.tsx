@@ -21,7 +21,7 @@ import { Avatar, Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ChevronRight, LogOut, Wallet } from '@hanzogui/lucide-icons-2'
 
 import { useSession } from '~/lib/auth/session'
-import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
+import { useCloudBalance, spendableCents, balanceSplitLabel } from '~/lib/billing/live-balance'
 
 const fmtUsd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 
@@ -56,6 +56,9 @@ export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
   // top-up — so spend/credit changes reflect here without a reload.
   const { balance } = useCloudBalance()
   const cents = spendableCents(balance)
+  // The distinct trial + prepaid split ("$5.00 trial + $X.XX credits"), when commerce
+  // reports the buckets — else null and we show only the combined total.
+  const splitText = balanceSplitLabel(balance)
 
   if (!owner) return null
 
@@ -93,22 +96,24 @@ export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
         <ChevronRight size={16} opacity={0.5} />
       </XStack>
 
-      {/* Balance → Cost */}
-      <XStack
-        items="center"
-        justify="space-between"
+      {/* Balance → Cost (with the trial + prepaid split when reported) */}
+      <YStack
         onPress={openCost}
         cursor="pointer"
         hoverStyle={{ opacity: 0.85 }}
         px="$1"
-        aria-label={`Balance ${balanceText} — open Cost`}
+        gap="$0.5"
+        aria-label={`Balance ${balanceText}${splitText ? ` (${splitText})` : ''} — open Cost`}
       >
-        <XStack items="center" gap="$1.5">
-          <Wallet size={13} opacity={0.7} />
-          <Text fontSize="$2" color="$color11">{balanceText}</Text>
+        <XStack items="center" justify="space-between">
+          <XStack items="center" gap="$1.5">
+            <Wallet size={13} opacity={0.7} />
+            <Text fontSize="$2" color="$color11">{balanceText}</Text>
+          </XStack>
+          <ChevronRight size={14} opacity={0.4} />
         </XStack>
-        <ChevronRight size={14} opacity={0.4} />
-      </XStack>
+        {splitText ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{splitText}</Text> : null}
+      </YStack>
 
       <Button size="$2" onPress={openTopUp}>Top up</Button>
       <Button size="$2" chromeless icon={<LogOut size={15} />} onPress={() => void signOut()} justify="center">
