@@ -2308,3 +2308,51 @@ fields — the `spec.docs` in resolve.test is the NativeOverview inline-docs spe
 different field). Rebased on origin/main (v8.4.86) → **v8.4.87**. Live re-verify:
 the 6 product overviews no longer render a dead Docs deep link (button dropped /
 roots to docs.hanzo.ai), zero customer 404s — post-deploy gate.
+
+## Marketplace model cards show the MODEL VENDOR's canonical brand logo (v8.4.92, #57)
+
+Model cards resolved their avatar from the provider string ALONE, so two classes
+read wrong: (1) a model served through the api.hanzo.ai gateway is tagged provider
+"hanzo" (verified live: `/v1/models` returns `qwen3.5-397b`, `glm-5.2`, `kimi-k2.6`,
+`minimax-m2.5` all `owned_by:"hanzo"`), and `normalizeBrand("hanzo")` → the house
+brand, so a Qwen/Zhipu/Moonshot/MiniMax model showed the Hanzo block-H; (2) the
+proprietary vendors that DO carry clean providers (`Anthropic`/`OpenAI`/`Google`,
+confirmed live in `/v1/pricing/models`) rendered a bland "A" monogram (Anthropic had
+NO curated mark) or Hanzo's own invented glyphs (an asterisk for OpenAI, a Gemma gem
+for Google) rather than the vendor's real logo. Fixed both, DRY, one resolver:
+
+- **Identity-first resolution (the id/prefix map).** New pure `brandForModel(idOrName,
+  provider)` (`components/ui/brand.ts`) = `normalizeBrand(idOrName) ?? normalizeBrand
+  (provider)` — the MODEL id/name (e.g. `anthropic/claude-opus-4.6`, `openai/gpt-5`,
+  `google/gemini-2.5-pro`, `qwen3.5-397b`, `glm-5.2`) is authoritative, so a gateway
+  model tagged "hanzo" is NOT shadowed into the house brand; its true vendor wins.
+  Zen ids (`zen*`) and genuinely-Hanzo ids with no third-party tell still resolve to
+  the house brand — **Hanzo stays ONLY the fallback**. Because it keys off the id
+  prefix, a NEW model resolves on its own with no per-model map. `ProviderLogo` gained
+  an optional `model?` prop that, when set, resolves via `brandForModel` (else the
+  existing provider-only path — non-model surfaces like Integrations/Provider-admin
+  unchanged). Wired at every per-model call site: Marketplace card, Model Catalog
+  detail, Playground ModelPicker (chip + rows).
+- **Canonical vendor marks (self-contained inline SVG, no CDN → CSP-safe, theme-aware
+  by construction — white knockout on the brand-hue tile reads on light AND dark).**
+  `brand-marks.ts`: ADDED **Anthropic** (the sunburst/spark radial burst on the coral
+  #D97757 tile); REPLACED **OpenAI** with its blossom knot (three interlocking ellipse
+  loops = the six-fold rosette, on black); REPLACED **Google** with the **Gemini**
+  four-point spark star (on Google blue) — the Google-AI mark covering Gemini + the
+  Gemma slice. Qwen/Meta/DeepSeek/Mistral/xAI(grok)/Moonshot/NVIDIA marks unchanged.
+  Each mark body validated in a headless browser (non-zero `getBBox`, no path errors).
+- **Coherent card, one resolution.** The Marketplace `ListingCard` derives logo +
+  provider LABEL (`brandLabel`, full vendor names; house → "Zen") + the house
+  "Verified" badge from the SAME `brandForModel` result — so a gateway-served Qwen
+  model never reads "Qwen logo + Zen label + Verified". `brandLabel` maps both house
+  keys (`zen`/`hanzo`) to "Zen" (our models are branded Zen), matching `displayProvider`.
+- **White-label:** these are the MODEL VENDOR's brands (shown on every brand host —
+  hanzo/lux/zoo), orthogonal to the platform brand; only the house brand (Zen) renders
+  the Hanzo mark.
+- Verification: `tsc --noEmit` clean; `vitest` **1667/1667** (+15 brand: brandForModel
+  gateway-shadow/identity-first/zen-preserved/hanzo-fallback, brandLabel, Anthropic
+  mark + all-marks-distinct); the 3 new/changed SVG marks proven to render in a
+  headless browser. Live before-state captured as z@hanzo.ai (Claude="A" mono,
+  GPT-5=invented knot, Gemini=Gemma gem, gateway Qwen/GLM/Kimi/MiniMax=Hanzo-H).
+  Branched off origin/main (v8.4.91) → **v8.4.92**. Live re-verify (Claude→Anthropic,
+  Gemini→Gemini spark, GPT-5→OpenAI blossom, Zen→Hanzo) is the post-deploy gate.
