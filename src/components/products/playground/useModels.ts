@@ -37,6 +37,8 @@ export type ModelOption = {
   outputPrice: number | null
   /** Servable right now (vs catalog-only). */
   available: boolean
+  /** Editorially promoted/featured in the catalog — drives the default pick. */
+  featured: boolean
 }
 
 type State =
@@ -62,12 +64,14 @@ export function useModels(): ModelsCatalog {
         const options: ModelOption[] = entries
           .map((m) => ({
             id: modelId(m),
-            name: modelDisplayName(m),
+            // Fall back to the id so a live-only entry (no rich name) never renders blank.
+            name: modelDisplayName(m) || modelId(m),
             provider: displayProvider(m.provider),
             context: modelContext(m),
             inputPrice: typeof m.pricing?.input === 'number' ? m.pricing.input : null,
             outputPrice: typeof m.pricing?.output === 'number' ? m.pricing.output : null,
             available: m.available,
+            featured: !!m.featured,
           }))
           .filter((o) => o.id.length > 0)
         setState({ phase: 'ready', options })
@@ -93,17 +97,7 @@ export function pricingOf(opt: ModelOption | undefined): ModelPricing | null {
   }
 }
 
-const AUX = /(embed|tts|whisper|speech|rerank|image|diffusion|flux|dall|guard|moderation)/i
-
-/**
- * Pick a sensible default model: prefer our own Zen text models that are servable
- * now, then any servable text model, then the first catalog entry. Auxiliary
- * (embedding/audio/image) models are skipped for the chat default.
- */
-export function defaultModelId(options: ModelOption[]): string {
-  if (options.length === 0) return ''
-  const text = options.filter((o) => !AUX.test(o.id))
-  const zen = text.filter((o) => /zen/i.test(o.id) || o.provider.toLowerCase() === 'zen')
-  const pickAvail = (arr: ModelOption[]): ModelOption | undefined => arr.find((o) => o.available) ?? arr[0]
-  return (pickAvail(zen) ?? pickAvail(text) ?? options[0]).id
-}
+// The default-model pick is pure policy (latest promoted Zen flagship) — it lives
+// in ./default-model so it's unit-testable without this hook's React/UI imports.
+// Re-exported so the composer imports the catalog hook and its default from ONE module.
+export { defaultModelId } from './default-model'

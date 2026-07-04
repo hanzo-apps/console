@@ -64,16 +64,19 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
   const seeded = useRef(false)
   useEffect(() => {
     if (seeded.current || models.phase === 'loading') return
-    seeded.current = true
     const token =
       typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get(SHARE_PARAM) : null
     const shared = token ? decodeShare(token) : null
     if (shared) {
       composer.loadShare(shared)
       if (!shared.model && models.options.length) composer.setModel(defaultModelId(models.options))
+      seeded.current = true
     } else if (models.options.length) {
       composer.setModel(defaultModelId(models.options))
+      seeded.current = true
     }
+    // else: catalog error with no share link — leave unseeded so a Retry still
+    // seeds the promoted default once the catalog resolves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [models.phase])
 

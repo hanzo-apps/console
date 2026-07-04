@@ -2055,3 +2055,41 @@ they just couldn't deploy.
 - Test-only diff (2 files, +75/−6) — the runtime fixes are already on main; this cuts
   the green release. Verification: `tsc --noEmit` 0; `vitest` **1507/1507** (121
   files); `next build` ✓ 14/14. Rebased on origin/main (v8.4.71) → **v8.4.72**.
+
+## Playground catalog 502 → resilient + promoted-Zen default (v8.4.73)
+
+Live bug (CTO screenshot): `console.hanzo.ai/playground` → "Could not reach the
+backend — HTTP 502" with the model selector empty ("Choose a model"), Run blocked.
+ROOT CAUSE: the ChatPlayground catalog fetch (`aicatalog.fetchCatalog`, via
+`useModels`) hard-depended on the rich pricing catalog `/v1/pricing/models` — that
+endpoint 502s on the live ingress, and its `restGet` had **no `.catch`**, so the
+whole `Promise.all` rejected even though `/v1/models` (200, the full ~59-model DO-first
+catalog incl the zen5 family) succeeded right beside it. The working `/v1/models`
+result was discarded → 502 error card → no model preselected → Run disabled.
+
+- **Fix 1 — repoint to the WORKING `/v1/models` (catalog reachability, DRY).**
+  `fetchCatalog` now treats `/v1/models` (the live routing set) as the PRIMARY,
+  always-routed source and `/v1/pricing/models` as a BEST-EFFORT overlay — the EXACT
+  resilience `CloudModelApi.list` already uses (models primary + `fetchPricing` catch).
+  When pricing 502s it falls through to the live set (each entry normalized name←id,
+  provider←owned_by so the picker row is never blank — also fixes a pre-existing latent
+  blank-name for live-only Zen models when pricing IS up); it throws ONLY if the live
+  `/v1/models` set itself is unreachable. Marketplace + ModelCatalog (the other
+  `fetchCatalog` consumers) get the same resilience for free.
+- **Fix 2 — auto-select the latest PROMOTED Zen flagship as default.** New pure
+  `default-model.ts` (`defaultModelId`, extracted from `useModels` so it's node-testable
+  without the hook's UI imports — re-exported so callers are unchanged): (1) honor an
+  explicit catalog promotion (`featured` — the "Editorially highlighted" flag) so the
+  default AUTO-TRACKS whatever we promote next (a `featured` zen6) with no code change;
+  (2) else the Zen flagship by name — newest major, bare family id (`zen5`) over a named
+  tier (`zen5-pro`) over a sub-tier (`zen5-mini`/`-flash`/`-coder`); (3) else any
+  servable text model, then the first entry. `ModelOption` carries `featured`. The
+  ChatPlayground seed effect is now retry-safe (only "commits" once it actually seeds).
+- Verification: `tsc --noEmit` clean; `vitest` **1518/1518** (+9 default-model,
+  +2 aicatalog 502-resilience over v8.4.72's 1507). (The `canonical-paths.test.ts` s3
+  case this branch had originally flagged as pre-existing-RED was fixed independently on
+  main in v8.4.72 — the `/cloud/v1/s3` exception lock — so the suite is fully green here;
+  `storage.ts`/`canonical-paths.test.ts`/`client.ts` untouched by this change.) `next
+  build` ✓ 14/14. Authenticated Playground screenshot is post-deploy (the `(dashboard)`
+  group is behind AuthGate); the two fixes are proven by the logic tests (repointed/
+  resilient endpoint + promoted-Zen default). Rebased on origin/main (v8.4.72) → **v8.4.73**.
