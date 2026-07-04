@@ -102,6 +102,7 @@ import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
+import { AdminO11yModule } from '~/components/products/AdminO11yModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
 import { SearchModule } from '~/components/products/SearchModule'
 import { TemplatesModule } from '~/components/products/TemplatesModule'
@@ -505,6 +506,26 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: FinanceDashboard }],
   },
   {
+    // admin.hanzo.ai FLEET OBSERVABILITY board — the cross-org o11y god view:
+    // fleet requests/tokens/cost/latency/errors + log volume, usage & log
+    // timeseries, and top orgs/models/services leaderboards, all aggregated across
+    // EVERY tenant from the ONE datastore. GLOBAL-ADMIN ONLY (`admin: true` hides it
+    // from every customer's nav/launcher/palette; the `/v1/admin/o11y` aggregate is
+    // server-gated by getAdminGate, so cross-tenant telemetry never reaches a
+    // customer). The un-org-scoped twin of the per-org console o11y.
+    id: 'fleet-o11y',
+    label: 'Fleet Observability',
+    icon: Activity,
+    description: 'Cross-org requests, tokens, cost, latency, errors, logs and traces across the whole platform.',
+    gcp: 'Cloud Monitoring (fleet)',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: AdminO11yModule }],
+  },
+  {
     // admin.hanzo.ai CUSTOMERS board — the operator cockpit: the live fleet customer
     // list (incl. new self-serve signups), one-customer detail, and the AUDITED
     // management actions (grant credit, suspend/reactivate). GLOBAL-ADMIN ONLY
@@ -758,6 +779,26 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/auto`,
     kind: 'external',
     href: 'https://auto.hanzo.ai',
+  },
+  {
+    // Hanzo Automations — the NATIVE cloud Connectors + Automations subsystem
+    // (hanzoai/cloud clients/automations, /v1/automations; HIP-0106 / task #51):
+    // an org's flows run durably on the shared hanzoai/tasks engine over the
+    // go:embed'd 700+ connector catalog, credentials KMS-sealed per org. The
+    // reused auto web/ flow builder is served under the automations path;
+    // hanzo-scoped so the URL never leaks onto a Lux/Zoo console.
+    id: 'automations',
+    label: 'Automations',
+    icon: Workflow,
+    description: 'Build and run automation flows — 700+ connectors on the native /v1/automations engine.',
+    gcp: 'Application Integration',
+    category: 'AI',
+    status: 'enabled',
+    brands: ['hanzo'],
+    repo: 'hanzoai/cloud',
+    docs: `${DOCS}/automations`,
+    kind: 'external',
+    href: 'https://auto.hanzo.ai/automations',
   },
   {
     id: 'inference',
@@ -2045,6 +2086,10 @@ export const catalog: CatalogEntry[] = [
     kind: 'module',
     routes: [
       { path: '', component: ChatModule },
+      // `:owner/:name` carries the chat's real owner (2 segs); `:name` (1 seg) is the
+      // legacy single-segment link, owner defaulting to the active org. Unambiguous by
+      // segment count.
+      { path: ':owner/:name', component: ChatModule },
       { path: ':name', component: ChatModule },
     ],
   },

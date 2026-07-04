@@ -18,9 +18,13 @@ export function apiBaseFromDocs(docsUrl: string): string {
   return `https://api.${apexFromDocs(docsUrl)}/v1`
 }
 
-/** A docs URL for a product, with an optional sub-path. */
+/**
+ * A docs URL for a product, with an optional sub-path. The docs site serves every
+ * product page under the `/docs/` prefix (a bare `docs.hanzo.ai/<slug>` 404s), so
+ * the canonical form is `<docsHost>/docs/<product>[/<sub>]`.
+ */
 export function landingDocsUrl(docsUrl: string, product: string, sub?: string): string {
-  const base = `${docsUrl.replace(/\/+$/, '')}/${product}`
+  const base = `${docsUrl.replace(/\/+$/, '')}/docs/${product}`
   return sub ? `${base}/${sub}` : base
 }
 
@@ -38,10 +42,15 @@ export interface StandardResources {
 }
 
 export function standardResources(docsUrl: string, product: string): StandardResources {
+  // The docs site is one page per product (Mintlify) — there are no separate
+  // `/<product>/quickstart|examples|api-reference` sub-pages (they 404). So the
+  // product's own docs page (which contains the quickstart + examples sections) is
+  // the real target for those rows, and API Reference points at the real `/docs/api`.
+  const page = landingDocsUrl(docsUrl, product)
   return {
-    docs: landingDocsUrl(docsUrl, product),
-    quickstart: landingDocsUrl(docsUrl, product, 'quickstart'),
-    examples: landingDocsUrl(docsUrl, product, 'examples'),
-    api: landingDocsUrl(docsUrl, product, 'api-reference'),
+    docs: page,
+    quickstart: page,
+    examples: page,
+    api: `${docsUrl.replace(/\/+$/, '')}/docs/api`,
   }
 }

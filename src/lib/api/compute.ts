@@ -33,7 +33,7 @@
  * helpers, kept here (not braided into `platform.ts`) so the concurrent Machines work
  * on `platform.ts` and this stay orthogonal.
  */
-import { cloudGet, restGet, originV1Url } from './client'
+import { cloudGet, restGet, cloudProxyV1Url } from './client'
 import type { Cluster } from './platform'
 
 // ── Wire types ───────────────────────────────────────────────────────────────
@@ -450,21 +450,21 @@ export const GPU_NODE_SIZES = [
 export const ComputeApi = {
   /** Per-GPU inventory + telemetry from the native cloud (`GET /v1/gpus`). */
   gpus: async (): Promise<Gpu[]> => {
-    const r = await restGet<unknown>(originV1Url('gpus'))
+    const r = await restGet<unknown>(cloudProxyV1Url('gpus'))
     const arr = Array.isArray(r) ? r : rec(r).gpus
     return (Array.isArray(arr) ? arr : []).map((g) => normalizeGpu(g))
   },
 
   /** GPU alerts from the native cloud (`GET /v1/gpus/alerts`). */
   alerts: async (): Promise<GpuAlert[]> => {
-    const r = await restGet<unknown>(originV1Url('gpus/alerts'))
+    const r = await restGet<unknown>(cloudProxyV1Url('gpus/alerts'))
     const arr = Array.isArray(r) ? r : rec(r).alerts
     return (Array.isArray(arr) ? arr : []).map((a, i) => normalizeAlert(a, i))
   },
 
   /** GPU scheduling pools from the native cloud (`GET /v1/gpus/pools`). */
   pools: async (): Promise<GpuPool[]> => {
-    const r = await restGet<unknown>(originV1Url('gpus/pools'))
+    const r = await restGet<unknown>(cloudProxyV1Url('gpus/pools'))
     const arr = Array.isArray(r) ? r : rec(r).pools
     return (Array.isArray(arr) ? arr : []).map((p, i) => normalizePool(p, i))
   },
