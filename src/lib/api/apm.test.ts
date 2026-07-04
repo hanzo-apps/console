@@ -15,12 +15,16 @@ import {
   normalizeDashboard,
   normalizeDashboards,
   listQueryPayload,
+  serviceFilterItem,
+  pickService,
+  serviceHealthOf,
   parseListRows,
   toIso,
   normalizeLogRow,
   normalizeLogs,
   normalizeTraceSpan,
   normalizeSpans,
+  type ServiceRow,
 } from './apm'
 
 describe('apmWindow', () => {
@@ -264,6 +268,73 @@ describe('listQueryPayload (SigNoz v3 query_range LIST)', () => {
     expect(big.compositeQuery.builderQueries.A.pageSize).toBe(1000)
     expect(zero.compositeQuery.builderQueries.A.pageSize).toBe(1)
     expect(frac.compositeQuery.builderQueries.A.pageSize).toBe(12)
+  })
+
+  it('defaults to NO filters (whole-org stream) when none are given — back-compat', () => {
+    const p = listQueryPayload('logs', w, 100) as { compositeQuery: { builderQueries: { A: { filters: { items: unknown[]; op: string } } } } }
+    expect(p.compositeQuery.builderQueries.A.filters).toEqual({ items: [], op: 'AND' })
+  })
+
+  it('carries a per-service filter into the builder query when given (per-product scope)', () => {
+    const item = serviceFilterItem('logs', 'iam')
+    const p = listQueryPayload('logs', w, 100, [item]) as { compositeQuery: { builderQueries: { A: { filters: { items: unknown[]; op: string } } } } }
+    expect(p.compositeQuery.builderQueries.A.filters).toEqual({ items: [item], op: 'AND' })
+  })
+})
+
+describe('serviceFilterItem (scope a logs/traces query to one OTel service.name)', () => {
+  it('builds the service.name resource-attribute equality SigNoz expects', () => {
+    const f = serviceFilterItem('logs', 'vector')
+    expect(f.op).toBe('=')
+    expect(f.value).toBe('vector')
+    expect(f.key.key).toBe('service.name')
+    expect(f.key.type).toBe('resource')
+    expect(f.key.isColumn).toBe(false) // logs: resource attribute, not an indexed column
+  })
+  it('marks service.name as an indexed column for traces (where it is materialized)', () => {
+    expect(serviceFilterItem('traces', 'gateway').key.isColumn).toBe(true)
+  })
+})
+
+describe('pickService (RED-metrics row for a product, by candidate names)', () => {
+  const rows: ServiceRow[] = [
+    { serviceName: 'iam', p99: 1, avgDuration: 1, numCalls: 5, callRate: 1, numErrors: 0, errorRate: 0, num4XX: 0, fourXXRate: 0 },
+    { serviceName: 'cloud', p99: 1, avgDuration: 1, numCalls: 9, callRate: 2, numErrors: 0, errorRate: 0, num4XX: 0, fourXXRate: 0 },
+  ]
+  it('exact-matches the first candidate that exists', () => {
+    expect(pickService(rows, ['iam'])?.serviceName).toBe('iam')
+    // tries candidates in order — a missing first, then a hit.
+    expect(pickService(rows, ['ai', 'cloud'])?.serviceName).toBe('cloud')
+  })
+  it('returns null on no match (→ honest empty, never another service)', () => {
+    expect(pickService(rows, ['nope'])).toBeNull()
+    expect(pickService(rows, [null, undefined, ''])).toBeNull()
+    expect(pickService([], ['iam'])).toBeNull()
+  })
+})
+
+describe('serviceHealthOf (RED verdict for one service)', () => {
+  const row = (over: Partial<ServiceRow>): ServiceRow => ({
+    serviceName: 'iam', p99: 125_000_000, avgDuration: 40_000_000, numCalls: 1200, callRate: 3.4, numErrors: 12, errorRate: 1, num4XX: 5, fourXXRate: 0.4, ...over,
+  })
+  it('converts ns latency → ms and reads the (already-percent) error rate', () => {
+    const h = serviceHealthOf(row({}))!
+    expect(h.service).toBe('iam')
+    expect(h.p99Ms).toBe(125) // 125e6 ns → 125 ms
+    expect(h.avgMs).toBe(40)
+    expect(h.errorRatePct).toBe(1)
+    expect(h.callRate).toBe(3.4)
+    expect(h.numCalls).toBe(1200)
+  })
+  it('rolls a RED verdict: <1% green, ≥1% yellow, ≥5% red', () => {
+    expect(serviceHealthOf(row({ errorRate: 0.2 }))!.tone).toBe('green')
+    expect(serviceHealthOf(row({ errorRate: 1 }))!.tone).toBe('yellow')
+    expect(serviceHealthOf(row({ errorRate: 7 }))!.tone).toBe('red')
+  })
+  it('is null when the service reported no calls (nothing to fabricate a verdict from)', () => {
+    expect(serviceHealthOf(row({ numCalls: 0 }))).toBeNull()
+    expect(serviceHealthOf(null)).toBeNull()
+    expect(serviceHealthOf(row({ serviceName: '' }))).toBeNull()
   })
 })
 
