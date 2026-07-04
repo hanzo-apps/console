@@ -47,8 +47,14 @@ export type RichModel = {
 }
 
 type PricingCatalog = { models?: RichModel[]; total?: number; updated?: string }
-/** The live routing set — the SAME rich shape as the catalog, each entry servable now. */
-type LiveModels = { data?: RichModel[] }
+/**
+ * The live routing set (`/v1/models`) — each entry servable now. It is the
+ * OpenAI list shape (a routing `id` + an `owned_by` provider), NOT the rich
+ * pricing shape, so live-only entries are normalized to the catalog shape on
+ * merge (name ← id, provider ← owned_by) — otherwise the picker row is blank.
+ */
+type LiveModel = RichModel & { owned_by?: string }
+type LiveModels = { data?: LiveModel[] }
 
 /** The live routing/availability key for a model: id (third-party) else name (Zen). */
 const liveKey = (m: { id?: string | null; name?: string }): string =>
@@ -104,11 +110,20 @@ export function modelDisplayName(m: RichModel): string {
   return name
 }
 
-/** Fetch the rich catalog + the live set; join availability. Throws on catalog failure. */
+/**
+ * Fetch the live model set and join the rich pricing overlay. The live routing
+ * set (`/v1/models`) is the PRIMARY source — always routed, it returns the full
+ * servable catalog (incl the current Zen family); its failure IS the backend
+ * error. The rich pricing catalog (`/v1/pricing/models`) is a BEST-EFFORT overlay
+ * (name/description/context/price): on some ingresses it is unrouted/502, so a
+ * failure there degrades to the live set rather than blanking the whole catalog —
+ * the SAME resilience `CloudModelApi.list` already uses. Throws only when the live
+ * set itself is unreachable.
+ */
 export async function fetchCatalog(): Promise<CatalogEntry[]> {
   const [cat, live] = await Promise.all([
-    restGet<PricingCatalog>(originV1Url('pricing/models')),
-    restGet<LiveModels>(originV1Url('models')).catch(() => ({ data: [] }) as LiveModels),
+    restGet<PricingCatalog>(originV1Url('pricing/models')).catch(() => ({ models: [] }) as PricingCatalog),
+    restGet<LiveModels>(originV1Url('models')),
   ])
   const liveArr = live.data ?? []
   const liveSet = new Set(liveArr.map(liveKey).filter(Boolean))
@@ -120,14 +135,17 @@ export async function fetchCatalog(): Promise<CatalogEntry[]> {
     // so both record shapes resolve their live-availability correctly.
     available: liveSet.has(modelId(m).toLowerCase()) || liveSet.has((m.name ?? '').toLowerCase()),
   }))
-  // Merge live-only models the pricing bundle doesn't carry — notably the CURRENT
-  // Zen set (zen5-flash/coder/nano-*) the older bundle omits. They are servable now,
-  // so they list as Available under their family. Deduped by both id and name.
+  // Merge live-only models the pricing overlay doesn't carry — the CURRENT Zen set
+  // (zen5-flash/coder/nano-*) the older bundle omits, and EVERY model when pricing
+  // is down. They are servable now, so they list Available under their family.
+  // Normalize the OpenAI list shape to the catalog shape (name ← id, provider ←
+  // owned_by) so the picker row never renders blank. Deduped by both id and name.
   for (const lm of liveArr) {
     const key = liveKey(lm)
     const nameKey = (lm.name ?? '').trim().toLowerCase()
     if (!key || catKeys.has(key) || (nameKey && catKeys.has(nameKey))) continue
-    entries.push({ ...lm, available: true })
+    const id = modelId(lm)
+    entries.push({ ...lm, name: (lm.name ?? '').trim() || id, provider: lm.provider ?? lm.owned_by, available: true })
   }
   return entries
 }

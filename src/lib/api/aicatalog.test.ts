@@ -134,6 +134,51 @@ describe('fetchCatalog — availability cross-ref by stable id', () => {
   })
 })
 
+describe('fetchCatalog — resilient when the pricing overlay is down (the 502 fix)', () => {
+  beforeEach(() => {
+    ;(globalThis as { window?: unknown }).window = {
+      location: { origin: ORIGIN, hostname: 'console.hanzo.ai' },
+      localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    }
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (globalThis as { window?: unknown }).window
+  })
+
+  it('loads the live /v1/models set (normalized) when /v1/pricing/models 502s', async () => {
+    // The exact live failure: the rich pricing catalog 502s, the routing set is 200.
+    vi.stubGlobal('fetch', (url: string) =>
+      url.includes('pricing')
+        ? Promise.resolve(new Response('bad gateway', { status: 502 }))
+        : Promise.resolve(
+            new Response(
+              JSON.stringify({
+                object: 'list',
+                data: [
+                  { id: 'zen5', owned_by: 'hanzo' },
+                  { id: 'zen5-mini', owned_by: 'hanzo' },
+                ],
+              }),
+              { status: 200, headers: { 'content-type': 'application/json' } },
+            ),
+          ),
+    )
+    const cat = await fetchCatalog() // must NOT throw despite the 502
+    const z5 = cat.find((m) => m.id === 'zen5')!
+    expect(z5).toBeDefined()
+    expect(z5.available).toBe(true) // the live routing set is servable
+    expect(z5.name).toBe('zen5') // name normalized from id — never a blank picker row
+    expect(z5.provider).toBe('hanzo') // provider normalized from owned_by
+    expect(cat.map((m) => m.id)).toContain('zen5-mini')
+  })
+
+  it('still throws when the live /v1/models set itself is unreachable', async () => {
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('bad gateway', { status: 502 })))
+    await expect(fetchCatalog()).rejects.toBeTruthy()
+  })
+})
+
 describe('fetchPlans — honest-empty when gated', () => {
   beforeEach(() => {
     ;(globalThis as { window?: unknown }).window = {

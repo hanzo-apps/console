@@ -11,6 +11,7 @@ const opt = (p: Partial<ModelOption> & { id: string }): ModelOption => ({
   inputPrice: p.inputPrice ?? null,
   outputPrice: p.outputPrice ?? null,
   available: p.available ?? false,
+  featured: p.featured ?? false,
 })
 
 describe('providerGroups — Zen-first, count-desc', () => {
