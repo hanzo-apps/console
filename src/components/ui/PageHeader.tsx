@@ -20,7 +20,7 @@ export function PageHeader({
     // width, which would overflow on mobile).
     <XStack justify="space-between" items="flex-start" gap="$3" flexWrap="wrap">
       <YStack gap="$1" flex={1} minW={200}>
-        <Text fontSize="$7" fontWeight="800">
+        <Text fontSize="$7" fontWeight="500" letterSpacing={-0.4}>
           {title}
         </Text>
         {subtitle ? (

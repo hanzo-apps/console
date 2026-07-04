@@ -72,7 +72,7 @@ function Panel({ title, right, children, minW = 320, flex }: { title: string; ri
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" flex={flex} minW={minW}>
       <XStack items="center" justify="space-between" gap="$2">
-        <Text fontSize="$4" fontWeight="700" color="$color12">
+        <Text fontSize="$4" fontWeight="500" color="$color12">
           {title}
         </Text>
         {right}
@@ -106,7 +106,7 @@ export function MetricTileView({ tile, data, loading, live, index }: { tile: Met
       {loading && kpi === undefined ? (
         <SkeletonBar w={110} h={34} />
       ) : (
-        <Text fontSize="$9" fontWeight="900" color="$color12" numberOfLines={1}>
+        <Text fontSize="$9" fontWeight="500" color="$color12" numberOfLines={1} className="hz-tnum">
           {kpi === undefined ? '—' : formatMetric(shown, tile.unit)}
         </Text>
       )}
@@ -159,7 +159,7 @@ export function TimeseriesTileView({ tile, data, loading }: { tile: TimeseriesTi
   const total = points.reduce((s, p) => s + p.value, 0)
 
   return (
-    <Panel title={tile.title} flex={1} right={points.length ? <Text fontSize="$2" color="$color10">{fmt(total)}</Text> : undefined}>
+    <Panel title={tile.title} flex={1} right={points.length ? <Text fontSize="$2" color="$color10" className="hz-tnum">{fmt(total)}</Text> : undefined}>
       {loading && series === undefined ? (
         <SkeletonBar w="100%" h={200} />
       ) : points.length < 2 ? (
@@ -197,7 +197,7 @@ export function DistributionTileView({ tile, data, loading }: { tile: Distributi
             slices={slices}
             center={
               <>
-                <Text fontSize="$5" fontWeight="900" color="$color12">
+                <Text fontSize="$5" fontWeight="500" color="$color12" className="hz-tnum">
                   {fmt(total)}
                 </Text>
                 {tile.centerLabel ? (
@@ -223,10 +223,10 @@ export function DistributionTileView({ tile, data, loading }: { tile: Distributi
                   ) : null}
                 </YStack>
                 <YStack items="flex-end">
-                  <Text fontSize="$3" fontWeight="700" color="$color12">
+                  <Text fontSize="$3" fontWeight="500" color="$color12" className="hz-tnum">
                     {fmt(s.value)}
                   </Text>
-                  <Text fontSize="$1" color="$color10">
+                  <Text fontSize="$1" color="$color10" className="hz-tnum">
                     {Math.round((s.value / total) * 100)}%
                   </Text>
                 </YStack>

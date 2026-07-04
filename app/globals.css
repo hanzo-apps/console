@@ -38,6 +38,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   line-height: 1.5;
+  /* Basel ships only Book (400) + Medium (500). NEVER let the browser fabricate a
+     heavier/oblique face — a requested 600/700/800 falls to the real Medium (500)
+     via CSS font-matching, so headings are crisp Medium, never a smeared faux-bold.
+     Inherited by every element; the ONE place the whole product bans synthesis. */
+  font-synthesis: none;
 }
 
 code,
@@ -54,8 +59,32 @@ samp {
   font-feature-settings: 'tnum' 1;
 }
 
+/* Data/numeric face — Geist Mono + tabular figures for metric values, prices, IDs,
+   counts and code-like tokens. The dashboard-grade "numbers are typeset" detail
+   (Linear/Stripe): stat tiles, table numeric cells and monospace identifiers read
+   as precise, column-aligned data — distinct from Basel prose. One class, whole
+   product. `className` forwards to the DOM node on web, so a Gui <Text> can wear it. */
+.hz-mono {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+
 * {
   box-sizing: border-box;
+}
+
+/* Ban faux-bold/oblique EVERYWHERE. Basel ships only Book (400) + Medium (500);
+   a requested 600/700/800/900 must fall to the real Medium face, never a
+   browser-synthesized smear. Tamagui/RNW inject runtime styles that reset the
+   inherited `font-synthesis` on Text nodes, so a body-level declaration loses —
+   this universal rule (with !important, a true global invariant) wins on every
+   element regardless of insertion order. One place, whole product. */
+*,
+*::before,
+*::after {
+  font-synthesis: none !important;
 }
 
 /* ── Console dark theme — TRUE-BLACK canvas + calm text/borders. The ONE place the
