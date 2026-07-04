@@ -5,12 +5,18 @@
  *
  * The console is white-labelled per brand, but a USER'S ORG is a property of the
  * user, not of the console: a customer in org `maxpower` signs into the
- * Hanzo-branded console with their email and IAM resolves THEIR org. So we POST
- * the canonical `/v1/iam/login` with an EMPTY `organization` — IAM matches the
- * user across every org by email — and get back an OAuth code, which the
- * existing `completeSignIn` → `/v1/iam/signin` exchange turns into the session
- * cookie. Pinning the brand's own org (the old SDK `organizationName`) is the
- * bug this replaces: it makes a non-brand-org user un-signinable.
+ * Hanzo-branded console with their email and IAM resolves THEIR org. So on a
+ * TENANT host we POST the canonical `/v1/iam/login` with an EMPTY `organization`
+ * — IAM matches the user across every org by email — and get back an OAuth code,
+ * which the existing `completeSignIn` → `/v1/iam/signin` exchange turns into the
+ * session cookie. Pinning the brand's own org (the old SDK `organizationName`) is
+ * the bug this replaces: it makes a non-brand-org user un-signinable.
+ *
+ * An ADMIN host (admin.<brand>) is the ONE exception: it is single-org, so we pin
+ * `organization` to the reserved `admin` org (config.iamOrgName resolves there),
+ * making the operator authenticate INTO the org where the `admin-console` app is
+ * registered — an empty org would mint the code in the wrong org and the token
+ * audience would mismatch.
  *
  * This speaks the exact wire `@hanzo/id-auth` does (verified against live IAM);
  * it lives here, bound to console2's `config`, because that package is not
@@ -24,7 +30,7 @@
  * console2 hands MFA off to IAM's same-site hosted flow (see SignInForm); this
  * module only handles the credential step and reports the MFA signal.
  */
-import { config } from '~/config'
+import { config, isAdminHost } from '~/config'
 import { CALLBACK_PATH } from './iam'
 
 /** Outcome of the credential step. */
@@ -71,7 +77,13 @@ export async function loginWithPassword(username: string, password: string): Pro
       body: JSON.stringify({
         type: 'code',
         application: config.iamAppName,
-        organization: '', // resolve the user's org across all orgs by email
+        // A TENANT host resolves the user's org across ALL orgs by email (a customer
+        // in org `maxpower` signs into the Hanzo-branded console) — hence empty. An
+        // ADMIN host is single-org: the operator authenticates INTO the reserved
+        // `admin` org where `admin-console` lives (config.iamOrgName is `admin` there),
+        // so pin it — otherwise the code is minted in the wrong org and the token
+        // audience mismatches (application.Name:[hanzo-cloud] vs token.Application:[admin-console]).
+        organization: isAdminHost(window.location.hostname) ? config.iamOrgName : '',
         username,
         password,
         signinMethod: 'Password',

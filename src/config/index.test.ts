@@ -17,10 +17,26 @@ describe('config: per-host admin login client', () => {
     expect(c.iamAppName).toBe('admin-console')
   })
 
-  it('admin host keeps the brand + brand IAM issuer/org — only the client changes', () => {
+  it('admin host keeps the brand + brand IAM issuer, but switches the ORG to the reserved admin org', () => {
     const c = resolveConfig('admin.hanzo.ai')
     expect(c.brand).toBe('hanzo')
     expect(c.iamUrl).toBe('https://hanzo.id')
+    // The `admin-console` app is registered in the reserved `admin` org — login MUST
+    // resolve there (owner=admin), so BOTH the app and the org switch on an admin host.
+    expect(c.iamOrgName).toBe('admin')
+  })
+
+  it('admin.hanzo.ai resolves the FULL operator auth config (app + client + org)', () => {
+    const c = resolveConfig('admin.hanzo.ai')
+    expect(c.iamAppName).toBe('admin-console')
+    expect(c.iamClientId).toBe('admin-console')
+    expect(c.iamOrgName).toBe('admin')
+  })
+
+  it('a tenant host (console.hanzo.ai) is UNCHANGED — brand app + brand org', () => {
+    const c = resolveConfig('console.hanzo.ai')
+    expect(c.iamClientId).toBe('hanzo-cloud')
+    expect(c.iamAppName).toBe('hanzo-cloud')
     expect(c.iamOrgName).toBe('hanzo')
   })
 
@@ -32,10 +48,12 @@ describe('config: per-host admin login client', () => {
     expect(resolveConfig('console.hanzo.ai').iamClientId).toBe('hanzo-cloud')
   })
 
-  it('the reserved admin org is ONE global app across every brand', () => {
+  it('the reserved admin org is ONE global app+org across every brand', () => {
     expect(resolveConfig('admin.lux.network').iamClientId).toBe('admin-console')
+    expect(resolveConfig('admin.lux.network').iamOrgName).toBe('admin')
     expect(resolveConfig('admin.lux.network').brand).toBe('lux')
     expect(resolveConfig('admin.zoo.cloud').iamClientId).toBe('admin-console')
+    expect(resolveConfig('admin.zoo.cloud').iamOrgName).toBe('admin')
   })
 })
 
@@ -72,8 +90,9 @@ describe('white-label cloud tenants (7stars / yotoda)', () => {
     expect(resolveConfig('cloud.yotoda.tech').docsUrl).toBe('https://docs.yotoda.tech')
   })
 
-  it('admin.<tenant> still uses the ONE global admin app, keeping the brand', () => {
+  it('admin.<tenant> still uses the ONE global admin app+org, keeping the brand', () => {
     expect(resolveConfig('admin.7stars.dev').iamClientId).toBe('admin-console')
+    expect(resolveConfig('admin.7stars.dev').iamOrgName).toBe('admin')
     expect(resolveConfig('admin.7stars.dev').brand).toBe('7stars')
     // …but its IAM issuer stays hanzo.id (the tenant has no own issuer).
     expect(resolveConfig('admin.7stars.dev').iamUrl).toBe('https://hanzo.id')
