@@ -70,6 +70,10 @@ export type CustomerDetail = {
   transactions: CustomerTxn[]
 }
 
+/** Where a staff grant lands: `trial` = non-cash comp credit (welcome/starter/comp),
+ *  `prepaid` = real money. Spend draws trial-first (enforced server-side). */
+export type GrantSource = 'trial' | 'prepaid'
+
 export type GrantResult = { org: string; grantedCents: number; currency: string; balanceCents: number; transactionId: string }
 export type SuspendResult = { org: string; suspended: boolean; affected: string[]; failed: string[] }
 
@@ -205,7 +209,7 @@ export const AdminCockpitApi = {
   },
   customer: async (org: string): Promise<CustomerDetail> =>
     normalizeDetail(await originGet<unknown>(`admin/customers/${encodeURIComponent(org)}`)),
-  grantCredit: async (org: string, body: { amountCents: number; currency?: string; reason?: string }): Promise<GrantResult> => {
+  grantCredit: async (org: string, body: { amountCents: number; currency?: string; reason?: string; source?: GrantSource }): Promise<GrantResult> => {
     const d = (await originPost<unknown>(`admin/customers/${encodeURIComponent(org)}/credit`, body) ?? {}) as Record<string, unknown>
     return { org: str(d.org) || org, grantedCents: num(d.grantedCents), currency: str(d.currency) || 'usd', balanceCents: num(d.balanceCents), transactionId: str(d.transactionId) }
   },
