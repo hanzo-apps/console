@@ -159,13 +159,14 @@ function BucketList({ onOpen }: { onOpen: (bucket: string) => void }) {
         </XStack>
       ),
     },
-    { key: 'createdAt', header: 'Created', width: 200, render: (b) => <Muted>{fmtTime(b.createdAt)}</Muted> },
+    { key: 'createdAt', header: 'Created', width: 200, render: (b) => <MonoMuted>{fmtTime(b.createdAt)}</MonoMuted> },
     {
       key: 'actions',
       header: '',
       width: 100,
+      align: 'right',
       render: (b) => (
-        <XStack gap="$1" justify="flex-end" self="stretch" flex={1}>
+        <XStack gap="$1" items="center" justify="flex-end">
           <Button
             size="$2"
             chromeless
@@ -367,15 +368,16 @@ function ObjectBrowser({ bucket, onBack }: { bucket: string; onBack: () => void 
           </XStack>
         ),
     },
-    { key: 'size', header: 'Size', width: 110, render: (o) => <Muted>{fmtSize(o)}</Muted> },
-    { key: 'lastModified', header: 'Modified', width: 190, render: (o) => <Muted>{fmtTime(o.lastModified)}</Muted> },
+    { key: 'size', header: 'Size', width: 110, align: 'right', render: (o) => <MonoMuted>{fmtSize(o)}</MonoMuted> },
+    { key: 'lastModified', header: 'Modified', width: 190, render: (o) => <MonoMuted>{fmtTime(o.lastModified)}</MonoMuted> },
     {
       key: 'actions',
       header: '',
       width: 110,
+      align: 'right',
       render: (o) =>
         o.isDir ? null : (
-          <XStack gap="$1" justify="flex-end" self="stretch" flex={1}>
+          <XStack gap="$1" items="center" justify="flex-end">
             <Button
               size="$2"
               chromeless
@@ -476,6 +478,15 @@ function ObjectBrowser({ bucket, onBack }: { bucket: string; onBack: () => void 
 function Muted({ children }: { children: React.ReactNode }) {
   return (
     <Text fontSize="$3" color="$color11" numberOfLines={1}>
+      {children}
+    </Text>
+  )
+}
+
+/** Muted, monospaced, tabular — for timestamps and byte sizes (data, not prose). */
+function MonoMuted({ children }: { children: React.ReactNode }) {
+  return (
+    <Text fontSize="$2" color="$color10" numberOfLines={1} className="hz-mono">
       {children}
     </Text>
   )
