@@ -227,7 +227,7 @@ function Ready({ data }: { data: Data }) {
                     </Text>
                   </XStack>
                   <Text fontSize="$1" color="$color10" numberOfLines={1}>
-                    {r.instance}
+                    {r.instance || '—'}
                   </Text>
                 </XStack>
               ))}

@@ -72,13 +72,6 @@ function Tile({ entry, color, onPress }: { entry: CatalogEntry; color: string; o
       <Text fontSize="$2" fontWeight="600" color="$color12" numberOfLines={1}>
         {entry.label}
       </Text>
-      {entry.status === 'soon' ? (
-        <YStack px="$1.5" py={1} rounded="$10" bg="$color4" position="absolute" b="$2">
-          <Text fontSize={8} fontWeight="800" letterSpacing={0.5} color="$color11">
-            SOON
-          </Text>
-        </YStack>
-      ) : null}
     </YStack>
   )
 }

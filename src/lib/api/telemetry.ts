@@ -75,7 +75,12 @@ export type ServiceHealth = {
   job: string
   /** Human service name (the `-health` suffix stripped, `_` → ` `). */
   service: string
-  /** Scrape instance (host:port). */
+  /**
+   * Customer-safe endpoint — a public FQDN (port stripped) or `''` when the scrape
+   * instance is internal (in-cluster `.svc`, loopback, or a private IP). REDACTED at
+   * the source by `redactInstance`, so the raw internal `host:port` never reaches the
+   * browser (defense in depth). Render `instance || '—'`.
+   */
   instance: string
   /** `up == 1`. */
   up: boolean
@@ -88,6 +93,30 @@ export function serviceNameOf(job: string): string {
   return job.replace(/-health$/, '')
 }
 
+/**
+ * Redact an internal scrape instance (`host:port`) for a CUSTOMER-facing status board.
+ * A Prometheus `instance` label is the in-cluster address the collector scrapes —
+ * `visor.hanzo.svc:19000`, `localhost:8428`, `127.0.0.1:8429`, `10.x.x.x:9000` — which
+ * must NEVER render to a customer (it exposes internal topology). We keep only what is
+ * safe and useful: a non-private, non-internal PUBLIC host (e.g. `iam.hanzo.ai`) is
+ * shown port-stripped; anything in-cluster / loopback / private-IP / bare-port is
+ * dropped to `''` (the UI renders `—`). The status verdict still comes from `up`, so a
+ * redacted row loses no health signal — only the internal address. Applied at the
+ * source so the internal address never even reaches the browser (defense in depth).
+ */
+export function redactInstance(instance: string): string {
+  const raw = (instance ?? '').trim()
+  if (!raw) return ''
+  const host = raw.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split('/')[0].split(':')[0].trim().toLowerCase()
+  if (!host) return ''
+  // Loopback + unqualified in-cluster names (no public TLD).
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.svc') || host.includes('.svc.') || !host.includes('.')) return ''
+  // RFC1918 / link-local / loopback IPv4 and any IPv6 literal — internal by definition.
+  if (/^(10|127)\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /^169\.254\./.test(host) || host.includes(':')) return ''
+  // A public FQDN: show the host, port stripped (a customer never needs the scrape port).
+  return host
+}
+
 /** Map `up` samples → the service-health board, sorted down-first then by name. */
 export function toServiceHealth(samples: Sample[]): ServiceHealth[] {
   const rows = samples.map((s) => {
@@ -95,7 +124,7 @@ export function toServiceHealth(samples: Sample[]): ServiceHealth[] {
     return {
       job,
       service: serviceNameOf(job),
-      instance: s.metric.instance ?? '',
+      instance: redactInstance(s.metric.instance ?? ''),
       up: s.value === 1,
       brand: s.metric.brand,
     }

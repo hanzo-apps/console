@@ -34,9 +34,8 @@ describe('showsQuickLinks — only enabled, customer-visible product modules qua
       expect(showsQuickLinks(entry({ id }))).toBe(false)
     }
   })
-  it('hides for admin god-views, soon placeholders, and external launches', () => {
+  it('hides for admin god-views and external launches', () => {
     expect(showsQuickLinks(entry({ id: 'business', admin: true }))).toBe(false)
-    expect(showsQuickLinks(entry({ id: 'hsm', status: 'soon' }))).toBe(false)
     expect(showsQuickLinks(entry({ id: 'auto', kind: 'external' } as Partial<CatalogEntry>))).toBe(false)
   })
 })
