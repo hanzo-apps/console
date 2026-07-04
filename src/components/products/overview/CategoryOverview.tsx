@@ -4,8 +4,8 @@
  * CategoryOverview — the landing page for one product CATEGORY (AI, Compute,
  * Data, …). It is the category-level twin of `NativeOverview`: a header + a
  * one-line "what this category is", optional featured shortcuts, and a grid of
- * every product in the category (each card opening its native route). Coming-soon
- * products are shown honestly with the SOON affordance — never hidden, never faked.
+ * every product in the category (each card opening its native route). Every listed
+ * product is live — nothing is hidden, faked, or shown as a dead placeholder.
  *
  * Everything is derived from the ONE catalog registry (`visibleCatalogByCategory`,
  * brand- and admin-scoped), so a new product appears here for free and there is no
@@ -80,17 +80,6 @@ const CATEGORY_FEATURED: Partial<Record<ProductCategory, string[]>> = {
   AI: ['models', 'providers'],
 }
 
-/** The SOON affordance — the same badge the sidebar uses for a coming-soon product. */
-function SoonBadge() {
-  return (
-    <YStack px="$1.5" py={1} rounded="$10" bg="$color4">
-      <Text fontSize={9} fontWeight="800" letterSpacing={0.5}>
-        SOON
-      </Text>
-    </YStack>
-  )
-}
-
 /** One product card in the category grid — mirrors the catalog-home card (no pin). */
 function ProductCard({
   entry,
@@ -104,7 +93,6 @@ function ProductCard({
   onLearnMore: () => void
 }) {
   const Icon = entry.icon
-  const soon = entry.status === 'soon'
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" width={272}>
       <XStack justify="space-between" items="flex-start" gap="$2">
@@ -123,7 +111,6 @@ function ProductCard({
         </XStack>
         <XStack gap="$1.5" items="center">
           {entry.admin ? <Lock size={13} opacity={0.45} /> : null}
-          {soon ? <SoonBadge /> : null}
         </XStack>
       </XStack>
 
@@ -149,7 +136,7 @@ function ProductCard({
           onPress={onOpen}
           iconAfter={<ArrowRight size={14} />}
         >
-          {soon ? 'Preview' : 'Open'}
+          Open
         </Button>
       </XStack>
     </Card>

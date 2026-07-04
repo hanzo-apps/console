@@ -152,6 +152,30 @@ export const CLOUD_HEADS: readonly string[] = [
   // refuses a non-beta item, so it routes through /cloud like the rest (a cookie-only
   // call 403s). Distinct from the global-admin /v1/admin/enablement (the aggregate proxy).
   'enablement',
+  // Casibase store-admin surface (cloud binary, casibase `*-store(s)` routes): the org's
+  // knowledge STORES that back Embeddings · Collections and store settings. Each is a
+  // Bearer-required, org-scoped (owner from the token) casibase-envelope call, so a
+  // cookie-only `/v1/get-stores` 401s → a FALSE "session expired" for a signed-in user.
+  // Routing through /cloud mints the user token like the rest. One head per casibase verb
+  // (the heads are literal, not `v1/<head>/...` sub-paths). Read: list/get/names/global;
+  // mutate: add/update/delete/refresh-vectors.
+  'get-stores',
+  'get-store',
+  'get-store-names',
+  'get-global-stores',
+  'add-store',
+  'update-store',
+  'delete-store',
+  'refresh-store-vectors',
+  // Knowledge-store ingest + per-file index status (casibase docs surface): the
+  // Embeddings product's ingest actions (`/v1/docs/ingest` — upload/github/crawl) and
+  // per-file status (`/v1/get-files`). Bearer-required + org-scoped (owner from the
+  // token); a cookie-only call 401s, so they route through /cloud like the stores.
+  'docs',
+  'get-files',
+  // Embeddings/collections usage slice of the cloud-usage read API (`/v1/get-cloud-usages`).
+  // Bearer-required; degrades to "—" but should read real data through /cloud.
+  'get-cloud-usages',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */

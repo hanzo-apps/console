@@ -12,8 +12,8 @@
  *    kind through the shared, tolerant `PaasResourceTab` (honest states when a
  *    kind isn't served on this deployment yet).
  *  - The right rail is the picked cluster's detail (k8s version, region, nodes,
- *    PROVISIONED CPU/RAM from its node pools) + Quick Actions (real routes or
- *    honest "coming soon"). Nothing is fabricated.
+ *    PROVISIONED CPU/RAM from its node pools) + Quick Actions (real routes — Create
+ *    Deployment → /pipelines, View Logs). Nothing is fabricated.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
