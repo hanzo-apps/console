@@ -2244,3 +2244,46 @@ forked, nothing new-per-product. Adding a product still needs zero sub-page code
   gate). Authenticated visual e2e is post-deploy (the `(dashboard)` group is behind
   AuthGate); the per-product o11y query building + mapping real SigNoz responses is proven
   by the logic + end-to-end tests. Rebased on origin/main (v8.4.84) → **v8.4.85**.
+
+## Zero customer-facing 404s — declare :tab routes for Containers/Finetuning/Tasks (v8.4.86)
+
+Exhaustive authenticated crawl of console.hanzo.ai (as Dave/maxpower, a customer)
+found the console's ONLY dead in-app links: three tabbed modules whose registry
+entries dropped the `:tab` sub-route. Each renders its own tab bar
+(`const go = (id) => router.push(`/<id>${id ? '/'+id : ''}`)`, reading
+`params.tab`) but declared only `{ path: '' }`, so every tab 404'd:
+
+- **Containers** — Pods/Containers/Images/Namespaces/Events (`/containers/<tab>`).
+- **Fine-tuning** — Datasets/Checkpoints/Models (`/finetuning/<tab>`).
+- **Tasks** — Schedules/Workers 404'd; Queues degraded to a placeholder stub
+  (`queues` was a declared subpage, so it fell to the stub instead of 404).
+
+Fix (registry data only, minimal): declare `{ path: ':tab', component: <Module> }`
+on each. Tasks keeps its 2-segment `:ns/:wid` workflow-detail route — `:tab`
+(1 seg) and `:ns/:wid` (2 seg) are unambiguous (matched by exact segment count).
+The modules already read `params.tab`; nothing else changed. This is the same
+class the CLAUDE.md notes have hit before (a module targeting a `:tab`/detail route
+the registry never declared).
+
+Also corrected the API Keys "API reference" button: it opened
+`https://docs.hanzo.ai/api`, but the docs site serves everything under `/docs`
+(a bare `docs.hanzo.ai/<slug>` 404s), so it now opens `${config.docsUrl}/docs/api`
+(white-labeled off the brand's docs host, matching every other docs deep link).
+
+How it was found + proven: an authenticated iframe-batch crawler on the live
+origin (same-origin ⇒ real session) that detects a 404 by the `document.title`
+flipping to "404: This page could not be found." after client hydration (the SSR
+shell 200s for every path — AuthGate renders a loader, and the catch-all's
+`notFound()` fires only client-side, so HTTP status can't distinguish routes). Swept
+ALL 137 product roots (0 bad) and every real UI navigation target (`router.push`
+literal + template targets extracted from source); the three `go(t.id)` tab
+modules were the only breakage. `/datasets/:name` and `/scores/:name` 404 for a
+hand-typed URL but nothing links there (not a dead link). Registry docs deep links
+all use the correct `https://docs.hanzo.ai/docs/<slug>` form.
+
+Verification: `tsc --noEmit` clean; `vitest` **1643/1643** (129 files); the
+icon-ESM registry stays un-importable in vitest (documented), so the registry
+route contract is proven by the live re-crawl (authoritative gate), not a unit
+test. Rebased on origin/main (v8.4.85, the o11y-logs lane) → **v8.4.86**. Live
+re-crawl (every Containers/Fine-tuning/Tasks tab resolves; zero customer 404s) is
+the post-deploy gate.
