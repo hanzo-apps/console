@@ -114,3 +114,58 @@ export async function loginWithPassword(username: string, password: string): Pro
   if (typeof data === 'string' && data) return { kind: 'code', code: data, verifier: pkce?.verifier }
   return { kind: 'error', message: env.msg || 'Sign-in failed.' }
 }
+
+// ── Admin-console silent SSO (redirect flow) ─────────────────────────────────────
+// A tenant host signs in through the SignInForm credential POST above. An ADMIN host
+// (admin.<brand>) must NOT show a second manual form: the admin guard already
+// authenticated the operator at the brand IAM, so the console silently (re)authorizes
+// the PUBLIC `admin-console` client against that live SSO session and returns via
+// `/auth/callback`. Because the browser leaves the page for IAM, the PKCE verifier
+// can't live in memory — it is stashed here and consumed by the callback.
+
+/** sessionStorage key holding the admin-console PKCE verifier across the authorize
+ *  redirect. Namespaced to the console; one in-flight admin login per browser. */
+const ADMIN_PKCE_KEY = 'hz_admin_pkce_verifier'
+
+/**
+ * Begin admin-console silent SSO (admin hosts only — the caller gates on
+ * `isAdminHost`). Mints a PKCE (RFC 7636) verifier, stashes it for the callback's
+ * secretless BFF redemption (`/auth/signin`), and redirects the browser to IAM's
+ * authorize endpoint for the PUBLIC `admin-console` client in the reserved `admin`
+ * org. IAM reuses the operator's live brand-IAM session and returns a code with NO
+ * extra manual step — the single-login flow.
+ */
+export async function startAdminSignin(): Promise<void> {
+  const pkce = await createPkce()
+  try {
+    window.sessionStorage.setItem(ADMIN_PKCE_KEY, pkce.verifier)
+  } catch {
+    /* sessionStorage unavailable (private mode) — the callback then carries no
+       verifier and surfaces a real error rather than a silent wrong-client redeem */
+  }
+  const u = new URL(`${config.iamUrl}/v1/iam/oauth/authorize`)
+  u.searchParams.set('client_id', config.iamClientId) // admin-console
+  u.searchParams.set('organization', config.iamOrgName) // admin
+  u.searchParams.set('response_type', 'code')
+  u.searchParams.set('redirect_uri', `${window.location.origin}${CALLBACK_PATH}`)
+  u.searchParams.set('scope', 'openid profile email')
+  u.searchParams.set('state', loginState())
+  u.searchParams.set('code_challenge', pkce.challenge)
+  u.searchParams.set('code_challenge_method', 'S256')
+  window.location.assign(u.toString())
+}
+
+/**
+ * Consume the admin PKCE verifier stashed by `startAdminSignin` (callback side).
+ * Present ONLY after an admin-host silent SSO; `undefined` everywhere else, so the
+ * callback keeps the cloud-backend exchange on a tenant host. One-shot (cleared on read).
+ */
+export function takeAdminPkceVerifier(): string | undefined {
+  try {
+    const v = window.sessionStorage.getItem(ADMIN_PKCE_KEY)
+    if (v) window.sessionStorage.removeItem(ADMIN_PKCE_KEY)
+    return v || undefined
+  } catch {
+    return undefined
+  }
+}
