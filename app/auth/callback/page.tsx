@@ -1,9 +1,13 @@
 'use client'
 
 /**
- * IAM OAuth callback. IAM redirects here with `?code&state`; we exchange them
- * for a backend session (`/v1/iam/signin`) and land on the dashboard. On failure we
- * surface the error and offer a retry.
+ * IAM OAuth callback. IAM redirects here with `?code&state`; we exchange them for a
+ * backend session and land on the dashboard. On an ADMIN host the code was minted for
+ * the PUBLIC `admin-console` client via PKCE, so we hand `completeSignIn` the verifier
+ * `startAdminSignin` stashed for this browser — it then redeems the code through the
+ * console's OWN BFF (`/auth/signin`, no secret). Tenant hosts carry no verifier and keep
+ * the cloud-backend `/v1/iam/signin` exchange. On failure we surface the error and offer
+ * a retry.
  */
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -13,6 +17,7 @@ import { ApiError } from '~/lib/api'
 import { Loader } from '~/components/ui/Loader'
 import { useSession } from '~/lib/auth/session'
 import { takeReturnTo } from '~/lib/auth/iam'
+import { takeAdminPkceVerifier } from '~/lib/auth/iam-login'
 
 function Callback() {
   const params = useSearchParams() ?? new URLSearchParams()
@@ -27,7 +32,9 @@ function Callback() {
       setError('Missing authorization code.')
       return
     }
-    completeSignIn(code, state)
+    // The verifier is present ONLY after an admin-host silent SSO (startAdminSignin);
+    // undefined on a tenant host, which then keeps the cloud-backend exchange.
+    completeSignIn(code, state, takeAdminPkceVerifier())
       // Land the user back where a mid-task expiry interrupted them (default home).
       .then(() => router.replace(takeReturnTo()))
       .catch((e: unknown) => setError(e instanceof ApiError ? e.message : 'Sign-in failed.'))
