@@ -14,8 +14,15 @@ import {
   getBillingBalance,
   upgradeBotPlan,
 } from "./commerceClient";
-import { kmsGet } from "@/src/features/kms/server/kmsClient";
-import type { Bot, BotLogEntry, BotInvoice, TeamPreset, BotDID, BotWallet } from "../types";
+import { listOrgSecrets } from "@/src/features/kms/server/secretsAdapter";
+import type {
+  Bot,
+  BotLogEntry,
+  BotInvoice,
+  TeamPreset,
+  BotDID,
+  BotWallet,
+} from "../types";
 
 // ---------------------------------------------------------------------------
 // Bot Router
@@ -278,15 +285,24 @@ export const botRouter = createTRPCRouter({
         botId: z.string(),
       }),
     )
-    .query(async ({ input }) => {
-      return kmsGet<{ secrets: Array<{ key: string; value: string }> }>(
-        "/api/v3/secrets/raw",
-        {
-          workspaceId: input.projectId,
-          environment: "production",
-          secretPath: `/bots/${input.botId}`,
-        },
+    .query(async ({ input, ctx }) => {
+      // Bot secrets live on the SAME unified Hanzo Cloud KMS as the KMS feature,
+      // through the SAME adapter — org-scoped, sealed. The bot is isolated by the
+      // subpath /bots/{botId} (botId is globally unique) under the caller's org,
+      // preserving per-bot isolation while dropping the legacy per-workspace
+      // dimension; the "production" env is unchanged. The unified KMS expresses
+      // this scope exactly — no capability is lost.
+      const { secrets } = await listOrgSecrets(
+        ctx.session.orgId,
+        "production",
+        `/bots/${input.botId}`,
       );
+      return {
+        secrets: secrets.map((s) => ({
+          key: s.secretKey,
+          value: s.secretValue,
+        })),
+      };
     }),
 
   // ── Team Presets (via bot gateway) ──────────────────────────────────
@@ -354,10 +370,10 @@ export const botRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      return zapCallTool<{ agentId: string; did: BotDID }>(
-        "agent.did.create",
-        { agentId: input.agentId, method: input.method },
-      );
+      return zapCallTool<{ agentId: string; did: BotDID }>("agent.did.create", {
+        agentId: input.agentId,
+        method: input.method,
+      });
     }),
 
   getAgentWallet: protectedProjectProcedure
@@ -374,9 +390,7 @@ export const botRouter = createTRPCRouter({
       z.object({
         projectId: z.string(),
         agentId: z.string(),
-        chain: z
-          .enum(["lux", "hanzo", "zoo", "pars"])
-          .default("hanzo"),
+        chain: z.enum(["lux", "hanzo", "zoo", "pars"]).default("hanzo"),
       }),
     )
     .mutation(async ({ input }) => {
