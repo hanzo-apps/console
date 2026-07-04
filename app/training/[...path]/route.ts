@@ -4,15 +4,24 @@
  *
  * The console's Training page calls its OWN origin (`/training/...`) with just the
  * first-party session cookie; this server handler resolves the signed-in user from
- * that cookie and forwards to the cloud backend's `/v1/...` surface, passing the
- * cookie through (the proven `get-account` server-to-server pattern in
- * lib/server/identity.ts) plus the active `X-Org-Id`. Training is a TENANT action —
- * any signed-in org user may run it — so this is user-scoped (resolveUser), NOT the
- * control-plane admin gate the `/paas` proxy uses. The cloud backend scopes by org
- * (GetEffectiveOrg / the X-Org-Id the plain-REST train sub-service requires), so a
- * caller can only ever touch their own org's jobs. `POST /v1/train/jobs` is
- * billing-gated by the live ResourceMeter and returns 402 on an unfunded org — that
- * status flows straight back so the UI can surface it honestly.
+ * that cookie, mints a SHORT-LIVED, user-bound IAM Bearer (`adminBearer` — the ONE
+ * per-user cache shared with the `/cloud` bearer proxy), and forwards to the cloud
+ * backend's `/v1/...` surface with `Authorization: Bearer <token>` + the active
+ * `X-Org-Id`. Training is a TENANT action — any signed-in org user may run it — so
+ * this is user-scoped (resolveUser), NOT the control-plane admin gate the `/paas`
+ * proxy uses. The cloud backend resolves the org from the token's `owner` claim (and
+ * the X-Org-Id the plain-REST train sub-service reads), so a caller can only ever
+ * touch their own org's jobs. `POST /v1/train/jobs` is billing-gated by the live
+ * ResourceMeter and returns 402 on an unfunded org — that status flows straight back
+ * so the UI can surface it honestly.
+ *
+ * Why a Bearer and NOT the cookie (the fix for the "Not enabled" 403): cloud-api's
+ * `/v1/train/*` authorizes on a VALIDATED JWT principal and returns 403 "no validated
+ * principal" for a cookie-only call — the raw casibase session cookie is NOT a
+ * principal it accepts (only the sanitizer's cookie-token names or a Bearer). Minting
+ * the same user-bound token the `/cloud` proxy uses is the ONE way a signed-in tenant
+ * reaches the train surface; the cookie is deliberately dropped upstream (it can't
+ * authenticate, and a cookie + JWT together risks the public-gateway 431).
  *
  * Least privilege: only the explicit ML/training sub-paths are forwarded; anything
  * else 404s, so this is not a general backend tunnel. No secret ever reaches the
@@ -21,7 +30,7 @@
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { resolveUser } from '~/lib/server/identity'
+import { resolveUser, adminBearer } from '~/lib/server/identity'
 import { orgFor } from '~/lib/server/admin-policy'
 import { csrfRefusal } from '~/lib/server/bearer-proxy'
 import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
@@ -29,6 +38,7 @@ import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 export const runtime = 'nodejs'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
+const msgOf = (e: unknown) => (e instanceof Error ? e.message : String(e))
 /** Cloud `/v1` backend (hanzoai/ai) — same target lib/server/identity.ts resolves. */
 const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud.hanzo.svc.cluster.local:8000')
 
@@ -71,16 +81,34 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     )
   }
 
-  const cookie = req.headers.get('cookie') ?? ''
+  // Mint a short-lived, user-bound Bearer (the SAME per-user cache the `/cloud`
+  // proxy uses). cloud-api's `/v1/train/*` 403s a cookie-only call ("no validated
+  // principal"); a Bearer is the one credential it accepts. Fail CLOSED with 502 if
+  // the token can't be minted — never fall through to an unauthenticated forward.
+  let bearer: string
+  try {
+    bearer = await adminBearer(user)
+  } catch (e) {
+    // Redact — the exception carries the internal IAM host/port. Log server-side only.
+    console.error('training-proxy: could not mint user bearer:', msgOf(e))
+    return NextResponse.json(
+      { status: 'error', msg: 'Could not authorize the request.' },
+      { status: 502 },
+    )
+  }
+
   const url = `${CLOUD_API_URL}/v1/${rel}${req.nextUrl.search}`
   const headers: Record<string, string> = {
-    cookie,
+    Authorization: `Bearer ${bearer}`,
     Accept: 'application/json',
     'Content-Type': 'application/json',
     // Org is SERVER-RESOLVED, not the raw browser header: a global admin's switched
     // org (?/X-Org-Id) is honored, a non-global caller is PINNED to their own — so a
     // brand admin can't drive another tenant's training jobs even if the backend
-    // trusted the forwarded header. Matches the /paas + /admin/kms orgFor pin.
+    // trusted the forwarded header. For a non-global caller this equals the token
+    // owner (the Bearer's own claim), so header and token agree. Matches the /paas +
+    // /admin/kms orgFor pin. The raw session cookie is NOT forwarded (cloud-api can't
+    // validate it as a principal, and cookie + JWT together risks the gateway 431).
     'X-Org-Id': orgFor({ isGlobalAdmin: user.isGlobalAdmin, orgScope: user.owner }, req.headers.get('X-Org-Id')),
   }
   const projectId = req.headers.get('X-Project-Id')
