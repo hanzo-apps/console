@@ -45,6 +45,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // call, so it routes through /cloud exactly like prompts/agents — the single `crm`
   // head admits every sub-path (summary, the three collections, their :id detail).
   'crm',
+  // Tracker (cloud clients/tracker): /v1/tracker/projects[/:key[/issues[/:num]]].
+  // Native per-org issue tracker on Base/SQLite (projects + issues, rows grouped by
+  // status). The handler resolves the org from the Bearer owner (X-Org-Id) and 403s a
+  // cookie-only call, so it routes through /cloud exactly like crm/agents — the single
+  // `tracker` head admits every sub-path (projects, a project's issues, their :num detail).
+  'tracker',
   // Integrations (cloud clients/integrations): /v1/integrations[/:provider[/connect|
   // /disconnect]]. The generic, provider-agnostic OAuth connector framework (Slack =
   // reference impl, GitHub = registered seam). connect/list/disconnect resolve the org
