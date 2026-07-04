@@ -11,6 +11,7 @@ import {
   shortDay,
   capRows,
   COST_ROW_CAP,
+  tileView,
 } from './logic'
 
 /**
@@ -203,5 +204,27 @@ describe('dailySpend + shortDay', () => {
   it('shortDay renders M/D', () => {
     expect(shortDay('2026-06-05')).toBe('6/5')
     expect(shortDay('bogus')).toBe('bogus')
+  })
+})
+
+describe('tileView — bounded loading (no infinite spinner through a backend blip)', () => {
+  it('shows the spinner ONLY while loading within the timeout budget', () => {
+    expect(tileView('idle', false)).toBe('pending')
+    expect(tileView('loading', false)).toBe('pending')
+  })
+
+  it('degrades to the fallback on a fetch error (a 502 during a deploy roll)', () => {
+    expect(tileView('error', false)).toBe('failed')
+  })
+
+  it('degrades to the fallback when a load outlives its timeout (the hang case)', () => {
+    // Still "loading" but the budget elapsed → the tile stops spinning and shows "—".
+    expect(tileView('loading', true)).toBe('failed')
+    expect(tileView('idle', true)).toBe('failed')
+  })
+
+  it('a value always wins — even if it lands after the timeout', () => {
+    expect(tileView('ready', false)).toBe('ready')
+    expect(tileView('ready', true)).toBe('ready')
   })
 })
