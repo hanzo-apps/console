@@ -789,6 +789,26 @@ export const catalog: CatalogEntry[] = [
     href: 'https://auto.hanzo.ai',
   },
   {
+    // Hanzo Automations — the NATIVE cloud Connectors + Automations subsystem
+    // (hanzoai/cloud clients/automations, /v1/automations; HIP-0106 / task #51):
+    // an org's flows run durably on the shared hanzoai/tasks engine over the
+    // go:embed'd 700+ connector catalog, credentials KMS-sealed per org. The
+    // reused auto web/ flow builder is served under the automations path;
+    // hanzo-scoped so the URL never leaks onto a Lux/Zoo console.
+    id: 'automations',
+    label: 'Automations',
+    icon: Workflow,
+    description: 'Build and run automation flows — 700+ connectors on the native /v1/automations engine.',
+    gcp: 'Application Integration',
+    category: 'AI',
+    status: 'enabled',
+    brands: ['hanzo'],
+    repo: 'hanzoai/cloud',
+    docs: `${DOCS}/automations`,
+    kind: 'external',
+    href: 'https://auto.hanzo.ai/automations',
+  },
+  {
     id: 'inference',
     label: 'Inference',
     icon: Zap,
