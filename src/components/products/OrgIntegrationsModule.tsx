@@ -235,8 +235,13 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
     )
   }
 
-  // ── Honest empty (framework returned no providers) ───────────────────────────
-  if (providers.length === 0) {
+  // Only connectors whose OAuth is configured on this deployment (available) or
+  // already connected are shown — a not-yet-configured provider never renders a
+  // dead "Not yet available" card. Nothing fabricated; real ones appear as they wire.
+  const visible = providers.filter((p) => p.available || p.connected)
+
+  // ── Honest empty (no connectable providers on this deployment) ───────────────
+  if (visible.length === 0) {
     return (
       <YStack gap="$4">
         {header}
@@ -254,7 +259,7 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
     <YStack gap="$4">
       {header}
       <XStack flexWrap="wrap" gap="$3">
-        {providers.map((p) => (
+        {visible.map((p) => (
           <ProviderCard key={p.id} p={p} busy={busyId === p.id} onConnect={onConnect} onDisconnect={onDisconnect} />
         ))}
       </XStack>
