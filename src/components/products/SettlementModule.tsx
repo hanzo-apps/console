@@ -18,15 +18,16 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet, originV1Url } from '~/lib/api/client'
+import { restGet, billingProxyV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
-/** Canonical billing DATA path (`/v1/billing/*`, nothing before /v1/); `next.config`
- *  rewrites it to the same-origin commerce proxy (service token + server-pinned org). */
-const billing = (path: string) => originV1Url(`billing/${path.replace(/^\/+/, '')}`)
+/** Per-tenant billing DATA path — the console's OWN `/billing/v1/*` proxy addressed
+ *  DIRECTLY (service token + server-pinned org), NOT a bare `/v1/billing/*` (which the
+ *  live ingress sends to the gateway-fronted cloud binary → 403). See `billingProxyV1Url`. */
+const billing = (path: string) => billingProxyV1Url(path.replace(/^\/+/, ''))
 
 /** One payout as commerce's `ListPayouts` returns it (`payoutResponse`). */
 type Payout = {
