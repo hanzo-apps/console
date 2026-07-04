@@ -37,8 +37,26 @@ const ALLOWED = new Set([
   'v1/rerank',
   'v1/audio/speech', // text-to-speech (JSON in → audio bytes out) for the Playground Audio tab
   'v1/images/generations', // text-to-image (JSON in → image url/b64 out) for the Playground Image tab
-  'v1/videos/generations', // text-to-video (JSON in → base64 MP4 out) for the Playground Video tab
+  'v1/videos/generations', // text-to-video CREATE — async: JSON in → a queued job object out (Sora-style)
 ])
+
+/**
+ * Async video poll/download sub-paths: GET `/v1/videos/{id}` and
+ * `/v1/videos/{id}/content`. Video generation is async (create returns a job id
+ * immediately; the client polls the job and then downloads the finished MP4), so
+ * the Playground must reach these two dynamic paths in addition to the exact
+ * CREATE above. The job id is an opaque `video_<uuid>`; the charset is kept
+ * conservative and the pattern is anchored to `v1/videos/`, so this stays a
+ * narrow allow-list (the create POST is still only the exact
+ * `v1/videos/generations`), never a general gateway tunnel. Method is enforced
+ * by the backend (these are GET-only there).
+ */
+const VIDEO_JOB_PATH = /^v1\/videos\/[A-Za-z0-9._-]+(?:\/content)?$/
+
+/** Whether a resolved `/v1/<...>` path is reachable through this proxy. */
+function isAllowedAiPath(p: string): boolean {
+  return ALLOWED.has(p) || VIDEO_JOB_PATH.test(p)
+}
 
 type Ctx = { params: Promise<{ path: string[] }> }
 
@@ -48,7 +66,7 @@ function handle(req: NextRequest, ctx: Ctx) {
     return forwardWithUserBearer(req, {
       target: AI_GATEWAY_URL,
       path,
-      allow: (p) => ALLOWED.has(p),
+      allow: isAllowedAiPath,
       // Forward the RAG retrieval switch when present; the store's org owner is still
       // resolved server-side from the session (the bearer), never the browser.
       extraHeaders: retrievalHeaders((h) => req.headers.get(h)),
