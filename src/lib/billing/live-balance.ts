@@ -110,6 +110,41 @@ export function spendableCents(b: CloudBalance | null): number | null {
 }
 
 /**
+ * Trial (non-cash credit) spendable cents, or null when commerce doesn't report the
+ * bucket (legacy build) — the caller then shows only the combined total. Reads the
+ * `trialBalance` alias, falling back to `creditsRemaining` (same value).
+ */
+export function trialCents(b: CloudBalance | null): number | null {
+  if (!b) return null
+  const t = b.trialBalance ?? b.creditsRemaining
+  return typeof t === 'number' ? t : null
+}
+
+/**
+ * Prepaid (real money) spendable cents, or null when the bucket is absent. Reads
+ * `prepaidAvailable`, falling back to `prepaidBalance`.
+ */
+export function prepaidCents(b: CloudBalance | null): number | null {
+  if (!b) return null
+  const p = b.prepaidAvailable ?? b.prepaidBalance
+  return typeof p === 'number' ? p : null
+}
+
+/**
+ * "$5.00 trial + $12.00 credits" — the distinct trial/prepaid split for the wallet
+ * surfaces, or null when NEITHER bucket is reported (the caller shows only the total,
+ * never a fabricated split). The two fields land together, so once one is present the
+ * other is treated as 0 rather than hiding the split.
+ */
+export function balanceSplitLabel(b: CloudBalance | null): string | null {
+  const t = trialCents(b)
+  const p = prepaidCents(b)
+  if (t === null && p === null) return null
+  const usd = (c: number): string => `$${(c / 100).toFixed(2)}`
+  return `${usd(t ?? 0)} trial + ${usd(p ?? 0)} credits`
+}
+
+/**
  * Fetch the balance through the `/billing/balance` proxy and publish it. A single
  * request is in-flight at a time; a non-forced call within `FRESH_MS` of the last
  * settle is a no-op (so mount + focus + poll collapse into one network call).
