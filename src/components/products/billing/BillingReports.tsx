@@ -15,10 +15,12 @@
  * nothing is fabricated until then.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, Search, X } from '@hanzogui/lucide-icons-2'
 
 import { fetchUsageRecords, withinRange, type UsageRecord, type RangeKey } from '~/lib/api/aimetrics'
+import { findEntry } from '~/lib/products/registry'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
@@ -44,6 +46,14 @@ type Async<T> =
   | { phase: 'ready'; data: T }
 
 export function BillingReports(_props: { params: Record<string, string> }) {
+  const router = useRouter()
+  const search = useSearchParams() ?? new URLSearchParams()
+  // `?product=<tag>` scopes the whole report to ONE product's meters — the deep-link
+  // the per-product overview's Billing quick link uses. The tag is the ledger's
+  // `metadata.product`; the label is resolved from the catalog for the filter chip.
+  const productParam = search.get('product')
+  const productLabel = productParam ? findEntry(productParam)?.label ?? productParam : null
+
   const [range, setRange] = useState<RangeKey>('30d')
   const [dim, setDim] = useState<SpendDimension>('model')
   const [query, setQuery] = useState('')
@@ -62,7 +72,14 @@ export function BillingReports(_props: { params: Record<string, string> }) {
   }, [load])
 
   const now = Date.now()
-  const records = usage.phase === 'ready' ? usage.data : []
+  const allRecords = usage.phase === 'ready' ? usage.data : []
+  // Pre-filter to the deep-linked product's own ledger rows (`metadata.product`)
+  // BEFORE any windowing/grouping, so every figure below is that product's real
+  // spend — an honest empty when the product carries no attributed spend yet.
+  const records = useMemo(
+    () => (productParam ? allRecords.filter((r) => r.product === productParam) : allRecords),
+    [allRecords, productParam],
+  )
   const windowed = useMemo(() => withinRange(records, range, now), [records, range, now])
   const dims = useMemo(() => presentDimensions(records), [records])
   // If the selected dimension isn't present, fall back to model (always present).
@@ -107,8 +124,12 @@ export function BillingReports(_props: { params: Record<string, string> }) {
   return (
     <>
       <PageHeader
-        title="Cost reports"
-        subtitle="Spend by model, provider, product, or agent over a selectable range — the same charged ledger the gateway debits. Product and agent breakdowns appear once spend is tagged with them."
+        title={productLabel ? `Cost reports · ${productLabel}` : 'Cost reports'}
+        subtitle={
+          productLabel
+            ? `Spend attributed to ${productLabel} over a selectable range — the same charged ledger the gateway debits. Empty until spend is tagged to this product.`
+            : 'Spend by model, provider, product, or agent over a selectable range — the same charged ledger the gateway debits. Product and agent breakdowns appear once spend is tagged with them.'
+        }
         actions={
           <XStack gap="$2" items="center">
             <RangeTabs value={range} onChange={setRange} />
@@ -118,6 +139,23 @@ export function BillingReports(_props: { params: Record<string, string> }) {
           </XStack>
         }
       />
+
+      {productLabel ? (
+        <XStack items="center" gap="$2" flexWrap="wrap">
+          <XStack items="center" gap="$1.5" px="$2.5" py="$1" rounded="$10" bg="$color3" borderWidth={1} borderColor="$borderColor">
+            <Text fontSize="$2" color="$color11" fontWeight="600">
+              Filtered to {productLabel}
+            </Text>
+            <Button
+              size="$1"
+              chromeless
+              icon={<X size={13} />}
+              onPress={() => router.push('/billing/reports')}
+              aria-label="Clear product filter"
+            />
+          </XStack>
+        </XStack>
+      ) : null}
 
       {usage.phase === 'error' ? (
         <BackendStateCard state={usage.error} onRetry={load} hint="endpoint · GET /v1/billing/usage" />
