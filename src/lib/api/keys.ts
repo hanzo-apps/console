@@ -1,15 +1,20 @@
 /**
- * Cloud API key client — the per-user `hk-` credential, via the unified backend's
- * same-origin `/v1/console/keys` route (the cloud console subsystem; task #41). The
- * server resolves the user from the VALIDATED principal (gateway-injected identity)
- * and mints/revokes through IAM as the confidential `hanzo-console` client; the
- * browser only ever sends its cookie. Same handler in both topologies — served
- * directly by the go:embed one-binary, and via the gateway in the split deploy.
+ * Cloud API key client — the per-user `hk-` credential, via the console's OWN
+ * same-origin `/keys` route (`app/keys/route.ts`). The server resolves the user
+ * from the first-party session cookie and mints/reads/revokes through IAM as the
+ * confidential `hanzo-console` client; the browser only ever sends its cookie.
+ *
+ * SAME-ORIGIN by construction (the fix for the money crack): the old client hit
+ * `config.cloudUrl/v1/console/keys` — a DIFFERENT origin than console.hanzo.ai — so
+ * the browser `fetch` was blocked by CORS ("Failed to fetch"), and cloud-api's own
+ * `/v1/console/keys` handler 501s on this deployment regardless. Addressing the
+ * console's own `/keys` route (which uses the working IAM `mint-user-keys` path)
+ * keeps the request same-origin and the credential entirely server-side.
  *
  * The secret is returned ONLY by `create()` (show once). `status()` reports
  * existence + the public prefix, never secret material.
  */
-import { ApiError, v1Url } from './client'
+import { ApiError } from './client'
 
 export type KeyStatus = {
   hasKey: boolean
@@ -18,10 +23,13 @@ export type KeyStatus = {
   createdAt?: string
 }
 
+/** The console's OWN same-origin key route (`<origin>/keys`); root-relative on the server. */
+const keysUrl = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/keys` : '/keys')
+
 async function keysReq<T>(method: 'GET' | 'POST' | 'DELETE'): Promise<T> {
   let res: Response
   try {
-    res = await fetch(v1Url('console/keys'), {
+    res = await fetch(keysUrl(), {
       method,
       credentials: 'include',
       headers: { Accept: 'application/json' },
