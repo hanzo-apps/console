@@ -480,7 +480,7 @@ function SidebarNav({
   collapsed: boolean
   onNavigate: () => void
 }) {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const router = useRouter()
   const { view, isPinned, toggle } = usePins()
   const { colorOf } = useProductColors()
@@ -905,7 +905,7 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
 }
 
 export function DashboardShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const router = useRouter()
   const { signOut } = useSession()
   const { get, set } = usePreferences()
