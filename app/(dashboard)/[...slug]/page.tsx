@@ -8,6 +8,7 @@ import { findEntry } from '~/lib/products/registry'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { ProductSubpageStub } from '~/components/products/ProductSubpageStub'
 import { ProductSubpageModule } from '~/components/products/subpage/ProductSubpageModule'
+import { ProductInterstitial } from '~/components/products/ProductInterstitial'
 import { AdminManagedNotice } from '~/components/products/AdminManagedNotice'
 import { ProductErrorBoundary } from '~/components/errors/ProductErrorBoundary'
 
@@ -38,6 +39,12 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const view = resolveView(slug)
 
   if (view.kind === 'notfound') notFound()
+
+  // A directly-navigated URL to an EXTERNAL product (its id, or a conventional
+  // alias like /automation → auto) — render its in-console discover page (what it
+  // is + an "Open" that launches its own domain), never a 404. The nav/launcher
+  // launch it directly; this only catches a hand-typed/bookmarked URL.
+  if (view.kind === 'external') return <ProductInterstitial id={view.entry.id} />
 
   if (!showAdmin && isAdminRoute(slug)) {
     const entry = findEntry(slug[0])
