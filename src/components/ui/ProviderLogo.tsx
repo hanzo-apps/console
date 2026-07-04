@@ -19,7 +19,7 @@
 import { Text, XStack, useTheme } from '@hanzo/gui'
 import { Server } from '@hanzogui/lucide-icons-2'
 
-import { normalizeBrand, BRANDS, providerInitials } from './brand'
+import { normalizeBrand, brandForModel, BRANDS, providerInitials } from './brand'
 import { BRAND_MARK, type BrandMark } from './brand-marks'
 
 export { providerInitials } from './brand'
@@ -111,9 +111,23 @@ function Tile({ size, bg, borderColor, children }: { size: number; bg: string; b
   )
 }
 
-export function ProviderLogo({ provider, size = 24 }: { provider: string; size?: number }) {
+export function ProviderLogo({
+  provider,
+  model,
+  size = 24,
+}: {
+  /** The provider/family/vendor NAME (a group-level tell, e.g. "OpenAI", "Anthropic"). */
+  provider: string
+  /**
+   * Optional MODEL id/name (e.g. `anthropic/claude-opus-4.6`, `qwen3.5-397b`). When
+   * given, the model identity resolves the brand FIRST — so a model served through the
+   * Hanzo gateway (tagged provider "hanzo") shows its TRUE vendor, not the house mark.
+   */
+  model?: string
+  size?: number
+}) {
   const theme = useTheme()
-  const brand = normalizeBrand(provider)
+  const brand = model && model.trim() ? brandForModel(model, provider) : normalizeBrand(provider)
 
   // Integration provider glyphs — our own inline SVG marks (no external asset). Slack
   // reads on a white tile (with a subtle border so it doesn't float on dark), GitHub
