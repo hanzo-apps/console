@@ -18,7 +18,7 @@
  * On a 404/501/401 the caller renders the shared `BackendStateCard` — never
  * fabricated spend, balance, or card data.
  */
-import { restGet, restPost, billingProxyV1Url } from './client'
+import { restGet, restPost, restDelete, billingProxyV1Url } from './client'
 import type { CloudBalance } from './wallet'
 import { normalizeUsageRecords, perModel, totalsOf } from './aimetrics'
 
@@ -82,6 +82,11 @@ export type Subscription = {
   interval?: string
   /** ISO end of the current billing period (renewal date). */
   currentPeriodEnd?: string
+  /** True when the subscription is set to cancel at the end of the current period
+   *  (a scheduled cancel; still active until `currentPeriodEnd`, then it ends). */
+  cancelAtPeriodEnd?: boolean
+  /** ISO time the subscription was canceled, if it has been (immediate cancel). */
+  canceledAt?: string
 }
 
 /**
@@ -255,8 +260,28 @@ function normalizeSubscriptions(payload: unknown): Subscription[] {
       interval: str(r.interval) ?? str(plan.interval) ?? str(objAt(price, 'recurring').interval),
       currentPeriodEnd:
         isoDate(r.currentPeriodEnd) ?? isoDate((r as Record<string, unknown>).current_period_end) ?? isoDate(r.renewsAt),
+      cancelAtPeriodEnd:
+        r.cancelAtPeriodEnd === true || (r as Record<string, unknown>).cancel_at_period_end === true,
+      canceledAt:
+        isoDate(r.canceledAt) ?? isoDate((r as Record<string, unknown>).canceled_at) ?? isoDate(r.cancelAt) ?? undefined,
     }
   })
+}
+
+/**
+ * Pull a single created/updated record out of the common single-object commerce
+ * envelopes ({paymentMethod|payment_method|method|subscription|data|<bare>}), so a
+ * mutation response normalizes whether commerce returns the record bare or wrapped.
+ * A non-object payload degrades to `{}` (the normalizer then yields honest fallbacks).
+ */
+function oneRecord(payload: unknown): Record<string, unknown> {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return {}
+  const p = payload as Record<string, unknown>
+  for (const k of ['paymentMethod', 'payment_method', 'method', 'subscription', 'data']) {
+    const v = p[k]
+    if (v && typeof v === 'object' && !Array.isArray(v)) return v as Record<string, unknown>
+  }
+  return p
 }
 
 /**
@@ -341,13 +366,60 @@ export const BillingApi = {
   /** The tenant's invoice history (most recent first, as commerce returns it). */
   invoices: (): Promise<Invoice[]> => restGet<unknown>(billingProxyV1Url('invoices')).then(normalizeInvoices),
 
-  /** The org's subscriptions (plan, status, renewal) — read-only. */
+  /** The org's subscriptions (plan, status, renewal, cancel state). */
   subscriptions: (): Promise<Subscription[]> =>
     restGet<unknown>(billingProxyV1Url('subscriptions')).then(normalizeSubscriptions),
 
-  /** The org's saved payment methods (masked brand + last4 only) — read-only. */
+  /**
+   * Cancel a subscription (`POST /v1/billing/subscriptions/:id/cancel`). `atPeriodEnd`
+   * true schedules the cancel for the end of the current period (keeps access until
+   * `currentPeriodEnd`); false cancels immediately. The `:id` comes from the caller's
+   * OWN subscriptions list (already scoped by the proxy), and commerce re-authorizes
+   * the id against the caller's server-pinned subject (404s a foreign id). Returns the
+   * updated subscription so the row reflects the new cancel state.
+   */
+  cancelSubscription: (id: string, atPeriodEnd: boolean): Promise<Subscription> =>
+    restPost<unknown>(billingProxyV1Url(`subscriptions/${encodeURIComponent(id)}/cancel`), {
+      atPeriodEnd,
+    }).then((r) => normalizeSubscriptions([oneRecord(r)])[0]),
+
+  /**
+   * Reactivate a subscription scheduled to cancel at period end
+   * (`POST /v1/billing/subscriptions/:id/reactivate`) — clears `cancelAtPeriodEnd`
+   * before the period closes. Same server-side subject authorization as cancel.
+   */
+  reactivateSubscription: (id: string): Promise<Subscription> =>
+    restPost<unknown>(billingProxyV1Url(`subscriptions/${encodeURIComponent(id)}/reactivate`)).then((r) =>
+      normalizeSubscriptions([oneRecord(r)])[0],
+    ),
+
+  /** The org's saved payment methods (masked brand + last4 only). */
   paymentMethods: (): Promise<PaymentMethod[]> =>
     restGet<unknown>(billingProxyV1Url('payment-methods')).then(normalizePaymentMethods),
+
+  /**
+   * Save a card as a payment method (`POST /v1/billing/payment-methods`) from a
+   * single-use Square nonce. The RAW PAN NEVER touches our code — the browser
+   * tokenizes the card IN Square's iframe and sends ONLY the opaque `token` (nonce)
+   * + the method `type`. The proxy pins the billing subject server-side
+   * (`scopedBillingBody`), so the browser needn't know its subject and cannot save a
+   * method against another tenant. Returns the created (masked) method.
+   */
+  createPaymentMethod: (input: { type?: string; token: string }): Promise<PaymentMethod> =>
+    restPost<unknown>(billingProxyV1Url('payment-methods'), {
+      type: input.type ?? 'card',
+      token: input.token,
+    }).then((r) => normalizePaymentMethods([oneRecord(r)])[0]),
+
+  /**
+   * Detach a saved payment method (`DELETE /v1/billing/payment-methods/:id`). The
+   * proxy authenticates the session, injects the service token, and stamps the
+   * caller's OWN subject + `X-Org-Id`; commerce authorizes the delete against that
+   * subject and 404s a method the caller doesn't own (defense in depth) — so a
+   * browser can never detach another tenant's card by id.
+   */
+  removePaymentMethod: (id: string): Promise<void> =>
+    restDelete(billingProxyV1Url(`payment-methods/${encodeURIComponent(id)}`)),
 
   /**
    * The org's spend alerts / budgets (`GET /v1/billing/spend-alerts`). The proxy

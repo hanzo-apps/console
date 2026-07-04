@@ -2420,3 +2420,67 @@ search}` all 403 while their `/cloud/v1/*` twins 200.
   logos) → **v8.4.93**. Live re-verify as Dave (the ~15 rewired modules show real
   per-org data / honest-empty, every fixed Docs button 200s, saved chats open,
   Crawl tabs stay under /crawl) is the post-deploy gate.
+
+## Integration release — @hanzo/ui design-system polish (#58) + billing surface completed (#29) (v8.4.100)
+
+Integration-lead pass over the open feature branches: only the two GENUINELY-NEW,
+canonical branches were merged onto origin/main (v8.4.99). Every other listed
+branch was reviewed and SKIPPED as already-superseded by main's own advancement
+(verified by merge-tree/`git cherry`/file presence, never a guess) — merging them
+would have regressed main or introduced a second way to do a thing already done:
+`native-o11y-ui` (net = package.json only — the Fleet/ProductObservability o11y is
+already on main), `o11y-app-logs-live`+`o11y-transport-nav-fixes` (main has the
+canonical v8.4.62/74/85 SigNoz logs + the Observations/Users nav entries),
+`admin-cogs` (vendor COGS+margin already on the business board via `finance.ts`;
+its `/costs` proxy is a divergent second mechanism, and its living/adapters are
+−600 lines behind main), `integrations-page` (main already ships the canonical
+customer `OrgIntegrationsModule` Connect/authorize/disconnect page + `integrations.ts`),
+`finance-vendor-donut` (−435 lines behind main's finance adapters), `product-landings`
+(re-adds an `app/railway-demo` page main intentionally deleted; add/add on
+`landing/logic` main already owns), `automations-tile` (merge-tree ≡ main), and
+`mobile-fixes` (its PageHeader subtitle-wrap is byte-identical to what main already
+ships). `backup/*` untouched per policy.
+
+- **#58 @hanzo/ui design-system polish** (`feat/console-ui-58`, clean merge): org-brand
+  sidebar header + Hanzo-H fallback (`DashboardShell`/`BrandLogo`), Material
+  elevation/paper tokens (`globals.css`), a DRY alphabetical + selected-first product
+  sort (`src/lib/products/order.ts` + tests), the mobile nav drawer opening LEFT
+  (matching the top-left hamburger) and auto-closing on a product tap, and an
+  opacity-only `hz-menu-in` entrance for floating-ui anchored menus (SelectMenu/ComboBox)
+  so a transform-animation never detaches the menu from its trigger (transform-based
+  `hz-pop-in` stays for centered Dialog surfaces). @hanzo/gui v5 shorthands only; no
+  Svelte/Radix. Includes the recovered in-progress edits from the dev agent's cut-off
+  session, committed cleanly.
+- **#29 Billing surface completed** (`feat/billing-surface-complete`) — the Billing
+  Center's three external-portal punts are now IN-CONSOLE over the ONE per-tenant
+  `/billing/v1/*` commerce proxy; no new backend, PCI posture unchanged, tenant scoping
+  server-authoritative:
+  - **Payment Methods** (`PaymentMethodsModule`) — in-console ADD (Square's own card
+    iframe tokenizes in-browser; only the opaque single-use nonce is POSTed — the raw
+    PAN never touches our code/servers/logs, SAQ-A, with a `billing.test.ts` no-PAN-leak
+    assertion) + per-row REMOVE (`DELETE /v1/billing/payment-methods/:id`). Set-default
+    was fail-secure-skipped (the endpoint bakes the customer id in the path — un-scopeable
+    from the browser).
+  - **Subscriptions** (`SubscriptionsModule`) — in-console Cancel (explicit "at period
+    end" vs "now") / Reactivate; the `:id` always from the caller's own scoped list,
+    commerce re-authorizes against the server-pinned subject.
+  - **Invoice PDF** — download builds the URL from the invoice `id`
+    (`billingProxyV1Url('invoices/'+id+'/pdf')`), opened same-origin (session-scoped).
+  - **Hardened proxy** — extracted into the tested `src/lib/server/billing-proxy.ts`
+    (`forwardBilling`, the bearer-proxy pattern): GET+POST+DELETE, a non-JSON upstream
+    (application/pdf) passed through as RAW BYTES (Content-Type/-Disposition forwarded),
+    empty body → null (204-safe). All security intact: session-auth 401, cross-origin
+    CSRF refusal, path-segment validation, service-Bearer injection, `X-Org-Id` from the
+    validated session, `scopedBillingSearch` pinning the full billing-subject key set on
+    every verb.
+  - **DRY** — the ~40-line Square card mount+tokenize is ONE reusable `useSquareCard`
+    hook (`src/lib/billing/use-square-card.ts`) shared by BillingCredits (Add credits) +
+    PaymentMethods (Add a card).
+- Verification (this integration, in an isolated worktree off origin/main v8.4.99):
+  `tsc --noEmit` clean; `vitest` **all green** (132 → 133+ files, ~1697+ tests after
+  console-ui-58, billing suites fold in); merged with only an append-only LLM.md doc
+  conflict (resolved: main's superset kept, this note appended). Bumped v8.4.99 →
+  **v8.4.100** (patch — never major). CI builds the `console` image at
+  `:v<package.json version>`; live re-verify (sign-in + key surfaces render) is the
+  post-deploy gate. The universe CR bump is owned by the universe agent (not touched
+  here to avoid a race) — the new console semver is **v8.4.100**.
