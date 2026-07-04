@@ -104,6 +104,19 @@ export const PlatformAppsApi = {
   listApps: (project: string): Promise<PlatformApp[]> =>
     restGet<PlatformApp[]>(cloudProxyV1Url(`platform/projects/${seg(project)}/apps`)).then((r) => r ?? []),
 
+  /**
+   * Every app the caller's org owns, flattened across its projects (newest first),
+   * each tagged with its `projectSlug`. The org-wide app inventory the PaaS module
+   * and the unified resource overview both render — one read, one place.
+   */
+  listAllApps: async (): Promise<PlatformApp[]> => {
+    const projects = await PlatformAppsApi.listProjects()
+    const perProject = await Promise.all(
+      projects.map(async (p) => (await PlatformAppsApi.listApps(p.slug)).map((a) => ({ ...a, projectSlug: p.slug }))),
+    )
+    return perProject.flat().sort((a, b) => b.updatedAt - a.updatedAt)
+  },
+
   getApp: (project: string, app: string): Promise<PlatformApp> =>
     restGet<PlatformApp>(cloudProxyV1Url(appBase(project, app))) as Promise<PlatformApp>,
 

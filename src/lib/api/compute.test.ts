@@ -128,6 +128,21 @@ describe('normalizeGpu — defensive (string/number, alt field names)', () => {
     expect(g.utilization).toBeUndefined()
     expect(g.temperature).toBeUndefined()
   })
+  it('passes provider through so cloud vs BYO can be badged', () => {
+    expect(normalizeGpu({ id: 'a', provider: 'doks' }).provider).toBe('doks')
+    expect(normalizeGpu({ id: 'b', provider: 'byo' }).provider).toBe('byo')
+    expect(normalizeGpu({ id: 'c' }).provider).toBeUndefined()
+  })
+  it('tolerates a BYO GPU’s string memory (GB10 128GB) → numeric VRAM', () => {
+    // On-prem/BYO agents report memory as a unit-suffixed string, not memoryTotalGb.
+    expect(normalizeGpu({ id: 'spark', model: 'GB10', provider: 'byo', memory: '128GB' }).memoryTotalGb).toBe(128)
+    expect(normalizeGpu({ id: 'b', memory: '80 GiB' }).memoryTotalGb).toBe(80)
+    expect(normalizeGpu({ id: 'c', memory: '131072MB' }).memoryTotalGb).toBe(128)
+    // The numeric DOKS field still wins and is untouched.
+    expect(normalizeGpu({ id: 'd', memoryTotalGb: 80, memory: 'garbage' }).memoryTotalGb).toBe(80)
+    // Unparseable memory → undefined (renders —, never a fabricated 0).
+    expect(normalizeGpu({ id: 'e', memory: 'n/a' }).memoryTotalGb).toBeUndefined()
+  })
 })
 
 describe('normalizeLedger — cloud_usage rows → total + daily + breakdown', () => {

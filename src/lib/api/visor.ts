@@ -36,6 +36,12 @@ export type VisorMachine = {
   region?: string
   /** Machine size / type slug (e.g. `s-2vcpu-4gb`, `gpu-h100x1-80gb`). */
   type?: string
+  /**
+   * Where this machine lives, as the unioned inventory reports it:
+   * `visor`/`doks` (Hanzo Cloud) or `byo` (a bring-your-own fleet worker /
+   * on-prem node). Absent on older responses; drives the cloud-vs-BYO badge.
+   */
+  provider?: string
   /** Lifecycle string (e.g. `active`, `running`, `provisioning`, `off`). */
   status?: string
   vcpu?: number
@@ -75,6 +81,7 @@ export function normalizeMachine(raw: unknown, i = 0): VisorMachine {
     name: str(r.name) ?? str(r.hostname) ?? str(r.label) ?? id,
     region: str(r.region) ?? str(r.zone) ?? str(r.datacenter) ?? str(r.location),
     type: str(r.type) ?? str(r.size) ?? str(r.machineType) ?? str(r.slug) ?? str(r.plan),
+    provider: str(r.provider) ?? str(r.origin) ?? str(r.source),
     status: str(r.status) ?? str(r.state) ?? str(r.phase),
     vcpu: num(r.vcpu) ?? num(r.vcpus) ?? num(r.cpu) ?? num(r.cores),
     memGb: num(r.memGb) ?? num(r.memoryGb) ?? num(r.ramGb) ?? num(r.memory),
