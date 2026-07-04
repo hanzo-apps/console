@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { normalizeResourceList } from './provisioning'
+import { ProvisioningApi, normalizeResourceList, type ResourceKind } from './provisioning'
 
 /**
  * The provisioning list must ALWAYS reduce to a `Resource[]`. A managed backend
@@ -43,5 +43,51 @@ describe('normalizeResourceList', () => {
 
   it('drops non-object elements defensively', () => {
     expect(normalizeResourceList([row, null, 'x', 3, row])).toEqual([row, row])
+  })
+})
+
+/**
+ * Transport contract — every provisioning call MUST address the console's OWN-origin
+ * `/cloud` user-bearer proxy (`<origin>/cloud/v1/<kind>`), never a bare `/v1/<kind>`.
+ * A bare `/v1/*` is routed straight to hanzoai/gateway on the live ingress (no minted
+ * Bearer) and 403s "X-Org-Id required", surfacing as a FALSE "Not enabled for your
+ * account". These pin the fix so the class-bug can never silently return.
+ */
+describe('ProvisioningApi transport → /cloud proxy', () => {
+  const ORIGIN = 'https://console.hanzo.ai'
+  let lastUrl = ''
+
+  beforeEach(() => {
+    lastUrl = ''
+    ;(globalThis as { window?: unknown }).window = {
+      location: { origin: ORIGIN, hostname: 'console.hanzo.ai' },
+      localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    }
+    vi.stubGlobal('fetch', (url: string) => {
+      lastUrl = String(url)
+      return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'content-type': 'application/json' } }))
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (globalThis as { window?: unknown }).window
+  })
+
+  const kinds: ResourceKind[] = ['sql', 'vector', 'datastore', 'kv', 'search', 's3', 'docdb']
+
+  it.each(kinds)('list(%s) hits <origin>/cloud/v1/<kind> (never a bare /v1)', async (kind) => {
+    await ProvisioningApi.list(kind)
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/${kind}`)
+    expect(lastUrl).not.toMatch(new RegExp(`^${ORIGIN}/v1/`))
+  })
+
+  it('get/create/remove address the same /cloud proxy', async () => {
+    await ProvisioningApi.get('vector', 'gooo')
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/vector/gooo`)
+    await ProvisioningApi.create('vector', 'gooo')
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/vector`)
+    await ProvisioningApi.remove('vector', 'gooo')
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/vector/gooo`)
   })
 })
