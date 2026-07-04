@@ -2126,3 +2126,50 @@ result was discarded → 502 error card → no model preselected → Run disable
   build` ✓ 14/14. Authenticated Playground screenshot is post-deploy (the `(dashboard)`
   group is behind AuthGate); the two fixes are proven by the logic tests (repointed/
   resilient endpoint + promoted-Zen default). Rebased on origin/main (v8.4.72) → **v8.4.73**.
+
+## admin.<brand> /v1/admin/* 403 → audience-scoped operator bearer (closes INFO-2)
+
+THE LAST admin-cockpit gate. The operator logs in on admin.hanzo.ai (owner=admin,
+isGlobalAdmin, cockpit renders), but EVERY `/v1/admin/*` returned 403 "global admin
+required" from cloud. ROOT CAUSE (traced through cloud + IAM source, NOT the initial
+guess): the admin-aggregate proxy forwards a user bearer minted by `issue-user-token`
+for the resolved operator `admin/z`. That JWT's `owner` claim IS `admin` and `isAdmin`
+IS true (both come from the TARGET user, `getUserWithoutThirdIdp`/`getShortUser` →
+`Owner: user.Owner`), so the initial "owner=hanzo" diagnosis was a misattribution. The
+real defect is the **audience**: `issue-user-token` defaults the JWT `aud` to the
+target user's OWN app (`tokenAudience` → `application.ClientId`), and the reserved-admin
+operator's app is `admin-console` — which is NOT in cloud's audience allowlist
+(`defaultJWTAudiences` = hanzo-app/console/chat/id/cloud/cowork/https://api.hanzo.ai +
+`BrandAudiences` = `<brand>-cloud`). cloud's `SanitizeIdentity` therefore REJECTS the
+token entirely (`validatedPrincipal` → nil), the request resolves anonymous, no
+`X-User-IsAdmin`, and `guard()` 403s. Tenant tokens never hit this because a tenant
+user's home app (`hanzo-cloud`) already IS in the allowlist.
+
+FIX — an audience-scoped bearer (the RFC 8707 `resource` `issue-user-token` already
+accepts), host-aware, scoped ONLY to the admin path:
+- `config/index.ts` `cloudAudience(host)` — the brand cloud audience `<brand>-cloud`,
+  read off `BRANDS[brand].iamApp` (the ONE source). Correct EVEN on an admin host,
+  where the LOGIN app switches to `admin-console` but the RESOURCE the forwarded bearer
+  is presented to is still the brand cloud API. cloud's `BrandAudiences` bakes in every
+  `<brand>-cloud` un-removably, so this audience is always trusted.
+- `identity.ts` `issueUserToken(user, audience?)` passes `aud` when set; `adminBearer
+  (user, audience?)` caches per `(user, audience)` (a token minted for one resource
+  server's audience must never be handed to a proxy needing another).
+- `bearer-proxy.ts` `BearerProxyOpts.audience?` → `adminBearer(user, opts.audience)`.
+- `app/admin/aggregate/[...path]/route.ts` passes `audience: cloudAudience(host)`.
+So the operator's forwarded `/v1/admin/*` bearer now carries `aud=<brand>-cloud`
+(accepted) + `owner=admin` + `isAdmin=true` → cloud sets `X-User-IsAdmin=true` → 200.
+The tenant proxies (`/cloud`, `/ai`, `/vm`, …) omit `audience`, so they mint the
+default (target-app) audience exactly as before — tenant owner/isAdmin/confidential
+mint client (`hanzo-console`) all unchanged; no security change. This is the
+"INFO-2 audience-scoped bearer" deploy-config follow-up flagged since v8.4.34, now a
+code fix (no cloud change — the backend gate `global-admin = owner==adminOrg &&
+isAdmin` is correct and untouched).
+
+- Verification: `tsc --noEmit` clean; `vitest` **1603/1603** (128 files; +3 config
+  `cloudAudience` incl. the admin-host-still-cloud-audience case, +3 identity
+  issueUserToken/adminBearer aud + per-audience cache, +2 bearer-proxy admin-aggregate
+  audience plumbing / tenant-unchanged); `next build` ✓ (`/admin/aggregate/[...path]`
+  registered). Live 200 on `/v1/admin/overview` with a minted admin bearer is the
+  post-deploy gate (the confidential mint creds live in the cluster secret, not the
+  dev host — devs don't touch k8s directly). Branched off origin/main (v8.4.80).

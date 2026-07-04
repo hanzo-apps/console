@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { resolveConfig, isAdminHost, isBillingOnlyHost, brandFromHost } from './index'
+import { resolveConfig, isAdminHost, isBillingOnlyHost, brandFromHost, cloudAudience } from './index'
 
 /**
  * Per-host admin login client (admin.hanzo.ai global-admin cutover).
@@ -152,5 +152,38 @@ describe('billing-only shell host', () => {
     expect(resolveConfig('billing.lux.cloud').brand).toBe('lux')
     expect(resolveConfig('billing.zoo.cloud').billingOnly).toBe(true)
     expect(resolveConfig('billing.zoo.cloud').brand).toBe('zoo')
+  })
+})
+
+/**
+ * cloudAudience — the RFC 8707 resource a forwarded user bearer is scoped to so the
+ * cloud API accepts it. It is the brand cloud client id (`<brand>-cloud`), read off
+ * the brand's own `iamApp`, host-aware, and — critically — the SAME cloud audience on
+ * an admin host, where the LOGIN app switches to admin-console but the resource the
+ * token is presented to is still the brand cloud API. admin-console is NOT in cloud's
+ * allowlist, which is exactly why the admin-aggregate must scope to this value.
+ */
+describe('cloudAudience — the cloud API resource for the forwarded bearer', () => {
+  it('is the brand cloud client id (<brand>-cloud), resolved from the host', () => {
+    expect(cloudAudience('cloud.hanzo.ai')).toBe('hanzo-cloud')
+    expect(cloudAudience('console.hanzo.ai')).toBe('hanzo-cloud')
+    expect(cloudAudience('cloud.lux.network')).toBe('lux-cloud')
+    expect(cloudAudience('cloud.zoo.cloud')).toBe('zoo-cloud')
+    expect(cloudAudience('cloud.pars.network')).toBe('pars-cloud')
+  })
+
+  it('is the brand cloud audience EVEN on an admin host (never the admin-console login app)', () => {
+    // The admin host logs in as admin-console (org admin)…
+    expect(resolveConfig('admin.hanzo.ai').iamClientId).toBe('admin-console')
+    // …but a bearer forwarded to the cloud API must carry the cloud audience cloud
+    // trusts. admin-console is NOT in cloud's allowlist — this was the /v1/admin/* 403.
+    expect(cloudAudience('admin.hanzo.ai')).toBe('hanzo-cloud')
+    expect(cloudAudience('admin.lux.network')).toBe('lux-cloud')
+    expect(cloudAudience('admin.zoo.cloud')).toBe('zoo-cloud')
+  })
+
+  it('defaults to the hanzo cloud audience for an unknown host', () => {
+    expect(cloudAudience(undefined)).toBe('hanzo-cloud')
+    expect(cloudAudience('')).toBe('hanzo-cloud')
   })
 })
