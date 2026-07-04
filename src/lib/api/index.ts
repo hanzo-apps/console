@@ -33,7 +33,6 @@ export {
   type CatalogModel,
   type ModelPricing,
 } from './models-catalog'
-export { ApplicationApi } from './applications'
 export { StoreApi } from './stores'
 export {
   EmbeddingsApi,
