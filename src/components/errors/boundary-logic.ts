@@ -24,6 +24,15 @@
  */
 
 /**
+ * The ONE sessionStorage key the chunk-skew recovery reload is bounded by. Every
+ * React recovery site — `global-error`, the dashboard segment boundary, and
+ * `ProductErrorBoundary` — records its last reload here, so a skew that trips
+ * several boundaries at once reloads ONCE and never loops. One key, one guard,
+ * shared across every recovery site (DRY).
+ */
+export const CHUNK_RELOAD_AT_KEY = 'hz.console.chunkReloadAt'
+
+/**
  * True for a webpack/Next dynamic chunk (JS or CSS) load failure — including the
  * stale-deploy case where a 404'd chunk URL falls through to the SPA and the
  * browser parses HTML as JS ("Unexpected token '<'" / module-script failed). In a
