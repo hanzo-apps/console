@@ -53,34 +53,37 @@ afterEach(() => {
   delete (globalThis as { window?: unknown }).window
 })
 
-// Most refactored clients hit a CANONICAL `/v1/<resource>` (nothing before /v1/): the
-// console host's ingress routes `/v1/*` to the gateway (cloud-api), which SERVES those
-// heads on the session/header path (the AI heads validate the session), so the browser
-// URL stays prefix-free.
-//
-// The EXCEPTIONS are heads the bare `/v1/*` → gateway path can NOT satisfy: the VISOR
-// catalog (regions/sizes/gpus — cloud-api serves no visor catalog route) and the
-// bearer-scoped compute + s3 + framework + PROVISIONING (sql/vector/kv/…) surfaces
-// (cloud-api needs an org from a minted BEARER, which the gateway strips from the
-// cookie-only path → 403 "X-Org-Id required"). Those clients address their `/vm` or
-// `/cloud` user-bearer proxy EXPLICITLY — see the dedicated block below. This is the
-// SAME ingress reality that the framework/s3 fix (v8.4.70) documented.
-describe('canonical /v1 client paths (no service prefix before /v1/)', () => {
-  it('ComputeApi.gpus (inventory) -> /v1/gpus', async () => {
+// The bearer-scoped CLOUD heads — gpus / clusters (compute), functions, platform
+// (paas) — are the compute analog of the s3/framework/provisioning exception: a bare
+// `/v1/<head>` from the browser hits the console ingress, which routes `/v1/*` to the
+// gateway (cloud-api) BYPASSING Next, so the next.config `/v1 → /cloud` rewrite never
+// runs and cloud-api 403s "X-Org-Id required" (the gateway strips the client header and
+// has no minted bearer to inject the org). VERIFIED LIVE (2026-07): `/v1/gpus`,
+// `/v1/clusters`, `/v1/functions`, `/v1/platform/projects` all return 403 while their
+// `/cloud/v1/*` twins return 200. So these clients MUST address the `/cloud` user-bearer
+// proxy EXPLICITLY (`cloudProxyV1Url`) — same class + fix as s3/framework (v8.4.70) and
+// machines. Do NOT "canonicalize" them back to a bare `/v1/` — that 403s a signed-in
+// customer and shows a FALSE "Not enabled for your account".
+describe('cloud bearer-scoped heads via /cloud (ingress does not serve their bare /v1 heads)', () => {
+  it('ComputeApi.gpus (inventory) -> /cloud/v1/gpus (NOT bare /v1/gpus → gateway 403)', async () => {
     stub({ gpus: [] })
     await ComputeApi.gpus()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/gpus`)
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/gpus`)
   })
-  it('PlatformApi.listClusters -> /v1/clusters', async () => {
+  it('PlatformApi.listClusters -> /cloud/v1/clusters (NOT bare /v1/clusters)', async () => {
     stub({ clusters: [] })
     await PlatformApi.listClusters()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/clusters`)
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/clusters`)
   })
-
-  it('a prefix-free client never emits a /<svc>/v1/ path', async () => {
-    stub({ gpus: [] })
-    await ComputeApi.gpus()
-    expect(lastUrl).not.toMatch(/\/(cloud|vm|ai|billing|org)\/v1\//)
+  it('FunctionsApi.list -> /cloud/v1/functions (NOT bare /v1/functions)', async () => {
+    stub({ functions: [] })
+    await FunctionsApi.list()
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/functions`)
+  })
+  it('PaasApi.listProjects -> /cloud/v1/platform/projects (NOT bare /v1/platform)', async () => {
+    stub({ projects: [] })
+    await PaasApi.listProjects()
+    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/platform/projects`)
   })
 })
 
@@ -113,13 +116,16 @@ describe('baseHeaders — org + project + actor on every call', () => {
   })
 })
 
-// The three centralized proxy helpers were DELETED (aiV1Url / cloudProxyV1Url /
-// commerceProxyV1Url): every remaining data-product client now builds the CANONICAL,
-// prefix-free `/v1/<resource>` through the ONE `originV1Url` (apm/commerce namespace their
-// surface AFTER `/v1/`, the billing twin — never before it). next.config rewrites each head
-// to its hardened same-origin BFF proxy, so the browser URL stays prefix-free. This locks
-// the six clients PR #79 left on `/<svc>/v1/` (aicatalog/apm/commerce/embeddings/functions/paas).
-describe('canonical /v1 — the last six data-product clients (no prefix before /v1/)', () => {
+// The genuinely SESSION-scoped data-product clients build the CANONICAL, prefix-free
+// `/v1/<resource>` through `originV1Url` (apm/commerce namespace their surface AFTER
+// `/v1/`, never before it). plans/embeddings (AI gateway) and commerce are served on
+// the session path (the gateway forwards the session and cloud resolves the org from
+// the session owner), so a bare `/v1/*` works — VERIFIED LIVE. apm/o11y keeps its
+// prefix-free shape here; its backend cloud→SigNoz reverse-proxy is a separate infra
+// gap (surfaces show an honest RuntimeNotice until it resolves) — not a client-path bug.
+// (functions + paas MOVED to the /cloud bearer block above — they are header-scoped and
+// 403 on the bare path.)
+describe('canonical /v1 — session-scoped data-product clients (no prefix before /v1/)', () => {
   it('aicatalog fetchPlans -> /v1/plans (AI catalog head -> /ai)', async () => {
     stub({ plans: [] })
     await fetchPlans()
@@ -130,20 +136,10 @@ describe('canonical /v1 — the last six data-product clients (no prefix before 
     await EmbeddingsApi.generate('text-embedding-3-small', 'hi')
     expect(lastUrl).toBe(`${ORIGIN}/v1/embeddings`)
   })
-  it('apm ApmApi.dashboards -> /v1/o11y/v1/dashboards (cloud o11y -> /cloud)', async () => {
+  it('apm ApmApi.dashboards -> /v1/o11y/v1/dashboards (cloud o11y)', async () => {
     stub([])
     await ApmApi.dashboards()
     expect(lastUrl).toBe(`${ORIGIN}/v1/o11y/v1/dashboards`)
-  })
-  it('functions FunctionsApi.list -> /v1/functions (cloud product head -> /cloud)', async () => {
-    stub({ functions: [] })
-    await FunctionsApi.list()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/functions`)
-  })
-  it('paas PaasApi.listProjects -> /v1/platform/projects (cloud platform head -> /cloud)', async () => {
-    stub({ projects: [] })
-    await PaasApi.listProjects()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/platform/projects`)
   })
   it('commerce CommerceApi.currentStore -> /v1/commerce/store/current (namespaced -> /commerce)', async () => {
     stub({ store: {} })
@@ -151,7 +147,7 @@ describe('canonical /v1 — the last six data-product clients (no prefix before 
     expect(lastUrl).toBe(`${ORIGIN}/v1/commerce/store/current`)
   })
 
-  it('none of the six emits a /<svc>/v1/ prefix', async () => {
+  it('none of the session-scoped clients emits a /<svc>/v1/ prefix', async () => {
     const bad = /\/(cloud|vm|ai|billing|org|commerce)\/v1\//
     stub({ plans: [] })
     await fetchPlans()
@@ -161,12 +157,6 @@ describe('canonical /v1 — the last six data-product clients (no prefix before 
     expect(lastUrl).not.toMatch(bad)
     stub([])
     await ApmApi.dashboards()
-    expect(lastUrl).not.toMatch(bad)
-    stub({ functions: [] })
-    await FunctionsApi.list()
-    expect(lastUrl).not.toMatch(bad)
-    stub({ projects: [] })
-    await PaasApi.listProjects()
     expect(lastUrl).not.toMatch(bad)
     stub({ store: {} })
     await CommerceApi.currentStore()

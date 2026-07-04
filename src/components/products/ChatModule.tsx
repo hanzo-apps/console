@@ -18,15 +18,25 @@ import { ChatView } from './chat/ChatView'
 export function ChatModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const name = params.name
+  // The chat's real OWNER travels in the route (`/chat/<owner>/<name>`) — casibase
+  // chats are keyed `owner/name` and a customer org's chats are NOT owned by the
+  // literal `admin` org, so dropping the owner made every saved chat unopenable.
+  const owner = params.owner
   const [view, setView] = useState<'chat' | 'history'>('chat')
 
   if (name) {
-    return <ChatView name={decodeURIComponent(name)} onDone={() => router.push('/chat')} />
+    return (
+      <ChatView
+        owner={owner ? decodeURIComponent(owner) : undefined}
+        name={decodeURIComponent(name)}
+        onDone={() => router.push('/chat')}
+      />
+    )
   }
   if (view === 'history') {
     return (
       <ChatListView
-        onOpen={(c) => router.push(`/chat/${encodeURIComponent(c.name)}`)}
+        onOpen={(c) => router.push(`/chat/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.name)}`)}
         onBack={() => setView('chat')}
       />
     )
