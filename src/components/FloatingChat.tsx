@@ -17,7 +17,7 @@
  * instance floats over all children — lightweight, no per-page wiring.
  */
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button, Dialog, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
 import { Sparkles, X } from '@hanzogui/lucide-icons-2'
 
@@ -120,6 +120,16 @@ function ChatSheet({
 
 export function FloatingChatProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname() ?? ''
+  // The bubble is redundant — and OVERLAPS the composer's send control — on the
+  // pages that ARE a full chat/composer surface. Suppress it there (the assistant
+  // is still openable programmatically via `useFloatingChat`); every other page
+  // keeps the one-tap bubble.
+  const onChatSurface =
+    pathname === '/chat' ||
+    pathname.startsWith('/chat/') ||
+    pathname === '/playground' ||
+    pathname.startsWith('/playground/')
   const [isOpen, setIsOpen] = useState(false)
   const open = useCallback(() => setIsOpen(true), [])
   const close = useCallback(() => setIsOpen(false), [])
@@ -137,8 +147,9 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
       {/* The bubble — fixed bottom-right over every page (rendered last in this
           provider so DOM order keeps it above normal-flow content; the chat sheet
           portals above it). Hidden while open so the sheet's own close control is
-          the single dismiss affordance. */}
-      {!isOpen ? (
+          the single dismiss affordance. Hidden on the chat/playground surfaces,
+          where it would overlap the page's own composer. */}
+      {!isOpen && !onChatSurface ? (
         <YStack position="fixed" b={24} r={24}>
           {/* The support/AI bubble = the brand 'H' mark (white-labeled per brand),
               on Material paper elevation with a gentle hover lift. */}

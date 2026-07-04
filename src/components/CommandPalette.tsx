@@ -696,7 +696,9 @@ export function CommandSearchBox() {
       <Text flex={1} fontSize="$3" color="$color10" numberOfLines={1}>
         Search or jump to…
       </Text>
-      <XStack items="center" gap="$1" opacity={0.6}>
+      {/* ⌘K hint — hidden below lg: there is no keyboard shortcut on a phone, and
+          the chip stole width from the placeholder (which truncated to “S…”). */}
+      <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$1" opacity={0.6}>
         <Command size={12} />
         <Text fontSize="$2" color="$color10">
           K
