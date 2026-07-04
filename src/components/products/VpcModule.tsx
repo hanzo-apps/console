@@ -18,7 +18,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack } from '@hanzo/gui'
 import { Network, Plus, RefreshCw, Trash2 } from '@hanzogui/lucide-icons-2'
 
-import { restGet, restPost, restDelete, originV1Url } from '~/lib/api/client'
+import { restGet, restPost, restDelete, cloudProxyV1Url } from '~/lib/api/client'
 import { DOKS_REGIONS } from '~/lib/api'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
@@ -63,7 +63,7 @@ export function VpcModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<unknown>(originV1Url('vpcs'))
+      const r = await restGet<unknown>(cloudProxyV1Url('vpcs'))
       setRows(vpcsOf(r))
       setLoadError(null)
     } catch (e) {
@@ -86,7 +86,7 @@ export function VpcModule(_props: { params: Record<string, string> }) {
     setCreating(true)
     setActionMsg(null)
     try {
-      await restPost(originV1Url('vpcs'), { name: name.trim(), cidr: cidr.trim() || undefined, region })
+      await restPost(cloudProxyV1Url('vpcs'), { name: name.trim(), cidr: cidr.trim() || undefined, region })
       setActionMsg({ tone: 'ok', text: `Created VPC "${name.trim()}".` })
       setName('')
       await load()
@@ -101,7 +101,7 @@ export function VpcModule(_props: { params: Record<string, string> }) {
     if (typeof window !== 'undefined' && !window.confirm(`Delete VPC "${v.name || v.id}"? This cannot be undone.`)) return
     setActionMsg(null)
     try {
-      await restDelete(originV1Url(`vpcs/${enc(v.id)}`))
+      await restDelete(cloudProxyV1Url(`vpcs/${enc(v.id)}`))
       setActionMsg({ tone: 'ok', text: `Deleted VPC "${v.name || v.id}".` })
       await load()
     } catch (e) {
