@@ -94,7 +94,7 @@ function QuickActionsCard({ onDeploy, nav }: { onDeploy: () => void; nav: (path:
         <ActionRow icon={<Rocket size={15} />} label="Deploy a new endpoint" onPress={onDeploy} />
         <ActionRow icon={<Play size={15} />} label="View Playground" onPress={() => nav('/playground')} />
         <ActionRow icon={<KeyRound size={15} />} label="Manage API Keys" onPress={() => nav('/api-keys')} />
-        <ActionRow icon={<BookOpen size={15} />} label="View Documentation" onPress={() => openExternal(`${config.docsUrl}/inference`)} />
+        <ActionRow icon={<BookOpen size={15} />} label="View Documentation" onPress={() => openExternal(`${config.docsUrl}/docs/gateway`)} />
       </YStack>
     </SectionCard>
   )

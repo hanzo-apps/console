@@ -18,7 +18,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack } from '@hanzo/gui'
 import { Network, Plus, RefreshCw, Trash2 } from '@hanzogui/lucide-icons-2'
 
-import { restGet, restPost, restDelete, originV1Url } from '~/lib/api/client'
+import { restGet, restPost, restDelete, cloudProxyV1Url } from '~/lib/api/client'
 import { DOKS_REGIONS } from '~/lib/api'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
@@ -66,7 +66,7 @@ export function LoadBalancerModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<unknown>(originV1Url('load-balancers'))
+      const r = await restGet<unknown>(cloudProxyV1Url('load-balancers'))
       setRows(lbsOf(r))
       setLoadError(null)
     } catch (e) {
@@ -89,7 +89,7 @@ export function LoadBalancerModule(_props: { params: Record<string, string> }) {
     setCreating(true)
     setActionMsg(null)
     try {
-      await restPost(originV1Url('load-balancers'), { name: name.trim(), type, region })
+      await restPost(cloudProxyV1Url('load-balancers'), { name: name.trim(), type, region })
       setActionMsg({ tone: 'ok', text: `Created load balancer "${name.trim()}".` })
       setName('')
       await load()
@@ -104,7 +104,7 @@ export function LoadBalancerModule(_props: { params: Record<string, string> }) {
     if (typeof window !== 'undefined' && !window.confirm(`Delete load balancer "${lb.name || lb.id}"? This cannot be undone.`)) return
     setActionMsg(null)
     try {
-      await restDelete(originV1Url(`load-balancers/${enc(lb.id)}`))
+      await restDelete(cloudProxyV1Url(`load-balancers/${enc(lb.id)}`))
       setActionMsg({ tone: 'ok', text: `Deleted load balancer "${lb.name || lb.id}".` })
       await load()
     } catch (e) {
