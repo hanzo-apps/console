@@ -22,7 +22,7 @@
  *   - DELETE /v1/clusters/:cid/pools/:pid       → remove a node pool.
  *   - POST /v1/org/{org}/cluster   → provision a fresh dedicated cluster (`/paas`).
  */
-import { restGet, restPost, restDelete, originV1Url } from './client'
+import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
 
 /** Where a cluster lives: shared multi-tenant Hanzo Cloud, or a BYO/managed DOKS. */
 export type ClusterKind = 'shared' | 'byo' | (string & {})
@@ -171,7 +171,7 @@ const clustersOf = (payload: unknown): Cluster[] => {
 
 /** Canonical path for the clusters surface (`/v1/clusters…`); `next.config` rewrites
  *  it to the same-origin user-bearer `/cloud` proxy. */
-const clustersUrl = (path = ''): string => originV1Url(`clusters${path}`)
+const clustersUrl = (path = ''): string => cloudProxyV1Url(`clusters${path}`)
 
 export const PlatformApi = {
   /** The apps inventory — the real "what is running" board across all clusters (`/paas`). */
@@ -215,7 +215,7 @@ export const PlatformApi = {
    * service token. (Same native-`/v1` path as `listClusters`.)
    */
   provisionCluster: async (org: string, input: ProvisionClusterInput): Promise<Cluster> => {
-    const r = await restPost<{ cluster: Cluster }>(originV1Url(`org/${enc(org)}/cluster`), input)
+    const r = await restPost<{ cluster: Cluster }>(cloudProxyV1Url(`org/${enc(org)}/cluster`), input)
     return r.cluster
   },
 }
