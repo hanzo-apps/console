@@ -8,6 +8,8 @@ import { findEntry } from '~/lib/products/registry'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { ProductSubpageStub } from '~/components/products/ProductSubpageStub'
 import { ProductSubpageModule } from '~/components/products/subpage/ProductSubpageModule'
+import { ProductQuickLinks } from '~/components/products/overview/ProductQuickLinks'
+import { showsQuickLinks } from '~/components/products/overview/quick-links'
 import { ProductInterstitial } from '~/components/products/ProductInterstitial'
 import { AdminManagedNotice } from '~/components/products/AdminManagedNotice'
 import { ProductErrorBoundary } from '~/components/errors/ProductErrorBoundary'
@@ -68,8 +70,15 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     )
 
   const Component = view.matched.route.component
+  // On a product's OVERVIEW (the '' route) render the shared Billing/Usage/Metrics
+  // quick-links band above the module — ONE place wires it for EVERY product
+  // overview (native, living, or bespoke), scoped + derived from the catalog entry
+  // (never hand-copied per module). Suppressed for money/account/admin surfaces.
+  const overviewEntry = view.matched.route.path === '' ? findEntry(view.matched.module.id) : undefined
+  const quickLinks = overviewEntry && showsQuickLinks(overviewEntry) ? overviewEntry : undefined
   return (
     <ProductErrorBoundary resetKey={slug.join('/')}>
+      {quickLinks ? <ProductQuickLinks entry={quickLinks} /> : null}
       <Component params={view.matched.params} />
     </ProductErrorBoundary>
   )
