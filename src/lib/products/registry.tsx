@@ -1802,7 +1802,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Web3',
     status: 'enabled',
     repo: 'luxfi/maker',
-    docs: `${DOCS}/trading`,
     kind: 'module',
     routes: [
       { path: '', component: TradingModule },
@@ -1823,7 +1822,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Web3',
     status: 'enabled',
     repo: 'luxfi/graph',
-    docs: `${DOCS}/markets`,
     kind: 'module',
     routes: [{ path: '', component: MarketsModule }],
   },
@@ -2080,7 +2078,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/cloud',
-    docs: `${DOCS}/crm`,
     kind: 'module',
     // Overview ('') defaults to Companies; the three collections render via the
     // `:tab` route the module targets (`/crm/{companies,contacts,opportunities}`).
@@ -2128,7 +2125,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/cloud',
-    docs: `${DOCS}/erp`,
     kind: 'module',
     routes: [
       { path: '', component: ErpModule },
@@ -2168,7 +2164,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/console',
-    docs: `${DOCS}/accessibility`,
     kind: 'module',
     routes: [{ path: '', component: AccessibilityModule }],
   },
@@ -2276,7 +2271,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/gallery',
-    docs: `${DOCS}/templates`,
     kind: 'module',
     routes: [{ path: '', component: TemplatesModule }],
   },
