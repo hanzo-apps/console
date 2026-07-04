@@ -269,3 +269,13 @@ export type {
   Connection as IntegrationConnection,
   ConnectResult as IntegrationConnectResult,
 } from './integrations'
+// White-label tenant provisioning — clusters/domain/package/brand over the /paas
+// service-token proxy (REAL cluster ops, honest-not-connected domain/package/brand).
+export {
+  TenantsApi,
+  type TenantCluster,
+  type TenantDomain,
+  type TenantBrandConfig,
+  type BindDomainInput,
+  type BrandInput,
+} from './tenants'

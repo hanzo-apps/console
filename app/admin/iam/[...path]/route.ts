@@ -33,7 +33,18 @@ const GET_SEGMENTS = new Set([
   'get-records',
 ])
 
-/** Mutation segments — reachable via POST only (JSON body forwarded). */
+/**
+ * Mutation segments — reachable via POST only (JSON body forwarded).
+ *
+ * The org-metadata WRITES (`add-organization`/`update-organization`/`delete-organization`)
+ * are the DATA-DRIVEN white-label backbone: a tenant IS an org record, and its BRAND
+ * (logo / favicon / themeData) is a real writable IAM field on that record. This is
+ * how the Tenants board CREATES a tenant and WRITES its brand — no hardcoded brand map.
+ * These are safe on THIS proxy because the gate is already GLOBAL-ADMIN-ONLY and
+ * `forwardIam` pins the org NAME (`orgNameSegments` below) so the write is scoped
+ * (a non-global caller — who can't reach this route anyway — could never retarget
+ * another tenant's org via the id or the body `name`).
+ */
 const POST_SEGMENTS = new Set([
   'add-user',
   'update-user',
@@ -47,14 +58,36 @@ const POST_SEGMENTS = new Set([
   'add-role',
   'update-role',
   'delete-role',
+  'add-organization',
+  'update-organization',
+  'delete-organization',
 ])
 
 /**
  * Organization objects are owned by IAM's built-in `admin`, and the org
  * list/get endpoints scope results to the caller's org server-side — so `admin`
- * is an acceptable owner THERE (never for tenant data like users/roles).
+ * is an acceptable owner THERE (never for tenant data like users/roles). The
+ * org-metadata WRITES join it: they operate on the `admin`-owned org record.
  */
-const ORG_ENDPOINTS = new Set(['get-organizations', 'get-organization'])
+const ORG_ENDPOINTS = new Set([
+  'get-organizations',
+  'get-organization',
+  'add-organization',
+  'update-organization',
+  'delete-organization',
+])
+
+/**
+ * Segments carrying an org NAME to guard — a non-global admin can't read/write
+ * another org's settings via the `admin` metadata owner. (This route's gate is
+ * already global-only, so this is defense-in-depth: it keeps the org-name scoping
+ * identical to the `/org/iam` self-service proxy, one policy for both.)
+ */
+const ORG_NAME_SEGMENTS = new Set([
+  'get-organization',
+  'update-organization',
+  'delete-organization',
+])
 
 const forbidden = () => NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
@@ -69,6 +102,7 @@ async function handle(req: NextRequest, path: string[], method: 'GET' | 'POST'):
       method,
       allowed: method === 'GET' ? GET_SEGMENTS : POST_SEGMENTS,
       orgMetaSegments: ORG_ENDPOINTS,
+      orgNameSegments: ORG_NAME_SEGMENTS,
       // The gate is already global-only; global admins may write to any org.
       requireAdminForWrite: false,
     },
