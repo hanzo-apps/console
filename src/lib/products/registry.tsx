@@ -148,6 +148,7 @@ import { MemoryModule } from '~/components/products/MemoryModule'
 import { TasksModule } from '~/components/products/TasksModule'
 import { AttestationsModule } from '~/components/products/AttestationsModule'
 import { ProjectsModule } from '~/components/products/ProjectsModule'
+import { TrackerModule } from '~/components/products/TrackerModule'
 import { AppsModule } from '~/components/products/AppsModule'
 import { OraclesModule } from '~/components/products/OraclesModule'
 import { IndexerModule } from '~/components/products/IndexerModule'
@@ -1424,6 +1425,21 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: ProjectsModule }],
+  },
+  {
+    // Native @hanzo/gui issue tracker over the real cloud `/v1/tracker` surface —
+    // projects + issues, rows GROUPED BY STATUS (grouped List + Board). Replaces
+    // the old Huly/Svelte hanzo.team tracker, which could not render grouped rows.
+    id: 'tracker',
+    label: 'Tracker',
+    icon: ClipboardList,
+    description: 'Track work as issues grouped by status — projects, a grouped List, and a Board.',
+    gcp: 'Cloud Issue Tracker',
+    category: 'Platform',
+    status: 'enabled',
+    repo: 'hanzoai/tracker',
+    kind: 'module',
+    routes: [{ path: '', component: TrackerModule }],
   },
   {
     // White-label TENANTS board — the operator surface for launching, branding,
