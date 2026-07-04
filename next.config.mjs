@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
+import { resolveBuildId, readGitSha } from './src/config/build-id.mjs'
+
 /**
  * Hanzo Cloud Console — Next.js config.
  *
@@ -171,6 +173,11 @@ const EMBED = process.env.CONSOLE_EMBED === '1'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Deterministic per-commit build id (see src/config/build-id.mjs): pins ONE id
+  // across every replica of a release so a rolling deploy never serves one build's
+  // HTML against another build's /_next/static/<BUILD_ID>/ path — the chunk-404 the
+  // live audit hit. SOURCE_COMMIT (CI build-arg) -> git HEAD -> package version.
+  generateBuildId: () => resolveBuildId({ env: process.env, gitSha: readGitSha(__dirname), version: pkgVersion }),
   env: { NEXT_PUBLIC_APP_VERSION: pkgVersion },
   transpilePackages: guiPackages(),
   ...(EMBED
