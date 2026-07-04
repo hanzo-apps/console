@@ -29,7 +29,14 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 const MODE = (process.env.AUDIT_MODE ?? 'notrouted') as 'notrouted' | 'down' | 'empty'
 const ROLE = (process.env.AUDIT_ROLE ?? 'admin') as 'admin' | 'customer'
 
-const IDS: string[] = JSON.parse(readFileSync(join(process.cwd(), 'e2e', 'route-ids.json'), 'utf8'))
+const CANONICAL_IDS: string[] = JSON.parse(readFileSync(join(process.cwd(), 'e2e', 'route-ids.json'), 'utf8'))
+/**
+ * The HUMAN slugs the console nav / docs / bookmarks / the CTO's e2e list use that
+ * are NOT registry ids — they must resolve via SLUG_ALIASES to a real module (never
+ * a 404 blank). Auditing them here proves the alias map end-to-end against the real app.
+ */
+const ALIAS_SLUGS = ['traces', 'deploy', 'plans-pricing', 'wallets', 'model-catalog', 'fine-tuning', 'web-search', 'mlpipelines', 'kubeflow']
+const IDS: string[] = [...CANONICAL_IDS, ...ALIAS_SLUGS]
 
 /** A global-admin (sees every surface) or a tenant customer (Dave/maxpower shape). */
 const ACCOUNT =
@@ -90,6 +97,17 @@ test.describe(`blank audit [mode=${MODE} role=${ROLE}]`, () => {
   test.beforeAll(async ({ browser }) => {
     ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
     page = await ctx.newPage()
+    // Seed the active org to the account's own org so OrgGate doesn't hard-pin +
+    // reload a customer (currentOrg !== owner) mid-audit, and dismiss the admin
+    // banner so the shell is stable. Runs before every navigation (survives reloads).
+    await page.addInitScript((org) => {
+      try {
+        localStorage.setItem('hanzo.console.org', org)
+        localStorage.setItem('hz_admin_banner_dismissed', '1')
+      } catch {
+        /* private mode */
+      }
+    }, ACCOUNT.owner)
     await page.route('**/*', mock)
   })
 
