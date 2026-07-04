@@ -135,7 +135,7 @@ export function EdgeModule(_props: { params: Record<string, string> }) {
             'Backed by the same functions + containers you already run',
             'Nodes and traffic appear here as your edge fabric comes online',
           ]}
-          primary={{ label: 'Edge docs', href: `${config.docsUrl}/edge` }}
+          primary={{ label: 'Edge docs', href: `${config.docsUrl}/docs/edge` }}
           secondary={{ label: 'Containers', onPress: () => { if (typeof window !== 'undefined') window.location.assign('/containers') } }}
         />
       )}

@@ -45,6 +45,20 @@ export function normalizeBrand(raw: string): BrandKey | null {
   return null
 }
 
+/**
+ * Resolve the brand for a specific catalog MODEL. The model IDENTITY (its stable id
+ * or name — e.g. `anthropic/claude-opus-4.6`, `openai/gpt-5`, `google/gemini-2.5-pro`,
+ * `qwen3.5-397b`, `glm-5.2`) is authoritative and tried FIRST, so a model served
+ * through the Hanzo gateway — which tags it provider "hanzo" — is NOT shadowed into
+ * the house brand: its real vendor still wins. Falls back to the provider string,
+ * then null (→ neutral initials). Zen ids (`zen*`) and genuinely-Hanzo models with no
+ * third-party tell keep resolving to the house brand exactly as before. This is why a
+ * new gateway model resolves on its own — keyed by id/prefix, not a per-model map.
+ */
+export function brandForModel(idOrName: string, provider: string): BrandKey | null {
+  return normalizeBrand(idOrName) ?? normalizeBrand(provider)
+}
+
 /** Brand-colored monogram tiles for third-party families. Fixed brand hues. */
 export const BRANDS: Record<Exclude<BrandKey, 'zen' | 'hanzo'>, { bg: string; label: string }> = {
   openai:    { bg: '#000000', label: 'AI' },
@@ -61,6 +75,36 @@ export const BRANDS: Record<Exclude<BrandKey, 'zen' | 'hanzo'>, { bg: string; la
   xai:       { bg: '#111111', label: 'x' },
   cohere:    { bg: '#39594D', label: 'co' },
   microsoft: { bg: '#0067B8', label: 'Ph' },
+}
+
+/**
+ * Full vendor display name per brand — for a MODEL card's provider label, so a
+ * gateway-served third-party model reads as its true vendor ("Qwen") rather than the
+ * house label. The house brands map to "Zen" (our models are branded Zen, never the
+ * bare company name), matching `displayProvider`.
+ */
+export const BRAND_LABEL: Record<BrandKey, string> = {
+  zen: 'Zen',
+  hanzo: 'Zen',
+  openai: 'OpenAI',
+  qwen: 'Qwen',
+  deepseek: 'DeepSeek',
+  meta: 'Meta',
+  mistral: 'Mistral',
+  google: 'Google',
+  anthropic: 'Anthropic',
+  zhipu: 'Zhipu',
+  moonshot: 'Moonshot',
+  minimax: 'MiniMax',
+  nvidia: 'NVIDIA',
+  xai: 'xAI',
+  cohere: 'Cohere',
+  microsoft: 'Microsoft',
+}
+
+/** The full vendor display name for a resolved brand key. */
+export function brandLabel(brand: BrandKey): string {
+  return BRAND_LABEL[brand]
 }
 
 /** 1–2 uppercase initials from a provider name: words→first letters, else first 2 chars. */

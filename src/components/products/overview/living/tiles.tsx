@@ -95,7 +95,21 @@ export function MetricTileView({ tile, data, loading, live, index }: { tile: Met
   const Icon = tile.icon
 
   return (
-    <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" flex={1} minW={200}>
+    // Responsive KPI columns, so a 4-card row balances instead of wrapping 3+1: one
+    // column on phones, two from md (fixes the tablet 3+1), four from xl. flexGrow
+    // equalizes the widths within each row; the basis just fixes how many fit.
+    <Card
+      borderWidth={1}
+      borderColor="$borderColor"
+      p="$4"
+      gap="$2"
+      flexGrow={1}
+      flexShrink={1}
+      flexBasis="100%"
+      $md={{ flexBasis: '48%' }}
+      $xl={{ flexBasis: '22%' }}
+      minW={200}
+    >
       <XStack items="center" gap="$2">
         <Icon size={15} opacity={0.7} />
         <Text fontSize="$2" color="$color10" numberOfLines={1}>

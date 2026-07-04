@@ -209,7 +209,7 @@ function BucketList({ onOpen }: { onOpen: (bucket: string) => void }) {
             'Use the same bucket as an S3 endpoint from your app with your access key.',
           ]}
           primary={{ label: 'New bucket', icon: <Plus size={15} />, onPress: () => setCreating(true) }}
-          secondary={{ label: 'Docs', href: `${config.docsUrl}/storage` }}
+          secondary={{ label: 'Docs', href: `${config.docsUrl}/docs/storage` }}
         />
       ) : (
         <DataTable

@@ -3,18 +3,20 @@
  *
  * It composes existing clients (no parallel transport): collections are knowledge
  * STORES (`StoreApi`), models are the gateway catalog (`CloudModelApi`), and the
- * remaining calls reach the cloud `/v1` directly. Each call uses the transport its
- * endpoint actually speaks:
+ * remaining calls reach the cloud `/v1` through the console's OWN `/cloud` user-bearer
+ * proxy (the live ingress does not rewrite bare `/v1/*`). Each call uses the transport
+ * its endpoint speaks:
  *   - envelope (`{status,msg,data}`): get-stores, get-cloud-usages, get-files,
- *     add-store, docs/ingest, index            → `get`/`post`
- *   - raw JSON: search (`{hits}`), search/stats (`{documentCount,…}`)  → `restGet`/`restPost`
+ *     add-store, docs/ingest, index            → `cloudGet`/`cloudPost` (→ /cloud)
+ *   - raw JSON: search (`{hits}`), search/stats (`{documentCount,…}`) → `restGet`/`restPost`
+ *     on `cloudProxyV1Url` (→ /cloud)
  *   - OpenAI gateway (Bearer-only): embeddings  → the keyless `/ai` proxy (`originV1Url`)
  *
  * Every call throws `ApiError` (with status) on failure so callers render an
  * honest state — collections list real/empty, and absent fields ("—") and absent
  * endpoints (404 → BackendStateCard) are never papered over with fabricated data.
  */
-import { cloudGet, cloudPost, restGet, restPost, v1Url, originV1Url } from './client'
+import { cloudGet, cloudPost, restGet, restPost, cloudProxyV1Url, originV1Url } from './client'
 import { config } from '~/config'
 import { StoreApi } from './stores'
 import { CloudModelApi, type CatalogModel } from './models-catalog'
@@ -146,7 +148,7 @@ export const EmbeddingsApi = {
 
   /** Top-K search over a collection. Hybrid by default; scores are absent (see EmbeddingHit). */
   search: async ({ store, query, topK = 8, mode = 'hybrid' }: SearchInput): Promise<EmbeddingHit[]> => {
-    const url = `${v1Url('search', config.cloudUrl)}?store=${encodeURIComponent(store)}`
+    const url = `${cloudProxyV1Url('search')}?store=${encodeURIComponent(store)}`
     const res = await restPost<{ hits?: RawHit[] }>(url, { query, limit: topK, mode })
     return (res?.hits ?? []).map((h, i) => ({
       id: h.id ?? `hit-${i}`,
@@ -160,7 +162,7 @@ export const EmbeddingsApi = {
   /** Best-effort live index stats for one collection. Never throws — degrades to {}. */
   indexStats: async (store: string): Promise<IndexStats> => {
     try {
-      const url = `${v1Url('search/stats', config.cloudUrl)}?store=${encodeURIComponent(store)}`
+      const url = `${cloudProxyV1Url('search/stats')}?store=${encodeURIComponent(store)}`
       const r = await restGet<{ documentCount?: number; isIndexing?: boolean }>(url)
       return { documentCount: num(r?.documentCount), isIndexing: r?.isIndexing === true }
     } catch {
