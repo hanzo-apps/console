@@ -15,7 +15,7 @@ import { useSession } from '~/lib/auth/session'
 import { takeReturnTo } from '~/lib/auth/iam'
 
 function Callback() {
-  const params = useSearchParams()
+  const params = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
   const { completeSignIn } = useSession()
   const [error, setError] = useState<string | null>(null)
