@@ -36,6 +36,14 @@ describe('normalizeMachine', () => {
   it('reads a nested gpu object model', () => {
     expect(normalizeMachine({ id: 'g', gpu: { model: 'H100', count: 8 } }).gpu).toBe('H100')
   })
+
+  it('passes provider through so cloud vs BYO can be badged', () => {
+    expect(normalizeMachine({ id: 'a', provider: 'doks' }).provider).toBe('doks')
+    // A bring-your-own on-prem worker in the unioned inventory.
+    expect(normalizeMachine({ id: 'b', provider: 'byo', region: 'on-prem' }).provider).toBe('byo')
+    // Absent on older responses → undefined (never a fabricated value).
+    expect(normalizeMachine({ id: 'c' }).provider).toBeUndefined()
+  })
 })
 
 describe('interpretVisorError — an error is an error, never the empty state', () => {
