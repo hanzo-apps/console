@@ -4,8 +4,10 @@ import {
   accessClaims,
   clearCookies,
   consoleSession,
+  durableSessionClientId,
   open,
   passwordGrant,
+  pkceCodeGrant,
   readRefreshToken,
   refreshGrant,
   sameSubject,
@@ -196,5 +198,50 @@ describe('OAuth grants (fetch-mocked)', () => {
     await expect(refreshGrant('old')).rejects.toMatchObject({ status: 502 })
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('econnrefused') }))
     await expect(passwordGrant('u', 'p')).rejects.toMatchObject({ status: 502 })
+  })
+})
+
+describe('admin-console redemption is host-aware (public client, no secret)', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const okToken = { access_token: 'AT', refresh_token: 'RT', expires_in: 3600 }
+  const mockFetch = () => {
+    const f = vi.fn(async () => new Response(JSON.stringify(okToken), { status: 200 }))
+    vi.stubGlobal('fetch', f)
+    return f
+  }
+  const initOf = (f: ReturnType<typeof mockFetch>) =>
+    (f.mock.calls[0] as unknown as [string, RequestInit])[1]
+  const headersOf = (f: ReturnType<typeof mockFetch>) => (initOf(f).headers ?? {}) as Record<string, string>
+  const bodyOf = (f: ReturnType<typeof mockFetch>) => String(initOf(f).body)
+
+  it('durableSessionClientId → admin-console on an admin host, null on a tenant host', () => {
+    expect(durableSessionClientId('admin.hanzo.ai')).toBe('admin-console')
+    expect(durableSessionClientId('admin.lux.network')).toBe('admin-console')
+    expect(durableSessionClientId('console.hanzo.ai')).toBeNull()
+    expect(durableSessionClientId('cloud.hanzo.ai')).toBeNull()
+    expect(durableSessionClientId(null)).toBeNull()
+  })
+
+  it('pkceCodeGrant redeems as admin-console with the verifier and NO client secret (public)', async () => {
+    const f = mockFetch()
+    await pkceCodeGrant({ clientId: 'admin-console', code: 'C', codeVerifier: 'VERIF', redirectUri: 'https://admin.hanzo.ai/auth/callback' })
+    const body = bodyOf(f)
+    expect(body).toContain('grant_type=authorization_code')
+    expect(body).toContain('client_id=admin-console')
+    expect(body).toContain('code_verifier=VERIF')
+    // Public client — the exchange carries no Authorization (client_secret_basic) header.
+    expect(headersOf(f).Authorization).toBeUndefined()
+  })
+
+  it('refreshGrant rotates the ADMIN session as admin-console (no secret), the TENANT session as the confidential client', async () => {
+    const admin = mockFetch()
+    await refreshGrant('rt', 'admin-console')
+    expect(bodyOf(admin)).toContain('client_id=admin-console')
+    expect(headersOf(admin).Authorization).toBeUndefined()
+
+    vi.unstubAllGlobals()
+    const tenant = mockFetch()
+    await refreshGrant('rt')
+    expect(headersOf(tenant).Authorization).toMatch(/^Basic /)
   })
 })

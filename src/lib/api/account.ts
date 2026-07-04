@@ -6,12 +6,14 @@
  * AuthGate reads `account` from here, so a signed-in user is never bounced while
  * either session is valid.
  */
-import { get, post } from './client'
+import { ApiError, get, post } from './client'
 import { refreshSession } from '~/lib/auth/refresh'
 import { type Account } from './types'
 
 /** The console session route is same-origin (the console's OWN BFF), not `/v1/*`. */
 const SESSION_URL = '/auth/session'
+/** The console's OWN OAuth code-exchange route (admin PKCE redemption), same-origin. */
+const SIGNIN_URL = '/auth/signin'
 
 /** Result of resolving the current session: the account + the console-session
  *  lifetime (seconds) when the console session is the source (null on the casibase
@@ -96,6 +98,29 @@ export const AccountApi = {
 
   /** Exchange the IAM OAuth code+state for a casibase session cookie (redirect flow). */
   signin: (code: string, state: string) => post<Account>('iam/signin', undefined, { code, state }),
+
+  /**
+   * Redeem an ADMIN credential login's OAuth code into the console's OWN durable session
+   * (BFF `/auth/signin`, admin hosts only). The code was minted for the PUBLIC
+   * `admin-console` client, so the console redeems it here via authorization_code + PKCE
+   * (no secret) — the cloud backend's `/v1/iam/signin` would redeem with the wrong
+   * (confidential `hanzo-cloud`) client and IAM rejects the mismatch. Throws on failure
+   * so sign-in surfaces a real error (never a silent bounce).
+   */
+  consoleSignin: async (code: string, codeVerifier: string): Promise<SessionResult> => {
+    const res = await fetch(SIGNIN_URL, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({ code, codeVerifier }),
+    })
+    const j = (await res.json().catch(() => null)) as { account?: Account; expiresIn?: number; error?: string } | null
+    if (!res.ok || !j?.account?.name) {
+      throw new ApiError(j?.error || `Sign-in failed (HTTP ${res.status}).`, res.status)
+    }
+    return { account: j.account, expiresIn: typeof j.expiresIn === 'number' ? j.expiresIn : null }
+  },
 
   /** Sign out of BOTH sessions: clear the console session (revoke + clear cookie),
    *  then the casibase session. Both best-effort so one failing still signs out. */
