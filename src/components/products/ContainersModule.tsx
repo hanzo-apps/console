@@ -100,7 +100,7 @@ function ClusterSidebar({
 
 export function ContainersModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
-  const search = useSearchParams()
+  const search = useSearchParams() ?? new URLSearchParams()
   const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
 
   const [apps, setApps] = useState<PlatformApp[]>([])
