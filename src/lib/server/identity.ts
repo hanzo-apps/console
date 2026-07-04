@@ -557,9 +557,22 @@ export async function activateMember(
     // empty stored password. Do NOT set passwordType, or hashing is skipped.
     password: opts.password,
   }
-  if (opts.displayName) updated.displayName = opts.displayName
-  if (opts.signupApplication) updated.signupApplication = opts.signupApplication
-  await iamPostBody('/v1/iam/update-user', { id }, updated)
+  // Pin the EXACT columns to write. Casibase's update-user default column set does
+  // NOT include `password`, and it only auto-appends the password columns when a
+  // non-empty `columns` is supplied — so with no columns, UpdateUserPassword hashes
+  // the value in memory but the column is never persisted (the credential silently
+  // stays empty). Naming the password columns explicitly guarantees the hashed
+  // password + salt + type are written.
+  const columns = ['password', 'password_salt', 'password_type']
+  if (opts.displayName) {
+    updated.displayName = opts.displayName
+    columns.push('display_name')
+  }
+  if (opts.signupApplication) {
+    updated.signupApplication = opts.signupApplication
+    columns.push('signup_application')
+  }
+  await iamPostBody('/v1/iam/update-user', { id, columns: columns.join(',') }, updated)
 }
 
 // ── Admin gate ───────────────────────────────────────────────────────────────
