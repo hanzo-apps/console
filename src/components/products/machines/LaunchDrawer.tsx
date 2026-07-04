@@ -311,7 +311,7 @@ export function LaunchDrawer({
 
       {/* Actions — primary LAUNCHES; docs is the secondary "Learn more" */}
       <XStack gap="$2" pt="$1" items="center">
-        <Button chromeless icon={<BookOpen size={14} />} onPress={() => { if (typeof window !== 'undefined') window.open(`${config.docsUrl}/${kind === 'gpu' ? 'gpus' : 'vm'}`, '_blank', 'noopener') }}>
+        <Button chromeless icon={<BookOpen size={14} />} onPress={() => { if (typeof window !== 'undefined') window.open(`${config.docsUrl}/docs/${kind === 'gpu' ? 'gpus' : 'machines'}`, '_blank', 'noopener') }}>
           Learn more
         </Button>
         <YStack flex={1} />
