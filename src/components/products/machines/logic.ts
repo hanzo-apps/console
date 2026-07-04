@@ -307,6 +307,75 @@ export const regionLabel = (region: string): string => regionMeta(region).label
 export const fmtUsd = (n: number): string =>
   `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+// ── Funding model — WHICH balance pays, per compute kind (pure, tested) ───────
+// The single source of truth for the CPU-credit vs GPU-prepay-card distinction the
+// customer sees. It mirrors — and never contradicts — what the server ENFORCES on
+// launch (cloud-api launch + commerce charge):
+//   - A CPU / non-GPU machine is metered to the org's granted **credit** balance —
+//     NO card required. It launches on credits.
+//   - A GPU is **prepay-only**, charged to the org's payment **card** with a 24-hour
+//     minimum upfront; granted credits can NOT fund a GPU, and no card ⇒ blocked.
+// So the console shows the RIGHT funding source + the RIGHT add-funds CTA per kind,
+// making it obvious that a non-GPU droplet IS credit-eligible.
+
+/** Which balance funds a launch: the granted credit ledger, or a real payment card. */
+export type FundingSource = 'credit' | 'card'
+
+/** The customer-facing funding descriptor for a compute kind. */
+export type FundingModel = {
+  source: FundingSource
+  /** Headline, e.g. "Launches on your Hanzo credit" / "Prepay only · charged to your card". */
+  headline: string
+  /** One-line detail (available balance / 24h minimum / no-card note). */
+  detail: string
+  /** True when the funding source is empty and must be topped up first (add credits / add a card). */
+  needsFunds: boolean
+  /** The add-funds action for this source (credits → /wallet; card → /billing/credits). */
+  cta: { label: string; href: string }
+}
+
+/** Whole-dollar credit figure with thousands separators, e.g. 2046235 → "$20,462". */
+export function fmtCredit(cents: number): string {
+  return `$${Math.round(cents / 100).toLocaleString()}`
+}
+
+/**
+ * Resolve the funding model for a compute kind. `creditCents` is the org's spendable
+ * credit balance (undefined/null = not yet known → the note stays honest without a
+ * figure); `hasCard` is whether a payment card is on file (GPU only). PURE.
+ */
+export function fundingModel(
+  kind: 'cpu' | 'gpu',
+  opts: { creditCents?: number | null; hasCard?: boolean | null } = {},
+): FundingModel {
+  if (kind === 'gpu') {
+    // GPUs are real-money, card-prepay only — never the credit balance.
+    const needsFunds = opts.hasCard === false
+    return {
+      source: 'card',
+      headline: 'Prepay only · charged to your card',
+      detail:
+        '24-hour minimum charged upfront to your payment card, then the per-hour rate. Granted credits can’t be used for GPUs.',
+      needsFunds,
+      cta: { label: 'Add a payment card & prepay', href: '/billing/credits' },
+    }
+  }
+  // CPU / non-GPU compute → the granted Hanzo credit balance, no card required.
+  const credit = opts.creditCents
+  const known = typeof credit === 'number' && Number.isFinite(credit)
+  const needsFunds = known && (credit as number) <= 0
+  const available = known && (credit as number) > 0 ? `${fmtCredit(credit as number)} available · ` : ''
+  return {
+    source: 'credit',
+    headline: 'Launches on your Hanzo credit',
+    detail: needsFunds
+      ? 'Your credit balance is empty — add credits to launch. No card required.'
+      : `${available}charged to credits · no card required.`,
+    needsFunds,
+    cta: { label: 'Add credits', href: '/wallet' },
+  }
+}
+
 /** Render a GB quantity as GB, or TB when large. */
 export function fmtMemGb(gb: number): string {
   if (gb >= 1024) return `${(gb / 1024).toLocaleString(undefined, { maximumFractionDigits: 1 })} TB`

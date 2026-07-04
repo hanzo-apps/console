@@ -33,8 +33,10 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { useDetailPane } from '~/components/DetailPane'
 import { asColor } from '~/components/ui/color'
+import { BillingApi } from '~/lib/api/billing'
 import { MachineCatalog } from './MachineCatalog'
 import { LaunchDrawer } from './LaunchDrawer'
+import { FundingNote } from './FundingNote'
 
 const VERDICT_TONE = {
   ok: '$green10',
@@ -90,9 +92,17 @@ export function CustomerMachines() {
   const [rows, setRows] = useState<VisorMachine[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<VisorError | null>(null)
+  // The org's spendable CREDIT balance (cents) that a non-GPU machine launches on —
+  // best-effort, so the Machines page can state clearly that CPU compute is
+  // credit-funded (no card). `null` until known → the note omits the figure.
+  const [creditCents, setCreditCents] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
+    // Credit balance is enrichment for the funding note — never blocks the list.
+    BillingApi.balance()
+      .then((b) => setCreditCents(b.available))
+      .catch(() => setCreditCents(null))
     try {
       setRows(await VisorApi.machines())
       setError(null)
@@ -281,11 +291,12 @@ export function CustomerMachines() {
     return (
       <>
         {header}
+        <FundingNote kind="cpu" creditCents={creditCents} />
         <EmptyState
           icon={Server}
           title="Launch your first machine"
           description="Dedicated compute machines run your workloads across regions. Launch one and it appears here — with real capacity, region, and cost. Managed on Hanzo Cloud."
-          bullets={['Tap a size in the live catalog below to launch it.', 'Machines, cores, memory, and cost are read from your real machines — nothing is fabricated.']}
+          bullets={['Tap a size in the live catalog below to launch it.', 'CPU machines launch on your Hanzo credit balance — no card required; nothing is fabricated.']}
           primary={{ label: 'Launch a machine', onPress: () => openLaunch() }}
           secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
         />
@@ -297,6 +308,7 @@ export function CustomerMachines() {
   return (
     <>
       {header}
+      <FundingNote kind="cpu" creditCents={creditCents} />
       <DataTable columns={columns} rows={rows} rowKey={(m) => m.id} onRowPress={openDetail} />
     </>
   )
