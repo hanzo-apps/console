@@ -12,7 +12,7 @@ vi.mock('./identity', () => ({
   adminBearer: vi.fn(async () => 'test-bearer'),
 }))
 
-import { forwardBilling, isTextualContentType } from './billing-proxy'
+import { forwardBilling, isTextualContentType, inertTextualType, sanitizeFilename, downloadFilename } from './billing-proxy'
 
 const HOST = 'console.hanzo.ai'
 const COMMERCE = 'http://commerce.test'
@@ -197,11 +197,15 @@ describe('forwardBilling — invoice PDF binary passthrough (task F)', () => {
     delete process.env.COMMERCE_TOKEN
   })
 
-  it('streams the PDF bytes UNMODIFIED + forwards Content-Type & Content-Disposition', async () => {
+  it('streams the PDF bytes UNMODIFIED + forces attachment + nosniff (RED-2/RED-3)', async () => {
     const res = await forwardBilling(req('GET'), ['invoices', 'inv_1', 'pdf'])
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toBe('application/pdf')
+    // Attachment is FORCED with a sanitized filename (re-derived from the upstream
+    // Content-Disposition, never trusted verbatim), and nosniff blocks MIME-sniffing —
+    // so a compromised/MITM'd upstream can't render active content at our origin.
     expect(res.headers.get('content-disposition')).toBe('attachment; filename="invoice-inv_1.pdf"')
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff')
     expect(res.headers.get('cache-control')).toBe('no-store, must-revalidate')
     const out = new Uint8Array(await res.arrayBuffer())
     expect(Array.from(out)).toEqual(Array.from(pdfBytes)) // byte-for-byte, no text() mangling
@@ -218,5 +222,173 @@ describe('forwardBilling — invoice PDF binary passthrough (task F)', () => {
     expect(q.get('customerId')).toBe('maxpower')
     const init = calledInit(fetchMock)
     expect((init.headers as Record<string, string>)['X-Org-Id']).toBe('maxpower')
+  })
+})
+
+describe('forwardBilling — RED-1: encoded path-traversal is refused BEFORE any fetch', () => {
+  const fetchMock = vi.fn(async () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }))
+
+  beforeEach(() => {
+    fetchMock.mockClear()
+    vi.stubGlobal('fetch', fetchMock)
+    process.env.COMMERCE_URL = COMMERCE
+    process.env.COMMERCE_TOKEN = 'svc-token'
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete process.env.COMMERCE_URL
+    delete process.env.COMMERCE_TOKEN
+  })
+
+  // The exploit RED-1 found: a percent-encoded dot-segment (`%2e%2e`, `.%2e`, `%2E%2E`, or
+  // double-encoded `%252e%252e` which Next single-decodes to `%2e%2e`) survives a literal
+  // `..`/`/` check, then undici normalizes it to a real `..` and pops OUT of /v1/billing/,
+  // reaching the whole commerce API with the service token. Every case → 400, NO fetch.
+  const traversals: Array<[string, string[]]> = [
+    ['%2e%2e / product', ['%2e%2e', 'product']],
+    ['.%2e / x', ['.%2e', 'x']],
+    ['%2E%2E / y (upper)', ['%2E%2E', 'y']],
+    ['double-encoded %252e%252e', ['%252e%252e', 'product']],
+    ['encoded slash %2f', ['invoices%2f..%2f..', 'iam']],
+    ['matrix-param ..;', ['..;', 'x']],
+    ['literal .. (still rejected)', ['invoices', '..', 'pdf']],
+  ]
+  for (const [label, seg] of traversals) {
+    it(`400s on ${label} and never fetches upstream`, async () => {
+      const res = await forwardBilling(req('GET'), seg)
+      expect(res.status).toBe(400)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+  }
+
+  it('400s on ANY `%`-containing segment and never fetches upstream', async () => {
+    // A legitimate DECODED billing segment never contains a percent-escape — a residual
+    // one is a multi-encoding tell, refused at the boundary.
+    for (const seg of [['pay%00ment'], ['inv_%2f_1'], ['%ff'], ['bal%61nce']]) {
+      fetchMock.mockClear()
+      const res = await forwardBilling(req('GET'), seg)
+      expect(res.status).toBe(400)
+      expect(fetchMock).not.toHaveBeenCalled()
+    }
+  })
+
+  it('applies the path guard to EVERY verb (POST/DELETE too), never fetching', async () => {
+    for (const method of ['POST', 'DELETE']) {
+      fetchMock.mockClear()
+      const res = await forwardBilling(
+        req(method, { body: method === 'POST' ? '{}' : undefined }),
+        ['%2e%2e', 'product'],
+      )
+      expect(res.status).toBe(400)
+      expect(fetchMock).not.toHaveBeenCalled()
+    }
+  })
+
+  it('allows a clean billing path through to the normalized upstream URL', async () => {
+    // Positive control: the layer-2 normalized re-check must NOT false-positive on a
+    // legitimate multi-segment billing path.
+    await forwardBilling(req('GET'), ['invoices', 'inv_1', 'pdf'])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const url = String((fetchMock.mock.calls[0] as unknown[])[0])
+    expect(url.startsWith(`${COMMERCE}/v1/billing/invoices/inv_1/pdf?`)).toBe(true)
+  })
+})
+
+describe('forwardBilling — RED-2: nosniff on every response + inert active content', () => {
+  const html = '<script>alert(document.domain)</script>'
+  const fetchMock = vi.fn(
+    async () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+  )
+
+  beforeEach(() => {
+    fetchMock.mockClear()
+    vi.stubGlobal('fetch', fetchMock)
+    process.env.COMMERCE_URL = COMMERCE
+    process.env.COMMERCE_TOKEN = 'svc-token'
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete process.env.COMMERCE_URL
+    delete process.env.COMMERCE_TOKEN
+  })
+
+  it('sets X-Content-Type-Options: nosniff on the JSON branch', async () => {
+    const res = await forwardBilling(req('GET'), ['balance'])
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(res.headers.get('content-type')).toBe('application/json')
+  })
+
+  it('serves a compromised text/html upstream as INERT text/plain (no XSS at our origin)', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(html, { status: 200, headers: { 'content-type': 'text/html' } }))
+    const res = await forwardBilling(req('GET'), ['invoices', 'inv_1'])
+    expect(res.headers.get('content-type')).toBe('text/plain; charset=utf-8')
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+  })
+
+  it('neutralizes an SVG (which can carry <script>) to inert text/plain', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response('<svg/>', { status: 200, headers: { 'content-type': 'image/svg+xml' } }),
+    )
+    const res = await forwardBilling(req('GET'), ['x'])
+    expect(res.headers.get('content-type')).toBe('text/plain; charset=utf-8')
+  })
+})
+
+describe('forwardBilling — RED-4: a 502 never leaks the internal upstream detail', () => {
+  const fetchMock = vi.fn(async () => {
+    throw new Error('connect ECONNREFUSED http://commerce.hanzo.svc:8001')
+  })
+  let errSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    fetchMock.mockClear()
+    vi.stubGlobal('fetch', fetchMock)
+    errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    process.env.COMMERCE_URL = COMMERCE
+    process.env.COMMERCE_TOKEN = 'svc-token'
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    errSpy.mockRestore()
+    delete process.env.COMMERCE_URL
+    delete process.env.COMMERCE_TOKEN
+  })
+
+  it('returns a generic 502 (no upstream host/exception) and logs the detail server-side', async () => {
+    const res = await forwardBilling(req('GET'), ['balance'])
+    expect(res.status).toBe(502)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toBe('Billing upstream is unavailable.')
+    expect(body.error).not.toMatch(/ECONNREFUSED|commerce|8001/)
+    // The detail is logged server-side (not leaked to the client).
+    expect(errSpy).toHaveBeenCalled()
+  })
+})
+
+describe('inertTextualType / sanitizeFilename / downloadFilename (pure)', () => {
+  it('keeps legitimate data types, coerces active ones to inert text/plain', () => {
+    for (const ct of ['application/json', 'application/json; charset=utf-8', 'text/csv', 'application/problem+json', 'application/xml']) {
+      expect(inertTextualType(ct)).toBe(ct)
+    }
+    for (const ct of ['text/html', 'text/html; charset=utf-8', 'application/xhtml+xml', 'image/svg+xml', 'application/javascript']) {
+      expect(inertTextualType(ct)).toBe('text/plain; charset=utf-8')
+    }
+  })
+
+  it('strips CRLF / quote / semicolon / path chars and refuses empty', () => {
+    expect(sanitizeFilename('invoice-inv_1.pdf')).toBe('invoice-inv_1.pdf')
+    // CR/LF/quote/semicolon (header-injection chars) are stripped.
+    expect(sanitizeFilename('a"; \r\nSet-Cookie: x=y')).toBe('a Set-Cookie: x=y')
+    expect(sanitizeFilename('../../etc/passwd')).toBe('etcpasswd')
+    expect(sanitizeFilename('..')).toBe('download')
+    expect(sanitizeFilename('')).toBe('download')
+  })
+
+  it('re-derives the download filename from the upstream disposition (sanitized) or the path', () => {
+    expect(downloadFilename('attachment; filename="invoice-inv_1.pdf"', ['invoices', 'inv_1', 'pdf'])).toBe('invoice-inv_1.pdf')
+    // A header-injecting upstream filename is neutralized.
+    expect(downloadFilename('attachment; filename="x"; evil="\r\n"', ['a'])).toBe('x')
+    // No disposition → last path segment.
+    expect(downloadFilename(null, ['statements', 'stmt_9.pdf'])).toBe('stmt_9.pdf')
   })
 })
