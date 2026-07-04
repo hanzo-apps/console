@@ -22,9 +22,9 @@ import {
   CreditCard,
   Gauge,
   HardDrive,
+  KeyRound,
   Plus,
   Tag,
-  Wrench,
 } from '@hanzogui/lucide-icons-2'
 
 import {
@@ -63,13 +63,9 @@ const fmtTime = (s?: string) => {
 export function OverviewTab({
   data,
   onNav,
-  onAddGpus,
-  onDiagnostics,
 }: {
   data: ComputeData
   onNav: (tab: string) => void
-  onAddGpus?: () => void
-  onDiagnostics?: () => void
 }) {
   const { gpus, clusters, alerts, ledger, accountUsage } = data
   const [range, setRange] = useState<(typeof RANGES)[number]>('24H')
@@ -89,7 +85,7 @@ export function OverviewTab({
   // usage total as a CLEARLY-LABELLED fallback.
   const ledgerReady = ledger.phase === 'ready'
   const costCents = ledgerReady ? ledger.data.totalCents : null
-  const costCaption = ledgerReady ? 'cloud usage ledger · 7d' : 'ledger reader not yet available'
+  const costCaption = ledgerReady ? 'cloud usage ledger · 7d' : 'no ledger data yet'
   const costSpark = ledgerReady && ledger.data.daily.length >= 2 ? ledger.data.daily.map((d) => d.cents) : undefined
 
   const sourceCaption =
@@ -103,17 +99,14 @@ export function OverviewTab({
     <YStack gap="$4">
       {/* Quick actions */}
       <XStack gap="$2" flexWrap="wrap">
-        <HintButton icon={<Plus size={15} />} disabled hint="Connect a GPU provider (DigitalOcean / AWS) to add capacity" onPress={onAddGpus}>
-          Add GPUs
-        </HintButton>
         <HintButton icon={<Plus size={15} />} theme="light" onPress={() => onNav('clusters')}>
           Create cluster
         </HintButton>
         <HintButton icon={<Tag size={15} />} onPress={() => onNav('pricing')}>
           View pricing
         </HintButton>
-        <HintButton icon={<Wrench size={15} />} disabled hint="Diagnostics run once a GPU provider/agent is connected" onPress={onDiagnostics}>
-          Run diagnostics
+        <HintButton icon={<KeyRound size={15} />} onPress={() => onNav('/secrets')}>
+          Connect a provider
         </HintButton>
       </XStack>
 
