@@ -114,6 +114,7 @@ import { StorageModule } from '~/components/products/StorageModule'
 import { BaseModule } from '~/components/products/BaseModule'
 import { RecordsModule } from '~/components/products/RecordsModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
+import { TenantsModule } from '~/components/products/TenantsModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
 import { TracesModule } from '~/components/products/TracesModule'
 import { ObservationsModule } from '~/components/products/ObservationsModule'
@@ -1423,6 +1424,32 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: ProjectsModule }],
+  },
+  {
+    // White-label TENANTS board — the operator surface for launching, branding,
+    // domain-binding, and managing white-label tenants + resold sub-orgs. GLOBAL-ADMIN
+    // ONLY (`admin: true` hides it from every customer's nav/launcher/palette). It
+    // COMPOSES real backends: the IAM org list (/admin/iam, global-admin gated) is the
+    // tenant set + brand; the admin cockpit (/v1/admin/customers) is plan/wallet/status;
+    // the platform (/paas) provisions clusters + (follow-up) domains/packages. The '' route
+    // is the tenants list + reseller tree; the `:tab` route serves the package catalog
+    // (`/tenants/packages`). Reseller self-scoping + a real `parentOrgId` are the
+    // foundation follow-ups (flagged honestly in the board, never fabricated).
+    id: 'tenants',
+    label: 'Tenants',
+    icon: Building2,
+    description: 'White-label tenants + resold sub-orgs — brand, domain, IAM scope, packages, and billing.',
+    gcp: 'Cloud Identity (org management)',
+    category: 'Platform',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [
+      { path: '', component: TenantsModule },
+      { path: ':tab', component: TenantsModule },
+    ],
+    subpages: [{ slug: 'packages', label: 'Packages', icon: Boxes }],
   },
   {
     // Apps — the org's BUILDABLE SITES (cloud clients/projectsvc, /v1/projects): the
