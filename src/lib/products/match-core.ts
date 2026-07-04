@@ -71,12 +71,29 @@ export function entryMatches(e: CatalogEntry, query: string): boolean {
  * `mlpipelines`/`kubeflow` → `ml-pipelines` (the old engine-named slug stays live
  * for any existing bookmark after the id rename). An alias only resolves to
  * SOMETHING truthful — a real module route or an external launch — never a fake.
+ *
+ * The rest close the gap between the product's HUMAN name (what an external doc,
+ * bookmark, the CTO's e2e list, or a hand-typed URL uses) and its canonical `id`,
+ * which was the single biggest source of "half the pages are blank": a slug with
+ * no matching id resolved to `notfound` → a Next 404 the operator read as a blank
+ * page. Each maps a real human slug to the id that renders it:
+ *   `traces` → `o11y` (that entry IS labelled "Traces"),
+ *   `deploy` → `app-platform`, `plans-pricing` → `plans`, `wallets` → `wallet`,
+ *   `model-catalog` → `models`, `fine-tuning` → `finetuning`,
+ *   `web-search` → `websearch`.
  */
 export const SLUG_ALIASES: Record<string, string> = {
   automation: 'auto',
   automations: 'auto',
   mlpipelines: 'ml-pipelines',
   kubeflow: 'ml-pipelines',
+  traces: 'o11y',
+  deploy: 'app-platform',
+  'plans-pricing': 'plans',
+  wallets: 'wallet',
+  'model-catalog': 'models',
+  'fine-tuning': 'finetuning',
+  'web-search': 'websearch',
 }
 
 /** Canonicalize the FIRST slug segment through `SLUG_ALIASES` (identity if none). */
