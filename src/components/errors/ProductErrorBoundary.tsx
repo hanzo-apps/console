@@ -19,10 +19,7 @@ import { Component, type ReactNode } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
-import { isChunkLoadError, isNextControlFlowError, shouldReloadForChunk } from './boundary-logic'
-
-/** epoch-ms of the last chunk-recovery reload — bounds it to once per window. */
-const RELOAD_AT_KEY = 'hz.console.chunkReloadAt'
+import { isChunkLoadError, isNextControlFlowError, shouldReloadForChunk, CHUNK_RELOAD_AT_KEY } from './boundary-logic'
 
 function reloadPage(): void {
   if (typeof window !== 'undefined') window.location.reload()
@@ -61,10 +58,10 @@ export class ProductErrorBoundary extends Component<Props, State> {
   private recoverFromChunkSkew(): void {
     if (typeof window === 'undefined') return
     try {
-      const raw = window.sessionStorage.getItem(RELOAD_AT_KEY)
+      const raw = window.sessionStorage.getItem(CHUNK_RELOAD_AT_KEY)
       const last = raw ? Number(raw) : null
       if (shouldReloadForChunk(Date.now(), last)) {
-        window.sessionStorage.setItem(RELOAD_AT_KEY, String(Date.now()))
+        window.sessionStorage.setItem(CHUNK_RELOAD_AT_KEY, String(Date.now()))
         window.location.reload()
       }
     } catch {

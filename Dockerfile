@@ -2,6 +2,11 @@
 # NEXT_PUBLIC_* are inlined at build time (browser config), so they are build args.
 FROM public.ecr.aws/docker/library/node:24-alpine AS build
 WORKDIR /app
+# Exact commit for a deterministic Next build id (next.config.mjs generateBuildId).
+# The alpine image has no git binary, so CI passes the SHA as a build arg -> ENV,
+# baked into .next/BUILD_ID so every replica of this image shares ONE build id.
+ARG SOURCE_COMMIT=""
+ENV SOURCE_COMMIT=$SOURCE_COMMIT
 # Copy ALL source FIRST, then install — order matters under Kaniko --single-snapshot:
 # a `COPY` that FOLLOWS `RUN npm install` in the same stage drops the RUN's freshly
 # created node_modules (the 'next not found' cause — the install's own `test -f next`
