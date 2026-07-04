@@ -130,6 +130,27 @@ export const IamAdminApi = {
   organization: (name: string): Promise<Organization> =>
     admin.iamOne<Organization>('get-organization', { id: `admin/${name}` }),
 
+  /**
+   * Create a tenant ORG (the white-label tenant record). Global-admin only.
+   * IAM orgs are owned by the reserved `admin` org; the record's `name` is the
+   * tenant slug. This is the DATA-DRIVEN create — a new tenant is a new org row.
+   */
+  addOrganization: (org: Organization): Promise<void> =>
+    admin.iamMutate('add-organization', { ...org, owner: 'admin' }),
+
+  /**
+   * Update a tenant ORG — the BRAND write (logo / favicon / themeData are real IAM
+   * org fields). Global-admin only; the proxy pins the org name so a write can't
+   * retarget another tenant. This is how the Tenants board persists a brand as DATA
+   * (no hardcoded brand map).
+   */
+  updateOrganization: (name: string, org: Organization): Promise<void> =>
+    admin.iamMutate('update-organization', { ...org, owner: 'admin' }, { id: `admin/${name}` }),
+
+  /** Delete a tenant ORG (the whole tenant record). Global-admin only. */
+  deleteOrganization: (org: Organization): Promise<void> =>
+    admin.iamMutate('delete-organization', { ...org, owner: 'admin' }),
+
   users: (owner: string, params: ListParams = {}): Promise<Paged<IamUser>> =>
     admin.iamList<IamUser>('get-users', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
