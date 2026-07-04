@@ -10,12 +10,12 @@
  * not the casibase `{status,msg,data}` envelope), so this uses the `restGet/
  * restPost/restPut/restDelete` layer.
  *
- * Transport: `originV1Url('platform/...')` builds `<origin>/v1/platform/...`,
+ * Transport: `cloudProxyV1Url('platform/...')` builds `<origin>/v1/platform/...`,
  * which `next.config.mjs` rewrites to the hardened `/cloud` bearer proxy (mints a
  * short-lived user token, org from its owner claim). The raw session cookie never
  * reaches cloud-api. `platform` is allow-listed in `proxy-allow.ts` CLOUD_HEADS.
  */
-import { originV1Url, restDelete, restGet, restPost, restPut } from './client'
+import { cloudProxyV1Url, restDelete, restGet, restPost, restPut } from './client'
 
 export type PlatformEnvVar = { key: string; value: string; secret: boolean }
 
@@ -99,41 +99,41 @@ const appBase = (project: string, app: string) =>
 
 export const PlatformAppsApi = {
   listProjects: (): Promise<PlatformProject[]> =>
-    restGet<PlatformProject[]>(originV1Url('platform/projects')).then((r) => r ?? []),
+    restGet<PlatformProject[]>(cloudProxyV1Url('platform/projects')).then((r) => r ?? []),
 
   listApps: (project: string): Promise<PlatformApp[]> =>
-    restGet<PlatformApp[]>(originV1Url(`platform/projects/${seg(project)}/apps`)).then((r) => r ?? []),
+    restGet<PlatformApp[]>(cloudProxyV1Url(`platform/projects/${seg(project)}/apps`)).then((r) => r ?? []),
 
   getApp: (project: string, app: string): Promise<PlatformApp> =>
-    restGet<PlatformApp>(originV1Url(appBase(project, app))) as Promise<PlatformApp>,
+    restGet<PlatformApp>(cloudProxyV1Url(appBase(project, app))) as Promise<PlatformApp>,
 
   deploy: (project: string, app: string, body?: { tag?: string; commit?: string }): Promise<PlatformDeployment> =>
-    restPost<PlatformDeployment>(originV1Url(`${appBase(project, app)}/deploy`), body ?? {}) as Promise<PlatformDeployment>,
+    restPost<PlatformDeployment>(cloudProxyV1Url(`${appBase(project, app)}/deploy`), body ?? {}) as Promise<PlatformDeployment>,
 
   stop: (project: string, app: string): Promise<PlatformApp> =>
-    restPost<PlatformApp>(originV1Url(`${appBase(project, app)}/stop`)) as Promise<PlatformApp>,
+    restPost<PlatformApp>(cloudProxyV1Url(`${appBase(project, app)}/stop`)) as Promise<PlatformApp>,
 
   start: (project: string, app: string): Promise<PlatformApp> =>
-    restPost<PlatformApp>(originV1Url(`${appBase(project, app)}/start`)) as Promise<PlatformApp>,
+    restPost<PlatformApp>(cloudProxyV1Url(`${appBase(project, app)}/start`)) as Promise<PlatformApp>,
 
   listDeployments: (project: string, app: string): Promise<PlatformDeployment[]> =>
-    restGet<PlatformDeployment[]>(originV1Url(`${appBase(project, app)}/deployments`)).then((r) => r ?? []),
+    restGet<PlatformDeployment[]>(cloudProxyV1Url(`${appBase(project, app)}/deployments`)).then((r) => r ?? []),
 
   deploymentLogs: (project: string, app: string, id: string): Promise<PlatformDeploymentLogs> =>
-    restGet<PlatformDeploymentLogs>(originV1Url(`${appBase(project, app)}/deployments/${seg(id)}/logs`)) as Promise<PlatformDeploymentLogs>,
+    restGet<PlatformDeploymentLogs>(cloudProxyV1Url(`${appBase(project, app)}/deployments/${seg(id)}/logs`)) as Promise<PlatformDeploymentLogs>,
 
   setEnv: (project: string, app: string, env: PlatformEnvVar[]): Promise<PlatformApp> =>
-    restPut<PlatformApp>(originV1Url(`${appBase(project, app)}/env`), { env }) as Promise<PlatformApp>,
+    restPut<PlatformApp>(cloudProxyV1Url(`${appBase(project, app)}/env`), { env }) as Promise<PlatformApp>,
 
   listDomains: (project: string, app: string): Promise<PlatformDomain[]> =>
-    restGet<PlatformDomain[]>(originV1Url(`${appBase(project, app)}/domains`)).then((r) => r ?? []),
+    restGet<PlatformDomain[]>(cloudProxyV1Url(`${appBase(project, app)}/domains`)).then((r) => r ?? []),
 
   addDomain: (project: string, app: string, host: string): Promise<PlatformDomain> =>
-    restPost<PlatformDomain>(originV1Url(`${appBase(project, app)}/domains`), { host }) as Promise<PlatformDomain>,
+    restPost<PlatformDomain>(cloudProxyV1Url(`${appBase(project, app)}/domains`), { host }) as Promise<PlatformDomain>,
 
   verifyDomain: (project: string, app: string, host: string): Promise<PlatformDomain> =>
-    restPost<PlatformDomain>(originV1Url(`${appBase(project, app)}/domains/${seg(host)}/verify`)) as Promise<PlatformDomain>,
+    restPost<PlatformDomain>(cloudProxyV1Url(`${appBase(project, app)}/domains/${seg(host)}/verify`)) as Promise<PlatformDomain>,
 
   removeDomain: (project: string, app: string, host: string): Promise<void> =>
-    restDelete(originV1Url(`${appBase(project, app)}/domains/${seg(host)}`)),
+    restDelete(cloudProxyV1Url(`${appBase(project, app)}/domains/${seg(host)}`)),
 }

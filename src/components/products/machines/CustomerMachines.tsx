@@ -258,7 +258,7 @@ export function CustomerMachines() {
           icon={Server}
           title="Sign in to view your machines"
           description={error.message}
-          primary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
+          primary={{ label: 'Compute docs', href: `${config.docsUrl}/docs/machines` }}
         />
       </>
     )
@@ -278,7 +278,7 @@ export function CustomerMachines() {
           title={forbidden ? 'Machines are not enabled for your account' : 'Could not load your machines'}
           description={error.message}
           primary={forbidden ? undefined : { label: 'Retry', onPress: () => void load() }}
-          secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
+          secondary={{ label: 'Compute docs', href: `${config.docsUrl}/docs/machines` }}
         />
       </>
     )
@@ -298,7 +298,7 @@ export function CustomerMachines() {
           description="Dedicated compute machines run your workloads across regions. Launch one and it appears here — with real capacity, region, and cost. Managed on Hanzo Cloud."
           bullets={['Tap a size in the live catalog below to launch it.', 'CPU machines launch on your Hanzo credit balance — no card required; nothing is fabricated.']}
           primary={{ label: 'Launch a machine', onPress: () => openLaunch() }}
-          secondary={{ label: 'Compute docs', href: `${config.docsUrl}/vm` }}
+          secondary={{ label: 'Compute docs', href: `${config.docsUrl}/docs/machines` }}
         />
         <MachineCatalog onLaunch={openLaunch} />
       </>

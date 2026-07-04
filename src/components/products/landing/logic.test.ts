@@ -19,9 +19,9 @@ describe('apiBaseFromDocs', () => {
 })
 
 describe('landingDocsUrl', () => {
-  it('joins the product path and optional sub-path (no double slash)', () => {
-    expect(landingDocsUrl('https://docs.hanzo.ai', 'embeddings')).toBe('https://docs.hanzo.ai/embeddings')
-    expect(landingDocsUrl('https://docs.hanzo.ai/', 'embeddings', 'quickstart')).toBe('https://docs.hanzo.ai/embeddings/quickstart')
+  it('joins the /docs/ product path and optional sub-path (no double slash)', () => {
+    expect(landingDocsUrl('https://docs.hanzo.ai', 'embeddings')).toBe('https://docs.hanzo.ai/docs/embeddings')
+    expect(landingDocsUrl('https://docs.hanzo.ai/', 'embeddings', 'quickstart')).toBe('https://docs.hanzo.ai/docs/embeddings/quickstart')
   })
 })
 
@@ -35,10 +35,10 @@ describe('supportMailto', () => {
 describe('standardResources', () => {
   it('returns the real docs/quickstart/examples/api links for a product', () => {
     expect(standardResources('https://docs.hanzo.ai', 'embeddings')).toEqual({
-      docs: 'https://docs.hanzo.ai/embeddings',
-      quickstart: 'https://docs.hanzo.ai/embeddings/quickstart',
-      examples: 'https://docs.hanzo.ai/embeddings/examples',
-      api: 'https://docs.hanzo.ai/embeddings/api-reference',
+      docs: 'https://docs.hanzo.ai/docs/embeddings',
+      quickstart: 'https://docs.hanzo.ai/docs/embeddings',
+      examples: 'https://docs.hanzo.ai/docs/embeddings',
+      api: 'https://docs.hanzo.ai/docs/api',
     })
   })
 })
