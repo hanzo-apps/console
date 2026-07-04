@@ -53,6 +53,8 @@ export type VisorMachine = {
   createdAt?: string
   /** Hourly price in USD, if visor reports it. */
   costHourlyUsd?: number
+  /** Operating system, when reported (a BYO box reports it from the connecting host). */
+  os?: string
 }
 
 const rec = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {})
@@ -89,6 +91,7 @@ export function normalizeMachine(raw: unknown, i = 0): VisorMachine {
     ip: str(r.ip) ?? str(r.publicIp) ?? str(r.ipv4) ?? str(r.address),
     createdAt: str(r.createdAt) ?? str(r.created) ?? str(r.createdTime) ?? str(r.created_at),
     costHourlyUsd: num(r.costHourlyUsd) ?? num(r.costHourly) ?? num(r.priceHourly) ?? num(r.hourly),
+    os: str(r.os) ?? str(r.operatingSystem) ?? str(r.image),
   }
 }
 
