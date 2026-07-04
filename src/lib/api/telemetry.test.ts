@@ -108,7 +108,7 @@ describe('redactInstance — internal host:port never reaches a customer status 
     expect(redactInstance('localhost:8428')).toBe('')
     expect(redactInstance('127.0.0.1:8429')).toBe('')
   })
-  it('drops in-cluster, loopback, private-IP, IPv6, and bare-port instances', () => {
+  it('drops in-cluster, loopback, private-IP, IPv6, internal-TLD, and bare-port instances', () => {
     for (const internal of [
       'iam.hanzo.svc:80',
       'cloud-api.hanzo.svc.cluster.local:8000',
@@ -120,6 +120,10 @@ describe('redactInstance — internal host:port never reaches a customer status 
       '169.254.1.1:80',
       '[::1]:8428',
       'fe80::1:9000',
+      'db.internal:5432', // internal TLD
+      'metrics.corp:9090',
+      'node.lan:9100',
+      'x.cluster.local:80',
       '',
     ]) {
       expect(redactInstance(internal)).toBe('')
