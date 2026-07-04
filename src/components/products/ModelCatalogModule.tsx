@@ -113,7 +113,7 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
 
       <YStack gap="$2">
         <XStack items="center" gap="$3" flexWrap="wrap">
-          {/* Family brand so the detail matches the catalog row (Zen → ensō). */}
+          {/* Family brand so the detail matches the catalog row (Zen → Hanzo mark). */}
           <ProviderLogo provider={familyOf(m)?.logo ?? m.provider ?? 'Other'} size={40} />
           <Text fontSize="$8" fontWeight="800" color="$color12">
             {modelDisplayName(m)}
@@ -215,7 +215,7 @@ function ModelRow({ m, brand, onOpen }: { m: CatalogEntry; brand: string; onOpen
       hoverStyle={{ bg: '$color3' }}
       onPress={onOpen}
     >
-      {/* Family brand — every model in a family shares its header mark (Zen → ensō). */}
+      {/* Family brand — every model in a family shares its header mark (Zen → Hanzo mark). */}
       <ProviderLogo provider={brand} size={26} />
       <YStack flex={1} minW={0} gap={1}>
         <XStack items="center" gap="$2" flexWrap="wrap">
