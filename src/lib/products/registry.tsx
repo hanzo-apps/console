@@ -129,7 +129,6 @@ import { PromptCreateModule, PromptMetricsModule, PromptsModule } from '~/compon
 import { EvalsModule } from '~/components/products/EvalsModule'
 import { DatasetItemsModule, DatasetRunsModule, DatasetsModule } from '~/components/products/DatasetsModule'
 import { resourceRoutes } from '~/components/products/ResourceModule'
-import { ComingSoon } from '~/components/products/ComingSoon'
 import { overviewFor } from '~/components/products/overview/NativeOverview'
 import { CategoryOverview } from '~/components/products/overview/CategoryOverview'
 import {
@@ -416,13 +415,6 @@ const ext = {
   ide: `${DOCS}/code`,
   desktop: `${DOCS}/desktop`,
 } as const
-
-/**
- * The shared "coming soon" surface for a `soon` entry — an honest page that
- * resolves itself from the path and points at the API/CLI. ONE component for
- * every `soon` leaf (DRY), so a soon entry is just `routes: soonRoutes`.
- */
-const soonRoutes: ProductRoute[] = [{ path: '', component: ComingSoon }]
 
 /**
  * The native product overview for a product that has no bespoke admin surface yet.
