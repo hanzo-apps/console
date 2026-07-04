@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet, originV1Url } from '~/lib/api/client'
+import { restGet, cloudProxyV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
@@ -36,7 +36,7 @@ export function EnvironmentsModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ environments?: Environment[] }>(originV1Url('environments'))
+      const r = await restGet<{ environments?: Environment[] }>(cloudProxyV1Url('environments'))
       setRows(r.environments ?? [])
       setLoadError(null)
     } catch (e) {

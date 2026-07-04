@@ -5,6 +5,7 @@ import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Sparkles } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ChatApi, MessageApi, type Chat, type Message } from '~/lib/api'
+import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { Markdown } from './markdown'
 
@@ -52,7 +53,7 @@ const Bubble = ({ m }: { m: Message }) => {
  * Ported from ChatPage.js / ChatBox.js: loads the chat (`get-chat`) and its
  * messages (`get-messages?owner&chat`), renders each turn by author (AI vs user).
  */
-export function ChatView({ name, onDone }: { name: string; onDone: () => void }) {
+export function ChatView({ owner, name, onDone }: { owner?: string; name: string; onDone: () => void }) {
   const [chat, setChat] = useState<Chat | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,7 +62,10 @@ export function ChatView({ name, onDone }: { name: string; onDone: () => void })
   useEffect(() => {
     let live = true
     setLoading(true)
-    ChatApi.get('admin', name)
+    // Use the chat's REAL owner (carried in the route); a legacy single-segment link
+    // with no owner falls back to the active org — never a hardcoded `admin`, which
+    // 404'd every non-admin org's saved chats.
+    ChatApi.get(owner || currentOrg(), name)
       .then(async (c) => {
         if (!live) return
         setChat(c)
@@ -80,7 +84,7 @@ export function ChatView({ name, onDone }: { name: string; onDone: () => void })
     return () => {
       live = false
     }
-  }, [name])
+  }, [owner, name])
 
   if (loading) {
     return (

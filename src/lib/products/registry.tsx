@@ -2074,6 +2074,10 @@ export const catalog: CatalogEntry[] = [
     kind: 'module',
     routes: [
       { path: '', component: ChatModule },
+      // `:owner/:name` carries the chat's real owner (2 segs); `:name` (1 seg) is the
+      // legacy single-segment link, owner defaulting to the active org. Unambiguous by
+      // segment count.
+      { path: ':owner/:name', component: ChatModule },
       { path: ':name', component: ChatModule },
     ],
   },
