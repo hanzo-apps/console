@@ -77,12 +77,22 @@ export type SubpageSources = {
   /** Real health source (reused verbatim from the native-overview spec). */
   status: HealthSource
   /**
-   * Candidate operator-service name to filter the apps inventory + platform logs
+   * Candidate operator-service name to filter the apps inventory (deployment state)
    * by. From an explicit override, else the overview health spec, else the repo
    * basename / product id. `null` for a product with no plausible discrete service
    * (the views then show an honest managed state, never a false negative).
    */
   service: string | null
+  /**
+   * The product's OpenTelemetry `service.name` — the label it emits spans/logs/metrics
+   * under, used to scope the LIVE o11y (SigNoz) reads (Status health, Logs, Metrics
+   * latency) to THIS product. Derived from the OTel convention (service.name = the
+   * binary/repo name), with a tiny override for the few that differ. `null` for a
+   * product with no backing service. Orthogonal to `service` (the k8s operator-app
+   * name for deployment state) — a product may emit telemetry under one name and be
+   * deployed under another, so both are candidates when reading health.
+   */
+  o11yService: string | null
   /** How the Metrics sub-page scopes the usage ledger (per-product / org-wide inference). */
   metrics: MetricsScope
   /** How the Settings sub-page resolves. */
@@ -148,6 +158,30 @@ const SERVICE_OVERRIDE: Record<string, string> = {
 
 /** repo basename, e.g. `hanzoai/vector` → `vector`; null when absent. */
 const repoBase = (repo?: string): string | null => (repo ? repo.split('/').pop() || null : null)
+
+/**
+ * Products whose OpenTelemetry `service.name` differs from their repo basename (the
+ * default). Kept tiny — the OTel convention is service.name = the binary/repo name, so
+ * the repo basename is right for the vast majority (iam→iam, vector→vector, the AI
+ * products→ai, the Observe products→o11y, …). A product NOT here uses the repo
+ * basename, then its id. A wrong guess yields an honest empty o11y state, never
+ * another service's telemetry (the reads exact-match the service name).
+ */
+const O11Y_SERVICE_OVERRIDE: Record<string, string> = {
+  // The agent gateway emits under its gateway service name, not the `bot` repo base.
+  bot: 'bot-gateway',
+}
+
+/**
+ * The product's OTel `service.name` — the label its telemetry (spans/logs/metrics)
+ * carries, used to scope the LIVE o11y reads to THIS product. ONE decision, one place
+ * (DRY). `null` for a product with no backing service (org/account admin, cross-cutting
+ * rollups) — its o11y sub-pages then show an honest managed state, never a false read.
+ */
+export function o11yServiceFor(entry: CatalogEntry): string | null {
+  if (NO_SERVICE.has(entry.id)) return null
+  return O11Y_SERVICE_OVERRIDE[entry.id] ?? repoBase(entry.repo) ?? entry.id
+}
 
 /**
  * AI products that call the unified gateway — their real, product-specific config is
@@ -247,8 +281,9 @@ export function subpageSourcesFor(entry: CatalogEntry): SubpageSources {
     ? null
     : (SERVICE_OVERRIDE[entry.id] ??
       (status.kind === 'platform-app' ? status.service : repoBase(entry.repo) ?? entry.id))
+  const o11yService = o11yServiceFor(entry)
   const metrics = metricsScopeFor(entry.id)
   const route = SETTINGS_ROUTE[entry.id]
   const settings: SettingsFeed = route ? { kind: 'route', to: route } : { kind: 'managed' }
-  return { status, service, metrics, settings }
+  return { status, service, o11yService, metrics, settings }
 }

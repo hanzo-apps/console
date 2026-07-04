@@ -153,6 +153,58 @@ export function normalizeTopOperations(body: unknown): TopOperation[] {
     .filter((t) => t.name !== '')
 }
 
+// ── Per-service health (RED metrics for ONE product's service) ────────────────
+
+/**
+ * Pick the RED-metrics row for a product's OTel service from the services list,
+ * trying each candidate name in order (the product's o11y `service.name`, then its
+ * operator-app name — a product may emit under either). Exact match, so a wrong
+ * guess yields `null` (→ honest empty), never another service's metrics.
+ */
+export function pickService(rows: ServiceRow[], candidates: (string | null | undefined)[]): ServiceRow | null {
+  const names = candidates.filter((c): c is string => typeof c === 'string' && c !== '')
+  for (const n of names) {
+    const hit = rows.find((r) => r.serviceName === n)
+    if (hit) return hit
+  }
+  return null
+}
+
+/** A product service's live health, derived from its o11y RED metrics over the window. */
+export type ServiceHealth = {
+  service: string
+  numCalls: number
+  callRate: number
+  /** Error rate as a percentage (SigNoz `errorRate` is already a percent). */
+  errorRatePct: number
+  /** p99 latency in milliseconds (SigNoz returns nanoseconds). */
+  p99Ms: number
+  /** Average latency in milliseconds. */
+  avgMs: number
+  tone: 'green' | 'yellow' | 'red'
+}
+
+/**
+ * Derive a service's health from its RED metrics: a service that served traffic in
+ * the window is `green`, `yellow` at ≥1% errors, `red` at ≥5% — the standard RED
+ * verdict. `null` when the service reported no calls (nothing to fabricate a verdict
+ * from → the view shows an honest "no telemetry" state, never a fake green).
+ */
+export function serviceHealthOf(row: ServiceRow | null): ServiceHealth | null {
+  if (!row || row.serviceName === '' || row.numCalls <= 0) return null
+  const errorRatePct = Math.max(0, row.errorRate)
+  const tone = errorRatePct >= 5 ? 'red' : errorRatePct >= 1 ? 'yellow' : 'green'
+  return {
+    service: row.serviceName,
+    numCalls: row.numCalls,
+    callRate: row.callRate,
+    errorRatePct,
+    p99Ms: row.p99 / 1_000_000,
+    avgMs: row.avgDuration / 1_000_000,
+    tone,
+  }
+}
+
 // ── Infrastructure (hosts / k8s) ──────────────────────────────────────────────
 
 /** One host row from `/api/v1/hosts/list`. */
@@ -369,12 +421,46 @@ export function normalizeDashboards(body: unknown): Dashboard[] {
 export type SignozDataSource = 'logs' | 'traces' | 'metrics'
 
 /**
+ * One SigNoz builder-query filter item — the `{key, op, value}` shape the explorer
+ * sends. `key` carries the attribute's name + type so the runtime resolves it
+ * correctly (a resource attribute vs an indexed column).
+ */
+export type QueryFilterItem = {
+  key: { key: string; dataType: 'string'; type: string; isColumn: boolean }
+  op: string
+  value: string
+}
+
+/**
+ * Filter a logs/traces list query to ONE OpenTelemetry `service.name`. `service.name`
+ * is a RESOURCE attribute on both signals (on traces it is also materialized as an
+ * indexed column, so `isColumn` is set there) — this is the exact filter item SigNoz's
+ * own explorer emits for a service-scoped list, so the runtime resolves it and never
+ * 400s. The caller ALSO re-filters the normalized rows client-side (belt-and-suspenders),
+ * so a runtime that ignores the item can never leak another service's rows onto a
+ * per-product page.
+ */
+export function serviceFilterItem(dataSource: SignozDataSource, service: string): QueryFilterItem {
+  return {
+    key: { key: 'service.name', dataType: 'string', type: 'resource', isColumn: dataSource === 'traces' },
+    op: '=',
+    value: service,
+  }
+}
+
+/**
  * The exact v3 `query_range` LIST payload — ONE `noop` builder query keyed `A`,
  * newest-first, paged by `offset`/`pageSize`. Mirrors what SigNoz's own explorer
  * sends (verified against the frontend + the server `BuilderQuery` struct), so the
- * runtime never 400s on shape.
+ * runtime never 400s on shape. `filters` (default none) scopes the query — e.g. a
+ * `serviceFilterItem` restricts it to one product's OTel service.
  */
-export function listQueryPayload(dataSource: SignozDataSource, w: ApmWindow, limit: number): Record<string, unknown> {
+export function listQueryPayload(
+  dataSource: SignozDataSource,
+  w: ApmWindow,
+  limit: number,
+  filters: QueryFilterItem[] = [],
+): Record<string, unknown> {
   const pageSize = Math.max(1, Math.min(1000, Math.floor(limit)))
   return {
     start: w.startMs,
@@ -392,7 +478,7 @@ export function listQueryPayload(dataSource: SignozDataSource, w: ApmWindow, lim
           expression: 'A',
           disabled: false,
           stepInterval: 60,
-          filters: { items: [], op: 'AND' },
+          filters: { items: filters, op: 'AND' },
           groupBy: [],
           having: [],
           orderBy: [{ columnName: 'timestamp', order: 'desc' }],
@@ -544,8 +630,24 @@ export const ApmApi = {
   dashboard: (uuid: string): Promise<unknown> => restGet<unknown>(u(`v1/dashboards/${encodeURIComponent(uuid)}`)),
 
   // ── Logs + Traces (composite query_range; `/api/v1/logs` is a stub) ──
-  logs: async (w: ApmWindow, limit = 200): Promise<LogRow[]> =>
-    normalizeLogs(await restPost<unknown>(u('v3/query_range'), listQueryPayload('logs', w, limit))),
-  traceSearch: async (w: ApmWindow, limit = 200): Promise<TraceSpan[]> =>
-    normalizeSpans(await restPost<unknown>(u('v3/query_range'), listQueryPayload('traces', w, limit))),
+  // A `service` scopes the query to ONE product's OTel `service.name` (the per-product
+  // Logs sub-page); omit it for the org-wide stream. The rows are re-filtered client-side
+  // to the same service so a runtime ignoring the item can never leak other services' lines.
+  logs: async (w: ApmWindow, limit = 200, service?: string): Promise<LogRow[]> => {
+    const filters = service ? [serviceFilterItem('logs', service)] : []
+    const rows = normalizeLogs(await restPost<unknown>(u('v3/query_range'), listQueryPayload('logs', w, limit, filters)))
+    return service ? rows.filter((r) => !r.service || r.service === service) : rows
+  },
+  traceSearch: async (w: ApmWindow, limit = 200, service?: string): Promise<TraceSpan[]> => {
+    const filters = service ? [serviceFilterItem('traces', service)] : []
+    const rows = normalizeSpans(await restPost<unknown>(u('v3/query_range'), listQueryPayload('traces', w, limit, filters)))
+    return service ? rows.filter((r) => !r.service || r.service === service) : rows
+  },
+
+  // ── Per-product service health (RED metrics for ONE product's OTel service) ──
+  // Reads the org-scoped services list once and picks the row for the product's service
+  // (trying each candidate name). Works for a customer too (o11y scopes by the bearer's
+  // org), unlike the admin-only control-plane inventory. `null` → honest "no telemetry".
+  serviceHealth: async (w: ApmWindow, ...candidates: (string | null | undefined)[]): Promise<ServiceHealth | null> =>
+    serviceHealthOf(pickService(await ApmApi.services(w), candidates)),
 }

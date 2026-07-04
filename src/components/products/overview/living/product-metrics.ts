@@ -12,18 +12,26 @@
  * under its name; the raw model-serving surface (inference/models/api/gateway) reads the
  * FULL ledger — which is entirely inference calls flowing through it — and the subtitle +
  * the view's banner frame it as org-wide inference, not a fabricated per-product slice.
- * P95 latency has no ledger source, so its tile renders an honest "—" until o11y trace
- * latency is wired in (flagged, never fabricated).
+ *
+ * Latency (p99) is the LIVE o11y (SigNoz) RED metric for the product's OTel service
+ * (`ApmApi.serviceHealth`, scoped to `subpageSourcesFor(entry).o11yService`), fetched in
+ * parallel with the ledger and merged into `kpi.latencyP99`. The commerce ledger carries
+ * no latency, so this is the ONE real source for it — and it degrades to an honest "—"
+ * when o11y has no telemetry for the service (never fabricated).
  */
 import { Activity, DollarSign, Hash, Timer } from '@hanzogui/lucide-icons-2'
 
 import type { CatalogEntry } from '~/lib/products/registry'
 import { UsageApi } from '~/lib/api/usage'
-import { metricsScopeFor } from '~/components/products/subpage/sources'
+import { ApmApi, apmWindow } from '~/lib/api/apm'
+import { metricsScopeFor, o11yServiceFor } from '~/components/products/subpage/sources'
 import type { LivingOverviewConfig, OverviewRange } from './config'
 import { fromCloudUsage } from './adapters'
 
 const usageRange = (r: OverviewRange): '24h' | '7d' | '30d' => r
+
+/** The o11y latency window matches the metrics range (seconds). */
+const RANGE_SECONDS: Record<OverviewRange, number> = { '24h': 86_400, '7d': 604_800, '30d': 2_592_000 }
 
 /** The per-product Metrics ledger filter — the `metadata.product` tag, or null (whole
  *  inference ledger) for a raw model-serving surface. Thin accessor over the ONE
@@ -40,6 +48,7 @@ export function metricsProductFilter(id: string): string | null {
  */
 export function productMetricsConfig(entry: CatalogEntry): LivingOverviewConfig {
   const { product, scope } = metricsScopeFor(entry.id)
+  const o11yService = o11yServiceFor(entry)
   const subtitle =
     scope === 'inference-all'
       ? `Org-wide inference — every model call flows through ${entry.label}, per organization.`
@@ -54,7 +63,7 @@ export function productMetricsConfig(entry: CatalogEntry): LivingOverviewConfig 
         { tile: 'metric', key: 'requests', label: 'Total Requests', icon: Activity },
         { tile: 'metric', key: 'tokens', label: 'Total Tokens', icon: Hash },
         { tile: 'metric', key: 'spendCents', label: 'Total Spend', icon: DollarSign, unit: 'cents' },
-        { tile: 'metric', key: 'latencyP95', label: 'Avg. Latency (P95)', icon: Timer, unit: 'ms' },
+        { tile: 'metric', key: 'latencyP99', label: 'Latency (p99)', icon: Timer, unit: 'ms' },
       ],
       [
         { tile: 'timeseries', key: 'requests', title: 'Usage over time' },
@@ -67,9 +76,18 @@ export function productMetricsConfig(entry: CatalogEntry): LivingOverviewConfig 
       ],
       [{ tile: 'activity', title: 'Recent usage', empty: `No usage attributed to ${entry.label} in this range yet.` }],
     ],
-    load: async ({ range, allOrgs }) =>
-      fromCloudUsage(
-        await UsageApi.overview({ range: usageRange(range), activityType: 'all', activityLimit: 12, topModels: 8, allOrgs, product }),
-      ),
+    // Fetch the REAL usage ledger and the LIVE o11y service latency in parallel; merge the
+    // real p99 into the latency KPI. o11y failure / no-telemetry → the tile stays an honest "—".
+    load: async ({ range, allOrgs }) => {
+      const [usage, health] = await Promise.all([
+        UsageApi.overview({ range: usageRange(range), activityType: 'all', activityLimit: 12, topModels: 8, allOrgs, product }),
+        o11yService
+          ? ApmApi.serviceHealth(apmWindow(RANGE_SECONDS[range]), o11yService).catch(() => null)
+          : Promise.resolve(null),
+      ])
+      const data = fromCloudUsage(usage)
+      if (health) data.kpi.latencyP99 = { value: health.p99Ms }
+      return data
+    },
   }
 }

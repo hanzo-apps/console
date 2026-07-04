@@ -4,6 +4,7 @@ import {
   subpageSourcesFor,
   metricsScopeFor,
   settingsConfigFor,
+  o11yServiceFor,
   INFERENCE_SURFACE_PRODUCTS,
 } from './sources'
 import type { CatalogEntry } from '~/lib/products/registry'
@@ -72,6 +73,42 @@ describe('subpageSourcesFor — per-product Status/Logs service (real, derived +
 
   it('defaults Settings to the honest managed state (no fabricated dead form)', () => {
     expect(subpageSourcesFor(entry('vector')).settings).toEqual({ kind: 'managed' })
+  })
+})
+
+describe('o11yServiceFor — the per-product OTel service.name for LIVE o11y reads (DRY)', () => {
+  it('derives the OTel service.name from the repo basename (the OTel convention)', () => {
+    // service.name == the binary/repo name for the vast majority.
+    expect(o11yServiceFor(entry('vector', { repo: 'hanzoai/vector' }))).toBe('vector')
+    expect(o11yServiceFor(entry('iam', { repo: 'hanzoai/iam', category: 'Security' }))).toBe('iam')
+    expect(o11yServiceFor(entry('gateway', { repo: 'hanzoai/gateway', category: 'Network' }))).toBe('gateway')
+    // AI products share the `ai` service; Observe products share `o11y`.
+    expect(o11yServiceFor(entry('models', { repo: 'hanzoai/ai', category: 'AI' }))).toBe('ai')
+    expect(o11yServiceFor(entry('embeddings', { repo: 'hanzoai/ai', category: 'AI' }))).toBe('ai')
+    expect(o11yServiceFor(entry('evals', { repo: 'hanzoai/o11y', category: 'Observe' }))).toBe('o11y')
+  })
+
+  it('applies the tiny override where the OTel name differs from the repo base', () => {
+    // repo hanzoai/bot would derive `bot`; the agent gateway emits under `bot-gateway`.
+    expect(o11yServiceFor(entry('bot', { repo: 'hanzoai/bot', category: 'Apps' }))).toBe('bot-gateway')
+  })
+
+  it('falls back to the product id when there is no repo', () => {
+    expect(o11yServiceFor(entry('memory'))).toBe('memory')
+  })
+
+  it('is null (honest managed, no o11y read) for pure org/account + rollup products', () => {
+    for (const id of ['settings', 'team', 'profile', 'billing', 'plans', 'cost', 'wallet', 'referrals', 'api-keys']) {
+      expect(o11yServiceFor(entry(id, { category: 'Settings' }))).toBeNull()
+    }
+  })
+
+  it('is carried on subpageSourcesFor (one source for every sub-page view)', () => {
+    expect(subpageSourcesFor(entry('vector', { repo: 'hanzoai/vector' })).o11yService).toBe('vector')
+    // Orthogonal to the operator `service`: models emits telemetry as `ai`, deploys as `models`.
+    const models = subpageSourcesFor(entry('models', { repo: 'hanzoai/ai', category: 'AI' }))
+    expect(models.o11yService).toBe('ai')
+    expect(models.service).toBe('models')
   })
 })
 
