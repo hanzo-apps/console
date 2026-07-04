@@ -32,10 +32,12 @@
  */
 import { config, isAdminHost } from '~/config'
 import { CALLBACK_PATH } from './iam'
+import { createPkce } from './pkce'
 
-/** Outcome of the credential step. */
+/** Outcome of the credential step. On an admin host a successful `code` also carries the
+ *  PKCE `verifier` the console's BFF needs to redeem it as the public admin-console client. */
 export type LoginResult =
-  | { kind: 'code'; code: string }
+  | { kind: 'code'; code: string; verifier?: string }
   | { kind: 'mfa' }
   | { kind: 'error'; message: string }
 
@@ -67,6 +69,12 @@ function loginUrl(): string {
  * `error` message.
  */
 export async function loginWithPassword(username: string, password: string): Promise<LoginResult> {
+  const admin = isAdminHost(window.location.hostname)
+  // On an admin host the console redeems the code ITSELF as the public `admin-console`
+  // client (no secret), so it authorizes with PKCE (RFC 7636): send the S256
+  // code_challenge now and keep the verifier to authenticate the exchange. A tenant host
+  // sends no challenge — the cloud backend redeems its code with a confidential client.
+  const pkce = admin ? await createPkce() : null
   let res: Response
   try {
     res = await fetch(loginUrl(), {
@@ -83,11 +91,14 @@ export async function loginWithPassword(username: string, password: string): Pro
         // `admin` org where `admin-console` lives (config.iamOrgName is `admin` there),
         // so pin it — otherwise the code is minted in the wrong org and the token
         // audience mismatches (application.Name:[hanzo-cloud] vs token.Application:[admin-console]).
-        organization: isAdminHost(window.location.hostname) ? config.iamOrgName : '',
+        organization: admin ? config.iamOrgName : '',
         username,
         password,
         signinMethod: 'Password',
         autoSignin: true,
+        // PKCE (admin only) — IAM stores the challenge with the code; the BFF then
+        // presents the verifier to redeem it without the admin-console secret.
+        ...(pkce ? { codeChallenge: pkce.challenge, codeChallengeMethod: 'S256' } : {}),
       }),
     })
   } catch (e) {
@@ -100,6 +111,6 @@ export async function loginWithPassword(username: string, password: string): Pro
 
   const data = env.data
   if (data === 'RequiredMfa' || data === 'NextMfa') return { kind: 'mfa' }
-  if (typeof data === 'string' && data) return { kind: 'code', code: data }
+  if (typeof data === 'string' && data) return { kind: 'code', code: data, verifier: pkce?.verifier }
   return { kind: 'error', message: env.msg || 'Sign-in failed.' }
 }
