@@ -22,8 +22,11 @@ import { getBrand } from '~/lib/branding/brands'
 /** Per-org logo cache for the session ('' = checked, none). */
 const orgLogoCache = new Map<string, string>()
 
-/** The host-derived brand mark — inline, build-time-trusted SVG (currentColor). */
-function BrandMark({ size }: { size: number }) {
+/** The host-derived brand mark — inline, build-time-trusted SVG (currentColor).
+ *  White-label by hostname: a lux/zoo/pars host renders ITS mark, never Hanzo's.
+ *  Exported so surfaces that need JUST the brand H (sidebar fallback, support
+ *  bubble) share the one definition. */
+export function BrandMark({ size }: { size: number }) {
   const brand = getBrand()
   return (
     <svg
@@ -41,10 +44,20 @@ function BrandMark({ size }: { size: number }) {
   )
 }
 
-export function BrandLogo({ size = 22, wordmark = true }: { size?: number; wordmark?: boolean }) {
+/** The current org name the console is scoped to (org > owner > brand default). */
+export function useOrgName(): string {
   const { account } = useSession()
+  return account?.organization || account?.owner || config.iamOrgName
+}
+
+/**
+ * The selected org's own logo URL (IAM `organization.logo`), or '' when none —
+ * the ONE org-logo source (cached per session). Reused by `BrandLogo` and the
+ * sidebar org-brand header so the fetch happens once and both stay in lockstep.
+ */
+export function useOrgLogo(): string {
   const isGlobalAdmin = useIsGlobalAdmin()
-  const orgName = account?.organization || account?.owner || config.iamOrgName
+  const orgName = useOrgName()
   const [logo, setLogo] = useState<string>(() => orgLogoCache.get(orgName) ?? '')
 
   useEffect(() => {
@@ -72,6 +85,12 @@ export function BrandLogo({ size = 22, wordmark = true }: { size?: number; wordm
       live = false
     }
   }, [orgName, isGlobalAdmin])
+
+  return logo
+}
+
+export function BrandLogo({ size = 22, wordmark = true }: { size?: number; wordmark?: boolean }) {
+  const logo = useOrgLogo()
 
   const wordmarkText = `${getBrand().brandName.replace(' Cloud', '')} Console`
 
