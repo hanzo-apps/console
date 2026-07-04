@@ -14,10 +14,7 @@ import { useEffect } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
-import { isChunkLoadError, shouldReloadForChunk } from '~/components/errors/boundary-logic'
-
-/** Shared once-per-window guard key (same as ProductErrorBoundary — never double-reload). */
-const RELOAD_AT_KEY = 'hz.console.chunkReloadAt'
+import { isChunkLoadError, shouldReloadForChunk, CHUNK_RELOAD_AT_KEY } from '~/components/errors/boundary-logic'
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const chunk = isChunkLoadError(error)
@@ -29,10 +26,10 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
     // crash at the segment level auto-recovers instead of stranding a manual card.
     if (!chunk || typeof window === 'undefined') return
     try {
-      const raw = window.sessionStorage.getItem(RELOAD_AT_KEY)
+      const raw = window.sessionStorage.getItem(CHUNK_RELOAD_AT_KEY)
       const last = raw ? Number(raw) : null
       if (shouldReloadForChunk(Date.now(), last)) {
-        window.sessionStorage.setItem(RELOAD_AT_KEY, String(Date.now()))
+        window.sessionStorage.setItem(CHUNK_RELOAD_AT_KEY, String(Date.now()))
         window.location.reload()
       }
     } catch {
