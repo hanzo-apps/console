@@ -14,10 +14,15 @@
  * with the admin API (DRY), differing only in the gated base path.
  */
 import { makeIamClient, DEFAULT_PAGE_SIZE, type Paged } from './iam-envelope'
+import { ApiError } from './client'
 import { listQuery, type ListParams } from './types'
 import type { Organization, IamUser, Role } from './admin'
 
 const org = makeIamClient('/org/iam')
+
+/** A shareable accept link for a pending member (delivery is a link hand-off —
+ *  email/OTP is not wired on this deployment). */
+export type InviteLink = { link: string; org: string; name: string; email: string }
 
 export const TeamApi = {
   /** Members of `orgName` (the caller's own org, or any for a global admin). */
@@ -54,4 +59,29 @@ export const TeamApi = {
 
   /** Remove a member. Body is the full user object (owner must be the caller's org). */
   remove: (user: IamUser): Promise<void> => org.iamMutate('delete-user', user),
+
+  /**
+   * Mint a shareable ACCEPT LINK for a pending member (`/console/invite-link`, the
+   * console's own org-admin-gated BFF). The invitee opens it to set a password and
+   * sign in — the honest, no-email delivery for a deployment where IAM's
+   * `send-invitation` is a stub. Server-gated to an org admin of the member's org.
+   */
+  inviteLink: async (member: { org: string; name: string; email?: string }): Promise<InviteLink> => {
+    let res: Response
+    try {
+      res = await fetch('/console/invite-link', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(member),
+      })
+    } catch (e) {
+      throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
+    }
+    const j = (await res.json().catch(() => null)) as (InviteLink & { error?: string }) | null
+    if (!res.ok || !j?.link) {
+      throw new ApiError(j?.error || `Could not create an invite link (HTTP ${res.status})`, res.status)
+    }
+    return { link: j.link, org: j.org, name: j.name, email: j.email }
+  },
 }
