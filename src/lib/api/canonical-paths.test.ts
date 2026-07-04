@@ -75,11 +75,6 @@ describe('canonical /v1 client paths (no service prefix before /v1/)', () => {
     await ProvisioningApi.list('sql')
     expect(lastUrl).toBe(`${ORIGIN}/v1/sql`)
   })
-  it('BillingApi.balance -> /v1/billing/balance', async () => {
-    stub({ balanceCents: 0 })
-    await BillingApi.balance()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/billing/balance?currency=usd`)
-  })
   it('PlatformApi.listClusters -> /v1/clusters', async () => {
     stub({ clusters: [] })
     await PlatformApi.listClusters()
@@ -183,15 +178,17 @@ describe('canonical /v1 — the last six data-product clients (no prefix before 
   })
 })
 
-// s3 + framework are the DELIBERATE exceptions to the prefix-free rule above. The
-// live Traefik ingress does NOT rewrite a bare `/v1/s3` / `/v1/framework` to the
-// console app — those heads reach hanzoai/gateway directly with no principal and
-// 403 ("valid principal required"). So both clients address the `/cloud` user-bearer
-// proxy EXPLICITLY (`cloudProxyV1Url` → `<origin>/cloud/v1/<head>`), which IS routed
-// to `app/cloud/[...path]` regardless of the `/v1/*` ingress config (see the
-// `cloudProxyV1Url` docstring in client.ts). This block PINS that exception so a
+// s3 + framework + billing are the DELIBERATE exceptions to the prefix-free rule
+// above. The live console ingress does NOT rewrite a bare `/v1/s3` / `/v1/framework`
+// / `/v1/billing` to the console app — those heads reach the gateway-fronted cloud
+// binary directly, which 403s a cookie-only browser request with no bearer (s3/
+// framework: "valid principal required"; billing: "sign in to view billing"). So the
+// clients address the console's OWN proxy EXPLICITLY: s3/framework via the `/cloud`
+// user-bearer proxy (`cloudProxyV1Url`), billing via the per-tenant `/billing/v1/*`
+// service-token proxy (`billingProxyV1Url`) — both routed to their Next handler
+// regardless of the `/v1/*` ingress config. This block PINS that exception so a
 // future "canonicalization" can't repoint them to a bare `/v1/` that 403s live.
-describe('cloud-proxy exceptions — s3 + framework address /cloud/v1 explicitly (ingress does not rewrite their heads)', () => {
+describe('proxy exceptions — s3/framework via /cloud/v1, billing via /billing/v1 (ingress does not rewrite their heads)', () => {
   it('StorageApi.buckets -> /cloud/v1/s3/buckets (NOT bare /v1/s3)', async () => {
     stub({ buckets: [] })
     await StorageApi.buckets()
@@ -202,6 +199,12 @@ describe('cloud-proxy exceptions — s3 + framework address /cloud/v1 explicitly
     stub({ data: [] })
     await FrameworkApi.doctypes.list()
     expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/framework/doctypes`)
+  })
+
+  it('BillingApi.balance -> /billing/v1/balance (NOT bare /v1/billing)', async () => {
+    stub({ balance: 0, holds: 0, available: 0 })
+    await BillingApi.balance()
+    expect(lastUrl).toBe(`${ORIGIN}/billing/v1/balance?currency=usd`)
   })
 })
 
