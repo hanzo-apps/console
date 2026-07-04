@@ -18,7 +18,7 @@
  *    HUSD transfer on-chain, then records it to commerce as a `husd` crypto
  *    payment and returns the credited amount + new balance.
  */
-import { ApiError, restGet, restPost, v1Url } from './client'
+import { ApiError, restGet, restPost, v1Url, billingProxyV1Url } from './client'
 
 /** Money balance in USD cents (commerce shape). */
 export type CloudBalance = {
@@ -52,12 +52,6 @@ export type WalletTopupResult = {
   status: string
 }
 
-/** Same-origin URL for a console server route handler (not the `/v1` gateway). */
-const appUrl = (path: string): string => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${origin}/${path.replace(/^\/+/, '')}`
-}
-
 export const WalletApi = {
   /**
    * The user's cloud credit balance (USD cents). `currency` defaults to `usd`
@@ -68,7 +62,7 @@ export const WalletApi = {
     // commerce service token + scopes to the caller's OWN org server-side. The
     // `user` subject is server-resolved (the arg is ignored — the browser cannot
     // read another tenant's ledger), so only `currency` is forwarded.
-    restGet<CloudBalance>(`${appUrl('billing/v1/balance')}?currency=${encodeURIComponent(currency)}`),
+    restGet<CloudBalance>(`${billingProxyV1Url('balance')}?currency=${encodeURIComponent(currency)}`),
 
   /**
    * Verify a sent HUSD transfer and credit the user's balance, via the cloud
