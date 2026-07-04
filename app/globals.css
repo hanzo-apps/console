@@ -336,3 +336,21 @@ html:root.t_light {
     animation: none;
   }
 }
+
+/* Hover lift — a subtle rise + border/background brighten on interactive cards and
+   rows (the deploy-hub aesthetic: true-black ground, hairline borders, hover lift).
+   Reduced-motion keeps the color transition but drops the transform. */
+.hz-lift {
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.16s ease, background-color 0.16s ease;
+}
+.hz-lift:hover {
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hz-lift {
+    transition: border-color 0.16s ease, background-color 0.16s ease;
+  }
+  .hz-lift:hover {
+    transform: none;
+  }
+}

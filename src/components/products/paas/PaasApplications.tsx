@@ -26,6 +26,7 @@ import { StatusTag } from '~/components/ui/StatusTag'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { appUrl, appSource, orderDeployments, buildStatusOf, deploymentLabel, classifyPaasError } from './logic'
+import { launchDeploy, type LaunchStep } from './deploy'
 import { DomainsPanel } from './DomainsPanel'
 import { RailwayDeploy } from './RailwayDeploy'
 
@@ -215,30 +216,29 @@ function NewAppForm({ projects, onCancel, onDeployed }: { projects: PaasProject[
 
   const deploy = async () => {
     if (!valid) return
+    const stepText: Record<LaunchStep, string> = {
+      project: 'Preparing project…',
+      app: 'Creating app…',
+      deploy: 'Deploying…',
+    }
     try {
-      setState({ phase: 'working', step: 'Preparing project…' })
-      let projectSlug: string
-      if (creatingProject) {
-        const p = await PaasApi.createProject({ name: newProjectName.trim() })
-        projectSlug = p.slug || p.id
-      } else {
-        const chosen = projects.find((p) => (p.name || p.slug) === projectChoice)
-        projectSlug = chosen?.slug || chosen?.id || projectChoice
-      }
-
-      setState({ phase: 'working', step: 'Creating app…' })
-      const app = await PaasApi.createApp(projectSlug, {
-        name: appName.trim(),
-        source,
-        ...(source === 'git'
-          ? { repo: { url: repoUrl.trim(), branch: branch.trim() || 'main' } }
-          : { image: { repository: imageRepo.trim(), tag: imageTag.trim() || 'latest' } }),
-      })
-
-      setState({ phase: 'working', step: 'Deploying…' })
-      await PaasApi.deploy(projectSlug, app.slug || app.id, source === 'image' ? { tag: imageTag.trim() || 'latest' } : {})
+      // ONE deploy orchestration (shared with the Deploy hub): resolve/create the
+      // project → create the app for the target → kick off the deploy. A git app is
+      // a `service` target; an image app is a `container` target.
+      const chosen = projects.find((p) => (p.name || p.slug) === projectChoice)
+      const { project, app } = await launchDeploy(
+        {
+          projectSlug: creatingProject ? undefined : chosen?.slug || chosen?.id || projectChoice,
+          newProjectName: creatingProject ? newProjectName.trim() : undefined,
+          appName: appName.trim(),
+          target: source === 'git' ? 'service' : 'container',
+          ref: source === 'git' ? repoUrl.trim() : `${imageRepo.trim()}:${imageTag.trim() || 'latest'}`,
+          branch: branch.trim() || 'main',
+        },
+        (s) => setState({ phase: 'working', step: stepText[s] }),
+      )
       // Hand off to the live pipeline — watch it go Queued → Building → Deploying → Live.
-      setState({ phase: 'watching', project: projectSlug, app: app.slug || app.id })
+      setState({ phase: 'watching', project, app })
     } catch (e) {
       const { kind, message } = classifyPaasError(e)
       setState({

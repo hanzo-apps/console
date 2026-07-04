@@ -99,6 +99,7 @@ import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
+import { DeployModule } from '~/components/products/DeployModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
@@ -1409,6 +1410,23 @@ export const catalog: CatalogEntry[] = [
   // ── Deploy — the PaaS control plane (platform.hanzo.ai) over the /paas
   //    proxy. Clusters and Kubernetes are the real, wired surfaces; the rest of
   //    the CI/CD pipeline ships incrementally.
+  {
+    // The "Let's build something new" hub — the ONE uniform way to deploy any new
+    // project/service/container/site. Leads with repo→deploy on the real per-org
+    // PaaS (/v1/platform), a real connect-git dropdown (/v1/git/*), and the real
+    // template gallery (/v1/templates). Placed first in Platform so "Deploy" is
+    // the obvious front door. Mirrors hanzo.app/new, infra-first.
+    id: 'new',
+    label: 'Deploy',
+    icon: Rocket,
+    description: 'Deploy a repo, image, or template — as a service, container, or static site.',
+    gcp: 'Cloud Run',
+    category: 'Platform',
+    status: 'enabled',
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: DeployModule }],
+  },
   {
     id: 'projects',
     label: 'Projects',

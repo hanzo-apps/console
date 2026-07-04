@@ -4,7 +4,7 @@
  * unit-testable. The board (`PaasApplications.tsx`) is a thin shell over these.
  */
 import { ApiError } from '~/lib/api/client'
-import type { PaasApp, PaasDeployment, PaasDomain } from '~/lib/api/paas'
+import type { CreateAppInput, DeployInput, PaasApp, PaasDeployment, PaasDomain } from '~/lib/api/paas'
 
 /** The app's primary live URL — the first domain, made absolute (https). Null when none. */
 export function appUrl(app: Pick<PaasApp, 'domains'>): string | null {
@@ -99,4 +99,121 @@ export function classifyPaasError(e: unknown): { kind: PaasErrorKind; message: s
   if (status === 403) return { kind: 'forbidden', message }
   if (status === 404) return { kind: 'unavailable', message }
   return { kind: 'error', message }
+}
+
+// ── Deploy targets (the "Deploy something new" composer) ─────────────────────
+//
+// One composer, three REAL targets that map onto the platform's own build
+// strategies (`clients/platform` `buildTypes` = {nixpacks, dockerfile, static,
+// buildpacks, image}). A target is purely a UX framing over `createApp`:
+//   - service   → a git repo, auto-built (nixpacks) into a running container.
+//   - static    → a git repo, built as a static site (buildType 'static').
+//   - container → a prebuilt image, run as-is (source 'image').
+// No invented targets — every one is a shape `PaasApi.createApp` accepts.
+
+/** A deploy target the composer offers. */
+export type DeployTarget = 'service' | 'static' | 'container'
+
+/** Whether a target deploys from a Git repository (vs a prebuilt image). */
+export const targetIsGit = (t: DeployTarget): boolean => t === 'service' || t === 'static'
+
+/** The platform `buildType` for a target (the closed set the backend accepts). */
+export function buildTypeFor(t: DeployTarget): 'nixpacks' | 'static' | 'image' {
+  switch (t) {
+    case 'static':
+      return 'static'
+    case 'container':
+      return 'image'
+    default:
+      return 'nixpacks'
+  }
+}
+
+/**
+ * True when a string looks like a Git repository URL (https or scp-style ssh),
+ * for a host the platform accepts (github/gitlab/bitbucket/gitea/codeberg) OR any
+ * https URL ending `.git`. Pure + permissive — the backend re-validates the host
+ * at the boundary, so this only drives the composer's Deploy-vs-Build affordance.
+ */
+export function looksLikeGitUrl(s: string): boolean {
+  const v = s.trim()
+  if (!v) return false
+  // scp-style: git@github.com:owner/repo(.git)
+  if (/^git@[\w.-]+:[\w.-]+\/[\w.-]+/.test(v)) return true
+  if (!/^https?:\/\//i.test(v)) return false
+  if (/\.git($|[?#])/i.test(v)) return true
+  return /^https?:\/\/(www\.)?(github\.com|gitlab\.com|bitbucket\.org|gitea\.com|codeberg\.org)\/[\w.-]+\/[\w.-]+/i.test(v)
+}
+
+/**
+ * True when a string looks like a container image reference (no URL scheme, a
+ * registry/namespace path, optional :tag) — e.g. `ghcr.io/hanzoai/app:1.2.3` or
+ * `nginx`. Pure; the composer uses it only to pick the right input semantics.
+ */
+export function looksLikeImageRef(s: string): boolean {
+  const v = s.trim()
+  if (!v || /\s/.test(v) || /^https?:\/\//i.test(v) || v.includes('://')) return false
+  // A bare name (nginx) or a registry/namespace path, with an optional :tag / @digest.
+  return /^[a-z0-9]([\w.-]*[a-z0-9])?(:\d+)?(\/[\w.-]+)*(:[\w][\w.-]*)?(@sha256:[a-f0-9]+)?$/i.test(v)
+}
+
+/** Split an image ref into `{ repository, tag }` (defaults tag to 'latest'). */
+export function parseImageRef(ref: string): { repository: string; tag: string } {
+  const v = ref.trim()
+  const at = v.indexOf('@') // digest pins live after '@'
+  const body = at >= 0 ? v.slice(0, at) : v
+  const lastSlash = body.lastIndexOf('/')
+  const lastColon = body.lastIndexOf(':')
+  // A ':' after the last '/' is a tag (a ':' inside a registry host:port is not).
+  if (lastColon > lastSlash) {
+    return { repository: body.slice(0, lastColon), tag: body.slice(lastColon + 1) || 'latest' }
+  }
+  return { repository: body, tag: 'latest' }
+}
+
+/**
+ * Derive a stable, k8s-safe app name from a repo URL or image ref: the last path
+ * segment, lower-cased, non-alphanumerics collapsed to '-', trimmed. Empty input
+ * (or all-symbol) yields '' so the caller keeps the user's own name.
+ */
+export function deriveAppName(input: string): string {
+  const v = input.trim()
+  if (!v) return ''
+  const s = v
+    .replace(/^https?:\/\//i, '') // scheme
+    .replace(/^git@[\w.-]+:/i, '') // scp-style git@host:
+    .replace(/[?#].*$/, '') // query / hash
+    .replace(/@[^/@]+$/, '') // a trailing @digest / @ref (no '/' inside it)
+    .replace(/\.git$/i, '') // trailing .git
+  const segs = s.split('/').filter(Boolean)
+  const tail = (segs[segs.length - 1] ?? '').replace(/:[\w.-]+$/, '') // drop an image :tag
+  return tail
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 63)
+}
+
+/** The `CreateAppInput` for a target + composer values (pure — no I/O). */
+export function createAppInputFor(
+  target: DeployTarget,
+  v: { name: string; ref: string; branch?: string },
+): CreateAppInput {
+  const name = v.name.trim()
+  if (target === 'container') {
+    const { repository, tag } = parseImageRef(v.ref)
+    return { name, source: 'image', image: { repository, tag }, buildType: 'image' }
+  }
+  return {
+    name,
+    source: 'git',
+    repo: { url: v.ref.trim(), branch: (v.branch || 'main').trim() || 'main' },
+    buildType: buildTypeFor(target),
+  }
+}
+
+/** The `deploy` body for a target (image → pin the tag; git → build the ref). */
+export function deployInputFor(target: DeployTarget, ref: string): DeployInput {
+  if (target === 'container') return { tag: parseImageRef(ref).tag }
+  return {}
 }
