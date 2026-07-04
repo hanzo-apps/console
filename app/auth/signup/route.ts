@@ -28,7 +28,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { brandFromHost } from '~/config'
 import { BRANDS } from '~/lib/branding/brands'
-import { createOrganization, createUser, getOrganization, mintConfigured } from '~/lib/server/identity'
+import { createOrganization, createUser, getOrganization, grantWelcomeCredit, mintConfigured } from '~/lib/server/identity'
 import {
   deriveUsername,
   displayNameFromEmail,
@@ -72,11 +72,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const displayName = displayNameFromEmail(v.email)
+  const username = deriveUsername(v.email)
   try {
     await createOrganization({ name: orgSlug, displayName, personal: true, sourceOwner: brandOrg })
     await createUser({
       org: orgSlug,
-      username: deriveUsername(v.email),
+      username,
       email: v.email,
       password: v.password,
       displayName,
@@ -88,6 +89,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { status: 502 },
     )
   }
+
+  // Best-effort $5 welcome grant so the new account can chat immediately (the
+  // onboarding paywall fix). NEVER blocks signup: `grantWelcomeCredit` swallows its
+  // own errors, and the grant is idempotent — the self-heal on first authenticated
+  // load re-lands it if this attempt didn't take.
+  await grantWelcomeCredit(orgSlug, username)
 
   return NextResponse.json({ ok: true, org: orgSlug })
 }

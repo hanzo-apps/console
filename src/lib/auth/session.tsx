@@ -22,6 +22,7 @@ import { isAdminHost } from '~/config'
 import { getProviderSigninUrl, getSigninUrl, stashReturnTo } from './iam'
 import { refreshSession } from './refresh'
 import { setCurrentActor } from '~/lib/actor-scope'
+import { claimWelcomeGrantOnce } from '~/lib/billing/welcome'
 
 type SessionState = {
   account: Account | null
@@ -55,6 +56,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const applyAccount = useCallback((a: Account | null) => {
     setAccount(a)
     setCurrentActor(a && a.owner && a.name ? `${a.owner}/${a.name}` : '')
+    // Self-heal the one-time $5 welcome trial credit for a just-resolved authenticated
+    // account (social-login + pre-existing $0 users the signup-time grant never reached).
+    // Idempotent server-side; guarded to fire at most once per browser session per org.
+    if (a && a.owner && a.name) claimWelcomeGrantOnce(a.owner)
   }, [])
 
   /** (Re)arm the proactive refresh timer for the given remaining lifetime. */
