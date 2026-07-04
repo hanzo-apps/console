@@ -2173,3 +2173,74 @@ isAdmin` is correct and untouched).
   registered). Live 200 on `/v1/admin/overview` with a minted admin bearer is the
   post-deploy gate (the confidential mint creds live in the cluster secret, not the
   dev host — devs don't touch k8s directly). Branched off origin/main (v8.4.80).
+
+## Per-product Status/Logs/Metrics wired to the LIVE o11y (SigNoz) runtime, one DRY mechanism (v8.4.74)
+
+The shared per-product sub-page system (`components/products/subpage/*`, one
+Status/Logs/Metrics/Settings for every `module` product — the catch-all routes every
+base slug here, so ALL 136 products already had these four tabs) is now backed by the
+LIVE o11y (SigNoz) runtime, scoped per product by its OpenTelemetry `service.name` —
+via ONE mechanism parameterized per product, NOT bespoke wiring. Reuses the existing
+`ApmApi` o11y client + the shared `RuntimeNotice` + the ONE `LivingOverview` — nothing
+forked, nothing new-per-product. Adding a product still needs zero sub-page code.
+
+- **The ONE new mapping — product → OTel `service.name` (`subpage/sources.ts`
+  `o11yServiceFor`, pure + tested).** Derived from the OTel convention (service.name =
+  the binary/repo basename: `iam`→iam, `vector`→vector, the AI products→`ai`, the
+  Observe products→`o11y`, …), a tiny override (`bot`→`bot-gateway`), id as last resort;
+  `null` for pure org/account + rollup products (no backing service → honest managed
+  state). Carried as a new `o11yService` field on `subpageSourcesFor` — ONE source every
+  sub-page view reads. Orthogonal to the operator-app `service` (deployment state): a
+  product may emit telemetry under one name (`ai`) and deploy under another (`models`),
+  so both are candidates when reading health. A wrong guess yields an honest EMPTY o11y
+  state, never another service's telemetry (the reads exact-match the name).
+- **The ONE new query capability — per-service o11y filtering (`lib/api/apm.ts`).**
+  `listQueryPayload` gains an optional `filters` arg (default none → back-compat with the
+  Observe Logs board + the existing tests); `serviceFilterItem(dataSource, service)`
+  builds the exact SigNoz v3 `service.name` resource-attribute equality the explorer
+  sends. `ApmApi.logs(w, limit, service?)` / `traceSearch(w, limit, service?)` scope the
+  query to one product's service AND re-filter the rows client-side (a runtime that
+  ignored the item can never leak another service's lines). `ApmApi.serviceHealth(w,
+  ...candidates)` reads the org-scoped services list and picks the product's RED-metrics
+  row (`pickService`) → a `ServiceHealth` verdict (`serviceHealthOf`: ns→ms latency,
+  green/<1%/yellow/≥5%/red on error rate; `null` when the service reported no calls).
+- **Status = LIVE o11y RED metrics + deployment state (two orthogonal sources).**
+  `ProductStatusView` now leads with a real "is it serving traffic and healthy" band
+  from `ApmApi.serviceHealth` (requests/s · error rate · p99 · request count) — org-scoped
+  by the minted bearer, so it works for a CUSTOMER too (unlike the admin-only control-plane
+  inventory), keeping the deployment workloads table for admins. Honest by construction:
+  no o11y telemetry AND no deployment rows → the managed card; one source failing never
+  blanks the other; never a fabricated green.
+- **Logs = LIVE o11y logs filtered to the product's service.** `ProductLogsView` is
+  rebuilt onto `ApmApi.logs(window, 500, o11yService)` — real OTLP→SigNoz log lines
+  (time · severity · message) for THIS product, org-scoped, range toggle (15m/1h/6h/24h)
+  + severity filter (reusing the Observe Logs board's pattern). Replaces the dead
+  `/paas/logs` path (the platform log endpoint rejects even the service token). Honest
+  states: the shared o11y `RuntimeNotice` on 503/404/401/403, and an honest "Connected ·
+  no logs for <product> in the last <range>" empty card (the service ships no OTLP logs
+  yet) — never a fabricated grid, never placeholder lines.
+- **Metrics = REAL ledger + LIVE o11y latency (the P95 "—" filled).** The shared
+  `productMetricsConfig` loader now fetches the commerce usage ledger AND
+  `ApmApi.serviceHealth` in parallel and merges the real p99 into the latency KPI (the
+  tile was stuck at "—" — the ledger carries no latency). Renamed `latencyP95`→
+  `latencyP99` (honest to the RED metric we actually have). o11y failure / no-telemetry →
+  the tile stays an honest "—"; the ledger half always resolves.
+- **Settings unchanged** — already REAL, product-specific config (endpoint/auth/connection
+  facts + deployment facts), honest where a product self-serves none.
+- **Coverage:** all **136 products** route Status/Logs/Metrics/Settings through this ONE
+  system (external launch tiles correctly get none). Every product with a backing service
+  (its `o11yService` resolves — every `module` product except the 9 pure org/account +
+  rollup ids) now has LIVE o11y Status + Logs + Metrics-latency wired; it shows REAL data
+  the moment that service emits OTLP, and an honest empty/RuntimeNotice until then (never
+  fabricated). The product→o11y-service map is repoBase-derived (the OTel convention),
+  best-effort exact-match, correctable via the tiny `O11Y_SERVICE_OVERRIDE` as live o11y
+  reveals a non-default `OTEL_SERVICE_NAME`.
+- Verification: `tsc --noEmit` clean (0 errors); `vitest` **1545/1545** (124 files; +25:
+  13 apm serviceFilterItem/pickService/serviceHealthOf/listQueryPayload-filter, 6
+  apm-service-scope end-to-end query-builds-+-maps-real-response, 8 sources o11yServiceFor,
+  3 product-metrics latency-injection, latencyP95→P99 rename); `next build` ✓ Compiled
+  successfully (14/14 pages, the `/[...slug]` catch-all renders every product's sub-pages).
+  o11y is LIVE (o11y.hanzo.ai/api/v2/readyz=200; `/v1/o11y` 403 unauth = the org-scoped
+  gate). Authenticated visual e2e is post-deploy (the `(dashboard)` group is behind
+  AuthGate); the per-product o11y query building + mapping real SigNoz responses is proven
+  by the logic + end-to-end tests. Rebased on origin/main (v8.4.84) → **v8.4.85**.
