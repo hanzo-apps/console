@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('./session', () => ({ consoleClaims: vi.fn() }))
 
 import { consoleClaims } from './session'
-import { resolveUser } from './identity'
+import { resolveUser, issueUserToken, adminBearer, type SessionUser } from './identity'
 
 const mockClaims = vi.mocked(consoleClaims)
 
@@ -54,5 +54,65 @@ describe('resolveUser — console session preferred, casibase fallback', () => {
     // With the console claim rejected AND no cookie, resolveUser must be null (not the anon).
     vi.stubGlobal('fetch', vi.fn())
     expect(await resolveUser(req(null))).toBeNull()
+  })
+})
+
+/**
+ * Audience-scoped bearer mint — the /v1/admin/* 403 fix. The operator is a member of
+ * the reserved `admin` org, whose OWN app (`admin-console`) is NOT in cloud's audience
+ * allowlist, so the default-audience `issue-user-token` bearer is rejected → 403. The
+ * admin-aggregate passes the brand cloud audience (RFC 8707 `aud`) so cloud accepts the
+ * token and, seeing owner=admin + isAdmin=true, sets X-User-IsAdmin=true. The token's
+ * `owner`/`isAdmin` come from the TARGET user (admin/z) unchanged — only the `aud` is set.
+ */
+describe('issueUserToken / adminBearer — RFC 8707 audience', () => {
+  const user = (id: string): SessionUser =>
+    ({ owner: 'admin', name: 'z', id, accessKey: '', email: '', emailVerified: true, isAdmin: true, isGlobalAdmin: true })
+
+  /** Stub the IAM POST; capture the request URL and return a token envelope. */
+  const stubIam = (token = 'jwt') => {
+    const urls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (u: unknown) => {
+        urls.push(String(u))
+        return new Response(JSON.stringify({ status: 'ok', data: { accessToken: token, expiresIn: 3600 } }), { status: 200 })
+      }),
+    )
+    return urls
+  }
+
+  it('passes the audience as the issue-user-token `aud` query (the cloud-accepted resource)', async () => {
+    const urls = stubIam()
+    const t = await issueUserToken(user('admin/z'), 'hanzo-cloud')
+    expect(t.accessToken).toBe('jwt')
+    const q = new URL(urls[0])
+    expect(q.pathname).toBe('/v1/iam/issue-user-token')
+    expect(q.searchParams.get('id')).toBe('admin/z')
+    expect(q.searchParams.get('aud')).toBe('hanzo-cloud')
+  })
+
+  it('OMITS `aud` when no audience is given (tenant proxies unchanged — target-app default)', async () => {
+    const urls = stubIam()
+    await issueUserToken(user('hanzo/dave'), undefined)
+    expect(new URL(urls[0]).searchParams.has('aud')).toBe(false)
+  })
+
+  it('adminBearer caches per (user, audience) — a different audience mints a distinct token', async () => {
+    let n = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        n += 1
+        return new Response(JSON.stringify({ status: 'ok', data: { accessToken: `jwt-${n}`, expiresIn: 3600 } }), { status: 200 })
+      }),
+    )
+    const u = user(`admin/z-${Math.random()}`) // unique id so the module cache starts cold
+    const a1 = await adminBearer(u, 'hanzo-cloud')
+    const a2 = await adminBearer(u, 'hanzo-cloud') // cache hit — no new mint
+    const dflt = await adminBearer(u) // no audience → distinct cache key → new mint
+    expect(a1).toBe(a2)
+    expect(a1).not.toBe(dflt)
+    expect(n).toBe(2)
   })
 })
