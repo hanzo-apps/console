@@ -806,7 +806,10 @@ export const catalog: CatalogEntry[] = [
     // TrainJobs are the runs, and /v1/train/health is a real operator/CRD probe.
     // Grouped with Fine-tuning under Training (the model-building axis); honest
     // states until the Kubeflow control plane reports.
-    id: 'kubeflow',
+    // The id IS the URL slug: `ml-pipelines` matches the product name (Kubeflow is
+    // the engine, named in the description) so `/ml-pipelines` is the canonical
+    // route — the old `/kubeflow` still resolves via SLUG_ALIASES (match-core).
+    id: 'ml-pipelines',
     label: 'ML Pipelines',
     icon: Blocks,
     description: 'Orchestrated training and evaluation pipelines (Kubeflow).',
