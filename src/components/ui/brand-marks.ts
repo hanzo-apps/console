@@ -16,8 +16,11 @@
  *
  * Brand policy (repo LLM.md): **Zen is the house brand** and renders the Hanzo mark
  * (handled in `ProviderLogo`, not here) — it NEVER carries an upstream family glyph.
- * The third-party families below are the real open-weight brands we resell by name,
- * so an evocative mark for each is on-brand and honest.
+ * The brands below are the real model VENDORS the api.hanzo.ai gateway serves —
+ * open-weight families (Qwen/Meta/DeepSeek/Mistral) AND the proprietary vendors it
+ * proxies (OpenAI/Anthropic/Google Gemini/xAI) — so an evocative mark for each is the
+ * MODEL VENDOR's brand (shown on every white-label host), distinct from the platform
+ * brand, and stays honest.
  */
 import type { BrandKey } from './brand'
 
@@ -32,6 +35,17 @@ export type BrandMark = {
 // gateway serves. Each is visually distinct from the others AND from the first-party
 // Hanzo block-H, so no two families ever read as the same glyph.
 export const BRAND_MARK: Partial<Record<BrandKey, BrandMark>> = {
+  // Anthropic (Claude) — the sunburst/spark: tapered rays radiating from a center,
+  // its signature radial burst mark (knocked out white on the coral tile).
+  anthropic: {
+    viewBox: '0 0 24 24',
+    body:
+      '<g stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' +
+      '<path d="M12 3v18"/><path d="M3 12h18"/>' +
+      '<path d="M4.2 7.5 19.8 16.5"/><path d="M4.2 16.5 19.8 7.5"/>' +
+      '<path d="M7.5 4.2 16.5 19.8"/><path d="M16.5 4.2 7.5 19.8"/>' +
+      '</g>',
+  },
   // Qwen — a geometric origami hexagon with a Y-fold (its angular, folded mark).
   qwen: {
     viewBox: '0 0 24 24',
@@ -59,22 +73,22 @@ export const BRAND_MARK: Partial<Record<BrandKey, BrandMark>> = {
     body:
       '<path d="M3 20V5.4h3.3L12 12.9l5.7-7.5H21V20h-3.4v-8.6L12 18.9 6.4 11.4V20Z" fill="currentColor"/>',
   },
-  // Google Gemma — a faceted gem (Gemma = gem), the cut-diamond silhouette + facets.
+  // Google Gemini — the four-point spark star (concave-sided), Gemini's signature
+  // glyph. Covers the Google family (Gemini + the Gemma slice) as one Google-AI mark.
   google: {
     viewBox: '0 0 24 24',
     body:
-      '<g fill="none" stroke="currentColor" stroke-width="1.55" stroke-linejoin="round">' +
-      '<path d="M7.5 4h9l3.5 5-8 11-8-11Z"/>' +
-      '<path d="M4 9h16"/>' +
-      '<path d="M9.5 4 12 9M14.5 4 12 9M12 9v11"/>' +
-      '</g>',
+      '<path d="M12 2C12.6 7.2 16.8 11.4 22 12 16.8 12.6 12.6 16.8 12 22 11.4 16.8 7.2 12.6 2 12 7.2 11.4 11.4 7.2 12 2Z" fill="currentColor"/>',
   },
-  // OpenAI GPT-OSS — a six-point knot/asterisk (its hexagonal-knot mark, simplified).
+  // OpenAI — the blossom knot: three interlocking loops forming its six-fold hexagonal
+  // rosette (three rotated ellipse outlines), its signature flower mark.
   openai: {
     viewBox: '0 0 24 24',
     body:
-      '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
-      '<path d="M12 3.4v17.2M4.55 7.7 19.45 16.3M4.55 16.3 19.45 7.7"/>' +
+      '<g fill="none" stroke="currentColor" stroke-width="1.5">' +
+      '<ellipse cx="12" cy="12" rx="3.4" ry="8.2"/>' +
+      '<ellipse cx="12" cy="12" rx="3.4" ry="8.2" transform="rotate(60 12 12)"/>' +
+      '<ellipse cx="12" cy="12" rx="3.4" ry="8.2" transform="rotate(120 12 12)"/>' +
       '</g>',
   },
   // xAI — a bold "X" (its wordless mark). Appears in the broader provider picker.

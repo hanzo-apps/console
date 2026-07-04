@@ -148,7 +148,7 @@ export function ModelPicker({
         >
           <XStack gap="$2" items="center" flex={1} minW={0}>
             {current || value ? (
-              <ProviderLogo provider={current?.provider ?? 'Other'} size={22} />
+              <ProviderLogo provider={current?.provider ?? 'Other'} model={current?.id} size={22} />
             ) : (
               <Boxes size={18} color="$color10" />
             )}
@@ -260,7 +260,7 @@ export function ModelPicker({
                         bg={isHi ? '$color4' : isSel ? '$color3' : 'transparent'}
                         onPress={() => pick(o.id)}
                       >
-                        <ProviderLogo provider={o.provider} size={22} />
+                        <ProviderLogo provider={o.provider} model={o.id} size={22} />
                         <YStack flex={1} gap={1} minW={0}>
                           <XStack items="center" gap="$2">
                             <Text fontSize="$3" color="$color12" numberOfLines={1}>
