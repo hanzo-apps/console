@@ -19,9 +19,10 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Dialog, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
-import { MessageCircle, Sparkles, X } from '@hanzogui/lucide-icons-2'
+import { Sparkles, X } from '@hanzogui/lucide-icons-2'
 
 import { ChatConversation } from '~/components/products/chat/ChatConversation'
+import { BrandMark } from '~/components/ui/BrandLogo'
 
 type FloatingChatApi = { isOpen: boolean; open: () => void; close: () => void; toggle: () => void }
 
@@ -49,11 +50,11 @@ function ChatSheet({
   return (
     <Dialog modal open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay key="chat-overlay" bg="rgba(0,0,0,0.5)" $lg={{ bg: 'transparent' }} />
+        <Dialog.Overlay key="chat-overlay" className="hz-scrim-in" bg="rgba(0,0,0,0.5)" $lg={{ bg: 'transparent' }} />
         <Dialog.Content
           key="chat-content"
+          className="hz-paper hz-pop-in"
           bordered
-          elevate
           position="absolute"
           bg="$color1"
           overflow="hidden"
@@ -139,17 +140,17 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
           the single dismiss affordance. */}
       {!isOpen ? (
         <YStack position="fixed" b={24} r={24}>
+          {/* The support/AI bubble = the brand 'H' mark (white-labeled per brand),
+              on Material paper elevation with a gentle hover lift. */}
           <Button
             circular
             size="$6"
             bg="$color5"
+            className="hz-lift hz-elevation-3"
             hoverStyle={{ bg: '$color6' }}
             pressStyle={{ bg: '$color7' }}
-            icon={<MessageCircle size={24} />}
+            icon={<BrandMark size={22} />}
             onPress={open}
-            shadowColor="rgba(0,0,0,0.35)"
-            shadowRadius={16}
-            shadowOffset={{ width: 0, height: 4 }}
             aria-label="Open AI assistant"
           />
         </YStack>
