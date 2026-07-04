@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { XStack } from '@hanzo/gui'
-import { Plus, Upload } from '@hanzogui/lucide-icons-2'
+import { KeyRound, Plus } from '@hanzogui/lucide-icons-2'
 
 import { PlatformApi, type Cluster } from '~/lib/api'
 import { BillingApi, type Usage } from '~/lib/api/billing'
@@ -116,11 +116,8 @@ function AdminGpus({ params }: { params: Record<string, string> }) {
         subtitle="Monitor and manage your GPU clusters, utilization, and costs."
         actions={
           <XStack gap="$2">
-            <HintButton icon={<Plus size={15} />} disabled hint="Connect a GPU provider (DigitalOcean / AWS) to add capacity">
-              Add GPUs
-            </HintButton>
-            <HintButton icon={<Upload size={15} />} disabled hint="Importing an existing cluster needs the compute-provider connector">
-              Import cluster
+            <HintButton icon={<KeyRound size={15} />} onPress={() => onNav('/secrets')}>
+              Connect a provider
             </HintButton>
             <HintButton icon={<Plus size={15} />} theme="light" onPress={() => onNav('clusters')}>
               Create cluster

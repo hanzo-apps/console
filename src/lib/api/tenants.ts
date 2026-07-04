@@ -14,9 +14,9 @@
  *     - IAM app (create) → `IamAdminApi.addApplication` (`/admin/iam`, allow-listed) → the tenant's own IAM app.
  *     - Suspend/reactivate→ `AdminCockpitApi.suspend/reactivate` → enable/disable the whole tenant (REAL).
  *
- *   HONEST-NOT-CONNECTED (the platform has NO HTTP route yet — the calls ride `/paas`
- *   so they light up the moment the platform serves them; until then a 404 renders
- *   the honest "backend not yet available" state — NEVER a fabricated success):
+ *   HONEST-NOT-CONNECTED (the platform serves NO HTTP route for these — the calls ride
+ *   `/paas` and read live wherever the platform serves them; where it does not, a 404
+ *   renders the honest "endpoint not served here" state — NEVER a fabricated success):
  *     - Bind domain          → `POST /paas/org/{org}/domain` (createDomain + cloudflare + k8s-ingress are
  *                              INTERNAL platform functions with no HTTP surface → foundation follow-up).
  *     - Provision package    → `POST /paas/org/{org}/package/{id}` (a composite `provisionPackage(org,pkg)`
@@ -214,9 +214,9 @@ export const TenantsApi = {
   /**
    * Bind a custom domain to a tenant, auto-creating the ingress + DNS + cert
    * (`POST /paas/org/{org}/domain`). HONEST-NOT-CONNECTED: the platform's
-   * `createDomain` / cloudflare / k8s-ingress services have NO HTTP route yet, so
-   * this 404s today (rendered as the honest "backend not yet available" state) and
-   * lights up automatically when the platform mounts the route. This REPLACES the
+   * `createDomain` / cloudflare / k8s-ingress services expose NO HTTP route, so this
+   * 404s (rendered as the honest "endpoint not served here" state) and reads live
+   * wherever the platform mounts the route. This REPLACES the
    * hand-made throwaway ingresses (`console-admin-lux-network`, `console-admin-zoo-cloud`).
    */
   bindDomain: (org: string, input: BindDomainInput): Promise<void> =>
