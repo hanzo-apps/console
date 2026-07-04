@@ -999,7 +999,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </Text>
           </Button>
 
-          <XStack flex={1} />
+          {/* Spacer — pushes the right-side controls to the edge at lg+. On phones
+              it must NOT compete with the search box for width (two flex:1 siblings
+              halved the box, truncating the placeholder to “S…”), so it only flexes
+              at lg+; below lg the search box fills the row. */}
+          <XStack display="none" $lg={{ display: 'flex' }} flex={1} />
 
           {/* Full topbar controls — shown only at lg+. */}
           <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$2">
