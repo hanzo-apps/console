@@ -109,8 +109,9 @@ export function redactInstance(instance: string): string {
   if (!raw) return ''
   const host = raw.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split('/')[0].split(':')[0].trim().toLowerCase()
   if (!host) return ''
-  // Loopback + unqualified in-cluster names (no public TLD).
-  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.svc') || host.includes('.svc.') || !host.includes('.')) return ''
+  // Loopback + unqualified / internal-TLD in-cluster names (no public TLD).
+  const INTERNAL_TLD = /\.(local|svc|internal|intranet|corp|lan|home|cluster)$/
+  if (host === 'localhost' || INTERNAL_TLD.test(host) || host.includes('.svc.') || host.includes('.cluster.') || !host.includes('.')) return ''
   // RFC1918 / link-local / loopback IPv4 and any IPv6 literal — internal by definition.
   if (/^(10|127)\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /^169\.254\./.test(host) || host.includes(':')) return ''
   // A public FQDN: show the host, port stripped (a customer never needs the scrape port).
