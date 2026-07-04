@@ -2356,3 +2356,67 @@ for Google) rather than the vendor's real logo. Fixed both, DRY, one resolver:
   GPT-5=invented knot, Gemini=Gemma gem, gateway Qwen/GLM/Kimi/MiniMax=Hanzo-H).
   Branched off origin/main (v8.4.91) → **v8.4.92**. Live re-verify (Claude→Anthropic,
   Gemini→Gemini spark, GPT-5→OpenAI blossom, Zen→Hanzo) is the post-deploy gate.
+
+## Header-scoped modules wired to /cloud + canonical docs links + chat/crawl fixes (v8.4.93)
+
+A deep customer-facing audit (grep + LIVE probing every backend head as Dave/
+maxpower) found the LAST systemic "renders but silently-not-connected" class and a
+cluster of dead docs links. The framework/s3 fix (v8.4.70) — "the live ingress
+routes bare `/v1/*` to the gateway, which strips the client X-Org-Id and 403s a
+cookie-only request, so bearer-scoped heads MUST address the `/cloud` user-bearer
+proxy EXPLICITLY" — was applied to framework/s3/machines but NEVER to the OTHER
+header-scoped heads. Their clients still built a bare `/v1/<head>` via `originV1Url`,
+which 403s live, so ~15 customer products rendered an honest error/empty card instead
+of their real per-org data. VERIFIED LIVE: `/v1/{gpus,clusters,functions,platform,
+vpcs,load-balancers,builds,releases,pipelines,environments,indexers,oracles,authz,
+search}` all 403 while their `/cloud/v1/*` twins 200.
+
+- **Transport class-fix (`originV1Url`/`v1Url` → `cloudProxyV1Url`)** in every
+  bearer-scoped client: `compute.ts` (gpus/alerts/pools), `functions.ts`,
+  `platform.ts` (clusters + org/cluster), `paas.ts` + `platform-apps.ts` (platform
+  head), `embeddings.ts` (the Explore vector `search`/`search/stats` — kept
+  `originV1Url('embeddings')`, an AI head that IS session-scoped), and the inline
+  single-head modules Vpc/LoadBalancer/Builds/Releases/Pipelines/Environments/
+  Indexer/Oracles/Authz. All heads are already in `proxy-allow.ts` `CLOUD_HEADS`, so
+  the `/cloud` proxy admits them; the response shape is identical (same cloud-api
+  handler, just a minted bearer). `memory` was LEFT on bare `/v1` — verified live it
+  is session-scoped (`/v1/memory/list` = 200). `canonical-paths.test.ts` MOVED
+  gpus/clusters/functions/paas from the "canonical /v1" block to the "/cloud
+  exception" block (it had ENSHRINED the broken bare-path assumption) + `functions.
+  test.ts` now asserts `/cloud/v1/functions`.
+- **Canonical docs links.** The docs site serves product pages under `/docs/<slug>`
+  (a bare `docs.hanzo.ai/<slug>` mostly 404s); the registry `docs:` fields were
+  already correct (v8.4.86) but a batch of INLINE module links were not: EdgeModule
+  (`/edge`→`/docs/edge`), StorageModule (`/storage`→`/docs/storage`), machines
+  LaunchDrawer + CustomerMachines (`/vm`→`/docs/machines`, `/gpus`→`/docs/gpus`),
+  AgentsModule (`/agents`→`/docs/agents`), inference RightRail/panes/StatusBoard
+  (`/inference`→`/docs/gateway` — inference has no docs page), FunctionsModule
+  (`/functions`→`/docs/functions`, `/kms`→`/docs/kms`), SearchModule (`/crawl`→
+  `/docs/crawl`). The shared ProductLanding kit's `standardResources` built a bare
+  `/<product>` + non-existent `/quickstart|/examples|/api-reference` sub-pages (all
+  404 — the Embeddings overview rail's 4 doc rows were dead); now `/docs/<product>`
+  (Mintlify is one page per product; the sub-rows point at the product page, API →
+  the real `/docs/api`).
+- **Chat History→View owner bug.** `ChatView` hardcoded owner `'admin'`; casibase
+  chats are keyed `owner/name` and a customer org's chats are NOT owned by `admin`,
+  so every saved chat 404'd ("Failed to load chat"). The real owner now travels in a
+  new 2-segment route `/chat/:owner/:name` (unambiguous by segment count); a legacy
+  1-segment link defaults owner to the active org — never a hardcoded `admin`.
+- **Crawl tabs navigated away.** `SearchModule` renders BOTH `/websearch` and
+  `/crawl` but hardcoded `/websearch/*` in its tab strip + "Try a search" CTA, so
+  every tab/CTA on the Crawl page jumped to Web Search. Base path now derives from
+  `usePathname()`; docs point at `/docs/crawl` (Crawl) or `/docs` (Web Search — no
+  page, `/docs/websearch` 500s).
+- **Honest-dead surfaces reported, not faked (roadmap).** DNS, Zero-Trust,
+  Referrals, Dashboards, Experiments, Scores-analytics all 404 on this deployment
+  BOTH via bare `/v1` AND `/cloud` — their backends genuinely don't exist here yet;
+  they render honest `BackendStateCard`/`RuntimeNotice` (forward-compatible — light
+  up when the backend appears), so they were LEFT honest rather than regressed to a
+  static 'soon'. o11y (Service Map/Alerts/Logs/per-product Status·Logs·Metrics) is
+  the same class: the cloud→SigNoz `/v1/o11y/*` reverse-proxy isn't resolved on this
+  deployment (404 both ways) — an infra gap, not a console client-path bug.
+- Verification: `tsc --noEmit` clean; `vitest` **1658/1658** (131 files); `next
+  build` ✓ Compiled successfully. Rebased on origin/main (v8.4.92, marketplace
+  logos) → **v8.4.93**. Live re-verify as Dave (the ~15 rewired modules show real
+  per-org data / honest-empty, every fixed Docs button 200s, saved chats open,
+  Crawl tabs stay under /crawl) is the post-deploy gate.

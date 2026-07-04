@@ -82,7 +82,7 @@ export function FunctionsModule({ params }: { params: Record<string, string> }) 
   const router = useRouter()
   const inv = useInventory()
   const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
-  const docsHref = config.docsUrl + '/functions'
+  const docsHref = config.docsUrl + '/docs/functions'
 
   const hint = 'endpoint · GET /v1/functions'
 
@@ -173,7 +173,7 @@ export function FunctionsModule({ params }: { params: Record<string, string> }) 
       ) : tab === 'triggers' ? (
         <TriggersTab hint="endpoint · GET /v1/functions/triggers" />
       ) : tab === 'secrets' ? (
-        <SecretsTab hint="endpoint · GET /v1/functions/secrets" docsHref={config.docsUrl + '/kms'} />
+        <SecretsTab hint="endpoint · GET /v1/functions/secrets" docsHref={config.docsUrl + '/docs/kms'} />
       ) : (
         <SettingsTab functions={inv.functions} live={inv.live} docsHref={docsHref} />
       )}
