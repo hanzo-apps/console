@@ -19,7 +19,7 @@ import { FadeIn } from '~/components/ui/FadeIn'
 import { WaitlistForm } from '~/components/products/WaitlistForm'
 
 export function ComingSoon() {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const id = pathname.split('/').filter(Boolean)[0] ?? ''
   const entry = findEntry(id)
   const Icon = entry?.icon
