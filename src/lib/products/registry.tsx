@@ -1629,29 +1629,32 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: PipelinesModule }],
   },
   {
-    // Real, enabled — pick WHERE workloads run: shared Hanzo Cloud or your own
-    // DOKS, reconciled by the same operator. One control plane, many targets.
+    // CUSTOMER self-service — provision a dedicated DOKS cluster and manage its node
+    // pools (add / scale / delete) over the native cloud `/v1/clusters*` surface,
+    // org-scoped by the Bearer owner. Not admin-gated: a paying customer runs their
+    // own clusters. The unified fleet cockpit (see + attach + connect) is Kubernetes.
     id: 'clusters',
     label: 'Clusters',
     icon: Network,
-    description: 'Your Kubernetes — shared Hanzo Cloud or your own DOKS.',
+    description: 'Provision and manage your Kubernetes clusters and node pools.',
     category: 'Compute',
     status: 'enabled',
-    admin: true,
     repo: 'hanzoai/operator',
     kind: 'module',
     routes: [{ path: '', component: ClustersModule }],
   },
   {
-    // Real, enabled — browse workloads + operator custom resources per cluster,
-    // via the PaaS control plane (/paas → platform). Honest states if not live.
+    // CUSTOMER self-service — the UNIFIED COMPUTE FLEET: managed + attached BYO
+    // clusters (with GPU inventory) MERGED from `GET /v1/clusters`, plus dialed-in
+    // BYO machines from `GET /v1/machines`, and the three connect actions (attach a
+    // BYO cluster via `POST /v1/clusters`, connect a box via `hanzo gpu connect`,
+    // connect a cloud account — coming). Org-scoped by the Bearer owner; honest states.
     id: 'kubernetes',
     label: 'Kubernetes',
     icon: Boxes,
-    description: 'Workloads and operator custom resources, per cluster.',
+    description: 'Your unified compute fleet — clusters, GPUs, and connected machines.',
     category: 'Compute',
     status: 'enabled',
-    admin: true,
     repo: 'hanzoai/operator',
     kind: 'module',
     routes: [

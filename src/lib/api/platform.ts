@@ -83,6 +83,12 @@ export type Cluster = {
   nodeSize?: string
   nodeCount?: number
   version?: string
+  // ── Fleet fields (additive) — a BYO ("bring your own") attached cluster reports
+  //    the live accelerator inventory it was validated with (nvidia.com/gpu +
+  //    amd.com/gpu allocatable, summed across its nodes). A managed cluster omits
+  //    these (its node pools carry the compute), so they render an honest "—".
+  nvidiaGpu?: number
+  amdGpu?: number
 }
 
 /** Provision a fresh dedicated DOKS cluster (the DO token is read from KMS server-side). */
@@ -91,6 +97,21 @@ export type ProvisionClusterInput = {
   nodeSize: string
   nodeCount: number
   ha?: boolean
+}
+
+/**
+ * Attach a BYO ("bring your own") Kubernetes cluster to the org's fleet
+ * (`POST /v1/clusters`). The kubeconfig is validated by REACHING the cluster (its
+ * node + GPU inventory), sealed in the org's KMS server-side, and never stored or
+ * returned by the console. `provider` is a free label (byo | k3s | …); `default`
+ * makes it the org's default workload target. Returns the attached cluster
+ * (`kind:"byo"`, `status:"attached"`, with the live GPU inventory it reported).
+ */
+export type AttachClusterInput = {
+  name: string
+  kubeconfig: string
+  provider?: string
+  default?: boolean
 }
 
 /** Add a node pool to an existing cluster (`POST /v1/clusters/:cid/pools`). */
@@ -194,6 +215,21 @@ export const PlatformApi = {
     if (r && typeof r === 'object' && 'cluster' in r) return (r as { cluster?: Cluster }).cluster ?? null
     return (r as Cluster) ?? null
   },
+
+  /**
+   * Attach a BYO cluster by kubeconfig (`POST /v1/clusters`). The backend validates
+   * it by reaching the cluster (node + GPU inventory), seals the kubeconfig in the
+   * org's KMS, and returns the attached cluster (`kind:"byo"`, `status:"attached"`).
+   * Honest failures propagate as `ApiError`: 503 (BYO attach not configured — KMS
+   * required on this deployment), 422 (kubeconfig unusable / cluster unreachable),
+   * 402 (nominal management-fee billing gate), 400 (missing name/kubeconfig).
+   */
+  attachCluster: async (input: AttachClusterInput): Promise<Cluster> =>
+    (await restPost<Cluster>(clustersUrl(), input)) ?? ({} as Cluster),
+
+  /** Detach a BYO cluster from the org's fleet (`DELETE /v1/clusters/:id`, id = its
+   *  name). Only touches BYO clusters; managed pools use the node-pool routes. */
+  detachCluster: (id: string): Promise<void> => restDelete(clustersUrl(`/${enc(id)}`)),
 
   /** Add a node pool to a cluster (`POST /v1/clusters/:cid/pools`). */
   addPool: (clusterId: string, input: AddPoolInput): Promise<void> =>
