@@ -365,3 +365,14 @@ html:root.t_light {
     animation: none;
   }
 }
+
+/* DataTable row — the hover fill eases in/out (Tamagui flips the bg instantly;
+   this smooths it to the 140ms ease-out the rest of the product uses). */
+.hz-row {
+  transition: background-color 140ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hz-row {
+    transition: none;
+  }
+}
