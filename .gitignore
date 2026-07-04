@@ -20,3 +20,6 @@ e2e-shots/
 test-results/
 playwright-report/
 .claude/
+
+# blank-audit generated report
+e2e/blank-report.json
