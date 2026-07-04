@@ -171,3 +171,25 @@ export type SpendPoint = { label: string; value: number }
 export function dailySpend(records: UsageRecord[], range: RangeKey, now: number): SpendPoint[] {
   return dailySeries(records, range, now).map((b) => ({ label: shortDay(b.day), value: round2(b.cents / 100) }))
 }
+
+/** Bound (ms) on a tile's loading spinner before it degrades to the honest fallback. */
+export const TILE_LOAD_TIMEOUT_MS = 10_000
+
+/** What a money/usage tile shows: the spinner, the value, or the honest fallback. */
+export type TileView = 'pending' | 'ready' | 'failed'
+
+/**
+ * How a tile should render given its async `phase` and whether the load has outlived
+ * its budget (`timedOut`). This is the fix for "billing spins on Loading… forever
+ * through a backend blip": a `loading` phase renders the spinner ONLY within the
+ * timeout — a 502 (`error`) OR a load that outlives `TILE_LOAD_TIMEOUT_MS`
+ * (`timedOut`) both degrade to `failed`, so the tile shows a "—"/"Unavailable —
+ * retrying" fallback (the graceful pattern the Dashboard + Machines tiles use)
+ * instead of an unbounded spinner. A value always wins — `ready` shows even if it
+ * lands after the timeout. PURE, so the resilience is unit-tested without a DOM.
+ */
+export function tileView(phase: 'idle' | 'loading' | 'ready' | 'error', timedOut: boolean): TileView {
+  if (phase === 'ready') return 'ready'
+  if (phase === 'error' || timedOut) return 'failed'
+  return 'pending'
+}
