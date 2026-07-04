@@ -2019,3 +2019,83 @@ from s3.hanzo.ai (MinIO/SeaweedFS backend) — bucket-create + presign + Media-d
 all work (200/201), only the object WRITE fails, backend-wide (a fresh bucket 500s
 too). The DAM code is correct up to the storage boundary; the S3 write path is a
 separate infra defect.
+
+## Tenants / White-Label board — data-driven tenant/package/domain/brand management (v8.4.72)
+
+The operator surface for launching, branding, domain-binding, and managing white-label
+tenants + resold sub-orgs. GLOBAL-ADMIN only (`admin: true` in the registry; category
+Platform). It is the MANAGEMENT UI over the platform's provisioning — the tenant /
+package / domain / brand RECORDS are the single source of truth, nothing hardcoded as the
+canonical path. Honest-state by construction: real where a backend answers, honest
+not-connected where a platform endpoint isn't bound yet.
+
+- **The board (`TenantsModule` + `tenants/`).** Two views + two SlideOvers:
+  - **Tenants list** — every org COMPOSED from three real backends (`tenants/model.ts`,
+    pure + tested): IAM orgs (`IamAdminApi.organizations`, /admin/iam global-admin gate) =
+    the tenant set + BRAND (logo/favicon/theme are real IAM org fields); admin cockpit
+    (`AdminCockpitApi.customers`, /v1/admin/customers) = plan/wallet/status/users/owner
+    (real cross-tenant); platform (`TenantsApi.clusters`, /paas) = the dedicated cluster
+    (enriched per-tenant in the detail). Each field a source doesn't answer stays an honest
+    em-dash — an IAM-only org lists brand-only, never a fabricated plan/wallet.
+  - **Reseller TREE** (org → sub-orgs) — DERIVED, never fabricated. The platform has NO
+    `parentOrgId` column, so the parent is (1) a real `metadata.parentOrg` when present
+    (the follow-up column, honored the moment it exists) or (2) INFERRED from a shared
+    owner email — flagged `parentHint:'owner'` with an honest "inferred; a real parentOrgId
+    is the follow-up" banner. `buildResellerTree` is cycle-safe.
+  - **Package catalog** — DATA, read from the platform (`TenantsApi.packages()` →
+    `GET /paas/packages`), NOT a hardcoded const. The 8 presets (console-admin, paas, dex,
+    bank, ats, bd, ta, sovereign-l1=ats+bd+ta+chain) live in `platform-seed/packages.json`
+    as the SEED for the platform `package` table; the console renders whatever the API
+    returns (honest not-connected until the platform serves it). `tenants/packages.ts` holds
+    ONLY the `Package` type + pure normalizer/helpers, no catalog.
+  - **New tenant** — creates the org RECORD (`IamAdminApi.addOrganization`, REAL) + brand;
+    a new white-label brand is a tenant record, not a code edit.
+  - **Per-tenant manage** (`TenantDetail`): Billing (plan/wallet REAL; suspend/reactivate
+    REAL via cockpit), Brand (logo/favicon/accent WRITE REAL via `updateOrganization` —
+    they ARE IAM org fields), Cluster (provision REAL via /paas), Custom domains (LIST +
+    bind — records drive routed hosts, bind honest-not-connected), IAM (list apps + create
+    app REAL via /admin/iam), Packages (grant — honest-not-connected composite).
+
+- **BFF: NO new proxy needed (DRY).** All platform calls ride the EXISTING `/paas`
+  catch-all proxy (`app/paas/[...path]` — service-token, brand-admin gated, CSRF), which
+  forwards ANY path to `platform.hanzo.ai/v1/*`. So tenant/domain/package/brand-config
+  calls light up the moment the platform serves them; a 404 today is the honest
+  not-connected state (`tenants/state.tsx` `classifyAction` → pending, `PlatformStateCard`).
+  The ONLY server change: `add/update/delete-organization` added to the `/admin/iam`
+  allow-list (+ `orgNameSegments` for org-name scoping) — global-admin gated, org-name
+  pinned by the existing `forwardIam` policy; this makes tenant-create + brand-write REAL.
+
+- **Data-driven brand resolver — the config.ts cleanup (flagged, additive).**
+  `TenantsApi.brandConfig(host)` + `TenantBrandConfig` is the runtime host→tenant-config
+  read that REPLACES the hardcoded `BRANDS`/`HOST_BRANDS` map in `src/config/index.ts`.
+  The map is marked DEPRECATED with the precise migration (platform serves
+  `GET /v1/brand?host=` from tenant records → `resolveConfig` reads it first, map is
+  fallback for the 4 legacy brands, then deleted). NOT swapped this pass — it's a
+  build-time-inlined OAuth-issuer boundary (a wrong change breaks sign-in + the build), so
+  it's the REQUIRED follow-up, treated as seed data for the tenant records until then.
+
+- **MISSING PLATFORM ENDPOINTS (the foundation-phase follow-up list — the board calls what
+  SHOULD exist, honest-404 until then):**
+  1. `GET /v1/packages` + a `package` DB table (seed `platform-seed/packages.json`) — the
+     data-driven catalog.
+  2. `POST /v1/org/{org}/package/{id}` + `DELETE` — the composite `provisionPackage(org,pkg)`
+     (clusters are the only unit the platform provisions today; no bundle composite).
+  3. `GET|POST /v1/org/{org}/domain` — bind a host → auto-create ingress+DNS+cert (the
+     platform's `createDomain`/cloudflare/k8s-ingress are INTERNAL functions with no HTTP
+     route). REPLACES the throwaway hand-made ingresses (console-admin-lux-network etc.).
+  4. `GET /v1/brand?host=<h>` — the host→tenant-brand-config read for the config.ts
+     data-driven resolver.
+  5. `parentOrgId` column on `organization` (or `metadata.parentOrg`) — a real reseller
+     parent link (the tree is owner-inferred until then).
+  REAL today (used live): `GET|POST /v1/org/{org}/cluster` (+ install-baseline), `/admin/iam`
+  org list/create/update/app-create, `/v1/admin/customers` (+ suspend/reactivate).
+
+- Verification: my code is `tsc --noEmit` clean (0 errors from these files; the repo carries
+  14 PRE-EXISTING `next/navigation` null errors in untouched files — auth/callback,
+  DashboardShell, Breadcrumbs, ComingSoon, Containers, OrgIntegrations — that already fail
+  `next build`'s type-check on clean main, out of scope). `next build` COMPILES my code
+  successfully. `npm test` +41 new (14 packages-normalizer+seed, 18 model compose/tree/
+  infer, 9 tenants-API path/normalizer) — all green; the 1 failing suite (canonical-paths
+  StorageApi) is pre-existing. `/tenants` + `/tenants/packages` render 200 with ZERO page
+  errors (headless), resolving through the `/[...slug]` catch-all → the admin-gated module.
+  Branch `feat/console-whitelabel-tenants` (off main v8.4.71 → v8.4.72), not merged.
