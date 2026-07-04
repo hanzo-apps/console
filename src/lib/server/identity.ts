@@ -500,6 +500,68 @@ export async function moveUserToOrg(user: SessionUser, org: string): Promise<voi
   await iamPostBody('/v1/iam/update-user', { id: user.id }, moved)
 }
 
+// ── Team-invite acceptance (activate a pending member) ───────────────────────
+// An org admin's invite creates a real member row (owner=org, isAdmin=role) with
+// NO password — it can't sign in yet ("pending"). The accept flow lets the invitee
+// set that password themselves via a sealed invite token (see server/invite.ts).
+// Both ops use the SAME confidential client as createUser/moveUserToOrg (already
+// allowlisted for user-admin), so no new IAM capability is required.
+
+/** An IAM member row (only the fields the accept flow reads/writes). */
+export type IamMember = {
+  owner?: string
+  name?: string
+  email?: string
+  displayName?: string
+  password?: string
+  signupApplication?: string
+  isAdmin?: boolean
+  [k: string]: unknown
+}
+
+/** Read a member (`<owner>/<name>`) as the confidential client; null when absent. */
+export async function getMember(id: string): Promise<IamMember | null> {
+  return iamGetData<IamMember>('/v1/iam/get-user', { id })
+}
+
+/**
+ * True when the member already has a login credential set. IAM returns the stored
+ * hash (or a masked `***`) for a set password, and `''` when none was ever set — so
+ * a non-empty value (either form) means "already activated". This is what makes an
+ * invite link single-use for activation and refuses to reset an active member.
+ */
+export function memberHasPassword(m: IamMember | null): boolean {
+  const p = m?.password
+  return typeof p === 'string' && p.length > 0
+}
+
+/**
+ * Activate a pending member: set their initial password (IAM hashes it via the
+ * org's policy — argon2id/bcrypt — and REFUSES to persist plaintext, see
+ * object/user.go UpdateUser's passwordChanged path). Sends the FULL current row
+ * with only password/displayName/signupApplication changed (update-user overwrites
+ * the default column set, so a partial would blank fields). Throws on any failure.
+ *
+ * Idempotency/safety is the CALLER's: refuse when `memberHasPassword` is already
+ * true, so an accept link can never overwrite an active member's credential.
+ */
+export async function activateMember(
+  id: string,
+  opts: { password: string; displayName?: string; signupApplication?: string },
+): Promise<void> {
+  const current = await iamGetData<IamMember>('/v1/iam/get-user', { id })
+  if (!current) throw new Error('Could not read the member from IAM')
+  const updated: IamMember = {
+    ...current,
+    // Plaintext in — update-user hashes it (org policy) because it differs from the
+    // empty stored password. Do NOT set passwordType, or hashing is skipped.
+    password: opts.password,
+  }
+  if (opts.displayName) updated.displayName = opts.displayName
+  if (opts.signupApplication) updated.signupApplication = opts.signupApplication
+  await iamPostBody('/v1/iam/update-user', { id }, updated)
+}
+
 // ── Admin gate ───────────────────────────────────────────────────────────────
 // The trust boundary for the admin console (IAM + KMS proxies). Resolves WHO the
 // caller is from their own session, then enforces TWO authoritative checks: the
