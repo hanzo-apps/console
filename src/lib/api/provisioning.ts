@@ -7,11 +7,21 @@
  *   GET    /v1/<kind>/<name>               -> 200 Resource
  *   DELETE /v1/<kind>/<name>               -> 204
  *
- * Tenancy is server-side (X-Org-Id from the validated session); the browser
- * sends cookie credentials only. One client, parameterized by `kind` — the
- * ResourceModule factory binds a kind and gets a working admin surface.
+ * Transport: the browser calls the console's OWN-origin `/cloud` user-bearer proxy
+ * (`cloudProxyV1Url` → `<origin>/cloud/v1/<kind>`), NEVER a bare `/v1/<kind>`. On the
+ * live console ingress a bare `/v1/*` is routed straight to hanzoai/gateway (bypassing
+ * Next), where the provisioning backends authorize on the Bearer owner claim and 403 a
+ * cookie-only call ("X-Org-Id required") — surfacing as a FALSE "Not enabled for your
+ * account". The `/cloud` route (`app/cloud/[...path]`, allow-listed in proxy-allow.ts)
+ * mints a short-lived user-bound IAM token from the session and forwards it, so the org
+ * is resolved server-side and the real per-org resources load. Same class-fix as
+ * storage.ts (`/v1/s3`) and framework — the seven data kinds share ONE proxy path.
+ *
+ * Tenancy is server-side (X-Org-Id from the Bearer owner); the browser sends cookie
+ * credentials only. One client, parameterized by `kind` — the ResourceModule factory
+ * binds a kind and gets a working admin surface.
  */
-import { restGet, restPost, restDelete, originV1Url } from './client'
+import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
 
 /** Wire kind = the REST path segment the provisioning service serves. */
 export type ResourceKind =
@@ -85,14 +95,14 @@ export function normalizeResourceList(body: unknown): Resource[] {
 
 export const ProvisioningApi = {
   list: async (kind: ResourceKind): Promise<Resource[]> =>
-    normalizeResourceList(await restGet<unknown>(originV1Url(kind))),
+    normalizeResourceList(await restGet<unknown>(cloudProxyV1Url(kind))),
 
   get: (kind: ResourceKind, name: string) =>
-    restGet<Resource>(originV1Url(`${kind}/${encodeURIComponent(name)}`)),
+    restGet<Resource>(cloudProxyV1Url(`${kind}/${encodeURIComponent(name)}`)),
 
   create: (kind: ResourceKind, name: string) =>
-    restPost<ResourceCreated>(originV1Url(kind), { name }),
+    restPost<ResourceCreated>(cloudProxyV1Url(kind), { name }),
 
   remove: (kind: ResourceKind, name: string) =>
-    restDelete(originV1Url(`${kind}/${encodeURIComponent(name)}`)),
+    restDelete(cloudProxyV1Url(`${kind}/${encodeURIComponent(name)}`)),
 }
