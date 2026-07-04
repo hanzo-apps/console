@@ -17,11 +17,11 @@
  * GitHub token ⇒ `null` (the UI shows an honest "Connect GitHub" CTA); a shared
  * service token is NEVER substituted.
  *
- * This is the SAME `/v1/git/{accounts,repos}` contract hanzo.app serves, ported so
+ * This is the SAME connected-git contract hanzo.app serves at `/v1/git`, ported (at `/git`) so
  * the console's connect-repo dropdown is genuinely real (works the moment a user
  * links GitHub in IAM) rather than a mock.
  *
- * Server-only by construction: imported ONLY by the `/v1/git/*` route handlers
+ * Server-only by construction: imported ONLY by the `/git/*` route handlers
  * (the console convention — like `identity.ts`/`session.ts`, no `server-only`
  * package dep), so the GitHub token never reaches the client bundle.
  */

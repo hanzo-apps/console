@@ -1,5 +1,5 @@
 /**
- * /v1/git/repos — repositories for one connected Git account.
+ * /git/repos — repositories for one connected Git account.
  *
  * GET ?account=<login>&q=<search> → `{ repos: GitRepo[] }`, newest-push first,
  * server-side filtered by `q`. `account` defaults to the authenticated user.

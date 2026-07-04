@@ -1413,7 +1413,7 @@ export const catalog: CatalogEntry[] = [
   {
     // The "Let's build something new" hub — the ONE uniform way to deploy any new
     // project/service/container/site. Leads with repo→deploy on the real per-org
-    // PaaS (/v1/platform), a real connect-git dropdown (/v1/git/*), and the real
+    // PaaS (/v1/platform), a real connect-git dropdown (/git/*), and the real
     // template gallery (/v1/templates). Placed first in Platform so "Deploy" is
     // the obvious front door. Mirrors hanzo.app/new, infra-first.
     id: 'new',

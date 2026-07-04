@@ -11,7 +11,7 @@
  * Three real, uniform targets (each a shape `PaasApi.createApp` accepts — no
  * invented targets): Service (git → build → run), Static site (git → static),
  * Container (prebuilt image → run). The connect-git dropdown is REAL — it lists the
- * signed-in user's GitHub repos via the same `/v1/git/{accounts,repos}` BFF
+ * signed-in user's GitHub repos via the same connected-git BFF (console-served at `/git`)
  * contract hanzo.app serves (resolved from the IAM-linked token server-side), and
  * degrades to an honest "Connect GitHub" CTA when GitHub isn't linked. The
  * "describe an app" path links out to Hanzo Build (hanzo.app), which owns the AI
@@ -433,7 +433,7 @@ function DeployWatchCard({ project, app, onView, onAnother }: { project: string;
   )
 }
 
-// ── Connect a Git repository (real /v1/git/* BFF) ────────────────────────────
+// ── Connect a Git repository (real /git/* BFF) ────────────────────────────
 
 type GitState =
   | { phase: 'loading' }

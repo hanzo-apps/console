@@ -1,5 +1,5 @@
 /**
- * Client for the same-origin Git import BFF (`/v1/git/*`).
+ * Client for the same-origin Git import BFF (`/git/*`).
  *
  * These endpoints resolve the user's IAM-linked GitHub token server-side and return
  * only repository/account metadata — the token stays on the server. All calls are
@@ -39,7 +39,7 @@ export interface GitAccountsResult {
 /** Connected accounts for the signed-in user (empty + not-connected on any failure). */
 export async function fetchGitAccounts(): Promise<GitAccountsResult> {
   try {
-    const res = await fetch('/v1/git/accounts', {
+    const res = await fetch('/git/accounts', {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })
@@ -60,7 +60,7 @@ export async function fetchGitRepos(account: string, q = ''): Promise<GitRepo[]>
     const params = new URLSearchParams()
     if (account) params.set('account', account)
     if (q.trim()) params.set('q', q.trim())
-    const res = await fetch(`/v1/git/repos?${params.toString()}`, {
+    const res = await fetch(`/git/repos?${params.toString()}`, {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })

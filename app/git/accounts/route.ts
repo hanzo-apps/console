@@ -1,5 +1,5 @@
 /**
- * /v1/git/accounts — the signed-in user's connected Git accounts.
+ * /git/accounts — the signed-in user's connected Git accounts.
  *
  * GET → `{ connected: boolean, accounts: GitAccount[] }`.
  *   - `connected: false, accounts: []` when the user has no GitHub linked in IAM
@@ -9,9 +9,10 @@
  * The GitHub token is resolved from IAM server-side (the user's own session) and
  * used only here — it is never returned to the browser. Per-user data ⇒ no-store.
  *
- * `git` is deliberately NOT a `/cloud` rewrite head (next.config `CLOUD_V1_HEADS`),
- * so `/v1/git/*` terminates at THIS console BFF, not the cloud binary's internal
- * git-hosting surface.
+ * Served at TOP-LEVEL `/git/*` (a Next-served BFF like `/cloud`, `/ai`, `/paas`,
+ * `/cms`), NOT under `/v1/*`: console.hanzo.ai's ingress routes `/v1/*` to
+ * hanzoai/gateway (bypassing Next), so a `/v1/git/*` handler would be shadowed and
+ * 404 at the cloud binary. `/git/*` reaches THIS console BFF.
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
