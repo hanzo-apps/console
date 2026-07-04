@@ -48,7 +48,7 @@ function crumbsFor(pathname: string): Crumb[] {
 }
 
 export function Breadcrumbs() {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const router = useRouter()
   const crumbs = crumbsFor(pathname)
   if (crumbs.length <= 1) return null
