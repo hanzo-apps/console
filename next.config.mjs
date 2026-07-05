@@ -69,7 +69,7 @@ function guiPackages() {
  * NOT rewritten here: they keep their own gated proxies with their own tenant
  * scoping, and are reached by the client's explicit `/admin/*` origin path.
  */
-const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'platform', 'crm', 'tracker', 'integrations', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch', 'enablement']
+const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'platform', 'crm', 'referrals', 'tracker', 'integrations', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch', 'enablement']
 // `pricing` (the rich model+provider CATALOG at `/v1/pricing/models`) and `plans` (the
 // subscription tiers/entitlements) are AI-gateway-served like models/chat and are in the
 // `/ai` proxy ALLOWED set (app/ai/[...path]), so they route to `/ai` too.
@@ -79,7 +79,7 @@ const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images'
 // (`providers/toggle`, `providers/primary`) both match the `/:path*` rewrite below,
 // which is method-agnostic (Next matches on the URL), so POST is covered without a
 // second entry. Keep this in sync with `admin-aggregate.ts` ADMIN_AGGREGATE_HEADS.
-const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants']
+const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals']
 /**
  * DEV-ONLY: proxy the client's direct-cloud `/v1/{iam,o11y}/*` calls (get-account,
  * annotation-queues/users) to a real cloud backend so `npm run dev` renders the
