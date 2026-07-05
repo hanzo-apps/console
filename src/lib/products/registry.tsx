@@ -198,9 +198,10 @@ import { OrgIntegrationsModule } from '~/components/products/OrgIntegrationsModu
 import {
   DashboardsModule,
   ExperimentsModule,
-  ReferralsModule,
   ScoreAnalyticsModule,
 } from '~/components/products/ConsoleFeatureModule'
+import { ReferralsModule } from '~/components/products/ReferralsModule'
+import { ReferralsAdminModule } from '~/components/products/ReferralsAdminModule'
 
 /**
  * Living overviews — the reusable, videogame-like overview (count-up KPIs, live
@@ -1964,17 +1965,28 @@ export const catalog: CatalogEntry[] = [
   {
     id: 'referrals',
     label: 'Referrals',
-    icon: Coins,
-    description: 'Referral link, invite history, and cloud-credit earnings.',
+    icon: Gift,
+    description: 'Share your referral link and earn cloud credit when teams get started.',
     category: 'Web3',
     status: 'enabled',
-    repo: 'hanzoai/billing',
-    docs: `${DOCS}/referrals`,
+    repo: 'hanzoai/cloud',
     kind: 'module',
-    routes: [
-      { path: '', component: ReferralsModule },
-      { path: ':tab', component: ReferralsModule },
-    ],
+    // Single screen (link + copy, stat tiles, referrals list); the shared base
+    // sub-pages (status/logs/metrics/settings) resolve via the catch-all.
+    routes: [{ path: '', component: ReferralsModule }],
+  },
+  {
+    // Global-admin operator board (hidden from every customer nav/launcher/palette).
+    id: 'referrals-admin',
+    label: 'Referrals',
+    icon: Gift,
+    description: 'Fleet-wide referral program — invites, qualification, and credit granted.',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: ReferralsAdminModule }],
   },
   {
     id: 'tokens',

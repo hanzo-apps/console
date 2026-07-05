@@ -1,0 +1,103 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+
+import { ReferralsApi, normalizeOverview, normalizeMyReferral, normalizeClaim } from './referrals'
+
+/**
+ * Referrals API + pure normalizers. The client calls the cloud `/v1/referrals`
+ * contract through the console's `/cloud` user-bearer proxy (`cloudProxyV1Url` →
+ * `<origin>/cloud/v1/referrals` — the live-ingress-safe form for a bearer-scoped
+ * head; a bare `/v1/referrals` 403s on the gateway). These tests pin (1) that each
+ * call hits the EXACT `/cloud/v1/referrals` path, (2) the real store JSON shape
+ * normalizes, and (3) a garbage/absent field degrades to a safe default.
+ */
+const ORIGIN = 'https://console.hanzo.ai'
+
+describe('Referrals normalizers — real cloud JSON shape, defensive', () => {
+  it('normalizes the overview with all fields', () => {
+    const o = normalizeOverview({
+      code: 'ABC123XY',
+      link: 'https://hanzo.ai/?ref=ABC123XY',
+      referrerBonusCents: 1000,
+      refereeBonusCents: 500,
+      creditsEarnedCents: 2000,
+      counts: { total: 3, signedUp: 1, qualified: 0, credited: 2 },
+      referrals: [
+        { id: 'ref_1', referee: 'orgB', status: 'credited', creditsCents: 1000, createdAt: 5, qualifiedAt: 6, creditedAt: 6 },
+        { id: 'ref_2', referee: 'orgC', status: 'signed_up', creditsCents: 0, createdAt: 7, qualifiedAt: 0, creditedAt: 0 },
+      ],
+    })
+    expect(o).toMatchObject({
+      code: 'ABC123XY',
+      link: 'https://hanzo.ai/?ref=ABC123XY',
+      referrerBonusCents: 1000,
+      refereeBonusCents: 500,
+      creditsEarnedCents: 2000,
+      counts: { total: 3, signedUp: 1, qualified: 0, credited: 2 },
+    })
+    expect(o.referrals.map((r) => r.id)).toEqual(['ref_1', 'ref_2'])
+    expect(o.referrals[0].status).toBe('credited')
+  })
+
+  it('coerces missing/garbage fields to safe defaults (never throws)', () => {
+    const o = normalizeOverview(null)
+    expect(o).toMatchObject({ code: '', link: '', creditsEarnedCents: 0 })
+    expect(o.counts).toEqual({ total: 0, signedUp: 0, qualified: 0, credited: 0 })
+    expect(o.referrals).toEqual([])
+    // A row with no id is filtered out of the list.
+    expect(normalizeOverview({ referrals: [null, 'x', { id: 'ref_9', referee: 'z' }] }).referrals.map((r) => r.id)).toEqual([
+      'ref_9',
+    ])
+    // A row defaults status to signed_up.
+    expect(normalizeMyReferral({ id: 'ref_x' }).status).toBe('signed_up')
+    // Numeric coercion from strings.
+    expect(normalizeMyReferral({ id: 'r', creditsCents: '1500' }).creditsCents).toBe(1500)
+  })
+
+  it('normalizes a claim result', () => {
+    expect(normalizeClaim({ id: 'ref_1', code: 'ABC', status: 'signed_up', created: true, createdAt: 9 })).toEqual({
+      id: 'ref_1',
+      code: 'ABC',
+      status: 'signed_up',
+      created: true,
+      createdAt: 9,
+    })
+    // created is strict-boolean; a missing field → false.
+    expect(normalizeClaim({ id: 'r' }).created).toBe(false)
+  })
+})
+
+describe('ReferralsApi — hits the /cloud/v1/referrals bearer-proxy path', () => {
+  const fetched: { url: string; method: string }[] = []
+
+  beforeEach(() => {
+    fetched.length = 0
+    ;(globalThis as { window?: unknown }).window = {
+      location: { origin: ORIGIN, hostname: 'console.hanzo.ai' },
+    }
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+      fetched.push({ url, method: init?.method ?? 'GET' })
+      const body = url.endsWith('/claim')
+        ? { id: 'ref_1', code: 'ABC', status: 'signed_up', created: true, createdAt: 1 }
+        : { code: 'ABC', link: 'https://hanzo.ai/?ref=ABC', counts: {}, referrals: [] }
+      return Promise.resolve(
+        new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }),
+      )
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (globalThis as { window?: unknown }).window
+  })
+
+  it('reads the overview via the /cloud proxy (never a bare /v1 or direct cloud-origin call)', async () => {
+    const out = await ReferralsApi.overview()
+    expect(fetched[0]).toEqual({ url: `${ORIGIN}/cloud/v1/referrals`, method: 'GET' })
+    expect(out.code).toBe('ABC')
+  })
+
+  it('claims a referral with POST through the proxy', async () => {
+    const r = await ReferralsApi.claim('ABC')
+    expect(fetched[0]).toEqual({ url: `${ORIGIN}/cloud/v1/referrals/claim`, method: 'POST' })
+    expect(r.created).toBe(true)
+  })
+})

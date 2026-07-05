@@ -45,6 +45,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // call, so it routes through /cloud exactly like prompts/agents — the single `crm`
   // head admits every sub-path (summary, the three collections, their :id detail).
   'crm',
+  // Referrals (cloud clients/referrals): /v1/referrals + /v1/referrals/claim. Native
+  // per-org viral loop on Base/SQLite (referral code/link, claim, credit earned). The
+  // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
+  // call, so it routes through /cloud exactly like crm — the single `referrals` head
+  // admits the overview read + the claim POST (the /v1/admin/referrals* surface is a
+  // separate global-admin head handled by app/admin/aggregate, not this proxy).
+  'referrals',
   // Tracker (cloud clients/tracker): /v1/tracker/projects[/:key[/issues[/:num]]].
   // Native per-org issue tracker on Base/SQLite (projects + issues, rows grouped by
   // status). The handler resolves the org from the Bearer owner (X-Org-Id) and 403s a
