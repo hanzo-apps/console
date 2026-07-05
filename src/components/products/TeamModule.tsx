@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Dialog, Spinner, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, Shield, Trash2, UserPlus, X } from '@hanzogui/lucide-icons-2'
+import { Check, Copy, Link2, RefreshCw, Shield, Trash2, UserPlus, X } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, TeamApi, type IamUser, type Role, type Paged } from '~/lib/api'
 import { config } from '~/config'
@@ -71,6 +71,49 @@ function RoleBadge({ role }: { role: 'admin' | 'member' }) {
   )
 }
 
+/** A member has a login credential once they've accepted their invite; until then
+ *  they're PENDING (created, scoped, role assigned — but can't sign in yet). */
+const isPending = (u: IamUser): boolean => !(typeof u.password === 'string' && u.password.length > 0)
+
+/** MFA is on when a preferred channel is set or a channel is enabled. */
+const mfaOn = (u: IamUser): boolean =>
+  Boolean((u.preferredMfaType && u.preferredMfaType !== '') || u.mfaPhoneEnabled || u.mfaEmailEnabled)
+
+/** Read-only, copyable link field with a transient "copied" state. */
+function CopyLink({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard?.writeText(value)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    } catch {
+      /* clipboard unavailable — the value is still visible + selectable */
+    }
+  }
+  return (
+    <XStack gap="$2" items="center">
+      <Text
+        flex={1}
+        fontSize="$2"
+        color="$color12"
+        numberOfLines={1}
+        px="$2.5"
+        py="$2"
+        rounded="$3"
+        borderWidth={1}
+        borderColor="$borderColor"
+        bg="$color2"
+      >
+        {value}
+      </Text>
+      <Button size="$3" icon={copied ? <Check size={15} /> : <Copy size={15} />} onPress={() => void copy()}>
+        {copied ? 'Copied' : 'Copy'}
+      </Button>
+    </XStack>
+  )
+}
+
 // ── Invite dialog ─────────────────────────────────────────────────────────────
 
 function InviteDialog({
@@ -89,12 +132,17 @@ function InviteDialog({
   const [role, setRole] = useState('member')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  // Two phases: the invite form, then the shareable accept link to hand off.
+  const [link, setLink] = useState<string | null>(null)
+  const [invitedEmail, setInvitedEmail] = useState('')
 
   const reset = () => {
     setEmail('')
     setRole('member')
     setErr(null)
     setBusy(false)
+    setLink(null)
+    setInvitedEmail('')
   }
 
   const submit = async () => {
@@ -116,50 +164,97 @@ function InviteDialog({
       createdTime: new Date().toISOString(),
     }
     try {
+      // 1. Create the member (scoped to org, role assigned) — a real IAM row.
       await TeamApi.invite(user)
-      toast.success('Member invited', `${trimmed} was added to ${org}.`)
-      onOpenChange(false)
-      reset()
-      onInvited()
+      // 2. Mint the shareable accept link so they can set a password + sign in
+      //    (email/OTP delivery isn't wired — the link is the honest hand-off).
+      let accept = ''
+      try {
+        accept = (await TeamApi.inviteLink({ org, name, email: trimmed })).link
+      } catch {
+        accept = '' // member exists regardless; the roster's row action can re-mint it
+      }
+      onInvited() // refresh the roster now — the member exists
+      toast.success('Member invited', `${trimmed} was added to ${org} as ${role}.`)
+      setInvitedEmail(trimmed)
+      setLink(accept)
+      setBusy(false)
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : 'Could not invite the member.')
       setBusy(false)
     }
   }
 
+  const showLink = link !== null
+
   return (
     <Dialog modal open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset() }}>
       <Dialog.Portal>
         <Dialog.Overlay key="invite-overlay" bg="rgba(0,0,0,0.55)" />
-        <Dialog.Content key="invite-content" bordered elevate width={460} maxW="92vw" p="$4" gap="$3.5">
+        <Dialog.Content key="invite-content" bordered elevate width={480} maxW="92vw" p="$4" gap="$3.5">
           <XStack items="center" justify="space-between">
             <Dialog.Title>
-              <Text fontSize="$6" fontWeight="800">Invite member</Text>
+              <Text fontSize="$6" fontWeight="800">{showLink ? 'Invite sent' : 'Invite member'}</Text>
             </Dialog.Title>
             <Button size="$2" chromeless icon={<X size={18} />} onPress={() => onOpenChange(false)} aria-label="Close" />
           </XStack>
-          <Text fontSize="$3" color="$color11">
-            Add someone to {org}. They sign in with your organization's login; no password is set here.
-          </Text>
-          <YStack gap="$3">
-            <FieldRow label="Email">
-              <FieldText value={email} onChange={setEmail} placeholder="teammate@company.com" />
-            </FieldRow>
-            <FieldRow label="Role">
-              <FieldSelect value={role} options={['member', 'admin']} onChange={setRole} />
-            </FieldRow>
-          </YStack>
-          {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
-          <XStack gap="$2" justify="flex-end">
-            <Button chromeless onPress={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
-            <PrimaryButton
-              onPress={() => void submit()}
-              disabled={busy || !email.trim()}
-              icon={busy ? <Spinner size="small" /> : <UserPlus size={16} />}
-            >
-              Invite
-            </PrimaryButton>
-          </XStack>
+
+          {showLink ? (
+            <>
+              <Text fontSize="$3" color="$color11">
+                <Text color="$color12" fontWeight="700">{invitedEmail}</Text> is now a {role} of {org}. Send them
+                this link to set a password and sign in.
+              </Text>
+              {link ? (
+                <YStack gap="$2">
+                  <XStack gap="$1.5" items="center">
+                    <Link2 size={14} />
+                    <Text fontSize="$2" color="$color11" fontWeight="600">Invite link</Text>
+                  </XStack>
+                  <CopyLink value={link} />
+                  <Text fontSize="$1" color="$color10">
+                    Valid for 14 days. Email delivery isn't enabled on this deployment yet, so share the
+                    link directly (chat, SMS, your own email).
+                  </Text>
+                </YStack>
+              ) : (
+                <Text fontSize="$2" color="$yellow10">
+                  The member was created, but the invite link couldn't be generated. Use “Copy invite link”
+                  on their row to try again.
+                </Text>
+              )}
+              <XStack gap="$2" justify="flex-end">
+                <Button onPress={() => reset()}>Invite another</Button>
+                <PrimaryButton onPress={() => onOpenChange(false)}>Done</PrimaryButton>
+              </XStack>
+            </>
+          ) : (
+            <>
+              <Text fontSize="$3" color="$color11">
+                Add someone to {org}. We'll create their account and give you a link to share so they can set
+                a password and sign in.
+              </Text>
+              <YStack gap="$3">
+                <FieldRow label="Email">
+                  <FieldText value={email} onChange={setEmail} placeholder="teammate@company.com" />
+                </FieldRow>
+                <FieldRow label="Role">
+                  <FieldSelect value={role} options={['member', 'admin']} onChange={setRole} />
+                </FieldRow>
+              </YStack>
+              {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
+              <XStack gap="$2" justify="flex-end">
+                <Button chromeless onPress={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
+                <PrimaryButton
+                  onPress={() => void submit()}
+                  disabled={busy || !email.trim()}
+                  icon={busy ? <Spinner size="small" /> : <UserPlus size={16} />}
+                >
+                  Invite
+                </PrimaryButton>
+              </XStack>
+            </>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>
@@ -257,6 +352,29 @@ function MembersTab({ org, canManage }: { org: string; canManage: boolean }) {
     [load, toast],
   )
 
+  // Re-mint + copy a pending member's accept link (for a member created earlier, or
+  // when the invite dialog couldn't mint it). Delivery is a link hand-off.
+  const copyInviteLink = useCallback(
+    async (u: IamUser) => {
+      const id = `${u.owner}/${u.name}`
+      setBusyId(id)
+      try {
+        const { link } = await TeamApi.inviteLink({ org: u.owner, name: u.name, email: u.email })
+        try {
+          await navigator.clipboard?.writeText(link)
+          toast.success('Invite link copied', `Send it to ${u.email || u.name} so they can set a password.`)
+        } catch {
+          toast.success('Invite link ready', link)
+        }
+      } catch (e) {
+        toast.error('Could not create invite link', e instanceof ApiError ? e.message : undefined)
+      } finally {
+        setBusyId(null)
+      }
+    },
+    [toast],
+  )
+
   const columns = useMemo<Column<IamUser>[]>(() => {
     const cols: Column<IamUser>[] = [
       {
@@ -269,22 +387,45 @@ function MembersTab({ org, canManage }: { org: string; canManage: boolean }) {
           </YStack>
         ),
       },
-      { key: 'role', header: 'Role', width: 110, render: (u) => <RoleBadge role={roleOf(u)} /> },
-      { key: 'createdTime', header: 'Joined', width: 130, render: (u) => <Text fontSize="$2" color="$color11">{fmtDate(u.createdTime)}</Text> },
+      { key: 'role', header: 'Role', width: 100, render: (u) => <RoleBadge role={roleOf(u)} /> },
+      {
+        key: 'status',
+        header: 'Status',
+        width: 130,
+        render: (u) => (
+          <XStack gap="$1.5" items="center" flexWrap="wrap">
+            {isPending(u) ? (
+              <Text fontSize="$2" px="$2" py="$1" rounded="$2" bg="$yellow4" color="$yellow11">Pending</Text>
+            ) : (
+              <Text fontSize="$2" px="$2" py="$1" rounded="$2" bg="$green4" color="$green11">Active</Text>
+            )}
+            {mfaOn(u) ? (
+              <Text fontSize="$1" px="$1.5" py="$1" rounded="$2" bg="$color4" color="$color11">2FA</Text>
+            ) : null}
+          </XStack>
+        ),
+      },
+      { key: 'createdTime', header: 'Joined', width: 120, render: (u) => <Text fontSize="$2" color="$color11">{fmtDate(u.createdTime)}</Text> },
     ]
     if (canManage) {
       cols.push({
         key: 'actions',
         header: '',
-        width: 210,
+        width: 260,
         render: (u) => {
           const id = `${u.owner}/${u.name}`
           const busy = busyId === id
           return (
-            <XStack gap="$2" justify="flex-end">
-              <Button size="$2" chromeless icon={<Shield size={14} />} disabled={busy} onPress={() => void toggleRole(u)}>
-                {u.isAdmin ? 'Make member' : 'Make admin'}
-              </Button>
+            <XStack gap="$2" justify="flex-end" flexWrap="wrap">
+              {isPending(u) ? (
+                <Button size="$2" chromeless icon={<Link2 size={14} />} disabled={busy} onPress={() => void copyInviteLink(u)}>
+                  Copy invite link
+                </Button>
+              ) : (
+                <Button size="$2" chromeless icon={<Shield size={14} />} disabled={busy} onPress={() => void toggleRole(u)}>
+                  {u.isAdmin ? 'Make member' : 'Make admin'}
+                </Button>
+              )}
               <Button size="$2" chromeless theme="red" icon={<Trash2 size={14} />} disabled={busy} onPress={() => setRemoving(u)} aria-label={`Remove ${u.name}`} />
             </XStack>
           )
@@ -292,7 +433,7 @@ function MembersTab({ org, canManage }: { org: string; canManage: boolean }) {
       })
     }
     return cols
-  }, [canManage, busyId, toggleRole])
+  }, [canManage, busyId, toggleRole, copyInviteLink])
 
   return (
     <>
