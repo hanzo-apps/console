@@ -96,13 +96,7 @@ export function DataTable<T>({
 
           {loading ? (
             <SkeletonRows columns={columns} />
-          ) : rows.length === 0 ? (
-            <YStack py="$8" items="center" gap="$1">
-              <Text color="$color10" fontSize="$3">
-                {empty}
-              </Text>
-            </YStack>
-          ) : (
+          ) : rows.length > 0 ? (
             <YStack>
               {rows.map((row) => (
                 <XStack
@@ -145,9 +139,20 @@ export function DataTable<T>({
                 </XStack>
               ))}
             </YStack>
-          )}
+          ) : null}
         </YStack>
       </YStack>
+
+      {/* Empty message lives OUTSIDE the horizontal (min-width) scroll area so it
+          centers + wraps within the VISIBLE width — on a phone the min-width table
+          scrolls, but "Nothing here yet." must never be clipped off the right edge. */}
+      {!loading && rows.length === 0 ? (
+        <YStack py="$8" px="$4" items="center" gap="$1" borderTopWidth={1} borderColor="$borderColor">
+          <Text color="$color10" fontSize="$3" text="center">
+            {empty}
+          </Text>
+        </YStack>
+      ) : null}
     </YStack>
   )
 }
