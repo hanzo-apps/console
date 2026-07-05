@@ -10,8 +10,9 @@
  *
  * Verbs: GET (reads: balance/usage/invoices/subscriptions/payment-methods, and the
  * per-invoice PDF), POST (writes: top-up, spend-alerts, save-a-method, cancel/
- * reactivate a subscription), DELETE (detach a saved payment method). Each is scoped
- * to the caller's OWN org server-side; a mutating verb is CSRF-guarded.
+ * reactivate a subscription), PATCH (edit a budget/spend-alert), DELETE (detach a
+ * saved payment method, remove a budget). Each is scoped to the caller's OWN org
+ * server-side; a mutating verb is CSRF-guarded (`forwardBilling`).
  */
 import { type NextRequest } from 'next/server'
 
@@ -25,6 +26,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   return forwardBilling(req, (await ctx.params).path)
 }
 export async function POST(req: NextRequest, ctx: Ctx) {
+  return forwardBilling(req, (await ctx.params).path)
+}
+export async function PATCH(req: NextRequest, ctx: Ctx) {
   return forwardBilling(req, (await ctx.params).path)
 }
 export async function DELETE(req: NextRequest, ctx: Ctx) {
