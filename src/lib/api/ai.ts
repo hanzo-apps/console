@@ -20,7 +20,7 @@
 import { ApiError } from './client'
 import { PlaygroundApi, type ChatMessage } from './playground'
 import { invalidateBalance } from '~/lib/billing/live-balance'
-import { splitSSE, dataOf, parseChatData } from './stream'
+import { splitSSE, dataOf, parseChatData, streamErrorMessage } from './stream'
 
 /** Cached model id list — resolved once per session for default-model selection. */
 let modelsCache: string[] | null = null
@@ -92,11 +92,14 @@ export async function readChatStream(res: Response, onDelta: (text: string) => v
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
+  let raw = ''
   try {
     for (;;) {
       const { value, done } = await reader.read()
       if (done) break
-      buf += decoder.decode(value, { stream: true })
+      const chunk = decoder.decode(value, { stream: true })
+      raw += chunk
+      buf += chunk
       const split = splitSSE(buf)
       buf = split.rest
       for (const ev of split.events) {
@@ -108,6 +111,14 @@ export async function readChatStream(res: Response, onDelta: (text: string) => v
     if (tail != null) consume(tail)
   } finally {
     await reader.cancel().catch(() => {})
+  }
+  // The gateway can answer a 200 with a PLAIN JSON error envelope (not SSE) —
+  // e.g. a prompt over the model's context window, or a premium model on a
+  // trial balance. That body carries no `data:` events, so the stream yields no
+  // content; surface the gateway's real message instead of an empty completion.
+  if (content === '') {
+    const envelopeError = streamErrorMessage(raw)
+    if (envelopeError) throw new ApiError(envelopeError, res.status)
   }
   return content
 }
