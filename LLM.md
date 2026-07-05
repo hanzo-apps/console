@@ -2486,3 +2486,62 @@ ships). `backup/*` untouched per policy.
   `:v<package.json version>`; live re-verify (sign-in + key surfaces render) is the
   post-deploy gate. The universe CR bump is owned by the universe agent (not touched
   here to avoid a race) — the new console semver is **v8.4.101**.
+
+## Budgets & limits — EXTEND the existing Budgets page with spend caps + rate limits (Hanzo Cloud #70)
+
+Extends the EXISTING Budgets page (`components/products/billing/BillingBudgets.tsx`,
+the `/billing/budgets` tab under the Billing center in Observe) from create/list soft
+alerts into a full **Budgets & limits** surface — per-scope HARD spend caps and request
+rate limits — over the SAME real commerce spend-alerts API (`/v1/billing/spend-alerts`,
+via the per-tenant `/billing` proxy). This REPLACES an earlier scaffolded separate
+`/v1/commerce/limits` "Limits" module: the CTO re-anchored mid-build (that endpoint is
+being dropped — a 2nd parallel system), so it was folded into Budgets and repointed. No
+new nav entry (Budgets already lives beside Billing/Status in Observe). One budgets
+surface, one endpoint.
+
+- **`lib/api/billing.ts`** — `SpendAlert` extended with the new spend-alerts fields:
+  `project`/`service` (''=all → org-wide default), `enforce` (true = HARD cap, billable
+  calls 402 at the cap; false = soft alert), `softPct` (warn %, default 80),
+  `rateLimitRpm` (0 = no limit, else 429), and the READ-ONLY projections
+  `periodSpentCents`/`over`/`warn`. `normalizeSpendAlerts` reads them defensively
+  (snake_case tolerant, sensible defaults) so a LEGACY soft-alert row renders as an
+  org-wide alert TODAY and the meter/enforce/rate-limit surface lights up the moment the
+  backend emits the fields — forward-compatible, nothing fabricated. `createSpendAlert`
+  takes the new fields; added `updateSpendAlert` (PATCH `/spend-alerts/:id`) +
+  `deleteSpendAlert` (DELETE `/spend-alerts/:id`). Added a **PATCH** verb to
+  `app/billing/v1/[...path]/route.ts` (`forwardBilling` already forwards `req.method` +
+  CSRF-guards non-safe methods — SAFE_METHODS = GET/HEAD/OPTIONS — and pins the billing
+  subject server-side via `scopedBillingSearch`, so edit/delete are subject-scoped from
+  the browser). NOTE (flagged to the spend-alerts backend lane): per-ALERT ownership
+  WITHIN a subject must be enforced backend-side (the subject pin scopes to the caller,
+  not to a specific alert row) — the reason the old code hid edit/delete.
+- **`components/products/billing/budgets-logic.ts`** (PURE + tested) — `capVerdict`
+  (unlimited/over/warn/ok, trusts the backend `over`/`warn` flags then falls back to
+  cap+soft math), `spendPct`, `scopeTypeOf`/`scopeLabel`, `deriveBudgetsSummary` (incl.
+  an `enforced` count), and boundary parsing/validation (non-negative dollars→cents,
+  softPct 0–100, non-negative-int rpm, scope-id required for project/service, a hard cap
+  requires cap>0). `formForAlert` round-trips a row into the edit form.
+- **`BillingBudgets.tsx`** — per-scope CARDS (not a fixed table): a responsive spend
+  meter (periodSpentCents/threshold, green→amber→red by verdict; honest "Unlimited spend"
+  at cap=0), a verdict pill + a Hard-cap/Alert-only mode pill, and cap/soft/rate/mode
+  facts. SET: an add form + inline per-card edit sharing ONE `BudgetFields` editor
+  (Name · Scope selector Org-wide/Project/Service + id · Spend cap $ · Soft-warn % ·
+  Rate limit req/min · **Enforce (hard cap)** toggle) → POST/PATCH; per-row remove →
+  DELETE (confirm). A 5-tile KPI summary band (Budgets/Hard caps/Warnings/Over cap/Spent
+  this period, reusing `MetricCard`). Honest states: skeleton loading, `BackendStateCard`
+  (hint `GET /v1/billing/spend-alerts`), rich `EmptyState`; refetch-after-save. @hanzo/ui
+  (`@hanzo/gui` v5 shorthands) + `FieldSelect`/`FieldSwitch`; mobile-first `flexWrap`/
+  `minW` rows, NO horizontal body scroll.
+- Verification: `tsc --noEmit` clean; `vitest` all green (+21 budgets-logic tests
+  replacing the removed limits tests); `next build` ✓ (the Budgets tab renders via the
+  BillingModule `:tab` route). Responsive e2e (`e2e/budgets-responsive.spec.ts`, mocked
+  spend-alerts + admin session) renders four budgets (org-default hard-cap on-track /
+  project warn / service over / unlimited-throttle) at 1440px AND 390px, asserts NO
+  horizontal body scroll at 390px, and opens the inline edit form on mobile — screenshots
+  in `e2e-shots/budgets-{desktop,mobile,mobile-edit}.png`. Removed the earlier separate
+  scaffolding (`lib/api/limits.ts`, `components/products/limits/`, the `limits` registry
+  + `COMMERCE_HEADS` entries, `limits-responsive.spec.ts`). Feature branch
+  `feat/commerce-limits-page`; no version bump (the release/merge agent bumps
+  `package.json` + tags the image). Consumes the extended `/v1/billing/spend-alerts`
+  shape as-is; if a field is absent the row degrades to an honest soft alert (never
+  fabricated).
