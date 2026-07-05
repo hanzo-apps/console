@@ -77,6 +77,7 @@ import { Users,
   ArrowLeftRight,
   Wallet,
   Coins,
+  Landmark,
   Gift,
   Handshake,
   BookOpen,
@@ -208,6 +209,7 @@ import { AffiliatesModule } from '~/components/products/AffiliatesModule'
 import { AffiliatesAdminModule } from '~/components/products/AffiliatesAdminModule'
 import { AuthorsModule } from '~/components/products/AuthorsModule'
 import { AuthorsAdminModule } from '~/components/products/AuthorsAdminModule'
+import { TreasuryAdminModule } from '~/components/products/TreasuryAdminModule'
 
 /**
  * Living overviews — the reusable, videogame-like overview (count-up KPIs, live
@@ -2045,6 +2047,19 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: AuthorsAdminModule }],
+  },
+  {
+    // Global-admin reserve-fund board (hidden from every customer nav/launcher/palette).
+    id: 'treasury',
+    label: 'Treasury',
+    icon: Landmark,
+    description: 'Platform reserve fund — revenue-share policy, backed growth-loop payouts, double-entry journal, Hanzo L1 anchor.',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: TreasuryAdminModule }],
   },
   {
     id: 'tokens',
