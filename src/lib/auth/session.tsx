@@ -23,6 +23,7 @@ import { getProviderSigninUrl, getSigninUrl, stashReturnTo } from './iam'
 import { refreshSession } from './refresh'
 import { setCurrentActor } from '~/lib/actor-scope'
 import { claimWelcomeGrantOnce } from '~/lib/billing/welcome'
+import { claimReferralOnce, stashReferralCode } from '~/lib/referrals/claim'
 
 type SessionState = {
   account: Account | null
@@ -59,7 +60,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // Self-heal the one-time $5 welcome trial credit for a just-resolved authenticated
     // account (social-login + pre-existing $0 users the signup-time grant never reached).
     // Idempotent server-side; guarded to fire at most once per browser session per org.
-    if (a && a.owner && a.name) claimWelcomeGrantOnce(a.owner)
+    if (a && a.owner && a.name) {
+      claimWelcomeGrantOnce(a.owner)
+      // Claim a stashed referral (?ref= captured at signup) → binds this org as the
+      // referee. Once per session per org, server-idempotent, best-effort.
+      claimReferralOnce(a.owner)
+    }
   }, [])
 
   /** (Re)arm the proactive refresh timer for the given remaining lifetime. */
@@ -95,6 +101,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [reload])
 
   useEffect(() => {
+    // Capture a ?ref=<code> from the landing URL BEFORE auth resolves, so a referral
+    // link survives the OAuth round-trip and is claimed on first authenticated load.
+    stashReferralCode()
     void reload()
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
