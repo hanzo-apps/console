@@ -40,6 +40,15 @@ describe('allowAdminSurface — least-privilege admin read surface (v1/admin/<he
     expect(ADMIN_AGGREGATE_HEADS).toContain('o11y')
   })
 
+  it('admits the treasury aggregate (the reserve-fund report + policy/sweep/seed/anchor)', () => {
+    expect(allowAdminSurface('v1/admin/treasury')).toBe(true)
+    expect(allowAdminSurface('v1/admin/treasury/policy')).toBe(true)
+    expect(allowAdminSurface('v1/admin/treasury/sweep')).toBe(true)
+    expect(allowAdminSurface('v1/admin/treasury/seed')).toBe(true)
+    expect(allowAdminSurface('v1/admin/treasury/anchor')).toBe(true)
+    expect(ADMIN_AGGREGATE_HEADS).toContain('treasury')
+  })
+
   it('admits the providers control board — the list AND the two mutation sub-paths', () => {
     expect(allowAdminSurface('v1/admin/providers')).toBe(true)
     // The POST mutations (toggle enable/disable, set primary) ride the same head.
