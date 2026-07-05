@@ -40,7 +40,7 @@ function guiPackages() {
   // @hanzo/dash and @hanzo/data ship their screens/components as ESM/TSX
   // source (no compiled dist), so the shared Base UI is transpiled here the same
   // way Gui is.
-  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', 'react-native-web', ...scoped]
+  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', '@hanzo/finance-ui', 'react-native-web', ...scoped]
 }
 
 /**
@@ -69,7 +69,7 @@ function guiPackages() {
  * NOT rewritten here: they keep their own gated proxies with their own tenant
  * scoping, and are reached by the client's explicit `/admin/*` origin path.
  */
-const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'platform', 'crm', 'referrals', 'affiliates', 'authors', 'tracker', 'integrations', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch', 'enablement']
+const CLOUD_V1_HEADS = ['prompts', 'agents', 'evals', 'analytics', 'templates', 'projects', 'platform', 'crm', 'referrals', 'affiliates', 'authors', 'finance', 'tracker', 'integrations', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch', 'enablement']
 // `pricing` (the rich model+provider CATALOG at `/v1/pricing/models`) and `plans` (the
 // subscription tiers/entitlements) are AI-gateway-served like models/chat and are in the
 // `/ai` proxy ALLOWED set (app/ai/[...path]), so they route to `/ai` too.
