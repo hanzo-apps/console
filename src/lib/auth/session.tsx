@@ -24,6 +24,7 @@ import { refreshSession } from './refresh'
 import { setCurrentActor } from '~/lib/actor-scope'
 import { claimWelcomeGrantOnce } from '~/lib/billing/welcome'
 import { claimReferralOnce, stashReferralCode } from '~/lib/referrals/claim'
+import { attributeAffiliateOnce, stashAffiliateCode } from '~/lib/affiliates/claim'
 
 type SessionState = {
   account: Account | null
@@ -65,6 +66,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // Claim a stashed referral (?ref= captured at signup) → binds this org as the
       // referee. Once per session per org, server-idempotent, best-effort.
       claimReferralOnce(a.owner)
+      // Attribute a stashed affiliate (?aff= captured at signup) → binds this org to
+      // the affiliate. Orthogonal to the referral above (an org can be both); once per
+      // session per org, server-idempotent, best-effort.
+      attributeAffiliateOnce(a.owner)
     }
   }, [])
 
@@ -104,6 +109,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // Capture a ?ref=<code> from the landing URL BEFORE auth resolves, so a referral
     // link survives the OAuth round-trip and is claimed on first authenticated load.
     stashReferralCode()
+    // Same for an ?aff=<code> affiliate link (orthogonal capture).
+    stashAffiliateCode()
     void reload()
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)

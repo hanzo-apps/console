@@ -52,6 +52,14 @@ export const CLOUD_HEADS: readonly string[] = [
   // admits the overview read + the claim POST (the /v1/admin/referrals* surface is a
   // separate global-admin head handled by app/admin/aggregate, not this proxy).
   'referrals',
+  // Affiliates (cloud clients/affiliates): /v1/affiliates + /v1/affiliates/{apply,
+  // attribute}. Native per-org partner-commission loop on Base/SQLite (apply, code/
+  // link, attribution, accrued/pending/paid, payout history). The handler resolves the
+  // org from the Bearer owner (X-Org-Id) and 403s a cookie-only call, so it routes
+  // through /cloud exactly like referrals — the single `affiliates` head admits the
+  // overview read + the apply/attribute POSTs (the /v1/admin/affiliates* surface is a
+  // separate global-admin head handled by app/admin/aggregate, not this proxy).
+  'affiliates',
   // Tracker (cloud clients/tracker): /v1/tracker/projects[/:key[/issues[/:num]]].
   // Native per-org issue tracker on Base/SQLite (projects + issues, rows grouped by
   // status). The handler resolves the org from the Bearer owner (X-Org-Id) and 403s a
