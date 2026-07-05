@@ -2538,7 +2538,7 @@ surface, one endpoint.
   spend-alerts + admin session) renders four budgets (org-default hard-cap on-track /
   project warn / service over / unlimited-throttle) at 1440px AND 390px, asserts NO
   horizontal body scroll at 390px, and opens the inline edit form on mobile — screenshots
-  in `e2e-shots/budgets-{desktop,mobile,mobile-edit}.png`. Removed the earlier separate
+  in `e2e-shots/budgets-{desktop,mobile,edit}.png`. Removed the earlier separate
   scaffolding (`lib/api/limits.ts`, `components/products/limits/`, the `limits` registry
   + `COMMERCE_HEADS` entries, `limits-responsive.spec.ts`). Feature branch
   `feat/commerce-limits-page`; no version bump (the release/merge agent bumps
