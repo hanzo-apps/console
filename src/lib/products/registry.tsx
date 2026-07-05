@@ -113,6 +113,7 @@ import { SearchModule } from '~/components/products/SearchModule'
 import { TemplatesModule } from '~/components/products/TemplatesModule'
 import { PlansModule } from '~/components/products/PlansModule'
 import { BillingModule } from '~/components/products/BillingModule'
+import { FinanceModule } from '~/components/products/FinanceModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule, AuditModule } from '~/components/products/AdminModule'
 import { KmsModule } from '~/components/products/KmsModule'
@@ -1880,6 +1881,27 @@ export const catalog: CatalogEntry[] = [
       { slug: 'payment-methods', label: 'Payment methods' },
       { slug: 'credits', label: 'Credits' },
     ],
+  },
+  {
+    // The signed-in org's per-tenant view of the UNIFIED finance ledger (hanzoai/
+    // finance, embedded in cloud): balance, metered spend, credits, invoices, payment
+    // methods, and the double-entry ledger, over /v1/finance/* scoped to the caller's
+    // org (the `/cloud` bearer proxy resolves the org from the token owner). Renders the
+    // SHARED @hanzo/finance-ui board — the SAME component finance.hanzo.ai renders — so
+    // a spend/usage/credits card is identical across both surfaces (the shared-reuse
+    // point). Distinct id from the admin `finance` platform-FinOps board (admin: true)
+    // and from `billing` (the commerce money surface); this is the native-ledger read.
+    id: 'finance-center',
+    label: 'Finance',
+    icon: Wallet,
+    description: 'Your organization’s ledger, spend, credits, invoices, and payment methods.',
+    gcp: 'Cloud Billing / FinOps',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/finance',
+    docs: `${DOCS}/finance`,
+    kind: 'module',
+    routes: [{ path: '', component: FinanceModule }],
   },
   {
     // Real, enabled — the all-services health view, from real cluster data.
