@@ -22,6 +22,7 @@ import { Button, ScrollView, Spinner, Text, TextArea, XStack, YStack } from '@ha
 import { Send, Sparkles, Plus, History, Braces, Brain, ChevronDown, ChevronRight } from '@hanzogui/lucide-icons-2'
 
 import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
+import { DEFAULT_MODEL } from '~/lib/api/families'
 import { hanzoAssistantSystemPrompt, ASSISTANT_DOCS_STORE } from '~/lib/assistant'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
 import { config } from '~/config'
@@ -185,12 +186,22 @@ export function ChatConversation({
   const showAdmin = useIsGlobalAdmin()
   const system = useMemo(() => hanzoAssistantSystemPrompt({ showAdmin }), [showAdmin])
 
-  // Default to a Zen model once the catalog loads (Hanzo-first), else the first.
+  // Default to the trial-safe Zen default once the catalog loads: prefer the
+  // NON-PREMIUM `DEFAULT_MODEL` (the same default the Models page pills and the
+  // Playground pick), then any Zen model, then the first — so a $5-trial user's
+  // first message never 402s on a premium default.
   useEffect(() => {
     let live = true
     PlaygroundApi.listModels()
       .then((ids) => {
-        if (live && ids.length) setModel((m) => m || (ids.find((x) => /zen/i.test(x)) ?? ids[0]))
+        if (live && ids.length)
+          setModel(
+            (m) =>
+              m ||
+              ids.find((x) => x.toLowerCase() === DEFAULT_MODEL) ||
+              ids.find((x) => /zen/i.test(x)) ||
+              ids[0],
+          )
       })
       .catch(() => {
         /* model stays auto-resolved server-side */
