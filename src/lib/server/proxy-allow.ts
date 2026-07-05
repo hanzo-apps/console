@@ -110,6 +110,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // Bearer owner and 403s a cookie-only call, so it routes through /cloud like the
   // rest — the single `platform` head admits every project/app/deployment sub-path.
   'platform',
+  // Finance ledger (hanzoai/finance, embedded in cloud): /v1/finance/{balance,credits,
+  // usage,invoices,payment-methods,ledger,treasury}. Per-org double-entry ledger on
+  // Base; the handler resolves the org from the Bearer owner and 403s a cookie-only
+  // call, so it routes through /cloud like platform/analytics. Read-only; writes stay
+  // in the billing portal. The single `finance` head admits every finance sub-path.
+  'finance',
   // ── Native cloud infra surfaces (the unified cloud binary now serves these
   // per-org at /v1/*, previously the admin `/paas` control plane). Each resolves the
   // org from the Bearer owner (X-Org-Id) and 403s a cookie-only call, so it routes
