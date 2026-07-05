@@ -29,7 +29,15 @@ export function PageHeader({
           </Text>
         ) : null}
       </YStack>
-      {actions ? <XStack gap="$2" items="center">{actions}</XStack> : null}
+      {/* Actions take a FULL line below the title on phones (width 100%) and WRAP —
+          so a header with many buttons (e.g. Tracker's Projects/Refresh/List/Board/
+          New issue/Delete) never runs off-screen and clips the last controls. At $md+
+          they collapse back to a right-aligned inline row beside the title. */}
+      {actions ? (
+        <XStack gap="$2" items="center" flexWrap="wrap" width="100%" $md={{ width: 'auto', justify: 'flex-end' }}>
+          {actions}
+        </XStack>
+      ) : null}
     </XStack>
   )
 }
