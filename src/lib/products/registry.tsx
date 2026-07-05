@@ -79,6 +79,7 @@ import { Users,
   Coins,
   Gift,
   Handshake,
+  BookOpen,
   MessageSquare,
   Search,
   KeySquare,
@@ -205,6 +206,8 @@ import { ReferralsModule } from '~/components/products/ReferralsModule'
 import { ReferralsAdminModule } from '~/components/products/ReferralsAdminModule'
 import { AffiliatesModule } from '~/components/products/AffiliatesModule'
 import { AffiliatesAdminModule } from '~/components/products/AffiliatesAdminModule'
+import { AuthorsModule } from '~/components/products/AuthorsModule'
+import { AuthorsAdminModule } from '~/components/products/AuthorsAdminModule'
 
 /**
  * Living overviews — the reusable, videogame-like overview (count-up KPIs, live
@@ -2016,6 +2019,32 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: AffiliatesAdminModule }],
+  },
+  {
+    id: 'authors',
+    label: 'Authors',
+    icon: BookOpen,
+    description: 'Earn when your open-source project is deployed on Hanzo.',
+    category: 'Web3',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    // Connect GitHub (not enrolled) / dashboard (repos + verify, deploys, payouts);
+    // the shared base sub-pages (status/logs/metrics/settings) resolve via the catch-all.
+    routes: [{ path: '', component: AuthorsModule }],
+  },
+  {
+    // Global-admin operator board (hidden from every customer nav/launcher/palette).
+    id: 'authors-admin',
+    label: 'Authors',
+    icon: BookOpen,
+    description: 'OSS-author royalty program — verifications, deploys, accruals, payouts.',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: AuthorsAdminModule }],
   },
   {
     id: 'tokens',
