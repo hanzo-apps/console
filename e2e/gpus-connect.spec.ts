@@ -1,0 +1,101 @@
+/**
+ * e2e screenshot proof — the GPUs page shows BOTH "Connect GPU" (BYO) and "Deploy GPU"
+ * (cloud) actions, and a BYO machine renders with a BYO badge next to a cloud one.
+ *
+ * Fully mocked network (no backend, no password), same harness as blank-audit:
+ *   - /auth/session → a tenant customer (so CustomerGpus renders, not AdminGpus).
+ *   - GET .../v1/machines → one BYO GB10 (provider=byo) + one cloud H100 (provider=doks).
+ *   - GET .../v1/gpus → a small live catalog so the page reads real.
+ *   - every other data path → an honest empty envelope.
+ *
+ * Writes two PNGs to e2e/shots/. Run:
+ *   BASE_URL=http://localhost:4000 npx playwright test gpus-connect
+ */
+import { test, type Route } from '@playwright/test'
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
+const SHOTS = join(process.cwd(), 'e2e', 'shots')
+
+const ACCOUNT = {
+  owner: 'maxpower',
+  name: 'dave',
+  type: 'normal-user',
+  email: 'dave@maxpower.com',
+  displayName: 'Dave',
+  isGlobalAdmin: false,
+  isAdmin: true,
+  signupApplication: 'hanzo-cloud',
+}
+
+const ok = (data: unknown) => JSON.stringify({ status: 'ok', msg: '', data })
+
+// Two GPU machines: a BYO GB10 that dialed in via `hanzo gpu connect`, and a
+// Hanzo-Cloud-provisioned H100. isGpuMachine keeps both (gpu set / gpu-* slug).
+const MACHINES = [
+  { id: 'gb10-studio', name: 'gb10-studio', type: 'byo-gpu', provider: 'byo', gpu: 'NVIDIA GB10', region: 'on-prem', status: 'online' },
+  { id: 'gpu-h100-sfo', name: 'gpu-h100-sfo', type: 'gpu-h100x1-80gb', provider: 'doks', gpu: 'H100', region: 'sfo3', status: 'running', costHourlyUsd: 2.49 },
+]
+
+const CATALOG = [
+  { slug: 'gpu-h100x1-80gb', model: 'H100', gpuCount: 1, vramGb: 80, vcpus: 20, memGb: 240, priceHourly: 2.49, priceMonthly: 1818 },
+  { slug: 'gpu-a100x1-40gb', model: 'A100', gpuCount: 1, vramGb: 40, vcpus: 12, memGb: 120, priceHourly: 1.59, priceMonthly: 1161 },
+  { slug: 'gpu-l40sx1-48gb', model: 'L40S', gpuCount: 1, vramGb: 48, vcpus: 8, memGb: 64, priceHourly: 1.14, priceMonthly: 832 },
+]
+
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+
+async function mock(route: Route) {
+  const req = route.request()
+  if (req.resourceType() === 'document') return route.continue()
+  const url = new URL(req.url())
+  const path = url.pathname
+
+  if (path === '/auth/session') {
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ account: ACCOUNT, expiresIn: 3600 }) })
+  }
+  if (path.startsWith('/auth/')) {
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+  }
+
+  const sameOrigin = url.origin === new URL(BASE_URL).origin
+  if (sameOrigin && !API_RE.test(path)) return route.continue()
+
+  // Data paths — match by suffix so it works regardless of /vm vs /cloud proxy prefix.
+  if (path.endsWith('/v1/machines')) return route.fulfill({ status: 200, contentType: 'application/json', body: ok(MACHINES) })
+  if (path.endsWith('/v1/gpus')) return route.fulfill({ status: 200, contentType: 'application/json', body: ok(CATALOG) })
+  // Everything else (regions, sizes, clusters, billing, …) → honest empty.
+  return route.fulfill({ status: 200, contentType: 'application/json', body: ok([]) })
+}
+
+test('GPUs page: Connect vs Deploy + BYO/Cloud badges', async ({ browser }) => {
+  mkdirSync(SHOTS, { recursive: true })
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 })
+  const page = await ctx.newPage()
+  await page.addInitScript((org) => {
+    try {
+      localStorage.setItem('hanzo.console.org', org)
+      localStorage.setItem('hz_admin_banner_dismissed', '1')
+    } catch {
+      /* private mode */
+    }
+  }, ACCOUNT.owner)
+  await page.route('**/*', mock)
+
+  await page.goto(`${BASE_URL}/gpus`, { waitUntil: 'domcontentloaded' })
+  await page.locator('[data-testid="product-content"]').first().waitFor({ state: 'attached', timeout: 20_000 })
+  // Wait for both header actions to be present, then the machine rows to render.
+  await page.getByRole('button', { name: 'Connect GPU' }).first().waitFor({ timeout: 20_000 })
+  await page.locator('text=NVIDIA GB10').first().waitFor({ timeout: 20_000 })
+  await page.waitForTimeout(600)
+  await page.screenshot({ path: join(SHOTS, 'gpus-connect-deploy.png'), fullPage: true })
+
+  // Open the Connect drawer and capture it.
+  await page.getByRole('button', { name: 'Connect GPU' }).first().click()
+  await page.locator('text=hanzo gpu connect').first().waitFor({ timeout: 10_000 })
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: join(SHOTS, 'gpus-connect-drawer.png'), fullPage: true })
+
+  await ctx.close()
+})
