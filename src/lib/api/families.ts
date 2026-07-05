@@ -31,8 +31,17 @@
  */
 import { modelId, modelType, modelDisplayName, type CatalogEntry } from './aicatalog'
 
-/** The default model surfaced first in the house Zen family (chat's default). */
-export const DEFAULT_MODEL = 'zen5-mini'
+/**
+ * The default model surfaced first in the house Zen family — the user-facing
+ * "Default" the Models page pills and the Chat surface preselect. It MUST be a
+ * NON-PREMIUM model so a trial / $5-welcome balance gets a 200 on the first call
+ * (a premium default 402s for a trial-only balance). `zen5-flash` is the
+ * non-premium Zen flagship — `zen5-mini` is PREMIUM, so it can't be the trial
+ * default. The Playground's `defaultModelId` independently picks the same
+ * non-premium Zen flagship at runtime from the live catalog's `premium` flag, so
+ * Chat, Playground, and the Models page all agree on one trial-safe default.
+ */
+export const DEFAULT_MODEL = 'zen5-flash'
 
 /** One curated family: a stable id, a display label, and a membership matcher. */
 export type Family = {
@@ -131,7 +140,7 @@ export type FamilyGroup = {
   available: number
 }
 
-/** Available-first, then Zen `mini` default up top, then name asc. PURE. */
+/** Available-first, then the Zen default (`DEFAULT_MODEL`) up top, then name asc. PURE. */
 function sortMembers(models: CatalogEntry[]): CatalogEntry[] {
   return [...models].sort((a, b) => {
     const av = Number(b.available) - Number(a.available)
