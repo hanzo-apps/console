@@ -1030,6 +1030,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
       <YStack flex={1} minW={0}>
         <XStack
+          className="hz-topbar"
           height={56}
           px="$3"
           items="center"
@@ -1120,7 +1121,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             the full width. Padding + section rhythm scale up at xl. */}
         <ScrollView flex={1}>
           <XStack justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
-            <YStack testID="product-content" width="100%" maxW={CONTENT_MAX} py="$3" $md={{ py: '$4' }} $xl={{ py: '$5', gap: '$5' }} gap="$4">
+            <YStack testID="product-content" width="100%" maxW={CONTENT_MAX} pt="$3" pb={80} $md={{ pt: '$4' }} $xl={{ pt: '$5', gap: '$5' }} gap="$4">
               {children}
             </YStack>
           </XStack>
