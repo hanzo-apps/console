@@ -58,6 +58,10 @@ export type IamUser = {
   isForbidden?: boolean
   isDeleted?: boolean
   type?: string
+  signupApplication?: string
+  /** Stored credential — a hash (or masked `***`) when set, `''` for a pending
+   *  member who hasn't accepted their invite yet. Presence, not the value, is read. */
+  password?: string
   /** Preferred 2FA channel ("", "app", "sms", "email"). */
   preferredMfaType?: string
   mfaPhoneEnabled?: boolean
