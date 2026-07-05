@@ -439,7 +439,9 @@ function ProjectBoard({ project, onBack, onDeletedProject }: { project: Project;
         title={project.name}
         subtitle={`${project.key} · ${total} issue${total === 1 ? '' : 's'} — grouped by status. Press “c” to create an issue.`}
         actions={
-          <XStack gap="$2" items="center" flexWrap="wrap">
+          // Full-width on phones so the button row WRAPS inside the header instead of
+          // overflowing (PageHeader gives this its own line < $md); inline at $md+.
+          <XStack gap="$2" items="center" flexWrap="wrap" width="100%" $md={{ width: 'auto' }}>
             <Button size="$2" chromeless onPress={onBack}>
               ← Projects
             </Button>
