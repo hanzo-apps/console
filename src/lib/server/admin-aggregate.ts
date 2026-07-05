@@ -24,7 +24,7 @@
  *    is a HEAD like the others; `allowAdminSurface` admits `v1/admin/providers[/...]`,
  *    so both the read and the two mutation sub-paths pass, and NOTHING else does.
  */
-export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals'] as const
+export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates'] as const
 
 const ALLOWED = new Set<string>(ADMIN_AGGREGATE_HEADS)
 
