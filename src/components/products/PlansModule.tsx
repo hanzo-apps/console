@@ -1,41 +1,51 @@
 'use client'
 
 /**
- * Plans & Pricing — the discovery surface that guides a user from "what can I
- * run" to "what will it cost", on the live rate card (GET /v1/pricing). It does
- * NOT take money: paying happens at `config.billingUrl` (hanzoai/billing over the
- * commerce backend), which every card links to. One money surface, never
- * reimplemented here — this is the GCP-style "products & pricing" front door.
+ * Plans & Pricing — the discovery surface that guides a user from "what can I run"
+ * to "what will it cost" and, for a paid tier, into checkout. It reads the published
+ * cloud subscription catalog (Developer / Pro / Max / Team / Enterprise) through the
+ * per-tenant billing proxy (`PlansApi.plans` -> GET /billing/v1/plans), so a signed-in
+ * user actually SEES the tiers — the old /v1/pricing read 401'd on the live ingress and
+ * rendered a bare "Not authorized", so nobody could see or subscribe to Pro.
+ *
+ * It does NOT take money here: subscribing happens in the brand billing portal
+ * (`config.billingUrl` — hanzoai/billing over commerce, Square checkout), which every
+ * card's CTA opens. One money surface, never reimplemented.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Check, Star, CreditCard, RefreshCw, ArrowUpRight } from '@hanzogui/lucide-icons-2'
+import { ArrowUpRight, Check, CreditCard, RefreshCw, Star } from '@hanzogui/lucide-icons-2'
 
-import { ApiError, PlansApi, type CloudPlan, type BlockStoragePricing } from '~/lib/api'
+import { PlansApi, type Plan } from '~/lib/api'
 import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
-const money = (n: number): string => (Number.isInteger(n) ? `$${n}` : `$${n.toFixed(n < 1 ? 4 : 2)}`)
-
-/** The feature bullets for a plan — prefer the published list, else derive from specs. */
-function planFeatures(p: CloudPlan): string[] {
-  if (p.features?.length) return p.features
-  const out = [
-    `${p.vcpus} ${p.cpuType === 'dedicated' ? 'dedicated ' : ''}vCPU`,
-    `${p.memoryGB} GB RAM`,
-    `${p.diskGB} GB SSD`,
-  ]
-  if (p.transferTB) out.push(`${p.transferTB} TB transfer`)
-  if (p.maxVMs) out.push(`Up to ${p.maxVMs} VM${p.maxVMs > 1 ? 's' : ''}`)
-  return out
+/** Open the brand billing portal (Square checkout) — the ONE money surface; the console
+ *  LINKS here, never reimplements it. `#pricing` lands on the portal's checkout section,
+ *  matching the portal's own plan-card CTA. */
+function openBilling(anchor = ''): void {
+  if (typeof window !== 'undefined') window.open(`${config.billingUrl}${anchor}`, '_blank', 'noopener')
 }
 
-function openBilling() {
-  if (typeof window !== 'undefined') window.open(config.billingUrl, '_blank', 'noopener')
+/** The price headline for a tier: a quote, free, or the whole-dollar monthly price. */
+function priceLabel(p: Plan): string {
+  if (p.contactSales) return 'Contact sales'
+  if (p.priceMonthly === 0) return 'Free'
+  return `$${p.priceMonthly}`
 }
 
-function PlanCard({ plan }: { plan: CloudPlan }) {
+/** The subscribe CTA label for a tier. */
+function ctaLabel(p: Plan): string {
+  if (p.contactSales) return 'Talk to sales'
+  if (p.priceMonthly === 0) return 'Start free'
+  return `Upgrade to ${p.name}`
+}
+
+function PlanCard({ plan }: { plan: Plan }) {
   const highlight = plan.popular
+  const free = plan.priceMonthly === 0 && !plan.contactSales
+  const showAnnual = !plan.contactSales && plan.priceMonthly > 0 && !!plan.priceAnnual && plan.priceAnnual < plan.priceMonthly
   return (
     <Card
       borderWidth={highlight ? 2 : 1}
@@ -55,7 +65,7 @@ function PlanCard({ plan }: { plan: CloudPlan }) {
               Popular
             </Text>
           </XStack>
-        ) : plan.freeTier ? (
+        ) : free ? (
           <XStack bg="$color4" px="$2" py="$1" rounded="$10">
             <Text fontSize="$1" fontWeight="700" color="$color11">
               Free tier
@@ -66,14 +76,16 @@ function PlanCard({ plan }: { plan: CloudPlan }) {
 
       <XStack items="flex-end" gap="$1.5">
         <Text fontSize="$9" fontWeight="900">
-          {money(plan.priceMonthly)}
+          {priceLabel(plan)}
         </Text>
-        <Text fontSize="$3" color="$color11" mb="$1.5">
-          /mo
-        </Text>
-        {plan.priceHourly ? (
+        {!plan.contactSales && plan.priceMonthly > 0 ? (
+          <Text fontSize="$3" color="$color11" mb="$1.5">
+            /mo
+          </Text>
+        ) : null}
+        {showAnnual ? (
           <Text fontSize="$2" color="$color10" mb="$1.5">
-            · {money(plan.priceHourly)}/hr
+            · ${plan.priceAnnual}/mo annually
           </Text>
         ) : null}
       </XStack>
@@ -83,7 +95,7 @@ function PlanCard({ plan }: { plan: CloudPlan }) {
       </Text>
 
       <YStack gap="$1.5">
-        {planFeatures(plan).map((f) => (
+        {plan.features.map((f) => (
           <XStack key={f} gap="$2" items="center">
             <Check size={14} color="$color10" />
             <Text fontSize="$3" color="$color12">
@@ -96,76 +108,66 @@ function PlanCard({ plan }: { plan: CloudPlan }) {
       <Button
         theme={highlight ? 'light' : undefined}
         iconAfter={<ArrowUpRight size={15} />}
-        onPress={openBilling}
+        onPress={() => openBilling('#pricing')}
         mt="$1"
       >
-        {plan.freeTier ? 'Start free' : `Choose ${plan.name}`}
+        {ctaLabel(plan)}
       </Button>
     </Card>
   )
 }
 
-export function PlansModule(_props: { params: Record<string, string> }) {
-  const [plans, setPlans] = useState<CloudPlan[]>([])
-  const [blockStorage, setBlockStorage] = useState<BlockStoragePricing | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+type Async<T> =
+  | { phase: 'loading' }
+  | { phase: 'error'; error: BackendState }
+  | { phase: 'ready'; data: T }
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await PlansApi.pricing()
-      setPlans(data?.cloud?.plans ?? [])
-      setBlockStorage(data?.cloud?.blockStorage ?? null)
-      setError(null)
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to load pricing')
-    } finally {
-      setLoading(false)
-    }
+export function PlansModule(_props: { params: Record<string, string> }) {
+  const [state, setState] = useState<Async<Plan[]>>({ phase: 'loading' })
+
+  const load = useCallback(() => {
+    setState({ phase: 'loading' })
+    PlansApi.plans()
+      .then((data) => setState({ phase: 'ready', data }))
+      .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [])
 
   useEffect(() => {
-    void load()
+    load()
   }, [load])
+
+  const plans = state.phase === 'ready' ? state.data : []
 
   return (
     <>
       <PageHeader
         title="Plans & Pricing"
-        subtitle={`Pick a plan that fits, then manage billing in ${config.brandName} Billing. Usage is metered; upgrade or downgrade anytime.`}
+        subtitle={`Pick a plan that fits, then subscribe in ${config.brandName} Billing. Usage is metered; upgrade or downgrade anytime.`}
         actions={
           <XStack gap="$2">
-            <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
+            <Button icon={<RefreshCw size={16} />} onPress={load}>
               Refresh
             </Button>
-            <Button theme="light" icon={<CreditCard size={16} />} onPress={openBilling}>
+            <Button theme="light" icon={<CreditCard size={16} />} onPress={() => openBilling()}>
               Open Billing
             </Button>
           </XStack>
         }
       />
 
-      {error ? <Text color="$color12">{error}</Text> : null}
-      {loading && !plans.length ? <Text color="$color11">Loading pricing…</Text> : null}
-
-      <XStack flexWrap="wrap" gap="$3">
-        {plans.map((p) => (
-          <PlanCard key={p.id} plan={p} />
-        ))}
-      </XStack>
-
-      {blockStorage ? (
-        <Card p="$4" gap="$1.5" borderWidth={1} borderColor="$borderColor">
-          <Text fontSize="$5" fontWeight="700">
-            Block storage
-          </Text>
-          <Text fontSize="$3" color="$color11">
-            Add persistent SSD volumes to any plan at {money(blockStorage.pricePerGBMonthly)}/GB per
-            month ({blockStorage.minSizeGB}–{blockStorage.maxSizeGB.toLocaleString()} GB).
-          </Text>
-        </Card>
-      ) : null}
+      {state.phase === 'error' ? (
+        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /billing/v1/plans" />
+      ) : state.phase === 'loading' ? (
+        <Text color="$color11">Loading plans…</Text>
+      ) : plans.length === 0 ? (
+        <Text color="$color11">No plans available right now.</Text>
+      ) : (
+        <XStack flexWrap="wrap" gap="$3">
+          {plans.map((p) => (
+            <PlanCard key={p.id} plan={p} />
+          ))}
+        </XStack>
+      )}
 
       <Card p="$4" gap="$1.5" borderWidth={1} borderColor="$borderColor" bg="$color2">
         <Text fontSize="$3" color="$color11">
