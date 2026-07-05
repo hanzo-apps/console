@@ -18,7 +18,7 @@
  * On a 404/501/401 the caller renders the shared `BackendStateCard` — never
  * fabricated spend, balance, or card data.
  */
-import { restGet, restPost, restDelete, billingProxyV1Url } from './client'
+import { restGet, restPost, restPatch, restDelete, billingProxyV1Url } from './client'
 import type { CloudBalance } from './wallet'
 import { normalizeUsageRecords, perModel, totalsOf } from './aimetrics'
 
@@ -122,7 +122,7 @@ export type SpendAlert = {
   id: string
   /** Human name for the budget, e.g. "Monthly cap". */
   title: string
-  /** Threshold in USD cents; the alert trips when spend crosses it. */
+  /** The spend CAP for the period in USD cents; 0 = unlimited (alert/rate-limit only). */
   thresholdCents: number
   /** Ledger currency (lowercase ISO), e.g. `usd`. */
   currency: string
@@ -130,10 +130,32 @@ export type SpendAlert = {
   triggeredAt?: string
   /** ISO creation time. */
   createdAt?: string
+  // ── Scope + enforcement (the spend-alerts extended fields) ──────────────────
+  // Forward-compatible: a legacy soft-alert row that predates these lights up with
+  // sensible defaults (org-wide, alert-only, softPct 80, no rate limit, zero spent)
+  // and the meter/enforce/rate-limit surface activates the moment the backend emits
+  // them — nothing is fabricated.
+  /** '' = every project (the ORG-WIDE default when `service` is '' too). */
+  project: string
+  /** '' = every service within the project. */
+  service: string
+  /** true = HARD cap (billable calls get 402 once over); false = soft alert only. */
+  enforce: boolean
+  /** Soft-warn threshold as a percent of the cap (0–100). Backend default 80. */
+  softPct: number
+  /** Requests/minute ceiling; 0 = no limit (else 429 when exceeded). */
+  rateLimitRpm: number
+  /** Cents spent so far this period (backend-computed, READ-ONLY). */
+  periodSpentCents: number
+  /** True once spend has reached/crossed the cap (blocked when `enforce`). */
+  over: boolean
+  /** True once spend has crossed the soft-warn threshold. */
+  warn: boolean
 }
 
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
+const bool = (v: unknown): boolean => v === true || v === 'true' || v === 1
 
 /** Cents from a record that may report `cents`, or a dollar `amount`/`cost`/`total`. */
 const centsOf = (r: Record<string, unknown>): number => {
@@ -328,6 +350,18 @@ function normalizeSpendAlerts(payload: unknown): SpendAlert[] {
     currency: (str(r.currency) ?? 'usd').toLowerCase(),
     triggeredAt: isoDate(r.triggeredAt) ?? undefined,
     createdAt: isoDate(r.createdAt) ?? isoDate(r.created) ?? undefined,
+    project: str(r.project) ?? '',
+    service: str(r.service) ?? '',
+    enforce: bool(r.enforce),
+    softPct: Math.round(num(r.softPct) ?? num((r as Record<string, unknown>).soft_pct) ?? 80),
+    rateLimitRpm: Math.round(
+      num(r.rateLimitRpm) ?? num((r as Record<string, unknown>).rate_limit_rpm) ?? num(r.rpm) ?? 0,
+    ),
+    periodSpentCents: Math.round(
+      num(r.periodSpentCents) ?? num((r as Record<string, unknown>).period_spent_cents) ?? num(r.spentCents) ?? 0,
+    ),
+    over: bool(r.over),
+    warn: bool(r.warn),
   }))
 }
 
@@ -453,12 +487,60 @@ export const BillingApi = {
    * the title + threshold (USD cents) + currency, and cannot create a budget for
    * another tenant. Returns the created alert.
    */
-  createSpendAlert: (input: { title: string; thresholdCents: number; currency?: string }): Promise<SpendAlert> =>
+  createSpendAlert: (input: {
+    title: string
+    thresholdCents: number
+    currency?: string
+    project?: string
+    service?: string
+    enforce?: boolean
+    softPct?: number
+    rateLimitRpm?: number
+  }): Promise<SpendAlert> =>
     restPost<unknown>(billingProxyV1Url('spend-alerts'), {
       title: input.title,
       threshold: Math.round(input.thresholdCents),
       currency: (input.currency ?? 'usd').toLowerCase(),
+      project: input.project ?? '',
+      service: input.service ?? '',
+      enforce: input.enforce ?? false,
+      softPct: input.softPct ?? 80,
+      rateLimitRpm: input.rateLimitRpm ?? 0,
     }).then((r) => normalizeSpendAlerts([r])[0]),
+
+  /**
+   * Update a budget's cap / scope / enforcement (`PATCH /v1/billing/spend-alerts/:id`).
+   * Only the provided fields are sent; the subject is pinned server-side by the proxy
+   * (a caller can only edit their OWN budgets). Returns the updated alert.
+   */
+  updateSpendAlert: (
+    id: string,
+    patch: {
+      title?: string
+      thresholdCents?: number
+      project?: string
+      service?: string
+      enforce?: boolean
+      softPct?: number
+      rateLimitRpm?: number
+    },
+  ): Promise<SpendAlert> => {
+    const body: Record<string, unknown> = {}
+    if (patch.title !== undefined) body.title = patch.title
+    if (patch.thresholdCents !== undefined) body.threshold = Math.round(patch.thresholdCents)
+    if (patch.project !== undefined) body.project = patch.project
+    if (patch.service !== undefined) body.service = patch.service
+    if (patch.enforce !== undefined) body.enforce = patch.enforce
+    if (patch.softPct !== undefined) body.softPct = patch.softPct
+    if (patch.rateLimitRpm !== undefined) body.rateLimitRpm = patch.rateLimitRpm
+    return restPatch<unknown>(billingProxyV1Url(`spend-alerts/${encodeURIComponent(id)}`), body).then(
+      (r) => normalizeSpendAlerts([r])[0],
+    )
+  },
+
+  /** Remove a budget (`DELETE /v1/billing/spend-alerts/:id`); subject pinned server-side. */
+  deleteSpendAlert: (id: string): Promise<void> =>
+    restDelete(billingProxyV1Url(`spend-alerts/${encodeURIComponent(id)}`)),
 
   /**
    * PUBLIC Square Web Payments config for THIS org (`GET /v1/billing/payment-config`):
