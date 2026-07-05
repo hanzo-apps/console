@@ -87,4 +87,36 @@ describe('AiApi.ragChatStream — grounded streaming send', () => {
     )
     await expect(AiApi.ragChatStream({ question: 'hi', model: 'zen' }, () => {})).rejects.toThrow('upstream exploded')
   })
+
+  // REGRESSION (the live "(empty response)" bug): the gateway can answer a 200 whose
+  // BODY is a plain casibase error envelope (NOT SSE) — e.g. a prompt over the model's
+  // context window. That body has no `data:` events, so the stream yields no content;
+  // the reader MUST surface the gateway's real message instead of resolving to ''.
+  it('surfaces a 200 casibase error envelope (context-length) instead of an empty completion', async () => {
+    vi.spyOn(PlaygroundApi, 'streamChat').mockResolvedValue(
+      jsonResponse(200, {
+        status: 'error',
+        msg: 'the token count: [4198] exceeds the model: [minimax-m2.5]\'s maximum token count: [4096]',
+        data: null,
+        data2: null,
+      }),
+    )
+    await expect(AiApi.ragChatStream({ question: 'hi', model: 'zen' }, () => {})).rejects.toThrow(
+      /exceeds the model/,
+    )
+  })
+
+  it('surfaces a 200 OpenAI-style {error:{message}} envelope instead of an empty completion', async () => {
+    vi.spyOn(PlaygroundApi, 'streamChat').mockResolvedValue(
+      jsonResponse(200, { error: { message: 'model is not available' } }),
+    )
+    await expect(AiApi.ragChatStream({ question: 'hi', model: 'zen' }, () => {})).rejects.toThrow(
+      'model is not available',
+    )
+  })
+
+  it('still resolves an empty-but-successful completion (no false error on a blank stream)', async () => {
+    vi.spyOn(PlaygroundApi, 'streamChat').mockResolvedValue(sse(['data: [DONE]\n\n']))
+    await expect(AiApi.ragChatStream({ question: 'hi', model: 'zen' }, () => {})).resolves.toBe('')
+  })
 })

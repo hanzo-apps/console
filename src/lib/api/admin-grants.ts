@@ -60,6 +60,26 @@ export const AdminGrantsApi = {
   /** Every grant issued across the fleet (most recent first, as cloud returns them). */
   list: async (): Promise<AdminGrant[]> => arr(await originGet<unknown>('admin/grants')).map(normalizeGrant),
 
-  /** Issue a grant (`POST /v1/admin/grants`). Returns the created grant row. */
-  create: async (body: NewGrant): Promise<AdminGrant> => normalizeGrant(await originPost<unknown>('admin/grants', body)),
+  /**
+   * Issue a grant (`POST /v1/admin/grants`). Returns the created grant row.
+   *
+   * The create response does not always echo the amount/source/org (commerce's
+   * deposit result reports the transaction, not always the requested cents), which
+   * would make the success banner read "$0.00". So the REQUESTED values backfill any
+   * field the response omits — we know exactly what we asked for and it succeeded, so
+   * the returned row is self-consistent whatever the response shape (the ledger LIST
+   * still carries the authoritative amount).
+   */
+  create: async (body: NewGrant): Promise<AdminGrant> => {
+    const g = normalizeGrant(await originPost<unknown>('admin/grants', body))
+    return {
+      ...g,
+      org: g.org || body.org,
+      amountCents: g.amountCents || body.amountCents,
+      // The operator's explicit toggle is authoritative (normalizeGrant collapses a
+      // missing response `source` to 'trial', which would mask a requested 'prepaid').
+      source: body.source ? asSource(body.source) : g.source,
+      currency: g.currency || body.currency || 'usd',
+    }
+  },
 }
