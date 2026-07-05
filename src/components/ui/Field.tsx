@@ -19,14 +19,18 @@ import {
   YStack,
 } from '@hanzo/gui'
 
-/** Labeled row: fixed label column + flexing control. */
+/**
+ * Labeled row. STACKED on phones (label full-width above a full-width control) so a
+ * form inside a SlideOver stays usable and never clips its labels; a fixed 180px
+ * label column + flexing control at $md+ (the two-column desktop/tablet layout).
+ */
 export function FieldRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <XStack gap="$3" items="flex-start" flexWrap="wrap">
-      <Label width={180} pt="$2" color="$color11" fontSize="$3">
+      <Label width="100%" pt="$2" color="$color11" fontSize="$3" $md={{ width: 180 }}>
         {label}
       </Label>
-      <YStack flex={1} minW={240}>
+      <YStack flex={1} minW={0} $md={{ minW: 240 }}>
         {children}
       </YStack>
     </XStack>
