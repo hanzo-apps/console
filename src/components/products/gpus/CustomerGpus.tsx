@@ -22,7 +22,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Cpu, RefreshCw, Rocket, Server } from '@hanzogui/lucide-icons-2'
+import { Cable, Cloud, Cpu, HardDrive, RefreshCw, Rocket, Server } from '@hanzogui/lucide-icons-2'
 
 import {
   VisorApi,
@@ -40,6 +40,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { useDetailPane } from '~/components/DetailPane'
 import { productColorHex } from '~/lib/products/colors'
 import { LaunchDrawer } from '../machines/LaunchDrawer'
+import { ConnectGpuDrawer } from './ConnectGpuDrawer'
 import { FundingNote } from '../machines/FundingNote'
 import { interpretPlatformError } from '../platform/state'
 import { GpuTabBar, gpuTabId } from './tabs'
@@ -69,6 +70,19 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
       <Text fontSize="$8" fontWeight="900" color="$color12" numberOfLines={1}>{value}</Text>
       {sub ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{sub}</Text> : null}
     </YStack>
+  )
+}
+
+/** BYO vs Cloud provider badge — a machine that dialed in via `hanzo gpu connect`
+ *  (provider="byo") vs one Hanzo Cloud provisioned (visor/DOKS). Monochrome pill. */
+function ProviderBadge({ provider }: { provider?: string }) {
+  const byo = (provider ?? '').toLowerCase() === 'byo'
+  const Icon = byo ? HardDrive : Cloud
+  return (
+    <XStack items="center" gap="$1.5" px="$2" height={22} rounded="$10" borderWidth={1} borderColor="$borderColor" bg="$color2">
+      <Icon size={11} color="$color11" />
+      <Text fontSize="$1" color="$color11" fontWeight="700">{byo ? 'BYO' : 'Cloud'}</Text>
+    </XStack>
   )
 }
 
@@ -117,6 +131,7 @@ const machineColumns: Column<VisorMachine>[] = [
     ),
   },
   { key: 'gpu', header: 'GPU', width: 120, render: (m) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{m.gpu || DASH}</Text> },
+  { key: 'source', header: 'Source', width: 92, render: (m) => <ProviderBadge provider={m.provider} /> },
   { key: 'region', header: 'Region', width: 100, render: (m) => <Text fontSize="$3" color="$color11">{m.region || DASH}</Text> },
   { key: 'spec', header: 'Resources', width: 140, render: (m) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{fmtSpec(m)}</Text> },
   {
@@ -226,14 +241,32 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
   /** Tap a catalog/pricing row → launch that exact accelerator (its size slug). */
   const launchGpu = useCallback((c: VisorGpuSize) => launch(c.slug), [launch])
 
+  // The BYO path — bring hardware you already own into the fleet via `hanzo gpu
+  // connect` (or the Desktop toggle). Sibling of Deploy: connect your own OR spin up
+  // cloud, both from here.
+  const connect = useCallback(
+    () =>
+      detail.open({
+        title: 'Connect your GPU',
+        subtitle: 'Bring your own hardware to your fleet',
+        icon: Cable,
+        iconColor: productColorHex('gpus'),
+        size: 520,
+        content: <ConnectGpuDrawer onClose={detail.close} />,
+        footer: <Button theme="light" onPress={detail.close}>Done</Button>,
+      }),
+    [detail],
+  )
+
   const header = (
     <PageHeader
       title="GPUs"
-      subtitle="On-demand GPU accelerators — H100, A100, L40S and more."
+      subtitle="Bring your own GPU or deploy one in the cloud — H100, A100, L40S, GB10 and more."
       actions={
         <XStack gap="$2">
           <Button size="$3" chromeless icon={<RefreshCw size={15} />} onPress={reload} aria-label="Refresh" />
-          <Button size="$3" theme="light" icon={<Rocket size={15} />} onPress={() => launch()}>Launch GPU</Button>
+          <Button size="$3" borderWidth={1} borderColor="$borderColor" icon={<Cable size={15} />} onPress={connect}>Connect GPU</Button>
+          <Button size="$3" theme="light" icon={<Rocket size={15} />} onPress={() => launch()}>Deploy GPU</Button>
         </XStack>
       }
     />
@@ -297,11 +330,14 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
         ) : (
           <Card borderWidth={1} borderColor="$borderColor" borderStyle="dashed" p="$5" items="center" gap="$2">
             <Rocket size={20} />
-            <Text fontSize="$3" fontWeight="700">Launch your first GPU</Text>
-            <Text fontSize="$2" color="$color11" text="center" maxW={440}>
-              You have no GPU machines yet. Tap an accelerator below to launch one in seconds — GPUs are prepay-only, charged to your payment card with a 24-hour minimum.
+            <Text fontSize="$3" fontWeight="700">Add your first GPU</Text>
+            <Text fontSize="$2" color="$color11" text="center" maxW={460}>
+              Bring a GPU you already own into your fleet, or deploy one in the cloud in seconds. Cloud GPUs are prepay-only, charged to your payment card with a 24-hour minimum.
             </Text>
-            <Button size="$2" theme="light" icon={<Rocket size={15} />} onPress={() => launch()}>Launch a GPU</Button>
+            <XStack gap="$2" flexWrap="wrap" justify="center">
+              <Button size="$2" borderWidth={1} borderColor="$borderColor" icon={<Cable size={15} />} onPress={connect}>Connect GPU</Button>
+              <Button size="$2" theme="light" icon={<Rocket size={15} />} onPress={() => launch()}>Deploy GPU</Button>
+            </XStack>
           </Card>
         )}
 
