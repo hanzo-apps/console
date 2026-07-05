@@ -137,9 +137,10 @@ describe('groupByFamily — Zen first, no zen4, empty families dropped', () => {
     expect(names).toContain('zen5-mini')
     expect(names).toContain('zen3-vl')
   })
-  it('surfaces the default zen5-mini first among available Zen models', () => {
+  it('surfaces the non-premium default (zen5-flash) first among available Zen models', () => {
     const zen = groups.find((g) => g.id === 'zen')!
     expect(zen.models[0].name).toBe(DEFAULT_MODEL)
+    expect(DEFAULT_MODEL).toBe('zen5-flash') // trial-safe: zen5-mini is premium
   })
   it('excludes qwen2, the HF mirror, and the :free alias', () => {
     const qwen = groups.find((g) => g.id === 'qwen')!
