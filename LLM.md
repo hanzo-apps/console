@@ -2545,3 +2545,36 @@ surface, one endpoint.
   `package.json` + tags the image). Consumes the extended `/v1/billing/spend-alerts`
   shape as-is; if a field is absent the row degrades to an honest soft alert (never
   fabricated).
+
+## OSS Authors product — connect GitHub, verify repos, earn on deploys (v8.4.111)
+
+Mirrors the Affiliates + Referrals pattern for the new **OSS Author program** over the
+real cloud `/v1/authors` surface (native-Go `clients/authors`: an author earns a royalty
+on the metered platform spend of every org that DEPLOYS their open-source project on
+Hanzo). One customer module + one admin module + two API clients + a pure logic helper,
+registered through the one `registry.tsx` + the server allow-lists — the same shape as
+Affiliates, nothing forked.
+
+- **`AuthorsModule`** (customer, `id:'authors'`, Web3) — two states, one module:
+  NOT enrolled → a **Connect GitHub** card (optional login when no linked GitHub account
+  is detected) + a 3-step explainer; ENROLLED → the dashboard: status pill + verified
+  identity + share rate, four MetricCards (Repos/Accrued/Pending/Paid), a **repositories**
+  panel (verify a repo → OAuth admin-check OR the `hanzo.json` verify-code file; per-repo
+  **Copy badge** for the ready-to-paste "Deploy on Hanzo" markdown), a **verify-by-file**
+  helper (the `hanzo.json` snippet + copy), a **deploys of your work** list, and payout
+  history. Every value real or an honest empty/`—`.
+- **`AuthorsAdminModule`** (`id:'authors-admin'`, `admin:true`, Observe) — the
+  global-admin operator board: Run-sweep + summary tiles + the author directory
+  (org/GitHub/status/repos/deploys/accrued/pending/paid) with per-status actions
+  (Approve + share override / Reactivate / Pay out credits|cash / Suspend). Server-gated
+  via `getAdminGate` behind `/admin/aggregate`; honest access/empty/error states.
+- **Clients:** `lib/api/authors.ts` (customer, BARE JSON via `cloudProxyV1Url` +
+  defensive normalizers) and `lib/api/admin-authors.ts` (admin, `{status,msg,data}`
+  envelope via `originGet`/`originPost`), plus the pure `products/authors/logic.ts`
+  (`usd`/`sharePct`/`statusLabel`/`statusTone`/`shortDate`/`payoutMethodLabel`/
+  `verifyMethodLabel`/`dollarsToCents`).
+- **Registration (no `app/` route — the catch-all resolves it):** two catalog entries in
+  `registry.tsx`; `'authors'` added to `next.config.mjs` `CLOUD_V1_HEADS` + `ADMIN_V1_HEADS`,
+  `proxy-allow.ts` `CLOUD_HEADS`, and `admin-aggregate.ts` `ADMIN_AGGREGATE_HEADS`. No
+  `claim.ts`/session wiring (Authors is connect/verify-based — there is no `?xxx=` signup
+  link, unlike Affiliates' `?aff`).
