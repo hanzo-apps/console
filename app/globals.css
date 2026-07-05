@@ -536,3 +536,40 @@ html:root.t_light {
     transform: none;
   }
 }
+
+/* ── A11y + responsive hardening ─────────────────────────────────────────────
+   Global floors that hold across every product surface. One place, whole app. */
+
+/* 1. The page body is a hard NO-horizontal-scroll surface. A stray fixed/overwide
+      child (an off-screen drawer mid-transition, a wide table) must clip, never
+      scroll the whole document sideways. `clip` (not `hidden`) does not create a
+      scroll container, so sticky/fixed descendants keep working. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* 2. Visible keyboard focus, everywhere. `:focus-visible` fires ONLY for keyboard
+      navigation (never a mouse/touch press), so this paints a crisp ring for
+      tab-through without touching pointer interactions. Tamagui focusStyle handles
+      some controls; this is the global floor so nothing is ever focus-invisible.
+      Colour reads from the theme scale, so it adapts in light and dark. */
+:focus-visible {
+  outline: 2px solid var(--color9, #6c6c6c);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 3. Touch tap targets ≥44px (WCAG 2.5.5 / Apple HIG). On a COARSE pointer
+      (phone/tablet) every top-bar control meets the 44×44 minimum; the desktop
+      mouse density is deliberately left unchanged. Scoped to the top bar so table
+      row-actions and inline chips are untouched. */
+@media (pointer: coarse) {
+  .hz-topbar button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
