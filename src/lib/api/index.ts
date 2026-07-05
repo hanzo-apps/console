@@ -12,12 +12,7 @@ export * from './types'
 export { AccountApi } from './account'
 export { ProjectApi, projectEnvironments, type Project } from './projects'
 export { BotApi, type BotHealth } from './bot'
-export {
-  PlansApi,
-  type CloudPlan,
-  type CloudPricing,
-  type BlockStoragePricing,
-} from './plans'
+export { PlansApi, type Plan, type PlanLimits } from './plans'
 export {
   WalletApi,
   type CloudBalance,

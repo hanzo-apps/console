@@ -10,6 +10,7 @@ import { ProvisioningApi } from './provisioning'
 import { StorageApi } from './storage'
 import { FrameworkApi } from '~/lib/framework/client'
 import { BillingApi } from './billing'
+import { PlansApi } from './plans'
 import { PlatformApi } from './platform'
 import { fetchPlans } from './aicatalog'
 import { ApmApi } from './apm'
@@ -203,6 +204,12 @@ describe('proxy exceptions — s3/framework/provisioning/stores via /cloud/v1, c
     stub({ balance: 0, holds: 0, available: 0 })
     await BillingApi.balance()
     expect(lastUrl).toBe(`${ORIGIN}/billing/v1/balance?currency=usd`)
+  })
+
+  it('PlansApi.plans -> /billing/v1/plans (money-truth catalog, NOT bare /v1/pricing → 401 "Not authorized")', async () => {
+    stub([])
+    await PlansApi.plans()
+    expect(lastUrl).toBe(`${ORIGIN}/billing/v1/plans`)
   })
 
   it('CommerceApi.currentStore -> /commerce/v1/store/current (NOT bare /v1/commerce → gateway 403 "Not enabled")', async () => {
