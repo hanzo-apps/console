@@ -9,12 +9,15 @@
  * here). The API Keys tab embeds the shared per-user `hk-` credential surface.
  * Reached from the footer wallet's user row; also carries Sign out.
  */
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Avatar, Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { ExternalLink, LogOut, ShieldCheck } from '@hanzogui/lucide-icons-2'
+import { Avatar, Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
+import { Check, Copy, ExternalLink, KeyRound, LogOut, ShieldCheck } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
+import { ApiError } from '~/lib/api'
+import { MfaApi, type MfaSetup } from '~/lib/api/mfa'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FieldRow } from '~/components/ui/Field'
 import { ApiKeysView } from './ApiKeysModule'
@@ -84,20 +87,159 @@ function AccountTab() {
   )
 }
 
+/** Small copy-to-clipboard chip for the TOTP secret. */
+function CopyChip({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <Button
+      size="$2"
+      icon={copied ? <Check size={14} /> : <Copy size={14} />}
+      onPress={async () => {
+        try {
+          await navigator.clipboard?.writeText(value)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        } catch { /* clipboard blocked — value is visible */ }
+      }}
+    >
+      {copied ? 'Copied' : 'Copy'}
+    </Button>
+  )
+}
+
+/** Two-factor (authenticator app / TOTP) — enrolled NATIVELY in the console over the
+ *  user's own bearer, so it works regardless of the hanzo.id account-session path. */
+function TwoFactorCard() {
+  const { account } = useSession()
+  // Best-effort initial state from the session claims (IAM sets a preferred type
+  // when 2FA is on); the enroll/disable actions are authoritative thereafter.
+  const claims = account as unknown as { preferredMfaType?: string; mfaEnabled?: boolean } | null
+  const [enabled, setEnabled] = useState(Boolean(claims?.preferredMfaType || claims?.mfaEnabled))
+  const [setup, setSetup] = useState<MfaSetup | null>(null)
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const fail = (e: unknown) => setErr(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')
+
+  const start = async () => {
+    setBusy(true); setErr(null)
+    try {
+      setSetup(await MfaApi.initiate())
+      setCode('')
+    } catch (e) { fail(e) } finally { setBusy(false) }
+  }
+
+  const confirm = async () => {
+    if (!setup) return
+    setBusy(true); setErr(null)
+    try {
+      await MfaApi.verify(setup.secret, code.trim())
+      await MfaApi.enable(setup.secret, setup.recoveryCode)
+      setEnabled(true); setSetup(null); setCode('')
+    } catch (e) { fail(e) } finally { setBusy(false) }
+  }
+
+  const disable = async () => {
+    setBusy(true); setErr(null)
+    try { await MfaApi.disable(); setEnabled(false); setSetup(null) } catch (e) { fail(e) } finally { setBusy(false) }
+  }
+
+  return (
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
+      <XStack gap="$2" items="center" justify="space-between">
+        <XStack gap="$2" items="center">
+          <ShieldCheck size={18} />
+          <Text fontSize="$5" fontWeight="700">Two-factor authentication</Text>
+        </XStack>
+        {enabled ? (
+          <Text fontSize="$2" px="$2" py="$1" rounded="$2" bg="$green4" color="$green11">On</Text>
+        ) : (
+          <Text fontSize="$2" px="$2" py="$1" rounded="$2" bg="$color4" color="$color11">Off</Text>
+        )}
+      </XStack>
+
+      {enabled ? (
+        <>
+          <Text fontSize="$3" color="$color11">
+            An authenticator app is required at sign-in. You'll be asked for a 6-digit code after your password.
+          </Text>
+          <XStack>
+            <Button theme="red" size="$3" disabled={busy} icon={busy ? <Spinner size="small" /> : undefined} onPress={() => void disable()}>
+              Turn off two-factor
+            </Button>
+          </XStack>
+        </>
+      ) : setup ? (
+        <YStack gap="$3">
+          <Text fontSize="$3" color="$color11">
+            Add this account to an authenticator app (Google Authenticator, 1Password, Authy…), then enter the 6-digit code it shows.
+          </Text>
+          <YStack gap="$1.5">
+            <Text fontSize="$2" color="$color11" fontWeight="600">Setup key</Text>
+            <XStack gap="$2" items="center">
+              <Text flex={1} fontSize="$3" color="$color12" px="$2.5" py="$2" rounded="$3" borderWidth={1} borderColor="$borderColor" bg="$color2">
+                {setup.secret}
+              </Text>
+              <CopyChip value={setup.secret} />
+            </XStack>
+            {setup.url ? (
+              <Text fontSize="$1" color="$color10" numberOfLines={1}>
+                Or add via URI: {setup.url}
+              </Text>
+            ) : null}
+          </YStack>
+          <YStack gap="$1.5">
+            <Text fontSize="$2" color="$color11" fontWeight="600">6-digit code</Text>
+            <Input
+              value={code}
+              onChangeText={(v) => { setCode(v.replace(/\D/g, '').slice(0, 6)); if (err) setErr(null) }}
+              placeholder="123456"
+              keyboardType="number-pad"
+              onSubmitEditing={() => void confirm()}
+            />
+          </YStack>
+          {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
+          <XStack gap="$2">
+            <Button theme="light" disabled={busy || code.length !== 6} icon={busy ? <Spinner size="small" /> : <KeyRound size={16} />} onPress={() => void confirm()}>
+              Verify &amp; turn on
+            </Button>
+            <Button chromeless disabled={busy} onPress={() => { setSetup(null); setErr(null) }}>Cancel</Button>
+          </XStack>
+        </YStack>
+      ) : (
+        <>
+          <Text fontSize="$3" color="$color11">
+            Add a second factor with an authenticator app. After your password, sign-in will ask for a 6-digit code —
+            protecting your {config.brandName} account even if your password is compromised.
+          </Text>
+          {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
+          <XStack>
+            <Button theme="light" size="$3" disabled={busy} icon={busy ? <Spinner size="small" /> : <ShieldCheck size={16} />} onPress={() => void start()}>
+              Set up authenticator app
+            </Button>
+          </XStack>
+        </>
+      )}
+    </Card>
+  )
+}
+
 function SecurityTab() {
   return (
     <YStack gap="$4" maxW={720}>
+      <TwoFactorCard />
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack gap="$2" items="center">
-          <ShieldCheck size={18} />
-          <Text fontSize="$5" fontWeight="700">Password &amp; two-factor</Text>
+          <KeyRound size={18} />
+          <Text fontSize="$5" fontWeight="700">Password</Text>
         </XStack>
         <Text fontSize="$3" color="$color11">
-          Your password and 2FA are managed by Hanzo IAM — never stored here. Update them in the
-          identity console; changes apply to every {config.brandName} product you sign in to.
+          Your password is managed by Hanzo IAM — never stored here. Change it in the identity console;
+          it applies to every {config.brandName} product you sign in to.
         </Text>
         <XStack>
-          <ManageInIam label="Manage security in IAM" />
+          <ManageInIam label="Change password in IAM" />
         </XStack>
       </Card>
     </YStack>
