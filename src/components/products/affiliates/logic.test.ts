@@ -1,0 +1,60 @@
+import { describe, it, expect } from 'vitest'
+
+import { usd, ratePct, statusLabel, statusTone, shortDate, payoutMethodLabel, dollarsToCents } from './logic'
+
+describe('affiliates logic — money/rate/label/tone formatting', () => {
+  it('formats USD cents, em-dash for non-finite', () => {
+    expect(usd(2000)).toBe('$20.00')
+    expect(usd(0)).toBe('$0.00')
+    expect(usd(null)).toBe('—')
+    expect(usd(undefined)).toBe('—')
+    expect(usd(NaN)).toBe('—')
+  })
+
+  it('formats basis points as a percent', () => {
+    expect(ratePct(2000)).toBe('20%')
+    expect(ratePct(1550)).toBe('15.5%')
+    expect(ratePct(500)).toBe('5%')
+    expect(ratePct(null)).toBe('—')
+    expect(ratePct(NaN)).toBe('—')
+  })
+
+  it('labels each status', () => {
+    expect(statusLabel('applied')).toBe('Applied')
+    expect(statusLabel('approved')).toBe('Approved')
+    expect(statusLabel('suspended')).toBe('Suspended')
+    expect(statusLabel('weird' as never)).toBe('weird')
+  })
+
+  it('tones each status (literal union)', () => {
+    expect(statusTone('approved')).toBe('#3fb950')
+    expect(statusTone('applied')).toBe('#d29922')
+    expect(statusTone('suspended')).toBe('#f85149')
+    expect(statusTone('other' as never)).toBe('#8b949e')
+  })
+
+  it('formats a short date, em-dash when unset', () => {
+    expect(shortDate(0)).toBe('—')
+    expect(shortDate(1_700_000_000)).toMatch(/\d{4}/)
+  })
+
+  it('labels payout methods', () => {
+    expect(payoutMethodLabel('credits')).toBe('Cloud credit')
+    expect(payoutMethodLabel('wire')).toBe('Wire')
+    expect(payoutMethodLabel('paypal')).toBe('PayPal')
+    expect(payoutMethodLabel('ach')).toBe('ACH')
+    expect(payoutMethodLabel('bank')).toBe('Bank')
+    expect(payoutMethodLabel('')).toBe('—')
+  })
+
+  it('parses dollars → cents (null on blank/invalid)', () => {
+    expect(dollarsToCents('20')).toBe(2000)
+    expect(dollarsToCents('20.00')).toBe(2000)
+    expect(dollarsToCents('$12.34')).toBe(1234)
+    expect(dollarsToCents('0.01')).toBe(1)
+    expect(dollarsToCents('')).toBeNull()
+    expect(dollarsToCents('abc')).toBeNull()
+    expect(dollarsToCents('0')).toBeNull()
+    expect(dollarsToCents('-5')).toBeNull()
+  })
+})

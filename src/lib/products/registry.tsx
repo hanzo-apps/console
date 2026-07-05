@@ -78,6 +78,7 @@ import { Users,
   Wallet,
   Coins,
   Gift,
+  Handshake,
   MessageSquare,
   Search,
   KeySquare,
@@ -202,6 +203,8 @@ import {
 } from '~/components/products/ConsoleFeatureModule'
 import { ReferralsModule } from '~/components/products/ReferralsModule'
 import { ReferralsAdminModule } from '~/components/products/ReferralsAdminModule'
+import { AffiliatesModule } from '~/components/products/AffiliatesModule'
+import { AffiliatesAdminModule } from '~/components/products/AffiliatesAdminModule'
 
 /**
  * Living overviews — the reusable, videogame-like overview (count-up KPIs, live
@@ -1987,6 +1990,32 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: ReferralsAdminModule }],
+  },
+  {
+    id: 'affiliates',
+    label: 'Affiliates',
+    icon: Handshake,
+    description: 'Partner with Hanzo — earn ongoing commission on the customers you refer.',
+    category: 'Web3',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    // Apply form (not enrolled) / dashboard (code + link, stat tiles, payout history);
+    // the shared base sub-pages (status/logs/metrics/settings) resolve via the catch-all.
+    routes: [{ path: '', component: AffiliatesModule }],
+  },
+  {
+    // Global-admin operator board (hidden from every customer nav/launcher/palette).
+    id: 'affiliates-admin',
+    label: 'Affiliates',
+    icon: Handshake,
+    description: 'Partner-commission program — applications, accrual, and payouts.',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: AffiliatesAdminModule }],
   },
   {
     id: 'tokens',
