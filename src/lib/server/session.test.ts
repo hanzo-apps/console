@@ -199,6 +199,26 @@ describe('OAuth grants (fetch-mocked)', () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('econnrefused') }))
     await expect(passwordGrant('u', 'p')).rejects.toMatchObject({ status: 502 })
   })
+
+  it('retries a TRANSIENT non-JSON blip once, then succeeds (the /auth/refresh self-heal)', async () => {
+    // First: IAM mid-roll answers an HTML page (non-JSON, no error envelope); second: the token.
+    let n = 0
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      n += 1
+      return n === 1
+        ? new Response('<!doctype html><html>rolling</html>', { status: 503, headers: { 'content-type': 'text/html' } })
+        : new Response(JSON.stringify(okToken), { status: 200 })
+    }))
+    expect(await refreshGrant('rt')).toEqual({ accessToken: 'AT', refreshToken: 'RT2', expiresIn: 3600 })
+    expect(n).toBe(2)
+  })
+
+  it('does NOT retry a definitive OAuth error envelope (invalid_grant → 401, one call only)', async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 }))
+    vi.stubGlobal('fetch', f)
+    await expect(refreshGrant('old')).rejects.toMatchObject({ status: 401 })
+    expect(f).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('admin-console redemption is host-aware (public client, no secret)', () => {
