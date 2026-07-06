@@ -32,18 +32,19 @@
  * match (no hydration flash). The nav body (`SidebarNav`) is shared by the
  * persistent sidebar and the drawer (DRY) — one definition, two mounts.
  */
-import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Button, Input, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
+import { Button, Input, Popover, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import {
   Activity,
-  ArrowLeft,
   BarChart3,
   Bell,
   BookOpen,
   ChevronRight,
+  ChevronsUpDown,
   Circle,
   CircleHelp,
+  CircleUser,
   Command,
   CreditCard,
   ExternalLink,
@@ -82,19 +83,16 @@ import { categoryIsOpen, toggleCategory, NAV_OPEN_PREF, EMPTY_OPEN, type Categor
 import { usePreferences } from '~/lib/products/preferences'
 import { useSession } from '~/lib/auth/session'
 import { useIsGlobalAdmin } from '~/lib/auth/admin'
-import { useAccent } from '~/lib/theme/accent'
 import { SidebarWallet } from '~/components/SidebarWallet'
 import { CommandSearchBox, useCommandPalette } from '~/components/CommandPalette'
 import { useAppLauncher } from '~/components/AppLauncher'
 import { useDetailPane } from '~/components/DetailPane'
 import { ProductCustomize, ManagePins } from '~/components/SidebarCustomize'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { asColor } from '~/components/ui/color'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
-import { BrandLogo, BrandMark, useOrgLogo, useOrgName } from '~/components/ui/BrandLogo'
-import { getBrand } from '~/lib/branding/brands'
+import { BrandLogo } from '~/components/ui/BrandLogo'
 import { OrgSwitcher } from '~/components/OrgSwitcher'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 
@@ -172,12 +170,6 @@ function ColorDot({ color, onPress, label }: { color: string; onPress: () => voi
   )
 }
 
-/** Inline accent-bar style for the ACTIVE nav item when a custom org accent is set — a
- *  left bar in the org's color (keeps the product glyph + label legible; no forced
- *  background/text). Default monochrome (undefined) when no accent. */
-const accentBarStyle = (active: boolean, accent: string | null): { boxShadow: string } | undefined =>
-  active && accent ? { boxShadow: `inset 3px 0 0 0 ${accent}` } : undefined
-
 /** A fixed (non-catalog) sidebar link: Overview, Docs. */
 function FixedRow({
   icon: Icon,
@@ -194,12 +186,10 @@ function FixedRow({
   collapsed: boolean
   onPress: () => void
 }) {
-  const { accent } = useAccent()
   return (
     <Button
       onPress={onPress}
       bg={active ? '$color4' : 'transparent'}
-      style={accentBarStyle(!!active, accent)}
       justify={collapsed ? 'center' : 'flex-start'}
       px={collapsed ? '$0' : '$2.5'}
       icon={<Icon size={ICON} />}
@@ -235,13 +225,11 @@ function NavRow({
   onCustomize?: () => void
 }) {
   const Icon = entry.icon
-  const { accent } = useAccent()
   if (collapsed) {
     return (
       <Button
         onPress={onOpen}
         bg={active ? '$color4' : 'transparent'}
-        style={accentBarStyle(active, accent)}
         justify="center"
         px="$0"
         height={44}
@@ -262,7 +250,6 @@ function NavRow({
         flex={1}
         onPress={onOpen}
         bg={active ? '$color4' : 'transparent'}
-        style={accentBarStyle(active, accent)}
         justify="flex-start"
         icon={<ProductIcon icon={Icon} color={color} size={18} />}
         iconAfter={hint}
@@ -286,115 +273,53 @@ function NavRow({
   )
 }
 
-/** Level 2 — the open product's sub-nav: a CATEGORY breadcrumb (back + sibling
- *  jumps), the product header, its sub-pages, and "More in <category>". */
-function Level2Nav({
+/**
+ * The active product's sub-pages, rendered INLINE (indented) directly under its nav
+ * row — Google-Cloud-Console style. So a product AND its sub-pages are reachable in a
+ * single click from the always-visible list, with NO slide-out and NO "back" step
+ * (the prior two-level nav required returning to the list to reach another product).
+ * Overview + the product's specifics + the uniform base set (Settings · Status · Logs
+ * · Metrics); an unwired sub-page is dimmed but honest (opens a placeholder, never a
+ * dead link). Rendered only for the active product, and hidden while filtering.
+ */
+function InlineSubnav({
   entry,
-  color,
-  colorOf,
   pathname,
   showAdmin,
-  onBack,
   onGo,
 }: {
   entry: CatalogEntry
-  color: string
-  colorOf: (id: string) => string
   pathname: string
   showAdmin: boolean
-  onBack: () => void
   onGo: (path: string) => void
 }) {
-  const Icon = entry.icon
   const subs = productSubpages(entry, showAdmin)
+  // Nothing beyond Overview → no sub-nav worth showing (the row itself is the page).
+  if (subs.length <= 1) return null
   const activeSlug = activeSubpageSlug(pathname, entry.id)
-  const siblings = useMemo(() => {
-    const group = visibleCatalogByCategory(showAdmin).find((g) => g.category === entry.category)
-    // Alphabetical (the current product is excluded), matching the level-1 ordering.
-    return orderEntries((group?.entries ?? []).filter((e) => e.id !== entry.id))
-  }, [entry.category, entry.id, showAdmin])
-
   return (
-    <>
-      {/* Category breadcrumb — the "where am I?" context; the chip jumps back to
-          the product list, so the category is always one tap away. */}
-      <XStack items="center" gap="$1" height={30}>
-        <Button size="$2" chromeless icon={<ArrowLeft size={18} />} onPress={onBack} aria-label="Back to products" />
-        <XStack onPress={onBack} cursor="pointer" items="center" hoverStyle={{ opacity: 0.7 }}>
-          <Text fontSize="$1" color="$color10" fontWeight="800" textTransform="uppercase" letterSpacing={0.4}>
-            {entry.category}
-          </Text>
-        </XStack>
-      </XStack>
-      <XStack items="center" gap="$2" px="$1.5" mb="$1" height={30} minW={0}>
-        <ProductIcon icon={Icon} color={color} size={22} />
-        <Text fontSize="$4" fontWeight="800" color="$color12" numberOfLines={1}>
-          {entry.label}
-        </Text>
-      </XStack>
-
-      <ScrollView flex={1}>
-        <YStack gap="$1">
-          {subs.map((sp: ProductSubpage) => {
-            const wired = subpageWired(entry.id, sp.slug)
-            const active = sp.slug === activeSlug
-            const SubIcon = subpageIcon(sp.slug)
-            return (
-              <Button
-                key={sp.slug || 'overview'}
-                onPress={() => onGo(sp.slug ? `/${entry.id}/${sp.slug}` : `/${entry.id}`)}
-                bg={active ? '$color4' : 'transparent'}
-                justify="flex-start"
-                icon={<SubIcon size={17} />}
-                iconAfter={!wired ? <Circle size={7} opacity={0.5} /> : undefined}
-                size="$3"
-                opacity={wired ? 1 : 0.6}
-                aria-label={wired ? sp.label : `${sp.label} (not available yet)`}
-              >
-                {sp.label}
-              </Button>
-            )
-          })}
-
-          {/* Category links — jump to sibling products without leaving the level-2
-              context; keeps the category navigable, never a dead end. */}
-          {siblings.length > 0 ? (
-            <YStack gap="$1" mt="$3" pt="$2" borderTopWidth={1} borderColor="$borderColor">
-              <XStack
-                px="$2"
-                items="center"
-                justify="space-between"
-                cursor="pointer"
-                hoverStyle={{ opacity: 0.7 }}
-                onPress={() => onGo(`/category/${categorySlug(entry.category)}`)}
-                aria-label={`${entry.category} overview`}
-              >
-                <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
-                  More in {entry.category}
-                </Text>
-                <ChevronRight size={11} opacity={0.4} />
-              </XStack>
-              {siblings.map((s) => {
-                const SibIcon = s.icon
-                return (
-                  <Button
-                    key={s.id}
-                    onPress={() => openProduct(s, onGo)}
-                    justify="flex-start"
-                    chromeless
-                    icon={<SibIcon size={16} color={asColor(colorOf(s.id))} />}
-                    size="$3"
-                    opacity={0.9}
-                  >
-                    {s.label}
-                  </Button>
-                )
-              })}
-            </YStack>
-          ) : null}
-        </YStack>
-      </ScrollView>
-    </>
+    <YStack gap="$0.5" ml="$5" my="$0.5">
+      {subs.map((sp: ProductSubpage) => {
+        const wired = subpageWired(entry.id, sp.slug)
+        const active = sp.slug === activeSlug
+        const SubIcon = subpageIcon(sp.slug)
+        return (
+          <Button
+            key={sp.slug || 'overview'}
+            onPress={() => onGo(sp.slug ? `/${entry.id}/${sp.slug}` : `/${entry.id}`)}
+            bg={active ? '$color4' : 'transparent'}
+            justify="flex-start"
+            icon={<SubIcon size={15} />}
+            iconAfter={!wired ? <Circle size={7} opacity={0.5} /> : undefined}
+            size="$2"
+            opacity={wired ? 1 : 0.6}
+            aria-label={wired ? sp.label : `${sp.label} (not available yet)`}
+          >
+            {sp.label}
+          </Button>
+        )
+      })}
+    </YStack>
   )
 }
 
@@ -466,83 +391,137 @@ function CategorySection({
   )
 }
 
-/**
- * Sidebar org-brand header — the org identity block, top-left of the sidebar. Shows
- * the current org's avatar (IAM `organization.logo`) + name; with no org logo the
- * fallback is the host-derived brand mark (Hanzo 'H' on hanzo.ai, WHITE-LABELED per
- * brand — lux/zoo/pars never show the Hanzo mark), wrapped in a subtle hover-container
- * (paper lift) — ONLY the mark, never the whole row. Clicking the row opens Overview.
- * Collapsed = just the icon, centered. The topbar keeps its own OrgSwitcher (this is
- * the identity; that is the switch). Reused by the desktop sidebar AND the mobile
- * drawer (both mount SidebarNav), so one definition, many mounts (DRY).
- */
-function SidebarBrandHeader({ collapsed, onPress }: { collapsed: boolean; onPress: () => void }) {
-  const logo = useOrgLogo()
-  const orgName = useOrgName()
-  const label = orgName ? orgName[0].toUpperCase() + orgName.slice(1) : orgName
-  const brandName = getBrand().brandName
-
-  // Org avatar: the org's own logo when set, else the brand mark in a hover-container
-  // (the ONLY element that lifts on hover — per the directive, not the whole row).
-  const avatar = logo ? (
-    // Arbitrary org logo URL — raw <img> (next/image needs a per-tenant remote allowlist).
+/** A square identity avatar — the account/org image when set, else initials on a tile. */
+function IdentityAvatar({ src, label, size }: { src?: string | null; label: string; size: number }) {
+  if (src) {
+    // Arbitrary account/org image URL — raw <img> (next/image needs a per-tenant allowlist).
     // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={logo}
-      alt=""
-      style={{
-        height: collapsed ? 28 : 26,
-        width: collapsed ? 28 : 26,
-        borderRadius: 7,
-        objectFit: 'contain',
-        display: 'block',
-        flexShrink: 0,
-      }}
-    />
-  ) : (
-    <XStack
-      className="hz-hover-paper"
-      width={collapsed ? 40 : 32}
-      height={collapsed ? 40 : 32}
-      items="center"
-      justify="center"
-      rounded="$3"
-      hoverStyle={{ bg: '$color3' }}
-    >
-      <BrandMark size={collapsed ? 22 : 20} />
+    return <img src={src} alt="" style={{ height: size, width: size, borderRadius: 8, objectFit: 'cover', display: 'block', flexShrink: 0 }} />
+  }
+  const initials = (label.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2) || 'U').toUpperCase()
+  return (
+    <XStack width={size} height={size} items="center" justify="center" rounded="$3" bg="$color5" style={{ flexShrink: 0 }}>
+      <Text fontSize={Math.round(size * 0.4)} fontWeight="800" color="$color12">
+        {initials}
+      </Text>
     </XStack>
+  )
+}
+
+/** One row in the account menu popover. */
+function MenuItem({ icon: Icon, label, onPress }: { icon: ComponentType<{ size?: number }>; label: string; onPress: () => void }) {
+  return (
+    <XStack
+      onPress={onPress}
+      cursor="pointer"
+      items="center"
+      gap="$2.5"
+      px="$2"
+      py="$2"
+      rounded="$3"
+      hoverStyle={{ bg: '$color4' }}
+    >
+      <Icon size={15} />
+      <Text fontSize="$2" color="$color12">
+        {label}
+      </Text>
+    </XStack>
+  )
+}
+
+/**
+ * Sidebar identity — the ACCOUNT switcher on top with the current ORG below it
+ * (Google-Cloud-Console style), replacing the old org-then-brand header. The user row
+ * opens an account menu (profile · theme · sign out); the org row is the working
+ * `OrgSwitcher` (switch / create org). Collapsed → just the account avatar, opening the
+ * same menu. Reused by the desktop sidebar AND the mobile drawer (both mount
+ * SidebarNav), so one definition, many mounts (DRY).
+ */
+function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
+  const router = useRouter()
+  const { account, signOut } = useSession()
+  const [open, setOpen] = useState(false)
+  const name = account?.displayName?.trim() || account?.name || 'Account'
+  const email = account?.email
+  const go = (path: string) => {
+    setOpen(false)
+    router.push(path)
+    onNavigate()
+  }
+
+  const menu = (
+    <Popover.Content bordered elevate p="$2" width={252} bg="$color2" borderColor="$borderColor">
+      <YStack gap="$1">
+        <XStack items="center" gap="$2.5" px="$2" py="$2">
+          <IdentityAvatar src={account?.avatar} label={name} size={34} />
+          <YStack flex={1} minW={0}>
+            <Text fontSize="$3" fontWeight="700" color="$color12" numberOfLines={1}>
+              {name}
+            </Text>
+            {email ? (
+              <Text fontSize="$1" color="$color10" numberOfLines={1}>
+                {email}
+              </Text>
+            ) : null}
+          </YStack>
+        </XStack>
+        <MenuItem icon={CircleUser} label="Profile" onPress={() => go('/profile')} />
+        <XStack items="center" justify="space-between" px="$2" py="$1.5">
+          <Text fontSize="$2" color="$color11">
+            Theme
+          </Text>
+          <ThemeToggle />
+        </XStack>
+        <YStack borderTopWidth={1} borderColor="$borderColor" pt="$1">
+          <MenuItem icon={LogOut} label="Sign out" onPress={() => { setOpen(false); void signOut() }} />
+        </YStack>
+      </YStack>
+    </Popover.Content>
   )
 
   if (collapsed) {
     return (
       <YStack items="center" mb="$1">
-        <XStack onPress={onPress} cursor="pointer" aria-label={`${label} · Overview`}>
-          {avatar}
-        </XStack>
+        <Popover open={open} onOpenChange={setOpen} placement="right-start">
+          <Popover.Trigger asChild>
+            <Button chromeless p="$0" width={40} height={40} aria-label={`${name} · account menu`}>
+              <IdentityAvatar src={account?.avatar} label={name} size={36} />
+            </Button>
+          </Popover.Trigger>
+          {menu}
+        </Popover>
       </YStack>
     )
   }
 
   return (
-    <XStack
-      items="center"
-      gap="$2.5"
-      height={44}
-      mb="$1"
-      onPress={onPress}
-      cursor="pointer"
-      aria-label={`${label} · Overview`}
-    >
-      {avatar}
-      <YStack flex={1} minW={0}>
-        <Text fontSize="$4" fontWeight="800" color="$color12" numberOfLines={1}>
-          {label}
-        </Text>
-        <Text fontSize="$1" color="$color10" numberOfLines={1}>
-          {brandName}
-        </Text>
-      </YStack>
-    </XStack>
+    <YStack gap="$1.5" mb="$1">
+      <Popover open={open} onOpenChange={setOpen} placement="bottom-start">
+        <Popover.Trigger asChild>
+          <Button chromeless height={44} px="$2" justify="flex-start" aria-label={`${name} · account menu`}>
+            <XStack items="center" gap="$2.5" flex={1} minW={0}>
+              <IdentityAvatar src={account?.avatar} label={name} size={30} />
+              <YStack flex={1} minW={0}>
+                <Text fontSize="$4" fontWeight="800" color="$color12" numberOfLines={1}>
+                  {name}
+                </Text>
+                {email ? (
+                  <Text fontSize="$1" color="$color10" numberOfLines={1}>
+                    {email}
+                  </Text>
+                ) : null}
+              </YStack>
+              <ChevronsUpDown size={15} color="$color9" />
+            </XStack>
+          </Button>
+        </Popover.Trigger>
+        {menu}
+      </Popover>
+      {/* The current org, directly below the user — the working switch/create control. */}
+      <XStack px="$1">
+        <OrgSwitcher />
+      </XStack>
+    </YStack>
   )
 }
 
@@ -574,17 +553,8 @@ function SidebarNav({
   const activeCat = activeCategory(pathname)
   const toggleSection = (category: string) => prefs.set(NAV_OPEN_PREF, toggleCategory(navOpen, category))
 
-  // The open product's sub-nav (level 2) FOLLOWS the route.
+  // The active product (from the route) is the one whose sub-pages expand inline.
   const activeId = activeModuleId(pathname)
-  const [openId, setOpenId] = useState<string | null>(activeId)
-  const prevActive = useRef(activeId)
-  useEffect(() => {
-    if (activeId !== prevActive.current) {
-      prevActive.current = activeId
-      setOpenId(activeId)
-    }
-  }, [activeId])
-
   const isActive = (id: string) => pathname === `/${id}` || pathname.startsWith(`/${id}/`)
 
   const go = (path: string) => {
@@ -592,18 +562,16 @@ function SidebarNav({
     onNavigate()
   }
   const open = (entry: CatalogEntry) => {
-    // An external launch tile opens its deployed app in a new tab (no route, no
-    // sub-nav to expand) — the ONE opener handles the kind; close the drawer after.
+    // Route DIRECTLY to any product from anywhere in the always-visible list — no
+    // slide, no "back" step. An external launch tile opens its deployed app in a new
+    // tab (the ONE opener handles the kind); the drawer closes after either way.
     if (entry.kind === 'external') {
       openProduct(entry, go)
       onNavigate()
       return
     }
     setFilter('')
-    setOpenId(entry.id)
     router.push(`/${entry.id}`)
-    // Close the drawer on a product tap (mobile) — the route changed, so the
-    // off-canvas nav dismisses. Desktop passes a no-op onNavigate (stays open).
     onNavigate()
   }
   const openDocs = () => {
@@ -623,13 +591,8 @@ function SidebarNav({
   const manage = () =>
     detail.open({ title: 'Manage pins', subtitle: 'Reorder · group · organize', icon: Star, content: <ManagePins /> })
 
-  const openEntry = openId ? findEntry(openId) : undefined
   const q = (collapsed ? '' : filter).trim().toLowerCase()
   const filtering = q.length > 0
-  // Level 2 (the open product's sub-nav) yields to the product list while the user
-  // is filtering, so a query typed from ANY level surfaces the list to jump across.
-  const showLevel2 =
-    !collapsed && !filtering && Boolean(openEntry && openEntry.kind === 'module' && (showAdmin || !openEntry.admin))
 
   // Grouped pins, gated so a customer never sees an admin-only surface.
   const pinnedGroups = useMemo(
@@ -713,11 +676,11 @@ function SidebarNav({
     )
   }
 
-  // ── Collapsed icon rail — products as colored icons; expand for sub-nav ──
+  // ── Collapsed icon rail — account avatar + products as colored icons ──
   if (collapsed) {
     return (
       <>
-        <SidebarBrandHeader collapsed onPress={() => go('/')} />
+        <SidebarIdentity collapsed onNavigate={onNavigate} />
         <ScrollView flex={1}>
           <YStack gap="$3.5">
             <YStack gap="$1">
@@ -763,14 +726,17 @@ function SidebarNav({
     )
   }
 
-  // ── Expanded: org-brand header + two-level slide + wallet footer ──
+  // ── Expanded: identity (user + org) + single-level grouped nav + wallet ──
+  // Google-Cloud-Console style: ONE always-visible, scrollable list — Overview/Docs,
+  // Pinned, then categories in fixed order (collapsible). The active product's
+  // sub-pages expand INLINE under its row, so every product AND sub-page is one click
+  // away with no slide and no "back".
   return (
     <>
-      <SidebarBrandHeader collapsed={false} onPress={() => go('/')} />
+      <SidebarIdentity collapsed={false} onNavigate={onNavigate} />
 
-      {/* Product filter — a PERSISTENT header above the two-level slide, so a user
-          deep in a product (level 2) can filter + jump straight to another product
-          without going Back. Typing surfaces the (level-1) list from any level. */}
+      {/* Product filter — narrows the whole list; a match from any category jumps
+          straight there. Typing hides the inline sub-nav so the list stays scannable. */}
       <XStack
         items="center"
         gap="$2"
@@ -799,127 +765,90 @@ function SidebarNav({
         ) : null}
       </XStack>
 
-      <YStack flex={1} minH={0} overflow="hidden" position="relative">
-        {/* Level 1 — product list */}
-        <YStack
-          position="absolute"
-          t={0}
-          l={0}
-          r={0}
-          b={0}
-          gap="$2"
-          className="hz-slide"
-          style={{ transform: showLevel2 ? 'translateX(-100%)' : 'translateX(0)' }}
-          pointerEvents={showLevel2 ? 'none' : 'auto'}
-          aria-hidden={showLevel2}
-        >
-          <ScrollView flex={1}>
-            <YStack gap="$3.5">
-              {!filtering ? (
-                <YStack gap="$1">
-                  <FixedRow icon={House} label="Overview" active={pathname === '/'} collapsed={false} onPress={() => go('/')} />
-                  <FixedRow icon={BookOpen} label="Docs" external collapsed={false} onPress={openDocs} />
-                </YStack>
-              ) : null}
-
-              {!filtering && pinnedGroups.length > 0 ? (
-                <YStack gap="$1.5">
-                  <XStack items="center" justify="space-between" px="$2">
-                    <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
-                      Pinned
-                    </Text>
-                    <Button size="$1" chromeless onPress={manage} aria-label="Manage pins">
-                      <Text fontSize="$1" color="$color10" fontWeight="700">
-                        Manage
-                      </Text>
-                    </Button>
-                  </XStack>
-                  {pinnedGroups.map((group) => (
-                    <YStack key={group.name || 'default'} gap="$1">
-                      {group.name ? (
-                        <Text px="$2" fontSize="$1" color="$color9" fontWeight="700">
-                          {group.label}
-                        </Text>
-                      ) : null}
-                      {group.entries.map((e) => {
-                        const entry = findEntry(e.id)
-                        if (!entry) return null
-                        return (
-                          <NavRow
-                            key={`pin-${e.id}`}
-                            entry={entry}
-                            active={isActive(e.id)}
-                            color={colorOf(e.id)}
-                            collapsed={false}
-                            pinned
-                            onOpen={() => open(entry)}
-                            onCustomize={() => customize(entry)}
-                          />
-                        )
-                      })}
-                    </YStack>
-                  ))}
-                </YStack>
-              ) : null}
-
-              {groups.map((group) => (
-                <CategorySection
-                  key={group.category}
-                  category={group.category}
-                  count={group.entries.length}
-                  open={categoryIsOpen(navOpen, group.category, { activeCategory: activeCat, filtering })}
-                  onToggle={() => toggleSection(group.category)}
-                >
-                  {group.entries.map((entry) => (
-                    <NavRow
-                      key={entry.id}
-                      entry={entry}
-                      active={isActive(entry.id)}
-                      color={colorOf(entry.id)}
-                      collapsed={false}
-                      pinned={isPinned(entry.id)}
-                      onOpen={() => open(entry)}
-                      onToggle={() => toggle(entry.id)}
-                    />
-                  ))}
-                </CategorySection>
-              ))}
-
-              {filtering && groups.length === 0 ? (
-                <Text px="$2" py="$3" fontSize="$2" color="$color10">
-                  No products match “{filter.trim()}”.
-                </Text>
-              ) : null}
+      <ScrollView flex={1} minH={0}>
+        <YStack gap="$3.5">
+          {!filtering ? (
+            <YStack gap="$1">
+              <FixedRow icon={House} label="Overview" active={pathname === '/'} collapsed={false} onPress={() => go('/')} />
+              <FixedRow icon={BookOpen} label="Docs" external collapsed={false} onPress={openDocs} />
             </YStack>
-          </ScrollView>
-        </YStack>
+          ) : null}
 
-        {/* Level 2 — the open product's sub-nav */}
-        <YStack
-          position="absolute"
-          t={0}
-          l={0}
-          r={0}
-          b={0}
-          gap="$2"
-          className="hz-slide"
-          style={{ transform: showLevel2 ? 'translateX(0)' : 'translateX(100%)' }}
-          pointerEvents={showLevel2 ? 'auto' : 'none'}
-          aria-hidden={!showLevel2}
-        >
-          {openEntry && openEntry.kind === 'module' ? (
-            <Level2Nav
-              entry={openEntry}
-              color={colorOf(openEntry.id)}
-              colorOf={colorOf}
-              pathname={pathname}
-              showAdmin={showAdmin}
-              onBack={() => setOpenId(null)}
-              onGo={go}
-            />
+          {!filtering && pinnedGroups.length > 0 ? (
+            <YStack gap="$1.5">
+              <XStack items="center" justify="space-between" px="$2">
+                <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+                  Pinned
+                </Text>
+                <Button size="$1" chromeless onPress={manage} aria-label="Manage pins">
+                  <Text fontSize="$1" color="$color10" fontWeight="700">
+                    Manage
+                  </Text>
+                </Button>
+              </XStack>
+              {pinnedGroups.map((group) => (
+                <YStack key={group.name || 'default'} gap="$1">
+                  {group.name ? (
+                    <Text px="$2" fontSize="$1" color="$color9" fontWeight="700">
+                      {group.label}
+                    </Text>
+                  ) : null}
+                  {group.entries.map((e) => {
+                    const entry = findEntry(e.id)
+                    if (!entry) return null
+                    return (
+                      <NavRow
+                        key={`pin-${e.id}`}
+                        entry={entry}
+                        active={isActive(e.id)}
+                        color={colorOf(e.id)}
+                        collapsed={false}
+                        pinned
+                        onOpen={() => open(entry)}
+                        onCustomize={() => customize(entry)}
+                      />
+                    )
+                  })}
+                </YStack>
+              ))}
+            </YStack>
+          ) : null}
+
+          {groups.map((group) => (
+            <CategorySection
+              key={group.category}
+              category={group.category}
+              count={group.entries.length}
+              open={categoryIsOpen(navOpen, group.category, { activeCategory: activeCat, filtering })}
+              onToggle={() => toggleSection(group.category)}
+            >
+              {group.entries.map((entry) => (
+                <YStack key={entry.id} gap="$0.5">
+                  <NavRow
+                    entry={entry}
+                    active={isActive(entry.id)}
+                    color={colorOf(entry.id)}
+                    collapsed={false}
+                    pinned={isPinned(entry.id)}
+                    onOpen={() => open(entry)}
+                    onToggle={() => toggle(entry.id)}
+                  />
+                  {/* The active product's sub-pages, inline (never a slide/back). */}
+                  {!filtering && entry.kind === 'module' && isActive(entry.id) ? (
+                    <InlineSubnav entry={entry} pathname={pathname} showAdmin={showAdmin} onGo={go} />
+                  ) : null}
+                </YStack>
+              ))}
+            </CategorySection>
+          ))}
+
+          {filtering && groups.length === 0 ? (
+            <Text px="$2" py="$3" fontSize="$2" color="$color10">
+              No products match “{filter.trim()}”.
+            </Text>
           ) : null}
         </YStack>
-      </YStack>
+      </ScrollView>
 
       <SidebarWallet collapsed={false} />
     </>
@@ -1087,12 +1016,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               at lg+; below lg the search box fills the row. */}
           <XStack display="none" $lg={{ display: 'flex' }} flex={1} />
 
-          {/* Full topbar controls — shown only at lg+. */}
+          {/* Full topbar controls — shown only at lg+. The org switcher now lives in
+              the sidebar identity block (user → org); the topbar keeps the project
+              scope switcher, theme, docs, and notifications. */}
           <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$2">
             <ThemeToggle />
             <Button size="$2" chromeless icon={<CircleHelp size={16} />} onPress={openDocs} aria-label="Documentation" />
             <Button size="$2" chromeless icon={<Bell size={16} />} onPress={() => push('/alerts')} aria-label="Notifications" />
-            <OrgSwitcher />
             <ScopeSwitcher />
           </XStack>
 

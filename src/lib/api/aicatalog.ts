@@ -188,8 +188,15 @@ export function modelType(m: RichModel): string {
   const n = `${m.name ?? ''} ${m.id ?? ''}`.toLowerCase()
   if (n.includes('tts') || n.includes('-asr') || n.includes('audio') || n.includes('whisper') || n.includes('speech'))
     return 'Audio'
-  if (n.includes('embed')) return 'Embedding'
+  // Embedding/retrieval — `embed*`, plus the well-known open embedding families the DO
+  // gateway serves under bare model ids (BGE · GTE · E5 · MPNet · MiniLM · multi-qa).
+  if (n.includes('embed') || /(^|[\s/-])(bge|gte|e5|mpnet|minilm|mini-lm)([\s/-]|$)/.test(n) || n.includes('multi-qa'))
+    return 'Embedding'
   if (n.includes('rerank')) return 'Rerank'
+  // Video generation (`t2v`/`i2v`/wan/sora/veo) — before Image so a text-to-video model
+  // isn't mistaken for a chat "Text" model and leaked into the chat browser.
+  if (n.includes('video') || n.includes('t2v') || n.includes('i2v') || n.includes('wan2') || n.includes('sora') || n.includes('veo'))
+    return 'Video'
   if (n.includes('image') || n.includes('diffusion') || n.includes('flux') || n.includes('dall'))
     return 'Image'
   if (n.includes('agent')) return 'Agent'
@@ -201,7 +208,7 @@ export function modelType(m: RichModel): string {
 /** The distinct model types present in a set (for the Type filter). */
 export function modelTypes(models: RichModel[]): string[] {
   const set = new Set(models.map(modelType))
-  const order = ['Text', 'Vision', 'Image', 'Audio', 'Embedding', 'Rerank', 'Agent']
+  const order = ['Text', 'Vision', 'Image', 'Video', 'Audio', 'Embedding', 'Rerank', 'Agent']
   return Array.from(set).sort((a, b) => {
     const ia = order.indexOf(a)
     const ib = order.indexOf(b)
@@ -209,11 +216,15 @@ export function modelTypes(models: RichModel[]): string[] {
   })
 }
 
-/** Display name for a provider — our own models are branded "Zen", never "Hanzo (Zen)". */
+/** Display name for a provider — our own models are branded "Zen", never "Hanzo (Zen)";
+ *  the raw DigitalOcean gateway tag reads as "DigitalOcean AI" (the vendor of the
+ *  proxied third-party models is resolved per-model by the brand resolver, not here). */
 export function displayProvider(provider: string | null | undefined): string {
   const p = (provider ?? '').trim()
   if (!p) return 'Other'
-  if (p.toLowerCase() === 'hanzo') return 'Zen'
+  const lower = p.toLowerCase()
+  if (lower === 'hanzo') return 'Zen'
+  if (lower === 'do-ai') return 'DigitalOcean AI'
   return p
 }
 

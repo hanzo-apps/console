@@ -289,41 +289,52 @@ export class SessionError extends Error {
   }
 }
 
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+
 /** POST the token endpoint with a form body. `confidential` (default) sends
  *  client_secret_basic — the first-party `hanzo-console` client. A PUBLIC grant sends
  *  NO Authorization header: it authenticates by `client_id` + `code_verifier`/
  *  `refresh_token` (RFC 7636/6749), so the public `admin-console` app is redeemed and
  *  refreshed WITHOUT provisioning its secret. Throws a redacted error on a non-ok /
- *  error-envelope response (the caller maps to 401/502). Never logs the body — tokens. */
+ *  error-envelope response (the caller maps to 401/502). Never logs the body — tokens.
+ *
+ *  RESILIENCE: a TRANSIENT upstream failure — a network error OR a NON-JSON/empty body
+ *  (IAM mid-roll on its Recreate strategy, a 5xx page, or the SPA-HTML catch-all) — is
+ *  retried once with a short backoff before surfacing a 502, so a momentary IAM blip
+ *  self-heals instead of bouncing a live session (the `/auth/refresh` 502). A definitive
+ *  OAuth error ENVELOPE (`invalid_grant`, `server_error`, …) is NOT retried — it is the
+ *  real answer (invalid_grant → 401, else 502). */
 async function tokenRequest(form: Record<string, string>, confidential = true): Promise<Tokens> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/x-www-form-urlencoded',
     Accept: 'application/json',
   }
   if (confidential) headers.Authorization = basicAuth()
-  let res: Response
-  try {
-    res = await fetchWithTimeout(TOKEN_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: new URLSearchParams(form).toString(),
-      cache: 'no-store',
-    })
-  } catch {
-    throw new SessionError('token endpoint unreachable', 502)
+  const body = new URLSearchParams(form).toString()
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await sleep(300)
+    let res: Response
+    try {
+      res = await fetchWithTimeout(TOKEN_ENDPOINT, { method: 'POST', headers, body, cache: 'no-store' })
+    } catch {
+      continue // network error → transient, retry once then give up
+    }
+    const json = (await res.json().catch(() => null)) as
+      | { access_token?: string; refresh_token?: string; expires_in?: number; error?: string }
+      | null
+    if (json?.access_token) {
+      return {
+        accessToken: json.access_token,
+        refreshToken: json.refresh_token ?? '',
+        expiresIn: typeof json.expires_in === 'number' ? json.expires_in : 0,
+      }
+    }
+    // A real OAuth error envelope is definitive — do not retry.
+    if (json?.error) throw new SessionError('token grant failed', json.error === 'invalid_grant' ? 401 : 502)
+    // Non-JSON / empty body (a 5xx page or the SPA-HTML catch-all) → transient, retry.
   }
-  const json = (await res.json().catch(() => null)) as
-    | { access_token?: string; refresh_token?: string; expires_in?: number; error?: string }
-    | null
-  if (!json || json.error || !json.access_token) {
-    // `invalid_grant` (bad/expired/revoked credential) → 401; anything else → 502.
-    throw new SessionError('token grant failed', json?.error === 'invalid_grant' ? 401 : 502)
-  }
-  return {
-    accessToken: json.access_token,
-    refreshToken: json.refresh_token ?? '',
-    expiresIn: typeof json.expires_in === 'number' ? json.expires_in : 0,
-  }
+  throw new SessionError('token endpoint unavailable', 502)
 }
 
 /** Resource-Owner-Password grant for the FIRST-PARTY user (gated by the caller's
