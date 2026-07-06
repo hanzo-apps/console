@@ -28,7 +28,9 @@ export function normalizeBrand(raw: string): BrandKey | null {
   if (p === 'zen' || p === 'zenlm' || /^zen[\d-]/.test(p)) return 'zen'
   if (p === 'hanzo') return 'hanzo'
   // Third-party families (match provider strings AND their model-name tells).
-  if (p.includes('openai') || p.includes('gpt')) return 'openai'
+  // OpenAI: the `gpt*` line AND the reasoning `o`-series (`o1`, `o3`, `o3-mini`, `o4-mini`)
+  // whose ids carry no "gpt"/"openai" tell — matched by the `o<digit>` prefix (not "omni").
+  if (p.includes('openai') || p.includes('gpt') || /^o[1-9]([.\-]|$)/.test(p)) return 'openai'
   if (p.includes('qwen') || p.includes('tongyi') || p.includes('alibaba') || p.includes('qwq')) return 'qwen'
   if (p.includes('deepseek')) return 'deepseek'
   if (p.includes('meta') || p.includes('llama')) return 'meta'

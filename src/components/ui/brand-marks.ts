@@ -110,4 +110,24 @@ export const BRAND_MARK: Partial<Record<BrandKey, BrandMark>> = {
       '<path d="M3 12s3.5-5 9-5 9 5 9 5-3.5 5-9 5-9-5-9-5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
       '<circle cx="12" cy="12" r="2.4" fill="currentColor"/>',
   },
+  // Zhipu (GLM) — a node triad: three linked vertices, evoking the graph/relational
+  // model family. Distinct from every other mark (a connected-node triangle).
+  zhipu: {
+    viewBox: '0 0 24 24',
+    body:
+      '<path d="M12 5 5.5 16.5H18.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<circle cx="12" cy="5" r="2.3" fill="currentColor"/>' +
+      '<circle cx="5.5" cy="16.5" r="2.3" fill="currentColor"/>' +
+      '<circle cx="18.5" cy="16.5" r="2.3" fill="currentColor"/>',
+  },
+  // MiniMax — a min bar beside a max bar (a short rounded column next to a tall one),
+  // its literal "min/max" mark. Distinct blocky pair.
+  minimax: {
+    viewBox: '0 0 24 24',
+    body:
+      '<g fill="currentColor">' +
+      '<rect x="5" y="12" width="4.4" height="7.5" rx="2.2"/>' +
+      '<rect x="14.6" y="4.5" width="4.4" height="15" rx="2.2"/>' +
+      '</g>',
+  },
 }

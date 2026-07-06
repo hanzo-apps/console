@@ -18,6 +18,7 @@ import { notFound, useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import {
   Activity,
+  ArrowLeft,
   ArrowRight,
   BookOpen,
   Blocks,
@@ -39,6 +40,7 @@ import { config } from '~/config'
 import {
   visibleCatalogByCategory,
   categoryFromSlug,
+  categorySlug,
   CATEGORY_SUMMARY,
   type CatalogEntry,
   type ProductCategory,
@@ -166,6 +168,14 @@ export function CategoryOverview({ params }: { params: Record<string, string> })
     .map((id) => group.entries.find((e) => e.id === id))
     .filter((e): e is CatalogEntry => Boolean(e))
 
+  // Category pager — step prev/next through the visible categories in their FIXED
+  // order (the ONE `categoryOrder`, brand/admin-scoped), wrapping around so you can
+  // cycle the whole cloud axis without returning to the home grid.
+  const orderedCats = visibleCatalogByCategory(showAdmin).map((g) => g.category)
+  const idx = orderedCats.indexOf(category)
+  const prevCat = orderedCats.length > 1 ? orderedCats[(idx - 1 + orderedCats.length) % orderedCats.length] : null
+  const nextCat = orderedCats.length > 1 ? orderedCats[(idx + 1) % orderedCats.length] : null
+
   return (
     <>
       <PageHeader
@@ -225,6 +235,30 @@ export function CategoryOverview({ params }: { params: Record<string, string> })
           ))}
         </XStack>
       </FadeIn>
+
+      {/* Prev / next category — step through the cloud axis in its fixed order. */}
+      {prevCat && nextCat ? (
+        <XStack mt="$4" pt="$4" borderTopWidth={1} borderColor="$borderColor" justify="space-between" gap="$3" flexWrap="wrap">
+          <Button
+            size="$3"
+            chromeless
+            icon={<ArrowLeft size={16} />}
+            onPress={() => push(`/category/${categorySlug(prevCat)}`)}
+            aria-label={`Previous category: ${prevCat}`}
+          >
+            {prevCat}
+          </Button>
+          <Button
+            size="$3"
+            chromeless
+            iconAfter={<ArrowRight size={16} />}
+            onPress={() => push(`/category/${categorySlug(nextCat)}`)}
+            aria-label={`Next category: ${nextCat}`}
+          >
+            {nextCat}
+          </Button>
+        </XStack>
+      ) : null}
     </>
   )
 }
