@@ -1,35 +1,31 @@
 /**
- * Model families — the ONE curated grouping the unified model browser renders,
- * identical to hanzo.chat's picker: the house-brand **Zen** first, then the
- * independent third-party families the same api.hanzo.ai gateway serves
- * (Qwen · Meta Llama · DeepSeek · Mistral · Google Gemma · OpenAI GPT-OSS).
+ * Model families — the ONE vendor grouping the unified model browser renders: the
+ * house-brand **Zen** first, then EVERY model vendor the api.hanzo.ai gateway serves.
  *
- * Data-driven, not hard-coded: membership comes from the LIVE catalog
- * (`fetchCatalog` → `/v1/pricing/models` joined with `/v1/models`), each model
- * assigned to the FIRST family whose matcher it satisfies. A family with zero
- * live models is dropped (honest — never an empty "Qwen" header), so the browser
- * shows exactly the families the gateway actually serves for the caller's org.
+ * Data-driven, resolved through the ONE brand resolver (`~/components/ui/brand`), NOT
+ * a second hand-rolled matcher list. `familyOf` runs a model's id (then its provider)
+ * through `brandForModel`, so a gateway-served model — the DigitalOcean lane tags every
+ * third-party model provider "do-ai" with NO per-vendor field — still resolves to its
+ * TRUE vendor by id: `gpt-4o`/`o3`→OpenAI, `claude-opus-4-8`→Anthropic, `llama-3.3-70b`
+ * →Meta, `deepseek-v3.2`→DeepSeek, `gemma-4-31b`→Google, `qwen3-coder`→Qwen, `glm-5`
+ * →Zhipu, `kimi-k2`→Moonshot, `nemotron-3-ultra-550b`→NVIDIA, `minimax-m2.5`→MiniMax.
+ * The house Zen records (`zen*`, provider "hanzo") collapse to the one Zen family.
  *
- * Curation rule (matches chat exactly):
- *   - Provider-defined families (Qwen/Meta/DeepSeek/Mistral) match on the catalog
- *     `provider` string, so a Qwen-distilled DeepSeek stays in DeepSeek (its
- *     provider), and the HuggingFace-hub mirror (provider "HuggingFace") is left
- *     out of the curated set.
- *   - Subset families match a NAMED slice of a broader provider: "Google Gemma"
- *     is the `gemma-*` slice of Google (not Gemini); "OpenAI GPT-OSS" the
- *     `gpt-oss-*` slice of OpenAI (not GPT-4o/5). This is why provider-grouping
- *     alone can't reproduce chat's set — the taxonomy is curated here, once.
- *   - Zen matches by id/name (`zen*`) OR provider hanzo/zen — the catalog's own
- *     Zen records carry NO provider, so the name prefix is authoritative.
+ * NEVER drops a model: a vendor the resolver doesn't know yet lands in an honest
+ * catch-all ("Other models") rather than vanishing — the regression this fixes was
+ * every `do-ai` model (OpenAI, Claude, …) silently dropped because its provider string
+ * matched no curated family. Because the family, its header logo, and its brand hue all
+ * come from the SAME resolver, grouping/colour/icon stay in lockstep (families ↔ brand).
  *
- * Only CURRENT-GEN CHAT models list: non-chat modalities (embedding · rerank ·
- * tts · asr/audio · image · guard/moderation) and sunset generations
- * (zen4-*, qwen2-*) are filtered out, mirroring the task's rule.
+ * Only CURRENT-GEN CHAT models list: non-chat modalities (embedding · rerank · tts ·
+ * asr/audio · image · video · guard/moderation) and sunset generations (zen4-*, qwen2-*)
+ * are filtered out — the same set Hanzo Chat's picker shows.
  *
  * Pure + unit-tested — no IO, no host coupling. The view layer (ModelCatalogModule)
  * just renders `groupByFamily(catalog)`.
  */
 import { modelId, modelType, modelDisplayName, type CatalogEntry } from './aicatalog'
+import { brandForModel, brandLabel, type BrandKey } from '~/components/ui/brand'
 
 /**
  * The default model surfaced first in the house Zen family — the user-facing
@@ -43,53 +39,48 @@ import { modelId, modelType, modelDisplayName, type CatalogEntry } from './aicat
  */
 export const DEFAULT_MODEL = 'zen5-flash'
 
-/** One curated family: a stable id, a display label, and a membership matcher. */
+/** One vendor family: a stable id (the canonical brand key), its vendor label, and
+ *  the brand key `ProviderLogo` resolves to a mark + hue. */
 export type Family = {
-  /** Stable family key (routing/testing). */
+  /** Stable family key — the canonical brand key (`zen`, `openai`, `anthropic`, …). */
   id: string
-  /** Display label — exactly as chat's picker groups them. */
+  /** Vendor display label (`brandLabel`) — the real vendor name; "Zen" for the house. */
   label: string
-  /** Provider name `ProviderLogo` renders for the family header mark. */
+  /** Brand key `ProviderLogo` resolves to the family's mark + hue. */
   logo: string
-  /**
-   * True when a catalog model belongs to this family. `id` is the lowercased
-   * stable id/name; `provider` is the lowercased provider string ('' when the
-   * record carries none, as the Zen records do).
-   */
-  match: (id: string, provider: string) => boolean
 }
 
 const has = (s: string, ...subs: string[]): boolean => subs.some((x) => s.includes(x))
 
 /**
- * The families in DISPLAY ORDER — Zen (house brand) first, then the third-party
- * families in chat's order. A model is assigned to the FIRST match, so order also
- * disambiguates overlaps.
+ * The KNOWN vendor families in DISPLAY ORDER — the house brand **Zen** first, then
+ * every gateway vendor that carries a curated mark (`brand-marks.ts`). One brand key
+ * per family, so the family, its header logo, and its hue all resolve from the ONE
+ * brand resolver (`familyOf` handles any OTHER resolvable vendor + the catch-all).
  */
-export const FAMILIES: Family[] = [
-  {
-    id: 'zen',
-    label: 'Zen',
-    logo: 'zen',
-    // The catalog's Zen records carry no provider, so the id/name prefix is
-    // authoritative; the live `/v1/models` set additionally tags them "hanzo".
-    match: (id, p) => p === 'hanzo' || p === 'zen' || /^zen\d/.test(id),
-  },
-  { id: 'qwen', label: 'Qwen', logo: 'Qwen', match: (_id, p) => p === 'qwen' },
-  { id: 'llama', label: 'Meta Llama', logo: 'Meta', match: (_id, p) => p === 'meta' || p === 'meta llama' },
-  { id: 'deepseek', label: 'DeepSeek', logo: 'DeepSeek', match: (_id, p) => p === 'deepseek' },
-  { id: 'mistral', label: 'Mistral', logo: 'Mistral', match: (_id, p) => p === 'mistral' || p === 'mistral ai' },
-  // Named slices of a broader provider — the id carries the family, not the provider.
-  { id: 'gemma', label: 'Google Gemma', logo: 'Google', match: (id, p) => p === 'google' && has(id, 'gemma') },
-  { id: 'gptoss', label: 'OpenAI GPT-OSS', logo: 'OpenAI', match: (id, p) => p === 'openai' && has(id, 'gpt-oss') },
+const FAMILY_BRANDS: BrandKey[] = [
+  'zen', 'openai', 'anthropic', 'google', 'meta', 'deepseek', 'qwen',
+  'mistral', 'zhipu', 'moonshot', 'minimax', 'nvidia', 'xai',
 ]
 
-/** The family a model belongs to (first match in display order), or null. PURE. */
-export function familyOf(m: CatalogEntry): Family | null {
-  const id = modelId(m).toLowerCase()
-  const provider = (m.provider ?? '').trim().toLowerCase()
-  for (const f of FAMILIES) if (f.match(id, provider)) return f
-  return null
+export const FAMILIES: Family[] = FAMILY_BRANDS.map((key) => ({ id: key, label: brandLabel(key), logo: key }))
+
+/** The honest catch-all for a vendor the brand resolver doesn't recognize yet — its
+ *  models still list (grouped + labelled "Other models") rather than vanishing. */
+const OTHER_FAMILY: Family = { id: 'other', label: 'Other models', logo: 'other' }
+
+/**
+ * The family a model belongs to — resolved through the ONE brand resolver
+ * (`brandForModel` tries the model id FIRST, then the provider). The house brands
+ * (`zen*`, provider "hanzo") collapse to the one Zen family; a recognized third-party
+ * vendor gets its own family; an unrecognized vendor → the honest catch-all. NEVER
+ * null — a chat model is never dropped for want of a curated family. PURE.
+ */
+export function familyOf(m: CatalogEntry): Family {
+  const brand = brandForModel(modelId(m), (m.provider ?? '').trim())
+  if (!brand) return OTHER_FAMILY
+  const id = brand === 'hanzo' ? 'zen' : brand
+  return { id, label: brandLabel(brand), logo: id }
 }
 
 /**
@@ -152,29 +143,35 @@ function sortMembers(models: CatalogEntry[]): CatalogEntry[] {
   })
 }
 
+/** Family display rank: the KNOWN vendors in `FAMILIES` order (Zen first), then any
+ *  other resolvable vendor (e.g. Cohere), then the catch-all ("Other models") last. */
+const FAMILY_RANK = new Map<string, number>(FAMILIES.map((f, i) => [f.id, i]))
+function familyRank(id: string): number {
+  if (id === OTHER_FAMILY.id) return FAMILY_RANK.size + 1
+  return FAMILY_RANK.get(id) ?? FAMILY_RANK.size
+}
+
 /**
- * Group the catalog into the curated families, in display order (Zen first),
- * keeping only current-gen chat models and dropping empty families. PURE — the
+ * Group the catalog into vendor families — Zen first, then the gateway vendors in
+ * order — keeping only current-gen chat models and NEVER dropping a model for want of
+ * a curated family (an unrecognized vendor lands in the honest catch-all). PURE — the
  * ONE place the browser's grouping is decided.
  */
 export function groupByFamily(catalog: CatalogEntry[]): FamilyGroup[] {
-  const buckets = new Map<string, CatalogEntry[]>()
+  const buckets = new Map<string, { family: Family; models: CatalogEntry[] }>()
   for (const m of catalog) {
     if (!isChatModel(m) || !isCurrentGen(m) || isFreeAlias(m)) continue
-    const fam = familyOf(m)
-    if (!fam) continue
-    const arr = buckets.get(fam.id)
-    if (arr) arr.push(m)
-    else buckets.set(fam.id, [m])
+    const family = familyOf(m)
+    const b = buckets.get(family.id)
+    if (b) b.models.push(m)
+    else buckets.set(family.id, { family, models: [m] })
   }
-  const out: FamilyGroup[] = []
-  for (const f of FAMILIES) {
-    const models = buckets.get(f.id)
-    if (!models || models.length === 0) continue
-    const sorted = sortMembers(models)
-    out.push({ id: f.id, label: f.label, logo: f.logo, models: sorted, available: sorted.filter((m) => m.available).length })
-  }
-  return out
+  return [...buckets.values()]
+    .sort((a, b) => familyRank(a.family.id) - familyRank(b.family.id) || a.family.label.localeCompare(b.family.label))
+    .map(({ family, models }) => {
+      const sorted = sortMembers(models)
+      return { id: family.id, label: family.label, logo: family.logo, models: sorted, available: sorted.filter((mm) => mm.available).length }
+    })
 }
 
 /** Filter grouped families by a query (name/id/provider), dropping empty families. PURE. */
