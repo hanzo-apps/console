@@ -161,7 +161,7 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
         p="$4"
       >
         <Fact label="Type" value={modelType(m)} />
-        <Fact label="Provider" value={displayProvider(m.provider)} />
+        <Fact label="Provider" value={familyOf(m).id === 'other' ? displayProvider(m.provider) : familyOf(m).label} />
         <Fact label="Context" value={fmtContext(modelContext(m))} />
         <Fact label="Tier" value={m.tier ? m.tier : '—'} />
         <Fact label="Input / Mtok" value={fmtPrice(m.pricing?.input)} />
@@ -406,7 +406,7 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Models"
-        subtitle="The same models you get in Hanzo Chat — the house-brand Zen family plus the open third-party families, all on one gateway."
+        subtitle="The same models you get in Hanzo Chat — the house-brand Zen family plus every third-party model the gateway serves (OpenAI, Claude, DeepSeek, Llama, and more)."
         actions={
           <XStack gap="$2" items="center" flexWrap="wrap">
             <Button size="$2" chromeless icon={<Boxes size={15} />} onPress={() => router.push('/providers')}>
@@ -425,7 +425,7 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
           onRetry={run}
           copy={{
             notFound:
-              'The model catalog (/v1/pricing/models) is not routed on this host yet. It appears automatically once the deployment proxies it through the gateway.',
+              'The model catalog (/v1/models) is not routed on this host yet. It appears automatically once the deployment proxies it through the gateway.',
           }}
         />
       ) : (

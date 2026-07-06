@@ -13,18 +13,20 @@ import {
   DEFAULT_MODEL,
 } from './families'
 import type { CatalogEntry } from './aicatalog'
-import { normalizeBrand, BRANDS } from '~/components/ui/brand'
+import { normalizeBrand, brandLabel, BRANDS } from '~/components/ui/brand'
+import { BRAND_MARK } from '~/components/ui/brand-marks'
 
 /**
- * The family taxonomy must reproduce hanzo.chat's picker EXACTLY: Zen first, then
- * Qwen · Meta Llama · DeepSeek · Mistral · Google Gemma · OpenAI GPT-OSS, over the
- * REAL catalog shapes — Zen records carry no provider (matched by name), third-party
- * records carry a provider + slugged id. These fixtures mirror the live
- * `/v1/pricing/models` payload (see ~/work/hanzo/pricing/data/pricing.json).
+ * The family taxonomy groups every model the gateway serves by its TRUE vendor — Zen
+ * (house) first, then each third-party vendor — resolved through the ONE brand
+ * resolver. Crucially it never DROPS a model: the DigitalOcean lane tags every
+ * third-party model provider "do-ai" with `name: null` (so the merge sets name ← id),
+ * and each must still resolve to its real vendor by id — the regression these fixtures
+ * guard against was every `do-ai` model (OpenAI, Claude, …) silently vanishing.
  */
 const m = (o: Partial<CatalogEntry>): CatalogEntry => ({ name: '', available: false, ...o }) as CatalogEntry
 
-// Zen (no provider — name-matched), current + sunset gens + non-chat modalities.
+// House Zen (provider "hanzo" or a zen* id), current + sunset + non-chat modalities.
 const zen5mini = m({ name: 'zen5-mini', available: true })
 const zen5flash = m({ name: 'zen5-flash', available: true })
 const zen3vl = m({ name: 'zen3-vl', available: true })
@@ -34,200 +36,229 @@ const zen4mini = m({ name: 'zen4-mini', available: false }) // sunset
 const zen3embed = m({ name: 'zen3-embedding', available: true }) // non-chat
 const zen3guard = m({ name: 'zen3-guard', available: true }) // guard
 const zen3image = m({ name: 'zen3-image', available: true }) // image
-// Third-party (provider + slugged id).
-const qwenPlus = m({ id: 'qwen/qwen-plus-2025-07-28', name: 'Qwen: Plus', provider: 'Qwen', available: false })
-const qwen2 = m({ id: 'qwen/qwen-2.5-72b', name: 'Qwen: 2.5 72B', provider: 'Qwen', available: false }) // sunset gen
-const llama4 = m({ id: 'meta-llama/llama-4-maverick', name: 'Meta: Llama 4 Maverick', provider: 'Meta', available: false })
-const dsChat = m({ id: 'deepseek/deepseek-chat-v3.1', name: 'DeepSeek: Chat v3.1', provider: 'DeepSeek', available: false })
-const dsDistillQwen = m({ id: 'deepseek/deepseek-r1-distill-qwen-32b', name: 'DeepSeek: R1 Distill Qwen', provider: 'DeepSeek', available: false })
-const mistralLarge = m({ id: 'mistralai/mistral-large-2512', name: 'Mistral: Large', provider: 'Mistral', available: false })
-const gemma3 = m({ id: 'google/gemma-3-27b-it', name: 'Google: Gemma 3 27B', provider: 'Google', available: false })
-const gemini = m({ id: 'google/gemini-2.5-pro', name: 'Google: Gemini 2.5 Pro', provider: 'Google', available: false }) // NOT gemma
-const gptoss = m({ id: 'openai/gpt-oss-120b', name: 'OpenAI: GPT-OSS 120B', provider: 'OpenAI', available: false })
-const gpt5 = m({ id: 'openai/gpt-5', name: 'OpenAI: GPT-5', provider: 'OpenAI', available: false }) // NOT gpt-oss
-const hfQwen = m({ id: 'huggingface/Qwen/Qwen3-4B', name: 'Qwen3 4B', provider: 'HuggingFace', available: false }) // hub mirror — excluded
-const gemmaFree = m({ id: 'google/gemma-3-27b-it:free', name: 'Google: Gemma 3 27B (free)', provider: 'Google', available: false })
+const zen3video = m({ name: 'zen3-video', available: true }) // video
 
-describe('familyOf — chat-exact curation', () => {
-  it('assigns Zen by name (records carry no provider)', () => {
-    expect(familyOf(zen5mini)?.id).toBe('zen')
-    expect(familyOf(zen3omni)?.id).toBe('zen')
-    expect(familyOf(zen4)?.id).toBe('zen')
+// DigitalOcean lane (owned_by/provider "do-ai", name ← id on merge). Real live ids.
+const doai = (id: string, available = true): CatalogEntry => m({ id, name: id, provider: 'do-ai', available })
+const gpt4o = doai('gpt-4o')
+const gpt5 = doai('gpt-5')
+const o3 = doai('o3')
+const gptoss = doai('gpt-oss-120b')
+const claude = doai('claude-opus-4-8')
+const claudeHaiku = doai('claude-3-5-haiku')
+const deepseek = doai('deepseek-v3.2')
+const llama = doai('llama-3.3-70b')
+const gemma = doai('gemma-4-31b')
+const qwen = doai('qwen3-coder')
+const mistral = doai('mistral-small')
+const glm = doai('glm-5')
+const kimi = doai('kimi-k2.6')
+const nemotron = doai('nemotron-3-ultra-550b')
+const minimax = doai('minimax-m2.5')
+const bge = doai('bge-m3') // embedding (no "embed" in id) — must be filtered
+const wan = doai('wan2-2-t2v-a14b') // video — must be filtered
+const router = doai('router:general') // routing policy — must be filtered
+const mimo = doai('mimo-v2.5') // vendor the resolver doesn't know → catch-all, NOT dropped
+
+describe('familyOf — every gateway vendor resolves by id, nothing dropped', () => {
+  it('collapses the house Zen records (id or provider) to the one Zen family', () => {
+    expect(familyOf(zen5mini).id).toBe('zen')
+    expect(familyOf(zen3omni).id).toBe('zen')
+    expect(familyOf(zen4).id).toBe('zen')
+    expect(familyOf(m({ id: 'zen5', name: 'zen5', provider: 'hanzo', available: true })).id).toBe('zen')
   })
-  it('assigns provider-defined families by provider', () => {
-    expect(familyOf(qwenPlus)?.id).toBe('qwen')
-    expect(familyOf(llama4)?.id).toBe('llama')
-    expect(familyOf(dsChat)?.id).toBe('deepseek')
-    expect(familyOf(mistralLarge)?.id).toBe('mistral')
+
+  it('resolves each do-ai third-party model to its TRUE vendor by id', () => {
+    expect(familyOf(gpt4o).id).toBe('openai')
+    expect(familyOf(gpt5).id).toBe('openai')
+    expect(familyOf(o3).id).toBe('openai')
+    expect(familyOf(gptoss).id).toBe('openai')
+    expect(familyOf(claude).id).toBe('anthropic')
+    expect(familyOf(deepseek).id).toBe('deepseek')
+    expect(familyOf(llama).id).toBe('meta')
+    expect(familyOf(gemma).id).toBe('google')
+    expect(familyOf(qwen).id).toBe('qwen')
+    expect(familyOf(mistral).id).toBe('mistral')
+    expect(familyOf(glm).id).toBe('zhipu')
+    expect(familyOf(kimi).id).toBe('moonshot')
+    expect(familyOf(nemotron).id).toBe('nvidia')
+    expect(familyOf(minimax).id).toBe('minimax')
   })
-  it('keeps a Qwen-distilled DeepSeek in DeepSeek (its provider), not Qwen', () => {
-    expect(familyOf(dsDistillQwen)?.id).toBe('deepseek')
+
+  it('labels the resolved family with the real vendor name', () => {
+    expect(familyOf(gpt4o).label).toBe('OpenAI')
+    expect(familyOf(claude).label).toBe('Anthropic')
+    expect(familyOf(zen5mini).label).toBe('Zen')
   })
-  it('matches the named slices — Gemma ⊂ Google, GPT-OSS ⊂ OpenAI', () => {
-    expect(familyOf(gemma3)?.id).toBe('gemma')
-    expect(familyOf(gptoss)?.id).toBe('gptoss')
-  })
-  it('excludes Gemini and proprietary GPT (not in the curated slices)', () => {
-    expect(familyOf(gemini)).toBeNull()
-    expect(familyOf(gpt5)).toBeNull()
-  })
-  it('excludes the HuggingFace hub mirror (provider HuggingFace)', () => {
-    expect(familyOf(hfQwen)).toBeNull()
+
+  it('routes an UNRECOGNIZED vendor to the honest catch-all — never null, never dropped', () => {
+    const fam = familyOf(mimo)
+    expect(fam.id).toBe('other')
+    expect(fam.label).toBe('Other models')
   })
 })
 
 describe('filters — current-gen chat only', () => {
-  it('drops non-chat modalities and guards', () => {
+  it('drops non-chat modalities and guards (incl. the bare-id do-ai embedding/video)', () => {
     expect(isChatModel(zen5mini)).toBe(true)
     expect(isChatModel(zen3vl)).toBe(true)
+    expect(isChatModel(gpt4o)).toBe(true)
+    expect(isChatModel(claude)).toBe(true)
     expect(isChatModel(zen3embed)).toBe(false)
     expect(isChatModel(zen3image)).toBe(false)
+    expect(isChatModel(zen3video)).toBe(false)
     expect(isChatModel(zen3guard)).toBe(false)
+    expect(isChatModel(bge)).toBe(false)
+    expect(isChatModel(wan)).toBe(false)
+    expect(isChatModel(router)).toBe(false)
   })
   it('drops sunset generations (zen4, qwen2)', () => {
     expect(isCurrentGen(zen4)).toBe(false)
     expect(isCurrentGen(zen4mini)).toBe(false)
-    expect(isCurrentGen(qwen2)).toBe(false)
+    expect(isCurrentGen(m({ id: 'qwen/qwen-2.5-72b', name: 'Qwen 2.5', provider: 'Qwen' }))).toBe(false)
     expect(isCurrentGen(zen5mini)).toBe(true)
-    expect(isCurrentGen(qwenPlus)).toBe(true)
+    expect(isCurrentGen(qwen)).toBe(true)
   })
   it('flags free-tier duplicate aliases', () => {
-    expect(isFreeAlias(gemmaFree)).toBe(true)
-    expect(isFreeAlias(gemma3)).toBe(false)
-  })
-  it('excludes meta-routers (routing policy, not a pickable model)', () => {
-    const router = m({ id: 'router:general', name: '', provider: 'Hanzo', available: true })
-    expect(isChatModel(router)).toBe(false)
-    // …so a nameless router never leaks into the Zen family as a blank row.
-    expect(groupByFamily([zen5mini, router]).find((g) => g.id === 'zen')!.models.map((x) => x.name)).toEqual([
-      'zen5-mini',
-    ])
+    expect(isFreeAlias(m({ id: 'google/gemma-3-27b-it:free', name: 'Gemma free' }))).toBe(true)
+    expect(isFreeAlias(gemma)).toBe(false)
   })
 })
 
 describe('displayLabel — never blank', () => {
   it('falls back to the id when the model has no display name', () => {
-    const noName = m({ id: 'zen5-flash', name: '', available: true })
-    expect(displayLabel(noName)).toBe('zen5-flash')
+    expect(displayLabel(m({ id: 'zen5-flash', name: '', available: true }))).toBe('zen5-flash')
     expect(displayLabel(zen5mini)).toBe('zen5-mini')
-    expect(displayLabel(gemma3)).toBe('Gemma 3 27B') // "Google: " provider prefix stripped
+    expect(displayLabel(gpt4o)).toBe('gpt-4o')
   })
 })
 
-describe('groupByFamily — Zen first, no zen4, empty families dropped', () => {
+describe('groupByFamily — Zen first, do-ai vendors surfaced, nothing dropped', () => {
   const catalog = [
-    zen4, zen4mini, zen3guard, zen3image, zen3embed, // all filtered out
+    zen4, zen4mini, zen3guard, zen3image, zen3embed, zen3video, // all filtered out (modality/sunset)
+    bge, wan, router, // filtered out (embedding/video/router)
     zen5flash, zen5mini, zen3vl, zen3omni,
-    qwenPlus, qwen2, hfQwen,
-    llama4, dsChat, dsDistillQwen, mistralLarge,
-    gemma3, gemmaFree, gemini,
-    gptoss, gpt5,
+    gpt4o, gpt5, o3, gptoss, claude, claudeHaiku, deepseek, llama, gemma, qwen, mistral, glm, kimi, nemotron, minimax,
+    mimo, // unrecognized → catch-all
   ]
   const groups = groupByFamily(catalog)
 
-  it('orders Zen first, then chat families in taxonomy order', () => {
-    expect(groups.map((g) => g.id)).toEqual(['zen', 'qwen', 'llama', 'deepseek', 'mistral', 'gemma', 'gptoss'])
+  it('orders Zen first, then the resolved vendors, catch-all last', () => {
+    expect(groups[0].id).toBe('zen')
+    expect(groups[groups.length - 1].id).toBe('other')
+    // OpenAI + Anthropic come before the catch-all.
+    const ids = groups.map((g) => g.id)
+    expect(ids).toContain('openai')
+    expect(ids).toContain('anthropic')
+    expect(ids.indexOf('openai')).toBeLessThan(ids.indexOf('other'))
   })
-  it('excludes zen4/guard/image/embedding from Zen', () => {
-    const zen = groups.find((g) => g.id === 'zen')!
-    const names = zen.models.map((x) => x.name)
+
+  it('surfaces the OpenAI + Claude do-ai models (the regression fix)', () => {
+    const openai = groups.find((g) => g.id === 'openai')!
+    expect(openai.models.map((x) => x.id).sort()).toEqual(['gpt-4o', 'gpt-5', 'gpt-oss-120b', 'o3'])
+    const anthropic = groups.find((g) => g.id === 'anthropic')!
+    expect(anthropic.models.map((x) => x.id).sort()).toEqual(['claude-3-5-haiku', 'claude-opus-4-8'])
+  })
+
+  it('keeps the unrecognized vendor as a catch-all row, never dropped', () => {
+    const other = groups.find((g) => g.id === 'other')!
+    expect(other.models.map((x) => x.id)).toEqual(['mimo-v2.5'])
+  })
+
+  it('excludes zen4/guard/image/embedding/video from Zen', () => {
+    const names = groups.find((g) => g.id === 'zen')!.models.map((x) => x.name)
     expect(names).not.toContain('zen4')
-    expect(names).not.toContain('zen4-mini')
     expect(names).not.toContain('zen3-guard')
+    expect(names).not.toContain('zen3-image')
+    expect(names).not.toContain('zen3-video')
     expect(names).toContain('zen5-mini')
     expect(names).toContain('zen3-vl')
   })
+
   it('surfaces the non-premium default (zen5-flash) first among available Zen models', () => {
-    const zen = groups.find((g) => g.id === 'zen')!
-    expect(zen.models[0].name).toBe(DEFAULT_MODEL)
-    expect(DEFAULT_MODEL).toBe('zen5-flash') // trial-safe: zen5-mini is premium
+    expect(groups.find((g) => g.id === 'zen')!.models[0].name).toBe(DEFAULT_MODEL)
+    expect(DEFAULT_MODEL).toBe('zen5-flash')
   })
-  it('excludes qwen2, the HF mirror, and the :free alias', () => {
-    const qwen = groups.find((g) => g.id === 'qwen')!
-    expect(qwen.models.map((x) => x.id)).toEqual(['qwen/qwen-plus-2025-07-28'])
-    const gemma = groups.find((g) => g.id === 'gemma')!
-    expect(gemma.models.map((x) => x.id)).toEqual(['google/gemma-3-27b-it'])
-  })
-  it('does not emit an OpenAI/Google family for proprietary-only models', () => {
-    // gpt-5 and gemini are the only non-slice OpenAI/Google models — they must not
-    // create a bare "OpenAI"/"Google" family.
-    expect(groups.some((g) => g.label === 'OpenAI' || g.label === 'Google')).toBe(false)
-  })
+
   it('counts totals correctly', () => {
-    expect(totalModels(groups)).toBe(
-      groups.reduce((n, g) => n + g.models.length, 0),
-    )
+    expect(totalModels(groups)).toBe(groups.reduce((n, g) => n + g.models.length, 0))
   })
 })
 
 describe('filterFamilies — search across families', () => {
-  const groups = groupByFamily([zen5mini, zen3vl, qwenPlus, llama4, gptoss])
-  it('keeps only families with a matching model', () => {
-    const r = filterFamilies(groups, 'gpt-oss')
-    expect(r.map((g) => g.id)).toEqual(['gptoss'])
+  const groups = groupByFamily([zen5mini, zen3vl, gpt4o, claude, llama])
+  it('keeps only families with a matching model (by id)', () => {
+    expect(filterFamilies(groups, 'gpt-4o').map((g) => g.id)).toEqual(['openai'])
   })
   it('matches on family label too', () => {
-    const r = filterFamilies(groups, 'llama')
-    expect(r.map((g) => g.id)).toEqual(['llama'])
+    expect(filterFamilies(groups, 'anthropic').map((g) => g.id)).toEqual(['anthropic'])
   })
   it('empty query returns all', () => {
     expect(filterFamilies(groups, '  ').length).toBe(groups.length)
   })
 })
 
-describe('FAMILIES registry', () => {
-  it('is exactly the 7 chat families, Zen first', () => {
-    expect(FAMILIES.map((f) => f.label)).toEqual([
-      'Zen', 'Qwen', 'Meta Llama', 'DeepSeek', 'Mistral', 'Google Gemma', 'OpenAI GPT-OSS',
+describe('FAMILIES registry — Zen first, every family mark-backed', () => {
+  it('starts with Zen and lists the known gateway vendors', () => {
+    expect(FAMILIES[0].id).toBe('zen')
+    expect(FAMILIES[0].label).toBe('Zen')
+    expect(FAMILIES.map((f) => f.id)).toEqual([
+      'zen', 'openai', 'anthropic', 'google', 'meta', 'deepseek', 'qwen',
+      'mistral', 'zhipu', 'moonshot', 'minimax', 'nvidia', 'xai',
     ])
+  })
+  it('labels each family with the canonical vendor name', () => {
+    for (const f of FAMILIES) expect(f.label).toBe(brandLabel(f.id as never))
   })
 })
 
 /**
  * The families ↔ brand contract — the permanent guard against the "provider icon
- * blank/default" bug (the CTO's Qwen/Llama/DeepSeek report). The model browser
- * renders `<ProviderLogo provider={family.logo}>` for every family header AND row,
- * and ProviderLogo resolves that string through the ONE brand resolver
- * (`normalizeBrand` → `BRANDS`); a family whose `logo` doesn't resolve falls to the
- * neutral (blank) chip. So EVERY curated family's `logo` MUST resolve to a real
- * treatment: the first-party Hanzo block-H (zen/hanzo) or a third-party `BRANDS`
- * entry (hex colour) with its OWN distinct `BRAND_MARK` glyph — exactly the
- * OpenAI/DeepSeek/Meta/Mistral/Google/Qwen pattern.
- * Keyed off the EXACT live `/v1/pricing/models` provider strings
- * (~/work/hanzo/pricing/data/pricing.json: "Qwen"/"Meta"/"DeepSeek"), so grouping,
- * colour, and icon stay in lockstep and this class of bug can never recur.
+ * blank/default" bug. Every family header + row renders `<ProviderLogo provider={
+ * family.logo}>`, resolved through the ONE brand resolver (`normalizeBrand` → `BRANDS`
+ * + `BRAND_MARK`); a family whose `logo` doesn't resolve falls to the neutral chip. So
+ * EVERY declared family's `logo` MUST resolve to a real treatment — the first-party
+ * Hanzo block-H (zen/hanzo) or a third-party `BRANDS` hue WITH its own distinct
+ * `BRAND_MARK` glyph. The catch-all ("other") is intentionally NOT a declared family —
+ * it renders the neutral chip and is excluded here.
  */
-describe('families ↔ brand — every family renders a real colour + icon (never blank)', () => {
+describe('families ↔ brand — every family renders a real colour + distinct icon (never blank)', () => {
   const HEX = /^#[0-9a-fA-F]{6}$/
 
-  it('every curated family logo resolves through the ONE brand resolver', () => {
+  it('every declared family logo resolves through the ONE brand resolver', () => {
     for (const f of FAMILIES) {
       expect(normalizeBrand(f.logo), `family "${f.id}" logo "${f.logo}" must resolve`).not.toBeNull()
     }
   })
 
-  it('every third-party family has a real hex colour + monogram (OpenAI/Anthropic/Google pattern)', () => {
+  it('every third-party family has a real hex colour + a distinct curated mark', () => {
+    const bodies = new Set<string>()
     for (const f of FAMILIES) {
       const key = normalizeBrand(f.logo)
-      if (key === null || key === 'zen' || key === 'hanzo') continue // first-party SVG marks — no BRANDS row
+      if (key === null || key === 'zen' || key === 'hanzo') continue // first-party SVG mark
       expect(BRANDS[key].bg, `BRANDS[${key}].bg`).toMatch(HEX)
-      expect(BRANDS[key].label.length, `BRANDS[${key}].label`).toBeGreaterThan(0)
+      const mark = BRAND_MARK[key]
+      expect(mark, `family "${f.id}" (brand ${key}) must have a curated mark`).toBeDefined()
+      expect(bodies.has(mark!.body), `family "${f.id}" mark must be unique`).toBe(false)
+      bodies.add(mark!.body)
     }
   })
 
-  // The three the CTO flagged, end-to-end off the EXACT live provider strings:
-  // live provider → curated family → resolved brand colour + icon.
+  // The live do-ai vendors, end-to-end: real live id → true vendor family → brand.
   it.each([
-    ['Qwen', 'qwen', 'qwen', '#615CED', 'Q'],
-    ['Meta', 'llama', 'meta', '#0866FF', 'Me'],
-    ['DeepSeek', 'deepseek', 'deepseek', '#4D6BFE', 'DS'],
-  ] as const)('a live "%s" model groups into "%s" and renders its brand colour + icon', (provider, famId, brandKey, hex, label) => {
-    const model = m({ id: `${provider.toLowerCase()}/x`, name: `${provider}: X`, provider, available: true })
-    expect(familyOf(model)?.id).toBe(famId)
-    const key = normalizeBrand(familyOf(model)!.logo)
+    ['gpt-4o', 'openai', '#000000'],
+    ['claude-opus-4-8', 'anthropic', '#D97757'],
+    ['deepseek-v3.2', 'deepseek', '#4D6BFE'],
+    ['llama-3.3-70b', 'meta', '#0866FF'],
+    ['glm-5', 'zhipu', '#3859FF'],
+    ['kimi-k2.6', 'moonshot', '#16171B'],
+    ['minimax-m2.5', 'minimax', '#E1483B'],
+  ] as const)('a live do-ai "%s" model groups into "%s" and renders its brand colour', (id, brandKey, hex) => {
+    const fam = familyOf(doai(id))
+    expect(fam.id).toBe(brandKey)
+    const key = normalizeBrand(fam.logo)
     expect(key).toBe(brandKey)
-    if (key === null || key === 'zen' || key === 'hanzo') throw new Error('unreachable — asserted above')
+    if (key === null || key === 'zen' || key === 'hanzo') throw new Error('unreachable')
     expect(BRANDS[key].bg).toBe(hex)
-    expect(BRANDS[key].label).toBe(label)
   })
 })
