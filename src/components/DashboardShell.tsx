@@ -73,6 +73,7 @@ import {
   type ProductSubpage,
 } from '~/lib/products/registry'
 import { productSubpages, subpageWired } from '~/lib/products/match'
+import { ProductUpstreamNote } from '~/components/products/ProductUpstreamNote'
 import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
 import { usePins, useProductColors } from '~/lib/products/pins'
@@ -1123,6 +1124,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <XStack justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
             <YStack testID="product-content" width="100%" maxW={CONTENT_MAX} pt="$3" pb={80} $md={{ pt: '$4' }} $xl={{ pt: '$5', gap: '$5' }} gap="$4">
               {children}
+              <ProductUpstreamNote pathname={pathname} />
             </YStack>
           </XStack>
         </ScrollView>
