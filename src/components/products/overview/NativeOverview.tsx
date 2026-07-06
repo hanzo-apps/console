@@ -25,6 +25,7 @@ import {
   ArrowUpRight,
   BookOpen,
   Github,
+  GitFork,
   KeyRound,
   Plus,
   Settings as SettingsIcon,
@@ -293,6 +294,17 @@ export function NativeOverview({ entry }: { entry: CatalogEntry }) {
                   onPress={() => openExternal(githubUrl(entry.repo!))}
                 >
                   Source
+                </Button>
+              ) : null}
+              {entry.upstream ? (
+                <Button
+                  size="$2"
+                  chromeless
+                  icon={<GitFork size={14} />}
+                  iconAfter={<ArrowUpRight size={13} opacity={0.5} />}
+                  onPress={() => openExternal(entry.upstream!.url)}
+                >
+                  {`Forked from ${entry.upstream.name}`}
                 </Button>
               ) : null}
               <Button
