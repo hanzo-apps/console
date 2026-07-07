@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { categoryIsOpen, toggleCategory, type CategoryOpen } from './nav-accordion'
+import { categoryIsOpen, openChoice, toggleCategory, type CategoryOpen } from './nav-accordion'
 
 const ctx = (activeCategory: string | null, filtering = false) => ({ activeCategory, filtering })
 
@@ -34,22 +34,21 @@ describe('categoryIsOpen', () => {
   })
 })
 
-describe('toggleCategory', () => {
+describe('toggleCategory (single-open)', () => {
   it('opens an untouched (default-collapsed) category on first toggle', () => {
     expect(toggleCategory({}, 'AI')).toEqual({ AI: true })
   })
 
-  it('flips an explicit choice both ways', () => {
-    expect(toggleCategory({ AI: true }, 'AI')).toEqual({ AI: false })
+  it('closes the currently-open category (clears the choice → falls back to active)', () => {
+    expect(toggleCategory({ AI: true }, 'AI')).toEqual({})
+    // an explicit-false (legacy) entry is not "open", so toggling opens it
     expect(toggleCategory({ AI: false }, 'AI')).toEqual({ AI: true })
   })
 
-  it('leaves every OTHER category untouched (does not clobber other choices)', () => {
-    expect(toggleCategory({ Data: true, Web3: false }, 'AI')).toEqual({
-      Data: true,
-      Web3: false,
-      AI: true,
-    })
+  it('opening a category COLLAPSES whatever was open (only ONE at a time)', () => {
+    // Data was open; opening AI collapses Data — exactly one true key remains
+    expect(toggleCategory({ Data: true }, 'AI')).toEqual({ AI: true })
+    expect(toggleCategory({ Data: true, Web3: false }, 'AI')).toEqual({ AI: true })
   })
 
   it('is immutable — never mutates the input state', () => {
@@ -59,9 +58,17 @@ describe('toggleCategory', () => {
     expect(next).not.toBe(stored)
   })
 
-  it('round-trips: toggle twice returns to the original effective state', () => {
+  it('round-trips: opening then toggling the same category clears the choice', () => {
     const once = toggleCategory({}, 'Observe')
+    expect(once).toEqual({ Observe: true })
     const twice = toggleCategory(once, 'Observe')
-    expect(twice.Observe).toBe(false)
+    expect(openChoice(twice)).toBe(null)
+  })
+
+  it('never leaves two categories expanded (the single-open invariant)', () => {
+    // whatever the prior state, opening a category yields at most one true key
+    const next = toggleCategory({ Data: true, AI: true }, 'Web3')
+    expect(Object.values(next).filter(Boolean)).toHaveLength(1)
+    expect(next).toEqual({ Web3: true })
   })
 })
