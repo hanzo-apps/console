@@ -94,6 +94,7 @@ import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
 import { BrandLogo } from '~/components/ui/BrandLogo'
 import { OrgSwitcher } from '~/components/OrgSwitcher'
+import { leaveOrg } from '~/lib/org-scope'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 
 const EXPANDED_W = 264
@@ -481,7 +482,7 @@ function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavi
 
   if (collapsed) {
     return (
-      <YStack items="center" mb="$1">
+      <YStack items="center" gap="$1" mb="$1">
         <Popover open={open} onOpenChange={setOpen} placement="right-start">
           <Popover.Trigger asChild>
             <Button chromeless p="$0" width={40} height={40} aria-label={`${name} · account menu`}>
@@ -490,6 +491,15 @@ function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavi
           </Popover.Trigger>
           {menu}
         </Popover>
+        <Button
+          chromeless
+          p="$0"
+          width={40}
+          height={32}
+          icon={<LayoutGrid size={16} />}
+          onPress={() => leaveOrg()}
+          aria-label="All organizations — back to the org picker"
+        />
       </YStack>
     )
   }
@@ -517,9 +527,17 @@ function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavi
         </Popover.Trigger>
         {menu}
       </Popover>
-      {/* The current org, directly below the user — the working switch/create control. */}
-      <XStack px="$1">
+      {/* The current org, directly below the user — the working switch/create control,
+          with a Home affordance that de-scopes back to the org picker. */}
+      <XStack px="$1" items="center" gap="$1" justify="space-between">
         <OrgSwitcher />
+        <Button
+          size="$2"
+          chromeless
+          icon={<LayoutGrid size={15} />}
+          onPress={() => leaveOrg()}
+          aria-label="All organizations — back to the org picker"
+        />
       </XStack>
     </YStack>
   )
@@ -1071,6 +1089,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <ThemeToggle />
           </XStack>
           <OrgSwitcher />
+          <Button
+            justify="flex-start"
+            icon={<LayoutGrid size={16} />}
+            onPress={() => {
+              setMenuOpen(false)
+              leaveOrg()
+            }}
+          >
+            All organizations
+          </Button>
           <ScopeSwitcher />
           <Button
             justify="flex-start"
