@@ -113,6 +113,7 @@ import { SearchModule } from '~/components/products/SearchModule'
 import { TemplatesModule } from '~/components/products/TemplatesModule'
 import { PlansModule } from '~/components/products/PlansModule'
 import { BillingModule } from '~/components/products/BillingModule'
+import { AIAccountsModule } from '~/components/products/AIAccountsModule'
 import { FinanceModule } from '~/components/products/FinanceModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule, AuditModule } from '~/components/products/AdminModule'
@@ -466,6 +467,29 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: OverviewDashboard }],
+  },
+  {
+    // AI Accounts — link your AI provider accounts (OpenAI/Codex, Anthropic/Claude, …)
+    // and see UNIFIED usage across desktop/mobile/web/CLI in one place, beside the org's
+    // own Hanzo lane. Overview reads the merged `/ai-accounts/v1/usage` feed (external
+    // providers via the headless @hanzo/usage engine, Hanzo via the real commerce
+    // ledger); Accounts links a provider by pasting an API key / OAuth token / cookie
+    // header, sealed server-side (never in the browser). The `accounts` subpage lands
+    // `/ai-accounts/accounts` on the connect tab.
+    id: 'ai-accounts',
+    label: 'AI Accounts',
+    icon: Boxes,
+    description: 'Link your AI provider accounts and see unified usage across desktop, mobile, web, and CLI.',
+    gcp: 'Connected accounts',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [
+      { path: '', component: AIAccountsModule },
+      { path: ':tab', component: AIAccountsModule },
+    ],
+    subpages: [{ slug: 'accounts', label: 'Accounts' }],
   },
   {
     // admin.hanzo.ai OVERLORD board — the top-level god-view of EVERYTHING: every
