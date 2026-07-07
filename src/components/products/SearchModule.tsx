@@ -330,7 +330,7 @@ export function SearchModule({ params }: { params: Record<string, string> }) {
   // ONE module renders both the `/websearch` and `/crawl` products, so the base path
   // (and every tab/CTA push) must derive from the CURRENT route — a hardcoded
   // `/websearch` navigated the Crawl page's tabs away to Web Search.
-  const base = `/${pathname.split('/').filter(Boolean)[0] || 'websearch'}`
+  const base = `/${(pathname ?? '').split('/').filter(Boolean)[0] || 'websearch'}`
   const tab = resolveTab(params.tab)
   // Only Crawl has a docs page (`/docs/crawl`); Web Search has none → the docs root.
   const docsHref = base === '/crawl' ? `${config.docsUrl}/docs/crawl` : `${config.docsUrl}/docs`
