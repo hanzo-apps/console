@@ -1,32 +1,30 @@
 'use client'
 
 /**
- * Org gate — the console operates inside the user's organization.
+ * Org gate — the two-level org model's router. EVERY login lands org-LESS.
  *
- * Behaviours:
- *   1. isAdmin on a non-admin host → show a dismissible amber banner linking to
- *      admin.hanzo.ai (IAM/KMS ops), but render the full console. Admins use the
- *      console for all normal cloud work (models, API keys, AI, etc.).
- *   2. Any non-admin user in any org → render console normally.
- *   3. No org yet → first-run org onboarding.
+ * Route:
+ *   0. No org at all → first-run org onboarding (create/join).
+ *   1. Has org(s) but none ENTERED yet → the {@link OrgPicker} (the "Home" org
+ *      list). A one-org user still sees a one-card list and clicks in; a global
+ *      admin sees every org (masquerade). We never auto-enter.
+ *   2. An org is entered → the scoped console (children). A global admin on a
+ *      non-admin host also gets a dismissible banner linking to admin.hanzo.ai.
  *
- * Switching orgs at runtime is the OrgSwitcher's job; this gate only covers
- * the "no org" degenerate case and the admin hint.
- *
- * Last org: restored from localStorage on sign-in so the scope remembers where
- * the user left off.
+ * Entering/leaving an org is `org-scope`'s job (`enterOrg`/`leaveOrg`, which
+ * reload); in-shell quick-switching is the OrgSwitcher's. This gate only decides
+ * which of the three surfaces to show, read fresh on mount to avoid a flash.
  */
 import { useEffect, useState, type ReactNode } from 'react'
-import { Button, Text, XStack, YStack } from '@hanzo/gui'
+import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
-import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
 import { useSession } from '~/lib/auth/session'
 import { isGlobalAdminAccount } from '~/lib/auth/admin'
-import { currentOrg, setCurrentOrg } from '~/lib/org-scope'
+import { hasSelectedOrg } from '~/lib/org-scope'
 import { OrgOnboarding } from '~/components/OrgOnboarding'
+import { OrgPicker } from '~/components/OrgPicker'
 
-const LS_LAST_ORG = 'hz_last_org'
 const LS_BANNER_DISMISSED = 'hz_admin_banner_dismissed'
 
 function onAdminHost(): boolean {
@@ -80,43 +78,16 @@ export function OrgGate({ children }: { children: ReactNode }) {
   // A tenant org owner (e.g. Dave/maxpower) has owner!=='admin' → never global.
   const isGlobalAdmin = isGlobalAdminAccount(account)
   const [bannerDismissed, setBannerDismissed] = useState(true) // start hidden to avoid flash
+  // Which surface to show — resolved on mount (localStorage is client-only) so the
+  // picker vs. scoped-console decision never flashes the wrong one during hydration.
+  const [selected, setSelected] = useState<boolean | null>(null)
 
-  // Restore banner dismissed state and last org on mount
+  // Restore banner dismissed state + read the org selection on mount.
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const dismissed = localStorage.getItem(LS_BANNER_DISMISSED) === '1'
-    setBannerDismissed(dismissed)
-  }, [])
-
-  // Seed org scope on sign-in. A non-global admin can ONLY act in their OWN org —
-  // the server pins them there and every cross-tenant call 403s — so they are
-  // ALWAYS scoped to `owner`, ignoring a stale/switched org left in localStorage
-  // (e.g. a leftover `adnexus` from a prior global-admin switch, which would make
-  // the whole console 403 against a tenant they can't read). Only a global admin
-  // restores a previously-switched org.
-  useEffect(() => {
-    if (!owner || typeof window === 'undefined') return
-    if (!isGlobalAdmin) {
-      // Hard-pin to own org. If a stale cross-tenant scope was active, reset it and
-      // reload so every module refetches under the correct X-Org-Id. The reload is
-      // guarded on `currentOrg() !== owner`, so once the scope is right it never
-      // fires again — no loop.
-      localStorage.removeItem(LS_LAST_ORG)
-      if (currentOrg() !== owner) {
-        setCurrentOrg(owner)
-        window.location.reload()
-      }
-      return
-    }
-    const lastOrg = localStorage.getItem(LS_LAST_ORG)
-    if (currentOrg() === config.iamOrgName) {
-      const target = (lastOrg && lastOrg !== config.iamOrgName) ? lastOrg : owner
-      if (target !== config.iamOrgName) setCurrentOrg(target)
-    }
-    // Persist current org whenever it updates
-    const cur = currentOrg()
-    if (cur && cur !== config.iamOrgName) localStorage.setItem(LS_LAST_ORG, cur)
-  }, [owner, isGlobalAdmin])
+    setBannerDismissed(localStorage.getItem(LS_BANNER_DISMISSED) === '1')
+    setSelected(hasSelectedOrg())
+  }, [owner])
 
   const dismissBanner = () => {
     setBannerDismissed(true)
@@ -146,9 +117,25 @@ export function OrgGate({ children }: { children: ReactNode }) {
     return null
   }
 
-  // GLOBAL admin on a non-admin host: show dismissible banner, render console
-  // normally. Org-level admins (org owners) never see it — admin.hanzo.ai is
-  // cross-tenant ops they cannot use.
+  // Selection not read yet (pre-hydration) → a brief neutral loader, so the picker
+  // and the scoped console never flash in the wrong order.
+  if (selected === null) {
+    return (
+      <YStack flex={1} minH="100vh" items="center" justify="center">
+        <Spinner size="large" color="$color11" />
+      </YStack>
+    )
+  }
+
+  // Has org(s) but none entered → the org-less picker (the "Home" list). Every
+  // login lands here; a one-org user clicks their single card in.
+  if (!selected) {
+    return <OrgPicker />
+  }
+
+  // An org is entered → the scoped console. A GLOBAL admin on a non-admin host also
+  // gets the dismissible admin banner; org owners never see it (admin.hanzo.ai is
+  // cross-tenant ops they cannot use).
   const showBanner = isGlobalAdmin && !onAdminHost() && !bannerDismissed
 
   return (
