@@ -5,14 +5,17 @@
  * is unit-testable in isolation and the shell (`DashboardShell`) stays a thin
  * binding over it.
  *
- * The state is a sparse `Record<category, boolean>` of the user's EXPLICIT
- * choices, persisted per-user (account-backed) via `usePreferences` under
- * `NAV_OPEN_PREF`. A category with NO stored entry uses the honest default —
- * COLLAPSED — so a fresh user sees a tidy, un-overwhelming nav: 13 category
- * headers instead of ~120 flat rows, with only the active route's category open.
+ * SINGLE-OPEN accordion: at most ONE category is expanded at a time. The state is
+ * a sparse `Record<category, boolean>` holding the user's single EXPLICIT choice
+ * (at most one `true` key), persisted per-user (account-backed) via `usePreferences`
+ * under `NAV_OPEN_PREF`. With no explicit choice, the ACTIVE route's category is the
+ * one open section — so a fresh user sees a tidy nav (one section open, the rest
+ * collapsed), and expanding any category collapses whatever was open before. This is
+ * the "only ONE menu open at a time" behavior.
  */
 
-/** The user's explicit per-category open choices (sparse; a missing key = default). */
+/** The user's single explicit open choice (sparse; at most one `true` key; a missing
+ *  key = default). Kept as a Record for preference-shape compatibility. */
 export type CategoryOpen = Partial<Record<string, boolean>>
 
 /** Preference key (account-backed prefs) for the accordion open-state. */
@@ -22,13 +25,24 @@ export const NAV_OPEN_PREF = 'navCategoriesOpen'
  *  which would otherwise re-trigger memo/effect deps downstream). */
 export const EMPTY_OPEN: CategoryOpen = {}
 
+/** The single category the user has explicitly expanded, or `null` if none (in which
+ *  case the active route's category is the open one). Enforces the single-open
+ *  invariant on read, so a legacy multi-open pref still resolves to exactly one. */
+export function openChoice(stored: CategoryOpen): string | null {
+  for (const key of Object.keys(stored)) {
+    if (stored[key]) return key
+  }
+  return null
+}
+
 /**
- * Whether a category renders EXPANDED, given the user's stored choices + context:
+ * Whether a category renders EXPANDED (single-open), given the user's choice + context:
  *  - while FILTERING: always open, so a search match is never hidden behind a
  *    collapsed section (the group list is already narrowed to non-empty matches);
- *  - the ACTIVE route's category is always open, so the current page is visible
- *    even if the user had collapsed that category (navigating reveals it);
- *  - otherwise: the user's stored choice, defaulting to COLLAPSED (the tidy default).
+ *  - if the user has an explicit choice: EXACTLY that one category is open (every
+ *    other collapses — one at a time);
+ *  - otherwise (no choice): the ACTIVE route's category is the single open section,
+ *    so the current page is always visible.
  */
 export function categoryIsOpen(
   stored: CategoryOpen,
@@ -36,17 +50,18 @@ export function categoryIsOpen(
   ctx: { activeCategory: string | null; filtering: boolean },
 ): boolean {
   if (ctx.filtering) return true
-  if (category === ctx.activeCategory) return true
-  return stored[category] ?? false
+  const choice = openChoice(stored)
+  if (choice !== null) return category === choice
+  return category === ctx.activeCategory
 }
 
 /**
- * Toggle a category's stored open choice (pure + immutable — never mutates the
- * input). The default is collapsed, so the first toggle on an untouched category
- * OPENS it. Toggling the active category records a choice that takes effect once
- * the user navigates away (while active it stays visibly open — `categoryIsOpen`
- * keeps the current page's section revealed). Other categories are untouched.
+ * Toggle a category (pure + immutable — never mutates the input), enforcing the
+ * SINGLE-OPEN invariant: opening a category collapses every other one; closing the
+ * currently-open category clears the choice (falling back to the active route's
+ * section). So the sidebar never shows two expanded menus at once.
  */
 export function toggleCategory(stored: CategoryOpen, category: string): CategoryOpen {
-  return { ...stored, [category]: !(stored[category] ?? false) }
+  if (openChoice(stored) === category) return {} // close the open one → none chosen
+  return { [category]: true } // open ONLY this — collapses whatever was open
 }
