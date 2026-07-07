@@ -180,6 +180,10 @@ const nextConfig = {
   generateBuildId: () => resolveBuildId({ env: process.env, gitSha: readGitSha(__dirname), version: pkgVersion }),
   env: { NEXT_PUBLIC_APP_VERSION: pkgVersion },
   transpilePackages: guiPackages(),
+  // The headless usage engine (@hanzo/usage) is imported ONLY by the /ai-accounts
+  // server routes (nodejs runtime; it uses node:fs via its Node host). Keep it external
+  // so Node's ESM loader requires it at runtime rather than webpack bundling node built-ins.
+  serverExternalPackages: ['@hanzo/usage'],
   ...(EMBED
     ? { output: 'export', images: { unoptimized: true } }
     : { rewrites: aiSurfaceRewrites }),
