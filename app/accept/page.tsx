@@ -34,7 +34,7 @@ function Center({ children }: { children: React.ReactNode }) {
 function AcceptFlow() {
   const router = useRouter()
   const params = useSearchParams()
-  const token = params.get('t') ?? ''
+  const token = params?.get('t') ?? ''
 
   const [info, setInfo] = useState<Info>({ phase: 'loading' })
   const [password, setPassword] = useState('')

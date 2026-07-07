@@ -13,22 +13,43 @@
  * global admin → any org; a brand admin is PINNED to their own org by the proxy,
  * so passing it is always safe (the proxy ignores a brand admin's request to
  * cross orgs).
+ *
+ * Two-level model — the org VALUE (which org) and the SELECTION (has one been
+ * chosen yet) are orthogonal. Every login lands org-LESS on the picker: the
+ * selection flag is false, so `OrgGate` shows the org list even for a one-org
+ * user (they click in). Entering an org (`enterOrg`) sets the value AND the flag
+ * and drops into the scoped console; the sidebar "Home" affordance (`leaveOrg`)
+ * clears the flag to de-scope back to the picker. `currentOrg()` stays the pure
+ * value read that stamps `X-Org-Id` once entered.
  */
 import { config } from '~/config'
 
 const KEY = 'hanzo.console.org'
+/** Selection flag — '1' once an org has been explicitly ENTERED (picker → shell). */
+const SELECTED_KEY = 'hanzo.console.org.selected'
+
+/** Read a localStorage key, browser-only, null when blocked/SSR. */
+function read(key: string): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+/** Navigate to the console home, reloading so every module refetches under the
+ *  active scope. The ONE way the two-level model changes level (enter/leave). */
+function goHome(): void {
+  if (typeof window !== 'undefined' && typeof window.location?.assign === 'function') {
+    window.location.assign('/')
+  }
+}
 
 /** The org the console is currently scoped to (default: the brand org). */
 export function currentOrg(): string {
-  if (typeof window !== 'undefined') {
-    try {
-      const v = window.localStorage.getItem(KEY)
-      if (v) return v
-    } catch {
-      // localStorage blocked (private mode / SSR) — fall back to the brand org.
-    }
-  }
-  return config.iamOrgName
+  const v = read(KEY)
+  return v || config.iamOrgName
 }
 
 /** Switch the active org scope. Passing the brand org clears the override. */
@@ -48,14 +69,66 @@ export function isScopedAway(): boolean {
 }
 
 /**
+ * True once the user has EXPLICITLY entered an org (picker → scoped console).
+ * False on a fresh login — so `OrgGate` shows the org picker instead of
+ * auto-scoping, even for a one-org user. Orthogonal to the org VALUE.
+ */
+export function hasSelectedOrg(): boolean {
+  return read(SELECTED_KEY) === '1'
+}
+
+/**
+ * Enter an org from the picker: set the active scope AND mark it selected, then
+ * drop into the scoped console home (reload refetches every module under the new
+ * `X-Org-Id`). This is the "click an org card" transition.
+ */
+export function enterOrg(org: string): void {
+  if (!org) return
+  setCurrentOrg(org)
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(SELECTED_KEY, '1')
+    } catch {
+      // Storage blocked — selection can't persist; the picker will reappear.
+    }
+  }
+  goHome()
+}
+
+/**
+ * Leave the current org (the sidebar "Home"/back affordance): clear the selection
+ * so `OrgGate` returns to the picker, and reset the scope to the brand default so
+ * no stale `X-Org-Id` lingers. Re-enter picks a fresh org.
+ */
+export function leaveOrg(): void {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(SELECTED_KEY)
+    } catch {
+      // Storage blocked — nothing to clear.
+    }
+  }
+  setCurrentOrg(config.iamOrgName) // clears the override
+  goHome()
+}
+
+/**
  * Switch the active org scope and hard-reload so every module refetches under the
- * new `X-Org-Id`. The ONE way the console changes org (used by the OrgSwitcher and
- * the command palette) — switching to the current org is a no-op.
+ * new `X-Org-Id`. The in-shell quick-switch (OrgSwitcher / command palette): the
+ * user is already ENTERED, so keep the selection flag set. Switching to the
+ * current org is a no-op.
  */
 export function switchOrg(org: string): void {
   if (!org || org === currentOrg()) return
   setCurrentOrg(org)
-  if (typeof window !== 'undefined') window.location.reload()
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(SELECTED_KEY, '1')
+    } catch {
+      // Storage blocked — the switch still takes effect for this load.
+    }
+    window.location.reload()
+  }
 }
 
 /** Case-insensitive filter over org name + display name (the switcher search). */
