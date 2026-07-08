@@ -18,6 +18,7 @@ import { Route, Check, Copy, BookOpen, Newspaper, Sparkles } from '@hanzogui/luc
 
 import { config } from '~/config'
 import { AiAccountsApi } from '~/lib/api/ai-accounts'
+import { resolveRouting, type OrgRoutingDefaults } from '~/lib/products/ai-accounts'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { FieldSwitch } from '~/components/ui/Field'
@@ -59,15 +60,22 @@ function CodeBlock({ code }: { code: string }) {
   )
 }
 
+/** What the tab renders once loaded: the user's tri-state cookie override + the
+ *  server-driven org defaults (null when the defaults endpoint was unreachable). */
+type Routing = { pref: boolean | null; org: OrgRoutingDefaults | null }
+
 export function AIAccountsRouting(_props: { params: Record<string, string> }) {
   const toast = useToast()
-  const [state, setState] = useState<Async<boolean>>({ phase: 'loading' })
+  const [state, setState] = useState<Async<Routing>>({ phase: 'loading' })
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
-    AiAccountsApi.settings()
-      .then((r) => setState({ phase: 'ready', data: r.settings.routingEnabled }))
+    // The cookie preference is the required read; the org defaults are fail-soft
+    // (routingDefaults never throws — it resolves null on an older cloud-api / error),
+    // so an unreachable defaults endpoint degrades to the preference alone, not an error.
+    Promise.all([AiAccountsApi.settings(), AiAccountsApi.routingDefaults()])
+      .then(([s, org]) => setState({ phase: 'ready', data: { pref: s.settings.routingEnabled, org } }))
       .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [])
 
@@ -79,7 +87,11 @@ export function AIAccountsRouting(_props: { params: Record<string, string> }) {
     setBusy(true)
     try {
       const r = await AiAccountsApi.saveSettings({ routingEnabled: next })
-      setState({ phase: 'ready', data: r.settings.routingEnabled })
+      setState((prev) =>
+        prev.phase === 'ready'
+          ? { phase: 'ready', data: { ...prev.data, pref: r.settings.routingEnabled } }
+          : prev,
+      )
       toast.success(next ? 'Smart routing enabled' : 'Smart routing disabled')
     } catch (e) {
       toast.error('Could not save preference', e instanceof Error ? e.message : undefined)
@@ -88,7 +100,9 @@ export function AIAccountsRouting(_props: { params: Record<string, string> }) {
     }
   }
 
-  const enabled = state.phase === 'ready' ? state.data : false
+  const resolved =
+    state.phase === 'ready' ? resolveRouting(state.data.pref, state.data.org) : { enabled: false, toggleDisabled: false, orgDefault: null }
+  const { enabled, toggleDisabled, orgDefault } = resolved
 
   return (
     <>
@@ -114,11 +128,25 @@ export function AIAccountsRouting(_props: { params: Record<string, string> }) {
               </XStack>
               <XStack items="center" gap="$2">
                 <Text fontSize="$2" color="$color11">
-                  {enabled ? 'Enabled' : 'Disabled'}
+                  {toggleDisabled ? 'Disabled for your organization' : enabled ? 'Enabled' : 'Disabled'}
                 </Text>
-                <FieldSwitch checked={enabled} onChange={toggle} disabled={busy} />
+                <FieldSwitch checked={enabled} onChange={toggle} disabled={busy || toggleDisabled} />
               </XStack>
             </XStack>
+
+            {/* The org-level default an admin set — honest about where the default comes
+                from. Shown only when the defaults endpoint answered; on an older cloud-api
+                (org === null → orgDefault null, not disabled) this line is simply absent. */}
+            {toggleDisabled ? (
+              <Text fontSize="$2" color="$color10">
+                Smart routing is turned off for your organization by your admin.
+              </Text>
+            ) : orgDefault !== null ? (
+              <Text fontSize="$2" color="$color10">
+                Organization default: {orgDefault ? 'On' : 'Off'} — set by your admin. Your choice here
+                overrides it for you.
+              </Text>
+            ) : null}
 
             <Text fontSize="$3" color="$color11" maxW={720}>
               With <Text style={{ fontFamily: 'monospace' }}>model: &quot;auto&quot;</Text>, each request is routed to the

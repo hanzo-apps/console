@@ -11,7 +11,7 @@ import type { UsageSnapshot } from '@hanzo/usage'
 
 import { restGet, restPost, restPut, restDelete } from './client'
 import type { CloudUsageOverview } from './usage'
-import type { ConnectMode } from '~/lib/products/ai-accounts'
+import type { ConnectMode, OrgRoutingDefaults } from '~/lib/products/ai-accounts'
 
 const base = (): string => (typeof window !== 'undefined' ? window.location.origin : '')
 const url = (p: string): string => `${base()}/ai-accounts/v1/${p.replace(/^\/+/, '')}`
@@ -22,8 +22,9 @@ export type PublicAccount = { id: string; mode: ConnectMode; baseUrl?: string; c
 export type ProviderUsage = { id: string; ok: boolean; error?: string; usage?: UsageSnapshot }
 /** The Overview payload: external-provider snapshots + the org's own Hanzo commerce lane. */
 export type AccountsUsage = { providers: ProviderUsage[]; hanzo: CloudUsageOverview | null }
-/** Non-secret org/user preferences (the `model: "auto"` smart-routing default, …). */
-export type AiAccountsSettings = { routingEnabled: boolean }
+/** Non-secret org/user preferences — `routingEnabled` is the tri-state user override
+ *  of the org smart-routing default: `true` on, `false` off, `null` follow org default. */
+export type AiAccountsSettings = { routingEnabled: boolean | null }
 
 export const AiAccountsApi = {
   /** The masked list of connected accounts. */
@@ -39,6 +40,26 @@ export const AiAccountsApi = {
   usage: (): Promise<AccountsUsage> => restGet(url('usage')),
   /** The org/user smart-routing preference. */
   settings: (): Promise<{ settings: AiAccountsSettings }> => restGet(url('settings')),
-  /** Persist the smart-routing preference. */
-  saveSettings: (body: AiAccountsSettings): Promise<{ settings: AiAccountsSettings }> => restPut(url('settings'), body),
+  /** Persist the smart-routing preference (an explicit on/off override). */
+  saveSettings: (body: { routingEnabled: boolean }): Promise<{ settings: AiAccountsSettings }> =>
+    restPut(url('settings'), body),
+  /**
+   * The server-driven org routing defaults (admin-set, via cloud-api). FAIL-SOFT: `null`
+   * on any error — an older cloud-api that 404s the endpoint, a network failure, or a
+   * malformed body — so the tab falls back to the cookie preference alone, exactly as
+   * before this endpoint existed. Never throws.
+   */
+  routingDefaults: async (): Promise<OrgRoutingDefaults | null> => {
+    try {
+      const d = await restGet<{ auto_routing_active?: unknown; default_session_routing?: unknown }>(
+        url('routing-defaults'),
+      )
+      return {
+        autoRoutingActive: d?.auto_routing_active === true,
+        defaultSessionRouting: d?.default_session_routing === true,
+      }
+    } catch {
+      return null
+    }
+  },
 }
