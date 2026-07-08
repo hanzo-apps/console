@@ -14,7 +14,8 @@
  * The secret is returned ONLY by `create()` (show once). `status()` reports
  * existence + the public prefix, never secret material.
  */
-import { ApiError } from './client'
+import { ApiError, originV1Url } from './client'
+import { IS_EMBED } from '~/lib/embed'
 
 export type KeyStatus = {
   hasKey: boolean
@@ -23,8 +24,22 @@ export type KeyStatus = {
   createdAt?: string
 }
 
-/** The console's OWN same-origin key route (`<origin>/keys`); root-relative on the server. */
-const keysUrl = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/keys` : '/keys')
+/**
+ * The console's OWN same-origin key route (`<origin>/keys`); root-relative on the server.
+ *
+ * In the go:embed console (`IS_EMBED`) the `app/keys/route.ts` handler is stripped (no
+ * Next server → the request falls through to the SPA shell), and the cloud binary serves
+ * the canonical `hk-` key surface at `/v1/console/keys` (clients/console/console.go — GET
+ * status, POST mint, DELETE revoke), resolving the caller from the first-party IAM
+ * session cookie. So the embed addresses `<origin>/v1/console/keys` directly. Non-embed
+ * hosts keep the Next `/keys` proxy (confidential mint client).
+ */
+const keysUrl = (): string =>
+  IS_EMBED
+    ? originV1Url('console/keys')
+    : typeof window !== 'undefined'
+      ? `${window.location.origin}/keys`
+      : '/keys'
 
 async function keysReq<T>(method: 'GET' | 'POST' | 'DELETE'): Promise<T> {
   let res: Response
