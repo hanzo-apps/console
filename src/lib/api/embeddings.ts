@@ -3,13 +3,13 @@
  *
  * It composes existing clients (no parallel transport): collections are knowledge
  * STORES (`StoreApi`), models are the gateway catalog (`CloudModelApi`), and the
- * remaining calls reach the cloud `/v1` through the console's OWN `/cloud` user-bearer
+ * remaining calls reach the cloud `/v1` through the console's OWN `/v1` user-bearer
  * proxy (the live ingress does not rewrite bare `/v1/*`). Each call uses the transport
  * its endpoint speaks:
  *   - envelope (`{status,msg,data}`): get-stores, get-cloud-usages, get-files,
- *     add-store, docs/ingest, index            → `cloudGet`/`cloudPost` (→ /cloud)
+ *     add-store, docs/ingest, index            → `cloudGet`/`cloudPost` (→ /v1)
  *   - raw JSON: search (`{hits}`), search/stats (`{documentCount,…}`) → `restGet`/`restPost`
- *     on `cloudProxyV1Url` (→ /cloud)
+ *     on `cloudProxyV1Url` (→ /v1)
  *   - OpenAI gateway (Bearer-only): embeddings  → the keyless `/ai` proxy (`originV1Url`)
  *
  * Every call throws `ApiError` (with status) on failure so callers render an

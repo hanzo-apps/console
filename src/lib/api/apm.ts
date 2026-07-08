@@ -2,7 +2,7 @@
  * APM / Infrastructure / Exceptions / Dashboards API — the SigNoz-flagship
  * observability surface, over the REAL Hanzo o11y (SigNoz) runtime.
  *
- * Transport: the same-origin user-bearer `/cloud` proxy (`originV1Url`) — the
+ * Transport: the same-origin user-bearer `/v1` proxy (`originV1Url`) — the
  * browser sends only its session cookie, the server route mints a short-lived IAM
  * bearer and forwards it, and cloud-api reverse-proxies `/v1/o11y/*` to the o11y
  * Deployment, which internally rewrites `/v1/o11y/*` → its `/api/*` controllers.

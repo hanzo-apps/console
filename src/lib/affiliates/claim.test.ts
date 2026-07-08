@@ -5,7 +5,7 @@ import { stashAffiliateCode, attributeAffiliateOnce, __resetAffiliateGuard } fro
 /**
  * Affiliate capture + attribute — the signup-capture half. Uses a fetch stub (the
  * real client path, like referrals claim.test.ts) so the test proves the ACTUAL POST
- * to `/cloud/v1/affiliates/attribute`, plus the localStorage capture + the
+ * to `/v1/affiliates/attribute`, plus the localStorage capture + the
  * once-per-session guards.
  */
 const ORIGIN = 'https://console.hanzo.ai'
@@ -65,12 +65,12 @@ describe('affiliate capture + attribute', () => {
     expect(ls.getItem('hz_aff')).toBeNull()
   })
 
-  it('attributes a stashed code once, POSTing to the /cloud proxy, then consumes it', async () => {
+  it('attributes a stashed code once, POSTing to the /v1 bearer BFF, then consumes it', async () => {
     ls.setItem('hz_aff', 'acme')
     attributeAffiliateOnce('orgB')
     await flush()
     expect(fetched).toHaveLength(1)
-    expect(fetched[0].url).toBe(`${ORIGIN}/cloud/v1/affiliates/attribute`)
+    expect(fetched[0].url).toBe(`${ORIGIN}/v1/affiliates/attribute`)
     expect(fetched[0].method).toBe('POST')
     expect(fetched[0].body).toContain('acme')
     expect(ls.getItem('hz_aff')).toBeNull() // consumed on success

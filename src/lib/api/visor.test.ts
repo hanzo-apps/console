@@ -123,12 +123,12 @@ describe('compute catalog normalizers (real visor shapes)', () => {
 })
 
 describe('VisorApi routes each call to the correct server proxy (Problem-1 regression)', () => {
-  // ROOT CAUSE of "Accelerators 0 available to launch": the console host's ingress
-  // routes a bare `/v1/*` straight to the gateway (→ cloud-api), BYPASSING Next's
-  // rewrites — so `/v1/gpu-sizes` hit cloud-api (no visor catalog route there) → empty.
-  // The catalog MUST address the `/vm` (visor) proxy and machines the `/cloud` proxy
-  // EXPLICITLY. This test mocks fetch and pins the exact URL each call hits — the guard
-  // that would have caught the ingress-bypass bug (mirrors the v8.4.34 wiring lesson).
+  // ROOT CAUSE of "Accelerators 0 available to launch": the accelerator CATALOG lives on
+  // VISOR (a distinct backend), NOT cloud-api — cloud-api serves no visor catalog route,
+  // and its `/v1/gpus` is a different (per-org inventory) shape. So the catalog MUST
+  // address the `/vm` (visor) proxy, while machines ride the cloud `/v1` bearer BFF. This
+  // test mocks fetch and pins the exact URL each call hits — the guard that would have
+  // caught the wrong-backend bug (mirrors the v8.4.34 wiring lesson).
   const seen: { url: string; method: string; body?: string }[] = []
   const stubFetch = (body: unknown) =>
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
@@ -148,14 +148,14 @@ describe('VisorApi routes each call to the correct server proxy (Problem-1 regre
     for (const s of seen) expect(s.url).toContain('/vm/v1/')
   })
 
-  it('machines list uses the /cloud user-bearer proxy (org from the Bearer owner)', async () => {
+  it('machines list uses the /v1 user-bearer proxy (org from the Bearer owner)', async () => {
     stubFetch({ machines: [] })
     await VisorApi.machines()
     expect(seen[0].url).toBe(cloudProxyV1Url('machines'))
-    expect(seen[0].url).toContain('/cloud/v1/machines')
+    expect(seen[0].url).toContain('/v1/machines')
   })
 
-  it('launch POSTs a real (dryRun:false) launch to /cloud/v1/machines/launch', async () => {
+  it('launch POSTs a real (dryRun:false) launch to /v1/machines/launch', async () => {
     stubFetch({ status: 'ok', data: { id: 'm1' } })
     await VisorApi.launch({ size: 'gpu-h100x1-80gb', region: 'nyc1', name: 'box' })
     expect(seen[0].url).toBe(cloudProxyV1Url('machines/launch'))
@@ -163,14 +163,14 @@ describe('VisorApi routes each call to the correct server proxy (Problem-1 regre
     expect(JSON.parse(seen[0].body as string)).toMatchObject({ size: 'gpu-h100x1-80gb', dryRun: false })
   })
 
-  it('quote POSTs a dryRun:true (no-spend) launch to /cloud/v1/machines/launch', async () => {
+  it('quote POSTs a dryRun:true (no-spend) launch to /v1/machines/launch', async () => {
     stubFetch({ status: 'ok', data: { priceHourly: 2.5 } })
     await VisorApi.quote({ size: 'gpu-h100x1-80gb', region: 'nyc1', name: 'q' })
     expect(seen[0].url).toBe(cloudProxyV1Url('machines/launch'))
     expect(JSON.parse(seen[0].body as string)).toMatchObject({ dryRun: true })
   })
 
-  it('terminate DELETEs the machine on the /cloud proxy', async () => {
+  it('terminate DELETEs the machine on the /v1 bearer BFF', async () => {
     stubFetch({})
     await VisorApi.terminate('abc-123')
     expect(seen[0].url).toBe(cloudProxyV1Url('machines/abc-123'))

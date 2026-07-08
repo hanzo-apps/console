@@ -1,7 +1,7 @@
 /**
  * Native Analytics — the per-org analytics module over the unified ClickHouse
  * warehouse (datastore), read through cloud-api `/v1/analytics/*` via the same-origin
- * `/cloud` bearer proxy, so every metric is scoped to the caller's own IAM org
+ * `/v1` bearer proxy, so every metric is scoped to the caller's own IAM org
  * (server-authoritative, from the Bearer owner) — the browser holds no datastore
  * credential.
  *

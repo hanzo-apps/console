@@ -1,11 +1,10 @@
 /**
  * Store admin API — the casibase `*-store(s)` surface on the cloud binary. These heads
- * REQUIRE a Bearer, and on the live console ingress `/v1/*` reaches the gateway-fronted
- * cloud binary directly (the `next.config` rewrite never runs), so a bare `/v1/get-stores`
- * is cookie-only and 401s → a FALSE "session expired" for a signed-in user. So every call
- * routes through the console's OWN `/cloud` user-bearer proxy explicitly (`cloudGet`/
- * `cloudPost`), which mints a short-lived user token; commerce/casibase scopes the org
- * from the Bearer owner. The heads are allow-listed in `proxy-allow.ts` (CLOUD_HEADS).
+ * REQUIRE a Bearer: a cookie-only `/v1/get-stores` 401s → a FALSE "session expired" for a
+ * signed-in user. So every call goes through the console's OWN same-origin `/v1`
+ * user-bearer BFF (`cloudGet`/`cloudPost` → the `app/v1/[...path]` catch-all), which mints
+ * a short-lived user token; commerce/casibase scopes the org from the Bearer owner. The
+ * heads are allow-listed in `proxy-allow.ts` (CLOUD_HEADS).
  */
 import { cloudGet, cloudPost, idOf } from './client'
 import { type Store } from './types'

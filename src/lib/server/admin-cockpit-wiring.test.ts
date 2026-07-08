@@ -7,7 +7,7 @@ import { CLOUD_HEADS, allowCloudSurface } from '~/lib/server/proxy-allow'
  * The operator-cockpit wiring is a trust boundary: the fleet management surfaces
  * (customers/revenue/analytics + the admin enablement set) must ride the GLOBAL-
  * ADMIN-gated aggregate proxy, and the customer self-service enablement (opt-in)
- * must ride the per-tenant /cloud proxy — never the reverse, and never widening the
+ * must ride the per-tenant /v1 bearer BFF — never the reverse, and never widening the
  * least-privilege allow-lists to reach iam/kms.
  */
 describe('operator cockpit wiring', () => {
@@ -28,7 +28,7 @@ describe('operator cockpit wiring', () => {
     expect(allowAdminSurface('v1/admin/iam/get-users')).toBe(false)
   })
 
-  it('the customer self-service enablement rides the per-tenant /cloud proxy', () => {
+  it('the customer self-service enablement rides the per-tenant /v1 bearer BFF', () => {
     expect(CLOUD_HEADS).toContain('enablement')
     expect(allowCloudSurface('v1/enablement')).toBe(true)
     expect(allowCloudSurface('v1/enablement/optin')).toBe(true)

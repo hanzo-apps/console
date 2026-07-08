@@ -2,7 +2,7 @@
 
 /**
  * Customer machines — a tenant's OWN compute, read from the native `/v1/machines`
- * surface via the user-bearer `/cloud` proxy (`VisorApi.machines()`, visor-backed,
+ * surface via the user-bearer `/v1` proxy (`VisorApi.machines()`, visor-backed,
  * org resolved from the Bearer owner). This is what a non-admin (a customer like a
  * demo user) sees under Compute › Machines: their real machines with a launch flow
  * (`LaunchDrawer`) and a terminate action (`DELETE /v1/machines/:id`), or a graceful

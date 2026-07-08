@@ -4,7 +4,7 @@
  * Templates — the Hanzo starter-kit gallery (deployable app/site scaffolds,
  * `hanzoai/gallery`) browsed natively in-console over the REAL cloud
  * `/v1/templates` catalog (`TemplatesApi` → `originV1Url('templates')` → the
- * console's own `/cloud` bearer proxy).
+ * console's own `/v1` bearer proxy).
  *
  * Each card leads with a visual PREVIEW banner: the gallery screenshot
  * (`t.preview`) when it loads, else a branded gradient tile (stable per category

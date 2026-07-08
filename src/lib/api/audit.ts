@@ -1,7 +1,7 @@
 /**
  * Typed client for the ORG-SCOPED audit trail (cloud `clients/auditlog`), called
  * SAME-ORIGIN with NO prefix (`originV1Url('audit')`). The next.config rewrite
- * terminates it at the console's `/cloud` user-bearer proxy, which mints a
+ * terminates it at the console's `/v1` user-bearer proxy, which mints a
  * short-lived user Bearer and forwards to cloud-api; the org is PINNED
  * server-authoritatively from the Bearer owner claim (a client `org` param is
  * ignored), so an org admin reads ONLY their OWN org's security events.

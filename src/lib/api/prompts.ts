@@ -5,7 +5,7 @@
  * The DOCUMENTED contract is the cloud `/v1/prompts` surface (cloud
  * `clients/prompts`), called SAME-ORIGIN with NO prefix (`originV1Url('prompts')`
  * → `<origin>/v1/prompts`, the CTO one-endpoint-form). `next.config.mjs` rewrites
- * the `prompts` head to the console's OWN user-bearer proxy (`app/cloud`), which
+ * the `prompts` head to the console's OWN user-bearer proxy (`app/v1`), which
  * mints a short-lived user-bound IAM token server-side and forwards it; the cloud
  * backend resolves the org from the token's `owner` claim, so every read is
  * org-scoped server-side and NO credential reaches the browser. This is the SAME

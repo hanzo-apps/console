@@ -4,7 +4,7 @@
  * Kubernetes — the org's UNIFIED COMPUTE FLEET in one place.
  *
  * ONE surface reads the two live, tenant-scoped cloud sources (org resolved from
- * the Bearer owner by the same-origin `/cloud` proxy):
+ * the Bearer owner by the same-origin `/v1` proxy):
  *   - `GET /v1/clusters` — the org's clusters, managed (Visor-provisioned DOKS) and
  *     attached BYO ones MERGED, each with its kind, node count, status, and the GPU
  *     inventory a BYO cluster reported at attach (`nvidiaGpu`/`amdGpu`).

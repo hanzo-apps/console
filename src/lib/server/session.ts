@@ -11,7 +11,7 @@
  * for the signed-in user — a first-party confidential-client (`hanzo-console`) grant
  * WITH `offline_access`, so IAM returns an access token AND a rotating, revocable
  * refresh token. This is the PREFERRED identity source for the AuthGate (via
- * /auth/session) and the /cloud bearer-proxy (via resolveUser), silently refreshed
+ * /auth/session) and the /v1 bearer-proxy (via resolveUser), silently refreshed
  * (proactively before expiry + reactively on a 401) via `grant_type=refresh_token`.
  * The casibase cookie stays exactly as-is underneath as the graceful FALLBACK.
  *
