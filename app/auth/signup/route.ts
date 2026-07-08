@@ -8,20 +8,25 @@
  *   2. the user as that org's ADMIN (IAM hashes the password server-side).
  * The client then signs in with the same credentials and lands as admin — no
  * separate onboarding step (IAM users always belong to an org, so "create then
- * onboard" is not possible against casibase; the org is minted here).
+ * onboard" is not possible against casibase; the org is minted here). The new user's
+ * `owner` is their OWN personal org (never the reserved `admin` org), so a public
+ * signup is always a self-service customer org — never a platform SuperAdmin.
  *
  * Email uniqueness without a global user-lookup endpoint: the org slug is a
  * DETERMINISTIC, injective function of the email (`personalOrgFromEmail`), so a
  * repeat signup with the same email resolves to the same slug and is caught by
- * `getOrganization` (409) — two different emails never false-collide.
+ * `getOrganization` (409); two different emails never false-collide.
  *
- * Honest states: 501 when the IAM client is unwired, 400 on bad input, 409 when
- * the account already exists, 502 on an IAM failure.
- *
- * NOTE (hardening, flagged not done here): this endpoint creates accounts from the
- * open internet. It validates input but has NO captcha / rate-limit / email-
- * verification gate yet — those are follow-ups (email verification especially
- * would add friction the go-live conversion goal explicitly avoids).
+ * PUBLIC-LAUNCH ABUSE PROTECTIONS (this route mints an account + org + a $5 welcome
+ * grant from the open internet, so the open path is guarded, in order):
+ *   - same-origin CSRF gate (a scripted cross-origin signup is refused),
+ *   - Turnstile bot wall (`verifyTurnstile`, enforced when the secret is provisioned),
+ *   - per-IP sliding-window rate limit (`signupLimiter`, default 5/IP/hr),
+ *   - disposable-email block (`isDisposableEmail`).
+ * On success the account is JOINED to the brand waitlist (best-effort) so it holds a
+ * position immediately — product access is then waitlist-gated (see WaitlistGate),
+ * NOT signup. Honest states: 501 unwired, 400 bad input, 403 captcha, 409 exists,
+ * 429 rate-limited, 502 IAM failure.
  */
 import { createHash } from 'node:crypto'
 import { type NextRequest, NextResponse } from 'next/server'
@@ -36,14 +41,17 @@ import {
   personalOrgFromEmail,
   validateSignup,
 } from '~/lib/server/onboarding'
+import { isDisposableEmail } from '~/lib/server/disposable'
 import { csrfRefusal } from '~/lib/server/bearer-proxy'
+import { clientIp, signupLimiter } from '~/lib/server/rate-limit'
+import { verifyTurnstile } from '~/lib/server/turnstile'
+import { joinWaitlist } from '~/lib/server/waitlist'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  // Same-origin gate: this route creates accounts from the open internet with no
-  // captcha/rate-limit yet, so refuse cross-origin scripted signups (a mild anti-abuse
-  // measure; the console's own signup form is same-origin).
+  // Same-origin gate: the console's own signup form is same-origin; refuse scripted
+  // cross-origin signups before doing any work.
   const csrf = csrfRefusal(req)
   if (csrf) return csrf
 
@@ -54,9 +62,33 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
-  const body = (await req.json().catch(() => ({}))) as { email?: string; password?: string }
+  const body = (await req.json().catch(() => ({}))) as {
+    email?: string
+    password?: string
+    turnstileToken?: string
+    ref?: string
+  }
   const v = validateSignup(body.email ?? '', body.password ?? '')
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 })
+  if (isDisposableEmail(v.email)) {
+    return NextResponse.json({ error: 'Please use a non-disposable email address.' }, { status: 400 })
+  }
+
+  // Bot wall (no-op until Turnstile is provisioned) BEFORE the per-IP throttle, so a
+  // solved challenge is what a legitimate user spends their attempts on.
+  const ip = clientIp(req.headers)
+  const captcha = await verifyTurnstile((body.turnstileToken ?? '').trim(), ip)
+  if (!captcha.ok) {
+    return NextResponse.json({ error: 'Captcha verification failed. Please try again.' }, { status: 403 })
+  }
+
+  // Per-IP rate limit — the open-internet spam/cost floor.
+  if (!signupLimiter.allow(`signup:${ip}`)) {
+    return NextResponse.json(
+      { error: 'Too many sign-up attempts. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': '3600' } },
+    )
+  }
 
   const brand = BRANDS[brandFromHost(req.headers.get('host'))]
   const brandOrg = brand.id // hanzo/lux/zoo/pars — cloned for password/locale policy
@@ -92,12 +124,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // Best-effort $5 welcome grant so the new account can chat immediately (the
-  // onboarding paywall fix). Uses the commerce SERVICE-token `grant-starter` path
-  // (the new personal-org user can't be resolved by the confidential console client,
-  // so a user-bound bearer would fail). NEVER blocks signup: `grantWelcomeCredit`
-  // swallows its own errors, and the grant is idempotent — the read-path self-heal
-  // (`/billing/v1/me/welcome` on first authenticated load) re-lands it if this missed.
+  // onboarding paywall fix). NEVER blocks signup: `grantWelcomeCredit` swallows its
+  // own errors, and the grant is idempotent (the read-path self-heal re-lands it).
   await grantWelcomeCredit(orgSlug)
+
+  // Join the brand waitlist so the account holds a POSITION immediately — product
+  // access is waitlist-gated (WaitlistGate), and a `?ref=` from the landing link
+  // credits the referrer's position. Best-effort, service-authed; never blocks signup.
+  await joinWaitlist(v.email, { host: req.headers.get('host'), referrerCode: (body.ref ?? '').trim() })
 
   return NextResponse.json({ ok: true, org: orgSlug })
 }
