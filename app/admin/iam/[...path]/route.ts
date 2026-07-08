@@ -31,6 +31,10 @@ const GET_SEGMENTS = new Set([
   'get-provider',
   'get-roles',
   'get-records',
+  // Waitlist approval queue (iam#104) — the Pending-Users board reads this. The
+  // /admin/iam gate is already global-admin-only, matching IAM's own
+  // GetPendingUsers auth (global admin or org admin). REUSED, not rebuilt.
+  'get-pending-users',
 ])
 
 /**
@@ -61,6 +65,10 @@ const POST_SEGMENTS = new Set([
   'add-organization',
   'update-organization',
   'delete-organization',
+  // Waitlist approval actions (iam#104) — approve/reject a pending user. Body is
+  // `{id:"owner/name"}`; the global-admin gate + forwardIam's owner scoping apply.
+  'approve-user',
+  'reject-user',
 ])
 
 /**
