@@ -111,7 +111,7 @@ export function pruneConfig(c: AgentConfig): Partial<AgentConfig> | undefined {
 }
 
 /**
- * The clean create body for `POST /cloud/v1/agents`: name is trimmed (required);
+ * The clean create body for `POST /v1/agents`: name is trimmed (required);
  * every other field is trimmed and OMITTED when empty, and tools are normalized —
  * so the backend never stores a blank model/description/prompt or a `[]` tools
  * key it didn't need. PURE.

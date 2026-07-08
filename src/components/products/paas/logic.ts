@@ -91,7 +91,7 @@ export function orderDomains(domains: PaasDomain[]): PaasDomain[] {
 
 export type PaasErrorKind = 'signin' | 'forbidden' | 'unavailable' | 'error'
 
-/** Classify a `/cloud`-proxy error honestly (a signed-in user is never told to sign in). */
+/** Classify a `/v1`-proxy error honestly (a signed-in user is never told to sign in). */
 export function classifyPaasError(e: unknown): { kind: PaasErrorKind; message: string } {
   const status = e instanceof ApiError ? e.status : 0
   const message = e instanceof Error ? e.message : String(e)

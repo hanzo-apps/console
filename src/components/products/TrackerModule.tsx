@@ -9,7 +9,7 @@
  * is the proof view, and a Board toggle renders the SAME data as five columns.
  *
  * Every read/write is same-origin and keyless (`TrackerApi` → `<origin>/v1/tracker`,
- * rewritten to the console's user-bearer `/cloud` proxy), so every row is org-scoped
+ * rewritten to the console's user-bearer `/v1` proxy), so every row is org-scoped
  * SERVER-SIDE and no credential reaches the browser. Honest by construction: rows are
  * the real `/v1/tracker` payload; a failed load surfaces `ErrorState`, a genuinely
  * empty org shows `EmptyState` — never a fabricated project or issue.

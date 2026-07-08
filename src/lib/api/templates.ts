@@ -2,9 +2,9 @@
  * Templates API — the Hanzo starter-kit gallery (deployable app/site scaffolds,
  * source of truth `hanzoai/gallery`), served READ-ONLY by cloud `clients/templates`
  * at `/v1/templates`. Reached same-origin via `originV1Url('templates')` →
- * next.config rewrites the `templates` head to the console's own `/cloud` bearer
+ * next.config rewrites the `templates` head to the console's own `/v1` bearer
  * proxy, so dev and prod share ONE path (the catalog is public, but routing it
- * through /cloud keeps the surface uniform with prompts/agents).
+ * through /v1 keeps the surface uniform with prompts/agents).
  *
  * Routes (cloud `clients/templates/templates.go`):
  *   - GET /v1/templates          list the starter-kit catalog

@@ -1,8 +1,8 @@
 /**
- * LIVE probe of the o11y (SigNoz) backend through the console's own /cloud bearer
+ * LIVE probe of the o11y (SigNoz) backend through the console's own /v1 bearer
  * proxy. Logs in as z@hanzo.ai and, from the AUTHENTICATED page context, fetches
  * each candidate endpoint exactly as the new Observe modules will — same-origin
- * `<origin>/v1/o11y/*` (rewritten to `/cloud/v1/o11y/*`, cloud rewrites to the o11y
+ * `<origin>/v1/o11y/*` (rewritten to `/v1/o11y/*`, cloud rewrites to the o11y
  * runtime's `/api/*`). Prints the HTTP status + a body snippet per endpoint so we
  * know what returns real data vs 404 (which must be flagged) before we build.
  *

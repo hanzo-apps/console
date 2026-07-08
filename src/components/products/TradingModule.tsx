@@ -9,7 +9,7 @@
  * the PaaS BuildKit, start/stop, reconfigure/redeploy, and logs).
  *
  * DRY + one way: the fleet + the lifecycle controls are the SAME PaaS control plane
- * (`PaasApi` → `/cloud` bearer proxy → cloud `/v1/platform/*`) the Compute ›
+ * (`PaasApi` → `/v1` bearer proxy → cloud `/v1/platform/*`) the Compute ›
  * Applications page uses — the bots are ordinary PaaS git apps. The live STATE
  * (maker metrics + the DEX book) is read through console2's own session-gated,
  * brand-scoped `/trading` proxy. Honest states everywhere: a bot with no metrics

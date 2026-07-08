@@ -2,7 +2,7 @@
  * TradingApi — the live-data client for the Trading module. TWO transports, one
  * concern each, both same-origin + session-gated:
  *
- *  1. The DEPLOYED BOT FLEET is read through the existing `PaasApi` (`/cloud`
+ *  1. The DEPLOYED BOT FLEET is read through the existing `PaasApi` (`/v1`
  *     bearer proxy → cloud `/v1/platform/*`): the org's PaaS apps, filtered to the
  *     maker/trader images by `templateForImage`. The console never re-derives the
  *     app list — it reuses the one PaaS surface, so deploy/start/stop/logs are the

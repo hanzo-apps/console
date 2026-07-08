@@ -5,8 +5,8 @@
  * org-scoped SERVER-SIDE from the minted user bearer; no credential reaches the
  * browser.
  *
- * TRANSPORT: `cloudProxyV1Url('referrals/…')` → `<origin>/cloud/v1/referrals/…`,
- * the console's hardened `/cloud` user-bearer proxy (NOT bare `/v1/…`, which the
+ * TRANSPORT: `cloudProxyV1Url('referrals/…')` → `<origin>/v1/referrals/…`,
+ * the console's hardened `/v1` user-bearer proxy (NOT bare `/v1/…`, which the
  * live ingress routes to the gateway with no principal → 403; the v8.4.70/8.4.93
  * lesson for a bearer-scoped head). The backend answers BARE JSON (like
  * `clients/crm`), so these use the plain REST verbs + defensive normalizers.

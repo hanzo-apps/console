@@ -1,7 +1,7 @@
 /**
  * Typed client for the unified analytics data plane (cloud `clients/analytics`),
  * called SAME-ORIGIN with NO prefix (`originV1Url('analytics/...')`). The rewrite in
- * next.config.mjs terminates the request at the console's `/cloud` user-bearer proxy,
+ * next.config.mjs terminates the request at the console's `/v1` user-bearer proxy,
  * which mints a short-lived user Bearer and forwards to cloud-api; the org is resolved
  * server-authoritatively from the Bearer owner claim, so every metric is scoped to the
  * caller's own org — the browser never holds a datastore credential.
@@ -199,7 +199,7 @@ export function normalizeTop(raw: unknown): Top {
 
 /**
  * AnalyticsApi — one typed method per REAL `/v1/analytics/*` endpoint. Each is a plain
- * GET through the same-origin `/cloud` bearer proxy; the org is server-side. A 403
+ * GET through the same-origin `/v1` bearer proxy; the org is server-side. A 403
  * (cookie-only) or 503 (warehouse unwired) surfaces to the caller's BackendStateCard.
  */
 export const AnalyticsApi = {

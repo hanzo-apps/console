@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const restPost = vi.fn()
 vi.mock('./client', () => ({
   originV1Url: (p: string) => `/v1/${p}`,
-  cloudProxyV1Url: (p: string) => `/cloud/v1/${p}`,
+  cloudProxyV1Url: (p: string) => `/v1/${p}`,
   restPost: (...a: unknown[]) => restPost(...a),
   restGet: vi.fn(),
 }))

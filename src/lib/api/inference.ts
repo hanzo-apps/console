@@ -3,7 +3,7 @@
  *
  * ONE real source: the cloud ML service `GET /v1/ml/models` (cloud `clients/ml`),
  * the org's KServe `InferenceService` inventory. It is reached through the console's
- * OWN same-origin `/v1/ml/*` rewrite → the hardened `/cloud` user-bearer proxy
+ * OWN same-origin `/v1/ml/*` rewrite → the hardened `/v1` user-bearer proxy
  * (`next.config.mjs` maps the `ml` head; `proxy-allow.ts` admits it), which mints a
  * short-lived user token so cloud resolves the org from the Bearer owner claim and
  * lands the request in the PER-ORG namespace `ml-<org>`. A cookie-only call 403s, so

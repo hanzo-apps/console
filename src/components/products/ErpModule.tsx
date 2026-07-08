@@ -13,7 +13,7 @@
  * module=erp", and the whole ERPNext-core model is data + Go hooks, not bespoke UI.
  *
  * Per-org and honest by construction: the engine resolves the org from the validated
- * bearer (via the `/cloud` proxy) and enforces per-DocType permissions, so a customer
+ * bearer (via the `/v1` proxy) and enforces per-DocType permissions, so a customer
  * only ever sees + edits their OWN ERP data, and an un-set-up org sees the "Set up
  * ERP" install CTA — never a fabricated record and never the old cross-tenant desk.
  */

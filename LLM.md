@@ -219,7 +219,7 @@ headless Playwright on console2.hanzo.ai.
 Five "advertised-but-broken" surfaces the live E2E suite flagged, fixed honestly
 in the client (no fabrication):
 
-- **Vector module rendered nothing.** `GET /cloud/v1/vector` 200'd but the module
+- **Vector module rendered nothing.** `GET /v1/vector` 200'd but the module
   blanked while SQL/KV rendered — the vector provisioning backend 200s a WRAPPED
   body (not a bare `Resource[]`), so the list view's `for…of` threw during render
   behind the error boundary. Fix: `normalizeResourceList` in `lib/api/provisioning.ts`
@@ -714,11 +714,11 @@ was deleted, not re-merged.
 
 Every Compute page is wired to its REAL backend, per-org, via the user-bearer BFF
 proxies — and a customer (non-admin) never sees the admin `/paas` "PAAS_SERVICE_TOKEN
-not configured" message. Plus a rich **Agents** dashboard over `/cloud/v1/agents`.
+not configured" message. Plus a rich **Agents** dashboard over `/v1/agents`.
 
 - **Backends, per page (one proxy each, org resolved from the minted user Bearer):**
   Machines / GPUs / Regions → **visor** `/vm/v1/{machines,gpus,sizes,regions}`;
-  Agents / Functions / Prompts → **cloud** `/cloud/v1/*` (allow-listed in
+  Agents / Functions / Prompts → **cloud** `/v1/*` (allow-listed in
   `proxy-allow.ts`); Containers / Applications → **paas** `/paas`; Tasks → **tasksd**
   `/tasksd/v1/tasks/*`; Edge → honest managed/coming-soon (no backend). Verified live
   in-cluster: visor `/v1/regions|sizes|gpus` = 200 real DO catalog + pricing,
@@ -753,7 +753,7 @@ not configured" message. Plus a rich **Agents** dashboard over `/cloud/v1/agents
   PAAS_SERVICE_TOKEN hint). ONE fix removes the false infra-token claim for customers
   across every `/paas` module (Containers/Edge/GPUs-admin/Clusters/Kubernetes).
 - **Already customer-safe, unchanged:** Applications (cloud `/v1`), Tasks (`/tasksd`
-  per-user), Functions (`/cloud/v1/functions`).
+  per-user), Functions (`/v1/functions`).
 - Verification: `tsc --noEmit` clean, `vitest` **639+ green** (all suites; +22 agents,
   +4 visor), `next build` ✓ 14/14 pages. Live visual verification as Dave is post-deploy
   (ships in the merge agent's authoritative image from main HEAD).
@@ -766,7 +766,7 @@ backends ARE up; the fixes are about pages that were CONNECTED but READ AS BROKE
 
 - Live map as a customer: `/vm/v1/{regions,sizes,gpus}` = 200 real DO catalog+pricing;
   `/vm/v1/machines` = **403 "Unauthorized operation"** (visor authorizes the public
-  catalog but denies the per-org list to a signed-in customer); `/cloud/v1/{agents,
+  catalog but denies the per-org list to a signed-in customer); `/v1/{agents,
   functions,prompts}` = 200 `{[]}` (connected, empty — maxpower has none); `/tasksd/
   {cluster/health,namespaces}` = 200 (connected, empty); `/paas/apps` = 403 forbidden.
 - **Machines** (the visible bug): the page showed "Sign in to view your machines" next
@@ -784,7 +784,7 @@ backends ARE up; the fixes are about pages that were CONNECTED but READ AS BROKE
   state for a customer, honest "nothing deployed yet" when empty.
 - **Agents** live 200-empty now shows a "Connected · no agents yet" badge above the
   "create your first agent" state, so it's unmistakably connected (not "not routed").
-- **Proxy defaults hardened** (`/vm`,`/cloud`,`/tasksd`): `?.trim() || default` (not
+- **Proxy defaults hardened** (`/vm`,`/v1`,`/tasksd`): `?.trim() || default` (not
   `??`) so a VISOR_URL/CLOUD_API_URL/TASKS_URL reconciled to an EMPTY string still
   resolves the in-cluster service (observed env drift on the live pod — "keeps getting
   stripped"). Machines/GPUs now ALWAYS reach visor.
@@ -807,18 +807,18 @@ off `main` (v8.4.4); commit only (CI builds the image).
   request ("X-Org-Id required") — the live "Access required · GET /v1/prompts" card,
   same class as the "models missing" bug. cloud does NOT serve `/v1/get-account`
   (that's IAM/casibase, a DIFFERENT cookie), which is why get-account works cookie-only
-  but `/v1/prompts` 403s. Agents already used the `/cloud` bearer proxy → "Connected".
+  but `/v1/prompts` 403s. Agents already used the `/v1` bearer proxy → "Connected".
 - **ONE-ENDPOINT-FORM — same-origin `/v1/*`, NO prefix (CTO law).** New `originV1Url`
   (`client.ts`) builds `<origin>/v1/<path>`. `next.config.mjs` `rewrites().beforeFiles`
   maps a CLOSED head list to the console's already-hardened server-side bearer proxies:
-  `prompts|agents|evals` → `/cloud`, `models|chat|embeddings|rerank|audio` → `/ai`. The
+  `prompts|agents|evals` → `/v1`, `models|chat|embeddings|rerank|audio` → `/ai`. The
   client URL is `/v1/prompts`; the request terminates at OUR Next handler, which strips
   the cookie and mints a short-lived user bearer (`bearer-proxy.ts`). The raw session
   cookie NEVER reaches cloud-api → cloud-api carries no cookie-CSRF surface. This gives
   the clean URL WITHOUT weakening the bearer trust boundary. Repointed: `agents.ts`,
   `prompts.ts` (NEW facade), `evals.ts`, `models-catalog.ts`, `playground.ts`; `evals`
   added to `CLOUD_HEADS` (`proxy-allow.ts`). The rewrite CAN'T bypass least-privilege:
-  it terminates at `/cloud`|`/ai` whose `pathIsClean` (rejects `..`/`%2e`/`%2f`/double-
+  it terminates at `/v1`|`/ai` whose `pathIsClean` (rejects `..`/`%2e`/`%2f`/double-
   encode/matrix-param) + `allowCloudSurface`/`ALLOWED` re-validate the NORMALIZED path
   (13 existing bearer-proxy traversal tests + new proxy-allow evals tests).
 - **CSRF HARDENING (proactive, `bearer-proxy.ts` `sameOriginOK`).** The proxy
@@ -827,7 +827,7 @@ off `main` (v8.4.4); commit only (CI builds the image).
   equal `Host` — fail closed (403) BEFORE resolving the user. Stops a cross-site POST
   from creating/deleting an agent or running a paid eval as the victim; belt-and-
   suspenders on the cookie's own SameSite. Safe methods (GET/HEAD/OPTIONS) pass. This
-  protects EVERY proxy (`/cloud`,`/ai`,`/vm`,`/paas`,`/tasksd`,`/billing`,`/commerce`),
+  protects EVERY proxy (`/v1`,`/ai`,`/vm`,`/paas`,`/tasksd`,`/billing`,`/commerce`),
   not just the AI surface (+7 tests).
 - **CANONICAL AGENT BUILDER — ONE builder, zero duplication (CTO top principle).**
   `src/components/agent-builder/` is self-contained + schema-driven with NO host
@@ -863,7 +863,7 @@ off `main` (v8.4.4); commit only (CI builds the image).
   `next build` ✓ 14/14. Authenticated visual e2e is post-deploy.
 - **RED review (fix-then-ship, 0 critical/high, 1 med, 2 low — all addressed):**
   - **MED-1 cross-tenant eval read.** RED found the isolation of `/v1/evals/scores`
-    hung SOLELY on `/cloud` dropping the client `X-Project-Id`, with no test guarding
+    hung SOLELY on `/v1` dropping the client `X-Project-Id`, with no test guarding
     it (the cloud `clients/eval` `tenant()` PREFERRED the client-controllable
     `X-Project-Id` over the bearer org for KMS key selection). Fixed at BOTH layers:
     (a) console2 — a dedicated regression suite pins `upstreamHeaders` DROPS a
@@ -1038,8 +1038,8 @@ org-scoped SERVER-SIDE.
   `/v1/crm` (native-Go `clients/crm` on Base/SQLite, a port of Twenty's core model).
   `lib/api/crm.ts` is same-origin, keyless, prefix-free (`originV1Url('crm/...')` →
   `<origin>/v1/crm`, NOTHING before `/v1/`) — the EXACT Agents/Prompts/Evals form;
-  `next.config.mjs` `CLOUD_V1_HEADS` rewrites the `crm` head to the `/cloud`
-  user-bearer proxy (org from the token owner claim; a cookie-only call 403s), `crm`
+  the `crm` head terminates at the console's `app/v1` user-bearer BFF (org from the
+  token owner claim; a cookie-only call 403s), `crm`
   allow-listed in `proxy-allow.ts` `CLOUD_HEADS`. `CrmModule` is one module, three
   collections via the `:tab` route — each a real list + inline create form + per-row
   delete, with `/v1/crm/summary` counts; honest loading / `BackendStateCard` /
@@ -1059,9 +1059,9 @@ org-scoped SERVER-SIDE.
 Reconciliation decisions (DRY, one way):
 - Kept **#39's `originV1Url` CRM data path** — it hits `/v1/crm` DIRECTLY (nothing
   before `/v1/`), the majority pattern across agents/prompts/evals/templates/
-  analytics. #42's `cloudProxyV1Url` baked `/cloud` before `/v1/` — a divergent
+  analytics. #42's `cloudProxyV1Url` baked `/v1` before `/v1/` — a divergent
   second way (that helper stays for `functions.ts`, its existing owner; not used
-  for CRM). Both terminate at the same hardened `/cloud` bearer proxy.
+  for CRM). Both terminate at the same hardened `/v1` bearer proxy.
 - Kept **#39's `CrmModule`** — a strict superset of #42's (adds per-row delete +
   the `RowDelete` a11y-labelled control); everything else identical.
 - Folded in **#42's `CmsModule`** + the `cms`/`erp`/`helpdesk` registry entries.
@@ -1075,7 +1075,7 @@ Reconciliation decisions (DRY, one way):
   +9 crm normalizer/route-contract + 4 a11y over main's 874); `next build` ✓
   Compiled successfully (14/14 pages, the `/[...slug]` catch-all renders every
   module). The crm route suite pins the same-origin `/v1/crm/{companies,summary,
-  contacts,opportunities}` contract (never a `/cloud`-prefixed URL, never a direct
+  contacts,opportunities}` contract (never a `/v1`-prefixed URL, never a direct
   cloud-origin call). Authenticated visual e2e (the `(dashboard)` modules) is gated
   behind an IAM session → post-deploy; component-mount + the live axe-core scan were
   Playwright-verified locally.
@@ -1235,7 +1235,7 @@ reimplemented.
 - **Applications shows the org's REAL deployed apps on the LIVE PaaS.** The
   Compute → Applications page was a generic "managed by Hanzo" placeholder over the
   admin `/paas` inventory. It now drives the live per-org `/v1/platform/*` surface
-  (projects → apps → deployments) through the `/cloud` bearer proxy (org resolved
+  (projects → apps → deployments) through the `/v1` bearer proxy (org resolved
   from the Bearer owner — a caller sees only their own apps). New `lib/api/paas.ts`
   `PaasApi` (projects/apps/deployments CRUD + `deploy` + `listAllApps` aggregate;
   plain-JSON transport like `functions.ts`), `platform` added to `CLOUD_HEADS`.
@@ -1425,7 +1425,7 @@ The fix is **additive, one session manager, zero regression** (worst case === v8
   rotating-token race safety — a lost-race 401 must not nuke the winner's fresh cookie);
   only sign-out clears.
 - **`resolveUser`** (identity.ts) prefers the console session (`consoleClaims`), falls
-  back to the casibase get-account. So the AuthGate + `/cloud` bearer-proxy both read the
+  back to the casibase get-account. So the AuthGate + `/v1` bearer-proxy both read the
   ONE session manager (the coordinator's constraint), casibase as graceful fallback.
 - **Client**: `lib/auth/refresh.ts` = single-flight `refreshSession()` (rotating tokens
   MUST NOT race). `session.tsx` arms a PROACTIVE timer at 80% of the access lifetime
@@ -1691,9 +1691,9 @@ content + the SHARED sub-page Metrics view changed. Strictly @hanzo/gui v5 short
 
 - **Real endpoints source (two, merged).** `src/lib/api/inference.ts` `InferenceApi`
   reads the org's DEPLOYED KServe InferenceServices from cloud `GET /v1/ml/models`
-  (cloud `clients/ml`, per-org namespace `ml-<org>`) through the hardened `/cloud`
-  user-bearer proxy — NEW `ml` head in `proxy-allow.ts` `CLOUD_HEADS` + `next.config.mjs`
-  `CLOUD_V1_HEADS` (same-origin `/v1/ml/*` → `/cloud/v1/ml/*`, bearer minted, cookie-only
+  (cloud `clients/ml`, per-org namespace `ml-<org>`) through the console's `app/v1`
+  user-bearer BFF — NEW `ml` head in `proxy-allow.ts` `CLOUD_HEADS`
+  (same-origin `/v1/ml/*`, bearer minted, cookie-only
   403s). These are folded (`mergeEndpoints`, deployed wins) with the MANAGED model-serving
   catalog (`/v1/models` via the `/ai` proxy). The managed catalog is the POPULATED base
   (per-endpoint metrics match the ledger by model id); the deployed source is best-effort
@@ -1922,7 +1922,7 @@ field remains, flagged separately as a cross-console migration/discovery feature
 
 Fills the LAST o11y query gap the console had. o11y (SigNoz) was already consumed
 by **Service Map** (RED metrics + dependency graph, `ApmApi.services/dependencies/
-topOperations`) and **Alerts** (`o11y/v1/rules`) over the same-origin `/cloud`
+topOperations`) and **Alerts** (`o11y/v1/rules`) over the same-origin `/v1`
 bearer proxy (`cloudProxyV1Url('o11y/…')` → cloud reverse-proxies `/v1/o11y/*` →
 the o11y runtime's `/api/*`). The two SigNoz signals `apm.ts` was MISSING —
 application **LOGS** and **trace search** — are both the composite `POST /api/v3/
@@ -2037,8 +2037,8 @@ addressed a bare `/v1/framework` / `/v1/s3`, but console.hanzo.ai's INGRESS rout
 `/v1/*` to hanzoai/gateway (bypassing Next), so the next.config `/v1/<head> → /cloud`
 rewrite never runs and the gateway 403s (no principal). FIX (v8.4.70): the
 framework/client.ts + api/storage.ts build URLs with `cloudProxyV1Url` →
-`/cloud/v1/...` (re-added to api/client.ts; the /v1-canonicalization had deleted it).
-The `/cloud` route reaches app/cloud's bearer proxy, which mints a user-bound token
+`/v1/...` (re-added to api/client.ts; the /v1-canonicalization had deleted it).
+The `/v1` route reaches app/v1's bearer proxy, which mints a user-bound token
 and forwards with the org from the token owner. Fixes CMS + ERP + Help (all use
 FrameworkApi) + the S3 product + the CMS media DAM in ONE class-fix. VERIFIED LIVE as
 Dave (maxpower): all 6 collections render, the content-type builder + Lexical WYSIWYG
@@ -2070,14 +2070,14 @@ they just couldn't deploy.
   knowledge): re-add `cloudProxyV1Url` — the PROD-CORRECT variant. The live Traefik
   ingress does NOT rewrite bare `/v1/s3` / `/v1/framework` to the console app (they
   reach hanzoai/gateway with no principal → 403), so those two heads MUST address the
-  `/cloud` user-bearer proxy EXPLICITLY. (A naive repoint to bare `/v1/` — the
+  `/v1` user-bearer proxy EXPLICITLY. (A naive repoint to bare `/v1/` — the
   "canonical" form — would 403 live; NOT done.)
 - **But that left `vitest` RED** (its own oversight): `canonical-paths.test.ts` still
   asserted the OLD prefix-free `StorageApi.buckets → /v1/s3/buckets` (#81), which now
-  returns `/cloud/v1/s3/buckets`. Reconciled: dropped the stale prefix-free `s3`
+  returns `/v1/s3/buckets`. Reconciled: dropped the stale prefix-free `s3`
   assertion; added a DOCUMENTED `cloud-proxy exceptions` block pinning
-  `StorageApi.buckets → /cloud/v1/s3/buckets` + `FrameworkApi.doctypes.list →
-  /cloud/v1/framework/doctypes`, so a future "canonicalization" can't repoint them to
+  `StorageApi.buckets → /v1/s3/buckets` + `FrameworkApi.doctypes.list →
+  /v1/framework/doctypes`, so a future "canonicalization" can't repoint them to
   a bare `/v1/` that 403s in prod.
 - **families ↔ brand lock (the models guard):** every curated family's `logo`
   (rendered by `<ProviderLogo>` on every header + row) MUST resolve through the ONE
@@ -2121,7 +2121,7 @@ result was discarded → 502 error card → no model preselected → Run disable
 - Verification: `tsc --noEmit` clean; `vitest` **1518/1518** (+9 default-model,
   +2 aicatalog 502-resilience over v8.4.72's 1507). (The `canonical-paths.test.ts` s3
   case this branch had originally flagged as pre-existing-RED was fixed independently on
-  main in v8.4.72 — the `/cloud/v1/s3` exception lock — so the suite is fully green here;
+  main in v8.4.72 — the `/v1/s3` exception lock — so the suite is fully green here;
   `storage.ts`/`canonical-paths.test.ts`/`client.ts` untouched by this change.) `next
   build` ✓ 14/14. Authenticated Playground screenshot is post-deploy (the `(dashboard)`
   group is behind AuthGate); the two fixes are proven by the logic tests (repointed/
@@ -2159,7 +2159,7 @@ accepts), host-aware, scoped ONLY to the admin path:
 - `app/admin/aggregate/[...path]/route.ts` passes `audience: cloudAudience(host)`.
 So the operator's forwarded `/v1/admin/*` bearer now carries `aud=<brand>-cloud`
 (accepted) + `owner=admin` + `isAdmin=true` → cloud sets `X-User-IsAdmin=true` → 200.
-The tenant proxies (`/cloud`, `/ai`, `/vm`, …) omit `audience`, so they mint the
+The tenant proxies (`/v1`, `/ai`, `/vm`, …) omit `audience`, so they mint the
 default (target-app) audience exactly as before — tenant owner/isAdmin/confidential
 mint client (`hanzo-console`) all unchanged; no security change. This is the
 "INFO-2 audience-scoped bearer" deploy-config follow-up flagged since v8.4.34, now a
@@ -2363,13 +2363,13 @@ A deep customer-facing audit (grep + LIVE probing every backend head as Dave/
 maxpower) found the LAST systemic "renders but silently-not-connected" class and a
 cluster of dead docs links. The framework/s3 fix (v8.4.70) — "the live ingress
 routes bare `/v1/*` to the gateway, which strips the client X-Org-Id and 403s a
-cookie-only request, so bearer-scoped heads MUST address the `/cloud` user-bearer
+cookie-only request, so bearer-scoped heads MUST address the `/v1` user-bearer
 proxy EXPLICITLY" — was applied to framework/s3/machines but NEVER to the OTHER
 header-scoped heads. Their clients still built a bare `/v1/<head>` via `originV1Url`,
 which 403s live, so ~15 customer products rendered an honest error/empty card instead
 of their real per-org data. VERIFIED LIVE: `/v1/{gpus,clusters,functions,platform,
 vpcs,load-balancers,builds,releases,pipelines,environments,indexers,oracles,authz,
-search}` all 403 while their `/cloud/v1/*` twins 200.
+search}` all 403 while their `/v1/*` twins 200.
 
 - **Transport class-fix (`originV1Url`/`v1Url` → `cloudProxyV1Url`)** in every
   bearer-scoped client: `compute.ts` (gpus/alerts/pools), `functions.ts`,
@@ -2378,12 +2378,12 @@ search}` all 403 while their `/cloud/v1/*` twins 200.
   `originV1Url('embeddings')`, an AI head that IS session-scoped), and the inline
   single-head modules Vpc/LoadBalancer/Builds/Releases/Pipelines/Environments/
   Indexer/Oracles/Authz. All heads are already in `proxy-allow.ts` `CLOUD_HEADS`, so
-  the `/cloud` proxy admits them; the response shape is identical (same cloud-api
+  the `/v1` proxy admits them; the response shape is identical (same cloud-api
   handler, just a minted bearer). `memory` was LEFT on bare `/v1` — verified live it
   is session-scoped (`/v1/memory/list` = 200). `canonical-paths.test.ts` MOVED
   gpus/clusters/functions/paas from the "canonical /v1" block to the "/cloud
   exception" block (it had ENSHRINED the broken bare-path assumption) + `functions.
-  test.ts` now asserts `/cloud/v1/functions`.
+  test.ts` now asserts `/v1/functions`.
 - **Canonical docs links.** The docs site serves product pages under `/docs/<slug>`
   (a bare `docs.hanzo.ai/<slug>` mostly 404s); the registry `docs:` fields were
   already correct (v8.4.86) but a batch of INLINE module links were not: EdgeModule
@@ -2409,7 +2409,7 @@ search}` all 403 while their `/cloud/v1/*` twins 200.
   page, `/docs/websearch` 500s).
 - **Honest-dead surfaces reported, not faked (roadmap).** DNS, Zero-Trust,
   Referrals, Dashboards, Experiments, Scores-analytics all 404 on this deployment
-  BOTH via bare `/v1` AND `/cloud` — their backends genuinely don't exist here yet;
+  BOTH via bare `/v1` AND `/v1` — their backends genuinely don't exist here yet;
   they render honest `BackendStateCard`/`RuntimeNotice` (forward-compatible — light
   up when the backend appears), so they were LEFT honest rather than regressed to a
   static 'soon'. o11y (Service Map/Alerts/Logs/per-product Status·Logs·Metrics) is
@@ -2574,7 +2574,37 @@ Affiliates, nothing forked.
   (`usd`/`sharePct`/`statusLabel`/`statusTone`/`shortDate`/`payoutMethodLabel`/
   `verifyMethodLabel`/`dollarsToCents`).
 - **Registration (no `app/` route — the catch-all resolves it):** two catalog entries in
-  `registry.tsx`; `'authors'` added to `next.config.mjs` `CLOUD_V1_HEADS` + `ADMIN_V1_HEADS`,
-  `proxy-allow.ts` `CLOUD_HEADS`, and `admin-aggregate.ts` `ADMIN_AGGREGATE_HEADS`. No
+  `registry.tsx`; `'authors'` added to `proxy-allow.ts` `CLOUD_HEADS` (the per-tenant
+  head) + `next.config.mjs` `ADMIN_V1_HEADS` and `admin-aggregate.ts` `ADMIN_AGGREGATE_HEADS`
+  (the global-admin twin). No
   `claim.ts`/session wiring (Authors is connect/verify-based — there is no `?xxx=` signup
   link, unlike Affiliates' `?aff`).
+
+## Every cloud API path is `/v1/`-rooted — killed the `/cloud/` prefix (v8.4.120)
+
+- **CTO contract:** ZERO prefix before `/v1/` on ANY cloud API call (same rule as "no
+  `/api/`"). The console used to rewrite `/v1/<cloudhead>` → `/cloud/v1/<cloudhead>` (in
+  `next.config.mjs`) and `cloudProxyV1Url` built `/cloud/v1/…` directly, so the `/cloud/`
+  prefix leaked to clients and 404'd Automations (`/v1/automations/*` → `/cloud/v1/automations/*`).
+- **The BFF moved, the security did NOT change.** The user-bearer proxy that mints a
+  short-lived IAM token from the session cookie (cookie NEVER reaches cloud-api; org is
+  server-authoritative from the Bearer `owner`; CSRF same-origin guard on mutations;
+  least-privilege `allowCloudSurface` allow-list) moved from `app/cloud/[...path]` to
+  **`app/v1/[...path]`**. It re-prepends the `v1/` root (the catch-all sits under `/v1`),
+  so the allow-list and the upstream URL still see `v1/<head>`. Every guard in
+  `forwardWithUserBearer` is preserved — this is a PATH change, not a security change.
+- **Removed:** the `CLOUD_V1_HEADS`/`CLOUD_INFRA_V1_HEADS`/`CLOUD_PRODUCT_V1_HEADS` rewrite
+  lists in `next.config.mjs` (cloud heads now fall THROUGH to the `/v1` catch-all — no
+  rewrite). `cloudProxyBase` deleted; `cloudProxyV1Url === originV1Url` (both `/v1/<path>`).
+- **Kept (dispatch, `beforeFiles` — win over the catch-all):** AI heads → `/ai`, admin
+  aggregate `/v1/admin/*` → `/admin/aggregate`, visor catalog (regions/sizes/gpu-sizes) →
+  `/vm`, `/v1/billing/*` → `/billing/v1`, `/v1/commerce/*` → `/commerce/v1`. These are
+  server-internal (client only ever builds `/v1/…`); `/billing`+`/commerce` use their own
+  service-token / different-audience proxies, so they stay namespaced (out of scope).
+- **Acceptance (live, built server):** `GET /v1/automations/connectors` → 401 JSON
+  `{"error":"Sign in to use Hanzo Cloud."}` (reaches the cloud BFF, NOT a 404, NOT the SPA
+  shell); `/v1/agents`, `/v1/platform/projects` → 401 JSON (regression OK); `/v1/billing/balance`
+  → 401 JSON `"Sign in to view billing."` (the distinct message proves the billing dispatch
+  still wins); `/v1/bogushead` → 404 JSON `{"error":"Not found"}` (allow-list refuses a
+  non-head — still not a general tunnel). `git grep /cloud/v1` = ZERO. tsc + build green,
+  1965/1965 unit tests pass.

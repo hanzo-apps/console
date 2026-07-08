@@ -4,7 +4,7 @@
  * Oracles — price and data oracles feeding on-chain contracts (push/pull feeds,
  * aggregated values, source provenance) tracked by the platform.
  *
- * Reads the oracle registry from the cloud API via the same-origin `/cloud`
+ * Reads the oracle registry from the cloud API via the same-origin `/v1`
  * user-bearer proxy (`GET /v1/oracles`), which mints + forwards the caller's IAM
  * bearer server-side. When the oracle feed source isn't reachable the list load
  * fails and the honest not-configured / unavailable card renders instead of an empty

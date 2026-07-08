@@ -6,8 +6,8 @@
  * loop beside referrals' one-time both-sides credit. Every read/write is org-scoped
  * SERVER-SIDE from the minted user bearer; no credential reaches the browser.
  *
- * TRANSPORT: `cloudProxyV1Url('affiliates/…')` → `<origin>/cloud/v1/affiliates/…`,
- * the console's hardened `/cloud` user-bearer proxy (NOT bare `/v1/…`, which the live
+ * TRANSPORT: `cloudProxyV1Url('affiliates/…')` → `<origin>/v1/affiliates/…`,
+ * the console's hardened `/v1` user-bearer proxy (NOT bare `/v1/…`, which the live
  * ingress routes to the gateway with no principal → 403; the referrals/crm lesson).
  * The backend answers BARE JSON, so these use the plain REST verbs + defensive
  * normalizers.

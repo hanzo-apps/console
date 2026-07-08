@@ -5,7 +5,7 @@
  * The console's Training page calls its OWN origin (`/training/...`) with just the
  * first-party session cookie; this server handler resolves the signed-in user from
  * that cookie, mints a SHORT-LIVED, user-bound IAM Bearer (`adminBearer` — the ONE
- * per-user cache shared with the `/cloud` bearer proxy), and forwards to the cloud
+ * per-user cache shared with the `/v1` bearer proxy), and forwards to the cloud
  * backend's `/v1/...` surface with `Authorization: Bearer <token>` + the active
  * `X-Org-Id`. Training is a TENANT action — any signed-in org user may run it — so
  * this is user-scoped (resolveUser), NOT the control-plane admin gate the `/paas`
@@ -19,7 +19,7 @@
  * `/v1/train/*` authorizes on a VALIDATED JWT principal and returns 403 "no validated
  * principal" for a cookie-only call — the raw casibase session cookie is NOT a
  * principal it accepts (only the sanitizer's cookie-token names or a Bearer). Minting
- * the same user-bound token the `/cloud` proxy uses is the ONE way a signed-in tenant
+ * the same user-bound token the `/v1` proxy uses is the ONE way a signed-in tenant
  * reaches the train surface; the cookie is deliberately dropped upstream (it can't
  * authenticate, and a cookie + JWT together risks the public-gateway 431).
  *
@@ -81,7 +81,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     )
   }
 
-  // Mint a short-lived, user-bound Bearer (the SAME per-user cache the `/cloud`
+  // Mint a short-lived, user-bound Bearer (the SAME per-user cache the `/v1`
   // proxy uses). cloud-api's `/v1/train/*` 403s a cookie-only call ("no validated
   // principal"); a Bearer is the one credential it accepts. Fail CLOSED with 502 if
   // the token can't be minted — never fall through to an unauthenticated forward.

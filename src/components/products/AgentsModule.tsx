@@ -3,7 +3,7 @@
 /**
  * Agents — the autonomous-agent dashboard (AI / Automation). A rich, at-a-glance
  * board over the REAL agent registry (`AgentsApi.list` → the user-bearer
- * `/cloud/v1/agents` proxy, org-scoped server-side): five headline stat cards, an
+ * `/v1/agents` proxy, org-scoped server-side): five headline stat cards, an
  * invocations-over-time area chart, an agent-health donut, the agents table
  * (status tabs + pagination), a recent-activity feed, a top-agents bar list, and a
  * 30-day resource-usage panel.

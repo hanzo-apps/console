@@ -11,7 +11,7 @@
  *
  * TRANSPORT: every call is SAME-ORIGIN with NO prefix (`originV1Url('evals/…')`
  * → `<origin>/v1/evals/…`, the CTO one-endpoint-form). `next.config.mjs` rewrites
- * the `evals` head to the console's `/cloud` user-bearer proxy — the SAME
+ * the `evals` head to the console's `/v1` user-bearer proxy — the SAME
  * per-tenant path Prompts/Agents use. The facade authorizes on the validated
  * Bearer owner claim and scopes every read/write to that org SERVER-SIDE; a
  * cookie-only call has no bearer and 403s. `evals` is allow-listed in

@@ -4,7 +4,7 @@
  * Machines — your compute machines and capacity across regions.
  *
  * Routes by role. A CUSTOMER reads THEIR OWN machines from the native `/v1/machines`
- * surface (`CustomerMachines`, visor-backed via the user-bearer `/cloud` proxy) — real
+ * surface (`CustomerMachines`, visor-backed via the user-bearer `/v1` proxy) — real
  * data, a launch flow, and a terminate action. A GLOBAL ADMIN sees the operator FLEET
  * view here (`AdminMachines`): a MACHINE is one node of a real cluster pool, projected
  * from the org's dedicated DOKS clusters (`GET /v1/clusters`, the native cloud surface,
@@ -718,7 +718,7 @@ function AdminMachines(_props: { params: Record<string, string> }) {
         <Text fontSize="$5" fontWeight="800">Settings</Text>
         <YStack gap="$2">
           <Fact label="Org scope" value={currentOrg()} />
-          <Fact label="Backend" value="cloud-api (via /cloud user-bearer proxy)" />
+          <Fact label="Backend" value="cloud-api (via /v1 user-bearer proxy)" />
           <Fact label="Inventory source" value="GET /v1/clusters → node pools" />
           <Fact label="Connection" value={stateLabel} />
           <Fact label="Clusters" value={String(clusters.length)} />

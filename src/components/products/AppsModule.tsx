@@ -9,7 +9,7 @@
  * Read-only over the REAL cloud `/v1/projects` store (cloud `clients/projectsvc`):
  * every read is same-origin and keyless (`AppsApi` → `originV1Url('projects')` →
  * `<origin>/v1/projects`); `next.config.mjs` rewrites the `projects` head to the
- * console's OWN user-bearer `/cloud` proxy, which mints a short-lived user token and
+ * console's OWN user-bearer `/v1` proxy, which mints a short-lived user token and
  * forwards it, so the backend resolves the org from the token owner claim — every row
  * is org-scoped SERVER-SIDE (switching org in the OrgSwitcher re-lists that org's
  * sites) and no credential reaches the browser. The EXACT per-tenant path Agents/CRM
