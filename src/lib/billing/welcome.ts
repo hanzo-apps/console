@@ -12,6 +12,7 @@
  * retries), and the shared balance is refreshed only when a grant actually lands.
  */
 import { BillingApi } from '~/lib/api/billing'
+import { IS_EMBED } from '~/lib/embed'
 import { invalidateBalance } from './live-balance'
 
 /** In-memory guard (once per page lifetime). */
@@ -25,6 +26,10 @@ const SS_PREFIX = 'hz_welcome_claimed:'
  */
 export function claimWelcomeGrantOnce(owner: string): void {
   if (!owner || typeof window === 'undefined') return
+  // The welcome-grant proxy (POST /billing/v1/me/welcome) is a BFF-only route with no
+  // handler in the static embed (→ 405). Skip it here; the embed's welcome grant is
+  // handled server-side at signup (self-heal via /v1 is tracked separately).
+  if (IS_EMBED) return
   if (claimed.has(owner)) return
   const key = SS_PREFIX + owner
   try {
