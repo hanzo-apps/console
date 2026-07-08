@@ -25,6 +25,20 @@ describe('refreshSession (single-flight)', () => {
     await expect(refreshSession()).resolves.toBe(false)
   })
 
+  it('in the static embed, skips the /auth/refresh POST entirely (no 405 noise)', async () => {
+    // The embed has no BFF handler for /auth/refresh (POST → 405); the console runs on
+    // the casibase session there, so refreshSession must resolve false WITHOUT fetching.
+    vi.resetModules()
+    vi.stubEnv('NEXT_PUBLIC_CONSOLE_EMBED', '1')
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const { refreshSession: embedRefresh } = await import('./refresh')
+    await expect(embedRefresh()).resolves.toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
   it('coalesces concurrent callers into ONE rotation (single-flight)', async () => {
     // Rotating refresh tokens are one-time-use: two concurrent refreshes would race
     // and the second would replay a now-invalid token. Assert both callers share the
