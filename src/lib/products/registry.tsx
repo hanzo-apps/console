@@ -489,7 +489,10 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: AIAccountsModule },
       { path: ':tab', component: AIAccountsModule },
     ],
-    subpages: [{ slug: 'accounts', label: 'Accounts' }],
+    subpages: [
+      { slug: 'routing', label: 'Routing' },
+      { slug: 'accounts', label: 'Accounts' },
+    ],
   },
   {
     // admin.hanzo.ai OVERLORD board — the top-level god-view of EVERYTHING: every
