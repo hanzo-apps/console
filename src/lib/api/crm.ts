@@ -4,15 +4,13 @@
  * per-org CRM on Base/SQLite — a port of Twenty's core model, NOT a NestJS proxy).
  *
  * Every call is same-origin, keyless and prefix-free (`originV1Url('crm/...')` →
- * `<origin>/v1/crm/...`, the CTO one-endpoint form). `next.config.mjs` rewrites the
- * `crm` head to the console's OWN user-bearer `/cloud` proxy (`app/cloud`), which
- * mints a short-lived user-bound IAM token server-side and forwards it; the cloud
- * backend resolves the org from the token's `owner` claim, so every read/write is
- * org-scoped SERVER-SIDE and no credential reaches the browser. This is the EXACT
- * per-tenant path Agents/Evals/Prompts use (the `crm` head is allow-listed in both
- * `next.config.mjs` CLOUD_V1_HEADS and the proxy's `proxy-allow.ts` CLOUD_HEADS).
- * A cookie-only cloud-origin call would 403 ("X-Org-Id required"), so the rewrite
- * to the bearer proxy is mandatory — never a direct cloud-origin call.
+ * `<origin>/v1/crm/...`, the CTO one-endpoint form). The console's OWN `app/v1`
+ * user-bearer BFF serves the `crm` head — it mints a short-lived user-bound IAM token
+ * server-side and forwards it; the cloud backend resolves the org from the token's
+ * `owner` claim, so every read/write is org-scoped SERVER-SIDE and no credential
+ * reaches the browser. This is the EXACT per-tenant path Agents/Evals/Prompts use (the
+ * `crm` head is allow-listed in `proxy-allow.ts` CLOUD_HEADS). A cookie-only call would
+ * 403 ("X-Org-Id required"), so the bearer BFF is mandatory — never a direct call.
  *
  * Routes (from cloud `clients/crm/crm.go`):
  *   GET/POST            /v1/crm/companies            list / create

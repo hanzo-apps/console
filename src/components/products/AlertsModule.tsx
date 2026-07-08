@@ -5,7 +5,7 @@
  * platform observability engine.
  *
  * Reads the REAL alert rules from Hanzo o11y through the same-origin user-bearer
- * `/cloud` proxy: `GET /v1/o11y/v1/rules` (cloud rewrites `/v1/o11y/*` → the o11y
+ * `/v1` proxy: `GET /v1/o11y/v1/rules` (cloud rewrites `/v1/o11y/*` → the o11y
  * runtime's `/api/v1/rules`, `listRules` → `ListRuleStates`). The o11y envelope is
  * `{status,data:{rules:[…]}}` where each rule is a flattened `GettableRule`
  * (`alert`, `state`, `labels.severity`, `description`, …) — normalized here to the

@@ -5,7 +5,7 @@
  * The DOCUMENTED contract is `GET /v1/agents` on the unified cloud backend, called
  * SAME-ORIGIN with NO prefix (`originV1Url('agents')` → `<origin>/v1/agents`, the
  * CTO one-endpoint-form). `next.config.mjs` rewrites the `agents` head to the
- * console's OWN user-bearer proxy (`app/cloud`), which mints a short-lived
+ * console's OWN user-bearer proxy (`app/v1`), which mints a short-lived
  * user-bound IAM token server-side and forwards it; the cloud backend resolves the
  * org from the token's `owner` claim, so every read is org-scoped server-side and
  * no credential reaches the browser. This is the SAME per-tenant path Prompts +

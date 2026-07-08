@@ -6,7 +6,7 @@
  * Copy button, a reward explainer, three real stat tiles (invites / qualified /
  * credit earned), and your referrals list with live status. Every value is real or
  * an honest empty/`—`; states are loading / BackendStateCard / empty — never a
- * fabricated row. Org-scoped SERVER-SIDE (the `/cloud` bearer proxy); no credential
+ * fabricated row. Org-scoped SERVER-SIDE (the `/v1` bearer proxy); no credential
  * in the browser.
  */
 import { useCallback, useEffect, useState } from 'react'

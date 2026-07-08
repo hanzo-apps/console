@@ -1,6 +1,6 @@
 /**
  * Per-user proxy to the LIVE trading-bot state — the Trading module's ONE
- * live-data transport (the DEPLOYED FLEET is read separately via the `/cloud`
+ * live-data transport (the DEPLOYED FLEET is read separately via the `/v1`
  * PaaS proxy). The browser calls console2's OWN origin (`/trading/v1/*`) with just
  * the session cookie; this handler resolves the caller, resolves the BRAND from the
  * request host, and reads the allowlisted upstreams server-side, per network that

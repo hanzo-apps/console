@@ -6,17 +6,17 @@
  * This is a thin transport: the SHARED `@hanzo/finance-ui` owns the data contract, the
  * optional-safe normalizers, and the components — the SAME package finance.hanzo.ai
  * renders — so a spend/usage/credits card is identical in both surfaces. Here we only
- * inject console's transport: every read goes through the console's OWN `/cloud`
- * user-bearer proxy (`<origin>/cloud/v1/finance/*`), which mints a short-lived user
+ * inject console's transport: every read goes through the console's OWN `/v1`
+ * user-bearer proxy (`<origin>/v1/finance/*`), which mints a short-lived user
  * token and forwards to cloud with the org resolved from the Bearer owner. A cookie-only
  * bare `/v1/finance/*` would 403 on the live ingress (same class as platform/analytics),
- * so the explicit `/cloud` address is load-bearing. `finance` is allow-listed in
+ * so the explicit `/v1` address is load-bearing. `finance` is allow-listed in
  * `proxy-allow.ts` CLOUD_HEADS. Read-only; writes stay in the billing portal.
  */
 import { httpFinanceClient, type FinanceClient } from '@hanzo/finance-ui'
 import { restGet, cloudProxyV1Url } from './client'
 
-/** Build the console `/cloud/v1/finance/<path>` proxy URL with an optional query. */
+/** Build the console `/v1/finance/<path>` proxy URL with an optional query. */
 export function financeUrl(path: string, query?: Record<string, string | number | undefined>): string {
   let url = cloudProxyV1Url(`finance/${path}`)
   if (query) {
@@ -45,5 +45,5 @@ async function transport(path: string, query?: Record<string, string | number | 
   return unwrapEnvelope(body)
 }
 
-/** The console-wired finance client — real per-org `/v1/finance/*` reads over the `/cloud` proxy. */
+/** The console-wired finance client — real per-org `/v1/finance/*` reads over the `/v1` proxy. */
 export const financeClient = (): FinanceClient => httpFinanceClient(transport)

@@ -6,14 +6,13 @@
  *
  * Every call is same-origin, keyless and prefix-free (`originV1Url('integrations/...')`
  * → `<origin>/v1/integrations/...`, the CTO one-endpoint form — NOTHING before `/v1/`).
- * `next.config.mjs` rewrites the `integrations` head to the console's OWN user-bearer
- * `/cloud` proxy (`app/cloud`), which mints a short-lived user-bound IAM token
- * server-side and forwards it; the cloud backend resolves the org from the token's
- * `owner` claim, so every list/connect/disconnect is org-scoped SERVER-SIDE and no
- * credential reaches the browser. This is the EXACT per-tenant path Agents/CRM/Evals
- * use (`integrations` is allow-listed in BOTH `next.config.mjs` CLOUD_V1_HEADS and the
- * proxy's `proxy-allow.ts` CLOUD_HEADS). A cookie-only cloud-origin call would 403
- * ("X-Org-Id required"), so the rewrite to the bearer proxy is mandatory.
+ * The console's OWN `app/v1` user-bearer BFF serves the `integrations` head — it mints a
+ * short-lived user-bound IAM token server-side and forwards it; the cloud backend
+ * resolves the org from the token's `owner` claim, so every list/connect/disconnect is
+ * org-scoped SERVER-SIDE and no credential reaches the browser. This is the EXACT
+ * per-tenant path Agents/CRM/Evals use (`integrations` is allow-listed in
+ * `proxy-allow.ts` CLOUD_HEADS). A cookie-only call would 403 ("X-Org-Id required"), so
+ * the bearer BFF is mandatory.
  *
  * Routes (from the CONNECTORS_CONTRACT, cloud `clients/integrations`):
  *   GET  /v1/integrations                        list → { providers: [Provider] }

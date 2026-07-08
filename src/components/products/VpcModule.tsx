@@ -4,7 +4,7 @@
  * VPC — virtual private clouds providing network isolation (an org's private
  * address space, carved into subnets across regions).
  *
- * FULL CRUD over the unified cloud binary via the same-origin user-bearer `/cloud`
+ * FULL CRUD over the unified cloud binary via the same-origin user-bearer `/v1`
  * proxy, org resolved from the Bearer owner:
  *   - GET    /v1/vpcs        list
  *   - POST   /v1/vpcs        create (name + CIDR + region)

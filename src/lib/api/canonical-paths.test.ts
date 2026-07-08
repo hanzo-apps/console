@@ -55,37 +55,78 @@ afterEach(() => {
   delete (globalThis as { window?: unknown }).window
 })
 
-// The bearer-scoped CLOUD heads — gpus / clusters (compute), functions, platform
-// (paas) — are the compute analog of the s3/framework/provisioning exception: a bare
-// `/v1/<head>` from the browser hits the console ingress, which routes `/v1/*` to the
-// gateway (cloud-api) BYPASSING Next, so the next.config `/v1 → /cloud` rewrite never
-// runs and cloud-api 403s "X-Org-Id required" (the gateway strips the client header and
-// has no minted bearer to inject the org). VERIFIED LIVE (2026-07): `/v1/gpus`,
-// `/v1/clusters`, `/v1/functions`, `/v1/platform/projects` all return 403 while their
-// `/cloud/v1/*` twins return 200. So these clients MUST address the `/cloud` user-bearer
-// proxy EXPLICITLY (`cloudProxyV1Url`) — same class + fix as s3/framework (v8.4.70) and
-// machines. Do NOT "canonicalize" them back to a bare `/v1/` — that 403s a signed-in
-// customer and shows a FALSE "Not enabled for your account".
-describe('cloud bearer-scoped heads via /cloud (ingress does not serve their bare /v1 heads)', () => {
-  it('ComputeApi.gpus (inventory) -> /cloud/v1/gpus (NOT bare /v1/gpus → gateway 403)', async () => {
+// CTO contract: EVERY cloud API path is `/v1/`-rooted with ZERO prefix (no `/cloud/`,
+// no `/api/`). The bearer-scoped cloud heads — gpus/clusters (compute), functions,
+// platform (paas), s3, framework, provisioning (sql/vector/kv/datastore/docdb/search),
+// the casibase STORE-ADMIN heads (get-stores/…), and machines — all authorize on the
+// Bearer owner claim and reject a cookie-only browser call ("X-Org-Id required" /
+// "valid principal required" / a FALSE "session expired"). So the browser calls the
+// canonical, prefix-free `<origin>/v1/<head>`, which terminates at the console's OWN
+// `app/v1/[...path]` bearer BFF: it mints a short-lived user token from the session and
+// forwards to cloud-api `/v1/*` with the org resolved from the token owner. This block
+// PINS the prefix-free contract so a regression can't re-introduce a `/cloud/` prefix.
+describe('cloud heads → the same-origin /v1 bearer BFF (prefix-free, ZERO /cloud)', () => {
+  it('ComputeApi.gpus (inventory) -> /v1/gpus', async () => {
     stub({ gpus: [] })
     await ComputeApi.gpus()
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/gpus`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/gpus`)
   })
-  it('PlatformApi.listClusters -> /cloud/v1/clusters (NOT bare /v1/clusters)', async () => {
+  it('PlatformApi.listClusters -> /v1/clusters', async () => {
     stub({ clusters: [] })
     await PlatformApi.listClusters()
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/clusters`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/clusters`)
   })
-  it('FunctionsApi.list -> /cloud/v1/functions (NOT bare /v1/functions)', async () => {
+  it('FunctionsApi.list -> /v1/functions', async () => {
     stub({ functions: [] })
     await FunctionsApi.list()
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/functions`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/functions`)
   })
-  it('PaasApi.listProjects -> /cloud/v1/platform/projects (NOT bare /v1/platform)', async () => {
+  it('PaasApi.listProjects -> /v1/platform/projects', async () => {
     stub({ projects: [] })
     await PaasApi.listProjects()
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/platform/projects`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/platform/projects`)
+  })
+  it('StorageApi.buckets -> /v1/s3/buckets', async () => {
+    stub({ buckets: [] })
+    await StorageApi.buckets()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/s3/buckets`)
+  })
+  it('FrameworkApi.doctypes.list -> /v1/framework/doctypes', async () => {
+    stub({ data: [] })
+    await FrameworkApi.doctypes.list()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/framework/doctypes`)
+  })
+  it('ProvisioningApi.list(vector) -> /v1/vector', async () => {
+    stub([])
+    await ProvisioningApi.list('vector')
+    expect(lastUrl).toBe(`${ORIGIN}/v1/vector`)
+  })
+  it('ProvisioningApi.list(sql) -> /v1/sql', async () => {
+    stub([])
+    await ProvisioningApi.list('sql')
+    expect(lastUrl).toBe(`${ORIGIN}/v1/sql`)
+  })
+  it('StoreApi.list (embeddings collections) -> /v1/get-stores', async () => {
+    stub({ status: 'ok', msg: '', data: [] })
+    await StoreApi.list('acme')
+    expect(lastUrl).toBe(`${ORIGIN}/v1/get-stores?owner=acme`)
+  })
+  it('VisorApi.machines -> /v1/machines (bearer-scoped)', async () => {
+    stub({ machines: [] })
+    await VisorApi.machines()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/machines`)
+  })
+  it('none of the cloud heads emits a /<svc>/v1/ prefix', async () => {
+    const bad = /\/(cloud|vm|ai|billing|org|commerce)\/v1\//
+    stub({ gpus: [] })
+    await ComputeApi.gpus()
+    expect(lastUrl).not.toMatch(bad)
+    stub({ buckets: [] })
+    await StorageApi.buckets()
+    expect(lastUrl).not.toMatch(bad)
+    stub({ machines: [] })
+    await VisorApi.machines()
+    expect(lastUrl).not.toMatch(bad)
   })
 })
 
@@ -118,16 +159,11 @@ describe('baseHeaders — org + project + actor on every call', () => {
   })
 })
 
-// The genuinely SESSION-scoped data-product clients build the CANONICAL, prefix-free
-// `/v1/<resource>` through `originV1Url` (apm/commerce namespace their surface AFTER
-// `/v1/`, never before it). plans/embeddings (AI gateway) and commerce are served on
-// the session path (the gateway forwards the session and cloud resolves the org from
-// the session owner), so a bare `/v1/*` works — VERIFIED LIVE. apm/o11y keeps its
-// prefix-free shape here; its backend cloud→SigNoz reverse-proxy is a separate infra
-// gap (surfaces show an honest RuntimeNotice until it resolves) — not a client-path bug.
-// (functions + paas MOVED to the /cloud bearer block above — they are header-scoped and
-// 403 on the bare path.)
-describe('canonical /v1 — session-scoped data-product clients (no prefix before /v1/)', () => {
+// The AI-gateway + o11y clients also build the CANONICAL, prefix-free `/v1/<resource>`
+// (apm namespaces its o11y surface AFTER `/v1/`, never before it). A `next.config.mjs`
+// `beforeFiles` rewrite dispatches the AI heads (plans/embeddings) to the `/ai` proxy
+// INVISIBLY to the client, which only ever builds `/v1/...`.
+describe('canonical /v1 — AI-gateway + o11y clients (no prefix before /v1/)', () => {
   it('aicatalog fetchPlans -> /v1/plans (AI catalog head -> /ai)', async () => {
     stub({ plans: [] })
     await fetchPlans()
@@ -143,12 +179,8 @@ describe('canonical /v1 — session-scoped data-product clients (no prefix befor
     await ApmApi.dashboards()
     expect(lastUrl).toBe(`${ORIGIN}/v1/o11y/v1/dashboards`)
   })
-  // Functions + PaaS are NOT bare-/v1/ clients — they address the `/cloud` bearer proxy
-  // (pinned in the "cloud bearer-scoped heads via /cloud" block above). Commerce is NOT a
-  // bare-/v1/ client either — it addresses the `/commerce` proxy EXPLICITLY (pinned in the
-  // proxy-exceptions block below). The live ingress does not rewrite their heads.
 
-  it('none of the (bare-/v1/) three emits a /<svc>/v1/ prefix', async () => {
+  it('none of the three emits a /<svc>/v1/ prefix', async () => {
     const bad = /\/(cloud|vm|ai|billing|org|commerce)\/v1\//
     stub({ plans: [] })
     await fetchPlans()
@@ -162,78 +194,33 @@ describe('canonical /v1 — session-scoped data-product clients (no prefix befor
   })
 })
 
-// s3 + framework + provisioning (sql/vector/kv/datastore/docdb/search) + billing + COMMERCE
-// + the casibase STORE-ADMIN heads (get-stores/…) are the DELIBERATE exceptions to the
-// prefix-free rule above. The live console ingress does NOT rewrite a bare `/v1/<head>` to the
-// console app — those heads reach the gateway-fronted cloud binary directly, which rejects a
-// cookie-only browser request (s3/framework: "valid principal required"; provisioning:
-// "X-Org-Id required"; billing: "sign in to view billing"; commerce: 403 → a FALSE "Not
-// enabled for your account"; get-stores: 401 → a FALSE "session expired"). So the clients
-// address the console's OWN proxy EXPLICITLY: s3/framework/provisioning/stores via the
-// `/cloud` user-bearer proxy (`cloudProxyV1Url` / `cloudGet`), commerce via the `/commerce`
-// user-bearer proxy (`commerceProxyV1Url`), billing via the per-tenant `/billing/v1/*`
-// service-token proxy (`billingProxyV1Url`) — all routed to their Next handler regardless of
-// the `/v1/*` ingress config. This block PINS that exception so a future "canonicalization"
-// can't repoint them to a bare `/v1/` that fails live.
-describe('proxy exceptions — s3/framework/provisioning/stores via /cloud/v1, commerce via /commerce/v1, billing via /billing/v1 (ingress does not rewrite their heads)', () => {
-  it('StorageApi.buckets -> /cloud/v1/s3/buckets (NOT bare /v1/s3)', async () => {
-    stub({ buckets: [] })
-    await StorageApi.buckets()
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/s3/buckets`)
-  })
-
-  it('FrameworkApi.doctypes.list -> /cloud/v1/framework/doctypes (NOT bare /v1/framework)', async () => {
-    stub({ data: [] })
-    await FrameworkApi.doctypes.list()
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/framework/doctypes`)
-  })
-
-  it('ProvisioningApi.list(vector) -> /cloud/v1/vector (NOT bare /v1/vector → gateway 403)', async () => {
-    stub([])
-    await ProvisioningApi.list('vector')
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/vector`)
-  })
-
-  it('ProvisioningApi.list(sql) -> /cloud/v1/sql (bearer-scoped, NOT bare /v1/sql)', async () => {
-    stub([])
-    await ProvisioningApi.list('sql')
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/sql`)
-  })
-
-  it('BillingApi.balance -> /billing/v1/balance (NOT bare /v1/billing)', async () => {
+// The REMAINING prefix exceptions address a DIFFERENT backend than cloud-api, so they
+// are NOT `/v1/`-rooted: billing + PlansApi (money-truth) ride the per-tenant
+// `/billing/v1/*` SERVICE-token proxy (`billingProxyV1Url`); the store/merchant admin
+// rides the `/commerce/v1/*` user-bearer proxy (`commerceProxyV1Url`); the visor compute
+// CATALOG (regions/sizes/accelerators) rides `/vm/v1/*` (visor serves no cloud-api route,
+// and its `gpus` catalog is DISTINCT from the cloud GPU inventory). Each is served by its
+// OWN Next route handler; this block PINS the exception so a "canonicalization" can't
+// repoint them at a cloud-api `/v1/<head>` that would 404 (wrong backend).
+describe('prefix exceptions — billing via /billing/v1, commerce via /commerce/v1, visor catalog via /vm/v1', () => {
+  it('BillingApi.balance -> /billing/v1/balance', async () => {
     stub({ balance: 0, holds: 0, available: 0 })
     await BillingApi.balance()
     expect(lastUrl).toBe(`${ORIGIN}/billing/v1/balance?currency=usd`)
   })
 
-  it('PlansApi.plans -> /billing/v1/plans (money-truth catalog, NOT bare /v1/pricing → 401 "Not authorized")', async () => {
+  it('PlansApi.plans -> /billing/v1/plans (money-truth catalog)', async () => {
     stub([])
     await PlansApi.plans()
     expect(lastUrl).toBe(`${ORIGIN}/billing/v1/plans`)
   })
 
-  it('CommerceApi.currentStore -> /commerce/v1/store/current (NOT bare /v1/commerce → gateway 403 "Not enabled")', async () => {
+  it('CommerceApi.currentStore -> /commerce/v1/store/current', async () => {
     stub({ store: {} })
     await CommerceApi.currentStore()
     expect(lastUrl).toBe(`${ORIGIN}/commerce/v1/store/current`)
   })
 
-  it('StoreApi.list (embeddings collections) -> /cloud/v1/get-stores (NOT bare /v1/get-stores → 401 false "session expired")', async () => {
-    stub({ status: 'ok', msg: '', data: [] })
-    await StoreApi.list('acme')
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/get-stores?owner=acme`)
-  })
-})
-
-// The VISOR CATALOG + MACHINES are the compute analog of the s3/framework exception —
-// PINNED here because a bare `/v1/*` from the browser hits the gateway (→ cloud-api),
-// which serves NO visor catalog route (`/v1/gpu-sizes` 404s) and needs a minted bearer
-// for machines (`/v1/machines` 403 "X-Org-Id required"). That was the ROOT CAUSE of the
-// live "Accelerators 0 available to launch" bug — the catalog was hitting cloud-api, not
-// visor. The catalog reads visor DIRECTLY via `/vm`; machines/launch/terminate go through
-// the `/cloud` user-bearer proxy (org from the Bearer owner). Do NOT "canonicalize" these
-// back to a bare `/v1/` — that reintroduces the empty-catalog bug.
-describe('compute-proxy exceptions — visor catalog via /vm, machines via /cloud (ingress does not serve their bare heads)', () => {
   it('VisorApi.gpus (accelerator CATALOG) -> /vm/v1/gpus (visor, NOT cloud-api /v1/gpu-sizes)', async () => {
     stub({ data: [] })
     await VisorApi.gpus()
@@ -248,10 +235,5 @@ describe('compute-proxy exceptions — visor catalog via /vm, machines via /clou
     stub({ data: [] })
     await VisorApi.sizes()
     expect(lastUrl).toBe(`${ORIGIN}/vm/v1/sizes`)
-  })
-  it('VisorApi.machines -> /cloud/v1/machines (bearer-scoped, NOT bare /v1/machines)', async () => {
-    stub({ machines: [] })
-    await VisorApi.machines()
-    expect(lastUrl).toBe(`${ORIGIN}/cloud/v1/machines`)
   })
 })

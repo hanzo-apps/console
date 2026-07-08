@@ -1,7 +1,7 @@
 /**
  * Typed client for the unified USAGE SUMMARY endpoint (cloud `clients/usage`),
  * called SAME-ORIGIN with NO prefix (`originV1Url('usage/summary')`). The
- * next.config rewrite terminates it at the console's `/cloud` user-bearer proxy,
+ * next.config rewrite terminates it at the console's `/v1` user-bearer proxy,
  * which mints a short-lived user Bearer and forwards to cloud-api; the org is
  * resolved server-authoritatively from the Bearer owner claim, so every figure is
  * scoped to the caller's OWN org — the browser never holds a billing credential.
@@ -126,7 +126,7 @@ const q = (range: UsageRange, opts?: { start?: string; end?: string }): string =
 
 /**
  * UsageSummaryApi — the ONE org-scoped footprint roll-up. A plain GET through the
- * same-origin `/cloud` bearer proxy; the org is server-side. A 401/403 (session
+ * same-origin `/v1` bearer proxy; the org is server-side. A 401/403 (session
  * lapse) surfaces to the caller's BackendStateCard.
  */
 export const UsageSummaryApi = {

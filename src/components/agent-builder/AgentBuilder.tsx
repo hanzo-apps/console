@@ -9,7 +9,7 @@
  * library, a prompt-body fetch, and the create effect) — the builder owns the form,
  * the LIVE dropdowns, validation, and the honest states, but knows NOTHING about
  * any host's API client. That is what lets console2, chat, app, bot, and team all
- * import this exact component over the SAME backend (`POST /cloud/v1/agents`, org
+ * import this exact component over the SAME backend (`POST /v1/agents`, org
  * resolved server-side from the caller's bearer) instead of each rebuilding a form.
  *
  * Dynamic by construction:

@@ -4,7 +4,7 @@
  * Indexer — chain indexers tracking block and event indexing status per network
  * (current height, lag behind chain head, health) reported by the platform.
  *
- * Reads the indexer registry from the cloud API via the same-origin `/cloud`
+ * Reads the indexer registry from the cloud API via the same-origin `/v1`
  * user-bearer proxy (`GET /v1/indexers`), which mints + forwards the caller's IAM
  * bearer server-side. When the indexer isn't reachable the list load fails and the
  * honest not-configured / unavailable card renders instead of an empty grid —

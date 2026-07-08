@@ -7,7 +7,7 @@
  *
  * Same transport as `CrmApi` — same-origin, keyless, prefix-free
  * (`originV1Url('crm/applications')` → `<origin>/v1/crm/applications`), rewritten
- * to the console's user-bearer `/cloud` proxy so every read/write is org-scoped
+ * to the console's user-bearer `/v1` proxy so every read/write is org-scoped
  * SERVER-SIDE and no credential reaches the browser. The startups pipeline lives
  * in the hanzo org.
  *

@@ -5,13 +5,12 @@
  * tracker, which could not render issue ROWS GROUPED BY STATUS natively.
  *
  * Every call is same-origin, keyless and prefix-free (`originV1Url('tracker/...')`
- * → `<origin>/v1/tracker/...`, the CTO one-endpoint form). `next.config.mjs`
- * rewrites the `tracker` head to the console's OWN user-bearer `/cloud` proxy
- * (`app/cloud`), which mints a short-lived user-bound IAM token server-side and
- * injects `X-Org-Id` from the token's `owner` claim — so every read/write is
- * org-scoped SERVER-SIDE and no credential reaches the browser (the exact path
- * CRM / Agents / Evals use; the `tracker` head is allow-listed in both
- * `next.config.mjs` CLOUD_V1_HEADS and the proxy's `proxy-allow.ts` CLOUD_HEADS).
+ * → `<origin>/v1/tracker/...`, the CTO one-endpoint form). The console's OWN `app/v1`
+ * user-bearer BFF serves the `tracker` head — it mints a short-lived user-bound IAM
+ * token server-side and injects `X-Org-Id` from the token's `owner` claim — so every
+ * read/write is org-scoped SERVER-SIDE and no credential reaches the browser (the exact
+ * path CRM / Agents / Evals use; the `tracker` head is allow-listed in
+ * `proxy-allow.ts` CLOUD_HEADS).
  *
  * PLAIN REST — NOT the casibase `{status,msg,data}` envelope: lists return BARE
  * JSON arrays, objects return bare JSON, create=201, delete=204. Payloads are

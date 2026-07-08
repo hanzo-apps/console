@@ -8,8 +8,8 @@
  * own, and earns when someone deploys their work. Every read/write is org-scoped
  * SERVER-SIDE from the minted user bearer; no credential reaches the browser.
  *
- * TRANSPORT: `cloudProxyV1Url('authors/…')` → `<origin>/cloud/v1/authors/…`,
- * the console's hardened `/cloud` user-bearer proxy (NOT bare `/v1/…`, which the live
+ * TRANSPORT: `cloudProxyV1Url('authors/…')` → `<origin>/v1/authors/…`,
+ * the console's hardened `/v1` user-bearer proxy (NOT bare `/v1/…`, which the live
  * ingress routes to the gateway with no principal → 403; the affiliates/crm lesson).
  * The backend answers BARE JSON, so these use the plain REST verbs + defensive
  * normalizers.

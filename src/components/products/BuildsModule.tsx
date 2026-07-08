@@ -4,7 +4,7 @@
  * Builds — image and binary builds and their status.
  *
  * Reads the build list from the unified cloud binary via the same-origin user-bearer
- * `/cloud` proxy (`GET /v1/builds`), org resolved from the Bearer owner. This is a
+ * `/v1` proxy (`GET /v1/builds`), org resolved from the Bearer owner. This is a
  * derived, read-only aggregate; when the backend doesn't serve it the load fails and
  * the honest not-configured / unavailable card renders instead of an empty grid.
  */

@@ -10,7 +10,7 @@
  *    repositories (verify + copy the "Deploy on Hanzo" badge), the verify-by-file
  *    recipe, the deploys of your work, and your payout history. Every value is real
  *    or an honest empty/`—`; states are loading / BackendStateCard / honest empty —
- *    never a fabricated row. Org-scoped SERVER-SIDE (the `/cloud` bearer proxy); no
+ *    never a fabricated row. Org-scoped SERVER-SIDE (the `/v1` bearer proxy); no
  *    credential in the browser.
  */
 import { useCallback, useEffect, useState, type ReactElement } from 'react'

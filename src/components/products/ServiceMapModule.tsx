@@ -4,7 +4,7 @@
  * Service Map (APM) — per-service RED metrics (Rate · Errors · Duration) plus the
  * service dependency graph, over the REAL Hanzo o11y (SigNoz) runtime.
  *
- * ONE honest source: the o11y APM controllers through the same-origin `/cloud`
+ * ONE honest source: the o11y APM controllers through the same-origin `/v1`
  * user-bearer proxy (`ApmApi`, lib/api/apm.ts) — `/v1/o11y/v1/services` (RED per
  * service over the window), `/v1/o11y/v1/dependency_graph` (the call edges), and
  * `/v1/o11y/v1/service/top_operations` (a service's hottest operations). Every KPI,

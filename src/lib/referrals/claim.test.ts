@@ -5,7 +5,7 @@ import { stashReferralCode, claimReferralOnce, __resetReferralGuard } from './cl
 /**
  * Referral capture + claim — the signup-capture half. Uses a fetch stub (the real
  * client path, like crm.test.ts) so the test proves the ACTUAL POST to
- * `/cloud/v1/referrals/claim`, plus the localStorage capture + the once-per-session
+ * `/v1/referrals/claim`, plus the localStorage capture + the once-per-session
  * guards.
  */
 const ORIGIN = 'https://console.hanzo.ai'
@@ -65,12 +65,12 @@ describe('referral capture + claim', () => {
     expect(ls.getItem('hz_ref')).toBeNull()
   })
 
-  it('claims a stashed code once, POSTing to the /cloud proxy, then consumes it', async () => {
+  it('claims a stashed code once, POSTing to the /v1 bearer BFF, then consumes it', async () => {
     ls.setItem('hz_ref', 'ABC')
     claimReferralOnce('orgB')
     await flush()
     expect(fetched).toHaveLength(1)
-    expect(fetched[0].url).toBe(`${ORIGIN}/cloud/v1/referrals/claim`)
+    expect(fetched[0].url).toBe(`${ORIGIN}/v1/referrals/claim`)
     expect(fetched[0].method).toBe('POST')
     expect(fetched[0].body).toContain('ABC')
     expect(ls.getItem('hz_ref')).toBeNull() // consumed on success
