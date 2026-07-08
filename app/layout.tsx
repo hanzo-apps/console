@@ -7,6 +7,7 @@ import { headers } from 'next/headers'
 
 import { Provider } from '~/components/Provider'
 import { ChunkGuard } from '~/components/ChunkGuard'
+import { HanzoAnalytics } from '~/components/HanzoAnalytics'
 import { resolveConfig } from '~/config'
 
 // The document <title> is SSR metadata, so it must reflect the REQUEST host's
@@ -33,6 +34,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body style={{ margin: 0 }}>
         <ChunkGuard />
         <Provider>{children}</Provider>
+        {/* One analytics tag: first-party + GA4 + Meta Pixel (env-driven). */}
+        <HanzoAnalytics />
       </body>
     </html>
   )
