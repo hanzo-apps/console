@@ -59,20 +59,25 @@ export function accountsCookie(store: AiAccountsStore): CookieDirective {
  * Non-secret org/user preferences for the AI-accounts product. Sealed like the
  * credential store (same AEAD, same `/ai-accounts` scope) — the seal is for
  * integrity/unforgeability, not confidentiality (there is no secret here). The one
- * preference today is `routingEnabled`: the org's `model: "auto"` smart-routing
- * default that Hanzo surfaces (chat/app/desktop/mobile) read.
+ * preference today is `routingEnabled`, a tri-state user OVERRIDE of the org's
+ * `model: "auto"` smart-routing default (which the Hanzo surfaces read): `true` =
+ * forced on, `false` = forced off, `null` = never touched → follow the org default
+ * (`GET /v1/get-routing-defaults`). "Never touched" is the ABSENT cookie, so the
+ * toggle only ever WRITES a concrete boolean; `null` is a read-side default only.
  */
-export type AiAccountsSettings = { routingEnabled: boolean }
+export type AiAccountsSettings = { routingEnabled: boolean | null }
 
-const DEFAULT_SETTINGS: AiAccountsSettings = { routingEnabled: false }
+const DEFAULT_SETTINGS: AiAccountsSettings = { routingEnabled: null }
 
-/** Coerce an opened blob into settings — defensive, defaulted (fail-closed to off). */
+/** Coerce an opened blob into settings — defensive. A strict boolean is an explicit
+ *  override; anything else (absent/garbage) is `null` = follow the org default. */
 export function normalizeSettings(raw: unknown): AiAccountsSettings {
   const r = (raw ?? {}) as Partial<AiAccountsSettings>
-  return { routingEnabled: r.routingEnabled === true }
+  return { routingEnabled: r.routingEnabled === true ? true : r.routingEnabled === false ? false : null }
 }
 
-/** Read + decrypt the caller's preferences (defaults on absent/tamper — fail-closed). */
+/** Read + decrypt the caller's preferences (defaults to the unset override on
+ *  absent/tamper — so a fresh user follows the org default). */
 export function readSettings(req: NextRequest): AiAccountsSettings {
   const opened = open<AiAccountsSettings>(req.cookies.get(AI_SETTINGS_COOKIE)?.value)
   return opened ? normalizeSettings(opened) : DEFAULT_SETTINGS
