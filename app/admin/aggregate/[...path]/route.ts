@@ -6,7 +6,7 @@
  * routing that affects every org).
  *
  * The admin business board is an ALL-ORGS god view (`?org=all`) over IAM + commerce
- * + o11y. So — unlike the per-tenant `/cloud` proxy, which authorizes on the bearer
+ * + o11y. So — unlike the per-tenant `/v1` proxy, which authorizes on the bearer
  * `owner` claim and is safe for any authenticated user — this MUST be gated to a
  * GLOBAL admin BEFORE anything is forwarded: a tenant customer (even one who is
  * `isAdmin` of their own org) must NOT read another org's revenue/spend/customers,

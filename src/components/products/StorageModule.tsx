@@ -3,7 +3,7 @@
 /**
  * Storage — the "Hanzo S3" product surface (S3 file manager). A real
  * file manager over the org-scoped `/v1/s3` control plane in the unified cloud
- * binary (`hanzoai/cloud` clients/s3): the browser calls the same-origin `/cloud`
+ * binary (`hanzoai/cloud` clients/s3): the browser calls the same-origin `/v1`
  * user-bearer proxy, the server scopes every op to the caller's own org, and this
  * module renders buckets + objects with folder navigation, upload, download and
  * delete. No external s3.hanzo.ai UI — one console, one backend.

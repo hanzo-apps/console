@@ -7,14 +7,14 @@
  * auto.hanzo.ai engine + its `/v1/auto` reverse proxy — ONE native surface, no
  * link-out.
  *
- * Transport mirrors `paas.ts`/`functions.ts`: the `/cloud` bearer proxy via
- * `cloudProxyV1Url` — the browser sends only its session cookie, the proxy mints a
- * short-lived user IAM Bearer and forwards it; cloud's `SanitizeIdentity` resolves
- * the org from the Bearer OWNER claim and pins every read/write to it, so a caller
- * only ever sees THEIR org's flows/runs (backend-enforced). A bare `/v1/automations`
- * would 403 on the live ingress (the gateway strips the client identity), so the
- * `/cloud` proxy head is explicit; `automations` is allow-listed in `proxy-allow.ts`
- * and rewritten in `next.config.mjs`.
+ * Transport mirrors `paas.ts`/`functions.ts`: the same-origin `/v1` user-bearer BFF via
+ * `cloudProxyV1Url` (`<origin>/v1/automations/*` → the `app/v1/[...path]` catch-all) —
+ * the browser sends only its session cookie, the BFF mints a short-lived user IAM Bearer
+ * and forwards it; cloud's `SanitizeIdentity` resolves the org from the Bearer OWNER
+ * claim and pins every read/write to it, so a caller only ever sees THEIR org's
+ * flows/runs (backend-enforced). A cookie-only call would 403 (cloud requires the
+ * minted identity), so the BFF's bearer is load-bearing; `automations` is allow-listed
+ * in `proxy-allow.ts` CLOUD_HEADS.
  *
  * The endpoints return PLAIN JSON (`{data:[…]}` lists, bare objects), NOT the
  * casibase `{status,msg,data}` envelope — so we use the `rest*` transport and

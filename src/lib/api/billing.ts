@@ -28,7 +28,7 @@ import { normalizeUsageRecords, perModel, totalsOf } from './aimetrics'
 // (which 403s a cookie-only browser request with no bearer — "sign in to view
 // billing"), so a bare `/v1/billing/*` never reaches the proxy. The direct
 // `/billing/v1/*` route handler injects the commerce service token + pins the
-// caller's own subject (same class as v8.4.70's framework/s3 → /cloud/v1 fix).
+// caller's own subject (same class as v8.4.70's framework/s3 → /v1 fix).
 
 /** One metered line — spend grouped by product/model over the window. */
 export type UsageLine = {

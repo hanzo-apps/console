@@ -853,7 +853,7 @@ export const catalog: CatalogEntry[] = [
     // (hanzoai/cloud clients/automations, /v1/automations; HIP-0106 / task #51):
     // an org's flows run durably on the shared hanzoai/tasks engine over the
     // go:embed'd 706-connector catalogue, credentials KMS-sealed per org. Rendered
-    // NATIVELY in-console (flows + connector catalogue + runs) over the /cloud
+    // NATIVELY in-console (flows + connector catalogue + runs) over the /v1
     // user-bearer proxy — NO link-out, ONE surface. The retired standalone
     // auto.hanzo.ai engine + its /v1/auto reverse proxy are gone; `/auto` and
     // `/automation` alias here (match-core). hanzo-scoped so it never appears on a
@@ -1116,7 +1116,7 @@ export const catalog: CatalogEntry[] = [
     // The USER-facing per-org PaaS over cloud's native /v1/platform control plane
     // (hanzoai/cloud clients/platform): your own container apps — deploy, source-
     // tagged logs, KMS-sealed env (secret-masked), and verified custom domains.
-    // Org-scoped by the Bearer owner via the /cloud proxy. DISTINCT from the admin
+    // Org-scoped by the Bearer owner via the /v1 bearer BFF. DISTINCT from the admin
     // `applications` fleet board (/v1/apps) and internal-admin platform.hanzo.ai.
     id: 'app-platform',
     label: 'App Platform',
@@ -1855,7 +1855,7 @@ export const catalog: CatalogEntry[] = [
   {
     // Native Analytics — per-org LLM + web + commerce analytics over the unified
     // ClickHouse warehouse (datastore), read through cloud-api /v1/analytics/* via
-    // the /cloud bearer proxy (the FOUR real routes: overview/timeseries/top/health).
+    // the /v1 bearer proxy (the FOUR real routes: overview/timeseries/top/health).
     // Overview (LLM lens REAL from hanzo.cloud_usage; web/commerce honest-empty until
     // the events collector emits) + LLM (top models) — every metric a real query,
     // never fabricated. See universe/docs/architecture/unified-analytics.md.
@@ -1935,7 +1935,7 @@ export const catalog: CatalogEntry[] = [
     // The signed-in org's per-tenant view of the UNIFIED finance ledger (hanzoai/
     // finance, embedded in cloud): balance, metered spend, credits, invoices, payment
     // methods, and the double-entry ledger, over /v1/finance/* scoped to the caller's
-    // org (the `/cloud` bearer proxy resolves the org from the token owner). Renders the
+    // org (the `/v1` bearer proxy resolves the org from the token owner). Renders the
     // SHARED @hanzo/finance-ui board — the SAME component finance.hanzo.ai renders — so
     // a spend/usage/credits card is identical across both surfaces (the shared-reuse
     // point). Distinct id from the admin `finance` platform-FinOps board (admin: true)
@@ -2342,7 +2342,7 @@ export const catalog: CatalogEntry[] = [
   {
     // CRM — the first Hanzo Business-OS brick, over the native-Go cloud `/v1/crm`
     // surface (cloud clients/crm on Base/SQLite: companies/contacts/opportunities,
-    // a port of Twenty's core model). Per-org through the user-bearer /cloud proxy.
+    // a port of Twenty's core model). Per-org through the user-bearer /v1 bearer BFF.
     id: 'crm',
     label: 'CRM',
     icon: Building2,

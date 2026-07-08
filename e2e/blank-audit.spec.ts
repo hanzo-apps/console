@@ -5,7 +5,7 @@
  * network mocked, so it needs NO real backend and NO password:
  *   - `/auth/session` → a global-admin account (sees every product), so the AuthGate
  *     and OrgGate pass and the full console shell mounts.
- *   - every data endpoint (`/v1`, `/cloud`, `/ai`, `/billing`, `/commerce`,
+ *   - every data endpoint (`/v1`, `/v1`, `/ai`, `/billing`, `/commerce`,
  *     `/telemetry`, `/vm`, `/superbase`, `/admin`, cross-origin platform) → a chosen
  *     failure mode (AUDIT_MODE): `notrouted` (404, the "backend not wired on this
  *     deployment" reality), `down` (502), or `empty` (200 empty payload).

@@ -1,7 +1,7 @@
 /**
  * Media upload/resolve — the per-org DAM transport for a media DocType, built on
  * the SAME org-scoped S3 file manager the Storage product uses (`StorageApi`,
- * /v1/s3 → SeaweedFS via the /cloud bearer proxy). One storage backend, no bespoke
+ * /v1/s3 → SeaweedFS via the /v1 bearer proxy). One storage backend, no bespoke
  * media service.
  *
  * WHY store the KEY, not a URL: the cloud only mints presigned object URLs with a

@@ -12,7 +12,7 @@ import {
  * Integrations API + pure normalizers. The module calls the DOCUMENTED cloud
  * `/v1/integrations` contract same-origin, keyless and prefix-free (`originV1Url` →
  * `<origin>/v1/integrations`); `next.config.mjs` rewrites that head to the user-bearer
- * `/cloud` proxy. These tests pin (1) that each call hits the EXACT same-origin
+ * `/v1` proxy. These tests pin (1) that each call hits the EXACT same-origin
  * `/v1/integrations` path with the right verb (the canonical Agents/CRM form — never a
  * direct cloud-origin call, which 403s), (2) that the real Provider JSON shape (the
  * CONNECTORS_CONTRACT tags) normalizes, (3) the list reads any envelope key, and (4) a
@@ -79,7 +79,7 @@ describe('Integrations normalizers — contract Provider shape, defensive', () =
   })
 })
 
-describe('IntegrationsApi — hits the same-origin /v1/integrations contract (rewritten to /cloud)', () => {
+describe('IntegrationsApi — hits the same-origin /v1/integrations contract (rewritten to the /v1 BFF)', () => {
   const fetched: { url: string; method: string }[] = []
 
   beforeEach(() => {

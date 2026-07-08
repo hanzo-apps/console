@@ -44,32 +44,33 @@ function guiPackages() {
 }
 
 /**
- * Same-origin `/v1/*` for the AI product surface — ZERO client-visible prefix.
+ * Same-origin `/v1/*` — ZERO client-visible prefix (the CTO contract: "no prefix
+ * before /v1/ in any API call"). The browser ALWAYS calls its OWN origin at a clean
+ * `/v1/<head>/...`, never `/cloud/...`, `/ai/...` or `/api/...`.
  *
- * The CTO contract is "no prefix before /v1/ in any API call": the browser calls
- * its OWN origin at a clean `/v1/<head>/...`, never `/cloud/...` or `/ai/...`.
- * These rewrites map exactly the AI-surface heads to the console's already-hardened
- * server-side bearer proxies (`app/cloud`, `app/ai`) — so the URL the client builds
- * is `/v1/prompts` while the request still terminates at OUR Next origin, which
- * mints a short-lived user bearer and forwards it (the raw session cookie NEVER
- * reaches cloud-api, so cloud-api carries no cookie-CSRF surface). This gives the
- * one-endpoint-form goal WITHOUT weakening the bearer trust boundary.
+ * The DEFAULT terminus for a `/v1/<head>` call is the console's `app/v1/[...path]`
+ * catch-all bearer proxy (→ cloud-api `/v1/*`): it mints a short-lived user bearer
+ * from the session cookie and forwards it, so the raw cookie NEVER reaches cloud-api
+ * (no cookie-CSRF surface) and the org is server-authoritative. That handler needs
+ * NO rewrite — a clean `/v1/agents` falls straight through to it.
  *
- * Scope is deliberately the CLOSED head list the AI clients use (prompts/agents/
- * evals via /cloud, models/chat/embeddings/rerank via /ai) — a blanket `/v1/:path*`
- * would shadow paths meant for other backends. Each destination handler still
- * enforces its own least-privilege allow-list (`proxy-allow.ts`), so a rewrite can
- * never widen what the proxy admits. `beforeFiles` so these win over any route.
+ * These `beforeFiles` rewrites exist ONLY to DISPATCH the heads whose backend is NOT
+ * cloud-api to their own hardened same-origin proxy, while keeping the client URL a
+ * clean `/v1/...`:
+ *   - AI gateway heads (models/chat/embeddings/rerank/… + pricing/plans) → `/ai`.
+ *   - Admin AGGREGATE reads/writes (`/v1/admin/{overview,usage,…}`, the cross-tenant
+ *     god view) → the GLOBAL-ADMIN-GATED `/admin/aggregate` proxy, which runs
+ *     `getAdminGate` (fail-closed 403) BEFORE forwarding (RED H1). `admin/iam` +
+ *     `admin/kms` are deliberately NOT rewritten — they keep their own gated proxies,
+ *     reached by the client's explicit `/admin/*` origin path.
+ *   - Visor compute CATALOG (regions/sizes, and `gpu-sizes` → visor `gpus`) → `/vm`.
+ *   - Per-tenant billing + commerce store DATA → `/billing` + `/commerce`.
  *
- * The admin AGGREGATE reads (`/v1/admin/{overview,usage,orgs,audit,products}` — the
- * cross-tenant business/platform board) map to the GLOBAL-ADMIN-GATED proxy
- * (`app/admin/aggregate`), which runs `getAdminGate` (fail-closed 403) BEFORE
- * forwarding. This is the console-side server gate for the all-orgs god view (RED
- * H1) — NOT the ungated `/cloud` proxy. `admin/iam` + `admin/kms` are deliberately
- * NOT rewritten here: they keep their own gated proxies with their own tenant
- * scoping, and are reached by the client's explicit `/admin/*` origin path.
+ * `beforeFiles` so a dispatched head wins over the `/v1` catch-all; the scope is the
+ * CLOSED head list each non-cloud client uses (a blanket `/v1/:path*` would shadow the
+ * cloud surface). Each destination handler STILL enforces its own least-privilege
+ * allow-list (`proxy-allow.ts`), so a rewrite can never widen what a proxy admits.
  */
-const CLOUD_V1_HEADS = ['prompts', 'agents', 'automations', 'evals', 'analytics', 'usage', 'audit', 'templates', 'projects', 'platform', 'crm', 'referrals', 'affiliates', 'authors', 'finance', 'tracker', 'integrations', 'ml', 'vpcs', 'load-balancers', 'networks', 'mesh', 'edge', 'indexers', 'oracles', 'authz', 'o11y', 'websearch', 'enablement']
 // `pricing` (the rich model+provider CATALOG at `/v1/pricing/models`) and `plans` (the
 // subscription tiers/entitlements) are AI-gateway-served like models/chat and are in the
 // `/ai` proxy ALLOWED set (app/ai/[...path]), so they route to `/ai` too.
@@ -85,8 +86,8 @@ const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finan
  * annotation-queues/users) to a real cloud backend so `npm run dev` renders the
  * authenticated shell locally. Enabled ONLY when `DEV_CLOUD_ORIGIN` is set (never in
  * the built image), so production is unchanged — there the console host's edge routes
- * `/v1` to cloud-api. The request cookie is forwarded by the rewrite, so the local
- * dev session resolves against the real cloud.
+ * `/v1` to the console, whose `/v1` catch-all forwards to cloud-api. The request cookie
+ * is forwarded by the rewrite, so the local dev session resolves against the real cloud.
  */
 const DEV_CLOUD_ORIGIN = process.env.DEV_CLOUD_ORIGIN?.replace(/\/+$/, '')
 const devCloudRewrites = () =>
@@ -97,35 +98,20 @@ const devCloudRewrites = () =>
       ]
     : []
 
-// Native cloud INFRA + managed-data heads the data-product clients call at a clean
-// `/v1/<head>` (nothing before /v1/); each is rewritten to the same-origin user-
-// bearer `/cloud` proxy (app/cloud) — which mints a per-user token and forwards to
-// cloud-api — and is allow-listed in proxy-allow.ts CLOUD_HEADS (defense in depth).
-const CLOUD_INFRA_V1_HEADS = ['machines', 'gpus', 'clusters', 'org', 'sql', 'vector', 'datastore', 'kv', 'search', 's3', 'docdb']
 // Public compute CATALOG (regions / CPU sizes) → the same-origin visor `/vm` proxy
 // (app/vm). The GPU-accelerator catalog is the DISTINCT head `/v1/gpu-sizes` so it
-// never collides with the cloud-api GPU INVENTORY at `/v1/gpus`.
+// never collides with the cloud-api GPU INVENTORY at `/v1/gpus` (served by `/v1`).
 const VM_V1_HEADS = ['regions', 'sizes']
-// Serverless + build/deploy + framework product heads the data-product clients
-// (functions.ts, framework/client.ts) and the platform-aggregate modules
-// (Builds/Environments/Pipelines/Releases) call at a clean `/v1/<head>`; each routes to
-// the user-bearer `/cloud` proxy and is allow-listed in proxy-allow.ts CLOUD_HEADS.
-const CLOUD_PRODUCT_V1_HEADS = ['functions', 'framework', 'environments', 'pipelines', 'builds', 'releases']
 
 const aiSurfaceRewrites = () => ({
   beforeFiles: [
-    ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
-    ...CLOUD_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/cloud/v1/${h}/:path*` })),
+    // Cloud-api heads (prompts/agents/automations/functions/framework/s3/vector/…) are
+    // NOT rewritten: a clean `/v1/<head>` falls through to the `app/v1/[...path]` bearer
+    // proxy → cloud-api `/v1/*`. Only the NON-cloud backends are dispatched below.
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/ai/v1/${h}` })),
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/v1/${h}/:path*` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}`, destination: `/admin/aggregate/${h}` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}/:path*`, destination: `/admin/aggregate/${h}/:path*` })),
-    // Data-product clients (compute / visor / platform / provisioning / storage) —
-    // clean `/v1/<head>` → the user-bearer `/cloud` proxy (org from the Bearer owner).
-    ...CLOUD_INFRA_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
-    ...CLOUD_INFRA_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/cloud/v1/${h}/:path*` })),
-    ...CLOUD_PRODUCT_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/cloud/v1/${h}` })),
-    ...CLOUD_PRODUCT_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/cloud/v1/${h}/:path*` })),
     // Public compute catalog → the visor `/vm` proxy.
     ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/vm/v1/${h}` })),
     ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/vm/v1/${h}/:path*` })),
@@ -151,8 +137,8 @@ const aiSurfaceRewrites = () => ({
  *   - NO `rewrites` — a static export cannot run rewrites, and it does not need
  *     them: the clean `/v1/<head>` calls the SPA already builds now terminate
  *     DIRECTLY at the embedded cloud's mounted subsystems (prompts/agents/evals/…,
- *     models/chat/embeddings/…, admin/*), which is exactly what the rewrites used
- *     to forward to via the Next BFF. The BFF proxy routes (app/cloud, app/ai,
+ *     models/chat/embeddings/…, admin/*), which is exactly what the rewrites/`app/v1`
+ *     proxy forward to via the Next BFF. The BFF proxy routes (app/v1, app/ai,
  *     app/commerce, …) are the server, and in one-binary the cloud binary IS the
  *     server — so they are simply absent from the export (see below).
  *   - `images.unoptimized` — the export has no Image Optimization server.

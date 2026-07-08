@@ -4,7 +4,7 @@
  * TWO transports, cleanly split by authority:
  *   - Cluster INVENTORY + node-pool lifecycle (list / get / add-pool / scale-pool /
  *     delete-pool) go through the unified cloud binary at `/v1/clusters*`, via the
- *     same-origin user-bearer `/cloud` proxy (app/cloud/[...path]/route.ts → cloud-api,
+ *     same-origin user-bearer `/v1` proxy (app/v1/[...path]/route.ts → cloud-api,
  *     org resolved from the Bearer owner). This is the native, per-org surface every
  *     cluster consumer reads — one source of truth.
  *   - The apps inventory and cluster PROVISIONING (spin up a whole new DOKS cluster)
@@ -191,7 +191,7 @@ const clustersOf = (payload: unknown): Cluster[] => {
 }
 
 /** Canonical path for the clusters surface (`/v1/clusters…`); `next.config` rewrites
- *  it to the same-origin user-bearer `/cloud` proxy. */
+ *  it to the same-origin user-bearer `/v1` proxy. */
 const clustersUrl = (path = ''): string => cloudProxyV1Url(`clusters${path}`)
 
 export const PlatformApi = {
@@ -246,7 +246,7 @@ export const PlatformApi = {
   /**
    * Provision a fresh dedicated DOKS cluster for the org
    * (`POST /v1/org/{org}/cluster`). Served by Hanzo Cloud's EMBEDDED platform via
-   * the same-origin user-bearer `/cloud` proxy — org-scoped by the Bearer owner,
+   * the same-origin user-bearer `/v1` proxy — org-scoped by the Bearer owner,
    * the DigitalOcean credential lives server-side IN cloud, NOT a console `/paas`
    * service token. (Same native-`/v1` path as `listClusters`.)
    */

@@ -31,7 +31,7 @@ import type { CloudBalance } from './wallet'
 // 403s a cookie-only browser request), so the bare form never reaches the proxy; the
 // direct `/billing/v1/*` route handler injects the commerce service token + pins the
 // caller's own subject and returns the org's real ledger (same class as v8.4.70's
-// framework/s3 → /cloud/v1 fix). `wallet.ts` already addresses it this way.
+// framework/s3 → /v1 fix). `wallet.ts` already addresses it this way.
 
 /**
  * One usage record as commerce returns it under `usage[]`. All fields are

@@ -2,7 +2,7 @@
 
 /**
  * Prompts — versioned prompt management over the REAL cloud `/v1/prompts` surface
- * (cloud `clients/prompts`), reached through the console's OWN user-bearer `/cloud`
+ * (cloud `clients/prompts`), reached through the console's OWN user-bearer `/v1`
  * proxy (`PromptsApi` → `originV1Url('prompts')`). The proxy mints a short-lived
  * user token server-side and the backend scopes to the token owner's org, so every
  * read is org-scoped and no credential reaches the browser — the SAME per-tenant

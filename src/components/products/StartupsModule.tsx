@@ -6,7 +6,7 @@
  * applications resource on Base/SQLite). A public marketing form
  * (hanzo.ai/startups) posts an application; an AI screen scores it; staff work it
  * through the pipeline HERE. Same-origin, keyless (`StartupsApi` →
- * `<origin>/v1/crm/applications`, rewritten to the user-bearer `/cloud` proxy),
+ * `<origin>/v1/crm/applications`, rewritten to the user-bearer `/v1` proxy),
  * so every read/write is org-scoped SERVER-SIDE — the pipeline lives in `hanzo`.
  *
  * The pipeline is the SAME @hanzo/data `RecordsView` the CRM uses, defaulting to

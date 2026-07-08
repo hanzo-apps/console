@@ -7,12 +7,12 @@
  *   GET    /v1/<kind>/<name>               -> 200 Resource
  *   DELETE /v1/<kind>/<name>               -> 204
  *
- * Transport: the browser calls the console's OWN-origin `/cloud` user-bearer proxy
- * (`cloudProxyV1Url` → `<origin>/cloud/v1/<kind>`), NEVER a bare `/v1/<kind>`. On the
+ * Transport: the browser calls the console's OWN-origin `/v1` user-bearer proxy
+ * (`cloudProxyV1Url` → `<origin>/v1/<kind>`), NEVER a bare `/v1/<kind>`. On the
  * live console ingress a bare `/v1/*` is routed straight to hanzoai/gateway (bypassing
  * Next), where the provisioning backends authorize on the Bearer owner claim and 403 a
  * cookie-only call ("X-Org-Id required") — surfacing as a FALSE "Not enabled for your
- * account". The `/cloud` route (`app/cloud/[...path]`, allow-listed in proxy-allow.ts)
+ * account". The `/v1` route (`app/v1/[...path]`, allow-listed in proxy-allow.ts)
  * mints a short-lived user-bound IAM token from the session and forwards it, so the org
  * is resolved server-side and the real per-org resources load. Same class-fix as
  * storage.ts (`/v1/s3`) and framework — the seven data kinds share ONE proxy path.

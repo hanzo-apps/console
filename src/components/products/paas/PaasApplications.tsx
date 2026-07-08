@@ -2,7 +2,7 @@
 
 /**
  * Applications — the org's REAL deployed apps on the live Hanzo PaaS
- * (`/v1/platform/*` via the `/cloud` bearer proxy). Per-org by construction:
+ * (`/v1/platform/*` via the `/v1` bearer proxy). Per-org by construction:
  * cloud resolves the org from the Bearer owner, so the caller only ever sees
  * THEIR projects/apps. Lists every app with its project, status, source, and live
  * URL; deploys a new app (git repo or image) and — the marquee — lets a customer
