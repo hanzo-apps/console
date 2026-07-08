@@ -11,6 +11,7 @@ import { registerDefaultFields, registerField } from '@hanzo/data'
 
 import config from '../../gui.config'
 import { SessionProvider } from '~/lib/auth/session'
+import { EntitlementsProvider } from '~/lib/entitlements-context'
 import { OrgAccentProvider } from './OrgAccentProvider'
 import { RichTextDisplay, RichTextInput } from './fields/RichTextField'
 
@@ -54,7 +55,9 @@ export function Provider({ children }: { children: ReactNode }) {
     () => (
       <SessionProvider>
         <OrgAccentProvider />
-        {children}
+        {/* Entitlements live inside the session (they read the signed-in account +
+            active org scope) so the sidebar/launcher/palette gate from ONE fetch. */}
+        <EntitlementsProvider>{children}</EntitlementsProvider>
       </SessionProvider>
     ),
     [children],

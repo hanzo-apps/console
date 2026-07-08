@@ -33,7 +33,7 @@ import {
   type Series,
   type ServiceHealth,
 } from '~/lib/api'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard, Panel } from '~/components/ui/Metric'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
@@ -71,10 +71,10 @@ function toPoints(series: Series[], seconds: number): ChartPoint[] {
 }
 
 export function MetricsModule(props: { params: Record<string, string> }) {
-  const isGlobalAdmin = useIsGlobalAdmin()
+  const isSuperAdmin = useIsSuperAdmin()
   // A customer (or a tenant org owner) sees their own per-org usage — never the
   // platform infra-health board or internal `*.svc` topology.
-  if (!isGlobalAdmin) return <CustomerUsage params={props.params} />
+  if (!isSuperAdmin) return <CustomerUsage params={props.params} />
   return <InfraMetrics />
 }
 

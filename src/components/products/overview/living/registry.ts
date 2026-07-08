@@ -53,7 +53,7 @@ async function withHealth(data: OverviewData, probeApps = true): Promise<Overvie
   // The apps inventory (`/paas/apps`) is admin-gated on this deployment, so a
   // tenant user's probe only 403s — skip it and leave health in its honest empty
   // state instead of firing a request we know will be rejected (keeps the browser
-  // console clean). Global admins (probeApps=true, the default) still enrich health.
+  // console clean). Super admins (probeApps=true, the default) still enrich health.
   if (!probeApps) return data
   try {
     // Service-token-gated + tenant-scoped server-side, so no org filter from the browser.
@@ -93,14 +93,14 @@ const platformOverview: LivingOverviewConfig = {
     ],
     [{ tile: 'activity', title: 'Live activity' }, { tile: 'health', title: 'System health' }],
   ],
-  load: async ({ range, allOrgs, isGlobalAdmin }) => {
+  load: async ({ range, allOrgs, isSuperAdmin }) => {
     // `/v1/admin/overview` is a cross-tenant aggregate, server-gated to global
     // admins. A tenant user (even an org's OWN admin, e.g. `hanzo/z`) only ever
     // gets a 403 from it, so don't fire it for them — go straight to the org-scoped
     // usage ledger (the same source the catch-fallback already used). This keeps a
     // tenant admin's overview working AND silent, instead of spamming the browser
     // console with 403s for a call that can't succeed.
-    if (isGlobalAdmin) {
+    if (isSuperAdmin) {
       try {
         const ov = await AdminApi.overview({ range, allOrgs, activityLimit: 40 })
         const data = fromAdminOverview(ov)
@@ -123,7 +123,7 @@ const platformOverview: LivingOverviewConfig = {
     data.distribution.revenue = data.distribution.byModel ?? []
     // Skip the admin-gated apps probe for tenant users (→ honest empty health)
     // so it doesn't 403; global admins whose aggregate just failed still probe.
-    return withHealth(data, isGlobalAdmin)
+    return withHealth(data, isSuperAdmin)
   },
 }
 
@@ -222,7 +222,7 @@ const overlordOverview: LivingOverviewConfig = {
  * The admin.hanzo.ai BUSINESS overview — the SaaS control board for running the
  * business: MRR/revenue, total usage & cost trend, active orgs/customers, top
  * agents/bots by cost, subscription/plan mix, and fleet health. GLOBAL-ADMIN ONLY
- * (gated by the registry `admin` flag + `useIsGlobalAdmin`; the `/v1/admin/overview`
+ * (gated by the registry `admin` flag + `useIsSuperAdmin`; the `/v1/admin/overview`
  * aggregate is itself server-gated). It is an all-orgs god view — the module always
  * passes `allOrgs`, and the loader forwards `?org=all`.
  *

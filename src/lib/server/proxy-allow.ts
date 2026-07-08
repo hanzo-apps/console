@@ -224,6 +224,15 @@ export const CLOUD_HEADS: readonly string[] = [
   // Embeddings/collections usage slice of the cloud-usage read API (`/v1/get-cloud-usages`).
   // Bearer-required; degrades to "—" but should read real data through /v1.
   'get-cloud-usages',
+  // Per-org product entitlements (cloud clients/entitlements): /v1/orgs/{org}/entitlements
+  // — the set of products the org has enabled (out-of-box each org assembles its own
+  // backend from the catalog). GET reads the enabled ids; POST { add?, remove? } toggles
+  // them. The handler resolves + PINS the org from the Bearer owner (a customer can only
+  // read/mutate their OWN org's entitlements; a super admin any org, server-enforced),
+  // so it routes through /v1 exactly like the rest — a cookie-only call 403s. The single
+  // `orgs` head admits the org-scoped entitlements sub-path (the console never calls any
+  // other `orgs/*` surface; keep the tunnel to exactly what's used).
+  'orgs',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */

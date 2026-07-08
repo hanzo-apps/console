@@ -20,7 +20,7 @@ import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { getBrand } from '~/lib/branding/brands'
 import { useSession } from '~/lib/auth/session'
-import { isGlobalAdminAccount } from '~/lib/auth/admin'
+import { isSuperAdminAccount } from '~/lib/auth/admin'
 import { hasSelectedOrg } from '~/lib/org-scope'
 import { OrgOnboarding } from '~/components/OrgOnboarding'
 import { OrgPicker } from '~/components/OrgPicker'
@@ -73,10 +73,10 @@ export function OrgGate({ children }: { children: ReactNode }) {
   const { account } = useSession()
   const owner = account?.owner ?? ''
   // GLOBAL (cross-tenant) admin — the only one who may use admin.hanzo.ai. The
-  // decision (membership in the reserved `admin` org, or an explicit isGlobalAdmin
-  // claim) lives in ONE place — `isGlobalAdminAccount` — shared with the nav gate.
+  // decision (membership in the reserved `admin` org, or an explicit isSuperAdmin
+  // claim) lives in ONE place — `isSuperAdminAccount` — shared with the nav gate.
   // A tenant org owner (e.g. Dave/maxpower) has owner!=='admin' → never global.
-  const isGlobalAdmin = isGlobalAdminAccount(account)
+  const isSuperAdmin = isSuperAdminAccount(account)
   const [bannerDismissed, setBannerDismissed] = useState(true) // start hidden to avoid flash
   // Which surface to show — resolved on mount (localStorage is client-only) so the
   // picker vs. scoped-console decision never flashes the wrong one during hydration.
@@ -100,11 +100,11 @@ export function OrgGate({ children }: { children: ReactNode }) {
   // server /admin/* proxies also fail-closed, this is the matching UI gate).
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (onAdminHost() && owner && !isGlobalAdmin) {
+    if (onAdminHost() && owner && !isSuperAdmin) {
       const consoleHost = window.location.hostname.replace(/^admin\./, 'console.')
       window.location.replace(`https://${consoleHost}${window.location.pathname}${window.location.search}`)
     }
-  }, [owner, isGlobalAdmin])
+  }, [owner, isSuperAdmin])
 
   // No org yet → first-run onboarding
   if (!owner) {
@@ -113,7 +113,7 @@ export function OrgGate({ children }: { children: ReactNode }) {
 
   // On the admin host but not a global admin → render nothing while the redirect
   // above fires, so the admin console never flashes for an unauthorized user.
-  if (onAdminHost() && !isGlobalAdmin) {
+  if (onAdminHost() && !isSuperAdmin) {
     return null
   }
 
@@ -136,7 +136,7 @@ export function OrgGate({ children }: { children: ReactNode }) {
   // An org is entered → the scoped console. A GLOBAL admin on a non-admin host also
   // gets the dismissible admin banner; org owners never see it (admin.hanzo.ai is
   // cross-tenant ops they cannot use).
-  const showBanner = isGlobalAdmin && !onAdminHost() && !bannerDismissed
+  const showBanner = isSuperAdmin && !onAdminHost() && !bannerDismissed
 
   return (
     <YStack flex={1}>
