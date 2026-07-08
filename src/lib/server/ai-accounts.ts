@@ -21,6 +21,8 @@ import { seal, open, type CookieDirective } from './session'
 import type { ConnectMode } from '~/lib/products/ai-accounts'
 
 export const AI_ACCOUNTS_COOKIE = 'hz_ai_accounts'
+/** The sibling NON-SECRET preferences blob (routing on/off, …) — same seal, same scope. */
+export const AI_SETTINGS_COOKIE = 'hz_ai_settings'
 /** Scope the sealed blob to the ai-accounts routes only (it never needs to ride /v1 or the BFF). */
 const COOKIE_PATH = '/ai-accounts'
 const MAX_AGE_S = 90 * 24 * 60 * 60
@@ -45,6 +47,42 @@ export function accountsCookie(store: AiAccountsStore): CookieDirective {
   return {
     name: AI_ACCOUNTS_COOKIE,
     value: seal(store),
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: COOKIE_PATH,
+    maxAge: MAX_AGE_S,
+  }
+}
+
+/**
+ * Non-secret org/user preferences for the AI-accounts product. Sealed like the
+ * credential store (same AEAD, same `/ai-accounts` scope) — the seal is for
+ * integrity/unforgeability, not confidentiality (there is no secret here). The one
+ * preference today is `routingEnabled`: the org's `model: "auto"` smart-routing
+ * default that Hanzo surfaces (chat/app/desktop/mobile) read.
+ */
+export type AiAccountsSettings = { routingEnabled: boolean }
+
+const DEFAULT_SETTINGS: AiAccountsSettings = { routingEnabled: false }
+
+/** Coerce an opened blob into settings — defensive, defaulted (fail-closed to off). */
+export function normalizeSettings(raw: unknown): AiAccountsSettings {
+  const r = (raw ?? {}) as Partial<AiAccountsSettings>
+  return { routingEnabled: r.routingEnabled === true }
+}
+
+/** Read + decrypt the caller's preferences (defaults on absent/tamper — fail-closed). */
+export function readSettings(req: NextRequest): AiAccountsSettings {
+  const opened = open<AiAccountsSettings>(req.cookies.get(AI_SETTINGS_COOKIE)?.value)
+  return opened ? normalizeSettings(opened) : DEFAULT_SETTINGS
+}
+
+/** The Set-Cookie directive that persists the (re-sealed) preferences. */
+export function settingsCookie(settings: AiAccountsSettings): CookieDirective {
+  return {
+    name: AI_SETTINGS_COOKIE,
+    value: seal(settings),
     httpOnly: true,
     secure: true,
     sameSite: 'lax',

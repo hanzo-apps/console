@@ -2,21 +2,24 @@
 
 /**
  * AI Accounts — the unified usage + account-connect product (registry `''` + `:tab`).
- * Two tabs, mirroring the BillingModule idiom (a tab bar over `router.push`):
+ * Three tabs, mirroring the BillingModule idiom (a tab bar over `router.push`):
  *   Overview — unified usage across every connected provider + the Hanzo lane.
+ *   Routing  — smart routing (`model: "auto"`) explainer + enable/disable + curl.
  *   Accounts — connect/link provider accounts (paste an API key / OAuth token / cookie).
- * The subpage slug `accounts` matches the registry entry, so `/ai-accounts/accounts`
- * lands on the Accounts tab directly.
+ * The subpage slugs `routing`/`accounts` match the registry entries, so
+ * `/ai-accounts/routing` and `/ai-accounts/accounts` land on those tabs directly.
  */
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, XStack } from '@hanzo/gui'
 
 import { AIAccountsOverview } from './ai-accounts/OverviewTab'
+import { AIAccountsRouting } from './ai-accounts/RoutingTab'
 import { AIAccountsAccounts } from './ai-accounts/AccountsTab'
 
 const TABS: { id: string; label: string }[] = [
   { id: '', label: 'Overview' },
+  { id: 'routing', label: 'Routing' },
   { id: 'accounts', label: 'Accounts' },
 ]
 
@@ -43,7 +46,13 @@ export function AIAccountsModule({ params }: { params: Record<string, string> })
         ))}
       </XStack>
 
-      {tab === 'accounts' ? <AIAccountsAccounts params={params} /> : <AIAccountsOverview params={params} />}
+      {tab === 'accounts' ? (
+        <AIAccountsAccounts params={params} />
+      ) : tab === 'routing' ? (
+        <AIAccountsRouting params={params} />
+      ) : (
+        <AIAccountsOverview params={params} />
+      )}
     </>
   )
 }
