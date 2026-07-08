@@ -14,7 +14,6 @@ import { currentOrg } from '~/lib/org-scope'
 import { currentActor } from '~/lib/actor-scope'
 import { getScope } from '~/lib/scope'
 import { refreshSession } from '~/lib/auth/refresh'
-import { IS_EMBED } from '~/lib/embed'
 
 export type ApiResponse<T> = {
   status: 'ok' | 'error'
@@ -381,19 +380,8 @@ export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyB
  * org's real balance/usage), so tenant isolation is unchanged. On the server (SSR)
  * there is no `window`, so this yields a root-relative `/billing/v1/<path>`.
  */
-export const billingProxyBase = (): string => {
-  // In the hanzoai/cloud go:embed (static SPA, NO Next BFF), the `/billing/v1/*`
-  // route-handler does not exist → it falls through to the SPA fallback (200 HTML)
-  // and every billing/usage read throws "Invalid response (HTTP 200)" (the overview
-  // "Real-time usage" tile + wallet). There, `/v1/*` is served same-origin by cloud
-  // itself (NOT a bearer-less gateway), which validates the session and resolves the
-  // org from the owner claim — exactly as the WORKING bare-`/v1` heads (agents,
-  // tracker, analytics) already do. So the embed addresses cloud's `/v1/billing/*`
-  // directly. The Next-server console (console2.hanzo.ai) keeps the `/billing` BFF
-  // (which injects the commerce service token) — IS_EMBED is false there.
-  if (IS_EMBED) return typeof window !== 'undefined' ? window.location.origin : ''
-  return typeof window !== 'undefined' ? `${window.location.origin}/billing` : '/billing'
-}
+export const billingProxyBase = (): string =>
+  typeof window !== 'undefined' ? `${window.location.origin}/billing` : '/billing'
 
 /** Build a `/v1/<path>` URL on the per-tenant billing proxy (`<origin>/billing/v1/<path>`). */
 export const billingProxyV1Url = (path: string): string => v1Url(path, billingProxyBase())
