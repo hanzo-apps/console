@@ -152,7 +152,7 @@ export type OverviewContext = {
    * tenant user's browser would only ever get a 403 from, going straight to the
    * org-scoped source instead — the board renders the same, minus the console noise.
    */
-  isGlobalAdmin?: boolean
+  isSuperAdmin?: boolean
 }
 
 export type OverviewRange = '24h' | '7d' | '30d'

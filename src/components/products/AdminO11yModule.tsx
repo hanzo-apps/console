@@ -23,7 +23,7 @@ import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
 import { asApiError, ErrorState, OperatorAccessRequired } from '~/components/ui/States'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { formatMetric } from '~/components/products/overview/living/logic'
 
 const RANGES: O11yRange[] = ['24h', '7d', '30d']
@@ -63,7 +63,7 @@ const SVC_COLS: Column<FleetO11y['topServices'][number]>[] = [
 ]
 
 export function AdminO11yModule() {
-  const isAdmin = useIsGlobalAdmin()
+  const isAdmin = useIsSuperAdmin()
   const [range, setRange] = useState<O11yRange>('7d')
   const [st, setSt] = useState<State>({ loading: true, error: null, data: null })
 

@@ -41,7 +41,7 @@ export type PickerContext = {
   /** The signed-in user's own org (`account.owner`). */
   ownOrg: string
   /** Whether the caller is a global (cross-tenant) admin. */
-  isGlobalAdmin: boolean
+  isSuperAdmin: boolean
   /** Whether the caller is an admin of their OWN org (`account.isAdmin`). */
   callerIsAdmin: boolean
 }
@@ -78,18 +78,18 @@ export function initialsOf(org: Organization): string {
 
 /**
  * The caller's HONEST role in this org — derived from real context, never guessed:
- *   - global admin viewing another org → "Global admin" (masquerade access)
+ *   - super admin viewing another org → "Super admin" (masquerade access)
  *   - the caller's own org, they admin it → "Admin"
  *   - the caller's own org otherwise    → "Member"
- *   - global admin viewing their own org → "Admin"
+ *   - super admin viewing their own org → "Admin"
  */
 export function roleFor(org: Organization, ctx: PickerContext): string {
   const isOwn = org.name === ctx.ownOrg
-  if (ctx.isGlobalAdmin && !isOwn) return 'Global admin'
+  if (ctx.isSuperAdmin && !isOwn) return 'Super admin'
   if (isOwn) return ctx.callerIsAdmin ? 'Admin' : 'Member'
   // A non-global-admin only ever sees their own org, so this is unreachable in
   // practice; be honest rather than invent a role if it ever isn't.
-  return ctx.isGlobalAdmin ? 'Admin' : 'Member'
+  return ctx.isSuperAdmin ? 'Admin' : 'Member'
 }
 
 /** The date portion (YYYY-MM-DD) of an IAM timestamp, or '' if unparseable. */
