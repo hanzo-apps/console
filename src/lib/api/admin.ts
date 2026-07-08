@@ -192,6 +192,17 @@ export const IamAdminApi = {
   addRole: (role: Role): Promise<void> => admin.iamMutate('add-role', role),
   updateRole: (id: string, role: Role): Promise<void> => admin.iamMutate('update-role', role, { id }),
   deleteRole: (role: Role): Promise<void> => admin.iamMutate('delete-role', role),
+
+  // ── Waitlist approval queue (iam#104) — the launch dashboard's Pending-Users
+  //    board. REUSES the IAM approval API through the SAME global-admin /admin/iam
+  //    proxy; there is no second approval store. `owner` optionally scopes the
+  //    queue to one org (global admin sees all when omitted).
+  pendingUsers: (owner?: string, params: ListParams = {}): Promise<Paged<IamUser>> =>
+    admin.iamList<IamUser>('get-pending-users', listQuery({ pageSize: DEFAULT_PAGE_SIZE, ...(owner ? { owner } : {}), ...params })),
+  /** Approve a pending user off the waitlist (globally). id = `owner/name`. */
+  approveUser: (id: string): Promise<void> => admin.iamMutate('approve-user', { id }),
+  /** Reject a pending user's access request. id = `owner/name`. */
+  rejectUser: (id: string): Promise<void> => admin.iamMutate('reject-user', { id }),
 }
 
 // ── KMS admin (plain JSON over /admin/kms/secrets) ───────────────────────────
