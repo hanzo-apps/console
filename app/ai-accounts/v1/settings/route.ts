@@ -41,5 +41,23 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'routingEnabled (boolean) is required.' }, { status: 400 })
   }
   const settings = normalizeSettings(body)
+
+  // Cookie-only, deliberately. cloud-api now enforces per-org auto-routing via
+  // `OrgSettings.AutoRouting` (hanzoai/ai), toggled through
+  // `POST /v1/update-org-settings`. But that endpoint is `RequireGlobalAdmin`-gated
+  // (like every /v1/*-model-route admin route) and is NOT gateway-exposed — it is
+  // reachable only on the direct api.cloud.hanzo.ai ingress with a global-admin
+  // session. This Routing tab is a CUSTOMER surface: `resolveUser` here is a tenant
+  // user whose minted `hanzo-console` bearer is NOT global-admin, and the console's
+  // only admin proxy (`/admin/aggregate`) fail-closed-403s a non-global-admin. So
+  // there is NO clean authenticated path for a customer to write cloud-side
+  // OrgSettings, and forging one (a console service token asserting admin authority
+  // for a client-supplied org) would be a confused-deputy privilege escalation —
+  // refused per "do not bodge auth". The toggle therefore stays the sealed-cookie
+  // org preference the Hanzo surfaces read; API `model:"auto"` still honors the
+  // GLOBAL router flag. To make this write real, a global-admin must set the org's
+  // AutoRouting via the admin console (the OrgSettings CRUD), OR cloud-api must add a
+  // self-serve, org-scoped (owner-from-JWT, non-global-admin) auto-routing toggle the
+  // `/ai` proxy can reach — at which point wire that call in here.
   return applyCookies(NextResponse.json({ settings }), [settingsCookie(settings)])
 }
