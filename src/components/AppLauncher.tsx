@@ -27,7 +27,9 @@ import { searchCatalog } from '~/lib/products/search'
 import { useProductColors } from '~/lib/products/pins'
 import { asColor } from '~/components/ui/color'
 import { openProduct } from '~/lib/products/open'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useEntitlements } from '~/lib/entitlements-context'
+import { filterEntitled } from '~/lib/entitlements'
 
 type LauncherApi = { isOpen: boolean; open: () => void; close: () => void }
 
@@ -83,7 +85,8 @@ function Tile({ entry, color, active, onPress }: { entry: CatalogEntry; color: s
 function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const router = useRouter()
   const pathname = usePathname() ?? ''
-  const showAdmin = useIsGlobalAdmin()
+  const showAdmin = useIsSuperAdmin()
+  const { enabled } = useEntitlements()
   const { colorOf } = useProductColors()
   const [query, setQuery] = useState('')
 
@@ -98,16 +101,17 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
   // selected app pinned first — the SAME `orderEntries` rule the sidebar uses (DRY).
   const groups = useMemo(
     () =>
-      visibleCatalogByCategory(showAdmin).map((g) => ({
+      visibleCatalogByCategory(showAdmin, enabled).map((g) => ({
         category: g.category,
         entries: orderEntries(g.entries, activeId),
       })),
-    [showAdmin, activeId],
+    [showAdmin, enabled, activeId],
   )
-  // While filtering, keep the relevance ranking (a search is not alphabetical).
+  // While filtering, keep the relevance ranking (a search is not alphabetical). Gate
+  // the results by admin AND entitlement (the launcher mirrors the sidebar's scope).
   const filtered = useMemo(
-    () => (query.trim() ? searchCatalog(query).filter((e) => showAdmin || !e.admin) : null),
-    [query, showAdmin],
+    () => (query.trim() ? filterEntitled(searchCatalog(query).filter((e) => showAdmin || !e.admin), enabled, showAdmin) : null),
+    [query, showAdmin, enabled],
   )
 
   const activate = useCallback(

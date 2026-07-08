@@ -21,7 +21,7 @@ import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
 import { setOrgAccent, useAccent } from '~/lib/theme/accent'
 import { useSession } from '~/lib/auth/session'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FieldRow, FieldText, FieldSwitch } from '~/components/ui/Field'
 import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
@@ -308,11 +308,11 @@ function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: b
 
 function BrandingTab() {
   const { account } = useSession()
-  const isGlobalAdmin = useIsGlobalAdmin()
+  const isSuperAdmin = useIsSuperAdmin()
   const org = currentOrg()
   const fetchOrg = useCallback(() => TeamApi.organization(org), [org])
   const { state, reload } = useAsync<Organization>(fetchOrg)
-  const canEdit = isGlobalAdmin || !!account?.isAdmin
+  const canEdit = isSuperAdmin || !!account?.isAdmin
 
   return (
     <YStack gap="$5">

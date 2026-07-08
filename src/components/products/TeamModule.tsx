@@ -23,7 +23,7 @@ import { ApiError, TeamApi, type IamUser, type Role, type Paged } from '~/lib/ap
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { DataTable, type Column } from '~/components/ui/DataTable'
@@ -524,7 +524,7 @@ const TABS = [
 export function TeamModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const { account } = useSession()
-  const isGlobal = useIsGlobalAdmin()
+  const isGlobal = useIsSuperAdmin()
   const tab = params.tab ?? ''
   const org = currentOrg()
   // Writes are allowed for an org admin (own org) or a global admin — the server

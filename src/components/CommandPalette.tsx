@@ -74,7 +74,8 @@ import { ProductIcon } from '~/components/ui/ProductIcon'
 import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useEntitlements } from '~/lib/entitlements-context'
 import { useAppLauncher } from '~/components/AppLauncher'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
@@ -298,7 +299,8 @@ function PaletteDialog({
   const router = useRouter()
   const launcher = useAppLauncher()
   const { signOut } = useSession()
-  const showAdmin = useIsGlobalAdmin()
+  const showAdmin = useIsSuperAdmin()
+  const { enabled } = useEntitlements()
   const { colorOf } = useProductColors()
   const { current, resolvedTheme, set: setTheme } = useThemeSetting()
   const isDark = (resolvedTheme ?? current ?? 'dark') !== 'light'
@@ -360,8 +362,8 @@ function PaletteDialog({
   // Every jump target — products AND deep sub-pages ("queues" → Tasks › Queues) —
   // gated so a customer never sees an admin-only surface.
   const destResults = useMemo(
-    () => (mode === 'catalog' ? searchDestinations(query, showAdmin).slice(0, 50) : []),
-    [mode, query, showAdmin],
+    () => (mode === 'catalog' ? searchDestinations(query, showAdmin, enabled).slice(0, 50) : []),
+    [mode, query, showAdmin, enabled],
   )
 
   const matchedActions = useMemo(
