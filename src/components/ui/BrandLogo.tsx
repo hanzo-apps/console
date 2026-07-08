@@ -15,7 +15,7 @@ import { Text, XStack } from '@hanzo/gui'
 
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { IamAdminApi, TeamApi } from '~/lib/api'
 import { getBrand } from '~/lib/branding/brands'
 
@@ -56,7 +56,7 @@ export function useOrgName(): string {
  * sidebar org-brand header so the fetch happens once and both stay in lockstep.
  */
 export function useOrgLogo(): string {
-  const isGlobalAdmin = useIsGlobalAdmin()
+  const isSuperAdmin = useIsSuperAdmin()
   const orgName = useOrgName()
   const [logo, setLogo] = useState<string>(() => orgLogoCache.get(orgName) ?? '')
 
@@ -70,7 +70,7 @@ export function useOrgLogo(): string {
     // reads its OWN org via the org-scoped `/org/iam` proxy (which authorizes any
     // member). This keeps the tenant's own-org logo working without firing the
     // admin-gated `get-organization` that would only 403 in the browser console.
-    const fetchOrg = isGlobalAdmin ? IamAdminApi.organization(orgName) : TeamApi.organization(orgName)
+    const fetchOrg = isSuperAdmin ? IamAdminApi.organization(orgName) : TeamApi.organization(orgName)
     fetchOrg
       .then((o) => {
         const l = typeof o.logo === 'string' ? o.logo : ''
@@ -84,7 +84,7 @@ export function useOrgLogo(): string {
     return () => {
       live = false
     }
-  }, [orgName, isGlobalAdmin])
+  }, [orgName, isSuperAdmin])
 
   return logo
 }

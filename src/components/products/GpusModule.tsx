@@ -24,7 +24,7 @@ import { KeyRound, Plus } from '@hanzogui/lucide-icons-2'
 import { PlatformApi, type Cluster } from '~/lib/api'
 import { BillingApi, type Usage } from '~/lib/api/billing'
 import { ComputeApi, type Gpu, type GpuAlert, type UsageLedger } from '~/lib/api/compute'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { interpretPlatformError } from './platform/state'
@@ -88,14 +88,14 @@ function useComputeData(): ComputeData {
  * rules-of-hooks hazard.
  */
 export function GpusModule(props: { params: Record<string, string> }) {
-  return useIsGlobalAdmin() ? <AdminGpus {...props} /> : <CustomerGpus {...props} />
+  return useIsSuperAdmin() ? <AdminGpus {...props} /> : <CustomerGpus {...props} />
 }
 
 /** The GPUs Overview route (`/gpus`): the platform living overview for admins, the
  *  tabbed visor catalog for a customer. Kept here so the registry stays a plain data file. */
 const GpusLiving = livingOverviewModule('gpus')
 export function GpusOverview(props: { params: Record<string, string> }) {
-  return useIsGlobalAdmin() ? <GpusLiving {...props} /> : <CustomerGpus {...props} />
+  return useIsSuperAdmin() ? <GpusLiving {...props} /> : <CustomerGpus {...props} />
 }
 
 function AdminGpus({ params }: { params: Record<string, string> }) {
