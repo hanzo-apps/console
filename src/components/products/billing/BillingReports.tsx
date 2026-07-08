@@ -17,9 +17,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, Search, X } from '@hanzogui/lucide-icons-2'
+import { RefreshCw, Search, X, Download } from '@hanzogui/lucide-icons-2'
 
 import { fetchUsageRecords, withinRange, type UsageRecord, type RangeKey } from '~/lib/api/aimetrics'
+import { exportCSV } from '~/lib/csv'
 import { findEntry } from '~/lib/products/registry'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
@@ -93,6 +94,17 @@ export function BillingReports(_props: { params: Record<string, string> }) {
   const trend = useMemo(() => dailySpend(windowed, range, now), [windowed, range, now])
   const totalCents = groups.reduce((a, g) => a + g.cents, 0)
 
+  // CSV export of the FULL filtered breakdown (every line item, not just the capped
+  // top rows) — timestamp-window + dimension + qty + cost, for a finance review.
+  const onExport = useCallback(() => {
+    if (!filtered.length) return
+    exportCSV(
+      `billing-usage-${activeDim}-${range}`,
+      [DIM_LABEL[activeDim], 'Provider', 'Requests', 'Tokens', 'Cost (USD)', 'Share'],
+      filtered.map((g) => [g.label, g.provider ?? '', g.requests, g.tokens, (g.cents / 100).toFixed(2), totalCents > 0 ? `${Math.round((g.cents / totalCents) * 100)}%` : '0%']),
+    )
+  }, [filtered, activeDim, range, totalCents])
+
   // Spend-share donut — top 7 groups + an "Other" roll-up, categorical palette.
   const slices: Slice[] = useMemo(() => {
     const top = groups.slice(0, 7).map((g, i): Slice => ({ label: g.label, value: g.cents, color: CHART_PALETTE[i % CHART_PALETTE.length] }))
@@ -133,6 +145,9 @@ export function BillingReports(_props: { params: Record<string, string> }) {
         actions={
           <XStack gap="$2" items="center">
             <RangeTabs value={range} onChange={setRange} />
+            <Button size="$2" icon={<Download size={15} />} onPress={onExport} disabled={usage.phase !== 'ready' || !filtered.length} aria-label="Export usage CSV">
+              Export
+            </Button>
             <Button size="$2" icon={<RefreshCw size={15} />} onPress={load}>
               Refresh
             </Button>

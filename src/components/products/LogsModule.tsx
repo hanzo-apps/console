@@ -23,8 +23,8 @@
  * as two lenses of the one Logs product — nothing is fabricated in either.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { BarChart3, RefreshCw, ScrollText, Server } from '@hanzogui/lucide-icons-2'
+import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
+import { BarChart3, Bookmark, Download, RefreshCw, ScrollText, Search, Server, X } from '@hanzogui/lucide-icons-2'
 
 import { asApiError, ErrorState } from '~/components/ui/States'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -35,6 +35,7 @@ import { fetchUsageRecords, type UsageRecord } from '~/lib/api/aimetrics'
 import { logsFromRecords, type LogLine } from '~/components/products/inference/logic'
 import { ApmApi, apmWindow, type LogRow } from '~/lib/api/apm'
 import type { ApiError } from '~/lib/api'
+import { exportCSV } from '~/lib/csv'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 
 const LOG_LIMIT = 250
@@ -58,6 +59,45 @@ function distinctOf<T>(rows: T[], pick: (r: T) => string): SelectOption<string>[
     if (v) seen.add(v)
   }
   return [...seen].sort().map((v) => ({ key: v, label: v }))
+}
+
+/** Case-insensitive substring match, used by the contains-text log filter. */
+const contains = (haystack: string, needle: string): boolean =>
+  needle.trim() === '' || haystack.toLowerCase().includes(needle.trim().toLowerCase())
+
+// ── saved views (localStorage) ────────────────────────────────────────────────
+// A saved view is a named filter preset for the application-logs lens. It is a
+// convenience only — persistence failures are swallowed, never surfaced.
+type SavedView = { id: string; name: string; range: string; severity: string | null; service: string | null; text: string }
+const VIEWS_KEY = 'console.logs.savedViews'
+
+function loadViews(): SavedView[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const arr = JSON.parse(window.localStorage.getItem(VIEWS_KEY) ?? '[]') as unknown
+    return Array.isArray(arr) ? (arr.filter((v) => v && typeof v === 'object') as SavedView[]) : []
+  } catch {
+    return []
+  }
+}
+function persistViews(views: SavedView[]): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(VIEWS_KEY, JSON.stringify(views))
+  } catch {
+    /* storage full / disabled — a saved view is a convenience, never load-bearing */
+  }
+}
+
+/** A compact contains-text search box shared by the log lenses. */
+function LogSearch({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <XStack items="center" gap="$2" px="$2.5" height={34} rounded="$3" borderWidth={1} borderColor="$borderColor" bg="$color2" minW={200}>
+      <Search size={14} opacity={0.6} />
+      <Input flex={1} unstyled value={value} onChangeText={onChange} placeholder="Contains text…" fontSize="$3" color="$color12" autoCapitalize="none" />
+      {value ? <Button size="$1" chromeless icon={<X size={13} />} onPress={() => onChange('')} aria-label="Clear text filter" /> : null}
+    </XStack>
+  )
 }
 
 type Lens = 'application' | 'requests'
@@ -109,6 +149,12 @@ function ApplicationLogsLens() {
   const [rangeIdx, setRangeIdx] = useState(1) // default 1h
   const [severity, setSeverity] = useState<string | null>(null)
   const [service, setService] = useState<string | null>(null)
+  const [text, setText] = useState('')
+  const [views, setViews] = useState<SavedView[]>([])
+
+  useEffect(() => {
+    setViews(loadViews())
+  }, [])
 
   const load = useCallback(async (idx: number) => {
     setState({ phase: 'loading' })
@@ -127,10 +173,50 @@ function ApplicationLogsLens() {
   const all = state.phase === 'ready' ? state.lines : []
   const severityOptions = useMemo(() => distinctOf(all, (l) => l.severity), [all])
   const serviceOptions = useMemo(() => distinctOf(all, (l) => l.service), [all])
+  // The query builder: time range is composed into the o11y query server-side; the
+  // severity/service/contains-text axes narrow the returned window client-side.
   const lines = useMemo(
-    () => all.filter((l) => (!severity || l.severity === severity) && (!service || l.service === service)),
-    [all, severity, service],
+    () => all.filter((l) => (!severity || l.severity === severity) && (!service || l.service === service) && contains(l.body ?? '', text)),
+    [all, severity, service, text],
   )
+
+  const rangeKey = RANGES[rangeIdx].key
+  const hasFilters = Boolean(severity || service || text)
+
+  const saveView = useCallback(() => {
+    const name = [severity, service, text ? `"${text.trim()}"` : '', rangeKey].filter(Boolean).join(' · ') || 'All logs'
+    const view: SavedView = { id: `${Date.now()}`, name, range: rangeKey, severity, service, text }
+    setViews((prev) => {
+      const next = [view, ...prev.filter((v) => v.name !== name)].slice(0, 12)
+      persistViews(next)
+      return next
+    })
+  }, [severity, service, text, rangeKey])
+
+  const applyView = useCallback((v: SavedView) => {
+    const idx = RANGES.findIndex((r) => r.key === v.range)
+    if (idx >= 0) setRangeIdx(idx)
+    setSeverity(v.severity)
+    setService(v.service)
+    setText(v.text)
+  }, [])
+
+  const removeView = useCallback((id: string) => {
+    setViews((prev) => {
+      const next = prev.filter((v) => v.id !== id)
+      persistViews(next)
+      return next
+    })
+  }, [])
+
+  const onExport = useCallback(() => {
+    if (!lines.length) return
+    exportCSV(
+      `logs-${rangeKey}`,
+      ['Time', 'Severity', 'Service', 'Message'],
+      lines.map((l) => [l.timestamp ? new Date(l.timestamp).toISOString() : '', l.severity, l.service, l.body]),
+    )
+  }, [lines, rangeKey])
 
   const columns: Column<LogRow>[] = [
     { key: 'time', header: 'Time', width: 200, render: (l) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{l.timestamp ? new Date(l.timestamp).toLocaleString() : '—'}</Text> },
@@ -146,17 +232,38 @@ function ApplicationLogsLens() {
   const rangeLabel = RANGES[rangeIdx].label
   return (
     <YStack gap="$3">
+      {/* ── Query builder ────────────────────────────────────────────────── */}
       <XStack gap="$3" items="center" flexWrap="wrap" justify="space-between">
         <XStack gap="$2" items="center" flexWrap="wrap">
           <ScrollText size={16} />
           <Text fontSize="$2" color="$color10">Range</Text>
-          <Segmented value={RANGES[rangeIdx].key} options={RANGES} onChange={(k) => setRangeIdx(RANGES.findIndex((r) => r.key === k))} />
+          <Segmented value={rangeKey} options={RANGES} onChange={(k) => setRangeIdx(RANGES.findIndex((r) => r.key === k))} />
         </XStack>
         <XStack gap="$2" items="center" flexWrap="wrap">
           <SelectMenu options={severityOptions} value={severity} onChange={setSeverity} allLabel="All severities" />
           <SelectMenu options={serviceOptions} value={service} onChange={setService} allLabel="All services" />
+          <LogSearch value={text} onChange={setText} />
+          <Button size="$2" chromeless icon={<Bookmark size={14} />} onPress={saveView} disabled={!hasFilters} aria-label="Save this view">
+            Save view
+          </Button>
+          <Button size="$2" chromeless icon={<Download size={14} />} onPress={onExport} disabled={!lines.length} aria-label="Export logs CSV">
+            Export
+          </Button>
         </XStack>
       </XStack>
+
+      {/* ── Saved views ──────────────────────────────────────────────────── */}
+      {views.length ? (
+        <XStack gap="$2" items="center" flexWrap="wrap">
+          <Text fontSize="$1" color="$color10">Saved</Text>
+          {views.map((v) => (
+            <XStack key={v.id} items="center" gap="$1" px="$2" py="$1" rounded="$10" bg="$color3" borderWidth={1} borderColor="$borderColor">
+              <Text fontSize="$1" color="$color11" onPress={() => applyView(v)} cursor="pointer">{v.name}</Text>
+              <Button size="$1" chromeless icon={<X size={11} />} onPress={() => removeView(v.id)} aria-label={`Remove saved view ${v.name}`} />
+            </XStack>
+          ))}
+        </XStack>
+      ) : null}
 
       {state.phase === 'ready' && all.length === 0 ? (
         <NoApplicationLogs range={rangeLabel} />
@@ -217,6 +324,7 @@ function RequestActivityLens() {
   const [state, setState] = useState<ReqState>({ phase: 'loading' })
   const [endpoint, setEndpoint] = useState<string | null>(null)
   const [level, setLevel] = useState<string | null>(null)
+  const [text, setText] = useState('')
 
   const load = useCallback(async () => {
     setState({ phase: 'loading' })
@@ -236,9 +344,21 @@ function RequestActivityLens() {
   const endpointOptions = useMemo(() => distinctOf(records, (r) => r.model), [records])
   const levelOptions = useMemo(() => distinctOf(records, (r) => r.status), [records])
   const lines = useMemo(
-    () => logsFromRecords(records, { endpoint: endpoint ?? 'all', level: level ?? 'all' }, LOG_LIMIT),
-    [records, endpoint, level],
+    () =>
+      logsFromRecords(records, { endpoint: endpoint ?? 'all', level: level ?? 'all' }, LOG_LIMIT).filter(
+        (r) => contains(r.message ?? '', text) || contains(r.endpoint ?? '', text),
+      ),
+    [records, endpoint, level, text],
   )
+
+  const onExport = useCallback(() => {
+    if (!lines.length) return
+    exportCSV(
+      'request-activity',
+      ['Time', 'Endpoint', 'Level', 'Message'],
+      lines.map((r) => [r.at ? new Date(r.at).toISOString() : '', r.endpoint, r.level, r.message]),
+    )
+  }, [lines])
 
   const columns: Column<LogLine>[] = [
     { key: 'at', header: 'Time', width: 190, render: (r) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{fmtTime(r.at)}</Text> },
@@ -253,11 +373,17 @@ function RequestActivityLens() {
 
   return (
     <YStack gap="$3">
-      <XStack gap="$2" items="center" flexWrap="wrap">
-        <ScrollText size={16} />
-        <Text fontSize="$2" color="$color10">Filter</Text>
-        <SelectMenu options={endpointOptions} value={endpoint} onChange={setEndpoint} allLabel="All endpoints" />
-        <SelectMenu options={levelOptions} value={level} onChange={setLevel} allLabel="All levels" />
+      <XStack gap="$2" items="center" flexWrap="wrap" justify="space-between">
+        <XStack gap="$2" items="center" flexWrap="wrap">
+          <ScrollText size={16} />
+          <Text fontSize="$2" color="$color10">Filter</Text>
+          <SelectMenu options={endpointOptions} value={endpoint} onChange={setEndpoint} allLabel="All endpoints" />
+          <SelectMenu options={levelOptions} value={level} onChange={setLevel} allLabel="All levels" />
+          <LogSearch value={text} onChange={setText} />
+        </XStack>
+        <Button size="$2" chromeless icon={<Download size={14} />} onPress={onExport} disabled={!lines.length} aria-label="Export request activity CSV">
+          Export
+        </Button>
       </XStack>
 
       <DataTable
