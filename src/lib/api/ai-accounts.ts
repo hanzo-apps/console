@@ -9,7 +9,7 @@
  */
 import type { UsageSnapshot } from '@hanzo/usage'
 
-import { restGet, restPost, restDelete } from './client'
+import { restGet, restPost, restPut, restDelete } from './client'
 import type { CloudUsageOverview } from './usage'
 import type { ConnectMode } from '~/lib/products/ai-accounts'
 
@@ -22,6 +22,8 @@ export type PublicAccount = { id: string; mode: ConnectMode; baseUrl?: string; c
 export type ProviderUsage = { id: string; ok: boolean; error?: string; usage?: UsageSnapshot }
 /** The Overview payload: external-provider snapshots + the org's own Hanzo commerce lane. */
 export type AccountsUsage = { providers: ProviderUsage[]; hanzo: CloudUsageOverview | null }
+/** Non-secret org/user preferences (the `model: "auto"` smart-routing default, …). */
+export type AiAccountsSettings = { routingEnabled: boolean }
 
 export const AiAccountsApi = {
   /** The masked list of connected accounts. */
@@ -35,4 +37,8 @@ export const AiAccountsApi = {
   disconnect: (id: string): Promise<void> => restDelete(url(`accounts/${id}`)),
   /** Unified usage across connected providers + the Hanzo lane. */
   usage: (): Promise<AccountsUsage> => restGet(url('usage')),
+  /** The org/user smart-routing preference. */
+  settings: (): Promise<{ settings: AiAccountsSettings }> => restGet(url('settings')),
+  /** Persist the smart-routing preference. */
+  saveSettings: (body: AiAccountsSettings): Promise<{ settings: AiAccountsSettings }> => restPut(url('settings'), body),
 }
