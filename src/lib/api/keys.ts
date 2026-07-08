@@ -16,6 +16,7 @@
  */
 import { ApiError, originV1Url } from './client'
 import { IS_EMBED } from '~/lib/embed'
+import { csrfRequired, csrfToken, clearCsrfToken, CSRF_HEADER } from './csrf'
 
 export type KeyStatus = {
   hasKey: boolean
@@ -42,13 +43,24 @@ const keysUrl = (): string =>
       : '/keys'
 
 async function keysReq<T>(method: 'GET' | 'POST' | 'DELETE'): Promise<T> {
+  // In the embed build the mint/revoke write hits the cloud binary's ambient-cookie
+  // `/v1/console/keys` (requireCSRF), so echo the anti-CSRF token; a 403 = an
+  // expired/rotated token → re-mint once and retry (blue's re-fetch-on-403 contract).
+  const send = async (): Promise<Response> => {
+    const headers: Record<string, string> = { Accept: 'application/json' }
+    if (csrfRequired(method)) {
+      const token = await csrfToken()
+      if (token) headers[CSRF_HEADER] = token
+    }
+    return fetch(keysUrl(), { method, credentials: 'include', headers })
+  }
   let res: Response
   try {
-    res = await fetch(keysUrl(), {
-      method,
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    })
+    res = await send()
+    if (res.status === 403 && csrfRequired(method)) {
+      clearCsrfToken()
+      res = await send()
+    }
   } catch (e) {
     throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
   }

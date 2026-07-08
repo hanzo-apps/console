@@ -15,6 +15,7 @@ import { currentOrg } from '~/lib/org-scope'
 import { currentActor } from '~/lib/actor-scope'
 import { getScope } from '~/lib/scope'
 import { refreshSession } from '~/lib/auth/refresh'
+import { applyCsrfToInit, csrfRequired, clearCsrfToken } from './csrf'
 
 export type ApiResponse<T> = {
   status: 'ok' | 'error'
@@ -169,14 +170,24 @@ export async function resilientFetch(url: string, init: RequestInit, deps: Resil
 }
 
 /** The ONE fetch every cloud/BFF call goes through — `resilientFetch` wired to the real
- *  `fetch` + server-side `refreshSession` (browser-only). */
+ *  `fetch` + server-side `refreshSession` (browser-only).
+ *
+ *  On the embed ambient-cookie money path (`IS_EMBED`), a mutating request (POST/PUT/
+ *  PATCH/DELETE) carries the anti-CSRF `X-CSRF-Token` the cloud binary's `requireCSRF`
+ *  demands (clients/console/csrf.go). A 403 on such a write means an expired/rotated
+ *  token (the server key resets on a cloud restart when `CONSOLE_CSRF_KEY` is unset), so
+ *  we re-mint once and retry — blue's "SPA re-fetches on a 403" contract. Non-embed
+ *  hosts write through the user-bearer BFF (CSRF-immune) so this is a no-op there. */
 async function authedFetch(url: string, init: RequestInit): Promise<Response> {
-  return resilientFetch(url, init, {
-    doFetch: fetch,
-    refresh: refreshSession,
-    sleep,
-    canRefresh: typeof window !== 'undefined',
-  })
+  const deps = { doFetch: fetch, refresh: refreshSession, sleep, canRefresh: typeof window !== 'undefined' }
+  await applyCsrfToInit(init)
+  const res = await resilientFetch(url, init, deps)
+  if (res.status === 403 && csrfRequired(init.method)) {
+    clearCsrfToken()
+    await applyCsrfToInit(init) // re-mint a fresh token, re-stamp in place
+    return resilientFetch(url, init, deps)
+  }
+  return res
 }
 
 const buildUrl = (path: string, query?: Query): string => {
