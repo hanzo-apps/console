@@ -11,6 +11,7 @@
  * healthy session. Sharing ONE in-flight promise means every concurrent caller (the
  * timer + N parallel 401s) awaits the SAME single rotation.
  */
+import { IS_EMBED } from '~/lib/embed'
 
 let inflight: Promise<boolean> | null = null
 
@@ -20,6 +21,10 @@ let inflight: Promise<boolean> | null = null
  * expired/revoked → the caller falls through to graceful re-auth). Never throws.
  */
 export function refreshSession(): Promise<boolean> {
+  // The static embed has no BFF /auth/refresh handler (POST → 405). There is no
+  // durable console session to rotate there — the casibase session is the source —
+  // so skip the doomed probe entirely (identical fallback, no 405 console noise).
+  if (IS_EMBED) return Promise.resolve(false)
   if (inflight) return inflight
   inflight = (async () => {
     try {
