@@ -10,6 +10,7 @@
  * directly or a typed failure — never a half-checked envelope.
  */
 import { activeApiBase } from '~/lib/network'
+import { IS_EMBED } from '~/lib/embed'
 import { currentOrg } from '~/lib/org-scope'
 import { currentActor } from '~/lib/actor-scope'
 import { getScope } from '~/lib/scope'
@@ -377,8 +378,23 @@ export const cloudProxyV1Url = originV1Url
 export const billingProxyBase = (): string =>
   typeof window !== 'undefined' ? `${window.location.origin}/billing` : '/billing'
 
-/** Build a `/v1/<path>` URL on the per-tenant billing proxy (`<origin>/billing/v1/<path>`). */
-export const billingProxyV1Url = (path: string): string => v1Url(path, billingProxyBase())
+/**
+ * Build a `/v1/<path>` URL on the per-tenant billing proxy (`<origin>/billing/v1/<path>`).
+ *
+ * In the go:embed console (`IS_EMBED`) there is NO Next server, so the
+ * `app/billing/v1/[...path]` service-token route handler is stripped by the static
+ * export and a `/billing/v1/*` request falls through to the SPA shell (HTML, not
+ * JSON) — billing read "not available". The embed is same-origin with the cloud
+ * binary, which serves the SAME per-tenant billing bridge at the canonical bare
+ * `/v1/billing/<path>` (clients/console/billing.go — forwards to commerce with the
+ * admin service token SCOPED to the validated caller's own subject). So the embed
+ * addresses `<origin>/v1/billing/<path>` directly; the caller is resolved from the
+ * first-party IAM session cookie (cloud middleware_identity.go). Non-embed hosts keep
+ * the Next `/billing/v1` sub-proxy (their gateway-fronted ingress 403s a cookie-only
+ * bare `/v1/billing`).
+ */
+export const billingProxyV1Url = (path: string): string =>
+  IS_EMBED ? originV1Url(`billing/${path.replace(/^\/+/, '')}`) : v1Url(path, billingProxyBase())
 
 /**
  * The console's OWN same-origin VISOR user-bearer proxy base (`<origin>/vm`).
@@ -417,8 +433,17 @@ export const vmProxyV1Url = (path: string): string => v1Url(path, vmProxyBase())
 export const commerceProxyBase = (): string =>
   typeof window !== 'undefined' ? `${window.location.origin}/commerce` : '/commerce'
 
-/** Build a `/v1/<path>` URL on the commerce user-bearer proxy (`<origin>/commerce/v1/<path>`). */
-export const commerceProxyV1Url = (path: string): string => v1Url(path, commerceProxyBase())
+/**
+ * Build a `/v1/<path>` URL on the commerce user-bearer proxy (`<origin>/commerce/v1/<path>`).
+ *
+ * In the go:embed console (`IS_EMBED`) the `app/commerce/[...path]` route handler is
+ * stripped; the cloud binary serves the same per-tenant store bridge at the canonical
+ * bare `/v1/commerce/<path>` (clients/console/commerce.go), scoped to the validated
+ * caller's own org. So the embed addresses `<origin>/v1/commerce/<path>` directly.
+ * Non-embed hosts keep the Next `/commerce/v1` proxy.
+ */
+export const commerceProxyV1Url = (path: string): string =>
+  IS_EMBED ? originV1Url(`commerce/${path.replace(/^\/+/, '')}`) : v1Url(path, commerceProxyBase())
 
 async function restRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
