@@ -20,7 +20,6 @@ import {
   type Organization,
   type IamUser,
   type Role,
-  type AuditRecord,
 } from '~/lib/api/admin'
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
@@ -421,18 +420,6 @@ const roleColumns: Column<Role>[] = [
   { key: 'createdTime', header: 'Created', width: 200, render: (r) => dim(fmtDate(r.createdTime)) },
 ]
 
-const recordColumns: Column<AuditRecord>[] = [
-  { key: 'createdTime', header: 'Time', width: 200, render: (r) => dim(fmtDate(r.createdTime)) },
-  { key: 'user', header: 'User', render: (r) => dim(r.user) },
-  { key: 'action', header: 'Action', width: 150, render: (r) => dim(r.action) },
-  {
-    key: 'request',
-    header: 'Request',
-    render: (r) => dim([r.method, r.requestUri].filter(Boolean).join(' ')),
-  },
-  { key: 'clientIp', header: 'IP', width: 140, render: (r) => dim(r.clientIp) },
-]
-
 // ── Modules ──────────────────────────────────────────────────────────────────
 
 const IAM_TABS = [
@@ -488,23 +475,6 @@ export function IamModule({ params }: { params: Record<string, string> }) {
   )
 }
 
-/** Audit — the identity & access event log (`/v1/iam/get-records`). */
-export function AuditModule(_props: { params: Record<string, string> }) {
-  const org = currentOrg()
-  const fetcher = useCallback(() => IamAdminApi.records(org), [org])
-  return (
-    <>
-      <PageHeader
-        title="Audit"
-        subtitle="Identity and access events recorded by Hanzo IAM."
-        actions={<ManageInIam />}
-      />
-      <AdminListView
-        fetcher={fetcher}
-        columns={recordColumns}
-        rowKey={(r) => String(r.id ?? `${r.createdTime ?? ''}-${r.user ?? ''}-${r.requestUri ?? ''}`)}
-        empty="No audit events recorded yet."
-      />
-    </>
-  )
-}
+// The org-scoped Audit trail moved to its own enterprise view (filters, pagination,
+// a per-event detail drawer with hash-chain evidence, CSV export) backed by cloud's
+// tamper-evident store — see components/products/audit/AuditModule.tsx.
