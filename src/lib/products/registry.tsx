@@ -238,6 +238,7 @@ import { AffiliatesAdminModule } from '~/components/products/AffiliatesAdminModu
 import { AuthorsModule } from '~/components/products/AuthorsModule'
 import { AuthorsAdminModule } from '~/components/products/AuthorsAdminModule'
 import { TreasuryAdminModule } from '~/components/products/TreasuryAdminModule'
+import { FeatureGateModule } from '~/components/products/FeatureGateModule'
 
 /**
  * Living overviews — the reusable, videogame-like overview (count-up KPIs, live
@@ -590,6 +591,27 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FinanceDashboard }],
+  },
+  {
+    // admin.hanzo.ai LAUNCH CONTROL — the access-governance cockpit: a Services
+    // board (per-service waitlist-mode toggle — remove the waitlist one service at
+    // a time) + a Pending-Users approval queue (approve/reject off the waitlist,
+    // reusing IAM iam#104). ONE registry (cloud `clients/featuregate`), ONE approval
+    // API — no per-app duplication. GLOBAL-ADMIN ONLY (`admin: true` hides it from
+    // every customer's nav/launcher/palette; `/v1/admin/services*` is server-gated
+    // by getAdminGate and the pending queue rides the global-admin /admin/iam proxy,
+    // so access control never reaches a customer).
+    id: 'launch-control',
+    label: 'Launch Control',
+    icon: Rocket,
+    description: 'Remove the waitlist from hosted services one at a time, and approve users off the waitlist.',
+    gcp: 'Feature flags / Access control',
+    category: 'Security',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: FeatureGateModule }],
   },
   {
     // admin.hanzo.ai FLEET OBSERVABILITY board — the cross-org o11y god view:
