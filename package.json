@@ -22,7 +22,7 @@
     "@hanzo/gui": "7.3.0",
     "@hanzo/iam-js-sdk": "0.19.1",
     "@hanzo/logo": "^1.0.7",
-    "@hanzo/usage": "0.1.0",
+    "@hanzo/usage": "0.1.2",
     "@hanzogui/config": "7.3.0",
     "@hanzogui/core": "7.3.0",
     "@hanzogui/lucide-icons-2": "7.3.0",
