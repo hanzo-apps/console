@@ -67,7 +67,8 @@ export function entryMatches(e: CatalogEntry, query: string): boolean {
  * keep a directly-navigated URL from 404ing — the ONE place aliasing is defined
  * (DRY), consumed only by `resolveProductView`.
  *
- * `automation`/`automations` → `auto` (the external Hanzo Auto product), and
+ * `auto`/`automation` → `automations` (the ONE native Automations module; the
+ * external auto.hanzo.ai engine + its `/v1/auto` proxy are retired), and
  * `mlpipelines`/`kubeflow` → `ml-pipelines` (the old engine-named slug stays live
  * for any existing bookmark after the id rename). An alias only resolves to
  * SOMETHING truthful — a real module route or an external launch — never a fake.
@@ -83,8 +84,8 @@ export function entryMatches(e: CatalogEntry, query: string): boolean {
  *   `web-search` → `websearch`.
  */
 export const SLUG_ALIASES: Record<string, string> = {
-  automation: 'auto',
-  automations: 'auto',
+  auto: 'automations',
+  automation: 'automations',
   mlpipelines: 'ml-pipelines',
   kubeflow: 'ml-pipelines',
   traces: 'o11y',
@@ -213,7 +214,7 @@ export type ProductView =
   | { kind: 'subpage'; entry: CatalogEntry; subpage: ProductSubpage }
   | { kind: 'stub'; entry: CatalogEntry; subpage: ProductSubpage }
   // A directly-navigated URL that resolves (possibly via an alias) to an EXTERNAL
-  // entry — a real Hanzo product on its own domain (e.g. Automation → auto.hanzo.ai).
+  // entry — a real product on its own domain (e.g. a Lux/Zoo chain app launch tile).
   // External entries own no in-console route, so the catch-all launches `href`
   // instead of 404ing. The nav/launcher never produce this (they `openProduct`
   // directly); it's only for a hand-typed/bookmarked URL.

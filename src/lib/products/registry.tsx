@@ -193,6 +193,7 @@ import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { KubeflowModule } from '~/components/products/KubeflowModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
+import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
 import { StartupsModule } from '~/components/products/StartupsModule'
 import { CmsModule } from '~/components/products/CmsModule'
@@ -848,43 +849,34 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AgentsModule }],
   },
   {
-    // Hanzo Auto — visual workflow automation (~400 MCP servers), the n8n/Zapier
-    // surface. A standalone app at auto.hanzo.ai on shared Hanzo IAM, so the tile
-    // opens it already-signed-in. External launch (it owns its own full UI);
-    // hanzo-scoped so the auto.hanzo.ai URL never leaks onto a Lux/Zoo console.
-    id: 'auto',
-    label: 'Automation',
-    icon: Workflow,
-    description: 'Visual AI workflow automation — connect 400+ MCP tools and agents.',
-    gcp: 'Application Integration',
-    category: 'AI',
-    status: 'enabled',
-    brands: ['hanzo'],
-    repo: 'hanzoai/auto',
-    upstream: { name: 'Activepieces', url: 'https://www.activepieces.com', license: 'MIT' },
-    docs: `${DOCS}/auto`,
-    kind: 'external',
-    href: 'https://auto.hanzo.ai',
-  },
-  {
-    // Hanzo Automations — the NATIVE cloud Connectors + Automations subsystem
+    // Hanzo Automations — the ONE native Connectors + Automations engine
     // (hanzoai/cloud clients/automations, /v1/automations; HIP-0106 / task #51):
     // an org's flows run durably on the shared hanzoai/tasks engine over the
-    // go:embed'd 700+ connector catalog, credentials KMS-sealed per org. The
-    // reused auto web/ flow builder is served under the automations path;
-    // hanzo-scoped so the URL never leaks onto a Lux/Zoo console.
+    // go:embed'd 706-connector catalogue, credentials KMS-sealed per org. Rendered
+    // NATIVELY in-console (flows + connector catalogue + runs) over the /cloud
+    // user-bearer proxy — NO link-out, ONE surface. The retired standalone
+    // auto.hanzo.ai engine + its /v1/auto reverse proxy are gone; `/auto` and
+    // `/automation` alias here (match-core). hanzo-scoped so it never appears on a
+    // Lux/Zoo console.
     id: 'automations',
     label: 'Automations',
     icon: Workflow,
-    description: 'Build and run automation flows — 700+ connectors on the native /v1/automations engine.',
+    description: 'Build and run automation flows — 706 connectors on the native /v1/automations engine.',
     gcp: 'Application Integration',
     category: 'AI',
     status: 'enabled',
     brands: ['hanzo'],
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/automations`,
-    kind: 'external',
-    href: 'https://auto.hanzo.ai/automations',
+    kind: 'module',
+    routes: [
+      { path: '', component: AutomationsModule },
+      { path: ':tab', component: AutomationsModule },
+    ],
+    subpages: [
+      { slug: 'connectors', label: 'Connectors' },
+      { slug: 'runs', label: 'Runs' },
+    ],
   },
   {
     id: 'inference',
