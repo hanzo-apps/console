@@ -185,6 +185,7 @@ import { KubeflowModule } from '~/components/products/KubeflowModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
 import { CrmModule } from '~/components/products/CrmModule'
+import { StartupsModule } from '~/components/products/StartupsModule'
 import { CmsModule } from '~/components/products/CmsModule'
 import { ErpModule } from '~/components/products/ErpModule'
 import { HelpModule } from '~/components/products/HelpModule'
@@ -2127,6 +2128,20 @@ export const catalog: CatalogEntry[] = [
       { slug: 'contacts', label: 'Contacts' },
       { slug: 'opportunities', label: 'Opportunities' },
     ],
+  },
+  {
+    // Startups — the Hanzo Startup Program pipeline, over the native-Go cloud
+    // `/v1/crm/applications` surface (cloud clients/crm on Base/SQLite). Public
+    // marketing form → AI screen → staff pipeline board. Per-org (hanzo).
+    id: 'startups',
+    label: 'Startups',
+    icon: Rocket,
+    description: 'Startup Program applications — AI-screened pipeline board, per org.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: StartupsModule }],
   },
   {
     // Content — a NATIVE CMS on the Hanzo Framework DocType engine (/v1/framework/*),
