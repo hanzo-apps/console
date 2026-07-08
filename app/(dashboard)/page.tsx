@@ -17,7 +17,7 @@ import { config } from '~/config'
 import { visibleCatalogByCategory, categorySlug, type CatalogEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FadeIn } from '~/components/ui/FadeIn'
@@ -134,7 +134,7 @@ function GetApiKeyCta({ onOpen }: { onOpen: () => void }) {
 export default function DashboardHome() {
   const router = useRouter()
   const { toggle, isPinned } = useFavorites()
-  const showAdmin = useIsGlobalAdmin()
+  const showAdmin = useIsSuperAdmin()
   const push = (path: string) => router.push(path)
   const groups = visibleCatalogByCategory(showAdmin)
 

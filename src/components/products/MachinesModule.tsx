@@ -54,7 +54,7 @@ import { useRouter } from 'next/navigation'
 
 import { PlatformApi, type Cluster } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { CustomerMachines } from './machines/CustomerMachines'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
@@ -226,7 +226,7 @@ function Chip({ children }: { children: React.ReactNode }) {
  * rules-of-hooks hazard (each branch is a full component with its own hooks).
  */
 export function MachinesModule(props: { params: Record<string, string> }) {
-  const showAdmin = useIsGlobalAdmin()
+  const showAdmin = useIsSuperAdmin()
   return showAdmin ? <AdminMachines {...props} /> : <CustomerMachines />
 }
 

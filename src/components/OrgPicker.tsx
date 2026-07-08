@@ -23,7 +23,7 @@ import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { getBrand } from '~/lib/branding/brands'
 import { useSession } from '~/lib/auth/session'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { enterOrg } from '~/lib/org-scope'
 import { IamAdminApi, type Organization } from '~/lib/api'
 import { BrandMark } from '~/components/ui/BrandLogo'
@@ -106,7 +106,7 @@ function Center({ children }: { children: React.ReactNode }) {
 
 export function OrgPicker() {
   const { account } = useSession()
-  const isGlobalAdmin = useIsGlobalAdmin()
+  const isSuperAdmin = useIsSuperAdmin()
   const owner = account?.owner ?? ''
 
   const [orgs, setOrgs] = useState<Organization[] | null>(null)
@@ -131,7 +131,7 @@ export function OrgPicker() {
   useEffect(() => {
     if (!owner) return
     let live = true
-    if (!isGlobalAdmin) {
+    if (!isSuperAdmin) {
       setOrgs(ownOrgOnly)
       return
     }
@@ -152,11 +152,11 @@ export function OrgPicker() {
     return () => {
       live = false
     }
-  }, [owner, isGlobalAdmin, ownOrgOnly])
+  }, [owner, isSuperAdmin, ownOrgOnly])
 
   const ctx: PickerContext = useMemo(
-    () => ({ ownOrg: owner, isGlobalAdmin, callerIsAdmin: Boolean(account?.isAdmin) }),
-    [owner, isGlobalAdmin, account?.isAdmin],
+    () => ({ ownOrg: owner, isSuperAdmin, callerIsAdmin: Boolean(account?.isAdmin) }),
+    [owner, isSuperAdmin, account?.isAdmin],
   )
 
   const view = useMemo(
@@ -209,7 +209,7 @@ export function OrgPicker() {
               Choose an organization
             </Text>
             <Text fontSize="$3" color="$color11" maxW={520} text="center">
-              {isGlobalAdmin
+              {isSuperAdmin
                 ? 'Pick an organization to manage. As a platform admin you can enter any of them.'
                 : 'Select your organization to open its console.'}
             </Text>

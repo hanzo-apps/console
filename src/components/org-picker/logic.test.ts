@@ -22,7 +22,7 @@ const org = (name: string, extra: Partial<Organization> = {}): Organization => (
 
 const ctx = (over: Partial<PickerContext> = {}): PickerContext => ({
   ownOrg: 'hanzo',
-  isGlobalAdmin: false,
+  isSuperAdmin: false,
   callerIsAdmin: false,
   ...over,
 })
@@ -53,8 +53,8 @@ describe('initialsOf', () => {
 })
 
 describe('roleFor — honest, never fabricated', () => {
-  it('global admin viewing another org → Global admin', () => {
-    expect(roleFor(org('adnexus'), ctx({ isGlobalAdmin: true }))).toBe('Global admin')
+  it('global admin viewing another org → Super admin', () => {
+    expect(roleFor(org('adnexus'), ctx({ isSuperAdmin: true }))).toBe('Super admin')
   })
   it('own org, caller is admin → Admin', () => {
     expect(roleFor(org('hanzo'), ctx({ callerIsAdmin: true }))).toBe('Admin')
@@ -63,7 +63,7 @@ describe('roleFor — honest, never fabricated', () => {
     expect(roleFor(org('hanzo'), ctx())).toBe('Member')
   })
   it('global admin viewing their OWN org → Admin', () => {
-    expect(roleFor(org('hanzo'), ctx({ isGlobalAdmin: true, callerIsAdmin: true }))).toBe('Admin')
+    expect(roleFor(org('hanzo'), ctx({ isSuperAdmin: true, callerIsAdmin: true }))).toBe('Admin')
   })
 })
 
@@ -90,7 +90,7 @@ describe('cardFor — the full view-model', () => {
   it('assembles key/title/initials/logo/role/facts', () => {
     const card = cardFor(
       org('adnexus', { displayName: 'Ad Nexus', logo: 'https://cdn/ad.png', createdTime: '2023-01-02T00:00:00Z' }),
-      ctx({ isGlobalAdmin: true }),
+      ctx({ isSuperAdmin: true }),
     )
     expect(card).toEqual({
       key: 'admin/adnexus',
@@ -98,7 +98,7 @@ describe('cardFor — the full view-model', () => {
       title: 'Ad Nexus',
       initials: 'AN',
       logo: 'https://cdn/ad.png',
-      role: 'Global admin',
+      role: 'Super admin',
       facts: [{ label: 'Created', value: '2023-01-02' }],
     })
   })
@@ -149,7 +149,7 @@ describe('pickerView — filter → sort → paginate → cards', () => {
   ]
 
   it('sorts alphabetically and returns card view-models', () => {
-    const v = pickerView(orgs, '', 1, ctx({ isGlobalAdmin: true }))
+    const v = pickerView(orgs, '', 1, ctx({ isSuperAdmin: true }))
     expect(v.cards.map((c) => c.title)).toEqual(['Ad Nexus', 'Hanzo', 'Lux Network', 'Zoo'])
     expect(v.total).toBe(4)
     expect(v.shown).toBe(4)
@@ -157,7 +157,7 @@ describe('pickerView — filter → sort → paginate → cards', () => {
   })
 
   it('filters by a literal substring (case-insensitive)', () => {
-    const v = pickerView(orgs, 'network', 1, ctx({ isGlobalAdmin: true }))
+    const v = pickerView(orgs, 'network', 1, ctx({ isSuperAdmin: true }))
     expect(v.cards.map((c) => c.name)).toEqual(['lux'])
     expect(v.total).toBe(1)
   })
@@ -173,11 +173,11 @@ describe('pickerView — filter → sort → paginate → cards', () => {
     const big = Array.from({ length: PAGE_SIZE + 3 }, (_, i) =>
       org(`org${String(i).padStart(3, '0')}`, { displayName: `Org ${String(i).padStart(3, '0')}` }),
     )
-    const p1 = pickerView(big, '', 1, ctx({ isGlobalAdmin: true }))
+    const p1 = pickerView(big, '', 1, ctx({ isSuperAdmin: true }))
     expect(p1.shown).toBe(PAGE_SIZE)
     expect(p1.hasMore).toBe(true)
     expect(p1.remaining).toBe(3)
-    const p2 = pickerView(big, '', 2, ctx({ isGlobalAdmin: true }))
+    const p2 = pickerView(big, '', 2, ctx({ isSuperAdmin: true }))
     expect(p2.shown).toBe(PAGE_SIZE + 3)
     expect(p2.hasMore).toBe(false)
   })

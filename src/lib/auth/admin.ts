@@ -1,18 +1,22 @@
 'use client'
 
 /**
- * Client-side admin signal — the ONE place the browser decides whether the
- * signed-in user is a GLOBAL (platform / Hanzo-managed) admin.
+ * Client-side super-admin signal — the ONE place the browser decides whether the
+ * signed-in user is a SUPER admin (platform / Hanzo-managed, cross-tenant).
  *
- * This mirrors the authoritative server gate (`lib/server/admin-policy.gateAllows`,
- * which requires `isGlobalAdmin`) and the `OrgGate` host redirect: membership in
- * the reserved `admin` org IS global admin (its whole purpose is the seeded
- * superuser), or an explicit `isGlobalAdmin` claim. A tenant org owner — a
- * customer like `maxpower`, even one who is `isAdmin` of their OWN org — is NEVER
- * a global admin.
+ * This mirrors the authoritative server gate (`lib/server/admin-policy.gateAllows`)
+ * and the `OrgGate` host redirect: membership in the reserved `admin` org IS super
+ * admin (its whole purpose is the seeded superuser), or an explicit super-admin
+ * claim on the account. A tenant org owner — a customer like `maxpower`, even one
+ * who is `isAdmin` of their OWN org — is NEVER a super admin.
  *
- * The nav/launcher/palette use this to HIDE admin-only surfaces (cross-tenant IAM
- * / KMS / provider + routing config) from customers, and the catch-all uses it to
+ * TRANSITIONAL back-compat (the IAM field rename): the account signal is read from
+ * the new `isSuperAdmin` field FIRST, falling back to the legacy `isGlobalAdmin`
+ * field when the new one is absent — so this works both before and after IAM
+ * renames the claim, with identical behavior.
+ *
+ * The nav/launcher/palette use this to HIDE admin-only surfaces (cross-tenant IAM /
+ * KMS / provider + routing config) from customers, and the catch-all uses it to
  * render a graceful "managed by Hanzo" notice instead of a hostile 403 red error
  * if a customer reaches an admin URL directly. Access is ALWAYS enforced
  * server-side too — this is the matching UI gate, never the only one.
@@ -20,14 +24,17 @@
 import { useSession } from './session'
 import type { Account } from '~/lib/api'
 
-/** True when the account is a global (cross-tenant) admin — pure, testable. */
-export function isGlobalAdminAccount(account: Account | null | undefined): boolean {
+/** True when the account is a super (cross-tenant) admin — pure, testable. */
+export function isSuperAdminAccount(account: Account | null | undefined): boolean {
   if (!account) return false
-  return Boolean((account as { isGlobalAdmin?: boolean }).isGlobalAdmin) || account.owner === 'admin'
+  const a = account as { isSuperAdmin?: boolean; isGlobalAdmin?: boolean }
+  // New canonical field first; fall back to the legacy field until IAM renames it.
+  const claim = a.isSuperAdmin ?? a.isGlobalAdmin
+  return Boolean(claim) || account.owner === 'admin'
 }
 
-/** Whether the signed-in user is a global (platform) admin. */
-export function useIsGlobalAdmin(): boolean {
+/** Whether the signed-in user is a super (platform) admin. */
+export function useIsSuperAdmin(): boolean {
   const { account } = useSession()
-  return isGlobalAdminAccount(account)
+  return isSuperAdminAccount(account)
 }

@@ -54,6 +54,7 @@ import {
   LogOut,
   Menu,
   PanelLeft,
+  Plus,
   Repeat,
   ScrollText,
   Search,
@@ -82,7 +83,9 @@ import { orderEntries } from '~/lib/products/order'
 import { categoryIsOpen, toggleCategory, NAV_OPEN_PREF, EMPTY_OPEN, type CategoryOpen } from '~/lib/products/nav-accordion'
 import { usePreferences } from '~/lib/products/preferences'
 import { useSession } from '~/lib/auth/session'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useEntitlements } from '~/lib/entitlements-context'
+import { AddProductPanel } from '~/components/AddProductPanel'
 import { SidebarWallet } from '~/components/SidebarWallet'
 import { CommandSearchBox, useCommandPalette } from '~/components/CommandPalette'
 import { useAppLauncher } from '~/components/AppLauncher'
@@ -559,7 +562,10 @@ function SidebarNav({
   const { view, isPinned, toggle } = usePins()
   const { colorOf } = useProductColors()
   const detail = useDetailPane()
-  const showAdmin = useIsGlobalAdmin()
+  const showAdmin = useIsSuperAdmin()
+  // Entitlement gate: a customer's nav shows ONLY the products the org has enabled
+  // (always-on essentials + `enabled`); `gated` is true once a real set is in force.
+  const { enabled, gated } = useEntitlements()
   const [filter, setFilter] = useState('')
 
   // Collapsible-category accordion state — the user's explicit per-category open
@@ -634,11 +640,20 @@ function SidebarNav({
   // canonical order; only the items inside each are alphabetized + selected-first.
   const groups = useMemo(
     () =>
-      visibleCatalogByCategory(showAdmin)
+      visibleCatalogByCategory(showAdmin, enabled)
         .map((g) => ({ category: g.category, entries: orderEntries(g.entries.filter((e) => entryMatches(e, q)), activeId) }))
         .filter((g) => g.entries.length > 0),
-    [q, showAdmin, activeId],
+    [q, showAdmin, enabled, activeId],
   )
+
+  // The "Add product" affordance — open the shared DetailPane onto the enable flow.
+  const addProduct = () =>
+    detail.open({
+      title: 'Add product',
+      subtitle: 'Enable more products for your organization',
+      icon: Plus,
+      content: <AddProductPanel />,
+    })
 
   // ── Billing-only shell — the nav IS the Billing Center's tabs ─────────────
   // Same components, filtered nav: on billing.<brand> (or NEXT_PUBLIC_BILLING_ONLY)
@@ -864,6 +879,25 @@ function SidebarNav({
             <Text px="$2" py="$3" fontSize="$2" color="$color10">
               No products match “{filter.trim()}”.
             </Text>
+          ) : null}
+
+          {/* Out-of-box: a gated customer assembles their own backend — enable more
+              products. Hidden for super admins (they see everything) and while the
+              gate is ungated (endpoint not landed) so the nav is unchanged until then. */}
+          {!filtering && gated ? (
+            <Button
+              size="$2"
+              chromeless
+              justify="flex-start"
+              icon={<Plus size={16} />}
+              onPress={addProduct}
+              aria-label="Add product"
+              mt="$1"
+            >
+              <Text fontSize="$2" color="$color11" fontWeight="600">
+                Add product
+              </Text>
+            </Button>
           ) : null}
         </YStack>
       </ScrollView>
