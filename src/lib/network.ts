@@ -18,7 +18,7 @@
  *  - Sovereign L1 networks (Hanzo, Zoo, Pars) run their OWN primary network where
  *    `networkID == evmChainID` (one id per env per L1). This console is a Hanzo
  *    surface, so its stock networks ARE the Hanzo sovereign L1: `networkID` and
- *    `evmChainID` are equal for every stock network (36900 / 36962 / 36964 / 1337),
+ *    `evmChainID` are equal for every stock network (36963 / 36962 / 36964 / 1337),
  *    every value env-overridable so an operator can pin the exact deployed id.
  *
  * Values, not places: a network is data. The stock set is Hanzo's; a user running a
@@ -70,10 +70,10 @@ const HANZO_EXPLORER = trimSlash(process.env.NEXT_PUBLIC_HANZO_EXPLORER_URL ?? '
 // this console at home. Override to point a hosted console at a local binary.
 const LOCAL_CLOUD_API = trimSlash(process.env.NEXT_PUBLIC_LOCAL_CLOUD_URL ?? '')
 
-// Hanzo sovereign L1 ids (networkID == evmChainID). Mainnet 36900 matches the
-// deployed rpc.hanzo.network the wallet already targets; testnet/devnet are the
-// canonical genesis ids (36962/36964); local is the 1337 localnet convention.
-const MAINNET_ID = intEnv(process.env.NEXT_PUBLIC_HANZO_MAINNET_CHAIN_ID, 36900)
+// Hanzo sovereign L1 ids (networkID == evmChainID) — the genesis-canonical set
+// (lux/genesis/configs/hanzo-{mainnet,testnet,devnet}): mainnet 36963, testnet
+// 36962, devnet 36964; local is the 1337 localnet convention. All env-overridable.
+const MAINNET_ID = intEnv(process.env.NEXT_PUBLIC_HANZO_MAINNET_CHAIN_ID, 36963)
 const TESTNET_ID = intEnv(process.env.NEXT_PUBLIC_HANZO_TESTNET_CHAIN_ID, 36962)
 const DEVNET_ID = intEnv(process.env.NEXT_PUBLIC_HANZO_DEVNET_CHAIN_ID, 36964)
 const LOCAL_ID = intEnv(process.env.NEXT_PUBLIC_HANZO_LOCAL_CHAIN_ID, 1337)

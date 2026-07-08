@@ -8,7 +8,7 @@
  * for a cloud console (the mnemonic store in `@hanzo/ai` is a Tauri desktop
  * surface, not importable or appropriate here).
  *
- * Network values mirror the canonical `@hanzo/ai` wallet store (chainId 36900,
+ * Network values mirror the canonical `@hanzo/ai` wallet store (chainId 36963,
  * rpc.hanzo.network); the RPC is env-overridable because the Hanzo L1 EVM RPC
  * path is still settling (the node's default C-Chain currently answers a
  * different id at /ext/bc/C/rpc). HUSD is a Hanzo-USD ERC-20 — its address is
@@ -26,7 +26,7 @@ const MAINNET = STOCK_NETWORKS[0]
 /** Hanzo Mainnet — canonical network descriptor (values from `@hanzo/ai`). */
 export const HANZO_MAINNET = {
   chainId: MAINNET.evmChainID,
-  /** The EIP-3085/3326 hex form used by wallet_switch/addEthereumChain (e.g. `0x9024`). */
+  /** The EIP-3085/3326 hex form used by wallet_switch/addEthereumChain (e.g. `0x9063`). */
   chainIdHex: `0x${MAINNET.evmChainID.toString(16)}`,
   name: 'Hanzo Mainnet',
   rpcUrl: MAINNET.rpcEndpoint,
@@ -82,7 +82,7 @@ export const husdToCents = (amount: string): number =>
   Math.round(Number.parseFloat(amount) * 100)
 
 /**
- * Ensure the wallet is on Hanzo Mainnet (36900), adding the network if unknown.
+ * Ensure the wallet is on Hanzo Mainnet (36963), adding the network if unknown.
  * No-op when already on the chain. Surfaces the wallet's own error otherwise.
  */
 export async function ensureHanzoNetwork(eth: ethers.Eip1193Provider): Promise<void> {
