@@ -1,16 +1,21 @@
 'use client'
 
 /**
- * Scope context — the React layer over the module-level active scope (lib/scope.ts).
+ * Scope context — the React layer over the module-level active scope (lib/scope.ts)
+ * and the network registry (lib/network.ts).
  *
- * The non-React API client reads `getScope()` synchronously to stamp headers; this
- * provider is what keeps that module state in sync with the user's selection and
- * the persisted value. It also owns the org's project list (loaded once) so the
- * switcher and the Projects module share one source of truth.
+ * The non-React API client reads `getScope()` + `activeApiBase()` synchronously to
+ * stamp headers and pick the cloud base; this provider keeps that module state in
+ * sync with the user's selection and the persisted values. It owns the org's project
+ * list (loaded once) AND the user's custom networks (localStorage), so the switcher
+ * and the modules share one source of truth.
  *
- * Honest by construction: if the projects endpoint isn't routed on this
- * deployment it resolves to an empty list (org-level only) — never a fabricated
- * project. Selecting "no project" is valid and means org-level scope.
+ * Network + environment are ONE selection: the active network's `id` IS the active
+ * `environment` string. Selecting a network re-scopes cloud calls (via `X-Environment`)
+ * and retargets chain/RPC/API in a single move — no parallel state, no special-casing.
+ *
+ * Honest by construction: if the projects endpoint isn't routed on this deployment it
+ * resolves to an empty list (org-level only) — never a fabricated project.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
@@ -22,6 +27,15 @@ import {
   setScope,
   type Scope,
 } from '~/lib/scope'
+import {
+  DEFAULT_NETWORK,
+  STOCK_NETWORKS,
+  loadCustomNetworks,
+  networkById,
+  persistCustomNetworks,
+  setCustomRegistry,
+  type Network,
+} from '~/lib/network'
 import { ApiError } from '~/lib/api'
 import { ProjectApi, projectEnvironments, type Project } from '~/lib/api/projects'
 
@@ -36,12 +50,20 @@ type ScopeContextValue = {
   activeProject: Project | null
   /** Environments available for the active project: stock 3 + its custom ones. */
   environments: string[]
+  /** Selectable networks: the stock set (mainnet/testnet/devnet/local) + user custom ones. */
+  networks: Network[]
+  /** The active network (chain identity + endpoints) — resolved from the environment string. */
+  activeNetwork: Network
   /** True until the first project load settles. */
   loadingProjects: boolean
   /** Select a project (undefined = org-level). Resets env to the new scope's default. */
   selectProject: (name: string | undefined) => void
-  /** Select an environment within the active project. */
+  /** Select an environment / network by id (stock, custom network, or project env). */
   selectEnvironment: (env: string) => void
+  /** Add (or replace) a custom network and select it. */
+  addCustomNetwork: (net: Network) => void
+  /** Remove a custom network; falls back to mainnet if it was active. */
+  removeCustomNetwork: (id: string) => void
   /** Re-fetch the project list (after create/delete). */
   refreshProjects: () => Promise<void>
 }
@@ -51,6 +73,7 @@ const ScopeContext = createContext<ScopeContextValue | null>(null)
 export function ScopeProvider({ children }: { children: ReactNode }) {
   // Mirror the module scope into React state so consumers re-render on change.
   const [scope, setScopeState] = useState<Scope>(() => getScope())
+  const [customNetworks, setCustomNetworks] = useState<Network[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [projectsError, setProjectsError] = useState<ApiError | null>(null)
   const [loadingProjects, setLoadingProjects] = useState(true)
@@ -59,6 +82,14 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
     const merged = setScope(next) // updates module state (read by the API client)
     persistScope(merged)
     setScopeState(merged)
+  }, [])
+
+  // Restore the persisted custom networks once, and mirror them into the module
+  // registry so the non-React client resolves the active network synchronously.
+  useEffect(() => {
+    const loaded = loadCustomNetworks()
+    setCustomRegistry(loaded)
+    setCustomNetworks(loaded)
   }, [])
 
   // Restore the persisted { project, environment } once, before any module loads.
@@ -107,6 +138,14 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
 
   const environments = useMemo(() => projectEnvironments(activeProject ?? undefined), [activeProject])
 
+  const networks = useMemo(() => [...STOCK_NETWORKS, ...customNetworks], [customNetworks])
+
+  const activeNetwork = useMemo(
+    // customNetworks in the dep list so this recomputes after the registry updates.
+    () => networkById(scope.environment) ?? DEFAULT_NETWORK,
+    [scope.environment, customNetworks],
+  )
+
   const selectProject = useCallback(
     (name: string | undefined) => {
       // Switching project resets the environment to mainnet — a custom env from
@@ -118,6 +157,32 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
 
   const selectEnvironment = useCallback((env: string) => apply({ environment: env }), [apply])
 
+  const addCustomNetwork = useCallback(
+    (net: Network) => {
+      setCustomNetworks((prev) => {
+        const next = [...prev.filter((n) => n.id !== net.id), net]
+        setCustomRegistry(next)
+        persistCustomNetworks(next)
+        return next
+      })
+      apply({ environment: net.id }) // select the just-added network
+    },
+    [apply],
+  )
+
+  const removeCustomNetwork = useCallback(
+    (id: string) => {
+      setCustomNetworks((prev) => {
+        const next = prev.filter((n) => n.id !== id)
+        setCustomRegistry(next)
+        persistCustomNetworks(next)
+        return next
+      })
+      if (getScope().environment === id) apply({ environment: DEFAULT_ENVIRONMENT })
+    },
+    [apply],
+  )
+
   const value = useMemo<ScopeContextValue>(
     () => ({
       scope,
@@ -125,18 +190,22 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
       projectsError,
       activeProject,
       environments,
+      networks,
+      activeNetwork,
       loadingProjects,
       selectProject,
       selectEnvironment,
+      addCustomNetwork,
+      removeCustomNetwork,
       refreshProjects,
     }),
-    [scope, projects, projectsError, activeProject, environments, loadingProjects, selectProject, selectEnvironment, refreshProjects],
+    [scope, projects, projectsError, activeProject, environments, networks, activeNetwork, loadingProjects, selectProject, selectEnvironment, addCustomNetwork, removeCustomNetwork, refreshProjects],
   )
 
   return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>
 }
 
-/** Read the active scope + project list + selectors. Must be under <ScopeProvider>. */
+/** Read the active scope + project list + network registry + selectors. Must be under <ScopeProvider>. */
 export function useScope(): ScopeContextValue {
   const ctx = useContext(ScopeContext)
   if (!ctx) throw new Error('useScope must be used within <ScopeProvider>')

@@ -18,14 +18,19 @@
  */
 import { ethers } from 'ethers'
 
+import { STOCK_NETWORKS } from '~/lib/network'
+
+/** Mainnet identity (chain id + RPC + explorer) — the ONE source is the network model. */
+const MAINNET = STOCK_NETWORKS[0]
+
 /** Hanzo Mainnet — canonical network descriptor (values from `@hanzo/ai`). */
 export const HANZO_MAINNET = {
-  chainId: 36900,
-  /** `0x9024` — the EIP-3085/3326 hex form used by wallet_switch/addEthereumChain. */
-  chainIdHex: '0x9024',
+  chainId: MAINNET.evmChainID,
+  /** The EIP-3085/3326 hex form used by wallet_switch/addEthereumChain (e.g. `0x9024`). */
+  chainIdHex: `0x${MAINNET.evmChainID.toString(16)}`,
   name: 'Hanzo Mainnet',
-  rpcUrl: (process.env.NEXT_PUBLIC_HANZO_RPC_URL ?? 'https://rpc.hanzo.network').replace(/\/+$/, ''),
-  blockExplorer: 'https://explorer.hanzo.network',
+  rpcUrl: MAINNET.rpcEndpoint,
+  blockExplorer: MAINNET.explorer,
   nativeCurrency: { name: 'AI Token', symbol: 'AI', decimals: 18 },
 } as const
 
