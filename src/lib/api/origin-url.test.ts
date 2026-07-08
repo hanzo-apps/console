@@ -5,7 +5,7 @@ import { originV1Url } from './client'
 /**
  * originV1Url is the ONE client-visible form for the AI product surface: same-origin
  * `/v1/<path>` with NO prefix (the CTO one-endpoint contract). next.config rewrites
- * the AI heads to the bearer proxies, so the client never types `/cloud` or `/ai`.
+ * the AI heads to the bearer proxies, so the client never types `/v1` or `/ai`.
  */
 describe('originV1Url', () => {
   afterEach(() => {

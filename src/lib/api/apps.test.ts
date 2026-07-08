@@ -13,7 +13,7 @@ import {
  * Apps API (the hanzo.app buildable-sites store) + pure normalizers. The module
  * calls the DOCUMENTED cloud `/v1/projects` contract same-origin, keyless and
  * prefix-free (`originV1Url` → `<origin>/v1/projects`); `next.config.mjs` rewrites
- * that head to the user-bearer `/cloud` proxy. These tests pin (1) each call hits
+ * that head to the user-bearer `/v1` proxy. These tests pin (1) each call hits
  * the EXACT same-origin `/v1/projects` path (the canonical Agents/CRM form — never a
  * direct cloud-origin call, which 403s), (2) the real projectsvc JSON shape
  * (projectView/deploymentView) normalizes, (3) a bare array + the flat store-column
@@ -111,7 +111,7 @@ describe('builderEditUrl — the console→hanzo.app edit deep-link', () => {
   })
 })
 
-describe('AppsApi — hits the same-origin /v1/projects contract (rewritten to the /cloud bearer proxy)', () => {
+describe('AppsApi — hits the same-origin /v1/projects contract (rewritten to the /v1 bearer proxy)', () => {
   const fetched: { url: string; method: string }[] = []
 
   beforeEach(() => {

@@ -5,7 +5,7 @@
  * control plane (`hanzoai/cloud` clients/platform). A signed-in org member manages
  * their OWN container apps: list + status, deploy, source-tagged logs, KMS-sealed
  * env (secret-masked), and verified custom domains. Scoped to the caller's org by
- * the Bearer owner claim server-side (the `/cloud` proxy) — never a spoofable
+ * the Bearer owner claim server-side (the `/v1` proxy) — never a spoofable
  * header.
  *
  * DISTINCT from the admin `applications` module (the `/v1/apps` fleet drift board)

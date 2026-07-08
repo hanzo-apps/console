@@ -2,7 +2,7 @@
 
 /**
  * Per-product Logs — the LIVE application/platform logs for THIS product's OTel
- * service, read from the Hanzo o11y (SigNoz) runtime via the same-origin `/cloud`
+ * service, read from the Hanzo o11y (SigNoz) runtime via the same-origin `/v1`
  * bearer proxy (`POST /v1/o11y/api/v3/query_range`, a `list`-panel `noop` builder
  * query over `dataSource: logs`, newest first, FILTERED to the product's
  * `service.name`). The SAME o11y source the Observe › Logs board reads, scoped to

@@ -204,22 +204,22 @@ describe('upstreamHeaders', () => {
 })
 
 /**
- * CROSS-TENANT ISOLATION INVARIANT (RED MED-1) — the `/cloud` proxy MUST drop the
+ * CROSS-TENANT ISOLATION INVARIANT (RED MED-1) — the `/v1` proxy MUST drop the
  * browser-controlled `X-Project-Id` sub-scope, because it is EXCLUDED from cloud's
  * SanitizeIdentity.authorityHeaders (client-controllable) and the cloud evals facade
  * (`clients/eval` `tenant()`) TRUSTS `X-Project-Id` over the bearer-pinned org to
- * select a per-project console API key pair from KMS. If `/cloud` ever forwarded a
+ * select a per-project console API key pair from KMS. If `/v1` ever forwarded a
  * client `X-Project-Id`, a signed-in user could set `X-Project-Id: victim-org` and
- * read another org's eval scores. `/cloud` does NOT pass `forwardScope`, so this
+ * read another org's eval scores. `/v1` does NOT pass `forwardScope`, so this
  * suite pins that the sub-scope is dropped (and only rides when explicitly opted in,
  * as `/vm` does under its own org-membership re-validation). Never remove `forwardScope`
  * defaulting to off here without a project-membership check upstream.
  */
 describe('X-Project-Id drop — cross-tenant eval isolation (RED MED-1)', () => {
-  it('DROPS a client-forged X-Project-Id when forwardScope is unset (the /cloud default)', () => {
+  it('DROPS a client-forged X-Project-Id when forwardScope is unset (the /v1 default)', () => {
     // The browser stamps X-Project-Id (client.ts baseHeaders); a forged one must NOT survive.
     const req = reqWith({ 'X-Project-Id': 'victim-org', 'X-Environment': 'mainnet' })
-    const h = upstreamHeaders(req, 'maxpower', false, {}) // no forwardScope = the /cloud call
+    const h = upstreamHeaders(req, 'maxpower', false, {}) // no forwardScope = the /v1 call
     expect(h['X-Project-Id']).toBeUndefined()
     expect(h['X-Environment']).toBeUndefined()
     expect(h['X-Org-Id']).toBe('maxpower') // org stays the bearer owner, authoritative
@@ -231,7 +231,7 @@ describe('X-Project-Id drop — cross-tenant eval isolation (RED MED-1)', () => 
     expect(h['X-Project-Id']).toBeUndefined()
   })
 
-  it('rides X-Project-Id ONLY when a proxy explicitly opts in (e.g. /vm), never /cloud', () => {
+  it('rides X-Project-Id ONLY when a proxy explicitly opts in (e.g. /vm), never /v1', () => {
     const req = reqWith({ 'X-Project-Id': 'proj-1' })
     expect(upstreamHeaders(req, 'maxpower', false, { forwardScope: true })['X-Project-Id']).toBe('proj-1')
   })
@@ -240,7 +240,7 @@ describe('X-Project-Id drop — cross-tenant eval isolation (RED MED-1)', () => 
 /**
  * End-to-end forward (RED LOW-2) — the two-stage normalize→revalidate defense at the
  * TOP of forwardWithUserBearer, exercised through the real function with a mocked
- * fetch + identity. A rewrite-fed traversal (what reaches `app/cloud/[...path]` after
+ * fetch + identity. A rewrite-fed traversal (what reaches `app/v1/[...path]` after
  * Next single-decodes the catch-all) must 404 and NEVER issue the upstream fetch —
  * proving the allow-list can't be bypassed via a foreign head, not just that the
  * pure `pathIsClean` helper rejects strings.

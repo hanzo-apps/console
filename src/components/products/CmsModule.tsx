@@ -12,7 +12,7 @@
  * CMS is "that UI scoped to module=cms".
  *
  * Per-org and honest by construction: the engine resolves the org from the
- * validated bearer (via the `/cloud` proxy) and enforces per-DocType permissions,
+ * validated bearer (via the `/v1` proxy) and enforces per-DocType permissions,
  * so a customer only ever sees + edits their OWN content, and an un-set-up org
  * sees the "Set up Content" install CTA — never a fabricated page.
  */

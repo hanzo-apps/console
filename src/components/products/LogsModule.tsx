@@ -4,7 +4,7 @@
  * Logs — two real lenses, one product, honest states throughout.
  *
  *  1. APPLICATION logs (default) — full-text application/platform logs from the
- *     Hanzo o11y (SigNoz) runtime, read through the same-origin `/cloud` bearer
+ *     Hanzo o11y (SigNoz) runtime, read through the same-origin `/v1` bearer
  *     proxy as `POST /v1/o11y/api/v3/query_range` (a `list`-panel `noop` builder
  *     query over `dataSource: logs`, newest first — `O11ySignozApi.logs`). Real
  *     log lines (time · severity · service · message), org-scoped by the minted

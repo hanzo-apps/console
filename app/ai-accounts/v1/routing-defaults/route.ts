@@ -10,7 +10,7 @@
  * This is a pure READ. It forwards to cloud-api's org-scoped
  * `GET /v1/get-routing-defaults` with the caller's short-lived user bearer (org is
  * the token owner — never browser-supplied), the EXACT same auth pattern as the
- * `/cloud` proxy. It deliberately does NOT touch the org-settings WRITE path: a
+ * `/v1` proxy. It deliberately does NOT touch the org-settings WRITE path: a
  * customer surface has no clean authenticated path to mint the global-admin write,
  * and forging one is a confused-deputy escalation (see the long note in
  * `settings/route.ts`). Reads are fine; writes stay out.
@@ -29,7 +29,7 @@ import { forwardWithUserBearer } from '~/lib/server/bearer-proxy'
 export const runtime = 'nodejs'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
-/** The unified cloud backend (hanzoai/cloud) — same in-cluster target as the `/cloud` proxy. */
+/** The unified cloud backend (hanzoai/cloud) — same in-cluster target as the `/v1` proxy. */
 const CLOUD_API_URL = trim(process.env.CLOUD_API_URL?.trim() || 'http://cloud-api.hanzo.svc.cluster.local:8000')
 
 const UPSTREAM_PATH = 'v1/get-routing-defaults'

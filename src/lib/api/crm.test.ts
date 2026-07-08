@@ -15,7 +15,7 @@ import {
 /**
  * CRM API + pure normalizers. The module calls the DOCUMENTED cloud `/v1/crm`
  * contract same-origin, keyless and prefix-free (`originV1Url` → `<origin>/v1/crm`);
- * `next.config.mjs` rewrites that head to the user-bearer `/cloud` proxy. These
+ * `next.config.mjs` rewrites that head to the user-bearer `/v1` proxy. These
  * tests pin (1) that each call hits the EXACT same-origin `/v1/crm` path (the
  * canonical Agents/Evals form — never a direct cloud-origin call, which 403s),
  * (2) that the real store JSON shape (store.go tags) normalizes, (3) list reads any
@@ -65,7 +65,7 @@ describe('CRM normalizers — real store.go JSON shape, defensive', () => {
   })
 })
 
-describe('CrmApi — hits the same-origin /v1/crm contract (rewritten to the /cloud bearer proxy)', () => {
+describe('CrmApi — hits the same-origin /v1/crm contract (rewritten to the /v1 bearer proxy)', () => {
   const fetched: { url: string; method: string }[] = []
 
   beforeEach(() => {

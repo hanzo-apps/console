@@ -3,7 +3,7 @@
 /**
  * Applications — the org's REAL deployed apps on the live Hanzo PaaS. Thin route
  * adapter over `PaasApplications`, which drives the per-org `/v1/platform/*`
- * surface (projects → apps → deployments) through the `/cloud` bearer proxy.
+ * surface (projects → apps → deployments) through the `/v1` bearer proxy.
  *
  * This is the Compute "Applications" surface: real deployed apps with their
  * project, status, source, and live URL — NOT the IAM/OAuth "application"

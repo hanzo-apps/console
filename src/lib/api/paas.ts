@@ -4,7 +4,7 @@
  * deployments (git BuildKit builds or image deploys), all reconciled to operator
  * Service CRs.
  *
- * Transport mirrors `functions.ts`: the `/cloud` bearer proxy via
+ * Transport mirrors `functions.ts`: the `/v1` bearer proxy via
  * `cloudProxyV1Url` — the browser sends only its session cookie, the proxy mints a
  * short-lived user IAM Bearer and forwards it; cloud's `SanitizeIdentity` resolves
  * the org from the Bearer OWNER claim and pins every read/write to it, so the

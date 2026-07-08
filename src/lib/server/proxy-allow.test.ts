@@ -84,7 +84,7 @@ describe('allowCloudSurface', () => {
 
   it('LEAST PRIVILEGE: does NOT tunnel the cross-tenant / unused store heads', () => {
     // get-global-stores is a cross-tenant read the console never invokes; get-store-names
-    // is unused. Neither is allow-listed, so /cloud refuses them (not a general tunnel).
+    // is unused. Neither is allow-listed, so /v1 refuses them (not a general tunnel).
     expect(CLOUD_HEADS).not.toContain('get-global-stores')
     expect(CLOUD_HEADS).not.toContain('get-store-names')
     expect(allowCloudSurface('v1/get-global-stores')).toBe(false)
