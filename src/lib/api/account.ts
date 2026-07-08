@@ -8,6 +8,7 @@
  */
 import { ApiError, get, post } from './client'
 import { refreshSession } from '~/lib/auth/refresh'
+import { IS_EMBED } from '~/lib/embed'
 import { type Account } from './types'
 
 /** The console session route is same-origin (the console's OWN BFF), not `/v1/*`. */
@@ -22,6 +23,8 @@ export type SessionResult = { account: Account | null; expiresIn: number | null 
 
 /** Read the console OAuth session (GET /auth/session); null when there is none. */
 async function consoleGet(): Promise<SessionResult | null> {
+  // No BFF in the static embed — /auth/session isn't served; use the casibase session.
+  if (IS_EMBED) return null
   try {
     const res = await fetch(SESSION_URL, {
       method: 'GET',
@@ -79,6 +82,9 @@ export const AccountApi = {
    * success so the caller can arm the proactive refresh.
    */
   establishSession: async (username: string, password: string): Promise<SessionResult | null> => {
+    // No BFF in the static embed — the durable console session can't be minted there;
+    // the user stays signed in on the casibase session (POST /auth/session → 405).
+    if (IS_EMBED) return null
     try {
       const res = await fetch(SESSION_URL, {
         method: 'POST',
@@ -125,10 +131,14 @@ export const AccountApi = {
   /** Sign out of BOTH sessions: clear the console session (revoke + clear cookie),
    *  then the casibase session. Both best-effort so one failing still signs out. */
   signout: async (): Promise<void> => {
-    try {
-      await fetch(SESSION_URL, { method: 'DELETE', credentials: 'include', cache: 'no-store' })
-    } catch {
-      /* best-effort */
+    // The console-session cookie only exists behind the BFF; in the embed there's
+    // nothing to revoke here — go straight to the casibase sign-out.
+    if (!IS_EMBED) {
+      try {
+        await fetch(SESSION_URL, { method: 'DELETE', credentials: 'include', cache: 'no-store' })
+      } catch {
+        /* best-effort */
+      }
     }
     try {
       await post('iam/signout')
