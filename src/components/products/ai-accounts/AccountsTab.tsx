@@ -12,6 +12,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Check, Trash2, Plus } from '@hanzogui/lucide-icons-2'
 
+import { trackedProviderIds } from '@hanzo/usage'
+
 import { AiAccountsApi, type PublicAccount } from '~/lib/api/ai-accounts'
 import { AI_PROVIDERS, COMING_SOON, MODE_LABEL, type AiProvider, type ConnectMode } from '~/lib/products/ai-accounts'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -24,6 +26,9 @@ type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } |
 
 const modeFromLabel = (label: string): ConnectMode =>
   (Object.keys(MODE_LABEL) as ConnectMode[]).find((m) => MODE_LABEL[m] === label) ?? 'api'
+
+/** Provider ids with a live `@hanzo/usage` pipeline (vs. connect-only). */
+const TRACKED = new Set<string>(trackedProviderIds)
 
 /** The connect form + connected-state for one AI provider. */
 function ProviderRow({
@@ -82,9 +87,16 @@ function ProviderRow({
         <XStack items="center" gap="$3" flex={1} minW={0}>
           <YStack width={10} height={10} rounded={99} style={{ backgroundColor: provider.color }} />
           <YStack minW={0}>
-            <Text fontSize="$5" fontWeight="700">
-              {provider.label}
-            </Text>
+            <XStack items="center" gap="$2" flexWrap="wrap">
+              <Text fontSize="$5" fontWeight="700">
+                {provider.label}
+              </Text>
+              <XStack px="$2" py="$0.5" rounded="$2" borderWidth={1} borderColor="$borderColor" bg="$color2">
+                <Text fontSize="$1" color={TRACKED.has(provider.id) ? '#3fb950' : '$color10'}>
+                  {TRACKED.has(provider.id) ? 'In-app tracked' : 'Connect-only'}
+                </Text>
+              </XStack>
+            </XStack>
             <Text fontSize="$2" color="$color10">
               {provider.vendor}
             </Text>
