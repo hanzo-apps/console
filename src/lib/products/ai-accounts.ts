@@ -42,6 +42,37 @@ export const MODE_LABEL: Record<ConnectMode, string> = {
   web: 'Cookie header',
 }
 
+/**
+ * The org-level smart-routing defaults an admin set for the whole org, read from
+ * cloud-api `GET /v1/get-routing-defaults`. `autoRoutingActive` = routing is
+ * enabled for the org at all; `defaultSessionRouting` = the default on/off a new
+ * session inherits when the user has no explicit override.
+ */
+export type OrgRoutingDefaults = { autoRoutingActive: boolean; defaultSessionRouting: boolean }
+
+/**
+ * The EFFECTIVE smart-routing state for the Routing tab. PURE.
+ *
+ * `pref` is the user's own tri-state OVERRIDE from the sealed cookie: `true` = forced
+ * on, `false` = forced off, `null` = never touched (follow the org default). `org` is
+ * the server-driven default, or `null` when the defaults endpoint was unreachable
+ * (older cloud-api, network error) — in which case we FAIL SOFT to the pre-endpoint
+ * behavior: honor the user's own preference alone (off when never set).
+ *
+ * Precedence: an org that has turned routing OFF entirely (`autoRoutingActive:false`)
+ * wins — the toggle is disabled with honest copy and nothing routes. Otherwise the
+ * user's explicit override wins; absent one, the session follows the org default;
+ * absent both (no org info), off — exactly today's default.
+ */
+export function resolveRouting(
+  pref: boolean | null,
+  org: OrgRoutingDefaults | null,
+): { enabled: boolean; toggleDisabled: boolean; orgDefault: boolean | null } {
+  if (org && !org.autoRoutingActive) return { enabled: false, toggleDisabled: true, orgDefault: null }
+  const orgDefault = org ? org.defaultSessionRouting : null
+  return { enabled: pref ?? orgDefault ?? false, toggleDisabled: false, orgDefault }
+}
+
 /** Placeholder integration groups — honest "coming soon", catalog-driven rows. */
 export type ComingSoonGroup = { group: string; items: string[] }
 export const COMING_SOON: ComingSoonGroup[] = [
