@@ -66,6 +66,18 @@ export const CLOUD_HEADS: readonly string[] = [
   // call, so it routes through /cloud like prompts/agents. Multi-segment sub-paths
   // (top/referrers, llm/overview) are admitted by the single `analytics` head.
   'analytics',
+  // Unified usage summary (cloud clients/usage): /v1/usage/summary — the org's cost
+  // roll-up (spend by category over time + wallet) + LLM usage totals, composed from
+  // the commerce ledger + the warehouse. The handler resolves the org from the Bearer
+  // owner (principal.Tenant) and 401s a cookie-only call, so it routes through /cloud
+  // exactly like analytics. One `usage` head admits the summary sub-path.
+  'usage',
+  // Org-scoped audit trail (cloud clients/auditlog): /v1/audit — the caller's OWN org
+  // security events off the tamper-evident, hash-chained store (the per-org twin of the
+  // global-admin /v1/admin/audit). Org is PINNED from the Bearer owner (principal.Tenant);
+  // a cookie-only call 401s, so it routes through /cloud like the rest. Distinct from the
+  // admin god-view, which stays on the global-admin aggregate proxy.
+  'audit',
   // Evals facade (cloud clients/eval): /v1/evals/{scores,datasets,dataset-items,
   // evaluators,runs}. Single-segment sub-paths under the one `evals` head; the
   // facade resolves the console project key pair from the request tenant (the

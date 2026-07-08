@@ -108,8 +108,10 @@ import { SearchModule } from '~/components/products/SearchModule'
 import { TemplatesModule } from '~/components/products/TemplatesModule'
 import { PlansModule } from '~/components/products/PlansModule'
 import { BillingModule } from '~/components/products/BillingModule'
+import { UsageModule } from '~/components/products/UsageModule'
 import { WalletModule } from '~/components/products/WalletModule'
-import { IamModule, AuditModule } from '~/components/products/AdminModule'
+import { IamModule } from '~/components/products/AdminModule'
+import { AuditModule } from '~/components/products/audit/AuditModule'
 import { KmsModule } from '~/components/products/KmsModule'
 import { StorageModule } from '~/components/products/StorageModule'
 import { BaseModule } from '~/components/products/BaseModule'
@@ -1624,6 +1626,18 @@ export const catalog: CatalogEntry[] = [
   },
 
   // ── Observe ──────────────────────────────────────────────────────────
+  {
+    id: 'usage',
+    label: 'Usage',
+    icon: Coins,
+    description: "Your organization's total footprint — spend by category, LLM usage, and compute — in one place, with CSV export.",
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    docs: `${DOCS}/usage`,
+    kind: 'module',
+    routes: [{ path: '', component: UsageModule }],
+  },
   {
     id: 'logs',
     label: 'Logs',
