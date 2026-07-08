@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 
 import { resolveView, isAdminRoute } from '~/lib/products/match'
 import { findEntry } from '~/lib/products/registry'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { ProductSubpageStub } from '~/components/products/ProductSubpageStub'
 import { ProductSubpageModule } from '~/components/products/subpage/ProductSubpageModule'
 import { ProductInterstitial } from '~/components/products/ProductInterstitial'
@@ -35,7 +35,7 @@ import { ProductErrorBoundary } from '~/components/errors/ProductErrorBoundary'
  */
 export default function ProductPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = use(params)
-  const showAdmin = useIsGlobalAdmin()
+  const showAdmin = useIsSuperAdmin()
   const view = resolveView(slug)
 
   if (view.kind === 'notfound') notFound()

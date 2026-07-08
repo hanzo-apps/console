@@ -97,6 +97,7 @@ import { Users,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId } from '~/config'
+import { ALWAYS_ON_PRODUCTS, filterEntitled } from '~/lib/entitlements'
 import { type ProductCategory, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
@@ -118,6 +119,7 @@ import { FinanceModule } from '~/components/products/FinanceModule'
 import { UsageModule } from '~/components/products/UsageModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule } from '~/components/products/AdminModule'
+import { EntitlementsAdminModule } from '~/components/products/EntitlementsAdminModule'
 import { AuditModule } from '~/components/products/audit/AuditModule'
 import { KmsModule } from '~/components/products/KmsModule'
 import { StorageModule } from '~/components/products/StorageModule'
@@ -2120,6 +2122,22 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AuthorsAdminModule }],
   },
   {
+    // Super-admin per-org entitlements editor (hidden from every customer nav/
+    // launcher/palette). Masquerade into an org, then toggle which products its
+    // console shows — the admin half of the out-of-box "assemble your own backend"
+    // flow. Reads/writes /v1/orgs/{org}/entitlements (org-scoped server-side).
+    id: 'entitlements',
+    label: 'Entitlements',
+    icon: ShieldCheck,
+    description: "Manage which products the active organization has enabled.",
+    category: 'Settings',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: EntitlementsAdminModule }],
+  },
+  {
     // Global-admin reserve-fund board (hidden from every customer nav/launcher/palette).
     id: 'treasury',
     label: 'Treasury',
@@ -2998,7 +3016,10 @@ export const inBrand = (e: CatalogEntry): boolean =>
 /** The unified Billing Center entry id — the ONE money surface + the billing-only shell root. */
 export const BILLING_CENTER_ID = 'billing'
 
-export const visibleCatalog = (showAdmin: boolean): CatalogEntry[] => {
+export const visibleCatalog = (
+  showAdmin: boolean,
+  enabled?: string[] | null,
+): CatalogEntry[] => {
   // Billing-only shell mode (billing.<brand> host / NEXT_PUBLIC_BILLING_ONLY): the
   // SAME console image, but every surface is filtered to the ONE Billing Center.
   // Bypass the brand-category scope so the center shows on EVERY brand's billing
@@ -3008,14 +3029,20 @@ export const visibleCatalog = (showAdmin: boolean): CatalogEntry[] => {
     const billing = catalog.find((e) => e.id === BILLING_CENTER_ID)
     return billing ? [billing] : []
   }
-  return (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
+  const byAdmin = (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
+  // ENTITLEMENT GATE (customer only): out-of-box an org sees ONLY the products it has
+  // enabled/paid for (always-on essentials + its `enabled` set). A super admin
+  // (`showAdmin`) bypasses; an ungated set (`enabled` null/undefined — the endpoint
+  // hasn't landed) shows everything (no regression). ONE predicate, `filterEntitled`.
+  return filterEntitled(byAdmin, enabled, showAdmin)
 }
 
-/** `catalogByCategory` scoped to what the user may see (admin surfaces gated). */
+/** `catalogByCategory` scoped to what the user may see (admin surfaces + entitlements gated). */
 export const visibleCatalogByCategory = (
   showAdmin: boolean,
+  enabled?: string[] | null,
 ): { category: ProductCategory; entries: CatalogEntry[] }[] => {
-  const visible = visibleCatalog(showAdmin)
+  const visible = visibleCatalog(showAdmin, enabled)
   // In billing-only mode the Billing Center is the whole catalog — surface it as a
   // single group regardless of the brand's category order (its category may be
   // outside the brand's normal set).
@@ -3024,5 +3051,23 @@ export const visibleCatalogByCategory = (
   }
   return brandCategoryOrder()
     .map((category) => ({ category, entries: visible.filter((e) => e.category === category) }))
+    .filter((g) => g.entries.length > 0)
+}
+
+/**
+ * Products a customer could ADD (enable) — the "Add product" flow's source. The
+ * brand-scoped, non-admin catalog MINUS the always-on essentials MINUS what the org
+ * already has enabled. Grouped by category in display order; empty groups dropped.
+ * Super admins have nothing to add (they see everything already) → empty.
+ */
+export const addableCatalogByCategory = (
+  showAdmin: boolean,
+  enabled: string[] | null,
+): { category: ProductCategory; entries: CatalogEntry[] }[] => {
+  if (showAdmin || enabled == null) return []
+  const set = new Set<string>([...ALWAYS_ON_PRODUCTS, ...enabled])
+  const addable = catalog.filter((e) => !isAdminEntry(e) && inBrand(e) && !set.has(e.id))
+  return brandCategoryOrder()
+    .map((category) => ({ category, entries: addable.filter((e) => e.category === category) }))
     .filter((g) => g.entries.length > 0)
 }
