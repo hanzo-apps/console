@@ -145,12 +145,17 @@ const providers = mod('providers', { admin: true })
 // The real ML Pipelines module, id === the canonical `ml-pipelines` slug — the
 // alias target for `mlpipelines`/`kubeflow`.
 const mlPipelines = mod('ml-pipelines', { label: 'ML Pipelines', category: 'Training' })
-// An EXTERNAL product (Automation → auto.hanzo.ai): owns no in-console route; a
-// direct URL to it (or its `automation` alias) resolves to `external`, not 404.
-const auto = mod('auto', {
-  label: 'Automation',
+// The ONE native Automations module — `/auto` and `/automation` alias to it (the
+// external auto.hanzo.ai engine + its `/v1/auto` proxy are retired).
+const automations = mod('automations', { label: 'Automations', category: 'AI' })
+// A genuinely-EXTERNAL product (a Lux chain-app launch tile): owns no in-console
+// route; a direct URL resolves to `external`, not 404. Proves the external-kind
+// machinery still holds for the chain-app tiles after the auto entry became native.
+const luxExplorer = mod('lux-explorer', {
+  label: 'Explorer',
+  category: 'Web3',
   kind: 'external',
-  href: 'https://auto.hanzo.ai',
+  href: 'https://explore.lux.network',
   routes: undefined,
 } as never)
 // A defensive edge case: an entry that VIOLATES the module contract (kind is not
@@ -169,7 +174,7 @@ const wallet = mod('wallet', { label: 'Wallet', category: 'Web3' })
 const finetuning = mod('finetuning', { label: 'Fine-tuning', category: 'Training' })
 const websearch = mod('websearch', { label: 'Web Search', category: 'AI' })
 
-const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, mlPipelines, auto, o11y, appPlatform, plans, wallet, finetuning, websearch, nonModule]
+const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, mlPipelines, automations, luxExplorer, o11y, appPlatform, plans, wallet, finetuning, websearch, nonModule]
 const MODULES = CATALOG.filter((e) => e.kind === 'module').map((e) => e as unknown as ProductModule)
 
 describe('productSubpages — Overview + specifics + uniform base set', () => {
@@ -271,8 +276,8 @@ describe('resolveProductView — base sub-pages are the shared per-product view 
 
 describe('canonicalSlug — conventional URLs map to the canonical entry id', () => {
   it('rewrites only the head segment, preserving the rest', () => {
-    expect(canonicalSlug(['automation'])).toEqual(['auto'])
-    expect(canonicalSlug(['automations'])).toEqual(['auto'])
+    expect(canonicalSlug(['auto'])).toEqual(['automations'])
+    expect(canonicalSlug(['automation'])).toEqual(['automations'])
     expect(canonicalSlug(['mlpipelines'])).toEqual(['ml-pipelines'])
     expect(canonicalSlug(['kubeflow', 'status'])).toEqual(['ml-pipelines', 'status'])
   })
@@ -304,15 +309,16 @@ describe('resolveProductView — aliases + external resolve (never a 404 nav ite
   const view = (slug: string[]) => resolveProductView(CATALOG, MODULES, slug)
 
   it('a direct URL to an external product resolves to `external`, not 404', () => {
-    const v = view(['auto'])
+    const v = view(['lux-explorer'])
     expect(v.kind).toBe('external')
-    if (v.kind === 'external') expect(v.entry.href).toBe('https://auto.hanzo.ai')
+    if (v.kind === 'external') expect(v.entry.href).toBe('https://explore.lux.network')
   })
-  it('the Automation aliases (/automation, /automations) resolve to the external launch', () => {
-    expect(view(['automation']).kind).toBe('external')
-    expect(view(['automations']).kind).toBe('external')
-    const v = view(['automation'])
-    if (v.kind === 'external') expect(v.entry.id).toBe('auto')
+  it('the Automations aliases (/auto, /automation) resolve to the NATIVE module, not a link-out', () => {
+    expect(view(['auto']).kind).toBe('route')
+    expect(view(['automation']).kind).toBe('route')
+    expect(view(['automations']).kind).toBe('route')
+    const v = view(['auto'])
+    if (v.kind === 'route') expect(v.matched.module.id).toBe('automations')
   })
   it('ML Pipelines resolves at its canonical slug AND its aliases (mlpipelines/kubeflow)', () => {
     expect(view(['ml-pipelines']).kind).toBe('route')

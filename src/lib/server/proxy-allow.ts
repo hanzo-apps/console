@@ -26,6 +26,14 @@ export const CLOUD_HEADS: readonly string[] = [
   'functions',
   'prompts',
   'agents',
+  // Automations (cloud clients/automations): /v1/automations/{pieces,flows,runs,mcp}[/…].
+  // The ONE native Connectors + Automations engine — flows/versions/runs over the
+  // go:embed'd 706-connector catalogue, run durably on the shared hanzoai/tasks engine.
+  // The handler resolves the org from the Bearer owner (principal.Tenant) and 403s a
+  // cookie-only or forged-header call, so it routes through /cloud exactly like
+  // prompts/agents — the single `automations` head admits every sub-path (pieces,
+  // flows CRUD + enable/disable/run, runs, mcp). Replaces the retired /v1/auto proxy.
+  'automations',
   // Framework (cloud clients/framework): /v1/framework/{doctypes,roles,modules,:doctype}[/…].
   // The metadata-driven DocType engine — the FOUNDATION CMS/ERP/CRM/Helpdesk are "just
   // DocTypes" on. Per-org on Base/SQLite; the engine derives the org from the Bearer owner
