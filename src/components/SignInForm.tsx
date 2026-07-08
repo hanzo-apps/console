@@ -29,12 +29,24 @@ import { Github } from '@hanzogui/lucide-icons-2'
 import { branding } from '~/config'
 import { HanzoMark } from '~/components/ui/Loader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { Turnstile, turnstileConfigured } from '~/components/ui/Turnstile'
 import { useSession } from '~/lib/auth/session'
 import { getSigninUrl } from '~/lib/auth/iam'
 import { loginState, loginWithPassword } from '~/lib/auth/iam-login'
 import { signUp } from '~/lib/auth/signup'
 
 type Mode = 'signin' | 'signup'
+
+/** A `?ref=<code>` on the landing URL — passed to signup to credit the referrer's
+ *  waitlist position. Read at submit so a link opened straight on /signin still works. */
+function refFromUrl(): string {
+  if (typeof window === 'undefined') return ''
+  try {
+    return (new URLSearchParams(window.location.search).get('ref') ?? '').trim()
+  } catch {
+    return ''
+  }
+}
 
 /** Monochrome Google "G" — filled with the current text color so it tracks the
  * console's black/white chrome. */
@@ -82,6 +94,8 @@ export function SignInForm() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mfa, setMfa] = useState(false)
+  // Turnstile token for the signup path (only required when Turnstile is provisioned).
+  const [captcha, setCaptcha] = useState('')
 
   // The ONE credential login path — shared by sign-in and by post-signup auto-login.
   async function logInWithCredentials(): Promise<void> {
@@ -119,10 +133,16 @@ export function SignInForm() {
 
   async function submitSignUp() {
     if (busy || !email || !password) return
+    // When Turnstile is provisioned, a solved challenge is required before we spend a
+    // signup attempt (the server enforces this too — this is just early UX feedback).
+    if (turnstileConfigured() && !captcha) {
+      setError('Please complete the verification challenge.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
-      const r = await signUp(email.trim(), password)
+      const r = await signUp(email.trim(), password, { turnstileToken: captcha, ref: refFromUrl() })
       if (r.kind === 'exists') {
         setError('An account with this email already exists — sign in below.')
         setMode('signin')
@@ -218,6 +238,10 @@ export function SignInForm() {
           onSubmitEditing={submit}
         />
 
+        {/* Bot wall — only rendered/required in signup mode when Turnstile is
+            provisioned (NEXT_PUBLIC_TURNSTILE_SITE_KEY). Otherwise renders nothing. */}
+        {signup ? <Turnstile onToken={setCaptcha} /> : null}
+
         {error ? (
           <Text fontSize="$2" color="$red10" role="alert">
             {error}
@@ -232,6 +256,13 @@ export function SignInForm() {
         >
           {busy ? (signup ? 'Creating account…' : 'Signing in…') : signup ? 'Create account' : 'Sign in'}
         </PrimaryButton>
+
+        {signup ? (
+          <Text fontSize="$1" color="$color9" text="center">
+            Sign-up is open. Product access rolls out by waitlist position — you'll get
+            your spot right after you create your account.
+          </Text>
+        ) : null}
 
         {signup ? (
           <Text fontSize="$2" color="$color10" text="center">
