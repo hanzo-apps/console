@@ -17,7 +17,7 @@
  *
  * TRANSPORT: search is reached at the console's OWN same-origin `/v1/websearch/search`
  * (`originV1Url` — nothing before `/v1/`, the CTO prefix-free contract); `next.config.
- * mjs` rewrites the `websearch` head to the hardened `/cloud` user-bearer proxy, which
+ * mjs` rewrites the `websearch` head to the hardened `/v1` user-bearer proxy, which
  * mints a short-lived IAM token server-side (the browser stays keyless). The response
  * is BARE SearXNG JSON (not the casibase envelope) → plain `restGet`. The `search`
  * subsystem has no principal gate, so the minted bearer is accepted (or ignored) and
@@ -76,7 +76,7 @@ export function normalizeSearch(raw: unknown): SearchResult[] {
 
 export const WebSearchApi = {
   /**
-   * Run a live web search over the self-hosted SearXNG through the `/cloud` bearer
+   * Run a live web search over the self-hosted SearXNG through the `/v1` bearer
    * proxy. Returns the normalized hit list (honest `[]` when empty). Throws a typed
    * `ApiError` the caller renders as an honest state (a 403/404/5xx from the pipeline
    * → "not reachable", never a fabricated result). `format=json` is required or

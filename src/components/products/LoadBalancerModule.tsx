@@ -4,7 +4,7 @@
  * Load Balancers — L4/L7 traffic distribution across backend targets (the
  * platform's managed LBs, with their virtual IPs and health-checked pools).
  *
- * FULL CRUD over the unified cloud binary via the same-origin user-bearer `/cloud`
+ * FULL CRUD over the unified cloud binary via the same-origin user-bearer `/v1`
  * proxy, org resolved from the Bearer owner:
  *   - GET    /v1/load-balancers        list
  *   - POST   /v1/load-balancers        create (name + type + region)

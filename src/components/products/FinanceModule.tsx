@@ -9,7 +9,7 @@
  * component finance.hanzo.ai renders — so a spend/usage/credits card looks and behaves
  * identically across both surfaces (that shared reuse is the whole point). This module
  * only supplies console's chrome (`PageHeader`) + console's honest error states
- * (`BackendStateCard`) + the console-wired transport (`financeClient` → the `/cloud`
+ * (`BackendStateCard`) + the console-wired transport (`financeClient` → the `/v1`
  * bearer proxy). Nothing is reimplemented; nothing is fabricated.
  */
 import { YStack } from '@hanzo/gui'

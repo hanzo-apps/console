@@ -5,15 +5,13 @@
  * deployment history (S3-backed, Cloudflare-fronted).
  *
  * Every call is same-origin, keyless and prefix-free (`originV1Url('projects')` →
- * `<origin>/v1/projects`, the CTO one-endpoint form). `next.config.mjs` rewrites the
- * `projects` head to the console's OWN user-bearer `/cloud` proxy, which mints a
- * short-lived user-bound IAM token server-side and forwards it; the projectsvc
- * handler resolves the org from the token's `owner` claim, so every read is
- * org-scoped SERVER-SIDE and no credential reaches the browser. A cookie-only
- * cloud-origin call would 403 ("X-Org-Id required"), so the rewrite to the bearer
- * proxy is mandatory — the EXACT per-tenant path Agents/Prompts/Evals/CRM use
- * (`projects` allow-listed in both `next.config.mjs` CLOUD_V1_HEADS and the proxy's
- * `proxy-allow.ts` CLOUD_HEADS).
+ * `<origin>/v1/projects`, the CTO one-endpoint form). The console's OWN `app/v1`
+ * user-bearer BFF serves the `projects` head — it mints a short-lived user-bound IAM
+ * token server-side and forwards it; the projectsvc handler resolves the org from the
+ * token's `owner` claim, so every read is org-scoped SERVER-SIDE and no credential
+ * reaches the browser. A cookie-only call would 403 ("X-Org-Id required"), so the
+ * bearer BFF is mandatory — the EXACT per-tenant path Agents/Prompts/Evals/CRM use
+ * (`projects` allow-listed in `proxy-allow.ts` CLOUD_HEADS).
  *
  * DISTINCT from two neighbours that share the "project" word:
  *  - IAM tenancy `Project` (`lib/api/projects.ts`) — the org's resource SCOPE

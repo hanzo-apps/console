@@ -244,14 +244,14 @@ describe('FunctionsApi.list — hits the documented /v1/functions contract', () 
     delete (globalThis as { window?: unknown }).window
   })
 
-  it('fetches the inventory at /cloud/v1/functions and normalizes it', async () => {
-    // The functions surface authorizes on the Bearer owner claim. The live console
-    // ingress routes bare /v1/* to the gateway (bypassing Next), which 403s
-    // /v1/functions ("X-Org-Id required") — so the client MUST address the /cloud
-    // user-bearer proxy EXPLICITLY (mints a user token server-side, resolves the org
-    // from the owner). Same class-fix as framework/s3/machines. VERIFIED LIVE 2026-07.
+  it('fetches the inventory at /v1/functions and normalizes it', async () => {
+    // The functions surface authorizes on the Bearer owner claim and 403s a cookie-only
+    // call ("X-Org-Id required"). So the client calls the canonical, prefix-free
+    // same-origin /v1/functions, which the console's app/v1 bearer BFF serves by minting
+    // a short-lived user token server-side (org resolved from the owner). Same contract as
+    // framework/s3/machines — every cloud path is /v1-rooted, ZERO /cloud prefix.
     const out = await FunctionsApi.list()
-    expect(fetched).toContain(`${ORIGIN}/cloud/v1/functions`)
+    expect(fetched).toContain(`${ORIGIN}/v1/functions`)
     expect(out.map((f) => f.name)).toEqual(['resize'])
   })
 })

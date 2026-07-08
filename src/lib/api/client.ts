@@ -276,16 +276,14 @@ export async function originPost<T>(path: string, body?: unknown, query?: Query)
 }
 
 /**
- * Envelope GET routed through the console's OWN `/cloud` user-bearer proxy
- * (`<origin>/cloud/v1/<path>`) — the casibase-envelope twin of `originGet` for the
- * cloud-api STORE-ADMIN surfaces (`get-stores` / `get-store` / `get-store-names` /
- * `get-cloud-usages` / `get-files`). These heads REQUIRE a Bearer, and on the live
- * console ingress `/v1/*` reaches the gateway-fronted cloud binary directly (the
- * `next.config` rewrite never runs), so a bare `/v1/get-stores` is cookie-only and
- * 401s → a FALSE "session expired" for a signed-in user. Addressing `/cloud`
- * explicitly mints a short-lived user token and forwards it (org from the Bearer
- * owner). Same casibase envelope unwrap + `ApiError` as `get`. The head must be
- * allow-listed in `proxy-allow.ts` (`allowCommerceSurface`'s cloud twin).
+ * Envelope GET routed through the console's OWN same-origin `/v1` user-bearer BFF
+ * (`<origin>/v1/<path>`) — the casibase-envelope twin of `originGet` for the cloud-api
+ * STORE-ADMIN surfaces (`get-stores` / `get-store` / `get-store-names` /
+ * `get-cloud-usages` / `get-files`). These heads REQUIRE a Bearer: the
+ * `app/v1/[...path]` catch-all mints a short-lived user token from the session and
+ * forwards it (org from the Bearer owner), so a signed-in user reads real data instead
+ * of a FALSE "session expired". Same casibase envelope unwrap + `ApiError` as `get`.
+ * The head must be allow-listed in `proxy-allow.ts` (`allowCloudSurface`).
  */
 export async function cloudGet<T>(path: string, query?: Query): Promise<T> {
   const r = await request<T>('GET', path, { query, absoluteUrl: cloudProxyV1Url(path) })
@@ -293,7 +291,7 @@ export async function cloudGet<T>(path: string, query?: Query): Promise<T> {
   return r.data
 }
 
-/** Envelope POST routed through the `/cloud` user-bearer proxy — the mutating twin of `cloudGet`. */
+/** Envelope POST routed through the same-origin `/v1` user-bearer BFF — the mutating twin of `cloudGet`. */
 export async function cloudPost<T = string>(path: string, body?: unknown, query?: Query): Promise<ApiResponse<T>> {
   const r = await request<T>('POST', path, { query, body, absoluteUrl: cloudProxyV1Url(path) })
   if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
@@ -334,14 +332,15 @@ export const v1Url = (path: string, base: string = config.cloudUrl): string =>
   `${base.replace(/\/+$/, '')}/v1/${path.replace(/^\/+/, '')}`
 
 /**
- * The console's OWN same-origin `/v1/<path>` — the ONE client-visible form for the
- * AI product surface (agents / prompts / evals / models / chat / embeddings), with
- * NO prefix before `/v1/` (CTO contract). The browser calls `<origin>/v1/prompts`;
- * `next.config.mjs` rewrites that head to the hardened server-side bearer proxy
- * (`/cloud` or `/ai`), which mints a short-lived user token and forwards it — so
- * the client stays keyless and prefix-free while the bearer trust boundary is
- * unchanged. On the server (SSR / route handlers) there is no `window`, so this
- * yields a root-relative `/v1/<path>` (the rewrite still applies).
+ * The console's OWN same-origin `/v1/<path>` — the ONE client-visible form for EVERY
+ * cloud API call, with NO prefix before `/v1/` (CTO contract: zero prefix). The browser
+ * calls `<origin>/v1/prompts`; the console's `app/v1/[...path]` catch-all mints a
+ * short-lived user bearer from the session and forwards to cloud-api `/v1/*` (org from
+ * the Bearer owner) — so the client stays keyless and prefix-free while the bearer trust
+ * boundary is unchanged. The NON-cloud heads (AI gateway, admin-aggregate, visor catalog,
+ * billing, commerce) are dispatched to their own hardened proxy by a `next.config.mjs`
+ * `beforeFiles` rewrite BEFORE the catch-all — invisibly to the client. On the server
+ * (SSR / route handlers) there is no `window`, so this yields a root-relative `/v1/<path>`.
  */
 export const originV1Url = (path: string): string => {
   const clean = path.replace(/^\/+/, '')
@@ -349,21 +348,15 @@ export const originV1Url = (path: string): string => {
 }
 
 /**
- * The console's OWN same-origin cloud-api USER-BEARER proxy base (`<origin>/cloud`).
- *
- * Some cloud heads (framework, s3) are NOT rewritten from a bare `/v1/<head>` to the
- * `/cloud` proxy on the live ingress — a bare `/v1/framework`/`/v1/s3` reaches
- * hanzoai/gateway directly with no principal and 403s ("valid principal required").
- * So the clients for those heads (framework/client.ts, storage.ts) address the
- * `/cloud` proxy EXPLICITLY: `app/cloud/[...path]` mints a short-lived user-bound
- * token from the session and forwards to cloud-api with the org resolved from the
- * token owner. `cloud` heads are allow-listed in proxy-allow.ts (defense in depth).
+ * Build the console's OWN same-origin `/v1/<path>` for a cloud-api head that must go
+ * through the user-bearer BFF. Now IDENTICAL to `originV1Url` — every cloud path is
+ * `/v1/`-rooted with ZERO prefix (CTO contract), and the `app/v1/[...path]` catch-all
+ * mints a short-lived user bearer from the session and forwards to cloud-api `/v1/*`
+ * (org from the Bearer owner). Kept as a named alias so the call sites that reach the
+ * bearer BFF for a head that 403s on a cookie-only call (framework/s3/provisioning/
+ * store-admin/…) read intentionally; the head is allow-listed in proxy-allow.ts.
  */
-export const cloudProxyBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/cloud` : '/cloud'
-
-/** Build a `/v1/<path>` URL on the cloud-api user-bearer proxy (`<origin>/cloud/v1/<path>`). */
-export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyBase())
+export const cloudProxyV1Url = originV1Url
 
 /**
  * The console's OWN same-origin per-tenant billing proxy — the DIRECT route-handler
@@ -374,8 +367,9 @@ export const cloudProxyV1Url = (path: string): string => v1Url(path, cloudProxyB
  * the Next server, so the `/v1/billing → /billing/v1` rewrite never runs), and the
  * cloud gateway rejects a cookie-only browser request with no bearer — a bare
  * `/v1/billing/usage` 403s ("sign in to view billing"). So the billing clients must
- * address the proxy route handler EXPLICITLY, exactly like `cloudProxyV1Url` does
- * for `/cloud`. `app/billing/v1/[...path]` injects the commerce SERVICE token and
+ * address the proxy route handler EXPLICITLY (a namespaced `/billing/v1` sub-proxy,
+ * distinct from the cloud-api `/v1` bearer BFF because it injects a SERVICE token, not
+ * a user bearer). `app/billing/v1/[...path]` injects the commerce SERVICE token and
  * pins the caller's OWN billing subject server-side (proven live: it returns the
  * org's real balance/usage), so tenant isolation is unchanged. On the server (SSR)
  * there is no `window`, so this yields a root-relative `/billing/v1/<path>`.
@@ -394,8 +388,8 @@ export const billingProxyV1Url = (path: string): string => v1Url(path, billingPr
  * A bare `/v1/<head>` from the browser is NOT reachable: the console host's ingress
  * routes `/v1/*` straight to hanzoai/gateway (→ cloud-api), BYPASSING Next — so the
  * `next.config` `/v1/{regions,sizes,gpu-sizes} → /vm` rewrite never runs and cloud-api
- * 403s (no visor catalog route there). Same class as the framework/s3 `/cloud` fix
- * (v8.4.70). So the visor catalog client addresses this `/vm` proxy EXPLICITLY:
+ * 403s (no visor catalog route there). Same class as the framework/s3 cloud bearer-BFF
+ * fix (v8.4.70). So the visor catalog client addresses this `/vm` proxy EXPLICITLY:
  * `app/vm/[...path]` mints a short-lived user-bound token from the session and forwards
  * to visor (`allowVisorSurface`). Visor's catalog is un-scoped (any signed-in user), so
  * the minted bearer is accepted and the real DO region/size/GPU catalog loads.
@@ -411,8 +405,8 @@ export const vmProxyV1Url = (path: string): string => v1Url(path, vmProxyBase())
  *
  * The store/merchant admin surface (product/order/user/variant/collection/discount/
  * store…) is served by commerce (`commerce.hanzo.svc`) and REQUIRES a Bearer — a
- * cookie-only browser call is rejected. Same class as the framework/s3/billing `/cloud`
- * and `/billing` fixes: on the live console ingress `/v1/*` is routed straight to the
+ * cookie-only browser call is rejected. Same class as the framework/s3/billing bearer-BFF
+ * fixes: on the live console ingress `/v1/*` is routed straight to the
  * gateway-fronted cloud binary (it does NOT reach the Next server), so the `next.config`
  * `/v1/commerce/* → /commerce/v1/*` rewrite never runs and the bare call reaches the
  * gateway, which 403s ("Not enabled for your account"). So the commerce store clients

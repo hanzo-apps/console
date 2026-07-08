@@ -1,14 +1,12 @@
 /**
  * Visor — the CUSTOMER compute surface (a tenant's own machines).
  *
- * TWO transports, one file, cleanly split — each addresses its server proxy
- * EXPLICITLY (never a bare `/v1/<head>`: the console host's ingress routes `/v1/*`
- * straight to the gateway → cloud-api, bypassing Next's rewrites, so a bare head 403s;
- * same class as the framework/s3 `/cloud` fix, v8.4.70):
- *  - Machines INVENTORY + lifecycle (list / launch / quote / terminate) go through
- *    the unified cloud binary at `/cloud/v1/machines*`, via the same-origin user-bearer
- *    `/cloud` proxy (`app/cloud/[...path]/route.ts` → cloud-api, org resolved from the
- *    Bearer owner). This is the visor-backed native cloud surface.
+ * TWO transports, one file, cleanly split — each addresses the RIGHT backend:
+ *  - Machines INVENTORY + lifecycle (list / launch / quote / terminate) authorize on the
+ *    Bearer owner and 403 a cookie-only call, so they go through the canonical, prefix-free
+ *    same-origin `/v1/machines*` — the `app/v1/[...path]/route.ts` bearer BFF mints a
+ *    short-lived user token and forwards to cloud-api (org resolved from the Bearer
+ *    owner). This is the visor-backed native cloud surface.
  *  - The public compute CATALOG (regions / CPU sizes / GPU accelerators, un-scoped)
  *    reads visor DIRECTLY through the `/vm` proxy (`app/vm/[...path]/route.ts` → visor)
  *    at `/vm/v1/{regions,sizes,gpus}`. Visor's `/v1/gpus` is the accelerator CATALOG
@@ -243,7 +241,7 @@ function unwrapEnvelope(r: unknown): Record<string, unknown> {
 }
 
 export const VisorApi = {
-  /** The signed-in org's own machines (`/cloud/v1/machines`, org-scoped by the Bearer owner). */
+  /** The signed-in org's own machines (`/v1/machines`, org-scoped by the Bearer owner). */
   machines: async (): Promise<VisorMachine[]> => {
     const r = await restGet<unknown>(cloudProxyV1Url('machines'))
     return arrayUnder(r, ['machines', 'instances', 'data', 'items', 'rows', 'droplets']).map((m, i) => normalizeMachine(m, i))
@@ -268,7 +266,7 @@ export const VisorApi = {
   },
 
   /**
-   * The authoritative launch QUOTE for a size in a region (`/cloud/v1/machines/launch`
+   * The authoritative launch QUOTE for a size in a region (`/v1/machines/launch`
    * with `dryRun:true` — NO spend). Returns OUR market price (visor `HanzoPrice`), the
    * SAME figure the real launch charges and the catalog shows (one pricing source).
    */
@@ -288,7 +286,7 @@ export const VisorApi = {
     }
   },
 
-  /** Launch a metered, per-org machine (`/cloud/v1/machines/launch`, dryRun:false).
+  /** Launch a metered, per-org machine (`/v1/machines/launch`, dryRun:false).
    *  A CPU machine is metered to the org's Hanzo balance; a GPU launch is prepay-only,
    *  card-funded, with a 24-hour minimum charged upfront (see `LaunchDrawer` — the GPU
    *  gate is card-on-file + sufficient prepaid balance). A 402 (or "insufficient
@@ -300,7 +298,7 @@ export const VisorApi = {
     return normalizeMachine(unwrapEnvelope(r))
   },
 
-  /** Terminate (destroy) a machine (`DELETE /cloud/v1/machines/:id`). Stops metering; the
+  /** Terminate (destroy) a machine (`DELETE /v1/machines/:id`). Stops metering; the
    *  backend authorizes the delete against the Bearer owner's org. Resolves on 2xx/204. */
   terminate: (id: string): Promise<void> => restDelete(cloudProxyV1Url(`machines/${enc(id)}`)),
 }

@@ -10,7 +10,7 @@
  *
  * THREE real sources, in honest priority:
  *  1. GPU inventory — `GET /v1/gpus` (the unified cloud binary, via the same-origin
- *     user-bearer `/cloud` proxy → cloud-api /v1/gpus, org resolved from the Bearer
+ *     user-bearer `/v1` proxy → cloud-api /v1/gpus, org resolved from the Bearer
  *     owner). Per-GPU rows + live telemetry (`/v1/gpus/alerts`, `/v1/gpus/pools`).
  *     A not-yet-served route (404) → the caller renders the honest not-configured /
  *     unavailable card, never an empty grid.
@@ -501,7 +501,7 @@ export const ComputeApi = {
   /**
    * Metered usage over the last `days` from the cloud usage ledger
    * (`GET /v1/get-cloud-usages` — the reader over `hanzo.cloud_usage`). Routed through
-   * the `/cloud` user-bearer proxy (org resolved from the Bearer owner) — a bare
+   * the `/v1` user-bearer proxy (org resolved from the Bearer owner) — a bare
    * `/v1/get-cloud-usages` is cookie-only and 401s on the live ingress. Throws (→ honest
    * state) when the reader is not yet registered (404).
    */

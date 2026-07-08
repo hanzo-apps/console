@@ -8,13 +8,13 @@
  * names ("photos") and the server maps them to the tenant's physical namespace.
  *
  * TRANSPORT — metadata operations (list buckets/objects, create/delete bucket,
- * delete object, mint a presigned URL) go through the same-origin `/cloud`
- * user-bearer proxy (`cloudProxyV1Url` → the same-origin `/cloud` bearer proxy,
+ * delete object, mint a presigned URL) go through the same-origin `/v1`
+ * user-bearer proxy (`cloudProxyV1Url` → the same-origin `/v1` bearer proxy,
  * which mints a short-lived user
  * token; `s3` is allow-listed in proxy-allow.ts). Plain REST (raw JSON / 201 /
  * 204), like the provisioning + functions facades.
  *
- * UPLOAD / DOWNLOAD — NOT streamed through the proxy. The `/cloud` proxy buffers a
+ * UPLOAD / DOWNLOAD — NOT streamed through the proxy. The `/v1` proxy buffers a
  * body as text and forces `Content-Type: application/json`, which would corrupt
  * binary. So the backend returns a PRESIGNED URL (time-boxed, scoped to the exact
  * bucket+key, signed against the public S3 host) and the browser transfers the
@@ -27,7 +27,7 @@
  */
 import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
 
-/** File-manager base path — canonical `/v1/s3` (rewritten to the same-origin `/cloud`
+/** File-manager base path — canonical `/v1/s3` (rewritten to the same-origin `/v1`
  *  proxy → cloud-api). */
 const BASE = 's3'
 const enc = encodeURIComponent

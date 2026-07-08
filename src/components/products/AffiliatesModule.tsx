@@ -9,7 +9,7 @@
  *    four real stat tiles (referred / accrued / pending / paid), and your payout
  *    history. Every value is real or an honest empty/`—`; states are loading /
  *    BackendStateCard / honest empty — never a fabricated row. Org-scoped SERVER-SIDE
- *    (the `/cloud` bearer proxy); no credential in the browser.
+ *    (the `/v1` bearer proxy); no credential in the browser.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'

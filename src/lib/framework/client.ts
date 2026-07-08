@@ -6,7 +6,7 @@
  * is the client half of the "one engine + one renderer renders every business
  * app" thesis; the generic @hanzo/data DocType renderer drives it.
  *
- * Every call goes through the console's OWN user-bearer `/cloud` proxy
+ * Every call goes through the console's OWN user-bearer `/v1` proxy
  * (`cloudProxyV1Url('framework/...')`, the same per-tenant path CRM/Prompts/Agents
  * use, allow-listed as the `framework` head): the server mints a short-lived
  * user-bound IAM token and the engine resolves the org from the token's `owner`

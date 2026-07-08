@@ -3,7 +3,7 @@
 /**
  * Automations — the ONE native Connectors + Automations surface, rendered
  * IN-CONSOLE over cloud `/v1/automations/*` (`hanzoai/cloud` clients/automations)
- * through the `/cloud` user-bearer proxy. This replaces the retired external
+ * through the `/v1` user-bearer proxy. This replaces the retired external
  * auto.hanzo.ai engine + its `/v1/auto` reverse proxy — one engine, one surface,
  * no link-out. `/auto` and `/automation` alias here (match-core).
  *

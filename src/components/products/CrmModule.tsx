@@ -4,7 +4,7 @@
  * CRM — the first Hanzo Business-OS brick, over the REAL cloud `/v1/crm` surface
  * (cloud `clients/crm`: a native-Go, per-org CRM on Base/SQLite — companies,
  * contacts, opportunities). Every read/write is same-origin and keyless (`CrmApi`
- * → `<origin>/v1/crm`, rewritten to the console's user-bearer `/cloud` proxy), so
+ * → `<origin>/v1/crm`, rewritten to the console's user-bearer `/v1` proxy), so
  * every row is org-scoped SERVER-SIDE and no credential reaches the browser.
  *
  * CRM = BASE VIEWS. Each collection is rendered by the SAME @hanzo/data

@@ -11,7 +11,7 @@
  * restPost/restPut/restDelete` layer.
  *
  * Transport: `cloudProxyV1Url('platform/...')` builds `<origin>/v1/platform/...`,
- * which `next.config.mjs` rewrites to the hardened `/cloud` bearer proxy (mints a
+ * which `next.config.mjs` rewrites to the hardened `/v1` bearer proxy (mints a
  * short-lived user token, org from its owner claim). The raw session cookie never
  * reaches cloud-api. `platform` is allow-listed in `proxy-allow.ts` CLOUD_HEADS.
  */

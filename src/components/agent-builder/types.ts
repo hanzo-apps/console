@@ -7,7 +7,7 @@
  * loaders (`AgentBuilderLoaders`) — the model catalog, the saved-prompt library,
  * a prompt body, and the create effect — so a surface wires it to whatever client
  * it already has, as long as that client speaks the ONE agent backend
- * (`POST /cloud/v1/agents`, org resolved server-side from the caller's bearer).
+ * (`POST /v1/agents`, org resolved server-side from the caller's bearer).
  * That is what makes the builder truly shareable (extractable to
  * `@hanzo/agent-builder`) rather than a console2 one-off.
  */
