@@ -20,7 +20,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { ApiError } from '~/lib/api'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { FadeIn } from '~/components/ui/FadeIn'
@@ -55,7 +55,7 @@ export function LivingOverview({ config, allOrgs }: { config: LivingOverviewConf
 
   // A tenant (non-global) admin can't read cross-tenant admin aggregates; loaders
   // use this to skip those calls (which would 403) and source org-scoped data.
-  const isGlobalAdmin = useIsGlobalAdmin()
+  const isSuperAdmin = useIsSuperAdmin()
 
   const hidden = usePageHidden()
   // Pause polling while the tab is hidden OR the board is in its error state — an
@@ -73,7 +73,7 @@ export function LivingOverview({ config, allOrgs }: { config: LivingOverviewConf
     const first = state.s === 'loading'
     if (!first) setRefreshing(true)
     config
-      .load({ range, allOrgs, isGlobalAdmin })
+      .load({ range, allOrgs, isSuperAdmin })
       .then((v) => {
         if (id === reqRef.current) setState({ s: 'ready', v })
       })
@@ -90,7 +90,7 @@ export function LivingOverview({ config, allOrgs }: { config: LivingOverviewConf
         if (id === reqRef.current) setRefreshing(false)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range, allOrgs, isGlobalAdmin, tick, config])
+  }, [range, allOrgs, isSuperAdmin, tick, config])
 
   const onRange = (k: OverviewRange) => {
     setRange(k)

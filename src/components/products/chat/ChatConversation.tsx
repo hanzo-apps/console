@@ -24,7 +24,7 @@ import { Send, Sparkles, Plus, History, Braces, Brain, ChevronDown, ChevronRight
 import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
 import { DEFAULT_MODEL } from '~/lib/api/families'
 import { hanzoAssistantSystemPrompt, ASSISTANT_DOCS_STORE } from '~/lib/assistant'
-import { useIsGlobalAdmin } from '~/lib/auth/admin'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
@@ -183,7 +183,7 @@ export function ChatConversation({
   // The ONE grounded assistant prompt (product catalog + curated overview), scoped
   // so a global admin sees admin surfaces and a customer never does. Built once per
   // admin state — the same prompt backs the floating bubble and the full Chat page.
-  const showAdmin = useIsGlobalAdmin()
+  const showAdmin = useIsSuperAdmin()
   const system = useMemo(() => hanzoAssistantSystemPrompt({ showAdmin }), [showAdmin])
 
   // Default to the trial-safe Zen default once the catalog loads: prefer the
