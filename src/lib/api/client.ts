@@ -9,7 +9,7 @@
  * it here and throw `ApiError` on `status !== "ok"`, so callers get the payload
  * directly or a typed failure — never a half-checked envelope.
  */
-import { config } from '~/config'
+import { activeApiBase } from '~/lib/network'
 import { currentOrg } from '~/lib/org-scope'
 import { currentActor } from '~/lib/actor-scope'
 import { getScope } from '~/lib/scope'
@@ -179,7 +179,7 @@ async function authedFetch(url: string, init: RequestInit): Promise<Response> {
 }
 
 const buildUrl = (path: string, query?: Query): string => {
-  const url = new URL(`${config.cloudUrl}/v1/${path.replace(/^\/+/, '')}`)
+  const url = new URL(`${activeApiBase()}/v1/${path.replace(/^\/+/, '')}`)
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
@@ -328,7 +328,7 @@ export const idOf = (owner: string, name: string): string => `${owner}/${encodeU
 // the browser sends credentials only — never an org header.
 
 /** Build a `/v1/<path>` URL on an arbitrary base (cloud backend by default). */
-export const v1Url = (path: string, base: string = config.cloudUrl): string =>
+export const v1Url = (path: string, base: string = activeApiBase()): string =>
   `${base.replace(/\/+$/, '')}/v1/${path.replace(/^\/+/, '')}`
 
 /**
