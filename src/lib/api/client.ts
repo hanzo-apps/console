@@ -180,11 +180,11 @@ export async function resilientFetch(url: string, init: RequestInit, deps: Resil
  *  hosts write through the user-bearer BFF (CSRF-immune) so this is a no-op there. */
 async function authedFetch(url: string, init: RequestInit): Promise<Response> {
   const deps = { doFetch: fetch, refresh: refreshSession, sleep, canRefresh: typeof window !== 'undefined' }
-  await applyCsrfToInit(init)
+  await applyCsrfToInit(init, url)
   const res = await resilientFetch(url, init, deps)
-  if (res.status === 403 && csrfRequired(init.method)) {
+  if (res.status === 403 && csrfRequired(init.method, url)) {
     clearCsrfToken()
-    await applyCsrfToInit(init) // re-mint a fresh token, re-stamp in place
+    await applyCsrfToInit(init, url) // re-mint a fresh token, re-stamp in place
     return resilientFetch(url, init, deps)
   }
   return res
