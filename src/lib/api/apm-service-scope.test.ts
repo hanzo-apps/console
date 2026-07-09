@@ -2,7 +2,7 @@
  * End-to-end proof of the per-product o11y wiring: the REAL `ApmApi.logs` /
  * `ApmApi.serviceHealth` calls, with the transport (`./client`) mocked, so the test
  * asserts BOTH that the per-product query is BUILT with the service filter AND that a
- * realistic SigNoz response is MAPPED to real, service-scoped view-models. This is the
+ * realistic O11y response is MAPPED to real, service-scoped view-models. This is the
  * "the query builds + maps real responses" gate for the per-product Status/Logs/Metrics.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -22,8 +22,8 @@ type Body = { compositeQuery: { builderQueries: { A: { filters: { items: { op: s
 describe('ApmApi.logs — the per-product o11y query builds with the service filter + maps real rows', () => {
   beforeEach(() => restPost.mockReset())
 
-  it('sends a service.name filter and normalizes a real SigNoz logs response to service-scoped rows', async () => {
-    const nsTs = String(Date.parse('2026-07-03T00:00:00Z') * 1_000_000) // SigNoz ns epoch
+  it('sends a service.name filter and normalizes a real O11y logs response to service-scoped rows', async () => {
+    const nsTs = String(Date.parse('2026-07-03T00:00:00Z') * 1_000_000) // O11y ns epoch
     restPost.mockResolvedValueOnce({
       data: { result: [{ list: [{ timestamp: nsTs, data: { id: 'l1', severity_text: 'INFO', 'service.name': 'iam', body: 'signed in' } }] }] },
     })

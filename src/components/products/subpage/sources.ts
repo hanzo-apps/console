@@ -85,7 +85,7 @@ export type SubpageSources = {
   service: string | null
   /**
    * The product's OpenTelemetry `service.name` — the label it emits spans/logs/metrics
-   * under, used to scope the LIVE o11y (SigNoz) reads (Status health, Logs, Metrics
+   * under, used to scope the LIVE o11y (O11y) reads (Status health, Logs, Metrics
    * latency) to THIS product. Derived from the OTel convention (service.name = the
    * binary/repo name), with a tiny override for the few that differ. `null` for a
    * product with no backing service. Orthogonal to `service` (the k8s operator-app
