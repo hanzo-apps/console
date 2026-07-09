@@ -1,10 +1,10 @@
 /**
- * LIVE probe of the o11y (O11y) backend through the console's own /v1 bearer
- * proxy. Logs in as z@hanzo.ai and, from the AUTHENTICATED page context, fetches
- * each candidate endpoint exactly as the new Observe modules will — same-origin
- * `<origin>/v1/o11y/*` (rewritten to `/v1/o11y/*`, cloud rewrites to the o11y
- * runtime's `/api/*`). Prints the HTTP status + a body snippet per endpoint so we
- * know what returns real data vs 404 (which must be flagged) before we build.
+ * LIVE probe of the o11y (O11y) backend through the console's own /v1 bearer BFF.
+ * Logs in as z@hanzo.ai and, from the AUTHENTICATED page context, fetches each
+ * candidate endpoint exactly as the Observe modules now do — same-origin
+ * `<origin>/v1/o11y/<resource>` (the VERSION-LESS canonical surface; the `/v1`
+ * catch-all mints the caller's IAM bearer). Prints the HTTP status + a body
+ * snippet per endpoint so we know what returns real data vs 404/403 before we build.
  *
  * Not a pass/fail test — a discovery harness. Run:
  *   BASE_URL=https://console.hanzo.ai HANZO_PASSWORD='…' npx playwright test probe-o11y --reporter=line
@@ -43,78 +43,45 @@ const startMs = nowMs - 60 * 60 * 1000
 type Probe = { name: string; path: string; method: 'GET' | 'POST'; body?: unknown }
 
 const PROBES: Probe[] = [
-  // ── Dashboards (O11y) ──
-  { name: 'dashboards.list', path: 'o11y/v1/dashboards', method: 'GET' },
-  { name: 'dashboards.v2', path: 'o11y/v2/dashboards', method: 'GET' },
+  // ── Health (sanity: proves the runtime is reachable) ──
+  { name: 'health', path: 'o11y/health', method: 'GET' },
+  { name: 'version', path: 'o11y/version', method: 'GET' },
+  // ── Dashboards ──
+  { name: 'dashboards.list', path: 'o11y/dashboards', method: 'GET' },
   // ── Service map / APM ──
-  { name: 'services.list', path: 'o11y/v1/services/list', method: 'GET' },
+  { name: 'services.list', path: 'o11y/services/list', method: 'GET' },
+  { name: 'services', path: 'o11y/services', method: 'POST', body: { start: startNs, end: endNs, tags: [] } },
+  { name: 'dependency_graph', path: 'o11y/dependency_graph', method: 'POST', body: { start: startNs, end: endNs, tags: [] } },
+  { name: 'service.top_operations', path: 'o11y/service/top_operations', method: 'POST', body: { start: startNs, end: endNs, service: '' } },
+  // ── Logs / traces (the one true read — composite query_range) ──
   {
-    name: 'services',
-    path: 'o11y/v1/services',
+    name: 'query_range',
+    path: 'o11y/query_range',
     method: 'POST',
-    body: { start: startNs, end: endNs, tags: [] },
-  },
-  {
-    name: 'dependency_graph',
-    path: 'o11y/v1/dependency_graph',
-    method: 'POST',
-    body: { start: startNs, end: endNs, tags: [] },
-  },
-  {
-    name: 'service.top_operations',
-    path: 'o11y/v1/service/top_operations',
-    method: 'POST',
-    body: { start: startNs, end: endNs, service: '' },
+    body: {
+      start: startMs,
+      end: endMs,
+      step: 60,
+      compositeQuery: {
+        queryType: 'builder',
+        panelType: 'list',
+        builderQueries: {
+          A: { queryName: 'A', dataSource: 'logs', aggregateOperator: 'noop', aggregateAttribute: {}, expression: 'A', disabled: false, stepInterval: 60, filters: { items: [], op: 'AND' }, groupBy: [], having: [], orderBy: [{ columnName: 'timestamp', order: 'desc' }], limit: null, offset: 0, pageSize: 50 },
+        },
+      },
+    },
   },
   // ── Infra ──
-  {
-    name: 'hosts.list',
-    path: 'o11y/v1/hosts/list',
-    method: 'POST',
-    body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } },
-  },
-  {
-    name: 'pods.list',
-    path: 'o11y/v1/pods/list',
-    method: 'POST',
-    body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } },
-  },
-  {
-    name: 'nodes.list',
-    path: 'o11y/v1/nodes/list',
-    method: 'POST',
-    body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } },
-  },
-  {
-    name: 'namespaces.list',
-    path: 'o11y/v1/namespaces/list',
-    method: 'POST',
-    body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } },
-  },
-  {
-    name: 'clusters.list',
-    path: 'o11y/v1/clusters/list',
-    method: 'POST',
-    body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } },
-  },
+  { name: 'hosts.list', path: 'o11y/hosts/list', method: 'POST', body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } } },
+  { name: 'pods.list', path: 'o11y/pods/list', method: 'POST', body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } } },
+  { name: 'nodes.list', path: 'o11y/nodes/list', method: 'POST', body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } } },
+  { name: 'namespaces.list', path: 'o11y/namespaces/list', method: 'POST', body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } } },
+  { name: 'clusters.list', path: 'o11y/clusters/list', method: 'POST', body: { start: startMs, end: endMs, filters: { op: 'AND', items: [] } } },
   // ── Exceptions ──
-  {
-    name: 'listErrors',
-    path: 'o11y/v1/listErrors',
-    method: 'POST',
-    body: { start: startNs, end: endNs, limit: 50, order: 'descending', orderParam: 'exceptionCount' },
-  },
-  {
-    name: 'countErrors',
-    path: 'o11y/v1/countErrors',
-    method: 'POST',
-    body: { start: startNs, end: endNs },
-  },
-  // ── Health (sanity: proves the runtime is reachable) ──
-  { name: 'health', path: 'o11y/v1/health', method: 'GET' },
-  { name: 'version', path: 'o11y/v1/version', method: 'GET' },
-  // ── Alerts (known-good baseline — AlertsModule already uses this) ──
-  { name: 'rules', path: 'o11y/v1/rules', method: 'GET' },
+  { name: 'listErrors', path: 'o11y/listErrors', method: 'POST', body: { start: startNs, end: endNs, limit: 50, order: 'descending', orderParam: 'exceptionCount' } },
+  { name: 'countErrors', path: 'o11y/countErrors', method: 'POST', body: { start: startNs, end: endNs } },
+  // ── Alerts ──
+  { name: 'rules', path: 'o11y/rules', method: 'GET' },
 ]
 
 test('probe o11y endpoints (live, authenticated)', async ({ page }) => {
