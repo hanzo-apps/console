@@ -19,6 +19,13 @@ export function appDisplayStatus(app: Pick<PlatformApp, 'status' | 'phase' | 'he
   return app.status || 'unknown'
 }
 
+/** The app's current container image ref (`repository:tag`), or '' when it has no
+ *  image yet — the value shown in the Image fact and the key the SBOM panel looks up. */
+export function appImageRef(app: Pick<PlatformApp, 'image'>): string {
+  const repo = app.image?.repository
+  return repo ? `${repo}:${app.image?.tag || 'latest'}` : ''
+}
+
 /** Human label for the KMS secret-sync state; '' when the app has no secrets. */
 export function secretSyncLabel(app: Pick<PlatformApp, 'secretSync'>): string {
   switch (app.secretSync) {
