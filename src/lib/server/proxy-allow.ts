@@ -177,12 +177,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // POST/DELETE writes additionally require an admin role). One head admits the
   // policies list + the check sub-path. Backs the console's Authz page.
   'authz',
-  // Observability (hanzoai/o11y runtime, forked from SigNoz): the cloud binary mounts /v1/o11y/*
-  // and reverse-proxies it to the o11y Deployment (o11y.hanzo.svc), which rewrites
-  // /v1/o11y/* → its internal /api/* routes. The console's Alerts page reads
-  // /v1/o11y/v1/rules (alert rule states); cloud's principal gate refuses any bearer-
-  // less call, so it routes through /v1 like the rest. The single `o11y` head
-  // admits every o11y sub-path (rules, alerts, services, query_range, …).
+  // Observability (hanzoai/o11y): the cloud binary serves the embedded o11y surface at
+  // the VERSION-LESS canonical `/v1/o11y/<resource>` (NO nested v1/v3, NO /api). The
+  // console reads e.g. /v1/o11y/rules (alerts), /v1/o11y/services (RED metrics),
+  // /v1/o11y/query_range (logs/traces), /v1/o11y/health; cloud's principal gate refuses
+  // any bearer-less call, so it routes through the /v1 bearer BFF like the rest. The
+  // single `o11y` head admits every o11y sub-path.
   'o11y',
   // Web Search (cloud clients/websearch, order 141): /v1/websearch/{search,v1/scrape}.
   // Self-hosted SearXNG meta-search + Crawl4AI scrape. The `search` proxy has no

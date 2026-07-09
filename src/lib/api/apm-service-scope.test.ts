@@ -32,7 +32,8 @@ describe('ApmApi.logs — the per-product o11y query builds with the service fil
 
     // 1) the outgoing query carried the per-service filter (serviceFilterItem)
     const [url, body] = restPost.mock.calls[0] as [string, Body]
-    expect(url).toBe('/v1/o11y/v3/query_range')
+    // Version-less canonical o11y surface, addressed via the /v1 bearer BFF.
+    expect(url).toBe('/v1/o11y/query_range')
     const items = body.compositeQuery.builderQueries.A.filters.items
     expect(items).toHaveLength(1)
     expect(items[0]).toMatchObject({ op: '=', value: 'iam', key: { key: 'service.name' } })
