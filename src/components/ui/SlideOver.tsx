@@ -161,7 +161,15 @@ export function SlideOver({
         // Material paper depth — the drawer reads as a sheet lifted above the dimmed
         // list behind it (real layered shadow, theme-aware), not a flat panel.
         className="hz-slide hz-elevation-4"
-        style={{ transform: open ? 'translateX(0)' : offscreen, height: '100dvh' }}
+        // Full-height sheet (100dvh — mobile-safe), inset for the notch (top) + home
+        // indicator (bottom) so the drawer header + footer actions clear them on
+        // notched devices (env insets are 0 elsewhere, so no effect there).
+        style={{
+          transform: open ? 'translateX(0)' : offscreen,
+          height: '100dvh',
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
       >
         {title !== undefined ? (
           <>
