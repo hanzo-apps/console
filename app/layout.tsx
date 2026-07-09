@@ -25,6 +25,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: '#000000',
+  // Extend the layout into the display cutout / home-indicator area so the
+  // `env(safe-area-inset-*)` values become non-zero on notched devices — the mobile
+  // drawers + chat composer read them to keep content clear of the notch/indicator.
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -406,6 +406,9 @@ html:root.t_light {
     position: sticky;
     bottom: 0;
     z-index: 5;
+    /* Clear the iOS home indicator when Safari's bottom bar hides (viewport-fit=cover
+       exposes the inset; 0 on devices without one, so no effect elsewhere). */
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
