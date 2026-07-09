@@ -109,6 +109,7 @@ import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { AdminO11yModule } from '~/components/products/AdminO11yModule'
+import { SaasModule } from '~/components/products/SaasModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
 import { SearchModule } from '~/components/products/SearchModule'
 import { TemplatesModule } from '~/components/products/TemplatesModule'
@@ -578,6 +579,26 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AdminO11yModule }],
+  },
+  {
+    // admin.hanzo.ai SAAS METRICS board — the whole-business money god view: MRR/ARR,
+    // MRR by plan category, subscription mix (per plan, trials, seats, recent
+    // create/cancel events), metered pay-as-you-go revenue, and top customers by
+    // revenue — computed IN commerce (the money system of record) from ONE cross-org
+    // walk. The AI panel composes the SAME fleet o11y aggregate (never a fork).
+    // GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer; the
+    // `/v1/commerce/metrics/saas` aggregate is server-gated by getAdminGate).
+    id: 'saas-metrics',
+    label: 'SaaS Metrics',
+    icon: TrendingUp,
+    description: 'MRR/ARR, subscription mix, metered revenue, and top customers across the whole platform.',
+    gcp: 'Cloud Billing (SaaS)',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: SaasModule }],
   },
   {
     // admin.hanzo.ai CUSTOMERS board — the operator cockpit: the live fleet customer
