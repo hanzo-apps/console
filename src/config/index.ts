@@ -46,6 +46,12 @@ export type ConsoleConfig = {
    * env-overridable via NEXT_PUBLIC_APP_URL; default https://hanzo.app.
    */
   appUrl: string
+  /**
+   * hanzo.chat base URL — where a project's "Chat about it" deep-links (opens a
+   * project-scoped chat via `?project=<iamProjectId>`). Shared, env-overridable via
+   * NEXT_PUBLIC_CHAT_URL; default https://hanzo.chat.
+   */
+  chatUrl: string
   /** Canonical IAM OIDC issuer (the cloud /v1 validates) — shared. */
   iamUrl: string
   /** IAM application name (aud=hanzo-cloud) — shared. */
@@ -75,6 +81,7 @@ export type ConsoleConfig = {
 const SHARED = {
   platformUrl: trimSlash(process.env.NEXT_PUBLIC_PLATFORM_URL ?? 'https://platform.hanzo.ai'),
   appUrl: trimSlash(process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanzo.app'),
+  chatUrl: trimSlash(process.env.NEXT_PUBLIC_CHAT_URL ?? 'https://hanzo.chat'),
 }
 
 /**

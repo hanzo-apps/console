@@ -474,6 +474,13 @@ async function restRequest<T>(
     throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
   }
 
+  return parseRestResponse<T>(res)
+}
+
+/** Parse a plain-REST `Response` into `T | undefined`: 401/403 → ApiError, 204 → undefined,
+ *  a JSON body unwrapped, and a non-ok status carrying the human message from whichever
+ *  error shape (`{msg}` / `{error}` / `{error:{message}}`). Shared by every REST verb. */
+async function parseRestResponse<T>(res: Response): Promise<T | undefined> {
   if (res.status === 401 || res.status === 403) throw new ApiError('Not authorized', res.status)
   if (res.status === 204) return undefined
 
@@ -506,6 +513,36 @@ async function restRequest<T>(
   }
   return json as T
 }
+
+/**
+ * POST a RAW binary body (a deploy artifact — a zip/tar.gz static build) to a full URL,
+ * with the caller's own `Content-Type` (e.g. `application/zip`, `application/gzip`). Rides
+ * the SAME `authedFetch` as every REST verb (session cookie, silent 401-refresh), but the
+ * body is passed through verbatim — never `JSON.stringify`'d — and `baseHeaders(false)` is
+ * used so the JSON `Content-Type` is NOT stamped over the binary one. The console `/v1`
+ * bearer proxy forwards the bytes + this Content-Type to cloud unchanged (upstreamHeaders).
+ */
+export const restPostRaw = <T>(
+  url: string,
+  body: ArrayBuffer | Uint8Array | Blob,
+  contentType: string,
+): Promise<T | undefined> =>
+  (async () => {
+    let res: Response
+    try {
+      res = await authedFetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { ...baseHeaders(false), 'Content-Type': contentType },
+        // A raw binary body (ArrayBuffer/Uint8Array/Blob) is a valid fetch BodyInit; the
+        // cast bridges the strict typed-array generic (Uint8Array<ArrayBufferLike>).
+        body: body as BodyInit,
+      })
+    } catch (e) {
+      throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
+    }
+    return parseRestResponse<T>(res)
+  })()
 
 /** REST GET on a full URL (build it with `v1Url`). */
 export const restGet = <T>(url: string): Promise<T> => restRequest<T>('GET', url) as Promise<T>

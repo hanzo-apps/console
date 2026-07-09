@@ -97,7 +97,13 @@ export function upstreamHeaders(
     Accept: 'application/json',
     'X-Org-Id': owner,
   }
-  if (hasBody) headers['Content-Type'] = 'application/json'
+  // Preserve the caller's Content-Type when it carries a body: a JSON REST call
+  // arrives (and forwards) as `application/json`, but a BINARY artifact upload
+  // (a zip/tar.gz static build → the platform deploy endpoint) or a
+  // `multipart/form-data` upload MUST forward its OWN Content-Type (incl. any
+  // multipart boundary) so the backend content-sniffs correctly. Default to
+  // `application/json` when the caller sent no Content-Type (every REST client does).
+  if (hasBody) headers['Content-Type'] = req.headers.get('content-type') || 'application/json'
   if (opts.forwardScope) {
     const project = req.headers.get('X-Project-Id')
     const environment = req.headers.get('X-Environment')
@@ -273,7 +279,16 @@ export async function forwardWithUserBearer(req: NextRequest, opts: BearerProxyO
   headers.Authorization = `Bearer ${bearer}`
 
   const init: RequestInit = { method: req.method, headers, cache: 'no-store', signal: req.signal }
-  if (hasBody) init.body = await req.text()
+  if (hasBody) {
+    // JSON/text bodies forward as a string (the vast majority — every REST client).
+    // A NON-text body — a zip/tar.gz deploy artifact, or a multipart/form-data upload —
+    // MUST forward its bytes VERBATIM: reading it via `req.text()` would UTF-8-corrupt
+    // the binary. ONE proxy, both body kinds; the Content-Type (with any multipart
+    // boundary) already rode through `upstreamHeaders` above.
+    const ct = (req.headers.get('content-type') || '').toLowerCase()
+    const isText = ct === '' || ct.includes('application/json') || ct.startsWith('text/')
+    init.body = isText ? await req.text() : new Uint8Array(await req.arrayBuffer())
+  }
 
   try {
     // Fetch the NORMALIZED dest (exactly what we validated) — never the raw string.

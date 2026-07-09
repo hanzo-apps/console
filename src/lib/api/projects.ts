@@ -61,12 +61,17 @@ export const ProjectApi = {
   list: (): Promise<Project[]> =>
     iam.iamList<Project>('get-organization-projects', { organization: org() }).then((r) => r.rows),
 
-  /** Create a project under the org (`POST /org/iam/add-project`). */
-  create: (p: { name: string; description?: string }): Promise<void> =>
+  /**
+   * Create a project under the org (`POST /org/iam/add-project`). `name` is the
+   * org-unique id (slug-safe — it doubles as the deploy site slug and the shared
+   * cross-surface `?project=` key); `displayName` is the friendly label (defaults to
+   * `name` for callers that don't distinguish them).
+   */
+  create: (p: { name: string; displayName?: string; description?: string }): Promise<void> =>
     iam.iamMutate('add-project', {
       owner: org(),
       name: p.name,
-      displayName: p.name,
+      displayName: p.displayName ?? p.name,
       organization: org(),
       description: p.description ?? '',
     }),
