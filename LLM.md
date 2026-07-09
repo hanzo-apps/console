@@ -2608,3 +2608,57 @@ Affiliates, nothing forked.
   still wins); `/v1/bogushead` → 404 JSON `{"error":"Not found"}` (allow-list refuses a
   non-head — still not a general tunnel). `git grep /cloud/v1` = ZERO. tsc + build green,
   1965/1965 unit tests pass.
+
+## Insights (o11y) repointed to the VERSION-LESS `/v1/o11y/<resource>` surface, via the /v1 bearer BFF (v8.4.124)
+
+The rebooted o11y backend (cloud embedded o11y v1.5.4) serves the canonical
+VERSION-LESS surface `/v1/o11y/<resource>` — NO nested `v1`/`v3` version, NO `/api`.
+Proven live (unauthenticated, against api.hanzo.ai): `GET /v1/o11y/health` → **200**
+`{"service":"o11y","status":"ok"}`; `POST /v1/o11y/services`, `POST /v1/o11y/query_range`,
+`GET /v1/o11y/rules` → **403 `no validated principal`** (IAM-gated — anonymous refused, a
+logged-in bearer required); the deprecated `/v1/o11y/v1/rules` alias still resolves (403,
+not 404). The console's Insights modules were still calling the nested-version SigNoz forms
+(`/v1/o11y/v1/*`, `/v1/o11y/v3/query_range`) over `originV1Url` (a bare `/v1/o11y/*`), which
+on the live console ingress reaches the gateway with NO minted bearer → 403. Fixed both
+axes, one class-fix:
+
+- **Version-less paths.** `apm.ts` (`ApmApi` — Service Map RED metrics, dependency graph,
+  top-operations, infra hosts/pods/nodes, exceptions/listErrors, dashboards, and the
+  composite logs/traces `query_range`) now speaks `o11y/services`, `o11y/dependency_graph`,
+  `o11y/service/top_operations`, `o11y/hosts/list`, `o11y/query_range`, `o11y/listErrors`,
+  `o11y/dashboards`, … (the nested `v1/`·`v3/` segments dropped). `AlertsModule` → `o11y/rules`.
+  `o11y.ts` annotation-queues/users were already version-less; added an `O11yApi.health()`
+  probe (`o11y/health`).
+- **Bearer BFF (the IAM-gate fix).** o11y reads build `cloudProxyV1Url("o11y/<resource>")`.
+  Since v8.4.120 retired the `/cloud/` prefix, `cloudProxyV1Url` is an alias of `originV1Url`
+  and both yield the canonical `<origin>/v1/o11y/<resource>` — o11y rides the same-origin
+  `app/v1/[...path]` bearer BFF like every other IAM-scoped cloud head. The BFF mints the
+  caller's short-lived IAM bearer → cloud-api sees a validated principal → 200 (a cookie-only
+  call is refused). The `o11y` head is allow-listed in `proxy-allow.ts` `CLOUD_HEADS`.
+- **Reachable on admin.hanzo.ai.** The Observe product modules (Traces `/o11y`, Service Map,
+  Logs, Analytics, Dashboards, AI Metrics) plus the global-admin **Fleet Observability** board
+  (`fleet-o11y`, `AdminO11yModule`, `admin: true`) are all on the SuperAdmin's nav — a global
+  admin's `visibleCatalog(showAdmin=true)` returns the FULL catalog. No nav surfacing change was
+  needed; the Insights surfaces were already registered under Observe. Per-org o11y needs only a
+  validated principal (works for any signed-in org); the cross-org Fleet board additionally
+  requires `owner==admin`.
+- **Traces/Observations data domain — flagged, NOT ripped.** `TracesModule`/`ObservationsModule`
+  read the LLM/agent trace domain via `O11yApi` → `EvalsApi` on `/v1/evals` (cost/tokens/scores
+  that raw OTel spans lack). The rebooted backend also serves `/v1/o11y/traces` +
+  `/v1/o11y/observations` from the `o11y_` tables; repointing those READS off evals is a
+  DATA-DOMAIN change (would drop the eval joins), so it is deliberately left for a CTO call
+  rather than guessed in this path-form pass (documented in `o11y.ts`).
+- **Playwright proof.** `e2e/insights-o11y.spec.ts` — two layers: (A) an UNAUTHENTICATED gate
+  proof that ALWAYS runs and PASSES LIVE today (health 200 + the reads 403 "no validated
+  principal" + the alias resolves); (B) an AUTHENTICATED render proof (signs in, enters
+  admin.hanzo.ai or falls back to console — same image, asserts `/v1/o11y/*` PASSES the gate
+  (not 403) for a signed-in session, and Service Map/Logs/Traces/Fleet Observability RENDER —
+  real data or the honest RuntimeNotice, never a crash — with screenshots). B is STAGED: it needs
+  the reserved-`admin`-org SuperAdmin password (a KMS secret, not on the dev host) AND a browser
+  env that renders the Tamagui/RNW SPA (the sandbox headless chromium loads all 22 chunks but the
+  React root stays empty). `e2e/probe-o11y.spec.ts` discovery harness also repointed to the
+  version-less `/v1/o11y/*` forms.
+- Verification: `tsc --noEmit` clean; `vitest` green (`canonical-paths` now pins
+  `ApmApi.dashboards → /v1/o11y/dashboards`; `apm-service-scope` pins `/v1/o11y/query_range`);
+  Proof A runs green against the live cluster. Rebased onto main (post-v8.4.120 `/cloud`-prefix
+  retirement) → **v8.4.124**.

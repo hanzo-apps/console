@@ -20,7 +20,7 @@
  * session it simply overwrites the stamped value, so sending it is correct in both
  * topologies (direct cloud-api and gatewayed).
  */
-import { restGet, originV1Url } from './client'
+import { restGet, cloudProxyV1Url } from './client'
 import { EvalsApi, type EvalScoreConfig, type EvalSession } from './evals'
 
 /** Pagination metadata returned by every list endpoint. */
@@ -195,13 +195,20 @@ export type O11yUser = {
   firstSeen?: string | null
 }
 
-/** Build a `/v1/o11y/<path>` URL with optional pagination query. */
+/**
+ * Build a version-less `/v1/o11y/<path>` URL with optional pagination query.
+ * The o11y reads ride the same-origin `/v1` user-bearer BFF (`cloudProxyV1Url`, now an
+ * alias of `originV1Url`; the `/cloud/` prefix was retired in v8.4.120); a cookie-only
+ * call is refused, so `app/v1/[...path]` mints the caller's IAM bearer — a logged-in
+ * session passes and o11y scopes by the token owner. The `o11y` head is allow-listed
+ * in `proxy-allow.ts`.
+ */
 const listUrl = (path: string, q: O11yListQuery): string => {
   const params = new URLSearchParams()
   if (q.page) params.set('page', String(q.page))
   if (q.limit) params.set('limit', String(q.limit))
   const qs = params.toString()
-  return qs ? `${originV1Url(path)}?${qs}` : originV1Url(path)
+  return qs ? `${cloudProxyV1Url(path)}?${qs}` : cloudProxyV1Url(path)
 }
 
 /**
@@ -237,13 +244,19 @@ const scoreConfigOf = (c: EvalScoreConfig): ScoreConfig => ({
 })
 
 /**
- * The Observe READ client. Retargeted to the NATIVE `/v1/evals` surface (cloud
- * clients/eval, store owned by hanzoai/ai) — the old `/v1/o11y` proxy is gone.
- * Traces / trace-detail / sessions / scores / score-configs / observations all
- * delegate to the one native `EvalsApi` (which maps the wire rows into these
- * canonical view-models), wrapped in the `O11yList` envelope the modules render.
- * Annotation-queues and users have no eval-domain equivalent, so they remain on
- * `/v1/o11y` and surface honest states until that runtime is wired.
+ * The Observe READ client. The LLM/agent trace domain (traces / trace-detail /
+ * sessions / scores / score-configs / observations — which carry cost, tokens, and
+ * scores that raw OTel spans lack) delegates to the NATIVE `/v1/evals` surface (cloud
+ * clients/eval, store owned by hanzoai/ai), wrapped in the `O11yList` envelope the
+ * modules render. Annotation-queues, users, and the runtime `health` probe read the
+ * version-less canonical o11y surface (`/v1/o11y/<resource>`) through the `/v1`
+ * user-bearer BFF, surfacing honest states until that runtime returns rows.
+ *
+ * NOTE (open, for the CTO): the rebooted o11y backend (cloud v1.5.4) serves
+ * `/v1/o11y/traces` + `/v1/o11y/observations` from the `o11y_` tables. Repointing the
+ * trace/observation READS here from `/v1/evals` to that surface is a DATA-DOMAIN change
+ * (it would drop the eval cost/token/score joins), so it is deliberately NOT done in
+ * this path-form pass — flagged rather than guessed.
  */
 export const O11yApi = {
   traces: async (q: O11yListQuery = {}): Promise<O11yList<Trace>> =>
@@ -271,10 +284,18 @@ export const O11yApi = {
     restGet<O11yList<AnnotationQueue>>(listUrl('o11y/annotation-queues', q)),
 
   annotationQueue: (id: string) =>
-    restGet<AnnotationQueueDetail>(originV1Url(`o11y/annotation-queues/${encodeURIComponent(id)}`)),
+    restGet<AnnotationQueueDetail>(cloudProxyV1Url(`o11y/annotation-queues/${encodeURIComponent(id)}`)),
 
   annotationQueueItems: (id: string, q: O11yListQuery = {}) =>
     restGet<O11yList<AnnotationQueueItem>>(listUrl(`o11y/annotation-queues/${encodeURIComponent(id)}/items`, q)),
 
   users: (q: O11yListQuery = {}) => restGet<O11yList<O11yUser>>(listUrl('o11y/users', q)),
+
+  /**
+   * Liveness of the embedded o11y runtime — `GET /v1/o11y/health` (version-less) via
+   * the `/v1` bearer BFF. 200 = the runtime is up and the caller's session passed
+   * the IAM gate; a typed `ApiError` (503 initializing / 404 unrouted / 401·403 auth)
+   * otherwise, so callers render an honest state and the e2e proof can assert on it.
+   */
+  health: () => restGet<unknown>(cloudProxyV1Url('o11y/health')),
 }

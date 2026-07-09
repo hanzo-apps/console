@@ -5,9 +5,10 @@
  * service dependency graph, over the REAL Hanzo o11y (O11y) runtime.
  *
  * ONE honest source: the o11y APM controllers through the same-origin `/v1`
- * user-bearer proxy (`ApmApi`, lib/api/apm.ts) — `/v1/o11y/v1/services` (RED per
- * service over the window), `/v1/o11y/v1/dependency_graph` (the call edges), and
- * `/v1/o11y/v1/service/top_operations` (a service's hottest operations). Every KPI,
+ * user-bearer proxy (`ApmApi`, lib/api/apm.ts) — the version-less canonical o11y
+ * surface `/v1/o11y/services` (RED per service over the window),
+ * `/v1/o11y/dependency_graph` (the call edges), and
+ * `/v1/o11y/service/top_operations` (a service's hottest operations). Every KPI,
  * row, and edge is a fold over what the runtime returned — an empty result is an
  * honest empty state, never a fabricated service. When the runtime is not
  * initialized (503) / unrouted (404) / not enabled for the org (403) / the session

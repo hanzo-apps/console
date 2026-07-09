@@ -128,6 +128,15 @@ describe('cloud heads → the same-origin /v1 bearer BFF (prefix-free, ZERO /clo
     await VisorApi.machines()
     expect(lastUrl).not.toMatch(bad)
   })
+  // o11y is IAM-gated (403 "no validated principal" for a bearer-less call) and the
+  // canonical surface is VERSION-LESS (`/v1/o11y/<resource>`, NO nested v1/v3, NO /api),
+  // so the ApmApi client rides the same-origin `/v1` bearer BFF like the rest — a
+  // logged-in session's minted bearer passes, and the path carries no nested version.
+  it('ApmApi.dashboards -> /v1/o11y/dashboards (version-less, /v1 bearer BFF — NOT /cloud, NOT nested /v1/o11y/v1/...)', async () => {
+    stub([])
+    await ApmApi.dashboards()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/o11y/dashboards`)
+  })
 })
 
 // baseHeaders stamps the FULL tenant path on every call: org (always), project
@@ -159,11 +168,13 @@ describe('baseHeaders — org + project + actor on every call', () => {
   })
 })
 
-// The AI-gateway + o11y clients also build the CANONICAL, prefix-free `/v1/<resource>`
-// (apm namespaces its o11y surface AFTER `/v1/`, never before it). A `next.config.mjs`
-// `beforeFiles` rewrite dispatches the AI heads (plans/embeddings) to the `/ai` proxy
-// INVISIBLY to the client, which only ever builds `/v1/...`.
-describe('canonical /v1 — AI-gateway + o11y clients (no prefix before /v1/)', () => {
+// The genuinely SESSION-scoped data-product clients build the CANONICAL, prefix-free
+// `/v1/<resource>` through `originV1Url`. plans/embeddings (AI gateway) are served on
+// the session path (the gateway forwards the session and cloud resolves the org from
+// the session owner), so a bare `/v1/*` works — VERIFIED LIVE.
+// (functions + paas + apm/o11y are pinned in the /v1 bearer BFF block above — they are
+// header/IAM-scoped and 403 on the bare path. o11y is additionally VERSION-LESS.)
+describe('canonical /v1 — session-scoped data-product clients (no prefix before /v1/)', () => {
   it('aicatalog fetchPlans -> /v1/plans (AI catalog head -> /ai)', async () => {
     stub({ plans: [] })
     await fetchPlans()
@@ -174,22 +185,19 @@ describe('canonical /v1 — AI-gateway + o11y clients (no prefix before /v1/)', 
     await EmbeddingsApi.generate('text-embedding-3-small', 'hi')
     expect(lastUrl).toBe(`${ORIGIN}/v1/embeddings`)
   })
-  it('apm ApmApi.dashboards -> /v1/o11y/v1/dashboards (cloud o11y)', async () => {
-    stub([])
-    await ApmApi.dashboards()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/o11y/v1/dashboards`)
-  })
+  // Functions + PaaS + apm/o11y are NOT bare session clients — they ride the /v1 bearer
+  // BFF (pinned in the "cloud heads → the same-origin /v1 bearer BFF" block above) and
+  // 403 on a cookie-only call. Commerce is NOT a bare-/v1/ client either — it addresses
+  // the `/commerce` proxy EXPLICITLY (pinned in the proxy-exceptions block below). The
+  // live ingress does not rewrite their heads.
 
-  it('none of the three emits a /<svc>/v1/ prefix', async () => {
+  it('the (bare-/v1/) session-path clients emit no /<svc>/v1/ prefix', async () => {
     const bad = /\/(cloud|vm|ai|billing|org|commerce)\/v1\//
     stub({ plans: [] })
     await fetchPlans()
     expect(lastUrl).not.toMatch(bad)
     stub({})
     await EmbeddingsApi.generate('m', 'x')
-    expect(lastUrl).not.toMatch(bad)
-    stub([])
-    await ApmApi.dashboards()
     expect(lastUrl).not.toMatch(bad)
   })
 })
