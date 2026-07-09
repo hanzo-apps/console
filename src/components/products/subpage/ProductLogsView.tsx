@@ -2,7 +2,7 @@
 
 /**
  * Per-product Logs — the LIVE application/platform logs for THIS product's OTel
- * service, read from the Hanzo o11y (SigNoz) runtime via the same-origin `/v1`
+ * service, read from the Hanzo o11y (O11y) runtime via the same-origin `/v1`
  * bearer proxy (`POST /v1/o11y/api/v3/query_range`, a `list`-panel `noop` builder
  * query over `dataSource: logs`, newest first, FILTERED to the product's
  * `service.name`). The SAME o11y source the Observe › Logs board reads, scoped to
@@ -161,7 +161,7 @@ export function ProductLogsView({ entry }: { entry: CatalogEntry }) {
           )}
 
           <Text fontSize="$1" color="$color10">
-            Application logs from the Hanzo o11y runtime (OTLP → SigNoz), scoped to service{' '}
+            Application logs from the Hanzo o11y runtime (OTLP → O11y), scoped to service{' '}
             <Text fontSize="$1" color="$color11" fontWeight="600">{o11yService}</Text> and your organization. If {entry.label} isn&apos;t
             instrumented yet, no lines appear — never placeholder data.
           </Text>

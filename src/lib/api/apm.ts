@@ -1,6 +1,6 @@
 /**
- * APM / Infrastructure / Exceptions / Dashboards API — the SigNoz-flagship
- * observability surface, over the REAL Hanzo o11y (SigNoz) runtime.
+ * APM / Infrastructure / Exceptions / Dashboards API — the O11y-flagship
+ * observability surface, over the REAL Hanzo o11y (O11y) runtime.
  *
  * Transport: the same-origin user-bearer `/v1` proxy (`originV1Url`) — the
  * browser sends only its session cookie, the server route mints a short-lived IAM
@@ -11,14 +11,14 @@
  * only or cross-tenant call is refused server-side (the o11y runtime scopes every
  * query by the JWT `owner` claim → `X-Org-Id`).
  *
- * o11y (SigNoz) speaks plain REST (raw JSON, real HTTP status codes), NOT the
+ * o11y (O11y) speaks plain REST (raw JSON, real HTTP status codes), NOT the
  * casibase `{status,msg,data}` envelope — so we use `restGet`/`restPost`. When the
  * runtime is not initialized it answers 503; unrouted surfaces 404; access issues
  * 401/403. `restGet`/`restPost` throw a typed `ApiError` carrying that status, so
  * the modules render an honest `RuntimeNotice` instead of fabricating spans, hosts,
  * exceptions, or dashboards.
  *
- * Time units follow SigNoz's own controllers (verified against o11y
+ * Time units follow O11y's own controllers (verified against o11y
  * pkg/query-service): APM (services / dependency graph / listErrors) takes
  * NANOSECOND epoch strings; infra (hosts / pods / nodes / namespaces / clusters)
  * takes MILLISECOND epoch numbers. `apmWindow` / `infraWindow` build each correctly.
@@ -52,7 +52,7 @@ export function apmWindow(seconds: number): ApmWindow {
 /** One service row from `/api/v1/services` (POST): RED metrics over the window. */
 export type ServiceRow = {
   serviceName: string
-  /** p99 latency, nanoseconds (SigNoz returns ns). */
+  /** p99 latency, nanoseconds (O11y returns ns). */
   p99: number
   /** Average duration, nanoseconds. */
   avgDuration: number
@@ -135,7 +135,7 @@ export function normalizeDependencies(body: unknown): DependencyEdge[] {
   return rows.map(normalizeEdge).filter((e) => e.parent !== '' && e.child !== '')
 }
 
-/** Normalize the top-operations response (SigNoz returns rows keyed by name). */
+/** Normalize the top-operations response (O11y returns rows keyed by name). */
 export function normalizeTopOperations(body: unknown): TopOperation[] {
   const rows = Array.isArray(body) ? body : Array.isArray((body as { data?: unknown[] })?.data) ? (body as { data: unknown[] }).data : []
   return rows
@@ -175,9 +175,9 @@ export type ServiceHealth = {
   service: string
   numCalls: number
   callRate: number
-  /** Error rate as a percentage (SigNoz `errorRate` is already a percent). */
+  /** Error rate as a percentage (O11y `errorRate` is already a percent). */
   errorRatePct: number
-  /** p99 latency in milliseconds (SigNoz returns nanoseconds). */
+  /** p99 latency in milliseconds (O11y returns nanoseconds). */
   p99Ms: number
   /** Average latency in milliseconds. */
   avgMs: number
@@ -212,7 +212,7 @@ export type HostRow = {
   hostName: string
   active: boolean
   os: string
-  /** CPU utilization, 0..1 (SigNoz returns a fraction). */
+  /** CPU utilization, 0..1 (O11y returns a fraction). */
   cpu: number
   /** Memory utilization, 0..1. */
   memory: number
@@ -363,7 +363,7 @@ export function normalizeExceptions(body: unknown): ExceptionGroup[] {
   return rows.map(normalizeException).filter((e) => e.exceptionType !== '' || e.exceptionMessage !== '')
 }
 
-// ── Dashboards (SigNoz) ───────────────────────────────────────────────────────
+// ── Dashboards (O11y) ───────────────────────────────────────────────────────
 
 /** One dashboard from `/api/v1/dashboards` (list). */
 export type Dashboard = {
@@ -379,7 +379,7 @@ export type Dashboard = {
 }
 
 /**
- * Normalize one raw dashboard. SigNoz nests the display fields under `data`
+ * Normalize one raw dashboard. O11y nests the display fields under `data`
  * (`{uuid, created_at, data:{title, description, tags, widgets:[…]}}`); we read
  * both the top-level and `data.*` so either shape maps cleanly.
  */
@@ -407,21 +407,21 @@ export function normalizeDashboards(body: unknown): Dashboard[] {
   return rows.map(normalizeDashboard).filter((d) => d.uuid !== '')
 }
 
-// ── Logs + Traces (SigNoz composite query_range) ──────────────────────────────
+// ── Logs + Traces (O11y composite query_range) ──────────────────────────────
 //
 // The universal `POST /api/v3/query_range` builder query. A `list`-panel `noop`
 // query over `dataSource: logs | traces` returns RAW rows (recent log lines /
 // spans), newest first — the one true logs/traces read (`/api/v1/logs` is a stub
-// that returns `{"results":[]}`; query_range is what the SigNoz logs/traces
+// that returns `{"results":[]}`; query_range is what the O11y logs/traces
 // explorer actually issues). Time is epoch MILLISECONDS (v3) = `ApmWindow.startMs
 // /endMs`. Every helper is pure (JSON in, view-model out) so it unit-tests
 // without a live runtime.
 
 /** The telemetry signal a builder query reads. */
-export type SignozDataSource = 'logs' | 'traces' | 'metrics'
+export type O11yDataSource = 'logs' | 'traces' | 'metrics'
 
 /**
- * One SigNoz builder-query filter item — the `{key, op, value}` shape the explorer
+ * One O11y builder-query filter item — the `{key, op, value}` shape the explorer
  * sends. `key` carries the attribute's name + type so the runtime resolves it
  * correctly (a resource attribute vs an indexed column).
  */
@@ -434,13 +434,13 @@ export type QueryFilterItem = {
 /**
  * Filter a logs/traces list query to ONE OpenTelemetry `service.name`. `service.name`
  * is a RESOURCE attribute on both signals (on traces it is also materialized as an
- * indexed column, so `isColumn` is set there) — this is the exact filter item SigNoz's
+ * indexed column, so `isColumn` is set there) — this is the exact filter item O11y's
  * own explorer emits for a service-scoped list, so the runtime resolves it and never
  * 400s. The caller ALSO re-filters the normalized rows client-side (belt-and-suspenders),
  * so a runtime that ignores the item can never leak another service's rows onto a
  * per-product page.
  */
-export function serviceFilterItem(dataSource: SignozDataSource, service: string): QueryFilterItem {
+export function serviceFilterItem(dataSource: O11yDataSource, service: string): QueryFilterItem {
   return {
     key: { key: 'service.name', dataType: 'string', type: 'resource', isColumn: dataSource === 'traces' },
     op: '=',
@@ -450,13 +450,13 @@ export function serviceFilterItem(dataSource: SignozDataSource, service: string)
 
 /**
  * The exact v3 `query_range` LIST payload — ONE `noop` builder query keyed `A`,
- * newest-first, paged by `offset`/`pageSize`. Mirrors what SigNoz's own explorer
+ * newest-first, paged by `offset`/`pageSize`. Mirrors what O11y's own explorer
  * sends (verified against the frontend + the server `BuilderQuery` struct), so the
  * runtime never 400s on shape. `filters` (default none) scopes the query — e.g. a
  * `serviceFilterItem` restricts it to one product's OTel service.
  */
 export function listQueryPayload(
-  dataSource: SignozDataSource,
+  dataSource: O11yDataSource,
   w: ApmWindow,
   limit: number,
   filters: QueryFilterItem[] = [],
@@ -508,7 +508,7 @@ export function parseListRows(body: unknown): ListRow[] {
   return out
 }
 
-/** Read the first present key from a flattened SigNoz row `data` map. */
+/** Read the first present key from a flattened O11y row `data` map. */
 function pick(data: Record<string, unknown> | null | undefined, keys: string[]): string {
   if (!data) return ''
   for (const k of keys) {
@@ -518,7 +518,7 @@ function pick(data: Record<string, unknown> | null | undefined, keys: string[]):
   return ''
 }
 
-/** Normalize the epoch value SigNoz returns (ns/us/ms/s, or an ISO string) → ISO. */
+/** Normalize the epoch value O11y returns (ns/us/ms/s, or an ISO string) → ISO. */
 export function toIso(ts: string | number | undefined | null): string {
   if (ts == null || ts === '') return ''
   if (typeof ts === 'string' && !/^\d+$/.test(ts)) return ts // already ISO
@@ -557,7 +557,7 @@ export type TraceSpan = {
   traceId: string
   name: string
   service: string
-  /** Duration in nanoseconds (SigNoz unit), or null when absent. */
+  /** Duration in nanoseconds (O11y unit), or null when absent. */
   durationNano: number | null
   status: string
 }
@@ -589,7 +589,7 @@ export function normalizeSpans(body: unknown): TraceSpan[] {
 
 const u = (path: string): string => originV1Url(`o11y/${path}`)
 
-/** The APM POST body — a start/end window + optional tags filter (SigNoz shape). */
+/** The APM POST body — a start/end window + optional tags filter (O11y shape). */
 type ApmBody = { start: string; end: string; tags?: unknown[]; service?: string }
 /** The infra POST body — a start/end (ms) window + an (empty) filter set. */
 type InfraBody = { start: number; end: number; filters: { op: 'AND'; items: [] } }

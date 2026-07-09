@@ -1918,24 +1918,24 @@ field remains, flagged separately as a cross-console migration/discovery feature
 - Verification: `tsc --noEmit` clean; `vitest` **1163/1163** (96 files); `next build` ✓.
   Rebased on origin/main (v8.4.45) → **v8.4.46**.
 
-## Observe · Logs + trace-search wired to the live o11y (SigNoz) runtime (v8.4.62)
+## Observe · Logs + trace-search wired to the live o11y (O11y) runtime (v8.4.62)
 
-Fills the LAST o11y query gap the console had. o11y (SigNoz) was already consumed
+Fills the LAST o11y query gap the console had. o11y (O11y) was already consumed
 by **Service Map** (RED metrics + dependency graph, `ApmApi.services/dependencies/
 topOperations`) and **Alerts** (`o11y/v1/rules`) over the same-origin `/v1`
 bearer proxy (`cloudProxyV1Url('o11y/…')` → cloud reverse-proxies `/v1/o11y/*` →
-the o11y runtime's `/api/*`). The two SigNoz signals `apm.ts` was MISSING —
+the o11y runtime's `/api/*`). The two O11y signals `apm.ts` was MISSING —
 application **LOGS** and **trace search** — are both the composite `POST /api/v3/
 query_range` (the deployed `GET /api/v1/logs` is a hardcoded stub returning
-`{"results":[]}`; `query_range` is the one true read the SigNoz explorer itself
+`{"results":[]}`; `query_range` is the one true read the O11y explorer itself
 issues). Added there (DRY — ONE o11y client), NOT a second o11y path.
 
 - **`lib/api/apm.ts` gains `logs()` + `traceSearch()`** over `POST o11y/v3/
   query_range` with the exact `list`-panel `noop` builder query (`listQueryPayload`,
-  verified against the SigNoz frontend payload + the server `BuilderQuery` struct,
+  verified against the O11y frontend payload + the server `BuilderQuery` struct,
   so the runtime never 400s), plus pure, defensive parsers: `parseListRows` (reads
   `data.result[].list` AND the `data.newResult.data.result[].list` mirror), `toIso`
-  (collapses SigNoz ns/us/ms/s epochs → ISO), `normalizeLogRow`/`normalizeLogs`
+  (collapses O11y ns/us/ms/s epochs → ISO), `normalizeLogRow`/`normalizeLogs`
   ({id,timestamp,severity,service,body}) and `normalizeTraceSpan`/`normalizeSpans`
   ({id,traceId,name,service,durationNano,status}). Time = epoch MS (`ApmWindow.
   startMs/endMs`), the v3 unit. Every column-name variant tolerated; empty result →
@@ -1958,7 +1958,7 @@ issues). Added there (DRY — ONE o11y client), NOT a second o11y path.
   fabricating one. Alerts left as-is (same established `o11y/v1/*` convention).
 - **One canonical Observe surface** — the registry already routes every Observe
   product to a native module (no `o11y.hanzo.ai` link-outs); o11y.hanzo.ai is the
-  raw SigNoz backend, console is the product UI. Unchanged.
+  raw O11y backend, console is the product UI. Unchanged.
 - **Reachability (flagged, honest):** the o11y wiring uses the IDENTICAL transport +
   path convention as the already-shipped ServiceMap/Alerts clients, so it lights up
   with real data exactly when they do — iff the cloud→o11y `/v1/o11y/*` reverse-proxy
@@ -2174,12 +2174,12 @@ isAdmin` is correct and untouched).
   post-deploy gate (the confidential mint creds live in the cluster secret, not the
   dev host — devs don't touch k8s directly). Branched off origin/main (v8.4.80).
 
-## Per-product Status/Logs/Metrics wired to the LIVE o11y (SigNoz) runtime, one DRY mechanism (v8.4.74)
+## Per-product Status/Logs/Metrics wired to the LIVE o11y (O11y) runtime, one DRY mechanism (v8.4.74)
 
 The shared per-product sub-page system (`components/products/subpage/*`, one
 Status/Logs/Metrics/Settings for every `module` product — the catch-all routes every
 base slug here, so ALL 136 products already had these four tabs) is now backed by the
-LIVE o11y (SigNoz) runtime, scoped per product by its OpenTelemetry `service.name` —
+LIVE o11y (O11y) runtime, scoped per product by its OpenTelemetry `service.name` —
 via ONE mechanism parameterized per product, NOT bespoke wiring. Reuses the existing
 `ApmApi` o11y client + the shared `RuntimeNotice` + the ONE `LivingOverview` — nothing
 forked, nothing new-per-product. Adding a product still needs zero sub-page code.
@@ -2197,7 +2197,7 @@ forked, nothing new-per-product. Adding a product still needs zero sub-page code
 - **The ONE new query capability — per-service o11y filtering (`lib/api/apm.ts`).**
   `listQueryPayload` gains an optional `filters` arg (default none → back-compat with the
   Observe Logs board + the existing tests); `serviceFilterItem(dataSource, service)`
-  builds the exact SigNoz v3 `service.name` resource-attribute equality the explorer
+  builds the exact O11y v3 `service.name` resource-attribute equality the explorer
   sends. `ApmApi.logs(w, limit, service?)` / `traceSearch(w, limit, service?)` scope the
   query to one product's service AND re-filter the rows client-side (a runtime that
   ignored the item can never leak another service's lines). `ApmApi.serviceHealth(w,
@@ -2212,7 +2212,7 @@ forked, nothing new-per-product. Adding a product still needs zero sub-page code
   no o11y telemetry AND no deployment rows → the managed card; one source failing never
   blanks the other; never a fabricated green.
 - **Logs = LIVE o11y logs filtered to the product's service.** `ProductLogsView` is
-  rebuilt onto `ApmApi.logs(window, 500, o11yService)` — real OTLP→SigNoz log lines
+  rebuilt onto `ApmApi.logs(window, 500, o11yService)` — real OTLP→O11y log lines
   (time · severity · message) for THIS product, org-scoped, range toggle (15m/1h/6h/24h)
   + severity filter (reusing the Observe Logs board's pattern). Replaces the dead
   `/paas/logs` path (the platform log endpoint rejects even the service token). Honest
@@ -2242,7 +2242,7 @@ forked, nothing new-per-product. Adding a product still needs zero sub-page code
   successfully (14/14 pages, the `/[...slug]` catch-all renders every product's sub-pages).
   o11y is LIVE (o11y.hanzo.ai/api/v2/readyz=200; `/v1/o11y` 403 unauth = the org-scoped
   gate). Authenticated visual e2e is post-deploy (the `(dashboard)` group is behind
-  AuthGate); the per-product o11y query building + mapping real SigNoz responses is proven
+  AuthGate); the per-product o11y query building + mapping real O11y responses is proven
   by the logic + end-to-end tests. Rebased on origin/main (v8.4.84) → **v8.4.85**.
 
 ## Zero customer-facing 404s — declare :tab routes for Containers/Finetuning/Tasks (v8.4.86)
@@ -2413,7 +2413,7 @@ search}` all 403 while their `/v1/*` twins 200.
   they render honest `BackendStateCard`/`RuntimeNotice` (forward-compatible — light
   up when the backend appears), so they were LEFT honest rather than regressed to a
   static 'soon'. o11y (Service Map/Alerts/Logs/per-product Status·Logs·Metrics) is
-  the same class: the cloud→SigNoz `/v1/o11y/*` reverse-proxy isn't resolved on this
+  the same class: the cloud→O11y `/v1/o11y/*` reverse-proxy isn't resolved on this
   deployment (404 both ways) — an infra gap, not a console client-path bug.
 - Verification: `tsc --noEmit` clean; `vitest` **1658/1658** (131 files); `next
   build` ✓ Compiled successfully. Rebased on origin/main (v8.4.92, marketplace
@@ -2431,7 +2431,7 @@ branch was reviewed and SKIPPED as already-superseded by main's own advancement
 would have regressed main or introduced a second way to do a thing already done:
 `native-o11y-ui` (net = package.json only — the Fleet/ProductObservability o11y is
 already on main), `o11y-app-logs-live`+`o11y-transport-nav-fixes` (main has the
-canonical v8.4.62/74/85 SigNoz logs + the Observations/Users nav entries),
+canonical v8.4.62/74/85 O11y logs + the Observations/Users nav entries),
 `admin-cogs` (vendor COGS+margin already on the business board via `finance.ts`;
 its `/costs` proxy is a divergent second mechanism, and its living/adapters are
 −600 lines behind main), `integrations-page` (main already ships the canonical
