@@ -20,6 +20,17 @@ describe('csrf (embed ambient-cookie money path)', () => {
     for (const m of ['GET', 'HEAD', 'OPTIONS', undefined]) expect(csrfRequired(m)).toBe(false)
   })
 
+  it('csrfRequired is SCOPED to the money-write surfaces cloud gates (no spurious pre-auth mint)', async () => {
+    const { csrfRequired } = await import('./csrf')
+    // The cloud requireCSRF surfaces (clients/console/console.go) — must require a token.
+    for (const u of ['/v1/console/keys', '/v1/console/topup/wallet', '/v1/billing/spend-alerts', '/v1/commerce/product'])
+      expect(csrfRequired('POST', u)).toBe(true)
+    // NON-money mutating writes (login/session/control-plane) must NOT trigger the
+    // /v1/console/csrf mint — that pre-auth fetch was the SPA's only console error.
+    for (const u of ['/v1/iam/login', '/v1/iam/signin', '/auth/refresh', '/v1/agents', '/v1/tracker/projects'])
+      expect(csrfRequired('POST', u)).toBe(false)
+  })
+
   it('mints the token once and caches it across writes', async () => {
     const { csrfToken } = await import('./csrf')
     const fetchImpl = vi.fn().mockResolvedValue(csrfResponse('tok-1'))

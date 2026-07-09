@@ -34,9 +34,24 @@ const csrfEndpoint = (): string =>
 let cached: { token: string; expiresAt: number } | null = null
 let inflight: Promise<string | null> | null = null
 
-/** True when a request must carry a CSRF token: the embed ambient-cookie money path + a mutating verb. */
-export const csrfRequired = (method?: string): boolean =>
-  IS_EMBED && !!method && MUTATING.has(method.toUpperCase())
+/**
+ * The write surfaces cloud's `requireCSRF` actually gates (clients/console/console.go):
+ * POST/DELETE /v1/console/{keys,onboard,topup/wallet}, POST /v1/billing/*, and
+ * POST/PUT/PATCH/DELETE /v1/commerce/*. Every OTHER mutating request (login, session,
+ * agents/tracker/… control-plane) is NOT csrf-gated server-side, so it must NOT trigger
+ * a `GET /v1/console/csrf` — that fetch fires the SPA's ONE console error: a mutating
+ * bootstrap request (e.g. the pre-login session POST) minting a token before any session
+ * cookie exists → 403. Scoping to these prefixes both matches the server and kills that
+ * spurious pre-auth mint. When a url isn't supplied (legacy call), fall back to method-only.
+ */
+const CSRF_WRITE_PREFIXES = ['/v1/console/', '/v1/billing/', '/v1/commerce/']
+
+/** True when a request must carry a CSRF token: the embed ambient-cookie money-write path + a mutating verb. */
+export const csrfRequired = (method?: string, url?: string): boolean =>
+  IS_EMBED &&
+  !!method &&
+  MUTATING.has(method.toUpperCase()) &&
+  (url === undefined || CSRF_WRITE_PREFIXES.some((p) => url.includes(p)))
 
 /** Forget the cached token so the next write re-mints it (call on a 403 CSRF refusal). */
 export const clearCsrfToken = (): void => {
@@ -84,8 +99,8 @@ export async function csrfToken(fetchImpl: typeof fetch = fetch): Promise<string
  * is obtainable. Handles the three `HeadersInit` shapes so it composes with whatever
  * the caller built (`baseHeaders` returns a plain record; a caller may pass `Headers`).
  */
-export async function applyCsrfToInit(init: RequestInit): Promise<void> {
-  if (!csrfRequired(init.method)) return
+export async function applyCsrfToInit(init: RequestInit, url?: string): Promise<void> {
+  if (!csrfRequired(init.method, url)) return
   const token = await csrfToken()
   if (!token) return
   const h = init.headers
