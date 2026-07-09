@@ -224,6 +224,12 @@ const FinanceDashboard = livingOverviewModule('finance')
 const AiMetricsLiving = livingOverviewModule('ai-metrics')
 const OpenEditionLiving = livingOverviewModule('open-edition')
 const FunctionsLiving = livingOverviewModule('functions')
+// FLEET board — the per-org "see the whole fleet" surface (validator nodes + the
+// Kubernetes clusters they run on), scoped to the caller's brand/org. NOT admin: the
+// data is per-org fail-closed (the `/nodes` proxy brand-scopes networks, the `/cloud`
+// proxy org-scopes clusters), so the org owner sees ITS OWN fleet on console.lux.cloud
+// / console.zoo.*. Reuses the ONE LivingOverview — a config, not a new surface.
+const FleetDashboard = livingOverviewModule('fleet')
 // GPUs Overview is role-aware (admin → living overview, customer → visor catalog);
 // the living-overview construction lives in GpusModule (GpusOverview) so this route
 // is a plain component reference like every other.
@@ -1147,6 +1153,29 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/nodes`,
     kind: 'module',
     routes: [{ path: '', component: NodesModule }],
+  },
+  {
+    // FLEET — the owner's unified "see and manage the whole fleet" board: the luxd
+    // VALIDATOR nodes (net / nodeID / height / health) AND the Kubernetes CLUSTERS
+    // they run on (name / region / nodes / status), in ONE LivingOverview. In
+    // `Network` so it surfaces on hanzo (all-networks infra view) AND lux/zoo/pars
+    // (each scoped to its own chain + its own org's clusters). NOT `admin:true` — the
+    // data is per-org fail-closed at the transport (the `/nodes` proxy brand-scopes
+    // networks; the `/cloud` proxy org-scopes clusters by the Bearer owner), so the
+    // org owner sees ITS OWN fleet, never another org's. `brands` pins it to the
+    // chain-running brands (a pure AI-cloud tenant owns no chain fleet). Reads are
+    // live (luxd RPC + cloud `/v1/clusters`); honest empty per unreachable source.
+    id: 'fleet',
+    label: 'Fleet',
+    icon: Boxes,
+    description: 'Your validator nodes and the Kubernetes clusters they run on — one org-scoped board.',
+    category: 'Network',
+    status: 'enabled',
+    brands: ['hanzo', 'lux', 'zoo', 'pars'],
+    repo: 'hanzoai/console',
+    docs: `${DOCS}/nodes`,
+    kind: 'module',
+    routes: [{ path: '', component: FleetDashboard }],
   },
   {
     id: 'vpc',

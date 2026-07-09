@@ -37,6 +37,7 @@ import {
   selectDistribution,
   selectKpi,
   selectSeries,
+  selectTable,
   severityColor,
   statusColor,
   windowRows,
@@ -52,6 +53,8 @@ import type {
   MetricTile,
   MetricUnit,
   OverviewData,
+  OverviewColumn,
+  TableTile,
   TimeseriesTile,
 } from './config'
 
@@ -384,6 +387,81 @@ export function HealthTileView({ tile, data, loading }: { tile: HealthTile; data
             </XStack>
           ))}
         </XStack>
+      )}
+    </Panel>
+  )
+}
+
+// ── Table board (columnar rows: fleet nodes, clusters, …) ────────────────────
+
+/** Truncate a long identifier for a `mono` cell (keep head+tail, e.g. a NodeID). */
+function shortId(v: string): string {
+  return v.length > 24 ? `${v.slice(0, 12)}…${v.slice(-6)}` : v
+}
+
+function TableCell({ col, value, status }: { col: OverviewColumn; value: string; status?: string }) {
+  const end = col.align === 'end'
+  const cell =
+    col.kind === 'status' ? (
+      <XStack items="center" gap="$2" justify={end ? 'flex-end' : 'flex-start'}>
+        <YStack width={8} height={8} rounded="$10" style={{ backgroundColor: healthColor(status ?? value) }} />
+        <Text fontSize="$2" color="$color11" numberOfLines={1}>
+          {value || '—'}
+        </Text>
+      </XStack>
+    ) : (
+      <Text
+        fontSize="$2"
+        color={col.kind === 'mono' ? '$color10' : '$color12'}
+        numberOfLines={1}
+        style={{ fontFamily: col.kind === 'mono' ? 'ui-monospace, monospace' : undefined, textAlign: end ? 'right' : 'left' }}
+      >
+        {col.kind === 'mono' ? shortId(value || '—') : value || '—'}
+      </Text>
+    )
+  return (
+    <YStack flex={1} minW={90}>
+      {cell}
+    </YStack>
+  )
+}
+
+export function TableTileView({ tile, data, loading }: { tile: TableTile; data: OverviewData | null; loading: boolean }) {
+  const table = data ? selectTable(data, tile.key) : undefined
+  const rows = table?.rows ?? []
+  const cols = table?.columns ?? []
+
+  return (
+    <Panel title={tile.title} flex={1} minW={340} right={rows.length ? <Text fontSize="$2" color="$color10">{rows.length}</Text> : undefined}>
+      {loading && rows.length === 0 ? (
+        <YStack gap="$2">
+          {[0, 1, 2].map((i) => (
+            <SkeletonBar key={i} w="100%" h={28} />
+          ))}
+        </YStack>
+      ) : rows.length === 0 || cols.length === 0 ? (
+        <EmptyPanel note={tile.empty ?? 'No rows in this scope yet.'} />
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <YStack minW={cols.length * 120}>
+            <XStack gap="$3" py="$2" borderBottomWidth={1} borderColor="$borderColor">
+              {cols.map((c) => (
+                <YStack key={c.key} flex={1} minW={90}>
+                  <Text fontSize="$1" fontWeight="700" color="$color10" style={{ textAlign: c.align === 'end' ? 'right' : 'left' }} numberOfLines={1}>
+                    {c.label}
+                  </Text>
+                </YStack>
+              ))}
+            </XStack>
+            {rows.map((r) => (
+              <XStack key={r.id} gap="$3" py="$2.5" borderBottomWidth={1} borderColor="$borderColor" items="center">
+                {cols.map((c) => (
+                  <TableCell key={c.key} col={c} value={r.cells[c.key] ?? ''} status={r.status} />
+                ))}
+              </XStack>
+            ))}
+          </YStack>
+        </div>
       )}
     </Panel>
   )

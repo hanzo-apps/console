@@ -19,11 +19,12 @@
 import type { CloudUsageOverview } from '~/lib/api/usage'
 import type { AdminOverview } from '~/lib/api/admin-overview'
 import type { Finance } from '~/lib/api/finance'
-import type { PlatformApp } from '~/lib/api/platform'
+import type { PlatformApp, Cluster } from '~/lib/api/platform'
+import { clusterCapacity, isClusterRunning, fmtHeight, type NetworkInventory, type NodeRow } from '~/lib/api/nodes'
 import type { ServerlessFunction, FunctionsMetrics, OverviewStats } from '~/lib/api/functions'
 import type { EconomySnapshot } from '~/lib/api/economy'
 import type { MakerStatus } from '~/lib/api/trading'
-import type { OverviewData, OverviewEvent, OverviewHealth, OverviewPoint } from './config'
+import type { OverviewData, OverviewEvent, OverviewHealth, OverviewPoint, OverviewRow } from './config'
 
 const empty = (): OverviewData => ({ kpi: {}, series: {}, distribution: {}, activity: [], alerts: [], health: [] })
 
@@ -444,6 +445,137 @@ export function fromLuxIndexer(snap: EconomySnapshot | null, maker?: MakerStatus
     const pegs = maker.symbols.map((s) => s.pegErrorBps).filter((v): v is number => v != null)
     if (pegs.length) d.kpi.makerPegBps = { value: Math.max(...pegs.map((p) => Math.abs(p))) }
   }
+
+  return d
+}
+
+/**
+ * A validator node's row status → a health verdict for its table dot / health row.
+ * `active` (in the set + connected) → green; `offline` (a validator luxd reports not
+ * connected) → red; anything else (benched/unknown) → yellow. PURE.
+ */
+export function nodeStatusVerdict(status: NodeRow['status']): 'green' | 'yellow' | 'red' {
+  if (status === 'active' || status === 'connected') return 'green'
+  if (status === 'offline') return 'red'
+  return 'yellow'
+}
+
+/**
+ * Map the FLEET's two REAL, per-org, fail-closed sources onto `OverviewData` for the
+ * Fleet board — the owner's "see the whole fleet" surface. PURE (no I/O), so the
+ * mapping is unit-tested directly against the real wire shapes.
+ *
+ *   - `networks` (`NodesApi.inventory()` — luxd RPC via the brand-scoped `/nodes`
+ *     proxy): the blockchain node fleet. The board shows VALIDATORS (the owner's
+ *     "5 validators each"); each row is net / nodeID / height / health. `height` is the
+ *     network's P-chain height (`platform.getHeight`) — luxd returns ONE height per
+ *     network endpoint, not per validator, so every validator on a network reads that
+ *     network's height (honest — not a fabricated per-node figure). Networks are
+ *     already scoped by `nodeNetworksForBrand` server-side (lux sees lux-*, zoo sees
+ *     zoo-*), so this adapter never widens scope.
+ *   - `clusters` (`PlatformApi.listClusters()` — cloud `/v1/clusters`, the Visor
+ *     node-pool projection, org resolved from the Bearer owner): the org's dedicated
+ *     Kubernetes clusters; each row is name / region / nodes / status. `nodes` is the
+ *     provisioned node count summed from the cluster's pools (`clusterCapacity`), NOT a
+ *     live count (the control plane exposes pools, not per-droplet objects).
+ *
+ * Every tile degrades to its honest empty state when its source has no rows — a
+ * network that isn't reporting drops out of the validator table (and shows a red
+ * health row), an org with no dedicated clusters gets an empty clusters table. NEVER a
+ * fabricated node, height, cluster, or verdict.
+ */
+export function fromFleet(networks: NetworkInventory[], clusters: Cluster[]): OverviewData {
+  const d = empty()
+  const reporting = networks.filter((n) => n.status === 'reporting')
+
+  // ── Validator table (net / nodeID / height / health) ───────────────────────
+  const nodeRows: OverviewRow[] = []
+  for (const n of networks) {
+    for (const node of n.nodes) {
+      if (node.role !== 'validator') continue // the fleet = the validator set
+      nodeRows.push({
+        id: `${n.id}:${node.nodeID}`,
+        status: nodeStatusVerdict(node.status),
+        cells: {
+          network: n.label,
+          nodeID: node.nodeID,
+          // Network P-chain height (one per endpoint) — honest '—' when the RPC didn't answer.
+          height: fmtHeight(n.height),
+          status: node.status,
+        },
+      })
+    }
+  }
+  const validators = nodeRows.length
+
+  // ── Cluster table (name / region / nodes / status) ─────────────────────────
+  const clusterRows: OverviewRow[] = clusters.map((c) => {
+    const cap = clusterCapacity(c)
+    const running = isClusterRunning(c)
+    const state = (c.phase || c.status || '').toLowerCase()
+    const verdict: 'green' | 'yellow' | 'red' = running ? 'green' : state.includes('error') ? 'red' : 'yellow'
+    return {
+      id: c.doksClusterId || c.doClusterId || c.id || c.name,
+      status: verdict,
+      cells: {
+        name: c.name,
+        region: c.region || '—',
+        nodes: cap.nodes > 0 ? cap.nodes.toLocaleString() : '—',
+        status: c.phase || c.status || 'unknown',
+      },
+    }
+  })
+
+  d.tables = {
+    nodes: {
+      columns: [
+        { key: 'network', label: 'Network' },
+        { key: 'nodeID', label: 'Node ID', kind: 'mono' },
+        { key: 'height', label: 'Height', align: 'end' },
+        { key: 'status', label: 'Health', kind: 'status' },
+      ],
+      rows: nodeRows,
+    },
+    clusters: {
+      columns: [
+        { key: 'name', label: 'Cluster' },
+        { key: 'region', label: 'Region' },
+        { key: 'nodes', label: 'Nodes', align: 'end' },
+        { key: 'status', label: 'Status', kind: 'status' },
+      ],
+      rows: clusterRows,
+    },
+  }
+
+  // ── KPI tiles — real counts, honest em-dash when a source is empty ──────────
+  d.kpi.networks = { value: reporting.length }
+  d.kpi.validators = { value: validators }
+  d.kpi.clusters = { value: clusters.length }
+  const clusterNodes = clusters.reduce((s, c) => s + clusterCapacity(c).nodes, 0)
+  if (clusters.length) d.kpi.clusterNodes = { value: clusterNodes }
+
+  // ── Fleet health board — one row per network + one per cluster ─────────────
+  const health: OverviewHealth[] = []
+  for (const n of networks) {
+    health.push({
+      service: n.label,
+      health: n.status === 'reporting' ? 'green' : 'red',
+      detail:
+        n.status === 'reporting'
+          ? `${n.validators} validators · height ${fmtHeight(n.height)}`
+          : n.error || 'not reporting',
+    })
+  }
+  for (const c of clusters) {
+    const cap = clusterCapacity(c)
+    const running = isClusterRunning(c)
+    health.push({
+      service: c.name,
+      health: running ? 'green' : (c.phase || c.status || '').toLowerCase().includes('error') ? 'red' : 'yellow',
+      detail: `${c.region || 'region —'} · ${cap.nodes} node${cap.nodes === 1 ? '' : 's'}`,
+    })
+  }
+  d.health = health
 
   return d
 }

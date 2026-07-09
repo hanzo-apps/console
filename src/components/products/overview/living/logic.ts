@@ -22,6 +22,7 @@ import type {
   OverviewAlert,
   OverviewHealth,
   OverviewSeries,
+  OverviewTable,
 } from './config'
 
 // ── value formatting ─────────────────────────────────────────────────────────
@@ -140,6 +141,8 @@ export function healthTally(rows: readonly OverviewHealth[]): { healthy: number;
 export const selectKpi = (data: OverviewData, key: string): OverviewKpi | undefined => data.kpi[key]
 export const selectSeries = (data: OverviewData, key: string): OverviewSeries | undefined => data.series[key]
 export const selectDistribution = (data: OverviewData, key: string): OverviewSlice[] => data.distribution[key] ?? []
+/** A named table slice (fleet nodes/clusters), or undefined when the source has none. */
+export const selectTable = (data: OverviewData, key: string): OverviewTable | undefined => data.tables?.[key]
 
 /** Sum a distribution's positive values (the donut center total). */
 export function distributionTotal(slices: readonly OverviewSlice[]): number {

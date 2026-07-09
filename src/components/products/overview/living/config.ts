@@ -56,6 +56,26 @@ export type OverviewAlert = { id: string; severity: 'critical' | 'warning' | 'in
 /** A service-health row. */
 export type OverviewHealth = { service: string; health: 'green' | 'yellow' | 'red' | (string & {}); detail?: string }
 
+/** One column of a `table` tile — a key into each row's cells + how the cell renders. */
+export type OverviewColumn = {
+  /** Key into `OverviewRow.cells`. */
+  key: string
+  /** Column header. */
+  label: string
+  /** Cell rendering: plain `text` (default), a status-dot + text (`status`, colored by
+   *  the row's `status`), or a truncated monospaced identifier (`mono`). */
+  kind?: 'text' | 'status' | 'mono'
+  /** Right-align (numbers). */
+  align?: 'start' | 'end'
+}
+
+/** One row of a `table` tile — a stable id, a cell value per column key, and an
+ *  optional status verdict that colors any `status`-kind cell (green/yellow/red/…). */
+export type OverviewRow = { id: string; cells: Record<string, string>; status?: string }
+
+/** A columnar table of REAL rows (fleet nodes, clusters, …) — honest-empty when no rows. */
+export type OverviewTable = { columns: OverviewColumn[]; rows: OverviewRow[] }
+
 /**
  * The normalized data every tile reads. Keyed maps so a tile names its slice by a
  * stable key; every map may be partial (a slice with no data → honest empty tile).
@@ -67,6 +87,12 @@ export type OverviewData = {
   activity: OverviewEvent[]
   alerts: OverviewAlert[]
   health: OverviewHealth[]
+  /**
+   * Named columnar tables (fleet nodes, clusters, …) — a `table` tile names one by
+   * key. Optional so every existing `OverviewData` constructor is unaffected; a tile
+   * whose table is absent/empty renders its honest empty state.
+   */
+  tables?: Record<string, OverviewTable>
   /** Total count behind `activity` for pagination, when the source knows it. */
   activityTotal?: number
 }
@@ -121,6 +147,16 @@ export type AlertsTile = { tile: 'alerts'; title?: string }
 /** The service-health board. */
 export type HealthTile = { tile: 'health'; title?: string; empty?: string }
 
+/** A columnar table panel over `OverviewData.tables[key]` (fleet nodes, clusters, …). */
+export type TableTile = {
+  tile: 'table'
+  /** Key into `OverviewData.tables`. */
+  key: string
+  title: string
+  /** Empty-state copy when the table has no rows in this scope. */
+  empty?: string
+}
+
 /** Any tile. Discriminated on `tile` so the renderer branches exhaustively. */
 export type OverviewTile =
   | MetricTile
@@ -129,6 +165,7 @@ export type OverviewTile =
   | ActivityTile
   | AlertsTile
   | HealthTile
+  | TableTile
 
 /** The "videogame" layer — live updates + motion, all off-able for a static view. */
 export type LiveConfig = {

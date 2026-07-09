@@ -35,6 +35,7 @@ import {
   HealthTileView,
   MetricTileView,
   PanelSpinner,
+  TableTileView,
   TimeseriesTileView,
 } from './tiles'
 
@@ -158,6 +159,8 @@ function TileView({ tile, data, loading, live, index }: { tile: OverviewTile; da
       return <AlertsTileView tile={tile} data={data} loading={loading} />
     case 'health':
       return <HealthTileView tile={tile} data={data} loading={loading} />
+    case 'table':
+      return <TableTileView tile={tile} data={data} loading={loading} />
   }
 }
 

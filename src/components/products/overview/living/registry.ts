@@ -25,18 +25,19 @@
  * mismatch renders an honest empty tile (never a crash), so over-declaring a tile a
  * slow backend hasn't filled yet is safe.
  */
-import { Activity, ArrowLeftRight, BarChart3, Boxes, Building2, Coins, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, HeartPulse, Layers, LineChart, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
+import { Activity, ArrowLeftRight, BarChart3, Boxes, Building2, Coins, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, HeartPulse, Layers, LineChart, Network, Radio, Server, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
 
 import { UsageApi } from '~/lib/api/usage'
 import { AdminApi, type AdminOverview } from '~/lib/api/admin-overview'
 import { FinanceApi } from '~/lib/api/finance'
-import { PlatformApi } from '~/lib/api/platform'
+import { PlatformApi, type Cluster } from '~/lib/api/platform'
+import { NodesApi, type NetworkInventory } from '~/lib/api/nodes'
 import { FunctionsApi, deriveOverview } from '~/lib/api/functions'
 import { EconomyApi } from '~/lib/api/economy'
 import { TradingApi } from '~/lib/api/trading'
 import type { CloudUsageOverview } from '~/lib/api/usage'
 import type { LivingOverviewConfig, OverviewData, OverviewRange } from './config'
-import { fromAdminOverview, fromCloudUsage, fromFinance, fromFunctions, fromLuxIndexer, fromOverlord, healthFromApps } from './adapters'
+import { fromAdminOverview, fromCloudUsage, fromFinance, fromFleet, fromFunctions, fromLuxIndexer, fromOverlord, healthFromApps } from './adapters'
 
 /** The cloud-usage range key the commerce ledger adapter expects (identical set). */
 const usageRange = (r: OverviewRange): '24h' | '7d' | '30d' => r
@@ -534,6 +535,68 @@ const luxEconomyOverview: LivingOverviewConfig = {
   },
 }
 
+/**
+ * The FLEET board — the owner's "see and manage the whole fleet" surface, scoped to
+ * ONE org/brand. It composes the TWO real, per-org, fail-closed sources into one
+ * LivingOverview so console.lux.cloud (lux org) / console.zoo.* (zoo org) each shows
+ * ITS OWN fleet: the luxd VALIDATOR nodes (net / nodeID / height / health) and the
+ * Kubernetes CLUSTERS they run on (name / region / nodes / status).
+ *
+ *   - Nodes: `NodesApi.inventory()` → the brand-scoped `/nodes` proxy → luxd RPC. The
+ *     network set is `nodeNetworksForBrand(brand)` server-side (lux → lux-mainnet/
+ *     testnet/devnet, zoo → zoo-mainnet), so a Lux console can NEVER see Zoo's nodes.
+ *   - Clusters: `PlatformApi.listClusters()` → cloud `/v1/clusters` via the `/cloud`
+ *     user-bearer proxy, org resolved from the Bearer OWNER claim (never a client
+ *     header). A lux caller can never read zoo's clusters (fail-closed by pinning —
+ *     cloud `org_resolver.go` honors `X-Org-Id` only when it equals `user.Owner`).
+ *
+ * Each source loads independently and degrades to an honest empty table on failure —
+ * an unreachable network → no validator rows + a red health row; an org with no
+ * dedicated cluster → an empty clusters table ("runs on shared infrastructure"). It is
+ * a point-in-time inventory (no windowed series), so `ranged: false`.
+ *
+ * MANAGEMENT (provision/scale a cluster) is the existing `clusters` module's job over
+ * the same PaaS endpoints (`POST /v1/org/{org}/cluster`, `POST /v1/clusters/:id/pools`)
+ * — the Fleet board is the SEE surface; it never re-implements cluster ops.
+ */
+const fleetOverview: LivingOverviewConfig = {
+  id: 'fleet',
+  title: 'Fleet',
+  subtitle: 'Your blockchain validator nodes and the Kubernetes clusters they run on — scoped to your org.',
+  // A validator set + a cluster inventory are point-in-time (no windowed series today).
+  ranged: false,
+  live: { pollMs: 15000, countUp: true },
+  rows: [
+    [
+      { tile: 'metric', key: 'networks', label: 'Networks reporting', icon: Radio },
+      { tile: 'metric', key: 'validators', label: 'Validators', icon: Server },
+      { tile: 'metric', key: 'clusters', label: 'Clusters', icon: Network },
+      { tile: 'metric', key: 'clusterNodes', label: 'Cluster nodes', icon: Boxes },
+    ],
+    [{ tile: 'table', key: 'nodes', title: 'Validator nodes', empty: 'No validators reporting for your networks yet.' }],
+    [{ tile: 'table', key: 'clusters', title: 'Kubernetes clusters', empty: 'No dedicated clusters yet — your fleet runs on shared infrastructure.' }],
+    [{ tile: 'health', title: 'Fleet health', empty: 'Fleet health appears once your networks or clusters report.' }],
+  ],
+  // Compose the two real sources; each degrades independently (never throws a
+  // fabricated row). The `/nodes` proxy brand-scopes the networks and the `/cloud`
+  // proxy org-scopes the clusters, so this loader never widens scope.
+  load: async () => {
+    let networks: NetworkInventory[] = []
+    try {
+      networks = await NodesApi.inventory()
+    } catch {
+      /* honest empty — the validator table + network health rows show "not reporting" */
+    }
+    let clusters: Cluster[] = []
+    try {
+      clusters = await PlatformApi.listClusters()
+    } catch {
+      /* honest empty — the clusters table shows the shared-infrastructure empty state */
+    }
+    return fromFleet(networks, clusters)
+  },
+}
+
 /** The declared living overviews, by product id. Add a product = add one entry. */
 export const LIVING_OVERVIEWS: Record<string, LivingOverviewConfig> = {
   overview: platformOverview,
@@ -545,6 +608,7 @@ export const LIVING_OVERVIEWS: Record<string, LivingOverviewConfig> = {
   functions: functionsOverview,
   gpus: computeOverview,
   'lux-economy': luxEconomyOverview,
+  fleet: fleetOverview,
 }
 
 /** The living-overview config for a product id, if one is declared. */

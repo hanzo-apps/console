@@ -12,6 +12,7 @@ import {
   selectDistribution,
   selectKpi,
   selectSeries,
+  selectTable,
   statusColor,
   windowRows,
   worstHealth,
@@ -128,6 +129,33 @@ describe('ActivityTile contract — rows, status dots, virtualization, empty', (
   it('an empty feed yields no rows (the tile shows the honest empty note)', () => {
     const d: OverviewData = { ...board(), activity: [] }
     expect(d.activity).toEqual([])
+  })
+})
+
+describe('TableTile contract — columnar rows vs empty', () => {
+  const d: OverviewData = {
+    ...board(),
+    tables: {
+      nodes: {
+        columns: [
+          { key: 'network', label: 'Network' },
+          { key: 'nodeID', label: 'Node ID', kind: 'mono' },
+          { key: 'status', label: 'Health', kind: 'status' },
+        ],
+        rows: [{ id: 'n1', status: 'green', cells: { network: 'Lux Mainnet', nodeID: 'NodeID-AAA', status: 'active' } }],
+      },
+      empty: { columns: [], rows: [] },
+    },
+  }
+  it('selects a table with columns + rows', () => {
+    const t = selectTable(d, 'nodes')!
+    expect(t.rows).toHaveLength(1)
+    expect(t.columns.map((c) => c.key)).toEqual(['network', 'nodeID', 'status'])
+    expect(t.rows[0].cells.nodeID).toBe('NodeID-AAA')
+  })
+  it('an absent or empty table → the tile shows its honest empty note', () => {
+    expect(selectTable(d, 'does-not-exist')).toBeUndefined()
+    expect(selectTable(d, 'empty')!.rows).toEqual([])
   })
 })
 
