@@ -4,9 +4,9 @@
  * Logs — two real lenses, one product, honest states throughout.
  *
  *  1. APPLICATION logs (default) — full-text application/platform logs from the
- *     Hanzo o11y (SigNoz) runtime, read through the same-origin `/v1` bearer
+ *     Hanzo o11y (O11y) runtime, read through the same-origin `/v1` bearer
  *     proxy as `POST /v1/o11y/api/v3/query_range` (a `list`-panel `noop` builder
- *     query over `dataSource: logs`, newest first — `O11ySignozApi.logs`). Real
+ *     query over `dataSource: logs`, newest first — `ApmApi.logs`). Real
  *     log lines (time · severity · service · message), org-scoped by the minted
  *     bearer, filterable by severity + service. Honest states: loading, the
  *     shared o11y `RuntimeNotice` on 503/404/401/403, and an honest "connected ·
@@ -130,7 +130,7 @@ function Segmented<T extends string>({
   )
 }
 
-// ── Application logs lens (o11y / SigNoz) ─────────────────────────────────────
+// ── Application logs lens (o11y / O11y) ─────────────────────────────────────
 
 const RANGES: { key: string; label: string; seconds: number }[] = [
   { key: '15m', label: '15m', seconds: 900 },
@@ -278,7 +278,7 @@ function ApplicationLogsLens() {
       )}
 
       <Text fontSize="$1" color="$color10">
-        Application/platform logs from the Hanzo o11y runtime (OTLP → SigNoz), org-scoped. Emitted by
+        Application/platform logs from the Hanzo o11y runtime (OTLP → O11y), org-scoped. Emitted by
         services that ship OpenTelemetry logs; if a service isn&apos;t instrumented yet it won&apos;t appear here.
       </Text>
     </YStack>
@@ -404,7 +404,7 @@ function RequestActivityLens() {
 // ── the product ──────────────────────────────────────────────────────────────
 
 // Request activity (the org's billed API/model calls) is the guaranteed-real lens for
-// every org, so it leads and is the default. Application logs (OTLP → SigNoz) only
+// every org, so it leads and is the default. Application logs (OTLP → O11y) only
 // populate once a service ships instrumentation, so it must not be the landing tab.
 const LENSES: { key: Lens; label: string }[] = [
   { key: 'requests', label: 'Request activity' },

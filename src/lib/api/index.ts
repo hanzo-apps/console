@@ -250,7 +250,7 @@ export {
   type InfraList,
   type ExceptionGroup,
   type Dashboard,
-  type SignozDataSource,
+  type O11yDataSource,
   type LogRow,
   type TraceSpan,
 } from './apm'
