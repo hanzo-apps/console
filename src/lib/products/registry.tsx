@@ -104,6 +104,7 @@ import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
+import { PlatformModule } from '~/components/products/PlatformModule'
 import { MapModule } from '~/components/products/map/MapModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
@@ -1604,6 +1605,25 @@ export const catalog: CatalogEntry[] = [
   // ── Deploy — the PaaS control plane (platform.hanzo.ai) over the /paas
   //    proxy. Clusters and Kubernetes are the real, wired surfaces; the rest of
   //    the CI/CD pipeline ships incrementally.
+  {
+    // The project HUB: create an IAM-native project → deploy a static build (drag-drop
+    // zip/tar.gz → /v1/platform/sites) → manage deployments, domains, config → and
+    // deep-link the SAME project to hanzo.app (edit) + hanzo.chat (chat) on one shared
+    // key. The Platform-category flagship; `projects` stays the thin scope picker.
+    id: 'platform',
+    label: 'Platform',
+    icon: Layers,
+    description: 'Create, deploy, and ship your projects — drop a build, bind a domain, and edit or chat about the same project across hanzo.app and hanzo.chat.',
+    gcp: 'App Hosting',
+    category: 'Platform',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [
+      { path: '', component: PlatformModule },
+      { path: ':name', component: PlatformModule },
+    ],
+  },
   {
     id: 'projects',
     label: 'Projects',
