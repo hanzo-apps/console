@@ -188,6 +188,14 @@ describe('upstreamHeaders', () => {
     expect(h['Content-Type']).toBe('application/json')
   })
 
+  it('PRESERVES a non-JSON Content-Type on a body (a zip/tar.gz deploy artifact upload)', () => {
+    expect(upstreamHeaders(reqWith({ 'content-type': 'application/zip' }), 'maxpower', true, {})['Content-Type']).toBe('application/zip')
+    expect(upstreamHeaders(reqWith({ 'content-type': 'application/gzip' }), 'maxpower', true, {})['Content-Type']).toBe('application/gzip')
+    // multipart boundary must ride through so the backend can parse the parts.
+    const mp = 'multipart/form-data; boundary=abc123'
+    expect(upstreamHeaders(reqWith({ 'content-type': mp }), 'maxpower', true, {})['Content-Type']).toBe(mp)
+  })
+
   it('forwards the tenant sub-scope only when forwardScope is set and present', () => {
     const req = reqWith({ 'X-Project-Id': 'proj-1', 'X-Environment': 'mainnet' })
     expect(upstreamHeaders(req, 'maxpower', false, {})['X-Project-Id']).toBeUndefined()
@@ -312,6 +320,56 @@ describe('forwardWithUserBearer — rewrite-fed traversal fails closed (RED LOW-
     // The upstream URL is exactly the normalized allow-listed path (no traversal residue).
     const calledUrl = String((fetchMock.mock.calls[0] as unknown[])[0])
     expect(calledUrl).toBe('http://cloud-api.hanzo.svc.cluster.local:8000/v1/agents')
+  })
+})
+
+/**
+ * A BINARY deploy artifact (a zip/tar.gz static build) must forward through the ONE
+ * proxy VERBATIM — its bytes intact and its OWN Content-Type — never text-decoded
+ * (which UTF-8-corrupts binary) and never re-stamped `application/json`. This is the
+ * deploy-upload path (`POST /v1/platform/sites/:slug/deploy`).
+ */
+describe('forwardWithUserBearer — binary artifact passthrough (deploy upload)', () => {
+  // "PK\x03\x04" (zip magic) + a byte (0xFF) that is INVALID UTF-8 — a text read would drop/replace it.
+  const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0xff, 0x00])
+  const fetchMock = vi.fn(async () => new Response('{"status":"live"}', { status: 200 }))
+
+  const req = (): NextRequest =>
+    ({
+      method: 'POST',
+      headers: new Headers({
+        host: 'console.hanzo.ai',
+        origin: 'https://console.hanzo.ai',
+        'sec-fetch-site': 'same-origin',
+        'content-type': 'application/zip',
+      }),
+      nextUrl: { search: '' },
+      signal: undefined,
+      text: async () => {
+        throw new Error('binary body must NOT be read as text')
+      },
+      arrayBuffer: async () => zip.buffer,
+    }) as unknown as NextRequest
+
+  beforeEach(() => {
+    fetchMock.mockClear()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('forwards the exact bytes + the artifact Content-Type (not application/json)', async () => {
+    const res = await forwardWithUserBearer(req(), {
+      target: 'http://cloud-api.hanzo.svc.cluster.local:8000',
+      path: 'v1/platform/sites/my-app/deploy',
+      allow: allowCloudSurface,
+    })
+    expect(res.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const init = (fetchMock.mock.calls[0] as unknown[])[1] as RequestInit
+    expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/zip')
+    const body = init.body as Uint8Array
+    expect(body).toBeInstanceOf(Uint8Array)
+    expect(Array.from(body)).toEqual(Array.from(zip)) // byte-identical, no UTF-8 corruption
   })
 })
 
