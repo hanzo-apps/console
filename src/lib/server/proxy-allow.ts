@@ -177,7 +177,7 @@ export const CLOUD_HEADS: readonly string[] = [
   // POST/DELETE writes additionally require an admin role). One head admits the
   // policies list + the check sub-path. Backs the console's Authz page.
   'authz',
-  // Observability (hanzoai/o11y — SigNoz runtime): the cloud binary mounts /v1/o11y/*
+  // Observability (hanzoai/o11y runtime, forked from SigNoz): the cloud binary mounts /v1/o11y/*
   // and reverse-proxies it to the o11y Deployment (o11y.hanzo.svc), which rewrites
   // /v1/o11y/* → its internal /api/* routes. The console's Alerts page reads
   // /v1/o11y/v1/rules (alert rule states); cloud's principal gate refuses any bearer-

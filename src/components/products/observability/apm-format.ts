@@ -1,7 +1,7 @@
 /**
  * Display formatters for the APM / infra / exceptions surfaces — pure, display-only.
  *
- * SigNoz reports in its OWN units (latency in NANOSECONDS, throughput as a
+ * O11y reports in its OWN units (latency in NANOSECONDS, throughput as a
  * per-second rate, utilization as a 0..1 fraction), distinct from the LLM-trace
  * `format.ts` (latency in seconds, cost in USD). Keeping these separate is
  * separation of concerns: one module per unit system. No data is fabricated —

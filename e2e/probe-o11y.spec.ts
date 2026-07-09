@@ -1,5 +1,5 @@
 /**
- * LIVE probe of the o11y (SigNoz) backend through the console's own /v1 bearer
+ * LIVE probe of the o11y (O11y) backend through the console's own /v1 bearer
  * proxy. Logs in as z@hanzo.ai and, from the AUTHENTICATED page context, fetches
  * each candidate endpoint exactly as the new Observe modules will — same-origin
  * `<origin>/v1/o11y/*` (rewritten to `/v1/o11y/*`, cloud rewrites to the o11y
@@ -33,7 +33,7 @@ async function signIn(page: Page) {
   await page.waitForTimeout(2500)
 }
 
-/** now() epoch — SigNoz wants ns for services/errors, ms for infra. */
+/** now() epoch — O11y wants ns for services/errors, ms for infra. */
 const nowMs = Date.now()
 const endNs = String(nowMs * 1_000_000)
 const startNs = String((nowMs - 60 * 60 * 1000) * 1_000_000) // 1h window
@@ -43,7 +43,7 @@ const startMs = nowMs - 60 * 60 * 1000
 type Probe = { name: string; path: string; method: 'GET' | 'POST'; body?: unknown }
 
 const PROBES: Probe[] = [
-  // ── Dashboards (SigNoz) ──
+  // ── Dashboards (O11y) ──
   { name: 'dashboards.list', path: 'o11y/v1/dashboards', method: 'GET' },
   { name: 'dashboards.v2', path: 'o11y/v2/dashboards', method: 'GET' },
   // ── Service map / APM ──
