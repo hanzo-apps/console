@@ -4,7 +4,7 @@
  * Per-product Status — the REAL health of THIS product, from TWO orthogonal, live
  * sources, each honest by construction (never a fabricated green):
  *
- *  1. o11y (SigNoz) RED metrics for the product's OTel `service.name`
+ *  1. o11y (O11y) RED metrics for the product's OTel `service.name`
  *     (`ApmApi.serviceHealth`, org-scoped by the minted bearer) — the "is it serving
  *     traffic and healthy" signal: call rate, error rate, p99 latency, rolled to a
  *     green/yellow/red verdict. This works for a CUSTOMER too (o11y scopes by the JWT

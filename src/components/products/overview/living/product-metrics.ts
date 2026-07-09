@@ -13,7 +13,7 @@
  * FULL ledger — which is entirely inference calls flowing through it — and the subtitle +
  * the view's banner frame it as org-wide inference, not a fabricated per-product slice.
  *
- * Latency (p99) is the LIVE o11y (SigNoz) RED metric for the product's OTel service
+ * Latency (p99) is the LIVE o11y (O11y) RED metric for the product's OTel service
  * (`ApmApi.serviceHealth`, scoped to `subpageSourcesFor(entry).o11yService`), fetched in
  * parallel with the ledger and merged into `kpi.latencyP99`. The commerce ledger carries
  * no latency, so this is the ONE real source for it — and it degrades to an honest "—"

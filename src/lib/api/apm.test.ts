@@ -34,14 +34,14 @@ describe('apmWindow', () => {
     // ns = ms * 1e6
     expect(w.startNs).toBe(String(w.startMs * 1_000_000))
     expect(w.endNs).toBe(String(w.endMs * 1_000_000))
-    // ns strings are integer-only (no exponent) so SigNoz parses them
+    // ns strings are integer-only (no exponent) so O11y parses them
     expect(w.startNs).toMatch(/^\d+$/)
     expect(w.endNs).toMatch(/^\d+$/)
   })
 })
 
 describe('normalizeService', () => {
-  it('maps the SigNoz ServiceItem wire shape', () => {
+  it('maps the O11y ServiceItem wire shape', () => {
     const row = normalizeService({
       serviceName: 'cloud-api',
       p99: 125_000_000,
@@ -186,7 +186,7 @@ describe('normalizeNodes', () => {
 })
 
 describe('normalizeException / normalizeExceptions', () => {
-  it('maps a grouped error (the SigNoz Error struct)', () => {
+  it('maps a grouped error (the O11y Error struct)', () => {
     const e = normalizeException({
       exceptionType: 'RuntimeError',
       exceptionMessage: 'nil pointer',
@@ -211,7 +211,7 @@ describe('normalizeException / normalizeExceptions', () => {
 })
 
 describe('normalizeDashboard / normalizeDashboards', () => {
-  it('reads SigNoz nested data.{title,description,tags,widgets}', () => {
+  it('reads O11y nested data.{title,description,tags,widgets}', () => {
     const d = normalizeDashboard({
       uuid: 'u1',
       created_at: '2026-01-01T00:00:00Z',
@@ -234,7 +234,7 @@ describe('normalizeDashboard / normalizeDashboards', () => {
   })
 })
 
-describe('listQueryPayload (SigNoz v3 query_range LIST)', () => {
+describe('listQueryPayload (O11y v3 query_range LIST)', () => {
   const w = apmWindow(3600)
 
   it('builds a noop list builder query over the given dataSource with ms bounds', () => {
@@ -283,7 +283,7 @@ describe('listQueryPayload (SigNoz v3 query_range LIST)', () => {
 })
 
 describe('serviceFilterItem (scope a logs/traces query to one OTel service.name)', () => {
-  it('builds the service.name resource-attribute equality SigNoz expects', () => {
+  it('builds the service.name resource-attribute equality O11y expects', () => {
     const f = serviceFilterItem('logs', 'vector')
     expect(f.op).toBe('=')
     expect(f.value).toBe('vector')
@@ -381,9 +381,9 @@ describe('toIso', () => {
 })
 
 describe('normalizeLogRow / normalizeLogs', () => {
-  it('projects a SigNoz log row into {id,timestamp,severity,service,body}', () => {
+  it('projects a O11y log row into {id,timestamp,severity,service,body}', () => {
     const isoT = '2026-07-03T00:00:00.000Z'
-    const ns = String(Date.parse(isoT) * 1_000_000) // ns epoch as SigNoz emits
+    const ns = String(Date.parse(isoT) * 1_000_000) // ns epoch as O11y emits
     const row = {
       timestamp: ns,
       data: { id: 'log-1', severity_text: 'ERROR', 'service.name': 'iam', body: 'boom' },
