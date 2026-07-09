@@ -110,6 +110,11 @@ const aiSurfaceRewrites = () => ({
     // proxy → cloud-api `/v1/*`. Only the NON-cloud backends are dispatched below.
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/ai/v1/${h}` })),
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/v1/${h}/:path*` })),
+    // The SaaS-operations god-view is served by COMMERCE (the money SOT), NOT the
+    // cloud aggregate: route /v1/admin/saas to its OWN global-admin-gated commerce
+    // proxy (`app/admin/saas`). Placed before the aggregate map so it wins; `saas` is
+    // deliberately NOT in ADMIN_V1_HEADS (that list forwards to cloud /v1/admin/*).
+    { source: `/v1/admin/saas`, destination: `/admin/saas` },
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}`, destination: `/admin/aggregate/${h}` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}/:path*`, destination: `/admin/aggregate/${h}/:path*` })),
     // Public compute catalog → the visor `/vm` proxy.
