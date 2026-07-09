@@ -1,25 +1,8 @@
-/* Geist Mono — canonical Hanzo mono face (code/data). */
+/* Canonical Hanzo faces — Geist Sans (UI/body/headings) + Geist Mono (code/data),
+   loaded from the same CDN package so both faces resolve one way. Geist ships a full
+   real weight range, so headings render a true heavier cut, never a synthesized face. */
+@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css');
 @import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css');
-
-/* Basel Grotesk — canonical Hanzo UI/body/display/heading face (self-hosted). */
-@font-face {
-  font-family: 'Basel';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src:
-    url('/fonts/Basel-Grotesk-Book.woff2') format('woff2'),
-    url('/fonts/Basel-Grotesk-Book.woff') format('woff');
-}
-@font-face {
-  font-family: 'Basel';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src:
-    url('/fonts/Basel-Grotesk-Medium.woff2') format('woff2'),
-    url('/fonts/Basel-Grotesk-Medium.woff') format('woff');
-}
 
 html,
 body,
@@ -31,17 +14,15 @@ body {
   margin: 0;
   background-color: var(--background, #000000);
   color: var(--color, #ededf1);
-  font-family:
-    'Basel', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Geist', system-ui, -apple-system, sans-serif;
   /* Calm type rendering — crisp, low-glare, comfortable rhythm for a full workday. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   line-height: 1.5;
-  /* Basel ships only Book (400) + Medium (500). NEVER let the browser fabricate a
-     heavier/oblique face — a requested 600/700/800 falls to the real Medium (500)
-     via CSS font-matching, so headings are crisp Medium, never a smeared faux-bold.
-     Inherited by every element; the ONE place the whole product bans synthesis. */
+  /* Geist ships a full real weight range, so a requested 500/600/700 resolves to a
+     genuine cut — never a browser-fabricated faux-bold/oblique. This bans synthesis
+     outright as a floor. Inherited by every element; the ONE place the product sets it. */
   font-synthesis: none;
 }
 
@@ -62,7 +43,7 @@ samp {
 /* Data/numeric face — Geist Mono + tabular figures for metric values, prices, IDs,
    counts and code-like tokens. The dashboard-grade "numbers are typeset" detail
    (Linear/Stripe): stat tiles, table numeric cells and monospace identifiers read
-   as precise, column-aligned data — distinct from Basel prose. One class, whole
+   as precise, column-aligned data — distinct from Geist prose. One class, whole
    product. `className` forwards to the DOM node on web, so a Gui <Text> can wear it. */
 .hz-mono {
   font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -75,9 +56,9 @@ samp {
   box-sizing: border-box;
 }
 
-/* Ban faux-bold/oblique EVERYWHERE. Basel ships only Book (400) + Medium (500);
-   a requested 600/700/800/900 must fall to the real Medium face, never a
-   browser-synthesized smear. Tamagui/RNW inject runtime styles that reset the
+/* Ban faux-bold/oblique EVERYWHERE. Geist ships real weight cuts, so a requested
+   600/700/800/900 must map to a genuine face, never a browser-synthesized smear.
+   Tamagui/RNW inject runtime styles that reset the
    inherited `font-synthesis` on Text nodes, so a body-level declaration loses —
    this universal rule (with !important, a true global invariant) wins on every
    element regardless of insertion order. One place, whole product. */
@@ -104,7 +85,7 @@ samp {
 html:root.t_dark {
   --background: #000000;
   --backgroundStrong: #000000;
-  --backgroundHover: #171717;
+  --backgroundHover: #101010;
   --backgroundPress: #050505;
   --backgroundFocus: #171717;
 
@@ -114,21 +95,21 @@ html:root.t_dark {
   --color2: #0a0a0a;
   --color3: #171717;
   --color4: #1f1f1f;
-  --color5: hsl(220 6% 16%);
-  --color6: hsl(220 6% 22%);
-  --color7: hsl(220 6% 30%);
-  --color8: hsl(219 6% 42%);
-  --color9: hsl(220 6% 55%);
-  --color10: hsl(219 7% 68%);
-  --color11: hsl(214 9% 83%);
-  --color12: hsl(210 12% 95%);
-  --color: hsl(210 12% 95%);
+  --color5: hsl(0 0% 16%);
+  --color6: hsl(0 0% 22%);
+  --color7: hsl(0 0% 30%);
+  --color8: hsl(0 0% 42%);
+  --color9: hsl(0 0% 55%);
+  --color10: hsl(0 0% 68%);
+  --color11: hsl(0 0% 83%);
+  --color12: hsl(0 0% 95%);
+  --color: #ededed;
 
   /* Gentle hairlines — present enough to define, quiet enough to disappear on black. */
-  --borderColor: hsl(220 8% 15%);
-  --borderColorHover: hsl(220 7% 23%);
-  --borderColorPress: hsl(220 8% 13%);
-  --borderColorFocus: hsl(220 7% 23%);
+  --borderColor: #1f1f1f;
+  --borderColorHover: #333333;
+  --borderColorPress: hsl(0 0% 13%);
+  --borderColorFocus: hsl(0 0% 23%);
 
   /* Elevation ladder (Material-inspired: ambient + key light). On the true-black
      canvas a cast shadow alone is nearly invisible, so each level pairs a deep
