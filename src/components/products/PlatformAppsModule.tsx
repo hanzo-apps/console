@@ -15,14 +15,17 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Globe, KeyRound, Play, RefreshCw, Rocket, ScrollText, Square } from '@hanzogui/lucide-icons-2'
+import { Boxes, Globe, KeyRound, Play, RefreshCw, Rocket, ScrollText, Square } from '@hanzogui/lucide-icons-2'
 
 import {
   PlatformAppsApi,
   type PlatformApp,
   type PlatformDeploymentLogs,
   type PlatformDomain,
+  type Sbom,
+  type SbomComponent,
 } from '~/lib/api/platform-apps'
+import { ApiError } from '~/lib/api'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
@@ -33,6 +36,7 @@ import { SlideOver } from '~/components/ui/SlideOver'
 import { StatusTag } from '~/components/ui/StatusTag'
 import {
   appDisplayStatus,
+  appImageRef,
   canDeploy,
   isDeployed,
   logSourceLabel,
@@ -44,6 +48,23 @@ import {
 
 /** Monospace family for code/env/log text (CSS `style` — not a Gui shorthand prop). */
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
+
+/** SBOM component table columns — Name (mono), Version, Type, License. The shared
+ *  DataTable wraps in overflow-x:auto, so it never breaks the 540px SlideOver. */
+const sbomColumns: Column<SbomComponent>[] = [
+  {
+    key: 'name',
+    header: 'Name',
+    render: (c) => (
+      <Text fontSize="$2" numberOfLines={1} style={{ fontFamily: MONO }}>
+        {c.name}
+      </Text>
+    ),
+  },
+  { key: 'version', header: 'Version', width: 90, render: (c) => <Text fontSize="$2" numberOfLines={1}>{c.version || '—'}</Text> },
+  { key: 'type', header: 'Type', width: 90, render: (c) => <Text fontSize="$2" numberOfLines={1}>{c.type || '—'}</Text> },
+  { key: 'license', header: 'License', width: 110, render: (c) => <Text fontSize="$2" numberOfLines={1}>{c.license || '—'}</Text> },
+]
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
@@ -212,6 +233,9 @@ function AppDetail({
   const [domains, setDomains] = useState<PlatformDomain[] | null>(null)
   const [logs, setLogs] = useState<PlatformDeploymentLogs | null>(null)
   const [logsLoading, setLogsLoading] = useState(false)
+  const [sbom, setSbom] = useState<Sbom | null>(null)
+  const [sbomLoading, setSbomLoading] = useState(false)
+  const [sbomNote, setSbomNote] = useState<string | null>(null)
 
   const loadDomains = useCallback(async () => {
     try {
@@ -237,10 +261,33 @@ function AppDetail({
     }
   }, [project, app.slug])
 
+  const imageRef = appImageRef(app)
+  const loadSbom = useCallback(async () => {
+    if (!imageRef) {
+      setSbom(null)
+      setSbomNote(null)
+      setSbomLoading(false)
+      return
+    }
+    setSbomLoading(true)
+    setSbomNote(null)
+    try {
+      setSbom(await PlatformAppsApi.sbom(imageRef))
+    } catch (e) {
+      setSbom(null)
+      setSbomNote(
+        e instanceof ApiError && e.status === 503 ? 'SBOM datastore unavailable.' : 'Could not load the SBOM.',
+      )
+    } finally {
+      setSbomLoading(false)
+    }
+  }, [imageRef])
+
   useEffect(() => {
     void loadDomains()
     void loadLogs()
-  }, [loadDomains, loadLogs])
+    void loadSbom()
+  }, [loadDomains, loadLogs, loadSbom])
 
   const act = useCallback(
     async (name: string, fn: () => Promise<PlatformApp>) => {
@@ -310,13 +357,32 @@ function AppDetail({
         <Fact label="Status" value={<StatusTag status={appDisplayStatus(app)} />} />
         <Fact label="Environment" value={app.environment} />
         <Fact label="Source" value={app.source} />
-        <Fact
-          label="Image"
-          value={app.source === 'image' ? `${app.image?.repository ?? ''}:${app.image?.tag || 'latest'}` : app.repo?.url || '—'}
-        />
+        <Fact label="Image" value={app.source === 'image' ? appImageRef(app) || '—' : app.repo?.url || '—'} />
         <Fact label="Replicas" value={app.replicas} />
         <Fact label="Namespace" value={app.namespace || '—'} />
       </YStack>
+
+      {/* Bill of Materials (SBOM) — components CI recorded for this image (cloud clients/sbom) */}
+      <SectionTitle icon={Boxes}>
+        Bill of Materials (SBOM){sbom ? ` · ${sbom.componentCount} components` : ''}
+      </SectionTitle>
+      {sbomLoading ? (
+        <Spinner size="small" color="$color11" />
+      ) : sbomNote ? (
+        <Text fontSize="$2" color="$color10">
+          {sbomNote}
+        </Text>
+      ) : sbom && sbom.components.length > 0 ? (
+        <DataTable<SbomComponent>
+          columns={sbomColumns}
+          rows={sbom.components}
+          rowKey={(c) => c.purl || `${c.name}@${c.version}`}
+        />
+      ) : (
+        <Text fontSize="$2" color="$color10">
+          No SBOM recorded for this image yet.
+        </Text>
+      )}
 
       {/* Env (secret-masked) */}
       <SectionTitle icon={KeyRound}>

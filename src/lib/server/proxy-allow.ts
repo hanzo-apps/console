@@ -130,6 +130,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // Bearer owner and 403s a cookie-only call, so it routes through /v1 like the
   // rest — the single `platform` head admits every project/app/deployment sub-path.
   'platform',
+  // SBOM datastore (cloud clients/sbom): /v1/sbom/{ref} — the software bill of
+  // materials CI recorded for an image ref/digest (components + licenses). The
+  // handler resolves the org from the Bearer owner and 403s a cookie-only call, so
+  // it routes through /v1 like platform — the single `sbom` head admits the by-ref
+  // lookup (the deployments view's read-only SBOM panel).
+  'sbom',
   // Finance ledger (hanzoai/finance, embedded in cloud): /v1/finance/{balance,credits,
   // usage,invoices,payment-methods,ledger,treasury}. Per-org double-entry ledger on
   // Base; the handler resolves the org from the Bearer owner and 403s a cookie-only

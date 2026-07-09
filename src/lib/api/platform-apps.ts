@@ -15,7 +15,7 @@
  * short-lived user token, org from its owner claim). The raw session cookie never
  * reaches cloud-api. `platform` is allow-listed in `proxy-allow.ts` CLOUD_HEADS.
  */
-import { cloudProxyV1Url, restDelete, restGet, restPost, restPut } from './client'
+import { ApiError, cloudProxyV1Url, restDelete, restGet, restPost, restPut } from './client'
 
 export type PlatformEnvVar = { key: string; value: string; secret: boolean }
 
@@ -93,6 +93,30 @@ export type PlatformDeploymentLogs = {
   logs: string
 }
 
+/** One row of a software bill of materials (SBOM) — a resolved dependency. */
+export type SbomComponent = {
+  name: string
+  version: string
+  type: string
+  purl: string
+  license: string
+}
+
+/**
+ * The SBOM recorded for a container image (`GET /v1/sbom/{ref}`, cloud clients/sbom).
+ * Published by CI on release and tracked in the datastore, keyed by image digest;
+ * a lookup for an un-released image simply has none (404 -> null at the client).
+ */
+export type Sbom = {
+  imageDigest: string
+  imageRef: string
+  sourceRepo: string
+  gitSha: string
+  ingestedAt: string // RFC3339
+  componentCount: number
+  components: SbomComponent[]
+}
+
 const seg = (s: string) => encodeURIComponent(s)
 const appBase = (project: string, app: string) =>
   `platform/projects/${seg(project)}/apps/${seg(app)}`
@@ -134,6 +158,20 @@ export const PlatformAppsApi = {
 
   deploymentLogs: (project: string, app: string, id: string): Promise<PlatformDeploymentLogs> =>
     restGet<PlatformDeploymentLogs>(cloudProxyV1Url(`${appBase(project, app)}/deployments/${seg(id)}/logs`)) as Promise<PlatformDeploymentLogs>,
+
+  /**
+   * The SBOM recorded for an image ref (`repository:tag`) or digest (`sha256:…`).
+   * Returns null on 404 (no SBOM recorded yet — expected for un-released images, so
+   * NOT an error); throws on any other non-200 (e.g. 503 datastore-unavailable).
+   */
+  sbom: async (imageRef: string): Promise<Sbom | null> => {
+    try {
+      return (await restGet<Sbom>(cloudProxyV1Url(`sbom/${seg(imageRef)}`))) ?? null
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null
+      throw e
+    }
+  },
 
   setEnv: (project: string, app: string, env: PlatformEnvVar[]): Promise<PlatformApp> =>
     restPut<PlatformApp>(cloudProxyV1Url(`${appBase(project, app)}/env`), { env }) as Promise<PlatformApp>,
