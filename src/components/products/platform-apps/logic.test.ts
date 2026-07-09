@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { PlatformApp } from '~/lib/api/platform-apps'
 import {
   appDisplayStatus,
+  appImageRef,
   canDeploy,
   isDeployed,
   logSourceLabel,
@@ -92,5 +93,17 @@ describe('logSourceLabel', () => {
     expect(logSourceLabel('app')).toBe('App logs')
     expect(logSourceLabel('none')).toBe('No live logs yet')
     expect(logSourceLabel(undefined)).toBe('No live logs yet')
+  })
+})
+
+describe('appImageRef', () => {
+  it('is repository:tag, defaulting an empty tag to latest', () => {
+    expect(appImageRef({ image: { repository: 'ghcr.io/hanzoai/foo', tag: 'v1.2.3' } })).toBe('ghcr.io/hanzoai/foo:v1.2.3')
+    expect(appImageRef({ image: { repository: 'ghcr.io/hanzoai/foo', tag: '' } })).toBe('ghcr.io/hanzoai/foo:latest')
+    expect(appImageRef({ image: { repository: 'ghcr.io/hanzoai/foo' } })).toBe('ghcr.io/hanzoai/foo:latest')
+  })
+  it('is empty when the app has no image yet', () => {
+    expect(appImageRef({ image: {} })).toBe('')
+    expect(appImageRef({ image: { repository: '', tag: 'v1' } })).toBe('')
   })
 })
