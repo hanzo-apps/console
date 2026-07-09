@@ -2786,3 +2786,15 @@ the removed billing band, and single-level nav are untouched).
   `platform` product + `:name` detail register). Live authenticated Playwright proof
   (Platform in the sidebar/map, create → drag-drop deploy → cross-surface links) is the
   post-deploy gate. Deep-link shape coordinated to the shared `?project=` key.
+
+### Platform is always-on — the HUB shows for every org (v8.4.126)
+
+Live verification of v8.4.125 (Playwright, signed in as Dave/maxpower, an org admin)
+found the new `platform` product resolved but did NOT appear in the customer's sidebar
+or Apps map: maxpower is entitlement-gated (enabled set = models/chat + the always-on
+essentials), and `platform` was neither always-on nor in its enabled set. Since the
+project HUB is a FIRST-CLASS, foundational capability (create → deploy → ship a project),
+it belongs with the always-on essentials, not behind an opt-in. Fix: add `platform` to
+`ALWAYS_ON_PRODUCTS` (entitlements.ts) so it shows in the sidebar + home Apps map +
+launcher for EVERY org (the route already resolved via the full catalog). `tsc` clean;
+`vitest` green (entitlements iterate-list test unaffected). Rebuild/redeploy → v8.4.126.
