@@ -2,14 +2,21 @@
  * APM / Infrastructure / Exceptions / Dashboards API — the O11y-flagship
  * observability surface, over the REAL Hanzo o11y (O11y) runtime.
  *
- * Transport: the same-origin user-bearer `/v1` proxy (`originV1Url`) — the
- * browser sends only its session cookie, the server route mints a short-lived IAM
- * bearer and forwards it, and cloud-api reverse-proxies `/v1/o11y/*` to the o11y
- * Deployment, which internally rewrites `/v1/o11y/*` → its `/api/*` controllers.
- * This is the SAME path AlertsModule already uses for `o11y/v1/rules`, so the whole
- * APM/infra/exceptions/dashboards surface rides it with no new plumbing. A cookie-
- * only or cross-tenant call is refused server-side (the o11y runtime scopes every
- * query by the JWT `owner` claim → `X-Org-Id`).
+ * Transport: the same-origin user-bearer `/v1` proxy (`cloudProxyV1Url`, now an alias
+ * of `originV1Url` → `<origin>/v1/o11y/<resource>`) — the browser sends only its session
+ * cookie, the `app/v1/[...path]` catch-all mints a short-lived IAM bearer and forwards it,
+ * and cloud-api serves the embedded o11y surface. Every cloud head is `/v1/`-rooted with
+ * ZERO prefix (the `/cloud/` prefix was retired in v8.4.120); the `o11y` head is allow-
+ * listed in `proxy-allow.ts` so a cookie-only or cross-tenant call is refused server-side
+ * (o11y scopes every query by the JWT `owner` claim → `X-Org-Id`).
+ *
+ * Paths are VERSION-LESS: the canonical o11y contract is `/v1/o11y/<resource>` with NO
+ * nested version and NO `/api/` — `o11y/services`, `o11y/dependency_graph`,
+ * `o11y/query_range`, `o11y/listErrors`, `o11y/dashboards`, … (the old `o11y/v1/*` /
+ * `o11y/v3/query_range` forms still resolve via a deprecated backend alias, but the
+ * client speaks the canonical version-less surface). This is the SAME path AlertsModule
+ * uses for `o11y/rules`, so the whole APM/infra/exceptions/dashboards surface rides it
+ * with no new plumbing.
  *
  * o11y (O11y) speaks plain REST (raw JSON, real HTTP status codes), NOT the
  * casibase `{status,msg,data}` envelope — so we use `restGet`/`restPost`. When the
@@ -27,7 +34,7 @@
  * fields degrade to 0 / '' / [], never a throw), so the pure normalizers unit-test
  * without a live backend.
  */
-import { restGet, restPost, originV1Url } from './client'
+import { restGet, restPost, cloudProxyV1Url } from './client'
 
 // ── Time windows ──────────────────────────────────────────────────────────────
 
@@ -409,13 +416,11 @@ export function normalizeDashboards(body: unknown): Dashboard[] {
 
 // ── Logs + Traces (O11y composite query_range) ──────────────────────────────
 //
-// The universal `POST /api/v3/query_range` builder query. A `list`-panel `noop`
-// query over `dataSource: logs | traces` returns RAW rows (recent log lines /
-// spans), newest first — the one true logs/traces read (`/api/v1/logs` is a stub
-// that returns `{"results":[]}`; query_range is what the O11y logs/traces
-// explorer actually issues). Time is epoch MILLISECONDS (v3) = `ApmWindow.startMs
-// /endMs`. Every helper is pure (JSON in, view-model out) so it unit-tests
-// without a live runtime.
+// The universal `POST /v1/o11y/query_range` builder query (version-less canonical
+// surface). A `list`-panel `noop` query over `dataSource: logs | traces` returns RAW
+// rows (recent log lines / spans), newest first — the one true logs/traces read.
+// Time is epoch MILLISECONDS = `ApmWindow.startMs/endMs`. Every helper is pure (JSON
+// in, view-model out) so it unit-tests without a live runtime.
 
 /** The telemetry signal a builder query reads. */
 export type O11yDataSource = 'logs' | 'traces' | 'metrics'
@@ -587,7 +592,7 @@ export function normalizeSpans(body: unknown): TraceSpan[] {
 
 // ── Transport ─────────────────────────────────────────────────────────────────
 
-const u = (path: string): string => originV1Url(`o11y/${path}`)
+const u = (path: string): string => cloudProxyV1Url(`o11y/${path}`)
 
 /** The APM POST body — a start/end window + optional tags filter (O11y shape). */
 type ApmBody = { start: string; end: string; tags?: unknown[]; service?: string }
@@ -599,16 +604,16 @@ const infraBody = (w: ApmWindow): InfraBody => ({ start: w.startMs, end: w.endMs
 
 export const ApmApi = {
   // ── Service map / APM ──
-  services: async (w: ApmWindow): Promise<ServiceRow[]> => normalizeServices(await restPost<unknown>(u('v1/services'), apmBody(w))),
+  services: async (w: ApmWindow): Promise<ServiceRow[]> => normalizeServices(await restPost<unknown>(u('services'), apmBody(w))),
   dependencies: async (w: ApmWindow): Promise<DependencyEdge[]> =>
-    normalizeDependencies(await restPost<unknown>(u('v1/dependency_graph'), apmBody(w))),
+    normalizeDependencies(await restPost<unknown>(u('dependency_graph'), apmBody(w))),
   topOperations: async (w: ApmWindow, service: string): Promise<TopOperation[]> =>
-    normalizeTopOperations(await restPost<unknown>(u('v1/service/top_operations'), apmBody(w, { service }))),
+    normalizeTopOperations(await restPost<unknown>(u('service/top_operations'), apmBody(w, { service }))),
 
   // ── Infrastructure ──
-  hosts: async (w: ApmWindow): Promise<InfraList<HostRow>> => normalizeHosts(await restPost<unknown>(u('v1/hosts/list'), infraBody(w))),
-  pods: async (w: ApmWindow): Promise<InfraList<PodRow>> => normalizePods(await restPost<unknown>(u('v1/pods/list'), infraBody(w))),
-  nodes: async (w: ApmWindow): Promise<InfraList<NodeRow>> => normalizeNodes(await restPost<unknown>(u('v1/nodes/list'), infraBody(w))),
+  hosts: async (w: ApmWindow): Promise<InfraList<HostRow>> => normalizeHosts(await restPost<unknown>(u('hosts/list'), infraBody(w))),
+  pods: async (w: ApmWindow): Promise<InfraList<PodRow>> => normalizePods(await restPost<unknown>(u('pods/list'), infraBody(w))),
+  nodes: async (w: ApmWindow): Promise<InfraList<NodeRow>> => normalizeNodes(await restPost<unknown>(u('nodes/list'), infraBody(w))),
 
   // ── Exceptions ──
   exceptions: async (
@@ -616,7 +621,7 @@ export const ApmApi = {
     opts: { limit?: number; order?: 'ascending' | 'descending'; orderParam?: string } = {},
   ): Promise<ExceptionGroup[]> =>
     normalizeExceptions(
-      await restPost<unknown>(u('v1/listErrors'), {
+      await restPost<unknown>(u('listErrors'), {
         start: w.startNs,
         end: w.endNs,
         limit: opts.limit ?? 100,
@@ -626,8 +631,8 @@ export const ApmApi = {
     ),
 
   // ── Dashboards ──
-  dashboards: async (): Promise<Dashboard[]> => normalizeDashboards(await restGet<unknown>(u('v1/dashboards'))),
-  dashboard: (uuid: string): Promise<unknown> => restGet<unknown>(u(`v1/dashboards/${encodeURIComponent(uuid)}`)),
+  dashboards: async (): Promise<Dashboard[]> => normalizeDashboards(await restGet<unknown>(u('dashboards'))),
+  dashboard: (uuid: string): Promise<unknown> => restGet<unknown>(u(`dashboards/${encodeURIComponent(uuid)}`)),
 
   // ── Logs + Traces (composite query_range; `/api/v1/logs` is a stub) ──
   // A `service` scopes the query to ONE product's OTel `service.name` (the per-product
@@ -635,12 +640,12 @@ export const ApmApi = {
   // to the same service so a runtime ignoring the item can never leak other services' lines.
   logs: async (w: ApmWindow, limit = 200, service?: string): Promise<LogRow[]> => {
     const filters = service ? [serviceFilterItem('logs', service)] : []
-    const rows = normalizeLogs(await restPost<unknown>(u('v3/query_range'), listQueryPayload('logs', w, limit, filters)))
+    const rows = normalizeLogs(await restPost<unknown>(u('query_range'), listQueryPayload('logs', w, limit, filters)))
     return service ? rows.filter((r) => !r.service || r.service === service) : rows
   },
   traceSearch: async (w: ApmWindow, limit = 200, service?: string): Promise<TraceSpan[]> => {
     const filters = service ? [serviceFilterItem('traces', service)] : []
-    const rows = normalizeSpans(await restPost<unknown>(u('v3/query_range'), listQueryPayload('traces', w, limit, filters)))
+    const rows = normalizeSpans(await restPost<unknown>(u('query_range'), listQueryPayload('traces', w, limit, filters)))
     return service ? rows.filter((r) => !r.service || r.service === service) : rows
   },
 

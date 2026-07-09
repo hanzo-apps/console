@@ -5,8 +5,8 @@
  * platform observability engine.
  *
  * Reads the REAL alert rules from Hanzo o11y through the same-origin user-bearer
- * `/v1` proxy: `GET /v1/o11y/v1/rules` (cloud rewrites `/v1/o11y/*` → the o11y
- * runtime's `/api/v1/rules`, `listRules` → `ListRuleStates`). The o11y envelope is
+ * `/v1` bearer proxy: `GET /v1/o11y/rules` (the version-less canonical o11y surface;
+ * cloud serves the embedded o11y `rules` → `ListRuleStates`). The o11y envelope is
  * `{status,data:{rules:[…]}}` where each rule is a flattened `GettableRule`
  * (`alert`, `state`, `labels.severity`, `description`, …) — normalized here to the
  * console's flat Alert row. When o11y isn't reachable / authorized the load fails and
@@ -17,7 +17,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { restGet, originV1Url } from '~/lib/api/client'
+import { restGet, cloudProxyV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
@@ -74,7 +74,7 @@ export function AlertsModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<O11yRulesResponse>(originV1Url('o11y/v1/rules'))
+      const r = await restGet<O11yRulesResponse>(cloudProxyV1Url('o11y/rules'))
       setRows((r?.data?.rules ?? []).map(toAlert))
       setLoadError(null)
     } catch (e) {
