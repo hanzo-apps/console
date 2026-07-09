@@ -2732,3 +2732,57 @@ does NOT reinvent MFA, billing, or AI-connection storage. Six steps, in order:
   Authenticated visual e2e of the flow is post-deploy (the `(dashboard)` group is
   behind AuthGate). No version bump — the release/merge agent bumps `package.json`
   + tags the image.
+
+## console.hanzo.ai is the project HUB — deploy IAM-native projects + cross-surface deep links (v8.4.125)
+
+Makes console the **project hub**: create an IAM-native project → drag-drop a static
+build to deploy it over the embedded PaaS → manage deployments/domains/config → and
+deep-link the SAME project to hanzo.app (edit) and hanzo.chat (chat) on ONE shared key.
+Builds on the current main (the SBOM platform-deployments panel #145 stays; models,
+the removed billing band, and single-level nav are untouched).
+
+- **New first-class `Platform` product** (`registry.tsx` id `platform`, category
+  Platform, icon `Layers`, `kind:'module'`, routes `'' | ':name'`) → shows in the
+  sidebar, the home Apps map, the app launcher, and gets the shared per-product
+  Status/Logs/Metrics/Settings — like every product, via the ONE `visibleCatalog` gate
+  (ungated on this deployment; entitlements endpoint 404 = show-all). The existing
+  `projects` entry stays the thin org→project SCOPE picker (no duplicate — both create
+  through the ONE `ProjectApi.create`); `apps` stays the read-only hanzo.app-published
+  sites lens.
+- **ONE shared key, IAM-native.** A project is IAM-native (`ProjectApi`, keyed by
+  `name`); the create form slugifies the name so `name === deploy site slug === the
+  cross-surface ?project= value` — no `svc` suffix, no second copy of project state.
+  `ProjectApi.create` gained an optional `displayName` (friendly label; the slug is the
+  id) — additive, backward-compatible.
+- **Deploy = the embedded PaaS static engine** (`/v1/platform/sites/*`, the SAME store
+  hanzo.app deploys to; cloud `clients/projectsvc`, PR #204). New client
+  `lib/api/platform-sites.ts` (`PlatformSitesApi` — list/get/create/ensure/update,
+  `deploy` (raw artifact), listDeployments/getDeployment, list/bindDomains) over the
+  same-origin `/v1` bearer BFF (`platform` head already allow-listed; org from the
+  Bearer owner). The project HUB detail (`platform-hub/PlatformDetail.tsx`) has a
+  drag-and-drop **DeployDropzone** (a `.zip`/`.tar.gz` uploaded verbatim, or a FOLDER
+  packed client-side to tar.gz), a deployments table with per-deploy **status/logs**
+  (the deployment record + its message — static deploys are synchronous, no build log),
+  a custom-domains bind/list panel (honest 403 for a non-operator org), and a
+  framework/cache/description config editor.
+- **Binary upload through the ONE proxy (DRY, benefits every future upload).** The
+  shared `bearer-proxy.forwardWithUserBearer` now forwards a NON-JSON body VERBATIM
+  (bytes + its own Content-Type incl. any multipart boundary) instead of
+  `req.text()`-decoding it (which UTF-8-corrupts binary) and re-stamping
+  `application/json`. New `client.restPostRaw` posts the artifact bytes (keeps the
+  401-refresh via `authedFetch`). Pure client-side archive builder
+  (`lib/deploy/archive.ts` — a correct ustar tar + native `CompressionStream` gzip) +
+  drop/folder reader (`lib/deploy/drop.ts`, `webkitGetAsEntry` walk).
+- **Cross-surface deep links (both directions).** `lib/products/cross-surface.ts` —
+  `?project=<iamProjectId>`, matching the repo's existing `apps.ts builderEditUrl`
+  convention: **Edit → `hanzo.app/dev?project=<id>`**, **Chat →
+  `hanzo.chat/?project=<id>`** (injection-safe via `URLSearchParams`; `config.chatUrl`
+  added, env `NEXT_PUBLIC_CHAT_URL`). Inbound: `components/ProjectDeepLink.tsx` (mounted
+  in the dashboard layout) honors an inbound `?project=` (opened from hanzo.app/chat) →
+  selects that project scope + opens its hub detail.
+- Verification: `tsc --noEmit` clean; `vitest` **2122/2122** (180 files; +48 new:
+  cross-surface deep-link/slug, archive tar builder, hub logic, platform-sites contract,
+  bearer-proxy binary-passthrough + Content-Type preservation); `next build` ✓ (the
+  `platform` product + `:name` detail register). Live authenticated Playwright proof
+  (Platform in the sidebar/map, create → drag-drop deploy → cross-surface links) is the
+  post-deploy gate. Deep-link shape coordinated to the shared `?project=` key.

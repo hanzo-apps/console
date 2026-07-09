@@ -6,6 +6,7 @@ import { OrgGate } from '~/components/OrgGate'
 import { DashboardShell } from '~/components/DashboardShell'
 import { PreferencesProvider } from '~/lib/products/preferences'
 import { ScopeProvider } from '~/lib/scope-context'
+import { ProjectDeepLink } from '~/components/ProjectDeepLink'
 import { ToastProvider } from '~/components/ui/Toast'
 import { OnboardingGate } from '~/components/onboarding/OnboardingGate'
 import { CommandPaletteProvider } from '~/components/CommandPalette'
@@ -23,6 +24,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <WaitlistGate>
         <OrgGate>
           <ScopeProvider>
+            {/* Honor an inbound ?project=<iamProjectId> (opened from hanzo.app/chat):
+                select that project scope + open its Platform hub. Renders nothing. */}
+            <ProjectDeepLink />
             <PreferencesProvider>
               <ToastProvider>
                 {/* First-run onboarding takes over the whole surface for a user who
