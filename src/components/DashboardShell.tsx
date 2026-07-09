@@ -94,6 +94,7 @@ import { ProductCustomize, ManagePins } from '~/components/SidebarCustomize'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import { ThemeToggle } from '~/components/ui/ThemeToggle'
+import { SystemStatusBadge } from '~/components/ui/SystemStatusBadge'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
 import { BrandLogo } from '~/components/ui/BrandLogo'
 import { OrgSwitcher } from '~/components/OrgSwitcher'
@@ -1072,6 +1073,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               the sidebar identity block (user → org); the topbar keeps the project
               scope switcher, theme, docs, and notifications. */}
           <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$2">
+            <SystemStatusBadge />
             <ThemeToggle />
             <Button size="$2" chromeless icon={<CircleHelp size={16} />} onPress={openDocs} aria-label="Documentation" />
             <Button size="$2" chromeless icon={<Bell size={16} />} onPress={() => push('/alerts')} aria-label="Notifications" />
