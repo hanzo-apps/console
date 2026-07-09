@@ -38,6 +38,7 @@ const ALLOWED = new Set([
   'v1/audio/speech', // text-to-speech (JSON in → audio bytes out) for the Playground Audio tab
   'v1/images/generations', // text-to-image (JSON in → image url/b64 out) for the Playground Image tab
   'v1/videos/generations', // text-to-video CREATE — async: JSON in → a queued job object out (Sora-style)
+  'v1/ai/connections', // AI Login Manager (ai#79/#80): GET list + POST link a BYO provider key (KMS-sealed server-side)
 ])
 
 /**
@@ -53,9 +54,17 @@ const ALLOWED = new Set([
  */
 const VIDEO_JOB_PATH = /^v1\/videos\/[A-Za-z0-9._-]+(?:\/content)?$/
 
+/**
+ * Per-provider AI-connection sub-path: `/v1/ai/connections/<provider>` — the
+ * disconnect (the AI router maps POST here to the delete). Anchored to the
+ * connections head with a conservative provider charset, so it stays a narrow
+ * allow-list, never a general tunnel.
+ */
+const AI_CONNECTION_PATH = /^v1\/ai\/connections\/[A-Za-z0-9_-]+$/
+
 /** Whether a resolved `/v1/<...>` path is reachable through this proxy. */
 function isAllowedAiPath(p: string): boolean {
-  return ALLOWED.has(p) || VIDEO_JOB_PATH.test(p)
+  return ALLOWED.has(p) || VIDEO_JOB_PATH.test(p) || AI_CONNECTION_PATH.test(p)
 }
 
 type Ctx = { params: Promise<{ path: string[] }> }

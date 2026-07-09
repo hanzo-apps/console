@@ -2662,3 +2662,73 @@ axes, one class-fix:
   `ApmApi.dashboards → /v1/o11y/dashboards`; `apm-service-scope` pins `/v1/o11y/query_range`);
   Proof A runs green against the live cluster. Rebased onto main (post-v8.4.120 `/cloud`-prefix
   retirement) → **v8.4.124**.
+## First-run onboarding — 2FA · consent · team · trial credits · AI access (feat/onboarding)
+
+A guided post-signup wizard (Vercel-style) shown ONCE to a signed-in user who
+hasn't finished it, then never again. It runs AFTER auth + org selection (a NEW
+`OnboardingGate` inside the dashboard layout, placed inside `PreferencesProvider`
++ `ToastProvider` but ABOVE the launcher/palette/chat providers so no overlay
+floats over the takeover), and reuses the console's existing real surfaces — it
+does NOT reinvent MFA, billing, or AI-connection storage. Six steps, in order:
+
+- **1 · Secure account (2FA) — REAL.** Enrolls TOTP over the existing `MfaApi` →
+  `/console/mfa/*` BFF → IAM `mfa/setup/{initiate,verify,enable}` (the same path
+  Profile → Security uses). Skippable ("Skip securing my account"); if 2FA is
+  already on (session claims) it just confirms.
+- **2 · Data & consent — persisted (see gap).** Required Terms + Privacy
+  acknowledgement + an OPTIONAL "improve models with my data" toggle (DEFAULT
+  OFF). Persisted onto the account via the onboarding preference.
+- **3 · Team / workspace — REAL.** Confirms the org (created at first-run
+  `OrgOnboarding`) and lets the user NAME it via `TeamApi.{organization,
+  updateOrganization}` (org-admin, own-org-pinned server-side). Best-effort —
+  never blocks the flow.
+- **4 · Free trial credits — REAL.** Card-on-file → trial credits, no upfront
+  charge. The card is entered ONLY in Square's hosted element (`useSquareCard`,
+  the PAN never touches the console); `BillingApi.createPaymentMethod({token})`
+  vaults it (commerce grants/extends the trial as a handler side-effect, $1
+  verify-then-void), `welcome()` claims the fixed starter grant (idempotent), and
+  `balance()` shows the granted balance. Honest "payments not configured" when
+  `paymentConfig` has no Square app. Skippable.
+- **5 · AI access — REAL (b/c), honest gap (a).** Three cards: (a) **Connect a
+  provider login (OAuth)** — a real 3-legged OAuth to sign into a ChatGPT/Claude/
+  Gemini account is NOT on the backend, so this is an honest "coming soon", never a
+  fake connection; (b) **Bring your own API keys** — paste an OpenAI/Anthropic/
+  Google key, wired to the REAL, KMS-sealed AI Login Manager (new `AiConnectionsApi`
+  → `/v1/ai/connections`, ai#79/#80; `v1/ai/connections` added to the `/ai` proxy
+  allow-list; keys sealed server-side, never plaintext); (c) **Let Hanzo power it**
+  — one-click smart routing via `AiAccountsApi.saveSettings({routingEnabled:true})`
+  (the native router, up to 90% cheaper).
+- **6 · First action — REAL.** CTA tiles (Start a chat · Playground · Create an
+  API key · Deploy a project) that complete onboarding and deep-link into the
+  product; plus "Go to console".
+
+- **Persistence + resume/skip.** The whole state is ONE object under the account
+  preference `onboarding` (`usePreferences().set` → `AccountApi.updatePreferences`,
+  cross-device) — `completed` flag, resume `step`, per-step status, `consent`, and
+  `aiChoices`. A half-finished flow RESUMES at the saved step; "I'll finish later"
+  hides it for the session (sessionStorage, still resumable); a completed one never
+  shows again. Skipped in the static embed + on the admin host.
+- **BACKEND GAP (flagged, mitigated).** The canonical write `POST /v1/iam/update-
+  preferences` is NOT served by IAM today (the whole console preferences system
+  rides it; the optimistic write silently no-ops) — so completion also writes a
+  LOCAL guard (`lib/onboarding/guard.ts`, localStorage) so the wizard never
+  re-nags before the endpoint lands, and upgrades to cross-device automatically
+  once it does. **Backend tickets:** (1) IAM `update-preferences` (self-scoped
+  shallow-merge into `Properties["hanzo.preferences"]`); (2) AI provider-login
+  OAuth (authorize/callback for OpenAI/Anthropic/Google model accounts — the
+  KB-connector OAuth in `cloud/clients/knowledge` is the template); (3) optional:
+  a fixed-amount, webhook-driven trial grant on `payment_method.added` (today the
+  grant is a synchronous `CreatePaymentMethod` side-effect of a plan-derived
+  amount + the idempotent `welcome()` $5).
+- **Files.** Pure logic `src/lib/onboarding/steps.ts` (+ `steps.test.ts`, 11
+  tests) + `guard.ts`; `src/components/onboarding/` (`OnboardingGate`,
+  `OnboardingWizard`, `parts.tsx`, `types.ts`, `steps/{Secure,Consent,Team,
+  Credits,AiAccess,Launch}Step.tsx`); new client `src/lib/api/ai-connections.ts`;
+  `app/ai/[...path]/route.ts` (+`v1/ai/connections` head); `app/(dashboard)/
+  layout.tsx` (mounts the gate). Strictly @hanzo/gui v5 shorthands, monochrome +
+  Geist, reuses `PrimaryButton`/`Field*`/`FadeIn`/`HanzoMark`/`useToast`.
+- **Verification.** `tsc --noEmit` clean; `vitest` **2074/2074** (175 files; +11
+  onboarding-logic); `next build` ✓ Compiled successfully (all routes register).
+  Authenticated visual e2e of the flow is post-deploy (the `(dashboard)` group is
+  behind AuthGate). No version bump — the release/merge agent bumps `package.json`
+  + tags the image.
