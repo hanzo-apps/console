@@ -174,7 +174,7 @@ export async function resilientFetch(url: string, init: RequestInit, deps: Resil
  *
  *  On the embed ambient-cookie money path (`IS_EMBED`), a mutating request (POST/PUT/
  *  PATCH/DELETE) carries the anti-CSRF `X-CSRF-Token` the cloud binary's `requireCSRF`
- *  demands (clients/console/csrf.go). A 403 on such a write means an expired/rotated
+ *  demands (clients/account/csrf.go). A 403 on such a write means an expired/rotated
  *  token (the server key resets on a cloud restart when `CONSOLE_CSRF_KEY` is unset), so
  *  we re-mint once and retry — blue's "SPA re-fetches on a 403" contract. Non-embed
  *  hosts write through the user-bearer BFF (CSRF-immune) so this is a no-op there. */
@@ -397,7 +397,7 @@ export const billingProxyBase = (): string =>
  * export and a `/billing/v1/*` request falls through to the SPA shell (HTML, not
  * JSON) — billing read "not available". The embed is same-origin with the cloud
  * binary, which serves the SAME per-tenant billing bridge at the canonical bare
- * `/v1/billing/<path>` (clients/console/billing.go — forwards to commerce with the
+ * `/v1/billing/<path>` (clients/account/billing.go — forwards to commerce with the
  * admin service token SCOPED to the validated caller's own subject). So the embed
  * addresses `<origin>/v1/billing/<path>` directly; the caller is resolved from the
  * first-party IAM session cookie (cloud middleware_identity.go). Non-embed hosts keep
@@ -449,7 +449,7 @@ export const commerceProxyBase = (): string =>
  *
  * In the go:embed console (`IS_EMBED`) the `app/commerce/[...path]` route handler is
  * stripped; the cloud binary serves the same per-tenant store bridge at the canonical
- * bare `/v1/commerce/<path>` (clients/console/commerce.go), scoped to the validated
+ * bare `/v1/commerce/<path>` (clients/account/commerce.go), scoped to the validated
  * caller's own org. So the embed addresses `<origin>/v1/commerce/<path>` directly.
  * Non-embed hosts keep the Next `/commerce/v1` proxy.
  */

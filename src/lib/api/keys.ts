@@ -5,9 +5,9 @@
  * confidential `hanzo-console` client; the browser only ever sends its cookie.
  *
  * SAME-ORIGIN by construction (the fix for the money crack): the old client hit
- * `config.cloudUrl/v1/console/keys` — a DIFFERENT origin than console.hanzo.ai — so
+ * `config.cloudUrl/v1/iam/keys` — a DIFFERENT origin than console.hanzo.ai — so
  * the browser `fetch` was blocked by CORS ("Failed to fetch"), and cloud-api's own
- * `/v1/console/keys` handler 501s on this deployment regardless. Addressing the
+ * `/v1/iam/keys` handler 501s on this deployment regardless. Addressing the
  * console's own `/keys` route (which uses the working IAM `mint-user-keys` path)
  * keeps the request same-origin and the credential entirely server-side.
  *
@@ -30,21 +30,21 @@ export type KeyStatus = {
  *
  * In the go:embed console (`IS_EMBED`) the `app/keys/route.ts` handler is stripped (no
  * Next server → the request falls through to the SPA shell), and the cloud binary serves
- * the canonical `hk-` key surface at `/v1/console/keys` (clients/console/console.go — GET
+ * the canonical `hk-` key surface at `/v1/iam/keys` (clients/account/account.go — GET
  * status, POST mint, DELETE revoke), resolving the caller from the first-party IAM
- * session cookie. So the embed addresses `<origin>/v1/console/keys` directly. Non-embed
+ * session cookie. So the embed addresses `<origin>/v1/iam/keys` directly. Non-embed
  * hosts keep the Next `/keys` proxy (confidential mint client).
  */
 const keysUrl = (): string =>
   IS_EMBED
-    ? originV1Url('console/keys')
+    ? originV1Url('iam/keys')
     : typeof window !== 'undefined'
       ? `${window.location.origin}/keys`
       : '/keys'
 
 async function keysReq<T>(method: 'GET' | 'POST' | 'DELETE'): Promise<T> {
   // In the embed build the mint/revoke write hits the cloud binary's ambient-cookie
-  // `/v1/console/keys` (requireCSRF), so echo the anti-CSRF token; a 403 = an
+  // `/v1/iam/keys` (requireCSRF), so echo the anti-CSRF token; a 403 = an
   // expired/rotated token → re-mint once and retry (blue's re-fetch-on-403 contract).
   const send = async (): Promise<Response> => {
     const headers: Record<string, string> = { Accept: 'application/json' }
