@@ -289,7 +289,7 @@ export function OrgSwitcher() {
     setBusy(true)
     setErr(null)
     try {
-      const res = await fetch(v1Url('console/onboard'), {
+      const res = await fetch(v1Url('iam/onboard'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

@@ -12,7 +12,7 @@
  *  1) NO server route handlers. A static export has no runtime to run an
  *     app/route.ts. This repo's route handlers are (a) BFF reverse-proxies that in
  *     one-binary collapse to the cloud `/v1/*` the SPA calls directly, and (b) the
- *     two standalone routes (keys/onboard) now ported to cloud `/v1/console/*`.
+ *     two standalone routes (keys/onboard) now ported to cloud `/v1/iam/{keys,onboard}`.
  *     Either way they must be absent from the export → we STASH them.
  *
  *  2) Every dynamic page segment needs `generateStaticParams()`. The console's two

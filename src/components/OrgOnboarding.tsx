@@ -42,7 +42,7 @@ export function OrgOnboarding() {
     setBusy(which)
     let res: Response
     try {
-      res = await fetch(v1Url('console/onboard'), {
+      res = await fetch(v1Url('iam/onboard'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

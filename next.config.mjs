@@ -151,7 +151,7 @@ const aiSurfaceRewrites = () => ({
  * PRECONDITION for a clean `output:'export'`: the app/ tree must contain NO dynamic
  * server route handlers (a static export has no server runtime to run them).
  * Those handlers are the BFF proxies + the two standalone routes; the latter
- * (keys/onboard) are ported to cloud `/v1/console/*`, and the proxies collapse to
+ * (keys/onboard) are ported to cloud `/v1/iam/{keys,onboard}`, and the proxies collapse to
  * the cloud `/v1/*` the SPA calls directly. The embed build therefore runs against
  * a tree with every app route handler removed (the build:embed script prunes the
  * "route" files into a scratch stash so the server build on `main` is untouched).
