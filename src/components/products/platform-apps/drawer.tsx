@@ -10,8 +10,8 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Globe, KeyRound, Play, Rocket, ScrollText, Square } from '@hanzogui/lucide-icons-2'
-import { DeployTimeline, toEpochMs, type DeployEvent, type DrawerTab, type ServiceNodeData } from '@hanzo/canvas'
+import { Activity, Globe, KeyRound, Play, Rocket, ScrollText, Square } from '@hanzogui/lucide-icons-2'
+import { DeployTimeline, MetricSparkline, toEpochMs, type DeployEvent, type DrawerTab, type ServiceNodeData } from '@hanzo/canvas'
 
 import {
   PlatformAppsApi,
@@ -21,6 +21,7 @@ import {
   type Sbom,
   type SbomComponent,
 } from '~/lib/api/platform-apps'
+import { METRICS_RANGES, O11yMetricsApi, type ServiceMetrics } from '~/lib/api/o11y-metrics'
 import { ApiError } from '~/lib/api'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
@@ -219,18 +220,143 @@ function VariablesTab({ app }: { app: PlatformApp }) {
   )
 }
 
-/** Metrics tab — HONEST empty: the `/v1/platform` app has no per-service metric
- *  feed yet, so we never fabricate a chart. Documented seam: wire o11y/usage. */
-function MetricsTab() {
+/** A labeled metric row — value + optional sub-stat + a real sparkline of the series. */
+function MetricRow({ label, value, sub, points, tone }: { label: string; value: string; sub?: string; points: number[]; tone?: string }) {
   return (
-    <YStack gap="$2" py="$2">
-      <Text fontSize="$3" fontWeight="600" color="$color12">
-        Metrics not connected
-      </Text>
-      <Text fontSize="$2" color="$color10">
-        Per-service CPU, memory, and request metrics appear here once the observability feed is wired for this app. We never
-        show a fabricated chart.
-      </Text>
+    <XStack items="center" justify="space-between" gap="$3" py="$2.5" borderBottomWidth={1} borderColor="$borderColor">
+      <YStack gap="$0.5" minW={0}>
+        <Text fontSize="$1" color="$color10">
+          {label}
+        </Text>
+        <XStack items="baseline" gap="$2">
+          <Text fontSize="$5" fontWeight="800" color="$color12">
+            {value}
+          </Text>
+          {sub ? (
+            <Text fontSize="$1" color="$color10">
+              {sub}
+            </Text>
+          ) : null}
+        </XStack>
+      </YStack>
+      <MetricSparkline points={points} width={96} height={28} stroke={tone ?? '#2ea043'} strokeWidth={1.5} fill={`${tone ?? '#2ea043'}22`} />
+    </XStack>
+  )
+}
+
+const fmt = (n: number, dp = 0): string => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: dp }).format(n)
+
+/**
+ * Metrics tab — REAL per-service RED metrics from the cloud o11y surface
+ * (`GET /v1/o11y/metrics?product=<slug>`): requests, error rate, and p95 latency
+ * over a selectable window, each with its live time-series sparkline. Honest states:
+ * loading; o11y-not-connected (503/404/401/403); and "connected · no telemetry yet"
+ * when o11y answered but this service emits none. Per-service CPU/memory are not
+ * exposed by this RED (trace-derived) read, so they are labeled honestly — never a
+ * fabricated chart.
+ */
+function MetricsTab({ app }: { app: PlatformApp }) {
+  const [rangeSec, setRangeSec] = useState<number>(3600)
+  const [m, setM] = useState<ServiceMetrics | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let live = true
+    setLoading(true)
+    O11yMetricsApi.service(app.slug, { rangeSec })
+      .then((r) => live && setM(r))
+      .finally(() => live && setLoading(false))
+    return () => {
+      live = false
+    }
+  }, [app.slug, rangeSec])
+
+  const RangeBar = (
+    <XStack gap="$1" items="center">
+      {METRICS_RANGES.map((r) => {
+        const on = r.id === rangeSec
+        return (
+          <XStack
+            key={r.id}
+            px="$2"
+            py="$1"
+            rounded="$2"
+            bg={on ? '$color4' : 'transparent'}
+            onPress={() => setRangeSec(r.id)}
+            style={{ cursor: 'pointer' }}
+          >
+            <Text fontSize="$1" fontWeight={on ? '700' : '500'} color={on ? '$color12' : '$color10'}>
+              {r.label}
+            </Text>
+          </XStack>
+        )
+      })}
+    </XStack>
+  )
+
+  return (
+    <YStack gap="$3">
+      <XStack items="center" justify="space-between" gap="$2">
+        <XStack items="center" gap="$2">
+          <Activity size={14} />
+          <Text fontSize="$2" color="$color11">
+            {app.slug}
+          </Text>
+        </XStack>
+        {RangeBar}
+      </XStack>
+
+      {loading && !m ? (
+        <Spinner size="small" color="$color11" />
+      ) : m && !m.connected ? (
+        <YStack gap="$2" py="$2">
+          <Text fontSize="$3" fontWeight="600" color="$color12">
+            Metrics runtime not connected
+          </Text>
+          <Text fontSize="$2" color="$color10">
+            The observability service is not reachable on this deployment yet. Requests, errors, and latency for this app appear
+            here as soon as o11y is wired — we never show a fabricated chart.
+          </Text>
+        </YStack>
+      ) : m && !m.hasData ? (
+        <YStack gap="$2" py="$2">
+          <Text fontSize="$3" fontWeight="600" color="$color12">
+            Connected · no telemetry yet
+          </Text>
+          <Text fontSize="$2" color="$color10">
+            o11y answered but <Text style={{ fontFamily: MONO }}>{app.slug}</Text> has emitted no request telemetry in the last{' '}
+            {METRICS_RANGES.find((r) => r.id === rangeSec)?.label}. Real request, error, and latency charts render here once the
+            service reports traffic.
+          </Text>
+        </YStack>
+      ) : m ? (
+        <YStack>
+          <MetricRow
+            label="Requests"
+            value={fmt(m.summary.requests, 1)}
+            sub={`in the last ${METRICS_RANGES.find((r) => r.id === rangeSec)?.label}`}
+            points={m.requests.map((p) => p.v)}
+            tone="#2ea043"
+          />
+          <MetricRow
+            label="Error rate"
+            value={`${m.summary.errorRate.toFixed(m.summary.errorRate < 10 ? 1 : 0)}%`}
+            sub={`${fmt(m.summary.errors, 1)} errors`}
+            points={m.errors.map((p) => p.v)}
+            tone={m.summary.errorRate >= 5 ? '#e5534b' : m.summary.errorRate >= 1 ? '#bb8009' : '#2ea043'}
+          />
+          <MetricRow
+            label="Latency p95"
+            value={`${Math.round(m.summary.p95Ms)} ms`}
+            points={m.latencyP95Ms.map((p) => p.v)}
+            tone="#539bf5"
+          />
+          <Text fontSize="$1" color="$color9" pt="$2">
+            Requests, errors, and latency are live from o11y (RED, trace-derived). Per-service CPU and memory are not exposed by
+            this metrics API — they are omitted rather than estimated.
+          </Text>
+        </YStack>
+      ) : null}
     </YStack>
   )
 }
@@ -423,7 +549,7 @@ export function buildAppTabs(
     { id: 'overview', label: 'Overview', content: <OverviewTab app={app} project={project} onChanged={onChanged} onRefreshList={onRefreshList} /> },
     { id: 'deployments', label: 'Deployments', content: <DeploymentsTab app={app} project={project} /> },
     { id: 'variables', label: 'Variables', badge: (app.env ?? []).length || undefined, content: <VariablesTab app={app} /> },
-    { id: 'metrics', label: 'Metrics', content: <MetricsTab /> },
+    { id: 'metrics', label: 'Metrics', content: <MetricsTab app={app} /> },
     { id: 'logs', label: 'Logs', content: <LogsTab app={app} project={project} /> },
     { id: 'domains', label: 'Domains', badge: app.domains?.length || undefined, content: <DomainsTab app={app} project={project} /> },
     { id: 'sbom', label: 'SBOM', content: <SbomTab app={app} /> },
