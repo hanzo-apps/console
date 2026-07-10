@@ -594,6 +594,15 @@ export function normalizeSpans(body: unknown): TraceSpan[] {
 
 const u = (path: string): string => cloudProxyV1Url(`o11y/${path}`)
 
+// The composite builder `query_range` is pinned to the EXPLICIT v3 endpoint, not the
+// version-less alias. `listQueryPayload` + `parseListRows` are a matched v3 pair
+// (`compositeQuery.{queryType,builderQueries}` → `data.result[].list`), but the
+// embedded o11y's version-less `/v1/o11y/query_range` alias resolves to the HIGHEST
+// version (v5), whose composite query accepts only `{queries:[…]}` and 400s the v3
+// shape (`unknown field "queryType"`). Targeting the version we speak keeps the
+// request+response pair consistent; the v3 handler is registered + live.
+const COMPOSITE_QUERY_RANGE = 'api/v3/query_range'
+
 /** The APM POST body — a start/end window + optional tags filter (O11y shape). */
 type ApmBody = { start: string; end: string; tags?: unknown[]; service?: string }
 /** The infra POST body — a start/end (ms) window + an (empty) filter set. */
@@ -640,12 +649,12 @@ export const ApmApi = {
   // to the same service so a runtime ignoring the item can never leak other services' lines.
   logs: async (w: ApmWindow, limit = 200, service?: string): Promise<LogRow[]> => {
     const filters = service ? [serviceFilterItem('logs', service)] : []
-    const rows = normalizeLogs(await restPost<unknown>(u('query_range'), listQueryPayload('logs', w, limit, filters)))
+    const rows = normalizeLogs(await restPost<unknown>(u(COMPOSITE_QUERY_RANGE), listQueryPayload('logs', w, limit, filters)))
     return service ? rows.filter((r) => !r.service || r.service === service) : rows
   },
   traceSearch: async (w: ApmWindow, limit = 200, service?: string): Promise<TraceSpan[]> => {
     const filters = service ? [serviceFilterItem('traces', service)] : []
-    const rows = normalizeSpans(await restPost<unknown>(u('query_range'), listQueryPayload('traces', w, limit, filters)))
+    const rows = normalizeSpans(await restPost<unknown>(u(COMPOSITE_QUERY_RANGE), listQueryPayload('traces', w, limit, filters)))
     return service ? rows.filter((r) => !r.service || r.service === service) : rows
   },
 
