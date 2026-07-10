@@ -85,12 +85,12 @@ export const WalletApi = {
 
   /**
    * Verify a sent HUSD transfer and credit the user's balance, via the cloud
-   * console subsystem's same-origin `/v1/console/topup/wallet` (task #41). The
+   * console subsystem's same-origin `/v1/commerce/topup/wallet` (task #41). The
    * server reads the receipt on-chain, credits the VALIDATED caller's own org for
    * the on-chain amount (never a client number), and records it to commerce.
    */
   recordWalletTopup: (req: WalletTopupRequest): Promise<WalletTopupResult> =>
-    restPost<WalletTopupResult>(v1Url('console/topup/wallet'), req),
+    restPost<WalletTopupResult>(v1Url('commerce/topup/wallet'), req),
 }
 
 export { ApiError }
