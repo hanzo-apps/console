@@ -62,9 +62,24 @@ const VIDEO_JOB_PATH = /^v1\/videos\/[A-Za-z0-9._-]+(?:\/content)?$/
  */
 const AI_CONNECTION_PATH = /^v1\/ai\/connections\/[A-Za-z0-9_-]+$/
 
+/**
+ * Provider-login OAuth start (ai#85): `/v1/ai/connections/<provider>/authorize`.
+ * GET returns the provider consent URL (`?format=json` → `{ authorizeUrl }`) that
+ * the console redirects the browser to; the OAuth callback is handled server-side
+ * by the backend (KMS-sealed), never through this proxy. Anchored to the
+ * connections head with a conservative provider charset — a narrow allow-list, not
+ * a general tunnel.
+ */
+const AI_CONNECTION_AUTHORIZE_PATH = /^v1\/ai\/connections\/[A-Za-z0-9_-]+\/authorize$/
+
 /** Whether a resolved `/v1/<...>` path is reachable through this proxy. */
 function isAllowedAiPath(p: string): boolean {
-  return ALLOWED.has(p) || VIDEO_JOB_PATH.test(p) || AI_CONNECTION_PATH.test(p)
+  return (
+    ALLOWED.has(p) ||
+    VIDEO_JOB_PATH.test(p) ||
+    AI_CONNECTION_PATH.test(p) ||
+    AI_CONNECTION_AUTHORIZE_PATH.test(p)
+  )
 }
 
 type Ctx = { params: Promise<{ path: string[] }> }
