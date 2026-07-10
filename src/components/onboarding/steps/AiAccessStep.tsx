@@ -9,8 +9,11 @@
  *      sealed server-side (never plaintext). REAL: `AiConnectionsApi.connect` →
  *      `/v1/ai/connections`.
  *  (a) Connect a provider login (OAuth) — a real 3-legged OAuth to sign into your
- *      ChatGPT/Claude/Gemini account is NOT yet available on the backend, so this is
- *      an honest "coming soon" — it never fakes a connection. (Backend gap.)
+ *      ChatGPT/Claude/Gemini account. REAL: `AiConnectionsApi.authorizeUrl` →
+ *      `GET /v1/ai/connections/:provider/authorize` (ai#85); we redirect the browser
+ *      to the provider consent screen and the backend seals the token KMS-side on the
+ *      callback. Honest gap: a provider whose OAuth app creds aren't provisioned on
+ *      this deployment returns 503 → shown as "not available", never a fake connection.
  *
  * All optional; Continue advances. Choices are recorded on the onboarding state.
  */
@@ -42,6 +45,11 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
   const [connecting, setConnecting] = useState(false)
   const [connections, setConnections] = useState<AiConnection[]>([])
   const [err, setErr] = useState<string | null>(null)
+  const [oauthOpen, setOauthOpen] = useState(false)
+  const [oauthProvider, setOauthProvider] = useState<AiConnectionProvider>('openai')
+  const [oauthBusy, setOauthBusy] = useState(false)
+  // Providers whose OAuth app creds aren't provisioned on this deployment (backend 503).
+  const [oauthUnavailable, setOauthUnavailable] = useState<AiConnectionProvider[]>([])
 
   const record = (choice: AiChoice) => patch({ aiChoices: withAiChoice(state, choice).aiChoices })
 
@@ -88,6 +96,25 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
       setErr(e instanceof ApiError ? e.message : 'Could not connect. Check the key and try again.')
     } finally {
       setConnecting(false)
+    }
+  }
+
+  const startOauth = async () => {
+    setOauthBusy(true)
+    setErr(null)
+    try {
+      const authorizeUrl = await AiConnectionsApi.authorizeUrl(oauthProvider)
+      record('connect')
+      // Navigate to the provider consent screen; the backend callback links the
+      // account and returns the user here. We're leaving the page, so leave busy set.
+      window.location.assign(authorizeUrl)
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 503) {
+        setOauthUnavailable((s) => (s.includes(oauthProvider) ? s : [...s, oauthProvider]))
+      } else {
+        setErr(e instanceof ApiError ? e.message : `Could not start ${providerLabel(oauthProvider)} sign-in. Try again.`)
+      }
+      setOauthBusy(false)
     }
   }
 
@@ -175,12 +202,44 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
       <ChoiceCard
         icon={<LogIn size={20} />}
         title="Connect a provider login"
-        description="Sign in to your ChatGPT, Claude, or Gemini account with OAuth."
-        disabled
+        description="Sign in to your ChatGPT, Claude, or Gemini account with OAuth — no API key to paste."
+        onPress={() => setOauthOpen((v) => !v)}
       >
-        <Text fontSize="$2" color="$color10">
-          Coming soon. For now, use “Bring your own API keys” above to connect a provider with a key.
-        </Text>
+        {oauthOpen ? (
+          <YStack gap="$2.5" pt="$1">
+            <XStack gap="$2" flexWrap="wrap" items="center">
+              <YStack width={160}>
+                <FieldSelect
+                  value={providerLabel(oauthProvider)}
+                  options={AI_CONNECTION_PROVIDERS.map((p) => p.label)}
+                  onChange={(l) => {
+                    setOauthProvider(providerFromLabel(l))
+                    if (err) setErr(null)
+                  }}
+                />
+              </YStack>
+              <PrimaryButton
+                size="$3"
+                disabled={oauthBusy || oauthUnavailable.includes(oauthProvider)}
+                icon={oauthBusy ? <Spinner size="small" color="$color1" /> : <LogIn size={15} />}
+                onPress={() => void startOauth()}
+              >
+                {oauthBusy ? 'Redirecting…' : `Sign in with ${providerLabel(oauthProvider)}`}
+              </PrimaryButton>
+            </XStack>
+            {oauthUnavailable.includes(oauthProvider) ? (
+              <Text fontSize="$2" color="$color10">
+                {providerLabel(oauthProvider)} login isn’t available on this deployment yet. Use “Bring your own
+                API keys” above to connect {providerLabel(oauthProvider)} with a key.
+              </Text>
+            ) : (
+              <Text fontSize="$2" color="$color10">
+                You’ll be redirected to {providerLabel(oauthProvider)} to authorize, then returned here. The
+                connection is sealed securely — no key is stored in your browser.
+              </Text>
+            )}
+          </YStack>
+        ) : null}
       </ChoiceCard>
 
       {err ? (
