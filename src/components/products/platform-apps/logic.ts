@@ -97,3 +97,71 @@ export function logSourceLabel(source: string | undefined): string {
       return 'No live logs yet'
   }
 }
+
+// ── env editor (add/edit/delete variables + write-only secrets) ────────────────
+
+/** Env var key rule — mirrors cloud's `envKeyRE` (clients/platform), so the UI
+ *  rejects a bad key before the round-trip instead of surfacing a 400. */
+export const ENV_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
+export function envKeyValid(key: string): boolean {
+  return ENV_KEY_RE.test(key)
+}
+
+/**
+ * One editable env row. A secret is WRITE-ONLY: the backend never echoes its value
+ * (masked to '' on read), so an existing secret carries `sealed:true` with an empty
+ * `value` until the user chooses to `replace` it. `id` is a stable local key so an
+ * input never loses focus as the user edits the `key` field.
+ */
+export type EnvDraft = {
+  id: string
+  key: string
+  value: string
+  secret: boolean
+  /** Already sealed in KMS — its value is unknown here. */
+  sealed: boolean
+  /** User is typing a NEW value to replace the sealed one. */
+  replace: boolean
+}
+
+/** Editable drafts from an app's env, secrets first-classed as write-only (sorted). */
+export function toEnvDrafts(env: PlatformEnvVar[] | undefined): EnvDraft[] {
+  return [...(env ?? [])]
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map((e, i) => ({ id: `env-${i}`, key: e.key, value: e.secret ? '' : e.value, secret: e.secret, sealed: e.secret, replace: false }))
+}
+
+/**
+ * The `setEnv` payload from drafts. A plain var carries its value; a NEW or REPLACED
+ * secret carries its typed value; a KEPT sealed secret carries an empty value
+ * (`secret:true`) — the backend PRESERVES the already-sealed value on empty (write-only
+ * secret), so keeping is a no-op, never a re-seal or wipe. Empty-key rows are dropped;
+ * keys are trimmed.
+ */
+export function draftsToEnv(drafts: EnvDraft[]): PlatformEnvVar[] {
+  return drafts
+    .filter((d) => d.key.trim() !== '')
+    .map((d) => ({
+      key: d.key.trim(),
+      secret: d.secret,
+      value: d.secret ? (d.sealed && !d.replace ? '' : d.value) : d.value,
+    }))
+}
+
+/**
+ * First honest validation error for the draft set, or null when OK: a missing/bad key
+ * name, a duplicate key, or a NEW/replaced secret left without a value (a kept sealed
+ * secret needs none — its value stays in KMS).
+ */
+export function validateEnvDrafts(drafts: EnvDraft[]): string | null {
+  const seen = new Set<string>()
+  for (const d of drafts) {
+    const key = d.key.trim()
+    if (key === '') return 'Every variable needs a name.'
+    if (!envKeyValid(key)) return `"${key}" is not a valid name — use letters, digits, and _ (not starting with a digit).`
+    if (seen.has(key)) return `Duplicate variable: ${key}.`
+    seen.add(key)
+    if (d.secret && (!d.sealed || d.replace) && d.value === '') return `Enter a value for the secret ${key}.`
+  }
+  return null
+}

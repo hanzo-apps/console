@@ -8,33 +8,40 @@
  * source-tagged logs, verified domains, image SBOM) — no duplicated data layer.
  * Each tab is its own component, so it fetches only when its tab is opened.
  */
-import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Activity, Globe, KeyRound, Play, Rocket, ScrollText, Square } from '@hanzogui/lucide-icons-2'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
+import { Activity, Globe, KeyRound, Play, Plus, Rocket, ScrollText, Square, Trash2 } from '@hanzogui/lucide-icons-2'
 import { DeployTimeline, MetricSparkline, toEpochMs, type DeployEvent, type DrawerTab, type ServiceNodeData } from '@hanzo/canvas'
 
 import {
   PlatformAppsApi,
   type PlatformApp,
   type PlatformDeploymentLogs,
-  type PlatformDomain,
   type Sbom,
   type SbomComponent,
 } from '~/lib/api/platform-apps'
 import { METRICS_RANGES, O11yMetricsApi, type ServiceMetrics } from '~/lib/api/o11y-metrics'
 import { ApiError } from '~/lib/api'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { FieldText } from '~/components/ui/Field'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { StatusTag } from '~/components/ui/StatusTag'
+import { DomainsPanel } from '../paas/DomainsPanel'
+import { isTerminalPhase, railwayPhase } from '../paas/railway'
+import { usePoll } from '../overview/living/hooks'
 import {
   appDisplayStatus,
   appImageRef,
   canDeploy,
+  draftsToEnv,
   isDeployed,
   logSourceLabel,
   maskedEnvRows,
   secretCount,
   secretSyncLabel,
+  toEnvDrafts,
+  validateEnvDrafts,
+  type EnvDraft,
 } from './logic'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
@@ -181,42 +188,199 @@ function DeploymentsTab({ app, project }: { app: PlatformApp; project: string })
   return <DeployTimeline events={events} emptyLabel="No deployments yet — deploy this app to see its history." />
 }
 
-/** Variables tab — secret-masked env (the backend already blanks secrets). */
-function VariablesTab({ app }: { app: PlatformApp }) {
-  const rows = maskedEnvRows(app.env)
-  if (rows.length === 0) {
+/**
+ * Variables tab — the app's env: a masked read view (secrets never rendered) that
+ * flips into a full add/edit/delete editor writing through `setEnv` (PUT .../env).
+ * Secrets are write-only: an existing one is kept (or Replaced), never revealed.
+ */
+function VariablesTab({ app, project, onChanged }: { app: PlatformApp; project: string; onChanged: (a: PlatformApp) => void }) {
+  const [editing, setEditing] = useState(false)
+  if (editing) {
     return (
-      <Text fontSize="$2" color="$color10">
-        No environment variables.
-      </Text>
+      <EnvEditor
+        app={app}
+        project={project}
+        onDone={(updated) => {
+          if (updated) onChanged(updated)
+          setEditing(false)
+        }}
+      />
     )
   }
+
+  const rows = maskedEnvRows(app.env)
   return (
     <YStack gap="$2">
-      <XStack items="center" gap="$2">
-        <KeyRound size={14} />
-        <Text fontSize="$2" color="$color11">
-          {secretCount(app.env) > 0 ? `${secretCount(app.env)} secret` : `${rows.length} variable${rows.length === 1 ? '' : 's'}`}
-        </Text>
+      <XStack items="center" justify="space-between" gap="$2">
+        <XStack items="center" gap="$2">
+          <KeyRound size={14} />
+          <Text fontSize="$2" color="$color11">
+            {rows.length === 0
+              ? 'No variables'
+              : secretCount(app.env) > 0
+                ? `${rows.length} variable${rows.length === 1 ? '' : 's'} · ${secretCount(app.env)} secret`
+                : `${rows.length} variable${rows.length === 1 ? '' : 's'}`}
+          </Text>
+        </XStack>
+        <Button size="$2" onPress={() => setEditing(true)}>
+          {rows.length === 0 ? 'Add variables' : 'Edit'}
+        </Button>
       </XStack>
-      <YStack borderWidth={1} borderColor="$borderColor" rounded="$3" overflow="hidden">
-        {rows.map((e) => (
-          <XStack key={e.key} py="$2" px="$3" gap="$3" borderBottomWidth={1} borderColor="$borderColor" items="center">
-            <Text fontSize="$2" flex={1} numberOfLines={1} style={{ fontFamily: MONO }}>
-              {e.key}
-            </Text>
-            <Text fontSize="$2" color={e.secret ? '$color10' : '$color12'} flex={1} numberOfLines={1} style={{ fontFamily: MONO }}>
-              {e.value || '""'}
-            </Text>
-            {e.secret ? (
-              <Text fontSize="$1" color="$color10">
-                secret
+      {rows.length > 0 ? (
+        <YStack borderWidth={1} borderColor="$borderColor" rounded="$3" overflow="hidden">
+          {rows.map((e) => (
+            <XStack key={e.key} py="$2" px="$3" gap="$3" borderBottomWidth={1} borderColor="$borderColor" items="center">
+              <Text fontSize="$2" flex={1} numberOfLines={1} style={{ fontFamily: MONO }}>
+                {e.key}
               </Text>
-            ) : null}
-          </XStack>
-        ))}
-      </YStack>
+              <Text fontSize="$2" color={e.secret ? '$color10' : '$color12'} flex={1} numberOfLines={1} style={{ fontFamily: MONO }}>
+                {e.value || '""'}
+              </Text>
+              {e.secret ? (
+                <Text fontSize="$1" color="$color10">
+                  secret
+                </Text>
+              ) : null}
+            </XStack>
+          ))}
+        </YStack>
+      ) : null}
     </YStack>
+  )
+}
+
+const newDraftId = (): string =>
+  typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `new-${Math.random().toString(36).slice(2)}`
+
+/** The env editor — one row per var; secrets are write-only (Replace/Keep). */
+function EnvEditor({ app, project, onDone }: { app: PlatformApp; project: string; onDone: (updated?: PlatformApp) => void }) {
+  const [drafts, setDrafts] = useState<EnvDraft[]>(() => toEnvDrafts(app.env))
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const patch = (id: string, next: Partial<EnvDraft>) => setDrafts((ds) => ds.map((d) => (d.id === id ? { ...d, ...next } : d)))
+  const remove = (id: string) => setDrafts((ds) => ds.filter((d) => d.id !== id))
+  const add = (secret: boolean) =>
+    setDrafts((ds) => [...ds, { id: newDraftId(), key: '', value: '', secret, sealed: false, replace: false }])
+
+  const save = async () => {
+    const invalid = validateEnvDrafts(drafts)
+    if (invalid) {
+      setErr(invalid)
+      return
+    }
+    setBusy(true)
+    setErr(null)
+    try {
+      const updated = await PlatformAppsApi.setEnv(project, app.slug, draftsToEnv(drafts))
+      onDone({ ...updated, projectSlug: app.projectSlug ?? project })
+    } catch (e) {
+      setErr(
+        e instanceof ApiError && e.status === 503
+          ? 'Secrets service unavailable — no changes were saved.'
+          : e instanceof Error
+            ? e.message
+            : 'Could not save variables.',
+      )
+      setBusy(false)
+    }
+  }
+
+  return (
+    <YStack gap="$3">
+      <XStack items="center" justify="space-between" gap="$2">
+        <XStack items="center" gap="$2">
+          <KeyRound size={14} />
+          <Text fontSize="$2" color="$color11">
+            Environment variables
+          </Text>
+        </XStack>
+        <XStack gap="$2">
+          <Button size="$2" disabled={busy} onPress={() => onDone()}>
+            Cancel
+          </Button>
+          <PrimaryButton size="$2" icon={busy ? <Spinner size="small" /> : undefined} disabled={busy} onPress={() => void save()}>
+            {busy ? 'Saving…' : 'Save'}
+          </PrimaryButton>
+        </XStack>
+      </XStack>
+
+      {drafts.length === 0 ? (
+        <Text fontSize="$2" color="$color10">
+          No variables yet — add a plain variable or a secret.
+        </Text>
+      ) : (
+        <YStack gap="$2">
+          {drafts.map((d) => (
+            <EnvRow key={d.id} d={d} disabled={busy} onPatch={(n) => patch(d.id, n)} onRemove={() => remove(d.id)} />
+          ))}
+        </YStack>
+      )}
+
+      <XStack gap="$2">
+        <Button size="$2" icon={<Plus size={14} />} disabled={busy} onPress={() => add(false)}>
+          Variable
+        </Button>
+        <Button size="$2" icon={<Plus size={14} />} disabled={busy} onPress={() => add(true)}>
+          Secret
+        </Button>
+      </XStack>
+
+      {err ? (
+        <Text fontSize="$2" color="$red10">
+          {err}
+        </Text>
+      ) : null}
+      <Text fontSize="$1" color="$color9">
+        Secret values are sealed into KMS server-side — never stored or shown in plaintext. Pods pick up changes on their next deploy.
+      </Text>
+    </YStack>
+  )
+}
+
+/** One editable row: key + value (or a write-only secret) + remove. */
+function EnvRow({ d, disabled, onPatch, onRemove }: { d: EnvDraft; disabled?: boolean; onPatch: (n: Partial<EnvDraft>) => void; onRemove: () => void }) {
+  return (
+    <XStack gap="$2" items="flex-start">
+      <YStack flex={1} minW={0}>
+        <FieldText value={d.key} onChange={(key) => onPatch({ key })} disabled={disabled || d.sealed} placeholder="KEY" />
+      </YStack>
+      <YStack flex={1} minW={0} gap="$1">
+        {d.secret && d.sealed && !d.replace ? (
+          <XStack items="center" justify="space-between" gap="$2" height={40} px="$1">
+            <Text fontSize="$2" color="$color10" style={{ fontFamily: MONO }}>
+              •••••••• set
+            </Text>
+            <Button size="$1" onPress={() => onPatch({ replace: true })} disabled={disabled}>
+              Replace
+            </Button>
+          </XStack>
+        ) : (
+          <>
+            <FieldText
+              value={d.value}
+              onChange={(value) => onPatch({ value })}
+              disabled={disabled}
+              secure={d.secret}
+              placeholder={d.secret ? 'secret value' : 'value'}
+            />
+            {d.secret && d.sealed && d.replace ? (
+              <Button size="$1" self="flex-start" onPress={() => onPatch({ replace: false, value: '' })} disabled={disabled}>
+                Keep current
+              </Button>
+            ) : null}
+          </>
+        )}
+      </YStack>
+      <XStack items="center" gap="$1" pt="$1.5">
+        {d.secret ? (
+          <Text fontSize="$1" color="$color10">
+            secret
+          </Text>
+        ) : null}
+        <Button size="$1" chromeless icon={<Trash2 size={14} />} onPress={onRemove} disabled={disabled} aria-label={`Remove ${d.key || 'variable'}`} />
+      </XStack>
+    </XStack>
   )
 }
 
@@ -361,126 +525,80 @@ function MetricsTab({ app }: { app: PlatformApp }) {
   )
 }
 
-/** Logs tab — source-tagged build/app logs for the latest deployment. */
+/**
+ * Logs tab — source-tagged build/app logs for the latest deployment, LIVE-TAILED
+ * while a build/deploy is in progress. The endpoint returns a full snapshot (no SSE),
+ * so it polls on an interval and auto-scrolls, stopping once the deployment reaches a
+ * terminal phase (live/error). Reuses the `railway` phase model the pipeline tracks.
+ */
+const LOG_POLL_MS = 2000
+
 function LogsTab({ app, project }: { app: PlatformApp; project: string }) {
   const [logs, setLogs] = useState<PlatformDeploymentLogs | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [depStatus, setDepStatus] = useState<string | undefined>(undefined)
+  const [loading, setLoading] = useState(true)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  const phase = railwayPhase(depStatus)
+  const streaming = logs != null && logs.source !== 'none' && phase !== 'idle' && !isTerminalPhase(phase)
+  const { tick } = usePoll(streaming ? LOG_POLL_MS : 0)
 
   const load = useCallback(async () => {
-    setLoading(true)
     try {
       const deps = await PlatformAppsApi.listDeployments(project, app.slug)
       if (deps.length === 0) {
+        setDepStatus(undefined)
         setLogs({ deploymentId: '', source: 'none', logs: 'No deployments yet — deploy this app to see build and runtime logs.' })
         return
       }
-      setLogs(await PlatformAppsApi.deploymentLogs(project, app.slug, deps[0].id))
+      const latest = deps[0]
+      setDepStatus(latest.status)
+      setLogs(await PlatformAppsApi.deploymentLogs(project, app.slug, latest.id))
     } catch {
+      setDepStatus(undefined)
       setLogs({ deploymentId: '', source: 'none', logs: 'Logs are not available right now.' })
     } finally {
       setLoading(false)
     }
   }, [project, app.slug])
 
+  // Initial load, then re-load on each poll tick while streaming.
   useEffect(() => {
     void load()
   }, [load])
+  useEffect(() => {
+    if (tick > 0) void load()
+  }, [tick]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Follow the tail as new lines arrive while streaming.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el && streaming) el.scrollTop = el.scrollHeight
+  }, [logs, streaming])
 
   return (
     <YStack gap="$2">
       <XStack items="center" gap="$2">
         <ScrollText size={14} />
+        {streaming ? <YStack width={8} height={8} rounded="$10" bg="$green10" className="hz-rail-dot" /> : null}
         <Text fontSize="$2" color="$color11">
-          {logSourceLabel(logs?.source)}
+          {streaming ? `Streaming ${logSourceLabel(logs?.source).toLowerCase()}…` : logSourceLabel(logs?.source)}
         </Text>
         <Button size="$1" disabled={loading} onPress={() => void load()}>
           Refresh
         </Button>
       </XStack>
       <YStack bg="$color1" borderWidth={1} borderColor="$borderColor" rounded="$3" p="$3">
-        {loading ? (
+        {loading && !logs ? (
           <Spinner size="small" color="$color11" />
         ) : (
-          <Text fontSize="$1" color="$color11" style={{ fontFamily: MONO, whiteSpace: 'pre-wrap' }}>
-            {logs?.logs || '—'}
-          </Text>
+          <div ref={scrollRef} style={{ maxHeight: 340, overflowY: 'auto' }}>
+            <Text fontSize="$1" color="$color11" style={{ fontFamily: MONO, whiteSpace: 'pre-wrap' }}>
+              {logs?.logs || '—'}
+            </Text>
+          </div>
         )}
       </YStack>
-    </YStack>
-  )
-}
-
-/** Domains tab — verified custom domains with DNS records to publish. */
-function DomainsTab({ app, project }: { app: PlatformApp; project: string }) {
-  const [domains, setDomains] = useState<PlatformDomain[] | null>(null)
-  const [busy, setBusy] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    try {
-      setDomains(await PlatformAppsApi.listDomains(project, app.slug))
-    } catch {
-      setDomains([])
-    }
-  }, [project, app.slug])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const verify = useCallback(
-    async (host: string) => {
-      setBusy(`verify:${host}`)
-      try {
-        await PlatformAppsApi.verifyDomain(project, app.slug, host)
-        await load()
-      } finally {
-        setBusy(null)
-      }
-    },
-    [project, app.slug, load],
-  )
-
-  if (domains === null) return <Spinner size="small" color="$color11" />
-  if (domains.length === 0) {
-    return (
-      <Text fontSize="$2" color="$color10">
-        No domains.
-      </Text>
-    )
-  }
-  return (
-    <YStack gap="$2">
-      {domains.map((d) => (
-        <Card key={d.host} p="$3" gap="$2" borderWidth={1} borderColor="$borderColor">
-          <XStack justify="space-between" items="center" gap="$2">
-            <YStack flex={1}>
-              <Text fontSize="$3" fontWeight="600" numberOfLines={1}>
-                {d.host}
-              </Text>
-              <Text fontSize="$1" color="$color10">
-                {d.kind}
-                {d.primary ? ' · primary' : ''}
-              </Text>
-            </YStack>
-            <StatusTag status={d.status} />
-          </XStack>
-          {!d.verified && d.records && d.records.length > 0 ? (
-            <YStack gap="$1" bg="$color2" p="$2" rounded="$2">
-              <Text fontSize="$1" color="$color11">
-                {d.detail || 'Publish these DNS records, then verify:'}
-              </Text>
-              {d.records.map((r) => (
-                <Text key={`${r.type}-${r.name}`} fontSize="$1" numberOfLines={1} style={{ fontFamily: MONO }}>
-                  {r.type} {r.name} → {r.value}
-                </Text>
-              ))}
-              <Button size="$2" self="flex-start" disabled={busy === `verify:${d.host}`} onPress={() => void verify(d.host)}>
-                {busy === `verify:${d.host}` ? 'Verifying…' : 'Verify'}
-              </Button>
-            </YStack>
-          ) : null}
-        </Card>
-      ))}
     </YStack>
   )
 }
@@ -548,10 +666,10 @@ export function buildAppTabs(
   return [
     { id: 'overview', label: 'Overview', content: <OverviewTab app={app} project={project} onChanged={onChanged} onRefreshList={onRefreshList} /> },
     { id: 'deployments', label: 'Deployments', content: <DeploymentsTab app={app} project={project} /> },
-    { id: 'variables', label: 'Variables', badge: (app.env ?? []).length || undefined, content: <VariablesTab app={app} /> },
+    { id: 'variables', label: 'Variables', badge: (app.env ?? []).length || undefined, content: <VariablesTab app={app} project={project} onChanged={onChanged} /> },
     { id: 'metrics', label: 'Metrics', content: <MetricsTab app={app} /> },
     { id: 'logs', label: 'Logs', content: <LogsTab app={app} project={project} /> },
-    { id: 'domains', label: 'Domains', badge: app.domains?.length || undefined, content: <DomainsTab app={app} project={project} /> },
+    { id: 'domains', label: 'Domains', badge: app.domains?.length || undefined, content: <DomainsPanel projectSlug={app.projectSlug ?? project} appSlug={app.slug} /> },
     { id: 'sbom', label: 'SBOM', content: <SbomTab app={app} /> },
   ]
 }
