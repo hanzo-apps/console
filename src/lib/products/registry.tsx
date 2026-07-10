@@ -2020,6 +2020,12 @@ export const catalog: CatalogEntry[] = [
     description: 'Live health of every Hanzo service across your clusters.',
     category: 'Observe',
     status: 'enabled',
+    // GLOBAL-ADMIN ONLY (`admin: true`): the board reads the whole platform's
+    // VictoriaMetrics `up{}` inventory through the SuperAdmin-gated cloud VM proxy
+    // (`/v1/o11y/vm/*`, clients/o11y/vmproxy.go), which 403s a non-super caller. So a
+    // customer gets the graceful AdminManagedNotice (no proxy call, no console 403)
+    // instead of an error card, and only a SuperAdmin renders StatusModule + the board.
+    admin: true,
     repo: 'hanzoai/operator',
     kind: 'module',
     routes: [{ path: '', component: StatusModule }],
