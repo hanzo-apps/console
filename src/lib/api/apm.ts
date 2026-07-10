@@ -370,6 +370,124 @@ export function normalizeExceptions(body: unknown): ExceptionGroup[] {
   return rows.map(normalizeException).filter((e) => e.exceptionType !== '' || e.exceptionMessage !== '')
 }
 
+// ── Error tracking (Issues) ──────────────────────────────────────────────────
+// Sentry-class grouped errors from the o11y errortracking module
+// (`/v1/o11y/errortracking/issues`). Occurrences live in the telemetry store; an
+// Issue is the fingerprint bucket with lifecycle. Org scope is server-enforced.
+
+export type IssueStatus = 'unresolved' | 'resolved' | 'ignored'
+
+export type Issue = {
+  id: string
+  fingerprint: string
+  type: string
+  value: string
+  culprit: string
+  level: string
+  platform: string
+  status: IssueStatus
+  assignee: string
+  firstSeen: string
+  lastSeen: string
+  count: number
+  regressed: boolean
+  environment: string
+  release: string
+  serviceName: string
+}
+
+export type OccurrenceFrame = { function: string; module: string; filename: string; lineno: number; inApp: boolean }
+
+/** The issue's latest occurrence sample (drives the detail view). */
+export type Occurrence = {
+  eventId: string
+  type: string
+  value: string
+  culprit: string
+  level: string
+  platform: string
+  timestamp: string
+  environment: string
+  release: string
+  serviceName: string
+  traceId: string
+  spanId: string
+  frames: OccurrenceFrame[]
+}
+
+export type IssueDetail = { issue: Issue | null; latestEvent: Occurrence | null }
+
+/** Unwrap the o11y `{status,data}` render envelope (a bare body passes through). */
+const unwrapData = (body: unknown): unknown =>
+  body && typeof body === 'object' && 'data' in (body as Record<string, unknown>) ? (body as { data: unknown }).data : body
+
+const issueStatus = (v: unknown): IssueStatus => (v === 'resolved' || v === 'ignored' ? v : 'unresolved')
+
+export function normalizeIssue(r: unknown): Issue {
+  const o = (r ?? {}) as Record<string, unknown>
+  return {
+    id: str(o.id),
+    fingerprint: str(o.fingerprint),
+    type: str(o.type),
+    value: str(o.value),
+    culprit: str(o.culprit),
+    level: str(o.level) || 'error',
+    platform: str(o.platform),
+    status: issueStatus(o.status),
+    assignee: str(o.assignee),
+    firstSeen: str(o.firstSeen),
+    lastSeen: str(o.lastSeen),
+    count: num(o.count),
+    regressed: o.regressed === true,
+    environment: str(o.environment),
+    release: str(o.release),
+    serviceName: str(o.serviceName),
+  }
+}
+
+/** Unwrap {status,data:{items}} (or a bare array) → Issue[]. */
+export function normalizeIssues(body: unknown): Issue[] {
+  const data = unwrapData(body)
+  const rows = Array.isArray(data)
+    ? data
+    : Array.isArray((data as { items?: unknown[] })?.items)
+      ? (data as { items: unknown[] }).items
+      : []
+  return rows.map(normalizeIssue)
+}
+
+function normalizeOccurrence(r: unknown): Occurrence | null {
+  if (!r || typeof r !== 'object') return null
+  const o = r as Record<string, unknown>
+  const frames = Array.isArray(o.frames) ? o.frames : []
+  return {
+    eventId: str(o.eventId),
+    type: str(o.type),
+    value: str(o.value),
+    culprit: str(o.culprit),
+    level: str(o.level) || 'error',
+    platform: str(o.platform),
+    timestamp: str(o.timestamp),
+    environment: str(o.environment),
+    release: str(o.release),
+    serviceName: str(o.serviceName),
+    traceId: str(o.traceId),
+    spanId: str(o.spanId),
+    frames: frames.map((f) => {
+      const x = (f ?? {}) as Record<string, unknown>
+      return { function: str(x.function), module: str(x.module), filename: str(x.filename), lineno: num(x.lineno), inApp: x.inApp === true }
+    }),
+  }
+}
+
+export function normalizeIssueDetail(body: unknown): IssueDetail {
+  const data = (unwrapData(body) ?? {}) as Record<string, unknown>
+  return {
+    issue: data.issue ? normalizeIssue(data.issue) : null,
+    latestEvent: normalizeOccurrence(data.latestEvent),
+  }
+}
+
 // ── Dashboards (O11y) ───────────────────────────────────────────────────────
 
 /** One dashboard from `/api/v1/dashboards` (list). */
@@ -655,4 +773,34 @@ export const ApmApi = {
   // org), unlike the admin-only control-plane inventory. `null` → honest "no telemetry".
   serviceHealth: async (w: ApmWindow, ...candidates: (string | null | undefined)[]): Promise<ServiceHealth | null> =>
     serviceHealthOf(pickService(await ApmApi.services(w), candidates)),
+}
+
+/** The filter for GET /v1/o11y/errortracking/issues. */
+export type IssuesQuery = {
+  status?: IssueStatus | ''
+  level?: string
+  environment?: string
+  serviceName?: string
+  query?: string
+  sort?: 'lastSeen' | 'firstSeen' | 'count'
+  limit?: number
+  offset?: number
+}
+
+/**
+ * Error tracking (Issues) — the Errors tab's client. Reads/writes the o11y
+ * errortracking module over the SAME version-less, IAM-scoped `/v1/o11y/*` BFF the
+ * rest of ApmApi uses; org scope is server-enforced (never a client param).
+ */
+export const ErrorTrackingApi = {
+  listIssues: async (q: IssuesQuery = {}): Promise<Issue[]> => {
+    const qs = new URLSearchParams()
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
+    const query = qs.toString()
+    return normalizeIssues(await restGet<unknown>(u(`errortracking/issues${query ? `?${query}` : ''}`)))
+  },
+  getIssue: async (id: string): Promise<IssueDetail> =>
+    normalizeIssueDetail(await restGet<unknown>(u(`errortracking/issues/${encodeURIComponent(id)}`))),
+  updateIssue: async (id: string, patch: { status?: IssueStatus; assignee?: string }): Promise<Issue> =>
+    normalizeIssue(unwrapData(await restPost<unknown>(u(`errortracking/issues/${encodeURIComponent(id)}`), patch))),
 }
