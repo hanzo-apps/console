@@ -90,10 +90,13 @@ export function statusSlices(rows: Resource[]): Slice[] {
   ).filter((x) => x.value > 0)
 }
 
-/** Most-recently-created instances first (createdAt desc; undated sink to the end). */
+/** Most-recently-created instances first (createdAt desc; undated sink to the end).
+ *  createdAt is coerced with String() — a backend that returns a numeric epoch (the
+ *  vector kind does) is NOT a string, and `?? ''` only guards null/undefined, so a
+ *  raw `.localeCompare` on a number threw and crashed the whole module render. */
 export function recent(rows: Resource[], n: number): Resource[] {
   return [...rows]
-    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+    .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
     .slice(0, n)
 }
 
