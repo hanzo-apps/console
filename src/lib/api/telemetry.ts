@@ -1,7 +1,8 @@
 /**
  * Telemetry API — live platform health + infra metrics from VictoriaMetrics
  * (Prometheus-compatible), via the SuperAdmin-gated cloud VM proxy at the same-origin,
- * versionless `/v1/o11y/vm/api/v1/{query,query_range}` (cloud clients/o11y/vmproxy.go).
+ * FLAT version-less `/v1/o11y/vm/{query,query_range}` (cloud clients/o11y/vmproxy.go);
+ * the upstream VM `api/v1/*` path is resolved INSIDE the proxy, never in our route.
  *
  * Why not a Next route: the console ships as a static export go:embedded into the cloud
  * binary (output:'export'), which STRIPS every server route — so the former same-origin
@@ -149,9 +150,11 @@ export function summarizeHealth(rows: ServiceHealth[]): HealthSummary {
 
 /**
  * Build the transport URL for a VM read through the SuperAdmin cloud VM proxy:
- * `cloudProxyV1Url('o11y/vm/<path>')` → `<origin>/v1/o11y/vm/api/v1/{query,query_range}`
- * (root-relative `/v1/...` on the server, where there is no `window`). `path` is
- * `api/v1/query` or `api/v1/query_range`; the query/start/end/step params are appended.
+ * `cloudProxyV1Url('o11y/vm/<path>')` → `<origin>/v1/o11y/vm/{query,query_range}`
+ * (root-relative `/v1/...` on the server, where there is no `window`). `path` is the
+ * FLAT `query` or `query_range` — the upstream VictoriaMetrics `api/v1/*` nesting is
+ * resolved INSIDE the cloud proxy, never in our public path. The query/start/end/step
+ * params are appended.
  */
 const url = (path: string, params: Record<string, string | number>): string => {
   const abs = cloudProxyV1Url(`o11y/vm/${path}`)
@@ -173,11 +176,11 @@ export function windowOf(seconds: number, points = 60): RangeWindow {
 export const TelemetryApi = {
   /** Instant query — the current value of `promql` (e.g. `up`, `sum(up)`). */
   instant: async (promql: string): Promise<Sample[]> =>
-    parseInstant(await restGet<unknown>(url('api/v1/query', { query: promql }))),
+    parseInstant(await restGet<unknown>(url('query', { query: promql }))),
 
   /** Range query — `promql` sampled across a window (for a chart). */
   range: async (promql: string, w: RangeWindow): Promise<Series[]> =>
-    parseRange(await restGet<unknown>(url('api/v1/query_range', { query: promql, start: w.start, end: w.end, step: w.step }))),
+    parseRange(await restGet<unknown>(url('query_range', { query: promql, start: w.start, end: w.end, step: w.step }))),
 
   /** The live service-health board (`up` per scrape target). */
   serviceHealth: async (): Promise<ServiceHealth[]> => toServiceHealth(await TelemetryApi.instant('up')),

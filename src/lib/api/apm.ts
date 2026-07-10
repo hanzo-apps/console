@@ -615,14 +615,14 @@ export function normalizeSpans(body: unknown): TraceSpan[] {
 
 const u = (path: string): string => cloudProxyV1Url(`o11y/${path}`)
 
-// The composite builder `query_range` is pinned to the EXPLICIT v3 endpoint, not the
-// version-less alias. `listQueryPayload` + `parseListRows` are a matched v3 pair
-// (`compositeQuery.{queryType,builderQueries}` → `data.result[].list`), but the
-// embedded o11y's version-less `/v1/o11y/query_range` alias resolves to the HIGHEST
-// version (v5), whose composite query accepts only `{queries:[…]}` and 400s the v3
-// shape (`unknown field "queryType"`). Targeting the version we speak keeps the
-// request+response pair consistent; the v3 handler is registered + live.
-const COMPOSITE_QUERY_RANGE = 'api/v3/query_range'
+// The composite builder query rides the FLAT public path `/v1/o11y/query_range` (one
+// /v1/, no nested /api/vN). `listQueryPayload` + `parseListRows` are a matched v3 pair
+// (`compositeQuery.{queryType,builderQueries}` → `data.result[].list`); the cloud
+// clients/o11y flat route (query.go) resolves this flat path to the v3 engine handler
+// SERVER-SIDE. (The upstream module's version-less alias would instead resolve to the
+// HIGHEST engine version (v5), whose composite accepts only `{queries:[…]}` and 400s
+// the v3 shape — which is exactly why the mapping is pinned in cloud, not here.)
+const COMPOSITE_QUERY_RANGE = 'query_range'
 
 /** The APM POST body — a start/end window + optional tags filter (O11y shape). */
 type ApmBody = { start: string; end: string; tags?: unknown[]; service?: string }

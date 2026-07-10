@@ -186,14 +186,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // policies list + the check sub-path. Backs the console's Authz page.
   'authz',
   // Observability (hanzoai/o11y): the cloud binary serves the embedded o11y surface at
-  // the VERSION-LESS canonical `/v1/o11y/<resource>`. The console reads e.g.
-  // /v1/o11y/rules (alerts), /v1/o11y/services (RED metrics), /v1/o11y/health. The ONE
-  // exception is the composite builder query (logs/traces list): it is pinned to the
-  // explicit /v1/o11y/api/v3/query_range because the version-less alias floats to the
-  // HIGHEST version (v5), whose composite shape is `{queries:[…]}` and 400s the console's
-  // v3 `{queryType,builderQueries}` payload (see apm.ts COMPOSITE_QUERY_RANGE). cloud's
+  // the FLAT, VERSION-LESS canonical `/v1/o11y/<resource>` — one /v1/, no nested /api/vN.
+  // The console reads e.g. /v1/o11y/rules (alerts), /v1/o11y/services (RED metrics),
+  // /v1/o11y/query_range (the composite logs/traces list), /v1/o11y/vm/{query,query_range}
+  // (the SuperAdmin VM proxy), /v1/o11y/health. The upstream SigNoz engine version is
+  // resolved SERVER-SIDE inside cloud (clients/o11y) — never leaked into a route. cloud's
   // principal gate refuses any bearer-less call, so it routes through the /v1 bearer BFF
-  // like the rest. The single `o11y` head admits every o11y sub-path (nested v3 included).
+  // like the rest. The single `o11y` head admits every o11y sub-path.
   'o11y',
   // Web Search (cloud clients/websearch, order 141): /v1/websearch/{search,v1/scrape}.
   // Self-hosted SearXNG meta-search + Crawl4AI scrape. The `search` proxy has no
@@ -352,30 +351,6 @@ const BASE_RECORDS = /^v1\/collections\/[^/]+\/records(?:\/[^/]+)?$/
 /** Matches a single content-type (collection) admin path `v1/collections/<name>` —
  *  view / update / delete ONE collection. The content-type builder needs this. */
 const BASE_COLLECTION = /^v1\/collections\/[^/]+$/
-
-/**
- * VictoriaMetrics READ endpoints reachable through `/telemetry` (the platform
- * status/metrics proxy). VictoriaMetrics is Prometheus-compatible; only the
- * READ/query surface is admitted — never `/api/v1/write`, `/api/v1/import`, admin,
- * or `/-/reload`. This keeps the proxy a read-only telemetry window, so a signed-in
- * user can see live platform health/metrics but can never write or mutate the TSDB.
- */
-const TELEMETRY_READ = new Set([
-  'api/v1/query',
-  'api/v1/query_range',
-  'api/v1/series',
-  'api/v1/labels',
-  'api/v1/status/tsdb',
-  'api/v1/metadata',
-])
-/** Matches `api/v1/label/<name>/values` (one clean label-name segment). */
-const TELEMETRY_LABEL_VALUES = /^api\/v1\/label\/[^/]+\/values$/
-
-/** True iff `path` is an allow-listed, READ-only VictoriaMetrics query endpoint. */
-export function allowTelemetrySurface(path: string): boolean {
-  const rel = path.replace(/^\/+/, '')
-  return TELEMETRY_READ.has(rel) || TELEMETRY_LABEL_VALUES.test(rel)
-}
 
 /**
  * True iff `path` targets the Hanzo Base COLLECTION surface reachable through
