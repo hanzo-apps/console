@@ -5,6 +5,8 @@ import {
   appDisplayStatus,
   appImageRef,
   canDeploy,
+  draftsToEnv,
+  envKeyValid,
   isDeployed,
   logSourceLabel,
   maskedEnvRows,
@@ -12,6 +14,9 @@ import {
   secretCount,
   secretSyncLabel,
   summarize,
+  toEnvDrafts,
+  validateEnvDrafts,
+  type EnvDraft,
 } from './logic'
 
 describe('appDisplayStatus', () => {
@@ -105,5 +110,66 @@ describe('appImageRef', () => {
   it('is empty when the app has no image yet', () => {
     expect(appImageRef({ image: {} })).toBe('')
     expect(appImageRef({ image: { repository: '', tag: 'v1' } })).toBe('')
+  })
+})
+
+describe('envKeyValid', () => {
+  it('mirrors the backend env-key rule (^[A-Za-z_][A-Za-z0-9_]*$)', () => {
+    expect(envKeyValid('DATABASE_URL')).toBe(true)
+    expect(envKeyValid('_x')).toBe(true)
+    expect(envKeyValid('A1')).toBe(true)
+    expect(envKeyValid('1A')).toBe(false)
+    expect(envKeyValid('has-dash')).toBe(false)
+    expect(envKeyValid('has space')).toBe(false)
+    expect(envKeyValid('')).toBe(false)
+  })
+})
+
+describe('toEnvDrafts', () => {
+  it('sorts by key and first-classes a secret as write-only (sealed, empty value)', () => {
+    const drafts = toEnvDrafts([
+      { key: 'PLAIN', value: 'ok', secret: false },
+      { key: 'API_KEY', value: '', secret: true },
+    ])
+    expect(drafts.map((d) => d.key)).toEqual(['API_KEY', 'PLAIN'])
+    expect(drafts[0]).toMatchObject({ key: 'API_KEY', value: '', secret: true, sealed: true, replace: false })
+    expect(drafts[1]).toMatchObject({ key: 'PLAIN', value: 'ok', secret: false, sealed: false })
+  })
+})
+
+describe('draftsToEnv', () => {
+  const base: EnvDraft = { id: 'x', key: 'K', value: '', secret: false, sealed: false, replace: false }
+  it('sends a kept sealed secret with an EMPTY value (preserve-on-empty, never a wipe)', () => {
+    const out = draftsToEnv([{ ...base, key: 'API_KEY', secret: true, sealed: true, replace: false }])
+    expect(out).toEqual([{ key: 'API_KEY', value: '', secret: true }])
+  })
+  it('sends a replaced sealed secret with its NEW typed value', () => {
+    const out = draftsToEnv([{ ...base, key: 'API_KEY', value: 'new', secret: true, sealed: true, replace: true }])
+    expect(out).toEqual([{ key: 'API_KEY', value: 'new', secret: true }])
+  })
+  it('sends a new secret and a plain var with their values, trims keys, drops empty keys', () => {
+    const out = draftsToEnv([
+      { ...base, key: '  TOKEN ', value: 's3cret', secret: true, sealed: false },
+      { ...base, key: 'HOST', value: 'db' },
+      { ...base, key: '   ', value: 'dropped' },
+    ])
+    expect(out).toEqual([
+      { key: 'TOKEN', value: 's3cret', secret: true },
+      { key: 'HOST', value: 'db', secret: false },
+    ])
+  })
+})
+
+describe('validateEnvDrafts', () => {
+  const d = (over: Partial<EnvDraft>): EnvDraft => ({ id: 'x', key: 'K', value: 'v', secret: false, sealed: false, replace: false, ...over })
+  it('accepts a valid set (incl. a kept sealed secret with no value)', () => {
+    expect(validateEnvDrafts([d({ key: 'HOST', value: 'db' }), d({ key: 'API_KEY', value: '', secret: true, sealed: true })])).toBeNull()
+  })
+  it('rejects a missing/invalid key, a duplicate, and a valueless NEW secret', () => {
+    expect(validateEnvDrafts([d({ key: '' })])).toMatch(/needs a name/)
+    expect(validateEnvDrafts([d({ key: '1BAD' })])).toMatch(/not a valid name/)
+    expect(validateEnvDrafts([d({ key: 'A' }), d({ key: 'A' })])).toMatch(/Duplicate/)
+    expect(validateEnvDrafts([d({ key: 'TOKEN', value: '', secret: true, sealed: false })])).toMatch(/Enter a value/)
+    expect(validateEnvDrafts([d({ key: 'TOKEN', value: '', secret: true, sealed: true, replace: true })])).toMatch(/Enter a value/)
   })
 })
