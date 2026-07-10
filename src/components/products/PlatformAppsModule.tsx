@@ -20,10 +20,13 @@ import dynamic from 'next/dynamic'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Container, Database, GitBranch, LayoutTemplate, Network, Plus, RefreshCw, Rocket } from '@hanzogui/lucide-icons-2'
 import { useThemeSetting } from '@hanzogui/next-theme'
-import { EnvSwitcher, ServiceDetailDrawer, type ServiceNodeData } from '@hanzo/canvas'
+import { EnvSwitcher, ServiceDetailDrawer, type ServiceMetric, type ServiceNodeData } from '@hanzo/canvas'
 
 import { PlatformAppsApi, type PlatformApp } from '~/lib/api/platform-apps'
 import { ProvisioningApi, type ResourceKind } from '~/lib/api/provisioning'
+import { ApmApi, apmWindow } from '~/lib/api/apm'
+import { fetchCardMetrics } from './platform-apps/metrics'
+import type { ServiceDepEdge } from './platform-apps/canvas'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { Loader } from '~/components/ui/Loader'
@@ -100,9 +103,34 @@ export function PlatformAppsModule(_props: { params: Record<string, string> }) {
   }, [tick])
 
   const data = state.phase === 'ready' ? state.data : null
+
+  // Live o11y signals, fetched separately so the canvas fold stays pure. Card requests
+  // sparkline per VISIBLE app + the observed runtime dependency graph. Both degrade to
+  // empty on an o11y miss (honest — no fabricated sparkline / edge), keyed to refresh
+  // with the data poll and on scope change.
+  const [metricByApp, setMetricByApp] = useState<Map<string, ServiceMetric>>(new Map())
+  const [serviceDeps, setServiceDeps] = useState<ServiceDepEdge[]>([])
+
+  useEffect(() => {
+    if (!data) return
+    let live = true
+    const scoped = data.apps.filter(
+      (a) => (!project || a.projectSlug === project) && (!env || a.environment === env),
+    )
+    fetchCardMetrics(scoped)
+      .then((m) => live && setMetricByApp(m))
+      .catch(() => live && setMetricByApp(new Map()))
+    ApmApi.dependencies(apmWindow(3600))
+      .then((edges) => live && setServiceDeps(edges.map((e) => ({ parent: e.parent, child: e.child, callCount: e.callCount }))))
+      .catch(() => live && setServiceDeps([]))
+    return () => {
+      live = false
+    }
+  }, [data, project, env])
+
   const model = useMemo(
-    () => (data ? buildProjectCanvas(data, { project, env }) : null),
-    [data, project, env],
+    () => (data ? buildProjectCanvas(data, { project, env }, { metricByApp, serviceDeps }) : null),
+    [data, project, env, metricByApp, serviceDeps],
   )
   const summary = useMemo(() => (model ? summarizeCanvas(model.nodes) : null), [model])
 
