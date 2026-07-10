@@ -2798,3 +2798,33 @@ it belongs with the always-on essentials, not behind an opt-in. Fix: add `platfo
 `ALWAYS_ON_PRODUCTS` (entitlements.ts) so it shows in the sidebar + home Apps map +
 launcher for EVERY org (the route already resolved via the full catalog). `tsc` clean;
 `vitest` green (entitlements iterate-list test unaffected). Rebuild/redeploy → v8.4.126.
+
+### DEPLOY REALITY: console.hanzo.ai serves the go:embed'd console in the CLOUD binary (not the standalone `console` CR)
+
+Discovered live while verifying the HUB (v8.4.126): the ingress
+`hanzo-domains-console-hanzo-ai` routes `console.hanzo.ai/ → cloud:8000`
+(server header `fasthttp` = the Go cloud binary). Per universe `crs/console.yaml`
+(RETIRED 2026-07-07), the standalone Next.js console was superseded by a
+**go:embed'd static export of THIS repo inside `hanzoai/cloud`** — the cloud
+Dockerfile has a `console` stage: `git clone --branch ${CONSOLE_REF}` (default
+`main`) → `npm run build:embed` (static export, prunes server routes) → go:embed
+into the binary. The standalone `console` CR still runs (replicas 2) but is
+UNROUTED. So:
+
+- Building `ghcr.io/hanzoai/console:vX.Y.Z` + patching the `console` CR does NOT
+  update console.hanzo.ai. It only refreshes the (unrouted) standalone pods.
+- To ship a console change to console.hanzo.ai, the **cloud binary** must be
+  rebuilt embedding `console@<ref>`. It is AUTOMATIC: `CONSOLE_REF` defaults to
+  `main` (no CI override), so the next cloud release from main embeds whatever is
+  on console `main`. `npm run build:embed` MUST stay green (the cloud build
+  fail-hards on a broken/placeholder bundle) — verified green for the HUB.
+- The embedded console calls cloud's `/v1` DIRECTLY (same origin → cloud:8000,
+  cookie-authenticated via SanitizeIdentity) — the Next BFF proxies (`app/v1`,
+  `/ai`, …) are pruned by build:embed. So client code must work against cloud's
+  native `/v1` (it does; the HUB's deploy upload POSTs the raw artifact straight
+  to cloud's `/v1/platform/sites/:slug/deploy`). The `bearer-proxy` binary-body
+  fix only matters for the (unrouted) standalone console — harmless in the embed.
+- Net: the HUB (create/deploy/domains/cross-surface links) goes live on
+  console.hanzo.ai on the next `hanzoai/cloud` release from main (CONSOLE_REF=main
+  = the HUB commit). Coordinate the cloud release with the cloud lane; do NOT
+  expect a console-only image bump to appear on console.hanzo.ai.
