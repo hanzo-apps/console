@@ -346,10 +346,19 @@ export type EvalSession = {
 /** Full session detail — the session + its traces. */
 export type EvalSessionDetail = { session: EvalSession; traces: Trace[] }
 
-// ── the one Observe client ────────────────────────────────────────────────────
+// ── the eval-orchestration client ─────────────────────────────────────────────
+// SCOPE: this is the /v1/evals eval-ARTIFACT SDK — datasets, evaluators, runs,
+// score-configs, scores, AND the eval-domain trace/observation/session reads (which
+// carry the eval cost/token/score joins raw OTel spans lack). It is NOT the Observe
+// console read plane: as of the gen_ai observation-of-record flip,
+// O11yApi.traces/observations/sessions read the o11y SPAN plane (/v1/o11y), NOT these.
+// The five eval trace/observation/session readers below are a RETAINED SDK surface (a
+// real, currently-unwired eval-domain capability, 0 non-test refs) — do NOT re-wire
+// them into O11yApi (that reintroduces the duplicate Observe read the flip removed).
+// O11yApi.scores/scoreConfigs DO still delegate here — scores stay eval artifacts.
 
 export const EvalsApi = {
-  // ---- traces + the trace-detail tree (Observe · Traces) --------------------
+  // ---- eval-domain traces + trace-detail tree (RETAINED SDK, not the Observe plane) ----
   /** List traces (newest first). Backed today; enrichment columns may be null. */
   listTraces: async (q: { runName?: string; datasetName?: string; limit?: number } = {}): Promise<Trace[]> => {
     const res = await restGet<{ data?: TraceWire[] }>(url('traces', q))
@@ -375,14 +384,14 @@ export const EvalsApi = {
     }
   },
 
-  // ---- observations (Observe · Observations) --------------------------------
+  // ---- eval-domain observations (RETAINED SDK, not the Observe plane) --------
   /** List observations (generations/spans). BE GAP until bound. */
   listObservations: async (q: { traceId?: string; type?: string; limit?: number } = {}): Promise<Observation[]> => {
     const res = await restGet<{ data?: ObservationWire[] }>(url('observations', q))
     return rows<ObservationWire>(res).map(toObservation)
   },
 
-  // ---- sessions (Observe · Sessions) ----------------------------------------
+  // ---- eval-domain sessions (RETAINED SDK, not the Observe plane) ------------
   /** List sessions (traces grouped by session id, with rollups). BE GAP until bound. */
   listSessions: async (q: { limit?: number } = {}): Promise<EvalSession[]> => {
     const res = await restGet<{ data?: EvalSession[] }>(url('sessions', q))
