@@ -13,7 +13,7 @@
  * secret-free: the backend returns only existence + a masked account label, never
  * the key or the `kms://` ref.
  */
-import { restGet, restPost } from './client'
+import { ApiError, restGet, restPost } from './client'
 
 /** The providers the AI Login Manager can link (backend allow-list). */
 export type AiConnectionProvider = 'openai' | 'anthropic' | 'google'
@@ -65,6 +65,22 @@ function normalizeList(payload: unknown): AiConnection[] {
 export const AiConnectionsApi = {
   /** List the org's connectable providers + which are connected (masked). */
   list: async (): Promise<AiConnection[]> => normalizeList(await restGet(BASE())),
+
+  /**
+   * Begin a provider-login OAuth (ai#85). Fetches the backend authorize URL
+   * (`GET .../connections/<provider>/authorize?format=json` → `{ authorizeUrl }`)
+   * so the caller can redirect the browser to the provider's consent screen; the
+   * OAuth code exchange + KMS-sealing happens server-side in the backend callback.
+   * Throws an `ApiError` with `status === 503` when the provider's OAuth app creds
+   * aren't provisioned on this deployment — the caller shows an honest
+   * "not available" state (provisioning is a separate ops step).
+   */
+  authorizeUrl: async (provider: AiConnectionProvider): Promise<string> => {
+    const raw = await restGet<Record<string, unknown>>(`${BASE()}/${provider}/authorize?format=json`)
+    const authorizeUrl = str(raw?.authorizeUrl) ?? str(raw?.authorize_url) ?? str(raw?.url)
+    if (!authorizeUrl) throw new ApiError('The server did not return an authorize URL.')
+    return authorizeUrl
+  },
 
   /**
    * Link (or re-link) a provider with a raw API key. The key is POSTed to OUR proxy
