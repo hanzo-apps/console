@@ -42,6 +42,7 @@ export const ALWAYS_ON_PRODUCTS: readonly string[] = [
   'profile', // the signed-in user's own profile
   'api-keys', // credentials to call the API
   'platform', // the project HUB — create/deploy/ship a project (first-class, every org)
+  'tracker', // native @hanzo/gui issue tracker — first-class work surface, every org (peer of the HUB; replaces the retired Huly/hanzo.team)
 ]
 
 /** True when a product is always-on (implicit, never stored in `enabled`). */
