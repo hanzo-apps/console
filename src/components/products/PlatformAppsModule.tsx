@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Container, Database, GitBranch, LayoutTemplate, Network, Plus, RefreshCw, Rocket } from '@hanzogui/lucide-icons-2'
+import { Network, Plus, RefreshCw, Rocket } from '@hanzogui/lucide-icons-2'
 import { useThemeSetting } from '@hanzogui/next-theme'
 import { EnvSwitcher, ServiceDetailDrawer, type ServiceMetric, type ServiceNodeData } from '@hanzo/canvas'
 
@@ -28,6 +28,7 @@ import { ApmApi, apmWindow } from '~/lib/api/apm'
 import { fetchCardMetrics } from './platform-apps/metrics'
 import type { ServiceDepEdge } from './platform-apps/canvas'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { CreateAppForm } from './paas/CreateAppForm'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { Loader } from '~/components/ui/Loader'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -246,7 +247,7 @@ export function PlatformAppsModule(_props: { params: Record<string, string> }) {
         renderIcon={renderServiceIcon}
       />
 
-      <NewServicePanel open={newOpen} onClose={() => setNewOpen(false)} />
+      <NewServicePanel open={newOpen} onClose={() => setNewOpen(false)} onDeployed={refresh} />
     </YStack>
   )
 }
@@ -275,43 +276,18 @@ function ScopedEmpty({ onClear }: { onClear: () => void }) {
   )
 }
 
-/** Honest "+ New service" affordance — the four create paths, each with the real
- *  CLI/API command. No fake POST: the container-app create flow is the CLI / the
- *  `/v1/platform` API (documented seam to wire an in-console create form). */
-function NewServicePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const options = [
-    { icon: GitBranch, title: 'From a git repo', desc: 'Build and deploy from a GitHub repository.', cmd: 'hanzo deploy --repo <owner/name> --branch main' },
-    { icon: Container, title: 'From an image', desc: 'Deploy a prebuilt container image.', cmd: 'hanzo deploy --image <repository:tag>' },
-    { icon: LayoutTemplate, title: 'From a template', desc: 'Start from a Hanzo service template.', cmd: 'hanzo templates list' },
-    { icon: Database, title: 'Add a database', desc: 'Provision managed SQL, Vector, KV, Search, or Object Storage.', cmd: 'hanzo db create <sql|vector|kv|search|s3>' },
-  ]
+/** "+ New service" — the SAME create/deploy flow the Applications board uses
+ *  (`CreateAppForm`): one create path, git repo or image, then the live pipeline. */
+function NewServicePanel({ open, onClose, onDeployed }: { open: boolean; onClose: () => void; onDeployed: () => void }) {
   return (
-    <SlideOver open={open} onClose={onClose} title="New service" size={480} ariaLabel="New service">
-      <YStack gap="$3">
-        <Text fontSize="$2" color="$color11">
-          Create a service from a repo, an image, a template, or provision a database. Deploys run through the Hanzo CLI or
-          the <Text style={{ fontFamily: 'ui-monospace, monospace' }}>/v1/platform</Text> API — the new service then appears
-          on this canvas.
-        </Text>
-        {options.map((o) => (
-          <Card key={o.title} p="$3" gap="$2" borderWidth={1} borderColor="$borderColor">
-            <XStack items="center" gap="$2">
-              <o.icon size={16} />
-              <Text fontSize="$3" fontWeight="700" color="$color12">
-                {o.title}
-              </Text>
-            </XStack>
-            <Text fontSize="$2" color="$color10">
-              {o.desc}
-            </Text>
-            <YStack bg="$color2" p="$2" rounded="$2">
-              <Text fontSize="$1" color="$color11" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
-                {o.cmd}
-              </Text>
-            </YStack>
-          </Card>
-        ))}
-      </YStack>
+    <SlideOver open={open} onClose={onClose} title="New service" size={560} ariaLabel="New service">
+      <CreateAppForm
+        onCancel={onClose}
+        onDeployed={() => {
+          onClose()
+          onDeployed()
+        }}
+      />
     </SlideOver>
   )
 }
