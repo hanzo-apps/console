@@ -110,6 +110,7 @@ import { MapModule } from '~/components/products/map/MapModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
+import { BotsConsole } from '~/components/products/BotsConsole'
 import { AdminO11yModule } from '~/components/products/AdminO11yModule'
 import { SaasModule } from '~/components/products/SaasModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
@@ -2440,7 +2441,12 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/bot',
     kind: 'module',
-    routes: [{ path: '', component: BotModule }],
+    // '' = the gateway status/deep-links; 'run' = launch a computer-using bot on a
+    // booted machine and watch it live over VNC (cloud POST /v1/bots/run, metered).
+    routes: [
+      { path: '', component: BotModule },
+      { path: 'run', component: BotsConsole },
+    ],
   },
   {
     // CRM — the first Hanzo Business-OS brick, over the native-Go cloud `/v1/crm`
