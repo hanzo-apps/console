@@ -1,75 +1,70 @@
 'use client'
 
 /**
- * App Platform — the per-org **Hanzo PaaS** over cloud's native `/v1/platform/*`
- * control plane (`hanzoai/cloud` clients/platform). A signed-in org member manages
- * their OWN container apps: list + status, deploy, source-tagged logs, KMS-sealed
- * env (secret-masked), and verified custom domains. Scoped to the caller's org by
- * the Bearer owner claim server-side (the `/v1` proxy) — never a spoofable
- * header.
+ * App Platform — the per-org **Hanzo PaaS** rendered as a **Railway-grade project
+ * canvas** over cloud's native `/v1/platform/*` control plane. A signed-in org
+ * member sees every container app as a live service node, the domains that front
+ * them, and the managed data resources they reference — pan/zoom, glance at
+ * status, and open any node for the full management drawer (Deploy, Deployments,
+ * Variables, Metrics, Logs, Domains, SBOM).
  *
- * DISTINCT from the admin `applications` module (the `/v1/apps` fleet drift board)
- * and from platform.hanzo.ai (internal-admin). Every state is honest: loading,
- * empty (no apps → point at the CLI/API), and a `BackendStateCard` for a `/v1`
- * failure — never fabricated rows.
+ * All reusable canvas UI lives in `@hanzo/canvas` (brand/white-label aware via the
+ * design tokens); this module owns only the DATA — it fetches `/v1/platform` apps
+ * + `/v1/<kind>` resources and maps them (`platform-apps/canvas`) into the generic
+ * node/edge model. Every state is honest: loading, empty (no apps → the CLI/API),
+ * a `BackendStateCard` for a `/v1` failure, and NEVER a fabricated service or
+ * metric.
  */
-import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Boxes, Globe, KeyRound, Play, RefreshCw, Rocket, ScrollText, Square } from '@hanzogui/lucide-icons-2'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
+import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { Container, Database, GitBranch, LayoutTemplate, Network, Plus, RefreshCw, Rocket } from '@hanzogui/lucide-icons-2'
+import { useThemeSetting } from '@hanzogui/next-theme'
+import { EnvSwitcher, ServiceDetailDrawer, type ServiceNodeData } from '@hanzo/canvas'
 
-import {
-  PlatformAppsApi,
-  type PlatformApp,
-  type PlatformDeploymentLogs,
-  type PlatformDomain,
-  type Sbom,
-  type SbomComponent,
-} from '~/lib/api/platform-apps'
-import { ApiError } from '~/lib/api'
+import { PlatformAppsApi, type PlatformApp } from '~/lib/api/platform-apps'
+import { ProvisioningApi, type ResourceKind } from '~/lib/api/provisioning'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { Loader } from '~/components/ui/Loader'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { StatusTag } from '~/components/ui/StatusTag'
-import {
-  appDisplayStatus,
-  appImageRef,
-  canDeploy,
-  isDeployed,
-  logSourceLabel,
-  maskedEnvRows,
-  secretCount,
-  secretSyncLabel,
-  summarize,
-} from './platform-apps/logic'
+import { usePoll, useReducedMotion } from '~/components/products/overview/living/hooks'
+import { buildProjectCanvas, summarizeCanvas, type CanvasResource } from './platform-apps/canvas'
+import { renderServiceIcon } from './platform-apps/icons'
+import { buildAppTabs, buildResourceTabs } from './platform-apps/drawer'
 
-/** Monospace family for code/env/log text (CSS `style` — not a Gui shorthand prop). */
-const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
+/** The managed data kinds the provisioning service serves. */
+const RESOURCE_KINDS: ResourceKind[] = ['sql', 'vector', 'kv', 'search', 's3', 'datastore', 'docdb']
+const POLL_MS = 15_000
 
-/** SBOM component table columns — Name (mono), Version, Type, License. The shared
- *  DataTable wraps in overflow-x:auto, so it never breaks the 540px SlideOver. */
-const sbomColumns: Column<SbomComponent>[] = [
-  {
-    key: 'name',
-    header: 'Name',
-    render: (c) => (
-      <Text fontSize="$2" numberOfLines={1} style={{ fontFamily: MONO }}>
-        {c.name}
-      </Text>
+// `@xyflow/react` is browser-only — load the canvas client-side so SSR/prerender
+// never evaluates it.
+const ProjectCanvas = dynamic(() => import('@hanzo/canvas').then((m) => m.ProjectCanvas), {
+  ssr: false,
+  loading: () => <CanvasFrame><Loader label="Loading canvas…" /></CanvasFrame>,
+})
+
+type Data = { apps: PlatformApp[]; resources: CanvasResource[] }
+type State = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: Data }
+
+/** One composite read: apps (fatal) + managed resources (per-kind degrade to []). */
+async function loadPlatform(): Promise<Data> {
+  const apps = await PlatformAppsApi.listAllApps()
+  const lists = await Promise.all(
+    RESOURCE_KINDS.map((kind) =>
+      ProvisioningApi.list(kind)
+        .then((rs) => rs.map((r): CanvasResource => ({ kind, name: r.name, status: r.status, host: r.host, port: r.port, database: r.database })))
+        .catch(() => [] as CanvasResource[]),
     ),
-  },
-  { key: 'version', header: 'Version', width: 90, render: (c) => <Text fontSize="$2" numberOfLines={1}>{c.version || '—'}</Text> },
-  { key: 'type', header: 'Type', width: 90, render: (c) => <Text fontSize="$2" numberOfLines={1}>{c.type || '—'}</Text> },
-  { key: 'license', header: 'License', width: 110, render: (c) => <Text fontSize="$2" numberOfLines={1}>{c.license || '—'}</Text> },
-]
+  )
+  return { apps, resources: lists.flat() }
+}
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value, tone }: { label: string; value: number; tone?: string }) {
   return (
-    <Card p="$3" gap="$1" borderWidth={1} borderColor="$borderColor" minW={120} flex={1}>
-      <Text fontSize="$7" fontWeight="800">
+    <Card p="$3" gap="$1" borderWidth={1} borderColor="$borderColor" minW={110} flex={1}>
+      <Text fontSize="$7" fontWeight="800" style={tone ? { color: tone } : undefined}>
         {value}
       </Text>
       <Text fontSize="$2" color="$color11">
@@ -80,416 +75,215 @@ function StatCard({ label, value }: { label: string; value: number }) {
 }
 
 export function PlatformAppsModule(_props: { params: Record<string, string> }) {
-  const [apps, setApps] = useState<PlatformApp[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<BackendState | null>(null)
-  const [selected, setSelected] = useState<PlatformApp | null>(null)
+  const reducedMotion = useReducedMotion()
+  const { current, resolvedTheme } = useThemeSetting()
+  const theme: 'light' | 'dark' = (resolvedTheme ?? current ?? 'dark') === 'light' ? 'light' : 'dark'
+  const { tick, bump } = usePoll(POLL_MS)
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      setApps(await PlatformAppsApi.listAllApps())
-    } catch (e) {
-      setError(classifyBackend(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const [state, setState] = useState<State>({ phase: 'loading' })
+  const [refreshing, setRefreshing] = useState(false)
+  const [project, setProject] = useState('')
+  const [env, setEnv] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [newOpen, setNewOpen] = useState(false)
 
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    let live = true
+    setRefreshing(true)
+    loadPlatform()
+      .then((data) => live && setState({ phase: 'ready', data }))
+      .catch((e) => live && setState((s) => (s.phase === 'ready' ? s : { phase: 'error', error: classifyBackend(e) })))
+      .finally(() => live && setRefreshing(false))
+    return () => {
+      live = false
+    }
+  }, [tick])
 
-  const sum = summarize(apps)
+  const data = state.phase === 'ready' ? state.data : null
+  const model = useMemo(
+    () => (data ? buildProjectCanvas(data, { project, env }) : null),
+    [data, project, env],
+  )
+  const summary = useMemo(() => (model ? summarizeCanvas(model.nodes) : null), [model])
 
-  const columns: Column<PlatformApp>[] = [
-    {
-      key: 'name',
-      header: 'App',
-      render: (a) => (
-        <YStack>
-          <Text fontSize="$3" fontWeight="600" numberOfLines={1}>
-            {a.name}
-          </Text>
-          <Text fontSize="$1" color="$color10" numberOfLines={1}>
-            {a.projectSlug}/{a.slug}
-          </Text>
-        </YStack>
-      ),
-    },
-    { key: 'source', header: 'Source', width: 90, render: (a) => <Text fontSize="$2">{a.source}</Text> },
-    { key: 'status', header: 'Status', width: 120, render: (a) => <StatusTag status={appDisplayStatus(a)} /> },
-    {
-      key: 'secrets',
-      header: 'Secrets',
-      width: 130,
-      render: (a) => {
-        const label = secretSyncLabel(a)
-        return label ? <StatusTag status={a.secretSync} /> : <Text fontSize="$2" color="$color10">—</Text>
-      },
-    },
-    {
-      key: 'domains',
-      header: 'Domains',
-      width: 80,
-      render: (a) => <Text fontSize="$2">{a.domains?.length ?? 0}</Text>,
-    },
-  ]
+  // App lookup for the drawer (node id `app:<id>` → the PlatformApp).
+  const appById = useMemo(() => {
+    const m = new Map<string, PlatformApp>()
+    for (const a of data?.apps ?? []) m.set(`app:${a.id}`, a)
+    return m
+  }, [data])
+
+  const selected: ServiceNodeData | null = useMemo(
+    () => (selectedId && model ? model.nodes.find((n) => n.id === selectedId) ?? null : null),
+    [selectedId, model],
+  )
+
+  const refresh = useCallback(() => bump(), [bump])
+
+  const drawerTabs = useMemo(() => {
+    if (!selected) return []
+    const app = appById.get(selected.id)
+    if (app) return buildAppTabs(app, app.projectSlug ?? project, () => refresh(), () => refresh())
+    return buildResourceTabs(selected)
+  }, [selected, appById, project, refresh])
+
+  const empty = state.phase === 'ready' && state.data.apps.length === 0
 
   return (
     <YStack gap="$4" p="$4">
       <PageHeader
         title="App Platform"
-        subtitle="Deploy and manage your container apps — projects, deploys, logs, secrets, and domains."
+        subtitle="Your project's services on one live canvas — deploy, connect, and manage container apps."
         actions={
-          <Button size="$3" icon={RefreshCw} onPress={() => void refresh()} disabled={loading}>
-            Refresh
-          </Button>
+          <XStack gap="$2" items="center" flexWrap="wrap">
+            {model && model.projects.length > 1 ? (
+              <EnvSwitcher
+                size="sm"
+                value={project}
+                onChange={setProject}
+                options={[{ id: '', label: 'All projects' }, ...model.projects.map((p) => ({ id: p.id, label: p.label, count: p.count }))]}
+              />
+            ) : null}
+            {model && model.envs.length > 1 ? (
+              <EnvSwitcher
+                size="sm"
+                value={env}
+                onChange={setEnv}
+                options={[{ id: '', label: 'All' }, ...model.envs.map((e) => ({ id: e.id, label: e.label, count: e.count }))]}
+              />
+            ) : null}
+            <Button size="$3" icon={Plus} onPress={() => setNewOpen(true)}>
+              New service
+            </Button>
+            <Button size="$2" icon={RefreshCw} onPress={refresh} disabled={refreshing}>
+              Refresh
+            </Button>
+          </XStack>
         }
       />
 
-      {error ? (
+      {state.phase === 'error' ? (
         <BackendStateCard
-          state={error}
-          onRetry={() => void refresh()}
-          hint="Apps you create with the Hanzo CLI or POST /v1/platform appear here."
+          state={state.error}
+          onRetry={refresh}
+          hint="Apps you create with the Hanzo CLI or POST /v1/platform appear here as service nodes."
         />
-      ) : loading ? (
-        <Loader label="Loading your apps…" />
-      ) : apps.length === 0 ? (
+      ) : state.phase === 'loading' ? (
+        <Loader label="Loading your services…" />
+      ) : empty ? (
         <EmptyState
           icon={Rocket}
-          title="No apps yet"
-          description="Create a project and deploy a container app with the Hanzo CLI or the /v1/platform API. Your apps, deploys, logs, secrets, and domains show up here."
+          title="No services yet"
+          description="Create a project and deploy a container app with the Hanzo CLI or the /v1/platform API. Each app shows up here as a live service node — with its domains, connected data, deploys, logs, and SBOM."
           bullets={[
-            'Create a project, then an app from a git repo or a prebuilt image',
+            'Deploy from a git repo or a prebuilt image',
             'Set env — secret values are sealed in KMS, never plaintext',
             'Add a custom domain and verify it over DNS for automatic TLS',
           ]}
+          primary={{ label: 'New service', onPress: () => setNewOpen(true) }}
         />
       ) : (
         <>
-          <XStack gap="$3" flexWrap="wrap">
-            <StatCard label="Apps" value={sum.total} />
-            <StatCard label="Live" value={sum.live} />
-            <StatCard label="Building" value={sum.building} />
-            <StatCard label="Failed" value={sum.failed} />
-          </XStack>
-          <DataTable<PlatformApp>
-            columns={columns}
-            rows={apps}
-            rowKey={(a) => a.id}
-            onRowPress={(a) => setSelected(a)}
-          />
+          {summary ? (
+            <XStack gap="$3" flexWrap="wrap">
+              <StatCard label="Services" value={summary.services} />
+              <StatCard label="Active" value={summary.active} tone={summary.active ? '#2ea043' : undefined} />
+              <StatCard label="Deploying" value={summary.deploying} tone={summary.deploying ? '#bb8009' : undefined} />
+              <StatCard label="Crashed" value={summary.crashed} tone={summary.crashed ? '#e5534b' : undefined} />
+            </XStack>
+          ) : null}
+          <CanvasFrame>
+            {model && model.nodes.length > 0 ? (
+              <ProjectCanvas
+                nodes={model.nodes}
+                edges={model.edges}
+                theme={theme}
+                reducedMotion={reducedMotion}
+                renderIcon={renderServiceIcon}
+                onOpenDetail={(n) => setSelectedId(n.id)}
+              />
+            ) : (
+              <ScopedEmpty onClear={() => { setProject(''); setEnv('') }} />
+            )}
+          </CanvasFrame>
         </>
       )}
 
-      <SlideOver open={!!selected} onClose={() => setSelected(null)} title={selected?.name ?? 'App'} size={540}>
-        {selected ? (
-          <AppDetail app={selected} onChanged={(a) => setSelected(a)} onRefreshList={() => void refresh()} />
-        ) : null}
-      </SlideOver>
+      <ServiceDetailDrawer
+        open={!!selected}
+        onClose={() => setSelectedId(null)}
+        service={selected}
+        tabs={drawerTabs}
+        reducedMotion={reducedMotion}
+        renderIcon={renderServiceIcon}
+      />
+
+      <NewServicePanel open={newOpen} onClose={() => setNewOpen(false)} />
     </YStack>
   )
 }
 
-function Fact({ label, value }: { label: string; value: React.ReactNode }) {
+/** The bordered canvas viewport — one definite height so the canvas sizes itself. */
+function CanvasFrame({ children }: { children: React.ReactNode }) {
   return (
-    <XStack justify="space-between" items="center" py="$1.5" borderBottomWidth={1} borderColor="$borderColor" gap="$3">
-      <Text fontSize="$2" color="$color11">
-        {label}
-      </Text>
-      <Text fontSize="$2" color="$color12" fontWeight="600" numberOfLines={1}>
-        {value}
-      </Text>
-    </XStack>
+    <Card borderWidth={1} borderColor="$borderColor" rounded="$4" overflow="hidden" p={0} bg="$color1" style={{ height: 'min(74vh, 820px)', minHeight: 460 }}>
+      {children}
+    </Card>
   )
 }
 
-function SectionTitle({ icon: Icon, children }: { icon: typeof Globe; children: React.ReactNode }) {
+/** When a project/env filter hides everything, an honest in-canvas note. */
+function ScopedEmpty({ onClear }: { onClear: () => void }) {
   return (
-    <XStack items="center" gap="$2" mt="$2">
-      <Icon size={15} />
-      <Text fontSize="$4" fontWeight="700">
-        {children}
+    <YStack flex={1} items="center" justify="center" gap="$3" p="$6" style={{ height: '100%' }}>
+      <Network size={28} color="#8b949e" />
+      <Text fontSize="$3" color="$color11">
+        No services in this scope.
       </Text>
-    </XStack>
+      <Button size="$3" onPress={onClear}>
+        Show all
+      </Button>
+    </YStack>
   )
 }
 
-function AppDetail({
-  app,
-  onChanged,
-  onRefreshList,
-}: {
-  app: PlatformApp
-  onChanged: (a: PlatformApp) => void
-  onRefreshList: () => void
-}) {
-  const project = app.projectSlug ?? ''
-  const [busy, setBusy] = useState<string | null>(null)
-  const [actErr, setActErr] = useState<string | null>(null)
-  const [domains, setDomains] = useState<PlatformDomain[] | null>(null)
-  const [logs, setLogs] = useState<PlatformDeploymentLogs | null>(null)
-  const [logsLoading, setLogsLoading] = useState(false)
-  const [sbom, setSbom] = useState<Sbom | null>(null)
-  const [sbomLoading, setSbomLoading] = useState(false)
-  const [sbomNote, setSbomNote] = useState<string | null>(null)
-
-  const loadDomains = useCallback(async () => {
-    try {
-      setDomains(await PlatformAppsApi.listDomains(project, app.slug))
-    } catch {
-      setDomains([])
-    }
-  }, [project, app.slug])
-
-  const loadLogs = useCallback(async () => {
-    setLogsLoading(true)
-    try {
-      const deps = await PlatformAppsApi.listDeployments(project, app.slug)
-      if (deps.length === 0) {
-        setLogs({ deploymentId: '', source: 'none', logs: 'No deployments yet — deploy this app to see build and runtime logs.' })
-        return
-      }
-      setLogs(await PlatformAppsApi.deploymentLogs(project, app.slug, deps[0].id))
-    } catch {
-      setLogs({ deploymentId: '', source: 'none', logs: 'Logs are not available right now.' })
-    } finally {
-      setLogsLoading(false)
-    }
-  }, [project, app.slug])
-
-  const imageRef = appImageRef(app)
-  const loadSbom = useCallback(async () => {
-    if (!imageRef) {
-      setSbom(null)
-      setSbomNote(null)
-      setSbomLoading(false)
-      return
-    }
-    setSbomLoading(true)
-    setSbomNote(null)
-    try {
-      setSbom(await PlatformAppsApi.sbom(imageRef))
-    } catch (e) {
-      setSbom(null)
-      setSbomNote(
-        e instanceof ApiError && e.status === 503 ? 'SBOM datastore unavailable.' : 'Could not load the SBOM.',
-      )
-    } finally {
-      setSbomLoading(false)
-    }
-  }, [imageRef])
-
-  useEffect(() => {
-    void loadDomains()
-    void loadLogs()
-    void loadSbom()
-  }, [loadDomains, loadLogs, loadSbom])
-
-  const act = useCallback(
-    async (name: string, fn: () => Promise<PlatformApp>) => {
-      setBusy(name)
-      setActErr(null)
-      try {
-        const updated = await fn()
-        onChanged({ ...updated, projectSlug: project })
-        onRefreshList()
-        void loadLogs()
-      } catch (e) {
-        setActErr(e instanceof Error ? e.message : String(e))
-      } finally {
-        setBusy(null)
-      }
-    },
-    [onChanged, onRefreshList, project, loadLogs],
-  )
-
-  const verify = useCallback(
-    async (host: string) => {
-      setBusy(`verify:${host}`)
-      setActErr(null)
-      try {
-        await PlatformAppsApi.verifyDomain(project, app.slug, host)
-        await loadDomains()
-      } catch (e) {
-        setActErr(e instanceof Error ? e.message : String(e))
-      } finally {
-        setBusy(null)
-      }
-    },
-    [project, app.slug, loadDomains],
-  )
-
-  const envRows = maskedEnvRows(app.env)
-
+/** Honest "+ New service" affordance — the four create paths, each with the real
+ *  CLI/API command. No fake POST: the container-app create flow is the CLI / the
+ *  `/v1/platform` API (documented seam to wire an in-console create form). */
+function NewServicePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const options = [
+    { icon: GitBranch, title: 'From a git repo', desc: 'Build and deploy from a GitHub repository.', cmd: 'hanzo deploy --repo <owner/name> --branch main' },
+    { icon: Container, title: 'From an image', desc: 'Deploy a prebuilt container image.', cmd: 'hanzo deploy --image <repository:tag>' },
+    { icon: LayoutTemplate, title: 'From a template', desc: 'Start from a Hanzo service template.', cmd: 'hanzo templates list' },
+    { icon: Database, title: 'Add a database', desc: 'Provision managed SQL, Vector, KV, Search, or Object Storage.', cmd: 'hanzo db create <sql|vector|kv|search|s3>' },
+  ]
   return (
-    <YStack gap="$3">
-      {/* Overview + actions */}
-      <XStack gap="$2" flexWrap="wrap">
-        <PrimaryButton
-          size="$3"
-          icon={Rocket}
-          disabled={!!busy || !canDeploy(app)}
-          onPress={() => void act('deploy', () => PlatformAppsApi.deploy(project, app.slug).then(() => PlatformAppsApi.getApp(project, app.slug)))}
-        >
-          {busy === 'deploy' ? 'Deploying…' : 'Deploy'}
-        </PrimaryButton>
-        {isDeployed(app) && app.status !== 'stopped' ? (
-          <Button size="$3" icon={Square} disabled={!!busy} onPress={() => void act('stop', () => PlatformAppsApi.stop(project, app.slug))}>
-            Stop
-          </Button>
-        ) : isDeployed(app) ? (
-          <Button size="$3" icon={Play} disabled={!!busy} onPress={() => void act('start', () => PlatformAppsApi.start(project, app.slug))}>
-            Start
-          </Button>
-        ) : null}
-      </XStack>
-      {actErr ? (
-        <Text fontSize="$2" color="$red10">
-          {actErr}
-        </Text>
-      ) : null}
-
-      <YStack>
-        <Fact label="Status" value={<StatusTag status={appDisplayStatus(app)} />} />
-        <Fact label="Environment" value={app.environment} />
-        <Fact label="Source" value={app.source} />
-        <Fact label="Image" value={app.source === 'image' ? appImageRef(app) || '—' : app.repo?.url || '—'} />
-        <Fact label="Replicas" value={app.replicas} />
-        <Fact label="Namespace" value={app.namespace || '—'} />
-      </YStack>
-
-      {/* Bill of Materials (SBOM) — components CI recorded for this image (cloud clients/sbom) */}
-      <SectionTitle icon={Boxes}>
-        Bill of Materials (SBOM){sbom ? ` · ${sbom.componentCount} components` : ''}
-      </SectionTitle>
-      {sbomLoading ? (
-        <Spinner size="small" color="$color11" />
-      ) : sbomNote ? (
-        <Text fontSize="$2" color="$color10">
-          {sbomNote}
-        </Text>
-      ) : sbom && sbom.components.length > 0 ? (
-        <DataTable<SbomComponent>
-          columns={sbomColumns}
-          rows={sbom.components}
-          rowKey={(c) => c.purl || `${c.name}@${c.version}`}
-        />
-      ) : (
-        <Text fontSize="$2" color="$color10">
-          No SBOM recorded for this image yet.
-        </Text>
-      )}
-
-      {/* Env (secret-masked) */}
-      <SectionTitle icon={KeyRound}>
-        Environment {secretCount(app.env) > 0 ? `· ${secretCount(app.env)} secret` : ''}
-      </SectionTitle>
-      {secretSyncLabel(app) ? (
-        <XStack gap="$2" items="center">
-          <StatusTag status={app.secretSync} />
-          {app.secretSyncDetail ? (
-            <Text fontSize="$1" color="$color10" numberOfLines={2}>
-              {app.secretSyncDetail}
-            </Text>
-          ) : null}
-        </XStack>
-      ) : null}
-      {envRows.length === 0 ? (
-        <Text fontSize="$2" color="$color10">
-          No environment variables.
-        </Text>
-      ) : (
-        <YStack borderWidth={1} borderColor="$borderColor" rounded="$3" overflow="hidden">
-          {envRows.map((e) => (
-            <XStack key={e.key} py="$2" px="$3" gap="$3" borderBottomWidth={1} borderColor="$borderColor" items="center">
-              <Text fontSize="$2" flex={1} numberOfLines={1} style={{ fontFamily: MONO }}>
-                {e.key}
-              </Text>
-              <Text fontSize="$2" color={e.secret ? '$color10' : '$color12'} flex={1} numberOfLines={1} style={{ fontFamily: MONO }}>
-                {e.value || '""'}
-              </Text>
-              {e.secret ? (
-                <Text fontSize="$1" color="$color10">
-                  secret
-                </Text>
-              ) : null}
-            </XStack>
-          ))}
-        </YStack>
-      )}
-
-      {/* Domains */}
-      <SectionTitle icon={Globe}>Domains</SectionTitle>
-      {domains === null ? (
-        <Spinner size="small" color="$color11" />
-      ) : domains.length === 0 ? (
-        <Text fontSize="$2" color="$color10">
-          No domains.
-        </Text>
-      ) : (
-        <YStack gap="$2">
-          {domains.map((d) => (
-            <Card key={d.host} p="$3" gap="$2" borderWidth={1} borderColor="$borderColor">
-              <XStack justify="space-between" items="center" gap="$2">
-                <YStack flex={1}>
-                  <Text fontSize="$3" fontWeight="600" numberOfLines={1}>
-                    {d.host}
-                  </Text>
-                  <Text fontSize="$1" color="$color10">
-                    {d.kind}
-                    {d.primary ? ' · primary' : ''}
-                  </Text>
-                </YStack>
-                <StatusTag status={d.status} />
-              </XStack>
-              {!d.verified && d.records && d.records.length > 0 ? (
-                <YStack gap="$1" bg="$color2" p="$2" rounded="$2">
-                  <Text fontSize="$1" color="$color11">
-                    {d.detail || 'Publish these DNS records, then verify:'}
-                  </Text>
-                  {d.records.map((r) => (
-                    <Text key={`${r.type}-${r.name}`} fontSize="$1" numberOfLines={1} style={{ fontFamily: MONO }}>
-                      {r.type} {r.name} → {r.value}
-                    </Text>
-                  ))}
-                  <Button
-                    size="$2"
-                    self="flex-start"
-                    disabled={busy === `verify:${d.host}`}
-                    onPress={() => void verify(d.host)}
-                  >
-                    {busy === `verify:${d.host}` ? 'Verifying…' : 'Verify'}
-                  </Button>
-                </YStack>
-              ) : null}
-            </Card>
-          ))}
-        </YStack>
-      )}
-
-      {/* Source-tagged logs (cloud#75) */}
-      <SectionTitle icon={ScrollText}>Logs</SectionTitle>
-      <XStack items="center" gap="$2">
+    <SlideOver open={open} onClose={onClose} title="New service" size={480} ariaLabel="New service">
+      <YStack gap="$3">
         <Text fontSize="$2" color="$color11">
-          {logSourceLabel(logs?.source)}
+          Create a service from a repo, an image, a template, or provision a database. Deploys run through the Hanzo CLI or
+          the <Text style={{ fontFamily: 'ui-monospace, monospace' }}>/v1/platform</Text> API — the new service then appears
+          on this canvas.
         </Text>
-        <Button size="$1" icon={RefreshCw} disabled={logsLoading} onPress={() => void loadLogs()}>
-          Refresh
-        </Button>
-      </XStack>
-      <YStack bg="$color1" borderWidth={1} borderColor="$borderColor" rounded="$3" p="$3">
-        {logsLoading ? (
-          <Spinner size="small" color="$color11" />
-        ) : (
-          <Text fontSize="$1" color="$color11" style={{ fontFamily: MONO, whiteSpace: 'pre-wrap' }}>
-            {logs?.logs || '—'}
-          </Text>
-        )}
+        {options.map((o) => (
+          <Card key={o.title} p="$3" gap="$2" borderWidth={1} borderColor="$borderColor">
+            <XStack items="center" gap="$2">
+              <o.icon size={16} />
+              <Text fontSize="$3" fontWeight="700" color="$color12">
+                {o.title}
+              </Text>
+            </XStack>
+            <Text fontSize="$2" color="$color10">
+              {o.desc}
+            </Text>
+            <YStack bg="$color2" p="$2" rounded="$2">
+              <Text fontSize="$1" color="$color11" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                {o.cmd}
+              </Text>
+            </YStack>
+          </Card>
+        ))}
       </YStack>
-    </YStack>
+    </SlideOver>
   )
 }

@@ -40,7 +40,7 @@ function guiPackages() {
   // @hanzo/dash and @hanzo/data ship their screens/components as ESM/TSX
   // source (no compiled dist), so the shared Base UI is transpiled here the same
   // way Gui is.
-  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', '@hanzo/finance-ui', 'react-native-web', ...scoped]
+  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', '@hanzo/canvas', '@hanzo/finance-ui', 'react-native-web', ...scoped]
 }
 
 /**
