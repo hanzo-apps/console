@@ -6,14 +6,20 @@
  * Honest by construction: every node is a thing the API actually returned, and
  * an edge is drawn ONLY where a real relationship exists —
  *   - domain → app: the host came straight off the app's own `domains` list.
- *   - app → resource / app → app: an UNMASKED env-var value names the target's
- *     host or name (a genuine connection reference). Secret values arrive masked,
- *     so they can't match; a drawn edge is a real link, never invented. When no
- *     link is exposed, resources/apps simply sit unconnected — never a fabricated
- *     dependency (documented seam: wire real dependency edges when the backend
- *     exposes them).
+ *   - app → app (dependency): an OBSERVED runtime service→service call from the
+ *     o11y dependency graph (trace-derived). This is the REAL dependency signal —
+ *     the platform store declares no service bindings — drawn only when both ends
+ *     resolve to apps in the canvas.
+ *   - app → resource / app → app (reference): an UNMASKED env-var value names the
+ *     target's host or name (a genuine connection reference / declared intent).
+ *     Secret values arrive masked, so they can't match; a drawn edge is a real
+ *     link, never invented. An observed dependency supersedes a reference guess for
+ *     the same pair. When no link is exposed, resources/apps sit unconnected.
+ *
+ * App nodes also carry a live requests sparkline (`metric`) folded from the o11y
+ * per-service RED metrics; a service with no telemetry shows none (honest empty).
  */
-import type { ServiceEdgeData, ServiceKind, ServiceNodeData } from '@hanzo/canvas/pure'
+import type { ServiceEdgeData, ServiceKind, ServiceMetric, ServiceNodeData } from '@hanzo/canvas/pure'
 import { normalizeServiceStatus, toEpochMs } from '@hanzo/canvas/pure'
 
 import type { PlatformApp } from '~/lib/api/platform-apps'
@@ -40,6 +46,29 @@ export interface CanvasFilter {
   project?: string
   /** Environment to scope to; omit / '' for all environments. */
   env?: string
+}
+
+/**
+ * One observed runtime dependency — a service→service call edge from the o11y
+ * dependency graph (`/v1/o11y/dependency_graph`, trace-derived). `parent` calls
+ * `child`; both are OpenTelemetry `service.name` values. This is REAL observed
+ * dependency data (the platform store declares none), rendered as a solid
+ * `dependency` edge ONLY where both endpoints resolve to apps in the canvas.
+ */
+export interface ServiceDepEdge {
+  parent: string
+  child: string
+  callCount?: number
+}
+
+/**
+ * Live signals folded onto the graph, fetched separately (o11y) so `buildProjectCanvas`
+ * stays a pure fold. `metricByApp` keys the card's requests `ServiceMetric` by
+ * `PlatformApp.id`; `serviceDeps` are the observed runtime dependencies.
+ */
+export interface CanvasExtras {
+  metricByApp?: Map<string, ServiceMetric>
+  serviceDeps?: ServiceDepEdge[]
 }
 
 export interface CanvasOption {
@@ -98,7 +127,7 @@ const appNodeId = (a: PlatformApp): string => `app:${a.id}`
 const domainNodeId = (host: string): string => `dom:${host}`
 const resourceNodeId = (r: CanvasResource): string => `res:${r.kind}:${r.name}`
 
-function appNode(a: PlatformApp): ServiceNodeData {
+function appNode(a: PlatformApp, metric?: ServiceMetric): ServiceNodeData {
   const raw = appRaw(a)
   return {
     id: appNodeId(a),
@@ -112,7 +141,24 @@ function appNode(a: PlatformApp): ServiceNodeData {
     deployedAt: toEpochMs(a.updatedAt),
     capability: inferAppCapability({ slug: a.slug, imageRepo: a.image?.repository, name: a.name }),
     href: '/app-platform',
+    metric,
   }
+}
+
+/** repo basename, e.g. `hanzoai/api` → `api`. */
+function repoBase(url: string | undefined): string {
+  const ref = repoRef(url)
+  return ref ? ref.split('/').pop() || '' : ''
+}
+
+/** The OTel `service.name` values an app might emit under (slug/name/repo basename). */
+function serviceCandidates(a: PlatformApp): string[] {
+  const out = new Set<string>()
+  for (const c of [a.slug, a.name, repoBase(a.repo?.url), a.image?.repository?.split('/').pop()]) {
+    const s = (c ?? '').trim().toLowerCase()
+    if (s) out.add(s)
+  }
+  return [...out]
 }
 
 function resourceNode(r: CanvasResource): ServiceNodeData {
@@ -162,8 +208,13 @@ function distinct(apps: PlatformApp[], pick: (a: PlatformApp) => string | undefi
  * Build the project-canvas model. `projects`/`envs` are computed over ALL apps
  * (so the switchers show every option); `nodes`/`edges` are scoped to the filter.
  * Resources appear only when a visible app references them (honest linkage).
+ *
+ * `extras` folds live o11y signals onto the graph: `metricByApp` sets each app node's
+ * card sparkline (real requests preview), and `serviceDeps` (the observed runtime
+ * dependency graph) adds solid `dependency` edges between app nodes — a real observed
+ * link supersedes the env-var-derived `reference` guess for the same pair.
  */
-export function buildProjectCanvas(input: CanvasInput, filter: CanvasFilter = {}): ProjectCanvasModel {
+export function buildProjectCanvas(input: CanvasInput, filter: CanvasFilter = {}, extras: CanvasExtras = {}): ProjectCanvasModel {
   const projects = distinct(input.apps, (a) => a.projectSlug)
   const envs = distinct(input.apps, (a) => a.environment)
 
@@ -174,8 +225,8 @@ export function buildProjectCanvas(input: CanvasInput, filter: CanvasFilter = {}
   const nodes: ServiceNodeData[] = []
   const edges: ServiceEdgeData[] = []
 
-  // App nodes
-  for (const a of scoped) nodes.push(appNode(a))
+  // App nodes (with their real o11y requests sparkline, when present)
+  for (const a of scoped) nodes.push(appNode(a, extras.metricByApp?.get(a.id)))
 
   // Domain nodes + route edges (first app to claim a host owns the node)
   const domainOwner = new Set<string>()
@@ -221,6 +272,38 @@ export function buildProjectCanvas(input: CanvasInput, filter: CanvasFilter = {}
     }
   }
   for (const r of usedResource.values()) nodes.push(resourceNode(r))
+
+  // Observed runtime dependencies (o11y dependency graph). Map each service→service
+  // call edge onto app nodes by OTel service.name; draw a solid `dependency` edge ONLY
+  // when BOTH endpoints resolve to apps in THIS canvas (so an edge is never drawn to a
+  // service outside the scope, and cross-org names can't leak an edge). A real observed
+  // link supersedes the env-var-derived `reference` guess for the same ordered pair.
+  if (extras.serviceDeps && extras.serviceDeps.length > 0) {
+    const svcToApp = new Map<string, string>()
+    for (const a of scoped) for (const s of serviceCandidates(a)) if (!svcToApp.has(s)) svcToApp.set(s, appNodeId(a))
+
+    const depPairs = new Set<string>()
+    const depEdges: ServiceEdgeData[] = []
+    for (const d of extras.serviceDeps) {
+      const src = svcToApp.get((d.parent || '').toLowerCase())
+      const dst = svcToApp.get((d.child || '').toLowerCase())
+      if (!src || !dst || src === dst) continue
+      const key = `${src}->${dst}`
+      if (depPairs.has(key)) continue
+      depPairs.add(key)
+      depEdges.push({ id: `dep:${key}`, source: src, target: dst, reason: 'dependency' })
+    }
+
+    if (depEdges.length > 0) {
+      // Drop an app→app reference edge when an observed dependency covers the same pair.
+      const filtered = edges.filter(
+        (e) =>
+          !(e.reason === 'reference' && e.source.startsWith('app:') && e.target.startsWith('app:') && depPairs.has(`${e.source}->${e.target}`)),
+      )
+      filtered.push(...depEdges)
+      return { nodes, edges: filtered, projects, envs }
+    }
+  }
 
   return { nodes, edges, projects, envs }
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import type { ServiceMetric } from '@hanzo/canvas/pure'
 
 import type { PlatformApp } from '~/lib/api/platform-apps'
-import { buildProjectCanvas, summarizeCanvas, type CanvasResource } from './canvas'
+import { buildProjectCanvas, summarizeCanvas, type CanvasResource, type ServiceDepEdge } from './canvas'
 
 function app(over: Partial<PlatformApp>): PlatformApp {
   return {
@@ -76,6 +77,58 @@ describe('buildProjectCanvas', () => {
     expect(all.envs.map((e) => e.id).sort()).toEqual(['preview', 'production'])
     const scoped = buildProjectCanvas({ apps, resources: [] }, { project: 'acme', env: 'production' })
     expect(scoped.nodes.filter((n) => n.kind === 'app')).toHaveLength(1)
+  })
+})
+
+describe('buildProjectCanvas — live o11y signals (extras)', () => {
+  const metric: ServiceMetric = { label: 'req', points: [1, 2, 3], value: '1.2K' }
+
+  it('sets the app node card metric from metricByApp, keyed by app id', () => {
+    const a = app({ id: 'a1' })
+    const model = buildProjectCanvas({ apps: [a], resources: [] }, {}, { metricByApp: new Map([['a1', metric]]) })
+    expect(model.nodes.find((n) => n.id === 'app:a1')?.metric).toEqual(metric)
+  })
+
+  it('leaves the metric undefined (honest empty) when no telemetry is provided for the app', () => {
+    const model = buildProjectCanvas({ apps: [app({ id: 'a1' })], resources: [] }, {}, { metricByApp: new Map() })
+    expect(model.nodes.find((n) => n.id === 'app:a1')?.metric).toBeUndefined()
+  })
+
+  it('draws an OBSERVED dependency edge between two app nodes matched by service name', () => {
+    const apps = [app({ id: 'a', slug: 'api', name: 'API' }), app({ id: 'b', slug: 'vector', name: 'Vector' })]
+    const deps: ServiceDepEdge[] = [{ parent: 'api', child: 'vector', callCount: 10 }]
+    const model = buildProjectCanvas({ apps, resources: [] }, {}, { serviceDeps: deps })
+    const dep = model.edges.find((e) => e.reason === 'dependency')
+    expect(dep).toMatchObject({ source: 'app:a', target: 'app:b', reason: 'dependency' })
+  })
+
+  it('never draws a dependency edge to a service outside the canvas (honest scoping)', () => {
+    const apps = [app({ id: 'a', slug: 'api' })]
+    const deps: ServiceDepEdge[] = [{ parent: 'api', child: 'some-other-org-service' }]
+    const model = buildProjectCanvas({ apps, resources: [] }, {}, { serviceDeps: deps })
+    expect(model.edges.some((e) => e.reason === 'dependency')).toBe(false)
+  })
+
+  it('an observed dependency supersedes the env-derived reference edge for the same pair', () => {
+    // api references vector via an env value AND o11y observed api→vector calls.
+    const apps = [
+      app({ id: 'a', slug: 'api', name: 'API', env: [{ key: 'V', value: 'vector', secret: false }] }),
+      app({ id: 'b', slug: 'vector', name: 'Vector' }),
+    ]
+    const deps: ServiceDepEdge[] = [{ parent: 'api', child: 'vector' }]
+    const model = buildProjectCanvas({ apps, resources: [] }, {}, { serviceDeps: deps })
+    const appApp = model.edges.filter((e) => e.source === 'app:a' && e.target === 'app:b')
+    expect(appApp).toHaveLength(1)
+    expect(appApp[0].reason).toBe('dependency')
+  })
+
+  it('keeps env-derived reference edges when no observed dependency covers them', () => {
+    const apps = [
+      app({ id: 'a', slug: 'api', name: 'API', env: [{ key: 'V', value: 'vector', secret: false }] }),
+      app({ id: 'b', slug: 'vector', name: 'Vector' }),
+    ]
+    const model = buildProjectCanvas({ apps, resources: [] }, {}, { serviceDeps: [] })
+    expect(model.edges.some((e) => e.source === 'app:a' && e.target === 'app:b' && e.reason === 'reference')).toBe(true)
   })
 })
 
