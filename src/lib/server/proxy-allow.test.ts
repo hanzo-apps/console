@@ -75,6 +75,14 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/ml/health')).toBe(true)
   })
 
+  it('admits the code-intelligence surface (search/ask/context/index), per-org via the Bearer', () => {
+    expect(CLOUD_HEADS).toContain('code')
+    expect(allowCloudSurface('v1/code/search')).toBe(true)
+    expect(allowCloudSurface('v1/code/ask')).toBe(true)
+    expect(allowCloudSurface('v1/code/context')).toBe(true)
+    expect(allowCloudSurface('v1/code/index')).toBe(true)
+  })
+
   it('admits the casibase store-admin heads the console uses (Embeddings · Collections)', () => {
     for (const head of ['get-stores', 'get-store', 'add-store', 'update-store', 'delete-store', 'refresh-store-vectors']) {
       expect(CLOUD_HEADS).toContain(head)
