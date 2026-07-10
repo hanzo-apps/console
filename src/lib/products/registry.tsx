@@ -94,6 +94,7 @@ import { Users,
   Store,
   Compass,
   Droplet,
+  AlertTriangle,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId } from '~/config'
@@ -186,6 +187,7 @@ import { HsmModule } from '~/components/products/HsmModule'
 import { AuthzModule } from '~/components/products/AuthzModule'
 import { ServiceMeshModule } from '~/components/products/ServiceMeshModule'
 import { ServiceMapModule } from '~/components/products/ServiceMapModule'
+import { ErrorsModule } from '~/components/products/ErrorsModule'
 import { LoadBalancerModule } from '~/components/products/LoadBalancerModule'
 import { VpcModule } from '~/components/products/VpcModule'
 import { EdgeModule } from '~/components/products/EdgeModule'
@@ -1832,6 +1834,25 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/logs`,
     kind: 'module',
     routes: [{ path: '', component: LogsModule }],
+  },
+  {
+    // Sentry-class error/crash tracking, folded into the ONE o11y plane over the
+    // REAL /v1/o11y/errortracking surface: grouped issues by fingerprint with
+    // lifecycle (resolve/ignore/reopen). Honest RuntimeNotice when the runtime is
+    // not initialized (503) or unrouted (404); never fabricated issues.
+    id: 'errors',
+    label: 'Errors',
+    icon: AlertTriangle,
+    description: 'Grouped exceptions and crashes across your services.',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/o11y',
+    docs: `${DOCS}/errors`,
+    kind: 'module',
+    routes: [
+      { path: '', component: ErrorsModule },
+      { path: ':id', component: ErrorsModule },
+    ],
   },
   {
     id: 'metrics',
