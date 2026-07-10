@@ -454,11 +454,31 @@ export function serviceFilterItem(dataSource: O11yDataSource, service: string): 
 }
 
 /**
+ * The `list`-panel `selectColumns` per signal. The traces v4 list builder HARD-fails
+ * (`select columns cannot be empty for panelType list`, → 500) when a noop list query
+ * carries no `selectColumns`; the query already emits timestamp/spanID/traceID, so
+ * these ADD the display fields `normalizeTraceSpan` reads. Each name is a materialized
+ * static trace column (o11y `StaticFieldsTraces`), so the runtime resolves it verbatim.
+ * Logs list does NOT require selectColumns (its noop path returns the default row set),
+ * so it stays empty — adding trace columns there would reference non-existent log columns.
+ */
+const listSelectColumns: Record<O11yDataSource, Array<Record<string, unknown>>> = {
+  traces: [
+    { key: 'name', dataType: 'string', type: 'tag', isColumn: true },
+    { key: 'duration_nano', dataType: 'float64', type: 'tag', isColumn: true },
+    { key: 'response_status_code', dataType: 'string', type: 'tag', isColumn: true },
+  ],
+  logs: [],
+  metrics: [],
+}
+
+/**
  * The exact v3 `query_range` LIST payload — ONE `noop` builder query keyed `A`,
  * newest-first, paged by `offset`/`pageSize`. Mirrors what O11y's own explorer
  * sends (verified against the frontend + the server `BuilderQuery` struct), so the
  * runtime never 400s on shape. `filters` (default none) scopes the query — e.g. a
- * `serviceFilterItem` restricts it to one product's OTel service.
+ * `serviceFilterItem` restricts it to one product's OTel service. `selectColumns`
+ * is REQUIRED by the traces list builder (empty → 500); see `listSelectColumns`.
  */
 export function listQueryPayload(
   dataSource: O11yDataSource,
@@ -484,6 +504,7 @@ export function listQueryPayload(
           disabled: false,
           stepInterval: 60,
           filters: { items: filters, op: 'AND' },
+          selectColumns: listSelectColumns[dataSource],
           groupBy: [],
           having: [],
           orderBy: [{ columnName: 'timestamp', order: 'desc' }],
