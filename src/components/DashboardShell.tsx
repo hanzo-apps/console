@@ -96,7 +96,7 @@ import { ProductIcon } from '~/components/ui/ProductIcon'
 import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { SystemStatusBadge } from '~/components/ui/SystemStatusBadge'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
-import { BrandLogo } from '~/components/ui/BrandLogo'
+import { SidebarBrand } from '~/components/SidebarBrand'
 import { OrgSwitcher } from '~/components/OrgSwitcher'
 import { leaveOrg } from '~/lib/org-scope'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
@@ -435,12 +435,15 @@ function MenuItem({ icon: Icon, label, onPress }: { icon: ComponentType<{ size?:
 }
 
 /**
- * Sidebar identity — the ACCOUNT switcher on top with the current ORG below it
- * (Google-Cloud-Console style), replacing the old org-then-brand header. The user row
- * opens an account menu (profile · theme · sign out); the org row is the working
- * `OrgSwitcher` (switch / create org). Collapsed → just the account avatar, opening the
- * same menu. Reused by the desktop sidebar AND the mobile drawer (both mount
- * SidebarNav), so one definition, many mounts (DRY).
+ * Sidebar identity — the BOTTOM-LEFT cluster (org switcher above the user/account
+ * row), matching the unified app/chat shell where the brand logomark is top-left
+ * and the org+user+wallet cluster is bottom-left. The org row is the working
+ * `OrgSwitcher` (switch / create org); the user row opens an account menu
+ * (profile · theme · sign out). Because it sits at the FOOT of the sidebar, the
+ * account menu opens UPWARD (`top-start`) so it never clips off the bottom edge.
+ * Collapsed → just the account avatar, opening the same menu to the right. Reused
+ * by the desktop sidebar AND the mobile drawer (both mount SidebarNav), so one
+ * definition, many mounts (DRY).
  */
 function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
   const router = useRouter()
@@ -486,7 +489,7 @@ function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavi
 
   if (collapsed) {
     return (
-      <YStack items="center" gap="$1" mb="$1">
+      <YStack items="center" gap="$1" pt="$2" mt="$1" borderTopWidth={1} borderColor="$borderColor">
         <Popover open={open} onOpenChange={setOpen} placement="right-start">
           <Popover.Trigger asChild>
             <Button chromeless p="$0" width={40} height={40} aria-label={`${name} · account menu`}>
@@ -509,8 +512,21 @@ function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavi
   }
 
   return (
-    <YStack gap="$1.5" mb="$1">
-      <Popover open={open} onOpenChange={setOpen} placement="bottom-start">
+    <YStack gap="$1.5" pt="$2" mt="$1" borderTopWidth={1} borderColor="$borderColor">
+      {/* The current org — the working switch/create control, with a Home
+          affordance that de-scopes back to the org picker. Top of the cluster. */}
+      <XStack px="$1" items="center" gap="$1" justify="space-between">
+        <OrgSwitcher />
+        <Button
+          size="$2"
+          chromeless
+          icon={<LayoutGrid size={15} />}
+          onPress={() => leaveOrg()}
+          aria-label="All organizations — back to the org picker"
+        />
+      </XStack>
+      {/* The user/account — opens UPWARD (foot-anchored), so the menu never clips. */}
+      <Popover open={open} onOpenChange={setOpen} placement="top-start">
         <Popover.Trigger asChild>
           <Button chromeless height={44} px="$2" justify="flex-start" aria-label={`${name} · account menu`}>
             <XStack items="center" gap="$2.5" flex={1} minW={0}>
@@ -531,18 +547,6 @@ function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavi
         </Popover.Trigger>
         {menu}
       </Popover>
-      {/* The current org, directly below the user — the working switch/create control,
-          with a Home affordance that de-scopes back to the org picker. */}
-      <XStack px="$1" items="center" gap="$1" justify="space-between">
-        <OrgSwitcher />
-        <Button
-          size="$2"
-          chromeless
-          icon={<LayoutGrid size={15} />}
-          onPress={() => leaveOrg()}
-          aria-label="All organizations — back to the org picker"
-        />
-      </XStack>
     </YStack>
   )
 }
@@ -670,18 +674,8 @@ function SidebarNav({
     const activeSlug = billing ? activeSubpageSlug(pathname, billing.id) : ''
     return (
       <>
-        <XStack items="center" height={36} mb="$2">
-          <Button
-            flex={collapsed ? undefined : 1}
-            chromeless
-            justify={collapsed ? 'center' : 'flex-start'}
-            px="$1"
-            onPress={() => go(`/${BILLING_CENTER_ID}`)}
-            aria-label="Billing"
-          >
-            <BrandLogo size={22} wordmark={false} />
-          </Button>
-        </XStack>
+        {/* Top-left: the white-label brand logomark ALONE (matches app/chat). */}
+        <SidebarBrand collapsed={collapsed} onNavigate={onNavigate} />
         <ScrollView flex={1}>
           <YStack gap="$1">
             {subs.map((sp) => {
@@ -705,16 +699,18 @@ function SidebarNav({
             })}
           </YStack>
         </ScrollView>
+        {/* Bottom-left cluster: org + user, then wallet (matches app/chat). */}
+        <SidebarIdentity collapsed={collapsed} onNavigate={onNavigate} />
         <SidebarWallet collapsed={collapsed} />
       </>
     )
   }
 
-  // ── Collapsed icon rail — account avatar + products as colored icons ──
+  // ── Collapsed icon rail — brand mark on top; account + products; wallet foot ──
   if (collapsed) {
     return (
       <>
-        <SidebarIdentity collapsed onNavigate={onNavigate} />
+        <SidebarBrand collapsed onNavigate={onNavigate} />
         <ScrollView flex={1}>
           <YStack gap="$3.5">
             <YStack gap="$1">
@@ -755,19 +751,23 @@ function SidebarNav({
             ))}
           </YStack>
         </ScrollView>
+        {/* Bottom-left cluster: account, then wallet (matches app/chat). */}
+        <SidebarIdentity collapsed onNavigate={onNavigate} />
         <SidebarWallet collapsed />
       </>
     )
   }
 
-  // ── Expanded: identity (user + org) + single-level grouped nav + wallet ──
+  // ── Expanded: brand mark on top; grouped nav; identity + wallet at the foot ──
   // Google-Cloud-Console style: ONE always-visible, scrollable list — Overview/Docs,
   // Pinned, then categories in fixed order (collapsible). The active product's
   // sub-pages expand INLINE under its row, so every product AND sub-page is one click
   // away with no slide and no "back".
   return (
     <>
-      <SidebarIdentity collapsed={false} onNavigate={onNavigate} />
+      {/* Top-left: the white-label brand logomark ALONE — no wordmark, no product
+          name, no letter-H text (matches hanzo.app + hanzo.chat). */}
+      <SidebarBrand collapsed={false} onNavigate={onNavigate} />
 
       {/* Product filter — narrows the whole list; a match from any category jumps
           straight there. Typing hides the inline sub-nav so the list stays scannable. */}
@@ -903,6 +903,10 @@ function SidebarNav({
         </YStack>
       </ScrollView>
 
+      {/* Bottom-left cluster: the org switcher + the user/account menu, then the
+          wallet — ONE consolidated identity cluster at the foot of the sidebar,
+          matching the app/chat placement (was split user-on-top / wallet-below). */}
+      <SidebarIdentity collapsed={false} onNavigate={onNavigate} />
       <SidebarWallet collapsed={false} />
     </>
   )
