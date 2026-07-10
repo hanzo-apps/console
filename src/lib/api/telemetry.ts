@@ -1,20 +1,24 @@
 /**
  * Telemetry API — live platform health + infra metrics from VictoriaMetrics
- * (Prometheus-compatible), via the same-origin READ-only `/telemetry` proxy
- * (`app/telemetry/[...path]/route.ts` → `vmsingle-victoria-metrics-single-server`).
+ * (Prometheus-compatible), via the SuperAdmin-gated cloud VM proxy at the same-origin,
+ * versionless `/v1/o11y/vm/api/v1/{query,query_range}` (cloud clients/o11y/vmproxy.go).
  *
- * This is the REAL source the Status and Metrics surfaces read: VictoriaMetrics
- * scrapes a health target per Hanzo service (`up{job="iam-health"}`, `up{job=
- * "cloud-api-health"}`, …) plus process/runtime series. The old Status/`/paas/apps`
- * board is empty (the platform apps inventory reports zero apps) and `/paas/logs`
- * 401s — so those surfaces showed nothing; VictoriaMetrics is where the live signal
- * actually is.
+ * Why not a Next route: the console ships as a static export go:embedded into the cloud
+ * binary (output:'export'), which STRIPS every server route — so the former same-origin
+ * `/telemetry/[...path]` proxy is gone and a browser call to it 404s (this file's whole
+ * reason for the repoint). The cloud proxy is the one-and-only-one source now: it is
+ * gated to platform SuperAdmins, allowlists the query to exactly {up, sum(up), count(up)}
+ * (the three the infra-health board sends), and returns VM's native Prometheus envelope
+ * VERBATIM — so the parse helpers below are unchanged.
  *
- * Every value is a fold over what VictoriaMetrics returns — an empty result rolls up
- * to honest zeros / empty series, never a fabricated health dot. The parse helpers
- * are pure (JSON in, view-model out) so they unit-test without a live TSDB.
+ * This is the REAL source the Status and Metrics surfaces read: VictoriaMetrics scrapes a
+ * health target per Hanzo service (`up{job="iam-health"}`, `up{job="cloud-api-health"}`,
+ * …) plus process/runtime series. Every value is a fold over what VictoriaMetrics returns
+ * — an empty result rolls up to honest zeros / empty series, never a fabricated health
+ * dot. The parse helpers are pure (JSON in, view-model out) so they unit-test without a
+ * live TSDB.
  */
-import { ApiError, restGet } from './client'
+import { ApiError, cloudProxyV1Url, restGet } from './client'
 
 // ── Wire shape (Prometheus/VictoriaMetrics query API) ────────────────────────
 
@@ -143,14 +147,17 @@ export function summarizeHealth(rows: ServiceHealth[]): HealthSummary {
 
 // ── Transport ────────────────────────────────────────────────────────────────
 
-/** `<origin>/telemetry` — the same-origin read-only VictoriaMetrics proxy. */
-const base = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/telemetry` : '/telemetry')
-
+/**
+ * Build the transport URL for a VM read through the SuperAdmin cloud VM proxy:
+ * `cloudProxyV1Url('o11y/vm/<path>')` → `<origin>/v1/o11y/vm/api/v1/{query,query_range}`
+ * (root-relative `/v1/...` on the server, where there is no `window`). `path` is
+ * `api/v1/query` or `api/v1/query_range`; the query/start/end/step params are appended.
+ */
 const url = (path: string, params: Record<string, string | number>): string => {
-  const u = new URL(`${base()}/${path}`, typeof window !== 'undefined' ? window.location.origin : 'http://_')
+  const abs = cloudProxyV1Url(`o11y/vm/${path}`)
+  const u = new URL(abs, typeof window !== 'undefined' ? window.location.origin : 'http://_')
   for (const [k, v] of Object.entries(params)) u.searchParams.set(k, String(v))
-  const abs = u.toString()
-  return typeof window !== 'undefined' ? abs : `${u.pathname}${u.search}`
+  return typeof window !== 'undefined' ? u.toString() : `${u.pathname}${u.search}`
 }
 
 /** A range window (seconds). `step` is the resolution; `points ≈ (end-start)/step`. */
