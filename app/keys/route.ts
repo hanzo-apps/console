@@ -10,7 +10,7 @@
  * verified live). No credential ever reaches the browser; the `hk-` secret is
  * returned ONLY by POST (show once).
  *
- * Why not `cloud.hanzo.ai/v1/console/keys` (the old path): that is a DIFFERENT
+ * Why not `cloud.hanzo.ai/v1/iam/keys` (the old path): that is a DIFFERENT
  * ORIGIN than console.hanzo.ai, so a browser `fetch` is blocked by CORS ("Failed to
  * fetch") — and cloud-api's own keys handler 501s ("IAM client unset") on this
  * deployment anyway. The IAM confidential-client mint the console already uses for
