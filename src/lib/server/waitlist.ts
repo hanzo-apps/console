@@ -21,7 +21,7 @@
  * `waitlistAccess` FAILS OPEN (grants access) — a waitlist blip must never lock
  * paying users out of the product. Enforcement is additive, never a hard dependency.
  */
-import { brandFromHost } from '~/config'
+import { brandFromHost, isAdminHost } from '~/config'
 import { fetchWithTimeout } from './fetch-timeout'
 
 const trim = (s: string) => s.replace(/\/+$/, '')
@@ -150,6 +150,12 @@ export async function waitlistAccess(
   email: string,
   host?: string | null,
 ): Promise<{ hasAccess: boolean; status: WaitlistStatus | null }> {
+  // The admin operator surface (admin.<brand>) is NEVER a waitlisted consumer
+  // product — the operator cockpit is a distinct concern from consumer product
+  // rollout, so an operator is never held behind the line. This lifts only the
+  // consumer waitlist UX; real authorization to admin.<brand> + /v1/admin/* is
+  // still enforced by admin-guard (ForwardAuth) and the cloud global-admin gate.
+  if (isAdminHost(host)) return { hasAccess: true, status: null }
   if (!waitlistConfigured()) return { hasAccess: true, status: null }
   const status = await waitlistStatus(email, host)
   // Null status = the plugin was unreachable/errored → fail OPEN. A real closed
