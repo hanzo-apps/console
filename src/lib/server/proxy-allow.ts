@@ -178,11 +178,14 @@ export const CLOUD_HEADS: readonly string[] = [
   // policies list + the check sub-path. Backs the console's Authz page.
   'authz',
   // Observability (hanzoai/o11y): the cloud binary serves the embedded o11y surface at
-  // the VERSION-LESS canonical `/v1/o11y/<resource>` (NO nested v1/v3, NO /api). The
-  // console reads e.g. /v1/o11y/rules (alerts), /v1/o11y/services (RED metrics),
-  // /v1/o11y/query_range (logs/traces), /v1/o11y/health; cloud's principal gate refuses
-  // any bearer-less call, so it routes through the /v1 bearer BFF like the rest. The
-  // single `o11y` head admits every o11y sub-path.
+  // the VERSION-LESS canonical `/v1/o11y/<resource>`. The console reads e.g.
+  // /v1/o11y/rules (alerts), /v1/o11y/services (RED metrics), /v1/o11y/health. The ONE
+  // exception is the composite builder query (logs/traces list): it is pinned to the
+  // explicit /v1/o11y/api/v3/query_range because the version-less alias floats to the
+  // HIGHEST version (v5), whose composite shape is `{queries:[…]}` and 400s the console's
+  // v3 `{queryType,builderQueries}` payload (see apm.ts COMPOSITE_QUERY_RANGE). cloud's
+  // principal gate refuses any bearer-less call, so it routes through the /v1 bearer BFF
+  // like the rest. The single `o11y` head admits every o11y sub-path (nested v3 included).
   'o11y',
   // Web Search (cloud clients/websearch, order 141): /v1/websearch/{search,v1/scrape}.
   // Self-hosted SearXNG meta-search + Crawl4AI scrape. The `search` proxy has no
