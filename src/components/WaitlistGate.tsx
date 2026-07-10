@@ -19,9 +19,10 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { Anchor, Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowUp, Check, Copy, RefreshCw, Share2, Terminal, Users } from '@hanzogui/lucide-icons-2'
 
-import { branding } from '~/config'
+import { branding, isAdminHost } from '~/config'
 import { HanzoMark, Loader } from '~/components/ui/Loader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { isSuperAdminAccount } from '~/lib/auth/admin'
 import { useSession } from '~/lib/auth/session'
 import { useWaitlist, type WaitlistStatus } from '~/lib/auth/waitlist'
 
@@ -197,7 +198,17 @@ function WaitlistPanel({ status, onRefresh }: { status: WaitlistStatus | null; o
 }
 
 export function WaitlistGate({ children }: { children: ReactNode }) {
-  const { view, loading, reload } = useWaitlist(true)
+  const { account } = useSession()
+  // The admin operator surface (admin.<brand>) and any super (platform) admin are
+  // NEVER behind the consumer product waitlist — the operator cockpit is a distinct
+  // concern from consumer product rollout. Mirrors the server authority
+  // (`waitlistAccess` short-circuits an admin host); gating here too avoids even a
+  // panel flash and covers a super admin on any host. Real access to admin.<brand>
+  // stays enforced by admin-guard + the cloud global-admin gate.
+  const operator =
+    (typeof window !== 'undefined' && isAdminHost(window.location.hostname)) ||
+    isSuperAdminAccount(account)
+  const { view, loading, reload } = useWaitlist(!operator)
   if (loading || !view) return <Loader />
   if (view.hasAccess) return <>{children}</>
   return <WaitlistPanel status={view.status} onRefresh={reload} />
