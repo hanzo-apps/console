@@ -197,6 +197,7 @@ import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { KubeflowModule } from '~/components/products/KubeflowModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
+import { CodeModule } from '~/components/products/CodeModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
 import { StartupsModule } from '~/components/products/StartupsModule'
@@ -1576,6 +1577,22 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [{ path: '', component: PlaygroundModule }],
+  },
+  {
+    // Hanzo Code — the native per-org code-intelligence engine (hanzoai/cloud
+    // clients/code, /v1/code; HIP-0302). Hybrid retrieval (lexical + symbolic +
+    // semantic, RRF-fused) over an org's indexed repos, powering AI coding agents.
+    // Rendered NATIVELY in-console (search + cited ask) over the /v1 user-bearer
+    // proxy — org-scoped server-side (a PHYSICAL per-org SQLite file), NO link-out.
+    id: 'code',
+    label: 'Code',
+    icon: Code2,
+    description: 'Search your code and get cited answers — hybrid code intelligence for your agents.',
+    category: 'Dev',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: CodeModule }],
   },
   {
     id: 'ide',

@@ -47,6 +47,14 @@ export const CLOUD_HEADS: readonly string[] = [
   // so it routes through /v1 exactly like agents/functions. One head admits the models
   // list/get + the create/predict sub-paths (the Inference product's endpoints source).
   'ml',
+  // Code intelligence (cloud clients/code, order 134): /v1/code/{search,ask,context,
+  // index}. Native per-org HYBRID retrieval (lexical + symbolic + semantic, RRF-fused)
+  // over the org's indexed repos. The tenant boundary is a PHYSICAL per-org SQLite file
+  // and the handler resolves the org from the Bearer owner (principal.Tenant) — a
+  // cookie-only / forged-header call 403s, so it routes through /v1 exactly like
+  // agents/prompts. The single `code` head admits every sub-path (search, ask, the
+  // context bundle, and the index write).
+  'code',
   // CRM (cloud clients/crm): /v1/crm/{summary,companies,contacts,opportunities}[/:id].
   // Native-Go per-org CRM on Base/SQLite (companies/contacts/opportunities). The
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
