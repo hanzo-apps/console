@@ -8,13 +8,15 @@
  * no external bounce. Each card can be pinned to the sidebar (persisted to the
  * account). Rendered entirely from the catalog registry.
  */
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Star, Lock, ArrowRight, BookOpen, KeyRound } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { visibleCatalogByCategory, categorySlug, type CatalogEntry } from '~/lib/products/registry'
+import { resolveView } from '~/lib/products/match'
+import { ProductRoute } from '~/components/ProductRoute'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
@@ -133,10 +135,14 @@ function GetApiKeyCta({ onOpen }: { onOpen: () => void }) {
 
 export default function DashboardHome() {
   const router = useRouter()
+  const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
   const { toggle, isPinned } = useFavorites()
   const showAdmin = useIsSuperAdmin()
   const push = (path: string) => router.push(path)
   const groups = visibleCatalogByCategory(showAdmin)
+
+  useEffect(() => setMounted(true), [])
 
   // Billing-only shell (billing.<brand> / NEXT_PUBLIC_BILLING_ONLY): the default
   // route IS the Billing Center — redirect the catalog home to the billing overview
@@ -144,6 +150,24 @@ export default function DashboardHome() {
   useEffect(() => {
     if (config.billingOnly) router.replace('/billing')
   }, [router])
+
+  // One-binary STATIC embed: cloud serves THIS page's index.html for EVERY deep
+  // link (a static export can't pre-generate arbitrary product slugs), so a direct
+  // load / refresh — or a client nav that hard-falls-back — of /models, /chat,
+  // /tracker … would otherwise render the home instead of the module. Resolve the
+  // LIVE path client-side and hand any real product route to the shared
+  // ProductRoute. Gated on `mounted` so the first client render matches the
+  // server-exported home ("/") — no hydration mismatch; it then swaps to the
+  // resolved module. On a real Next server this page only renders for "/", so
+  // `segments` is empty and the home always shows; an unknown/non-product deep path
+  // (e.g. /category/*, /discover/*) resolves to notfound here and falls through to
+  // the home rather than a hard 404 in the embed.
+  const segments =
+    mounted && pathname ? pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean) : []
+  if (segments.length > 0 && resolveView(segments).kind !== 'notfound') {
+    return <ProductRoute slug={segments} />
+  }
+
   if (config.billingOnly) {
     return (
       <XStack flex={1} justify="center" items="center" p="$8">
