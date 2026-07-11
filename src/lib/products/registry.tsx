@@ -88,6 +88,7 @@ import { Users,
   Ruler,
   ClipboardList,
   Workflow,
+  Share2,
   NotebookPen,
   IdCard,
   Blocks,
@@ -203,6 +204,7 @@ import { AgentsModule } from '~/components/products/AgentsModule'
 import { CodeModule } from '~/components/products/CodeModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
+import { SocialModule } from '~/components/products/SocialModule'
 import { StartupsModule } from '~/components/products/StartupsModule'
 import { CmsModule } from '~/components/products/CmsModule'
 import { ErpModule } from '~/components/products/ErpModule'
@@ -2473,6 +2475,23 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
+    // Social — the in-process fold of the live social stack (github.com/hanzoai/social:
+    // social-backend/frontend/orchestrator, a Postiz-style scheduler) over the REAL
+    // native-Go cloud `/v1/social` surface (cloud clients/social on Base/SQLite: a
+    // per-org accounts+posts store, twin of clients/crm). The host→mode twin of the
+    // Billing Center: social.hanzo.ai boots THIS product alone (config.socialOnly).
+    // Per-org, honest-empty by construction — every state is loading / BackendStateCard / empty.
+    id: 'social',
+    label: 'Social',
+    icon: Share2,
+    description: 'Posts and accounts across networks (X, Instagram, LinkedIn, TikTok) — your social surface, per org.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: SocialModule }],
+  },
+  {
     // Startups — the Hanzo Startup Program pipeline, over the native-Go cloud
     // `/v1/crm/applications` surface (cloud clients/crm on Base/SQLite). Public
     // marketing form → AI screen → staff pipeline board. Per-org (hanzo).
@@ -3107,6 +3126,9 @@ export const inBrand = (e: CatalogEntry): boolean =>
 /** The unified Billing Center entry id — the ONE money surface + the billing-only shell root. */
 export const BILLING_CENTER_ID = 'billing'
 
+/** The Social entry id — the social-only shell root (host→mode twin of Billing). */
+export const SOCIAL_ID = 'social'
+
 export const visibleCatalog = (
   showAdmin: boolean,
   enabled?: string[] | null,
@@ -3119,6 +3141,13 @@ export const visibleCatalog = (
   if (config.billingOnly) {
     const billing = catalog.find((e) => e.id === BILLING_CENTER_ID)
     return billing ? [billing] : []
+  }
+  // Social-only shell mode (social.<brand> host / NEXT_PUBLIC_SOCIAL_ONLY): the
+  // host→mode twin of billing-only — the SAME console image filtered to the ONE
+  // Social product. Same shape, zero duplication.
+  if (config.socialOnly) {
+    const social = catalog.find((e) => e.id === SOCIAL_ID)
+    return social ? [social] : []
   }
   const byAdmin = (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
   // ENTITLEMENT GATE (customer only): out-of-box an org sees ONLY the products it has
@@ -3137,7 +3166,7 @@ export const visibleCatalogByCategory = (
   // In billing-only mode the Billing Center is the whole catalog — surface it as a
   // single group regardless of the brand's category order (its category may be
   // outside the brand's normal set).
-  if (config.billingOnly) {
+  if (config.billingOnly || config.socialOnly) {
     return visible.length ? [{ category: visible[0].category, entries: visible }] : []
   }
   return brandCategoryOrder()

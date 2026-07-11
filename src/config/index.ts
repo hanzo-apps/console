@@ -75,6 +75,15 @@ export type ConsoleConfig = {
    * section inside the full console (zero duplication, same components).
    */
   billingOnly: boolean
+  /**
+   * Social-only shell mode — TRUE on a brand's dedicated social host
+   * (social.<brand-domain>, e.g. social.hanzo.ai) or with NEXT_PUBLIC_SOCIAL_ONLY=1.
+   * The SAME console image serves it; the catalog is filtered to the ONE Social
+   * product and the home route defaults to it — the exact host→mode twin of
+   * `billingOnly`. This is the console half of the new `/v1/social` domain seam
+   * (one console, host-resolved modes, orthogonal /v1).
+   */
+  socialOnly: boolean
 }
 
 /** Fields shared by every brand. Env-overridable per-deploy. */
@@ -227,6 +236,24 @@ export function isBillingOnly(host?: string | null): boolean {
   return process.env.NEXT_PUBLIC_BILLING_ONLY === '1' || isBillingOnlyHost(host)
 }
 
+/**
+ * True on a brand's dedicated social host (social.<brand>, e.g. social.hanzo.ai).
+ * Such a host runs the SAME console image but in social-only shell mode (catalog
+ * filtered to the Social product, default route → its overview). Strict `social.`
+ * prefix — the host→mode twin of `isBillingOnlyHost`.
+ */
+export function isSocialHost(host?: string | null): boolean {
+  return normHost(host).startsWith('social.')
+}
+
+/**
+ * Social-only mode for a host: the dedicated social host OR an explicit
+ * NEXT_PUBLIC_SOCIAL_ONLY=1 override (dev / preview). Mirrors isBillingOnly.
+ */
+export function isSocial(host?: string | null): boolean {
+  return process.env.NEXT_PUBLIC_SOCIAL_ONLY === '1' || isSocialHost(host)
+}
+
 // Cache is keyed by NORMALIZED HOST (not brand): admin.hanzo.ai and
 // cloud.hanzo.ai are the same brand but MUST resolve to different clients
 // (admin-console vs hanzo-cloud), so a brand-keyed cache would collide.
@@ -260,6 +287,7 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     docsUrl: trimSlash(process.env.NEXT_PUBLIC_DOCS_URL ?? b.docsUrl),
     statusUrl: trimSlash(process.env.NEXT_PUBLIC_STATUS_URL ?? b.statusUrl),
     billingOnly: isBillingOnly(host),
+    socialOnly: isSocial(host),
     ...SHARED,
   }
   cache.set(key, resolved)
