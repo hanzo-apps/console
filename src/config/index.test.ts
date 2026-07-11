@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { resolveConfig, isAdminHost, isBillingOnlyHost, isMarketingHost, isAdsHost, brandFromHost, cloudAudience } from './index'
+import { resolveConfig, isAdminHost, isBillingOnlyHost, isMarketingHost, isAdsHost, isSocialHost, brandFromHost, cloudAudience } from './index'
 
 /**
  * Per-host admin login client (admin.hanzo.ai global-admin cutover).
@@ -236,6 +236,48 @@ describe('ads-only shell host', () => {
     expect(resolveConfig('ads.lux.cloud').brand).toBe('lux')
     expect(resolveConfig('ads.zoo.cloud').adsOnly).toBe(true)
     expect(resolveConfig('ads.zoo.cloud').brand).toBe('zoo')
+  })
+})
+
+/**
+ * social-only shell host — the host→mode twin of billing-only for the new
+ * `/v1/social` domain seam: social.<brand> boots the console into the ONE Social
+ * product (config.socialOnly), the SAME image, keeping the brand.
+ */
+describe('social-only shell host', () => {
+  it('matches social.<brand> case- and port-insensitively', () => {
+    expect(isSocialHost('social.hanzo.ai')).toBe(true)
+    expect(isSocialHost('SOCIAL.Lux.cloud:443')).toBe(true)
+    expect(isSocialHost('social.zoo.cloud')).toBe(true)
+  })
+
+  it('is a strict social. prefix — no false positives', () => {
+    expect(isSocialHost('cloud.hanzo.ai')).toBe(false)
+    expect(isSocialHost('mysocial.hanzo.ai')).toBe(false)
+    expect(isSocialHost('')).toBe(false)
+    expect(isSocialHost(null)).toBe(false)
+  })
+
+  it('resolveConfig marks the social host social-only, keeping the brand', () => {
+    const c = resolveConfig('social.hanzo.ai')
+    expect(c.socialOnly).toBe(true)
+    expect(c.brand).toBe('hanzo')
+    // social-only is orthogonal to billing-only — never both.
+    expect(c.billingOnly).toBe(false)
+  })
+
+  it('a normal console host is NOT social-only', () => {
+    expect(resolveConfig('cloud.hanzo.ai').socialOnly).toBe(false)
+    expect(resolveConfig('console.hanzo.ai').socialOnly).toBe(false)
+    // and a billing host is billing-only, not social-only.
+    expect(resolveConfig('billing.hanzo.ai').socialOnly).toBe(false)
+  })
+
+  it('resolves social-only per brand (lux/zoo social hosts)', () => {
+    expect(resolveConfig('social.lux.cloud').socialOnly).toBe(true)
+    expect(resolveConfig('social.lux.cloud').brand).toBe('lux')
+    expect(resolveConfig('social.zoo.cloud').socialOnly).toBe(true)
+    expect(resolveConfig('social.zoo.cloud').brand).toBe('zoo')
   })
 })
 
