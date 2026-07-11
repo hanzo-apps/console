@@ -68,6 +68,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // /v1 exactly like crm — the single `marketing` head admits every sub-path
   // (summary, the campaigns collection, its :id detail).
   'marketing',
+  // Ads (cloud clients/ads): /v1/ads/{summary,campaigns[/:id]}. Native-Go per-org
+  // ad-campaign store on Base/SQLite (net-new, twin of crm). The handler resolves the
+  // org from the Bearer owner (X-Org-Id) and 403s a cookie-only call, so it routes
+  // through /v1 exactly like crm — the single `ads` head admits every sub-path
+  // (summary, the campaigns collection, its :id detail).
+  'ads',
   // Referrals (cloud clients/referrals): /v1/referrals + /v1/referrals/claim. Native
   // per-org viral loop on Base/SQLite (referral code/link, claim, credit earned). The
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
