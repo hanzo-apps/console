@@ -149,6 +149,7 @@ export default function DashboardHome() {
   // so people who only ever see billing.hanzo.ai land straight on billing.
   useEffect(() => {
     if (config.billingOnly) router.replace('/billing')
+    else if (config.marketingOnly) router.replace('/marketing')
   }, [router])
 
   // One-binary STATIC embed: cloud serves THIS page's index.html for EVERY deep
@@ -168,7 +169,7 @@ export default function DashboardHome() {
     return <ProductRoute slug={segments} />
   }
 
-  if (config.billingOnly) {
+  if (config.billingOnly || config.marketingOnly) {
     return (
       <XStack flex={1} justify="center" items="center" p="$8">
         <Spinner size="large" color="$color11" />
