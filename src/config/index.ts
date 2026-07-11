@@ -31,6 +31,17 @@ const trimSlash = (s: string) => s.replace(/\/+$/, '')
 
 export type BrandId = 'hanzo' | 'lux' | 'zoo' | 'pars' | '7stars' | 'yotoda'
 
+/**
+ * The product SHELL a host wears — the console FACE, orthogonal to the brand.
+ * `console` is the full cloud console; `billing` is the Billing-Center-only portal
+ * (billing.<brand>); `sentry` is the Sentry error/log/trace product face
+ * (sentry.<brand>). ONE console image, host-selected. A product shell only scopes
+ * the nav + default route — brand identity (which IAM you log into, the wordmark)
+ * is resolved separately by `brandFromHost`, so a shell NEVER crosses brands
+ * (sentry.hanzo.ai is the hanzo brand wearing the Sentry face).
+ */
+export type ShellId = 'console' | 'billing' | 'sentry'
+
 export type ConsoleConfig = {
   /** Resolved brand id (from hostname). */
   brand: BrandId
@@ -75,6 +86,12 @@ export type ConsoleConfig = {
    * section inside the full console (zero duplication, same components).
    */
   billingOnly: boolean
+  /**
+   * The product shell this host wears (`shellFromHost`). `billingOnly` is the
+   * legacy `shell === 'billing'` boolean, kept for the existing call sites; new
+   * shell-aware code (the sentry face) reads `shell`.
+   */
+  shell: ShellId
 }
 
 /** Fields shared by every brand. Env-overridable per-deploy. */
@@ -227,6 +244,30 @@ export function isBillingOnly(host?: string | null): boolean {
   return process.env.NEXT_PUBLIC_BILLING_ONLY === '1' || isBillingOnlyHost(host)
 }
 
+/**
+ * True on a brand's dedicated Sentry host (sentry.<brand>, e.g. sentry.hanzo.ai) —
+ * the SAME console image, wearing the Sentry error/log/trace product face. Strict
+ * `sentry.` prefix — no false positives.
+ */
+export function isSentryHost(host?: string | null): boolean {
+  return normHost(host).startsWith('sentry.')
+}
+
+/**
+ * The product shell a host wears, resolved at runtime. `NEXT_PUBLIC_PRODUCT_SHELL`
+ * overrides for dev/preview (any host → a chosen face); otherwise the billing host
+ * (or the legacy `NEXT_PUBLIC_BILLING_ONLY=1`) selects `billing`, a `sentry.` host
+ * selects `sentry`, and everything else is the full `console`. Brand is resolved
+ * separately (`brandFromHost`) — the shell is orthogonal, never a brand.
+ */
+export function shellFromHost(host?: string | null): ShellId {
+  const env = process.env.NEXT_PUBLIC_PRODUCT_SHELL
+  if (env === 'billing' || env === 'sentry' || env === 'console') return env
+  if (isBillingOnly(host)) return 'billing'
+  if (isSentryHost(host)) return 'sentry'
+  return 'console'
+}
+
 // Cache is keyed by NORMALIZED HOST (not brand): admin.hanzo.ai and
 // cloud.hanzo.ai are the same brand but MUST resolve to different clients
 // (admin-console vs hanzo-cloud), so a brand-keyed cache would collide.
@@ -248,6 +289,8 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
   const admin = isAdminHost(host)
   const app = admin ? b.adminApp : b.iamApp
   const org = admin ? ADMIN_ORG : b.iamOrgName
+  // ONE source for the shell; billingOnly is the legacy `shell === 'billing'` view.
+  const shell = shellFromHost(host)
   const resolved: ConsoleConfig = {
     brand,
     brandName: b.brandName,
@@ -259,7 +302,8 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? b.billingUrl),
     docsUrl: trimSlash(process.env.NEXT_PUBLIC_DOCS_URL ?? b.docsUrl),
     statusUrl: trimSlash(process.env.NEXT_PUBLIC_STATUS_URL ?? b.statusUrl),
-    billingOnly: isBillingOnly(host),
+    billingOnly: shell === 'billing',
+    shell,
     ...SHARED,
   }
   cache.set(key, resolved)

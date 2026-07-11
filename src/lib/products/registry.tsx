@@ -97,9 +97,10 @@ import { Users,
   AlertTriangle,
 } from '@hanzogui/lucide-icons-2'
 
-import { config, type BrandId } from '~/config'
+import { config, type BrandId, type ShellId } from '~/config'
 import { ALWAYS_ON_PRODUCTS, filterEntitled } from '~/lib/entitlements'
 import { type ProductCategory, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
+import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
@@ -189,6 +190,7 @@ import { AuthzModule } from '~/components/products/AuthzModule'
 import { ServiceMeshModule } from '~/components/products/ServiceMeshModule'
 import { ServiceMapModule } from '~/components/products/ServiceMapModule'
 import { ErrorsModule } from '~/components/products/ErrorsModule'
+import { SentryModule, SENTRY_TABS } from '~/components/products/SentryModule'
 import { LoadBalancerModule } from '~/components/products/LoadBalancerModule'
 import { VpcModule } from '~/components/products/VpcModule'
 import { EdgeModule } from '~/components/products/EdgeModule'
@@ -395,6 +397,16 @@ type CatalogBase = {
    * (hanzo, the umbrella, shows the full suite).
    */
   brands?: BrandId[]
+  /**
+   * Product-shell scope — the console FACE this entry belongs to. OMIT for a normal
+   * console product (the default: shown in the full console, NOT in a product face).
+   * SET it to bind an entry to a single face (`sentry` → the sentry.<brand> Sentry
+   * shell): a `shell`-scoped entry is HIDDEN from the full console nav and shown
+   * ONLY inside its face (the DRY twin of the billing-only Billing Center, which is
+   * a normal entry surfaced alone by the `billing` shell — see `config.shell`).
+   * Orthogonal to `brands`.
+   */
+  shell?: ShellId
   /**
    * The product's SPECIFIC level-2 sub-pages (beyond Overview + the uniform base
    * set, which `productSubpages` auto-adds). Only meaningful for `module` kinds.
@@ -1856,6 +1868,36 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
+    // Hanzo Sentry — the full Sentry-parity error/log/trace product FACE, served at
+    // sentry.<brand> as a host-branded shell of THIS console (config.shell). It is
+    // the Sentry PRODUCT in Hanzo's identity + @hanzo/gui design system (never the
+    // upstream Sentry look), over the `/v1/sentry` contract. `shell: 'sentry'` scopes
+    // it to that face — HIDDEN from the full console nav (the console already has the
+    // o11y `errors`/`logs`/`o11y`(traces) surfaces), shown ONLY inside sentry.<brand>.
+    // ONE module, panels routed by `:tab` (+ a `:tab/:id` detail): '' = Issues,
+    // discover, logs (owns the base slug → its own panel, not the shared sub-page),
+    // traces, stats (Monitor), projects, members.
+    id: 'sentry',
+    label: 'Sentry',
+    icon: AlertTriangle,
+    description: 'Sentry-class error, log and trace monitoring — issues, discover, logs, traces, monitor, and projects.',
+    gcp: 'Cloud Error Reporting',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    shell: 'sentry',
+    kind: 'module',
+    // The panel sub-pages ARE the SentryModule tab strip (`SENTRY_TABS`) minus the
+    // Issues index (`id: ''`) — ONE source, so the sidebar face nav and the module's
+    // own tabs can never drift.
+    subpages: SENTRY_TABS.filter((t) => t.id !== '').map((t) => ({ slug: t.slug, label: t.label, icon: t.icon })),
+    routes: [
+      { path: '', component: SentryModule },
+      { path: ':tab', component: SentryModule },
+      { path: ':tab/:id', component: SentryModule },
+    ],
+  },
+  {
     id: 'metrics',
     label: 'Metrics',
     icon: BarChart3,
@@ -3111,16 +3153,23 @@ export const visibleCatalog = (
   showAdmin: boolean,
   enabled?: string[] | null,
 ): CatalogEntry[] => {
-  // Billing-only shell mode (billing.<brand> host / NEXT_PUBLIC_BILLING_ONLY): the
-  // SAME console image, but every surface is filtered to the ONE Billing Center.
-  // Bypass the brand-category scope so the center shows on EVERY brand's billing
-  // host (Observe isn't in the web3 brands' normal category set). Zero duplication —
-  // it's the same catalog entry the full console shows, just alone.
-  if (config.billingOnly) {
-    const billing = catalog.find((e) => e.id === BILLING_CENTER_ID)
-    return billing ? [billing] : []
+  // Product-shell mode (billing.<brand> / sentry.<brand> host, or an override): the
+  // SAME console image, scoped to ONE product FACE — its root module surfaced alone.
+  // Bypass the brand-category + entitlement scope so the face shows on its host
+  // regardless (its category may be outside a web3 brand's normal set). ONE branch
+  // for every face (billing today, sentry) driven by the shell descriptor — zero
+  // duplication; it's the same catalog entry the full console defines, shown alone.
+  if (isProductShell(config.shell)) {
+    const rootId = shellFor(config.shell).rootId
+    const entry = rootId ? catalog.find((e) => e.id === rootId) : undefined
+    return entry ? [entry] : []
   }
-  const byAdmin = (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
+  // The full console never shows a product-face-scoped entry (`e.shell`) — those
+  // belong to their face, not the general nav (e.g. the sentry panels are the o11y
+  // surfaces' Sentry twin, shown only on sentry.<brand>).
+  const byAdmin = (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e)))
+    .filter((e) => !e.shell)
+    .filter(inBrand)
   // ENTITLEMENT GATE (customer only): out-of-box an org sees ONLY the products it has
   // enabled/paid for (always-on essentials + its `enabled` set). A super admin
   // (`showAdmin`) bypasses; an ungated set (`enabled` null/undefined — the endpoint
@@ -3134,10 +3183,10 @@ export const visibleCatalogByCategory = (
   enabled?: string[] | null,
 ): { category: ProductCategory; entries: CatalogEntry[] }[] => {
   const visible = visibleCatalog(showAdmin, enabled)
-  // In billing-only mode the Billing Center is the whole catalog — surface it as a
+  // In a product-shell face the root module IS the whole catalog — surface it as a
   // single group regardless of the brand's category order (its category may be
-  // outside the brand's normal set).
-  if (config.billingOnly) {
+  // outside the brand's normal set). ONE branch for billing + sentry.
+  if (isProductShell(config.shell)) {
     return visible.length ? [{ category: visible[0].category, entries: visible }] : []
   }
   return brandCategoryOrder()
