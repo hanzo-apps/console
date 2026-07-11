@@ -74,6 +74,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // through /v1 exactly like crm — the single `ads` head admits every sub-path
   // (summary, the campaigns collection, its :id detail).
   'ads',
+  // Social (cloud clients/social): /v1/social/{summary,accounts[/:id],posts[/:id]}.
+  // Native-Go per-org accounts+posts store on Base/SQLite (the in-process fold of the
+  // live social stack github.com/hanzoai/social, twin of crm). The handler resolves
+  // the org from the Bearer owner (X-Org-Id) and 403s a cookie-only call, so it routes
+  // through /v1 exactly like crm — the single `social` head admits every sub-path
+  // (summary, the two collections, their :id detail).
+  'social',
   // Referrals (cloud clients/referrals): /v1/referrals + /v1/referrals/claim. Native
   // per-org viral loop on Base/SQLite (referral code/link, claim, credit earned). The
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
