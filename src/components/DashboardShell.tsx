@@ -69,7 +69,6 @@ import {
   visibleCatalogByCategory,
   findEntry,
   categorySlug,
-  BILLING_CENTER_ID,
   type CatalogEntry,
   type ProductCategory,
   type ProductSubpage,
@@ -97,6 +96,8 @@ import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { SystemStatusBadge } from '~/components/ui/SystemStatusBadge'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
 import { SidebarBrand } from '~/components/SidebarBrand'
+import { BrandMark } from '~/components/ui/BrandLogo'
+import { shellFor, isProductShell } from '~/lib/products/shell'
 import { OrgSwitcher } from '~/components/OrgSwitcher'
 import { leaveOrg } from '~/lib/org-scope'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
@@ -660,31 +661,56 @@ function SidebarNav({
       content: <AddProductPanel />,
     })
 
-  // ── Billing-only shell — the nav IS the Billing Center's tabs ─────────────
-  // Same components, filtered nav: on billing.<brand> (or NEXT_PUBLIC_BILLING_ONLY)
-  // the sidebar shows ONLY the Billing Center sub-pages (Overview · Reports ·
-  // Budgets · Invoices · Subscriptions · Payment methods · Credits). The rest of the
-  // chrome (header, cmd+K, org switcher, account menu, wallet footer) is untouched.
-  if (config.billingOnly) {
-    const billing = findEntry(BILLING_CENTER_ID)
+  // ── Product-shell face — the nav IS the root module's sub-pages ────────────
+  // ONE branch for every single-product FACE (billing.<brand> = the Billing Center;
+  // sentry.<brand> = Hanzo Sentry), driven by the shell descriptor (lib/products/
+  // shell.ts). Same components, filtered nav: the sidebar shows ONLY the face's root
+  // module sub-pages (billing: Overview · Reports · …; sentry: Issues · Discover ·
+  // Logs · Traces · Monitor · Projects · Members). A face may wear a product WORDMARK
+  // next to the Hanzo brand mark ("Sentry" — Hanzo identity, product-labelled, never
+  // an upstream mark); billing keeps the mark alone. The rest of the chrome (header,
+  // cmd+K, org switcher, account menu, wallet) is untouched. Zero cross-brand leak —
+  // the brand mark stays host-derived (white-label).
+  if (isProductShell(config.shell)) {
+    const shell = shellFor(config.shell)
+    const rootId = shell.rootId ?? ''
+    const root = findEntry(rootId)
     const subs: ProductSubpage[] =
-      billing && billing.kind === 'module'
-        ? [{ slug: '', label: 'Overview' }, ...(billing.subpages ?? []).filter((s) => showAdmin || !s.admin)]
+      root && root.kind === 'module'
+        ? [{ slug: '', label: shell.indexLabel }, ...(root.subpages ?? []).filter((s) => showAdmin || !s.admin)]
         : []
-    const activeSlug = billing ? activeSubpageSlug(pathname, billing.id) : ''
+    const activeSlug = root ? activeSubpageSlug(pathname, root.id) : ''
     return (
       <>
-        {/* Top-left: the white-label brand logomark ALONE (matches app/chat). */}
-        <SidebarBrand collapsed={collapsed} onNavigate={onNavigate} />
+        {/* Top-left: the host-derived Hanzo brand mark + (optional) product wordmark.
+            billing → mark alone (SidebarBrand, unchanged); sentry → mark + "Sentry". */}
+        {shell.wordmark && !collapsed ? (
+          <XStack
+            items="center"
+            gap="$2"
+            height={40}
+            pl="$1"
+            cursor="pointer"
+            onPress={() => go(shell.home ? `/${shell.home}` : '/')}
+            aria-label={`${shell.wordmark} — home`}
+          >
+            <BrandMark size={22} />
+            <Text fontWeight="800" fontSize="$5" color="$color12">
+              {shell.wordmark}
+            </Text>
+          </XStack>
+        ) : (
+          <SidebarBrand collapsed={collapsed} onNavigate={onNavigate} />
+        )}
         <ScrollView flex={1}>
           <YStack gap="$1">
             {subs.map((sp) => {
               const active = sp.slug === activeSlug
-              const SubIcon = billingSubpageIcon(sp.slug)
+              const SubIcon = sp.icon ?? billingSubpageIcon(sp.slug)
               return (
                 <Button
                   key={sp.slug || 'overview'}
-                  onPress={() => go(sp.slug ? `/${BILLING_CENTER_ID}/${sp.slug}` : `/${BILLING_CENTER_ID}`)}
+                  onPress={() => go(sp.slug ? `/${rootId}/${sp.slug}` : `/${rootId}`)}
                   bg={active ? '$color4' : 'transparent'}
                   justify={collapsed ? 'center' : 'flex-start'}
                   px={collapsed ? '$0' : '$2.5'}
