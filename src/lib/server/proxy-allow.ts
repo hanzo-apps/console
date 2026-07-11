@@ -214,6 +214,14 @@ export const CLOUD_HEADS: readonly string[] = [
   // principal gate refuses any bearer-less call, so it routes through the /v1 bearer BFF
   // like the rest. The single `o11y` head admits every o11y sub-path.
   'o11y',
+  // Hanzo Sentry (cloud clients/sentry): the full error/log/trace product surface at
+  // the canonical `/v1/sentry/<resource>` — projects (+ DSN/key rotate), issues (list/
+  // get/update/events), discover, events, logs, traces (+ detail), stats. The Sentry
+  // face (sentry.<brand>) reads it over the same-origin `/v1` bearer BFF; the handler
+  // scopes every read to the SANITIZED caller org (X-Org-Id from the Bearer owner) and
+  // 403s a cookie-only / cross-tenant call, so it routes through /v1 exactly like o11y.
+  // The single `sentry` head admits every sentry sub-path.
+  'sentry',
   // Web Search (cloud clients/websearch, order 141): /v1/websearch/{search,v1/scrape}.
   // Self-hosted SearXNG meta-search + Crawl4AI scrape. The `search` proxy has no
   // principal gate (its optional X-API-Key admits a missing key), so a signed-in

@@ -31,6 +31,18 @@ const trimSlash = (s: string) => s.replace(/\/+$/, '')
 
 export type BrandId = 'hanzo' | 'lux' | 'zoo' | 'pars' | '7stars' | 'yotoda'
 
+/**
+ * The product SHELL a host wears — the console FACE, orthogonal to the brand. ONE
+ * console image, host-selected, each face the SAME image scoped to one product:
+ * `console` = the full cloud console; `billing` = the Billing-Center portal
+ * (billing.<brand>); `marketing`/`ads`/`social` = those product faces
+ * (marketing./ads./social.<brand>); `sentry` = the Sentry error/log/trace face
+ * (sentry.<brand>). A product face only scopes the nav + default route — brand
+ * identity (which IAM you log into, the wordmark) is resolved separately by
+ * `brandFromHost`, so a face NEVER crosses brands (sentry.lux.cloud is the lux brand).
+ */
+export type ShellId = 'console' | 'billing' | 'marketing' | 'ads' | 'social' | 'sentry'
+
 export type ConsoleConfig = {
   /** Resolved brand id (from hostname). */
   brand: BrandId
@@ -76,32 +88,24 @@ export type ConsoleConfig = {
    */
   billingOnly: boolean
   /**
-   * Marketing-only shell mode — TRUE on a brand's dedicated marketing host
-   * (marketing.<brand-domain>, e.g. marketing.hanzo.ai) or with
-   * NEXT_PUBLIC_MARKETING_ONLY=1. The SAME console image serves it; the catalog is
-   * filtered to the ONE Marketing product and the home route defaults to it — the
-   * exact host→mode twin of `billingOnly`. This is the console half of the new
-   * `/v1/marketing` domain seam (one console, host-resolved modes, orthogonal /v1).
+   * Marketing-only shell mode — the legacy `shell === 'marketing'` alias, TRUE on a
+   * brand's dedicated marketing host (marketing.<brand>) or NEXT_PUBLIC_MARKETING_ONLY=1.
+   * The SAME console image serves it; the shell filters the catalog to the ONE Marketing
+   * product and defaults the home route to it (the `/v1/marketing` domain seam). Prefer `shell`.
    */
   marketingOnly: boolean
-  /**
-   * Ads-only shell mode — TRUE on a brand's dedicated ads host
-   * (ads.<brand-domain>, e.g. ads.hanzo.ai) or with NEXT_PUBLIC_ADS_ONLY=1. The
-   * SAME console image serves it; the catalog is filtered to the ONE Ads product
-   * and the home route defaults to it — the exact host→mode twin of `billingOnly`.
-   * This is the console half of the new `/v1/ads` domain seam (one console,
-   * host-resolved modes, orthogonal /v1 domains).
-   */
+  /** Ads-only shell mode — the legacy `shell === 'ads'` alias (ads.<brand> / NEXT_PUBLIC_ADS_ONLY=1; the `/v1/ads` seam). Prefer `shell`. */
   adsOnly: boolean
-  /**
-   * Social-only shell mode — TRUE on a brand's dedicated social host
-   * (social.<brand-domain>, e.g. social.hanzo.ai) or with NEXT_PUBLIC_SOCIAL_ONLY=1.
-   * The SAME console image serves it; the catalog is filtered to the ONE Social
-   * product and the home route defaults to it — the exact host→mode twin of
-   * `billingOnly`. This is the console half of the new `/v1/social` domain seam
-   * (one console, host-resolved modes, orthogonal /v1).
-   */
+  /** Social-only shell mode — the legacy `shell === 'social'` alias (social.<brand> / NEXT_PUBLIC_SOCIAL_ONLY=1; the `/v1/social` seam). Prefer `shell`. */
   socialOnly: boolean
+  /**
+   * The product shell this host wears (`shellFromHost`) — the ONE source of the console
+   * FACE (console / billing / marketing / ads / social / sentry). Each product face is
+   * the SAME image scoped to one product; brand identity is orthogonal (`brandFromHost`),
+   * so a face NEVER crosses a brand. `billingOnly`/`marketingOnly`/`adsOnly`/`socialOnly`
+   * are legacy `shell === '<x>'` aliases kept for existing call sites; new code reads `shell`.
+   */
+  shell: ShellId
 }
 
 /** Fields shared by every brand. Env-overridable per-deploy. */
@@ -256,10 +260,8 @@ export function isBillingOnly(host?: string | null): boolean {
 
 /**
  * True on a brand's dedicated marketing host (marketing.<brand>, e.g.
- * marketing.hanzo.ai). Such a host runs the SAME console image but in
- * marketing-only shell mode (catalog filtered to the Marketing product, default
- * route → its overview). Strict `marketing.` prefix — the host→mode twin of
- * `isBillingOnlyHost`.
+ * marketing.hanzo.ai). Such a host wears the SAME console image as the Marketing
+ * product face. Strict `marketing.` prefix — the host twin of `isBillingOnlyHost`.
  */
 export function isMarketingHost(host?: string | null): boolean {
   return normHost(host).startsWith('marketing.')
@@ -274,10 +276,9 @@ export function isMarketing(host?: string | null): boolean {
 }
 
 /**
- * True on a brand's dedicated ads host (ads.<brand>, e.g. ads.hanzo.ai). Such a
- * host runs the SAME console image but in ads-only shell mode (catalog filtered
- * to the Ads product, default route → its overview). Strict `ads.` prefix — the
- * host→mode twin of `isBillingOnlyHost`.
+ * True on a brand's dedicated ads host (ads.<brand>, e.g. ads.hanzo.ai). Wears the
+ * SAME image as the Ads product face. Strict `ads.` prefix — the host twin of
+ * `isBillingOnlyHost`.
  */
 export function isAdsHost(host?: string | null): boolean {
   return normHost(host).startsWith('ads.')
@@ -293,9 +294,8 @@ export function isAds(host?: string | null): boolean {
 
 /**
  * True on a brand's dedicated social host (social.<brand>, e.g. social.hanzo.ai).
- * Such a host runs the SAME console image but in social-only shell mode (catalog
- * filtered to the Social product, default route → its overview). Strict `social.`
- * prefix — the host→mode twin of `isBillingOnlyHost`.
+ * Wears the SAME image as the Social product face. Strict `social.` prefix — the
+ * host twin of `isBillingOnlyHost`.
  */
 export function isSocialHost(host?: string | null): boolean {
   return normHost(host).startsWith('social.')
@@ -307,6 +307,34 @@ export function isSocialHost(host?: string | null): boolean {
  */
 export function isSocial(host?: string | null): boolean {
   return process.env.NEXT_PUBLIC_SOCIAL_ONLY === '1' || isSocialHost(host)
+}
+
+/**
+ * True on a brand's dedicated Sentry host (sentry.<brand>, e.g. sentry.hanzo.ai) —
+ * the SAME console image, wearing the Sentry error/log/trace product face. Strict
+ * `sentry.` prefix — no false positives.
+ */
+export function isSentryHost(host?: string | null): boolean {
+  return normHost(host).startsWith('sentry.')
+}
+
+/**
+ * The product shell a host wears, resolved at runtime — the ONE resolver for EVERY
+ * console FACE. `NEXT_PUBLIC_PRODUCT_SHELL` overrides for dev/preview (any host → a
+ * chosen face); otherwise each dedicated host (or its legacy `NEXT_PUBLIC_*_ONLY=1`
+ * env) selects its face — billing / marketing / ads / social / sentry — and everything
+ * else is the full `console`. Brand is resolved separately (`brandFromHost`), so the
+ * shell is orthogonal — a face NEVER crosses a brand (sentry.lux.cloud is the lux brand).
+ */
+export function shellFromHost(host?: string | null): ShellId {
+  const env = process.env.NEXT_PUBLIC_PRODUCT_SHELL
+  if (env === 'billing' || env === 'marketing' || env === 'ads' || env === 'social' || env === 'sentry' || env === 'console') return env
+  if (isBillingOnly(host)) return 'billing'
+  if (isMarketing(host)) return 'marketing'
+  if (isAds(host)) return 'ads'
+  if (isSocial(host)) return 'social'
+  if (isSentryHost(host)) return 'sentry'
+  return 'console'
 }
 
 // Cache is keyed by NORMALIZED HOST (not brand): admin.hanzo.ai and
@@ -330,6 +358,8 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
   const admin = isAdminHost(host)
   const app = admin ? b.adminApp : b.iamApp
   const org = admin ? ADMIN_ORG : b.iamOrgName
+  // ONE source for the shell; billingOnly is the legacy `shell === 'billing'` view.
+  const shell = shellFromHost(host)
   const resolved: ConsoleConfig = {
     brand,
     brandName: b.brandName,
@@ -341,10 +371,12 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? b.billingUrl),
     docsUrl: trimSlash(process.env.NEXT_PUBLIC_DOCS_URL ?? b.docsUrl),
     statusUrl: trimSlash(process.env.NEXT_PUBLIC_STATUS_URL ?? b.statusUrl),
-    billingOnly: isBillingOnly(host),
-    marketingOnly: isMarketing(host),
-    adsOnly: isAds(host),
-    socialOnly: isSocial(host),
+    // ONE source (`shell`); the four *Only booleans are its legacy `shell === '<x>'` aliases.
+    billingOnly: shell === 'billing',
+    marketingOnly: shell === 'marketing',
+    adsOnly: shell === 'ads',
+    socialOnly: shell === 'social',
+    shell,
     ...SHARED,
   }
   cache.set(key, resolved)
