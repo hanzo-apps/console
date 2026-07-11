@@ -83,11 +83,26 @@ export type Post = {
   status: string
   /** Unix seconds; 0 = not scheduled / publish now. */
   scheduleAt: number
+  /** Server-managed publish results (empty until a publish attempt lands). */
+  accountId?: string
+  externalId?: string
+  error?: string
   createdAt: number
   updatedAt: number
 }
 
 export type Summary = { posts: number; scheduled: number; published: number; accounts: number }
+
+/**
+ * A network's publish-readiness (from GET /v1/social/providers): whether this
+ * deployment has the OAuth-app credentials to publish, and — if not — exactly which
+ * env vars are missing. The honest connect affordance; never fabricated.
+ */
+export type ProviderCapability = {
+  provider: string
+  credentialsConfigured: boolean
+  missingCredentials: string[]
+}
 
 /** Create/update bodies — only the writable fields (server owns id/org/timestamps). */
 export type NewAccount = Partial<Omit<Account, 'id' | 'createdAt' | 'updatedAt'>> & { provider: string }
@@ -115,6 +130,9 @@ export function normalizePost(raw: unknown): Post {
     channel: str(r.channel) || 'x',
     status: str(r.status) || 'draft',
     scheduleAt: num(r.scheduleAt),
+    accountId: str(r.accountId) || undefined,
+    externalId: str(r.externalId) || undefined,
+    error: str(r.error) || undefined,
     createdAt: num(r.createdAt),
     updatedAt: num(r.updatedAt),
   }
@@ -125,13 +143,31 @@ export function normalizeSummary(raw: unknown): Summary {
   return { posts: num(r.posts), scheduled: num(r.scheduled), published: num(r.published), accounts: num(r.accounts) }
 }
 
+export function normalizeProviderCapability(raw: unknown): ProviderCapability {
+  const r = asRecord(raw)
+  const miss = Array.isArray(r.missingCredentials)
+    ? (r.missingCredentials.filter((x) => typeof x === 'string') as string[])
+    : []
+  return {
+    provider: str(r.provider),
+    credentialsConfigured: Boolean(r.credentialsConfigured),
+    missingCredentials: miss,
+  }
+}
+
 export const normalizeAccounts = (p: unknown): Account[] => rows(p).map(normalizeAccount).filter((a) => a.id)
 export const normalizePosts = (p: unknown): Post[] => rows(p).map(normalizePost).filter((p) => p.id)
+export const normalizeProviders = (p: unknown): ProviderCapability[] =>
+  rows(p).map(normalizeProviderCapability).filter((c) => c.provider)
 
 // ── Network methods (thin — one per documented route) ───────────────────────
 
 export const SocialApi = {
   summary: (): Promise<Summary> => restGet<unknown>(originV1Url(`${BASE}/summary`)).then(normalizeSummary),
+
+  /** Publish-readiness per network (+ the exact missing OAuth-app credentials). */
+  providers: (): Promise<ProviderCapability[]> =>
+    restGet<unknown>(originV1Url(`${BASE}/providers`)).then(normalizeProviders),
 
   accounts: {
     list: (provider?: string): Promise<Account[]> =>
@@ -159,5 +195,8 @@ export const SocialApi = {
     update: (id: string, body: NewPost): Promise<Post> =>
       restPut<unknown>(originV1Url(`${BASE}/posts/${enc(id)}`), body).then(normalizePost),
     remove: (id: string): Promise<void> => restDelete(originV1Url(`${BASE}/posts/${enc(id)}`)),
+    /** Publish a post NOW to its channel's connected accounts. */
+    publish: (id: string): Promise<Post> =>
+      restPost<unknown>(originV1Url(`${BASE}/posts/${enc(id)}/publish`)).then(normalizePost),
   },
 }
