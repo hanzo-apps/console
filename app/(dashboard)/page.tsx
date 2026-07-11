@@ -151,6 +151,7 @@ export default function DashboardHome() {
     if (config.billingOnly) router.replace('/billing')
     else if (config.marketingOnly) router.replace('/marketing')
     else if (config.adsOnly) router.replace('/ads')
+    else if (config.socialOnly) router.replace('/social')
   }, [router])
 
   // One-binary STATIC embed: cloud serves THIS page's index.html for EVERY deep
@@ -170,7 +171,7 @@ export default function DashboardHome() {
     return <ProductRoute slug={segments} />
   }
 
-  if (config.billingOnly || config.marketingOnly || config.adsOnly) {
+  if (config.billingOnly || config.marketingOnly || config.adsOnly || config.socialOnly) {
     return (
       <XStack flex={1} justify="center" items="center" p="$8">
         <Spinner size="large" color="$color11" />
