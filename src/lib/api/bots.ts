@@ -9,21 +9,26 @@
  * hardened `/v1` user-bearer proxy (NOT bare `/v1/…`, which the live ingress routes
  * to the gateway with no principal → 403 — the affiliates/referrals lesson).
  *
- * SCOPE: the cloud bots surface is launch-only BY DESIGN — it does not track a run's
- * runtime (visor + the bot-gateway own that). So there is no list/stop here yet;
- * when `GET /v1/bots` + a stop endpoint land (proxying the bot-gateway's live nodes),
- * add `list()`/`stop()` below — the transport is identical.
+ * SCOPE: three heads, one transport. `run` launches; `list` reads the caller's org
+ * runs off `GET /v1/bots` (proxying the bot-gateway's live nodes); `stop` halts one off
+ * `POST /v1/bots/:runId/stop`. All three ride the same hardened `/v1` user-bearer proxy
+ * and defensively normalize their bare-JSON responses.
  */
-import { restPost, cloudProxyV1Url } from './client'
+import { restGet, restPost, cloudProxyV1Url } from './client'
 
 const BASE = 'bots'
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : v == null ? '' : String(v))
 const asRecord = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
+/** Coerce a timestamp field, keeping a number as a number and stringifying anything else. */
+const numOrStr = (v: unknown): number | string => (typeof v === 'number' ? v : str(v))
 
 /** The surface a launched bot boots into. */
 export type BotSurface = 'desktop' | 'terminal'
+
+/** Coerce an unknown surface to the closed union — anything but `terminal` reads as `desktop`. */
+const asSurface = (v: unknown): BotSurface => (str(v) === 'terminal' ? 'terminal' : 'desktop')
 
 /** POST /v1/bots/run input — the launch request (mirrors cloud `runReq`). */
 export interface BotRunInput {
@@ -46,6 +51,27 @@ export function normalizeRun(v: unknown): BotRun {
   return { runId: str(r.runId), status: str(r.status), sessionUrl: str(r.sessionUrl) }
 }
 
+/**
+ * GET /v1/bots row — a launched run enriched with the task/surface it ran and when it
+ * started, so the console lists real org runs (not just this session's launches).
+ */
+export interface BotRunRow extends BotRun {
+  task: string
+  surface: BotSurface
+  startedAt: number | string
+}
+
+/** Defensive normalizer over a `GET /v1/bots` row (`{runId,task,surface,status,sessionUrl,startedAt}`). */
+export function normalizeRunRow(v: unknown): BotRunRow {
+  const r = asRecord(v)
+  return {
+    ...normalizeRun(r),
+    task: str(r.task),
+    surface: asSurface(r.surface),
+    startedAt: numOrStr(r.startedAt),
+  }
+}
+
 export const BotsApi = {
   /** POST /v1/bots/run — launch a computer-using bot (billed a flat per-run fee); returns its VNC session. */
   run: (input: BotRunInput): Promise<BotRun> =>
@@ -55,4 +81,15 @@ export const BotsApi = {
       gpu: input.gpu ?? false,
       timeout: input.timeout ?? '',
     }).then(normalizeRun),
+
+  /** GET /v1/bots — the caller's org runs (`{ bots: [...] }`), each defensively normalized. */
+  list: (): Promise<BotRunRow[]> =>
+    restGet<unknown>(cloudProxyV1Url(BASE)).then((v) => {
+      const bots = asRecord(v).bots
+      return Array.isArray(bots) ? bots.map(normalizeRunRow) : []
+    }),
+
+  /** POST /v1/bots/:runId/stop — halt a run; returns its `{runId,status}`. */
+  stop: (runId: string): Promise<BotRun> =>
+    restPost<unknown>(cloudProxyV1Url(`${BASE}/${encodeURIComponent(runId)}/stop`), {}).then(normalizeRun),
 }

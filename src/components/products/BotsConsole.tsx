@@ -19,25 +19,36 @@
  * IAM-gated to its own origins, the gateway must allow this console origin as a
  * `frame-ancestors` — until it does, the "Open in a new tab" fallback always works.
  *
- * SCOPE: launch + watch today. A persistent runs LIST and STOP need cloud endpoints
- * the launch-only bots surface deliberately lacks (`GET /v1/bots` + stop, proxying
- * the bot-gateway's live nodes) — until then, the history below is this session's
- * launches, held client-side.
+ * SCOPE: launch + watch + manage. The launch form + VNC attach are unchanged; on top of
+ * them the runs list is now the REAL org fleet off `GET /v1/bots` (BotsApi.list) with a
+ * refresh control, and each run can be halted with `POST /v1/bots/:runId/stop`
+ * (BotsApi.stop). If the list endpoint isn't deployed yet the view degrades to launch-only
+ * (this session's launches, held client-side) with a subtle note — never a hard error.
  */
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Bot, Cpu, ExternalLink, Monitor, Play, Terminal } from '@hanzogui/lucide-icons-2'
+import { Bot, Cpu, ExternalLink, Monitor, Play, RefreshCw, Square, Terminal } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
-import { BotsApi, type BotRun, type BotSurface } from '~/lib/api/bots'
+import { BotsApi, type BotRunRow, type BotSurface } from '~/lib/api/bots'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { StatusTag } from '~/components/ui/StatusTag'
 
-/** A launched run plus the task it ran — this session's client-side history. */
-interface LaunchedRun extends BotRun {
-  task: string
-  surface: BotSurface
-}
+/** Statuses a run can't be stopped from — the Stop button is disabled on these. */
+const TERMINAL = new Set([
+  'stopped',
+  'stopping',
+  'failed',
+  'canceled',
+  'cancelled',
+  'succeeded',
+  'error',
+  'done',
+  'complete',
+  'completed',
+  'killed',
+])
+const isTerminal = (status: string): boolean => TERMINAL.has(status.toLowerCase())
 
 export function BotsConsole() {
   const [task, setTask] = useState('')
@@ -46,8 +57,56 @@ export function BotsConsole() {
   const [timeout, setTimeoutVal] = useState('')
   const [launching, setLaunching] = useState(false)
   const [err, setErr] = useState<{ message: string; needsFunds: boolean } | null>(null)
-  const [runs, setRuns] = useState<LaunchedRun[]>([])
-  const [active, setActive] = useState<LaunchedRun | null>(null)
+  const [runs, setRuns] = useState<BotRunRow[]>([])
+  const [active, setActive] = useState<BotRunRow | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [listErr, setListErr] = useState(false)
+  const [stoppingId, setStoppingId] = useState<string | null>(null)
+  const [stopErr, setStopErr] = useState<string | null>(null)
+
+  // Pull the org's real runs off GET /v1/bots. Server rows are the source of truth, but
+  // a just-launched run may not be listed yet (eventual consistency), so local-only runs
+  // are kept ahead of them — a quick refresh never makes a fresh launch vanish. A failure
+  // (endpoint not deployed) degrades to launch-only: keep existing runs, flag `listErr`.
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const rows = await BotsApi.list()
+      const seen = new Set(rows.map((r) => r.runId))
+      setRuns((prev) => [...prev.filter((r) => !seen.has(r.runId)), ...rows])
+      setActive((a) => (a ? (rows.find((r) => r.runId === a.runId) ?? a) : a))
+      setListErr(false)
+    } catch {
+      setListErr(true)
+    } finally {
+      setLoaded(true)
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  const stop = useCallback(
+    async (runId: string) => {
+      if (stoppingId) return
+      setStoppingId(runId)
+      setStopErr(null)
+      try {
+        const stopped = await BotsApi.stop(runId)
+        const status = stopped.status || 'stopped'
+        setRuns((prev) => prev.map((r) => (r.runId === runId ? { ...r, status } : r)))
+        setActive((a) => (a && a.runId === runId ? { ...a, status } : a))
+      } catch (e) {
+        setStopErr(e instanceof Error && e.message ? e.message : 'Stop failed. Try again.')
+      } finally {
+        setStoppingId(null)
+      }
+    },
+    [stoppingId],
+  )
 
   const launch = useCallback(async () => {
     const t = task.trim()
@@ -56,7 +115,7 @@ export function BotsConsole() {
     setErr(null)
     try {
       const run = await BotsApi.run({ task: t, surface, gpu, timeout: timeout.trim() || undefined })
-      const launched: LaunchedRun = { ...run, task: t, surface }
+      const launched: BotRunRow = { ...run, task: t, surface, startedAt: Date.now() }
       setRuns((prev) => [launched, ...prev])
       setActive(launched)
     } catch (e) {
@@ -244,38 +303,87 @@ export function BotsConsole() {
           </Card>
         ) : null}
 
-        {/* ── This session's launches ─────────────────────────────────────── */}
-        {runs.length > 0 ? (
+        {/* ── Runs — the org's real fleet (GET /v1/bots), with refresh + stop ─── */}
+        {loaded || runs.length > 0 ? (
           <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor">
-            <Text fontSize="$2" color="$color11">
-              This session
-            </Text>
-            {runs.map((r) => (
-              <XStack
-                key={r.runId}
-                items="center"
-                justify="space-between"
-                gap="$2"
-                py="$2"
-                borderBottomWidth={1}
-                borderColor="$borderColor"
+            <XStack items="center" justify="space-between" gap="$2">
+              <Text fontSize="$2" color="$color11">
+                Runs
+              </Text>
+              <Button
+                size="$2"
+                chromeless
+                disabled={loading}
+                icon={loading ? <Spinner size="small" /> : <RefreshCw size={14} />}
+                onPress={() => void refresh()}
               >
-                <XStack items="center" gap="$3" flex={1}>
-                  <StatusTag status={r.status || 'pending'} />
-                  <Text fontSize="$2" numberOfLines={1}>
-                    {r.task}
+                Refresh
+              </Button>
+            </XStack>
+
+            {stopErr ? (
+              <Text fontSize="$2" color="$red10">
+                {stopErr}
+              </Text>
+            ) : null}
+
+            {runs.length === 0 ? (
+              <Text fontSize="$1" color="$color10">
+                {listErr
+                  ? 'Live runs aren’t available yet — launch a bot above to get started.'
+                  : 'No bots running yet. Launch one above.'}
+              </Text>
+            ) : (
+              <>
+                {listErr ? (
+                  <Text fontSize="$1" color="$color10">
+                    Showing this session’s launches — the live runs list is unavailable.
                   </Text>
-                </XStack>
-                <Button
-                  size="$2"
-                  chromeless={active?.runId !== r.runId}
-                  theme={active?.runId === r.runId ? 'light' : undefined}
-                  onPress={() => setActive(r)}
-                >
-                  Attach
-                </Button>
-              </XStack>
-            ))}
+                ) : null}
+                {runs.map((r) => (
+                  <XStack
+                    key={r.runId}
+                    items="center"
+                    justify="space-between"
+                    gap="$2"
+                    py="$2"
+                    borderBottomWidth={1}
+                    borderColor="$borderColor"
+                  >
+                    <XStack items="center" gap="$3" flex={1}>
+                      <StatusTag status={r.status || 'pending'} />
+                      <YStack flex={1}>
+                        <Text fontSize="$2" numberOfLines={1}>
+                          {r.task}
+                        </Text>
+                        <Text fontSize="$1" color="$color10">
+                          {r.surface} · {r.runId}
+                        </Text>
+                      </YStack>
+                    </XStack>
+                    <XStack items="center" gap="$2">
+                      <Button
+                        size="$2"
+                        chromeless={active?.runId !== r.runId}
+                        theme={active?.runId === r.runId ? 'light' : undefined}
+                        onPress={() => setActive(r)}
+                      >
+                        Attach
+                      </Button>
+                      <Button
+                        size="$2"
+                        chromeless
+                        disabled={stoppingId === r.runId || isTerminal(r.status)}
+                        icon={stoppingId === r.runId ? <Spinner size="small" /> : <Square size={13} />}
+                        onPress={() => void stop(r.runId)}
+                      >
+                        Stop
+                      </Button>
+                    </XStack>
+                  </XStack>
+                ))}
+              </>
+            )}
           </Card>
         ) : null}
       </YStack>
