@@ -89,6 +89,7 @@ import { Users,
   ClipboardList,
   Workflow,
   Megaphone,
+  Target,
   NotebookPen,
   IdCard,
   Blocks,
@@ -205,6 +206,7 @@ import { CodeModule } from '~/components/products/CodeModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
 import { MarketingModule } from '~/components/products/MarketingModule'
+import { AdsModule } from '~/components/products/AdsModule'
 import { StartupsModule } from '~/components/products/StartupsModule'
 import { CmsModule } from '~/components/products/CmsModule'
 import { ErpModule } from '~/components/products/ErpModule'
@@ -2491,6 +2493,22 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: MarketingModule }],
   },
   {
+    // Ads — the net-new Ads product over the REAL native-Go cloud `/v1/ads` surface
+    // (cloud clients/ads on Base/SQLite: a per-org ad-campaign store, twin of
+    // clients/crm). The host→mode twin of the Billing Center: ads.hanzo.ai boots
+    // THIS product alone (config.adsOnly). Per-org, honest-empty by construction —
+    // every state is loading / BackendStateCard / empty.
+    id: 'ads',
+    label: 'Ads',
+    icon: Target,
+    description: 'Ad campaigns across platforms (Meta, Google, TikTok, X) — your ads surface, per org.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: AdsModule }],
+  },
+  {
     // Startups — the Hanzo Startup Program pipeline, over the native-Go cloud
     // `/v1/crm/applications` surface (cloud clients/crm on Base/SQLite). Public
     // marketing form → AI screen → staff pipeline board. Per-org (hanzo).
@@ -3128,6 +3146,9 @@ export const BILLING_CENTER_ID = 'billing'
 /** The Marketing entry id — the marketing-only shell root (host→mode twin of Billing). */
 export const MARKETING_ID = 'marketing'
 
+/** The Ads entry id — the ads-only shell root (host→mode twin of Billing). */
+export const ADS_ID = 'ads'
+
 export const visibleCatalog = (
   showAdmin: boolean,
   enabled?: string[] | null,
@@ -3148,6 +3169,13 @@ export const visibleCatalog = (
     const marketing = catalog.find((e) => e.id === MARKETING_ID)
     return marketing ? [marketing] : []
   }
+  // Ads-only shell mode (ads.<brand> host / NEXT_PUBLIC_ADS_ONLY): the host→mode
+  // twin of billing-only — the SAME console image filtered to the ONE Ads product.
+  // Same shape, zero duplication.
+  if (config.adsOnly) {
+    const ads = catalog.find((e) => e.id === ADS_ID)
+    return ads ? [ads] : []
+  }
   const byAdmin = (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
   // ENTITLEMENT GATE (customer only): out-of-box an org sees ONLY the products it has
   // enabled/paid for (always-on essentials + its `enabled` set). A super admin
@@ -3162,10 +3190,10 @@ export const visibleCatalogByCategory = (
   enabled?: string[] | null,
 ): { category: ProductCategory; entries: CatalogEntry[] }[] => {
   const visible = visibleCatalog(showAdmin, enabled)
-  // In billing-only mode the Billing Center is the whole catalog — surface it as a
-  // single group regardless of the brand's category order (its category may be
-  // outside the brand's normal set).
-  if (config.billingOnly || config.marketingOnly) {
+  // In billing-only (or marketing/ads-only) mode the single product is the whole
+  // catalog — surface it as a single group regardless of the brand's category order
+  // (its category may be outside the brand's normal set).
+  if (config.billingOnly || config.marketingOnly || config.adsOnly) {
     return visible.length ? [{ category: visible[0].category, entries: visible }] : []
   }
   return brandCategoryOrder()
