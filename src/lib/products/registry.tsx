@@ -90,6 +90,7 @@ import { Users,
   Workflow,
   Megaphone,
   Target,
+  Share2,
   NotebookPen,
   IdCard,
   Blocks,
@@ -207,6 +208,7 @@ import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
 import { MarketingModule } from '~/components/products/MarketingModule'
 import { AdsModule } from '~/components/products/AdsModule'
+import { SocialModule } from '~/components/products/SocialModule'
 import { StartupsModule } from '~/components/products/StartupsModule'
 import { CmsModule } from '~/components/products/CmsModule'
 import { ErpModule } from '~/components/products/ErpModule'
@@ -2509,6 +2511,23 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AdsModule }],
   },
   {
+    // Social — the in-process fold of the live social stack (github.com/hanzoai/social:
+    // social-backend/frontend/orchestrator, a Postiz-style scheduler) over the REAL
+    // native-Go cloud `/v1/social` surface (cloud clients/social on Base/SQLite: a
+    // per-org accounts+posts store, twin of clients/crm). The host→mode twin of the
+    // Billing Center: social.hanzo.ai boots THIS product alone (config.socialOnly).
+    // Per-org, honest-empty by construction — every state is loading / BackendStateCard / empty.
+    id: 'social',
+    label: 'Social',
+    icon: Share2,
+    description: 'Posts and accounts across networks (X, Instagram, LinkedIn, TikTok) — your social surface, per org.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: SocialModule }],
+  },
+  {
     // Startups — the Hanzo Startup Program pipeline, over the native-Go cloud
     // `/v1/crm/applications` surface (cloud clients/crm on Base/SQLite). Public
     // marketing form → AI screen → staff pipeline board. Per-org (hanzo).
@@ -3149,6 +3168,9 @@ export const MARKETING_ID = 'marketing'
 /** The Ads entry id — the ads-only shell root (host→mode twin of Billing). */
 export const ADS_ID = 'ads'
 
+/** The Social entry id — the social-only shell root (host→mode twin of Billing). */
+export const SOCIAL_ID = 'social'
+
 export const visibleCatalog = (
   showAdmin: boolean,
   enabled?: string[] | null,
@@ -3176,6 +3198,13 @@ export const visibleCatalog = (
     const ads = catalog.find((e) => e.id === ADS_ID)
     return ads ? [ads] : []
   }
+  // Social-only shell mode (social.<brand> host / NEXT_PUBLIC_SOCIAL_ONLY): the
+  // host→mode twin of billing-only — the SAME console image filtered to the ONE
+  // Social product. Same shape, zero duplication.
+  if (config.socialOnly) {
+    const social = catalog.find((e) => e.id === SOCIAL_ID)
+    return social ? [social] : []
+  }
   const byAdmin = (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
   // ENTITLEMENT GATE (customer only): out-of-box an org sees ONLY the products it has
   // enabled/paid for (always-on essentials + its `enabled` set). A super admin
@@ -3190,10 +3219,10 @@ export const visibleCatalogByCategory = (
   enabled?: string[] | null,
 ): { category: ProductCategory; entries: CatalogEntry[] }[] => {
   const visible = visibleCatalog(showAdmin, enabled)
-  // In billing-only (or marketing/ads-only) mode the single product is the whole
-  // catalog — surface it as a single group regardless of the brand's category order
-  // (its category may be outside the brand's normal set).
-  if (config.billingOnly || config.marketingOnly || config.adsOnly) {
+  // In billing-only (or marketing/ads/social-only) mode the single product is the
+  // whole catalog — surface it as a single group regardless of the brand's category
+  // order (its category may be outside the brand's normal set).
+  if (config.billingOnly || config.marketingOnly || config.adsOnly || config.socialOnly) {
     return visible.length ? [{ category: visible[0].category, entries: visible }] : []
   }
   return brandCategoryOrder()
