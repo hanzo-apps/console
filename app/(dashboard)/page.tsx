@@ -14,6 +14,7 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Star, Lock, ArrowRight, BookOpen, KeyRound } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
+import { shellFor } from '~/lib/products/shell'
 import { visibleCatalogByCategory, categorySlug, type CatalogEntry } from '~/lib/products/registry'
 import { resolveView } from '~/lib/products/match'
 import { ProductRoute } from '~/components/ProductRoute'
@@ -144,15 +145,14 @@ export default function DashboardHome() {
 
   useEffect(() => setMounted(true), [])
 
-  // Billing-only shell (billing.<brand> / NEXT_PUBLIC_BILLING_ONLY): the default
-  // route IS the Billing Center — redirect the catalog home to the billing overview
-  // so people who only ever see billing.hanzo.ai land straight on billing.
+  // Product-shell face (billing.<brand> / sentry.<brand> / an override): the default
+  // route IS the face's home — redirect the catalog home there so people who only ever
+  // see billing.hanzo.ai land on billing, and sentry.hanzo.ai on Issues. ONE redirect
+  // for every face, driven by the shell descriptor.
+  const shellHome = shellFor(config.shell).home
   useEffect(() => {
-    if (config.billingOnly) router.replace('/billing')
-    else if (config.marketingOnly) router.replace('/marketing')
-    else if (config.adsOnly) router.replace('/ads')
-    else if (config.socialOnly) router.replace('/social')
-  }, [router])
+    if (shellHome) router.replace(`/${shellHome}`)
+  }, [router, shellHome])
 
   // One-binary STATIC embed: cloud serves THIS page's index.html for EVERY deep
   // link (a static export can't pre-generate arbitrary product slugs), so a direct
@@ -171,7 +171,7 @@ export default function DashboardHome() {
     return <ProductRoute slug={segments} />
   }
 
-  if (config.billingOnly || config.marketingOnly || config.adsOnly || config.socialOnly) {
+  if (shellHome) {
     return (
       <XStack flex={1} justify="center" items="center" p="$8">
         <Spinner size="large" color="$color11" />
