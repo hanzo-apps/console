@@ -88,6 +88,7 @@ import { Users,
   Ruler,
   ClipboardList,
   Workflow,
+  Megaphone,
   NotebookPen,
   IdCard,
   Blocks,
@@ -203,6 +204,7 @@ import { AgentsModule } from '~/components/products/AgentsModule'
 import { CodeModule } from '~/components/products/CodeModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
+import { MarketingModule } from '~/components/products/MarketingModule'
 import { StartupsModule } from '~/components/products/StartupsModule'
 import { CmsModule } from '~/components/products/CmsModule'
 import { ErpModule } from '~/components/products/ErpModule'
@@ -2473,6 +2475,22 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
+    // Marketing — the in-process fold of github.com/hanzoai/marketing over the REAL
+    // native-Go cloud `/v1/marketing` surface (cloud clients/marketing on Base/SQLite:
+    // a per-org campaign store, twin of clients/crm). The host→mode twin of the Billing
+    // Center: marketing.hanzo.ai boots THIS product alone (config.marketingOnly). Per-org,
+    // honest-empty by construction — every state is loading / BackendStateCard / empty.
+    id: 'marketing',
+    label: 'Marketing',
+    icon: Megaphone,
+    description: 'Campaigns across channels (email, social, ads) — your marketing surface, per org.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: MarketingModule }],
+  },
+  {
     // Startups — the Hanzo Startup Program pipeline, over the native-Go cloud
     // `/v1/crm/applications` surface (cloud clients/crm on Base/SQLite). Public
     // marketing form → AI screen → staff pipeline board. Per-org (hanzo).
@@ -3107,6 +3125,9 @@ export const inBrand = (e: CatalogEntry): boolean =>
 /** The unified Billing Center entry id — the ONE money surface + the billing-only shell root. */
 export const BILLING_CENTER_ID = 'billing'
 
+/** The Marketing entry id — the marketing-only shell root (host→mode twin of Billing). */
+export const MARKETING_ID = 'marketing'
+
 export const visibleCatalog = (
   showAdmin: boolean,
   enabled?: string[] | null,
@@ -3119,6 +3140,13 @@ export const visibleCatalog = (
   if (config.billingOnly) {
     const billing = catalog.find((e) => e.id === BILLING_CENTER_ID)
     return billing ? [billing] : []
+  }
+  // Marketing-only shell mode (marketing.<brand> host / NEXT_PUBLIC_MARKETING_ONLY):
+  // the host→mode twin of billing-only — the SAME console image filtered to the ONE
+  // Marketing product. Same shape, zero duplication.
+  if (config.marketingOnly) {
+    const marketing = catalog.find((e) => e.id === MARKETING_ID)
+    return marketing ? [marketing] : []
   }
   const byAdmin = (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e))).filter(inBrand)
   // ENTITLEMENT GATE (customer only): out-of-box an org sees ONLY the products it has
@@ -3137,7 +3165,7 @@ export const visibleCatalogByCategory = (
   // In billing-only mode the Billing Center is the whole catalog — surface it as a
   // single group regardless of the brand's category order (its category may be
   // outside the brand's normal set).
-  if (config.billingOnly) {
+  if (config.billingOnly || config.marketingOnly) {
     return visible.length ? [{ category: visible[0].category, entries: visible }] : []
   }
   return brandCategoryOrder()

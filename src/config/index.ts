@@ -75,6 +75,15 @@ export type ConsoleConfig = {
    * section inside the full console (zero duplication, same components).
    */
   billingOnly: boolean
+  /**
+   * Marketing-only shell mode — TRUE on a brand's dedicated marketing host
+   * (marketing.<brand-domain>, e.g. marketing.hanzo.ai) or with
+   * NEXT_PUBLIC_MARKETING_ONLY=1. The SAME console image serves it; the catalog is
+   * filtered to the ONE Marketing product and the home route defaults to it — the
+   * exact host→mode twin of `billingOnly`. This is the console half of the new
+   * `/v1/marketing` domain seam (one console, host-resolved modes, orthogonal /v1).
+   */
+  marketingOnly: boolean
 }
 
 /** Fields shared by every brand. Env-overridable per-deploy. */
@@ -227,6 +236,25 @@ export function isBillingOnly(host?: string | null): boolean {
   return process.env.NEXT_PUBLIC_BILLING_ONLY === '1' || isBillingOnlyHost(host)
 }
 
+/**
+ * True on a brand's dedicated marketing host (marketing.<brand>, e.g.
+ * marketing.hanzo.ai). Such a host runs the SAME console image but in
+ * marketing-only shell mode (catalog filtered to the Marketing product, default
+ * route → its overview). Strict `marketing.` prefix — the host→mode twin of
+ * `isBillingOnlyHost`.
+ */
+export function isMarketingHost(host?: string | null): boolean {
+  return normHost(host).startsWith('marketing.')
+}
+
+/**
+ * Marketing-only mode for a host: the dedicated marketing host OR an explicit
+ * NEXT_PUBLIC_MARKETING_ONLY=1 override (dev / preview). Mirrors isBillingOnly.
+ */
+export function isMarketing(host?: string | null): boolean {
+  return process.env.NEXT_PUBLIC_MARKETING_ONLY === '1' || isMarketingHost(host)
+}
+
 // Cache is keyed by NORMALIZED HOST (not brand): admin.hanzo.ai and
 // cloud.hanzo.ai are the same brand but MUST resolve to different clients
 // (admin-console vs hanzo-cloud), so a brand-keyed cache would collide.
@@ -260,6 +288,7 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     docsUrl: trimSlash(process.env.NEXT_PUBLIC_DOCS_URL ?? b.docsUrl),
     statusUrl: trimSlash(process.env.NEXT_PUBLIC_STATUS_URL ?? b.statusUrl),
     billingOnly: isBillingOnly(host),
+    marketingOnly: isMarketing(host),
     ...SHARED,
   }
   cache.set(key, resolved)
