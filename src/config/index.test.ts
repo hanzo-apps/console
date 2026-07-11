@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { resolveConfig, isAdminHost, isBillingOnlyHost, brandFromHost, cloudAudience } from './index'
+import { resolveConfig, isAdminHost, isBillingOnlyHost, isAdsHost, brandFromHost, cloudAudience } from './index'
 
 /**
  * Per-host admin login client (admin.hanzo.ai global-admin cutover).
@@ -152,6 +152,48 @@ describe('billing-only shell host', () => {
     expect(resolveConfig('billing.lux.cloud').brand).toBe('lux')
     expect(resolveConfig('billing.zoo.cloud').billingOnly).toBe(true)
     expect(resolveConfig('billing.zoo.cloud').brand).toBe('zoo')
+  })
+})
+
+/**
+ * ads-only shell host — the host→mode twin of billing-only for the new `/v1/ads`
+ * domain seam: ads.<brand> boots the console into the ONE Ads product
+ * (config.adsOnly), the SAME image, keeping the brand.
+ */
+describe('ads-only shell host', () => {
+  it('matches ads.<brand> case- and port-insensitively', () => {
+    expect(isAdsHost('ads.hanzo.ai')).toBe(true)
+    expect(isAdsHost('ADS.Lux.cloud:443')).toBe(true)
+    expect(isAdsHost('ads.zoo.cloud')).toBe(true)
+  })
+
+  it('is a strict ads. prefix — no false positives', () => {
+    expect(isAdsHost('cloud.hanzo.ai')).toBe(false)
+    expect(isAdsHost('myads.hanzo.ai')).toBe(false)
+    expect(isAdsHost('')).toBe(false)
+    expect(isAdsHost(null)).toBe(false)
+  })
+
+  it('resolveConfig marks the ads host ads-only, keeping the brand', () => {
+    const c = resolveConfig('ads.hanzo.ai')
+    expect(c.adsOnly).toBe(true)
+    expect(c.brand).toBe('hanzo')
+    // ads-only is orthogonal to billing-only — never both.
+    expect(c.billingOnly).toBe(false)
+  })
+
+  it('a normal console host is NOT ads-only', () => {
+    expect(resolveConfig('cloud.hanzo.ai').adsOnly).toBe(false)
+    expect(resolveConfig('console.hanzo.ai').adsOnly).toBe(false)
+    // and a billing host is billing-only, not ads-only.
+    expect(resolveConfig('billing.hanzo.ai').adsOnly).toBe(false)
+  })
+
+  it('resolves ads-only per brand (lux/zoo ads hosts)', () => {
+    expect(resolveConfig('ads.lux.cloud').adsOnly).toBe(true)
+    expect(resolveConfig('ads.lux.cloud').brand).toBe('lux')
+    expect(resolveConfig('ads.zoo.cloud').adsOnly).toBe(true)
+    expect(resolveConfig('ads.zoo.cloud').brand).toBe('zoo')
   })
 })
 
