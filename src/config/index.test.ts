@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { resolveConfig, isAdminHost, isBillingOnlyHost, brandFromHost, cloudAudience } from './index'
+import { resolveConfig, isAdminHost, isBillingOnlyHost, isMarketingHost, brandFromHost, cloudAudience } from './index'
 
 /**
  * Per-host admin login client (admin.hanzo.ai global-admin cutover).
@@ -152,6 +152,48 @@ describe('billing-only shell host', () => {
     expect(resolveConfig('billing.lux.cloud').brand).toBe('lux')
     expect(resolveConfig('billing.zoo.cloud').billingOnly).toBe(true)
     expect(resolveConfig('billing.zoo.cloud').brand).toBe('zoo')
+  })
+})
+
+/**
+ * marketing-only shell host — the host→mode twin of billing-only for the new
+ * `/v1/marketing` domain seam: marketing.<brand> boots the console into the ONE
+ * Marketing product (config.marketingOnly), the SAME image, keeping the brand.
+ */
+describe('marketing-only shell host', () => {
+  it('matches marketing.<brand> case- and port-insensitively', () => {
+    expect(isMarketingHost('marketing.hanzo.ai')).toBe(true)
+    expect(isMarketingHost('MARKETING.Lux.cloud:443')).toBe(true)
+    expect(isMarketingHost('marketing.zoo.cloud')).toBe(true)
+  })
+
+  it('is a strict marketing. prefix — no false positives', () => {
+    expect(isMarketingHost('cloud.hanzo.ai')).toBe(false)
+    expect(isMarketingHost('mymarketing.hanzo.ai')).toBe(false)
+    expect(isMarketingHost('')).toBe(false)
+    expect(isMarketingHost(null)).toBe(false)
+  })
+
+  it('resolveConfig marks the marketing host marketing-only, keeping the brand', () => {
+    const c = resolveConfig('marketing.hanzo.ai')
+    expect(c.marketingOnly).toBe(true)
+    expect(c.brand).toBe('hanzo')
+    // marketing-only is orthogonal to billing-only — never both.
+    expect(c.billingOnly).toBe(false)
+  })
+
+  it('a normal console host is NOT marketing-only', () => {
+    expect(resolveConfig('cloud.hanzo.ai').marketingOnly).toBe(false)
+    expect(resolveConfig('console.hanzo.ai').marketingOnly).toBe(false)
+    // and a billing host is billing-only, not marketing-only.
+    expect(resolveConfig('billing.hanzo.ai').marketingOnly).toBe(false)
+  })
+
+  it('resolves marketing-only per brand (lux/zoo marketing hosts)', () => {
+    expect(resolveConfig('marketing.lux.cloud').marketingOnly).toBe(true)
+    expect(resolveConfig('marketing.lux.cloud').brand).toBe('lux')
+    expect(resolveConfig('marketing.zoo.cloud').marketingOnly).toBe(true)
+    expect(resolveConfig('marketing.zoo.cloud').brand).toBe('zoo')
   })
 })
 
