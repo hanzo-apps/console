@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { resolveConfig, isAdminHost, isBillingOnlyHost, isMarketingHost, isAdsHost, isSocialHost, brandFromHost, cloudAudience } from './index'
+import { resolveConfig, isAdminHost, isBillingOnlyHost, isMarketingHost, isAdsHost, isSocialHost, isSentryHost, shellFromHost, brandFromHost, cloudAudience, type ShellId } from './index'
 
 /**
  * Per-host admin login client (admin.hanzo.ai global-admin cutover).
@@ -311,5 +311,66 @@ describe('cloudAudience — the cloud API resource for the forwarded bearer', ()
   it('defaults to the hanzo cloud audience for an unknown host', () => {
     expect(cloudAudience(undefined)).toBe('hanzo-cloud')
     expect(cloudAudience('')).toBe('hanzo-cloud')
+  })
+})
+
+/**
+ * The UNIFIED product-shell model — ONE `shell: ShellId` resolved by `shellFromHost`,
+ * of which the four `*Only` booleans are legacy `shell === '<x>'` aliases. Proves all
+ * FIVE faces (billing/marketing/ads/social/sentry) resolve at the config level and stay
+ * orthogonal to the brand (a face host keeps its own brand). Called with explicit hosts.
+ */
+describe('config: unified product shell (five faces)', () => {
+  const FACE_HOST: Record<Exclude<ShellId, 'console'>, string> = {
+    billing: 'billing.hanzo.ai',
+    marketing: 'marketing.hanzo.ai',
+    ads: 'ads.hanzo.ai',
+    social: 'social.hanzo.ai',
+    sentry: 'sentry.hanzo.ai',
+  }
+
+  it('resolveConfig(host).shell is the host face; a full-console host is "console"', () => {
+    for (const [face, host] of Object.entries(FACE_HOST)) {
+      expect(resolveConfig(host).shell).toBe(face)
+    }
+    expect(resolveConfig('cloud.hanzo.ai').shell).toBe('console')
+    expect(resolveConfig('console.hanzo.ai').shell).toBe('console')
+    expect(resolveConfig('admin.hanzo.ai').shell).toBe('console')
+  })
+
+  it('the four *Only booleans are the shell aliases — exactly one true per face, none on console', () => {
+    const b = resolveConfig('billing.hanzo.ai')
+    expect([b.billingOnly, b.marketingOnly, b.adsOnly, b.socialOnly]).toEqual([true, false, false, false])
+    const m = resolveConfig('marketing.hanzo.ai')
+    expect([m.billingOnly, m.marketingOnly, m.adsOnly, m.socialOnly]).toEqual([false, true, false, false])
+    const a = resolveConfig('ads.hanzo.ai')
+    expect([a.billingOnly, a.marketingOnly, a.adsOnly, a.socialOnly]).toEqual([false, false, true, false])
+    const s = resolveConfig('social.hanzo.ai')
+    expect([s.billingOnly, s.marketingOnly, s.adsOnly, s.socialOnly]).toEqual([false, false, false, true])
+    // sentry is a face with NO legacy boolean (all four false) — it reads `shell`.
+    const se = resolveConfig('sentry.hanzo.ai')
+    expect([se.billingOnly, se.marketingOnly, se.adsOnly, se.socialOnly]).toEqual([false, false, false, false])
+    expect(se.shell).toBe('sentry')
+    // console: every boolean false.
+    const c = resolveConfig('cloud.hanzo.ai')
+    expect([c.billingOnly, c.marketingOnly, c.adsOnly, c.socialOnly]).toEqual([false, false, false, false])
+  })
+
+  it('isSentryHost + shellFromHost agree, and the sentry host is strict', () => {
+    expect(isSentryHost('sentry.hanzo.ai')).toBe(true)
+    expect(isSentryHost('SENTRY.Lux.cloud:443')).toBe(true)
+    expect(isSentryHost('mysentry.hanzo.ai')).toBe(false)
+    expect(isSentryHost('')).toBe(false)
+    expect(shellFromHost('sentry.lux.cloud')).toBe('sentry')
+  })
+
+  it('WHITE-LABEL: a face never crosses a brand — every face host keeps its own brand', () => {
+    expect(brandFromHost('sentry.hanzo.ai')).toBe('hanzo')
+    expect(brandFromHost('marketing.lux.cloud')).toBe('lux')
+    expect(brandFromHost('ads.zoo.ngo')).toBe('zoo')
+    expect(brandFromHost('social.pars.cloud')).toBe('pars')
+    // …and the brand's IAM is unchanged by the face (still the brand's own issuer/app).
+    expect(resolveConfig('sentry.lux.cloud').iamOrgName).toBe(resolveConfig('cloud.lux.cloud').iamOrgName)
+    expect(resolveConfig('marketing.zoo.ngo').iamAppName).toBe(resolveConfig('cloud.zoo.ngo').iamAppName)
   })
 })
