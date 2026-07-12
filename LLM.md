@@ -2828,3 +2828,72 @@ UNROUTED. So:
   console.hanzo.ai on the next `hanzoai/cloud` release from main (CONSOLE_REF=main
   = the HUB commit). Coordinate the cloud release with the cloud lane; do NOT
   expect a console-only image bump to appear on console.hanzo.ai.
+
+## admin.hanzo.ai Provider Billing — multi-provider credit + funding split (feat/admin-provider-billing)
+
+A new GLOBAL-ADMIN board answering "how much of each upstream AI provider's credit
+remains, what's the burn/runway, and how does spend split across OUR-credit / paid /
+paid-only / BYO". The ECONOMIC sibling of the existing AI-Providers ROUTING board
+(`ProviderAdminModule`, id `provider-admin`, which flips State/IsDefault) — registered
+RIGHT NEXT TO it in category AI (`admin: true`, hidden from every customer). The
+CONSOLE frontend half of a two-agent split; a sibling agent owns the `ai`+`cloud` Go
+backend endpoints.
+
+- **Authoritative contract (built against VERBATIM):**
+  - `GET /v1/admin/providers/credit` → `[{provider, grant_cents, burn_cents,
+    remaining_cents, runway_days, has_credit, is_paid_only}]`.
+  - `GET /v1/admin/usage/funding?from&to` → `[{provider, model, funding, tokens,
+    cost_cents, requests}]`, `funding ∈ {credit, paid, paid_only, byo}`.
+- **ZERO plumbing change — both heads were ALREADY wired.** `providers` and `usage`
+  are already in `ADMIN_AGGREGATE_HEADS` (`admin-aggregate.ts`) + `ADMIN_V1_HEADS`
+  (`next.config.mjs`), and `allowAdminSurface` admits `v1/admin/<head>/...` sub-paths,
+  so `/v1/admin/providers/credit` + `/v1/admin/usage/funding` pass the global-admin
+  gate (`getAdminGate`, fail-closed 403 → minted user bearer) with no proxy/rewrite
+  edit. In the go:embed console they hit cloud's `/v1/admin/*` directly under the
+  first-party session cookie (BFF pruned) — same client code, `originV1Url` pins the
+  console's OWN origin so a split cloud URL can't route around the gate.
+- **Client `src/lib/api/provider-billing.ts` (pure + fully unit-tested).** Transport
+  is `restGet` (raw JSON) + a tolerant `pluckList` that accepts the bare `[...]` the
+  contract documents OR the casibase `{data:[...]}` / `{usage:[...]}` envelope its
+  sibling admin routes use (ONE code path, honest `[]` on garbage) — robust to
+  whichever shape the backend ships. Defensive snake_case+camelCase normalizers
+  (`normalizeCredit`/`normalizeFunding`); pure roll-ups `creditSummary` (totals + MIN
+  runway = the provider that runs out first) and `foldFunding` (per-class buckets +
+  grand total + ordered cost slices, unknown classes kept in their own bucket, never
+  dropped); `FUNDING_META` (label+color+hint, ONE source), `runwayLabel`/`runwayTone`
+  (∞ / `—` / `< 1 day` / N days; red < 2wk, amber < 6wk), `usd`/`compactNumber`, and
+  `fundingWindow(range)` → RFC3339 `{from,to}` reusing the shared `rangeStart` (flag:
+  if the backend wants epoch/date-only, that's the one line to change).
+- **Module `src/components/products/admin/ProvidersBillingModule.tsx`.** (1) Provider
+  credit — a summary band (Remaining / Granted / Burn·day / Min runway) + per-provider
+  cards (remaining balance big in tabular-nums `hz-mono`, burn/day, runway, and a
+  has-credit / paid-only / depleted badge). (2) Credit-vs-paid usage — a `RangeTabs`
+  (24h/7d/30d) window, a per-class KPI band (Total + Our credit / Paid / Paid-only /
+  BYO with % of spend), a cost-by-funding `Donut` (legend + total center), and a
+  provider×model funding table sorted by cost. Honest states throughout: two
+  independent `Promise.allSettled` reads (one failing never blanks the other), a 403
+  on EITHER → the shared `OperatorAccessRequired` (both ride the one admin gate),
+  `ErrorState` on other failures, honest empty for a zero/one-provider set (DO is the
+  only funded provider tonight; the other 5 slot in as keys drop). Money is
+  tabular-nums; arbitrary chart colors go through `style` (the Tamagui bg/color props
+  take only tokens + hex literals — the Charts.tsx convention).
+- **Registry:** one import + one `admin: true` catalog entry (`id: 'provider-billing'`,
+  label "Provider Billing", category AI, icon Coins) directly after `provider-admin`.
+- **Verification.** `tsc --noEmit` clean; `vitest` **+25** provider-billing tests
+  (pluckList bare/envelope/garbage, normalizers snake+camel + runway-null, foldFunding
+  per-class+unknown, creditSummary min-runway, runwayLabel/Tone, formatting,
+  fundingWindow) — full suite **2320/2320** green; `npm run build:embed` ✓ (the cloud
+  go:embed gate — static export ready, 31 route handlers restored). **Playwright visual
+  proof** (`e2e/provider-billing.spec.ts`, local dev, network-mocked global-admin
+  session): the board RENDERS the DO $26k credit card ($24,180 remaining of $26,000,
+  58-day runway, HAS-CREDIT badge; openrouter 3-day runway in red; openai-direct
+  PAID-ONLY) + the full credit-vs-paid split (Our credit 26% / Paid 62% / Paid-only
+  13% / BYO 0%, glm-5.2 row) at desktop AND mobile (no horizontal body scroll) —
+  screenshots `e2e-shots/provider-billing-{desktop,mobile}.png`. LIVE layer (fail-closed
+  gate + authed real-DO render) is STAGED behind the sibling's endpoint deploy +
+  HANZO_PASSWORD (reserved-admin SuperAdmin secret), like `insights-o11y.spec`.
+- **Deploy:** console change → ships to console.hanzo.ai/admin.hanzo.ai via the next
+  `hanzoai/cloud` release embedding `console@main` (CONSOLE_REF=main); `build:embed`
+  is green so the cloud build won't fail-hard. No standalone console image bump reaches
+  console.hanzo.ai (the standalone CR is unrouted). Coordinate the cloud release with
+  the cloud lane. No version bump here — the merge/release agent bumps `package.json`.

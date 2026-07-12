@@ -106,6 +106,7 @@ import { type ProductCategory, categoryOrder, categoriesForBrand, categoryInBran
 import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
+import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
@@ -880,6 +881,28 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [{ path: '', component: ProviderAdminModule }],
+  },
+  {
+    // admin.hanzo.ai PROVIDER BILLING board — the ECONOMIC lens beside the AI-Providers
+    // routing board above: per-provider credit balance + burn + runway_days (has-credit vs
+    // paid-only), and the credit-vs-paid-vs-BYO usage split (tokens/cost/requests) over a
+    // selectable range. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/
+    // launcher/palette; the catch-all renders a managed notice for a non-admin). The reads
+    // `/v1/admin/providers/credit` + `/v1/admin/usage/funding` ride the SAME `getAdminGate`
+    // the sibling `provider-admin` board uses (`providers`/`usage` are already allow-listed
+    // admin-aggregate heads). DISTINCT from routing: this is "how much credit remains and how
+    // spend is funded", not "which upstream is primary".
+    id: 'provider-billing',
+    label: 'Provider Billing',
+    icon: Coins,
+    description: 'Per-provider credit balance, burn, and runway, plus the credit-vs-paid usage split across the fleet.',
+    gcp: 'Cloud Billing (provider credits)',
+    category: 'AI',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: ProvidersBillingModule }],
   },
   {
     id: 'agents',
