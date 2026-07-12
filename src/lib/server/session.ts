@@ -42,7 +42,7 @@
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes, timingSafeEqual } from 'node:crypto'
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { isAdminHost, resolveConfig } from '~/config'
+import { isAdminHost, isSuperAdminOwner, resolveConfig } from '~/config'
 import { type Account } from '~/lib/api/types'
 import { fetchWithTimeout } from './fetch-timeout'
 
@@ -455,8 +455,10 @@ export function accountOf(c: ConsoleClaims): Account {
     email: c.email,
     avatar: c.avatar,
     isAdmin: c.isAdmin,
-    // Canonical: the `isSuperAdmin` claim OR the `admin`-org owner is SuperAdmin.
-    isSuperAdmin: Boolean(c.isSuperAdmin) || c.owner === 'admin',
+    // THE predicate, one way: SuperAdmin ⟺ the principal's org IS the reserved
+    // admin org (isSuperAdminOwner). IAM derives its `isSuperAdmin` claim from the
+    // same equality, so reading the claim too would be two signals for one fact.
+    isSuperAdmin: isSuperAdminOwner(c.owner),
     properties: c.properties,
   }
 }
