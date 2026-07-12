@@ -192,10 +192,8 @@ export type ConsoleClaims = {
   email?: string
   emailVerified?: boolean
   isAdmin?: boolean
-  /** New canonical SuperAdmin wire claim (preferred). */
+  /** Canonical SuperAdmin wire claim. */
   isSuperAdmin?: boolean
-  /** Legacy IAM claim; drop once IAM sends `isSuperAdmin`. */
-  isGlobalAdmin?: boolean
   displayName?: string
   avatar?: string
   accessKey?: string
@@ -233,9 +231,6 @@ export function accessClaims(jwt: string): ConsoleClaims | null {
     emailVerified: bool(c.emailVerified) ?? bool(c.email_verified),
     isAdmin: bool(c.isAdmin),
     isSuperAdmin: bool(c.isSuperAdmin),
-    // Legacy IAM claim; drop once IAM sends `isSuperAdmin`. Kept so the derivation
-    // (sessionUserFromClaims / accountOf) can fall back to it during the transition.
-    isGlobalAdmin: bool(c.isGlobalAdmin),
     displayName: str(c.displayName),
     avatar: str(c.avatar),
     accessKey: str(c.accessKey),
@@ -460,9 +455,8 @@ export function accountOf(c: ConsoleClaims): Account {
     email: c.email,
     avatar: c.avatar,
     isAdmin: c.isAdmin,
-    // Canonical SuperAdmin field. Accept the new `isSuperAdmin` claim first, fall back
-    // to the legacy `isGlobalAdmin` IAM claim, OR the `admin`-org owner (canonical).
-    isSuperAdmin: Boolean(c.isSuperAdmin ?? c.isGlobalAdmin) || c.owner === 'admin',
+    // Canonical: the `isSuperAdmin` claim OR the `admin`-org owner is SuperAdmin.
+    isSuperAdmin: Boolean(c.isSuperAdmin) || c.owner === 'admin',
     properties: c.properties,
   }
 }

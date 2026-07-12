@@ -95,10 +95,8 @@ type UserClaims = {
   email?: string
   emailVerified?: boolean
   isAdmin?: boolean
-  /** New canonical SuperAdmin wire claim (preferred). */
+  /** Canonical SuperAdmin wire claim. */
   isSuperAdmin?: boolean
-  /** Legacy IAM claim; drop once IAM sends `isSuperAdmin`. */
-  isGlobalAdmin?: boolean
 }
 
 type AccountClaims = UserClaims & { User?: UserClaims }
@@ -143,9 +141,8 @@ function sessionUserFromClaims(c: ConsoleClaims): SessionUser | null {
     email: c.email ?? '',
     emailVerified: Boolean(c.emailVerified),
     isAdmin: Boolean(c.isAdmin),
-    // Canonical: an `admin`-org member is SuperAdmin. Accept the new `isSuperAdmin`
-    // claim first; `isGlobalAdmin` is the legacy IAM claim (drop once IAM renames).
-    isSuperAdmin: Boolean(c.isSuperAdmin ?? c.isGlobalAdmin) || isAdminOrg(owner),
+    // Canonical: the `isSuperAdmin` claim OR an `admin`-org member is SuperAdmin.
+    isSuperAdmin: Boolean(c.isSuperAdmin) || isAdminOrg(owner),
   }
 }
 
@@ -204,9 +201,9 @@ async function resolveSessionUser(
   let email = d.email ?? d.User?.email ?? ''
   let emailVerified = Boolean(d.emailVerified ?? d.User?.emailVerified)
   let isAdmin = Boolean(d.isAdmin ?? d.User?.isAdmin)
-  // New `isSuperAdmin` claim first; `isGlobalAdmin` is the legacy IAM claim (fallback).
+  // Canonical: the `isSuperAdmin` claim OR an `admin`-org member is SuperAdmin.
   let isSuperAdmin =
-    Boolean(d.isSuperAdmin ?? d.User?.isSuperAdmin ?? d.isGlobalAdmin ?? d.User?.isGlobalAdmin) || isAdminOrg(owner)
+    Boolean(d.isSuperAdmin ?? d.User?.isSuperAdmin) || isAdminOrg(owner)
 
   // get-account may not carry email/isAdmin (thin claims). When email is absent,
   // IAM is authoritative — fetch the user as the confidential client to resolve
@@ -218,8 +215,8 @@ async function resolveSessionUser(
       email = u.email ?? ''
       emailVerified = Boolean(u.emailVerified)
       isAdmin = Boolean(u.isAdmin)
-      // New claim first; `isGlobalAdmin` is the legacy IAM claim (fallback).
-      isSuperAdmin = Boolean(u.isSuperAdmin ?? u.isGlobalAdmin) || isAdminOrg(owner)
+      // Canonical: the `isSuperAdmin` claim OR an `admin`-org member is SuperAdmin.
+      isSuperAdmin = Boolean(u.isSuperAdmin) || isAdminOrg(owner)
     }
   }
 
