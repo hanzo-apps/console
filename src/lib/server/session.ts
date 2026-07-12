@@ -192,6 +192,9 @@ export type ConsoleClaims = {
   email?: string
   emailVerified?: boolean
   isAdmin?: boolean
+  /** New canonical SuperAdmin wire claim (preferred). */
+  isSuperAdmin?: boolean
+  /** Legacy IAM claim; drop once IAM sends `isSuperAdmin`. */
   isGlobalAdmin?: boolean
   displayName?: string
   avatar?: string
@@ -229,6 +232,9 @@ export function accessClaims(jwt: string): ConsoleClaims | null {
     email: str(c.email),
     emailVerified: bool(c.emailVerified) ?? bool(c.email_verified),
     isAdmin: bool(c.isAdmin),
+    isSuperAdmin: bool(c.isSuperAdmin),
+    // Legacy IAM claim; drop once IAM sends `isSuperAdmin`. Kept so the derivation
+    // (sessionUserFromClaims / accountOf) can fall back to it during the transition.
     isGlobalAdmin: bool(c.isGlobalAdmin),
     displayName: str(c.displayName),
     avatar: str(c.avatar),
@@ -443,8 +449,8 @@ export function durableSessionClientId(host?: string | null): string | null {
 }
 
 /** Project session claims to the client-facing Account (display + admin fields only —
- *  never the secret material Casdoor also packs). `owner === 'admin'` implies global
- *  admin. Shared by /auth/session (GET) and /auth/signin. */
+ *  never the secret material Casdoor also packs). `owner === 'admin'` implies
+ *  SuperAdmin. Shared by /auth/session (GET) and /auth/signin. */
 export function accountOf(c: ConsoleClaims): Account {
   return {
     owner: c.owner ?? '',
@@ -454,7 +460,9 @@ export function accountOf(c: ConsoleClaims): Account {
     email: c.email,
     avatar: c.avatar,
     isAdmin: c.isAdmin,
-    isGlobalAdmin: c.isGlobalAdmin || c.owner === 'admin',
+    // Canonical SuperAdmin field. Accept the new `isSuperAdmin` claim first, fall back
+    // to the legacy `isGlobalAdmin` IAM claim, OR the `admin`-org owner (canonical).
+    isSuperAdmin: Boolean(c.isSuperAdmin ?? c.isGlobalAdmin) || c.owner === 'admin',
     properties: c.properties,
   }
 }

@@ -26,6 +26,9 @@ const ACCOUNT = {
   type: 'normal-user',
   email: 'z@hanzo.ai',
   displayName: 'Z Admin',
+  // Super admin via the CLAIM (owner is a normal org, not the reserved `admin`).
+  // `isSuperAdmin` is canonical; `isGlobalAdmin` stays for legacy-claim coverage.
+  isSuperAdmin: true,
   isGlobalAdmin: true,
   isAdmin: true,
   signupApplication: 'hanzo-cloud',

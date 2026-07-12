@@ -102,14 +102,14 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     Authorization: `Bearer ${bearer}`,
     Accept: 'application/json',
     'Content-Type': 'application/json',
-    // Org is SERVER-RESOLVED, not the raw browser header: a global admin's switched
-    // org (?/X-Org-Id) is honored, a non-global caller is PINNED to their own — so a
+    // Org is SERVER-RESOLVED, not the raw browser header: a SuperAdmin's switched
+    // org (?/X-Org-Id) is honored, a non-SuperAdmin caller is PINNED to their own — so a
     // brand admin can't drive another tenant's training jobs even if the backend
-    // trusted the forwarded header. For a non-global caller this equals the token
+    // trusted the forwarded header. For a non-SuperAdmin caller this equals the token
     // owner (the Bearer's own claim), so header and token agree. Matches the /paas +
     // /admin/kms orgFor pin. The raw session cookie is NOT forwarded (cloud-api can't
     // validate it as a principal, and cookie + JWT together risks the gateway 431).
-    'X-Org-Id': orgFor({ isGlobalAdmin: user.isGlobalAdmin, orgScope: user.owner }, req.headers.get('X-Org-Id')),
+    'X-Org-Id': orgFor({ isSuperAdmin: user.isSuperAdmin, orgScope: user.owner }, req.headers.get('X-Org-Id')),
   }
   const projectId = req.headers.get('X-Project-Id')
   const environment = req.headers.get('X-Environment')

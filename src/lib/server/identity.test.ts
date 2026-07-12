@@ -28,10 +28,29 @@ describe('resolveUser — console session preferred, casibase fallback', () => {
     expect(fetchMock).not.toHaveBeenCalled() // no get-account when the console session resolves
   })
 
-  it('derives global-admin from owner === admin org', async () => {
+  it('derives SuperAdmin from owner === admin org (owner-canonical, no claim needed)', async () => {
     mockClaims.mockReturnValue({ owner: 'admin', name: 'root', type: 'normal-user' })
     vi.stubGlobal('fetch', vi.fn())
-    expect((await resolveUser(req('x')))?.isGlobalAdmin).toBe(true)
+    expect((await resolveUser(req('x')))?.isSuperAdmin).toBe(true)
+  })
+
+  it('honors the NEW `isSuperAdmin` claim for a tenant-org user (forward-compat)', async () => {
+    mockClaims.mockReturnValue({ owner: 'hanzo', name: 'z', isSuperAdmin: true, type: 'normal-user' })
+    vi.stubGlobal('fetch', vi.fn())
+    expect((await resolveUser(req('x')))?.isSuperAdmin).toBe(true)
+  })
+
+  it('TRANSITIONAL: a legacy `isGlobalAdmin` console claim still resolves to SuperAdmin (back-compat)', async () => {
+    mockClaims.mockReturnValue({ owner: 'hanzo', name: 'z', isGlobalAdmin: true, type: 'normal-user' })
+    vi.stubGlobal('fetch', vi.fn())
+    expect((await resolveUser(req('x')))?.isSuperAdmin).toBe(true)
+  })
+
+  it('TRANSITIONAL: a legacy `isGlobalAdmin` from the casibase get-account resolves (back-compat)', async () => {
+    mockClaims.mockReturnValue(null)
+    const account = { owner: 'hanzo', name: 'ops', email: 'ops@hanzo.ai', type: 'normal-user', isGlobalAdmin: true, emailVerified: true }
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ status: 'ok', data: account }), { status: 200 })))
+    expect((await resolveUser(req('cloud_session_id=abc')))?.isSuperAdmin).toBe(true)
   })
 
   it('falls back to the casibase get-account when there is no console session', async () => {
@@ -67,7 +86,7 @@ describe('resolveUser — console session preferred, casibase fallback', () => {
  */
 describe('issueUserToken / adminBearer — RFC 8707 audience', () => {
   const user = (id: string): SessionUser =>
-    ({ owner: 'admin', name: 'z', id, accessKey: '', email: '', emailVerified: true, isAdmin: true, isGlobalAdmin: true })
+    ({ owner: 'admin', name: 'z', id, accessKey: '', email: '', emailVerified: true, isAdmin: true, isSuperAdmin: true })
 
   /** Stub the IAM POST; capture the request URL and return a token envelope. */
   const stubIam = (token = 'jwt') => {
