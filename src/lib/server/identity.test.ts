@@ -34,21 +34,15 @@ describe('resolveUser — console session preferred, casibase fallback', () => {
     expect((await resolveUser(req('x')))?.isSuperAdmin).toBe(true)
   })
 
-  it('honors the NEW `isSuperAdmin` claim for a tenant-org user (forward-compat)', async () => {
+  it('honors the `isSuperAdmin` claim for a tenant-org user', async () => {
     mockClaims.mockReturnValue({ owner: 'hanzo', name: 'z', isSuperAdmin: true, type: 'normal-user' })
     vi.stubGlobal('fetch', vi.fn())
     expect((await resolveUser(req('x')))?.isSuperAdmin).toBe(true)
   })
 
-  it('TRANSITIONAL: a legacy `isGlobalAdmin` console claim still resolves to SuperAdmin (back-compat)', async () => {
-    mockClaims.mockReturnValue({ owner: 'hanzo', name: 'z', isGlobalAdmin: true, type: 'normal-user' })
-    vi.stubGlobal('fetch', vi.fn())
-    expect((await resolveUser(req('x')))?.isSuperAdmin).toBe(true)
-  })
-
-  it('TRANSITIONAL: a legacy `isGlobalAdmin` from the casibase get-account resolves (back-compat)', async () => {
+  it('resolves SuperAdmin from the casibase get-account `isSuperAdmin` claim', async () => {
     mockClaims.mockReturnValue(null)
-    const account = { owner: 'hanzo', name: 'ops', email: 'ops@hanzo.ai', type: 'normal-user', isGlobalAdmin: true, emailVerified: true }
+    const account = { owner: 'hanzo', name: 'ops', email: 'ops@hanzo.ai', type: 'normal-user', isSuperAdmin: true, emailVerified: true }
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ status: 'ok', data: account }), { status: 200 })))
     expect((await resolveUser(req('cloud_session_id=abc')))?.isSuperAdmin).toBe(true)
   })
