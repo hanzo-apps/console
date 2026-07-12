@@ -10,11 +10,10 @@
  * claim on the account. A tenant org owner — a customer like `maxpower`, even one
  * who is `isAdmin` of their OWN org — is NEVER a super admin.
  *
- * The account signal is read from the canonical `isSuperAdmin` field, which the
- * console projects from the session server-side (`accountOf`) — the browser never
- * sees the legacy IAM wire claim (the server owns that back-compat, in
- * `lib/server/identity`). Membership in the `admin` org (`owner === 'admin'`) is the
- * owner-canonical signal and needs no claim at all.
+ * ONE predicate, one way: SuperAdmin ⟺ the account's org (`owner`) IS the reserved
+ * `admin` org — isSuperAdminOwner, the same equality IAM's User.IsSuperAdmin() uses
+ * (`user.Owner == conf.AdminOrg`). No claim is read: IAM derives its `isSuperAdmin`
+ * claim from this very equality, so reading it too would be two signals for one fact.
  *
  * The nav/launcher/palette use this to HIDE admin-only surfaces (cross-tenant IAM /
  * KMS / provider + routing config) from customers, and the catch-all uses it to
@@ -23,15 +22,13 @@
  * server-side too — this is the matching UI gate, never the only one.
  */
 import { useSession } from './session'
+import { isSuperAdminOwner } from '~/config'
 import type { Account } from '~/lib/api'
 
-/** True when the account is a super (cross-tenant) admin — pure, testable. */
+/** True when the account is a SuperAdmin (cross-tenant) — pure, testable. */
 export function isSuperAdminAccount(account: Account | null | undefined): boolean {
   if (!account) return false
-  // Read the canonical `isSuperAdmin` field the console projects (server `accountOf`),
-  // OR the owner-canonical `admin`-org membership. No legacy claim on the client.
-  const a = account as { isSuperAdmin?: boolean }
-  return Boolean(a.isSuperAdmin) || account.owner === 'admin'
+  return isSuperAdminOwner(account.owner)
 }
 
 /** Whether the signed-in user is a super (platform) admin. */
