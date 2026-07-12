@@ -10,10 +10,11 @@
  * claim on the account. A tenant org owner — a customer like `maxpower`, even one
  * who is `isAdmin` of their OWN org — is NEVER a super admin.
  *
- * TRANSITIONAL back-compat (the IAM field rename): the account signal is read from
- * the new `isSuperAdmin` field FIRST, falling back to the legacy `isGlobalAdmin`
- * field when the new one is absent — so this works both before and after IAM
- * renames the claim, with identical behavior.
+ * The account signal is read from the canonical `isSuperAdmin` field, which the
+ * console projects from the session server-side (`accountOf`) — the browser never
+ * sees the legacy IAM wire claim (the server owns that back-compat, in
+ * `lib/server/identity`). Membership in the `admin` org (`owner === 'admin'`) is the
+ * owner-canonical signal and needs no claim at all.
  *
  * The nav/launcher/palette use this to HIDE admin-only surfaces (cross-tenant IAM /
  * KMS / provider + routing config) from customers, and the catch-all uses it to
@@ -27,10 +28,10 @@ import type { Account } from '~/lib/api'
 /** True when the account is a super (cross-tenant) admin — pure, testable. */
 export function isSuperAdminAccount(account: Account | null | undefined): boolean {
   if (!account) return false
-  const a = account as { isSuperAdmin?: boolean; isGlobalAdmin?: boolean }
-  // New canonical field first; fall back to the legacy field until IAM renames it.
-  const claim = a.isSuperAdmin ?? a.isGlobalAdmin
-  return Boolean(claim) || account.owner === 'admin'
+  // Read the canonical `isSuperAdmin` field the console projects (server `accountOf`),
+  // OR the owner-canonical `admin`-org membership. No legacy claim on the client.
+  const a = account as { isSuperAdmin?: boolean }
+  return Boolean(a.isSuperAdmin) || account.owner === 'admin'
 }
 
 /** Whether the signed-in user is a super (platform) admin. */
