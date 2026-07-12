@@ -55,12 +55,12 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
       { status: 501 },
     )
   }
-  // Resolve the authoritative tenant path. Org: the admin policy honors a global
-  // admin's switched org (the X-Org-Id the browser sends = currentOrg()) and pins
+  // Resolve the authoritative tenant path. Org: the admin policy honors a
+  // SuperAdmin's switched org (the X-Org-Id the browser sends = currentOrg()) and pins
   // a brand admin to their own — so we forward the resolved org, never the raw
   // claim. Project + environment are sub-scopes within that org, forwarded as-is.
   const org = policyOrgFor(
-    { isGlobalAdmin: gate.user.isGlobalAdmin, orgScope: gate.orgScope },
+    { isSuperAdmin: gate.user.isSuperAdmin, orgScope: gate.orgScope },
     req.headers.get('X-Org-Id'),
   )
   const projectId = req.headers.get('X-Project-Id')
