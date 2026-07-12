@@ -219,7 +219,7 @@ const withQuery = (base: string, query?: Query): string => {
 async function request<T>(
   method: 'GET' | 'POST',
   path: string,
-  opts: { query?: Query; body?: unknown; absoluteUrl?: string } = {},
+  opts: { query?: Query; body?: unknown; absoluteUrl?: string; headers?: Record<string, string> } = {},
 ): Promise<ApiResponse<T>> {
   let res: Response
   const url = opts.absoluteUrl ? withQuery(opts.absoluteUrl, opts.query) : buildUrl(path, opts.query)
@@ -227,7 +227,9 @@ async function request<T>(
     res = await authedFetch(url, {
       method,
       credentials: 'include',
-      headers: baseHeaders(opts.body !== undefined),
+      // Caller headers merge LAST (over the canonical org/locale stamp) so a per-call
+      // header like `Idempotency-Key` rides through; absent, this is the same as before.
+      headers: { ...baseHeaders(opts.body !== undefined), ...opts.headers },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     })
   } catch (e) {
@@ -280,9 +282,10 @@ export async function originGet<T>(path: string, query?: Query): Promise<T> {
  * `config.cloudUrl`) is load-bearing: a split-origin `NEXT_PUBLIC_CLOUD_URL` could
  * otherwise route the write around the console gate. Same casibase envelope unwrap +
  * `ApiError` as `post`; the browser sends its session cookie only — no credential.
+ * Optional `headers` ride through for a per-call header (e.g. `Idempotency-Key`).
  */
-export async function originPost<T>(path: string, body?: unknown, query?: Query): Promise<T> {
-  const r = await request<T>('POST', path, { query, body, absoluteUrl: originV1Url(path) })
+export async function originPost<T>(path: string, body?: unknown, query?: Query, headers?: Record<string, string>): Promise<T> {
+  const r = await request<T>('POST', path, { query, body, absoluteUrl: originV1Url(path), headers })
   if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
   return r.data
 }

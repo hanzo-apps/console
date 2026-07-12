@@ -48,6 +48,18 @@ const INPUT_BASE: CSSProperties = {
 export type GrantInput = { amountCents: number; source: GrantSource; reason?: string }
 
 /**
+ * A stable-per-attempt idempotency key for a credit grant. Minted ONCE when the grant
+ * panel mounts and reused verbatim on every submit (incl. a retry after a timed-out
+ * attempt), so commerce dedupes the retry to the ONE deposit; a NEW panel mounts a fresh
+ * key. Guarded for a non-secure-context runtime (matches platform-apps/drawer.tsx) where
+ * `crypto.randomUUID` is absent — the fallback is still unique-per-attempt.
+ */
+const newIdempotencyKey = (): string =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+
+/**
  * The ONE grant-credit form — reused by the per-ROW quick action (list) and the
  * customer DETAIL view, so both open the same audited flow. Owns its own inputs
  * (amount / source / reason) and validates locally; the parent owns the API call,
@@ -63,12 +75,15 @@ function GrantCreditPanel({
   display: string
   busy: boolean
   onCancel: () => void
-  onSubmit: (input: GrantInput) => void
+  onSubmit: (input: GrantInput, idempotencyKey: string) => void
 }) {
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   const [source, setSource] = useState<GrantSource>('trial')
   const [localErr, setLocalErr] = useState<string | null>(null)
+  // One key per panel mount — reused on retry (this instance persists across a failed
+  // submit), fresh on the next open (a new mount). Lazy init: minted exactly once.
+  const [idempotencyKey] = useState(newIdempotencyKey)
 
   const submit = () => {
     const dollars = parseFloat(amount)
@@ -77,7 +92,7 @@ function GrantCreditPanel({
       return
     }
     setLocalErr(null)
-    onSubmit({ amountCents: Math.round(dollars * 100), source, reason: reason.trim() || undefined })
+    onSubmit({ amountCents: Math.round(dollars * 100), source, reason: reason.trim() || undefined }, idempotencyKey)
   }
 
   return (
@@ -156,12 +171,12 @@ export function CustomersModule() {
     void load()
   }, [load])
 
-  const submitGrant = useCallback(async (input: GrantInput) => {
+  const submitGrant = useCallback(async (input: GrantInput, idempotencyKey: string) => {
     if (!grantFor) return
     setGrantBusy(true)
     setNotice(null)
     try {
-      const res = await AdminCockpitApi.grantCredit(grantFor.org, input)
+      const res = await AdminCockpitApi.grantCredit(grantFor.org, input, idempotencyKey)
       setNotice({ ok: true, msg: grantNotice(input.source, res) })
       setGrantFor(null)
       await load()
@@ -229,7 +244,11 @@ export function CustomersModule() {
       )}
 
       {grantFor && (
+        // `key` = the org: switching the quick-grant to a DIFFERENT customer remounts the
+        // panel, so it mints a fresh idempotency key (a distinct grant) rather than reusing
+        // the prior org's. A retry of the SAME org keeps the same mount, hence the same key.
         <GrantCreditPanel
+          key={grantFor.org}
           display={grantFor.display}
           busy={grantBusy}
           onCancel={() => setGrantFor(null)}
@@ -275,11 +294,11 @@ function CustomerDetailView({ org, onBack }: { org: string; onBack: () => void }
     void load()
   }, [load])
 
-  const grant = useCallback(async (input: GrantInput) => {
+  const grant = useCallback(async (input: GrantInput, idempotencyKey: string) => {
     setBusy(true)
     setNotice(null)
     try {
-      const res = await AdminCockpitApi.grantCredit(org, input)
+      const res = await AdminCockpitApi.grantCredit(org, input, idempotencyKey)
       setNotice({ ok: true, msg: grantNotice(input.source, res) })
       setShowCredit(false)
       await load()
