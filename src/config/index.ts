@@ -214,10 +214,26 @@ function normHost(host?: string | null): string {
 /**
  * True on a brand admin console host (admin.<brand>, e.g. admin.hanzo.ai). Such
  * hosts authenticate against the admin-org OAuth app (`adminApp`) so login
- * resolves the global-admin identity, whereas every normal host uses `iamApp`.
+ * resolves the SuperAdmin identity, whereas every normal host uses `iamApp`.
  */
 export function isAdminHost(host?: string | null): boolean {
   return normHost(host).startsWith('admin.')
+}
+
+/**
+ * THE SuperAdmin predicate — the ONE way, everywhere.
+ *
+ * SuperAdmin ⟺ the principal's IAM org (its `owner`) IS the reserved admin org.
+ * `owner` is the org a principal BELONGS TO (an identity is `<owner>/<name>`), not a
+ * role — so this reads "a member of the `admin` org", i.e. platform sudo. It is NOT
+ * "admin of your own org" (that is the per-user `isAdmin` bit, org-scoped).
+ *
+ * This mirrors IAM's canonical `User.IsSuperAdmin() { return user.Owner == conf.AdminOrg }`
+ * exactly. IAM's `isSuperAdmin` JWT claim is DERIVED from the same equality, so reading
+ * the claim as well would be two signals for one fact — this predicate is the only one.
+ */
+export function isSuperAdminOwner(owner?: string | null): boolean {
+  return (owner ?? '').trim().toLowerCase() === ADMIN_ORG
 }
 
 /**
