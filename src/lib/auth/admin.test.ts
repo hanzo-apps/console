@@ -23,12 +23,11 @@ describe('isSuperAdminAccount — super-admin signal', () => {
     expect(isSuperAdminAccount(acct({ isSuperAdmin: true } as Partial<Account>))).toBe(true)
   })
 
-  it('TRANSITIONAL: falls back to the legacy `isGlobalAdmin` claim when the new one is absent', () => {
-    expect(isSuperAdminAccount(acct({ isGlobalAdmin: true } as Partial<Account>))).toBe(true)
-  })
-
-  it('the NEW field wins when both are present (isSuperAdmin=false overrides legacy true)', () => {
-    // Post-rename, a real `isSuperAdmin:false` must not be resurrected by a stale legacy field.
+  it('IGNORES the legacy `isGlobalAdmin` claim on the client (the server owns back-compat)', () => {
+    // The console projects the canonical `isSuperAdmin` field (server `accountOf`); a bare
+    // legacy claim without owner==='admin' is NOT a super admin on the client.
+    expect(isSuperAdminAccount(acct({ isGlobalAdmin: true } as Partial<Account>))).toBe(false)
+    // And a real `isSuperAdmin:false` is never resurrected by a stale legacy field.
     expect(isSuperAdminAccount(acct({ isSuperAdmin: false, isGlobalAdmin: true } as Partial<Account>))).toBe(false)
   })
 })

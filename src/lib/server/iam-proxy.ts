@@ -1,7 +1,7 @@
 /**
  * Shared IAM proxy forward — the ONE place a gated route forwards to Hanzo IAM.
  *
- * Both the GLOBAL admin proxy (`/admin/iam`) and the SELF-SERVICE org member proxy
+ * Both the SUPER admin proxy (`/admin/iam`) and the SELF-SERVICE org member proxy
  * (`/org/iam`) use this: they differ only in the GATE (who is admitted) and the
  * allow-list. Everything after — the allow-list check, TENANT SCOPING of every
  * owner the request references (query `owner`, `id`'s owner, AND the mutation
@@ -50,13 +50,13 @@ export function bodyField(text: string, key: string): string | null {
 
 /**
  * The forwarded query string, PINNING `organization` to the caller's own scope when
- * the segment is org-keyed and the caller is NOT a global admin — so an omitted/empty
+ * the segment is org-keyed and the caller is NOT a SuperAdmin — so an omitted/empty
  * `organization` can't make IAM's lister return every org's rows (RED CRITICAL). A
- * global admin's value is left as-is (they may target any org, or all).
+ * SuperAdmin's value is left as-is (they may target any org, or all).
  */
-export function pinnedSearch(rawSearch: string, orgKeyed: boolean, isGlobalAdmin: boolean, orgScope: string): string {
+export function pinnedSearch(rawSearch: string, orgKeyed: boolean, isSuperAdmin: boolean, orgScope: string): string {
   const p = new URLSearchParams(rawSearch)
-  if (orgKeyed && !isGlobalAdmin) p.set('organization', orgScope)
+  if (orgKeyed && !isSuperAdmin) p.set('organization', orgScope)
   const s = p.toString()
   return s ? `?${s}` : ''
 }
@@ -70,13 +70,13 @@ export type IamForwardOpts = {
   /** Segments where the `admin` metadata owner is acceptable (org list/get). */
   orgMetaSegments: Set<string>
   /** Writes require org admin (the org proxy). The admin proxy gate is already
-   *  global-only, so this is a no-op there. */
+   *  SuperAdmin-only, so this is a no-op there. */
   requireAdminForWrite: boolean
   /** Segments carrying an org NAME to guard (get-organization) so a brand admin
    *  can't read another org's settings via the `admin` metadata owner. */
   orgNameSegments?: Set<string>
   /** Segments keyed by the `organization` param/body field (projects). For these a
-   *  non-global admin's org is PINNED to their own scope — validating is not enough
+   *  non-SuperAdmin's org is PINNED to their own scope — validating is not enough
    *  because an OMITTED/EMPTY organization makes IAM's lister drop its WHERE and
    *  return every org's rows (IAM bypasses Casbin for project routes → this proxy is
    *  the only gate). RED CRITICAL. */
@@ -103,15 +103,15 @@ export async function forwardIam(
 
   if (!allowed.has(segment)) return notFound()
 
-  // Writes: the org proxy requires an org admin (global admins always pass).
-  if (method === 'POST' && opts.requireAdminForWrite && !orgWriteAllowed({ isGlobalAdmin: gate.isGlobalAdmin, isAdmin: gate.user.isAdmin })) {
+  // Writes: the org proxy requires an org admin (SuperAdmins always pass).
+  if (method === 'POST' && opts.requireAdminForWrite && !orgWriteAllowed({ isSuperAdmin: gate.isSuperAdmin, isAdmin: gate.user.isAdmin })) {
     return forbidden()
   }
 
   const url = req.nextUrl
   const orgMetadataOk = opts.orgMetaSegments.has(segment)
   const ownerOk = (owner: string | null) =>
-    policyOwnerAllowed(owner, { isGlobalAdmin: gate.isGlobalAdmin, orgScope: gate.orgScope, orgMetadataOk })
+    policyOwnerAllowed(owner, { isSuperAdmin: gate.isSuperAdmin, orgScope: gate.orgScope, orgMetadataOk })
 
   // Every org the request references must be in scope: ?owner, the ?id owner, the
   // ?organization param (the projects lister keys on it), and — critically — for a
@@ -140,11 +140,11 @@ export async function forwardIam(
     if (opts.orgNameSegments?.has(segment) && !orgNameAllowed(bodyField(bodyText, 'name'), gate)) {
       return forbidden()
     }
-    // An org-keyed WRITE (add/delete-project) from a non-global admin MUST carry
+    // An org-keyed WRITE (add/delete-project) from a non-SuperAdmin MUST carry
     // their OWN org in owner+organization — ownerOk already blocks a FOREIGN org;
     // this also rejects an omitted/empty one (which would create an owner="" row
     // visible in the cross-tenant enumeration). RED.
-    if (orgKeyed && !gate.isGlobalAdmin) {
+    if (orgKeyed && !gate.isSuperAdmin) {
       if (bodyField(bodyText, 'organization') !== gate.orgScope || bodyField(bodyText, 'owner') !== gate.orgScope) {
         return forbidden()
       }
@@ -152,8 +152,8 @@ export async function forwardIam(
   }
 
   // Forwarded query with `organization` pinned to the caller's scope for an org-keyed
-  // reader + non-global admin (server-authoritative, like X-Org-Id) — RED CRITICAL.
-  const fwdSearch = pinnedSearch(url.search, orgKeyed, gate.isGlobalAdmin, gate.orgScope)
+  // reader + non-SuperAdmin (server-authoritative, like X-Org-Id) — RED CRITICAL.
+  const fwdSearch = pinnedSearch(url.search, orgKeyed, gate.isSuperAdmin, gate.orgScope)
 
   let bearer: string
   try {

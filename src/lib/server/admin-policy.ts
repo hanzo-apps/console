@@ -6,16 +6,16 @@
  * lane. Two concerns:
  *   - the GATE: may this caller reach this brand's admin console at all?
  *     (`gateAllows` = verified `@<adminDomain>` email AND an IAM admin flag).
- *   - tenant SCOPING: which org may an authorized caller act on? A global admin
+ *   - tenant SCOPING: which org may an authorized caller act on? A SuperAdmin
  *     → any org; a brand admin is pinned to their own (`ownerAllowed`/`orgFor`),
  *     which is what closes the cross-tenant read gap and stops a brand
  *     admin from targeting another org's KMS.
  */
 
 /** The identity claims a gate decision is made from. */
-export type AdminPrincipal = { email: string; emailVerified: boolean; isAdmin: boolean; isGlobalAdmin: boolean }
+export type AdminPrincipal = { email: string; emailVerified: boolean; isAdmin: boolean; isSuperAdmin: boolean }
 
-/** The global-admin metadata org ('admin') — acceptable only on org-list endpoints. */
+/** The SuperAdmin metadata org ('admin') — acceptable only on org-list endpoints. */
 const ORG_METADATA_OWNERS = new Set(['admin'])
 
 /** Email is on the brand's admin domain (case-insensitive). */
@@ -23,43 +23,43 @@ export function emailOnBrand(email: string, adminDomain: string): boolean {
   return !!email && email.toLowerCase().endsWith('@' + adminDomain.toLowerCase())
 }
 
-/** IAM marks the caller an admin (org-level or global). */
-export function isAdminGranted(p: { isAdmin: boolean; isGlobalAdmin: boolean }): boolean {
-  return p.isAdmin || p.isGlobalAdmin
+/** IAM marks the caller an admin (org-level or SuperAdmin). */
+export function isAdminGranted(p: { isAdmin: boolean; isSuperAdmin: boolean }): boolean {
+  return p.isAdmin || p.isSuperAdmin
 }
 
 /**
  * The admin gate for admin.hanzo.ai — CROSS-TENANT ops (IAM/KMS/orgs across every
- * tenant). It must be GLOBAL admins only (members of the `admin` org). An
+ * tenant). It must be SuperAdmins only (members of the `admin` org). An
  * org-level admin — a tenant org owner like Dave/maxpower with org-scoped
  * `isAdmin` — is NOT enough, even with a verified @<adminDomain> email. So gate on
- * `isGlobalAdmin`, NEVER `isAdminGranted` (which also accepts org-level isAdmin and
+ * `isSuperAdmin`, NEVER `isAdminGranted` (which also accepts org-level isAdmin and
  * was the leak). The verified brand-email requirement stays as a second factor
  * (defense in depth). Fail-closed on any miss.
  */
 export function gateAllows(p: AdminPrincipal, adminDomain: string): boolean {
-  return emailOnBrand(p.email, adminDomain) && p.emailVerified && p.isGlobalAdmin
+  return emailOnBrand(p.email, adminDomain) && p.emailVerified && p.isSuperAdmin
 }
 
 /**
- * A non-global admin may reference ONLY their own org. IAM read endpoints
- * do not enforce this, so the proxy must: global admin → any org; brand admin →
+ * A non-SuperAdmin may reference ONLY their own org. IAM read endpoints
+ * do not enforce this, so the proxy must: SuperAdmin → any org; brand admin →
  * `orgScope`; the `admin` metadata owner is allowed only where the
  * endpoint itself scopes to the caller (the org list/get — `orgMetadataOk`).
  */
 export function ownerAllowed(
   owner: string | null,
-  opts: { isGlobalAdmin: boolean; orgScope: string; orgMetadataOk?: boolean },
+  opts: { isSuperAdmin: boolean; orgScope: string; orgMetadataOk?: boolean },
 ): boolean {
   if (!owner) return true
-  if (opts.isGlobalAdmin) return true
+  if (opts.isSuperAdmin) return true
   if (opts.orgMetadataOk && ORG_METADATA_OWNERS.has(owner)) return true
   return owner === opts.orgScope
 }
 
-/** Org an operator acts on — the requested org only for a global admin, else scope. */
-export function orgFor(opts: { isGlobalAdmin: boolean; orgScope: string }, requested: string | null): string {
-  return opts.isGlobalAdmin && requested ? requested : opts.orgScope
+/** Org an operator acts on — the requested org only for a SuperAdmin, else scope. */
+export function orgFor(opts: { isSuperAdmin: boolean; orgScope: string }, requested: string | null): string {
+  return opts.isSuperAdmin && requested ? requested : opts.orgScope
 }
 
 // ── Org member proxy (/org/iam) — self-service, own-org only ──────────────────
@@ -68,12 +68,12 @@ export function orgFor(opts: { isGlobalAdmin: boolean; orgScope: string }, reque
 // pure predicates are the decision; the route handler wires transport around them.
 
 /**
- * May this caller WRITE to org members (invite / change-role / remove)? A global
- * admin may (owner checks then scope the target org); a non-global must be an
+ * May this caller WRITE to org members (invite / change-role / remove)? A
+ * SuperAdmin may (owner checks then scope the target org); a non-SuperAdmin must be an
  * admin of their own org. A plain member → read-only (false).
  */
-export function orgWriteAllowed(p: { isGlobalAdmin: boolean; isAdmin: boolean }): boolean {
-  return p.isGlobalAdmin || p.isAdmin
+export function orgWriteAllowed(p: { isSuperAdmin: boolean; isAdmin: boolean }): boolean {
+  return p.isSuperAdmin || p.isAdmin
 }
 
 /**
@@ -81,13 +81,13 @@ export function orgWriteAllowed(p: { isGlobalAdmin: boolean; isAdmin: boolean })
  * Organization objects are owned by the `admin` metadata org, so the owner check
  * alone (`ownerAllowed` with `orgMetadataOk`) would let a brand admin read ANOTHER
  * org's settings — this closes that by requiring the requested name to equal the
- * caller's scope, unless they are a global admin.
+ * caller's scope, unless they are a SuperAdmin.
  */
 export function orgNameAllowed(
   requested: string | null,
-  p: { isGlobalAdmin: boolean; orgScope: string },
+  p: { isSuperAdmin: boolean; orgScope: string },
 ): boolean {
   if (!requested) return true
-  if (p.isGlobalAdmin) return true
+  if (p.isSuperAdmin) return true
   return requested === p.orgScope
 }

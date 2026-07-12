@@ -37,7 +37,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const gate = await getOrgGate(req)
   if (!gate) return bad('forbidden', 403)
   // Writes (an invite is one) require org admin — a member can view the roster only.
-  if (!orgWriteAllowed({ isGlobalAdmin: gate.isGlobalAdmin, isAdmin: gate.user.isAdmin })) {
+  if (!orgWriteAllowed({ isSuperAdmin: gate.isSuperAdmin, isAdmin: gate.user.isAdmin })) {
     return bad('forbidden', 403)
   }
 
@@ -49,13 +49,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   const email = typeof body.email === 'string' ? body.email.trim() : ''
-  // The org defaults to the caller's own scope; a global admin may pass another.
+  // The org defaults to the caller's own scope; a SuperAdmin may pass another.
   const reqOrg = typeof body.org === 'string' && body.org.trim() ? body.org.trim() : gate.orgScope
   if (!name) return bad('missing member name', 400)
 
-  // Pin the org to the caller's scope (a non-global admin can only ever mint a link
+  // Pin the org to the caller's scope (a non-SuperAdmin can only ever mint a link
   // for their OWN org) — the SAME guard as the /org/iam proxy.
-  if (!ownerAllowed(reqOrg, { isGlobalAdmin: gate.isGlobalAdmin, orgScope: gate.orgScope, orgMetadataOk: false })) {
+  if (!ownerAllowed(reqOrg, { isSuperAdmin: gate.isSuperAdmin, orgScope: gate.orgScope, orgMetadataOk: false })) {
     return bad('forbidden', 403)
   }
 
