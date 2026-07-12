@@ -37,11 +37,11 @@ function secretRest(path: string, name: string): string {
   return [...path.split('/').filter(Boolean), name].map(encodeURIComponent).join('/')
 }
 
-/** Org the operator acts on — the brand org, unless a global admin passes ?org=
+/** Org the operator acts on — the brand org, unless a SuperAdmin passes ?org=
  *  (the pure `admin-policy` predicate, tested in admin-policy.test.ts). */
 function orgFor(gate: AdminGate, req: NextRequest): string {
   return policyOrgFor(
-    { isGlobalAdmin: gate.user.isGlobalAdmin, orgScope: gate.orgScope },
+    { isSuperAdmin: gate.user.isSuperAdmin, orgScope: gate.orgScope },
     req.nextUrl.searchParams.get('org'),
   )
 }

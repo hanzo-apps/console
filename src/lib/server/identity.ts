@@ -51,10 +51,10 @@ const KMS_URL = trim(process.env.KMS_URL ?? 'http://cloud.hanzo.svc:8000')
 /** Confidential client used for app-on-behalf mint/issue/revoke. */
 const MINT_CLIENT_ID = process.env.IAM_MINT_CLIENT_ID ?? ''
 const MINT_CLIENT_SECRET = process.env.IAM_MINT_CLIENT_SECRET ?? ''
-/** THE global-admin org — standardized as `admin` across the whole stack (IAM,
+/** THE SuperAdmin org — standardized as `admin` across the whole stack (IAM,
  *  commerce, ai, gateway all gate cross-tenant on owner=="admin"). A member-admin
- *  of `admin` is a global (cross-tenant) admin. A tenant org owner (hanzo, maxpower,
- *  …) is NEVER global, even with org-level isAdmin. One admin org, one way. */
+ *  of `admin` is a SuperAdmin (cross-tenant). A tenant org owner (hanzo, maxpower,
+ *  …) is NEVER a SuperAdmin, even with org-level isAdmin. One admin org, one way. */
 const ADMIN_ORG = 'admin'
 const isAdminOrg = (owner: string): boolean => owner === ADMIN_ORG
 
@@ -82,8 +82,8 @@ export type SessionUser = {
   emailVerified: boolean
   /** IAM-authoritative org-admin flag. */
   isAdmin: boolean
-  /** True for admin-org members — may act across any tenant org. */
-  isGlobalAdmin: boolean
+  /** SuperAdmin: an `admin`-org member — may act across any tenant org. */
+  isSuperAdmin: boolean
 }
 
 type UserClaims = {
@@ -95,6 +95,9 @@ type UserClaims = {
   email?: string
   emailVerified?: boolean
   isAdmin?: boolean
+  /** New canonical SuperAdmin wire claim (preferred). */
+  isSuperAdmin?: boolean
+  /** Legacy IAM claim; drop once IAM sends `isSuperAdmin`. */
   isGlobalAdmin?: boolean
 }
 
@@ -140,7 +143,9 @@ function sessionUserFromClaims(c: ConsoleClaims): SessionUser | null {
     email: c.email ?? '',
     emailVerified: Boolean(c.emailVerified),
     isAdmin: Boolean(c.isAdmin),
-    isGlobalAdmin: Boolean(c.isGlobalAdmin) || isAdminOrg(owner),
+    // Canonical: an `admin`-org member is SuperAdmin. Accept the new `isSuperAdmin`
+    // claim first; `isGlobalAdmin` is the legacy IAM claim (drop once IAM renames).
+    isSuperAdmin: Boolean(c.isSuperAdmin ?? c.isGlobalAdmin) || isAdminOrg(owner),
   }
 }
 
@@ -199,7 +204,9 @@ async function resolveSessionUser(
   let email = d.email ?? d.User?.email ?? ''
   let emailVerified = Boolean(d.emailVerified ?? d.User?.emailVerified)
   let isAdmin = Boolean(d.isAdmin ?? d.User?.isAdmin)
-  let isGlobalAdmin = Boolean(d.isGlobalAdmin ?? d.User?.isGlobalAdmin) || isAdminOrg(owner)
+  // New `isSuperAdmin` claim first; `isGlobalAdmin` is the legacy IAM claim (fallback).
+  let isSuperAdmin =
+    Boolean(d.isSuperAdmin ?? d.User?.isSuperAdmin ?? d.isGlobalAdmin ?? d.User?.isGlobalAdmin) || isAdminOrg(owner)
 
   // get-account may not carry email/isAdmin (thin claims). When email is absent,
   // IAM is authoritative — fetch the user as the confidential client to resolve
@@ -211,11 +218,12 @@ async function resolveSessionUser(
       email = u.email ?? ''
       emailVerified = Boolean(u.emailVerified)
       isAdmin = Boolean(u.isAdmin)
-      isGlobalAdmin = Boolean(u.isGlobalAdmin) || isAdminOrg(owner)
+      // New claim first; `isGlobalAdmin` is the legacy IAM claim (fallback).
+      isSuperAdmin = Boolean(u.isSuperAdmin ?? u.isGlobalAdmin) || isAdminOrg(owner)
     }
   }
 
-  return { owner, name, id, accessKey, email, emailVerified, isAdmin, isGlobalAdmin }
+  return { owner, name, id, accessKey, email, emailVerified, isAdmin, isSuperAdmin }
 }
 
 /**
@@ -587,7 +595,7 @@ export type AdminGate = {
   /** Brand resolved from the request Host header (DRY: `brandFromHost`). */
   brand: Brand
   /** Org the operator acts on by default — their OWN org (`user.owner`), never a
-   * blanket brand org. A global admin may override per-request (`?org=`). */
+   * blanket brand org. A SuperAdmin may override per-request (`?org=`). */
   orgScope: string
 }
 
@@ -596,9 +604,9 @@ export type AdminGate = {
  *
  * Requires ALL of: (1) a VERIFIED email ending `@<brand.adminDomain>` (a hanzo.ai
  * operator can't administer a lux host, and vice-versa), and (2) IAM marks them an
- * admin (`isAdmin`, or a built-in-org global admin). The operator's default
- * `orgScope` is THEIR OWN org (`user.owner`) — the IAM/KMS proxies pin a non-global
- * admin to it so one tenant's admin can never read/write another's. Returns null
+ * admin (`isAdmin`, or an admin-org SuperAdmin). The operator's default
+ * `orgScope` is THEIR OWN org (`user.owner`) — the IAM/KMS proxies pin a
+ * non-SuperAdmin to it so one tenant's admin can never read/write another's. Returns null
  * (→ caller 403s) on any miss — fail-closed.
  */
 export async function getAdminGate(req: NextRequest): Promise<AdminGate | null> {
@@ -625,24 +633,24 @@ export async function getAdminGate(req: NextRequest): Promise<AdminGate | null> 
 
 // ── Org member gate ──────────────────────────────────────────────────────────
 // The trust boundary for the SELF-SERVICE org member proxy (/org/iam), which lets
-// a CUSTOMER manage their OWN org — the /admin/iam gate above is global-only, so a
+// a CUSTOMER manage their OWN org — the /admin/iam gate above is SuperAdmin-only, so a
 // tenant org owner (e.g. Dave/maxpower) could never reach it. Here any
 // authenticated user with an org is admitted; the proxy then scopes reads to the
 // caller's own org and requires org-admin for writes (fail-closed on either miss).
 
-/** A resolved principal for the org proxy: who, whether global, and their org. */
-export type IamGate = { user: SessionUser; isGlobalAdmin: boolean; orgScope: string }
+/** A resolved principal for the org proxy: who, whether SuperAdmin, and their org. */
+export type IamGate = { user: SessionUser; isSuperAdmin: boolean; orgScope: string }
 
 /**
  * Resolve the caller for the org member proxy. Returns null (→ 403) when there is
  * no authenticated session with an org. The proxy pins every reference to
- * `orgScope` (the caller's own org) unless the caller is a global admin, so one
+ * `orgScope` (the caller's own org) unless the caller is a SuperAdmin, so one
  * tenant can never read or write another's members.
  */
 export async function getOrgGate(req: NextRequest): Promise<IamGate | null> {
   const user = await resolveUser(req)
   if (!user) return null
-  return { user, isGlobalAdmin: user.isGlobalAdmin, orgScope: user.owner }
+  return { user, isSuperAdmin: user.isSuperAdmin, orgScope: user.owner }
 }
 
 // ── Admin bearer-token cache ─────────────────────────────────────────────────

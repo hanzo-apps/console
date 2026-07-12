@@ -96,7 +96,7 @@ async function handle(req: NextRequest, path: string[], method: 'GET' | 'POST'):
   if (!gate) return forbidden()
   return forwardIam(
     req,
-    { user: gate.user, isGlobalAdmin: gate.user.isGlobalAdmin, orgScope: gate.orgScope },
+    { user: gate.user, isSuperAdmin: gate.user.isSuperAdmin, orgScope: gate.orgScope },
     {
       segment: path.join('/'),
       method,
