@@ -209,8 +209,13 @@ export const AdminCockpitApi = {
   },
   customer: async (org: string): Promise<CustomerDetail> =>
     normalizeDetail(await originGet<unknown>(`admin/customers/${encodeURIComponent(org)}`)),
-  grantCredit: async (org: string, body: { amountCents: number; currency?: string; reason?: string; source?: GrantSource }): Promise<GrantResult> => {
-    const d = (await originPost<unknown>(`admin/customers/${encodeURIComponent(org)}/credit`, body) ?? {}) as Record<string, unknown>
+  grantCredit: async (org: string, body: { amountCents: number; currency?: string; reason?: string; source?: GrantSource }, idempotencyKey?: string): Promise<GrantResult> => {
+    // A grant is a real commerce deposit — NON-idempotent by nature. When the caller
+    // supplies a stable-per-attempt key, the cloud reads `Idempotency-Key` and derives its
+    // commerce dedupe key from it, so an operator retry after a network timeout collapses to
+    // the ONE deposit instead of double-crediting. Body is unchanged.
+    const headers = idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined
+    const d = (await originPost<unknown>(`admin/customers/${encodeURIComponent(org)}/credit`, body, undefined, headers) ?? {}) as Record<string, unknown>
     return { org: str(d.org) || org, grantedCents: num(d.grantedCents), currency: str(d.currency) || 'usd', balanceCents: num(d.balanceCents), transactionId: str(d.transactionId) }
   },
   suspend: async (org: string): Promise<SuspendResult> => suspendResult(await originPost<unknown>(`admin/customers/${encodeURIComponent(org)}/suspend`, {}), org),
