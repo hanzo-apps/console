@@ -230,7 +230,12 @@ export function accessClaims(jwt: string): ConsoleClaims | null {
     email: str(c.email),
     emailVerified: bool(c.emailVerified) ?? bool(c.email_verified),
     isAdmin: bool(c.isAdmin),
-    isSuperAdmin: bool(c.isSuperAdmin),
+    // SuperAdmin ⟺ the principal's org (owner) IS the reserved `admin` org — the ONE
+    // predicate, derived owner-canonically here too (matching accountOf), never read
+    // from a JWT boolean claim. The gateway no longer mints an isSuperAdmin/
+    // isGlobalAdmin boolean; owner==admin is the sole signal, so a token can't carry a
+    // sudo bit its org doesn't earn.
+    isSuperAdmin: isSuperAdminOwner(str(c.owner)),
     displayName: str(c.displayName),
     avatar: str(c.avatar),
     accessKey: str(c.accessKey),
