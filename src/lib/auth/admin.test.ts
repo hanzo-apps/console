@@ -19,7 +19,10 @@ describe('isSuperAdminAccount — super-admin signal', () => {
     expect(isSuperAdminAccount(acct({ owner: 'maxpower', isAdmin: true }))).toBe(false)
   })
 
-  it('honors the canonical `isSuperAdmin` claim', () => {
-    expect(isSuperAdminAccount(acct({ isSuperAdmin: true } as Partial<Account>))).toBe(true)
+  // ONE predicate: org membership decides, never a claim. A claim on a NON-admin-org
+  // account cannot confer SuperAdmin (that would be a second, forgeable signal).
+  it('ignores any isSuperAdmin claim — `admin`-org membership is the only signal', () => {
+    expect(isSuperAdminAccount(acct({ owner: 'maxpower', isSuperAdmin: true } as Partial<Account>))).toBe(false)
+    expect(isSuperAdminAccount(acct({ owner: 'admin', isSuperAdmin: false } as Partial<Account>))).toBe(true)
   })
 })
