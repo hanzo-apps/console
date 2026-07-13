@@ -279,13 +279,18 @@ function basicAuth(): string {
   return 'Basic ' + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
 }
 
-/** A grant/seal failure with the HTTP status a route should surface. */
+/** A grant/seal failure with the HTTP status a route should surface. `code` carries
+ *  the OAuth error envelope value (`invalid_grant`, `authorization_pending`, …) when
+ *  the failure is a definitive OAuth error — the device poll reads it to tell the
+ *  RFC 8628 polling states (pending/slow_down/expired) apart from a hard failure. */
 export class SessionError extends Error {
   readonly status: number
-  constructor(message: string, status: number) {
+  readonly code?: string
+  constructor(message: string, status: number, code?: string) {
     super(message)
     this.name = 'SessionError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -330,8 +335,10 @@ async function tokenRequest(form: Record<string, string>, confidential = true): 
         expiresIn: typeof json.expires_in === 'number' ? json.expires_in : 0,
       }
     }
-    // A real OAuth error envelope is definitive — do not retry.
-    if (json?.error) throw new SessionError('token grant failed', json.error === 'invalid_grant' ? 401 : 502)
+    // A real OAuth error envelope is definitive — do not retry. Carry the error code
+    // so the device poll can map the RFC 8628 states (authorization_pending/slow_down/
+    // expired_token) rather than treat them as hard failures.
+    if (json?.error) throw new SessionError('token grant failed', json.error === 'invalid_grant' ? 401 : 502, json.error)
     // Non-JSON / empty body (a 5xx page or the SPA-HTML catch-all) → transient, retry.
   }
   throw new SessionError('token endpoint unavailable', 502)
@@ -380,6 +387,41 @@ export function pkceCodeGrant(opts: {
     },
     false,
   )
+}
+
+/** RFC 8628 device authorization grant identifier. */
+const DEVICE_CODE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code'
+
+/** Outcome of one device_code poll. `ok` carries the sealed session material (identity +
+ *  refresh + claims + lifetime — the exact shape sealSession returns) ready for the cookie
+ *  writer; `pending` = keep polling; `expired` = the code lapsed, restart the flow. */
+export type DeviceGrantResult =
+  | ({ status: 'ok' } & NonNullable<ReturnType<typeof sealSession>>)
+  | { status: 'pending' }
+  | { status: 'expired' }
+
+/**
+ * Redeem an APPROVED device authorization (RFC 8628) — the console is the "device".
+ * PUBLIC client (no secret): the device_code + `clientId` authenticate the exchange,
+ * mirroring how a native device app polls. Maps the polling states off the OAuth error
+ * envelope: authorization_pending/slow_down → `pending`, expired_token → `expired`; a
+ * hard error (invalid_client, unsupported_grant_type, …) still throws a SessionError.
+ * On success it SEALS the session (reuses sealSession) so the caller just sets cookies.
+ */
+export async function deviceCodeGrant(deviceCode: string, clientId: string): Promise<DeviceGrantResult> {
+  let tokens: Tokens
+  try {
+    tokens = await tokenRequest({ grant_type: DEVICE_CODE_GRANT, client_id: clientId, device_code: deviceCode }, false)
+  } catch (e) {
+    if (e instanceof SessionError) {
+      if (e.code === 'authorization_pending' || e.code === 'slow_down') return { status: 'pending' }
+      if (e.code === 'expired_token') return { status: 'expired' }
+    }
+    throw e
+  }
+  const sealed = sealSession(tokens)
+  if (!sealed) throw new SessionError('device grant produced no identity', 502)
+  return { status: 'ok', ...sealed }
 }
 
 /**
