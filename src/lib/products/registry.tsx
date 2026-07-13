@@ -207,6 +207,7 @@ import { KubeflowModule } from '~/components/products/KubeflowModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
 import { CodeModule } from '~/components/products/CodeModule'
+import { GitModule } from '~/components/products/GitModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
 import { MarketingModule } from '~/components/products/MarketingModule'
@@ -1573,22 +1574,27 @@ export const catalog: CatalogEntry[] = [
     routes: overviewRoutes('api'),
   },
   {
-    // Hanzo Git — the self-hosted Gitea code host at git.hanzo.ai (source of truth,
-    // mirror, and code search for all Hanzo repos). A standalone app that owns its
-    // own full UI (repos, PRs, code search) on shared Hanzo IAM, so the tile opens it
-    // already-signed-in. External launch (never a rebuilt in-console surface); like
-    // Automation it is `brands: ['hanzo']` so the git.hanzo.ai URL never leaks onto a
-    // Lux/Zoo console. No `docs`/`repo` field: git.hanzo.ai IS the code host, and it
-    // has no docs.hanzo.ai page (a dead deep link is worse than none).
+    // Hanzo Git — the org's hosted Git repositories over the NATIVE `/v1/git`
+    // subsystem welded into the cloud binary (hanzoai/git). Rendered IN-CONSOLE
+    // (`GitModule`: repos list + per-repo detail) over the same-origin `/v1` bearer
+    // BFF, org-scoped SERVER-SIDE — NO link-out. This is the cutover from stock
+    // Gitea: git.hanzo.ai is now a Hanzo Git PRODUCT landing whose "Open dashboard"
+    // CTA lands HERE (console.hanzo.ai) for the repo dashboard, while `git clone`/
+    // `git push` smart-HTTP stays served by cloud on git.hanzo.ai. `brands: ['hanzo']`
+    // so it never appears on a Lux/Zoo console. Distinct from `code` (code search).
     id: 'git',
     label: 'Git',
     icon: GitBranch,
-    description: 'Hosted Git — mirror, browse, and search all Hanzo code.',
+    description: 'Your organization’s hosted Git repositories — clone, browse, and push over native git.',
     category: 'Dev',
     status: 'enabled',
     brands: ['hanzo'],
-    kind: 'external',
-    href: 'https://git.hanzo.ai',
+    repo: 'hanzoai/git',
+    kind: 'module',
+    routes: [
+      { path: '', component: GitModule },
+      { path: ':name', component: GitModule },
+    ],
   },
   {
     // The customer-facing "connect your tools" page. A logged-in org connects

@@ -47,6 +47,15 @@ export const CLOUD_HEADS: readonly string[] = [
   // so it routes through /v1 exactly like agents/functions. One head admits the models
   // list/get + the create/predict sub-paths (the Inference product's endpoints source).
   'ml',
+  // Hanzo Git (cloud clients/git): /v1/git/repos[/:name] — the org's hosted Git
+  // repositories (the native code-hosting subsystem welded into the cloud binary).
+  // The handler resolves the org from the Bearer owner (principal.Org / X-Org-Id) and
+  // 403s a cookie-only or forged-header call, so it routes through /v1 exactly like
+  // code/agents — the single `git` head admits the repos list + the :name detail. The
+  // smart-HTTP git protocol paths (/v1/git/:org/:repo/{info/refs,git-upload-pack,
+  // git-receive-pack}) are the `git clone`/`git push` transport, served on git.hanzo.ai
+  // — the console never calls them, so admitting the `git` head does not widen the tunnel.
+  'git',
   // Code intelligence (cloud clients/code, order 134): /v1/code/{search,ask,context,
   // index}. Native per-org HYBRID retrieval (lexical + symbolic + semantic, RRF-fused)
   // over the org's indexed repos. The tenant boundary is a PHYSICAL per-org SQLite file
