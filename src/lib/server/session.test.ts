@@ -4,6 +4,7 @@ import {
   accessClaims,
   clearCookies,
   consoleSession,
+  deviceCodeGrant,
   durableSessionClientId,
   open,
   passwordGrant,
@@ -218,6 +219,55 @@ describe('OAuth grants (fetch-mocked)', () => {
     vi.stubGlobal('fetch', f)
     await expect(refreshGrant('old')).rejects.toMatchObject({ status: 401 })
     expect(f).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('deviceCodeGrant (RFC 8628 poll, fetch-mocked)', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  const errRes = (error: string, status = 400) =>
+    vi.fn(async () => new Response(JSON.stringify({ error }), { status }))
+
+  it('redeems the device_code as a PUBLIC client — no secret, the grant + client_id + code ride the body', async () => {
+    const f = vi.fn(async () =>
+      new Response(JSON.stringify({ access_token: fakeJwt(Z_CLAIMS), refresh_token: 'RT', expires_in: 3600 }), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', f)
+    const r = await deviceCodeGrant('DC-1', 'hanzo-cloud')
+    expect(r.status).toBe('ok')
+    if (r.status === 'ok') {
+      expect(r.claims.name).toBe('z')
+      expect(r.expiresInMs).toBe(3600_000)
+      expect(open<{ t: string }>(r.refresh)?.t).toBe('RT')
+    }
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    const body = String(init.body)
+    expect(body).toContain('grant_type=urn')
+    expect(body).toContain('device_code=DC-1')
+    expect(body).toContain('client_id=hanzo-cloud')
+    // Public device client — no client_secret_basic header.
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined()
+  })
+
+  it('surfaces authorization_pending and slow_down as `pending` (keep polling), one call each', async () => {
+    const pending = errRes('authorization_pending')
+    vi.stubGlobal('fetch', pending)
+    expect(await deviceCodeGrant('DC', 'hanzo-cloud')).toEqual({ status: 'pending' })
+    expect(pending).toHaveBeenCalledTimes(1) // an OAuth envelope is definitive — not retried
+
+    vi.unstubAllGlobals()
+    vi.stubGlobal('fetch', errRes('slow_down'))
+    expect(await deviceCodeGrant('DC', 'hanzo-cloud')).toEqual({ status: 'pending' })
+  })
+
+  it('surfaces expired_token as `expired`', async () => {
+    vi.stubGlobal('fetch', errRes('expired_token'))
+    expect(await deviceCodeGrant('DC', 'hanzo-cloud')).toEqual({ status: 'expired' })
+  })
+
+  it('rethrows a hard OAuth error (invalid_client) as a SessionError — not a polling state', async () => {
+    vi.stubGlobal('fetch', errRes('invalid_client', 401))
+    await expect(deviceCodeGrant('DC', 'hanzo-cloud')).rejects.toBeInstanceOf(SessionError)
   })
 })
 
