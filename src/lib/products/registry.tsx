@@ -113,6 +113,7 @@ import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
 import { PlatformModule } from '~/components/products/PlatformModule'
 import { MapModule } from '~/components/products/map/MapModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
+import { KnowledgeModule } from '~/components/products/KnowledgeModule'
 import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { BotsConsole } from '~/components/products/BotsConsole'
@@ -1036,6 +1037,22 @@ export const catalog: CatalogEntry[] = [
       { slug: 'models', label: 'Models' },
       { slug: 'settings', label: 'Settings' },
     ],
+  },
+  {
+    // Knowledge — the org's KB knowledge graph (cloud clients/knowledge). Pages,
+    // agent memories, and ingested sources as a force-directed graph over
+    // /v1/kb/graph, plus a vault importer (Obsidian/Notion/Roam/Evernote) over
+    // /v1/kb/import. Org-scoped SERVER-SIDE via the /v1 bearer proxy.
+    id: 'knowledge',
+    label: 'Knowledge',
+    icon: Network,
+    description: 'Your wiki, agent memory, and sources as one force-directed graph.',
+    category: 'AI',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    docs: `${DOCS}/knowledge`,
+    kind: 'module',
+    routes: [{ path: '', component: KnowledgeModule }],
   },
   {
     // Native console evals — REAL run (POST /v1/evals/runs) + scores
