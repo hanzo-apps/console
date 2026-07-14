@@ -126,6 +126,7 @@ import { BillingModule } from '~/components/products/BillingModule'
 import { AIAccountsModule } from '~/components/products/AIAccountsModule'
 import { FinanceModule } from '~/components/products/FinanceModule'
 import { UsageModule } from '~/components/products/UsageModule'
+import { AiUsageModule } from '~/components/products/AiUsageModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule } from '~/components/products/AdminModule'
 import { EntitlementsAdminModule } from '~/components/products/EntitlementsAdminModule'
@@ -256,7 +257,6 @@ const BusinessDashboard = livingOverviewModule('admin-business')
 // `/v1/admin/finance` aggregate is server-gated by getAdminGate). Financial data is
 // Hanzo-internal and must never reach a customer.
 const FinanceDashboard = livingOverviewModule('finance')
-const AiMetricsLiving = livingOverviewModule('ai-metrics')
 const OpenEditionLiving = livingOverviewModule('open-edition')
 const FunctionsLiving = livingOverviewModule('functions')
 // GPUs Overview is role-aware (admin → living overview, customer → visor catalog);
@@ -1981,12 +1981,13 @@ export const catalog: CatalogEntry[] = [
     description: 'Requests, tokens, spend, and per-model usage for your org.',
     category: 'Observe',
     status: 'enabled',
-    repo: 'hanzoai/commerce',
+    repo: 'hanzoai/ai',
     docs: `${DOCS}/billing`,
     kind: 'module',
-    // The reusable LivingOverview over the SAME real commerce usage ledger the old
-    // AiMetricsModule read — now with count-up KPIs, live sparklines, and streaming.
-    routes: [{ path: '', component: AiMetricsLiving }],
+    // The ONE canonical <UsagePanel> (@hanzo/usage/react) over the server-owned
+    // GET /v1/get-cloud-usages overview — no bespoke re-derivation, the same panel
+    // every Hanzo surface renders.
+    routes: [{ path: '', component: AiUsageModule }],
   },
   {
     // Open Edition (run-for-pay): the customer's view of their open-source
