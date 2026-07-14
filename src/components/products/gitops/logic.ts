@@ -18,7 +18,6 @@
  * empty phase with no replica data folds to `Unknown`.
  */
 import type { ServiceEdgeData, ServiceKind, ServiceNodeData, ServiceStatus } from '@hanzo/canvas/pure'
-import { toEpochMs } from '@hanzo/canvas/pure'
 
 import type { Application, AppTree, HealthStatus, ResourceNode, SyncStatus } from '~/lib/api/gitops'
 
@@ -206,7 +205,9 @@ function resourceNode(n: ResourceNode): ServiceNodeData {
     // The exact k8s Kind under the name — also the key the icon renderer maps on.
     typeLabel: n.kind,
     replicas: n.replicas || undefined,
-    deployedAt: n.createdAt ? toEpochMs(new Date(n.createdAt).toISOString()) : undefined,
+    // `createdAt` is already epoch ms (the client parses the k8s timestamp) — the
+    // `deployedAt` a canvas node renders as relative time.
+    deployedAt: n.createdAt || undefined,
   }
 }
 

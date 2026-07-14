@@ -274,6 +274,8 @@ import { EnablementModule as AdminEnablementModule } from '~/components/products
 import { GrantsModule as FleetGrantsModule } from '~/components/products/admin/GrantsModule'
 import { ProjectsModule as FleetProjectsModule } from '~/components/products/admin/ProjectsModule'
 import { BetaFeaturesModule } from '~/components/products/BetaFeaturesModule'
+// GitOps — the native ArgoCD replacement (SuperAdmin operator surface).
+import { GitOpsModule } from '~/components/products/gitops/GitOpsModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -1683,6 +1685,30 @@ export const catalog: CatalogEntry[] = [
     routes: [
       { path: '', component: PlatformModule },
       { path: ':name', component: PlatformModule },
+    ],
+  },
+  {
+    // GitOps — the native ArgoCD replacement. A SuperAdmin PLATFORM surface
+    // (admin: true → hidden from every customer's nav/launcher/palette) that reads
+    // the live services.hanzo.ai operator CRs through cloud's /v1/gitops/* — the
+    // console holds NO cluster credentials; cloud holds the k8s client and enforces
+    // SuperAdmin server-side. Every CR is an application: its declared image, folded
+    // health + sync, owned-resource tree, logs, and one-click rollback (patch the CR
+    // spec.image.tag → the hanzo-operator reconciles). The rich topology/diff mounts
+    // @hanzo/ui/gitops when that reusable export ships (see gitops/ui-contract.ts).
+    id: 'gitops',
+    label: 'GitOps',
+    icon: GitBranch,
+    description: 'The native deploy plane — every operator CR (services.hanzo.ai) with live health, sync, resource topology, logs, and one-click rollback. No ArgoCD.',
+    gcp: 'Cloud Deploy / ArgoCD',
+    category: 'Platform',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [
+      { path: '', component: GitOpsModule },
+      { path: ':name', component: GitOpsModule },
     ],
   },
   {
