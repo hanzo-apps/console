@@ -14,6 +14,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Rocket } from '@hanzogui/lucide-icons-2'
+import { useAnalytics } from '@hanzo/analytics/react'
+import { EVENTS } from '@hanzo/analytics'
 
 import { PaasApi, type PaasProject } from '~/lib/api/paas'
 import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
@@ -72,6 +74,7 @@ function CreateForm({ projects, onCancel, onDeployed }: { projects: PaasProject[
   const [imageRepo, setImageRepo] = useState('')
   const [imageTag, setImageTag] = useState('latest')
   const [state, setState] = useState<Deploying>({ phase: 'idle' })
+  const analytics = useAnalytics()
 
   const creatingProject = projectChoice === NEW_PROJECT || projects.length === 0
   const valid =
@@ -87,6 +90,7 @@ function CreateForm({ projects, onCancel, onDeployed }: { projects: PaasProject[
       if (creatingProject) {
         const p = await PaasApi.createProject({ name: newProjectName.trim() })
         projectSlug = p.slug || p.id
+        analytics.capture(EVENTS.PROJECT_CREATED)
       } else {
         const chosen = projects.find((p) => (p.name || p.slug) === projectChoice)
         projectSlug = chosen?.slug || chosen?.id || projectChoice
@@ -100,8 +104,10 @@ function CreateForm({ projects, onCancel, onDeployed }: { projects: PaasProject[
           ? { repo: { url: repoUrl.trim(), branch: branch.trim() || 'main' } }
           : { image: { repository: imageRepo.trim(), tag: imageTag.trim() || 'latest' } }),
       })
+      analytics.capture(EVENTS.APP_CREATED, { source })
 
       setState({ phase: 'working', step: 'Deploying…' })
+      analytics.capture(EVENTS.DEPLOY_STARTED, { source })
       await PaasApi.deploy(projectSlug, app.slug || app.id, source === 'image' ? { tag: imageTag.trim() || 'latest' } : {})
       // Hand off to the live pipeline — watch it go Queued → Building → Deploying → Live.
       setState({ phase: 'watching', project: projectSlug, app: app.slug || app.id })
