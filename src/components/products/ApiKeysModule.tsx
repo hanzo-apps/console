@@ -16,6 +16,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Copy, Check, KeyRound, RefreshCw, Trash2, TriangleAlert, Plus } from '@hanzogui/lucide-icons-2'
 
+import { useAnalytics } from '@hanzo/analytics/react'
+import { EVENTS } from '@hanzo/analytics'
+
 import { ApiError, KeysApi, type KeyStatus } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { config } from '~/config'
@@ -92,6 +95,7 @@ function NewKeyCard({ accessKey, onDone }: { accessKey: string; onDone: () => vo
 /** The credential surface — embeddable (no page header). */
 export function ApiKeysView() {
   const { account, loading: sessionLoading } = useSession()
+  const analytics = useAnalytics()
   const [status, setStatus] = useState<KeyStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState<null | 'create' | 'rotate' | 'revoke'>(null)
@@ -123,13 +127,14 @@ export function ApiKeysView() {
         const { accessKey } = await KeysApi.create()
         setNewKey(accessKey)
         setStatus({ hasKey: true, keyPrefix: accessKey.slice(0, 11), createdAt: new Date().toISOString() })
+        if (mode === 'create') analytics.capture(EVENTS.API_KEY_CREATED)
       } catch (e) {
         setError(e instanceof ApiError ? e.message : 'Failed to create the API key')
       } finally {
         setWorking(null)
       }
     },
-    [],
+    [analytics],
   )
 
   const revoke = useCallback(async () => {
