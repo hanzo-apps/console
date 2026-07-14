@@ -39,8 +39,9 @@ function guiPackages() {
   }
   // @hanzo/dash and @hanzo/data ship their screens/components as ESM/TSX
   // source (no compiled dist), so the shared Base UI is transpiled here the same
-  // way Gui is.
-  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', '@hanzo/canvas', '@hanzo/finance-ui', 'react-native-web', ...scoped]
+  // way Gui is. @hanzo/usage ships its <UsagePanel> (`/react`) as TSX source for the
+  // same reason (its headless core `.`/`/node` are compiled dist and pass through).
+  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', '@hanzo/canvas', '@hanzo/finance-ui', '@hanzo/usage', 'react-native-web', ...scoped]
 }
 
 /**
@@ -170,11 +171,10 @@ const nextConfig = {
   // live audit hit. SOURCE_COMMIT (CI build-arg) -> git HEAD -> package version.
   generateBuildId: () => resolveBuildId({ env: process.env, gitSha: readGitSha(__dirname), version: pkgVersion }),
   env: { NEXT_PUBLIC_APP_VERSION: pkgVersion },
+  // @hanzo/usage is transpiled (see guiPackages) so its source <UsagePanel> (`/react`)
+  // compiles in the client bundle; its headless `.` entry (used by the /ai-accounts
+  // server routes) carries no node built-ins, so it needs no server-external treatment.
   transpilePackages: guiPackages(),
-  // The headless usage engine (@hanzo/usage) is imported ONLY by the /ai-accounts
-  // server routes (nodejs runtime; it uses node:fs via its Node host). Keep it external
-  // so Node's ESM loader requires it at runtime rather than webpack bundling node built-ins.
-  serverExternalPackages: ['@hanzo/usage'],
   ...(EMBED
     ? { output: 'export', images: { unoptimized: true } }
     : { rewrites: aiSurfaceRewrites }),
