@@ -41,6 +41,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // /v1 exactly like prompts/agents — the single `framework` head admits every sub-path
   // (doctypes, roles, modules install, and the generic /:doctype document CRUD).
   'framework',
+  // Knowledge (cloud clients/knowledge): /v1/kb/{graph,import,search,connectors}[/…] and
+  // its /v1/knowledge alias — the KB knowledge graph + vault import + RAG retrieval. The
+  // handler resolves the org from the Bearer owner (principal.Org) and 403s a cookie-only
+  // call, so both heads route through /v1 exactly like framework/prompts.
+  'kb',
+  'knowledge',
   // ML serving (cloud clients/ml): /v1/ml/{models,health}[/:name[/predict]] — the org's
   // deployed KServe InferenceServices. The handler resolves the org from the Bearer owner
   // and lands every request in a PER-ORG namespace ("ml-"<org>); a cookie-only call 403s,
