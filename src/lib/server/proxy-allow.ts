@@ -277,6 +277,12 @@ export const CLOUD_HEADS: readonly string[] = [
   // `orgs` head admits the org-scoped entitlements sub-path (the console never calls any
   // other `orgs/*` surface; keep the tunnel to exactly what's used).
   'orgs',
+  // GitOps deploy plane (cloud reads the services.hanzo.ai operator CRs):
+  // /v1/gitops/{applications, :name/tree, :name/resource/:ref, :name/logs} +
+  // POST :name/{rollback,sync}. cloud holds the k8s client + enforces SuperAdmin
+  // server-side; the single `gitops` head admits every sub-path. The console never
+  // touches the cluster — a cookie-only call 403s like the rest.
+  'gitops',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
