@@ -1,7 +1,7 @@
 /**
- * Hanzo Deploy — the typed client for the operator-CR deploy plane.
+ * Hanzo GitOps — the typed client for the operator-CR deploy plane.
  *
- * The console's native replacement for ArgoCD's UI. It reads the live
+ * The console's native replacement for ArgoCD. It reads the live
  * `services.hanzo.ai` operator custom resources (the ONE native pipeline:
  * git push → native Actions → image → registry → cloud emits/updates a Service
  * CR → hanzo-operator reconciles the Deployment/Ingress/cert). There is no
@@ -9,20 +9,20 @@
  *
  * cloud OWNS this API (the k8s client lives there — the console never holds
  * cluster credentials). This client only CONSUMES the contract cloud serves,
- * through the same-origin `/v1` path (`cloudProxyV1Url` → `/v1/deploys/*`). In
- * the go:embed console (console.hanzo.ai) `/v1` reaches cloud directly under the
+ * through the same-origin `/v1` path (`cloudProxyV1Url` → `/v1/gitops/*`). In the
+ * go:embed console (console.hanzo.ai) `/v1` reaches cloud directly under the
  * session cookie; in the standalone console the `/v1` bearer BFF mints a
  * short-lived user token. Either way authz (SuperAdmin / owner scope — a
  * platform surface) is enforced SERVER-SIDE by cloud.
  *
- * CONTRACT (cloud-owned; if a route is not live yet the caller renders an honest
- * `BackendStateCard`, never fabricated rows):
- *   GET  /v1/deploys                          → { deploys: Deploy[] }
- *   GET  /v1/deploys/{name}/tree              → { nodes: ResourceNode[], edges? }
- *   GET  /v1/deploys/{name}/resource/{ref}    → ResourceDetail (manifest + diff + events)
- *   GET  /v1/deploys/{name}/logs?ref&container&tail → { lines: LogLine[] }
- *   POST /v1/deploys/{name}/rollback  { tag } → RollbackResult (patch CR tag → reconcile)
- *   POST /v1/deploys/{name}/restart           → RestartResult (rollout restart; extension)
+ * CONTRACT (cloud-owned; a not-yet-live route renders an honest `BackendStateCard`,
+ * never fabricated rows):
+ *   GET  /v1/gitops/applications                → { applications: Application[] }
+ *   GET  /v1/gitops/{name}/tree                 → { nodes: ResourceNode[], edges? }
+ *   GET  /v1/gitops/{name}/resource/{ref}       → ResourceDetail (manifest + diff + events)
+ *   GET  /v1/gitops/{name}/logs?ref&container&tail → { lines: LogLine[] }
+ *   POST /v1/gitops/{name}/rollback  { tag }    → RollbackResult (patch CR tag → reconcile)
+ *   POST /v1/gitops/{name}/sync                 → SyncResult (re-reconcile the CR to desired)
  *
  * Every field is optional-safe: the normalizers tolerate snake_case and
  * camelCase and degrade a missing signal to an honest empty/`Unknown`, never a
@@ -30,13 +30,13 @@
  */
 import { restGet, restPost, cloudProxyV1Url } from './client'
 
-// ── Vocabulary (mirrors the ArgoCD health/sync split, folded from the CR) ────
+// ── Vocabulary (mirrors ArgoCD's health/sync split, folded from the CR) ──────
 
-/** A deploy's live health — folded from the CR `.status` (phase + ready replicas). */
-export type DeployHealth = 'Healthy' | 'Progressing' | 'Degraded' | 'Suspended' | 'Missing' | 'Unknown'
+/** An application's live health — folded from the CR `.status` (phase + ready replicas). */
+export type HealthStatus = 'Healthy' | 'Progressing' | 'Degraded' | 'Suspended' | 'Missing' | 'Unknown'
 
 /** Desired (CR `spec.image.tag`) vs live (running Deployment image) agreement. */
-export type DeploySync = 'Synced' | 'OutOfSync' | 'Syncing' | 'Unknown'
+export type SyncStatus = 'Synced' | 'OutOfSync' | 'Syncing' | 'Unknown'
 
 /** The container image a CR (or an owned resource) declares. */
 export interface ImageRef {
@@ -44,15 +44,15 @@ export interface ImageRef {
   tag: string
 }
 
-/** One `services.hanzo.ai` operator CR, projected for the deploys board. */
-export interface Deploy {
+/** One `services.hanzo.ai` operator CR, projected as a GitOps application. */
+export interface Application {
   name: string
   namespace: string
   image: ImageRef
   /** Raw CR `.status.phase` (Pending|Creating|Running|Degraded|Deleting), verbatim. */
   phase: string
-  health: DeployHealth
-  sync: DeploySync
+  health: HealthStatus
+  sync: SyncStatus
   replicas: number
   readyReplicas: number
   /** Running image tag off the live Deployment (drives sync); '' when unknown. */
@@ -67,7 +67,7 @@ export interface Deploy {
   updatedAt: number
 }
 
-/** One node in a CR's owned-resource tree (the CR + every resource it owns). */
+/** One node in an application's owned-resource tree (the CR + everything it owns). */
 export interface ResourceNode {
   /** Opaque server token identifying the resource (its uid) — path-safe. */
   ref: string
@@ -76,8 +76,8 @@ export interface ResourceNode {
   kind: string
   name: string
   namespace: string
-  health: DeployHealth
-  sync: DeploySync
+  health: HealthStatus
+  sync: SyncStatus
   /** Raw phase/status string, verbatim. */
   phase: string
   replicas: number
@@ -89,8 +89,8 @@ export interface ResourceNode {
   createdAt: number
 }
 
-/** A CR's owned-resource graph — the topology the board renders as a canvas. */
-export interface DeployTree {
+/** An application's owned-resource graph — the topology the board renders. */
+export interface AppTree {
   nodes: ResourceNode[]
   /** Explicit owner→child edges; when absent they are derived from `ownerRefs`. */
   edges: { from: string; to: string }[]
@@ -132,7 +132,7 @@ export interface RollbackResult {
   phase: string
 }
 
-export interface RestartResult {
+export interface SyncResult {
   name: string
   phase: string
 }
@@ -155,23 +155,22 @@ const epoch = (v: unknown): number => {
   return Number.isNaN(t) ? 0 : t
 }
 
-const HEALTHS = new Set<DeployHealth>(['Healthy', 'Progressing', 'Degraded', 'Suspended', 'Missing', 'Unknown'])
-const SYNCS = new Set<DeploySync>(['Synced', 'OutOfSync', 'Syncing', 'Unknown'])
+const HEALTHS = new Set<HealthStatus>(['Healthy', 'Progressing', 'Degraded', 'Suspended', 'Missing', 'Unknown'])
 
 /** Coerce a server-provided health string to the vocab (case-insensitive). */
-export const asHealth = (v: unknown): DeployHealth | undefined => {
+export const asHealth = (v: unknown): HealthStatus | undefined => {
   const s = str(v).trim()
   const cap = s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : ''
-  return HEALTHS.has(cap as DeployHealth) ? (cap as DeployHealth) : undefined
+  return HEALTHS.has(cap as HealthStatus) ? (cap as HealthStatus) : undefined
 }
 /** Coerce a server-provided sync string to the vocab (case-insensitive). */
-export const asSync = (v: unknown): DeploySync | undefined => {
+export const asSync = (v: unknown): SyncStatus | undefined => {
   const s = str(v).trim().toLowerCase()
   if (s === 'synced' || s === 'insync' || s === 'in-sync') return 'Synced'
   if (s === 'outofsync' || s === 'out-of-sync' || s === 'drift') return 'OutOfSync'
-  if (s === 'syncing' || s === 'progressing') return 'Syncing'
-  if (s === 'unknown' || s === '') return s === '' ? undefined : 'Unknown'
-  return SYNCS.has((s[0].toUpperCase() + s.slice(1)) as DeploySync) ? ((s[0].toUpperCase() + s.slice(1)) as DeploySync) : undefined
+  if (s === 'syncing') return 'Syncing'
+  if (s === '' || s === 'unknown') return s === 'unknown' ? 'Unknown' : undefined
+  return undefined
 }
 
 /** Read an `{repository,tag}` image, tolerating a flat `repo:tag` string. */
@@ -189,7 +188,7 @@ function normalizeImage(v: unknown): ImageRef {
 // client trusts a server-computed `health`/`sync` when present and otherwise
 // carries `Unknown` for the fold to refine from phase + replicas.
 
-function normalizeDeploy(raw: unknown): Deploy {
+function normalizeApp(raw: unknown): Application {
   const r = rec(raw)
   return {
     name: str(pick(r, 'name')),
@@ -210,9 +209,8 @@ function normalizeDeploy(raw: unknown): Deploy {
 
 function normalizeResourceNode(raw: unknown): ResourceNode {
   const r = rec(raw)
-  const ref = str(pick(r, 'ref', 'uid', 'id'))
   return {
-    ref,
+    ref: str(pick(r, 'ref', 'uid', 'id')),
     group: str(pick(r, 'group')),
     version: str(pick(r, 'version')),
     kind: str(pick(r, 'kind')),
@@ -229,13 +227,15 @@ function normalizeResourceNode(raw: unknown): ResourceNode {
   }
 }
 
-function normalizeTree(raw: unknown): DeployTree {
+function normalizeTree(raw: unknown): AppTree {
   const r = rec(raw)
   const nodes = arr(pick(r, 'nodes', 'resources')).map(normalizeResourceNode).filter((n) => n.ref && n.kind)
-  const edges = arr(pick(r, 'edges')).map((e) => {
-    const er = rec(e)
-    return { from: str(pick(er, 'from', 'source', 'owner')), to: str(pick(er, 'to', 'target', 'child')) }
-  }).filter((e) => e.from && e.to)
+  const edges = arr(pick(r, 'edges'))
+    .map((e) => {
+      const er = rec(e)
+      return { from: str(pick(er, 'from', 'source', 'owner')), to: str(pick(er, 'to', 'target', 'child')) }
+    })
+    .filter((e) => e.from && e.to)
   return { nodes, edges }
 }
 
@@ -283,58 +283,58 @@ function linesFromBlob(blob: string): LogLine[] {
 const url = (path: string): string => cloudProxyV1Url(path)
 
 export interface LogQuery {
-  /** The pod resource `ref` to read (from the tree); omit for the deploy's pods. */
+  /** The pod resource `ref` to read (from the tree); omit for the app's pods. */
   ref?: string
   container?: string
   /** Tail line count. */
   tail?: number
 }
 
-export const DeploysApi = {
-  /** List every `services.hanzo.ai` CR with its folded health + sync. */
-  list: async (): Promise<Deploy[]> => {
-    const data = await restGet<unknown>(url('deploys'))
-    const rows = Array.isArray(data) ? data : arr(pick(rec(data), 'deploys', 'services', 'items'))
-    return rows.map(normalizeDeploy).filter((d) => d.name)
+export const GitopsApi = {
+  /** List every `services.hanzo.ai` CR as a GitOps application. */
+  applications: async (): Promise<Application[]> => {
+    const data = await restGet<unknown>(url('gitops/applications'))
+    const rows = Array.isArray(data) ? data : arr(pick(rec(data), 'applications', 'apps', 'items', 'services'))
+    return rows.map(normalizeApp).filter((a) => a.name)
   },
 
-  /** The owned-resource tree for one CR (Service → Deployment → ReplicaSet → Pods …). */
-  tree: async (name: string): Promise<DeployTree> => {
-    const data = await restGet<unknown>(url(`deploys/${encodeURIComponent(name)}/tree`))
+  /** The owned-resource tree for one application (Service → Deployment → RS → Pods …). */
+  tree: async (name: string): Promise<AppTree> => {
+    const data = await restGet<unknown>(url(`gitops/${encodeURIComponent(name)}/tree`))
     return normalizeTree(data)
   },
 
   /** One resource's live manifest, desired-vs-live diff, and events. */
   resource: async (name: string, ref: string): Promise<ResourceDetail> => {
-    const data = await restGet<unknown>(url(`deploys/${encodeURIComponent(name)}/resource/${encodeURIComponent(ref)}`))
+    const data = await restGet<unknown>(url(`gitops/${encodeURIComponent(name)}/resource/${encodeURIComponent(ref)}`))
     return normalizeDetail(ref, data)
   },
 
-  /** Pod logs for the deploy (optionally scoped to one pod `ref` + container). */
+  /** Pod logs for the application (optionally scoped to one pod `ref` + container). */
   logs: async (name: string, q: LogQuery = {}): Promise<LogLine[]> => {
     const qs = new URLSearchParams()
     if (q.ref) qs.set('ref', q.ref)
     if (q.container) qs.set('container', q.container)
     if (q.tail) qs.set('tail', String(q.tail))
     const suffix = qs.toString() ? `?${qs}` : ''
-    const data = await restGet<unknown>(url(`deploys/${encodeURIComponent(name)}/logs${suffix}`))
+    const data = await restGet<unknown>(url(`gitops/${encodeURIComponent(name)}/logs${suffix}`))
     const rows = pick(rec(data), 'lines', 'logs')
     if (Array.isArray(rows)) return rows.map(normalizeLine)
     const blob = str(pick(rec(data), 'log', 'output'))
     return blob ? linesFromBlob(blob) : []
   },
 
-  /** Roll a CR back to a prior image tag — cloud patches `spec.image.tag`, the
-   *  operator reconciles the Deployment. */
+  /** Roll an application back to a prior image tag — cloud patches the CR
+   *  `spec.image.tag`, the operator reconciles the Deployment. */
   rollback: async (name: string, tag: string): Promise<RollbackResult> => {
-    const data = await restPost<unknown>(url(`deploys/${encodeURIComponent(name)}/rollback`), { tag })
+    const data = await restPost<unknown>(url(`gitops/${encodeURIComponent(name)}/rollback`), { tag })
     const r = rec(data)
     return { name: str(pick(r, 'name')) || name, tag: str(pick(r, 'tag')) || tag, phase: str(pick(r, 'phase', 'status')) }
   },
 
-  /** Rollout-restart a CR's workload (extension; a 404 is handled as "not available"). */
-  restart: async (name: string): Promise<RestartResult> => {
-    const data = await restPost<unknown>(url(`deploys/${encodeURIComponent(name)}/restart`), {})
+  /** Force a re-reconcile of the CR to its desired state (ArgoCD "Sync"). */
+  sync: async (name: string): Promise<SyncResult> => {
+    const data = await restPost<unknown>(url(`gitops/${encodeURIComponent(name)}/sync`), {})
     const r = rec(data)
     return { name: str(pick(r, 'name')) || name, phase: str(pick(r, 'phase', 'status')) }
   },

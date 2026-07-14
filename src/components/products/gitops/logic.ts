@@ -1,9 +1,11 @@
 /**
- * Pure deploy-plane logic — the ONE place a raw operator-CR status is folded into
- * the console's health/sync vocabulary, and a CR's owned-resource tree is mapped
- * into the generic `@hanzo/canvas` node/edge model. No React, no I/O — unit-tested
- * in isolation (`logic.test.ts`), so the transport layer (`lib/api/deploys.ts`)
- * and the views stay thin.
+ * Pure GitOps logic — the ONE place a raw operator-CR status is folded into the
+ * console's health/sync vocabulary, and an application's owned-resource tree is
+ * mapped into the generic `@hanzo/canvas` node/edge model. No React, no I/O —
+ * unit-tested in isolation (`logic.test.ts`), so the transport layer
+ * (`lib/api/gitops.ts`) and the views stay thin, and so these folds/adapters can
+ * feed either the interim console board or the `@hanzo/ui/gitops` components when
+ * that package lands.
  *
  * Health mirrors ArgoCD's small glanceable set, folded from the CR `.status`
  * (phase + ready/desired replicas). Sync compares the DESIRED image tag
@@ -18,7 +20,7 @@
 import type { ServiceEdgeData, ServiceKind, ServiceNodeData, ServiceStatus } from '@hanzo/canvas/pure'
 import { toEpochMs } from '@hanzo/canvas/pure'
 
-import type { Deploy, DeployHealth, DeploySync, DeployTree, ResourceNode } from '~/lib/api/deploys'
+import type { Application, AppTree, HealthStatus, ResourceNode, SyncStatus } from '~/lib/api/gitops'
 
 // ── Health fold ──────────────────────────────────────────────────────────────
 
@@ -36,11 +38,11 @@ const PROGRESSING_PHASES = new Set(['pending', 'creating', 'deleting', 'progress
  *   - unknown/empty                            → Unknown (never guessed up)
  */
 export function foldHealth(input: {
-  health?: DeployHealth
+  health?: HealthStatus
   phase?: string
   replicas?: number
   readyReplicas?: number
-}): DeployHealth {
+}): HealthStatus {
   if (input.health && input.health !== 'Unknown') return input.health
   const phase = (input.phase ?? '').trim().toLowerCase()
   const desired = input.replicas ?? 0
@@ -70,11 +72,11 @@ export function foldHealth(input: {
  *   - live tag unknown                          → Unknown
  */
 export function foldSync(input: {
-  sync?: DeploySync
+  sync?: SyncStatus
   desiredTag?: string
   liveTag?: string
-  health?: DeployHealth
-}): DeploySync {
+  health?: HealthStatus
+}): SyncStatus {
   if (input.sync && input.sync !== 'Unknown') return input.sync
   const desired = (input.desiredTag ?? '').trim()
   const live = (input.liveTag ?? '').trim()
@@ -83,16 +85,16 @@ export function foldSync(input: {
   return input.health === 'Progressing' ? 'Syncing' : 'OutOfSync'
 }
 
-/** Resolve a deploy's effective health + sync (server value refined by the fold). */
-export function resolveDeploy(d: Deploy): { health: DeployHealth; sync: DeploySync } {
-  const health = foldHealth(d)
-  const sync = foldSync({ sync: d.sync, desiredTag: d.image.tag, liveTag: d.liveTag, health })
+/** Resolve an application's effective health + sync (server value refined by the fold). */
+export function resolveApp(a: Application): { health: HealthStatus; sync: SyncStatus } {
+  const health = foldHealth(a)
+  const sync = foldSync({ sync: a.sync, desiredTag: a.image.tag, liveTag: a.liveTag, health })
   return { health, sync }
 }
 
 // ── Palette (GitHub-family hues; shared with @hanzo/canvas semantics) ────────
 
-const HEALTH_COLOR: Record<DeployHealth, string> = {
+const HEALTH_COLOR: Record<HealthStatus, string> = {
   Healthy: '#3fb950',
   Progressing: '#d29922',
   Degraded: '#f85149',
@@ -100,22 +102,22 @@ const HEALTH_COLOR: Record<DeployHealth, string> = {
   Missing: '#6e7681',
   Unknown: '#8b949e',
 }
-const SYNC_COLOR: Record<DeploySync, string> = {
+const SYNC_COLOR: Record<SyncStatus, string> = {
   Synced: '#3fb950',
   Syncing: '#d29922',
   OutOfSync: '#d29922',
   Unknown: '#8b949e',
 }
 
-export const healthColor = (h: DeployHealth): string => HEALTH_COLOR[h]
-export const syncColor = (s: DeploySync): string => SYNC_COLOR[s]
+export const healthColor = (h: HealthStatus): string => HEALTH_COLOR[h]
+export const syncColor = (s: SyncStatus): string => SYNC_COLOR[s]
 
 /** Whether a health verdict should visually pulse (a live thing converging). */
-export const healthPulses = (h: DeployHealth): boolean => h === 'Progressing'
+export const healthPulses = (h: HealthStatus): boolean => h === 'Progressing'
 
 // ── Board summary ────────────────────────────────────────────────────────────
 
-export interface DeploySummary {
+export interface AppSummary {
   total: number
   healthy: number
   progressing: number
@@ -124,11 +126,11 @@ export interface DeploySummary {
   outOfSync: number
 }
 
-/** Roll a deploy list into the header KPI counts (all real, from the folds). */
-export function summarize(deploys: Deploy[]): DeploySummary {
-  const s: DeploySummary = { total: 0, healthy: 0, progressing: 0, degraded: 0, synced: 0, outOfSync: 0 }
-  for (const d of deploys) {
-    const { health, sync } = resolveDeploy(d)
+/** Roll an application list into the header KPI counts (all real, from the folds). */
+export function summarize(apps: Application[]): AppSummary {
+  const s: AppSummary = { total: 0, healthy: 0, progressing: 0, degraded: 0, synced: 0, outOfSync: 0 }
+  for (const a of apps) {
+    const { health, sync } = resolveApp(a)
     s.total++
     if (health === 'Healthy') s.healthy++
     else if (health === 'Progressing') s.progressing++
@@ -139,10 +141,10 @@ export function summarize(deploys: Deploy[]): DeploySummary {
   return s
 }
 
-// ── Tree → @hanzo/canvas graph ───────────────────────────────────────────────
+// ── Tree → @hanzo/canvas graph (the adapter that feeds a topology component) ──
 
 /** Map a health verdict onto the canvas status vocabulary (drives node tone). */
-export function healthToServiceStatus(h: DeployHealth): ServiceStatus {
+export function healthToServiceStatus(h: HealthStatus): ServiceStatus {
   switch (h) {
     case 'Healthy':
       return 'active'
@@ -188,7 +190,7 @@ export function kindToServiceKind(kind: string): ServiceKind {
 }
 
 /** Per-resource health — trust its own verdict, else infer from ready/desired. */
-export function resourceHealth(n: ResourceNode): DeployHealth {
+export function resourceHealth(n: ResourceNode): HealthStatus {
   return foldHealth({ health: n.health, phase: n.phase, replicas: n.replicas, readyReplicas: n.readyReplicas })
 }
 
@@ -209,13 +211,14 @@ function resourceNode(n: ResourceNode): ServiceNodeData {
 }
 
 /**
- * Fold a CR's owned-resource tree into the `@hanzo/canvas` node/edge model. Edges
- * are owner→child (from `ownerRefs`, plus any explicit `edges`), drawn ONLY when
- * both endpoints are present in the node set — so the layered layout reads as the
- * ArgoCD-style left-to-right ownership flow (Service → Deployment → ReplicaSet →
- * Pods), and an edge is never drawn to a resource outside the tree.
+ * Fold an application's owned-resource tree into the `@hanzo/canvas` node/edge
+ * model. Edges are owner→child (from `ownerRefs`, plus any explicit `edges`),
+ * drawn ONLY when both endpoints are present in the node set — so the layered
+ * layout reads as the ArgoCD-style left-to-right ownership flow (Service →
+ * Deployment → ReplicaSet → Pods), and an edge is never drawn to a resource
+ * outside the tree.
  */
-export function treeToGraph(tree: DeployTree): { nodes: ServiceNodeData[]; edges: ServiceEdgeData[] } {
+export function treeToGraph(tree: AppTree): { nodes: ServiceNodeData[]; edges: ServiceEdgeData[] } {
   const nodes = tree.nodes.map(resourceNode)
   const present = new Set(tree.nodes.map((n) => n.ref))
   const seen = new Set<string>()
@@ -236,8 +239,8 @@ export function treeToGraph(tree: DeployTree): { nodes: ServiceNodeData[]; edges
 }
 
 /** Health tally over a tree's resources (for the detail header). */
-export function treeHealth(tree: DeployTree): Record<DeployHealth, number> {
-  const tally: Record<DeployHealth, number> = {
+export function treeHealth(tree: AppTree): Record<HealthStatus, number> {
+  const tally: Record<HealthStatus, number> = {
     Healthy: 0,
     Progressing: 0,
     Degraded: 0,
@@ -252,14 +255,15 @@ export function treeHealth(tree: DeployTree): Record<DeployHealth, number> {
 // ── Rollback affordance ──────────────────────────────────────────────────────
 
 /**
- * The image tags a CR can roll back to — its recorded revisions, MINUS the tag
- * currently declared (you never "roll back" to where you already are), newest
- * first, de-duplicated. Empty ⇒ the board shows an honest "no prior revisions".
+ * The image tags an application can roll back to — its recorded revisions, MINUS
+ * the tag currently declared (you never "roll back" to where you already are),
+ * newest first, de-duplicated. Empty ⇒ the board shows an honest "no prior
+ * revisions".
  */
-export function rollbackTargets(d: Deploy): string[] {
+export function rollbackTargets(a: Application): string[] {
   const out: string[] = []
-  const seen = new Set<string>([d.image.tag])
-  for (const t of d.revisions) {
+  const seen = new Set<string>([a.image.tag])
+  for (const t of a.revisions) {
     const tag = t.trim()
     if (!tag || seen.has(tag)) continue
     seen.add(tag)
