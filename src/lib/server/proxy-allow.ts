@@ -61,6 +61,14 @@ export const CLOUD_HEADS: readonly string[] = [
   // agents/prompts. The single `code` head admits every sub-path (search, ask, the
   // context bundle, and the index write).
   'code',
+  // Business AI Guide (cloud clients/guide): /v1/guide + /v1/guide/{curriculum,steps/:id/
+  // {start,done,skip,reset,do},actions}. The interactive launch checklist — a curriculum
+  // drives the steps, per-org progress tracks a state per step, and the Business AI runs a
+  // step for you (JSON or an SSE stream). The handler resolves the org from the Bearer owner
+  // (principal.Tenant) and 403s a cookie-only call, so it routes through /v1 exactly like
+  // crm/agents — the single `guide` head admits every sub-path (overview, curriculum GET/
+  // PUT/DELETE, the per-step transitions + do, and the action ledger).
+  'guide',
   // CRM (cloud clients/crm): /v1/crm/{summary,companies,contacts,opportunities}[/:id].
   // Native-Go per-org CRM on Base/SQLite (companies/contacts/opportunities). The
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only

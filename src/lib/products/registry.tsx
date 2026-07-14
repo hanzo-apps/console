@@ -211,6 +211,7 @@ import { AgentsModule } from '~/components/products/AgentsModule'
 import { CodeModule } from '~/components/products/CodeModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
+import { GuideModule } from '~/components/products/GuideModule'
 import { MarketingModule } from '~/components/products/MarketingModule'
 import { AdsModule } from '~/components/products/AdsModule'
 import { SocialModule } from '~/components/products/SocialModule'
@@ -2535,6 +2536,26 @@ export const catalog: CatalogEntry[] = [
     routes: [
       { path: '', component: BotModule },
       { path: 'run', component: BotsConsole },
+    ],
+  },
+  {
+    // Guide — the Business AI Guide (cloud clients/guide, /v1/guide/*): an interactive
+    // launch checklist every org completes on-site. A curriculum drives the steps,
+    // per-org progress tracks a state per step, and the Business AI can DO a step for
+    // you (streamed). Foundational onboarding — always-on for every org (entitlements).
+    id: 'guide',
+    label: 'Guide',
+    icon: Compass,
+    description: 'Your interactive launch checklist — the Business AI can do each step for you.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    // Overview ('') renders the whole guide; ':tab' is reserved for future sub-tabs
+    // and deep-links a specific step open (params.tab → the expanded step).
+    routes: [
+      { path: '', component: GuideModule },
+      { path: ':tab', component: GuideModule },
     ],
   },
   {
