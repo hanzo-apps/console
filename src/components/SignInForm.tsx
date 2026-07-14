@@ -21,10 +21,12 @@
  * cross-site fetch can't carry the MFA challenge) — we hand off with a redirect
  * rather than fake an inline step.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Anchor, Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Github, QrCode } from '@hanzogui/lucide-icons-2'
+import { useAnalytics } from '@hanzo/analytics/react'
+import { EVENTS } from '@hanzo/analytics'
 
 import { branding } from '~/config'
 import { HanzoMark } from '~/components/ui/Loader'
@@ -88,6 +90,7 @@ function CardShell({ subtitle, children }: { subtitle: string; children: React.R
 
 export function SignInForm() {
   const { completeSignIn, signInWith, establishConsoleSession } = useSession()
+  const analytics = useAnalytics()
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
@@ -100,6 +103,12 @@ export function SignInForm() {
   const [qr, setQr] = useState(false)
   // Turnstile token for the signup path (only required when Turnstile is provisioned).
   const [captcha, setCaptcha] = useState('')
+
+  // Open the signup funnel when the create-account view is shown (a mode toggle here,
+  // not a route), so the funnel starts from one event on every host.
+  useEffect(() => {
+    if (mode === 'signup') analytics.capture(EVENTS.SIGNUP_VIEWED)
+  }, [mode, analytics])
 
   // The ONE credential login path — shared by sign-in and by post-signup auto-login.
   async function logInWithCredentials(): Promise<void> {
@@ -145,6 +154,7 @@ export function SignInForm() {
     }
     setBusy(true)
     setError(null)
+    analytics.capture(EVENTS.SIGNUP_SUBMITTED)
     try {
       const r = await signUp(email.trim(), password, { turnstileToken: captcha, ref: refFromUrl() })
       if (r.kind === 'exists') {
@@ -158,8 +168,9 @@ export function SignInForm() {
         setBusy(false)
         return
       }
-      // Account + org created — sign in with the same credentials so the new admin
-      // lands straight in their workspace (fresh accounts have no MFA to satisfy).
+      // Account + org created (self-serve signup has no separate email-verify step) —
+      // the funnel completes here, then auto-login lands the new admin in their workspace.
+      analytics.capture(EVENTS.SIGNUP_COMPLETED)
       await logInWithCredentials()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create your account.')
