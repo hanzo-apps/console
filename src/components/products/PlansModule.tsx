@@ -15,6 +15,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowUpRight, Check, CreditCard, RefreshCw, Star } from '@hanzogui/lucide-icons-2'
+import { useAnalytics } from '@hanzo/analytics/react'
+import { EVENTS } from '@hanzo/analytics'
 
 import { PlansApi, type Plan } from '~/lib/api'
 import { config } from '~/config'
@@ -43,6 +45,7 @@ function ctaLabel(p: Plan): string {
 }
 
 function PlanCard({ plan }: { plan: Plan }) {
+  const analytics = useAnalytics()
   const highlight = plan.popular
   const free = plan.priceMonthly === 0 && !plan.contactSales
   const showAnnual = !plan.contactSales && plan.priceMonthly > 0 && !!plan.priceAnnual && plan.priceAnnual < plan.priceMonthly
@@ -108,7 +111,13 @@ function PlanCard({ plan }: { plan: Plan }) {
       <Button
         theme={highlight ? 'light' : undefined}
         iconAfter={<ArrowUpRight size={15} />}
-        onPress={() => openBilling('#pricing')}
+        onPress={() => {
+          // Selecting a tier both records the plan choice and enters the brand billing
+          // portal (Square checkout) — so it is a plan click AND the start of checkout.
+          analytics.capture(EVENTS.PLAN_CLICKED, { plan: plan.name })
+          analytics.capture(EVENTS.CHECKOUT_STARTED, { plan: plan.name })
+          openBilling('#pricing')
+        }}
         mt="$1"
       >
         {ctaLabel(plan)}
@@ -123,6 +132,7 @@ type Async<T> =
   | { phase: 'ready'; data: T }
 
 export function PlansModule(_props: { params: Record<string, string> }) {
+  const analytics = useAnalytics()
   const [state, setState] = useState<Async<Plan[]>>({ phase: 'loading' })
 
   const load = useCallback(() => {
@@ -135,6 +145,11 @@ export function PlansModule(_props: { params: Record<string, string> }) {
   useEffect(() => {
     load()
   }, [load])
+
+  // The plans/pricing surface opened — upgrade-intent funnel entry.
+  useEffect(() => {
+    analytics.capture(EVENTS.PRICING_VIEWED)
+  }, [analytics])
 
   const plans = state.phase === 'ready' ? state.data : []
 
