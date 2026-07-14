@@ -2,7 +2,7 @@
 
 /**
  * Bridges the console session + App-Router navigation into the shared analytics
- * client (`@hanzo/analytics`). Rendered once, inside both `SessionProvider` and
+ * client (`@hanzo/capture`). Rendered once, inside both `SessionProvider` and
  * `AnalyticsProvider` (see `Provider.tsx`), it renders nothing.
  *
  *  - `usePageview` emits a pageview on every path change (the provider fires the
@@ -14,7 +14,7 @@
  */
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { useAnalytics, usePageview } from '@hanzo/analytics/react'
+import { useAnalytics, usePageview } from '@hanzo/capture/react'
 
 import { useSession } from '~/lib/auth/session'
 
