@@ -15,8 +15,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowUpRight, Check, CreditCard, RefreshCw, Star } from '@hanzogui/lucide-icons-2'
-import { useAnalytics } from '@hanzo/analytics/react'
-import { EVENTS } from '@hanzo/analytics'
+import { useAnalytics } from '@hanzo/capture/react'
+import { EVENTS } from '@hanzo/capture'
 
 import { PlansApi, type Plan } from '~/lib/api'
 import { config } from '~/config'
