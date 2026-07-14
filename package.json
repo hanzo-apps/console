@@ -16,7 +16,7 @@
     "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
-    "@hanzo/analytics": "^0.1.0",
+    "@hanzo/capture": "^0.1.0",
     "@hanzo/canvas": "^0.1.0",
     "@hanzo/dash": "0.3.0",
     "@hanzo/data": "^1.2.0",
