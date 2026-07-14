@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { Deploy, DeployTree, ResourceNode } from '~/lib/api/deploys'
+import type { Application, AppTree, ResourceNode } from '~/lib/api/gitops'
+import { FIXTURE_APPS, FIXTURE_TREE } from './fixtures'
 import {
   foldHealth,
   foldSync,
@@ -8,7 +9,7 @@ import {
   healthPulses,
   healthToServiceStatus,
   kindToServiceKind,
-  resolveDeploy,
+  resolveApp,
   resourceHealth,
   rollbackTargets,
   summarize,
@@ -17,7 +18,7 @@ import {
   treeToGraph,
 } from './logic'
 
-function deploy(over: Partial<Deploy> = {}): Deploy {
+function app(over: Partial<Application> = {}): Application {
   return {
     name: 'cloud',
     namespace: 'hanzo',
@@ -111,23 +112,23 @@ describe('foldSync', () => {
   })
 })
 
-describe('resolveDeploy', () => {
+describe('resolveApp', () => {
   it('folds health and sync together (a partial rollout to a new tag reads Progressing + Syncing)', () => {
-    const d = deploy({ health: 'Unknown', sync: 'Unknown', phase: 'Running', replicas: 3, readyReplicas: 1, image: { repository: 'r', tag: 'v2' }, liveTag: 'v1' })
-    expect(resolveDeploy(d)).toEqual({ health: 'Progressing', sync: 'Syncing' })
+    const a = app({ health: 'Unknown', sync: 'Unknown', phase: 'Running', replicas: 3, readyReplicas: 1, image: { repository: 'r', tag: 'v2' }, liveTag: 'v1' })
+    expect(resolveApp(a)).toEqual({ health: 'Progressing', sync: 'Syncing' })
   })
-  it('a healthy in-sync deploy resolves Healthy + Synced', () => {
-    expect(resolveDeploy(deploy())).toEqual({ health: 'Healthy', sync: 'Synced' })
+  it('a healthy in-sync app resolves Healthy + Synced', () => {
+    expect(resolveApp(app())).toEqual({ health: 'Healthy', sync: 'Synced' })
   })
 })
 
 describe('summarize', () => {
   it('counts health + sync across the fleet from the folds', () => {
     const s = summarize([
-      deploy({ name: 'a' }), // Healthy + Synced
-      deploy({ name: 'b', phase: 'Running', replicas: 2, readyReplicas: 1 }), // Progressing
-      deploy({ name: 'c', phase: 'Degraded' }), // Degraded
-      deploy({ name: 'd', image: { repository: 'r', tag: 'v2' }, liveTag: 'v1', phase: 'Running' }), // Healthy but OutOfSync
+      app({ name: 'a' }), // Healthy + Synced
+      app({ name: 'b', phase: 'Running', replicas: 2, readyReplicas: 1 }), // Progressing, tag matches → Synced
+      app({ name: 'c', phase: 'Degraded' }), // Degraded, tag matches → Synced
+      app({ name: 'd', image: { repository: 'r', tag: 'v2' }, liveTag: 'v1', phase: 'Running' }), // Healthy but OutOfSync
     ])
     expect(s.total).toBe(4)
     expect(s.healthy).toBe(2)
@@ -167,7 +168,7 @@ describe('healthToServiceStatus', () => {
 })
 
 describe('treeToGraph', () => {
-  const tree: DeployTree = {
+  const tree: AppTree = {
     nodes: [
       node({ ref: 'cr', kind: 'Service', name: 'cloud', ownerRefs: [] }),
       node({ ref: 'dep', kind: 'Deployment', name: 'cloud', ownerRefs: ['cr'], replicas: 2, readyReplicas: 2 }),
@@ -185,11 +186,11 @@ describe('treeToGraph', () => {
     expect(edges.every((e) => e.reason === 'dependency')).toBe(true)
   })
   it('never draws an edge to a resource outside the tree', () => {
-    const orphan: DeployTree = { nodes: [node({ ref: 'p1', ownerRefs: ['missing-rs'] })], edges: [] }
+    const orphan: AppTree = { nodes: [node({ ref: 'p1', ownerRefs: ['missing-rs'] })], edges: [] }
     expect(treeToGraph(orphan).edges).toHaveLength(0)
   })
   it('de-duplicates edges from ownerRefs and explicit edges', () => {
-    const dup: DeployTree = {
+    const dup: AppTree = {
       nodes: [node({ ref: 'a', kind: 'Service' }), node({ ref: 'b', ownerRefs: ['a'] })],
       edges: [{ from: 'a', to: 'b' }],
     }
@@ -204,7 +205,7 @@ describe('treeToGraph', () => {
 
 describe('treeHealth', () => {
   it('tallies resource health across the tree', () => {
-    const t: DeployTree = {
+    const t: AppTree = {
       nodes: [
         node({ ref: 'a', phase: 'Running', replicas: 2, readyReplicas: 2 }), // Healthy
         node({ ref: 'b', phase: 'Running', replicas: 2, readyReplicas: 0 }), // Degraded
@@ -227,11 +228,11 @@ describe('resourceHealth', () => {
 
 describe('rollbackTargets', () => {
   it('excludes the current tag and de-duplicates, newest first', () => {
-    const d = deploy({ image: { repository: 'r', tag: 'v3' }, revisions: ['v2', 'v1', 'v2', 'v3'] })
-    expect(rollbackTargets(d)).toEqual(['v2', 'v1'])
+    const a = app({ image: { repository: 'r', tag: 'v3' }, revisions: ['v2', 'v1', 'v2', 'v3'] })
+    expect(rollbackTargets(a)).toEqual(['v2', 'v1'])
   })
   it('empty when no prior revisions exist', () => {
-    expect(rollbackTargets(deploy({ revisions: [] }))).toEqual([])
+    expect(rollbackTargets(app({ revisions: [] }))).toEqual([])
   })
 })
 
@@ -242,8 +243,28 @@ describe('palette', () => {
     expect(syncColor('Synced')).toBe('#3fb950')
     expect(syncColor('OutOfSync')).toBe('#d29922')
   })
-  it('only a progressing deploy pulses', () => {
+  it('only a progressing app pulses', () => {
     expect(healthPulses('Progressing')).toBe(true)
     expect(healthPulses('Healthy')).toBe(false)
+  })
+})
+
+// The typed contract fixture (the shape cloud's /v1/gitops serves) folds cleanly.
+describe('contract fixture', () => {
+  it('summarizes the sample applications (iam is mid-rollout)', () => {
+    const s = summarize(FIXTURE_APPS)
+    expect(s.total).toBe(4)
+    // iam is 1/2 ready → Progressing + its live tag lags the desired → OutOfSync.
+    const iam = FIXTURE_APPS.find((a) => a.name === 'iam')!
+    expect(resolveApp(iam)).toEqual({ health: 'Progressing', sync: 'Syncing' })
+    expect(s.progressing).toBe(1)
+    expect(s.healthy).toBe(3)
+  })
+  it('folds the sample tree into a connected owner→child graph', () => {
+    const { nodes, edges } = treeToGraph(FIXTURE_TREE)
+    expect(nodes.length).toBe(FIXTURE_TREE.nodes.length)
+    // Every owned resource (all but the root CR) has an incoming owner edge.
+    const withOwner = new Set(edges.map((e) => e.target))
+    for (const n of FIXTURE_TREE.nodes) if (n.ownerRefs.length) expect(withOwner.has(n.ref)).toBe(true)
   })
 })
