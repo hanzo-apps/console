@@ -43,6 +43,7 @@ export const ALWAYS_ON_PRODUCTS: readonly string[] = [
   'api-keys', // credentials to call the API
   'platform', // the project HUB — create/deploy/ship a project (first-class, every org)
   'tracker', // native @hanzo/gui issue tracker — first-class work surface, every org (peer of the HUB; replaces the retired Huly/hanzo.team)
+  'guide', // the Business AI launch checklist — foundational onboarding, every org (like 'platform')
 ]
 
 /** True when a product is always-on (implicit, never stored in `enabled`). */
