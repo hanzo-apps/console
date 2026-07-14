@@ -2,14 +2,14 @@
 
 /**
  * AI Metrics — the org's AI usage: requests, tokens, spend, per-model breakdown,
- * and recent activity. Renders the ONE canonical `<UsagePanel>` (`@hanzo/usage/react`)
+ * and recent activity. Renders the ONE canonical `<UsagePanel>` (`@hanzo/usage/panel`)
  * over the server-owned `GET /v1/get-cloud-usages` overview — no bespoke re-derivation,
  * no second copy of the shape. This module only owns the fetch + honest async state;
  * the panel owns all the usage rendering (header, range tabs, cards, chart, breakdown,
  * activity), so this surface looks identical to every other Hanzo usage surface.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { UsagePanel } from '@hanzo/usage/react'
+import { UsagePanel } from '@hanzo/usage/panel'
 import type { CloudUsageOverview, UsageRange } from '@hanzo/usage'
 
 import { classifyBackend } from '~/components/ui/BackendState'
