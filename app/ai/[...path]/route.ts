@@ -72,13 +72,22 @@ const AI_CONNECTION_PATH = /^v1\/ai\/connections\/[A-Za-z0-9_-]+$/
  */
 const AI_CONNECTION_AUTHORIZE_PATH = /^v1\/ai\/connections\/[A-Za-z0-9_-]+\/authorize$/
 
+/**
+ * Import a connected account's usage: `/v1/ai/connections/<provider>/usage`. GET only —
+ * the org's key is unsealed SERVER-SIDE and the provider's usage/cost API is called there;
+ * the browser only reads the normalized ProviderUsage. Anchored to the connections head
+ * with a conservative provider charset — a narrow allow-list, not a general tunnel.
+ */
+const AI_CONNECTION_USAGE_PATH = /^v1\/ai\/connections\/[A-Za-z0-9_-]+\/usage$/
+
 /** Whether a resolved `/v1/<...>` path is reachable through this proxy. */
 function isAllowedAiPath(p: string): boolean {
   return (
     ALLOWED.has(p) ||
     VIDEO_JOB_PATH.test(p) ||
     AI_CONNECTION_PATH.test(p) ||
-    AI_CONNECTION_AUTHORIZE_PATH.test(p)
+    AI_CONNECTION_AUTHORIZE_PATH.test(p) ||
+    AI_CONNECTION_USAGE_PATH.test(p)
   )
 }
 
