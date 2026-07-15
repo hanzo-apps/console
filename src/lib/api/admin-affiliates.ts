@@ -126,6 +126,11 @@ export const AdminAffiliatesApi = {
     const data = await originPost<unknown>(`admin/affiliates/${encodeURIComponent(id)}/suspend`, {})
     return normalizeAdminAffiliate(asRecord(data).affiliate)
   },
+  /** POST /v1/admin/affiliates/:id/rate — set the DIRECT (L1) commission rate (capped at 9300 bps). */
+  setRate: async (id: string, rateBps: number): Promise<AdminAffiliate> => {
+    const data = await originPost<unknown>(`admin/affiliates/${encodeURIComponent(id)}/rate`, { rateBps })
+    return normalizeAdminAffiliate(asRecord(data).affiliate)
+  },
   /** POST /v1/admin/affiliates/:id/payout — record a payout (credits → grant; cash → record-only). */
   payout: async (id: string, input: PayoutInput): Promise<AdminAffiliate> => {
     const data = await originPost<unknown>(`admin/affiliates/${encodeURIComponent(id)}/payout`, {
