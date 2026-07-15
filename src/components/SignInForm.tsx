@@ -21,10 +21,10 @@
  * cross-site fetch can't carry the MFA challenge) — we hand off with a redirect
  * rather than fake an inline step.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Anchor, Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Github, Gitlab, QrCode, Wallet } from '@hanzogui/lucide-icons-2'
+import { Apple, Github, Gitlab, QrCode, Wallet } from '@hanzogui/lucide-icons-2'
 
 import { branding } from '~/config'
 import { HanzoMark } from '~/components/ui/Loader'
@@ -33,10 +33,32 @@ import { QrSignIn } from '~/components/QrSignIn'
 import { Turnstile, turnstileConfigured } from '~/components/ui/Turnstile'
 import { useSession } from '~/lib/auth/session'
 import { getSigninUrl } from '~/lib/auth/iam'
+import { FALLBACK_PROVIDERS, fetchSignInProviders, type SignInProvider } from '~/lib/auth/providers'
 import { loginState, loginWithPassword } from '~/lib/auth/iam-login'
 import { signUp } from '~/lib/auth/signup'
 
 type Mode = 'signin' | 'signup'
+
+/** Button presentation per IAM provider TYPE — an unknown type renders nothing
+ * (honest: never a button the flow can't finish). Web3 reads "Connect Wallet"
+ * to match the multi-chain SIWx hand-off. */
+function socialSpec(type: string): { label: string; icon: React.ReactElement } | null {
+  switch (type) {
+    case 'GitHub':
+      return { label: 'Continue with GitHub', icon: <Github size={18} /> }
+    case 'Google':
+      return { label: 'Continue with Google', icon: <GoogleMark /> }
+    case 'GitLab':
+      return { label: 'Continue with GitLab', icon: <Gitlab size={18} /> }
+    case 'Apple':
+      return { label: 'Continue with Apple', icon: <Apple size={18} /> }
+    case 'Web3Onboard':
+    case 'Web3':
+      return { label: 'Connect Wallet', icon: <Wallet size={18} /> }
+    default:
+      return null
+  }
+}
 
 /** A `?ref=<code>` on the landing URL — passed to signup to credit the referrer's
  *  waitlist position. Read at submit so a link opened straight on /signin still works. */
@@ -88,6 +110,17 @@ function CardShell({ subtitle, children }: { subtitle: string; children: React.R
 
 export function SignInForm() {
   const { completeSignIn, signInWith, establishConsoleSession } = useSession()
+  // Live sign-in providers from IAM (the app's real list); fallback until it lands.
+  const [providers, setProviders] = useState<SignInProvider[] | null>(null)
+  useEffect(() => {
+    let on = true
+    void fetchSignInProviders().then((p) => {
+      if (on && p) setProviders(p)
+    })
+    return () => {
+      on = false
+    }
+  }, [])
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
@@ -212,21 +245,21 @@ export function SignInForm() {
   return (
     <CardShell subtitle={signup ? `Create your ${branding.name} account.` : 'Sign in to manage your cloud.'}>
       <YStack gap="$2.5">
-        <Button size="$4" icon={<Github size={18} />} onPress={() => signInWith('provider-github')}>
-          Continue with GitHub
-        </Button>
-        <Button size="$4" icon={<GoogleMark />} onPress={() => signInWith('provider-google')}>
-          Continue with Google
-        </Button>
-        <Button size="$4" icon={<Gitlab size={18} />} onPress={() => signInWith('provider-gitlab')}>
-          Continue with GitLab
-        </Button>
-        {/* Wallet sign-in hands off to the hanzo.id login where the native
-            multi-chain SIWx flow runs (connecting a wallet needs a user gesture);
-            it returns an authorization code to our /auth/callback like the others. */}
-        <Button size="$4" icon={<Wallet size={18} />} onPress={() => signInWith('provider-web3')}>
-          Connect Wallet
-        </Button>
+        {/* Social buttons render from the app's LIVE IAM provider list (one
+            source of truth — a hardcoded button IAM can't honor strands the
+            user on the hanzo.id login page). Wallet sign-in hands off to the
+            hanzo.id login where the native multi-chain SIWx flow runs
+            (connecting a wallet needs a user gesture); it returns an
+            authorization code to our /auth/callback like the others. */}
+        {(providers ?? FALLBACK_PROVIDERS).map((p) => {
+          const spec = socialSpec(p.type)
+          if (!spec) return null
+          return (
+            <Button key={p.name} size="$4" icon={spec.icon} onPress={() => signInWith(p.name)}>
+              {spec.label}
+            </Button>
+          )
+        })}
         {!signup ? (
           <Button size="$4" icon={<QrCode size={18} />} onPress={() => setQr(true)}>
             Sign in with QR code
