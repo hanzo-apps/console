@@ -33,7 +33,7 @@ import { QrSignIn } from '~/components/QrSignIn'
 import { Turnstile, turnstileConfigured } from '~/components/ui/Turnstile'
 import { useSession } from '~/lib/auth/session'
 import { getSigninUrl } from '~/lib/auth/iam'
-import { FALLBACK_PROVIDERS, fetchSignInProviders, type SignInProvider } from '~/lib/auth/providers'
+import { fetchSignInProviders, type SignInProvider } from '~/lib/auth/providers'
 import { loginState, loginWithPassword } from '~/lib/auth/iam-login'
 import { signUp } from '~/lib/auth/signup'
 
@@ -110,12 +110,13 @@ function CardShell({ subtitle, children }: { subtitle: string; children: React.R
 
 export function SignInForm() {
   const { completeSignIn, signInWith, establishConsoleSession } = useSession()
-  // Live sign-in providers from IAM (the app's real list); fallback until it lands.
-  const [providers, setProviders] = useState<SignInProvider[] | null>(null)
+  // Live sign-in providers from IAM — the app's real list is the ONE source of
+  // truth (no hardcoded set that could drift). Empty until it lands / if it fails.
+  const [providers, setProviders] = useState<SignInProvider[]>([])
   useEffect(() => {
     let on = true
     void fetchSignInProviders().then((p) => {
-      if (on && p) setProviders(p)
+      if (on) setProviders(p)
     })
     return () => {
       on = false
@@ -251,7 +252,7 @@ export function SignInForm() {
             hanzo.id login where the native multi-chain SIWx flow runs
             (connecting a wallet needs a user gesture); it returns an
             authorization code to our /auth/callback like the others. */}
-        {(providers ?? FALLBACK_PROVIDERS).map((p) => {
+        {providers.map((p) => {
           const spec = socialSpec(p.type)
           if (!spec) return null
           return (
