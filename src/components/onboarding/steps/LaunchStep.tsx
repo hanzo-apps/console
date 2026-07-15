@@ -7,6 +7,8 @@
  */
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { MessageSquare, Sparkles, KeyRound, Rocket, PartyPopper, ArrowLeft } from '@hanzogui/lucide-icons-2'
+import { useAnalytics } from '@hanzo/capture/react'
+import { EVENTS } from '@hanzo/capture'
 
 import { config } from '~/config'
 import { StepShell, ChoiceCard } from '~/components/onboarding/parts'
@@ -21,6 +23,7 @@ const TILES: { icon: typeof MessageSquare; title: string; description: string; t
 ]
 
 export function LaunchStep({ finish, back, isFirst }: StepProps) {
+  const analytics = useAnalytics()
   return (
     <StepShell title="You're ready" subtitle={`Welcome to ${config.brandName}. Pick a first move — you can find everything else in the sidebar.`}>
       <Card p="$4" gap="$2" borderWidth={1} borderColor="$green7" bg="$green2">
@@ -44,7 +47,11 @@ export function LaunchStep({ finish, back, isFirst }: StepProps) {
               icon={<Icon size={20} />}
               title={t.title}
               description={t.description}
-              onPress={() => finish(t.to)}
+              onPress={() => {
+                // The new user's first meaningful move out of onboarding into a product.
+                analytics.capture(EVENTS.FIRST_ACTION, { to: t.to })
+                finish(t.to)
+              }}
             />
           )
         })}

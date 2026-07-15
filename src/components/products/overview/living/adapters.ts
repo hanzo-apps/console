@@ -16,7 +16,7 @@
  *   - `healthFromApps`   ← `PlatformApp[]` (operator inventory → the health tile),
  *                          composable INTO any of the above.
  */
-import type { CloudUsageOverview } from '~/lib/api/usage'
+import type { CloudUsageOverview } from '@hanzo/usage'
 import type { AdminOverview } from '~/lib/api/admin-overview'
 import type { Finance } from '~/lib/api/finance'
 import type { PlatformApp } from '~/lib/api/platform'
