@@ -2,10 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import {
   IntegrationsApi,
+  GitHubApi,
   normalizeConnection,
   normalizeProvider,
   normalizeProviders,
   normalizeConnectResult,
+  normalizeGitHubRepo,
+  normalizeGitHubRepos,
 } from './integrations'
 
 /**
@@ -127,5 +130,73 @@ describe('IntegrationsApi — hits the same-origin /v1/integrations contract (re
   it('disconnects with POST', async () => {
     await IntegrationsApi.disconnect('slack')
     expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/integrations/slack/disconnect`, method: 'POST' })
+  })
+})
+
+describe('GitHub repo normalizers — defensive, snake_case tolerant', () => {
+  it('normalizes a full repo (camelCase)', () => {
+    const r = normalizeGitHubRepo({
+      name: 'widgets', fullName: 'acme/widgets', private: true, defaultBranch: 'main',
+      imported: true, syncStatus: 'synced', lastSyncedAt: '2026-07-01T00:00:00Z', htmlUrl: 'https://github.com/acme/widgets',
+    })
+    expect(r).toEqual({
+      name: 'widgets', fullName: 'acme/widgets', private: true, defaultBranch: 'main',
+      imported: true, syncStatus: 'synced', lastSyncedAt: '2026-07-01T00:00:00Z', htmlUrl: 'https://github.com/acme/widgets',
+    })
+  })
+
+  it('reads snake_case + clamps an unknown syncStatus to "" and defaults the rest', () => {
+    const r = normalizeGitHubRepo({ name: 'x', full_name: 'o/x', default_branch: 'trunk', sync_status: 'weird' })
+    expect(r.fullName).toBe('o/x')
+    expect(r.defaultBranch).toBe('trunk')
+    expect(r.syncStatus).toBe('') // unknown value is not trusted
+    expect(r.imported).toBe(false)
+    expect(r.private).toBe(false)
+    // conflict is preserved.
+    expect(normalizeGitHubRepo({ name: 'y', imported: true, syncStatus: 'conflict' }).syncStatus).toBe('conflict')
+  })
+
+  it('reads the list from any envelope key and drops no-name rows', () => {
+    expect(normalizeGitHubRepos({ repos: [{ name: 'a' }, { name: '' }, 'junk'] }).map((r) => r.name)).toEqual(['a'])
+    expect(normalizeGitHubRepos({ data: [{ name: 'b' }] }).length).toBe(1)
+    expect(normalizeGitHubRepos([{ name: 'c' }]).length).toBe(1)
+    expect(normalizeGitHubRepos('garbage')).toEqual([])
+  })
+})
+
+describe('GitHubApi — hits the same-origin /v1/integrations/github contract', () => {
+  const fetched: { url: string; method: string; body?: unknown }[] = []
+  beforeEach(() => {
+    fetched.length = 0
+    ;(globalThis as { window?: unknown }).window = { location: { origin: ORIGIN, hostname: 'console.hanzo.ai' } }
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+      fetched.push({ url, method: init?.method ?? 'GET', body: init?.body ? JSON.parse(String(init.body)) : undefined })
+      const body = url.endsWith('/import')
+        ? { queued: 1, repos: ['widgets'] }
+        : { repos: [{ name: 'widgets', full_name: 'acme/widgets', imported: true, syncStatus: 'synced' }] }
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }))
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (globalThis as { window?: unknown }).window
+  })
+
+  it('lists repos via GET the same-origin github/repos path', async () => {
+    const out = await GitHubApi.listRepos()
+    expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/integrations/github/repos`, method: 'GET' })
+    expect(out.map((r) => r.name)).toEqual(['widgets'])
+    expect(out[0].imported).toBe(true)
+  })
+
+  it('imports selected repos via POST with the {repos} body', async () => {
+    const res = await GitHubApi.importRepos({ repos: ['widgets'] })
+    expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/integrations/github/repos/import`, method: 'POST', body: { repos: ['widgets'] } })
+    expect(res).toEqual({ queued: 1, repos: ['widgets'] })
+  })
+
+  it('imports all via POST with the {all:true} body', async () => {
+    await GitHubApi.importRepos({ all: true })
+    expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/integrations/github/repos/import`, method: 'POST', body: { all: true } })
   })
 })
