@@ -8,10 +8,12 @@ import { useMemo, type ReactNode } from 'react'
 import { GuiProvider } from '@hanzo/gui'
 import { NextThemeProvider, useRootTheme } from '@hanzogui/next-theme'
 import { registerDefaultFields, registerField } from '@hanzo/data'
+import { AnalyticsProvider } from '@hanzo/capture/react'
 
 import config from '../../gui.config'
 import { SessionProvider } from '~/lib/auth/session'
 import { EntitlementsProvider } from '~/lib/entitlements-context'
+import { AnalyticsBridge } from './Analytics'
 import { OrgAccentProvider } from './OrgAccentProvider'
 import { RichTextDisplay, RichTextInput } from './fields/RichTextField'
 
@@ -57,7 +59,16 @@ export function Provider({ children }: { children: ReactNode }) {
         <OrgAccentProvider />
         {/* Entitlements live inside the session (they read the signed-in account +
             active org scope) so the sidebar/launcher/palette gate from ONE fetch. */}
-        <EntitlementsProvider>{children}</EntitlementsProvider>
+        <EntitlementsProvider>
+          {/* Analytics lives INSIDE the session so `identify` binds the signed-in
+              actor; cookie/same-origin mode (the tenant is stamped server-side), so
+              only the product is configured. `AnalyticsBridge` wires pageviews +
+              identity. */}
+          <AnalyticsProvider config={{ product: 'console' }}>
+            <AnalyticsBridge />
+            {children}
+          </AnalyticsProvider>
+        </EntitlementsProvider>
       </SessionProvider>
     ),
     [children],
