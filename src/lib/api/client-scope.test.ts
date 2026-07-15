@@ -59,6 +59,30 @@ describe('project scope → X-Project-Id on every cloud call', () => {
     expect('X-Project-Id' in headersOf(fetchMock)).toBe(false)
   })
 
+  it('project selected: the INTENT X-Act-As-Project rides too (the gateway validates + mints from it)', async () => {
+    // The switcher must REQUEST a project, not assert one: a validating boundary
+    // checks the intent against the caller's scope set and mints X-Project-Id.
+    // Without this the gateway's project switch has nothing to validate — inert,
+    // exactly like the org switch is today.
+    setScope({ project: 'atlas' })
+    await get('agents')
+    expect(headersOf(fetchMock)['X-Act-As-Project']).toBe('atlas')
+  })
+
+  it('org-level: NO intent either (absent ⟺ default project — one seam, both forms)', async () => {
+    await get('agents')
+    expect('X-Act-As-Project' in headersOf(fetchMock)).toBe(false)
+  })
+
+  it('the intent and the assertion always agree — ONE fact, ONE seam', async () => {
+    // They are two wire forms of the SAME selection. If they could disagree, a
+    // boundary honoring one and a backend reading the other would scope differently.
+    setScope({ project: 'atlas' })
+    await get('agents')
+    const h = headersOf(fetchMock)
+    expect(h['X-Act-As-Project']).toBe(h['X-Project-Id'])
+  })
+
   it('the active environment rides along as X-Environment alongside the project', async () => {
     setScope({ project: 'atlas', environment: 'testnet' })
     await get('agents')
