@@ -221,11 +221,12 @@ export async function forwardBilling(req: NextRequest, path: string[]): Promise<
     signal: req.signal,
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    // Scope the WRITE body to the caller's OWN subject too (not just the query). Only
-    // set a body when the request actually carries one — a bodyless DELETE/POST sends
-    // none (never an empty-string body).
+    // Scope the WRITE body to the caller's OWN subject AND (for a binding write) its
+    // OWN holder — the browser names a holder KIND, the server says which holder that
+    // is. Only set a body when the request actually carries one — a bodyless DELETE/
+    // POST sends none (never an empty-string body).
     const raw = await req.text()
-    if (raw) init.body = scopedBillingBody(raw, subject)
+    if (raw) init.body = scopedBillingBody(raw, subject, org)
   }
 
   try {
