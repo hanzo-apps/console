@@ -26,6 +26,11 @@ export const CLOUD_HEADS: readonly string[] = [
   'functions',
   'prompts',
   'agents',
+  // Login manager (cloud clients/link): /v1/links[/…] — the org+user-scoped registry
+  // of which AI provider accounts are signed in on which machines + their usage. The
+  // handler resolves org from the Bearer owner + the user from the validated subject
+  // and 403s a cookie-only/forged call, so it routes through /v1 like agents/prompts.
+  'links',
   // Automations (cloud clients/automations): /v1/automations/{pieces,flows,runs,mcp}[/…].
   // The ONE native Connectors + Automations engine — flows/versions/runs over the
   // go:embed'd 706-connector catalogue, run durably on the shared hanzoai/tasks engine.
