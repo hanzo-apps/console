@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Cable, Plug, RefreshCw } from '@hanzogui/lucide-icons-2'
+import { Cable, Plug, RefreshCw, GitBranch } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, IntegrationsApi, type IntegrationProvider as Provider } from '~/lib/api'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -33,6 +33,7 @@ import { StatusTag } from '~/components/ui/StatusTag'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { BackendStateCard, classifyRead, type BackendState } from '~/components/ui/BackendState'
 import { useToast } from '~/components/ui/Toast'
+import { GitHubReposView } from '~/components/products/integrations/GitHubReposView'
 
 /** Format an RFC3339 (or any Date-parseable) timestamp; degrade to the raw value. */
 function fmtWhen(v: string): string {
@@ -47,11 +48,13 @@ function ProviderCard({
   busy,
   onConnect,
   onDisconnect,
+  onManageRepos,
 }: {
   p: Provider
   busy: boolean
   onConnect: (p: Provider) => void
   onDisconnect: (p: Provider) => void
+  onManageRepos?: (p: Provider) => void
 }) {
   return (
     <Card width={300} p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" bg="$color1">
@@ -91,7 +94,12 @@ function ProviderCard({
         </YStack>
       ) : null}
 
-      <XStack items="center" justify="flex-end" gap="$2" mt="$1">
+      <XStack items="center" justify="flex-end" gap="$2" mt="$1" flexWrap="wrap">
+        {p.connected && onManageRepos ? (
+          <Button size="$3" onPress={() => onManageRepos(p)} icon={<GitBranch size={15} />}>
+            Repositories
+          </Button>
+        ) : null}
         {p.connected ? (
           <Button size="$3" onPress={() => onDisconnect(p)} disabled={busy} icon={busy ? undefined : <Plug size={15} />}>
             {busy ? <Spinner size="small" color="$color11" /> : 'Disconnect'}
@@ -121,6 +129,8 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
   const [error, setError] = useState<BackendState | null>(null)
   /** The provider id currently mid connect/disconnect (per-card busy spinner). */
   const [busyId, setBusyId] = useState('')
+  /** Non-empty when the GitHub repositories sub-view is open (the provider id). */
+  const [reposFor, setReposFor] = useState('')
 
   const load = useCallback(() => {
     setLoading(true)
@@ -209,6 +219,11 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
     />
   )
 
+  // ── GitHub repositories sub-view (opened from the connected GitHub card) ─────
+  if (reposFor === 'github') {
+    return <GitHubReposView onBack={() => setReposFor('')} />
+  }
+
   // ── Initial loading ─────────────────────────────────────────────────────────
   if (loading && providers.length === 0 && !error) {
     return (
@@ -256,7 +271,14 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
       {header}
       <XStack flexWrap="wrap" gap="$3">
         {visible.map((p) => (
-          <ProviderCard key={p.id} p={p} busy={busyId === p.id} onConnect={onConnect} onDisconnect={onDisconnect} />
+          <ProviderCard
+            key={p.id}
+            p={p}
+            busy={busyId === p.id}
+            onConnect={onConnect}
+            onDisconnect={onDisconnect}
+            onManageRepos={p.id === 'github' ? (pr) => setReposFor(pr.id) : undefined}
+          />
         ))}
       </XStack>
     </YStack>
