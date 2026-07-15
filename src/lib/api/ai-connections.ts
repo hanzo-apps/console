@@ -14,6 +14,10 @@
  * the key or the `kms://` ref.
  */
 import { ApiError, restGet, restPost } from './client'
+import { IS_EMBED } from '~/lib/embed'
+import { normalizeProviderUsage, type ProviderUsage } from '@hanzo/usage'
+
+export type { ProviderUsage } from '@hanzo/usage'
 
 /** The providers the AI Login Manager can link (backend allow-list). */
 export type AiConnectionProvider = 'openai' | 'anthropic' | 'google'
@@ -34,8 +38,22 @@ export const AI_CONNECTION_PROVIDERS: readonly { id: AiConnectionProvider; label
   { id: 'google', label: 'Google', vendor: 'Gemini', keyHint: 'AIza…' },
 ]
 
-/** The same-origin `/ai` proxy address for the connections head. */
-const BASE = (): string => `${typeof window !== 'undefined' ? window.location.origin : ''}/ai/v1/ai/connections`
+/**
+ * The connections head address, host-aware (mirrors the billing/commerce IS_EMBED split
+ * in `client.ts`):
+ *  - EMBED (console.hanzo.ai, the go:embed console): the Next `/ai` BFF proxy is pruned,
+ *    and the cloud binary serves the connections API natively at `<origin>/v1/ai/connections`
+ *    under the first-party session cookie (SanitizeIdentity). So the embed addresses cloud's
+ *    native `/v1` directly.
+ *  - Standalone (console2/admin): a bare `/v1/ai/*` reaches the gateway with no bearer (403),
+ *    so it addresses the narrow `/ai` user-bearer proxy (`<origin>/ai/v1/ai/connections`),
+ *    which mints a short-lived token and forwards (org from the token owner).
+ * ONE connect path either way — no key in the browser, org resolved server-side.
+ */
+const BASE = (): string => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  return IS_EMBED ? `${origin}/v1/ai/connections` : `${origin}/ai/v1/ai/connections`
+}
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 
@@ -96,4 +114,39 @@ export const AiConnectionsApi = {
    * rides the proxy's POST handler (no separate DELETE verb needed).
    */
   disconnect: (provider: AiConnectionProvider): Promise<unknown> => restPost(`${BASE()}/${provider}`),
+
+  /**
+   * Import a connected provider's usage (spend/tokens/requests/per-model/day-series).
+   * The org's key is UNSEALED server-side (`GET /v1/ai/connections/:provider/usage`) and
+   * NEVER touches the browser; this reads the normalized `ProviderUsage` value. Honest by
+   * construction: a not-connected / scope-denied / empty provider returns a 200 with
+   * connected/available flags + a human note — never a fabricated figure. Envelope-tolerant
+   * (unwraps `{status,msg,data}` or a bare value) so it works over both transports.
+   */
+  usage: async (provider: string, from?: string, to?: string): Promise<ProviderUsage> => {
+    const q = new URLSearchParams()
+    if (from) q.set('from', from)
+    if (to) q.set('to', to)
+    const query = q.toString()
+    const raw = await restGet<Record<string, unknown>>(`${BASE()}/${encodeURIComponent(provider)}/usage${query ? `?${query}` : ''}`)
+    const payload = raw && typeof raw === 'object' && 'data' in raw ? (raw as { data: unknown }).data : raw
+    return normalizeProviderUsage(payload, provider)
+  },
+
+  /**
+   * List the org's CONNECTED providers and import each one's usage in parallel — the data
+   * the unified usage board renders beside native Hanzo usage. Per-provider isolation: one
+   * provider's import failing yields an honest failed card for THAT provider, never blanking
+   * the others. Returns `[]` when nothing is connected (the board shows its connect prompt).
+   */
+  listWithUsage: async (from?: string, to?: string): Promise<ProviderUsage[]> => {
+    const connected = (await AiConnectionsApi.list()).filter((c) => c.connected)
+    if (connected.length === 0) return []
+    const settled = await Promise.allSettled(connected.map((c) => AiConnectionsApi.usage(c.provider, from, to)))
+    return settled.map((r, i) =>
+      r.status === 'fulfilled'
+        ? r.value
+        : normalizeProviderUsage({ provider: connected[i]!.provider, connected: true, available: false, note: 'Usage import failed — retry.' }, connected[i]!.provider),
+    )
+  },
 }

@@ -128,6 +128,7 @@ import { AIAccountsModule } from '~/components/products/AIAccountsModule'
 import { FinanceModule } from '~/components/products/FinanceModule'
 import { UsageModule } from '~/components/products/UsageModule'
 import { AiUsageModule } from '~/components/products/AiUsageModule'
+import { ConnectionsModule } from '~/components/products/ConnectionsModule'
 import { WalletModule } from '~/components/products/WalletModule'
 import { IamModule } from '~/components/products/AdminModule'
 import { EntitlementsAdminModule } from '~/components/products/EntitlementsAdminModule'
@@ -909,6 +910,24 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: ProvidersBillingModule }],
+  },
+  {
+    // Customer surface — each org connects its OWN OpenAI / Anthropic / Google account
+    // (paste an API key, or OAuth sign-in) so Hanzo serves those models on the org's
+    // account AND imports the org's third-party spend into the unified Usage board. Thin
+    // UI over the EXISTING KMS-backed AI Login Manager (`/v1/ai/connections`, ai#79/#80) —
+    // keys are sealed to KMS server-side, never in the browser. Distinct from the
+    // admin-only `providers` board (shared-gateway upstream config): this is per-org BYO.
+    id: 'connections',
+    label: 'Connections',
+    icon: KeyRound,
+    description: 'Connect your OpenAI, Anthropic, or Google account by API key or sign-in — sealed to Hanzo KMS.',
+    gcp: 'Connected accounts',
+    category: 'AI',
+    status: 'enabled',
+    repo: 'hanzoai/ai',
+    kind: 'module',
+    routes: [{ path: '', component: ConnectionsModule }],
   },
   {
     id: 'agents',
