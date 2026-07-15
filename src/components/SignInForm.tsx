@@ -24,12 +24,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Anchor, Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Apple, Github, Gitlab, QrCode, Wallet } from '@hanzogui/lucide-icons-2'
+import { Apple, Github, Gitlab, Wallet } from '@hanzogui/lucide-icons-2'
 
 import { branding } from '~/config'
 import { HanzoMark } from '~/components/ui/Loader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { QrSignIn } from '~/components/QrSignIn'
 import { Turnstile, turnstileConfigured } from '~/components/ui/Turnstile'
 import { useSession } from '~/lib/auth/session'
 import { getSigninUrl } from '~/lib/auth/iam'
@@ -128,9 +127,6 @@ export function SignInForm() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mfa, setMfa] = useState(false)
-  // Scan-to-sign-in: open console on ANY machine, scan the QR with your phone, approve
-  // there, and this tab signs in (RFC 8628 device flow) — no password typed here.
-  const [qr, setQr] = useState(false)
   // Turnstile token for the signup path (only required when Turnstile is provisioned).
   const [captcha, setCaptcha] = useState('')
 
@@ -231,15 +227,6 @@ export function SignInForm() {
     )
   }
 
-  // Scan-to-sign-in view: the QR + short code, polling for approval on the phone.
-  if (qr) {
-    return (
-      <CardShell subtitle="Scan the code with your phone to sign in.">
-        <QrSignIn onBack={() => setQr(false)} />
-      </CardShell>
-    )
-  }
-
   const signup = mode === 'signup'
 
   return (
@@ -260,12 +247,6 @@ export function SignInForm() {
             </Button>
           )
         })}
-        {!signup ? (
-          <Button size="$4" icon={<QrCode size={18} />} onPress={() => setQr(true)}>
-            Sign in with QR code
-          </Button>
-        ) : null}
-
         <XStack items="center" gap="$3" my="$1">
           <YStack flex={1} height={1} bg="$borderColor" />
           <Text fontSize="$2" color="$color10">
