@@ -48,7 +48,7 @@ describe('AdminAffiliatesApi — hits the same-origin admin aggregate paths', ()
       const path = String(url)
       const data = path.endsWith('/sweep')
         ? { swept: 3, accrued: 1 }
-        : /\/(approve|suspend|payout)$/.test(path)
+        : /\/(approve|suspend|payout|rate)$/.test(path)
           ? { affiliate: { id: 'aff_1', org: 'orgA', code: 'acme', status: 'approved', rateBps: 2000 } }
           : { affiliates: [], summary: {} }
       return Promise.resolve(
@@ -97,5 +97,13 @@ describe('AdminAffiliatesApi — hits the same-origin admin aggregate paths', ()
     expect(fetched[0].url).toBe(`${ORIGIN}/v1/admin/affiliates/sweep`)
     expect(fetched[0].method).toBe('POST')
     expect(r).toEqual({ swept: 3, accrued: 1 })
+  })
+
+  it('sets the L1 rate (POST, rateBps)', async () => {
+    const a = await AdminAffiliatesApi.setRate('aff_1', 2500)
+    expect(fetched[0].url).toBe(`${ORIGIN}/v1/admin/affiliates/aff_1/rate`)
+    expect(fetched[0].method).toBe('POST')
+    expect(fetched[0].body).toContain('2500')
+    expect(a.id).toBe('aff_1')
   })
 })
