@@ -1,6 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
-import { AffiliatesApi, normalizeOverview, normalizePayout, normalizeApply, normalizeAttribute } from './affiliates'
+import {
+  AffiliatesApi,
+  normalizeOverview,
+  normalizePayout,
+  normalizeApply,
+  normalizeAttribute,
+  normalizeEarnings,
+  normalizeLinks,
+  normalizeLeaderboard,
+} from './affiliates'
 
 /**
  * Affiliates API + pure normalizers. The client calls the cloud `/v1/affiliates`
@@ -134,5 +143,109 @@ describe('AffiliatesApi — hits the /v1/affiliates bearer-proxy path', () => {
     expect(fetched[0].method).toBe('POST')
     expect(fetched[0].body).toContain('acme')
     expect(r.created).toBe(true)
+  })
+})
+
+describe('Affiliates dashboard normalizers — earnings, links, leaderboard', () => {
+  it('normalizes earnings (period + per-referral share), filtering junk rows', () => {
+    const e = normalizeEarnings({
+      isAffiliate: true,
+      marginBps: 4000,
+      accruedCents: 800,
+      pendingCents: 800,
+      paidCents: 0,
+      byPeriod: [
+        { period: '2026-07', marginCents: 4000, commissionCents: 800 },
+        { period: '', marginCents: 1, commissionCents: 1 }, // no period → filtered
+      ],
+      byReferredOrg: [{ referredOrg: 'orgX', commissionCents: 800 }, { commissionCents: 5 }],
+    })
+    expect(e.isAffiliate).toBe(true)
+    expect(e.marginBps).toBe(4000)
+    expect(e.byPeriod).toEqual([{ period: '2026-07', marginCents: 4000, commissionCents: 800 }])
+    expect(e.byReferredOrg).toEqual([{ referredOrg: 'orgX', commissionCents: 800 }])
+  })
+
+  it('normalizes links with derived stats (maxLinks fallback)', () => {
+    const v = normalizeLinks({
+      isAffiliate: true,
+      status: 'approved',
+      links: [{ code: 'acme', label: 'primary', url: 'https://hanzo.ai/?aff=acme', clicks: 3, signups: 2, conversions: 1, createdAt: 5 }, { label: 'no-code' }],
+    })
+    expect(v.maxLinks).toBe(50) // fallback when absent
+    expect(v.links).toHaveLength(1) // the code-less row is dropped
+    expect(v.links[0]).toMatchObject({ code: 'acme', clicks: 3, signups: 2, conversions: 1 })
+  })
+
+  it('normalizes the leaderboard (you may be null; junk rows dropped)', () => {
+    const lb = normalizeLeaderboard({
+      leaders: [
+        { rank: 1, handle: 'alice', accruedCents: 8000, referredCount: 2, isYou: true },
+        { rank: 0, handle: 'bad' }, // rank 0 → dropped
+      ],
+      total: 3,
+      you: { rank: 1, handle: 'alice', accruedCents: 8000, referredCount: 2, isYou: true },
+    })
+    expect(lb.leaders).toHaveLength(1)
+    expect(lb.leaders[0]).toMatchObject({ rank: 1, handle: 'alice', isYou: true })
+    expect(lb.total).toBe(3)
+    expect(lb.you?.rank).toBe(1)
+    expect(normalizeLeaderboard({ leaders: [] }).you).toBeNull()
+  })
+})
+
+describe('AffiliatesApi dashboard — hits the exact /v1/affiliates paths', () => {
+  const fetched: { url: string; method: string; body: string }[] = []
+
+  beforeEach(() => {
+    fetched.length = 0
+    ;(globalThis as { window?: unknown }).window = { location: { origin: ORIGIN, hostname: 'console.hanzo.ai' } }
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET'
+      fetched.push({ url, method, body: String(init?.body ?? '') })
+      let body: unknown = {}
+      if (url.endsWith('/me/earnings')) body = { isAffiliate: true, marginBps: 4000, byPeriod: [], byReferredOrg: [] }
+      else if (url.endsWith('/me/links')) body = method === 'POST' ? { link: { code: 'xy', label: 'l', url: 'u' } } : { isAffiliate: true, status: 'approved', maxLinks: 50, links: [] }
+      else if (url.endsWith('/me/handle')) body = { handle: 'alice' }
+      else if (url.endsWith('/leaderboard')) body = { leaders: [], total: 0, you: null }
+      else if (url.endsWith('/click')) body = { counted: true }
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }))
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (globalThis as { window?: unknown }).window
+  })
+
+  it('reads earnings via GET /v1/affiliates/me/earnings', async () => {
+    await AffiliatesApi.earnings()
+    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/affiliates/me/earnings`, method: 'GET', body: '' })
+  })
+  it('reads links via GET /v1/affiliates/me/links', async () => {
+    await AffiliatesApi.links()
+    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/affiliates/me/links`, method: 'GET', body: '' })
+  })
+  it('creates a link via POST /v1/affiliates/me/links', async () => {
+    const l = await AffiliatesApi.createLink('twitter')
+    expect(fetched[0].url).toBe(`${ORIGIN}/v1/affiliates/me/links`)
+    expect(fetched[0].method).toBe('POST')
+    expect(fetched[0].body).toContain('twitter')
+    expect(l.code).toBe('xy')
+  })
+  it('sets the handle via POST /v1/affiliates/me/handle', async () => {
+    const h = await AffiliatesApi.setHandle('alice')
+    expect(fetched[0].url).toBe(`${ORIGIN}/v1/affiliates/me/handle`)
+    expect(fetched[0].method).toBe('POST')
+    expect(h).toBe('alice')
+  })
+  it('reads the leaderboard via GET /v1/affiliates/leaderboard', async () => {
+    await AffiliatesApi.leaderboard()
+    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/affiliates/leaderboard`, method: 'GET', body: '' })
+  })
+  it('pings a click via POST /v1/affiliates/click', async () => {
+    await AffiliatesApi.click('xy')
+    expect(fetched[0].url).toBe(`${ORIGIN}/v1/affiliates/click`)
+    expect(fetched[0].method).toBe('POST')
+    expect(fetched[0].body).toContain('xy')
   })
 })
