@@ -24,6 +24,8 @@ const LS_AFF = 'hz_aff'
 const attributed = new Set<string>()
 /** Persistent per-session guard so we don't re-POST on every reload. */
 const SS_PREFIX = 'hz_aff_attributed:'
+/** Persistent per-session guard for the click ping (once per code per browser session). */
+const SS_CLICK_PREFIX = 'hz_aff_clicked:'
 
 /**
  * Capture an `?aff=<code>` from the current URL into localStorage. No-op on the
@@ -34,10 +36,30 @@ export function stashAffiliateCode(): void {
   try {
     const aff = new URLSearchParams(window.location.search).get('aff')
     const code = (aff ?? '').trim()
-    if (code) localStorage.setItem(LS_AFF, code)
+    if (!code) return
+    localStorage.setItem(LS_AFF, code)
+    pingClickOnce(code)
   } catch {
     /* URL/localStorage may be unavailable — nothing to capture */
   }
+}
+
+/**
+ * Fire a single best-effort click ping for a code, at most once per code per browser
+ * session (a landing via `?aff=<code>` is a click). The counter is a pure vanity metric
+ * — it never touches accrual/payout — so a missed or duplicate ping is harmless.
+ */
+function pingClickOnce(code: string): void {
+  const key = SS_CLICK_PREFIX + code
+  try {
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+  } catch {
+    /* sessionStorage unavailable — still ping (at most once per load) */
+  }
+  void AffiliatesApi.click(code).catch(() => {
+    /* best-effort vanity counter */
+  })
 }
 
 /**

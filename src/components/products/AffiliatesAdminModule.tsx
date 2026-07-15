@@ -12,7 +12,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { ArrowRight, BadgeCheck, Ban, Coins, HandCoins, Handshake, RefreshCw, Users, Wallet, Zap } from '@hanzogui/lucide-icons-2'
+import { BadgeCheck, Ban, Coins, HandCoins, Handshake, Percent, RefreshCw, Users, Wallet, Zap } from '@hanzogui/lucide-icons-2'
 
 import { AdminAffiliatesApi, type AdminAffiliate, type AdminAffiliatesView, type SweepResult } from '~/lib/api/admin-affiliates'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -22,7 +22,10 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldSelect, FieldText } from '~/components/ui/Field'
 import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
-import { dollarsToCents, ratePct, shortDate, statusLabel, statusTone, usd } from './affiliates/logic'
+import { dollarsToCents, percentToBps, ratePct, shortDate, statusLabel, statusTone, usd } from './affiliates/logic'
+
+/** The backend caps the DIRECT (L1) rate at 9300 bps so the L1+L2+L3 schedule ≤ 100% of margin. */
+const MAX_RATE_BPS = 9300
 
 type Async<T> =
   | { phase: 'loading' }
@@ -33,6 +36,7 @@ type Async<T> =
 type Action =
   | { kind: 'approve'; aff: AdminAffiliate; code: string }
   | { kind: 'payout'; aff: AdminAffiliate; amount: string; method: string; reference: string }
+  | { kind: 'rate'; aff: AdminAffiliate; percent: string }
   | null
 
 const PAYOUT_METHODS = ['credits', 'wire', 'paypal', 'ach', 'check']
@@ -92,6 +96,17 @@ export function AffiliatesAdminModule() {
     const fail = (e: unknown) => setActionErr(e instanceof Error ? e.message : 'Action failed')
     if (action.kind === 'approve') {
       AdminAffiliatesApi.approve(action.aff.id, action.code.trim() || undefined)
+        .then(done)
+        .catch(fail)
+        .finally(() => setBusy(false))
+    } else if (action.kind === 'rate') {
+      const bps = percentToBps(action.percent)
+      if (bps == null || bps > MAX_RATE_BPS) {
+        setActionErr(`Enter a rate between 0 and ${MAX_RATE_BPS / 100}%.`)
+        setBusy(false)
+        return
+      }
+      AdminAffiliatesApi.setRate(action.aff.id, bps)
         .then(done)
         .catch(fail)
         .finally(() => setBusy(false))
@@ -181,6 +196,10 @@ export function AffiliatesAdminModule() {
             setActionErr(null)
             setAction({ kind: 'payout', aff, amount: '', method: 'credits', reference: '' })
           }}
+          onRate={(aff) => {
+            setActionErr(null)
+            setAction({ kind: 'rate', aff, percent: String(aff.rateBps / 100) })
+          }}
           onSuspend={suspend}
         />
       )}
@@ -206,9 +225,16 @@ function ActionEditor({
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="#a371f7">
       <XStack items="center" gap="$2">
-        {action.kind === 'approve' ? <BadgeCheck size={16} color="#3fb950" /> : <HandCoins size={16} color="#a371f7" />}
+        {action.kind === 'approve' ? (
+          <BadgeCheck size={16} color="#3fb950" />
+        ) : action.kind === 'rate' ? (
+          <Percent size={16} color="#d29922" />
+        ) : (
+          <HandCoins size={16} color="#a371f7" />
+        )}
         <Text fontSize="$4" fontWeight="700">
-          {action.kind === 'approve' ? 'Approve affiliate' : 'Record payout'} · {action.aff.org}
+          {action.kind === 'approve' ? 'Approve affiliate' : action.kind === 'rate' ? 'Set commission rate' : 'Record payout'} ·{' '}
+          {action.aff.org}
         </Text>
       </XStack>
 
@@ -224,6 +250,21 @@ function ActionEditor({
           </FieldRow>
           <Text fontSize="$1" color="$color10">
             3–32 chars of a–z, 0–9, hyphen. Must be unique across affiliates (approval fails 409 on a collision).
+          </Text>
+        </YStack>
+      ) : action.kind === 'rate' ? (
+        <YStack gap="$1">
+          <FieldRow label="Direct (L1) commission rate %">
+            <FieldText
+              value={action.percent}
+              onChange={(percent) => onChange({ ...action, percent })}
+              disabled={busy}
+              placeholder="e.g. 20 — currently at that % of Hanzo’s margin"
+            />
+          </FieldRow>
+          <Text fontSize="$1" color="$color10">
+            0–{MAX_RATE_BPS / 100}%. This is the affiliate’s share OF HANZO’S MARGIN. The cap leaves headroom for the
+            L2/L3 upline so the whole schedule can never exceed the margin.
           </Text>
         </YStack>
       ) : (
@@ -262,7 +303,7 @@ function ActionEditor({
       ) : null}
       <XStack gap="$2">
         <PrimaryButton size="$3" onPress={onConfirm} disabled={busy}>
-          {busy ? 'Working…' : action.kind === 'approve' ? 'Approve' : 'Record payout'}
+          {busy ? 'Working…' : action.kind === 'approve' ? 'Approve' : action.kind === 'rate' ? 'Set rate' : 'Record payout'}
         </PrimaryButton>
         <Button size="$3" onPress={onCancel} disabled={busy}>
           Cancel
@@ -277,11 +318,13 @@ function AffiliatesAdminReady({
   onApprove,
   onPayout,
   onSuspend,
+  onRate,
 }: {
   data: AdminAffiliatesView
   onApprove: (a: AdminAffiliate) => void
   onPayout: (a: AdminAffiliate) => void
   onSuspend: (a: AdminAffiliate) => void
+  onRate: (a: AdminAffiliate) => void
 }) {
   const s = data.summary
   return (
@@ -364,6 +407,9 @@ function AffiliatesAdminReady({
               ) : null}
               {a.status === 'approved' ? (
                 <>
+                  <Button size="$2" icon={<Percent size={13} />} onPress={() => onRate(a)}>
+                    Rate
+                  </Button>
                   <Button size="$2" icon={<HandCoins size={13} />} onPress={() => onPayout(a)} disabled={a.pendingCents <= 0}>
                     Pay out
                   </Button>
