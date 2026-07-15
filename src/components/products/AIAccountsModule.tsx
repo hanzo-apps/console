@@ -16,9 +16,11 @@ import { Button, XStack } from '@hanzo/gui'
 import { AIAccountsOverview } from './ai-accounts/OverviewTab'
 import { AIAccountsRouting } from './ai-accounts/RoutingTab'
 import { AIAccountsAccounts } from './ai-accounts/AccountsTab'
+import { AIAccountsMachines } from './ai-accounts/MachinesTab'
 
 const TABS: { id: string; label: string }[] = [
   { id: '', label: 'Overview' },
+  { id: 'machines', label: 'Machines' },
   { id: 'routing', label: 'Routing' },
   { id: 'accounts', label: 'Accounts' },
 ]
@@ -48,6 +50,8 @@ export function AIAccountsModule({ params }: { params: Record<string, string> })
 
       {tab === 'accounts' ? (
         <AIAccountsAccounts params={params} />
+      ) : tab === 'machines' ? (
+        <AIAccountsMachines params={params} />
       ) : tab === 'routing' ? (
         <AIAccountsRouting params={params} />
       ) : (
