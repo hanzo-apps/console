@@ -208,6 +208,7 @@ import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { KubeflowModule } from '~/components/products/KubeflowModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
+import { MissionControlModule } from '~/components/products/MissionControlModule'
 import { CodeModule } from '~/components/products/CodeModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
@@ -920,6 +921,20 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/agents`,
     kind: 'module',
     routes: [{ path: '', component: AgentsModule }],
+  },
+  {
+    // Mission Control — the mobile-first swipeable terminal-per-agent cockpit over the
+    // live agent-session plane (cloud clients/agents, /v1/agents/sessions): see + drive
+    // every session (CLI on a laptop, bot in cloud, linked GPU box) + the run-target seam.
+    id: 'mission-control',
+    label: 'Mission Control',
+    icon: Terminal,
+    description: 'See and drive every agent session from one swipeable board — pause, resume, stop, message.',
+    category: 'AI',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: MissionControlModule }],
   },
   {
     // Hanzo Automations — the ONE native Connectors + Automations engine
