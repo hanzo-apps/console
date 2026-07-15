@@ -2897,3 +2897,23 @@ backend endpoints.
   is green so the cloud build won't fail-hard. No standalone console image bump reaches
   console.hanzo.ai (the standalone CR is unrouted). Coordinate the cloud release with
   the cloud lane. No version bump here — the merge/release agent bumps `package.json`.
+
+## TODO — embed the Hanzo Social dashboard (follow-up to social.hanzo.ai)
+
+The dedicated Social frontend shipped at **social.hanzo.ai** (hanzoai/social
+`apps/frontend`, image `ghcr.io/hanzoai/social-frontend`) on the unified cloud BE
+(`/v1/social/*` + `/v1/marketing/*`). Its pure display components were extracted to
+**`@hanzo/ui@8.0.2`** under `@hanzo/ui/product/social` — `ChannelBadge`, `PostCard`,
+`CampaignCard` (on `@hanzo/gui` primitives, data + handlers injected via props,
+reusing `StatusTag`). To embed the same dashboard here:
+- Bump `@hanzo/ui` to `>=8.0.2` and import `{ PostCard, CampaignCard, ChannelBadge }
+  from '@hanzo/ui/product/social'` — the console already has the `@hanzo/gui`
+  runtime/provider, so these render directly (unlike the Tailwind `apps/frontend`,
+  which is why the round-trip back into that app is intentionally NOT done).
+- Data layer: call the same cloud shapes the social FE uses
+  (`GET/POST /v1/social/posts`, `/v1/social/summary`, `/v1/marketing/campaigns`);
+  org comes from the console's existing IAM session, not a new client.
+- Still to extract into `@hanzo/ui` when needed: `QueueBoard` (compose
+  `@hanzo/data` `BoardView`), `Calendar` (reuse `@hanzo/data` `Calendar`),
+  `PostComposer` (needs `@hanzo/gui` input/select primitives). Ships via the normal
+  cloud release embedding `console@main` — coordinate with the cloud train.
