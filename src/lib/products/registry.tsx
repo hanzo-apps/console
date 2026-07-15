@@ -526,6 +526,7 @@ export const catalog: CatalogEntry[] = [
       { path: ':tab', component: AIAccountsModule },
     ],
     subpages: [
+      { slug: 'machines', label: 'Machines' },
       { slug: 'routing', label: 'Routing' },
       { slug: 'accounts', label: 'Accounts' },
     ],
