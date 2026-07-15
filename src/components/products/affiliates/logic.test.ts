@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { usd, ratePct, statusLabel, statusTone, shortDate, payoutMethodLabel, dollarsToCents } from './logic'
+import { usd, ratePct, statusLabel, statusTone, shortDate, payoutMethodLabel, dollarsToCents, monthLabel, percentToBps } from './logic'
 
 describe('affiliates logic — money/rate/label/tone formatting', () => {
   it('formats USD cents, em-dash for non-finite', () => {
@@ -56,5 +56,26 @@ describe('affiliates logic — money/rate/label/tone formatting', () => {
     expect(dollarsToCents('abc')).toBeNull()
     expect(dollarsToCents('0')).toBeNull()
     expect(dollarsToCents('-5')).toBeNull()
+  })
+
+  it('labels a YYYY-MM accrual period', () => {
+    expect(monthLabel('2026-07')).toMatch(/2026/)
+    expect(monthLabel('2026-07')).toMatch(/Jul/)
+    expect(monthLabel('bogus')).toBe('bogus')
+    expect(monthLabel('2026-13')).toBe('2026-13') // invalid month → passthrough
+    expect(monthLabel('')).toBe('—')
+  })
+
+  it('parses a percent → basis points (null on blank/invalid/out-of-range)', () => {
+    expect(percentToBps('20')).toBe(2000)
+    expect(percentToBps('15.5')).toBe(1550)
+    expect(percentToBps('93')).toBe(9300)
+    expect(percentToBps('0')).toBe(0)
+    expect(percentToBps('100')).toBe(10000)
+    expect(percentToBps('20%')).toBe(2000)
+    expect(percentToBps('')).toBeNull()
+    expect(percentToBps('abc')).toBeNull()
+    expect(percentToBps('-1')).toBeNull()
+    expect(percentToBps('101')).toBeNull()
   })
 })
