@@ -27,11 +27,21 @@ import type { OverviewData, OverviewEvent, OverviewHealth, OverviewPoint } from 
 
 const empty = (): OverviewData => ({ kpi: {}, series: {}, distribution: {}, activity: [], alerts: [], health: [] })
 
+/**
+ * The usage overview BOTH real sources produce: the canonical `@hanzo/usage`
+ * `CloudUsageOverview` (what cloud's `GET /v1/get-cloud-usages` returns), OPTIONALLY
+ * carrying the `byStatus` requests-by-status slice the console's commerce-ledger
+ * adapter (`~/lib/api/usage`, over `/billing/usage`) additionally computes. Typing
+ * `byStatus` optional lets the ONE `fromCloudUsage` map BOTH — the cloud aggregate
+ * (no `byStatus`) and the ledger rollup (with it) — so neither source needs a fork.
+ */
+type UsageOverview = CloudUsageOverview & { byStatus?: { status: string; requests: number }[] }
+
 /** Title-case a recorded status for the status donut legend (`success` → `Success`). */
 const labelStatus = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Unknown')
 
-/** Map the commerce usage overview (the platform/AI-usage source) onto `OverviewData`. */
-export function fromCloudUsage(ov: CloudUsageOverview): OverviewData {
+/** Map the cloud usage overview (the platform/AI-usage source) onto `OverviewData`. */
+export function fromCloudUsage(ov: UsageOverview): OverviewData {
   const d = empty()
   d.kpi.tokens = { value: ov.totals.tokens, prior: ov.deltas.tokens?.prior, series: ov.series.map((p) => p.tokens) }
   d.kpi.spendCents = { value: ov.totals.spendCents, prior: ov.deltas.spendCents?.prior, series: ov.series.map((p) => p.spendCents) }
@@ -56,7 +66,8 @@ export function fromCloudUsage(ov: CloudUsageOverview): OverviewData {
   ]
 
   // Requests by recorded status (Success/Error/…) — the Metrics dashboard's status donut.
-  d.distribution.byStatus = ov.byStatus.map((s) => ({ label: labelStatus(s.status), value: s.requests }))
+  // Only the commerce-ledger source carries it; the cloud aggregate omits it (honest empty).
+  d.distribution.byStatus = (ov.byStatus ?? []).map((s) => ({ label: labelStatus(s.status), value: s.requests }))
 
   d.activity = ov.activity.items.map(
     (r): OverviewEvent => ({
@@ -297,7 +308,7 @@ export function orgsFromApps(apps: PlatformApp[]): string[] {
  * operator inventory is reachable, so the god-view is meaningful even with no
  * aggregate + no ledger.
  */
-export function fromOverlord(apps: PlatformApp[], admin: AdminOverview | null, usage: CloudUsageOverview | null): OverviewData {
+export function fromOverlord(apps: PlatformApp[], admin: AdminOverview | null, usage: UsageOverview | null): OverviewData {
   // Start from whichever richer source is available for the usage/spend KPIs +
   // series + activity + alerts (admin aggregate preferred, else the ledger, else
   // an empty shell). The product-health board is layered on top from `apps`.
