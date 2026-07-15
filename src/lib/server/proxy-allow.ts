@@ -201,6 +201,13 @@ export const CLOUD_HEADS: readonly string[] = [
   'machines',
   'gpus',
   'clusters',
+  // Fleet (cloud clients/fleet + the visor/agents union): /v1/fleet[/samples|/workers].
+  // The org's WHOLE compute surface on one board — agent run-targets, BYO workers,
+  // in-cloud boxes and visor machines, each with its last heartbeat, plus the
+  // per-unit utilization trend. The handler resolves the org from the Bearer owner
+  // (X-Org-Id) and 403s a cookie-only call, so it routes through /v1 exactly like
+  // machines/gpus/clusters — the single `fleet` head admits every sub-path.
+  'fleet',
   // DO-native: virtual private clouds and managed load balancers — FULL CRUD
   // (/v1/vpcs[/:id], /v1/load-balancers[/:id]).
   'vpcs',

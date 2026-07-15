@@ -204,6 +204,7 @@ import { EdgeModule } from '~/components/products/EdgeModule'
 import { FunctionsModule } from '~/components/products/FunctionsModule'
 import { ContainersModule } from '~/components/products/ContainersModule'
 import { MachinesModule } from '~/components/products/MachinesModule'
+import { FleetModule } from '~/components/products/FleetModule'
 import { GpusModule, GpusOverview } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { KubeflowModule } from '~/components/products/KubeflowModule'
@@ -1150,6 +1151,29 @@ export const catalog: CatalogEntry[] = [
     docs: `${DOCS}/console`,
     kind: 'module',
     routes: [{ path: '', component: MapModule }],
+  },
+  {
+    // Fleet — the org's WHOLE compute surface on ONE board: agent/CLI run-targets,
+    // BYO workers, in-cloud boxes and visor machines, each with its last heartbeat,
+    // plus a per-unit utilization trend. The customer-facing union that GPUs and
+    // Machines are the per-kind lenses of, so it sits directly above them. Reads the
+    // per-org GET /v1/fleet + /v1/fleet/samples through the /v1 bearer BFF (org from
+    // the token owner) — NOT admin-gated: this is the customer's own compute.
+    id: 'fleet',
+    label: 'Fleet',
+    icon: Boxes,
+    description: 'Every machine you own or link — BYO, in-cloud, and agent run-targets — with live health.',
+    category: 'Compute',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    // '' is the board; ':source/:unit' is one unit — a unit id is unique only WITHIN
+    // a source, so the identity is the pair. Two segments, so it can never collide
+    // with the 1-segment shared base slugs (status/logs/metrics/settings).
+    routes: [
+      { path: '', component: FleetModule },
+      { path: ':source/:unit', component: FleetModule },
+    ],
   },
   {
     id: 'gpus',
