@@ -152,3 +152,63 @@ export const IntegrationsApi = {
   disconnect: (id: string): Promise<void> =>
     restPost<unknown>(originV1Url(`${BASE}/${enc(id)}/disconnect`)).then(() => undefined),
 }
+
+// ── GitHub App: repo mirror + bidirectional sync ─────────────────────────────
+//
+// Once the org installs the Hanzo GitHub App (via IntegrationsApi.connect('github')),
+// these list the org's granted repos and import them into git.hanzo.ai. Every call
+// is org-scoped SERVER-SIDE (the granted set rides the org's own installation token),
+// over the SAME `integrations` head — nothing before `/v1/`.
+//   GET  /v1/integrations/github/repos          → { repos: [GitHubRepo] }
+//   POST /v1/integrations/github/repos/import   → { queued, repos }  (202)
+
+/** One repo the installation grants, annotated with its native import + sync status. */
+export type GitHubRepo = {
+  name: string
+  fullName: string
+  private: boolean
+  defaultBranch: string
+  /** A native repo exists in git.hanzo.ai for this repo. */
+  imported: boolean
+  /** '' (not imported) · 'synced' · 'conflict' (native diverged, preserved). */
+  syncStatus: '' | 'synced' | 'conflict'
+  lastSyncedAt: string
+  htmlUrl: string
+}
+
+/** The queued-import response (202): how many repos were queued for a background import. */
+export type GitHubImportResult = { queued: number; repos: string[] }
+
+const syncStatusOf = (v: unknown): GitHubRepo['syncStatus'] =>
+  v === 'synced' || v === 'conflict' ? v : ''
+
+export function normalizeGitHubRepo(raw: unknown): GitHubRepo {
+  const r = asRecord(raw)
+  return {
+    name: str(r.name),
+    fullName: str(r.fullName) || str(r.full_name) || str(r.name),
+    private: bool(r.private),
+    defaultBranch: str(r.defaultBranch) || str(r.default_branch),
+    imported: bool(r.imported),
+    syncStatus: syncStatusOf(r.syncStatus ?? r.sync_status),
+    lastSyncedAt: str(r.lastSyncedAt) || str(r.last_synced_at),
+    htmlUrl: str(r.htmlUrl) || str(r.html_url),
+  }
+}
+
+export function normalizeGitHubRepos(payload: unknown): GitHubRepo[] {
+  return arrayUnder(payload, ['repos', 'data', 'items']).map(normalizeGitHubRepo).filter((r) => r.name)
+}
+
+export const GitHubApi = {
+  /** The org's granted GitHub repos with per-repo import + sync status. */
+  listRepos: (): Promise<GitHubRepo[]> =>
+    restGet<unknown>(originV1Url(`${BASE}/github/repos`)).then(normalizeGitHubRepos),
+
+  /** Queue a background import into git.hanzo.ai of the named repos (or all granted). */
+  importRepos: (sel: { repos?: string[]; all?: boolean }): Promise<GitHubImportResult> =>
+    restPost<unknown>(originV1Url(`${BASE}/github/repos/import`), sel).then((raw) => {
+      const r = asRecord(raw)
+      return { queued: Number(r.queued) || 0, repos: strArray(r.repos) }
+    }),
+}
