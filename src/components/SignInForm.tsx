@@ -24,7 +24,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Anchor, Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Github, QrCode } from '@hanzogui/lucide-icons-2'
+import { Github, Gitlab, QrCode, Wallet } from '@hanzogui/lucide-icons-2'
 
 import { branding } from '~/config'
 import { HanzoMark } from '~/components/ui/Loader'
@@ -217,6 +217,15 @@ export function SignInForm() {
         </Button>
         <Button size="$4" icon={<GoogleMark />} onPress={() => signInWith('provider-google')}>
           Continue with Google
+        </Button>
+        <Button size="$4" icon={<Gitlab size={18} />} onPress={() => signInWith('provider-gitlab')}>
+          Continue with GitLab
+        </Button>
+        {/* Wallet sign-in hands off to the hanzo.id login where the native
+            multi-chain SIWx flow runs (connecting a wallet needs a user gesture);
+            it returns an authorization code to our /auth/callback like the others. */}
+        <Button size="$4" icon={<Wallet size={18} />} onPress={() => signInWith('provider-web3')}>
+          Connect Wallet
         </Button>
         {!signup ? (
           <Button size="$4" icon={<QrCode size={18} />} onPress={() => setQr(true)}>
