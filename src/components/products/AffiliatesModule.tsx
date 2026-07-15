@@ -22,6 +22,7 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldText } from '~/components/ui/Field'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { payoutMethodLabel, ratePct, shortDate, statusLabel, statusTone, usd } from './affiliates/logic'
+import { EarningsPanel, LinksPanel, LeaderboardPanel } from './affiliates/panels'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -241,6 +242,15 @@ function AffiliateDashboard({
         <MetricCard icon={<Coins size={16} color="#d29922" />} label="Pending" value={usd(data.pendingCents)} caption="awaiting payout" />
         <MetricCard icon={<Wallet size={16} color="#3fb950" />} label="Paid out" value={usd(data.paidCents)} caption="commission paid" />
       </XStack>
+
+      {/* Rewards, links, and leaderboard — only for a live (approved) affiliate. */}
+      {data.status === 'approved' ? (
+        <>
+          <EarningsPanel />
+          <LinksPanel />
+          <LeaderboardPanel initialHandle={data.handle} />
+        </>
+      ) : null}
 
       {/* Payout history */}
       <Card p="$0" borderWidth={1} borderColor="$borderColor" overflow="hidden">

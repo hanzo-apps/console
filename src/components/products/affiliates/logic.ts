@@ -48,6 +48,20 @@ export function statusTone(status: AffiliateStatus): '#3fb950' | '#d29922' | '#f
   }
 }
 
+/** A "YYYY-MM" accrual period → a short month label ("2026-07" → "Jul 2026"). */
+export function monthLabel(period: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec((period || '').trim())
+  if (!m) return period || '—'
+  const year = Number(m[1])
+  const month = Number(m[2])
+  if (month < 1 || month > 12) return period
+  try {
+    return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+  } catch {
+    return period
+  }
+}
+
 /** Unix seconds → a short local date; em-dash when unset (0). */
 export function shortDate(unixSeconds: number): string {
   if (!unixSeconds) return '—'
@@ -81,6 +95,20 @@ export function payoutMethodLabel(method: string): string {
     default:
       return m.charAt(0).toUpperCase() + m.slice(1)
   }
+}
+
+/**
+ * A percent typed in a form ("20", "15.5") → basis points (2000, 1550), or null when
+ * blank/invalid/negative/over 100. The admin set-rate flow enters a percent; the
+ * backend caps the L1 rate at 9300 bps (93%) so the whole L1+L2+L3 schedule stays
+ * within the margin — the caller checks that cap and shows the error.
+ */
+export function percentToBps(input: string): number | null {
+  const t = (input ?? '').trim().replace(/%$/, '')
+  if (t === '') return null
+  const n = Number(t)
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null
+  return Math.round(n * 100)
 }
 
 /**
