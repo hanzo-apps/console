@@ -28,6 +28,7 @@
 import { Activity, ArrowLeftRight, BarChart3, Boxes, Building2, Coins, Cpu, CreditCard, DollarSign, FunctionSquare, Gauge, Hash, HeartPulse, Layers, LineChart, Timer, TrendingUp, TriangleAlert, Users } from '@hanzogui/lucide-icons-2'
 
 import { UsageApi } from '~/lib/api/usage'
+import { CloudUsageApi } from '~/lib/api/cloud-usage'
 import { AdminApi, type AdminOverview } from '~/lib/api/admin-overview'
 import { FinanceApi } from '~/lib/api/finance'
 import { PlatformApi } from '~/lib/api/platform'
@@ -110,13 +111,19 @@ const platformOverview: LivingOverviewConfig = {
         /* Admin backend not routed on this host → fall through to the usage ledger. */
       }
     }
-    // Tenant user, or the admin aggregate was unavailable: the real usage ledger.
-    const usage = await UsageApi.overview({
-      range: usageRange(range),
-      activityType: 'all',
-      activityLimit: 40,
+    // Tenant user (or the admin aggregate was unavailable): the org's REAL usage from
+    // cloud's NATIVE `GET /v1/get-cloud-usages` — the SAME source the AI Metrics board
+    // (`AiUsageModule`) reads. It is org-scoped SERVER-SIDE and cookie-authed, so a
+    // non-super-admin (even their OWN org's admin, e.g. `hanzo/z`) gets a 200 for THEIR
+    // org and the board renders their real spend — NEVER an "Access required" card. It is
+    // cloud-native, so it also works in the go:embed console that serves console.hanzo.ai;
+    // the `/billing/usage` proxy is a Next route handler the static embed prunes (which is
+    // why the prior fallback failed there). A 403 on the admin aggregate above has already
+    // fallen through to here silently.
+    const usage = await CloudUsageApi.overview(usageRange(range), {
+      org: allOrgs ? 'all' : undefined,
       topModels: 6,
-      allOrgs,
+      activityLimit: 40,
     })
     const data = fromCloudUsage(usage)
     // Reuse the byModel breakdown as the "revenue"/spend donut on the fallback path.
