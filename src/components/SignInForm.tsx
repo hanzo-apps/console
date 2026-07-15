@@ -25,6 +25,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Anchor, Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Apple, Github, Gitlab, Wallet } from '@hanzogui/lucide-icons-2'
+import { useAnalytics } from '@hanzo/capture/react'
+import { EVENTS } from '@hanzo/capture'
 
 import { branding } from '~/config'
 import { HanzoMark } from '~/components/ui/Loader'
@@ -120,6 +122,7 @@ export function SignInForm() {
       on = false
     }
   }, [])
+  const analytics = useAnalytics()
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
@@ -129,6 +132,12 @@ export function SignInForm() {
   const [mfa, setMfa] = useState(false)
   // Turnstile token for the signup path (only required when Turnstile is provisioned).
   const [captcha, setCaptcha] = useState('')
+
+  // Open the signup funnel when the create-account view is shown (a mode toggle here,
+  // not a route), so the funnel starts from one event on every host.
+  useEffect(() => {
+    if (mode === 'signup') analytics.capture(EVENTS.SIGNUP_VIEWED)
+  }, [mode, analytics])
 
   // The ONE credential login path — shared by sign-in and by post-signup auto-login.
   async function logInWithCredentials(): Promise<void> {
@@ -174,6 +183,7 @@ export function SignInForm() {
     }
     setBusy(true)
     setError(null)
+    analytics.capture(EVENTS.SIGNUP_SUBMITTED)
     try {
       const r = await signUp(email.trim(), password, { turnstileToken: captcha, ref: refFromUrl() })
       if (r.kind === 'exists') {
@@ -187,8 +197,9 @@ export function SignInForm() {
         setBusy(false)
         return
       }
-      // Account + org created — sign in with the same credentials so the new admin
-      // lands straight in their workspace (fresh accounts have no MFA to satisfy).
+      // Account + org created (self-serve signup has no separate email-verify step) —
+      // the funnel completes here, then auto-login lands the new admin in their workspace.
+      analytics.capture(EVENTS.SIGNUP_COMPLETED)
       await logInWithCredentials()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create your account.')

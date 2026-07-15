@@ -13,6 +13,8 @@
 import { useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Check, FolderGit2, Plus, Trash } from '@hanzogui/lucide-icons-2'
+import { useAnalytics } from '@hanzo/capture/react'
+import { EVENTS } from '@hanzo/capture'
 
 import { ProjectApi, projectEnvironments, type Project } from '~/lib/api/projects'
 import { useScope } from '~/lib/scope-context'
@@ -32,6 +34,7 @@ const fmt = (iso?: string) => {
 export function ProjectsModule(_props: { params: Record<string, string> }) {
   const { scope, projects, projectsError, loadingProjects, selectProject, refreshProjects } = useScope()
   const toast = useToast()
+  const analytics = useAnalytics()
 
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
@@ -53,6 +56,7 @@ export function ProjectsModule(_props: { params: Record<string, string> }) {
     setBusy(true)
     try {
       await ProjectApi.create({ name: n, description: description.trim() })
+      analytics.capture(EVENTS.PROJECT_CREATED)
       toast.success('Project created', `“${n}” is ready.`)
       reset()
       await refreshProjects()
