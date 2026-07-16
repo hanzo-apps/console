@@ -2,7 +2,7 @@
 
 /**
  * Audio tab — text-to-speech through the keyless `/ai` proxy
- * (`POST /ai/v1/audio/speech`, JSON in → audio bytes out). Type text, pick a
+ * (`POST /v1/audio/speech`, JSON in → audio bytes out). Type text, pick a
  * voice, synthesize, and play the returned audio. Real wiring: the audio is the
  * gateway's own bytes (played from a Blob URL); if the deployment doesn't serve
  * speech, an honest error state is shown instead of silent failure.

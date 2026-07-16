@@ -17,7 +17,7 @@
  *
  * BEST-EFFORT: never throws, never blocks signup. The grant is idempotent (tag-deduped
  * per subject), so a transient failure is harmless — the read-path self-heal
- * (`/billing/v1/me/welcome` on first authenticated load) re-lands it. Returns true only
+ * (`/v1/billing/me/welcome` on first authenticated load) re-lands it. Returns true only
  * when commerce accepted the call.
  */
 import { commerceBaseUrl, commerceServiceToken } from './billing-proxy'

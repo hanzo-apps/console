@@ -2,7 +2,7 @@
  * Same-origin user-bearer proxy to commerce (`commerce.hanzo.svc`) — the store /
  * merchant admin surface (products / orders / customers / collections / variants /
  * discounts / store settings). The browser calls this OWN-origin route
- * (`/commerce/v1/...`) with just its session cookie; `forwardWithUserBearer` resolves
+ * (`/v1/commerce/...`) with just its session cookie; `forwardWithUserBearer` resolves
  * the user, mints a short-lived user-bound IAM token, and forwards to commerce with
  * that Bearer. Commerce's EdgeAuth validates the JWT and resolves the org from its
  * `owner` claim (`middleware.TokenRequired` fast-paths IAM auth), so the store is
@@ -33,7 +33,11 @@ type Ctx = { params: Promise<{ path: string[] }> }
 
 function handle(req: NextRequest, ctx: Ctx) {
   return (async () => {
-    const path = (await ctx.params).path.join('/')
+    // This handler lives under `app/v1/commerce/[...path]`, so the catch-all captures
+    // ONLY the sub-path after `/v1/commerce/` (e.g. `product`). Commerce serves its REST
+    // models under `/v1/<model>`, so re-root the upstream path at `v1/` — the same path
+    // `allowCommerceSurface` (v1Head) and `forwardWithUserBearer` see (`v1/product`).
+    const path = `v1/${(await ctx.params).path.join('/')}`
     return forwardWithUserBearer(req, {
       target: COMMERCE_URL,
       path,

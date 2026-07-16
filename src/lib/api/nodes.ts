@@ -365,7 +365,7 @@ export const NodesApi = {
   /** Inventory for every network the current brand may see (optionally one). */
   async inventory(network?: NodeNetworkId): Promise<NetworkInventory[]> {
     const qs = network ? `?network=${encodeURIComponent(network)}` : ''
-    const res = await fetch(`/nodes/v1/inventory${qs}`, {
+    const res = await fetch(`/v1/nodes/inventory${qs}`, {
       credentials: 'include',
       headers: { Accept: 'application/json' },
       cache: 'no-store',

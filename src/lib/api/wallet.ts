@@ -77,7 +77,7 @@ export const WalletApi = {
    * (the credit ledger currency); HUSD top-ups settle into the same USD ledger.
    */
   cloudBalance: (_user: string, currency = 'usd'): Promise<CloudBalance> =>
-    // Same-origin `/billing/*` server proxy (app/billing/[...path]) injects the
+    // Same-origin `/v1/billing/*` server proxy (app/v1/billing/[...path]) injects the
     // commerce service token + scopes to the caller's OWN org server-side. The
     // `user` subject is server-resolved (the arg is ignored — the browser cannot
     // read another tenant's ledger), so only `currency` is forwarded.

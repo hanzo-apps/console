@@ -3,7 +3,7 @@
 /**
  * Machine catalog — the REAL, COMPLETE compute offer (all regions + every available
  * standard size, with OUR market price) read from visor's catalog (`GET /v1/regions`,
- * `GET /v1/sizes` via the `/vm` proxy). Rendered under the "launch your first machine"
+ * `GET /v1/sizes` via the `/v1/vm` proxy). Rendered under the "launch your first machine"
  * empty state so a customer with zero machines still sees the actual regions and the
  * full size list they can launch — searchable, with real $/hr AND $/mo per entry (the
  * same visor `HanzoPrice` the launch drawer quotes and the launch charges). Proves the
@@ -24,7 +24,7 @@ const spec = (s: VisorSize) =>
 
 /**
  * The live compute catalog under the "launch your first machine" state — REAL
- * regions + every available size with OUR market price (visor `/vm` catalog).
+ * regions + every available size with OUR market price (visor `/v1/vm` catalog).
  *
  * INTERACTIVE (not a brochure): tapping a region chip filters + presets the launch
  * region; tapping a size row opens the real launch drawer preselected on that size

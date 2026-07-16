@@ -184,7 +184,7 @@ describe('invalidateBalance', () => {
 
 /**
  * Resilience to a transient backend blip (a 502/503/504 while commerce rolls). These
- * prove the fix for the live capstone defect — billing hammered `billing/v1/balance`
+ * prove the fix for the live capstone defect — billing hammered `/v1/billing/balance`
  * hundreds of times against a down endpoint with no relief. The breaker turns a
  * minutes-long outage into a handful of spaced attempts (exponential backoff + jitter,
  * capped), gates the AUTOMATIC triggers while it's open, resets on the first success,

@@ -184,7 +184,7 @@ import { SettlementModule } from '~/components/products/SettlementModule'
 import { AlertsModule } from '~/components/products/AlertsModule'
 // Admin operator compute boards (cross-tenant, admin-only) — kind='bot'|'machine'
 // lenses over the datastore. Aliased to avoid the clash with the per-org customer
-// `MachinesModule` (Compute › Machines, over visor `/vm/v1/machines`).
+// `MachinesModule` (Compute › Machines, over visor-backed `/v1/machines`).
 import { BotsModule, MachinesModule as AdminMachinesModule, ClustersModule as AdminClustersModule, FunctionsModule as AdminFunctionsModule } from '~/components/products/ComputeModule'
 import { AnalyticsModule } from '~/components/products/AnalyticsModule'
 import { LogsModule } from '~/components/products/LogsModule'
@@ -509,7 +509,7 @@ export const catalog: CatalogEntry[] = [
   {
     // AI Accounts — link your AI provider accounts (OpenAI/Codex, Anthropic/Claude, …)
     // and see UNIFIED usage across desktop/mobile/web/CLI in one place, beside the org's
-    // own Hanzo lane. Overview reads the merged `/ai-accounts/v1/usage` feed (external
+    // own Hanzo lane. Overview reads the merged `/v1/ai-accounts/usage` feed (external
     // providers via the headless @hanzo/usage engine, Hanzo via the real commerce
     // ledger); Accounts links a provider by pasting an API key / OAuth token / cookie
     // header, sealed server-side (never in the browser). The `accounts` subpage lands
@@ -792,7 +792,7 @@ export const catalog: CatalogEntry[] = [
     // admin.hanzo.ai MACHINES board — the operator view of raw compute (kind='machine')
     // visor opens across EVERY org, and its spend, grouped org → app → project. The
     // CROSS-TENANT operator lens (id `vms` — the per-org customer `machines` entry is a
-    // different, non-admin surface over visor `/vm/v1/machines`). GLOBAL-ADMIN ONLY,
+    // different, non-admin surface over visor-backed `/v1/machines`). GLOBAL-ADMIN ONLY,
     // same datastore aggregate as Bots (`?kind=machine`). Honest-empty until wired.
     id: 'vms',
     label: 'Machines',

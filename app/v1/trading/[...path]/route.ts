@@ -1,7 +1,7 @@
 /**
  * Per-user proxy to the LIVE trading-bot state — the Trading module's ONE
  * live-data transport (the DEPLOYED FLEET is read separately via the `/v1`
- * PaaS proxy). The browser calls console2's OWN origin (`/trading/v1/*`) with just
+ * PaaS proxy). The browser calls console2's OWN origin (`/v1/trading/*`) with just
  * the session cookie; this handler resolves the caller, resolves the BRAND from the
  * request host, and reads the allowlisted upstreams server-side, per network that
  * brand may see. No cluster host or RPC method ever reaches the browser, and the
@@ -11,7 +11,7 @@
  *  - Session-gated: an unauthenticated caller gets 401.
  *  - Org/brand-aware: the network set is scoped by `nodeNetworksForBrand(brand)`,
  *    brand resolved from the host — cloud.lux.cloud sees only Lux networks.
- *  - Least privilege: the ONLY paths are `v1/metrics` and `v1/orderbook`; the ONLY
+ *  - Least privilege: the ONLY paths are `metrics` and `orderbook`; the ONLY
  *    upstreams are the maker's :2112 /metrics scrape and the DEX read endpoint —
  *    this is not a general RPC/HTTP tunnel.
  *
@@ -155,7 +155,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     return NextResponse.json({ error: 'Sign in to view trading bots.' }, { status: 401 })
   }
 
-  if (route === 'v1/metrics') {
+  if (route === 'metrics') {
     const networks = scopedNetworks(req)
     // A single-network scope is the common case (per-bot status); return the first
     // (the network the caller asked for), or the brand's first if none specified.
@@ -165,7 +165,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     return NextResponse.json(status)
   }
 
-  if (route === 'v1/orderbook') {
+  if (route === 'orderbook') {
     const networks = scopedNetworks(req)
     const net = networks[0]
     if (!net) {

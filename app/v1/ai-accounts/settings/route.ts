@@ -11,7 +11,7 @@
  * verb is CSRF-guarded (auto-sent cookie → refuse cross-origin first).
  *
  * A static route, so it wins over the sibling `[...path]` catch-all for this exact
- * path (same rule as `/ai-accounts/v1/usage`).
+ * path (same rule as `/v1/ai-accounts/usage`).
  */
 import { type NextRequest, NextResponse } from 'next/server'
 

@@ -359,7 +359,7 @@ const aiUsageOverview = (id: string, title: string, subtitle: string): LivingOve
 /**
  * The Open Edition (run-for-pay) living overview — the customer's view of what
  * their open-source workloads cost. It reads the SAME real commerce usage ledger
- * (`/billing/v1/usage`) as every other usage board, but scoped to the
+ * (`/v1/billing/usage`) as every other usage board, but scoped to the
  * run-for-pay product tag (`metadata.product = 'open-edition'`) via the ledger's
  * own client-side `product` filter — so the totals, spend-over-time, per-model
  * spend, and activity are all the org's REAL open-edition charges, never a mock.

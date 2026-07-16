@@ -46,7 +46,7 @@ import {
 /** Product base path — must match the registry entry id (`base`). */
 const BASE_PATH = '/base'
 /** Same-origin Base proxy prefix (injects the user bearer + org server-side). */
-const BASE_PROXY = '/superbase'
+const BASE_PROXY = '/v1/superbase'
 
 const SIZE_LABELS = SIZE_PRESETS.map((p) => p.label)
 const labelToSize = (label: string): string => SIZE_PRESETS.find((p) => p.label === label)?.id ?? DEFAULT_SIZE

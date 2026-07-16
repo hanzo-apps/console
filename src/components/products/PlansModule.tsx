@@ -4,7 +4,7 @@
  * Plans & Pricing — the discovery surface that guides a user from "what can I run"
  * to "what will it cost" and, for a paid tier, into checkout. It reads the published
  * cloud subscription catalog (Developer / Pro / Max / Team / Enterprise) through the
- * per-tenant billing proxy (`PlansApi.plans` -> GET /billing/v1/plans), so a signed-in
+ * per-tenant billing proxy (`PlansApi.plans` -> GET /v1/billing/plans), so a signed-in
  * user actually SEES the tiers — the old /v1/pricing read 401'd on the live ingress and
  * rendered a bare "Not authorized", so nobody could see or subscribe to Pro.
  *
@@ -171,7 +171,7 @@ export function PlansModule(_props: { params: Record<string, string> }) {
       />
 
       {state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /billing/v1/plans" />
+        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/billing/plans" />
       ) : state.phase === 'loading' ? (
         <Text color="$color11">Loading plans…</Text>
       ) : plans.length === 0 ? (

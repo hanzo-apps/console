@@ -46,7 +46,7 @@ describe('resolveTab — :tab param → known tab (non-base slugs, no shared-sub
 describe('curlFor — copy-paste example against the caller origin', () => {
   const origin = 'https://console.hanzo.ai'
   const search = WEBSEARCH_ENDPOINTS.find((e) => e.path === '/v1/websearch/search')!
-  const scrape = WEBSEARCH_ENDPOINTS.find((e) => e.path === '/v1/websearch/v1/scrape')!
+  const scrape = WEBSEARCH_ENDPOINTS.find((e) => e.path === '/v1/websearch/scrape')!
 
   it('search → a plain GET with q + format=json on the same origin', () => {
     const c = curlFor(search, origin)
@@ -58,7 +58,7 @@ describe('curlFor — copy-paste example against the caller origin', () => {
   it('scrape → a POST with the firecrawl body + the SERVER-SIDE key ref (never a real secret)', () => {
     const c = curlFor(scrape, origin)
     expect(c).toContain('POST')
-    expect(c).toContain(`${origin}/v1/websearch/v1/scrape`)
+    expect(c).toContain(`${origin}/v1/websearch/scrape`)
     expect(c).toContain('$WEBSEARCH_API_KEY') // an env ref, not a literal secret
     expect(c).toContain('"url"')
   })

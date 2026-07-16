@@ -220,7 +220,7 @@ describe('upstreamHeaders', () => {
  * client `X-Project-Id`, a signed-in user could set `X-Project-Id: victim-org` and
  * read another org's eval scores. `/v1` does NOT pass `forwardScope`, so this
  * suite pins that the sub-scope is dropped (and only rides when explicitly opted in,
- * as `/vm` does under its own org-membership re-validation). Never remove `forwardScope`
+ * as `/v1/vm` does under its own org-membership re-validation). Never remove `forwardScope`
  * defaulting to off here without a project-membership check upstream.
  */
 describe('X-Project-Id drop — cross-tenant eval isolation (RED MED-1)', () => {

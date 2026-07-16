@@ -4,7 +4,7 @@
  * AI Accounts — connect/link screen. The AI providers (from the shared catalog,
  * mirroring the `@hanzo/usage` registry) each get an inline connect form: pick a
  * link mode (API key / OAuth token / cookie header), paste the credential, save.
- * The secret is POSTed to `/ai-accounts/v1/accounts/:id`, sealed server-side, and
+ * The secret is POSTed to `/v1/ai-accounts/accounts/:id`, sealed server-side, and
  * NEVER stored in the browser (no localStorage) or echoed back. The non-AI groups
  * are honest, catalog-driven "coming soon" rows.
  */
