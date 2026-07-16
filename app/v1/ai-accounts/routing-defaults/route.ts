@@ -20,7 +20,7 @@
  * cookie preference alone, exactly as before this endpoint existed.
  *
  * A static route, so it wins over the sibling `[...path]` catch-all for this exact
- * path (same rule as `/ai-accounts/v1/usage` and `/ai-accounts/v1/settings`).
+ * path (same rule as `/v1/ai-accounts/usage` and `/v1/ai-accounts/settings`).
  */
 import { type NextRequest } from 'next/server'
 

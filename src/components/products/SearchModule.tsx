@@ -301,7 +301,7 @@ function ConfigTab({ health }: { health: SearchHealth }) {
           <Fact label="Search service" value="SearXNG (self-hosted)" />
           <Fact label="Crawl service" value="Crawl4AI (self-hosted)" />
           <Fact label="Search endpoint" value="/v1/websearch/search" />
-          <Fact label="Scrape endpoint" value="/v1/websearch/v1/scrape" />
+          <Fact label="Scrape endpoint" value="/v1/websearch/scrape" />
           <Fact label="Live status" value={verdict.label} />
         </YStack>
       </Section>

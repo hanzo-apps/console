@@ -2,7 +2,7 @@
 
 /**
  * Embeddings tab — a real single-model embeddings run through the keyless `/ai`
- * proxy (`POST /ai/v1/embeddings`). One input per line; the response shows each
+ * proxy (`POST /v1/embeddings`). One input per line; the response shows each
  * vector's dimensionality + a preview, the token usage, and the latency. Honest
  * states throughout — nothing is fabricated when the endpoint is down.
  */

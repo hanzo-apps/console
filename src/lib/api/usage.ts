@@ -2,7 +2,7 @@
  * Cloud usage client — the read side of the Overview dashboard.
  *
  * SOURCE: the REAL commerce usage ledger (`GET /v1/billing/usage`) through the
- * console's OWN per-tenant `/billing/*` proxy (`app/billing/[...path]/route.ts`),
+ * console's OWN per-tenant `/v1/billing/*` proxy (`app/v1/billing/[...path]/route.ts`),
  * which injects the commerce service token server-side and scopes every request
  * to the caller's own org/billing-subject — the SAME subject the gateway debits
  * and the Cost page reads. This deliberately does NOT use cloud `get-cloud-usages`

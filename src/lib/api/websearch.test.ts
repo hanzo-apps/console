@@ -63,9 +63,9 @@ describe('static product facts', () => {
   it('exactly the two /v1/websearch endpoints; only search is user-callable in-console', () => {
     const paths = WEBSEARCH_ENDPOINTS.map((e) => e.path)
     expect(paths).toContain('/v1/websearch/search')
-    expect(paths).toContain('/v1/websearch/v1/scrape')
+    expect(paths).toContain('/v1/websearch/scrape')
     const search = WEBSEARCH_ENDPOINTS.find((e) => e.path === '/v1/websearch/search')!
-    const scrape = WEBSEARCH_ENDPOINTS.find((e) => e.path === '/v1/websearch/v1/scrape')!
+    const scrape = WEBSEARCH_ENDPOINTS.find((e) => e.path === '/v1/websearch/scrape')!
     expect(search.method).toBe('GET')
     expect(search.liveInConsole).toBe(true)
     expect(scrape.method).toBe('POST')

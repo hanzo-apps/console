@@ -126,7 +126,7 @@ describe('VisorApi routes each call to the correct server proxy (Problem-1 regre
   // ROOT CAUSE of "Accelerators 0 available to launch": the accelerator CATALOG lives on
   // VISOR (a distinct backend), NOT cloud-api — cloud-api serves no visor catalog route,
   // and its `/v1/gpus` is a different (per-org inventory) shape. So the catalog MUST
-  // address the `/vm` (visor) proxy, while machines ride the cloud `/v1` bearer BFF. This
+  // address the `/v1/vm` (visor) proxy, while machines ride the cloud `/v1` bearer BFF. This
   // test mocks fetch and pins the exact URL each call hits — the guard that would have
   // caught the wrong-backend bug (mirrors the v8.4.34 wiring lesson).
   const seen: { url: string; method: string; body?: string }[] = []
@@ -145,7 +145,7 @@ describe('VisorApi routes each call to the correct server proxy (Problem-1 regre
     await VisorApi.regions()
     await VisorApi.sizes()
     expect(seen.map((s) => s.url)).toEqual([vmProxyV1Url('gpus'), vmProxyV1Url('regions'), vmProxyV1Url('sizes')])
-    for (const s of seen) expect(s.url).toContain('/vm/v1/')
+    for (const s of seen) expect(s.url).toContain('/v1/vm/')
   })
 
   it('machines list uses the /v1 user-bearer proxy (org from the Bearer owner)', async () => {

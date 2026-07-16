@@ -2,8 +2,8 @@
  * AI Metrics — the real per-org AI usage + spend behind the AI Metrics page.
  *
  * ONE real source: the commerce usage ledger `GET /v1/billing/usage`, reached
- * through the console's OWN same-origin `/billing/*` server proxy
- * (`app/billing/[...path]/route.ts`). That proxy injects the commerce SERVICE
+ * through the console's OWN same-origin `/v1/billing/*` server proxy
+ * (`app/v1/billing/[...path]/route.ts`). That proxy injects the commerce SERVICE
  * token server-side and OVERWRITES any client `user`/`org` with the caller's own
  * org/billing-subject — the browser never holds a commerce credential and cannot
  * widen scope. The subject is the SAME one the gateway debits, so what this page
@@ -25,13 +25,11 @@
 import { ApiError, restGet, billingProxyV1Url } from './client'
 import type { CloudBalance } from './wallet'
 
-// Billing usage/balance address the console's OWN per-tenant billing proxy DIRECTLY
-// (`/billing/v1/*`, one builder `billingProxyV1Url`) — NOT a bare `/v1/billing/*`.
-// On the live console ingress `/v1/*` goes to the gateway-fronted cloud binary (which
-// 403s a cookie-only browser request), so the bare form never reaches the proxy; the
-// direct `/billing/v1/*` route handler injects the commerce service token + pins the
-// caller's own subject and returns the org's real ledger (same class as v8.4.70's
-// framework/s3 → /v1 fix). `wallet.ts` already addresses it this way.
+// Billing usage/balance build the canonical `/v1/billing/*` path (the /v1-first law),
+// one builder `billingProxyV1Url`. Standalone: `/v1/billing/*` resolves to the console's
+// OWN `app/v1/billing/[...path]` route handler (service token + server-pinned subject);
+// embed: served by the cloud binary under the session cookie. Real ledger, same scoping
+// either way. `wallet.ts` builds the same path.
 
 /**
  * One usage record as commerce returns it under `usage[]`. All fields are
@@ -315,7 +313,7 @@ export function recent(records: UsageRecord[], n: number): UsageRecord[] {
     .slice(0, n)
 }
 
-/** Fetch the org's raw usage records through the per-tenant `/billing/v1/usage` proxy. */
+/** Fetch the org's raw usage records through the per-tenant `/v1/billing/usage` proxy. */
 export async function fetchUsageRecords(): Promise<UsageRecord[]> {
   return restGet<unknown>(billingProxyV1Url('usage')).then(normalizeUsageRecords)
 }

@@ -2,7 +2,7 @@
 
 /**
  * Video tab — text-to-video through the keyless `/ai` proxy
- * (`POST /ai/v1/videos/generations`, JSON in → a video out). Pick a Zen video
+ * (`POST /v1/videos/generations`, JSON in → a video out). Pick a Zen video
  * model, type a prompt, generate, and render the real clip the gateway returns.
  * Video generation is minutes-long and premium-billed; the gateway meters the
  * call, so we nudge the live balance after a run. If the deployment can't deliver

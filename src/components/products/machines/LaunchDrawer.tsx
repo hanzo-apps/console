@@ -4,7 +4,7 @@
  * Launch drawer — the ONE real launch flow for both Machines and GPUs (a GPU is just a
  * machine with a `gpu-*` size slug, so this is shared, DRY). Opened in the shared
  * right-side `DetailPane`. It loads the COMPLETE live catalog from visor
- * (`/vm/v1/sizes` for machines, `/vm/v1/gpus` for GPUs) + the real regions, shows OUR
+ * (`/v1/vm/sizes` for machines, `/v1/vm/gpus` for GPUs) + the real regions, shows OUR
  * market price ($/hr + $/mo — the same visor `HanzoPrice` the launch charges), and on
  * Launch calls the native `POST /v1/machines/launch` (visor-backed, per-org, Bearer-auth'd through the `/v1` proxy).
  * The new machine flows back to the caller's list via `onLaunched`. Errors are honest:
