@@ -7,6 +7,7 @@ import { headers } from 'next/headers'
 
 import { Provider } from '~/components/Provider'
 import { ChunkGuard } from '~/components/ChunkGuard'
+import { BrandTitle } from '~/components/BrandTitle'
 import { resolveConfig } from '~/config'
 
 // The document <title> is SSR metadata, so it must reflect the REQUEST host's
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className="t_dark" style={{ backgroundColor: '#000000', colorScheme: 'dark' }} suppressHydrationWarning>
       <body style={{ margin: 0 }}>
         <ChunkGuard />
+        <BrandTitle />
         <Provider>{children}</Provider>
       </body>
     </html>
