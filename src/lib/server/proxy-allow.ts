@@ -303,6 +303,15 @@ export const CLOUD_HEADS: readonly string[] = [
   // server-side; the single `gitops` head admits every sub-path. The console never
   // touches the cluster — a cookie-only call 403s like the rest.
   'gitops',
+  // Hanzo Git (cloud clients/git): /v1/git/repos[/:name[/{refs,tree,blob,commits,readme}]].
+  // The org's hosted code repositories — the native-Go git host welded into the cloud
+  // binary (smart-HTTP + the /v1/git control plane + the JSON browse surface). The
+  // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
+  // call, so it routes through /v1 exactly like the rest — the single `git` head admits
+  // the repos list/detail + the read/browse sub-paths (refs, tree, blob, commits, readme).
+  // The `/v1/git/:org/:repo/*` smart-HTTP protocol routes are NOT reached here (the git
+  // CLI hits git.hanzo.ai directly); this is the console's repo-browser read surface.
+  'git',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
