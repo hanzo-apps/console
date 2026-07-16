@@ -2,7 +2,7 @@
 
 /**
  * Image tab — text-to-image through the keyless `/ai` proxy
- * (`POST /ai/v1/images/generations`, JSON in → an image out). Pick a Zen image
+ * (`POST /v1/images/generations`, JSON in → an image out). Pick a Zen image
  * model, type a prompt, generate, and render the real image the gateway returns.
  * Real wiring: the image is the gateway's own result (a hosted URL or inline
  * base64); if the deployment doesn't serve image generation, an honest error

@@ -8,7 +8,7 @@
  *     (`?q=&format=json&engines=&language=&safesearch=`). Response is the SearXNG
  *     JSON: `{ results: [{ url, title, content, img_src?, engine? }] }`. The optional
  *     `X-API-Key` guard admits a MISSING key, so a signed-in user-bearer call passes.
- *   - `POST /v1/websearch/v1/scrape`  — Crawl4AI (Firecrawl-compatible). Body `{url}`,
+ *   - `POST /v1/websearch/scrape`  — Crawl4AI (Firecrawl-compatible). Body `{url}`,
  *     response `{ success, data:{ markdown, metadata }, error? }`. FAIL-CLOSED: it
  *     requires `Authorization: Bearer <WEBSEARCH_API_KEY>` (the shared crawl key, NOT
  *     an IAM user token) and 503s when unconfigured — so the console CANNOT drive a
@@ -128,7 +128,7 @@ export const WEBSEARCH_ENDPOINTS: readonly WebSearchEndpoint[] = [
   },
   {
     method: 'POST',
-    path: '/v1/websearch/v1/scrape',
+    path: '/v1/websearch/scrape',
     summary: 'Scrape a URL to clean markdown (Crawl4AI, Firecrawl-compatible). Body { url } → { success, data:{ markdown, metadata } }.',
     liveInConsole: false,
   },

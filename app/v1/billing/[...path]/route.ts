@@ -3,10 +3,12 @@
  * tenant scoping, CSRF guard, and binary (PDF) passthrough all live in the tested
  * `~/lib/server/billing-proxy` (`forwardBilling`) — this file only maps the HTTP verbs.
  *
- * Namespaced under `/billing/v1/` (NOT bare `/billing/`) so the data plane never
- * shadows the billing UI tab URLs (`/billing/reports`, `/billing/invoices`, …): a
- * route handler always wins over the catch-all page for a matching path segment, so
- * the tab slugs and the data endpoints live in disjoint path space.
+ * Rooted at `/v1/billing/` (the /v1-first law) — this handler lives at
+ * `app/v1/billing/[...path]`, MORE SPECIFIC than the cloud BFF catch-all
+ * `app/v1/[...path]`, so `/v1/billing/*` (data) resolves here while `/v1/<other>/*`
+ * falls through to the catch-all. And `/v1/billing/*` (data) never collides with the
+ * billing UI tab URLs (`/billing/reports`, `/billing/invoices`, …) — they differ at
+ * the FIRST path segment, so the tab slugs fall through to the SPA.
  *
  * Verbs: GET (reads: balance/usage/invoices/subscriptions/payment-methods, and the
  * per-invoice PDF), POST (writes: top-up, spend-alerts, save-a-method, cancel/

@@ -72,13 +72,14 @@ export interface CollectionInput {
 }
 
 export interface BaseDataApiOptions {
-  /** Base origin or same-origin proxy prefix (e.g. `/superbase` or `https://x.base.hanzo.ai`). */
+  /** Base API-version root: the same-origin proxy prefix `/v1/superbase` (whose handler
+   *  re-roots to Base's `/v1/<path>`), or a direct versioned origin `https://x.base.hanzo.ai/v1`. */
   baseUrl: string
   /** Optional Base auth token; sent as `Authorization: Bearer <token>`. */
   token?: string
 }
 
-/** Resolve same-origin proxy prefixes (`/superbase`) against the page origin. */
+/** Resolve same-origin proxy prefixes (`/v1/superbase`) against the page origin. */
 const pageOrigin = (): string => (typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
 
 /** Pull a list out of `{ items }` (paginated) or a bare array. */
@@ -196,7 +197,9 @@ export class BaseDataApi {
     path: string,
     opts?: { query?: ListRecordsParams; body?: Record<string, unknown> },
   ): Promise<unknown> {
-    const url = new URL(`${this.baseUrl}/v1/${path}`, pageOrigin())
+    // `baseUrl` carries the API-version root (the `/v1/superbase` proxy prefix, whose
+    // handler forwards to Base's `/v1/<path>`; or a direct `https://x.base.hanzo.ai/v1`).
+    const url = new URL(`${this.baseUrl}/${path}`, pageOrigin())
     if (opts?.query) {
       for (const [k, v] of Object.entries(opts.query)) {
         if (v !== undefined && v !== null) url.searchParams.set(k, String(v))

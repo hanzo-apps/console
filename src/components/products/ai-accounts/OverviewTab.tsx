@@ -2,7 +2,7 @@
 
 /**
  * AI Accounts — unified usage Overview. Provider cards (one per linked account,
- * plus the org's own Hanzo lane) over the merged `/ai-accounts/v1/usage` feed:
+ * plus the org's own Hanzo lane) over the merged `/v1/ai-accounts/usage` feed:
  * external providers via the headless usage engine, Hanzo via the real commerce
  * ledger. Empty of external links → a prominent "Connect your AI accounts" CTA to
  * the Accounts tab. Every number is real or an honest "—"; nothing is fabricated.

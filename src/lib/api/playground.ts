@@ -160,12 +160,11 @@ export const PlaygroundApi = {
    * nudge the shared live balance after the run.
    */
   images: async (req: ImageRequest): Promise<ImageResponse> => {
-    // Image generation is premium and REQUIRES a user Bearer. Call the keyless
-    // `/ai` proxy DIRECTLY (which mints the user-bound bearer) rather than the
-    // `/v1/*` form: on console.hanzo.ai the ingress routes `/v1/*` straight to
-    // cloud-api (bypassing the bearer proxy), so a `/v1` image call reaches cloud
-    // with no bearer and 401s. `/ai/v1/*` is served by THIS app → forwardWithUserBearer.
-    const res = await restPost<ImageResponse>('/ai/v1/images/generations', req)
+    // Image generation is premium and REQUIRES a user Bearer. Build the canonical
+    // `/v1/images/generations` (the /v1-first law): standalone dispatches it to the `/ai`
+    // bearer proxy (mints the user-bound bearer), and the go:embed console serves it on the
+    // cloud binary directly under the first-party session cookie — Bearer-backed either way.
+    const res = await restPost<ImageResponse>(originV1Url('images/generations'), req)
     invalidateBalance()
     return res
   },
@@ -176,8 +175,8 @@ export const PlaygroundApi = {
    * billed; the gateway meters it, so we nudge the shared live balance after.
    */
   videos: async (req: VideoRequest): Promise<VideoResponse> => {
-    // Premium + Bearer-required — call the `/ai` bearer proxy directly (see images).
-    const res = await restPost<VideoResponse>('/ai/v1/videos/generations', req)
+    // Premium + Bearer-required — the canonical `/v1/videos/generations` (see images).
+    const res = await restPost<VideoResponse>(originV1Url('videos/generations'), req)
     invalidateBalance()
     return res
   },

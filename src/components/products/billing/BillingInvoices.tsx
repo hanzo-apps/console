@@ -21,7 +21,7 @@ import { BackendStateCard, classifyBackend, type BackendState } from '~/componen
 const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 
 /**
- * The same-origin proxy URL for an invoice's PDF (`/billing/v1/invoices/:id/pdf`).
+ * The same-origin proxy URL for an invoice's PDF (`/v1/billing/invoices/:id/pdf`).
  * Built from the invoice `id` the list already returns — NOT a server `url` field —
  * so the download rides the tenant-scoped proxy (session-auth + server-injected
  * service token + `X-Org-Id`), and a user can only ever pull their OWN org's invoice.

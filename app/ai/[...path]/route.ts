@@ -3,10 +3,11 @@
  *
  * `/v1/chat/completions` (and friends) REQUIRE an `Authorization: Bearer` token; a
  * browser session cookie alone is rejected. Rather than ship the user's durable
- * `hk-` key to the browser, the console calls its OWN origin (`/ai/v1/...`) with just
- * the session cookie; `forwardWithUserBearer` resolves the user, mints a SHORT-LIVED,
- * user-bound IAM token (shared per-user cache in identity.ts), and forwards to the
- * gateway with that token. No key in the browser, no rotation on a chat turn, and
+ * `hk-` key to the browser, the console calls its OWN origin at the canonical, prefix-free
+ * `/v1/<aihead>` (the /v1-first law); `next.config.mjs` dispatches those heads to THIS `/ai`
+ * proxy (re-rooting the upstream at `v1/` — invisible to the client). `forwardWithUserBearer`
+ * resolves the user, mints a SHORT-LIVED, user-bound IAM token (shared per-user cache in
+ * identity.ts), and forwards to the gateway with that token. No key in the browser, and
  * every call is billed to the user's own org. The response STREAMS through, so
  * `chat/completions` SSE (and the multi-model TTFT measurement) is preserved.
  *
@@ -95,7 +96,11 @@ type Ctx = { params: Promise<{ path: string[] }> }
 
 function handle(req: NextRequest, ctx: Ctx) {
   return (async () => {
-    const path = (await ctx.params).path.join('/')
+    // The client builds a clean `/v1/<aihead>` and `next.config.mjs` dispatches it here
+    // WITHOUT a nested version (destination `/ai/<aihead>`), so the catch-all captures the
+    // sub-path after `/ai/`. Re-root the upstream at `v1/` — the exact path `isAllowedAiPath`
+    // and the gateway see (`v1/chat/completions`, `v1/images/generations`, `v1/ai/connections`).
+    const path = `v1/${(await ctx.params).path.join('/')}`
     return forwardWithUserBearer(req, {
       target: AI_GATEWAY_URL,
       path,

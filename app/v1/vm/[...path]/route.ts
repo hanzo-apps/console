@@ -1,7 +1,7 @@
 /**
  * Same-origin user-bearer proxy to Visor (vm.hanzo.ai) — the compute control plane
  * (regions / gpus / machines / instances). The browser calls this OWN-origin route
- * (`/vm/v1/...`) with just its session cookie; `forwardWithUserBearer` resolves the
+ * (`/v1/vm/...`) with just its session cookie; `forwardWithUserBearer` resolves the
  * user, mints a short-lived user-bound IAM token, and forwards to visor with that
  * Bearer. Visor mints org + user from the JWT claims, so compute is org-scoped
  * server-side — a caller only ever sees their own org's machines. No token reaches
@@ -34,7 +34,11 @@ type Ctx = { params: Promise<{ path: string[] }> }
 
 function handle(req: NextRequest, ctx: Ctx) {
   return (async () => {
-    const path = (await ctx.params).path.join('/')
+    // This handler lives under `app/v1/vm/[...path]`, so the catch-all captures ONLY the
+    // sub-path after `/v1/vm/` (e.g. `regions`). Visor serves its compute surface under
+    // `/v1/<x>`, so re-root the upstream path at `v1/` — the same path `allowVisorSurface`
+    // and `forwardWithUserBearer` see (`v1/regions`).
+    const path = `v1/${(await ctx.params).path.join('/')}`
     return forwardWithUserBearer(req, {
       target: VISOR_URL,
       path,

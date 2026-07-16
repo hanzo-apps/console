@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Route restGet by URL so list() and per-provider usage() get distinct responses.
-// `~/lib/embed` is left REAL (IS_EMBED false in test → the standalone `/ai/v1/ai/connections`
-// base), and `@hanzo/usage` is real (the pure normalizeProviderUsage).
+// The connections base is the canonical `/v1/ai/connections` (host-agnostic); `@hanzo/usage`
+// is real (the pure normalizeProviderUsage).
 const h = vi.hoisted(() => ({ routes: [] as Array<[string, unknown]>, calls: [] as string[] }))
 
 vi.mock('./client', () => ({
@@ -49,7 +49,7 @@ describe('AiConnectionsApi.usage', () => {
     expect(out.totals.spendCents).toBe(142)
     expect(out.byModel[0]!.model).toBe('gpt-4o')
     const url = h.calls[0]!
-    expect(url).toMatch(/\/ai\/v1\/ai\/connections\/openai\/usage\?from=2026-06-01&to=2026-07-01$/)
+    expect(url).toMatch(/\/v1\/ai\/connections\/openai\/usage\?from=2026-06-01&to=2026-07-01$/)
   })
 
   it('tolerates a bare value (no envelope) and fills the provider fallback', async () => {

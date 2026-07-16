@@ -1,7 +1,7 @@
 /**
  * Per-user proxy to the Lux DEX indexer's `dex` subgraph — the Lux Economy /
  * Markets board's ONE transport. The browser calls console2's OWN origin
- * (`/economy/v1/overview`) with just the session cookie; this handler resolves the
+ * (`/v1/economy/overview`) with just the session cookie; this handler resolves the
  * caller, resolves the BRAND from the request host, and POSTs a FIXED, allowlisted
  * GraphQL query to the in-cluster graphd per brand-scoped network, returning the
  * NORMALIZED markets + fills + day-data. No graph host or GraphQL query ever reaches
@@ -11,7 +11,7 @@
  *  - Session-gated: an unauthenticated caller gets 401.
  *  - Org/brand-aware: the network set is scoped by `nodeNetworksForBrand(brand)`,
  *    brand resolved from the host — cloud.lux.cloud sees only Lux networks.
- *  - Least privilege: the ONLY path is `v1/overview`, and the ONLY GraphQL query is
+ *  - Least privilege: the ONLY path is `overview`, and the ONLY GraphQL query is
  *    the fixed markets+fills+dayData read below — this is not a general GraphQL
  *    tunnel (no client-supplied query, no mutations, no arbitrary entity).
  *
@@ -142,7 +142,9 @@ async function probe(net: NodeNetworkId): Promise<EconomySnapshot> {
 }
 
 async function forward(req: NextRequest, path: string[]): Promise<NextResponse> {
-  if (path.join('/') !== 'v1/overview') {
+  // This handler lives at `app/v1/economy/[...path]`, so the catch-all captures the
+  // sub-path after `/v1/economy/`.
+  if (path.join('/') !== 'overview') {
     return NextResponse.json({ error: 'not found' }, { status: 404 })
   }
 

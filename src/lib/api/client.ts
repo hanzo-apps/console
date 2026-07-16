@@ -374,90 +374,60 @@ export const originV1Url = (path: string): string => {
 export const cloudProxyV1Url = originV1Url
 
 /**
- * The console's OWN same-origin per-tenant billing proxy — the DIRECT route-handler
- * address (`<origin>/billing/v1/<path>`), NOT a bare `/v1/billing/*`.
- *
- * Billing is the SAME class as framework/s3 above (v8.4.70): on the live console
- * ingress `/v1/*` is routed to the gateway-fronted cloud binary (it does NOT reach
- * the Next server, so the `/v1/billing → /billing/v1` rewrite never runs), and the
- * cloud gateway rejects a cookie-only browser request with no bearer — a bare
- * `/v1/billing/usage` 403s ("sign in to view billing"). So the billing clients must
- * address the proxy route handler EXPLICITLY (a namespaced `/billing/v1` sub-proxy,
- * distinct from the cloud-api `/v1` bearer BFF because it injects a SERVICE token, not
- * a user bearer). `app/billing/v1/[...path]` injects the commerce SERVICE token and
- * pins the caller's OWN billing subject server-side (proven live: it returns the
- * org's real balance/usage), so tenant isolation is unchanged. On the server (SSR)
- * there is no `window`, so this yields a root-relative `/billing/v1/<path>`.
- */
-export const billingProxyBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/billing` : '/billing'
-
-/**
- * Build a `/v1/<path>` URL on the per-tenant billing proxy (`<origin>/billing/v1/<path>`).
- *
- * In the go:embed console (`IS_EMBED`) there is NO Next server, so the
- * `app/billing/v1/[...path]` service-token route handler is stripped by the static
- * export and a `/billing/v1/*` request falls through to the SPA shell (HTML, not
- * JSON) — billing read "not available". The embed is same-origin with the cloud
- * binary, which serves the SAME per-tenant billing bridge at the canonical bare
- * `/v1/billing/<path>` (clients/account/billing.go — forwards to commerce with the
- * admin service token SCOPED to the validated caller's own subject). So the embed
- * addresses `<origin>/v1/billing/<path>` directly; the caller is resolved from the
- * first-party IAM session cookie (cloud middleware_identity.go). Non-embed hosts keep
- * the Next `/billing/v1` sub-proxy (their gateway-fronted ingress 403s a cookie-only
- * bare `/v1/billing`).
+ * Build the console's OWN same-origin per-tenant billing path — the canonical
+ * `/v1/billing/<path>` (the /v1-first law: ZERO prefix before `/v1/`). ONE form for
+ * BOTH deployments:
+ *  - go:embed console (`IS_EMBED`, console.hanzo.ai): same-origin with the cloud
+ *    binary, which serves the per-tenant billing bridge at `/v1/billing/<path>`
+ *    (clients/account/billing.go — forwards to commerce with the admin service token
+ *    SCOPED to the validated caller's own subject); the caller is resolved from the
+ *    first-party IAM session cookie (cloud middleware_identity.go).
+ *  - Standalone (console2/admin): `/v1/billing/*` resolves to the console's OWN
+ *    `app/v1/billing/[...path]` service-token route handler — MORE SPECIFIC than the
+ *    `app/v1/[...path]` cloud BFF catch-all, so it wins — which injects the commerce
+ *    SERVICE token and pins the caller's OWN billing subject server-side. Tenant
+ *    isolation is unchanged; only the PATH is /v1-first (previously namespaced before `/v1/`).
+ * On the server (SSR) there is no `window`, so this yields a root-relative `/v1/billing/<path>`.
  */
 export const billingProxyV1Url = (path: string): string =>
-  IS_EMBED ? originV1Url(`billing/${path.replace(/^\/+/, '')}`) : v1Url(path, billingProxyBase())
+  originV1Url(`billing/${path.replace(/^\/+/, '')}`)
 
 /**
- * The console's OWN same-origin VISOR user-bearer proxy base (`<origin>/vm`).
+ * Build the console's OWN same-origin VISOR catalog path — the canonical `/v1/vm/<path>`
+ * (the /v1-first law). The public compute CATALOG (regions / CPU sizes / GPU accelerators)
+ * is served by VISOR (`visor.hanzo.svc`), a DISTINCT backend from cloud-api. `/v1/vm/*`
+ * resolves to the console's OWN `app/v1/vm/[...path]` user-bearer route handler (MORE
+ * SPECIFIC than the `/v1/[...path]` cloud BFF, so it wins), which mints a short-lived
+ * user-bound token from the session and forwards to visor (`allowVisorSurface`). Visor's
+ * catalog is un-scoped (any signed-in user), so the minted bearer is accepted and the real
+ * DO region/size/GPU catalog loads. On the server (SSR) this yields a root-relative
+ * `/v1/vm/<path>`.
  *
- * The public compute CATALOG (regions / CPU sizes / GPU accelerators) is served by
- * VISOR (`visor.hanzo.svc`), not cloud-api — a DISTINCT backend with a distinct shape.
- * A bare `/v1/<head>` from the browser is NOT reachable: the console host's ingress
- * routes `/v1/*` straight to hanzoai/gateway (→ cloud-api), BYPASSING Next — so the
- * `next.config` `/v1/{regions,sizes,gpu-sizes} → /vm` rewrite never runs and cloud-api
- * 403s (no visor catalog route there). Same class as the framework/s3 cloud bearer-BFF
- * fix (v8.4.70). So the visor catalog client addresses this `/vm` proxy EXPLICITLY:
- * `app/vm/[...path]` mints a short-lived user-bound token from the session and forwards
- * to visor (`allowVisorSurface`). Visor's catalog is un-scoped (any signed-in user), so
- * the minted bearer is accepted and the real DO region/size/GPU catalog loads.
+ * NB: the visor `/v1/vm/gpus` catalog (accelerator models + VRAM + price) is DISTINCT from
+ * the cloud-api GPU INVENTORY at `/v1/gpus` (a per-org shape served by the cloud BFF) — the
+ * catalog MUST read visor, never cloud-api.
  */
-export const vmProxyBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/vm` : '/vm'
-
-/** Build a `/v1/<path>` URL on the visor user-bearer proxy (`<origin>/vm/v1/<path>`). */
-export const vmProxyV1Url = (path: string): string => v1Url(path, vmProxyBase())
+export const vmProxyV1Url = (path: string): string =>
+  originV1Url(`vm/${path.replace(/^\/+/, '')}`)
 
 /**
- * The console's OWN same-origin COMMERCE user-bearer proxy base (`<origin>/commerce`).
- *
- * The store/merchant admin surface (product/order/user/variant/collection/discount/
- * store…) is served by commerce (`commerce.hanzo.svc`) and REQUIRES a Bearer — a
- * cookie-only browser call is rejected. Same class as the framework/s3/billing bearer-BFF
- * fixes: on the live console ingress `/v1/*` is routed straight to the
- * gateway-fronted cloud binary (it does NOT reach the Next server), so the `next.config`
- * `/v1/commerce/* → /commerce/v1/*` rewrite never runs and the bare call reaches the
- * gateway, which 403s ("Not enabled for your account"). So the commerce store clients
- * address this `/commerce` proxy EXPLICITLY: `app/commerce/[...path]` mints a short-lived
- * user-bound token from the session and forwards to commerce with the org resolved from
- * the token owner (`allowCommerceSurface`) — tenant isolation unchanged, no rewrite reliance.
- */
-export const commerceProxyBase = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/commerce` : '/commerce'
-
-/**
- * Build a `/v1/<path>` URL on the commerce user-bearer proxy (`<origin>/commerce/v1/<path>`).
- *
- * In the go:embed console (`IS_EMBED`) the `app/commerce/[...path]` route handler is
- * stripped; the cloud binary serves the same per-tenant store bridge at the canonical
- * bare `/v1/commerce/<path>` (clients/account/commerce.go), scoped to the validated
- * caller's own org. So the embed addresses `<origin>/v1/commerce/<path>` directly.
- * Non-embed hosts keep the Next `/commerce/v1` proxy.
+ * Build the console's OWN same-origin COMMERCE store path — the canonical
+ * `/v1/commerce/<path>` (the /v1-first law). The store/merchant admin surface
+ * (product/order/user/variant/collection/discount/store…) is served by commerce
+ * (`commerce.hanzo.svc`) and REQUIRES a Bearer. ONE form for BOTH deployments:
+ *  - go:embed console (`IS_EMBED`): same-origin with the cloud binary, which serves
+ *    the per-tenant store bridge at `/v1/commerce/<path>` (clients/account/commerce.go),
+ *    scoped to the validated caller's own org (first-party IAM session cookie).
+ *  - Standalone (console2/admin): `/v1/commerce/*` resolves to the console's OWN
+ *    `app/v1/commerce/[...path]` user-bearer route handler (MORE SPECIFIC than the
+ *    `app/v1/[...path]` cloud BFF), which mints a short-lived user-bound IAM token and
+ *    forwards to commerce with the org resolved from the token owner
+ *    (`allowCommerceSurface`). Tenant isolation is unchanged; only the PATH is /v1-first
+ *    (previously namespaced before `/v1/`).
+ * On the server (SSR) there is no `window`, so this yields a root-relative `/v1/commerce/<path>`.
  */
 export const commerceProxyV1Url = (path: string): string =>
-  IS_EMBED ? originV1Url(`commerce/${path.replace(/^\/+/, '')}`) : v1Url(path, commerceProxyBase())
+  originV1Url(`commerce/${path.replace(/^\/+/, '')}`)
 
 async function restRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',

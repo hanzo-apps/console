@@ -1,6 +1,6 @@
 /**
  * Pure billing-subject scoping for the `/billing/*` per-tenant proxy
- * (`app/billing/[...path]/route.ts`). Extracted here (no Next imports) so the
+ * (`app/v1/billing/[...path]/route.ts`). Extracted here (no Next imports) so the
  * tenant-isolation logic that prevents cross-tenant billing reads is unit-tested
  * directly, without standing up commerce or a full Next request — the same
  * pattern as `lib/server/ai-proxy.ts`.

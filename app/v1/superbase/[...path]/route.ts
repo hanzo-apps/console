@@ -1,7 +1,7 @@
 /**
  * Per-user proxy to the Hanzo Base control plane (base.hanzo.ai) — the embedded
  * Base module's ONE transport. The browser calls console2's OWN origin
- * (`/superbase/v1/...`) with just the session cookie; `forwardWithUserBearer`
+ * (`/v1/superbase/...`) with just the session cookie; `forwardWithUserBearer`
  * resolves the user, mints a short-lived user-bound IAM token (shared per-user
  * cache), and forwards to base.hanzo.ai with that token. No token ever reaches the
  * browser, and the SAME @hanzo/superbase-dashboard screens render here and standalone.
@@ -37,7 +37,11 @@ type Ctx = { params: Promise<{ path: string[] }> }
 
 function handle(req: NextRequest, ctx: Ctx) {
   return (async () => {
-    const path = (await ctx.params).path.join('/')
+    // This handler lives under `app/v1/superbase/[...path]`, so the catch-all captures
+    // ONLY the sub-path after `/v1/superbase/` (e.g. `collections/...`). Base serves its
+    // data plane under `/v1/collections`, so re-root the upstream path at `v1/` — the same
+    // path `allowBaseSurface` and `forwardWithUserBearer` see (`v1/collections/...`).
+    const path = `v1/${(await ctx.params).path.join('/')}`
     return forwardWithUserBearer(req, {
       target: BASE_URL,
       path,
