@@ -83,7 +83,7 @@ function guiPackages() {
 // `/ai` bearer proxy like the rest; it is NOT a cloud-api head (never shadows a cloud surface).
 // `training` is the interactive (Tinker-style) engine head (`/v1/training/clients[/*]`) — the
 // live LoRA client plane, allow-listed in the `/ai` proxy, likewise never a cloud-api head.
-const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos', 'pricing', 'plans', 'ai', 'training']
+const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos', 'pricing', 'plans', 'ai', 'training', 'get-router-policy', 'update-router-policy']
 // The admin aggregate heads rewritten to the GLOBAL-ADMIN-GATED proxy. `providers`
 // is the AI-provider control board — its GET (the list) AND its POST mutations
 // (`providers/toggle`, `providers/primary`) both match the `/:path*` rewrite below,
