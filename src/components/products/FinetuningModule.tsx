@@ -29,11 +29,13 @@ import { MetricCard, UtilBar, Panel, SERIES } from '~/components/ui/Metric'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { NewTrainingPanel } from './training/NewTrainingPanel'
+import { InteractiveTraining } from './training/InteractiveTraining'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
 const TABS = [
   { id: '', label: 'Jobs' },
+  { id: 'interactive', label: 'Interactive' },
   { id: 'datasets', label: 'Datasets' },
   { id: 'checkpoints', label: 'Checkpoints' },
   { id: 'models', label: 'Models' },
@@ -242,6 +244,8 @@ export function FinetuningModule({ params }: { params: Record<string, string> })
             </Panel>
           </XStack>
         </>
+      ) : tab === 'interactive' ? (
+        <InteractiveTraining />
       ) : tab === 'datasets' ? (
         <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxWidth={620}>
           <XStack gap="$2" items="center"><Database size={18} /><Text fontSize="$5" fontWeight="700">Datasets</Text></XStack>
