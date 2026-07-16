@@ -194,7 +194,7 @@ export function NodesModule(_props: { params: Record<string, string> }) {
       />
 
       {state ? (
-        <BackendStateCard state={state} onRetry={load} hint="endpoint · GET /nodes/v1/inventory" />
+        <BackendStateCard state={state} onRetry={load} hint="endpoint · GET /v1/nodes/inventory" />
       ) : (
         <>
           {inv.length > 0 && (

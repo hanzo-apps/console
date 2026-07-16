@@ -218,7 +218,7 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 /**
  * Machines — routes by role. A CUSTOMER (non-global-admin) sees THEIR OWN machines
- * via the user-scoped visor `/vm` proxy (`CustomerMachines`) — real data or a
+ * via the user-scoped visor `/v1/vm` proxy (`CustomerMachines`) — real data or a
  * graceful "launch one" state, never the infra "PAAS_SERVICE_TOKEN not set"
  * message. A GLOBAL ADMIN sees the platform fleet across every cluster
  * (`AdminMachines`, over the `/paas` control plane), whose honest not-configured

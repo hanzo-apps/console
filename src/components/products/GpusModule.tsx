@@ -80,7 +80,7 @@ function useComputeData(): ComputeData {
 
 /**
  * GPUs — routes by role. A CUSTOMER sees the visor accelerator catalog + their own
- * GPU machines (`CustomerGpus`, over the user-bearer `/vm` proxy) — real per-org data
+ * GPU machines (`CustomerGpus`, over the user-bearer `/v1/vm` proxy) — real per-org data
  * or an honest empty state, never the admin `/paas` fleet view. A GLOBAL ADMIN sees
  * the operator fleet (`AdminGpus`, over the `/paas` control plane), whose
  * not-configured/forbidden state is the right operator signal. One wrapper per route

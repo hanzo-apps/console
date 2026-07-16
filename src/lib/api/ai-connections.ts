@@ -14,7 +14,6 @@
  * the key or the `kms://` ref.
  */
 import { ApiError, restGet, restPost } from './client'
-import { IS_EMBED } from '~/lib/embed'
 import { normalizeProviderUsage, type ProviderUsage } from '@hanzo/usage'
 
 export type { ProviderUsage } from '@hanzo/usage'
@@ -39,20 +38,19 @@ export const AI_CONNECTION_PROVIDERS: readonly { id: AiConnectionProvider; label
 ]
 
 /**
- * The connections head address, host-aware (mirrors the billing/commerce IS_EMBED split
- * in `client.ts`):
- *  - EMBED (console.hanzo.ai, the go:embed console): the Next `/ai` BFF proxy is pruned,
- *    and the cloud binary serves the connections API natively at `<origin>/v1/ai/connections`
- *    under the first-party session cookie (SanitizeIdentity). So the embed addresses cloud's
- *    native `/v1` directly.
- *  - Standalone (console2/admin): a bare `/v1/ai/*` reaches the gateway with no bearer (403),
- *    so it addresses the narrow `/ai` user-bearer proxy (`<origin>/ai/v1/ai/connections`),
- *    which mints a short-lived token and forwards (org from the token owner).
+ * The connections head address — the canonical `/v1/ai/connections` (the /v1-first law),
+ * ONE form for BOTH deployments:
+ *  - go:embed console (console.hanzo.ai): the cloud binary serves the connections API
+ *    natively at `<origin>/v1/ai/connections` under the first-party session cookie
+ *    (SanitizeIdentity).
+ *  - Standalone (console2/admin): `next.config.mjs` dispatches the `ai` head to the narrow
+ *    `/ai` user-bearer proxy, which mints a short-lived token and forwards to the gateway's
+ *    `/v1/ai/connections` (org from the token owner).
  * ONE connect path either way — no key in the browser, org resolved server-side.
  */
 const BASE = (): string => {
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  return IS_EMBED ? `${origin}/v1/ai/connections` : `${origin}/ai/v1/ai/connections`
+  return `${origin}/v1/ai/connections`
 }
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)

@@ -241,14 +241,15 @@ export const CLOUD_HEADS: readonly string[] = [
   // 403s a cookie-only / cross-tenant call, so it routes through /v1 exactly like o11y.
   // The single `sentry` head admits every sentry sub-path.
   'sentry',
-  // Web Search (cloud clients/websearch, order 141): /v1/websearch/{search,v1/scrape}.
+  // Web Search (cloud clients/websearch, order 141): /v1/websearch/{search,scrape}.
   // Self-hosted SearXNG meta-search + Crawl4AI scrape. The `search` proxy has no
   // principal gate (its optional X-API-Key admits a missing key), so a signed-in
   // user's minted bearer is accepted/ignored and the query proxies straight to
   // SearXNG — routing it through /v1 gives the console a keyless, prefix-free
   // `/v1/websearch/search`. (Scrape 503s without the shared crawl key — not a user
   // token — so the console never drives a live scrape; it documents it only.) One
-  // head admits both the search + the versioned scrape sub-path.
+  // head admits both the search + the scrape sub-path (the /v1-first law: a flat
+  // `/v1/websearch/scrape`, no nested inner version).
   'websearch',
   // Chain data (graph-backed, luxfi/indexer + luxfi/graph): the deployment's chain
   // indexing status (/v1/indexers — chain/network/height/health) and on-chain
@@ -319,7 +320,7 @@ export function allowCloudSurface(path: string): boolean {
 /**
  * True iff `path` targets the visor `/v1/*` surface (regions/gpus/machines/…). Visor
  * (vm.hanzo.ai) serves ONLY its own compute surface, so the whole `v1/` subtree is
- * the correct boundary — the task's `/vm` → visor `/v1/*` contract — while still
+ * the correct boundary — the task's `/v1/vm` → visor `/v1/*` contract — while still
  * refusing any non-`v1` path.
  */
 export function allowVisorSurface(path: string): boolean {

@@ -8,8 +8,8 @@
  *    short-lived user token and forwards to cloud-api (org resolved from the Bearer
  *    owner). This is the visor-backed native cloud surface.
  *  - The public compute CATALOG (regions / CPU sizes / GPU accelerators, un-scoped)
- *    reads visor DIRECTLY through the `/vm` proxy (`app/vm/[...path]/route.ts` → visor)
- *    at `/vm/v1/{regions,sizes,gpus}`. Visor's `/v1/gpus` is the accelerator CATALOG
+ *    reads visor DIRECTLY through the `/v1/vm` proxy (`app/v1/vm/[...path]/route.ts` → visor)
+ *    at `/v1/vm/{regions,sizes,gpus}`. Visor's `/v1/gpus` is the accelerator CATALOG
  *    (models + VRAM + price); the cloud-api `/v1/gpus` is the GPU INVENTORY surface (a
  *    different, per-org shape) — so the catalog MUST read visor, never cloud-api.
  *
@@ -247,19 +247,19 @@ export const VisorApi = {
     return arrayUnder(r, ['machines', 'instances', 'data', 'items', 'rows', 'droplets']).map((m, i) => normalizeMachine(m, i))
   },
 
-  /** The real region catalog (`/vm/v1/regions` → visor). */
+  /** The real region catalog (`/v1/vm/regions` → visor). */
   regions: async (): Promise<VisorRegion[]> => {
     const r = await restGet<unknown>(vmProxyV1Url('regions'))
     return arrayUnder(r, ['regions', 'data', 'items', 'rows']).map(normalizeRegion)
   },
 
-  /** The real standard (CPU) size catalog with pricing (`/vm/v1/sizes` → visor). */
+  /** The real standard (CPU) size catalog with pricing (`/v1/vm/sizes` → visor). */
   sizes: async (): Promise<VisorSize[]> => {
     const r = await restGet<unknown>(vmProxyV1Url('sizes'))
     return arrayUnder(r, ['sizes', 'data', 'items', 'rows']).map(normalizeSize)
   },
 
-  /** The real GPU accelerator catalog with pricing (`/vm/v1/gpus` → visor). */
+  /** The real GPU accelerator catalog with pricing (`/v1/vm/gpus` → visor). */
   gpus: async (): Promise<VisorGpuSize[]> => {
     const r = await restGet<unknown>(vmProxyV1Url('gpus'))
     return arrayUnder(r, ['gpus', 'data', 'items', 'rows']).map(normalizeGpuSize)

@@ -2,10 +2,10 @@
  * forwardBilling — the per-tenant billing DATA proxy → commerce, extracted here (in
  * `src/lib/server`, the `bearer-proxy.ts` pattern) so the tenant-scoping + binary
  * passthrough it enforces are unit-tested directly, without importing the `app/`
- * route. The route handler (`app/billing/v1/[...path]/route.ts`) is a thin wrapper
+ * route. The route handler (`app/v1/billing/[...path]/route.ts`) is a thin wrapper
  * that calls this for GET / POST / DELETE.
  *
- * The browser calls console2's OWN origin (`/billing/v1/...`); this forwards to
+ * The browser calls console2's OWN origin (`/v1/billing/...`); this forwards to
  * commerce's `/v1/billing/...`, injecting the commerce SERVICE token from server-only
  * env (never `NEXT_PUBLIC_`, never in the browser bundle) AND scoping every request to
  * the caller's OWN org:

@@ -7,7 +7,7 @@
  * header), for up to 90% lower spend (workload-dependent).
  *
  * The toggle persists the org/user `routingEnabled` preference server-side via the
- * sealed-cookie settings store (`/ai-accounts/v1/settings`), following the SAME
+ * sealed-cookie settings store (`/v1/ai-accounts/settings`), following the SAME
  * pattern as the credential store. It is HONEST about scope: it sets the org
  * preference that Hanzo surfaces (chat/app/desktop/mobile) read; API callers opt in
  * per request with `model: "auto"` (a copyable curl is shown).

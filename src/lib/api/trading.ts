@@ -9,7 +9,7 @@
  *     SAME control plane the Compute › Applications page uses.
  *
  *  2. The LIVE STATE (maker metrics + the DEX order book) is read through
- *     console2's OWN `/trading` proxy (`app/trading/[...path]/route.ts`), mirroring
+ *     console2's OWN `/v1/trading` proxy (`app/v1/trading/[...path]/route.ts`), mirroring
  *     `/nodes`: session-gated, brand-scoped, method-allowlisted. The browser sends
  *     only its session cookie; the server scrapes the in-cluster maker `:2112`
  *     `/metrics` and queries the DEX RPC per brand-scoped network, returning
@@ -215,7 +215,7 @@ export function fmtUptime(seconds?: number): string {
 // ── The client ───────────────────────────────────────────────────────────────
 
 async function tradingGet<T>(path: string): Promise<T> {
-  const res = await fetch(`/trading/${path}`, {
+  const res = await fetch(`/v1/trading/${path}`, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
     cache: 'no-store',
@@ -243,7 +243,7 @@ export const TradingApi = {
   async makerStatus(network: NodeNetworkId, service?: string): Promise<MakerStatus> {
     const qs = new URLSearchParams({ network })
     if (service) qs.set('service', service)
-    return tradingGet<MakerStatus>(`v1/metrics?${qs.toString()}`)
+    return tradingGet<MakerStatus>(`metrics?${qs.toString()}`)
   },
 
   /** The DEX order book for a market (symbol OR base+quote) on a network. */
@@ -252,6 +252,6 @@ export const TradingApi = {
     if (opts.symbol) qs.set('symbol', opts.symbol)
     if (opts.base) qs.set('base', opts.base)
     if (opts.quote) qs.set('quote', opts.quote)
-    return tradingGet<OrderBook>(`v1/orderbook?${qs.toString()}`)
+    return tradingGet<OrderBook>(`orderbook?${qs.toString()}`)
   },
 }
