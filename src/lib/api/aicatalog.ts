@@ -320,6 +320,9 @@ export type Plan = {
   contactSales?: boolean
   features?: string[]
   limits?: PlanLimits
+  /** Limited-time promo: percent off the list price through promoUntil (RFC3339). */
+  promoPercent?: number
+  promoUntil?: string
 }
 
 /**
