@@ -1,185 +1,383 @@
 'use client'
 
 /**
- * Inference Router — the per-org router policy editor (registry `''`, AI category).
+ * Router — the per-org routing dashboard (registry `''` + `:tab`, AI category).
  *
- * One form, two concerns, both org-scoped and customer-writable:
- *   Prefer — the task -> ordered model-id table ("default" is the catch-all). An
- *            org customizing one task keeps the conf defaults for the rest (the
- *            server folds org > "*" > conf per task key). Models are comma-separated
- *            so the pool is editable without a per-row picker.
- *   Cost ceiling — a per-1k cost cap the learned path enforces as a hard gate
- *                  (arms above it drop). 0 = no cap.
+ * The customer face of the virtual `auto`/`zen-router` model, in two tabs:
+ *   Overview — routing observability over `GET /v1/router/stats` (org-scoped):
+ *     (a) cost saved (a blended $/MTok PROXY, not billed dollars), (b) a quality
+ *     proxy (learned reward / engine share / confidence / shadow agreement),
+ *     (c) the per-task routed-model distribution, an opt-in training-contribution
+ *     toggle, and the last-retrain gate verdict when present.
+ *   Policy   — the reused λ/µ editor (`RouterPolicyEditor`): task pools + cost
+ *     ceiling. ONE editor, embedded here — never a second copy.
  *
- * Saving an empty prefer + 0 ceiling CLEARS the org override (reverts to "*" then
- * conf) — the honest "reset to platform default". The endpoint is org-admin gated
- * server-side and self-scoped to the caller's org, so a customer configures only
- * their own router. Honest states: loading, error (BackendStateCard + retry),
- * and the resolved effective table (never a fabricated default).
+ * Honest by construction: loading (`Loader`), failure (`BackendStateCard`), no
+ * activity (`EmptyState`), and an em-dash for every absent/nullable metric. All
+ * numbers come from the pure, tested `router/logic.ts` — nothing is fabricated.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Route, Save, RotateCcw } from '@hanzogui/lucide-icons-2'
+import { Activity, Coins, Gauge, GitBranch, PiggyBank, Route, ShieldCheck, Sparkles, TrendingDown, Waypoints } from '@hanzogui/lucide-icons-2'
 
-import { RouterPolicyApi, type RouterPolicy } from '~/lib/api/router-policy'
+import { RouterStatsApi, TrainingContributionApi, type RouterStats } from '~/lib/api/router'
+import {
+  normalizeStats,
+  hasActivity,
+  hasPricedCost,
+  moneyIndex,
+  fractionPct,
+  savedPctLabel,
+  rewardLabel,
+  shadowAgreementLabel,
+  modelSlices,
+  taskBreakdown,
+  throughputSeries,
+  retrainLine,
+  hoursFor,
+  ROUTER_RANGES,
+  type RouterRange,
+  type NamedValue,
+} from './router/logic'
+import { RouterPolicyEditor } from './RouterPolicyEditor'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { FieldRow, FieldText } from '~/components/ui/Field'
 import { Loader } from '~/components/ui/Loader'
+import { EmptyState } from '~/components/ui/EmptyState'
+import { MetricCard, Panel } from '~/components/ui/Metric'
+import { Donut, LineChart, CHART_PALETTE, type Slice } from '~/components/ui/Charts'
+import { FieldSwitch } from '~/components/ui/Field'
+import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { useToast } from '~/components/ui/Toast'
+
+const ACCENT = '#a371f7'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
-/** The canonical task tags a pool may map (matches the Go router Task set). */
-const TASKS = [
-  'code',
-  'reasoning',
-  'math',
-  'creative',
-  'vision',
-  'long_context',
-  'cheap_chat',
-  'default',
-] as const
+const TABS: { id: string; label: string }[] = [
+  { id: '', label: 'Overview' },
+  { id: 'policy', label: 'Policy' },
+]
 
-/** Render a prefer table as the editable form state: task -> comma-joined ids. */
-function toForm(prefer: Record<string, string[]>): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const t of TASKS) out[t] = (prefer[t] ?? []).join(', ')
-  return out
+const tabPath = (id: string): string => (id ? `/router/${id}` : '/router')
+
+/** Map a pure `NamedValue[]` to polychrome donut slices (color assigned in the view). */
+const toSlices = (rows: NamedValue[]): Slice[] =>
+  rows.map((r, i) => ({ label: r.label, value: r.value, color: CHART_PALETTE[i % CHART_PALETTE.length] }))
+
+export function RouterModule({ params }: { params: Record<string, string> }) {
+  const router = useRouter()
+  const tab = useMemo(() => (TABS.some((t) => t.id === params.tab) ? params.tab ?? '' : ''), [params.tab])
+
+  return (
+    <>
+      <XStack gap="$1" flexWrap="wrap">
+        {TABS.map((t) => (
+          <Button
+            key={t.id || 'overview'}
+            size="$2"
+            bg={t.id === tab ? '$color5' : 'transparent'}
+            borderWidth={1}
+            borderColor="$borderColor"
+            onPress={() => router.push(tabPath(t.id))}
+          >
+            {t.label}
+          </Button>
+        ))}
+      </XStack>
+
+      {tab === 'policy' ? <RouterPolicyEditor params={params} /> : <RouterOverview />}
+    </>
+  )
 }
 
-/** Parse the form back to a prefer table: split on comma, trim, drop empties. */
-function fromForm(form: Record<string, string>): Record<string, string[]> {
-  const out: Record<string, string[]> = {}
-  for (const t of TASKS) {
-    const ids = form[t]
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0)
-    if (ids.length > 0) out[t] = ids
-  }
-  return out
-}
+function RouterOverview() {
+  const [range, setRange] = useState<RouterRange>('24h')
+  const [state, setState] = useState<Async<RouterStats>>({ phase: 'loading' })
 
-export function InferenceRouterModule(_props: { params: Record<string, string> }) {
-  const toast = useToast()
-  const [state, setState] = useState<Async<RouterPolicy>>({ phase: 'loading' })
-  const [form, setForm] = useState<Record<string, string>>(toForm({}))
-  const [ceiling, setCeiling] = useState('0')
-  const [busy, setBusy] = useState(false)
-
-  const load = useCallback(() => {
+  const load = useCallback((r: RouterRange) => {
     setState({ phase: 'loading' })
-    RouterPolicyApi.get()
-      .then((p) => {
-        setState({ phase: 'ready', data: p })
-        setForm(toForm(p.prefer ?? {}))
-        setCeiling(String(p.costCeiling ?? 0))
-      })
+    RouterStatsApi.get({ hours: hoursFor(r) })
+      .then((raw) => setState({ phase: 'ready', data: normalizeStats(raw) }))
       .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [])
 
   useEffect(() => {
-    load()
-  }, [load])
-
-  const setTask = (t: string, v: string) => setForm((prev) => ({ ...prev, [t]: v }))
-
-  const save = async () => {
-    setBusy(true)
-    try {
-      const prefer = fromForm(form)
-      const costCeiling = Number.parseFloat(ceiling) || 0
-      const p = await RouterPolicyApi.save({ prefer, costCeiling })
-      setState({ phase: 'ready', data: p })
-      setForm(toForm(p.prefer ?? {}))
-      setCeiling(String(p.costCeiling ?? 0))
-      toast.success('Router policy saved')
-    } catch (e) {
-      toast.error('Could not save router policy', e instanceof Error ? e.message : undefined)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const reset = () => {
-    if (state.phase !== 'ready') return
-    setForm(toForm({}))
-    setCeiling('0')
-  }
-
-  const hasOverride = state.phase === 'ready' && state.data.hasOverride
+    load(range)
+  }, [load, range])
 
   return (
     <>
       <PageHeader
-        title="Inference Router"
-        subtitle="Route each request to the best, cheapest capable model. Configure your org's task pools and cost ceiling."
+        title="Router"
+        subtitle="How your org's requests are routed to the best, cheapest capable model — cost saved, quality, and per-task model mix."
         actions={
-          <XStack gap="$2" flexWrap="wrap">
-            <Button size="$2" icon={<RotateCcw size={15} />} onPress={reset} disabled={busy}>
-              Reset
-            </Button>
-            <PrimaryButton size="$2" icon={<Save size={15} />} onPress={save} disabled={busy}>
-              Save
-            </PrimaryButton>
+          <XStack gap="$1" flexWrap="wrap">
+            {ROUTER_RANGES.map((r) => (
+              <Button
+                key={r}
+                size="$2"
+                bg={r === range ? '$color5' : 'transparent'}
+                borderWidth={1}
+                borderColor="$borderColor"
+                onPress={() => setRange(r)}
+              >
+                {r}
+              </Button>
+            ))}
           </XStack>
         }
       />
 
       {state.phase === 'loading' ? (
-        <Loader label="Loading router policy…" />
+        <Loader label="Loading routing stats…" />
       ) : state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} />
+        <BackendStateCard state={state.error} onRetry={() => load(range)} hint="GET /v1/router/stats" />
       ) : (
-        <YStack gap="$4">
-          <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor">
-            <XStack items="center" gap="$2">
-              <Route size={18} color="#a371f7" />
-              <Text fontSize="$5" fontWeight="700">
-                Task pools
-              </Text>
-              {hasOverride ? (
-                <Text fontSize="$1" color="$color10">
-                  Your org overrides the platform default
-                </Text>
-              ) : (
-                <Text fontSize="$1" color="$color10">
-                  Showing the effective platform default
-                </Text>
-              )}
-            </XStack>
-            <Text fontSize="$2" color="$color11" maxW={720}>
-              Each task maps to an ordered model pool; the first servable model wins. Leave a task
-              empty to inherit the platform default. Comma-separate model ids (e.g.{' '}
-              <Text style={{ fontFamily: 'monospace' }}>zen4-coder, qwen3-coder</Text>).
-            </Text>
-            {TASKS.map((t) => (
-              <FieldRow key={t} label={t}>
-                <FieldText value={form[t]} onChange={(v) => setTask(t, v)} disabled={busy} placeholder={t === 'default' ? 'zen4, gpt-4o' : 'inherit default'} />
-              </FieldRow>
-            ))}
-          </Card>
-
-          <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor">
-            <Text fontSize="$5" fontWeight="700">
-              Cost ceiling
-            </Text>
-            <Text fontSize="$2" color="$color11" maxW={720}>
-              A per-1k-token cap the router enforces as a hard gate (models above it are dropped).
-              0 = no cap. A caller header (<Text style={{ fontFamily: 'monospace' }}>X-Max-Cost</Text>)
-              overrides it per request.
-            </Text>
-            <FieldRow label="Per 1k tokens ($)">
-              <FieldText value={ceiling} onChange={setCeiling} disabled={busy} placeholder="0" />
-            </FieldRow>
-          </Card>
-        </YStack>
+        <RouterBoard stats={state.data} />
       )}
     </>
   )
 }
 
-export default InferenceRouterModule
+function RouterBoard({ stats }: { stats: RouterStats }) {
+  const router = useRouter()
+  const cost = stats.cost
+  const q = stats.quality
+  const priced = hasPricedCost(stats)
+  const tasks = useMemo(() => taskBreakdown(stats.by_task).slice(0, 6), [stats.by_task])
+  const models = useMemo(() => modelSlices(stats.by_model), [stats.by_model])
+  const series = useMemo(() => throughputSeries(stats), [stats])
+  const shadow = shadowAgreementLabel(q)
+  const retrain = retrainLine(stats)
+
+  if (!hasActivity(stats)) {
+    return (
+      <YStack gap="$4">
+        <EmptyState
+          icon={Waypoints}
+          title="No routing activity yet"
+          description="Once your org sends traffic through the auto/zen-router model, cost-saved, quality, and per-task routing stats appear here — never fabricated."
+          bullets={[
+            'Point requests at the "auto" model (or any pooled task) to start routing.',
+            'Set your task pools and cost ceiling in the Policy tab.',
+          ]}
+          primary={{ label: 'Edit routing policy', onPress: () => router.push('/router/policy') }}
+        />
+        <TrainingContributionCard />
+      </YStack>
+    )
+  }
+
+  return (
+    <YStack gap="$4">
+      {/* (a) Cost saved — a blended $/MTok PROXY, not billed dollars. */}
+      <Panel title="Cost saved" grow={false}>
+        <Text fontSize="$2" color="$color11" maxW={720}>
+          A blended <Text style={{ fontFamily: 'monospace' }}>$/MTok</Text> proxy — the router ledger has no per-token
+          counts, so this compares the served model's price index against the premium single model you'd default to
+          without routing. Not billed dollars.
+        </Text>
+        <XStack gap="$3" flexWrap="wrap">
+          <MetricCard
+            icon={<PiggyBank size={16} color={ACCENT} />}
+            label="Cost saved"
+            value={savedPctLabel(stats)}
+            caption={priced ? `${cost?.priced_events.toLocaleString()} priced events` : 'no priced events yet'}
+          />
+          <MetricCard
+            icon={<TrendingDown size={16} color={ACCENT} />}
+            label="Routed index"
+            value={moneyIndex(cost?.routed_index)}
+            caption="avg served $/MTok (proxy)"
+          />
+          <MetricCard
+            icon={<Coins size={16} color={ACCENT} />}
+            label="Counterfactual"
+            value={moneyIndex(cost?.counterfactual_index)}
+            caption={cost?.baseline_model ? `vs ${cost.baseline_model}` : 'premium single model'}
+          />
+          <MetricCard
+            icon={<Coins size={16} color={ACCENT} />}
+            label="Cumulative saved"
+            value={priced ? moneyIndex(cost?.cumulative_saved_index) : '—'}
+            caption="Σ per-request (cf − routed)"
+          />
+        </XStack>
+      </Panel>
+
+      {/* (b) Quality proxy. */}
+      <Panel title="Quality proxy" grow={false}>
+        <XStack gap="$3" flexWrap="wrap">
+          <MetricCard
+            icon={<Sparkles size={16} color={ACCENT} />}
+            label="Reward rate"
+            value={rewardLabel(q)}
+            caption={`${q.rewarded_events.toLocaleString()} rewarded events`}
+          />
+          <MetricCard
+            icon={<Gauge size={16} color={ACCENT} />}
+            label="Engine share"
+            value={fractionPct(q.engine_share)}
+            caption="learned engine vs heuristic"
+          />
+          <MetricCard
+            icon={<Activity size={16} color={ACCENT} />}
+            label="Avg confidence"
+            value={fractionPct(q.avg_confidence)}
+            caption="router decision confidence"
+          />
+          {shadow != null ? (
+            <MetricCard
+              icon={<ShieldCheck size={16} color={ACCENT} />}
+              label="Shadow agreement"
+              value={shadow}
+              caption="live vs shadow model"
+            />
+          ) : (
+            <Card p="$3.5" gap="$2" borderWidth={1} borderColor="$borderColor" flex={1} minW={172}>
+              <XStack items="center" gap="$2">
+                <ShieldCheck size={16} color="$color10" />
+                <Text fontSize="$2" color="$color11" fontWeight="500">
+                  Shadow agreement
+                </Text>
+              </XStack>
+              <Text fontSize="$3" color="$color10">
+                Not available yet
+              </Text>
+              <Text fontSize="$1" color="$color10">
+                appears once a shadow model is scored
+              </Text>
+            </Card>
+          )}
+        </XStack>
+      </Panel>
+
+      {/* (c) Per-task routed-model distribution + routed models + throughput. */}
+      <XStack gap="$4" flexWrap="wrap">
+        <Panel title="Routed models" minW={300}>
+          <Donut slices={toSlices(models)} legend center={<Text fontSize="$3" color="$color11">{stats.window.events.toLocaleString()}</Text>} />
+        </Panel>
+        <Panel title="Requests over time" minW={320}>
+          <LineChart data={series} height={180} color={ACCENT} formatValue={(v) => v.toLocaleString()} />
+        </Panel>
+      </XStack>
+
+      <Panel title="Routing by task" grow={false}>
+        {tasks.length === 0 ? (
+          <Text fontSize="$3" color="$color10">
+            —
+          </Text>
+        ) : (
+          <XStack gap="$4" flexWrap="wrap">
+            {tasks.map((t) => (
+              <YStack key={t.task} gap="$2" minW={220} flex={1}>
+                <XStack items="center" justify="space-between" gap="$2">
+                  <Text fontSize="$3" fontWeight="600" color="$color12">
+                    {t.task}
+                  </Text>
+                  <Text fontSize="$1" color="$color10">
+                    {t.events.toLocaleString()} events
+                  </Text>
+                </XStack>
+                <Donut slices={toSlices(t.models)} size={132} thickness={18} legend />
+              </YStack>
+            ))}
+          </XStack>
+        )}
+      </Panel>
+
+      {/* (f) Last-retrain gate verdict, when present. */}
+      {retrain ? (
+        <Card p="$3" borderWidth={1} borderColor="$borderColor">
+          <XStack gap="$2" items="center">
+            <GitBranch size={15} color="$color10" />
+            <Text fontSize="$2" color="$color11" flex={1}>
+              {retrain}
+            </Text>
+          </XStack>
+        </Card>
+      ) : null}
+
+      {/* (e) Opt-in training contribution. */}
+      <TrainingContributionCard />
+    </YStack>
+  )
+}
+
+/**
+ * The opt-in for improving the org's personal router with its OWN usage — feature
+ * vectors only, never prompt text. Optimistic toggle with an honest revert on
+ * failure; if the preference isn't served on this deployment it says so (never a
+ * silent no-op that looks enabled).
+ */
+type FlagState =
+  | { phase: 'loading' }
+  | { phase: 'ready'; enabled: boolean }
+  | { phase: 'unavailable'; note: string }
+
+function TrainingContributionCard() {
+  const toast = useToast()
+  const [state, setState] = useState<FlagState>({ phase: 'loading' })
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    TrainingContributionApi.get()
+      .then((r) => alive && setState({ phase: 'ready', enabled: !!r.enabled }))
+      .catch((e) => alive && setState({ phase: 'unavailable', note: classifyBackend(e).message }))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const toggle = async (next: boolean) => {
+    if (state.phase !== 'ready') return
+    const prev = state.enabled
+    setState({ phase: 'ready', enabled: next }) // optimistic
+    setBusy(true)
+    try {
+      const r = await TrainingContributionApi.save(next)
+      setState({ phase: 'ready', enabled: !!r.enabled })
+      toast.success(r.enabled ? 'Contributing usage to routing' : 'Opted out of routing contribution')
+    } catch (e) {
+      setState({ phase: 'ready', enabled: prev }) // honest revert
+      toast.error('Could not update preference', e instanceof Error ? e.message : undefined)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
+      <XStack gap="$3" items="flex-start" justify="space-between" flexWrap="wrap">
+        <YStack gap="$1.5" flex={1} minW={260}>
+          <XStack items="center" gap="$2">
+            <Route size={16} color={ACCENT} />
+            <Text fontSize="$4" fontWeight="700">
+              Improve routing with our usage
+            </Text>
+          </XStack>
+          <Text fontSize="$2" color="$color11" maxW={640}>
+            Opt in to help train your org's personal router. Feature vectors only — never prompt text, never raw
+            requests. You can turn this off any time.
+          </Text>
+          {state.phase === 'unavailable' ? (
+            <Text fontSize="$1" color="$color10">
+              This preference isn't available on this deployment yet — it appears here once the route is live.
+            </Text>
+          ) : null}
+        </YStack>
+        {state.phase === 'loading' ? (
+          <Text fontSize="$2" color="$color10">
+            Loading…
+          </Text>
+        ) : state.phase === 'ready' ? (
+          <FieldSwitch checked={state.enabled} onChange={toggle} disabled={busy} />
+        ) : null}
+      </XStack>
+    </Card>
+  )
+}
+
+export default RouterModule
