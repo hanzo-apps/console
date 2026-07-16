@@ -18,11 +18,11 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { AccountApi, type Account } from '~/lib/api'
+import { withTimeout } from '~/lib/with-timeout'
 import { isAdminHost } from '~/config'
 import { getProviderSigninUrl, getSigninUrl, stashReturnTo } from './iam'
 import { refreshSession } from './refresh'
 import { setCurrentActor } from '~/lib/actor-scope'
-import { claimWelcomeGrantOnce } from '~/lib/billing/welcome'
 import { claimReferralOnce, stashReferralCode } from '~/lib/referrals/claim'
 import { attributeAffiliateOnce, stashAffiliateCode } from '~/lib/affiliates/claim'
 
@@ -47,6 +47,10 @@ const SessionContext = createContext<SessionState | null>(null)
 const MIN_PROACTIVE_MS = 30_000
 const MAX_PROACTIVE_MS = 2 * 60 * 60 * 1000 // 2h
 
+/** Cap the boot session resolve so a slow/hung backend can't hold the splash
+ *  forever — on timeout the visitor is anonymous and the sign-in card renders. */
+const SESSION_BOOT_TIMEOUT_MS = 8_000
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null)
   const [loading, setLoading] = useState(true)
@@ -58,11 +62,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const applyAccount = useCallback((a: Account | null) => {
     setAccount(a)
     setCurrentActor(a && a.owner && a.name ? `${a.owner}/${a.name}` : '')
-    // Self-heal the one-time $5 welcome trial credit for a just-resolved authenticated
-    // account (social-login + pre-existing $0 users the signup-time grant never reached).
-    // Idempotent server-side; guarded to fire at most once per browser session per org.
     if (a && a.owner && a.name) {
-      claimWelcomeGrantOnce(a.owner)
       // Claim a stashed referral (?ref= captured at signup) → binds this org as the
       // referee. Once per session per org, server-idempotent, best-effort.
       claimReferralOnce(a.owner)
@@ -92,7 +92,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(async () => {
     setLoading(true)
     try {
-      const { account: acct, expiresIn } = await AccountApi.session()
+      // The boot "who am I" (AccountApi.session → /v1/iam/get-account) must never
+      // pin the splash: a degraded backend (the beego IAM proxy hop, a dead pruned
+      // route) can leave it pending indefinitely. Cap it — on timeout treat the
+      // visitor as anonymous so the sign-in card renders. A later reload/refresh
+      // (or a recovered backend) resolves the real session.
+      const { account: acct, expiresIn } = await withTimeout(
+        AccountApi.session(),
+        SESSION_BOOT_TIMEOUT_MS,
+        { account: null, expiresIn: null },
+      )
       applyAccount(acct)
       armRefresh(acct ? expiresIn : null)
     } finally {
