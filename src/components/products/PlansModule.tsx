@@ -30,11 +30,13 @@ function openBilling(anchor = ''): void {
   if (typeof window !== 'undefined') window.open(`${config.billingUrl}${anchor}`, '_blank', 'noopener')
 }
 
+import { promoActive, effectiveMonthly, promoLabel } from '~/lib/billing/promo'
+
 /** The price headline for a tier: a quote, free, or the whole-dollar monthly price. */
 function priceLabel(p: Plan): string {
   if (p.contactSales) return 'Contact sales'
   if (p.priceMonthly === 0) return 'Free'
-  return `$${p.priceMonthly}`
+  return `$${effectiveMonthly(p) ?? p.priceMonthly}`
 }
 
 /** The subscribe CTA label for a tier. */
@@ -84,6 +86,16 @@ function PlanCard({ plan }: { plan: Plan }) {
         {!plan.contactSales && plan.priceMonthly > 0 ? (
           <Text fontSize="$3" color="$color11" mb="$1.5">
             /mo
+          </Text>
+        ) : null}
+        {promoActive(plan) ? (
+          <Text fontSize="$3" color="$color9" mb="$1.5" textDecorationLine="line-through">
+            ${plan.priceMonthly}
+          </Text>
+        ) : null}
+        {promoActive(plan) ? (
+          <Text fontSize="$1" fontWeight="700" color="$green11" mb="$2">
+            {promoLabel(plan)}
           </Text>
         ) : null}
         {showAnnual ? (
