@@ -1,14 +1,18 @@
 'use client'
 
 /**
- * Router — the per-org routing dashboard (registry `''` + `:tab`, AI category).
- *
- * The customer face of the virtual `auto`/`zen-router` model, in two tabs:
- *   Overview — routing observability over `GET /v1/router/stats` (org-scoped):
- *     (a) cost saved (a blended $/MTok PROXY, not billed dollars), (b) a quality
- *     proxy (learned reward / engine share / confidence / shadow agreement),
- *     (c) the per-task routed-model distribution, an opt-in training-contribution
- *     toggle, and the last-retrain gate verdict when present.
+ * Router — the per-org AI Usage & Training surface (registry `''` + `:tab`, AI
+ * category). The customer face of the virtual `auto`/`zen-router` model, in three
+ * tabs:
+ *   Overview — routing observability + TRAINING status over `GET /v1/router/stats`
+ *     (org-scoped): (a) cost saved (a blended $/MTok PROXY, not billed dollars),
+ *     (b) a quality proxy (learned reward / engine share / confidence / shadow
+ *     agreement), (c) the per-task routed-model distribution, the last-retrain gate
+ *     verdict when present, and the opt-in training-contribution toggle (kept in
+ *     THIS one place — the toggle lives nowhere else in the console).
+ *   Usage    — the org's AI usage (native Hanzo `GET /v1/get-cloud-usages` +
+ *     imported connected-provider usage), rendered by the shared `<AiUsagePanels>`
+ *     that `AiUsageModule` also uses. ONE usage implementation — never a second copy.
  *   Policy   — the reused λ/µ editor (`RouterPolicyEditor`): task pools + cost
  *     ceiling. ONE editor, embedded here — never a second copy.
  *
@@ -41,6 +45,7 @@ import {
   type NamedValue,
 } from './router/logic'
 import { RouterPolicyEditor } from './RouterPolicyEditor'
+import { AiUsagePanels } from './usage/AiUsagePanels'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { Loader } from '~/components/ui/Loader'
 import { EmptyState } from '~/components/ui/EmptyState'
@@ -56,6 +61,7 @@ type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } |
 
 const TABS: { id: string; label: string }[] = [
   { id: '', label: 'Overview' },
+  { id: 'usage', label: 'Usage' },
   { id: 'policy', label: 'Policy' },
 ]
 
@@ -86,7 +92,16 @@ export function RouterModule({ params }: { params: Record<string, string> }) {
         ))}
       </XStack>
 
-      {tab === 'policy' ? <RouterPolicyEditor params={params} /> : <RouterOverview />}
+      {tab === 'policy' ? (
+        <RouterPolicyEditor params={params} />
+      ) : tab === 'usage' ? (
+        <AiUsagePanels
+          title="AI usage"
+          subtitle="Requests, tokens, spend, and per-model usage for your org — native Hanzo usage (GET /v1/get-cloud-usages), beside your connected-provider usage."
+        />
+      ) : (
+        <RouterOverview />
+      )}
     </>
   )
 }
