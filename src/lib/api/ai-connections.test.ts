@@ -37,7 +37,7 @@ describe('AiConnectionsApi.authorizeUrl (provider-login OAuth, ai#85)', () => {
     ctl.ret = { authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth?x=1' }
     await AiConnectionsApi.authorizeUrl('google')
     expect(ctl.get).toHaveLength(1)
-    expect(ctl.get[0]).toMatch(/\/ai\/v1\/ai\/connections\/google\/authorize\?format=json$/)
+    expect(ctl.get[0]).toMatch(/\/v1\/ai\/connections\/google\/authorize\?format=json$/)
   })
 
   it('returns the camelCase authorizeUrl', async () => {

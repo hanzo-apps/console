@@ -253,7 +253,7 @@ export const fmtSpread = (v?: number): string => (v == null ? '—' : `${v.toFix
 // ── The client ───────────────────────────────────────────────────────────────
 
 async function economyGet<T>(path: string): Promise<T> {
-  const res = await fetch(`/economy/${path}`, {
+  const res = await fetch(`/v1/economy/${path}`, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
     cache: 'no-store',
@@ -279,6 +279,6 @@ async function economyGet<T>(path: string): Promise<T> {
 export const EconomyApi = {
   /** The economy snapshot (markets + recent fills + day history) for the brand's network. */
   async overview(): Promise<EconomySnapshot> {
-    return economyGet<EconomySnapshot>('v1/overview')
+    return economyGet<EconomySnapshot>('overview')
   },
 }

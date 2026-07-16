@@ -4,7 +4,7 @@
  * useCatalog — load the live model catalog ONCE for the playground.
  *
  * This is the SAME source the Models page uses (`CloudModelApi.list()` → the
- * `/ai/v1/models` proxy + best-effort `/v1/pricing/models` overlay), so the
+ * `/v1/models` proxy + best-effort `/v1/pricing/models` overlay), so the
  * selectable models and their $/Mtok pricing are exactly what the catalog shows.
  * Every playground surface (compare board, embeddings, audio, vision) shares this
  * one hook — one fetch, one honest loading/error state, no duplicate catalogs.

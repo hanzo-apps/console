@@ -56,7 +56,7 @@ export function apmWindow(seconds: number): ApmWindow {
 
 // ── Service map / APM ─────────────────────────────────────────────────────────
 
-/** One service row from `/api/v1/services` (POST): RED metrics over the window. */
+/** One service row from `/v1/o11y/services` (POST): RED metrics over the window. */
 export type ServiceRow = {
   serviceName: string
   /** p99 latency, nanoseconds (O11y returns ns). */
@@ -71,7 +71,7 @@ export type ServiceRow = {
   fourXXRate: number
 }
 
-/** One edge of the service dependency graph (`/api/v1/dependency_graph`). */
+/** One edge of the service dependency graph (`/v1/o11y/dependency_graph`). */
 export type DependencyEdge = {
   parent: string
   child: string
@@ -83,7 +83,7 @@ export type DependencyEdge = {
   p50: number
 }
 
-/** One top-operation row for a service (`/api/v1/service/top_operations`). */
+/** One top-operation row for a service (`/v1/o11y/service/top_operations`). */
 export type TopOperation = {
   name: string
   p50: number
@@ -214,7 +214,7 @@ export function serviceHealthOf(row: ServiceRow | null): ServiceHealth | null {
 
 // ── Infrastructure (hosts / k8s) ──────────────────────────────────────────────
 
-/** One host row from `/api/v1/hosts/list`. */
+/** One host row from `/v1/o11y/hosts/list`. */
 export type HostRow = {
   hostName: string
   active: boolean
@@ -227,7 +227,7 @@ export type HostRow = {
   load15: number
 }
 
-/** One pod row from `/api/v1/pods/list`. */
+/** One pod row from `/v1/o11y/pods/list`. */
 export type PodRow = {
   podName: string
   cpu: number
@@ -242,7 +242,7 @@ export type PodRow = {
   phase: { pending: number; running: number; succeeded: number; failed: number; unknown: number }
 }
 
-/** One node row from `/api/v1/nodes/list`. */
+/** One node row from `/v1/o11y/nodes/list`. */
 export type NodeRow = {
   nodeName: string
   cpuUsage: number
@@ -339,7 +339,7 @@ export function normalizeNodes(body: unknown): InfraList<NodeRow> {
 
 // ── Exceptions ────────────────────────────────────────────────────────────────
 
-/** One grouped exception from `/api/v1/listErrors`. */
+/** One grouped exception from `/v1/o11y/listErrors`. */
 export type ExceptionGroup = {
   groupID: string
   exceptionType: string
@@ -490,7 +490,7 @@ export function normalizeIssueDetail(body: unknown): IssueDetail {
 
 // ── Dashboards (O11y) ───────────────────────────────────────────────────────
 
-/** One dashboard from `/api/v1/dashboards` (list). */
+/** One dashboard from `/v1/o11y/dashboards` (list). */
 export type Dashboard = {
   uuid: string
   title: string
@@ -782,7 +782,7 @@ export const ApmApi = {
   dashboards: async (): Promise<Dashboard[]> => normalizeDashboards(await restGet<unknown>(u('dashboards'))),
   dashboard: (uuid: string): Promise<unknown> => restGet<unknown>(u(`dashboards/${encodeURIComponent(uuid)}`)),
 
-  // ── Logs + Traces (composite query_range; `/api/v1/logs` is a stub) ──
+  // ── Logs + Traces (composite query_range; `/v1/o11y/logs` is a stub) ──
   // A `service` scopes the query to ONE product's OTel `service.name` (the per-product
   // Logs sub-page); omit it for the org-wide stream. The rows are re-filtered client-side
   // to the same service so a runtime ignoring the item can never leak other services' lines.

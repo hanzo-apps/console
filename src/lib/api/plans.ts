@@ -1,14 +1,13 @@
 /**
  * Plans & pricing — the published subscription catalog (the money-truth rate card
  * that actually gets charged), read through the console's OWN per-tenant billing
- * proxy: GET /billing/v1/plans -> commerce api/billing.ListPlans.
+ * proxy at the canonical GET /v1/billing/plans -> commerce api/billing.ListPlans.
  *
- * Why the billing proxy, not a bare /v1/pricing or /v1/plans: on the live console
- * ingress /v1/* is routed straight to the gateway-fronted cloud binary (cookie-only,
- * no bearer) and 401s, so the old /v1/pricing read rendered "Not authorized" and NO
- * tiers — nobody could see or buy Pro. The /billing/v1/* route handler injects the
+ * Why the billing proxy, not /v1/pricing or /v1/plans: the billing proxy injects the
  * commerce SERVICE token server-side (the SAME proxy every working billing call uses —
- * balance, usage, subscriptions), so the catalog loads for a signed-in user. Read-only
+ * balance, usage, subscriptions), whereas the old /v1/pricing read rendered "Not
+ * authorized" and NO tiers — nobody could see or buy Pro. So the catalog loads for a
+ * signed-in user. Read-only
  * discovery: actually paying happens at config.billingUrl (the brand billing portal
  * over commerce, Square checkout), which the cards link to — one money surface, never
  * reimplemented here.

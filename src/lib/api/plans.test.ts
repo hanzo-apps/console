@@ -9,7 +9,7 @@ let lastUrl = ''
 
 /**
  * Stub `window` + a `fetch` that RECORDS the request URL and replies with `body`.
- * Mirrors the commerce `/billing/v1/plans` wire shape: a BARE ARRAY of `staticPlan`
+ * Mirrors the commerce `/v1/billing/plans` wire shape: a BARE ARRAY of `staticPlan`
  * records with prices in CENTS.
  */
 function stubPlans(body: unknown, status = 200): void {
@@ -57,7 +57,7 @@ describe('PlansApi.plans', () => {
   it('reads the per-tenant billing proxy directly (NOT a bare /v1/pricing or /v1/plans that 401s live)', async () => {
     stubPlans(CATALOG)
     await PlansApi.plans()
-    expect(lastUrl).toBe(`${ORIGIN}/billing/v1/plans`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/billing/plans`)
   })
 
   it('maps commerce cents -> whole dollars and carries the Pro tier at $49/mo, popular', async () => {

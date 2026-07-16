@@ -2898,6 +2898,63 @@ backend endpoints.
   console.hanzo.ai (the standalone CR is unrouted). Coordinate the cloud release with
   the cloud lane. No version bump here — the merge/release agent bumps `package.json`.
 
+## Every client-facing same-origin API path is `/v1/`-FIRST — one version, no `/prefix/vN/`, no nesting (feat/v1-first-paths)
+
+Comprehensive enforcement of the /v1-first law across EVERY same-origin API namespace —
+**superseding the v8.4.16 `/billing/v1/` namespacing** and completing the v8.4.120 "/v1-rooted"
+contract. The law: a client-facing same-origin API path is `/v1/<head>/…` — ONE version, NO
+`/<svc>/vN/` prefix, NO nested `/v1/<x>/vN/`, NO `/api/`. After this,
+`git grep -oE '/[a-z-]+/v[0-9]/'` over src/app/next.config returns ONLY external hosts.
+
+- **ONE mechanism, DRY (matching v8.4.120).** The CLIENT builds `/v1/<head>/…`; each
+  non-cloud-api proxy is a FILESYSTEM route `app/v1/<svc>/[...path]` — MORE SPECIFIC than the
+  `app/v1/[...path]` cloud BFF catch-all, so Next resolves `/v1/<svc>/*` straight to it (proven
+  in the `next build` route table: every `/v1/<svc>/[...path]` is a distinct route beside
+  `/v1/[...path]`). Bearer/service-token proxies re-root the upstream at `v1/`
+  (`` const path = `v1/${params.path.join('/')}` ``) — the exact path the backend + the
+  least-privilege allow-list see. NO rewrite for these — filesystem precedence dispatches.
+  This REMOVES the v8.4.120 `/v1/billing → /billing/v1` and `/v1/commerce → /commerce/v1`
+  beforeFiles rewrites. The stale v8.4.70 "ingress routes `/v1/*` straight to the gateway,
+  bypassing Next, so bare `/v1/billing` 403s" rationale is DISPROVEN by v8.4.120's own live
+  acceptance (`/v1/billing/balance` → 401 "Sign in to view billing" REACHED the Next billing
+  proxy), so the explicit `/<svc>/v1` addressing it justified is gone.
+- **Namespaces migrated (handler `git mv`'d, history preserved):** `/billing/v1/*` →
+  `/v1/billing/*` (service token); `/commerce/v1/*` → `/v1/commerce/*` (user bearer);
+  `/ai-accounts/v1/*` → `/v1/ai-accounts/*` (+ settings/usage/routing-defaults sub-routes);
+  `/economy/v1/*` → `/v1/economy/*`; `/nodes/v1/*` → `/v1/nodes/*`; `/trading/v1/*` →
+  `/v1/trading/*` (the brand-scoped read proxies drop the `v1/` route discriminator to `<x>`);
+  `/superbase/v1/*` → `/v1/superbase/*` (the generic `BaseDataApi` `baseUrl` is now the
+  version-root `/v1/superbase`; its handler re-roots to Base's `/v1/…`); `/vm/v1/*` →
+  `/v1/vm/*` (visor catalog; the `regions/sizes/gpu-sizes` beforeFiles dispatch retargeted to
+  `/v1/vm/*`). Each proxy's AUTH/scoping/CSRF/service-token/allow-list is UNCHANGED — only the
+  PATH moved. UI tab routes (`/billing/*`, `/ai-accounts/*`) still render (they differ at the
+  FIRST segment from the `/v1/…` data plane).
+- **AI heads (`/ai/v1/` → clean `/v1/*`).** playground images/videos + ai-connections built
+  `/ai/v1/*` directly; they now build `/v1/images/generations` · `/v1/videos/generations` ·
+  `/v1/ai/connections` (ONE path — drops the ai-connections IS_EMBED split). `next.config.mjs`
+  dispatches the AI heads to the `/ai` bearer proxy WITHOUT a nested version (destination
+  `/ai/<head>`, not `/ai/v1/<head>`); `app/ai/[...path]` re-roots the upstream at `v1/`. New
+  `ai` head so `/v1/ai/connections` dispatches (never shadows a cloud head — `ai` ≠ `ai-accounts`
+  as a segment). This also fixes image/video/connections on the go:embed console (the old
+  `/ai/v1/*` had no cloud route there).
+- **Nested inner-version dropped.** `/v1/websearch/v1/scrape` → `/v1/websearch/scrape` (the
+  scrape descriptor/Fact — the console documents it, never calls it live; the cloud websearch
+  backend should serve the flat form). `/v1/o11y/*` was already version-less (v8.4.124).
+  `apm.ts` stale SigNoz-upstream `/api/v1/<resource>` doc comments repointed to the
+  `/v1/o11y/<resource>` the client actually calls.
+- **Left (external, not ours — full `https://<host>`):** Gatus `status.<brand>/api/v1/
+  endpoints/statuses`, Cloudflare Turnstile `challenges.cloudflare.com/turnstile/v0/`, Slack
+  OAuth `slack.com/oauth/v2/`. External provider paths, untouched.
+- **Deploy unchanged either way.** go:embed console (console.hanzo.ai): `build:embed` prunes
+  the route handlers (recursive `app/**/route.ts` stash catches the nested `app/v1/<svc>/`
+  handlers) → the static export terminates at cloud's native `/v1/*` under the first-party
+  session cookie — same as before, just prefix-free. Standalone (console2/admin): the
+  filesystem route (or the `/ai` dispatch) serves it.
+- Verification: `tsc --noEmit` clean; `vitest` **2445/2445** (206 files; canonical-paths/
+  billing/aimetrics/plans/embed-paths/visor/ai-connections path assertions updated to the
+  `/v1/<head>` forms); `next build` ✓ (route table); `npm run build:embed` ✓ (go:embed gate,
+  31 handlers stashed+restored). `git grep -oE '/[a-z-]+/v[0-9]/'` = external hosts only.
+
 ## TODO — embed the Hanzo Social dashboard (follow-up to social.hanzo.ai)
 
 The dedicated Social frontend shipped at **social.hanzo.ai** (hanzoai/social

@@ -8,7 +8,7 @@
  *
  * Money path (one canonical ledger):
  *   card → Square Web Payments SDK tokenizes IN THE BROWSER → opaque nonce
- *   → POST /billing/v1/topup/token (same-origin proxy → commerce, service token,
+ *   → POST /v1/billing/topup/token (same-origin proxy → commerce, service token,
  *     subject pinned server-side) → commerce charges the org's Square account and
  *     credits transaction.Deposit(subject, "iam-user") → the exact key GetBalance
  *     reads and the gateway debits. invalidateBalance() then refreshes every surface.
