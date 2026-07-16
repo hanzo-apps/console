@@ -17,8 +17,9 @@
  * repeat signup with the same email resolves to the same slug and is caught by
  * `getOrganization` (409); two different emails never false-collide.
  *
- * PUBLIC-LAUNCH ABUSE PROTECTIONS (this route mints an account + org + a $5 welcome
- * grant from the open internet, so the open path is guarded, in order):
+ * PUBLIC-LAUNCH ABUSE PROTECTIONS (this route mints an account + org from the open
+ * internet — but NO credit; a new account is $0 until granted/paid — so the open
+ * path is guarded, in order):
  *   - same-origin CSRF gate (a scripted cross-origin signup is refused),
  *   - Turnstile bot wall (`verifyTurnstile`, enforced when the secret is provisioned),
  *   - per-IP sliding-window rate limit (`signupLimiter`, default 5/IP/hr),
@@ -34,7 +35,6 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { brandFromHost } from '~/config'
 import { BRANDS } from '~/lib/branding/brands'
 import { createOrganization, createUser, getOrganization, mintConfigured } from '~/lib/server/identity'
-import { grantWelcomeCredit } from '~/lib/server/billing-grant'
 import {
   deriveUsername,
   displayNameFromEmail,
@@ -123,10 +123,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // Best-effort $5 welcome grant so the new account can chat immediately (the
-  // onboarding paywall fix). NEVER blocks signup: `grantWelcomeCredit` swallows its
-  // own errors, and the grant is idempotent (the read-path self-heal re-lands it).
-  await grantWelcomeCredit(orgSlug)
+  // No automatic credit on signup — a new account starts at $0 until an admin
+  // grants credit (admin.hanzo.ai) or the user adds funds. (Credit-granting is the
+  // one mint-gated commerce primitive; signup never mints.)
 
   // Join the brand waitlist so the account holds a POSITION immediately — product
   // access is waitlist-gated (WaitlistGate), and a `?ref=` from the landing link

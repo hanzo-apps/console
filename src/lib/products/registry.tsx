@@ -109,7 +109,7 @@ import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
 import { AiEconomicsModule } from '~/components/products/admin/AiEconomicsModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
-import { InferenceRouterModule } from '~/components/products/InferenceRouterModule'
+import { RouterModule } from '~/components/products/RouterModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
 import { PlatformModule } from '~/components/products/PlatformModule'
@@ -879,16 +879,16 @@ export const catalog: CatalogEntry[] = [
     // surfaces beside it: `models`' admin "Routing" tab flips PLATFORM ModelRoute
     // config, and `ai-accounts`' Routing tab is the user's smart-routing on/off
     // preference — this one is the org's own policy TABLE.
-    id: 'inference-router',
-    label: 'Inference Router',
+    id: 'router',
+    label: 'Router',
     icon: Waypoints,
-    description: 'Route each request to the best, cheapest capable model — configure your org’s task pools and cost ceiling.',
+    description: 'Route each request to the best, cheapest capable model.',
     gcp: 'Vertex AI (model routing)',
     category: 'AI',
     status: 'enabled',
     repo: 'hanzoai/ai',
     kind: 'module',
-    routes: [{ path: '', component: InferenceRouterModule }],
+    routes: [{ path: '', component: RouterModule }],
   },
   {
     // Admin-only: providers + credentials are shared-gateway config managed by

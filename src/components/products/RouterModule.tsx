@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Inference Router — the per-org router policy editor (registry `''`, AI category).
+ * Router — the per-org router policy editor (registry `''`, AI category).
  *
  * One form, two concerns, both org-scoped and customer-writable:
  *   Prefer — the task -> ordered model-id table ("default" is the catch-all). An
@@ -21,7 +21,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Route, Save, RotateCcw } from '@hanzogui/lucide-icons-2'
 
-import { RouterPolicyApi, type RouterPolicy } from '~/lib/api/router-policy'
+import { RouterPolicyApi, type RouterPolicy } from '~/lib/api/router'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
@@ -63,7 +63,7 @@ function fromForm(form: Record<string, string>): Record<string, string[]> {
   return out
 }
 
-export function InferenceRouterModule(_props: { params: Record<string, string> }) {
+export function RouterModule(_props: { params: Record<string, string> }) {
   const toast = useToast()
   const [state, setState] = useState<Async<RouterPolicy>>({ phase: 'loading' })
   const [form, setForm] = useState<Record<string, string>>(toForm({}))
@@ -115,7 +115,7 @@ export function InferenceRouterModule(_props: { params: Record<string, string> }
   return (
     <>
       <PageHeader
-        title="Inference Router"
+        title="Router"
         subtitle="Route each request to the best, cheapest capable model. Configure your org's task pools and cost ceiling."
         actions={
           <XStack gap="$2" flexWrap="wrap">
@@ -182,4 +182,4 @@ export function InferenceRouterModule(_props: { params: Record<string, string> }
   )
 }
 
-export default InferenceRouterModule
+export default RouterModule

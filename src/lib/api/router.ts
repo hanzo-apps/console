@@ -1,5 +1,5 @@
 /**
- * Inference Router client — the per-org router policy over the canonical
+ * Router client — the per-org router policy over the canonical
  * same-origin `/v1` surface (v1-first: no service prefix, no nested version).
  *
  *   GET  /v1/get-router-policy     → the effective policy resolved for the
