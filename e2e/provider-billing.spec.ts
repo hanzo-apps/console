@@ -29,7 +29,7 @@ const SHOTS = join(process.cwd(), 'e2e-shots')
 // current org locally instead of demanding a pick from the (mocked-empty) org list;
 // the real reserved-`admin`-org SuperAdmin is exercised by the LIVE (B) test.
 const ACCOUNT = {
-  owner: 'hanzo',
+  owner: 'admin',
   name: 'z',
   type: 'normal-user',
   email: 'z@hanzo.ai',
