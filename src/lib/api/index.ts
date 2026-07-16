@@ -186,6 +186,34 @@ export {
   type MlModel,
   type CreateTrainJobInput,
 } from './train'
+// Interactive training — the ENGINE plane (live LoRA client: forward_backward /
+// optim_step / sample / save_weights), distinct from TrainApi's cloud k8s jobs.
+export {
+  TrainingApi,
+  LLAMA_TARGET_MODULES,
+  DEFAULT_LORA,
+  normLoraConfig,
+  normClientInfo,
+  normClientDetail,
+  normForwardBackward,
+  normSampleResult,
+  type LoraConfig,
+  type TrainingClientStatus,
+  type TrainingClientInfo,
+  type TrainingClientDetail,
+  type Datum,
+  type PromptCompletion,
+  type TokenDatum,
+  type ForwardBackwardResult,
+  type OptimStepResult,
+  type AdamParams,
+  type SamplingParams,
+  type SampleInput,
+  type SampleSequence,
+  type SampleResult,
+  type SaveWeightsResult,
+  type CreateClientInput,
+} from './training'
 export {
   O11yApi,
   type O11yList,

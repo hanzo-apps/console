@@ -463,7 +463,10 @@ async function parseRestResponse<T>(res: Response): Promise<T | undefined> {
     try {
       json = JSON.parse(text)
     } catch {
-      if (!res.ok) throw new ApiError(`Request failed (HTTP ${res.status})`, res.status)
+      // A non-JSON error body IS the human message — a backend that answers a 4xx with a
+      // plain-text reason (the engine's 400/404/409) — so surface it (capped) instead of a
+      // generic code. A non-JSON 2xx body is a malformed success.
+      if (!res.ok) throw new ApiError(text.trim().slice(0, 300) || `Request failed (HTTP ${res.status})`, res.status)
       throw new ApiError(`Invalid response from server (HTTP ${res.status})`, res.status)
     }
   }
