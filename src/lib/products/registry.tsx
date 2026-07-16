@@ -871,20 +871,25 @@ export const catalog: CatalogEntry[] = [
     subpages: [{ slug: 'routing', label: 'Routing', admin: true }],
   },
   {
-    // The customer face of the virtual `auto`/`zen-router` model, in two tabs:
-    // Overview (routing observability over `GET /v1/router/stats` — cost saved as
-    // a blended $/MTok proxy, a quality proxy, the per-task model mix, the opt-in
-    // training-contribution toggle, and the last-retrain gate verdict) and Policy
-    // (the org's own task→model-pool prefer table + cost ceiling over
-    // `/v1/get-router-policy` + `/v1/update-router-policy`). Both org-admin gated +
-    // self-scoped server-side (org > "*" > conf per task key). DISTINCT from the
-    // two routing surfaces beside it: `models`' admin "Routing" tab flips PLATFORM
-    // ModelRoute config, and `ai-accounts`' Routing tab is the user's smart-routing
-    // on/off preference — this one is the ORG's own policy + its routing stats.
+    // The org-user AI Usage & Training surface — the customer face of the virtual
+    // `auto`/`zen-router` model, in three tabs:
+    //   Overview — routing observability + TRAINING status over `GET /v1/router/stats`
+    //     (org-scoped): cost saved (a blended $/MTok proxy), a quality proxy, the
+    //     per-task model mix, the last-retrain gate verdict, and the opt-in
+    //     training-contribution toggle (the toggle lives ONLY here).
+    //   Usage    — the org's AI usage: native Hanzo `GET /v1/get-cloud-usages` +
+    //     imported connected-provider usage, via the shared `<AiUsagePanels>` that
+    //     the `ai-metrics` module also renders (one usage implementation, DRY).
+    //   Policy   — the org's own task→model-pool prefer table + cost ceiling over
+    //     `/v1/get-router-policy` + `/v1/update-router-policy`.
+    // All org-admin gated + self-scoped server-side (org > "*" > conf per task key).
+    // DISTINCT from the two routing surfaces beside it: `models`' admin "Routing" tab
+    // flips PLATFORM ModelRoute config, and `ai-accounts`' Routing tab is the user's
+    // smart-routing on/off preference — this one is the ORG's own usage + policy + stats.
     id: 'router',
-    label: 'Router',
+    label: 'AI Usage & Training',
     icon: Waypoints,
-    description: 'Route each request to the best, cheapest capable model — see cost saved and quality, and configure your org’s task pools and cost ceiling.',
+    description: 'See all your org’s AI usage (requests, tokens, spend, per-model), track training contribution and routing quality, and configure task pools and cost ceiling.',
     gcp: 'Vertex AI (model routing)',
     category: 'AI',
     status: 'enabled',
@@ -894,7 +899,10 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: RouterModule },
       { path: ':tab', component: RouterModule },
     ],
-    subpages: [{ slug: 'policy', label: 'Policy' }],
+    subpages: [
+      { slug: 'usage', label: 'Usage' },
+      { slug: 'policy', label: 'Policy' },
+    ],
   },
   {
     // Admin-only: providers + credentials are shared-gateway config managed by
