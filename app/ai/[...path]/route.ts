@@ -40,6 +40,7 @@ const ALLOWED = new Set([
   'v1/images/generations', // text-to-image (JSON in → image url/b64 out) for the Playground Image tab
   'v1/videos/generations', // text-to-video CREATE — async: JSON in → a queued job object out (Sora-style)
   'v1/ai/connections', // AI Login Manager (ai#79/#80): GET list + POST link a BYO provider key (KMS-sealed server-side)
+  'v1/training/clients', // Interactive Training: GET list clients + POST create a LoRA training client (engine plane)
 ])
 
 /**
@@ -81,6 +82,16 @@ const AI_CONNECTION_AUTHORIZE_PATH = /^v1\/ai\/connections\/[A-Za-z0-9_-]+\/auth
  */
 const AI_CONNECTION_USAGE_PATH = /^v1\/ai\/connections\/[A-Za-z0-9_-]+\/usage$/
 
+/**
+ * Interactive-training per-client sub-path: `/v1/training/clients/<id>` and its four
+ * drive actions — `/forward_backward`, `/optim_step`, `/sample`, `/save_weights`. GET
+ * reads a client, DELETE drops it, POST drives the actions. Anchored to the clients
+ * head with a conservative id charset (opaque `client_<...>`) and an exact action set,
+ * so it stays a narrow allow-list, never a general tunnel. The bare `v1/training/clients`
+ * (list/create) is the exact entry above.
+ */
+const TRAINING_CLIENT_PATH = /^v1\/training\/clients\/[A-Za-z0-9._-]+(?:\/(?:forward_backward|optim_step|sample|save_weights))?$/
+
 /** Whether a resolved `/v1/<...>` path is reachable through this proxy. */
 function isAllowedAiPath(p: string): boolean {
   return (
@@ -88,7 +99,8 @@ function isAllowedAiPath(p: string): boolean {
     VIDEO_JOB_PATH.test(p) ||
     AI_CONNECTION_PATH.test(p) ||
     AI_CONNECTION_AUTHORIZE_PATH.test(p) ||
-    AI_CONNECTION_USAGE_PATH.test(p)
+    AI_CONNECTION_USAGE_PATH.test(p) ||
+    TRAINING_CLIENT_PATH.test(p)
   )
 }
 
@@ -118,5 +130,10 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   return handle(req, ctx)
 }
 export async function POST(req: NextRequest, ctx: Ctx) {
+  return handle(req, ctx)
+}
+// DELETE drops an interactive-training client (`/v1/training/clients/<id>`); the
+// same-origin CSRF guard in the bearer proxy gates it like every mutating verb.
+export async function DELETE(req: NextRequest, ctx: Ctx) {
   return handle(req, ctx)
 }
