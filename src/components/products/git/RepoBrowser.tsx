@@ -41,7 +41,10 @@ const asTab = (v: string | null): RepoTab => (v && TABS.has(v as RepoTab) ? (v a
 
 export function RepoBrowser({ name }: { name: string }) {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  // `useSearchParams()` is typed `ReadonlyURLSearchParams | null` (null only during a
+  // non-Suspense prerender); fall back to empty params so the URL-derived coordinates
+  // below read their defaults instead of tripping a null access.
+  const searchParams = useSearchParams() ?? new URLSearchParams()
 
   const [state, setState] = useState<RepoState>({ phase: 'loading' })
   const [refs, setRefs] = useState<RefList | null>(null)
