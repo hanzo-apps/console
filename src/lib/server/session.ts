@@ -51,7 +51,7 @@ const trim = (s: string) => s.replace(/\/+$/, '')
 /** IAM OIDC host that serves the token endpoint. Server-side default is the
  *  in-cluster IAM service; the issuer inside the token stays `https://hanzo.id`. */
 const IAM_OAUTH_URL = trim(process.env.IAM_OAUTH_URL?.trim() || process.env.IAM_URL?.trim() || 'https://hanzo.id')
-const TOKEN_ENDPOINT = `${IAM_OAUTH_URL}/v1/iam/oauth/access_token`
+const TOKEN_ENDPOINT = `${IAM_OAUTH_URL}/v1/iam/oauth/token`
 const REVOKE_ENDPOINT = `${IAM_OAUTH_URL}/v1/iam/oauth/revoke`
 
 /** The confidential first-party client (`hanzo-console`) — same creds the mint/
