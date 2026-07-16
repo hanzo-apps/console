@@ -1,10 +1,10 @@
 /**
- * AI Accounts client — the browser face of the same-origin `/ai-accounts/v1/*`
+ * AI Accounts client — the browser face of the same-origin `/v1/ai-accounts/*`
  * routes. The browser sends only its first-party session cookie; the route handler
  * resolves the user, seals/reads the credential server-side, and returns a MASKED
  * account list (existence + mode, never the secret) and the merged usage.
  *
- * Namespaced under `/ai-accounts/v1/` (like `/billing/v1/`) so the data plane never
+ * Namespaced under `/v1/ai-accounts/` (like `/v1/billing/`) so the data plane never
  * shadows the UI tab URLs (`/ai-accounts`, `/ai-accounts/accounts`).
  */
 import type { UsageSnapshot } from '@hanzo/usage'
@@ -14,7 +14,7 @@ import type { CloudUsageOverview } from './usage'
 import type { ConnectMode, OrgRoutingDefaults } from '~/lib/products/ai-accounts'
 
 const base = (): string => (typeof window !== 'undefined' ? window.location.origin : '')
-const url = (p: string): string => `${base()}/ai-accounts/v1/${p.replace(/^\/+/, '')}`
+const url = (p: string): string => `${base()}/v1/ai-accounts/${p.replace(/^\/+/, '')}`
 
 /** Masked, secret-free account row. */
 export type PublicAccount = { id: string; mode: ConnectMode; baseUrl?: string; connectedAt: string }

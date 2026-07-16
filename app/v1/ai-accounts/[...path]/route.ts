@@ -9,9 +9,9 @@
  * and NEVER echoed back or logged. Every request is session-gated (`resolveUser`); the
  * two mutating verbs are CSRF-guarded (auto-sent cookie → refuse cross-origin first).
  *
- * Namespaced under `/ai-accounts/v1/` so the data plane never shadows the UI tab URLs
+ * Namespaced under `/v1/ai-accounts/` so the data plane never shadows the UI tab URLs
  * (`/ai-accounts`, `/ai-accounts/accounts`) — a route handler always wins over the
- * catch-all page, so the two live in disjoint path space (same rule as `/billing/v1/`).
+ * catch-all page, so the two live in disjoint path space (same rule as `/v1/billing/`).
  */
 import { type NextRequest, NextResponse } from 'next/server'
 

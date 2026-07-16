@@ -2,8 +2,8 @@
  * Billing — the signed-in tenant's money surface (commerce, hanzoai/commerce):
  * credit balance, metered usage, invoices, subscriptions, and payment methods.
  *
- * Every call goes through the console's OWN same-origin `/billing/*` server proxy
- * (`app/billing/[...path]/route.ts`), which injects the commerce SERVICE token
+ * Every call goes through the console's OWN same-origin `/v1/billing/*` server proxy
+ * (`app/v1/billing/[...path]/route.ts`), which injects the commerce SERVICE token
  * server-side and scopes every request to the caller's OWN org/billing-subject —
  * the browser never holds a commerce credential and cannot widen scope. The
  * subject is the SAME one the gateway debits, so what the console shows is what
@@ -22,13 +22,12 @@ import { restGet, restPost, restPatch, restDelete, billingProxyV1Url } from './c
 import type { CloudBalance } from './wallet'
 import { normalizeUsageRecords, perModel, totalsOf } from './aimetrics'
 
-// Billing DATA calls address the console's OWN per-tenant billing proxy DIRECTLY
-// (`/billing/v1/*`, one builder `billingProxyV1Url`) — NOT a bare `/v1/billing/*`.
-// On the live console ingress `/v1/*` is routed to the gateway-fronted cloud binary
-// (which 403s a cookie-only browser request with no bearer — "sign in to view
-// billing"), so a bare `/v1/billing/*` never reaches the proxy. The direct
-// `/billing/v1/*` route handler injects the commerce service token + pins the
-// caller's own subject (same class as v8.4.70's framework/s3 → /v1 fix).
+// Billing DATA calls build the canonical `/v1/billing/*` path (the /v1-first law: ZERO
+// prefix before `/v1/`), one builder `billingProxyV1Url`. Standalone (console2/admin):
+// `/v1/billing/*` resolves to the console's OWN `app/v1/billing/[...path]` route handler
+// (MORE SPECIFIC than the `/v1/[...path]` cloud BFF), which injects the commerce service
+// token + pins the caller's own subject. Embed (console.hanzo.ai): the same `/v1/billing/*`
+// is served by the cloud binary under the first-party session cookie. Same scoping either way.
 
 /** One metered line — spend grouped by product/model over the window. */
 export type UsageLine = {

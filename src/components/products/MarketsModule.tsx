@@ -95,7 +95,7 @@ export function MarketsModule(_props: { params: Record<string, string> }) {
         />
 
         {state ? (
-          <BackendStateCard state={state} onRetry={load} hint="endpoint · GET /economy/v1/overview" />
+          <BackendStateCard state={state} onRetry={load} hint="endpoint · GET /v1/economy/overview" />
         ) : !reporting && !loading ? (
           <Card borderWidth={1} borderColor="$borderColor" p="$3" gap="$2">
             <Text fontSize="$3" fontWeight="700">Indexer not reporting</Text>

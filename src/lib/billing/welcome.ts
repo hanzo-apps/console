@@ -26,7 +26,7 @@ const SS_PREFIX = 'hz_welcome_claimed:'
  */
 export function claimWelcomeGrantOnce(owner: string): void {
   if (!owner || typeof window === 'undefined') return
-  // The welcome-grant proxy (POST /billing/v1/me/welcome) is a BFF-only route with no
+  // The welcome-grant proxy (POST /v1/billing/me/welcome) is a BFF-only route with no
   // handler in the static embed (→ 405). Skip it here; the embed's welcome grant is
   // handled server-side at signup (self-heal via /v1 is tracked separately).
   if (IS_EMBED) return

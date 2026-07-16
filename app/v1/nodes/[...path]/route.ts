@@ -1,6 +1,6 @@
 /**
  * Per-user proxy to the REAL luxd node RPC — the Nodes module's ONE transport.
- * The browser calls console2's OWN origin (`/nodes/v1/inventory`) with just the
+ * The browser calls console2's OWN origin (`/v1/nodes/inventory`) with just the
  * session cookie; this handler resolves the caller, resolves the BRAND from the
  * request host, and fetches the allowlisted luxd RPC methods server-side for each
  * network that brand may see, returning NORMALIZED per-node rows. No RPC host or
@@ -12,7 +12,7 @@
  *  - Org/brand-aware: the network set is scoped by `nodeNetworksForBrand(brand)`,
  *    brand resolved from the host — so cloud.lux.cloud sees only Lux networks,
  *    console.hanzo.ai (hanzo) sees all.
- *  - Least privilege: the ONLY path is `v1/inventory`, and the ONLY luxd methods
+ *  - Least privilege: the ONLY path is `inventory`, and the ONLY luxd methods
  *    called are the four read methods below — this is not a general RPC tunnel.
  */
 import { type NextRequest, NextResponse } from 'next/server'
@@ -139,8 +139,9 @@ async function probe(net: NodeNetworkId): Promise<NetworkInventory> {
 }
 
 async function forward(req: NextRequest, path: string[]): Promise<NextResponse> {
-  // ONE endpoint — the inventory. No arbitrary RPC pass-through.
-  if (path.join('/') !== 'v1/inventory') {
+  // ONE endpoint — the inventory. No arbitrary RPC pass-through. This handler lives at
+  // `app/v1/nodes/[...path]`, so the catch-all captures the sub-path after `/v1/nodes/`.
+  if (path.join('/') !== 'inventory') {
     return NextResponse.json({ error: 'not found' }, { status: 404 })
   }
 

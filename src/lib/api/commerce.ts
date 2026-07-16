@@ -26,14 +26,14 @@ import { restGet, restPost, restDelete, commerceProxyV1Url } from './client'
 const enc = encodeURIComponent
 
 /**
- * The one commerce URL builder: the console's OWN same-origin user-bearer `/commerce`
- * proxy, addressed EXPLICITLY (`<origin>/commerce/v1/<resource>`) — NOT a bare
- * `/v1/commerce/*` that relies on a `next.config` rewrite. On the live console ingress
- * `/v1/*` is routed straight to the gateway-fronted cloud binary (it does NOT reach the
- * Next server), so that rewrite never runs and the bare call 403s → a FALSE "Not enabled
- * for your account". The `/commerce` route handler mints a short-lived user token and
- * commerce scopes the org from the Bearer owner (the billing twin of `/billing/v1/*`).
- * Callers pass the bare REST model (`product` / `store/current`); this namespaces it once.
+ * The one commerce URL builder: the canonical same-origin `/v1/commerce/<resource>`
+ * (the /v1-first law), via `commerceProxyV1Url`. Standalone (console2/admin):
+ * `/v1/commerce/*` resolves to the console's OWN `app/v1/commerce/[...path]` user-bearer
+ * route handler (MORE SPECIFIC than the `/v1/[...path]` cloud BFF), which mints a
+ * short-lived user token and commerce scopes the org from the Bearer owner. Embed
+ * (console.hanzo.ai): the same `/v1/commerce/*` is served by the cloud binary under the
+ * first-party session cookie (the billing twin). Callers pass the bare REST model
+ * (`product` / `store/current`); this namespaces it once.
  */
 const cUrl = (resource: string): string => commerceProxyV1Url(resource)
 

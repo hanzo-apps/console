@@ -202,46 +202,46 @@ describe('canonical /v1 — session-scoped data-product clients (no prefix befor
   })
 })
 
-// The REMAINING prefix exceptions address a DIFFERENT backend than cloud-api, so they
-// are NOT `/v1/`-rooted: billing + PlansApi (money-truth) ride the per-tenant
-// `/billing/v1/*` SERVICE-token proxy (`billingProxyV1Url`); the store/merchant admin
-// rides the `/commerce/v1/*` user-bearer proxy (`commerceProxyV1Url`); the visor compute
-// CATALOG (regions/sizes/accelerators) rides `/vm/v1/*` (visor serves no cloud-api route,
-// and its `gpus` catalog is DISTINCT from the cloud GPU inventory). Each is served by its
-// OWN Next route handler; this block PINS the exception so a "canonicalization" can't
-// repoint them at a cloud-api `/v1/<head>` that would 404 (wrong backend).
-describe('prefix exceptions — billing via /billing/v1, commerce via /commerce/v1, visor catalog via /vm/v1', () => {
-  it('BillingApi.balance -> /billing/v1/balance', async () => {
+// Money + store + visor-catalog DATA proxies are ALL /v1-first (the /v1-first law): billing
+// + PlansApi (money-truth) ride `/v1/billing/*` (service-token proxy → `app/v1/billing/
+// [...path]`); the store/merchant admin rides `/v1/commerce/*` (→ `app/v1/commerce/[...path]`);
+// the visor compute CATALOG (regions/sizes/accelerators) rides `/v1/vm/*` (→ `app/v1/vm/
+// [...path]`). Each is a FILESYSTEM route MORE SPECIFIC than the `/v1/[...path]` cloud BFF,
+// so it wins without a rewrite. Visor is a DIFFERENT backend — its `/v1/vm/gpus` catalog is
+// DISTINCT from the cloud GPU INVENTORY at `/v1/gpus`; this block PINS each at its own proxy
+// so a regression can't repoint one at a cloud-api `/v1/<head>` that would 404 (wrong backend).
+describe('money + store + visor-catalog proxies (all /v1-first): /v1/billing, /v1/commerce, /v1/vm', () => {
+  it('BillingApi.balance -> /v1/billing/balance', async () => {
     stub({ balance: 0, holds: 0, available: 0 })
     await BillingApi.balance()
-    expect(lastUrl).toBe(`${ORIGIN}/billing/v1/balance?currency=usd`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/billing/balance?currency=usd`)
   })
 
-  it('PlansApi.plans -> /billing/v1/plans (money-truth catalog)', async () => {
+  it('PlansApi.plans -> /v1/billing/plans (money-truth catalog)', async () => {
     stub([])
     await PlansApi.plans()
-    expect(lastUrl).toBe(`${ORIGIN}/billing/v1/plans`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/billing/plans`)
   })
 
-  it('CommerceApi.currentStore -> /commerce/v1/store/current', async () => {
+  it('CommerceApi.currentStore -> /v1/commerce/store/current', async () => {
     stub({ store: {} })
     await CommerceApi.currentStore()
-    expect(lastUrl).toBe(`${ORIGIN}/commerce/v1/store/current`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/commerce/store/current`)
   })
 
-  it('VisorApi.gpus (accelerator CATALOG) -> /vm/v1/gpus (visor, NOT cloud-api /v1/gpu-sizes)', async () => {
+  it('VisorApi.gpus (accelerator CATALOG) -> /v1/vm/gpus (visor, NOT cloud-api /v1/gpu-sizes)', async () => {
     stub({ data: [] })
     await VisorApi.gpus()
-    expect(lastUrl).toBe(`${ORIGIN}/vm/v1/gpus`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/vm/gpus`)
   })
-  it('VisorApi.regions -> /vm/v1/regions', async () => {
+  it('VisorApi.regions -> /v1/vm/regions', async () => {
     stub({ data: [] })
     await VisorApi.regions()
-    expect(lastUrl).toBe(`${ORIGIN}/vm/v1/regions`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/vm/regions`)
   })
-  it('VisorApi.sizes -> /vm/v1/sizes', async () => {
+  it('VisorApi.sizes -> /v1/vm/sizes', async () => {
     stub({ data: [] })
     await VisorApi.sizes()
-    expect(lastUrl).toBe(`${ORIGIN}/vm/v1/sizes`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/vm/sizes`)
   })
 })

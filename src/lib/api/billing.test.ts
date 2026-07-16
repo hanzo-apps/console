@@ -274,17 +274,17 @@ describe('BillingApi.paymentMethods — masked descriptor mapping', () => {
 /**
  * Add / remove payment methods (in-console, task D). The card is tokenized in
  * Square's iframe; the client sends ONLY the opaque nonce — NEVER a PAN. These pin
- * the exact request the client makes to the per-tenant `/billing/v1/*` proxy.
+ * the exact request the client makes to the per-tenant `/v1/billing/*` proxy.
  */
 describe('BillingApi.createPaymentMethod — saves a Square nonce, never a PAN', () => {
   afterEach(teardown)
 
-  it('POSTs { type, token } to /billing/v1/payment-methods and returns the masked method', async () => {
+  it('POSTs { type, token } to /v1/billing/payment-methods and returns the masked method', async () => {
     const calls = captureFetch({ id: 'pm_new', type: 'card', card: { brand: 'visa', last4: '4242', exp_month: 12, exp_year: 2030 } })
     const m = await BillingApi.createPaymentMethod({ type: 'card', token: 'cnon:card-nonce-ok' })
 
     expect(calls).toHaveLength(1)
-    expect(calls[0].url).toBe(`${ORIGIN}/billing/v1/payment-methods`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/payment-methods`)
     expect(calls[0].init.method).toBe('POST')
     const sent = JSON.parse(calls[0].init.body as string) as Record<string, unknown>
     expect(sent).toEqual({ type: 'card', token: 'cnon:card-nonce-ok' })
@@ -324,11 +324,11 @@ describe('BillingApi.createPaymentMethod — saves a Square nonce, never a PAN',
 describe('BillingApi.removePaymentMethod — detaches by id (DELETE)', () => {
   afterEach(teardown)
 
-  it('DELETEs /billing/v1/payment-methods/:id (url-encoded id)', async () => {
+  it('DELETEs /v1/billing/payment-methods/:id (url-encoded id)', async () => {
     const calls = captureFetch({}, 200)
     await BillingApi.removePaymentMethod('pm_1')
     expect(calls).toHaveLength(1)
-    expect(calls[0].url).toBe(`${ORIGIN}/billing/v1/payment-methods/pm_1`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/payment-methods/pm_1`)
     expect(calls[0].init.method).toBe('DELETE')
     expect(calls[0].init.body).toBeUndefined() // a detach carries no body
   })
@@ -336,7 +336,7 @@ describe('BillingApi.removePaymentMethod — detaches by id (DELETE)', () => {
   it('encodes an id with unsafe characters (no path injection)', async () => {
     const calls = captureFetch({}, 204)
     await BillingApi.removePaymentMethod('pm/../secret')
-    expect(calls[0].url).toBe(`${ORIGIN}/billing/v1/payment-methods/pm%2F..%2Fsecret`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/payment-methods/pm%2F..%2Fsecret`)
   })
 })
 
@@ -351,7 +351,7 @@ describe('BillingApi.cancelSubscription — at-period-end vs now', () => {
   it('POSTs {atPeriodEnd:true} to /subscriptions/:id/cancel and reflects the scheduled cancel', async () => {
     const calls = captureFetch({ id: 'sub_1', status: 'active', cancel_at_period_end: true, current_period_end: 1893456000 })
     const s = await BillingApi.cancelSubscription('sub_1', true)
-    expect(calls[0].url).toBe(`${ORIGIN}/billing/v1/subscriptions/sub_1/cancel`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/subscriptions/sub_1/cancel`)
     expect(calls[0].init.method).toBe('POST')
     expect(JSON.parse(calls[0].init.body as string)).toEqual({ atPeriodEnd: true })
     expect(s.cancelAtPeriodEnd).toBe(true)
@@ -372,7 +372,7 @@ describe('BillingApi.reactivateSubscription — clears the scheduled cancel', ()
   it('POSTs to /subscriptions/:id/reactivate and reflects the cleared cancel state', async () => {
     const calls = captureFetch({ id: 'sub_1', status: 'active', cancel_at_period_end: false })
     const s = await BillingApi.reactivateSubscription('sub_1')
-    expect(calls[0].url).toBe(`${ORIGIN}/billing/v1/subscriptions/sub_1/reactivate`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/subscriptions/sub_1/reactivate`)
     expect(calls[0].init.method).toBe('POST')
     expect(s.cancelAtPeriodEnd).toBe(false)
   })

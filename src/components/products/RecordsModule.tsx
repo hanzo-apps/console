@@ -33,7 +33,7 @@ import { baseCollectionToFields, type BaseCollection } from '~/lib/base-data/fie
 /** Product base path — must match the registry entry id (`records`). */
 const RECORDS_PATH = '/records'
 /** Same-origin Base proxy prefix (the proxy injects the user bearer server-side). */
-const BASE_PROXY = '/superbase'
+const BASE_PROXY = '/v1/superbase'
 
 export function RecordsModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
