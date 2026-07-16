@@ -107,6 +107,7 @@ import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
+import { AiEconomicsModule } from '~/components/products/admin/AiEconomicsModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
@@ -932,6 +933,30 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: ProvidersBillingModule }],
+  },
+  {
+    // admin.hanzo.ai AI ECONOMICS board — the STRATEGIC lens beside the Provider Billing
+    // (treasury) + Finance (P&L) boards: the per-(provider,model) REQUEST MIX (how many
+    // of each model), unit economics (upstream cost vs revenue vs gross margin + runway),
+    // the HONEST training-data collection card (the metering ledger holds NO prompt/
+    // completion content and nothing harvests traffic — the only training data is the
+    // user-curated eval dataset registry), recent eval runs, and how that eval signal
+    // folds into the enso router (offline ridge profile + online per-user LinUCB).
+    // GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/launcher/
+    // palette). COMPOSES the existing admin reads — model mix from `/v1/admin/usage/
+    // funding`, margin from `/v1/admin/finance`, credit from `/v1/admin/providers/credit`,
+    // evals from `/v1/evals/*` — it forks none of them.
+    id: 'ai-economics',
+    label: 'AI Economics',
+    icon: LineChart,
+    description: 'Model request mix, unit economics (margin + runway), and the eval → training flywheel across the fleet.',
+    gcp: 'Vertex AI (usage & cost)',
+    category: 'AI',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: AiEconomicsModule }],
   },
   {
     // Customer surface — each org connects its OWN OpenAI / Anthropic / Google account
