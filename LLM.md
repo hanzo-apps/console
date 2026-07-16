@@ -3004,3 +3004,72 @@ the honest "reset to platform default".
   policy table. Entitlement-gated like the rest of the AI family (not always-on).
 - Verification: `tsc --noEmit` clean; `vitest` 2525/2525 (212 files);
   `next build` ✓; `npm run build:embed` ✓ (31 handlers stashed+restored).
+
+## Router — observability dashboard (cost saved · quality · per-task mix) over the reused policy editor (feat/router-admin-panel)
+
+Upgrades the `router` product (was the single policy-editor `''` route — v8.4.136,
+`InferenceRouterModule`) into a two-tab **routing dashboard**, so a customer sees
+"what routing buys me" AND still configures it — ONE editor, one place, no
+duplication. Completes the v8.4.137 "Inference Router → Router" rename that HEAD
+left half-applied (the `git mv`'d files still referenced the old
+`~/lib/api/router-policy` + `InferenceRouterModule` names, which no longer existed —
+origin/main did NOT build; the consistency fix is folded in here, no package bump).
+
+- **Two tabs, one entry** (`RouterModule.tsx`, registry `''` + `:tab`, `subpages:
+  [{policy}]`, AI category, entitlement-gated like the AI family — org admins
+  configure their own router, so NOT `admin:true`). **Overview** = routing
+  observability; **Policy** = the reused λ/µ editor. The editor moved to
+  `RouterPolicyEditor.tsx` (renamed from the old `RouterModule.tsx`, export
+  `InferenceRouterModule` → `RouterPolicyEditor`, import fixed to `~/lib/api/router`)
+  and is EMBEDDED as the Policy tab — never a second copy. The `router` id keeps the
+  clean `/router` URL (the old `inference-router` id is retired; the feature is fresh
+  from v8.4.136).
+- **Overview reads `GET /v1/router/stats`** (org-scoped, RequirePrincipal upstream)
+  via `RouterStatsApi` (`lib/api/router.ts`, `originGet('router/stats', {hours})` —
+  casibase envelope, same transport as `get-router-policy`). A range toggle
+  (24h/7d/30d → `?hours=`, within the server's 90d cap). Renders: **(a) Cost saved**
+  — `saved_pct` headline + `routed_index` vs `counterfactual_index` (vs the premium
+  `baseline_model`) + `cumulative_saved_index`, LABELED a blended `$/MTok` PROXY (the
+  ledger has no token counts), honest "—" when `priced_events==0`; **(b) Quality
+  proxy** — `reward_rate` (+ `rewarded_events` coverage), `engine_share`,
+  `avg_confidence`, and `shadow_agreement` ONLY when non-null (else an honest "not
+  available yet" tile); **(c) Per-task distribution** — `by_task` as a per-task Donut
+  (models by share) + a `by_model` Donut + a `throughput` LineChart (24 buckets); the
+  **(e) training-contribution toggle** and **(f)** the retrain line below.
+- **Opt-in training contribution** (`TrainingContributionApi`) — a `@hanzo/gui`
+  `FieldSwitch` wired to `GET/POST /v1/{get,update}-training-contribution`
+  ("Improve routing with our usage — feature vectors only, never prompt text"),
+  optimistic with an honest revert-on-failure toast; honest "not available on this
+  deployment yet" when the read fails.
+- **(f) Retrain line** — `retrain` (when present) → "Last retrained &lt;time&gt; ·
+  gate &lt;kind&gt; &lt;metric&gt; &lt;value&gt; vs &lt;base&gt; · published/kept
+  incumbent".
+- **Pure, tested logic** (`components/products/router/logic.ts` — no React/Gui/
+  registry imports, node-testable per the icon-ESM convention): `normalizeStats`
+  (partial/garbage payload → honest empty, never a throw; `cost` stays null, not $0,
+  with no priced events; nullable `$` indices + `shadow_agreement` preserved),
+  `moneyIndex`/`fractionPct`/`savedPctLabel`/`rewardLabel`/`shadowAgreementLabel` (all
+  em-dash on absent), `modelSlices`/`taskBreakdown` (by share), `throughputSeries`
+  (UTC `HH:mm` labels, index fallback), `retrainLine`, `hoursFor`. +15 tests
+  (`logic.test.ts`). Reuses the dependency-free `ui/Charts` (Donut/LineChart) +
+  `ui/Metric` (MetricCard/Panel) + `EmptyState`/`BackendStateCard`/`Loader` — no chart
+  dep, honest states everywhere.
+- **Transport wiring (mirrors `get-router-policy` exactly):** three heads added to
+  `next.config.mjs` `AI_V1_HEADS` (`router` + `get-/update-training-contribution` →
+  the `/ai` bearer proxy) and to `app/ai/[...path]` `ALLOWED`
+  (`v1/router/stats`, `v1/{get,update}-training-contribution`) — no new route
+  handlers. go:embed: the same `/v1/*` paths hit cloud natively (cloud must serve/
+  forward the ai-gateway router endpoints; until then the honest BackendStateCard,
+  never fabricated stats) — identical caveat to v8.4.136.
+- **Backend contract:** hanzoai/ai `feat/router-stats-observability`
+  (`controllers/router_stats.go`: `GetRouterStats`/`GetTrainingContribution`/
+  `UpdateTrainingContribution`, all `c.ResponseOk` → casibase envelope). Not yet on
+  ai `main` — until the ai wave ships, the dashboard shows the honest state.
+- Verification: `tsc --noEmit` clean; `vitest` 2540/2540 (213 files; +15 router
+  logic); `next build` ✓; `npm run build:embed` ✓ (31 handlers stashed+restored). No
+  package bump (release agent owns it); the new console semver will be the next patch
+  above the release train's current tip. Authenticated visual e2e (the `(dashboard)`
+  group is behind AuthGate) is the post-deploy gate. Reaches admin.hanzo.ai/
+  console.hanzo.ai only on the next `hanzoai/cloud` release embedding `console@main`
+  (`CONSOLE_REF=main`) — a standalone console image bump does NOT; coordinate the
+  cloud release with the cloud lane.

@@ -109,7 +109,7 @@ import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
 import { AiEconomicsModule } from '~/components/products/admin/AiEconomicsModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
-import { InferenceRouterModule } from '~/components/products/InferenceRouterModule'
+import { RouterModule } from '~/components/products/RouterModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
 import { PlatformModule } from '~/components/products/PlatformModule'
@@ -871,24 +871,30 @@ export const catalog: CatalogEntry[] = [
     subpages: [{ slug: 'routing', label: 'Routing', admin: true }],
   },
   {
-    // The per-ORG router policy editor — the customer face of the virtual
-    // `auto`/`zen-router` model: an org's own admins set their task → model-pool
-    // prefer table + cost ceiling over `/v1/get-router-policy` +
-    // `/v1/update-router-policy` (org-admin gated + self-scoped server-side; the
-    // fold is org > "*" > conf per task key). DISTINCT from the two routing
-    // surfaces beside it: `models`' admin "Routing" tab flips PLATFORM ModelRoute
-    // config, and `ai-accounts`' Routing tab is the user's smart-routing on/off
-    // preference — this one is the org's own policy TABLE.
-    id: 'inference-router',
-    label: 'Inference Router',
+    // The customer face of the virtual `auto`/`zen-router` model, in two tabs:
+    // Overview (routing observability over `GET /v1/router/stats` — cost saved as
+    // a blended $/MTok proxy, a quality proxy, the per-task model mix, the opt-in
+    // training-contribution toggle, and the last-retrain gate verdict) and Policy
+    // (the org's own task→model-pool prefer table + cost ceiling over
+    // `/v1/get-router-policy` + `/v1/update-router-policy`). Both org-admin gated +
+    // self-scoped server-side (org > "*" > conf per task key). DISTINCT from the
+    // two routing surfaces beside it: `models`' admin "Routing" tab flips PLATFORM
+    // ModelRoute config, and `ai-accounts`' Routing tab is the user's smart-routing
+    // on/off preference — this one is the ORG's own policy + its routing stats.
+    id: 'router',
+    label: 'Router',
     icon: Waypoints,
-    description: 'Route each request to the best, cheapest capable model — configure your org’s task pools and cost ceiling.',
+    description: 'Route each request to the best, cheapest capable model — see cost saved and quality, and configure your org’s task pools and cost ceiling.',
     gcp: 'Vertex AI (model routing)',
     category: 'AI',
     status: 'enabled',
     repo: 'hanzoai/ai',
     kind: 'module',
-    routes: [{ path: '', component: InferenceRouterModule }],
+    routes: [
+      { path: '', component: RouterModule },
+      { path: ':tab', component: RouterModule },
+    ],
+    subpages: [{ slug: 'policy', label: 'Policy' }],
   },
   {
     // Admin-only: providers + credentials are shared-gateway config managed by
