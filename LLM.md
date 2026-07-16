@@ -2974,3 +2974,33 @@ reusing `StatusTag`). To embed the same dashboard here:
   `@hanzo/data` `BoardView`), `Calendar` (reuse `@hanzo/data` `Calendar`),
   `PostComposer` (needs `@hanzo/gui` input/select primitives). Ships via the normal
   cloud release embedding `console@main` — coordinate with the cloud train.
+
+## Inference Router — per-org router policy editor over /v1-first paths (v8.4.136)
+
+The customer face of the virtual `auto`/`zen-router` model: an org's own admins
+set their task → model-pool prefer table + per-1k cost ceiling. New catalog entry
+`inference-router` (AI category, beside `models`) → `InferenceRouterModule`
+(registry `''` route): a task-pool form (the 8 canonical router task tags,
+comma-separated ordered model ids, empty = inherit) + a cost-ceiling field +
+Save/Reset, with honest loading/BackendStateCard/effective-table states. Saving
+an empty prefer + 0 ceiling clears the org override (reverts to "*" then conf) —
+the honest "reset to platform default".
+
+- **Backend (hanzoai/ai, same wave):** `GET /v1/get-router-policy` +
+  `POST /v1/update-router-policy` — org-admin gated, self-scoped to the token
+  org (never another tenant's), resolved org > "*" > conf per task key.
+  `OrgSettings` grew `RouterPrefer`/`RouterCostCeiling`; `resolveAutoModel`
+  folds the policy per request (caller `X-Max-Cost` still wins).
+- **Transport (v1-first law):** the client (`lib/api/router-policy.ts`) builds
+  `/v1/get-router-policy` / `/v1/update-router-policy` via `originGet`/
+  `originPost` (casibase envelope). Standalone: the two heads are added to
+  `AI_V1_HEADS` (next.config dispatch → the ONE `/ai` user-bearer proxy) + its
+  `ALLOWED` set — no new route handlers. go:embed: the same paths hit cloud
+  natively (needs cloud to serve/forward the ai-gateway router endpoints; until
+  then the module shows the honest BackendStateCard, never fabricated config).
+- **Three routing surfaces, three concerns (not duplicates):** `models`' admin
+  "Routing" tab = PLATFORM ModelRoute config; `ai-accounts` Routing tab = the
+  user's smart-routing on/off preference; `inference-router` = the ORG's own
+  policy table. Entitlement-gated like the rest of the AI family (not always-on).
+- Verification: `tsc --noEmit` clean; `vitest` 2525/2525 (212 files);
+  `next build` ✓; `npm run build:embed` ✓ (31 handlers stashed+restored).
