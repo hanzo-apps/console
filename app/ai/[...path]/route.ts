@@ -46,6 +46,10 @@ const ALLOWED = new Set([
   'v1/router/stats', // Router: the caller org's routing observability aggregate (RequirePrincipal upstream, self-scoped)
   'v1/get-training-contribution', // Router: the caller org's training opt-in flag (org-admin gated upstream)
   'v1/update-training-contribution', // Router: set the caller org's training opt-in flag (org-admin gated upstream)
+  'v1/get-org-settings-list', // Routing admin: per-org settings rows (super-admin gated upstream)
+  'v1/get-org-settings', // Routing admin: one org's (or the "*" default) settings row (super-admin gated upstream)
+  'v1/update-org-settings', // Routing admin: upsert an org's auto-routing (super-admin gated upstream)
+  'v1/delete-org-settings', // Routing admin: revert an org to inherit (super-admin gated upstream)
 ])
 
 /**
