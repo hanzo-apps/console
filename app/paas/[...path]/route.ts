@@ -67,7 +67,13 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
   const environment = req.headers.get('X-Environment')
 
   const search = req.nextUrl.search
-  const url = `${PLATFORM_URL}/v1/${path.join('/')}${search}`
+  // `/paas/<x>` → `/v1/paas/<x>`. The control plane mounts under `/v1/paas`; this
+  // route prefixed only `/v1`, so every call landed on a path that does not exist
+  // (`/paas/apps` → `/v1/apps` → 404) and the board rendered nothing. The name is
+  // 1:1 on both sides: this proxy is the PaaS plane, so it forwards to the PaaS
+  // plane. It aimed at `/v1/<x>` because that IS where the standalone Node platform
+  // served apps; the plane moved into cloud under `/v1/paas` and the path did not.
+  const url = `${PLATFORM_URL}/v1/paas/${path.join('/')}${search}`
   const init: RequestInit = {
     method: req.method,
     headers: {
