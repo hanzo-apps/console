@@ -13,6 +13,7 @@ import { CommandPaletteProvider } from '~/components/CommandPalette'
 import { AppLauncherProvider } from '~/components/AppLauncher'
 import { DetailPaneProvider } from '~/components/DetailPane'
 import { FloatingChatProvider } from '~/components/FloatingChat'
+import { FirstRunTour } from '~/components/tour/FirstRunTour'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -43,6 +44,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         {/* DetailPane hosts the ONE right-side item detail/edit pane. */}
                         <DetailPaneProvider>
                           <DashboardShell>{children}</DashboardShell>
+                          {/* First-run guided tour — renders null until it decides to
+                              open (once, on the home, after onboarding). */}
+                          <FirstRunTour />
                         </DetailPaneProvider>
                       </FloatingChatProvider>
                     </CommandPaletteProvider>

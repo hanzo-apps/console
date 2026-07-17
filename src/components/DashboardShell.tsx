@@ -1067,6 +1067,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             borderColor="$borderColor"
             bg="$color1"
             className="hz-collapse"
+            data-tour="nav"
           >
             <SidebarNav collapsed={collapsed} onNavigate={() => {}} />
           </YStack>
