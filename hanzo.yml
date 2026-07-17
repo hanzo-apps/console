@@ -1,0 +1,13 @@
+# Canonical CI config for hanzoai/console — read by the hanzoai/ci reusable
+# (.github/workflows/cicd.yml) and platform.hanzo.ai.
+#
+# Publishes the console STATIC EMBED artifact (SPA static export at /dist) as a
+# versioned immutable image. hanzoai/cloud consumes it via `FROM ... AS console`
+# + `COPY --from=console /dist/`, so it never rebuilds npm+Next on a cloud release.
+# hanzoai/ci pushes to `repo:` (GHCR) and server-side-mirrors to registry.hanzo.ai
+# automatically. The Next.js SERVER runner image stays in build-image.yml.
+images:
+  - name: console-embed
+    context: .
+    dockerfile: Dockerfile.embed
+    repo: ghcr.io/hanzoai/console-embed
