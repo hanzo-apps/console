@@ -26,6 +26,7 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FadeIn } from '~/components/ui/FadeIn'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
 import { ResourceOverview } from '~/components/products/overview/ResourceOverview'
+import { ProductObservability } from '~/components/products/observability/ProductObservability'
 
 // The home centerpiece is the reusable LivingOverview (count-up KPIs, live
 // sparklines, streaming activity) — the SAME component every product overview uses.
@@ -111,7 +112,7 @@ function ProductCard({
  */
 function GetApiKeyCta({ onOpen }: { onOpen: () => void }) {
   return (
-    <Card borderWidth={1} borderColor="$borderColor" bg="$color2" p="$4">
+    <Card borderWidth={1} borderColor="$borderColor" bg="$color2" p="$4" data-tour="api-key">
       <XStack items="center" justify="space-between" gap="$4" flexWrap="wrap">
         <XStack items="center" gap="$3" flex={1} minW={240}>
           <YStack bg="$color5" rounded="$4" p="$2.5" items="center" justify="center">
@@ -183,6 +184,31 @@ export default function DashboardHome() {
     <YStack gap="$7">
       <GetApiKeyCta onOpen={() => push('/api-keys')} />
       <OverviewDashboard params={{}} />
+
+      {/* Observability, front-and-center — the platform's live LLM signals (RED
+          metrics · recent logs · recent traces) on the home, the way Langfuse put
+          its metrics dashboard up top. Reuses the ONE shared ProductObservability
+          panel over the `ai` inference service (honest-empty until o11y emits), and
+          deep-links to the full Observe surface. `data-tour` anchors the first-run
+          tour's Observability step. */}
+      <YStack gap="$3" data-tour="metrics">
+        <XStack
+          self="flex-start"
+          items="center"
+          gap="$2"
+          cursor="pointer"
+          hoverStyle={{ opacity: 0.75 }}
+          onPress={() => push('/o11y')}
+          aria-label="Open Observability"
+        >
+          <Text fontSize="$5" fontWeight="800" color="$color12">
+            Observability
+          </Text>
+          <ArrowRight size={16} opacity={0.5} />
+        </XStack>
+        <ProductObservability service="ai" label="AI inference" />
+      </YStack>
+
       <ResourceOverview />
       <YStack gap="$4">
         <PageHeader
