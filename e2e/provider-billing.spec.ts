@@ -20,6 +20,7 @@
 import { test, expect, type Route, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { requireFixtureServer } from './_fixture'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 const SHOTS = join(process.cwd(), 'e2e-shots')
@@ -110,6 +111,10 @@ test.beforeAll(() => mkdirSync(SHOTS, { recursive: true }))
 
 // ─── (A) fixture render ───────────────────────────────────────────────────────
 test.describe('(A) fixture render — DO $26k credit + glm-5.2 funding split', () => {
+  // Asserts LOCAL fixture data (the seeded $26k/glm-5.2 board); skip when the
+  // fixture server is down. The (B) LIVE gate below hits prod and always runs.
+  requireFixtureServer()
+
   test('renders the credit card + funding split at a desktop viewport', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
     const page = await ctx.newPage()
