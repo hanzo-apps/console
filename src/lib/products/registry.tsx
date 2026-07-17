@@ -286,6 +286,7 @@ import { ProjectsModule as FleetProjectsModule } from '~/components/products/adm
 import { BetaFeaturesModule } from '~/components/products/BetaFeaturesModule'
 // GitOps — the native ArgoCD replacement (SuperAdmin operator surface).
 import { GitOpsModule } from '~/components/products/gitops/GitOpsModule'
+import { ContactModule } from '~/components/products/ContactModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -3122,6 +3123,17 @@ export const catalog: CatalogEntry[] = [
       { path: ':tab', component: SettingsModule },
     ],
     subpages: [{ slug: 'branding', label: 'Branding' }],
+  },
+  {
+    id: 'contact',
+    label: 'Contact',
+    icon: LifeBuoy,
+    description: 'Reach support, sales, and the Hanzo community — the in-console assistant answers first.',
+    category: 'Settings',
+    status: 'enabled',
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: ContactModule }],
   },
   {
     id: 'prompts',
