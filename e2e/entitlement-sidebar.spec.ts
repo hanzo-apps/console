@@ -14,8 +14,12 @@
  * Run: BASE_URL=http://localhost:4000 npx playwright test entitlement-sidebar
  */
 import { test, expect, type Route, type Page } from '@playwright/test'
+import { requireFixtureServer } from './_fixture'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
+
+// These render specs assert LOCAL fixture data; skip cleanly when that server is down.
+requireFixtureServer()
 const ORG = 'maxpower'
 
 // A CUSTOMER — NOT a super admin (no isSuperAdmin/isGlobalAdmin, owner ≠ admin), so
