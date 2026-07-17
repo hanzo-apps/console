@@ -4,61 +4,28 @@
  * Honest async states — the ONE way the console explains a failed/empty load.
  *
  * Every admin module that reads a real `/v1` endpoint can 404 (not routed on
- * this deployment), 401/403 (access enforced server-side), or 503 (backend
- * starting). `honestError` maps an `ApiError` to a specific, truthful message —
- * never a generic crash and never fabricated data — and `ErrorState` renders it
- * with a retry. Per-call copy overrides keep surface-specific guidance (e.g. the
- * IAM admin API) without duplicating the structure.
+ * this deployment), 401/403 (access enforced server-side), 402 (the org has no
+ * funded balance), or 503 (backend starting). `honestError` maps an `ApiError` to
+ * a specific, truthful message — never a generic crash and never fabricated data —
+ * and `ErrorState` renders it with the RIGHT affordance: retry, "Sign in again"
+ * (401), or "Add credits" (402 → `/billing/credits`). Per-call copy overrides keep
+ * surface-specific guidance (e.g. the IAM admin API) without duplicating the structure.
  */
+import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack } from '@hanzo/gui'
-import { TriangleAlert, Lock } from '@hanzogui/lucide-icons-2'
+import { TriangleAlert, Lock, CreditCard } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { startReauth } from '~/lib/auth/iam'
 import { getBrand } from '~/lib/branding/brands'
+import { honestError, type HonestCopy } from './states-logic'
 
-/** Surface-specific overrides for the 404/unauthorized explanations. */
-export type HonestCopy = { notFound?: string; unauthorized?: string }
-
-/**
- * Map an ApiError to an honest title + body. Defaults are generic and truthful.
- *
- * 401 and 403 are DISTINCT: a 401 means the session lapsed (re-auth fixes it →
- * `reauth`), a 403 means the signed-in account isn't authorized for this surface.
- * A signed-in user is NEVER told to "sign in" for a 403.
- */
-export function honestError(
-  err: ApiError,
-  copy: HonestCopy = {},
-): { title: string; body: string; reauth?: boolean } {
-  if (err.status === 404)
-    return {
-      title: 'Not available on this deployment',
-      body:
-        copy.notFound ??
-        'This API is not routed on this host yet. It appears automatically once the deployment proxies it through the gateway.',
-    }
-  if (err.status === 503)
-    return {
-      title: 'Service unavailable',
-      body: 'The service is starting up or temporarily unavailable. Retry in a moment.',
-    }
-  if (err.status === 401)
-    return {
-      title: 'Your session expired',
-      body: 'Your session has expired or isn’t recognized here. Sign in again to continue where you left off.',
-      reauth: true,
-    }
-  if (err.status === 403 || /sign ?in|login|unauthorized/i.test(err.message))
-    return {
-      title: 'Access required',
-      body:
-        copy.unauthorized ??
-        "You're signed in, but this account isn't authorized for this — it's an admin-only surface, or it isn't enabled for your organization yet.",
-    }
-  return { title: 'Could not load', body: err.message }
-}
+// The honest-error VALUE logic lives in `./states-logic` (a plain `.ts`, node-
+// testable — no gui/icon imports). Re-exported here so callers keep importing
+// `{ honestError, type HonestCopy }` from `~/components/ui/States`.
+export { honestError }
+export type { HonestCopy }
 
 /** Coerce an unknown thrown value into an ApiError for honest rendering. */
 export const asApiError = (e: unknown): ApiError =>
@@ -102,7 +69,8 @@ export function ErrorState({
   onRetry?: () => void
   copy?: HonestCopy
 }) {
-  const { title, body, reauth } = honestError(err, copy)
+  const router = useRouter()
+  const { title, body, reauth, topUp } = honestError(err, copy)
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={620}>
       <XStack gap="$2" items="center">
@@ -114,7 +82,12 @@ export function ErrorState({
       <Text fontSize="$3" color="$color11">
         {body}
       </Text>
-      {reauth ? (
+      {topUp ? (
+        // 402 — an unfunded org. Send them to top up, not to a dead "Retry".
+        <Button size="$2" theme="light" self="flex-start" icon={<CreditCard size={14} />} onPress={() => router.push('/billing/credits')}>
+          Add credits
+        </Button>
+      ) : reauth ? (
         <Button size="$2" theme="light" self="flex-start" onPress={startReauth}>
           Sign in again
         </Button>

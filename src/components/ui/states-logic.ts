@@ -1,0 +1,65 @@
+/**
+ * Pure honest-error classification — the VALUE half of `States.tsx`.
+ *
+ * Lives in a plain `.ts` (no `@hanzo/gui` / lucide-icon imports) so it is
+ * unit-testable in the node vitest env; `States.tsx` renders it. It maps an
+ * `ApiError` to a specific, truthful title + body plus an optional affordance flag
+ * — never a generic crash, never fabricated data.
+ */
+import { ApiError } from '~/lib/api'
+
+/** Surface-specific overrides for the 404/unauthorized explanations. */
+export type HonestCopy = { notFound?: string; unauthorized?: string }
+
+/**
+ * The honest render model: a title + body, plus AT MOST ONE affordance flag —
+ * `reauth` (401 → re-sign-in) or `topUp` (402 → add credits). A plain failure sets
+ * neither; the two are mutually exclusive by construction (distinct statuses).
+ */
+export type HonestError = { title: string; body: string; reauth?: boolean; topUp?: boolean }
+
+/**
+ * Map an ApiError to an honest title + body. Defaults are generic and truthful.
+ *
+ * 401 and 403 are DISTINCT: a 401 means the session lapsed (re-auth fixes it →
+ * `reauth`), a 403 means the signed-in account isn't authorized for this surface.
+ * A signed-in user is NEVER told to "sign in" for a 403.
+ *
+ * A 402 is DISTINCT again: the org has no funded balance, so this balance-gated
+ * product can't load. That is not a crash and not an access failure — it's a
+ * top-up prompt (`topUp`), so the caller offers "Add credits", not "Retry".
+ */
+export function honestError(err: ApiError, copy: HonestCopy = {}): HonestError {
+  if (err.status === 404)
+    return {
+      title: 'Not available on this deployment',
+      body:
+        copy.notFound ??
+        'This API is not routed on this host yet. It appears automatically once the deployment proxies it through the gateway.',
+    }
+  if (err.status === 503)
+    return {
+      title: 'Service unavailable',
+      body: 'The service is starting up or temporarily unavailable. Retry in a moment.',
+    }
+  if (err.status === 402)
+    return {
+      title: 'Add credits to continue',
+      body: 'This product needs a funded balance to load. Add credits to your organization to get started.',
+      topUp: true,
+    }
+  if (err.status === 401)
+    return {
+      title: 'Your session expired',
+      body: 'Your session has expired or isn’t recognized here. Sign in again to continue where you left off.',
+      reauth: true,
+    }
+  if (err.status === 403 || /sign ?in|login|unauthorized/i.test(err.message))
+    return {
+      title: 'Access required',
+      body:
+        copy.unauthorized ??
+        "You're signed in, but this account isn't authorized for this — it's an admin-only surface, or it isn't enabled for your organization yet.",
+    }
+  return { title: 'Could not load', body: err.message }
+}
