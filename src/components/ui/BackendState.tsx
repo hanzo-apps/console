@@ -11,8 +11,9 @@
  * this card instead of placeholder rows/charts.
  */
 import type { ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack } from '@hanzo/gui'
-import { TriangleAlert } from '@hanzogui/lucide-icons-2'
+import { TriangleAlert, CreditCard } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import { startReauth } from '~/lib/auth/iam'
@@ -87,6 +88,7 @@ export function BackendStateCard({
   onRetry?: () => void
   hint?: ReactNode
 }) {
+  const router = useRouter()
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={640}>
       <XStack gap="$2" items="center">
@@ -107,6 +109,19 @@ export function BackendStateCard({
         <Button size="$2" theme="light" self="flex-start" onPress={startReauth}>
           Sign in again
         </Button>
+      ) : state.kind === 'billing' ? (
+        // 402 — the org has no funded balance. Offer a top-up CTA (and keep Retry so
+        // a returning, funded caller can reload in place).
+        <XStack gap="$2" items="center" flexWrap="wrap">
+          <Button size="$2" theme="light" self="flex-start" icon={<CreditCard size={14} />} onPress={() => router.push('/billing/credits')}>
+            Add credits
+          </Button>
+          {onRetry ? (
+            <Button size="$2" self="flex-start" onPress={onRetry}>
+              Retry
+            </Button>
+          ) : null}
+        </XStack>
       ) : onRetry ? (
         <Button size="$2" self="flex-start" onPress={onRetry}>
           Retry
