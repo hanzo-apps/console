@@ -21,9 +21,9 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Input, Popover, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Building2, Check, ChevronsUpDown, Plus, Search } from '@hanzogui/lucide-icons-2'
+import { Check, ChevronsUpDown, LayoutGrid, Plus, Search } from '@hanzogui/lucide-icons-2'
 
-import { currentOrg, switchOrg } from '~/lib/org-scope'
+import { currentOrg, switchOrg, leaveOrg } from '~/lib/org-scope'
 import {
   mergeOrgs,
   orgQuery,
@@ -221,9 +221,18 @@ export function OrgSwitcher() {
     return hit?.displayName || titleCase(currentId)
   }, [list.rows, currentId])
 
-  // Selectable items: the org rows, then the "Create" footer as the last item.
-  const itemCount = rows.length + 1
+  // The current org's avatar row for the trigger — its real logo/displayName when
+  // the loaded list carries it, else a synthesized monogram row (initials come free
+  // from rowFor). Reuses the same synth shape as the non-admin `rows` memo.
+  const currentRow: OrgRow = useMemo(() => {
+    const hit = list.rows.find((o) => o.name === currentId)
+    return rowFor(hit ?? ({ owner: 'admin', name: currentId, displayName: titleCase(currentId) } as Organization))
+  }, [list.rows, currentId])
+
+  // Selectable items: the org rows, then the "Create" footer, then "All organizations".
+  const itemCount = rows.length + 2
   const createIndex = rows.length
+  const allOrgsIndex = rows.length + 1
 
   // Reset the highlight to the top whenever the visible set changes.
   useEffect(() => {
@@ -250,10 +259,15 @@ export function OrgSwitcher() {
         setErr(null)
         return
       }
+      if (index === allOrgsIndex) {
+        setOpen(false)
+        leaveOrg() // de-scope back to the org picker (clears selection + resets scope)
+        return
+      }
       const row = rows[index]
       if (row) select(row.name)
     },
-    [createIndex, rows, select],
+    [createIndex, allOrgsIndex, rows, select],
   )
 
   // Keyboard while open (and not in the create form): ↑/↓ move, ↵ select, Esc close.
@@ -311,7 +325,7 @@ export function OrgSwitcher() {
   return (
     <Popover open={open} onOpenChange={setOpen} placement="bottom-end">
       <Popover.Trigger asChild>
-        <Button size="$2" chromeless icon={<Building2 size={14} />} iconAfter={<ChevronsUpDown size={13} />}>
+        <Button size="$2" chromeless icon={<OrgAvatar row={currentRow} size={18} />} iconAfter={<ChevronsUpDown size={13} />}>
           {currentName}
         </Button>
       </Popover.Trigger>
@@ -462,6 +476,26 @@ export function OrgSwitcher() {
               </YStack>
               <Text fontSize="$2" color="$color12">
                 Create organization
+              </Text>
+            </XStack>
+
+            <XStack
+              id={sel === allOrgsIndex ? 'org-active' : undefined}
+              onPress={() => activate(allOrgsIndex)}
+              cursor="pointer"
+              items="center"
+              gap="$2.5"
+              px="$2"
+              py="$2"
+              rounded="$3"
+              bg={sel === allOrgsIndex ? '$color5' : 'transparent'}
+              hoverStyle={{ bg: '$color5' }}
+            >
+              <YStack width={22} height={22} rounded="$3" bg="$color3" items="center" justify="center">
+                <LayoutGrid size={14} />
+              </YStack>
+              <Text fontSize="$2" color="$color12">
+                All organizations
               </Text>
             </XStack>
           </YStack>
