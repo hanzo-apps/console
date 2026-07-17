@@ -1,42 +1,47 @@
 'use client'
 
 /**
- * Dashboard shell — a TWO-LEVEL sidebar (category → product → sub-pages) + top
+ * Dashboard shell — a TWO-LEVEL sidebar (product list ⇄ drill into a product) + top
  * bar + content, responsive across phone / tablet / laptop / desktop.
  *
  * Level 1 (the product list) renders from the catalog: fixed Overview/Docs, a
- * Pinned section the user curates (GROUPED + drag-reorderable via the Manage
- * pane), then every product grouped by category, with a filter that narrows the
- * whole list. Clicking a PRODUCT slides the sidebar INTO that product's sub-nav
- * (Linear-style); a back affordance and a CATEGORY breadcrumb (with sibling jumps)
- * return context. Level 2 is `productSubpages(entry)` — Overview + the product's
- * specifics + the uniform base set (Settings · Status · Logs · Metrics). Sub-pages
- * with no backend yet are dimmed and open an honest placeholder (never a dead
- * link).
+ * Pinned section the user curates, then every product grouped by category. Each
+ * CATEGORY is an INDEPENDENTLY collapsible section that renders EXPANDED by default
+ * (nothing auto-collapses); the header is flush-left with the top-level items and
+ * carries an OPTIONAL collapse chevron whose state persists per-user. Clicking a
+ * PRODUCT that has sub-pages DRILLS the sidebar INTO that product's sub-nav
+ * (Overview + specifics + the uniform base set: Settings · Status · Logs · Metrics)
+ * with a clear BACK affordance to the full list — Level 2. A product with only an
+ * Overview navigates directly (no drill). Sub-pages with no backend yet are dimmed
+ * and open an honest placeholder (never a dead link).
  *
- * Every product icon carries a tasteful, per-product COLOR (Linear-style), which
- * the user can recolor, pin, and group from the customize pane — all persisted
- * per-user via the account-backed preferences (`usePins` / `useProductColors`).
+ * The WHOLE sidebar collapses to an icon RAIL (the topbar panel toggle, persisted).
+ * When collapsed, HOVER reveals the full sidebar as an OVERLAY flyout (it doesn't
+ * push the content) — the classic rail + flyout. On phones the sidebar is a LEFT
+ * drawer (hamburger) instead; the collapse/rail is a desktop concern.
  *
- * Responsive (one breakpoint, `lg` = 1024px, applied with CSS media style props):
- * - Desktop/laptop (≥lg): the persistent sidebar is always on (collapsible from
- *   the header); the topbar shows the full inline controls.
- * - Phone/tablet (<lg): the sidebar is HIDDEN and reached via a hamburger that
- *   opens the SAME two-level nav as a LEFT-side drawer (with ⌘K search + Apps at
- *   the top); the topbar condenses into a right-side account drawer.
+ * The assistant docks: a floating bubble by default, or a PERMANENT right column
+ * when docked (`useFloatingChat().docked`), which this shell reserves at `lg+`.
  *
- * Off-canvas surfaces (nav drawer, account menu, item DetailPane) all ride the
- * ONE `SlideOver` primitive — transform-driven, so enter AND exit animate
- * smoothly (reduced-motion aware). Layout responsiveness stays CSS-driven
- * (`display="none"` + `$lg={{…}}`), NOT a JS media branch, so SSR and first paint
- * match (no hydration flash). The nav body (`SidebarNav`) is shared by the
- * persistent sidebar and the drawer (DRY) — one definition, two mounts.
+ * Every product icon carries a tasteful per-product COLOR, recolorable/pinnable from
+ * the customize pane — all persisted per-user via the account-backed preferences.
+ *
+ * Responsive (one breakpoint, `lg` = 1024px, CSS media style props):
+ * - Desktop/laptop (≥lg): the persistent sidebar (rail or full) + inline topbar.
+ * - Phone/tablet (<lg): the sidebar is a LEFT drawer (hamburger); the topbar
+ *   condenses into a right-side account drawer. Touch targets ≥44px (hz-touch-target).
+ *
+ * Off-canvas surfaces (nav drawer, account menu, DetailPane) ride the ONE `SlideOver`
+ * primitive. Layout responsiveness stays CSS-driven (`display="none"` + `$lg={{…}}`),
+ * NOT a JS media branch, so SSR and first paint match. The nav body (`SidebarNav`) is
+ * shared by the sidebar, the flyout, and the drawer (DRY) — one definition, many mounts.
  */
-import { useMemo, useState, type ComponentType, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, Input, Popover, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import {
   Activity,
+  ArrowLeft,
   BarChart3,
   Bell,
   BookOpen,
@@ -101,9 +106,12 @@ import { shellFor, isProductShell } from '~/lib/products/shell'
 import { OrgSwitcher } from '~/components/OrgSwitcher'
 import { leaveOrg } from '~/lib/org-scope'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
+import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
 
 const EXPANDED_W = 264
 const COLLAPSED_W = 64
+/** Docked-assistant right column width (lg+ only). */
+const DOCK_W = 384
 /** Content column cap — wide desktops read comfortably (generous gutters) instead of
  *  stretching full-bleed; narrower viewports fall back to full width. */
 const CONTENT_MAX = 1680
@@ -138,16 +146,6 @@ function activeModuleId(pathname: string): string | null {
   if (!seg) return null
   const e = findEntry(seg)
   return e && e.kind === 'module' ? e.id : null
-}
-
-/** The CATEGORY of the product the path points at, or null (home / unknown) — the
- *  section the accordion keeps auto-expanded so the current page is always visible.
- *  Unlike `activeModuleId` this spans every kind (module + external both carry a
- *  category), so navigating to any product reveals its section. */
-function activeCategory(pathname: string): string | null {
-  const seg = pathname.split('/').filter(Boolean)[0]
-  if (!seg) return null
-  return findEntry(seg)?.category ?? null
 }
 
 /** The active sub-page slug within a product ('' = Overview), or '' when elsewhere. */
@@ -280,62 +278,91 @@ function NavRow({
 }
 
 /**
- * The active product's sub-pages, rendered INLINE (indented) directly under its nav
- * row — Google-Cloud-Console style. So a product AND its sub-pages are reachable in a
- * single click from the always-visible list, with NO slide-out and NO "back" step
- * (the prior two-level nav required returning to the list to reach another product).
- * Overview + the product's specifics + the uniform base set (Settings · Status · Logs
- * · Metrics); an unwired sub-page is dimmed but honest (opens a placeholder, never a
- * dead link). Rendered only for the active product, and hidden while filtering.
+ * Level 2 — the drilled product's sub-nav. Reached by clicking a product with
+ * sub-pages; a BACK affordance returns to the full product list (Level 1). The
+ * header shows the product (colored icon + name) under a category breadcrumb; the
+ * body is `productSubpages(entry)` — Overview + specifics + the uniform base set —
+ * with an unwired sub-page dimmed but honest (opens a placeholder, never a dead link).
  */
-function InlineSubnav({
+function DrillNav({
   entry,
+  subs,
   pathname,
-  showAdmin,
+  color,
+  onBack,
   onGo,
 }: {
   entry: CatalogEntry
+  subs: ProductSubpage[]
   pathname: string
-  showAdmin: boolean
+  color: string
+  onBack: () => void
   onGo: (path: string) => void
 }) {
-  const subs = productSubpages(entry, showAdmin)
-  // Nothing beyond Overview → no sub-nav worth showing (the row itself is the page).
-  if (subs.length <= 1) return null
   const activeSlug = activeSubpageSlug(pathname, entry.id)
+  const Icon = entry.icon
   return (
-    <YStack gap="$0.5" ml="$5" my="$0.5">
-      {subs.map((sp: ProductSubpage) => {
-        const wired = subpageWired(entry.id, sp.slug)
-        const active = sp.slug === activeSlug
-        const SubIcon = subpageIcon(sp.slug)
-        return (
-          <Button
-            key={sp.slug || 'overview'}
-            onPress={() => onGo(sp.slug ? `/${entry.id}/${sp.slug}` : `/${entry.id}`)}
-            bg={active ? '$color4' : 'transparent'}
-            justify="flex-start"
-            icon={<SubIcon size={15} />}
-            iconAfter={!wired ? <Circle size={7} opacity={0.5} /> : undefined}
-            size="$2"
-            opacity={wired ? 1 : 0.6}
-            aria-label={wired ? sp.label : `${sp.label} (not available yet)`}
-          >
-            {sp.label}
-          </Button>
-        )
-      })}
-    </YStack>
+    <>
+      {/* Back to the full product list, with the category as a quiet breadcrumb. */}
+      <Button
+        chromeless
+        size="$2"
+        height={34}
+        px="$2"
+        justify="flex-start"
+        icon={<ArrowLeft size={17} />}
+        onPress={onBack}
+        hoverStyle={{ bg: '$color3' }}
+        aria-label="Back to all products"
+      >
+        <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
+          {entry.category}
+        </Text>
+      </Button>
+
+      {/* The product header. */}
+      <XStack items="center" gap="$2.5" px="$2" py="$1.5" mb="$1">
+        <ProductIcon icon={Icon} color={color} size={22} />
+        <Text flex={1} fontSize="$5" fontWeight="800" color="$color12" numberOfLines={1}>
+          {entry.label}
+        </Text>
+      </XStack>
+
+      <ScrollView flex={1} minH={0}>
+        <YStack gap="$0.5">
+          {subs.map((sp) => {
+            const wired = subpageWired(entry.id, sp.slug)
+            const active = sp.slug === activeSlug
+            const SubIcon = sp.icon ?? subpageIcon(sp.slug)
+            return (
+              <Button
+                key={sp.slug || 'overview'}
+                onPress={() => onGo(sp.slug ? `/${entry.id}/${sp.slug}` : `/${entry.id}`)}
+                bg={active ? '$color4' : 'transparent'}
+                justify="flex-start"
+                icon={<SubIcon size={17} />}
+                iconAfter={!wired ? <Circle size={7} opacity={0.5} /> : undefined}
+                size="$3"
+                opacity={wired ? 1 : 0.6}
+                aria-label={wired ? sp.label : `${sp.label} (not available yet)`}
+              >
+                {sp.label}
+              </Button>
+            )
+          })}
+        </YStack>
+      </ScrollView>
+    </>
   )
 }
 
-/** A collapsible level-1 CATEGORY section — the ONE way the expanded sidebar
- *  groups products under a topic. The header is a clickable button with an OBVIOUS
- *  rotating chevron (▸ collapsed, ▾ expanded), keyboard-toggleable and
- *  `aria-expanded`; its product rows (`children`) reveal in order when open. The
- *  body animates height + opacity via `.hz-acc` (grid-rows, reduced-motion-guarded)
- *  and is `inert` when collapsed, so hidden rows leave the tab order. The category
- *  label keeps its per-category accent color + a count of what's inside. */
+/** A collapsible level-1 CATEGORY section — the ONE way the expanded sidebar groups
+ *  products under a topic. EXPANDED by default; the header is FLUSH-LEFT (aligned
+ *  with Overview/Docs — no leading-chevron indentation) and carries the count plus an
+ *  OPTIONAL collapse chevron (▾ open, ▸ collapsed) at the RIGHT. The whole header is
+ *  the toggle (a big, keyboard-focusable, `aria-expanded` hit target). The body
+ *  animates height + opacity via `.hz-acc` (grid-rows, reduced-motion-guarded) and is
+ *  `inert` when collapsed, so hidden rows leave the tab order. */
 function CategorySection({
   category,
   count,
@@ -355,7 +382,7 @@ function CategorySection({
       <Button
         chromeless
         size="$2"
-        height={34}
+        height={32}
         px="$2.5"
         rounded="$3"
         justify="flex-start"
@@ -367,23 +394,23 @@ function CategorySection({
         aria-label={`${category}, ${open ? 'collapse' : 'expand'} section, ${count} items`}
       >
         <XStack flex={1} items="center" gap="$2">
-          {/* The OBVIOUS clicker — a chevron that rotates ▸→▾ on expand. Wrapped in a
+          {/* Flush-left label — calm neutral tint (per-product COLOR lives on the icons
+              within). The count + the collapse chevron sit at the far RIGHT. */}
+          <Text flex={1} fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
+            {category}
+          </Text>
+          <Text fontSize={10} fontWeight="700" color="$color9">
+            {count}
+          </Text>
+          {/* The OPTIONAL collapse affordance — a chevron that rotates ▸→▾. Wrapped in a
               plain span so the CSS transition (`.hz-chevron`) applies (the Gui icon
-              takes style props, not className). Calm, neutral tint — the section header
-              is quiet gray (Linear-style); per-product COLOR lives on the icons within. */}
+              takes style props, not className). */}
           <span
             className="hz-chevron"
             style={{ display: 'inline-flex', transform: open ? 'rotate(90deg)' : undefined }}
           >
             <ChevronRight size={13} color="$color8" />
           </span>
-          <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
-            {category}
-          </Text>
-          <XStack flex={1} />
-          <Text fontSize={10} fontWeight="700" color="$color9">
-            {count}
-          </Text>
         </XStack>
       </Button>
       <div className="hz-acc" data-open={open ? 'true' : 'false'} id={sectionId} inert={!open}>
@@ -437,14 +464,13 @@ function MenuItem({ icon: Icon, label, onPress }: { icon: ComponentType<{ size?:
 
 /**
  * Sidebar identity — the BOTTOM-LEFT cluster (org switcher above the user/account
- * row), matching the unified app/chat shell where the brand logomark is top-left
- * and the org+user+wallet cluster is bottom-left. The org row is the working
- * `OrgSwitcher` (switch / create org); the user row opens an account menu
- * (profile · theme · sign out). Because it sits at the FOOT of the sidebar, the
- * account menu opens UPWARD (`top-start`) so it never clips off the bottom edge.
- * Collapsed → just the account avatar, opening the same menu to the right. Reused
- * by the desktop sidebar AND the mobile drawer (both mount SidebarNav), so one
- * definition, many mounts (DRY).
+ * row), matching the unified app/chat shell. The org row is the working `OrgSwitcher`
+ * (switch / create org / "All organizations" all live IN its dropdown now — the
+ * former redundant app-grid button beside it is gone). The user row opens an account
+ * menu (profile · theme · sign out). Because it sits at the FOOT of the sidebar, the
+ * account menu opens UPWARD (`top-start`). Collapsed → just the account avatar,
+ * opening the same menu to the right. Reused by the desktop sidebar, the flyout, AND
+ * the mobile drawer (DRY).
  */
 function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
   const router = useRouter()
@@ -499,32 +525,16 @@ function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavi
           </Popover.Trigger>
           {menu}
         </Popover>
-        <Button
-          chromeless
-          p="$0"
-          width={40}
-          height={32}
-          icon={<LayoutGrid size={16} />}
-          onPress={() => leaveOrg()}
-          aria-label="All organizations — back to the org picker"
-        />
       </YStack>
     )
   }
 
   return (
     <YStack gap="$1.5" pt="$2" mt="$1" borderTopWidth={1} borderColor="$borderColor">
-      {/* The current org — the working switch/create control, with a Home
-          affordance that de-scopes back to the org picker. Top of the cluster. */}
-      <XStack px="$1" items="center" gap="$1" justify="space-between">
+      {/* The current org — the working switch/create control (org avatar + name +
+          "All organizations" all inside its dropdown). Top of the cluster. */}
+      <XStack px="$1" items="center">
         <OrgSwitcher />
-        <Button
-          size="$2"
-          chromeless
-          icon={<LayoutGrid size={15} />}
-          onPress={() => leaveOrg()}
-          aria-label="All organizations — back to the org picker"
-        />
       </XStack>
       {/* The user/account — opens UPWARD (foot-anchored), so the menu never clips. */}
       <Popover open={open} onOpenChange={setOpen} placement="top-start">
@@ -553,8 +563,9 @@ function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavi
 }
 
 /**
- * The nav body — shared by the persistent desktop sidebar and the mobile drawer.
- * `onNavigate` lets the drawer close on a leaf selection (desktop passes a no-op).
+ * The nav body — shared by the persistent desktop sidebar, the collapsed-rail flyout,
+ * and the mobile drawer. `onNavigate` closes the drawer on a LEAF selection (desktop
+ * / flyout pass a no-op). Owns the Level-1 ⇄ Level-2 (drill-in) state.
  */
 function SidebarNav({
   collapsed,
@@ -565,51 +576,68 @@ function SidebarNav({
 }) {
   const pathname = usePathname() ?? ''
   const router = useRouter()
-  const { view, isPinned, toggle } = usePins()
+  const { view, isPinned, toggle, pinnedIds } = usePins()
   const { colorOf } = useProductColors()
   const detail = useDetailPane()
   const showAdmin = useIsSuperAdmin()
-  // Entitlement gate: a customer's nav shows ONLY the products the org has enabled
-  // (always-on essentials + `enabled`); `gated` is true once a real set is in force.
-  const { enabled, gated } = useEntitlements()
+  // Entitlement scope: currently ungated in prod (the endpoint 404s → `enabled` is
+  // null → the full catalog shows), matching "every product is always available".
+  const { enabled } = useEntitlements()
   const [filter, setFilter] = useState('')
 
-  // Collapsible-category accordion state — the user's explicit per-category open
-  // choices, persisted per-user (account-backed + localStorage cache) so a
-  // reload/navigation keeps them. The active route's category stays open (see
-  // `categoryIsOpen`), so the current page is always visible.
+  // Collapsible-category accordion state — the user's EXPLICIT per-category collapse
+  // choices, persisted per-user. Everything is EXPANDED by default; a collapsed
+  // section stays collapsed where the user left it (see `categoryIsOpen`).
   const prefs = usePreferences()
   const navOpen = prefs.get<CategoryOpen>(NAV_OPEN_PREF, EMPTY_OPEN)
-  const activeCat = activeCategory(pathname)
   const toggleSection = (category: string) => prefs.set(NAV_OPEN_PREF, toggleCategory(navOpen, category))
 
-  // The active product (from the route) is the one whose sub-pages expand inline.
+  // ── Drill-in state (Level 1 ⇄ Level 2) ────────────────────────────────────
   const activeId = activeModuleId(pathname)
+  const activeEntry = activeId ? findEntry(activeId) ?? null : null
+  const activeSubs = useMemo(
+    () => (activeEntry && activeEntry.kind === 'module' ? productSubpages(activeEntry, showAdmin) : []),
+    [activeEntry, showAdmin],
+  )
+  // `manualList` = the user hit BACK — force the Level-1 list even though the active
+  // route is a drillable product. Entering a DIFFERENT product resets it (auto-drill).
+  const [manualList, setManualList] = useState(false)
+  useEffect(() => {
+    setManualList(false)
+  }, [activeId])
+  const canDrill = Boolean(activeEntry) && activeSubs.length > 1
+  const drilled = canDrill && !manualList && !collapsed
   const isActive = (id: string) => pathname === `/${id}` || pathname.startsWith(`/${id}/`)
 
+  // Navigate to a LEAF (a sub-page or a no-sub-page product) — closes the drawer.
   const go = (path: string) => {
     router.push(path)
     onNavigate()
   }
+  // Open a product from the list: DRILL if it has sub-pages (keep the drawer open so
+  // the sub-nav shows), else navigate directly (leaf → close the drawer). An external
+  // launch tile opens its deployed app in a new tab.
   const open = (entry: CatalogEntry) => {
-    // Route DIRECTLY to any product from anywhere in the always-visible list — no
-    // slide, no "back" step. An external launch tile opens its deployed app in a new
-    // tab (the ONE opener handles the kind); the drawer closes after either way.
     if (entry.kind === 'external') {
       openProduct(entry, go)
       onNavigate()
       return
     }
     setFilter('')
-    router.push(`/${entry.id}`)
-    onNavigate()
+    const subs = productSubpages(entry, showAdmin)
+    if (subs.length > 1) {
+      setManualList(false)
+      router.push(`/${entry.id}`) // DRILL — keep the drawer open for the sub-nav
+    } else {
+      go(`/${entry.id}`) // leaf — navigate + close
+    }
   }
   const openDocs = () => {
     if (typeof window !== 'undefined') window.open(config.docsUrl, '_blank', 'noopener')
     onNavigate()
   }
 
-  // Customize + manage panes — open the ONE DetailPane with a descriptor (DRY).
+  // Customize + manage + all-products panes — open the ONE DetailPane (DRY).
   const customize = (entry: CatalogEntry) =>
     detail.open({
       title: entry.label,
@@ -620,6 +648,15 @@ function SidebarNav({
     })
   const manage = () =>
     detail.open({ title: 'Manage pins', subtitle: 'Reorder · group · organize', icon: Star, content: <ManagePins /> })
+  // Browse the FULL catalog: pin/unpin to the sidebar + find what's in use (the
+  // reworked panel — no enable gate; every product is always available).
+  const allProducts = () =>
+    detail.open({
+      title: 'All products',
+      subtitle: 'Pin to your sidebar · find what’s in use',
+      icon: LayoutGrid,
+      content: <AddProductPanel />,
+    })
 
   const q = (collapsed ? '' : filter).trim().toLowerCase()
   const filtering = q.length > 0
@@ -638,11 +675,9 @@ function SidebarNav({
         .filter((g) => g.entries.length > 0),
     [view, showAdmin],
   )
-  const pinnedIds = useMemo(() => pinnedGroups.flatMap((g) => g.entries.map((e) => e.id)), [pinnedGroups])
 
   // Within-scope ordering is CONTINUOUS ALPHABETICAL with the SELECTED product pinned
-  // first (emphasized + kept visible), per directive #58 §2.2 — via the ONE shared
-  // `orderEntries` helper (reused by the AppLauncher). Categories stay in their
+  // first — via the ONE shared `orderEntries` helper. Categories stay in their
   // canonical order; only the items inside each are alphabetized + selected-first.
   const groups = useMemo(
     () =>
@@ -652,25 +687,7 @@ function SidebarNav({
     [q, showAdmin, enabled, activeId],
   )
 
-  // The "Add product" affordance — open the shared DetailPane onto the enable flow.
-  const addProduct = () =>
-    detail.open({
-      title: 'Add product',
-      subtitle: 'Enable more products for your organization',
-      icon: Plus,
-      content: <AddProductPanel />,
-    })
-
   // ── Product-shell face — the nav IS the root module's sub-pages ────────────
-  // ONE branch for every single-product FACE (billing.<brand> = the Billing Center;
-  // sentry.<brand> = Hanzo Sentry), driven by the shell descriptor (lib/products/
-  // shell.ts). Same components, filtered nav: the sidebar shows ONLY the face's root
-  // module sub-pages (billing: Overview · Reports · …; sentry: Issues · Discover ·
-  // Logs · Traces · Monitor · Projects · Members). A face may wear a product WORDMARK
-  // next to the Hanzo brand mark ("Sentry" — Hanzo identity, product-labelled, never
-  // an upstream mark); billing keeps the mark alone. The rest of the chrome (header,
-  // cmd+K, org switcher, account menu, wallet) is untouched. Zero cross-brand leak —
-  // the brand mark stays host-derived (white-label).
   if (isProductShell(config.shell)) {
     const shell = shellFor(config.shell)
     const rootId = shell.rootId ?? ''
@@ -682,8 +699,6 @@ function SidebarNav({
     const activeSlug = root ? activeSubpageSlug(pathname, root.id) : ''
     return (
       <>
-        {/* Top-left: the host-derived Hanzo brand mark + (optional) product wordmark.
-            billing → mark alone (SidebarBrand, unchanged); sentry → mark + "Sentry". */}
         {shell.wordmark && !collapsed ? (
           <XStack
             items="center"
@@ -725,15 +740,24 @@ function SidebarNav({
             })}
           </YStack>
         </ScrollView>
-        {/* Bottom-left cluster: org + user, then wallet (matches app/chat). */}
         <SidebarIdentity collapsed={collapsed} onNavigate={onNavigate} />
         <SidebarWallet collapsed={collapsed} />
       </>
     )
   }
 
-  // ── Collapsed icon rail — brand mark on top; account + products; wallet foot ──
+  // ── Collapsed icon rail — brand mark; a CURATED set (pinned + the active product);
+  //    All-products; account + wallet. Hover reveals the full nav as a flyout. ──
   if (collapsed) {
+    const railIds: string[] = []
+    const seen = new Set<string>()
+    for (const id of [...pinnedIds, ...(activeId ? [activeId] : [])]) {
+      const e = findEntry(id)
+      if (e && !seen.has(id) && (showAdmin || !e.admin)) {
+        seen.add(id)
+        railIds.push(id)
+      }
+    }
     return (
       <>
         <SidebarBrand collapsed onNavigate={onNavigate} />
@@ -743,14 +767,14 @@ function SidebarNav({
               <FixedRow icon={House} label="Overview" active={pathname === '/'} collapsed onPress={() => go('/')} />
               <FixedRow icon={BookOpen} label="Docs" external collapsed onPress={openDocs} />
             </YStack>
-            {pinnedIds.length > 0 ? (
+            {railIds.length > 0 ? (
               <YStack gap="$1">
-                {pinnedIds.map((id) => {
+                {railIds.map((id) => {
                   const entry = findEntry(id)
                   if (!entry) return null
                   return (
                     <NavRow
-                      key={`pin-${id}`}
+                      key={`rail-${id}`}
                       entry={entry}
                       active={isActive(id)}
                       color={colorOf(id)}
@@ -761,42 +785,42 @@ function SidebarNav({
                 })}
               </YStack>
             ) : null}
-            {groups.map((group) => (
-              <YStack key={group.category} gap="$1">
-                {group.entries.map((entry) => (
-                  <NavRow
-                    key={entry.id}
-                    entry={entry}
-                    active={isActive(entry.id)}
-                    color={colorOf(entry.id)}
-                    collapsed
-                    onOpen={() => open(entry)}
-                  />
-                ))}
-              </YStack>
-            ))}
+            <FixedRow icon={LayoutGrid} label="All products" collapsed onPress={allProducts} />
           </YStack>
         </ScrollView>
-        {/* Bottom-left cluster: account, then wallet (matches app/chat). */}
         <SidebarIdentity collapsed onNavigate={onNavigate} />
         <SidebarWallet collapsed />
       </>
     )
   }
 
-  // ── Expanded: brand mark on top; grouped nav; identity + wallet at the foot ──
-  // Google-Cloud-Console style: ONE always-visible, scrollable list — Overview/Docs,
-  // Pinned, then categories in fixed order (collapsible). The active product's
-  // sub-pages expand INLINE under its row, so every product AND sub-page is one click
-  // away with no slide and no "back".
+  // ── Level 2 — drilled into a product's sub-nav, with a BACK affordance ──
+  if (drilled && activeEntry) {
+    return (
+      <>
+        <SidebarBrand collapsed={false} onNavigate={onNavigate} />
+        <DrillNav
+          entry={activeEntry}
+          subs={activeSubs}
+          pathname={pathname}
+          color={colorOf(activeEntry.id)}
+          onBack={() => setManualList(true)}
+          onGo={go}
+        />
+        <SidebarIdentity collapsed={false} onNavigate={onNavigate} />
+        <SidebarWallet collapsed={false} />
+      </>
+    )
+  }
+
+  // ── Level 1 — the full product list: brand; filter; Overview/Docs; Pinned; every
+  //    category (EXPANDED by default, collapsible); All-products; identity + wallet. ──
   return (
     <>
-      {/* Top-left: the white-label brand logomark ALONE — no wordmark, no product
-          name, no letter-H text (matches hanzo.app + hanzo.chat). */}
       <SidebarBrand collapsed={false} onNavigate={onNavigate} />
 
       {/* Product filter — narrows the whole list; a match from any category jumps
-          straight there. Typing hides the inline sub-nav so the list stays scannable. */}
+          straight there. Typing hides the section chrome so the list stays scannable. */}
       <XStack
         items="center"
         gap="$2"
@@ -836,8 +860,8 @@ function SidebarNav({
 
           {!filtering && pinnedGroups.length > 0 ? (
             <YStack gap="$1.5">
-              <XStack items="center" justify="space-between" px="$2">
-                <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+              <XStack items="center" justify="space-between" px="$2.5">
+                <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
                   Pinned
                 </Text>
                 <Button size="$1" chromeless onPress={manage} aria-label="Manage pins">
@@ -849,7 +873,7 @@ function SidebarNav({
               {pinnedGroups.map((group) => (
                 <YStack key={group.name || 'default'} gap="$1">
                   {group.name ? (
-                    <Text px="$2" fontSize="$1" color="$color9" fontWeight="700">
+                    <Text px="$2.5" fontSize="$1" color="$color9" fontWeight="700">
                       {group.label}
                     </Text>
                   ) : null}
@@ -879,59 +903,51 @@ function SidebarNav({
               key={group.category}
               category={group.category}
               count={group.entries.length}
-              open={categoryIsOpen(navOpen, group.category, { activeCategory: activeCat, filtering })}
+              open={categoryIsOpen(navOpen, group.category, { filtering })}
               onToggle={() => toggleSection(group.category)}
             >
               {group.entries.map((entry) => (
-                <YStack key={entry.id} gap="$0.5">
-                  <NavRow
-                    entry={entry}
-                    active={isActive(entry.id)}
-                    color={colorOf(entry.id)}
-                    collapsed={false}
-                    pinned={isPinned(entry.id)}
-                    onOpen={() => open(entry)}
-                    onToggle={() => toggle(entry.id)}
-                  />
-                  {/* The active product's sub-pages, inline (never a slide/back). */}
-                  {!filtering && entry.kind === 'module' && isActive(entry.id) ? (
-                    <InlineSubnav entry={entry} pathname={pathname} showAdmin={showAdmin} onGo={go} />
-                  ) : null}
-                </YStack>
+                <NavRow
+                  key={entry.id}
+                  entry={entry}
+                  active={isActive(entry.id)}
+                  color={colorOf(entry.id)}
+                  collapsed={false}
+                  pinned={isPinned(entry.id)}
+                  onOpen={() => open(entry)}
+                  onToggle={() => toggle(entry.id)}
+                />
               ))}
             </CategorySection>
           ))}
 
           {filtering && groups.length === 0 ? (
-            <Text px="$2" py="$3" fontSize="$2" color="$color10">
+            <Text px="$2.5" py="$3" fontSize="$2" color="$color10">
               No products match “{filter.trim()}”.
             </Text>
           ) : null}
 
-          {/* Out-of-box: a gated customer assembles their own backend — enable more
-              products. Hidden for super admins (they see everything) and while the
-              gate is ungated (endpoint not landed) so the nav is unchanged until then. */}
-          {!filtering && gated ? (
+          {/* Browse the full catalog — pin/unpin + find what's in use. Always
+              available (no enable gate; every product is always on). */}
+          {!filtering ? (
             <Button
               size="$2"
               chromeless
               justify="flex-start"
-              icon={<Plus size={16} />}
-              onPress={addProduct}
-              aria-label="Add product"
+              icon={<LayoutGrid size={16} />}
+              onPress={allProducts}
+              aria-label="All products"
               mt="$1"
             >
               <Text fontSize="$2" color="$color11" fontWeight="600">
-                Add product
+                All products
               </Text>
             </Button>
           ) : null}
         </YStack>
       </ScrollView>
 
-      {/* Bottom-left cluster: the org switcher + the user/account menu, then the
-          wallet — ONE consolidated identity cluster at the foot of the sidebar,
-          matching the app/chat placement (was split user-on-top / wallet-below). */}
+      {/* Bottom-left cluster: the org switcher + account menu, then the wallet. */}
       <SidebarIdentity collapsed={false} onNavigate={onNavigate} />
       <SidebarWallet collapsed={false} />
     </>
@@ -939,17 +955,15 @@ function SidebarNav({
 }
 
 /** Mobile/tablet nav drawer — the same SidebarNav, slid in from the LEFT (the
- *  hamburger is top-left and this is a left-nav, so the drawer enters from that
- *  edge; the account/profile drawer stays on the right), with a ⌘K search + Apps
- *  launcher at the top (the command surface, reachable on mobile). */
+ *  hamburger is top-left and this is a left-nav), with a ⌘K search + Apps launcher
+ *  at the top (the command surface, reachable on mobile). */
 function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const palette = useCommandPalette()
   const launcher = useAppLauncher()
   return (
     <SlideOver open={open} onClose={() => onOpenChange(false)} side="left" size={320} ariaLabel="Navigation">
       {/* `hz-touch-target` raises every control in the drawer to a ≥44px tap target
-          on phones/tablets (see globals.css); the desktop sidebar is a separate
-          mount and stays dense. */}
+          on phones/tablets (see globals.css); the desktop sidebar stays dense. */}
       <YStack flex={1} minH={0} p="$3" gap="$2.5" className="hz-touch-target">
         <XStack gap="$2" items="center">
           <XStack
@@ -986,8 +1000,8 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
             borderColor="$borderColor"
             aria-label="Apps"
           />
-          {/* Explicit close — right-aligned INSIDE the drawer header, so it is always
-              reachable on a 390px phone (backdrop/Escape still close too). */}
+          {/* Explicit close — right-aligned INSIDE the drawer header, always reachable
+              on a 390px phone (backdrop/Escape still close too). */}
           <Button
             size="$3"
             chromeless
@@ -1011,11 +1025,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const { signOut } = useSession()
   const { get, set } = usePreferences()
   const launcher = useAppLauncher()
+  const { docked } = useFloatingChat()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  // Collapsed-rail hover flyout (desktop only): the full sidebar overlays the content
+  // without pushing it, revealed while the pointer is over the rail/flyout.
+  const [flyout, setFlyout] = useState(false)
 
   const collapsed = get<boolean>('sidebarCollapsed', false)
-  const toggleCollapsed = () => set('sidebarCollapsed', !collapsed)
+  const toggleCollapsed = () => {
+    setFlyout(false)
+    set('sidebarCollapsed', !collapsed)
+  }
   const push = (path: string) => router.push(path)
   const openDocs = () => {
     if (typeof window !== 'undefined') window.open(config.docsUrl, '_blank', 'noopener')
@@ -1023,19 +1044,52 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <XStack flex={1} minH="100vh" bg="$background">
-      {/* Persistent sidebar — hidden below lg (1024px), shown at lg+. */}
-      <YStack
-        display="none"
-        $lg={{ display: 'flex' }}
-        width={collapsed ? COLLAPSED_W : EXPANDED_W}
-        p={collapsed ? '$2' : '$3.5'}
-        gap="$2.5"
-        borderRightWidth={1}
-        borderColor="$borderColor"
-        bg="$color1"
-        className="hz-collapse"
-      >
-        <SidebarNav collapsed={collapsed} onNavigate={() => {}} />
+      {/* Persistent sidebar — hidden below lg (1024px), shown at lg+. When collapsed
+          it's an icon RAIL; hovering it reveals the full sidebar as an OVERLAY flyout
+          (absolute, elevated) that doesn't push the content. */}
+      <YStack display="none" $lg={{ display: 'flex' }}>
+        {/* Plain div owns the HOVER (DOM mouseenter/leave — reliable, and a descendant
+            move into the flyout never fires leave) + is the positioned anchor for the
+            absolute flyout. The outer YStack only media-gates the whole sidebar to lg+. */}
+        <div
+          onMouseEnter={() => {
+            if (collapsed) setFlyout(true)
+          }}
+          onMouseLeave={() => setFlyout(false)}
+          style={{ position: 'relative', display: 'flex', flex: 1, alignSelf: 'stretch' }}
+        >
+          <YStack
+            width={collapsed ? COLLAPSED_W : EXPANDED_W}
+            minW={collapsed ? COLLAPSED_W : EXPANDED_W}
+            p={collapsed ? '$2' : '$3.5'}
+            gap="$2.5"
+            borderRightWidth={1}
+            borderColor="$borderColor"
+            bg="$color1"
+            className="hz-collapse"
+          >
+            <SidebarNav collapsed={collapsed} onNavigate={() => {}} />
+          </YStack>
+
+          {collapsed && flyout ? (
+            <YStack
+              position="absolute"
+              t={0}
+              l={0}
+              b={0}
+              width={EXPANDED_W}
+              p="$3.5"
+              gap="$2.5"
+              bg="$color1"
+              borderRightWidth={1}
+              borderColor="$borderColor"
+              className="hz-elevation-4"
+              style={{ zIndex: 1000 }}
+            >
+              <SidebarNav collapsed={false} onNavigate={() => setFlyout(false)} />
+            </YStack>
+          ) : null}
+        </div>
       </YStack>
 
       {/* Mobile/tablet nav drawer — opened by the hamburger (hidden ≥ lg). */}
@@ -1053,7 +1107,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           borderBottomWidth={1}
           borderColor="$borderColor"
         >
-          {/* Collapse the sidebar — the ONE collapse control (desktop only). */}
+          {/* Collapse the sidebar to an icon rail — the ONE collapse control (desktop). */}
           <Button
             size="$3"
             chromeless
@@ -1061,11 +1115,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             $lg={{ display: 'flex' }}
             icon={<PanelLeft size={ICON} />}
             onPress={toggleCollapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'}
           />
 
-          {/* Hamburger — opens the RIGHT nav drawer. Shown only below lg; ≥44×44
-              touch target (WCAG 2.5.5). Hidden at lg+, so no desktop impact. */}
+          {/* Hamburger — opens the LEFT nav drawer. Shown only below lg; ≥44×44 touch
+              target (WCAG 2.5.5). Hidden at lg+, so no desktop impact. */}
           <Button
             size="$3"
             chromeless
@@ -1093,15 +1147,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </Text>
           </Button>
 
-          {/* Spacer — pushes the right-side controls to the edge at lg+. On phones
-              it must NOT compete with the search box for width (two flex:1 siblings
-              halved the box, truncating the placeholder to “S…”), so it only flexes
-              at lg+; below lg the search box fills the row. */}
+          {/* Spacer — pushes the right-side controls to the edge at lg+. Below lg the
+              search box fills the row (two flex:1 siblings would halve it). */}
           <XStack display="none" $lg={{ display: 'flex' }} flex={1} />
 
-          {/* Full topbar controls — shown only at lg+. The org switcher now lives in
-              the sidebar identity block (user → org); the topbar keeps the project
-              scope switcher, theme, docs, and notifications. */}
+          {/* Full topbar controls — shown only at lg+. */}
           <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$2">
             <SystemStatusBadge />
             <ThemeToggle />
@@ -1122,8 +1172,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </XStack>
 
         {pathname !== '/' ? (
-          // Full-width divider; the breadcrumb content aligns to the same centered
-          // max-width column as the page body (tidy on big-desktop, no drift).
           <XStack borderBottomWidth={1} borderColor="$borderColor" justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
             <XStack width="100%" maxW={CONTENT_MAX} py="$2.5">
               <Breadcrumbs />
@@ -1131,9 +1179,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </XStack>
         ) : null}
 
-        {/* Content — a centered, capped column so wide desktops read comfortably
-            (generous gutters, not stretched full-bleed) while narrow viewports use
-            the full width. Padding + section rhythm scale up at xl. */}
+        {/* Content — a centered, capped column so wide desktops read comfortably. */}
         <ScrollView flex={1}>
           <XStack justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
             <YStack testID="product-content" width="100%" maxW={CONTENT_MAX} pt="$3" pb={80} $md={{ pt: '$4' }} $xl={{ pt: '$5', gap: '$5' }} gap="$4">
@@ -1144,10 +1190,25 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </ScrollView>
       </YStack>
 
+      {/* Docked assistant — a PERMANENT right column (lg+ only). Reserves its own
+          width beside the content; toggled from the assistant header. On phones the
+          assistant stays the floating bubble/sheet (no room for a column). */}
+      <YStack
+        display="none"
+        $lg={{ display: docked ? 'flex' : 'none' }}
+        width={DOCK_W}
+        minW={DOCK_W}
+        borderLeftWidth={1}
+        borderColor="$borderColor"
+        bg="$color1"
+      >
+        <DockedChatPanel />
+      </YStack>
+
       {/* Mobile account drawer — org/scope switching, notifications, theme, docs,
           sign-out. The SAME SlideOver primitive as the nav drawer (DRY, smooth). */}
       <SlideOver open={menuOpen} onClose={() => setMenuOpen(false)} side="right" size={320} title="Account">
-        <YStack gap="$2">
+        <YStack gap="$2" className="hz-touch-target">
           <XStack items="center" justify="space-between">
             <Text fontSize="$2" color="$color10">
               Theme
@@ -1155,16 +1216,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <ThemeToggle />
           </XStack>
           <OrgSwitcher />
-          <Button
-            justify="flex-start"
-            icon={<LayoutGrid size={16} />}
-            onPress={() => {
-              setMenuOpen(false)
-              leaveOrg()
-            }}
-          >
-            All organizations
-          </Button>
           <ScopeSwitcher />
           <Button
             justify="flex-start"
