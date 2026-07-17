@@ -4,11 +4,12 @@ import { ProjectApi } from './projects'
 
 const ORIGIN = 'https://console.hanzo.ai'
 
-// Projects are IAM-served; the console host's /v1 sends /v1/iam/* to the cloud
-// binary → 404 ("projects not routed"). The fix routes Projects through the
-// /org/iam BFF proxy (mints a user Bearer server-side, forwards to IAM), NOT the
-// cloud cookie path. This pins that contract so it can't regress to the 404 path.
-describe('ProjectApi.list — routes through the /org/iam Bearer proxy', () => {
+// Projects are IAM-served over the ONE cloud IAM edge: `iamList` targets
+// `/v1/iam/<segment>`, which the one-binary console (console.hanzo.ai served by
+// cloud) calls directly and a split console forwards through its `/v1` bearer
+// proxy — ONE path, both topologies. This pins that contract (replacing the old
+// `/org/iam` BFF, which the static one-binary console can't run) so it can't regress.
+describe('ProjectApi.list — routes through the /v1/iam cloud edge', () => {
   const fetched: string[] = []
 
   beforeEach(() => {
@@ -31,12 +32,12 @@ describe('ProjectApi.list — routes through the /org/iam Bearer proxy', () => {
     delete (globalThis as { window?: unknown }).window
   })
 
-  it('lists from /org/iam/get-organization-projects with the org param (not the cloud /v1/iam path)', async () => {
+  it('lists from /v1/iam/get-organization-projects with the org param (not the old /org/iam BFF)', async () => {
     const out = await ProjectApi.list()
-    expect(fetched.some((u) => u.startsWith('/org/iam/get-organization-projects'))).toBe(true)
+    expect(fetched.some((u) => u.includes('/v1/iam/get-organization-projects'))).toBe(true)
     expect(fetched.some((u) => u.includes('organization='))).toBe(true)
-    // never the cloud /v1 path that 404s
-    expect(fetched.some((u) => u.includes('/v1/iam/'))).toBe(false)
+    // no longer the old /org/iam BFF (the static one-binary console has no server routes)
+    expect(fetched.some((u) => u.includes('/org/iam/'))).toBe(false)
     expect(out.map((p) => p.name)).toEqual(['demo'])
   })
 })
