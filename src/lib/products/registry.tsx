@@ -46,6 +46,7 @@ import { Users,
   FileText,
   Network,
   Waypoints,
+  Route,
   Globe,
   Cable,
   Spline,
@@ -108,6 +109,7 @@ import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
 import { AiEconomicsModule } from '~/components/products/admin/AiEconomicsModule'
+import { RoutingModule } from '~/components/products/admin/RoutingModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
 import { RouterModule } from '~/components/products/RouterModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
@@ -993,6 +995,28 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: AiEconomicsModule }],
+  },
+  {
+    // admin.hanzo.ai ROUTING board — the config-as-Base auto-routing editor: the
+    // platform-wide default (the reserved "*" OrgSettings row) + per-org overrides,
+    // each a three-state control (inherit / enabled / disabled) written as DATA to the
+    // Base/SQLite OrgSettings row via `/v1/{get,update,delete}-org-settings` (all
+    // RequireSuperAdmin upstream). This is where auto-routing (enso) becomes a real
+    // admin toggle — set one org to Enabled for the org-first rollout, then flip the
+    // global default. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer;
+    // the endpoints are super-admin gated server-side, so a non-admin sees the honest
+    // OperatorAccessRequired panel). Runtime policy lives as editable rows, never env.
+    id: 'routing',
+    label: 'Routing',
+    icon: Route,
+    description: 'Set the platform auto-routing default and per-org overrides as data — the config-as-Base settings editor.',
+    gcp: 'Vertex AI (model routing)',
+    category: 'AI',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/ai',
+    kind: 'module',
+    routes: [{ path: '', component: RoutingModule }],
   },
   {
     // Customer surface — each org connects its OWN OpenAI / Anthropic / Google account
