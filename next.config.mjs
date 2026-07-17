@@ -84,9 +84,11 @@ function guiPackages() {
 // `training` is the interactive (Tinker-style) engine head (`/v1/training/clients[/*]`) — the
 // live LoRA client plane, allow-listed in the `/ai` proxy, likewise never a cloud-api head.
 // `router` is the routing-observability head (`/v1/router/stats`); `get-/update-training-contribution`
-// are the org's opt-in flag — all AI-gateway-served (hanzoai/ai) like the router policy, so they route
-// to the `/ai` bearer proxy and are in its ALLOWED set (app/ai/[...path]).
-const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos', 'pricing', 'plans', 'ai', 'training', 'get-router-policy', 'update-router-policy', 'router', 'get-training-contribution', 'update-training-contribution']
+// are the org's opt-in flag; `get-org-settings-list`/`get-org-settings`/`update-org-settings`/
+// `delete-org-settings` are the super-admin config-as-Base OrgSettings CRUD (the Routing admin editor) —
+// all AI-gateway-served (hanzoai/ai) like the router policy, so they route to the `/ai` bearer proxy and
+// are in its ALLOWED set (app/ai/[...path]).
+const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos', 'pricing', 'plans', 'ai', 'training', 'get-router-policy', 'update-router-policy', 'router', 'get-training-contribution', 'update-training-contribution', 'get-org-settings-list', 'get-org-settings', 'update-org-settings', 'delete-org-settings']
 // The admin aggregate heads rewritten to the GLOBAL-ADMIN-GATED proxy. `providers`
 // is the AI-provider control board — its GET (the list) AND its POST mutations
 // (`providers/toggle`, `providers/primary`) both match the `/:path*` rewrite below,
