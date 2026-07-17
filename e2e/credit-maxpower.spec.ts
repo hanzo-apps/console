@@ -28,7 +28,11 @@ const ORG = process.env.MAXPOWER_ORG ?? 'maxpower'
 const CREDIT_CENTS = Number(process.env.CREDIT_CENTS ?? '10000') // $100 default
 const CURRENCY = process.env.CREDIT_CURRENCY ?? 'usd'
 
-/** Sign in via the console app sign-in form (email/password → cloud /v1/signin). */
+const ADMIN = process.env.ADMIN_URL ?? 'https://admin.hanzo.ai'
+
+/** Sign in via the console app sign-in form (email/password → cloud /v1/signin).
+ *  Resolves to the user's OWN org (e.g. hanzo/z, maxpower/dave) — a normal member,
+ *  NOT SuperAdmin (per the privilege-separation: superadmin is admin.hanzo.ai only). */
 async function signIn(page: Page, email: string, password: string) {
   await page.goto(`${CONSOLE}/signin`)
   await page.waitForSelector('input[placeholder="Email"]', { timeout: 25_000 })
@@ -36,6 +40,27 @@ async function signIn(page: Page, email: string, password: string) {
   await page.fill('input[placeholder="Password"]', password)
   await page.click('button:has-text("Sign in")')
   await page.waitForFunction(() => !location.pathname.startsWith('/signin'), { timeout: 30_000 })
+  await page.waitForLoadState('domcontentloaded')
+}
+
+/** Sign in as SUPERADMIN via admin.hanzo.ai — the ONLY surface that resolves an
+ *  admin-org identity (owner==admin) post privilege-separation. Navigating to the
+ *  edge-guarded admin host redirects to the hanzo.id (admin-guard) login; on submit
+ *  the admin session cookie is set and we land back on admin.hanzo.ai. Robust to
+ *  either the @hanzo/id portal form or the console-style form (selector fallbacks). */
+async function signInAdmin(page: Page, email: string, password: string) {
+  await page.goto(ADMIN, { waitUntil: 'domcontentloaded' })
+  // We are now on hanzo.id (the admin-guard login). Fill whichever form renders.
+  const emailBox = page
+    .locator('input[type="email"], input[name="username"], input[placeholder*="Email" i], input[placeholder*="username" i]')
+    .first()
+  const passBox = page.locator('input[type="password"], input[placeholder*="Password" i]').first()
+  await emailBox.waitFor({ timeout: 25_000 })
+  await emailBox.fill(email)
+  await passBox.fill(password)
+  await page.getByRole('button', { name: /sign in|continue|log ?in/i }).first().click()
+  // Back on the admin host (left the hanzo.id login origin).
+  await page.waitForURL((u) => u.host.includes('admin.'), { timeout: 40_000 }).catch(() => {})
   await page.waitForLoadState('domcontentloaded')
 }
 
@@ -60,16 +85,17 @@ test('unauthenticated admin credit is rejected — no money moves', async ({ req
 test.describe('SuperAdmin funds the maxpower org', () => {
   test.skip(!PASSWORD, 'set HANZO_PASSWORD to run the live credit flow')
 
-  test('z@ signs in, credits maxpower, and the balance moves by exactly the grant', async ({
+  test('z@ signs in as SuperAdmin, credits maxpower, and the balance moves by exactly the grant', async ({
     page,
   }) => {
-    await signIn(page, EMAIL, PASSWORD)
+    await signInAdmin(page, EMAIL, PASSWORD)
 
-    // The signed-in browser context carries the session cookie; page.request reuses
-    // it, so this is the SAME authenticated principal the UI uses — no token juggling.
+    // The admin session cookie now rides on the admin.hanzo.ai origin; page.request
+    // reuses the browser context, so this is the SAME SuperAdmin principal — the ONLY
+    // identity the credit gate (owner==admin) admits. No token juggling.
     const before = await readBalance(page, ORG)
 
-    const credit = await page.request.post(`${CONSOLE}/v1/admin/customers/${ORG}/credit`, {
+    const credit = await page.request.post(`${ADMIN}/v1/admin/customers/${ORG}/credit`, {
       data: {
         amountCents: CREDIT_CENTS,
         currency: CURRENCY,
@@ -104,9 +130,10 @@ test.describe('maxpower member reaches the console after funding', () => {
   })
 })
 
-/** Read the org's balance in cents via the admin customer read (auth from page context). */
+/** Read the org's balance in cents via the admin customer read (SuperAdmin session
+ *  on the admin host). Returns 0 on any non-OK so the delta assertion still holds. */
 async function readBalance(page: Page, org: string): Promise<number> {
-  const res = await page.request.get(`${CONSOLE}/v1/admin/customers/${org}`)
+  const res = await page.request.get(`${ADMIN}/v1/admin/customers/${org}`)
   if (!res.ok()) return 0
   const j = await res.json().catch(() => ({}))
   const cents = j?.balanceCents ?? j?.balance?.cents ?? j?.data?.balanceCents
