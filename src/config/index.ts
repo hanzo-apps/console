@@ -74,6 +74,13 @@ export type ConsoleConfig = {
   iamClientId: string
   /** Billing/account portal — PER BRAND. The console LINKS here, never reimplements it. */
   billingUrl: string
+  /**
+   * Hosted top-up/payment page (pay.<brand>) — PER BRAND. The Wallet "Top up" LINKS
+   * here (new tab); the console NEVER hosts a card form or mints credit itself.
+   * Derived from the brand billing host (billing.<brand> → pay.<brand>), so it is
+   * white-label-safe (a Lux console links to pay.lux.cloud, never pay.hanzo.ai).
+   */
+  payUrl: string
   /** Documentation site — PER BRAND. The console LINKS here (new tab), never embeds it. */
   docsUrl: string
   /** Status page (Gatus) — PER BRAND. The global status badge reads its summary via the /system-status BFF. */
@@ -385,6 +392,9 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? app,
     iamClientId: process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? app,
     billingUrl: trimSlash(process.env.NEXT_PUBLIC_BILLING_URL ?? b.billingUrl),
+    // pay.<brand> — derived from the brand billing host (billing.<brand> → pay.<brand>),
+    // so each brand links to ITS OWN hosted payment page. Env-overridable per-deploy.
+    payUrl: trimSlash(process.env.NEXT_PUBLIC_PAY_URL ?? b.billingUrl.replace(/:\/\/billing\./, '://pay.')),
     docsUrl: trimSlash(process.env.NEXT_PUBLIC_DOCS_URL ?? b.docsUrl),
     statusUrl: trimSlash(process.env.NEXT_PUBLIC_STATUS_URL ?? b.statusUrl),
     // ONE source (`shell`); the four *Only booleans are its legacy `shell === '<x>'` aliases.

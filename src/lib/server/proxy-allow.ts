@@ -196,10 +196,11 @@ export const CLOUD_HEADS: readonly string[] = [
   //
   // Compute (visor-backed): machines inventory + launch/quote/terminate
   // (/v1/machines[/launch|/:id]); GPU inventory + alerts + pools (/v1/gpus[/alerts|
-  // /pools]); dedicated clusters + node-pool add/scale/delete (/v1/clusters[/:cid/
-  // pools[/:pid[/scale]]]).
+  // /pools]); the BYO connect fleet with live heartbeat (/v1/fleet/workers); dedicated
+  // clusters + node-pool add/scale/delete (/v1/clusters[/:cid/pools[/:pid[/scale]]]).
   'machines',
   'gpus',
+  'fleet',
   'clusters',
   // DO-native: virtual private clouds and managed load balancers — FULL CRUD
   // (/v1/vpcs[/:id], /v1/load-balancers[/:id]).
