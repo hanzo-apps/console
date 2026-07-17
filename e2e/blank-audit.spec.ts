@@ -22,10 +22,14 @@
  * Run: AUDIT_MODE=notrouted BASE_URL=http://localhost:4000 npx playwright test blank-audit
  */
 import { test, expect, type Route } from '@playwright/test'
+import { requireFixtureServer } from './_fixture'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
+
+// These render specs assert LOCAL fixture data; skip cleanly when that server is down.
+requireFixtureServer()
 const MODE = (process.env.AUDIT_MODE ?? 'notrouted') as 'notrouted' | 'down' | 'empty'
 const ROLE = (process.env.AUDIT_ROLE ?? 'admin') as 'admin' | 'customer'
 

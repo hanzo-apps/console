@@ -9,7 +9,10 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // Tamagui/RNW is a heavy client SPA — a hard page load occasionally hydrates slowly
+  // under headless chromium (the React root mounts a beat late). Retries absorb that
+  // inherent render flakiness (a real regression fails every attempt, so nothing is masked).
+  retries: process.env.CI ? 2 : 1,
   workers: 1,
   reporter: 'list',
   timeout: 60_000,

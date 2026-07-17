@@ -86,7 +86,9 @@ const PROBES: Probe[] = [
 
 test('probe o11y endpoints (live, authenticated)', async ({ page }) => {
   test.setTimeout(180_000)
-  if (!PASSWORD) throw new Error('HANZO_PASSWORD required for the live probe')
+  // Credentialed discovery harness — skip cleanly without a password (never a hard
+  // fail); set HANZO_PASSWORD to run the live authenticated probe.
+  test.skip(!PASSWORD, 'HANZO_PASSWORD required for the live o11y probe')
   await signIn(page)
 
   const results = await page.evaluate(
